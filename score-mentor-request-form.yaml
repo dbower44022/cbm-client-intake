@@ -1,0 +1,419 @@
+version: "1.0"
+content_version: "1.0.0"
+description: >
+  EspoCRM YAML mapping of the SCORE Mentor Request intake form
+  (FormAssembly form 111). The form is a client/mentee intake — a
+  small-business owner requesting a mentor — so it normalizes across
+  three entities:
+
+    - Contact (native Person)  — the requester. All requester fields
+      (First/Last Name, Email, Phone, Zip) are NATIVE Person fields
+      and are therefore NOT re-declared here. "Confirm Email" is a
+      client-side validation field only and is not stored.
+    - Account (native Company) — the requester's business. Business
+      Name → native Account.name; Business Website → native
+      Account.website. Three business attributes have no native
+      equivalent and are added as custom fields below.
+    - MentorRequest (custom)   — one record per submitted request,
+      holding the request-specific fields and linking to the
+      requester Contact and their Account.
+
+  Field-type mapping notes:
+    - Single-select dropdowns      → enum
+    - Yes/No radios and the Terms checkbox → bool
+    - "Marketing consent" is a Yes/No dropdown on the form; modeled
+      as bool (EspoCRM-idiomatic) rather than a two-value enum.
+    - Free-text question box       → text
+    - Year Formed / # Employees    → int (form uses text inputs with
+      maxlength 4 / 8 and numeric placeholders)
+    - "How did you hear" option "Workshop/ event" normalized to
+      "Workshop/Event".
+
+# Source: SCORE Mentor Request Form, FormAssembly form 111
+#         (https://score.tfaforms.net/111). Field inventory captured
+#         2026-05-28 — see score-mentor-request-form-fields.md.
+
+entities:
+
+  # ---------------------------------------------------------------
+  # Native Account — business-profile additions
+  # ---------------------------------------------------------------
+  # Business Name → native Account.name, Business Website → native
+  # Account.website (neither re-declared). Only the three attributes
+  # below lack a native equivalent. No layout block is provided so
+  # Account's native detail layout is left intact; place these via a
+  # fuller Account YAML or the admin UI. (businessType could instead
+  # override the native Account.industry enum's options.)
+
+  Account:
+    description: >
+      Native Company entity. Custom fields contributed by the SCORE
+      mentor-request intake. Business Name and Website are native and
+      are not re-declared.
+    fields:
+
+      - name: businessType
+        type: enum
+        label: "Business Type"
+        description: >
+          Industry/type of the requester's business. From the
+          form's "What type of business do you have?" dropdown
+          (43 values). Captured only when "Is your business already
+          established?" = Yes on the request.
+        category: "Business Profile"
+        required: false
+        options:
+          - "Accounting & Tax Services"
+          - "Advertising, Design, & Marketing"
+          - "Agriculture"
+          - "Animal & Veterinary Services"
+          - "Architecture, Engineering, & Related Services"
+          - "Arts, Entertainment & Recreation"
+          - "Auto Repair & Mechanic"
+          - "Beauty, Cosmetics & Salon Services"
+          - "Business Consulting & Coaching"
+          - "Childcare"
+          - "Commercial & Residential Services"
+          - "Construction"
+          - "Counseling & Therapy"
+          - "Distribution & Transportation of Goods"
+          - "Education"
+          - "Farming & Livestock"
+          - "Fine Arts, Artisan, & Craft Work"
+          - "Fishing & Hunting"
+          - "Food & Beverage"
+          - "Forestry"
+          - "Funeral & Death Care Services"
+          - "Information Technology"
+          - "Manufacturing"
+          - "Media & Publishing"
+          - "Mining, Quarry, & Utilities"
+          - "Nonprofit"
+          - "Personal Care Services"
+          - "Photography & Video Services"
+          - "Professional Services"
+          - "Public Relations & Communications"
+          - "Real Estate"
+          - "Recruiting & Staffing"
+          - "Rental & Leasing"
+          - "Restaurant & Bar"
+          - "Retail"
+          - "Social Assistance & Family Services"
+          - "Transportation"
+          - "Travel, Hospitality, & Tourism"
+          - "Warehousing"
+          - "Waste Management & Disposal"
+          - "Website Development"
+          - "Wellness, Healthcare, & Home Health"
+          - "Wholesale"
+
+      - name: yearFormed
+        type: int
+        label: "Year Formed"
+        description: >
+          Calendar year the business was formed. From the form's
+          "Year Formed" field (text, 4-digit).
+        category: "Business Profile"
+        required: false
+
+      - name: numberOfEmployees
+        type: int
+        label: "Number of Employees"
+        description: >
+          Headcount of the business. From the form's "Number of
+          Employees" field (text, up to 8 digits).
+        category: "Business Profile"
+        required: false
+
+  # ---------------------------------------------------------------
+  # Custom entity — MentorRequest
+  # ---------------------------------------------------------------
+
+  MentorRequest:
+    description: >
+      One submitted SCORE mentor request. Captures the request-
+      specific fields from FormAssembly form 111 and links to the
+      requester (Contact) and their business (Account). Requester
+      identity (name/email/phone/zip) lives on the linked Contact;
+      business profile (name/website/type/year/employees) lives on
+      the linked Account.
+    action: create
+    type: Base
+    settings:
+      labelSingular: "Mentor Request"
+      labelPlural: "Mentor Requests"
+      stream: true
+      disabled: false
+      autoPlaceName: false
+
+    fields:
+
+      # Auto-generated label: "{Requester Name} — {Mentoring Area}".
+      # Read-only; autoPlaceName:false keeps the layout engine from
+      # surfacing name as a manual input.
+      - name: name
+        type: varchar
+        label: "Name"
+        description: >
+          Auto-generated label "{Requester Name} — {Mentoring Area}".
+          Read-only.
+        category: "Request"
+        readOnly: true
+        formula:
+          type: concat
+          parts:
+            - { lookup: { via: requester, field: name } }
+            - { literal: " — " }
+            - { field: mentoringArea }
+
+      # --- Request details ---
+
+      - name: mentoringArea
+        type: enum
+        label: "Area of Mentoring"
+        description: >
+          The area the requester wants to be mentored in. From the
+          form's "Select an area you would like to be mentored in"
+          dropdown (40 values, single-select).
+        category: "Request"
+        required: true
+        options:
+          - "Accounting & Finance"
+          - "Advertising"
+          - "Bookkeeping"
+          - "Branding"
+          - "Budgeting"
+          - "Business Plan"
+          - "Business Structure"
+          - "Cash Flow"
+          - "Communications Tech"
+          - "Contracts"
+          - "Customer Service"
+          - "Cybersecurity"
+          - "Digital Marketing"
+          - "Disaster Prep & Recovery"
+          - "Ecommerce"
+          - "Financial Literacy"
+          - "Franchising"
+          - "Funding/Loans"
+          - "Government Contracting"
+          - "Government Regulations"
+          - "Hardware & Equipment"
+          - "Human Resources"
+          - "Import & Export"
+          - "Intellectual Property"
+          - "Legal"
+          - "Management & Operations"
+          - "Marketing"
+          - "Marketing Strategy"
+          - "PR/Media"
+          - "Pricing"
+          - "Product Development"
+          - "Sales"
+          - "Social Media"
+          - "Software & Applications"
+          - "Strategy Development"
+          - "Supply Chain Management"
+          - "Tax Planning"
+          - "Technology"
+          - "Websites"
+          - "Work/Life Balance"
+
+      - name: businessQuestions
+        type: text
+        label: "Business Questions"
+        description: >
+          The business questions the requester needs answered. From
+          the form's "Please describe the business questions you need
+          answered" textarea.
+        category: "Request"
+        required: false
+
+      - name: meetingPreference
+        type: enum
+        label: "Meeting Preference"
+        description: >
+          How the requester would like to meet with their mentor.
+          From the form's "How would you like to meet with your
+          mentor?" dropdown.
+        category: "Request"
+        required: false
+        options:
+          - "No Preference"
+          - "Video"
+          - "Phone"
+          - "Email"
+          - "In Person"
+
+      - name: notificationPreference
+        type: enum
+        label: "Notification Preference"
+        description: >
+          How the requester would like to receive notifications about
+          this request. From the form's notification dropdown.
+        category: "Request"
+        required: false
+        options:
+          - "Email"
+          - "Text Message"
+
+      - name: scheduleNow
+        type: bool
+        label: "Schedule Appointment Now"
+        description: >
+          Whether the requester wants to schedule an appointment now.
+          From the form's "Would you like to schedule an appointment
+          now?" Yes/No radio.
+        category: "Request"
+        required: false
+
+      # --- Business context ---
+
+      - name: businessEstablished
+        type: bool
+        label: "Business Already Established"
+        description: >
+          Whether the requester's business is already established.
+          From the form's "Is your business already established?"
+          Yes/No radio. When Yes, the form reveals the business
+          profile fields now stored on the linked Account
+          (businessType, yearFormed, numberOfEmployees) plus
+          Account name/website.
+        category: "Business Context"
+        required: false
+
+      # --- Referral / source ---
+
+      - name: howHeardAboutScore
+        type: enum
+        label: "How Did You Hear About SCORE"
+        description: >
+          How the requester learned about SCORE. From the form's
+          "How did you hear about SCORE?" dropdown. ("Workshop/ event"
+          normalized to "Workshop/Event".)
+        category: "Referral"
+        required: false
+        options:
+          - "Online search"
+          - "TV"
+          - "Newspaper"
+          - "Radio"
+          - "Social media"
+          - "SBA"
+          - "Friend or relative"
+          - "SCORE client or volunteer"
+          - "Workshop/Event"
+          - "Other"
+
+      - name: referrerName
+        type: varchar
+        label: "Referrer Name"
+        description: >
+          Name of the person who referred the requester. From the
+          form's "Referrer Name" field.
+        category: "Referral"
+        required: false
+
+      - name: workshopEvent
+        type: varchar
+        label: "Workshop / Event"
+        description: >
+          The workshop or event that prompted the request. From the
+          form's "Workshop / Event" field.
+        category: "Referral"
+        required: false
+
+      # --- Consent ---
+
+      - name: marketingConsent
+        type: bool
+        label: "Marketing Communication Consent"
+        description: >
+          Whether the requester consents to receive marketing
+          communication from SCORE. From the form's Yes/No consent
+          dropdown (modeled as a boolean).
+        category: "Consent"
+        required: false
+
+      - name: termsAccepted
+        type: bool
+        label: "Terms & Conditions Accepted"
+        description: >
+          Whether the requester accepted the Client Code of Conduct,
+          Terms of Use, and Privacy Policy. From the form's terms
+          checkbox. Required at submission.
+        category: "Consent"
+        required: true
+
+    layout:
+      detail:
+        panels:
+          - label: "Request"
+            description: "Core request details from the intake form."
+            rows:
+              - [mentoringArea, meetingPreference]
+              - [notificationPreference, scheduleNow]
+              - [businessQuestions, null]
+          - label: "Business Context"
+            description: "Whether the requester's business is established."
+            tabs:
+              - label: "Business Context"
+                category: "Business Context"
+          - label: "Referral"
+            description: "How the requester found SCORE."
+            tabs:
+              - label: "Referral"
+                category: "Referral"
+          - label: "Consent"
+            description: "Marketing and terms-of-use consent."
+            tabs:
+              - label: "Consent"
+                category: "Consent"
+      list:
+        columns:
+          - field: name
+            width: 30
+          - field: mentoringArea
+            width: 20
+          - field: meetingPreference
+            width: 14
+          - field: scheduleNow
+            width: 10
+          - field: createdAt
+            width: 16
+
+# ---------------------------------------------------------------
+# Relationships
+# ---------------------------------------------------------------
+
+relationships:
+
+  - name: mentorRequestToRequester
+    description: >
+      Links each MentorRequest to the Contact who submitted it. Many
+      requests belong to one Contact (manyToOne from the request
+      side). The MentorRequest.name concat formula looks up the
+      requester's name via this relationship.
+    entity: MentorRequest
+    entityForeign: Contact
+    linkType: manyToOne
+    link: requester
+    linkForeign: mentorRequests
+    label: "Requester"
+    labelForeign: "Mentor Requests"
+    audited: false
+
+  - name: mentorRequestToBusiness
+    description: >
+      Links each MentorRequest to the Account (business) it concerns.
+      Many requests belong to one Account (manyToOne from the request
+      side). Populated only when the requester's business is
+      established.
+    entity: MentorRequest
+    entityForeign: Account
+    linkType: manyToOne
+    link: business
+    linkForeign: mentorRequests
+    label: "Business"
+    labelForeign: "Mentor Requests"
+    audited: false
