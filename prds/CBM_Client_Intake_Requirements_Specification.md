@@ -8,8 +8,8 @@
 | Document | Requirements Specification |
 | Project | CBM Client Intake Application |
 | Status | Draft |
-| Version | 0.2 |
-| Last Updated | 05-28-26 10:02 |
+| Version | 0.3 |
+| Last Updated | 05-28-26 10:20 |
 | Owner | David Bower |
 
 ### Change Log
@@ -18,6 +18,7 @@
 |---|---|---|---|
 | 0.1 | 05-28-26 01:32 | Claude (scaffold) | Initial scaffold. Document control, change log, and the approved section structure established. Upstream sources cited at their current versions. Context overview and known open issues seeded. Design-dependent sections (form flow, field specification, branching logic, validation, integration requirements) left as placeholders pending the canonical data extraction and the branching design. |
 | 0.2 | 05-28-26 10:02 | Claude (edit) | Corrected upstream version citations to the versions current on main (MN-INTAKE v2.7, Account Entity PRD v1.9, Engagement Entity PRD v1.3; Contact Entity PRD v1.7 unchanged). Reworded the carry-forward follow-on to be version-agnostic, since MN-INTAKE has advanced past the originally assumed v2.6. |
+| 0.3 | 05-28-26 10:20 | Claude (edit) | Wrote finished content for Section 4 (form flow), Section 5 (field specification, reconciled to MN-INTAKE v2.7 and the Contact/Account/Engagement Entity PRDs), and Section 6 (branching logic). Added Section 11 carry-forward register and open-decisions list. Reflects the approved reconciliation: canonical multi-select mentoring areas, two-level NAICS, Business Stage as required field and branch trigger, how-did-you-hear mapped to the canonical 8-value list, kept SCORE-only fields (terms, marketing consent, meeting/notification preference, year formed, number of employees), dropped fields (referrer, workshop/event, schedule-now), and deferred Requested Mentor. |
 
 ---
 
@@ -72,19 +73,77 @@ The application is a satellite of the system of record. It does not maintain a p
 
 ## 4. User Experience and Form Flow
 
-_Placeholder. To be authored. This section describes the dynamic branching intake experience in narrative form and includes a flow diagram. It is design work that has not yet been done and is the first content decision to resolve, since the field specification (Section 5) and the branching logic (Section 6) both depend on it._
+The intake is presented as a single guided form that adapts to the applicant's answers. Most questions are always shown. One answer changes what follows: the applicant's Business Stage determines whether the business-profile questions are presented (see Section 6).
+
+The logical order of the form is: applicant identity (name, email, phone, zip code), how the applicant heard about CBM, communication preferences (meeting and notification), the mentoring request (areas of mentoring and a free-text description of needs), the Business Stage, the business-profile questions (shown only when applicable), and finally marketing consent and terms acceptance.
+
+**Pending decision — presentation model.** Whether this is delivered as one scrolling page with progressive reveal, or as a multi-step wizard with one logical group per step, is an open user-experience decision recorded in Section 11. The field set and the branching rules below are independent of that choice.
 
 ---
 
 ## 5. Field Specification
 
-_Placeholder. To be authored. Field-by-field specification — label, help text, type, required or optional status, conditional display rule, and target entity and field — extracted from the canonical sources cited in Section 2 (MN-INTAKE v2.4 and the Contact, Account, and Engagement Entity Product Requirements Documents) and reconciled with the agreed starting field set. The canonical extraction has not yet been performed._
+The field set is reconciled against the canonical intake fields in MN-INTAKE v2.7, Section 8, and the Contact, Account, and Engagement Entity Product Requirements Documents. The "Required" column is the requirement applied at the form layer, which the application owns; it may be stricter than the underlying canonical field constraint. "Provenance" gives the MN-INTAKE data-item identifier for existing canonical fields, or marks a field as new and therefore subject to the carry-forward register in Section 11.
+
+### 5.1 Contact (the applicant)
+
+| Form label | Target field | Type | Required | Conditional display | Provenance |
+|---|---|---|---|---|---|
+| First Name | Contact.firstName | varchar | Yes | Always | DAT-010 |
+| Last Name | Contact.lastName | varchar | Yes | Always | DAT-011 |
+| Email Address | Contact.email | email | Yes | Always | DAT-014 |
+| Confirm Email Address | (not stored) | — | Yes | Always | Client-side validation only |
+| Phone Number | Contact.phone | phone | Yes | Always | DAT-015 |
+| Zip Code | Contact.zipCode | varchar | Yes | Always | DAT-016 (canonical optional; required at form) |
+| How did you hear about CBM | Contact.howDidYouHearAboutCbm | enum (8 canonical values) | No | Always | New to intake — field exists on Contact; pending carry-forward to add to the MN-INTAKE intake data set |
+| Marketing Communication Consent | Contact.marketingConsent | bool | No | Always | New canonical field — pending carry-forward |
+
+### 5.2 Account (the business)
+
+| Form label | Target field | Type | Required | Conditional display | Provenance |
+|---|---|---|---|---|---|
+| Business Stage | Account.businessStage | enum (Pre-Startup, Startup, Early Stage, Growth Stage, Established) | Yes | Always | DAT-006 — also the branch trigger (Section 6) |
+| Business Name | Account.name | varchar | No | When Business Stage is not Pre-Startup | DAT-002 |
+| Business Website | Account.website | url | No | When Business Stage is not Pre-Startup | DAT-003 |
+| Industry Sector | Account.industrySector | enum (20 NAICS sectors) | No | When Business Stage is not Pre-Startup | DAT-007 |
+| Industry Subsector | Account.industrySubsector | enum (~100, filtered by Sector) | No | When Business Stage is not Pre-Startup and a Sector is selected | DAT-008 |
+| Year Formed | Account.yearFormed | int | No | When Business Stage is not Pre-Startup | New canonical field — pending carry-forward |
+| Number of Employees | Account.numberOfEmployees | int | No | When Business Stage is not Pre-Startup | New canonical field — pending carry-forward |
+
+### 5.3 Engagement (the mentoring request)
+
+| Form label | Target field | Type | Required | Conditional display | Provenance |
+|---|---|---|---|---|---|
+| Area(s) of Mentoring | Engagement.mentoringFocusAreas | multiEnum (~42 canonical values, pending ISS-001) | Yes | Always | DAT-022 (canonical optional; required at form) |
+| Describe Your Mentoring Needs | Engagement.mentoringNeedsDescription | wysiwyg | Yes | Always | DAT-023 |
+| Meeting Preference | Engagement.meetingPreference | enum (No Preference, Video, Phone, Email, In Person) | No | Always | New canonical field — pending carry-forward |
+| Notification Preference | Engagement.notificationPreference | enum (Email, Text Message) | No | Always | New canonical field — pending carry-forward |
+| Terms & Conditions Accepted | Engagement.termsAccepted | bool | Yes | Always | New canonical field — pending carry-forward |
+
+### 5.4 System-set fields (no form input)
+
+These are set by the integration at record creation and are not presented to the applicant: Account Type = Client (DAT-001); Contact Type = Client (DAT-009); Primary Contact = Yes (DAT-018); Engagement Status = Submitted (DAT-021); the auto-generated Engagement Name (DAT-020); the Contact-to-Account, Engagement-to-Account, and Primary-Engagement-Contact relationships (DAT-019, DAT-024, DAT-025); and applicantSinceTimestamp (DAT-027).
+
+### 5.5 Not collected in this version
+
+Collected by the source SCORE form but deliberately excluded here: Referrer Name, Workshop / Event, and Schedule Appointment Now (dropped per the approved reconciliation). The SCORE flat business-type list is replaced by the two-level NAICS Sector and Subsector. The SCORE single-select 40-value mentoring list is replaced by the canonical multi-select Mentoring Focus Areas. The SCORE 10-value "how did you hear" list is replaced by the canonical 8-value CBM list. Requested Mentor (DAT-026) is deferred to a later phase and left null.
+
+Canonical Contact and Account fields not asked by this form, left unpopulated for now: Middle Name (DAT-012), Preferred Name (DAT-013), LinkedIn Profile (DAT-017), Organization Type (DAT-005), and full business Address (DAT-004).
 
 ---
 
 ## 6. Branching Logic
 
-_Placeholder. To be authored. The conditional rules that determine which follow-up questions are presented based on prior answers, stated explicitly. Depends on Section 4._
+**BR-1 — Business-profile branch (primary).** The business-profile questions are shown only when the business exists. The trigger is Business Stage.
+
+- When Business Stage is **Pre-Startup**, the following are hidden and not collected: Business Name, Business Website, Industry Sector, Industry Subsector, Year Formed, and Number of Employees.
+- When Business Stage is **Startup, Early Stage, Growth Stage, or Established**, those fields are shown.
+
+The Pre-Startup threshold is a draft and is recorded in Section 11 for confirmation; if a different cut-off is preferred (for example, revealing business detail only at Established), only this rule changes.
+
+**BR-2 — Industry Subsector dependency.** Industry Subsector is a dependent dropdown. Its options are filtered by the selected Industry Sector, and it remains disabled until a Sector is chosen. This dependency applies only while the business-profile block is visible under BR-1.
+
+No other fields branch in this version. Communication preferences, how-did-you-hear, mentoring request fields, marketing consent, and terms acceptance are presented unconditionally.
 
 ---
 
@@ -123,6 +182,28 @@ The following value lists are owned upstream and remain unresolved. They are dep
 | Northeast Ohio zip code master list (if intake consumes it) | To be confirmed | Deferred upstream to implementation |
 
 Additional open issues will be recorded here as they surface during authoring.
+
+---
+
+
+### 11.1 Carry-forwards into the Cleveland Business Mentoring repository
+
+Several decisions in this specification require fields or acknowledgments to be added to canonical upstream documents. Each is a separate carry-forward that follows CBM methodology; adding canonical fields may require stakeholder review. The entity placements below are provisional and are confirmed against the target document when each carry-forward is executed.
+
+| Upstream target | Change | Status |
+|---|---|---|
+| MN-INTAKE intake data set | Add "How did you hear about CBM" as an intake data item mapping to Contact.howDidYouHearAboutCbm (8 canonical values) | Pending carry-forward |
+| Contact Entity PRD (v1.7) | Add marketingConsent (bool) | Pending carry-forward |
+| Account Entity PRD (v1.9) | Add yearFormed (int) and numberOfEmployees (int) | Pending carry-forward |
+| Engagement Entity PRD (v1.3) | Add meetingPreference (enum), notificationPreference (enum), and termsAccepted (bool) | Pending carry-forward |
+| MN-INTAKE | Acknowledge that intake is implemented as a dynamic branching form and state the three-record data-integrity expectation | Pending (version-agnostic follow-on, see Section 2.2) |
+
+### 11.2 Open decisions
+
+| Decision | Description | Status |
+|---|---|---|
+| Presentation model | Single scrolling page with progressive reveal, or a multi-step wizard (Section 4) | Open |
+| BR-1 threshold | Confirm that Pre-Startup is the correct cut-off for hiding the business-profile block (Section 6) | Open — draft is Pre-Startup hides, all other stages show |
 
 ---
 
