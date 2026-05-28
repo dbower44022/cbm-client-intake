@@ -38,14 +38,16 @@ records are created**.
   (`/healthz` → `{"status":"ok","dryRun":true,...}`, both forms 200):
   `Dockerfile`, `.dockerignore`, `.do/app.yaml`.
 
-**Resume point — next actions (in order):**
-1. **Push** `main` to origin (Claude commits; Doug pushes — see Conventions).
-2. **Create the App** in the DO console: Apps → Create App → GitHub →
-   `dbower44022/cbm-client-intake` @ `main` → it auto-detects the Dockerfile →
-   Basic xxs → Create. (Or `doctl apps create --spec .do/app.yaml`; `doctl` is
-   not installed locally yet and needs a DO API token.)
-3. Verify `/healthz`, `/client-intake/`, `/volunteer/` at the
+**Resume point — deploy to App Platform.** Full runbook (prerequisites,
+going-live with EspoCRM secrets, verification, rollback, troubleshooting) is in
+**`DEPLOYMENT.md`**.
+1. **Deploy:** `./scripts/deploy.sh` — idempotent (creates the app, or updates
+   it on later runs); deploys **dry-run** (`ESPO_DRY_RUN=true`, no EspoCRM
+   writes). First run needs the GitHub repo connected to DO once (see runbook).
+2. Verify `/healthz`, `/client-intake/`, `/volunteer/` at the
    `…ondigitalocean.app` URL; share it for feedback.
+3. To write to EspoCRM in production: set `ESPO_DRY_RUN=false` + `ESPO_BASE_URL`
+   + `ESPO_API_KEY` as **encrypted** App Platform env vars (DEPLOYMENT.md).
 
 **EspoCRM wiring — BOTH forms VERIFIED end-to-end against crm-test (2026-05-28).**
 - **client-intake**: created/linked Account → Contact → CClientProfile →
@@ -92,6 +94,7 @@ uv sync                                  # install deps (uv-managed; package = f
 uv run uvicorn main:app --reload --port 8000   # run locally -> http://localhost:8000/
 uv run pytest -q                         # tests
 docker build -t cbm-intake . && docker run --rm -p 8099:8080 cbm-intake  # prod-like run
+./scripts/deploy.sh                      # deploy to DO App Platform (see DEPLOYMENT.md)
 ```
 
 ## Architecture
