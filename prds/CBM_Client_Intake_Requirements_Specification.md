@@ -8,8 +8,8 @@
 | Document | Requirements Specification |
 | Project | CBM Client Intake Application |
 | Status | Draft |
-| Version | 0.4 |
-| Last Updated | 05-28-26 10:36 |
+| Version | 0.5 |
+| Last Updated | 05-28-26 16:08 |
 | Owner | David Bower |
 
 ### Change Log
@@ -20,6 +20,7 @@
 | 0.2 | 05-28-26 10:02 | Claude (edit) | Corrected upstream version citations to the versions current on main (MN-INTAKE v2.7, Account Entity PRD v1.9, Engagement Entity PRD v1.3; Contact Entity PRD v1.7 unchanged). Reworded the carry-forward follow-on to be version-agnostic, since MN-INTAKE has advanced past the originally assumed v2.6. |
 | 0.3 | 05-28-26 10:20 | Claude (edit) | Wrote finished content for Section 4 (form flow), Section 5 (field specification, reconciled to MN-INTAKE v2.7 and the Contact/Account/Engagement Entity PRDs), and Section 6 (branching logic). Added Section 11 carry-forward register and open-decisions list. Reflects the approved reconciliation: canonical multi-select mentoring areas, two-level NAICS, Business Stage as required field and branch trigger, how-did-you-hear mapped to the canonical 8-value list, kept SCORE-only fields (terms, marketing consent, meeting/notification preference, year formed, number of employees), dropped fields (referrer, workshop/event, schedule-now), and deferred Requested Mentor. |
 | 0.4 | 05-28-26 10:36 | Claude (edit) | Resolved the presentation-model decision in favor of a multi-step wizard and rewrote Section 4 to specify the four-step flow with the business-profile branch revealing in place within the Business step. Authored Section 7 (Validation Rules, VR-1 through VR-16), Section 8 (Integration Requirements, INT-1 through INT-9), Section 9 (Notifications and Confirmations, NC-1 through NC-6), and Section 10 (Non-Functional Requirements, NFR-1 through NFR-9). Closed the presentation-model row in Section 11.2; the BR-1 threshold row remains open per instruction. Sections 7 through 10 are product-agnostic per the PRD content rules. |
+| 0.5 | 05-28-26 16:08 | Claude (edit) | Carry-forward from reconciling against the deployed system of record (crm-test): the completed submission creates **four** linked records, not three — a Client Profile hub sits between the organization/individual and the mentoring request, and the request links to the Client Profile (not directly to the organization). Updated Section 3 accordingly and added a §11 dependency to reconcile this structural difference into the upstream MN-INTAKE / Entity documents. Field-level value lists (mentoring areas, NAICS subsector) and several new fields remain pending upstream per §11. |
 
 ---
 
@@ -62,13 +63,16 @@ A tracked follow-on exists: the Mentoring Domain Client Intake process document 
 
 ## 3. Context Overview
 
-A completed intake submission results in three linked records being created in the system of record:
+A completed intake submission results in **four** linked records being created in the system of record:
 
 1. An **Account** record representing the client organization.
 2. A **Contact** record representing the individual applicant, linked to the Account.
-3. An **Engagement** record representing the mentoring request, linked to the Account.
+3. A **Client Profile** record — the client-relationship hub — linked to both the Account and the Contact.
+4. An **Engagement** record representing the mentoring request, linked to the **Client Profile** (and, through it, to the Account) with the Contact as its primary engagement contact.
 
-The application is a satellite of the system of record. It does not maintain a parallel store of business data; the canonical records live in the system of record. The exact sequencing, failure handling, and integration mechanism for the three-record creation are specified in Section 8 at the requirements level and in the Technical Design document at the implementation level.
+> **Reconciliation note (v0.5).** Earlier drafts described a three-record outcome with the Engagement linked directly to the Account. Reconciling against the deployed system of record showed a Client Profile hub between the organization/individual and the request, with the Engagement linking to the Client Profile. This structural difference is tracked as an upstream reconciliation dependency in Section 11.
+
+The application is a satellite of the system of record. It does not maintain a parallel store of business data; the canonical records live in the system of record. The exact sequencing, failure handling, and integration mechanism for the compound creation are specified in Section 8 at the requirements level and in the Technical Design document at the implementation level.
 
 ---
 

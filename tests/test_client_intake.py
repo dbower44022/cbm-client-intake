@@ -1,10 +1,16 @@
-"""Tests for the Account -> Contact -> Engagement orchestration."""
+"""Tests for the Account -> Contact -> CClientProfile -> CEngagement orchestration."""
 
 from __future__ import annotations
 
 import pytest
 
-from forms.client_intake.orchestrator import ACCOUNT, CONTACT, ENGAGEMENT, submit_intake
+from forms.client_intake.orchestrator import (
+    ACCOUNT,
+    CLIENT_PROFILE,
+    CONTACT,
+    ENGAGEMENT,
+    submit_intake,
+)
 from forms.client_intake.schemas import IntakeSubmission
 
 
@@ -36,7 +42,7 @@ def _submission(**overrides) -> IntakeSubmission:
         phone="216-555-0100",
         zip_code="44121",
         how_did_you_hear="Search Engine",
-        mentoring_focus_areas=["Marketing", "Retail"],
+        mentoring_focus_areas=["Manufacturing", "Retail"],
         mentoring_needs_description="Need help with go-to-market.",
         meeting_preference="Video",
         notification_preference="Email",
@@ -55,21 +61,32 @@ def _submission(**overrides) -> IntakeSubmission:
     return IntakeSubmission(**base)
 
 
-async def test_creates_three_linked_records():
+async def test_creates_four_linked_records():
     client = CapturingClient()
     ids = await submit_intake(_submission(), client)
 
-    assert set(ids) == {"accountId", "contactId", "engagementId"}
+    assert set(ids) == {"accountId", "contactId", "clientProfileId", "engagementId"}
     entities = [e for e, _ in client.creates]
-    assert entities == [ACCOUNT, CONTACT, ENGAGEMENT]
+    assert entities == [ACCOUNT, CONTACT, CLIENT_PROFILE, ENGAGEMENT]
+
+    _, account_payload = client.creates[0]
+    assert account_payload["cCompanyType"] == ["Client"]
 
     _, contact_payload = client.creates[1]
     assert contact_payload["accountId"] == ids["accountId"]
+    assert contact_payload["cContactType"] == ["Client"]
 
-    _, eng_payload = client.creates[2]
-    assert eng_payload["accountId"] == ids["accountId"]
-    assert eng_payload["contactsIds"] == [ids["contactId"]]
-    assert eng_payload["status"] == "Submitted"
+    _, profile_payload = client.creates[2]
+    assert profile_payload["linkedCompanyId"] == ids["accountId"]
+    assert profile_payload["clientcontactId"] == ids["contactId"]
+
+    _, eng_payload = client.creates[3]
+    assert eng_payload["engagementClientId"] == ids["clientProfileId"]
+    assert eng_payload["primaryEngagementContactId"] == ids["contactId"]
+    assert eng_payload["engagementStatus"] == "Submitted"
+    # Fields not deployed on the instance must not be sent.
+    assert "termsAccepted" not in eng_payload
+    assert "meetingPreference" not in eng_payload
 
 
 async def test_matched_contact_is_reused_not_created():
@@ -79,7 +96,7 @@ async def test_matched_contact_is_reused_not_created():
     assert ids["contactId"] == "existing-123"
     entities = [e for e, _ in client.creates]
     assert CONTACT not in entities  # contact reused, not created
-    assert entities == [ACCOUNT, ENGAGEMENT]
+    assert entities == [ACCOUNT, CLIENT_PROFILE, ENGAGEMENT]
 
 
 async def test_pre_startup_creates_placeholder_account_without_profile():

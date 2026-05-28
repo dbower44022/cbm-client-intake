@@ -8,8 +8,8 @@
 | Document | Technical Design |
 | Project | CBM Client Intake Application |
 | Status | Draft |
-| Version | 0.2 |
-| Last Updated | 05-28-26 10:30 |
+| Version | 0.3 |
+| Last Updated | 05-28-26 16:08 |
 | Owner | David Bower |
 
 ### Change Log
@@ -18,6 +18,7 @@
 |---|---|---|---|
 | 0.1 | 05-28-26 01:32 | Claude (scaffold) | Initial scaffold. Document control, change log, and the approved section structure established. All sections are placeholders pending the Requirements Specification reaching enough maturity to design against. |
 | 0.2 | 05-28-26 10:30 | Claude (edit) | Authored Section 2 (architecture: static multi-step wizard frontend + FastAPI proxy backend, EspoCRM as system of record), Section 3 (integration: the `/api/intake` endpoint, payload, EspoCRM authentication via a dedicated scoped API user, and the Account→Contact→Engagement create-and-link sequence), and Section 4 (data integrity and partial-creation handling). Seeded Section 5 (administration), Section 6 (deployment), and Section 7 (open technical issues) with initial content. Designed against Requirements Specification v0.4 (multi-step wizard). |
+| 0.3 | 05-28-26 16:08 | Claude (edit) | Reconciled the integration against the deployed crm-test instance. Section 3.3 rewritten as a four-record sequence (Account → Contact → CClientProfile → CEngagement); the Engagement links to the CClientProfile hub, not the Account. Confirmed entity/attribute names, multiEnum discriminators, link FKs, and `engagementStatus`; documented the not-deployed (§11.1 pending) fields the orchestrator omits. `forms/client_intake/orchestrator.py` is the executable source of truth for the mapping. |
 
 ---
 
@@ -76,9 +77,32 @@ CORS is locked to the origin(s) that serve the frontend; the intake endpoint acc
 
 EspoCRM is accessed with a **dedicated API User** created for this application, authenticating by API key in the `X-Api-Key` header. The user is assigned a role scoped to the minimum needed: create (and the read required to support find-or-create deduplication) on Account, Contact, and Engagement only, and no access to any other entity, no delete, and no administrative scope. The key is supplied to the backend as an injected secret (Section 6) and exists only server-side. If a submission must be attributed to a source, that attribution is set as field data on the records, not by impersonating a user.
 
-### 3.3 The three-record create-and-link sequence
+### 3.3 The four-record create-and-link sequence
 
-A completed submission yields one Account, one Contact, and one Engagement, linked as in Requirements Specification §3 and §5.4. The backend creates them in dependency order so that each link target exists before it is referenced:
+> **Reconciled against the deployed instance (crm-test, 2026-05-28).** Reading
+> the deployed metadata showed a **Client Profile** (`CClientProfile`) hub: the
+> Engagement (`CEngagement`) links to the Client Profile via `engagementClient`
+> (belongsTo), not to the Account. The sequence below is therefore four records,
+> superseding the earlier three-record description. The authoritative, executable
+> mapping — entity names, the `c`-prefixed attribute names, the multiEnum
+> discriminators (`cCompanyType`/`cContactType` = `["Client"]`), the link FKs
+> (`accountId`, `clientcontactId`, `linkedCompanyId`, `engagementClientId`,
+> `primaryEngagementContactId`), and the `engagementStatus` value — lives in
+> `forms/client_intake/orchestrator.py`, which documents every field that is
+> omitted because it is not yet deployed (the §11.1 pending-carry-forward set).
+
+A completed submission yields one Account, one Contact, one Client Profile, and
+one Engagement, created in dependency order so that each link target exists
+before it is referenced:
+
+1. **Account** — the client organization (`cCompanyType` includes "Client").
+2. **Contact** — the applicant (find-or-create by email), linked to the Account.
+3. **Client Profile** — linked to the Account (`linkedCompany`) and Contact
+   (`clientcontact`).
+4. **Engagement** — `engagementStatus` = "Submitted", linked to the Client
+   Profile (`engagementClient`) with the Contact as `primaryEngagementContact`.
+
+Historical detail (the original three-record write, retained for context):
 
 1. **Account** — resolved first. New-business submissions create an Account (`name`, `website`, `industrySector`, `industrySubsector`, `yearFormed`, `numberOfEmployees`) with Account Type = Client (DAT-001). How a **Pre-Startup** submission — which collects no business profile — maps to the required Account record is governed by the Account creation precedence ladder in the Master PRD (v2.5) and is an open integration issue (Section 7); the sequence below assumes an Account identifier is available by the end of this step.
 2. **Contact** — created (or matched; see Section 4.2) with Contact Type = Client (DAT-009) and Primary Contact = Yes (DAT-018), and linked to the Account from step 1. The Contact carries `firstName`, `lastName`, `email`, `phone`, `zipCode`, `howDidYouHearAboutCbm`, and `marketingConsent`, plus the applicant-since timestamp (DAT-027).
