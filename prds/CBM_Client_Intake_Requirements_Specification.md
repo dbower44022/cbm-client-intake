@@ -8,8 +8,8 @@
 | Document | Requirements Specification |
 | Project | CBM Client Intake Application |
 | Status | Draft |
-| Version | 0.1 |
-| Last Updated | 05-28-26 01:32 |
+| Version | 0.2 |
+| Last Updated | 05-28-26 10:02 |
 | Owner | David Bower |
 
 ### Change Log
@@ -17,6 +17,7 @@
 | Version | Date (MM-DD-YY HH:MM) | Author | Changes |
 |---|---|---|---|
 | 0.1 | 05-28-26 01:32 | Claude (scaffold) | Initial scaffold. Document control, change log, and the approved section structure established. Upstream sources cited at their current versions. Context overview and known open issues seeded. Design-dependent sections (form flow, field specification, branching logic, validation, integration requirements) left as placeholders pending the canonical data extraction and the branching design. |
+| 0.2 | 05-28-26 10:02 | Claude (edit) | Corrected upstream version citations to the versions current on main (MN-INTAKE v2.7, Account Entity PRD v1.9, Engagement Entity PRD v1.3; Contact Entity PRD v1.7 unchanged). Reworded the carry-forward follow-on to be version-agnostic, since MN-INTAKE has advanced past the originally assumed v2.6. |
 
 ---
 
@@ -42,10 +43,10 @@ The following are cited at the versions current as of this scaffold. Each versio
 
 | Upstream document | Repository | Version | What this specification draws from it |
 |---|---|---|---|
-| Mentoring Domain Client Intake process document (MN-INTAKE) | dbower44022/ClevelandBusinessMentoring | v2.4 | The intake process definition, data items collected, process-level system requirements, and the three-record outcome. |
+| Mentoring Domain Client Intake process document (MN-INTAKE) | dbower44022/ClevelandBusinessMentoring | v2.7 | The intake process definition, data items collected, process-level system requirements, and the three-record outcome. |
 | Contact Entity Product Requirements Document | dbower44022/ClevelandBusinessMentoring | v1.7 | Canonical Contact field definitions, types, and constraints. |
-| Account Entity Product Requirements Document | dbower44022/ClevelandBusinessMentoring | v1.8 | Canonical Account field definitions, types, and constraints. |
-| Engagement Entity Product Requirements Document | dbower44022/ClevelandBusinessMentoring | v1.2 | Canonical Engagement field definitions, types, and constraints. |
+| Account Entity Product Requirements Document | dbower44022/ClevelandBusinessMentoring | v1.9 | Canonical Account field definitions, types, and constraints. |
+| Engagement Entity Product Requirements Document | dbower44022/ClevelandBusinessMentoring | v1.3 | Canonical Engagement field definitions, types, and constraints. |
 | Master Product Requirements Document | dbower44022/ClevelandBusinessMentoring | v2.5 | The Universal Contact-Creation Rules and the Account creation precedence ladder. |
 | Entity Inventory | dbower44022/ClevelandBusinessMentoring | v1.6 | Entity ownership and cross-domain field provenance. |
 
@@ -53,7 +54,7 @@ The following are cited at the versions current as of this scaffold. Each versio
 
 Changes to any cited upstream document that affect Client Intake generate a carry-forward into this specification, following the carry-forward discipline used within the Cleveland Business Mentoring project. A carry-forward updates the relevant section here, bumps the cited upstream version, and records the change in the change log above.
 
-A tracked follow-on already exists: the Mentoring Domain Client Intake process document is expected to receive a version 2.6 content update acknowledging that the intake form is implemented as a dynamic branching experience and stating the data-integrity expectation for the three-record creation. That update is sequenced after the in-flight four-session remediation workpacket on MN-INTAKE. When it lands, the version reference in Section 2.1 is bumped to 2.6 and the relevant sections here are reconciled.
+A tracked follow-on exists: the Mentoring Domain Client Intake process document does not yet acknowledge that the intake form is implemented as a dynamic branching experience, nor state the data-integrity expectation for the three-record creation. A future MN-INTAKE update (target version to be determined; the document is currently at v2.7) will add both. When it lands, the version reference in Section 2.1 is bumped and the relevant sections here are reconciled.
 
 ---
 
