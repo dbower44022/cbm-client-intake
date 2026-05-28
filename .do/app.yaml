@@ -1,0 +1,34 @@
+# DigitalOcean App Platform spec for the CBM Client Intake app.
+#
+# Create the app from this spec with:
+#   doctl apps create --spec .do/app.yaml
+# or in the DO console: Apps -> Create App -> connect this GitHub repo
+# (App Platform auto-detects the Dockerfile).
+#
+# Deploys in dry-run: submissions are validated and logged, but NO EspoCRM
+# records are created (ESPO_DRY_RUN=true). Flip that env var (and add
+# ESPO_BASE_URL / ESPO_API_KEY as encrypted secrets) when wiring EspoCRM.
+name: cbm-client-intake
+region: nyc
+services:
+  - name: web
+    dockerfile_path: Dockerfile
+    github:
+      repo: dbower44022/cbm-client-intake
+      branch: main
+      deploy_on_push: true
+    http_port: 8080
+    instance_size_slug: basic-xxs
+    instance_count: 1
+    health_check:
+      http_path: /healthz
+    envs:
+      # Feedback build: never call EspoCRM. Remove/flip to wire the CRM later.
+      - key: ESPO_DRY_RUN
+        scope: RUN_TIME
+        value: "true"
+      # The wizard posts to its own origin, so CORS is not in the form's path;
+      # this only matters if a separate frontend origin is ever added.
+      - key: ALLOWED_ORIGINS
+        scope: RUN_TIME
+        value: "http://localhost:8000"

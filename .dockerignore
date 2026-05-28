@@ -1,0 +1,15 @@
+# Keep the build context lean and the image clean.
+# Critically: never copy the host virtualenv (its interpreter paths are wrong
+# for the container) or any local secrets into the image.
+.venv/
+.git/
+.gitignore
+__pycache__/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.env
+.do/
+Dockerfile
+.dockerignore
