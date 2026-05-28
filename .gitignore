@@ -11,5 +11,8 @@ __pycache__/
 # Secrets — never commit the real environment file
 .env
 
+# Production App Platform spec overlay — carries ESPO_DRY_RUN=false + CRM secrets
+.do/app.prod.yaml
+
 # OS
 .DS_Store

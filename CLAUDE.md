@@ -33,21 +33,37 @@ records are created**.
 
 **Done:**
 - Both forms build and serve (locally: `uv run uvicorn main:app --reload --port 8000`).
-- Tests green (11 passing).
+- Tests green (17 passing).
 - Deploy glue committed at `12791d9` and **verified by a local Docker build+run**
   (`/healthz` → `{"status":"ok","dryRun":true,...}`, both forms 200):
   `Dockerfile`, `.dockerignore`, `.do/app.yaml`.
 
-**Resume point — deploy to App Platform.** Full runbook (prerequisites,
-going-live with EspoCRM secrets, verification, rollback, troubleshooting) is in
-**`DEPLOYMENT.md`**.
-1. **Deploy:** `./scripts/deploy.sh` — idempotent (creates the app, or updates
-   it on later runs); deploys **dry-run** (`ESPO_DRY_RUN=true`, no EspoCRM
-   writes). First run needs the GitHub repo connected to DO once (see runbook).
-2. Verify `/healthz`, `/client-intake/`, `/volunteer/` at the
+**Deployment method confirmed (2026-05-28): DigitalOcean App Platform.** The
+method was re-evaluated against a droplet, co-hosting on the CRM box, and other
+PaaS, and App Platform was confirmed (decision record + full comparison in
+`DEPLOYMENT.md`). The prod-like container (the exact image App Platform builds)
+was **tested locally and verified**: `docker build`/`run` → `/healthz` is
+`dryRun:true`, both forms + index + shared assets 200, a dry-run
+`POST /api/volunteer/intake` returns synthetic ids (no CRM call) and is
+idempotent on token re-submit, `pytest` 17 passing.
+
+**Resume point — run the live dry-run deploy.** `DEPLOYMENT.md` is the full
+runbook: prerequisites, deploy, going-live, **custom domain**, **reproduce in
+production from scratch**, verification, rollback, troubleshooting.
+1. **Blocker (needs Doug's DO account):** `doctl` is **not installed** on this
+   machine, and the GitHub repo must be connected to App Platform once in the
+   DO console. These are the only steps Claude can't do — they need Doug's
+   credentials. See `DEPLOYMENT.md` Prerequisites.
+2. **Deploy:** `./scripts/deploy.sh` — idempotent; deploys **dry-run**
+   (`ESPO_DRY_RUN=true`, no EspoCRM writes). It now has a **safety guard** that
+   refuses to update a *live* app (would revert it to dry-run + drop secrets);
+   override with `ALLOW_LIVE_UPDATE=1` only when intended.
+3. Verify `/healthz`, `/client-intake/`, `/volunteer/` at the
    `…ondigitalocean.app` URL; share it for feedback.
-3. To write to EspoCRM in production: set `ESPO_DRY_RUN=false` + `ESPO_BASE_URL`
-   + `ESPO_API_KEY` as **encrypted** App Platform env vars (DEPLOYMENT.md).
+4. To write to EspoCRM: set `ESPO_DRY_RUN=false` + `ESPO_BASE_URL` +
+   `ESPO_API_KEY` as **encrypted** env vars (console or a gitignored
+   `.do/app.prod.yaml` overlay) — **not** by re-running `deploy.sh`. See
+   `DEPLOYMENT.md` "Going live".
 
 **EspoCRM wiring — BOTH forms VERIFIED end-to-end against crm-test (2026-05-28).**
 - **client-intake**: created/linked Account → Contact → CClientProfile →
@@ -86,9 +102,10 @@ Local `.env` stays `ESPO_DRY_RUN=true`; live tests use an inline
 - Clean up the `ZZTEST` test records left in crm-test by the wiring tests
   (must be done in the EspoCRM UI — the intake API user is create-only and
   cannot delete; verified by 403s).
-- Evaluate an alternative deployment method (compare to / move off App Platform):
-  run the kickoff at `prompts/CLAUDE-CODE-PROMPT-deployment-method.md` — it drives
-  explore → decide-with-user → build infra + docs.
+- ~~Evaluate an alternative deployment method~~ **Done (2026-05-28).** App
+  Platform was re-evaluated and confirmed; see the decision record in
+  `DEPLOYMENT.md`. The kickoff that drove it is
+  `prompts/CLAUDE-CODE-PROMPT-deployment-method.md`.
 
 ## Commands
 

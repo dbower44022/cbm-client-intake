@@ -44,6 +44,19 @@ if [ -z "$APP_ID" ]; then
   APP_ID="$(doctl apps create --spec "$SPEC" --no-header --format ID --wait)"
   echo "==> Created app: $APP_ID"
 else
+  # Safety: refuse to clobber a LIVE app. Applying this spec sets
+  # ESPO_DRY_RUN=true and drops any console-set CRM secrets. If the existing
+  # app is already live (ESPO_DRY_RUN=false), require an explicit override.
+  # Detection is conservative — if we can't positively confirm "false", we
+  # proceed as before, so this never falsely blocks a dry-run update.
+  if [ "${ALLOW_LIVE_UPDATE:-0}" != "1" ] \
+     && doctl apps spec get "$APP_ID" 2>/dev/null \
+        | grep -A2 'ESPO_DRY_RUN' \
+        | grep -qiE 'value:[[:space:]]*"?false"?'; then
+    die "App $APP_ID appears to be LIVE (ESPO_DRY_RUN=false). Updating from
+$SPEC would revert it to dry-run and drop CRM secrets. Manage live apps per
+DEPLOYMENT.md 'Going live'. To override: ALLOW_LIVE_UPDATE=1 ./scripts/deploy.sh"
+  fi
   echo "==> Found app $APP_ID — updating from spec and redeploying"
   doctl apps update "$APP_ID" --spec "$SPEC" --wait >/dev/null
 fi
