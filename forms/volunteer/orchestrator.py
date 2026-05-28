@@ -1,20 +1,29 @@
-"""Volunteer application -> a single Contact (contactType = "Mentor").
+"""Volunteer application -> Contact (Mentor) + linked CMentorProfile.
 
-Unlike client intake (three linked records), MR-APPLY creates one Contact with
-mentorStatus = "Submitted". No Account, no Engagement.
+Reconciled against the deployed crm-test instance (2026-05-28). The mentor
+model mirrors the client side: a native Contact carries identity plus
+``cContactType = ["Mentor"]``, and the mentor-specific data lives on a
+CMentorProfile record linked back to the Contact via ``contactRecord``
+(FK ``contactRecordId``). The earlier flat-Contact mapping (per MR-Contact.yaml)
+did not match the instance — only ``cContactType`` existed there.
 
-INSTANCE MAPPING — CONFIRM BEFORE GOING LIVE (same caveats as the client-intake
-orchestrator): custom fields on the native Contact entity are ``c``-prefixed on
-the deployed instance; the value lists (industry / expertise / languages /
-how-heard) are owned upstream and pending reconciliation (mapping doc §4).
-File upload (resume) is a documented follow-on (mapping doc §5) and is not
-handled here yet.
+Mapping decisions (confirmed with the product owner):
+  * mentorStatus  -> "Candidate" (new applicant; enum has no "Submitted")
+  * mentorType    -> "Mentor"
+  * industry_experience is multi-select on the form but ``industrySector`` is a
+    single enum on the instance, so only the FIRST value is stored for now
+    (multi-store deferred until a multi-value field is deployed).
+  * terms_accepted -> CMentorProfile.termsAccepted (a dedicated bool field).
+
+NOT YET DEPLOYED / deferred:
+  * Resume upload — no attachment field exists on Contact or CMentorProfile on
+    the instance, so an uploaded resume is accepted by the form but not stored.
+  * currently_employed / contact_preference / phone_type have no target field.
 """
 
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
 
 from core.espo import EspoApi
 from core.phone import to_e164
@@ -24,39 +33,42 @@ from .schemas import VolunteerApplication
 log = logging.getLogger("cbm_intake.volunteer")
 
 CONTACT = "Contact"  # native
+MENTOR_PROFILE = "CMentorProfile"
 
-# Attribute names (CONFIRM against deployed metadata) ---
-C_TYPE = "cContactType"
-C_MENTOR_STATUS = "cMentorStatus"
-C_WHY = "whyInterestedInMentoring"  # custom; confirm prefix
-C_BIO = "professionalBio"
-C_CURRENTLY_EMPLOYED = "currentlyEmployed"
-C_INDUSTRY = "industrySectors"
-C_FOCUS_AREAS = "mentoringFocusAreas"
-C_LANGUAGES = "fluentLanguages"
-C_LINKEDIN = "linkedInProfile"
-C_HOW_HEARD = "cHowDidYouHearAboutCbm"
-C_FELONY = "felonyConvictionDisclosure"
-C_TERMS = "termsAndConditionsAccepted"
-C_APPLICANT_SINCE = "cApplicantSinceTimestamp"
-# Attachment-multiple field that holds the resume on the Contact (CONFIRM).
-C_RESUME_FIELD = "cResume"
+# --- Contact attributes (reconciled against the deployed instance) ---
+C_CONTACT_TYPE = "cContactType"       # multiEnum
+C_LINKEDIN = "cLinkedInProfile"       # url
+C_PREFERRED_NAME = "cPreferredName"   # varchar
 
-MENTOR = "Mentor"
-MENTOR_STATUS_SUBMITTED = "Submitted"
+# --- CMentorProfile attributes ---
+P_CONTACT_LINK = "contactRecordId"    # belongsTo Contact (link FK)
+P_STATUS = "mentorStatus"             # enum
+P_TYPE = "mentorType"                 # enum
+P_WHY = "mentoringWhyInterested"      # wysiwyg
+P_BIO = "mentorProfessionalBio"       # wysiwyg
+P_FOCUS_AREAS = "mentoringFocusAreas"  # multiEnum
+P_LANGUAGES = "fluentLanguages"       # multiEnum
+P_INDUSTRY = "industrySector"         # enum (single)
+P_HOW_HEARD = "howDidYouHearAboutCBM"  # varchar
+P_FELONY = "felonyConfiction"         # bool (note: CRM field name is misspelled)
+P_TERMS = "termsAccepted"             # bool
+
+# --- System-set values ---
+CONTACT_TYPE_MENTOR = "Mentor"
+MENTOR_STATUS_NEW = "Candidate"
+MENTOR_TYPE_DEFAULT = "Mentor"
 
 
-def _now_iso() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+async def _find_or_create_mentor_contact(sub: VolunteerApplication, client: EspoApi) -> str:
+    """Find-or-create the mentor's Contact by email and return its id.
 
-
-async def submit_application(sub: VolunteerApplication, client: EspoApi) -> dict[str, str]:
-    """Find-or-create the mentor Contact and return its id."""
+    A matched Contact is reused without overwrite (the create-only API user
+    cannot update it anyway); the mentor profile still links to it.
+    """
     existing = await client.find_one(CONTACT, "emailAddress", str(sub.email))
     if existing:
-        # Merge policy for a matched Contact is an open issue; reuse without overwrite.
         log.info("matched existing Contact %s for %s", existing["id"], sub.email)
-        return {"contactId": existing["id"]}
+        return existing["id"]
 
     payload: dict = {
         "firstName": sub.first_name,
@@ -64,43 +76,58 @@ async def submit_application(sub: VolunteerApplication, client: EspoApi) -> dict
         "emailAddress": str(sub.email),
         "phoneNumber": to_e164(sub.phone),
         "addressPostalCode": sub.zip_code,
-        C_TYPE: MENTOR,
-        C_MENTOR_STATUS: MENTOR_STATUS_SUBMITTED,
-        C_WHY: sub.why_volunteer,
-        C_TERMS: sub.terms_accepted,
-        C_FELONY: sub.felony_conviction,
-        C_APPLICANT_SINCE: _now_iso(),
+        C_CONTACT_TYPE: [CONTACT_TYPE_MENTOR],
     }
     if sub.middle_initial:
         payload["middleName"] = sub.middle_initial
+    if sub.preferred_name:
+        payload[C_PREFERRED_NAME] = sub.preferred_name
     if sub.street:
         payload["addressStreet"] = sub.street
-    if sub.work_experience:
-        payload[C_BIO] = sub.work_experience
-    if sub.currently_employed is not None:
-        payload[C_CURRENTLY_EMPLOYED] = sub.currently_employed != "No"
     if sub.linkedin_profile:
         payload[C_LINKEDIN] = sub.linkedin_profile
-    if sub.industry_experience:
-        payload[C_INDUSTRY] = sub.industry_experience
-    if sub.areas_of_expertise:
-        payload[C_FOCUS_AREAS] = sub.areas_of_expertise
-    if sub.fluent_languages:
-        payload[C_LANGUAGES] = sub.fluent_languages
-    if sub.how_did_you_hear:
-        payload[C_HOW_HEARD] = sub.how_did_you_hear
-
-    # Resume: upload as an Attachment bound to the Contact's resume field, then
-    # reference it by id on the create (attachment-multiple -> "<field>Ids").
-    if sub.resume is not None:
-        attachment_id = await client.upload_attachment(
-            filename=sub.resume.filename,
-            content_type=sub.resume.content_type,
-            data_base64=sub.resume.data_base64,
-            related_type=CONTACT,
-            field=C_RESUME_FIELD,
-        )
-        payload[f"{C_RESUME_FIELD}Ids"] = [attachment_id]
 
     created = await client.create(CONTACT, payload)
-    return {"contactId": created["id"]}
+    return created["id"]
+
+
+async def _create_mentor_profile(
+    sub: VolunteerApplication, client: EspoApi, contact_id: str
+) -> str:
+    """Create the CMentorProfile holding the mentor-specific data."""
+    payload: dict = {
+        "name": f"{sub.first_name} {sub.last_name}",
+        P_CONTACT_LINK: contact_id,
+        P_STATUS: MENTOR_STATUS_NEW,
+        P_TYPE: MENTOR_TYPE_DEFAULT,
+        P_WHY: sub.why_volunteer,
+        P_FOCUS_AREAS: sub.areas_of_expertise,
+        P_FELONY: sub.felony_conviction,
+        P_TERMS: sub.terms_accepted,
+    }
+    if sub.work_experience:
+        payload[P_BIO] = sub.work_experience
+    if sub.fluent_languages:
+        payload[P_LANGUAGES] = sub.fluent_languages
+    if sub.industry_experience:
+        # Single-enum field — store only the first selection for now.
+        payload[P_INDUSTRY] = sub.industry_experience[0]
+    if sub.how_did_you_hear:
+        payload[P_HOW_HEARD] = sub.how_did_you_hear
+
+    created = await client.create(MENTOR_PROFILE, payload)
+    return created["id"]
+
+
+async def submit_application(sub: VolunteerApplication, client: EspoApi) -> dict[str, str]:
+    """Create/reuse the mentor Contact, then create the linked CMentorProfile."""
+    if sub.resume is not None:
+        # No attachment field is deployed for the resume yet (see module docstring).
+        log.warning(
+            "resume received for %s but not stored — no deployed attachment field",
+            sub.email,
+        )
+
+    contact_id = await _find_or_create_mentor_contact(sub, client)
+    profile_id = await _create_mentor_profile(sub, client, contact_id)
+    return {"contactId": contact_id, "mentorProfileId": profile_id}
