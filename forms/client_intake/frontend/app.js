@@ -248,7 +248,7 @@
     submitBtn.disabled = true;
     submitBtn.textContent = "Submitting…";
     try {
-      const resp = await fetch("/api/intake", {
+      const resp = await fetch("/api/client-intake/intake", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(buildPayload()),

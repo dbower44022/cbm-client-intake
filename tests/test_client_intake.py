@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from app.orchestrator import ACCOUNT, CONTACT, ENGAGEMENT, submit_intake
-from app.schemas import IntakeSubmission
+from forms.client_intake.orchestrator import ACCOUNT, CONTACT, ENGAGEMENT, submit_intake
+from forms.client_intake.schemas import IntakeSubmission
 
 
 class CapturingClient:

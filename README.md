@@ -23,32 +23,52 @@ here. It lives in the Mentoring Domain Client Intake process document
 
 ## Application
 
-- `frontend/` — the static four-step wizard (plain HTML/CSS/JS). Styling comes
-  from `frontend/tokens.css`, the CBM design tokens extracted from the public
-  CBM site.
-- `app/` — the FastAPI proxy (Technical Design §2–4). It is the only component
-  that holds EspoCRM credentials and orchestrates the Account → Contact →
-  Engagement create-and-link sequence.
+This is a multi-form app: a shared core hosts any number of intake forms.
+
+- `core/` — shared machinery (Technical Design §2–4): the EspoCRM client (with a
+  dry-run mode), config, the form registry (`FormSpec` + `BaseSubmission`), and
+  the FastAPI app factory. The only component that holds EspoCRM credentials.
+- `forms/<name>/` — one form per package. Each contributes a `SPEC` with its
+  submission schema, its EspoCRM mapping (`orchestrator`), and an optional
+  `frontend/` directory.
+  - `forms/client_intake/` — SCORE form 111 reconciled to the CBM model; creates
+    Account + Contact + Engagement; ships the four-step wizard UI.
+  - `forms/volunteer/` — SCORE form 6 (MR-APPLY); creates a single Contact
+    (Mentor). Backend only for now; UI is a follow-on.
+- `frontend/shared/` — shared assets (the CBM design tokens), served at `/shared/`.
+- `main.py` — composition root; registers the forms.
+
+Each registered form is reachable at `POST /api/<slug>/intake`, and (if it ships
+a UI) at `/<slug>/`. The root lists the available forms.
 
 ### Run locally
 
 ```bash
 uv sync                          # install dependencies
 cp .env.example .env             # ESPO_DRY_RUN=true by default — no live CRM needed
-uv run uvicorn app.main:app --reload --port 8000
+uv run uvicorn main:app --reload --port 8000
 ```
 
-Then open <http://localhost:8000>. In dry-run mode the would-be records are
-logged and synthetic ids returned, so the full form works without an EspoCRM
-instance. Set `ESPO_DRY_RUN=false` and supply `ESPO_BASE_URL` / `ESPO_API_KEY`
-to write to a real instance.
+Then open <http://localhost:8000> (the client-intake wizard is at
+`/client-intake/`). In dry-run mode the would-be records are logged and synthetic
+ids returned, so the forms work without an EspoCRM instance. Set
+`ESPO_DRY_RUN=false` and supply `ESPO_BASE_URL` / `ESPO_API_KEY` to write to a
+real instance.
 
 ```bash
 uv run pytest                    # run the test suite
 ```
 
-> **Before going live:** the EspoCRM entity/attribute names in
-> `app/orchestrator.py` are provisional guesses and must be reconciled against
-> the deployed instance metadata (Technical Design §3.4, §7), and the open
-> issues in Technical Design §7 (Pre-Startup Account mapping, anti-spam
-> provider, admin auth, host) must be resolved.
+### Adding a form
+
+Create `forms/<name>/` with a `schemas.py` (extend `core.forms.BaseSubmission`),
+an `orchestrator.py` (`async def submit(sub, client) -> dict`), and an
+`__init__.py` exposing a `SPEC`. Register it in `main.py`. Add a `frontend/`
+directory and point `SPEC.frontend_dir` at it when the UI is ready.
+
+> **Before going live:** the EspoCRM entity/attribute names in each form's
+> `orchestrator.py` are provisional guesses and must be reconciled against the
+> deployed instance metadata (Technical Design §3.4, §7); the §7 open issues
+> (Pre-Startup Account mapping, anti-spam provider, admin auth, host) must be
+> resolved; and the volunteer form still needs its file-upload (resume) path and
+> UI (see `score-volunteer-form-6-mapping.md`).

@@ -25,7 +25,8 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 
-from .espo import EspoApi
+from core.espo import EspoApi
+
 from .schemas import IntakeSubmission
 
 log = logging.getLogger("cbm_intake.orchestrator")
