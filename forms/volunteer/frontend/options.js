@@ -1,7 +1,9 @@
 /*
- * Volunteer form value lists (SCORE form 6). Sourced from the form's own
- * dropdowns; per the mapping doc §4 these reconcile to canonical CBM lists
- * (industry/expertise/languages/how-heard) before go-live.
+ * Volunteer form value lists (SCORE form 6). The industry, expertise, and
+ * language lists are aligned to the deployed CRM enum options
+ * (CMentorProfile.industrySector / mentoringFocusAreas / fluentLanguages), so
+ * every selectable value is accepted on submit. "How did you hear" maps to a
+ * free-text CRM field, so its list is presentational only.
  */
 window.VOL_OPTIONS = {
   phoneType: ["Mobile", "Home", "Work"],
@@ -13,7 +15,23 @@ window.VOL_OPTIONS = {
     "SCORE client or volunteer", "Social media", "TV", "Workshop/Event", "Other",
   ],
 
+  // Aligned to CMentorProfile.industrySector (20 NAICS sectors).
   industryExperience: [
+    "Agriculture, Forestry, Fishing and Hunting",
+    "Mining, Quarrying, and Oil and Gas Extraction", "Utilities", "Construction",
+    "Manufacturing", "Wholesale Trade", "Retail Trade",
+    "Transportation and Warehousing", "Information", "Finance and Insurance",
+    "Real Estate and Rental and Leasing",
+    "Professional, Scientific, and Technical Services",
+    "Management of Companies and Enterprises",
+    "Administrative and Support and Waste Management", "Educational Services",
+    "Health Care and Social Assistance", "Arts, Entertainment, and Recreation",
+    "Accommodation and Food Services",
+    "Other Services (except Public Administration)", "Public Administration",
+  ],
+
+  // Aligned to CMentorProfile.mentoringFocusAreas.
+  areasOfExpertise: [
     "Accounting & Tax Services", "Advertising, Design, & Marketing", "Agriculture",
     "Animal & Veterinary Services", "Architecture, Engineering, & Related Services",
     "Arts, Entertainment, & Recreation", "Auto Repair & Mechanic",
@@ -27,31 +45,19 @@ window.VOL_OPTIONS = {
     "Photography & Video Services", "Professional Services",
     "Public Relations & Communications", "Real Estate", "Recruiting & Staffing",
     "Rental & Leasing", "Restaurant & Bar", "Retail",
-    "Social Assistance & Family Services", "Travel, Hospitality, & Tourism",
-    "Warehousing", "Waste Management & Disposal", "Website Development",
-    "Wellness, Healthcare, & Home Health", "Wholesale", "Transportation",
+    "Social Assistance & Family Services", "Transportation",
+    "Travel, Hospitality, & Tourism", "Warehousing", "Waste Management & Disposal",
+    "Website Development", "Wellness, Healthcare, & Home Health",
   ],
 
-  areasOfExpertise: [
-    "Accounting & Finance", "Advertising", "Bookkeeping", "Branding", "Budgeting",
-    "Business Plan", "Business Structure", "Cash Flow", "Communications Tech",
-    "Contracts", "Customer Service", "Cybersecurity", "Digital Marketing",
-    "Disaster Prep & Recovery", "Ecommerce", "Financial Literacy", "Franchising",
-    "Funding/Loans", "Government Contracting", "Government Regulations",
-    "Hardware & Equipment", "Human Resources", "Import & Export",
-    "Intellectual Property", "Legal", "Management & Operations", "Marketing",
-    "Marketing Strategy", "PR/Media", "Pricing", "Product Development", "Sales",
-    "Social Media", "Software & Applications", "Strategy Development",
-    "Supply Chain Management", "Tax Planning", "Technology", "Websites",
-    "Work/Life Balance",
-  ],
-
+  // Aligned to CMentorProfile.fluentLanguages.
   fluentLanguages: [
-    "English", "Spanish", "Chinese", "Tagalog", "Vietnamese", "French", "Korean",
-    "Arabic", "American Sign Language", "Bengali", "Cantonese", "Dutch", "German",
-    "Greek", "Gujarati", "Hebrew", "Hindi", "Italian", "Japanese", "Mandarin",
-    "Polish", "Portuguese", "Punjabi", "Russian", "Swedish", "Telugu", "Urdu",
-    "Other",
+    "American Sign Language", "Arabic", "Bengali", "Cantonese", "Chinese",
+    "Czech", "Danish", "Dutch", "English", "French", "German", "Greek",
+    "Gujarati", "Hebrew", "Hindi", "Hungarian", "Indonesian", "Italian",
+    "Japanese", "Korean", "Lithuanian", "Malay", "Mandarin", "Marathi",
+    "Norwegian", "Pashto", "Polish", "Portuguese", "Punjabi", "Russian",
+    "Spanish", "Swedish", "Tagalog", "Telugu", "Urdu", "Other",
   ],
 
   // "Choose up to N" constraint applied to industry + expertise.

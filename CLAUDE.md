@@ -56,7 +56,10 @@ records are created**.
   Contact+CMentorProfile model — mentor data lives on CMentorProfile, not flat
   Contact fields. Mapping decisions: mentorStatus=`Candidate`, mentorType=`Mentor`,
   multi-select industry → first `industrySector` only (single enum; multi-store
-  deferred), terms_accepted → `termsAccepted`. **Deferred:** resume upload (no
+  deferred), terms_accepted → `termsAccepted`. The form's industry/expertise/
+  language dropdowns are aligned to the deployed CRM enum options — a value
+  outside the enum 400s the create (`forms/volunteer/frontend/options.js`).
+  **Deferred:** resume upload (no
   attachment field deployed), `currently_employed`/`contact_preference`/`phone_type`
   (no target field). The volunteer mapping doc `score-volunteer-form-6-mapping.md`
   is now STALE (describes the old flat-Contact model) — orchestrator is the truth.
