@@ -35,6 +35,7 @@ import logging
 from datetime import datetime, timezone
 
 from core.espo import EspoApi
+from core.phone import to_e164
 
 from .schemas import IntakeSubmission
 
@@ -90,7 +91,7 @@ async def _find_or_create_contact(
         "firstName": sub.first_name,
         "lastName": sub.last_name,
         "emailAddress": str(sub.email),
-        "phoneNumber": sub.phone,
+        "phoneNumber": to_e164(sub.phone),
         "addressPostalCode": sub.zip_code,
         "accountId": account_id,
         C_CONTACT_TYPE: [CLIENT],
