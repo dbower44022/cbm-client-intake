@@ -47,13 +47,26 @@ records are created**.
 3. Verify `/healthz`, `/client-intake/`, `/volunteer/` at the
    `…ondigitalocean.app` URL; share it for feedback.
 
-**After feedback — wiring EspoCRM:**
-- Set `ESPO_DRY_RUN=false` and add `ESPO_BASE_URL` + `ESPO_API_KEY` (a dedicated
-  create-only intake API user) as **encrypted** App Platform env vars.
-- Confirm deployed EspoCRM attribute names against the target instance
-  (custom fields on native Account/Contact are `c`-prefixed); see Technical
-  Design §3.4 and the §11.1 pending-carry-forward set. `forms/client_intake/
-  orchestrator.py` is the executable source of truth for the mapping.
+**EspoCRM wiring — VERIFIED end-to-end against crm-test (2026-05-28).**
+A live submission created and linked all four records (Account → Contact →
+CClientProfile → CEngagement, all GET-verified 200). Local `.env` stays
+`ESPO_DRY_RUN=true`; the live test used an inline `ESPO_DRY_RUN=false` override
+on a throwaway port. Findings while wiring:
+- **Phone must be E.164** — crm-test rejects other formats with a phone "valid"
+  failure; `core/phone.to_e164` normalizes at the CRM boundary (commit 95f841c).
+- **API-user role** must grant *create* on CEngagement (was read-only until
+  granted 2026-05-28); it already had create on Account/Contact/CClientProfile.
+- **Account duplicate detection** — EspoCRM returns 409 on a same-named Account
+  and the orchestrator neither skips the check nor reuses the match, so a
+  duplicate-named business currently 502s. OPEN: decide skip-check vs reuse.
+- Mapping source of truth: `forms/client_intake/orchestrator.py`; see also
+  Technical Design §3.4 and the §11.1 pending-carry-forward set.
+
+**Open follow-ups:**
+- Make the *deployed* app write to EspoCRM: set `ESPO_DRY_RUN=false` plus
+  `ESPO_BASE_URL` + `ESPO_API_KEY` as **encrypted** App Platform env vars.
+- Resolve the Account 409 duplicate-detection behavior (above).
+- Clean up the `ZZTEST` test records left in crm-test by the wiring tests.
 
 ## Commands
 
