@@ -86,6 +86,9 @@ Local `.env` stays `ESPO_DRY_RUN=true`; live tests use an inline
 - Clean up the `ZZTEST` test records left in crm-test by the wiring tests
   (must be done in the EspoCRM UI — the intake API user is create-only and
   cannot delete; verified by 403s).
+- Evaluate an alternative deployment method (compare to / move off App Platform):
+  run the kickoff at `prompts/CLAUDE-CODE-PROMPT-deployment-method.md` — it drives
+  explore → decide-with-user → build infra + docs.
 
 ## Commands
 
