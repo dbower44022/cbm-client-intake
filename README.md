@@ -34,8 +34,10 @@ This is a multi-form app: a shared core hosts any number of intake forms.
   - `forms/client_intake/` — SCORE form 111 reconciled to the CBM model; creates
     Account + Contact + Engagement; ships the four-step wizard UI.
   - `forms/volunteer/` — SCORE form 6 (MR-APPLY); creates a single Contact
-    (Mentor). Backend only for now; UI is a follow-on.
-- `frontend/shared/` — shared assets (the CBM design tokens), served at `/shared/`.
+    (Mentor) with an optional resume upload; ships its own four-step wizard UI.
+- `frontend/shared/` — shared assets served at `/shared/`: the CBM design tokens
+  (`tokens.css`), the wizard styles (`wizard.css`), and the shared wizard
+  controller (`wizard.js`) that both forms' page scripts build on.
 - `main.py` — composition root; registers the forms.
 
 Each registered form is reachable at `POST /api/<slug>/intake`, and (if it ships
@@ -63,12 +65,14 @@ uv run pytest                    # run the test suite
 
 Create `forms/<name>/` with a `schemas.py` (extend `core.forms.BaseSubmission`),
 an `orchestrator.py` (`async def submit(sub, client) -> dict`), and an
-`__init__.py` exposing a `SPEC`. Register it in `main.py`. Add a `frontend/`
-directory and point `SPEC.frontend_dir` at it when the UI is ready.
+`__init__.py` exposing a `SPEC`. Register it in `main.py`. For a UI, add a
+`frontend/` directory (its `index.html` + `app.js` build on the shared
+`/shared/wizard.js` controller) and point `SPEC.frontend_dir` at it.
 
 > **Before going live:** the EspoCRM entity/attribute names in each form's
 > `orchestrator.py` are provisional guesses and must be reconciled against the
 > deployed instance metadata (Technical Design §3.4, §7); the §7 open issues
 > (Pre-Startup Account mapping, anti-spam provider, admin auth, host) must be
-> resolved; and the volunteer form still needs its file-upload (resume) path and
-> UI (see `score-volunteer-form-6-mapping.md`).
+> resolved; and `forms/client_intake/frontend/app.js` is still bespoke — it can
+> migrate onto the shared `wizard.js` controller (the volunteer form already
+> uses it) for full frontend reuse.

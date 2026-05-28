@@ -39,7 +39,13 @@ def _make_handler(spec: FormSpec, settings: Settings, processed: dict[str, dict]
         try:
             submission = spec.submission_model.model_validate(await request.json())
         except ValidationError as exc:
-            return JSONResponse(status_code=422, content={"detail": exc.errors()})
+            # exc.errors() can carry a raw exception in ctx (non-serializable);
+            # project to a JSON-safe shape.
+            detail = [
+                {"loc": list(e["loc"]), "msg": e["msg"], "type": e["type"]}
+                for e in exc.errors()
+            ]
+            return JSONResponse(status_code=422, content={"detail": detail})
 
         # Honeypot: acknowledge generically, do not tell a bot it was caught.
         if submission.company_url.strip():

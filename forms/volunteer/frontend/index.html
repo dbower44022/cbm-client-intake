@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cleveland Business Mentors — Volunteer / Become a Mentor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/tokens.css" />
+  <link rel="stylesheet" href="/shared/wizard.css" />
+</head>
+<body>
+  <main class="cbm-container cbm-container--narrow intake">
+    <header class="intake__header">
+      <h1>Become a Mentor</h1>
+      <p class="intake__sub">Volunteer your experience to help local small businesses succeed. This takes a few minutes.</p>
+    </header>
+
+    <ol class="wizard__progress" id="progress" aria-label="Progress">
+      <li data-step="1">About You</li>
+      <li data-step="2">Background</li>
+      <li data-step="3">Expertise</li>
+      <li data-step="4">Review &amp; Submit</li>
+    </ol>
+
+    <form id="intakeForm" novalidate>
+      <div class="hp" aria-hidden="true">
+        <label>Company URL <input type="text" name="company_url" id="company_url" tabindex="-1" autocomplete="off" /></label>
+      </div>
+
+      <!-- Step 1 — About You -->
+      <section class="step" data-step="1">
+        <h2>About You</h2>
+        <div class="grid-2">
+          <div class="cbm-field">
+            <label for="first_name">First Name <span class="cbm-required">*</span></label>
+            <input type="text" id="first_name" required />
+          </div>
+          <div class="cbm-field">
+            <label for="middle_initial">Middle Initial</label>
+            <input type="text" id="middle_initial" maxlength="1" />
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="cbm-field">
+            <label for="last_name">Last Name <span class="cbm-required">*</span></label>
+            <input type="text" id="last_name" required />
+          </div>
+          <div class="cbm-field">
+            <label for="preferred_name">Preferred Name</label>
+            <input type="text" id="preferred_name" />
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="cbm-field">
+            <label for="email">Email <span class="cbm-required">*</span></label>
+            <input type="email" id="email" required />
+          </div>
+          <div class="cbm-field">
+            <label for="confirm_email">Confirm Email <span class="cbm-required">*</span></label>
+            <input type="email" id="confirm_email" required />
+          </div>
+        </div>
+        <div class="cbm-field">
+          <label for="street">Street</label>
+          <input type="text" id="street" />
+        </div>
+        <div class="grid-2">
+          <div class="cbm-field">
+            <label for="zip_code">Zip Code <span class="cbm-required">*</span></label>
+            <input type="text" id="zip_code" inputmode="numeric" maxlength="10" required />
+          </div>
+          <div class="cbm-field">
+            <label for="phone">Phone <span class="cbm-required">*</span></label>
+            <input type="tel" id="phone" placeholder="###-###-####" required />
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="cbm-field">
+            <label for="phone_type">Phone Type</label>
+            <select id="phone_type"></select>
+          </div>
+          <div class="cbm-field">
+            <label for="contact_preference">How should we contact you?</label>
+            <select id="contact_preference"></select>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 2 — Background -->
+      <section class="step" data-step="2" hidden>
+        <h2>Background</h2>
+        <div class="cbm-field">
+          <label for="why_volunteer">Why would you like to volunteer? <span class="cbm-required">*</span></label>
+          <textarea id="why_volunteer" required></textarea>
+        </div>
+        <div class="cbm-field">
+          <label for="work_experience">Describe your work experience</label>
+          <textarea id="work_experience"></textarea>
+        </div>
+        <div class="cbm-field">
+          <label for="resume">Upload Resume <span class="cbm-help">(PDF, Word, or text — up to 5 MB)</span></label>
+          <input type="file" id="resume" accept=".pdf,.doc,.docx,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" />
+          <p class="cbm-help" id="resume_status"></p>
+        </div>
+        <div class="grid-2">
+          <div class="cbm-field">
+            <label for="currently_employed">Are you currently employed?</label>
+            <select id="currently_employed"></select>
+          </div>
+          <div class="cbm-field">
+            <label for="linkedin_profile">LinkedIn Profile</label>
+            <input type="url" id="linkedin_profile" placeholder="https://" />
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 3 — Expertise -->
+      <section class="step" data-step="3" hidden>
+        <h2>Expertise</h2>
+        <div class="cbm-field">
+          <label>Industry Experience <span class="cbm-help">(choose up to 6)</span></label>
+          <div class="checkgrid" id="industry_experience"></div>
+        </div>
+        <div class="cbm-field">
+          <label>Areas of Expertise <span class="cbm-required">*</span> <span class="cbm-help">(choose up to 6)</span></label>
+          <div class="checkgrid" id="areas_of_expertise"></div>
+        </div>
+        <div class="cbm-field">
+          <label>Fluent Languages</label>
+          <div class="checkgrid" id="fluent_languages"></div>
+        </div>
+      </section>
+
+      <!-- Step 4 — Review & Submit -->
+      <section class="step" data-step="4" hidden>
+        <h2>Review &amp; Submit</h2>
+        <div class="review" id="review"></div>
+        <div class="cbm-field">
+          <label for="how_did_you_hear">How did you hear about SCORE?</label>
+          <select id="how_did_you_hear"></select>
+        </div>
+        <div class="cbm-field">
+          <label for="felony_conviction">Have you ever been convicted of a felony?</label>
+          <select id="felony_conviction"><option value="">Please select…</option><option value="No">No</option><option value="Yes">Yes</option></select>
+        </div>
+        <div class="cbm-field cbm-field--check">
+          <label><input type="checkbox" id="terms_accepted" required /> I have read and agree to the Code of Conduct, Terms of Use, and Privacy Policy. <span class="cbm-required">*</span></label>
+        </div>
+      </section>
+
+      <p class="form-error" id="formError" role="alert" hidden></p>
+
+      <div class="wizard__nav">
+        <button type="button" class="cbm-button cbm-button--secondary" id="backBtn" hidden>Back</button>
+        <button type="button" class="cbm-button" id="nextBtn">Next</button>
+        <button type="submit" class="cbm-button" id="submitBtn" hidden>Submit Application</button>
+      </div>
+    </form>
+
+    <section class="confirmation" id="confirmation" hidden>
+      <h2>Thank you!</h2>
+      <p>Your volunteer application has been received. A member of the Cleveland Business Mentors team will be in touch.</p>
+    </section>
+  </main>
+
+  <script src="/shared/wizard.js"></script>
+  <script src="options.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

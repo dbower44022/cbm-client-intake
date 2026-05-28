@@ -96,10 +96,14 @@ fields pending a value-list decision.
 - Fluent Languages: confirm against canonical `fluentLanguages` (36-value) list.
 
 ## 5. New capabilities this form needs (that form 111 did not)
-1. **File upload** (resume + additional files) → EspoCRM Attachment API + an
-   attachment-field link on Contact. The current proxy has no upload path.
-2. **"Choose up to N" multi-select** with a max-selection constraint (max 6).
-3. **Progressive disclosure within a field** (Fluent Languages "Show More").
+1. **File upload** (resume) → ✅ **implemented**: `core.espo.upload_attachment`
+   (EspoCRM Attachment API), wired in the volunteer orchestrator (uploads then
+   links via `cResume`Ids). The frontend reads the file to base64 with a 5 MB cap
+   and an allowed-type list. *Additional* files beyond the first remain deferred.
+2. **"Choose up to N" multi-select** (max 6) → ✅ implemented: enforced client-side
+   (boxes disable at the cap) and validated server-side (`max_length=6`).
+3. **Progressive disclosure within a field** (Fluent Languages "Show More") — the
+   UI shows the full language list directly; a "show more" affordance is optional.
 
 ## 6. Architecture implications (for the multi-form decision)
 - **Same machinery, different mapping.** Form 6 reuses every shared piece — proxy,
@@ -107,8 +111,10 @@ fields pending a value-list decision.
   orchestration is *one* Contact create, versus form 111's three-record sequence.
   This is the clearest argument for **shared core + per-form mapping module**: the
   per-form code is a schema + an entity-mapping, nothing else.
-- **The core must grow a file-upload primitive** to serve this form — a shared
-  capability, written once, reused by any future form that takes documents.
+- **The core grew a file-upload primitive** to serve this form — `upload_attachment`
+  now lives in the shared EspoCRM client, written once and reusable by any future
+  form that takes documents. (Architecture test: passed — the new shared capability
+  slotted into the core without touching client-intake.)
 - **Value-list reconciliation is per-form upstream work** regardless of code
   structure; both forms hit the same NAICS / focus-area / how-heard lists, so a
   shared options module (sourced from canonical lists) avoids duplicating them.

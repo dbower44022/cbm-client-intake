@@ -9,13 +9,34 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-from pydantic import EmailStr, Field, model_validator
+from pydantic import BaseModel, EmailStr, Field, model_validator
 
 from core.forms import BaseSubmission
 
 PhoneType = Literal["Mobile", "Home", "Work"]
 ContactPreference = Literal["Email", "Phone", "Text", "No Preference"]
 EmploymentStatus = Literal["Yes, Full-time", "Yes, Part-time", "No"]
+
+# ~5 MB file ≈ 6.8 MB base64; cap a little above that.
+MAX_RESUME_B64_CHARS = 7_000_000
+ALLOWED_RESUME_TYPES = {
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "text/plain",
+}
+
+
+class ResumeUpload(BaseModel):
+    filename: str = Field(min_length=1, max_length=255)
+    content_type: str
+    data_base64: str = Field(min_length=1, max_length=MAX_RESUME_B64_CHARS)
+
+    @model_validator(mode="after")
+    def _check_type(self) -> "ResumeUpload":
+        if self.content_type not in ALLOWED_RESUME_TYPES:
+            raise ValueError(f"unsupported resume type: {self.content_type}")
+        return self
 
 
 class VolunteerApplication(BaseSubmission):
@@ -35,6 +56,7 @@ class VolunteerApplication(BaseSubmission):
     # Motivation & background
     why_volunteer: str = Field(min_length=1)
     work_experience: Optional[str] = None
+    resume: Optional[ResumeUpload] = None
     currently_employed: Optional[EmploymentStatus] = None
     linkedin_profile: Optional[str] = None
 

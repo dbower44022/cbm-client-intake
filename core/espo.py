@@ -29,6 +29,15 @@ class EspoApi(Protocol):
     async def find_one(
         self, entity: str, attribute: str, value: str
     ) -> Optional[dict[str, Any]]: ...
+    async def upload_attachment(
+        self,
+        *,
+        filename: str,
+        content_type: str,
+        data_base64: str,
+        related_type: str,
+        field: str,
+    ) -> str: ...
 
 
 class EspoClient:
@@ -69,6 +78,35 @@ class EspoClient:
         rows = resp.json().get("list") or []
         return rows[0] if rows else None
 
+    async def upload_attachment(
+        self,
+        *,
+        filename: str,
+        content_type: str,
+        data_base64: str,
+        related_type: str,
+        field: str,
+    ) -> str:
+        # EspoCRM expects the file as a data URL; the attachment is bound to the
+        # target entity/field so it links when the record is created.
+        body = {
+            "name": filename,
+            "type": content_type,
+            "role": "Attachment",
+            "relatedType": related_type,
+            "field": field,
+            "file": f"data:{content_type};base64,{data_base64}",
+        }
+        async with httpx.AsyncClient(timeout=self._timeout) as client:
+            resp = await client.post(
+                f"{self._base}/Attachment", json=body, headers=self._headers
+            )
+        if resp.status_code >= 400:
+            raise EspoError(
+                f"upload attachment failed: HTTP {resp.status_code} {resp.text[:300]}"
+            )
+        return resp.json()["id"]
+
 
 class DryRunEspoClient:
     """No-op client for local development; never contacts EspoCRM."""
@@ -87,3 +125,20 @@ class DryRunEspoClient:
     ) -> Optional[dict[str, Any]]:
         log.info("DRY_RUN find_one %s %s=%s -> None", entity, attribute, value)
         return None
+
+    async def upload_attachment(
+        self,
+        *,
+        filename: str,
+        content_type: str,
+        data_base64: str,
+        related_type: str,
+        field: str,
+    ) -> str:
+        self._counter += 1
+        fake_id = f"dryrun-attachment-{self._counter:04d}"
+        log.info(
+            "DRY_RUN upload_attachment %s (%s, %d b64 chars) -> %s for %s.%s",
+            filename, content_type, len(data_base64), fake_id, related_type, field,
+        )
+        return fake_id

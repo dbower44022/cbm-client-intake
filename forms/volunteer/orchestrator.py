@@ -38,6 +38,8 @@ C_HOW_HEARD = "cHowDidYouHearAboutCbm"
 C_FELONY = "felonyConvictionDisclosure"
 C_TERMS = "termsAndConditionsAccepted"
 C_APPLICANT_SINCE = "cApplicantSinceTimestamp"
+# Attachment-multiple field that holds the resume on the Contact (CONFIRM).
+C_RESUME_FIELD = "cResume"
 
 MENTOR = "Mentor"
 MENTOR_STATUS_SUBMITTED = "Submitted"
@@ -86,6 +88,18 @@ async def submit_application(sub: VolunteerApplication, client: EspoApi) -> dict
         payload[C_LANGUAGES] = sub.fluent_languages
     if sub.how_did_you_hear:
         payload[C_HOW_HEARD] = sub.how_did_you_hear
+
+    # Resume: upload as an Attachment bound to the Contact's resume field, then
+    # reference it by id on the create (attachment-multiple -> "<field>Ids").
+    if sub.resume is not None:
+        attachment_id = await client.upload_attachment(
+            filename=sub.resume.filename,
+            content_type=sub.resume.content_type,
+            data_base64=sub.resume.data_base64,
+            related_type=CONTACT,
+            field=C_RESUME_FIELD,
+        )
+        payload[f"{C_RESUME_FIELD}Ids"] = [attachment_id]
 
     created = await client.create(CONTACT, payload)
     return {"contactId": created["id"]}

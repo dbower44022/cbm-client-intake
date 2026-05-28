@@ -11,6 +11,7 @@ from forms.volunteer.schemas import VolunteerApplication
 class CapturingClient:
     def __init__(self, existing_contact=None):
         self.creates: list[tuple[str, dict]] = []
+        self.uploads: list[dict] = []
         self._existing_contact = existing_contact
         self._n = 0
 
@@ -23,6 +24,13 @@ class CapturingClient:
         if entity == CONTACT and self._existing_contact:
             return {"id": self._existing_contact}
         return None
+
+    async def upload_attachment(self, *, filename, content_type, data_base64, related_type, field):
+        self._n += 1
+        self.uploads.append(
+            {"filename": filename, "related_type": related_type, "field": field}
+        )
+        return f"attachment-{self._n}"
 
 
 def _application(**overrides) -> VolunteerApplication:
@@ -73,3 +81,39 @@ async def test_max_six_areas_enforced():
 async def test_terms_required():
     with pytest.raises(ValueError):
         _application(terms_accepted=False)
+
+
+async def test_resume_uploaded_and_attached():
+    client = CapturingClient()
+    sub = _application(
+        resume={
+            "filename": "resume.pdf",
+            "content_type": "application/pdf",
+            "data_base64": "aGVsbG8=",
+        }
+    )
+    await submit_application(sub, client)
+
+    assert len(client.uploads) == 1
+    assert client.uploads[0]["related_type"] == CONTACT
+    _, payload = client.creates[0]
+    assert payload["cResumeIds"] == ["attachment-1"]
+
+
+async def test_unsupported_resume_type_rejected():
+    with pytest.raises(ValueError):
+        _application(
+            resume={
+                "filename": "malware.exe",
+                "content_type": "application/x-msdownload",
+                "data_base64": "AAAA",
+            }
+        )
+
+
+async def test_no_resume_means_no_upload():
+    client = CapturingClient()
+    await submit_application(_application(), client)
+    assert client.uploads == []
+    _, payload = client.creates[0]
+    assert "cResumeIds" not in payload
