@@ -8,8 +8,8 @@
 | Document | Requirements Specification |
 | Project | CBM Client Intake Application |
 | Status | Draft |
-| Version | 0.3 |
-| Last Updated | 05-28-26 10:20 |
+| Version | 0.4 |
+| Last Updated | 05-28-26 10:30 |
 | Owner | David Bower |
 
 ### Change Log
@@ -19,6 +19,7 @@
 | 0.1 | 05-28-26 01:32 | Claude (scaffold) | Initial scaffold. Document control, change log, and the approved section structure established. Upstream sources cited at their current versions. Context overview and known open issues seeded. Design-dependent sections (form flow, field specification, branching logic, validation, integration requirements) left as placeholders pending the canonical data extraction and the branching design. |
 | 0.2 | 05-28-26 10:02 | Claude (edit) | Corrected upstream version citations to the versions current on main (MN-INTAKE v2.7, Account Entity PRD v1.9, Engagement Entity PRD v1.3; Contact Entity PRD v1.7 unchanged). Reworded the carry-forward follow-on to be version-agnostic, since MN-INTAKE has advanced past the originally assumed v2.6. |
 | 0.3 | 05-28-26 10:20 | Claude (edit) | Wrote finished content for Section 4 (form flow), Section 5 (field specification, reconciled to MN-INTAKE v2.7 and the Contact/Account/Engagement Entity PRDs), and Section 6 (branching logic). Added Section 11 carry-forward register and open-decisions list. Reflects the approved reconciliation: canonical multi-select mentoring areas, two-level NAICS, Business Stage as required field and branch trigger, how-did-you-hear mapped to the canonical 8-value list, kept SCORE-only fields (terms, marketing consent, meeting/notification preference, year formed, number of employees), dropped fields (referrer, workshop/event, schedule-now), and deferred Requested Mentor. |
+| 0.4 | 05-28-26 10:30 | Claude (edit) | Resolved the presentation-model open decision (§11.2): the intake is a **multi-step wizard** with one logical group per step. Rewrote Section 4 to describe the four-step flow and the placement of the Business-Stage branch within the business step. Field set and branching rules unchanged. |
 
 ---
 
@@ -73,11 +74,16 @@ The application is a satellite of the system of record. It does not maintain a p
 
 ## 4. User Experience and Form Flow
 
-The intake is presented as a single guided form that adapts to the applicant's answers. Most questions are always shown. One answer changes what follows: the applicant's Business Stage determines whether the business-profile questions are presented (see Section 6).
+The intake is presented as a **multi-step wizard** that adapts to the applicant's answers. Each step collects one logical group of questions; the applicant advances step by step, with the ability to move back, and submits from the final step. Most questions are always shown. One answer changes what follows: the applicant's Business Stage determines whether the business-profile questions are presented within the business step (see Section 6).
 
-The logical order of the form is: applicant identity (name, email, phone, zip code), how the applicant heard about CBM, communication preferences (meeting and notification), the mentoring request (areas of mentoring and a free-text description of needs), the Business Stage, the business-profile questions (shown only when applicable), and finally marketing consent and terms acceptance.
+The wizard has four steps, in this order:
 
-**Pending decision — presentation model.** Whether this is delivered as one scrolling page with progressive reveal, or as a multi-step wizard with one logical group per step, is an open user-experience decision recorded in Section 11. The field set and the branching rules below are independent of that choice.
+1. **About You** — applicant identity (first name, last name, email, confirm email, phone, zip code) and how the applicant heard about CBM.
+2. **Your Mentoring Request** — communication preferences (meeting and notification) and the mentoring request itself (areas of mentoring and a free-text description of needs).
+3. **Your Business** — Business Stage (always shown). When Business Stage is not Pre-Startup, the business-profile questions (business name, website, industry sector and subsector, year formed, number of employees) appear within this step; when it is Pre-Startup, the step contains only the Business Stage question.
+4. **Review and Submit** — marketing consent and terms acceptance, with a read-back summary of the entered answers, and the submit action.
+
+Step boundaries are an experience decision and may be re-grouped without affecting the field set or the branching rules in Section 6, both of which are independent of how the steps are divided. A progress indicator showing the current step out of four is expected; its exact form is a design-time detail.
 
 ---
 
@@ -202,7 +208,7 @@ Several decisions in this specification require fields or acknowledgments to be 
 
 | Decision | Description | Status |
 |---|---|---|
-| Presentation model | Single scrolling page with progressive reveal, or a multi-step wizard (Section 4) | Open |
+| Presentation model | Single scrolling page with progressive reveal, or a multi-step wizard (Section 4) | **Resolved 05-28-26 — multi-step wizard** (four steps; see Section 4) |
 | BR-1 threshold | Confirm that Pre-Startup is the correct cut-off for hiding the business-profile block (Section 6) | Open — draft is Pre-Startup hides, all other stages show |
 
 ---
