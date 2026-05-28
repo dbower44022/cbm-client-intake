@@ -59,17 +59,35 @@ CLIENT = "Client"
 STATUS_SUBMITTED = "Submitted"
 
 
-async def _create_account(sub: IntakeSubmission, client: EspoApi) -> str:
-    """Create the client Account and return its id.
+async def _find_or_create_account(sub: IntakeSubmission, client: EspoApi) -> str:
+    """Find-or-create the client Account by name and return its id.
+
+    Reusing a same-named Account dedupes repeat submitters and avoids EspoCRM's
+    duplicate-detection 409, which would otherwise fail the whole submission.
+    Name matching is deliberately simple (exact, case-insensitive via the DB
+    collation), aligning with EspoCRM's own name-based duplicate check; distinct
+    businesses sharing a name collapse to one Account — acceptable for intake
+    capture, split by admins downstream if ever needed.
 
     Pre-Startup submissions collect no business profile; the Account is created
     with a placeholder name (Account creation precedence ladder — OPEN, TD §7).
     """
-    payload: dict = {A_COMPANY_TYPE: [CLIENT], A_BUSINESS_STAGE: sub.business_stage}
     if sub.business_stage == "Pre-Startup":
-        payload["name"] = f"{sub.first_name} {sub.last_name} (Pre-Startup)"
+        name = f"{sub.first_name} {sub.last_name} (Pre-Startup)"
     else:
-        payload["name"] = sub.business_name or f"{sub.first_name} {sub.last_name}"
+        name = sub.business_name or f"{sub.first_name} {sub.last_name}"
+
+    existing = await client.find_one(ACCOUNT, "name", name)
+    if existing:
+        log.info("matched existing Account %s for %r", existing["id"], name)
+        return existing["id"]
+
+    payload: dict = {
+        "name": name,
+        A_COMPANY_TYPE: [CLIENT],
+        A_BUSINESS_STAGE: sub.business_stage,
+    }
+    if sub.business_stage != "Pre-Startup":
         if sub.business_website:
             payload["website"] = sub.business_website
         if sub.industry_sector:
@@ -137,7 +155,7 @@ async def submit_intake(sub: IntakeSubmission, client: EspoApi) -> dict[str, str
     routes to the failed-submission store (Technical Design §4.3); already-created
     records are valid canonical data and are not deleted.
     """
-    account_id = await _create_account(sub, client)
+    account_id = await _find_or_create_account(sub, client)
     contact_id = await _find_or_create_contact(sub, client, account_id)
     client_profile_id = await _create_client_profile(sub, client, account_id, contact_id)
     engagement_id = await _create_engagement(sub, client, client_profile_id, contact_id)

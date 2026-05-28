@@ -17,9 +17,10 @@ from forms.client_intake.schemas import IntakeSubmission
 class CapturingClient:
     """Fake EspoApi that records create calls and returns sequential ids."""
 
-    def __init__(self, existing_contact=None):
+    def __init__(self, existing_contact=None, existing_account=None):
         self.creates: list[tuple[str, dict]] = []
         self._existing_contact = existing_contact
+        self._existing_account = existing_account
         self._n = 0
 
     async def create(self, entity, payload):
@@ -30,6 +31,8 @@ class CapturingClient:
     async def find_one(self, entity, attribute, value):
         if entity == CONTACT and self._existing_contact:
             return {"id": self._existing_contact}
+        if entity == ACCOUNT and self._existing_account:
+            return {"id": self._existing_account}
         return None
 
 
@@ -97,6 +100,21 @@ async def test_matched_contact_is_reused_not_created():
     entities = [e for e, _ in client.creates]
     assert CONTACT not in entities  # contact reused, not created
     assert entities == [ACCOUNT, CLIENT_PROFILE, ENGAGEMENT]
+
+
+async def test_matched_account_is_reused_not_created():
+    client = CapturingClient(existing_account="acct-existing")
+    ids = await submit_intake(_submission(), client)
+
+    assert ids["accountId"] == "acct-existing"
+    entities = [e for e, _ in client.creates]
+    assert ACCOUNT not in entities  # account reused, not created
+    assert entities == [CONTACT, CLIENT_PROFILE, ENGAGEMENT]
+
+    _, contact_payload = client.creates[0]
+    assert contact_payload["accountId"] == "acct-existing"
+    _, profile_payload = client.creates[1]
+    assert profile_payload["linkedCompanyId"] == "acct-existing"
 
 
 async def test_pre_startup_creates_placeholder_account_without_profile():
