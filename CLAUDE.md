@@ -47,11 +47,22 @@ records are created**.
 3. Verify `/healthz`, `/client-intake/`, `/volunteer/` at the
    `…ondigitalocean.app` URL; share it for feedback.
 
-**EspoCRM wiring — VERIFIED end-to-end against crm-test (2026-05-28).**
-A live submission created and linked all four records (Account → Contact →
-CClientProfile → CEngagement, all GET-verified 200). Local `.env` stays
-`ESPO_DRY_RUN=true`; the live test used an inline `ESPO_DRY_RUN=false` override
-on a throwaway port. Findings while wiring:
+**EspoCRM wiring — BOTH forms VERIFIED end-to-end against crm-test (2026-05-28).**
+- **client-intake**: created/linked Account → Contact → CClientProfile →
+  CEngagement (all GET-verified 200).
+- **volunteer**: created/linked Contact (`cContactType=["Mentor"]`) → CMentorProfile
+  (`contactRecord` link), data verified on the records. The orchestrator was
+  rewritten (commit 95765e4) from its wrong flat-Contact model to the deployed
+  Contact+CMentorProfile model — mentor data lives on CMentorProfile, not flat
+  Contact fields. Mapping decisions: mentorStatus=`Candidate`, mentorType=`Mentor`,
+  multi-select industry → first `industrySector` only (single enum; multi-store
+  deferred), terms_accepted → `termsAccepted`. **Deferred:** resume upload (no
+  attachment field deployed), `currently_employed`/`contact_preference`/`phone_type`
+  (no target field). The volunteer mapping doc `score-volunteer-form-6-mapping.md`
+  is now STALE (describes the old flat-Contact model) — orchestrator is the truth.
+
+Local `.env` stays `ESPO_DRY_RUN=true`; live tests use an inline
+`ESPO_DRY_RUN=false` override on a throwaway port. Findings while wiring:
 - **Phone must be E.164** — crm-test rejects other formats with a phone "valid"
   failure; `core/phone.to_e164` normalizes at the CRM boundary (commit 95f841c).
 - **API-user role** must grant *create* on CEngagement (was read-only until
