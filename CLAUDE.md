@@ -47,23 +47,30 @@ was **tested locally and verified**: `docker build`/`run` → `/healthz` is
 `POST /api/volunteer/intake` returns synthetic ids (no CRM call) and is
 idempotent on token re-submit, `pytest` 17 passing.
 
-**Resume point — run the live dry-run deploy.** `DEPLOYMENT.md` is the full
-runbook: prerequisites, deploy, going-live, **custom domain**, **reproduce in
-production from scratch**, verification, rollback, troubleshooting.
-1. **Blocker (needs Doug's DO account):** `doctl` is **not installed** on this
-   machine, and the GitHub repo must be connected to App Platform once in the
-   DO console. These are the only steps Claude can't do — they need Doug's
-   credentials. See `DEPLOYMENT.md` Prerequisites.
-2. **Deploy:** `./scripts/deploy.sh` — idempotent; deploys **dry-run**
-   (`ESPO_DRY_RUN=true`, no EspoCRM writes). It now has a **safety guard** that
-   refuses to update a *live* app (would revert it to dry-run + drop secrets);
-   override with `ALLOW_LIVE_UPDATE=1` only when intended.
-3. Verify `/healthz`, `/client-intake/`, `/volunteer/` at the
-   `…ondigitalocean.app` URL; share it for feedback.
-4. To write to EspoCRM: set `ESPO_DRY_RUN=false` + `ESPO_BASE_URL` +
+**LIVE on App Platform in dry-run (2026-05-28).** `./scripts/deploy.sh` created
+the app and the deploy was verified live: all forms 200 over managed HTTPS,
+`/healthz` `dryRun:true`, valid auto-provisioned TLS cert.
+- **App ID:** `509b4370-b9ca-42c7-b251-04d6820fe88e`
+- **URL:** https://cbm-client-intake-svxs3.ondigitalocean.app
+  (`/client-intake/`, `/volunteer/`)
+- **DO account:** `admin@cbmentors.org`. `doctl` is now installed
+  (`~/.local/bin`, v1.160.0) and the GitHub repo is connected to App Platform.
+- Manage: `doctl apps logs 509b4370-b9ca-42c7-b251-04d6820fe88e --type run -f`;
+  `git push` auto-redeploys (preserves env). Tear down if needed:
+  `doctl apps delete 509b4370-b9ca-42c7-b251-04d6820fe88e`.
+
+**Resume point — gather feedback, then go live.** `DEPLOYMENT.md` is the full
+runbook: deploy, going-live, **custom domain**, **reproduce in production from
+scratch**, verification, rollback, troubleshooting.
+1. Share the URL above for feedback (dry-run: submissions validated + logged,
+   **no records created** — and not persisted beyond runtime logs).
+2. To write to EspoCRM: set `ESPO_DRY_RUN=false` + `ESPO_BASE_URL` +
    `ESPO_API_KEY` as **encrypted** env vars (console or a gitignored
-   `.do/app.prod.yaml` overlay) — **not** by re-running `deploy.sh`. See
-   `DEPLOYMENT.md` "Going live".
+   `.do/app.prod.yaml` overlay) — **not** by re-running `deploy.sh` (its safety
+   guard now refuses to update a live app; `ALLOW_LIVE_UPDATE=1` overrides).
+   See `DEPLOYMENT.md` "Going live".
+3. For a separate **production** app (vs. flipping this feedback app), follow
+   `DEPLOYMENT.md` "Reproduce the deployment in production".
 
 **EspoCRM wiring — BOTH forms VERIFIED end-to-end against crm-test (2026-05-28).**
 - **client-intake**: created/linked Account → Contact → CClientProfile →
