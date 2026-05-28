@@ -1,0 +1,76 @@
+/* Wizard-specific styles, layered on the CBM design tokens (tokens.css). */
+
+* { box-sizing: border-box; }
+body { margin: 0; padding: 2rem 0 4rem; }
+
+.intake { padding-top: 1rem; padding-bottom: 1rem; }
+.intake__header { text-align: center; margin-bottom: 1.5rem; }
+.intake__header h1 { font-size: 2.25rem; }
+.intake__sub { color: var(--cbm-text); margin: 0 auto; max-width: 36rem; }
+
+/* Progress indicator */
+.wizard__progress {
+  list-style: none; display: flex; gap: 0.5rem; padding: 0; margin: 0 0 2rem;
+  counter-reset: step;
+}
+.wizard__progress li {
+  flex: 1; text-align: center; font-size: var(--cbm-text-sm); font-weight: 600;
+  color: var(--cbm-border); padding-top: 2.4rem; position: relative; line-height: 1.2;
+}
+.wizard__progress li::before {
+  counter-increment: step; content: counter(step);
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 2rem; height: 2rem; border-radius: 50%;
+  background: var(--cbm-surface); color: var(--cbm-border);
+  display: flex; align-items: center; justify-content: center; font-weight: 700;
+  border: 2px solid var(--cbm-border);
+}
+.wizard__progress li.is-active { color: var(--cbm-navy); }
+.wizard__progress li.is-active::before {
+  background: var(--cbm-gold); color: #fff; border-color: var(--cbm-gold);
+}
+.wizard__progress li.is-done { color: var(--cbm-navy); }
+.wizard__progress li.is-done::before {
+  background: var(--cbm-navy); color: #fff; border-color: var(--cbm-navy);
+}
+
+/* Steps */
+.step h2 { margin-top: 0; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1.25rem; }
+@media (max-width: 560px) { .grid-2 { grid-template-columns: 1fr; } }
+
+/* Checkbox grid for multi-select focus areas */
+.checkgrid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.4rem 1.25rem;
+  border: 1px solid var(--cbm-border); border-radius: var(--cbm-radius);
+  padding: 1rem; max-height: 16rem; overflow-y: auto;
+}
+@media (max-width: 560px) { .checkgrid { grid-template-columns: 1fr; } }
+.checkgrid label { font-weight: 400; color: var(--cbm-slate-900); display: flex; gap: 0.5rem; align-items: flex-start; }
+.checkgrid input { margin-top: 0.2rem; }
+
+.cbm-field--check label { font-weight: 400; color: var(--cbm-slate-900); display: flex; gap: 0.5rem; align-items: flex-start; }
+
+/* Navigation */
+.wizard__nav { display: flex; justify-content: space-between; gap: 1rem; margin-top: 2rem; }
+.wizard__nav .cbm-button { min-width: 9rem; }
+#nextBtn, #submitBtn { margin-left: auto; }
+
+/* Review list */
+.review { border: 1px solid var(--cbm-border); border-radius: var(--cbm-radius); padding: 1rem 1.25rem; margin-bottom: 1.5rem; }
+.review dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 0.4rem 1rem; }
+.review dt { font-weight: 600; color: var(--cbm-slate-700); }
+.review dd { margin: 0; color: var(--cbm-slate-900); }
+
+/* Errors */
+.form-error { color: var(--cbm-danger); font-weight: 600; margin-top: 1rem; }
+.cbm-field input:invalid.touched, .cbm-field select:invalid.touched, .cbm-field textarea:invalid.touched {
+  border-color: var(--cbm-danger);
+}
+
+/* Honeypot — keep it out of view and out of the tab order */
+.hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+
+/* Confirmation */
+.confirmation { text-align: center; padding: 3rem 1rem; }
+.confirmation h2 { color: var(--cbm-navy); }

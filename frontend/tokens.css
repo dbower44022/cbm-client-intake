@@ -1,0 +1,160 @@
+/*
+ * CBM design tokens — extracted from the Cleveland Business Mentors
+ * staging site (cbmentostagdev.wpenginepowered.com), which runs
+ * WordPress + Astra theme + Elementor. Values pulled from the
+ * Elementor global kit (--e-global-color-*, --e-global-typography-*)
+ * and Astra theme variables on 2026-05-28.
+ *
+ * Framework-agnostic: these CSS custom properties work in plain HTML,
+ * React, Vue, etc. Use as the single source of truth for the rebuilt
+ * (Approach B) intake form so it faithfully matches the site's look.
+ */
+
+:root {
+  /* --- Brand palette --- */
+  --cbm-navy: #173B60;        /* primary — headings, primary brand */
+  --cbm-gold: #CB963B;        /* secondary — buttons, key accents */
+  --cbm-text: #7A7A7A;        /* default body text */
+  --cbm-green: #61CE70;       /* accent — use sparingly */
+
+  /* --- Neutrals / system (Astra) --- */
+  --cbm-blue: #046BD2;
+  --cbm-blue-dark: #045CB4;
+  --cbm-slate-900: #1E293B;
+  --cbm-slate-700: #334155;
+  --cbm-white: #FFFFFF;
+  --cbm-surface: #F0F5FA;     /* light section background */
+  --cbm-ink: #111111;         /* near-black headings on light */
+  --cbm-border: #D1D5DB;
+
+  /* status colors (Astra/Bootstrap-derived, used on alerts) */
+  --cbm-info: #5BC0DE;
+  --cbm-success: #5CB85C;
+  --cbm-warning: #F0AD4E;
+  --cbm-danger: #D9534F;
+
+  /* --- Typography --- */
+  --cbm-font-heading: "Roboto", system-ui, -apple-system, sans-serif;
+  --cbm-font-body:    "Roboto", system-ui, -apple-system, sans-serif;
+  --cbm-font-serif:   "Roboto Slab", Georgia, serif;
+  --cbm-font-button:  "Roboto", system-ui, -apple-system, sans-serif;
+
+  --cbm-fw-heading: 600;
+  --cbm-fw-body: 400;
+  --cbm-fw-serif: 400;
+  --cbm-fw-button: 500;
+
+  /* type scale (desktop, from rendered page) */
+  --cbm-h1: 50px;
+  --cbm-h2: 41px;
+  --cbm-h3: 25px;
+  --cbm-h4: 24px;
+  --cbm-h5: 20px;
+  --cbm-h6: 16px;
+  --cbm-text-base: 16px;
+  --cbm-text-sm: 14px;
+  --cbm-line: 1.6;
+
+  /* --- Layout --- */
+  --cbm-container: 1200px;
+  --cbm-container-narrow: 750px;   /* good width for a form column */
+  --cbm-container-pad: 2.5rem;
+  --cbm-radius: 5px;
+
+  /* --- Buttons (gold, radius 5px, ~15px 30px) --- */
+  --cbm-btn-bg: var(--cbm-gold);
+  --cbm-btn-bg-hover: #b8842f;     /* gold, darkened ~10% */
+  --cbm-btn-color: var(--cbm-white);
+  --cbm-btn-radius: 5px;
+  --cbm-btn-pad-y: 15px;
+  --cbm-btn-pad-x: 30px;
+  --cbm-btn-font-size: 16px;
+}
+
+/* --- Base elements --- */
+body {
+  font-family: var(--cbm-font-body);
+  font-weight: var(--cbm-fw-body);
+  font-size: var(--cbm-text-base);
+  line-height: var(--cbm-line);
+  color: var(--cbm-text);
+  background: var(--cbm-white);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--cbm-font-heading);
+  font-weight: var(--cbm-fw-heading);
+  color: var(--cbm-navy);
+  line-height: 1.2;
+  margin: 0 0 0.5em;
+}
+h1 { font-size: var(--cbm-h1); }
+h2 { font-size: var(--cbm-h2); }
+h3 { font-size: var(--cbm-h3); }
+h4 { font-size: var(--cbm-h4); }
+h5 { font-size: var(--cbm-h5); }
+h6 { font-size: var(--cbm-h6); }
+
+a { color: var(--cbm-blue); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* --- Button --- */
+.cbm-button {
+  display: inline-block;
+  font-family: var(--cbm-font-button);
+  font-weight: var(--cbm-fw-button);
+  font-size: var(--cbm-btn-font-size);
+  line-height: 1;
+  color: var(--cbm-btn-color);
+  background-color: var(--cbm-btn-bg);
+  border: none;
+  border-radius: var(--cbm-btn-radius);
+  padding: var(--cbm-btn-pad-y) var(--cbm-btn-pad-x);
+  text-align: center;
+  cursor: pointer;
+  transition: background-color .2s ease;
+}
+.cbm-button:hover { background-color: var(--cbm-btn-bg-hover); }
+.cbm-button--secondary {
+  background-color: var(--cbm-navy);
+}
+.cbm-button--secondary:hover { background-color: #0f2942; }
+
+/* --- Layout helpers --- */
+.cbm-container { max-width: var(--cbm-container); margin: 0 auto; padding: 0 var(--cbm-container-pad); }
+.cbm-container--narrow { max-width: var(--cbm-container-narrow); }
+
+/* --- Form controls (matched to the site's neutral/border tokens) --- */
+.cbm-field { margin-bottom: 1.25rem; }
+.cbm-field label {
+  display: block;
+  font-weight: 600;
+  color: var(--cbm-slate-900);
+  margin-bottom: 0.4rem;
+}
+.cbm-field .cbm-required { color: var(--cbm-danger); }
+.cbm-field input[type="text"],
+.cbm-field input[type="email"],
+.cbm-field input[type="tel"],
+.cbm-field input[type="number"],
+.cbm-field select,
+.cbm-field textarea {
+  width: 100%;
+  font-family: var(--cbm-font-body);
+  font-size: var(--cbm-text-base);
+  color: var(--cbm-slate-900);
+  background: var(--cbm-white);
+  border: 1px solid var(--cbm-border);
+  border-radius: var(--cbm-radius);
+  padding: 12px 14px;
+  box-sizing: border-box;
+}
+.cbm-field textarea { min-height: 120px; resize: vertical; }
+.cbm-field input:focus,
+.cbm-field select:focus,
+.cbm-field textarea:focus {
+  outline: none;
+  border-color: var(--cbm-navy);
+  box-shadow: 0 0 0 3px rgba(23, 59, 96, 0.12);
+}
+.cbm-field .cbm-help { font-size: var(--cbm-text-sm); color: var(--cbm-text); margin-top: 0.3rem; }

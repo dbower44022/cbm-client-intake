@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cleveland Business Mentors — Request a Mentor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="cbm-container cbm-container--narrow intake">
+    <header class="intake__header">
+      <h1>Request a Mentor</h1>
+      <p class="intake__sub">Tell us about you and your business, and what you'd like help with. It takes a few minutes.</p>
+    </header>
+
+    <!-- Progress -->
+    <ol class="wizard__progress" id="progress" aria-label="Progress">
+      <li data-step="1">About You</li>
+      <li data-step="2">Your Mentoring Request</li>
+      <li data-step="3">Your Business</li>
+      <li data-step="4">Review &amp; Submit</li>
+    </ol>
+
+    <form id="intakeForm" novalidate>
+      <!-- Honeypot: visually hidden, must stay empty -->
+      <div class="hp" aria-hidden="true">
+        <label>Company URL <input type="text" name="company_url" id="company_url" tabindex="-1" autocomplete="off" /></label>
+      </div>
+
+      <!-- Step 1 — About You -->
+      <section class="step" data-step="1">
+        <h2>About You</h2>
+        <div class="grid-2">
+          <div class="cbm-field">
+            <label for="first_name">First Name <span class="cbm-required">*</span></label>
+            <input type="text" id="first_name" name="first_name" required />
+          </div>
+          <div class="cbm-field">
+            <label for="last_name">Last Name <span class="cbm-required">*</span></label>
+            <input type="text" id="last_name" name="last_name" required />
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="cbm-field">
+            <label for="email">Email Address <span class="cbm-required">*</span></label>
+            <input type="email" id="email" name="email" required />
+          </div>
+          <div class="cbm-field">
+            <label for="confirm_email">Confirm Email <span class="cbm-required">*</span></label>
+            <input type="email" id="confirm_email" name="confirm_email" required />
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="cbm-field">
+            <label for="phone">Phone Number <span class="cbm-required">*</span></label>
+            <input type="tel" id="phone" name="phone" placeholder="###-###-####" required />
+          </div>
+          <div class="cbm-field">
+            <label for="zip_code">Zip Code <span class="cbm-required">*</span></label>
+            <input type="text" id="zip_code" name="zip_code" inputmode="numeric" maxlength="10" required />
+          </div>
+        </div>
+        <div class="cbm-field">
+          <label for="how_did_you_hear">How did you hear about CBM?</label>
+          <select id="how_did_you_hear" name="how_did_you_hear"></select>
+        </div>
+      </section>
+
+      <!-- Step 2 — Your Mentoring Request -->
+      <section class="step" data-step="2" hidden>
+        <h2>Your Mentoring Request</h2>
+        <div class="cbm-field">
+          <label>Area(s) of Mentoring <span class="cbm-required">*</span></label>
+          <p class="cbm-help">Select all that apply.</p>
+          <div class="checkgrid" id="mentoring_focus_areas"></div>
+        </div>
+        <div class="cbm-field">
+          <label for="mentoring_needs_description">Describe Your Mentoring Needs <span class="cbm-required">*</span></label>
+          <textarea id="mentoring_needs_description" name="mentoring_needs_description" required></textarea>
+        </div>
+        <div class="grid-2">
+          <div class="cbm-field">
+            <label for="meeting_preference">Meeting Preference</label>
+            <select id="meeting_preference" name="meeting_preference"></select>
+          </div>
+          <div class="cbm-field">
+            <label for="notification_preference">Notification Preference</label>
+            <select id="notification_preference" name="notification_preference"></select>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 3 — Your Business -->
+      <section class="step" data-step="3" hidden>
+        <h2>Your Business</h2>
+        <div class="cbm-field">
+          <label for="business_stage">Business Stage <span class="cbm-required">*</span></label>
+          <select id="business_stage" name="business_stage" required></select>
+        </div>
+
+        <!-- Business profile — revealed when Business Stage is not Pre-Startup (BR-1) -->
+        <div id="businessProfile" hidden>
+          <div class="cbm-field">
+            <label for="business_name">Business Name</label>
+            <input type="text" id="business_name" name="business_name" />
+          </div>
+          <div class="cbm-field">
+            <label for="business_website">Business Website</label>
+            <input type="url" id="business_website" name="business_website" placeholder="https://" />
+          </div>
+          <div class="grid-2">
+            <div class="cbm-field">
+              <label for="industry_sector">Industry Sector</label>
+              <select id="industry_sector" name="industry_sector"></select>
+            </div>
+            <div class="cbm-field">
+              <label for="industry_subsector">Industry Subsector</label>
+              <select id="industry_subsector" name="industry_subsector" disabled></select>
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="cbm-field">
+              <label for="year_formed">Year Formed</label>
+              <input type="number" id="year_formed" name="year_formed" min="1800" max="2100" placeholder="####" />
+            </div>
+            <div class="cbm-field">
+              <label for="number_of_employees">Number of Employees</label>
+              <input type="number" id="number_of_employees" name="number_of_employees" min="0" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 4 — Review & Submit -->
+      <section class="step" data-step="4" hidden>
+        <h2>Review &amp; Submit</h2>
+        <div class="review" id="review"></div>
+        <div class="cbm-field cbm-field--check">
+          <label><input type="checkbox" id="marketing_consent" name="marketing_consent" /> I consent to receive marketing communication from CBM.</label>
+        </div>
+        <div class="cbm-field cbm-field--check">
+          <label><input type="checkbox" id="terms_accepted" name="terms_accepted" required /> I have read and agree to the Client Code of Conduct, Terms of Use, and Privacy Policy. <span class="cbm-required">*</span></label>
+        </div>
+      </section>
+
+      <p class="form-error" id="formError" role="alert" hidden></p>
+
+      <!-- Navigation -->
+      <div class="wizard__nav">
+        <button type="button" class="cbm-button cbm-button--secondary" id="backBtn" hidden>Back</button>
+        <button type="button" class="cbm-button" id="nextBtn">Next</button>
+        <button type="submit" class="cbm-button" id="submitBtn" hidden>Submit Request</button>
+      </div>
+    </form>
+
+    <!-- Confirmation (shown after success) -->
+    <section class="confirmation" id="confirmation" hidden>
+      <h2>Thank you!</h2>
+      <p>Your mentor request has been received. A member of the Cleveland Business Mentors team will be in touch.</p>
+    </section>
+  </main>
+
+  <script src="options.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
