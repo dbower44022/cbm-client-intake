@@ -56,17 +56,20 @@ on a throwaway port. Findings while wiring:
   failure; `core/phone.to_e164` normalizes at the CRM boundary (commit 95f841c).
 - **API-user role** must grant *create* on CEngagement (was read-only until
   granted 2026-05-28); it already had create on Account/Contact/CClientProfile.
-- **Account duplicate detection** — EspoCRM returns 409 on a same-named Account
-  and the orchestrator neither skips the check nor reuses the match, so a
-  duplicate-named business currently 502s. OPEN: decide skip-check vs reuse.
+- **Account duplicate detection** — EspoCRM returns 409 on a same-named Account.
+  RESOLVED (commit befa2cc): `_find_or_create_account` reuses a same-named match
+  (exact, case-insensitive) instead of creating, so repeat submitters dedupe and
+  the 409 path is avoided. Distinct businesses sharing a name collapse to one
+  Account by design — split downstream if ever needed.
 - Mapping source of truth: `forms/client_intake/orchestrator.py`; see also
   Technical Design §3.4 and the §11.1 pending-carry-forward set.
 
 **Open follow-ups:**
 - Make the *deployed* app write to EspoCRM: set `ESPO_DRY_RUN=false` plus
   `ESPO_BASE_URL` + `ESPO_API_KEY` as **encrypted** App Platform env vars.
-- Resolve the Account 409 duplicate-detection behavior (above).
-- Clean up the `ZZTEST` test records left in crm-test by the wiring tests.
+- Clean up the `ZZTEST` test records left in crm-test by the wiring tests
+  (must be done in the EspoCRM UI — the intake API user is create-only and
+  cannot delete; verified by 403s).
 
 ## Commands
 
