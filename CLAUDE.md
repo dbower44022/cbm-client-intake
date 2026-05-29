@@ -22,14 +22,17 @@ kept aligned to it by carry-forward.
 
 ## Current status (2026-05-28)
 
-**Goal right now:** publish the app **as-is** to DigitalOcean for user feedback.
-EspoCRM wiring is deliberately deferred to *after* feedback.
+**Goal:** publish the app on DigitalOcean for user feedback. As of 2026-05-28
+it is **deployed and live on App Platform against crm-test** (go-live verified —
+see the LIVE block below). The original "feedback first in dry-run, wire CRM
+later" plan was overtaken by Doug's decision to verify and keep go-live live.
 
 **Chosen path:** **DigitalOcean App Platform**, building the `Dockerfile`
 straight from this GitHub repo (`dbower44022/cbm-client-intake`, branch `main`).
-A new droplet was ruled out for time. Deploys in **dry-run**
-(`ESPO_DRY_RUN=true`): submissions are validated and logged but **no EspoCRM
-records are created**.
+The method was evaluated against a droplet / co-hosting / other PaaS and
+confirmed (decision record in `DEPLOYMENT.md`). It can run dry-run
+(`ESPO_DRY_RUN=true`, committed `.do/app.yaml`) or live (`ESPO_DRY_RUN=false`
++ CRM secrets via the gitignored `.do/app.prod.yaml` overlay).
 
 **Done:**
 - Both forms build and serve (locally: `uv run uvicorn main:app --reload --port 8000`).
@@ -47,30 +50,40 @@ was **tested locally and verified**: `docker build`/`run` → `/healthz` is
 `POST /api/volunteer/intake` returns synthetic ids (no CRM call) and is
 idempotent on token re-submit, `pytest` 17 passing.
 
-**LIVE on App Platform in dry-run (2026-05-28).** `./scripts/deploy.sh` created
-the app and the deploy was verified live: all forms 200 over managed HTTPS,
-`/healthz` `dryRun:true`, valid auto-provisioned TLS cert.
+**LIVE on App Platform, writing to crm-test (`dryRun:false`) — 2026-05-28.**
+`./scripts/deploy.sh` created the app (dry-run), then it was flipped live against
+crm-test and **go-live was verified end-to-end through the deployed app**: a
+valid volunteer submission matched/created the Contact and created a
+CMentorProfile in crm-test, edge returned **200 in ~0.4s** (`volunteer ok`
+in the run logs). Per Doug's call, the app is **left live against crm-test**
+(not reverted to dry-run).
 - **App ID:** `509b4370-b9ca-42c7-b251-04d6820fe88e`
 - **URL:** https://cbm-client-intake-svxs3.ondigitalocean.app
-  (`/client-intake/`, `/volunteer/`)
-- **DO account:** `admin@cbmentors.org`. `doctl` is now installed
-  (`~/.local/bin`, v1.160.0) and the GitHub repo is connected to App Platform.
+  (`/client-intake/`, `/volunteer/`); `/healthz` → `dryRun:false`
+- **DO account:** `admin@cbmentors.org`. `doctl` installed (`~/.local/bin`,
+  v1.160.0); GitHub repo connected to App Platform.
+- **Live spec:** the gitignored `.do/app.prod.yaml` overlay (`ESPO_DRY_RUN=false`,
+  `ESPO_BASE_URL=https://crm-test.clevelandbusinessmentors.org`, `ESPO_API_KEY`
+  as encrypted `SECRET`). Applied with
+  `doctl apps update <app-id> --spec .do/app.prod.yaml --wait`.
 - Manage: `doctl apps logs 509b4370-b9ca-42c7-b251-04d6820fe88e --type run -f`;
-  `git push` auto-redeploys (preserves env). Tear down if needed:
-  `doctl apps delete 509b4370-b9ca-42c7-b251-04d6820fe88e`.
+  `git push` auto-redeploys (preserves env). `./scripts/deploy.sh` now **refuses**
+  to update this app (its guard sees `ESPO_DRY_RUN=false`); use
+  `ALLOW_LIVE_UPDATE=1` only to deliberately revert to dry-run.
+- **Note:** real submissions must use the form's dropdown values (`options.js`,
+  aligned to the CRM enums). Ad-hoc test data with an invalid enum value 400s
+  on the profile create *after* the Contact is already created (find-or-create),
+  leaving an orphan Contact — see `DEPLOYMENT.md` troubleshooting.
 
-**Resume point — gather feedback, then go live.** `DEPLOYMENT.md` is the full
+**Resume point — production go-live + cleanup.** `DEPLOYMENT.md` is the full
 runbook: deploy, going-live, **custom domain**, **reproduce in production from
 scratch**, verification, rollback, troubleshooting.
-1. Share the URL above for feedback (dry-run: submissions validated + logged,
-   **no records created** — and not persisted beyond runtime logs).
-2. To write to EspoCRM: set `ESPO_DRY_RUN=false` + `ESPO_BASE_URL` +
-   `ESPO_API_KEY` as **encrypted** env vars (console or a gitignored
-   `.do/app.prod.yaml` overlay) — **not** by re-running `deploy.sh` (its safety
-   guard now refuses to update a live app; `ALLOW_LIVE_UPDATE=1` overrides).
-   See `DEPLOYMENT.md` "Going live".
-3. For a separate **production** app (vs. flipping this feedback app), follow
-   `DEPLOYMENT.md` "Reproduce the deployment in production".
+1. **Clean up** the 3 `ZZTEST-GOLIVE DeployCheck` records left in crm-test by
+   the go-live verification (1 CMentorProfile + 2 Contacts) — in the EspoCRM UI
+   (the create-only API user can't delete).
+2. **Production go-live:** copy the approach to a production app or point
+   `ESPO_BASE_URL` at the production CRM (re-key `ESPO_API_KEY` in the overlay).
+   See `DEPLOYMENT.md` "Reproduce the deployment in production".
 
 **EspoCRM wiring — BOTH forms VERIFIED end-to-end against crm-test (2026-05-28).**
 - **client-intake**: created/linked Account → Contact → CClientProfile →
