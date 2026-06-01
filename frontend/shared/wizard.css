@@ -1,6 +1,11 @@
 /* Wizard-specific styles, layered on the CBM design tokens (tokens.css). */
 
 * { box-sizing: border-box; }
+/* The HTML `hidden` attribute must always win. Class selectors like
+   `.cbm-button { display: inline-block }` otherwise out-rank the UA
+   `[hidden]` rule, leaving JS-hidden buttons (e.g. Next on the review
+   step) visible. */
+[hidden] { display: none !important; }
 body { margin: 0; padding: 2rem 0 4rem; }
 
 .intake { padding-top: 1rem; padding-bottom: 1rem; }
