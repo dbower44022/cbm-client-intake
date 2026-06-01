@@ -21,6 +21,13 @@ The business-level definition of the Client Intake process is **not** owned
 here. It lives in the Mentoring Domain Client Intake process document
 (MN-INTAKE) in the Cleveland Business Mentoring repository.
 
+### Deployment
+
+- [`DEPLOYMENT.md`](DEPLOYMENT.md) — the engineer-level runbook (DigitalOcean
+  App Platform): deploy, go live, custom domain, rollback, troubleshooting.
+- [`STAFF-DEPLOYMENT-GUIDE.md`](STAFF-DEPLOYMENT-GUIDE.md) — a plain-language,
+  web-console-only companion for CBM staff.
+
 ## Application
 
 This is a multi-form app: a shared core hosts any number of intake forms.

@@ -5,6 +5,9 @@ How to deploy the CBM intake app (client-intake + volunteer forms) to
 production**. App Platform builds the repo's `Dockerfile` straight from GitHub
 and serves it over managed HTTPS — no server to run, patch, or renew certs on.
 
+> **Non-technical reader?** See [`STAFF-DEPLOYMENT-GUIDE.md`](STAFF-DEPLOYMENT-GUIDE.md)
+> for a plain-language, web-console-only companion to this runbook.
+
 > **New session quick-start:** read `CLAUDE.md` first (current state), then run
 > `./scripts/deploy.sh`. The script is idempotent (creates the app the first
 > time, updates it after). It deploys in **dry-run** (no EspoCRM writes); see
