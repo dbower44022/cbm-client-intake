@@ -120,16 +120,25 @@
       <section class="step" data-step="3" hidden>
         <h2>Expertise</h2>
         <div class="cbm-field">
-          <label>Industry Experience <span class="cbm-help">(choose up to 6)</span></label>
+          <label for="industry_experience_filter">Industry Experience <span class="cbm-help">(choose up to 6)</span></label>
+          <input type="search" id="industry_experience_filter" class="checkgrid__filter"
+                 placeholder="Filter industries…" autocomplete="off" aria-controls="industry_experience" />
           <div class="checkgrid" id="industry_experience"></div>
+          <p class="cbm-help" id="industry_experience_no_match" hidden>No industries match “<span></span>”.</p>
         </div>
         <div class="cbm-field">
-          <label>Areas of Expertise <span class="cbm-required">*</span> <span class="cbm-help">(choose up to 6)</span></label>
+          <label for="areas_of_expertise_filter">Areas of Expertise <span class="cbm-required">*</span> <span class="cbm-help">(choose up to 6)</span></label>
+          <input type="search" id="areas_of_expertise_filter" class="checkgrid__filter"
+                 placeholder="Filter areas…" autocomplete="off" aria-controls="areas_of_expertise" />
           <div class="checkgrid" id="areas_of_expertise"></div>
+          <p class="cbm-help" id="areas_of_expertise_no_match" hidden>No areas match “<span></span>”.</p>
         </div>
         <div class="cbm-field">
-          <label>Fluent Languages</label>
+          <label for="fluent_languages_filter">Fluent Languages</label>
+          <input type="search" id="fluent_languages_filter" class="checkgrid__filter"
+                 placeholder="Filter languages…" autocomplete="off" aria-controls="fluent_languages" />
           <div class="checkgrid" id="fluent_languages"></div>
+          <p class="cbm-help" id="fluent_languages_no_match" hidden>No languages match “<span></span>”.</p>
         </div>
       </section>
 

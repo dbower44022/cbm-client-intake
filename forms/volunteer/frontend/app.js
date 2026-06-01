@@ -27,11 +27,13 @@
   fillSelect("currently_employed", O.employment, "Please select…");
   fillSelect("how_did_you_hear", O.howDidYouHear, "Please select…");
 
-  // --- checkbox grids ---
+  // --- checkbox grids, each with a type-to-filter search box ---
   function fillCheckgrid(id, values) {
     const wrap = document.getElementById(id);
+    const labels = [];
     values.forEach((v) => {
       const label = document.createElement("label");
+      label.dataset.search = v.toLowerCase();
       const cb = document.createElement("input");
       cb.type = "checkbox";
       cb.name = id;
@@ -39,6 +41,28 @@
       label.appendChild(cb);
       label.appendChild(document.createTextNode(" " + v));
       wrap.appendChild(label);
+      labels.push(label);
+    });
+    wireFilter(id, labels);
+  }
+
+  // Filtering only hides labels — a checked box scrolled out of view stays
+  // checked, so selections (and the up-to-N cap) survive a search.
+  function wireFilter(id, labels) {
+    const filter = document.getElementById(id + "_filter");
+    if (!filter) return;
+    const noMatch = document.getElementById(id + "_no_match");
+    const queryEl = noMatch && noMatch.querySelector("span");
+    filter.addEventListener("input", () => {
+      const q = filter.value.trim().toLowerCase();
+      let shown = 0;
+      labels.forEach((label) => {
+        const match = !q || label.dataset.search.indexOf(q) !== -1;
+        label.hidden = !match;
+        if (match) shown += 1;
+      });
+      if (noMatch) noMatch.hidden = shown !== 0;
+      if (queryEl) queryEl.textContent = filter.value.trim();
     });
   }
   fillCheckgrid("industry_experience", O.industryExperience);
