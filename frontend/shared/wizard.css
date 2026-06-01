@@ -45,6 +45,7 @@ body { margin: 0; padding: 2rem 0 4rem; }
 @media (max-width: 560px) { .grid-2 { grid-template-columns: 1fr; } }
 
 /* Checkbox grid for multi-select focus areas */
+.checkgrid__filter { width: 100%; margin-bottom: 0.6rem; }
 .checkgrid {
   display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.4rem 1.25rem;
   border: 1px solid var(--cbm-border); border-radius: var(--cbm-radius);

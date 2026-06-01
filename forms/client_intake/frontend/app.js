@@ -56,8 +56,10 @@
 
   // Multi-select focus areas as checkboxes
   const focusWrap = document.getElementById("mentoring_focus_areas");
+  const focusLabels = [];
   sortOptions(OPT.mentoringFocusAreas).forEach((area) => {
     const label = document.createElement("label");
+    label.dataset.search = area.toLowerCase();
     const cb = document.createElement("input");
     cb.type = "checkbox";
     cb.name = "mentoring_focus_areas";
@@ -65,7 +67,27 @@
     label.appendChild(cb);
     label.appendChild(document.createTextNode(" " + area));
     focusWrap.appendChild(label);
+    focusLabels.push(label);
   });
+
+  // Type-to-filter the focus-area list. Filtering only hides labels — a checked
+  // box that scrolls out of view stays selected, so prior choices are kept.
+  const focusFilter = document.getElementById("focus_filter");
+  const focusNoMatch = document.getElementById("focus_no_match");
+  const focusQuery = document.getElementById("focus_query");
+  if (focusFilter) {
+    focusFilter.addEventListener("input", () => {
+      const q = focusFilter.value.trim().toLowerCase();
+      let shown = 0;
+      focusLabels.forEach((label) => {
+        const match = !q || label.dataset.search.indexOf(q) !== -1;
+        label.hidden = !match;
+        if (match) shown += 1;
+      });
+      if (focusNoMatch) focusNoMatch.hidden = shown !== 0;
+      if (focusQuery) focusQuery.textContent = focusFilter.value.trim();
+    });
+  }
 
   // --- BR-1: Business Stage reveals the business-profile block ---
   const stageSel = document.getElementById("business_stage");

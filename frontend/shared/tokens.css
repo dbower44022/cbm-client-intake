@@ -137,6 +137,7 @@ a:hover { text-decoration: underline; }
 .cbm-field input[type="email"],
 .cbm-field input[type="tel"],
 .cbm-field input[type="number"],
+.cbm-field input[type="search"],
 .cbm-field select,
 .cbm-field textarea {
   width: 100%;

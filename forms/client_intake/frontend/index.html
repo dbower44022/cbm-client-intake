@@ -74,9 +74,13 @@
       <section class="step" data-step="2" hidden>
         <h2>Your Mentoring Request</h2>
         <div class="cbm-field">
-          <label>Area(s) of Mentoring <span class="cbm-required">*</span></label>
-          <p class="cbm-help">Select all that apply.</p>
+          <label for="focus_filter">Area(s) of Mentoring <span class="cbm-required">*</span></label>
+          <p class="cbm-help">Select all that apply. Type below to filter the list.</p>
+          <input type="search" id="focus_filter" class="checkgrid__filter"
+                 placeholder="Filter areas…" autocomplete="off"
+                 aria-controls="mentoring_focus_areas" />
           <div class="checkgrid" id="mentoring_focus_areas"></div>
+          <p class="cbm-help" id="focus_no_match" hidden>No areas match “<span id="focus_query"></span>”.</p>
         </div>
         <div class="cbm-field">
           <label for="mentoring_needs_description">Describe Your Mentoring Needs <span class="cbm-required">*</span></label>
