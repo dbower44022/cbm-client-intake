@@ -18,8 +18,18 @@
     (window.crypto && crypto.randomUUID && crypto.randomUUID()) ||
     "tok-" + Date.now() + "-" + Math.random().toString(36).slice(2);
 
+  // Alphabetize a value list, but always sink a literal "Other" to the bottom.
+  // ("Please select…" is added separately as the placeholder and stays on top.)
+  function sortOptions(values) {
+    const rest = [];
+    const other = [];
+    values.forEach((v) => (v === "Other" ? other : rest).push(v));
+    rest.sort((a, b) => a.localeCompare(b));
+    return rest.concat(other);
+  }
+
   // --- Populate option-driven controls ---
-  function fillSelect(id, values, { placeholder } = {}) {
+  function fillSelect(id, values, { placeholder, sort } = {}) {
     const sel = document.getElementById(id);
     if (!sel) return;
     if (placeholder !== undefined) {
@@ -28,7 +38,7 @@
       o.textContent = placeholder;
       sel.appendChild(o);
     }
-    values.forEach((v) => {
+    (sort ? sortOptions(values) : values).forEach((v) => {
       const o = document.createElement("option");
       o.value = v;
       o.textContent = v;
@@ -36,15 +46,17 @@
     });
   }
 
-  fillSelect("how_did_you_hear", OPT.howDidYouHear, { placeholder: "Please select…" });
+  // Reference lists are alphabetized (Other last); the three with a meaningful
+  // order — business stage, meeting/notification preference — are left as-is.
+  fillSelect("how_did_you_hear", OPT.howDidYouHear, { placeholder: "Please select…", sort: true });
   fillSelect("meeting_preference", OPT.meetingPreference, { placeholder: "Please select…" });
   fillSelect("notification_preference", OPT.notificationPreference, { placeholder: "Please select…" });
   fillSelect("business_stage", OPT.businessStage, { placeholder: "Please select…" });
-  fillSelect("industry_sector", OPT.industrySector, { placeholder: "Please select…" });
+  fillSelect("industry_sector", OPT.industrySector, { placeholder: "Please select…", sort: true });
 
   // Multi-select focus areas as checkboxes
   const focusWrap = document.getElementById("mentoring_focus_areas");
-  OPT.mentoringFocusAreas.forEach((area) => {
+  sortOptions(OPT.mentoringFocusAreas).forEach((area) => {
     const label = document.createElement("label");
     const cb = document.createElement("input");
     cb.type = "checkbox";
@@ -74,7 +86,7 @@
       return;
     }
     const opts = list.length ? list : ["Other"];
-    fillSelectEl(subsectorSel, opts, "Please select…");
+    fillSelectEl(subsectorSel, sortOptions(opts), "Please select…");
     subsectorSel.disabled = false;
   });
 
