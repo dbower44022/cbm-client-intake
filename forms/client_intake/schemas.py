@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-from pydantic import EmailStr, Field, model_validator
+from pydantic import EmailStr, Field, field_validator, model_validator
 
 from core.forms import BaseSubmission
 
@@ -51,6 +51,24 @@ class IntakeSubmission(BaseSubmission):
     terms_accepted: bool
 
     # submission_token + company_url (honeypot) are inherited from BaseSubmission.
+
+    @field_validator("business_website", mode="after")
+    @classmethod
+    def _normalize_website(cls, v: Optional[str]) -> Optional[str]:
+        """Accept a bare domain and store it as a proper URL.
+
+        The Account.website CRM field is a `url` type, and asking users to type
+        the `https://` scheme is needless friction. A non-empty value without a
+        scheme gets `https://` prepended; empty/None passes through unchanged.
+        """
+        if v is None:
+            return None
+        v = v.strip()
+        if not v:
+            return None
+        if "://" not in v:
+            v = f"https://{v}"
+        return v
 
     @model_validator(mode="after")
     def _cross_field(self) -> "IntakeSubmission":

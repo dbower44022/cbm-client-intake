@@ -73,7 +73,8 @@ async def test_creates_four_linked_records():
     assert entities == [ACCOUNT, CONTACT, CLIENT_PROFILE, ENGAGEMENT]
 
     _, account_payload = client.creates[0]
-    assert account_payload["cCompanyType"] == ["Client"]
+    assert account_payload["cAccountType"] == ["Client"]   # required discriminator
+    assert account_payload["cCompanyType"] == ["Client"]   # legacy, kept in sync
 
     _, contact_payload = client.creates[1]
     assert contact_payload["accountId"] == ids["accountId"]
@@ -138,3 +139,18 @@ async def test_pre_startup_creates_placeholder_account_without_profile():
 async def test_email_mismatch_rejected():
     with pytest.raises(ValueError):
         _submission(confirm_email="typo@example.com")
+
+
+@pytest.mark.parametrize(
+    "entered,stored",
+    [
+        ("example.com", "https://example.com"),
+        ("www.example.com", "https://www.example.com"),
+        ("  example.com  ", "https://example.com"),
+        ("http://example.com", "http://example.com"),
+        ("https://example.com", "https://example.com"),
+        ("", None),
+    ],
+)
+def test_website_bare_domain_normalized_to_url(entered, stored):
+    assert _submission(business_website=entered).business_website == stored
