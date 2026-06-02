@@ -19,6 +19,8 @@ INSTANCE MAPPING — reconciled against crm-test.clevelandbusinessmentors.org
   * Link FKs: Contact.accountId (belongsTo Account); CClientProfile.clientcontactId
     (belongsTo Contact) + linkedCompanyId (hasOne Account); CEngagement
     .engagementClientId (belongsTo CClientProfile) + primaryEngagementContactId.
+    The applicant is additionally added to CEngagement.engagementContacts, a
+    hasMany Contact link, via a relationship POST after the engagement create.
   * Engagement status field is `engagementStatus` (value "Submitted").
 
 NOT DEPLOYED on this instance (Requirements Specification §11.1 pending
@@ -55,6 +57,9 @@ A_BUSINESS_STAGE = "cBusinessStage"  # enum
 A_INDUSTRY_SECTOR = "cIndustrySector"  # enum
 C_CONTACT_TYPE = "cContactType"      # multiEnum on Contact
 ENGAGEMENT_STATUS = "engagementStatus"
+
+# --- Link names ---
+ENGAGEMENT_CONTACTS = "engagementContacts"  # CEngagement hasMany Contact
 
 # --- System-set values (Requirements Specification §5.4) ---
 CLIENT = "Client"
@@ -162,6 +167,9 @@ async def submit_intake(sub: IntakeSubmission, client: EspoApi) -> dict[str, str
     contact_id = await _find_or_create_contact(sub, client, account_id)
     client_profile_id = await _create_client_profile(sub, client, account_id, contact_id)
     engagement_id = await _create_engagement(sub, client, client_profile_id, contact_id)
+    # Also add the applicant to the Engagement Contacts (hasMany) link, alongside
+    # the primaryEngagementContact set on the engagement itself.
+    await client.relate(ENGAGEMENT, engagement_id, ENGAGEMENT_CONTACTS, contact_id)
     return {
         "accountId": account_id,
         "contactId": contact_id,

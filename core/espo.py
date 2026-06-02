@@ -29,6 +29,9 @@ class EspoApi(Protocol):
     async def find_one(
         self, entity: str, attribute: str, value: str
     ) -> Optional[dict[str, Any]]: ...
+    async def relate(
+        self, entity: str, record_id: str, link: str, related_id: str
+    ) -> None: ...
     async def upload_attachment(
         self,
         *,
@@ -78,6 +81,22 @@ class EspoClient:
         rows = resp.json().get("list") or []
         return rows[0] if rows else None
 
+    async def relate(
+        self, entity: str, record_id: str, link: str, related_id: str
+    ) -> None:
+        """Add a record to a hasMany/manyMany link (EspoCRM relationship POST)."""
+        async with httpx.AsyncClient(timeout=self._timeout) as client:
+            resp = await client.post(
+                f"{self._base}/{entity}/{record_id}/{link}",
+                json={"id": related_id},
+                headers=self._headers,
+            )
+        if resp.status_code >= 400:
+            raise EspoError(
+                f"relate {entity}/{record_id}/{link} failed: "
+                f"HTTP {resp.status_code} {resp.text[:300]}"
+            )
+
     async def upload_attachment(
         self,
         *,
@@ -125,6 +144,11 @@ class DryRunEspoClient:
     ) -> Optional[dict[str, Any]]:
         log.info("DRY_RUN find_one %s %s=%s -> None", entity, attribute, value)
         return None
+
+    async def relate(
+        self, entity: str, record_id: str, link: str, related_id: str
+    ) -> None:
+        log.info("DRY_RUN relate %s/%s/%s -> %s", entity, record_id, link, related_id)
 
     async def upload_attachment(
         self,

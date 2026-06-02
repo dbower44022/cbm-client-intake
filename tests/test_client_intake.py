@@ -19,6 +19,7 @@ class CapturingClient:
 
     def __init__(self, existing_contact=None, existing_account=None):
         self.creates: list[tuple[str, dict]] = []
+        self.relates: list[tuple[str, str, str, str]] = []
         self._existing_contact = existing_contact
         self._existing_account = existing_account
         self._n = 0
@@ -34,6 +35,9 @@ class CapturingClient:
         if entity == ACCOUNT and self._existing_account:
             return {"id": self._existing_account}
         return None
+
+    async def relate(self, entity, record_id, link, related_id):
+        self.relates.append((entity, record_id, link, related_id))
 
 
 def _submission(**overrides) -> IntakeSubmission:
@@ -88,6 +92,11 @@ async def test_creates_four_linked_records():
     assert eng_payload["engagementClientId"] == ids["clientProfileId"]
     assert eng_payload["primaryEngagementContactId"] == ids["contactId"]
     assert eng_payload["engagementStatus"] == "Submitted"
+
+    # The applicant is also added to the Engagement Contacts (hasMany) link.
+    assert (ENGAGEMENT, ids["engagementId"], "engagementContacts", ids["contactId"]) in (
+        client.relates
+    )
     # Fields not deployed on the instance must not be sent.
     assert "termsAccepted" not in eng_payload
     assert "meetingPreference" not in eng_payload
