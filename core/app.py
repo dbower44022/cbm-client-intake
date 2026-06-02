@@ -99,6 +99,27 @@ def create_app(forms: list[FormSpec]) -> FastAPI:
         allow_headers=["*"],
     )
 
+    @app.middleware("http")
+    async def _revalidate_frontend(request: Request, call_next):
+        """Make the frontend always revalidate so deploys take effect at once.
+
+        Without this, browsers (and DO's edge) may serve a stale cached
+        ``app.js``/``wizard.css`` after a deploy, so a fix only appears after a
+        hard refresh. ``no-cache`` lets the asset stay cached but forces a
+        conditional request; StaticFiles answers with a cheap ``304`` when the
+        ETag is unchanged, and full fresh content when it is not. The JSON API
+        and ``/healthz`` are left untouched.
+        """
+        response = await call_next(request)
+        path = request.url.path
+        if (
+            request.method in ("GET", "HEAD")
+            and not path.startswith("/api/")
+            and path != "/healthz"
+        ):
+            response.headers["Cache-Control"] = "no-cache"
+        return response
+
     # Idempotency cache shared across forms (Technical Design §4 wants a durable store).
     processed: dict[str, dict] = {}
 
