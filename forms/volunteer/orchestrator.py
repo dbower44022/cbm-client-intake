@@ -15,9 +15,11 @@ Mapping decisions (confirmed with the product owner):
     (multi-store deferred until a multi-value field is deployed).
   * terms_accepted -> CMentorProfile.termsAccepted (a dedicated bool field).
 
+Resume upload is stored on ``CMentorProfile.resumeUpload`` (a file field): the
+file is created as an EspoCRM Attachment bound to that field, and its id is set
+on the profile at create time.
+
 NOT YET DEPLOYED / deferred:
-  * Resume upload — no attachment field exists on Contact or CMentorProfile on
-    the instance, so an uploaded resume is accepted by the form but not stored.
   * currently_employed / contact_preference / phone_type have no target field.
 """
 
@@ -52,6 +54,8 @@ P_INDUSTRY = "industrySector"         # enum (single)
 P_HOW_HEARD = "howDidYouHearAboutCBM"  # varchar
 P_FELONY = "felonyConfiction"         # bool (note: CRM field name is misspelled)
 P_TERMS = "termsAccepted"             # bool
+P_RESUME_ID = "resumeUploadId"        # file field FK (-> Attachment)
+RESUME_FIELD = "resumeUpload"         # the file field the attachment binds to
 
 # --- System-set values ---
 CONTACT_TYPE_MENTOR = "Mentor"
@@ -114,20 +118,28 @@ async def _create_mentor_profile(
         payload[P_INDUSTRY] = sub.industry_experience[0]
     if sub.how_did_you_hear:
         payload[P_HOW_HEARD] = sub.how_did_you_hear
+    if sub.resume is not None:
+        # Upload the file as an Attachment bound to CMentorProfile.resumeUpload,
+        # then set its id so it links when the profile is created.
+        attachment_id = await client.upload_attachment(
+            filename=sub.resume.filename,
+            content_type=sub.resume.content_type,
+            data_base64=sub.resume.data_base64,
+            related_type=MENTOR_PROFILE,
+            field=RESUME_FIELD,
+        )
+        payload[P_RESUME_ID] = attachment_id
 
     created = await client.create(MENTOR_PROFILE, payload)
     return created["id"]
 
 
 async def submit_application(sub: VolunteerApplication, client: EspoApi) -> dict[str, str]:
-    """Create/reuse the mentor Contact, then create the linked CMentorProfile."""
-    if sub.resume is not None:
-        # No attachment field is deployed for the resume yet (see module docstring).
-        log.warning(
-            "resume received for %s but not stored — no deployed attachment field",
-            sub.email,
-        )
+    """Create/reuse the mentor Contact, then create the linked CMentorProfile.
 
+    A resume, if provided, is uploaded as an Attachment and linked on the
+    profile's ``resumeUpload`` file field (see ``_create_mentor_profile``).
+    """
     contact_id = await _find_or_create_mentor_contact(sub, client)
     profile_id = await _create_mentor_profile(sub, client, contact_id)
     return {"contactId": contact_id, "mentorProfileId": profile_id}

@@ -32,8 +32,11 @@ class CapturingClient:
 
     async def upload_attachment(self, *, filename, content_type, data_base64, related_type, field):
         self._n += 1
-        self.uploads.append({"filename": filename, "related_type": related_type, "field": field})
-        return f"attachment-{self._n}"
+        att_id = f"attachment-{self._n}"
+        self.uploads.append(
+            {"id": att_id, "filename": filename, "related_type": related_type, "field": field}
+        )
+        return att_id
 
 
 def _application(**overrides) -> VolunteerApplication:
@@ -99,7 +102,7 @@ async def test_terms_required():
         _application(terms_accepted=False)
 
 
-async def test_resume_accepted_but_not_uploaded_yet():
+async def test_resume_uploaded_and_linked_on_profile():
     client = CapturingClient()
     sub = _application(
         resume={
@@ -109,9 +112,25 @@ async def test_resume_accepted_but_not_uploaded_yet():
         }
     )
     ids = await submit_application(sub, client)
-    # No deployed attachment field yet -> resume not uploaded, submission still ok.
-    assert client.uploads == []
+
+    # The file is uploaded as an Attachment bound to the resumeUpload field...
+    assert len(client.uploads) == 1
+    up = client.uploads[0]
+    assert up["filename"] == "resume.pdf"
+    assert up["related_type"] == MENTOR_PROFILE
+    assert up["field"] == "resumeUpload"
+    # ...and its id is set on the profile so the file links on create.
+    _, profile = client.creates[1]
+    assert profile["resumeUploadId"] == up["id"]
     assert set(ids) == {"contactId", "mentorProfileId"}
+
+
+async def test_no_resume_means_no_upload():
+    client = CapturingClient()
+    await submit_application(_application(), client)
+    assert client.uploads == []
+    _, profile = client.creates[1]
+    assert "resumeUploadId" not in profile
 
 
 async def test_unsupported_resume_type_rejected():
