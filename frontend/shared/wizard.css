@@ -65,6 +65,12 @@ body { margin: 0; padding: 2rem 0 4rem; }
 /* Review list */
 .review { border: 1px solid var(--cbm-border); border-radius: var(--cbm-radius); padding: 1rem 1.25rem; margin-bottom: 1.5rem; }
 .review dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 0.4rem 1rem; }
+
+.cbm-footer { margin-top: 2.5rem; padding-top: 1.25rem; border-top: 1px solid var(--cbm-border);
+  text-align: center; color: var(--cbm-text); font-size: 0.85rem; }
+.cbm-footer p { margin: 0; }
+/* Show the separator only once JS has filled in the version. */
+.cbm-footer__version:not(:empty)::before { content: " · "; }
 .review dt { font-weight: 600; color: var(--cbm-slate-700); }
 .review dd { margin: 0; color: var(--cbm-slate-900); }
 

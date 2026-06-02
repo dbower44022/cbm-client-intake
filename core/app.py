@@ -8,6 +8,7 @@ tokens) are served at ``/shared/``. The root lists the available forms.
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
@@ -19,6 +20,7 @@ from pydantic import ValidationError
 from .config import Settings, get_settings
 from .espo import DryRunEspoClient, EspoApi, EspoClient, EspoError
 from .forms import FormSpec
+from .version import __version__
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("cbm_intake")
@@ -82,16 +84,22 @@ def _index_html(forms: list[FormSpec]) -> str:
             items.append(f'<li><a href="/{f.slug}/">{f.title}</a></li>')
         else:
             items.append(f"<li>{f.title} <em>(API only — UI pending)</em></li>")
+    year = datetime.now(timezone.utc).year
+    footer = (
+        f"<footer><p>&copy; {year} Cleveland Business Mentors. "
+        f"All rights reserved. &middot; v{__version__}</p></footer>"
+    )
     return (
         "<!DOCTYPE html><html><head><meta charset='utf-8'>"
         "<title>CBM Intake Forms</title></head><body>"
-        "<h1>CBM Intake Forms</h1><ul>" + "".join(items) + "</ul></body></html>"
+        "<h1>CBM Intake Forms</h1><ul>" + "".join(items) + "</ul>" + footer
+        + "</body></html>"
     )
 
 
 def create_app(forms: list[FormSpec]) -> FastAPI:
     settings = get_settings()
-    app = FastAPI(title="CBM Intake Forms", version="0.2.0")
+    app = FastAPI(title="CBM Intake Forms", version=__version__)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.allowed_origins_list,
@@ -127,6 +135,7 @@ def create_app(forms: list[FormSpec]) -> FastAPI:
     async def healthz() -> dict:
         return {
             "status": "ok",
+            "version": __version__,
             "dryRun": settings.espo_dry_run,
             "forms": [f.slug for f in forms],
         }

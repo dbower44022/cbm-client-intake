@@ -33,3 +33,11 @@ def test_api_and_healthz_not_marked_no_cache():
     resp = client.get("/healthz")
     assert resp.status_code == 200
     assert resp.headers.get("cache-control") != "no-cache"
+
+
+def test_healthz_reports_version():
+    from core.version import __version__
+
+    resp = client.get("/healthz")
+    assert resp.json()["version"] == __version__
+    assert __version__ != "0.0.0"  # pyproject was read successfully
