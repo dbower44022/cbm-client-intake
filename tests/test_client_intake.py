@@ -158,8 +158,16 @@ async def test_email_mismatch_rejected():
         ("  example.com  ", "https://example.com"),
         ("http://example.com", "http://example.com"),
         ("https://example.com", "https://example.com"),
+        ("sub.example.co.uk/path", "https://sub.example.co.uk/path"),
         ("", None),
+        # Non-URL junk is dropped, not sent to EspoCRM's url field (would 400).
+        ("n/a", None),
+        ("none", None),
+        ("N/A", None),
+        ("acme .com", None),
+        ("just some text", None),
+        ("https://nodot", None),
     ],
 )
-def test_website_bare_domain_normalized_to_url(entered, stored):
+def test_website_normalized_or_dropped(entered, stored):
     assert _submission(business_website=entered).business_website == stored

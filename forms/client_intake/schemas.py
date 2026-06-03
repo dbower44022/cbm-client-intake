@@ -7,11 +7,16 @@ stricter than the underlying canonical field constraint.
 
 from __future__ import annotations
 
+import re
 from typing import Literal, Optional
 
 from pydantic import EmailStr, Field, field_validator, model_validator
 
 from core.forms import BaseSubmission
+
+# http(s):// + a host containing a dot and no whitespace (e.g. example.com).
+# Used to drop non-URL website input that EspoCRM's url field would reject.
+_PLAUSIBLE_URL = re.compile(r"^https?://[^\s/]+\.[^\s/]+", re.IGNORECASE)
 
 BusinessStage = Literal[
     "Pre-Startup", "Startup", "Early Stage", "Growth Stage", "Established"
@@ -55,20 +60,27 @@ class IntakeSubmission(BaseSubmission):
     @field_validator("business_website", mode="after")
     @classmethod
     def _normalize_website(cls, v: Optional[str]) -> Optional[str]:
-        """Accept a bare domain and store it as a proper URL.
+        """Accept a bare domain and store it as a proper URL, dropping junk.
 
         The Account.website CRM field is a `url` type, and asking users to type
-        the `https://` scheme is needless friction. A non-empty value without a
-        scheme gets `https://` prepended; empty/None passes through unchanged.
+        the `https://` scheme is needless friction, so a non-empty value without
+        a scheme gets `https://` prepended.
+
+        EspoCRM rejects a value that isn't a valid URL, which would 400 the whole
+        submission. Since the website is optional, anything that doesn't look
+        like a real http(s) host (e.g. "n/a", "none", text with spaces) is
+        dropped to None rather than failing the intake.
         """
         if v is None:
             return None
         v = v.strip()
         if not v:
             return None
-        if "://" not in v:
-            v = f"https://{v}"
-        return v
+        candidate = v if "://" in v else f"https://{v}"
+        # Require http(s) + a dotted, space-free host; otherwise drop it.
+        if not _PLAUSIBLE_URL.match(candidate):
+            return None
+        return candidate
 
     @model_validator(mode="after")
     def _cross_field(self) -> "IntakeSubmission":
