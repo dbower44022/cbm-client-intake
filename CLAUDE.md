@@ -17,8 +17,11 @@ linked records in EspoCRM (the system of record). Two forms ship today:
 - **info-request** — generic request-for-information (single step). Creates a
   Contact (`cContactType=["Prospect"]`) with the message in `description`,
   plus an Account (`cClientStatus="Prospect"`) only when a company name is
-  given. Repeat email = APPEND to the existing contact's description (needs
-  *edit* on Contact for the intake API user — verify the grant before go-live).
+  given. Repeat email = APPEND to the existing contact's description (uses
+  *edit* on Contact — the API user's grant was VERIFIED live 2026-06-12).
+  Verified end-to-end against crm-test 2026-06-12 (create + append + Account,
+  all GET-verified); left 1 `ZZTEST-INFOREQ` Contact + 1 Account in crm-test
+  to clean up in the UI alongside the older ZZTEST records.
 
 This repo owns the *application*, not the business definition of the process.
 The Client Intake process is defined by **MN-INTAKE** in the
