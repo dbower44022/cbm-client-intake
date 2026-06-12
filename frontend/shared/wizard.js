@@ -7,7 +7,7 @@
  *
  * Expected DOM: form#intakeForm, .step[data-step], #progress li[data-step],
  *   #backBtn, #nextBtn, #submitBtn, #formError, #confirmation, and a hidden
- *   honeypot input#company_url.
+ *   honeypot input#xtra_note (posted under the `company_url` payload key).
  *
  * Usage:
  *   CBMWizard.mount({
@@ -33,6 +33,17 @@ window.CBMWizard = (function () {
     const token =
       (window.crypto && crypto.randomUUID && crypto.randomUUID()) ||
       "tok-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+
+    // Honeypot. Only count it as filled when actual keystrokes landed in it:
+    // browser autofill / password managers set values on hidden fields without
+    // typing, and flagging those lost two real submissions on 2026-06-12.
+    const honeypot = document.getElementById("xtra_note");
+    let honeypotKeystrokes = 0;
+    if (honeypot) {
+      honeypot.addEventListener("keydown", () => {
+        honeypotKeystrokes += 1;
+      });
+    }
 
     function fail(msg) {
       formError.textContent = msg;
@@ -74,10 +85,10 @@ window.CBMWizard = (function () {
       const originalLabel = submitBtn.textContent;
       submitBtn.textContent = "Submitting…";
       try {
-        const honeypot = document.getElementById("company_url");
         const payload = Object.assign({}, opts.buildPayload(), {
           submission_token: token,
-          company_url: honeypot ? honeypot.value : "",
+          company_url:
+            honeypot && honeypotKeystrokes > 0 ? honeypot.value : "",
         });
         const resp = await fetch(`/api/${slug}/intake`, {
           method: "POST",

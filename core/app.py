@@ -50,8 +50,15 @@ def _make_handler(spec: FormSpec, settings: Settings, processed: dict[str, dict]
             return JSONResponse(status_code=422, content={"detail": detail})
 
         # Honeypot: acknowledge generically, do not tell a bot it was caught.
+        # Log the email so a false positive (e.g. browser autofill, seen
+        # 2026-06-12) is recoverable from the run logs.
         if submission.company_url.strip():
-            log.warning("honeypot %s token=%s", spec.slug, submission.submission_token)
+            log.warning(
+                "honeypot %s token=%s email=%s",
+                spec.slug,
+                submission.submission_token,
+                getattr(submission, "email", "?"),
+            )
             return {"status": "received"}
 
         key = f"{spec.slug}:{submission.submission_token}"
