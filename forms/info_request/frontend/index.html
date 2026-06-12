@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cleveland Business Mentors — Request Information</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/tokens.css" />
+  <link rel="stylesheet" href="/shared/wizard.css" />
+</head>
+<body>
+  <main class="cbm-container cbm-container--narrow intake">
+    <header class="intake__header">
+      <h1>Request Information</h1>
+      <p class="intake__sub">Curious about Cleveland Business Mentoring? Tell us a little about yourself and what you'd like to know, and we'll be in touch.</p>
+    </header>
+
+    <form id="intakeForm" novalidate>
+      <div class="hp" aria-hidden="true">
+        <label>Company URL <input type="text" name="company_url" id="company_url" tabindex="-1" autocomplete="off" /></label>
+      </div>
+
+      <section class="step" data-step="1">
+        <div class="grid-2">
+          <div class="cbm-field">
+            <label for="first_name">First Name <span class="cbm-required">*</span></label>
+            <input type="text" id="first_name" required />
+          </div>
+          <div class="cbm-field">
+            <label for="last_name">Last Name <span class="cbm-required">*</span></label>
+            <input type="text" id="last_name" required />
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="cbm-field">
+            <label for="email">Email <span class="cbm-required">*</span></label>
+            <input type="email" id="email" required />
+          </div>
+          <div class="cbm-field">
+            <label for="phone">Phone</label>
+            <input type="tel" id="phone" placeholder="###-###-####" />
+          </div>
+        </div>
+        <div class="cbm-field">
+          <label for="company">Company / Business Name</label>
+          <input type="text" id="company" />
+        </div>
+        <div class="cbm-field">
+          <label for="message">What would you like to know? <span class="cbm-required">*</span></label>
+          <textarea id="message" required></textarea>
+        </div>
+        <div class="cbm-field">
+          <label for="how_did_you_hear">How did you hear about Cleveland Business Mentoring?</label>
+          <select id="how_did_you_hear"></select>
+        </div>
+      </section>
+
+      <p class="form-error" id="formError" role="alert" hidden></p>
+
+      <div class="wizard__nav">
+        <button type="button" class="cbm-button cbm-button--secondary" id="backBtn" hidden>Back</button>
+        <button type="button" class="cbm-button" id="nextBtn">Next</button>
+        <button type="submit" class="cbm-button" id="submitBtn" hidden>Send Request</button>
+      </div>
+    </form>
+
+    <section class="confirmation" id="confirmation" hidden>
+      <h2>Thank you!</h2>
+      <p>Your request has been received. A member of the Cleveland Business Mentors team will be in touch.</p>
+    </section>
+
+    <footer class="cbm-footer">
+      <p>&copy; <span data-cbm-year>2026</span> Cleveland Business Mentors. All rights reserved.<span class="cbm-footer__version" data-cbm-version></span></p>
+    </footer>
+  </main>
+
+  <script src="/shared/wizard.js"></script>
+  <script src="app.js"></script>
+  <script src="/shared/footer.js"></script>
+</body>
+</html>

@@ -26,8 +26,11 @@ class EspoError(Exception):
 
 class EspoApi(Protocol):
     async def create(self, entity: str, payload: dict[str, Any]) -> dict[str, Any]: ...
+    async def update(
+        self, entity: str, record_id: str, payload: dict[str, Any]
+    ) -> dict[str, Any]: ...
     async def find_one(
-        self, entity: str, attribute: str, value: str
+        self, entity: str, attribute: str, value: str, select: str = "id"
     ) -> Optional[dict[str, Any]]: ...
     async def relate(
         self, entity: str, record_id: str, link: str, related_id: str
@@ -60,11 +63,25 @@ class EspoClient:
             )
         return resp.json()
 
+    async def update(
+        self, entity: str, record_id: str, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        async with httpx.AsyncClient(timeout=self._timeout) as client:
+            resp = await client.put(
+                f"{self._base}/{entity}/{record_id}", json=payload, headers=self._headers
+            )
+        if resp.status_code >= 400:
+            raise EspoError(
+                f"update {entity}/{record_id} failed: "
+                f"HTTP {resp.status_code} {resp.text[:300]}"
+            )
+        return resp.json()
+
     async def find_one(
-        self, entity: str, attribute: str, value: str
+        self, entity: str, attribute: str, value: str, select: str = "id"
     ) -> Optional[dict[str, Any]]:
         params = [
-            ("select", "id"),
+            ("select", select),
             ("maxSize", "1"),
             ("where[0][type]", "equals"),
             ("where[0][attribute]", attribute),
@@ -139,8 +156,14 @@ class DryRunEspoClient:
         log.info("DRY_RUN create %s -> %s  payload=%s", entity, fake_id, payload)
         return {"id": fake_id, **payload}
 
+    async def update(
+        self, entity: str, record_id: str, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        log.info("DRY_RUN update %s/%s  payload=%s", entity, record_id, payload)
+        return {"id": record_id, **payload}
+
     async def find_one(
-        self, entity: str, attribute: str, value: str
+        self, entity: str, attribute: str, value: str, select: str = "id"
     ) -> Optional[dict[str, Any]]:
         log.info("DRY_RUN find_one %s %s=%s -> None", entity, attribute, value)
         return None

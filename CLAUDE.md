@@ -14,6 +14,11 @@ linked records in EspoCRM (the system of record). Two forms ship today:
   to the CBM model. Creates Account → Contact → CClientProfile → CEngagement.
 - **volunteer** — SCORE volunteer/become-a-mentor (form 6 / MR-APPLY). Creates
   a single Contact (Mentor) with an optional in-memory resume upload.
+- **info-request** — generic request-for-information (single step). Creates a
+  Contact (`cContactType=["Prospect"]`) with the message in `description`,
+  plus an Account (`cClientStatus="Prospect"`) only when a company name is
+  given. Repeat email = APPEND to the existing contact's description (needs
+  *edit* on Contact for the intake API user — verify the grant before go-live).
 
 This repo owns the *application*, not the business definition of the process.
 The Client Intake process is defined by **MN-INTAKE** in the
