@@ -12,7 +12,7 @@ window.VOL_OPTIONS = {
 
   howDidYouHear: [
     "Friend or relative", "Newspaper", "Online search", "Radio", "SBA",
-    "SCORE client or volunteer", "Social media", "TV", "Workshop/Event", "Other",
+    "CBM client or volunteer", "Social media", "TV", "Workshop/Event", "Other",
   ],
 
   // Aligned to CMentorProfile.industrySector (20 NAICS sectors).
