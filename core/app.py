@@ -20,6 +20,7 @@ from pydantic import ValidationError
 from .config import Settings, get_settings
 from .espo import DryRunEspoClient, EspoApi, EspoClient, EspoError
 from .forms import FormSpec
+from .quarantine import quarantine_submission
 from .version import __version__
 
 logging.basicConfig(level=logging.INFO)
@@ -50,14 +51,18 @@ def _make_handler(spec: FormSpec, settings: Settings, processed: dict[str, dict]
             return JSONResponse(status_code=422, content={"detail": detail})
 
         # Honeypot: acknowledge generically, do not tell a bot it was caught.
-        # Log the email so a false positive (e.g. browser autofill, seen
-        # 2026-06-12) is recoverable from the run logs.
+        # The submission is held for admin review (emailed if SMTP is
+        # configured) rather than dropped, so a false positive (e.g. browser
+        # autofill, seen 2026-06-12) is recoverable without contacting the
+        # submitter. The email line is the fallback when SMTP is off.
         if submission.company_url.strip():
+            quarantined = await quarantine_submission(settings, spec.slug, submission)
             log.warning(
-                "honeypot %s token=%s email=%s",
+                "honeypot %s token=%s email=%s quarantined=%s",
                 spec.slug,
                 submission.submission_token,
                 getattr(submission, "email", "?"),
+                quarantined,
             )
             return {"status": "received"}
 

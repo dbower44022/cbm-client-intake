@@ -155,6 +155,16 @@ A shared core hosts any number of per-form packages.
     and serves `/{slug}/`. Also `GET /` (form index), `GET /healthz`, and
     `/shared/` for the design tokens / wizard assets. Honeypot (`company_url`)
     and a `submission_token` idempotency cache live here.
+  - `quarantine.py` — a honeypot hit is held for admin review (emailed via
+    SMTP, `core.quarantine`) instead of dropped, so a false positive is
+    recoverable without contacting the submitter. No-op until SMTP is
+    configured (`SMTP_HOST` + `QUARANTINE_EMAIL_FROM`/`_TO`, see `.env.example`);
+    when off it falls back to logging the honeypot hit (with the email). The
+    review email carries the submission as reprocess-ready JSON (honeypot
+    field cleared) — an admin re-POSTs it to `/api/{slug}/intake` to create the
+    records (honeypot hits never populate the idempotency cache, so the
+    original token still processes). Large base64 (résumés) is redacted from
+    the email; on send failure the payload is logged at WARNING.
   - `espo.py` — `EspoClient` (real) and `DryRunEspoClient` (logs + synthetic ids).
   - `config.py` — `pydantic-settings`. **All settings default**, and
     `espo_dry_run` defaults to `True`, so the app boots with zero env vars.
