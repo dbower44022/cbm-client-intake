@@ -125,18 +125,19 @@ Local `.env` stays `ESPO_DRY_RUN=true`; live tests use an inline
   Technical Design §3.4 and the §11.1 pending-carry-forward set.
 
 **Open follow-ups:**
-- **Honeypot quarantine CRM build** (spec in `cintake-submission-entity.md`).
-  DONE end-to-end on the write side (2026-06-14): modeled in the V2 system
-  (engagement `CBM`/`ENG-002`, `ENT-015` "Intake Submission", `FLD-215..219`);
-  **deployed to crm-test as `CIntakeSubmission`** via the v1 crmbuilder GUI
-  (program `ClevelandBusinessMentors/programs/MN-IntakeSubmission.yaml`); fields
-  `form`/`reason`/`submitterEmail`/`status` created un-prefixed + native
-  `description` reused (app constants match, no code change). Intake API user
-  *create* grant added + cache rebuilt; a create probe with the intake key
-  returns 200, so the app's quarantine write now succeeds.
-  **Remaining:** (1) add an alert-on-create workflow in EspoCRM (CRM-owned
-  alerting); (2) clean up the `ZZTEST-INTAKE GrantCheck` probe record
-  (id `6a2eec00c83e44628`) in the EspoCRM UI (intake key is create-only).
+- **CIntakeSubmission — log every submission** (spec in
+  `cintake-submission-entity.md`). The app now writes a record for every
+  submission (Normal/Honeypot/OrchestratorError), not just honeypot holds —
+  `core/submission_log.py`. V1.0 entity is live in crm-test + create grant
+  verified (2026-06-14). **Remaining CRM-side:**
+  1. **Re-run the v1 deploy** of `MN-IntakeSubmission.yaml` (v1.1) to add the
+     `source` field, the `Normal` reason option, and the `contact` link to
+     crm-test. Until then, `Normal` logs fail on the missing `source`/`contact`
+     and fall back to WARNING logs (held records still write fine).
+  2. Add the **`reason != Normal`** alert-on-create workflow (so only review
+     items ping; spec in the doc).
+  3. Clean up the `ZZTEST-INTAKE GrantCheck` probe record
+     (id `6a2eec00c83e44628`) in the EspoCRM UI.
 - Make the *deployed* app write to EspoCRM: set `ESPO_DRY_RUN=false` plus
   `ESPO_BASE_URL` + `ESPO_API_KEY` as **encrypted** App Platform env vars.
 - Clean up the `ZZTEST` test records left in crm-test by the wiring tests
@@ -167,19 +168,20 @@ A shared core hosts any number of per-form packages.
     and serves `/{slug}/`. Also `GET /` (form index), `GET /healthz`, and
     `/shared/` for the design tokens / wizard assets. Honeypot (`company_url`)
     and a `submission_token` idempotency cache live here.
-  - `quarantine.py` — a honeypot hit is held for admin review (written to the
-    CRM as a `CIntakeSubmission` record, `core.quarantine`) instead of dropped,
-    so a false positive is recoverable without contacting the submitter. The
-    record carries the submission as reprocess-ready JSON in `description`
-    (honeypot field cleared) — an admin re-POSTs it to `/api/{slug}/intake` to
-    create the records (honeypot hits never populate the idempotency cache, so
-    the original token still processes). Large base64 (résumés) is redacted.
-    **CRM dependency** (CRM team — see `cintake-submission-entity.md`): the
-    `CIntakeSubmission` entity, the API user's *create* grant, and an
-    alert-on-create workflow. Until they exist the CRM write fails and it
-    **falls back to logging the full payload at WARNING**, so the app deploys
-    safely ahead of the CRM build. Alerting is CRM-owned (workflow/assignment),
-    not in the app.
+  - `submission_log.py` — writes a `CIntakeSubmission` CRM record for **every**
+    submission (`core.submission_log`): `reason=Normal`/`status=Processed` on
+    success (linked to the Contact via `contactId`), `OrchestratorError`/`New`
+    on a CRM failure, `Honeypot`/`New` on a honeypot hit. Gives an audit trail
+    (raw input vs. the transformed records) + inbound analytics (by `form`,
+    `source`, native `createdAt`; conversion via the `contact` link). The review
+    queue is `status=New`; `Normal` is the log. `description` carries the raw
+    JSON (honeypot field cleared; reprocess steps for held records; large base64
+    redacted). Create-only (write happens after the outcome — no edit grant).
+    All writes are **best-effort**: a CRM-write failure logs the payload at
+    WARNING and never breaks the submission, so the app deploys safely ahead of
+    the CRM build. **CRM dependency** (see `cintake-submission-entity.md`): the
+    `CIntakeSubmission` entity/fields/`contact` link, the create grant, and a
+    `reason != Normal` alert-on-create workflow (CRM-owned alerting, not in the app).
   - `espo.py` — `EspoClient` (real) and `DryRunEspoClient` (logs + synthetic ids).
   - `config.py` — `pydantic-settings`. **All settings default**, and
     `espo_dry_run` defaults to `True`, so the app boots with zero env vars.

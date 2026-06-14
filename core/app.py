@@ -20,7 +20,14 @@ from pydantic import ValidationError
 from .config import Settings, get_settings
 from .espo import DryRunEspoClient, EspoApi, EspoClient, EspoError
 from .forms import FormSpec
-from .quarantine import quarantine_submission
+from .submission_log import (
+    REASON_HONEYPOT,
+    REASON_NORMAL,
+    REASON_ORCHESTRATOR_ERROR,
+    STATUS_NEW,
+    STATUS_PROCESSED,
+    log_submission,
+)
 from .version import __version__
 
 logging.basicConfig(level=logging.INFO)
@@ -50,22 +57,24 @@ def _make_handler(spec: FormSpec, settings: Settings, processed: dict[str, dict]
             ]
             return JSONResponse(status_code=422, content={"detail": detail})
 
+        client = _make_client(settings)
+
         # Honeypot: acknowledge generically, do not tell a bot it was caught.
         # The submission is held for admin review (written to the CRM as a
-        # CIntakeSubmission record) rather than dropped, so a false positive
-        # (e.g. browser autofill, seen 2026-06-12) is recoverable without
-        # contacting the submitter. Falls back to logging if the CRM write
-        # fails (e.g. the entity isn't built yet).
+        # CIntakeSubmission record, reason=Honeypot, status=New) rather than
+        # dropped, so a false positive (e.g. browser autofill, seen 2026-06-12)
+        # is recoverable without contacting the submitter.
         if submission.company_url.strip():
-            quarantined = await quarantine_submission(
-                _make_client(settings), spec.slug, submission
+            logged = await log_submission(
+                client, spec.slug, submission,
+                reason=REASON_HONEYPOT, status=STATUS_NEW,
             )
             log.warning(
-                "honeypot %s token=%s email=%s quarantined=%s",
+                "honeypot %s token=%s email=%s logged=%s",
                 spec.slug,
                 submission.submission_token,
                 getattr(submission, "email", "?"),
-                quarantined,
+                logged,
             )
             return {"status": "received"}
 
@@ -74,8 +83,14 @@ def _make_handler(spec: FormSpec, settings: Settings, processed: dict[str, dict]
             return {"status": "ok", "idempotent": True, **processed[key]}
 
         try:
-            ids = await spec.orchestrator(submission, _make_client(settings))
+            ids = await spec.orchestrator(submission, client)
         except EspoError as exc:
+            # Capture the raw submission for recovery (some records may have been
+            # created before the failure). Best-effort, then surface the 502.
+            await log_submission(
+                client, spec.slug, submission,
+                reason=REASON_ORCHESTRATOR_ERROR, status=STATUS_NEW,
+            )
             log.error("%s failed token=%s: %s", spec.slug, submission.submission_token, exc)
             raise HTTPException(
                 status_code=502,
@@ -84,6 +99,13 @@ def _make_handler(spec: FormSpec, settings: Settings, processed: dict[str, dict]
                     "the system of record. It has been recorded for completion."
                 ),
             )
+
+        # Log the processed submission for audit/analytics, linked to its Contact.
+        await log_submission(
+            client, spec.slug, submission,
+            reason=REASON_NORMAL, status=STATUS_PROCESSED,
+            contact_id=ids.get("contactId"),
+        )
 
         processed[key] = ids
         log.info("%s ok token=%s ids=%s", spec.slug, submission.submission_token, ids)
