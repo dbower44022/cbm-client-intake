@@ -46,15 +46,60 @@ UI.
 
 ## Alerting (CRM-owned)
 
-The app deliberately does not send any alert — that is configured here so it is
-visible and changeable by admins:
+The app deliberately sends no alert — it is configured in EspoCRM so it is
+visible and changeable by admins. crm-test has the Advanced Pack **Workflow
+Manager** (verified 2026-06-14), so a single Workflow does it; full BPM is not
+needed. The app does not set `assignedUser`/`teams` (the create-only API user
+"customapps" has no user directory), so routing must come from the Workflow,
+not the app payload — and do **not** notify "Created By" / "Followers" (that is
+the API user).
 
-- **Recommended:** a Workflow (or BPM flow) **on `CIntakeSubmission` create**
-  that emails the admin team and/or assigns the record to a team. This is the
-  "the CRM sends the alert" path.
-- The app does not set `assignedUser` (the create-only API user has no user
-  directory), so assignment-based notifications must come from the workflow /
-  a default-team rule, not from the app payload.
+### Step 1 — Email Template (Administration → Email Templates)
+
+- **Name:** `CIntakeSubmission New — Admin Alert`
+- **Type:** Email · **Entity Type:** `CIntakeSubmission`
+- **Subject:** `New intake submission held for review — {{form}} ({{reason}})`
+- **Body:**
+  ```
+  A web intake submission was held for review (it tripped the spam honeypot
+  but passed all other validation).
+
+  Form:      {{form}}
+  Reason:    {{reason}}
+  Submitter: {{submitterEmail}}
+  Status:    {{status}}
+
+  {{description}}
+
+  Open in CRM: {{config.siteUrl}}/#CIntakeSubmission/view/{{id}}
+  ```
+  (`description` already contains the reprocess-ready JSON + instructions the
+  app wrote. If `{{config.siteUrl}}` doesn't resolve in your version, hardcode
+  `https://crm-test.clevelandbusinessmentors.org`.)
+
+### Step 2 — Workflow (Administration → Workflows)
+
+- **Name:** `CIntakeSubmission — notify on new submission`
+- **Target Entity:** `CIntakeSubmission` · **Active:** yes
+- **Trigger Type:** **After record created**
+- **Conditions:** none (every create should alert). Optional: `status = New`.
+- **Actions:**
+  1. **Send Email** — Template `CIntakeSubmission New — Admin Alert`; **To** =
+     *Specified* (a shared/admin address, e.g. an intake-review distro) **or**
+     *Team Users* of the admin team; **From** = system outbound address.
+  2. *(recommended)* **Create Notification** — to the admin Team/users:
+     `New intake submission held for review: {{name}}`. This is the in-app bell
+     alert and needs no SMTP — a good fallback if outbound email isn't set up.
+  3. *(optional)* **Update Target Record** → set `teams`/`assignedUser` to the
+     admin team so it shows in their list/Kanban (Kanban groups on `status`).
+
+### Gotchas
+
+- **Send Email needs outbound SMTP** configured (Administration → Outbound
+  Emails). If that's not set, rely on action 2 (Create Notification).
+- Placeholders are `{{fieldName}}` for the record's own fields.
+- For an at-a-glance queue, add a saved filter / list-view dashlet on
+  `CIntakeSubmission` where `status = New`.
 
 ## Processing a valid submission
 
