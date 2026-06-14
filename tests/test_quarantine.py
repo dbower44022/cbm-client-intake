@@ -1,4 +1,4 @@
-"""Tests for honeypot-held submission quarantine (email for admin review)."""
+"""Tests for honeypot-held submission quarantine (CRM CIntakeSubmission record)."""
 
 from __future__ import annotations
 
@@ -6,9 +6,26 @@ import json
 
 import pytest
 
-from core.config import Settings
-from core.quarantine import build_quarantine_message, quarantine_submission
+from core.quarantine import (
+    QUARANTINE_ENTITY,
+    build_quarantine_payload,
+    quarantine_submission,
+)
 from forms.info_request.schemas import InfoRequest
+
+
+class CapturingClient:
+    def __init__(self, fail=False):
+        self.creates: list[tuple[str, dict]] = []
+        self._fail = fail
+        self._n = 0
+
+    async def create(self, entity, payload):
+        if self._fail:
+            raise RuntimeError("entity does not exist")
+        self._n += 1
+        self.creates.append((entity, payload))
+        return {"id": f"{entity}-{self._n}", **payload}
 
 
 def _submission(**overrides) -> InfoRequest:
@@ -24,73 +41,42 @@ def _submission(**overrides) -> InfoRequest:
     return InfoRequest(**base)
 
 
-def test_message_carries_payload_and_clears_honeypot():
-    msg = build_quarantine_message(
-        "info-request", _submission(), mail_from="bot@cbm", mail_to="admin@cbm"
-    )
-    assert msg["To"] == "admin@cbm"
-    assert "ada@example.com" in msg["Subject"]
-    body = msg.get_content()
+def test_payload_has_review_fields_and_clears_honeypot():
+    payload = build_quarantine_payload("info-request", _submission())
+    assert payload["cForm"] == "info-request"
+    assert payload["cReason"] == "Honeypot"
+    assert payload["cStatus"] == "New"
+    assert payload["cSubmitterEmail"] == "ada@example.com"
+    desc = payload["description"]
     # The honeypot value is reported for context...
-    assert "http://spam.example" in body
+    assert "http://spam.example" in desc
     # ...but the reprocess-ready JSON block has it cleared.
-    start = body.index("----- submission payload -----")
-    payload = json.loads(body[body.index("{", start) : body.rindex("}") + 1])
-    assert payload["company_url"] == ""
-    assert payload["email"] == "ada@example.com"
-    assert payload["message"] == "Please tell me about mentoring."
+    block = json.loads(desc[desc.index("{") : desc.rindex("}") + 1])
+    assert block["company_url"] == ""
+    assert block["email"] == "ada@example.com"
 
 
 def test_oversized_fields_are_redacted():
-    msg = build_quarantine_message(
-        "info-request",
-        _submission(message="x" * 5000),
-        mail_from="bot@cbm",
-        mail_to="admin@cbm",
+    payload = build_quarantine_payload(
+        "info-request", _submission(message="x" * 5000)
     )
-    body = msg.get_content()
-    assert "chars omitted>" in body
-    assert "x" * 5000 not in body
+    assert "chars omitted>" in payload["description"]
+    assert "x" * 5000 not in payload["description"]
 
 
 @pytest.mark.asyncio
-async def test_disabled_when_smtp_unconfigured():
-    settings = Settings(smtp_host="", quarantine_email_to="", quarantine_email_from="")
-    assert settings.quarantine_enabled is False
-    assert await quarantine_submission(settings, "info-request", _submission()) is False
-
-
-@pytest.mark.asyncio
-async def test_sends_when_configured(monkeypatch):
-    settings = Settings(
-        smtp_host="smtp.example",
-        quarantine_email_from="bot@cbm",
-        quarantine_email_to="admin@cbm",
-    )
-    assert settings.quarantine_enabled is True
-
-    sent = {}
-
-    def fake_send(s, msg):
-        sent["to"] = msg["To"]
-
-    monkeypatch.setattr("core.quarantine._send_smtp", fake_send)
-    ok = await quarantine_submission(settings, "info-request", _submission())
+async def test_writes_record_to_crm():
+    client = CapturingClient()
+    ok = await quarantine_submission(client, "info-request", _submission())
     assert ok is True
-    assert sent["to"] == "admin@cbm"
+    [(entity, payload)] = client.creates
+    assert entity == QUARANTINE_ENTITY
+    assert payload["cReason"] == "Honeypot"
 
 
 @pytest.mark.asyncio
-async def test_send_failure_is_swallowed(monkeypatch):
-    settings = Settings(
-        smtp_host="smtp.example",
-        quarantine_email_from="bot@cbm",
-        quarantine_email_to="admin@cbm",
-    )
-
-    def boom(s, msg):
-        raise OSError("connection refused")
-
-    monkeypatch.setattr("core.quarantine._send_smtp", boom)
-    # Best-effort: a transport failure must not raise, just return False.
-    assert await quarantine_submission(settings, "info-request", _submission()) is False
+async def test_crm_failure_is_swallowed():
+    client = CapturingClient(fail=True)
+    # Best-effort: a CRM create failure (e.g. entity not built yet) must not
+    # raise, just return False so the user still gets a generic success.
+    assert await quarantine_submission(client, "info-request", _submission()) is False

@@ -51,12 +51,15 @@ def _make_handler(spec: FormSpec, settings: Settings, processed: dict[str, dict]
             return JSONResponse(status_code=422, content={"detail": detail})
 
         # Honeypot: acknowledge generically, do not tell a bot it was caught.
-        # The submission is held for admin review (emailed if SMTP is
-        # configured) rather than dropped, so a false positive (e.g. browser
-        # autofill, seen 2026-06-12) is recoverable without contacting the
-        # submitter. The email line is the fallback when SMTP is off.
+        # The submission is held for admin review (written to the CRM as a
+        # CIntakeSubmission record) rather than dropped, so a false positive
+        # (e.g. browser autofill, seen 2026-06-12) is recoverable without
+        # contacting the submitter. Falls back to logging if the CRM write
+        # fails (e.g. the entity isn't built yet).
         if submission.company_url.strip():
-            quarantined = await quarantine_submission(settings, spec.slug, submission)
+            quarantined = await quarantine_submission(
+                _make_client(settings), spec.slug, submission
+            )
             log.warning(
                 "honeypot %s token=%s email=%s quarantined=%s",
                 spec.slug,

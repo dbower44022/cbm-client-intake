@@ -125,6 +125,11 @@ Local `.env` stays `ESPO_DRY_RUN=true`; live tests use an inline
   Technical Design §3.4 and the §11.1 pending-carry-forward set.
 
 **Open follow-ups:**
+- **CRM-side build for honeypot quarantine** (CRM team — spec in
+  `cintake-submission-entity.md`): create the `CIntakeSubmission` entity, grant
+  the intake API user *create* on it, and add an alert-on-create workflow.
+  Until then the app holds honeypot hits by logging the payload at WARNING
+  (the CRM write fails gracefully).
 - Make the *deployed* app write to EspoCRM: set `ESPO_DRY_RUN=false` plus
   `ESPO_BASE_URL` + `ESPO_API_KEY` as **encrypted** App Platform env vars.
 - Clean up the `ZZTEST` test records left in crm-test by the wiring tests
@@ -155,16 +160,19 @@ A shared core hosts any number of per-form packages.
     and serves `/{slug}/`. Also `GET /` (form index), `GET /healthz`, and
     `/shared/` for the design tokens / wizard assets. Honeypot (`company_url`)
     and a `submission_token` idempotency cache live here.
-  - `quarantine.py` — a honeypot hit is held for admin review (emailed via
-    SMTP, `core.quarantine`) instead of dropped, so a false positive is
-    recoverable without contacting the submitter. No-op until SMTP is
-    configured (`SMTP_HOST` + `QUARANTINE_EMAIL_FROM`/`_TO`, see `.env.example`);
-    when off it falls back to logging the honeypot hit (with the email). The
-    review email carries the submission as reprocess-ready JSON (honeypot
-    field cleared) — an admin re-POSTs it to `/api/{slug}/intake` to create the
-    records (honeypot hits never populate the idempotency cache, so the
-    original token still processes). Large base64 (résumés) is redacted from
-    the email; on send failure the payload is logged at WARNING.
+  - `quarantine.py` — a honeypot hit is held for admin review (written to the
+    CRM as a `CIntakeSubmission` record, `core.quarantine`) instead of dropped,
+    so a false positive is recoverable without contacting the submitter. The
+    record carries the submission as reprocess-ready JSON in `description`
+    (honeypot field cleared) — an admin re-POSTs it to `/api/{slug}/intake` to
+    create the records (honeypot hits never populate the idempotency cache, so
+    the original token still processes). Large base64 (résumés) is redacted.
+    **CRM dependency** (CRM team — see `cintake-submission-entity.md`): the
+    `CIntakeSubmission` entity, the API user's *create* grant, and an
+    alert-on-create workflow. Until they exist the CRM write fails and it
+    **falls back to logging the full payload at WARNING**, so the app deploys
+    safely ahead of the CRM build. Alerting is CRM-owned (workflow/assignment),
+    not in the app.
   - `espo.py` — `EspoClient` (real) and `DryRunEspoClient` (logs + synthetic ids).
   - `config.py` — `pydantic-settings`. **All settings default**, and
     `espo_dry_run` defaults to `True`, so the app boots with zero env vars.

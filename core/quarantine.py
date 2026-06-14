@@ -3,34 +3,48 @@
 A honeypot hit returns a generic success and creates nothing (see
 ``core/app.py``). That is correct for bots, but a false positive (e.g. a
 browser that autofills the hidden field) would silently lose a real
-submission. To make those recoverable, a held submission is emailed to an
-admin address so a human can review it and, if valid, reprocess it.
+submission. To make those recoverable, a held submission is written to the
+CRM as a ``CIntakeSubmission`` record so it is visible to every admin and the
+CRM can alert on it (assignment / workflow-on-create) — no app-side mail
+credentials, no separate review surface.
 
 The submission reaches here only after passing full schema validation, so the
 held payload is always well-formed — the review queue is small and meaningful,
 not a flood of malformed spam.
 
-Transport is plain SMTP configured entirely via env vars. When SMTP is not
-configured the feature is a no-op (the app still boots with zero env vars),
-and the caller falls back to logging.
+CRM dependency (owned by the CRM team — see ``cintake-submission-entity.md``):
+the ``CIntakeSubmission`` entity and the intake API user's *create* grant must
+exist. Until they do, ``client.create`` fails and this falls back to logging
+the full payload at WARNING — so deploying the app never blocks on the CRM
+build, and nothing is silently lost in the meantime.
 """
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
-import smtplib
-from email.message import EmailMessage
+from datetime import datetime, timezone
 from typing import Any
 
-from .config import Settings
+from .espo import EspoApi
 from .forms import BaseSubmission
 
 log = logging.getLogger("cbm_intake.quarantine")
 
+# The CRM holding entity and its fields (reconciled to the spec the CRM team
+# builds to — see cintake-submission-entity.md). Field names mirror the
+# orchestrators' hardcoded-constant style.
+QUARANTINE_ENTITY = "CIntakeSubmission"
+Q_FORM = "cForm"                # enum: client-intake / volunteer / info-request
+Q_REASON = "cReason"            # enum: Honeypot / OrchestratorError
+Q_SUBMITTER_EMAIL = "cSubmitterEmail"  # varchar
+Q_STATUS = "cStatus"           # enum: New / Approved / Rejected / Processed
+
+REASON_HONEYPOT = "Honeypot"
+STATUS_NEW = "New"
+
 # Strings longer than this (base64 résumé uploads, mainly) are redacted from
-# the email so it stays small enough to send.
+# the stored payload so the CRM text field stays manageable.
 _MAX_FIELD_CHARS = 2000
 
 
@@ -45,82 +59,65 @@ def _redact(value: Any) -> Any:
     return value
 
 
-def build_quarantine_message(
-    slug: str, submission: BaseSubmission, *, mail_from: str, mail_to: str
-) -> EmailMessage:
-    """Build the review email for a held submission (pure; no I/O).
+def _description(slug: str, submission: BaseSubmission, email: str) -> str:
+    """Human-readable note + reprocess-ready JSON for the CRM record.
 
-    The JSON block is reprocess-ready: the honeypot field is emptied so an
-    admin can re-POST it verbatim to ``/api/{slug}/intake`` to create the
-    records (honeypot hits never populate the idempotency cache, so the
-    original token still processes).
+    The JSON block has the honeypot field cleared so an admin who deems the
+    submission valid can re-POST it verbatim to ``/api/{slug}/intake`` to
+    create the records (honeypot hits never populate the idempotency cache,
+    so the original token still processes).
     """
     payload = _redact(json.loads(submission.model_dump_json()))
     held_honeypot = payload.get("company_url", "")
     payload["company_url"] = ""  # clear so the block is ready to resubmit
     pretty = json.dumps(payload, indent=2, sort_keys=True)
-
-    email = getattr(submission, "email", "(unknown)")
-    msg = EmailMessage()
-    msg["Subject"] = f"[CBM intake — review] held {slug} submission from {email}"
-    msg["From"] = mail_from
-    msg["To"] = mail_to
-    msg.set_content(
-        "A submission to the CBM "
-        f"{slug} form was held because it tripped the spam honeypot.\n"
-        "It passed all other validation. If it looks like a real person rather\n"
-        "than a bot, you can process it without contacting the submitter.\n\n"
+    return (
+        f"Held by the intake app: this {slug} submission tripped the spam "
+        "honeypot.\nIt passed all other validation. If it looks like a real "
+        "person rather than\na bot, you can process it without contacting the "
+        "submitter.\n\n"
         f"Submitter email: {email}\n"
         f"Honeypot value that was caught: {held_honeypot!r}\n\n"
-        "To process it: POST the JSON below (the honeypot field is already\n"
-        f"cleared) to  /api/{slug}/intake  with Content-Type: application/json.\n\n"
+        "To process it: POST the JSON below (honeypot field already cleared) "
+        f"to\n/api/{slug}/intake  with Content-Type: application/json.\n\n"
         "----- submission payload -----\n"
-        f"{pretty}\n"
+        f"{pretty}"
     )
-    return msg
 
 
-def _send_smtp(settings: Settings, msg: EmailMessage) -> None:
-    """Blocking SMTP send (run off the event loop via ``asyncio.to_thread``)."""
-    if settings.smtp_ssl:
-        server: smtplib.SMTP = smtplib.SMTP_SSL(
-            settings.smtp_host, settings.smtp_port, timeout=15
-        )
-    else:
-        server = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=15)
-    with server:
-        if settings.smtp_starttls and not settings.smtp_ssl:
-            server.starttls()
-        if settings.smtp_user:
-            server.login(settings.smtp_user, settings.smtp_password)
-        server.send_message(msg)
+def build_quarantine_payload(slug: str, submission: BaseSubmission) -> dict[str, Any]:
+    """Build the ``CIntakeSubmission`` record body (pure; no I/O)."""
+    email = getattr(submission, "email", None) or "(unknown)"
+    return {
+        "name": f"{slug} — {email} — {datetime.now(timezone.utc):%Y-%m-%d}",
+        Q_FORM: slug,
+        Q_REASON: REASON_HONEYPOT,
+        Q_SUBMITTER_EMAIL: str(email),
+        Q_STATUS: STATUS_NEW,
+        "description": _description(slug, submission, str(email)),
+    }
 
 
 async def quarantine_submission(
-    settings: Settings, slug: str, submission: BaseSubmission
+    client: EspoApi, slug: str, submission: BaseSubmission
 ) -> bool:
-    """Email a held submission for review. Returns True if an email was sent.
+    """Write a held submission to the CRM for review. Returns True on success.
 
-    Best-effort: never raises. When SMTP is unconfigured this is a no-op
-    (returns False). On a send failure the full payload is logged at WARNING
-    so the submission is still recoverable from the run logs.
+    Best-effort: never raises. If the CRM create fails (e.g. the
+    CIntakeSubmission entity or the API user's create grant is not in place
+    yet) the full payload is logged at WARNING so the submission is still
+    recoverable from the run logs.
     """
-    if not settings.quarantine_enabled:
-        return False
-    msg = build_quarantine_message(
-        slug,
-        submission,
-        mail_from=settings.quarantine_email_from,
-        mail_to=settings.quarantine_email_to,
-    )
+    payload = build_quarantine_payload(slug, submission)
     try:
-        await asyncio.to_thread(_send_smtp, settings, msg)
+        created = await client.create(QUARANTINE_ENTITY, payload)
+        log.info("quarantined %s submission to %s/%s", slug, QUARANTINE_ENTITY, created["id"])
         return True
     except Exception as exc:  # noqa: BLE001 — best-effort; log everything
         log.warning(
-            "quarantine email failed for %s (%s); payload=%s",
+            "quarantine to CRM failed for %s (%s); payload=%s",
             slug,
             exc,
-            _redact(json.loads(submission.model_dump_json())),
+            payload,
         )
         return False
