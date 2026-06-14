@@ -126,13 +126,17 @@ Local `.env` stays `ESPO_DRY_RUN=true`; live tests use an inline
 
 **Open follow-ups:**
 - **Honeypot quarantine CRM build** (spec in `cintake-submission-entity.md`).
-  Entity is **modeled in the V2 system** (engagement `CBM`/`ENG-002`, entity
-  `ENT-015` "Intake Submission", fields `FLD-215..219`, all `candidate`).
-  Remaining: **deploy it to crm-test** (V2 doesn't push to EspoCRM — use the v1
-  crmbuilder deploy or the EspoCRM admin UI; it lands as `CIntakeSubmission`),
-  grant the intake API user *create* on it, and add an alert-on-create
-  workflow. Until it exists in crm-test the app holds honeypot hits by logging
-  the payload at WARNING (the CRM write fails gracefully).
+  DONE end-to-end on the write side (2026-06-14): modeled in the V2 system
+  (engagement `CBM`/`ENG-002`, `ENT-015` "Intake Submission", `FLD-215..219`);
+  **deployed to crm-test as `CIntakeSubmission`** via the v1 crmbuilder GUI
+  (program `ClevelandBusinessMentors/programs/MN-IntakeSubmission.yaml`); fields
+  `form`/`reason`/`submitterEmail`/`status` created un-prefixed + native
+  `description` reused (app constants match, no code change). Intake API user
+  *create* grant added + cache rebuilt; a create probe with the intake key
+  returns 200, so the app's quarantine write now succeeds.
+  **Remaining:** (1) add an alert-on-create workflow in EspoCRM (CRM-owned
+  alerting); (2) clean up the `ZZTEST-INTAKE GrantCheck` probe record
+  (id `6a2eec00c83e44628`) in the EspoCRM UI (intake key is create-only).
 - Make the *deployed* app write to EspoCRM: set `ESPO_DRY_RUN=false` plus
   `ESPO_BASE_URL` + `ESPO_API_KEY` as **encrypted** App Platform env vars.
 - Clean up the `ZZTEST` test records left in crm-test by the wiring tests
