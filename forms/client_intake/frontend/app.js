@@ -18,6 +18,16 @@
     (window.crypto && crypto.randomUUID && crypto.randomUUID()) ||
     "tok-" + Date.now() + "-" + Math.random().toString(36).slice(2);
 
+  // Honeypot — only count it filled when actual keystrokes landed in it;
+  // browser autofill sets hidden-field values without typing (false positives).
+  const honeypot = document.getElementById("xtra_note");
+  let honeypotKeystrokes = 0;
+  if (honeypot) {
+    honeypot.addEventListener("keydown", () => {
+      honeypotKeystrokes += 1;
+    });
+  }
+
   // Alphabetize a value list, but always sink a literal "Other" to the bottom.
   // ("Please select…" is added separately as the placeholder and stays on top.)
   function sortOptions(values) {
@@ -272,7 +282,7 @@
       marketing_consent: document.getElementById("marketing_consent").checked,
       terms_accepted: document.getElementById("terms_accepted").checked,
       submission_token: submissionToken,
-      company_url: document.getElementById("company_url").value,
+      company_url: honeypot && honeypotKeystrokes > 0 ? honeypot.value : "",
     };
   }
 
