@@ -125,11 +125,14 @@ Local `.env` stays `ESPO_DRY_RUN=true`; live tests use an inline
   Technical Design §3.4 and the §11.1 pending-carry-forward set.
 
 **Open follow-ups:**
-- **CRM-side build for honeypot quarantine** (CRM team — spec in
-  `cintake-submission-entity.md`): create the `CIntakeSubmission` entity, grant
-  the intake API user *create* on it, and add an alert-on-create workflow.
-  Until then the app holds honeypot hits by logging the payload at WARNING
-  (the CRM write fails gracefully).
+- **Honeypot quarantine CRM build** (spec in `cintake-submission-entity.md`).
+  Entity is **modeled in the V2 system** (engagement `CBM`/`ENG-002`, entity
+  `ENT-015` "Intake Submission", fields `FLD-215..219`, all `candidate`).
+  Remaining: **deploy it to crm-test** (V2 doesn't push to EspoCRM — use the v1
+  crmbuilder deploy or the EspoCRM admin UI; it lands as `CIntakeSubmission`),
+  grant the intake API user *create* on it, and add an alert-on-create
+  workflow. Until it exists in crm-test the app holds honeypot hits by logging
+  the payload at WARNING (the CRM write fails gracefully).
 - Make the *deployed* app write to EspoCRM: set `ESPO_DRY_RUN=false` plus
   `ESPO_BASE_URL` + `ESPO_API_KEY` as **encrypted** App Platform env vars.
 - Clean up the `ZZTEST` test records left in crm-test by the wiring tests

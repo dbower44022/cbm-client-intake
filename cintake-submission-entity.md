@@ -6,28 +6,36 @@ to a false positive (e.g. browser autofill). The held submission is written to
 the CRM as a **`CIntakeSubmission`** record, so it is visible to every admin
 and the CRM (not the app) owns alerting.
 
-This file is the contract the **CRM team** builds to. Until the entity and the
-API user's create grant exist, the app's write fails and it falls back to
-logging the full payload at WARNING (so nothing is silently lost, and
-deploying the app never blocks on this build).
+**Status:** modeled in the **V2 system** (engagement `CBM` / `ENG-002`) as
+entity **`ENT-015` "Intake Submission"** with fields `FLD-215..219`, all
+`candidate` (matching the other CBM entities). The remaining step is the
+downstream **deploy to crm-test** — V2 is the upstream model and does not push
+to EspoCRM itself; the entity is created in EspoCRM via the v1 crmbuilder
+deploy or the EspoCRM admin UI. Until it exists in crm-test, the app's write
+fails and it falls back to logging the full payload at WARNING (so nothing is
+silently lost, and deploying the app never blocks on this).
 
 ## Entity
 
-- **Name:** `CIntakeSubmission` (custom object entity; show in the navbar so
-  admins can find the queue).
+- **V2 name:** `Intake Submission` (natural label, `ENT-015`); **EspoCRM
+  name:** `CIntakeSubmission` (EspoCRM adds the `C` prefix to custom entities).
+  Custom object entity; show in the navbar so admins can find the queue.
 
 ## Fields
 
-| Field | Type | Notes |
+EspoCRM field api-names (custom fields on a custom entity are plain camelCase —
+**no `c` prefix**, unlike custom fields on native Account/Contact):
+
+| Field (api-name) | Type | Notes |
 |---|---|---|
-| `name` | varchar | Record label. The app sets `"<form> — <email> — <YYYY-MM-DD>"`. |
-| `cForm` | enum | Which form. Options: `client-intake`, `volunteer`, `info-request`. |
-| `cReason` | enum | Why it was held. Options: `Honeypot`, `OrchestratorError` (reserved for a future use; only `Honeypot` is written today). |
-| `cSubmitterEmail` | varchar | The submitter's email, for quick scanning / dedupe. |
-| `cStatus` | enum | Review state. Options: `New`, `Approved`, `Rejected`, `Processed`. Default `New`. The app always writes `New`; admins advance it. |
+| `name` | varchar | Native record label. The app sets `"<form> — <email> — <YYYY-MM-DD>"`. |
+| `form` | enum | Which form. Options: `client-intake`, `volunteer`, `info-request`. |
+| `reason` | enum | Why it was held. Options: `Honeypot`, `OrchestratorError` (reserved for future use; only `Honeypot` is written today). |
+| `submitterEmail` | email | The submitter's email, for quick scanning / dedupe. |
+| `status` | enum | Review state. Options: `New`, `Approved`, `Rejected`, `Processed`. Default `New`. The app always writes `New`; admins advance it. |
 | `description` | text | A human-readable note plus the full **reprocess-ready** JSON payload (honeypot field already cleared). |
 
-Standard `assignedUser` / `teams` links should be enabled for routing.
+Standard `assignedUser` / `teams` links come for free on a `Base`-type entity.
 
 ## API-user permission
 
@@ -52,9 +60,9 @@ visible and changeable by admins:
 
 If an admin decides a held record is a real person, the `description` field
 contains the original submission as JSON with the honeypot field cleared.
-Re-POST that JSON to `/api/<cForm>/intake` (Content-Type: application/json) to
+Re-POST that JSON to `/api/<form>/intake` (Content-Type: application/json) to
 create the real records — honeypot hits never populate the app's idempotency
-cache, so the original `submission_token` still processes. Then set `cStatus`
+cache, so the original `submission_token` still processes. Then set `status`
 to `Processed`. Spam is set to `Rejected` (or deleted).
 
 ## App-side references

@@ -31,14 +31,17 @@ from .forms import BaseSubmission
 
 log = logging.getLogger("cbm_intake.quarantine")
 
-# The CRM holding entity and its fields (reconciled to the spec the CRM team
-# builds to — see cintake-submission-entity.md). Field names mirror the
-# orchestrators' hardcoded-constant style.
+# The CRM holding entity and its fields, modeled in the V2 system as
+# "Intake Submission" / ENT-015 (see cintake-submission-entity.md). The entity
+# deploys to EspoCRM with the C prefix (CIntakeSubmission); its custom fields
+# do NOT take the prefix — custom fields on a custom entity stay plain
+# camelCase (cf. CMentorProfile.mentorStatus), unlike custom fields on the
+# native Account/Contact entities (cAccountType, etc.).
 QUARANTINE_ENTITY = "CIntakeSubmission"
-Q_FORM = "cForm"                # enum: client-intake / volunteer / info-request
-Q_REASON = "cReason"            # enum: Honeypot / OrchestratorError
-Q_SUBMITTER_EMAIL = "cSubmitterEmail"  # varchar
-Q_STATUS = "cStatus"           # enum: New / Approved / Rejected / Processed
+Q_FORM = "form"                # enum: client-intake / volunteer / info-request
+Q_REASON = "reason"            # enum: Honeypot / OrchestratorError
+Q_SUBMITTER_EMAIL = "submitterEmail"  # varchar (EspoCRM type email)
+Q_STATUS = "status"            # enum: New / Approved / Rejected / Processed
 
 REASON_HONEYPOT = "Honeypot"
 STATUS_NEW = "New"

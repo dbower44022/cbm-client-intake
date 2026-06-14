@@ -43,10 +43,10 @@ def _submission(**overrides) -> InfoRequest:
 
 def test_payload_has_review_fields_and_clears_honeypot():
     payload = build_quarantine_payload("info-request", _submission())
-    assert payload["cForm"] == "info-request"
-    assert payload["cReason"] == "Honeypot"
-    assert payload["cStatus"] == "New"
-    assert payload["cSubmitterEmail"] == "ada@example.com"
+    assert payload["form"] == "info-request"
+    assert payload["reason"] == "Honeypot"
+    assert payload["status"] == "New"
+    assert payload["submitterEmail"] == "ada@example.com"
     desc = payload["description"]
     # The honeypot value is reported for context...
     assert "http://spam.example" in desc
@@ -71,7 +71,7 @@ async def test_writes_record_to_crm():
     assert ok is True
     [(entity, payload)] = client.creates
     assert entity == QUARANTINE_ENTITY
-    assert payload["cReason"] == "Honeypot"
+    assert payload["reason"] == "Honeypot"
 
 
 @pytest.mark.asyncio
