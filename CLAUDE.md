@@ -8,7 +8,7 @@ if a session is lost. Keep the "Current status" section up to date.
 
 A custom web application for **Cleveland Business Mentors (CBM)**. It hosts
 branded, multi-step wizard **intake forms**; a completed submission creates
-linked records in EspoCRM (the system of record). Two forms ship today:
+linked records in EspoCRM (the system of record). Five forms ship today:
 
 - **client-intake** — SCORE Mentor Request (FormAssembly form 111), reconciled
   to the CBM model. Creates Account → Contact → CClientProfile → CEngagement.
@@ -22,6 +22,35 @@ linked records in EspoCRM (the system of record). Two forms ship today:
   Verified end-to-end against crm-test 2026-06-12 (create + append + Account,
   all GET-verified); left 1 `ZZTEST-INFOREQ` Contact + 1 Account in crm-test
   to clean up in the UI alongside the older ZZTEST records.
+- **partner** — Become-a-Partner (3-step). Creates Account
+  (`cAccountType=["Partner"]`) → Contact (`cContactType=["Partner"]`) →
+  CPartnerProfile (`partnershipStatus="Candidate"`, with `partnershipType` +
+  `partnershipValue` from the form). Profile links: `partnerCompanyId` (Account),
+  `primaryPartnercontactId` (Contact), + applicant added to the `contacts`
+  hasMany. Added 2026-06-17.
+- **sponsor** — Become-a-Sponsor (3-step). Creates Account
+  (`cAccountType=["Donor/Sponsor"]`) → Contact (`cContactType=["Donor"]` — the
+  enum has no "Sponsor" option) → CSponsorProfile (message in `description`).
+  Profile links: `sponsorCompanyId`, `sponsorContactId`, + applicant added to
+  the `sponsorContacts` hasMany. Added 2026-06-17.
+
+**partner + sponsor status (2026-06-17): built & verified in DRY-RUN only;
+NOT yet wired live.** The `CPartnerProfile`/`CSponsorProfile` entities exist in
+crm-test (confirmed via the Metadata API after Doug added a *read* grant to the
+intake API user). Mapping was reconciled against the deployed metadata; both
+orchestrators are the source of truth. Tests green (59 total) and a local
+dry-run smoke test of both `POST /api/{partner,sponsor}/intake` produced the
+expected payloads. **Before go-live — CRM-side follow-ups (create-only API user
+can't self-serve these):**
+  1. **Add `create` grant** on `CPartnerProfile` + `CSponsorProfile` to the
+     intake API user's role (read was added 2026-06-17; create still needed).
+  2. Confirm sponsor contact typing: using existing `"Donor"` on `cContactType`
+     (no "Sponsor" option) — add a real "Sponsor" option if preferred.
+  3. Add `partner` + `sponsor` options to the `CIntakeSubmission.form` enum so
+     per-submission logging doesn't fall back to a WARNING (best-effort either way).
+  4. During live verification, confirm the canonical Account link on
+     `CPartnerProfile` (`partnerCompany` vs the second `account` link) — the
+     orchestrator writes `partnerCompany`.
 
 This repo owns the *application*, not the business definition of the process.
 The Client Intake process is defined by **MN-INTAKE** in the
