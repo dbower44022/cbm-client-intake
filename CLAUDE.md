@@ -34,23 +34,32 @@ linked records in EspoCRM (the system of record). Five forms ship today:
   Profile links: `sponsorCompanyId`, `sponsorContactId`, + applicant added to
   the `sponsorContacts` hasMany. Added 2026-06-17.
 
-**partner + sponsor status (2026-06-17): built & verified in DRY-RUN only;
-NOT yet wired live.** The `CPartnerProfile`/`CSponsorProfile` entities exist in
-crm-test (confirmed via the Metadata API after Doug added a *read* grant to the
-intake API user). Mapping was reconciled against the deployed metadata; both
-orchestrators are the source of truth. Tests green (59 total) and a local
-dry-run smoke test of both `POST /api/{partner,sponsor}/intake` produced the
-expected payloads. **Before go-live — CRM-side follow-ups (create-only API user
-can't self-serve these):**
-  1. **Add `create` grant** on `CPartnerProfile` + `CSponsorProfile` to the
-     intake API user's role (read was added 2026-06-17; create still needed).
-  2. Confirm sponsor contact typing: using existing `"Donor"` on `cContactType`
+**partner + sponsor status (2026-06-17): VERIFIED LIVE end-to-end against
+crm-test.** Both orchestrators were run live (real `EspoClient`, not dry-run)
+and the created records GET-verified: Account (`cAccountType` `["Partner"]` /
+`["Donor/Sponsor"]`) → Contact (`cContactType` `["Partner"]` / `["Donor"]`) →
+CPartnerProfile (`partnershipStatus="Candidate"`, `partnershipType` +
+`partnershipValue` set) / CSponsorProfile (message in `description`), all link
+FKs + the `contacts`/`sponsorContacts` hasMany relate confirmed. Tests green
+(59 total). Orchestrators are the source-of-truth mapping. (One-off live check:
+`scripts/verify_partner_sponsor_live.py`, untracked — writes real records.)
+  1. ✅ **DONE** — `create` grant on `CPartnerProfile` + `CSponsorProfile` added
+     to the intake API user's role (read + create now granted; verified live
+     2026-06-17).
+  2. **OPEN** — sponsor contact typing uses existing `"Donor"` on `cContactType`
      (no "Sponsor" option) — add a real "Sponsor" option if preferred.
-  3. Add `partner` + `sponsor` options to the `CIntakeSubmission.form` enum so
-     per-submission logging doesn't fall back to a WARNING (best-effort either way).
-  4. During live verification, confirm the canonical Account link on
-     `CPartnerProfile` (`partnerCompany` vs the second `account` link) — the
-     orchestrator writes `partnerCompany`.
+  3. **OPEN** — add `partner` + `sponsor` options to the `CIntakeSubmission.form`
+     enum so per-submission logging doesn't fall back to a WARNING (best-effort
+     either way; the create still succeeds for the main records).
+  4. ✅ **RESOLVED** — canonical Account link on `CPartnerProfile` is
+     `partnerCompany` (populated bidirectionally; the alternate `account` link
+     stays null). The orchestrator writes `partnerCompany` — correct.
+
+  **Cleanup:** the live check left 6 `ZZTEST … GrantCheck` records in crm-test
+  to delete in the EspoCRM UI (create-only API user can't): Partner set —
+  Account `6a331a2de469f5cdb` + Contact `6a331a2e579820e91` + CPartnerProfile
+  `6a331a2ea07850bb3`; Sponsor set — Account `6a331a2fa4d5d75fb` + Contact
+  `6a331a300793cedba` + CSponsorProfile `6a331a3042ecfc111`.
 
 This repo owns the *application*, not the business definition of the process.
 The Client Intake process is defined by **MN-INTAKE** in the
