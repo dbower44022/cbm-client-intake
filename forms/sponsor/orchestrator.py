@@ -1,0 +1,125 @@
+"""Sponsor application -> Account (Donor/Sponsor) + Contact (Donor) + CSponsorProfile.
+
+Mirrors the partner/mentor pattern: an Account for the sponsoring organization,
+a Contact for the applicant, and a CSponsorProfile hub linking the two.
+
+INSTANCE MAPPING — reconciled against crm-test.clevelandbusinessmentors.org
+(2026-06-17) by reading the deployed EspoCRM metadata:
+
+  * Account.cAccountType (multiEnum, REQUIRED) takes ["Donor/Sponsor"].
+  * Contact.cContactType (multiEnum) takes ["Donor"] — there is NO "Sponsor"
+    option on the deployed enum, so "Donor" is the closest fit (adding a real
+    "Sponsor" option is a CRM follow-up).
+  * CSponsorProfile links: ``sponsorCompany`` (belongsTo Account, set via
+    ``sponsorCompanyId``) and ``sponsorContact`` (belongsTo Contact, set via
+    ``sponsorContactId``); the applicant is also added to the ``sponsorContacts``
+    hasMany link via a relationship POST.
+  * The applicant's message is stored on CSponsorProfile.description.
+
+DEFERRED: totalContribution / lastContribution and the sponsor-manager links are
+internal/admin (staff fill them later) and are not collected by the form.
+"""
+
+from __future__ import annotations
+
+import logging
+
+from core.espo import EspoApi
+from core.phone import to_e164
+
+from .schemas import SponsorApplication
+
+log = logging.getLogger("cbm_intake.sponsor")
+
+ACCOUNT = "Account"
+CONTACT = "Contact"
+SPONSOR_PROFILE = "CSponsorProfile"
+
+# --- Discriminator attributes (reconciled against the deployed instance) ---
+A_ACCOUNT_TYPE = "cAccountType"   # multiEnum on Account — REQUIRED
+C_CONTACT_TYPE = "cContactType"   # multiEnum on Contact
+
+# --- CSponsorProfile attributes / links ---
+S_COMPANY_LINK = "sponsorCompanyId"   # belongsTo Account (FK)
+S_CONTACT_LINK = "sponsorContactId"   # belongsTo Contact (FK)
+SPONSOR_CONTACTS = "sponsorContacts"  # CSponsorProfile hasMany Contact
+
+# --- System-set values ---
+ACCOUNT_TYPE_SPONSOR = "Donor/Sponsor"
+CONTACT_TYPE_SPONSOR = "Donor"
+
+
+async def _find_or_create_account(sub: SponsorApplication, client: EspoApi) -> str:
+    """Find-or-create the sponsor Account by name and return its id.
+
+    Reusing a same-named Account dedupes repeat submitters and avoids EspoCRM's
+    duplicate-detection 409 (same rule as the client-intake form).
+    """
+    existing = await client.find_one(ACCOUNT, "name", sub.company)
+    if existing:
+        log.info("matched existing Account %s for %r", existing["id"], sub.company)
+        return existing["id"]
+
+    payload: dict = {
+        "name": sub.company,
+        A_ACCOUNT_TYPE: [ACCOUNT_TYPE_SPONSOR],
+    }
+    if sub.business_website:
+        payload["website"] = sub.business_website
+    created = await client.create(ACCOUNT, payload)
+    return created["id"]
+
+
+async def _find_or_create_contact(
+    sub: SponsorApplication, client: EspoApi, account_id: str
+) -> str:
+    """Find-or-create the applicant Contact by email and return its id."""
+    existing = await client.find_one(CONTACT, "emailAddress", str(sub.email))
+    if existing:
+        log.info("matched existing Contact %s for %s", existing["id"], sub.email)
+        return existing["id"]
+
+    payload: dict = {
+        "firstName": sub.first_name,
+        "lastName": sub.last_name,
+        "emailAddress": str(sub.email),
+        "accountId": account_id,
+        C_CONTACT_TYPE: [CONTACT_TYPE_SPONSOR],
+    }
+    if sub.phone:
+        payload["phoneNumber"] = to_e164(sub.phone)
+    created = await client.create(CONTACT, payload)
+    return created["id"]
+
+
+async def _create_sponsor_profile(
+    sub: SponsorApplication, client: EspoApi, account_id: str, contact_id: str
+) -> str:
+    """Create the CSponsorProfile hub linked to the Account and Contact."""
+    payload: dict = {
+        "name": sub.company,
+        S_COMPANY_LINK: account_id,
+        S_CONTACT_LINK: contact_id,
+        "description": sub.message.strip(),
+    }
+    created = await client.create(SPONSOR_PROFILE, payload)
+    return created["id"]
+
+
+async def submit_sponsor(sub: SponsorApplication, client: EspoApi) -> dict[str, str]:
+    """Run the Account -> Contact -> CSponsorProfile create-and-link sequence.
+
+    Each id is captured as its step succeeds; on a later-step failure the caller
+    routes to the failed-submission store and already-created records are kept.
+    """
+    account_id = await _find_or_create_account(sub, client)
+    contact_id = await _find_or_create_contact(sub, client, account_id)
+    profile_id = await _create_sponsor_profile(sub, client, account_id, contact_id)
+    # Add the applicant to the profile's Contacts (hasMany), alongside the
+    # sponsorContact set on the profile itself.
+    await client.relate(SPONSOR_PROFILE, profile_id, SPONSOR_CONTACTS, contact_id)
+    return {
+        "accountId": account_id,
+        "contactId": contact_id,
+        "sponsorProfileId": profile_id,
+    }

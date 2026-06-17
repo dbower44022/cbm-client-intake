@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cleveland Business Mentors — Become a Partner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/tokens.css" />
+  <link rel="stylesheet" href="/shared/wizard.css" />
+</head>
+<body>
+  <main class="cbm-container cbm-container--narrow intake">
+    <header class="intake__header">
+      <h1>Become a Partner</h1>
+      <p class="intake__sub">Interested in partnering with Cleveland Business Mentoring? Tell us about your organization and how we might work together.</p>
+    </header>
+
+    <!-- Progress -->
+    <ol class="wizard__progress" id="progress" aria-label="Progress">
+      <li data-step="1">Your Organization</li>
+      <li data-step="2">Your Contact Info</li>
+      <li data-step="3">Partnership Details</li>
+    </ol>
+
+    <form id="intakeForm" novalidate>
+      <!-- Honeypot: visually hidden, must stay empty -->
+      <div class="hp" aria-hidden="true">
+        <label>Leave this field empty <input type="text" name="xtra_note" id="xtra_note" tabindex="-1" autocomplete="off" /></label>
+      </div>
+
+      <!-- Step 1 — Your Organization -->
+      <section class="step" data-step="1">
+        <h2>Your Organization</h2>
+        <div class="cbm-field">
+          <label for="company">Organization / Company Name <span class="cbm-required">*</span></label>
+          <input type="text" id="company" name="company" required />
+        </div>
+        <div class="cbm-field">
+          <label for="business_website">Website</label>
+          <input type="text" id="business_website" name="business_website" placeholder="example.com" />
+        </div>
+      </section>
+
+      <!-- Step 2 — Your Contact Info -->
+      <section class="step" data-step="2">
+        <h2>Your Contact Info</h2>
+        <div class="grid-2">
+          <div class="cbm-field">
+            <label for="first_name">First Name <span class="cbm-required">*</span></label>
+            <input type="text" id="first_name" name="first_name" required />
+          </div>
+          <div class="cbm-field">
+            <label for="last_name">Last Name <span class="cbm-required">*</span></label>
+            <input type="text" id="last_name" name="last_name" required />
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="cbm-field">
+            <label for="email">Email <span class="cbm-required">*</span></label>
+            <input type="email" id="email" name="email" required />
+          </div>
+          <div class="cbm-field">
+            <label for="phone">Phone</label>
+            <input type="tel" id="phone" name="phone" placeholder="###-###-####" />
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 3 — Partnership Details -->
+      <section class="step" data-step="3">
+        <h2>Partnership Details</h2>
+        <div class="cbm-field">
+          <label for="partnership_type">What kind of partnership are you interested in?</label>
+          <select id="partnership_type" name="partnership_type"></select>
+        </div>
+        <div class="cbm-field">
+          <label>What could your organization offer? <span class="cbm-help">(select any that apply)</span></label>
+          <div class="checkgrid" id="partnership_value"></div>
+        </div>
+        <div class="cbm-field">
+          <label for="how_did_you_hear">How did you hear about Cleveland Business Mentoring?</label>
+          <select id="how_did_you_hear" name="how_did_you_hear"></select>
+        </div>
+      </section>
+
+      <p class="form-error" id="formError" role="alert" hidden></p>
+
+      <div class="wizard__nav">
+        <button type="button" class="cbm-button cbm-button--secondary" id="backBtn" hidden>Back</button>
+        <button type="button" class="cbm-button" id="nextBtn">Next</button>
+        <button type="submit" class="cbm-button" id="submitBtn" hidden>Submit Application</button>
+      </div>
+    </form>
+
+    <section class="confirmation" id="confirmation" hidden>
+      <h2>Thank you!</h2>
+      <p>Your partnership inquiry has been received. A member of the Cleveland Business Mentors team will be in touch.</p>
+    </section>
+
+    <footer class="cbm-footer">
+      <p>&copy; <span data-cbm-year>2026</span> Cleveland Business Mentors. All rights reserved.<span class="cbm-footer__version" data-cbm-version></span></p>
+    </footer>
+  </main>
+
+  <script src="options.js"></script>
+  <script src="/shared/wizard.js"></script>
+  <script src="app.js"></script>
+  <script src="/shared/footer.js"></script>
+</body>
+</html>
