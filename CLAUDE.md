@@ -80,9 +80,14 @@ mentor.
   with the `Espo-Authorization` header). The returned auth token is kept in a
   signed session cookie and replayed (`Espo-Authorization` + by-token header) so
   **all reads/writes run as that user** — EspoCRM enforces their ACL and records
-  them as modifier. Access gated to active internal users who are admin or hold
-  a role in `ASSIGN_ALLOWED_ROLES`. (The shared `customapps` API user is NOT used
-  here — it's create-only and can't read Users/Roles or edit.)
+  them as modifier. Access gated to active internal users who are admin, belong
+  to an allowed **Team** (`ASSIGN_ALLOWED_TEAMS`, the primary gate — set to
+  `Client Administration Team`), OR hold an allowed Role (`ASSIGN_ALLOWED_ROLES`).
+  **Gate by Team, not Role:** a regular user's own token can read its `teamsNames`
+  but NOT its `rolesNames` (EspoCRM strips role names for users without Role-scope
+  read — verified live: a valid non-admin login returned `roles=[]`). (The shared
+  `customapps` API user is NOT used here — create-only, and it can't even read
+  Teams/Users/Roles.)
 - **Mentor dropdown** = `CMentorProfile` where `acceptingNewClients=true` AND
   `mentorStatus="Active"` AND `assignedUser` set. The mentor's login User =
   `CMentorProfile.assignedUser`.
@@ -96,17 +101,26 @@ mentor.
   `Submitted`/`Pending Acceptance`; `CEngagement.mentorProfile` belongsTo
   CMentorProfile; `CMentorProfile.acceptingNewClients` (bool) +
   `availableCapacity`/`currentActiveClients`/`maximumClientCapacity` (int).
-- **Status (2026-06-19): built; 71 tests green; read-path + login mechanism
-  VERIFIED live against crm-test** (7 Submitted engagements; 3 eligible mentors —
-  Douglas Bower, Jane Doe, Matt Mentor; bad-cred login → clean 401). **PENDING:**
-  full login→assign→write path with a real staff login (use a throwaway/ZZTEST
-  engagement). One-off live checker: `scripts/verify_assignment_live.py`.
+- **Status (2026-06-19): built; 72 tests green; DEPLOYED LIVE on App Platform
+  against crm-test.** Login (incl. non-admin via Team) + read path VERIFIED live
+  (7 Submitted engagements; 3 eligible mentors — Douglas Bower, Jane Doe, Matt
+  Mentor; admin + `kitty.cat` via `Client Administration Team` both log in).
+  **PENDING:** full assign→write path (use a throwaway/ZZTEST engagement). One-off
+  live checker: `scripts/verify_assignment_live.py`.
 - **Deploy-time secrets** (encrypted App Platform env, gitignored
-  `.do/app.prod.yaml`): `SESSION_SECRET` (required to enable), `ASSIGN_ALLOWED_ROLES`
-  (the staff Role name — crm-test has **no Teams**; gate by role), keep
-  `SESSION_COOKIE_SECURE=true` in prod. See `.env.example`.
-- **Note:** `CClientProfile.assignedUser` is `disabled:true` in CRM metadata; the
-  PUT is still attempted but may no-op CRM-side — confirm during live write check.
+  `.do/app.prod.yaml`, applied with `doctl apps update <app-id> --spec ...`):
+  `SESSION_SECRET` (required to enable), `ASSIGN_ALLOWED_TEAMS`
+  (`Client Administration Team`), optionally `ASSIGN_ALLOWED_ROLES`, keep
+  `SESSION_COOKIE_SECURE=true` in prod. See `.env.example`. (NOTE: crm-test DOES
+  have Teams — the create-only API user just can't see them, so an earlier
+  `Team` API list returned 0.)
+- **Assignment field differs by entity** (verified live, the source of a fixed
+  bug): Contact/Account use the single `assignedUser`; **CEngagement and
+  CClientProfile have `assignedUser` DISABLED and use the multi-user
+  `assignedUsers` (collaborators) field** — so the service writes
+  `assignedUsersIds=[userId]` to those two and `assignedUserId` to Contact/Account
+  (`assignments/service.py:_assigned_user_payload`). Writing `assignedUserId` to a
+  disabled-field entity is silently ignored.
 
 ## Current status (2026-05-28)
 

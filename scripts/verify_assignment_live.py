@@ -57,22 +57,23 @@ async def main() -> None:
 
     eng = await client.get(
         service.ENGAGEMENT, eng_id,
-        select="engagementStatus,assignedUserId,assignedUserName,mentorProfileId,"
+        select="engagementStatus,assignedUsersIds,mentorProfileId,"
         "primaryEngagementContactId,engagementClientId,clientOrganizationId",
     )
     print("  engagement now:", {
         "status": eng.get("engagementStatus"),
-        "assignedUser": eng.get("assignedUserName"),
+        "assignedUsersIds": eng.get("assignedUsersIds"),  # CEngagement uses collaborators
         "mentorProfileId": eng.get("mentorProfileId"),
     })
-    for entity, rid in [
-        (service.CONTACT, eng.get("primaryEngagementContactId")),
-        (service.CLIENT_PROFILE, eng.get("engagementClientId")),
-        (service.ACCOUNT, eng.get("clientOrganizationId")),
+    # CClientProfile also uses assignedUsers; Contact/Account use single assignedUser.
+    for entity, rid, sel in [
+        (service.CONTACT, eng.get("primaryEngagementContactId"), "name,assignedUserName"),
+        (service.CLIENT_PROFILE, eng.get("engagementClientId"), "name,assignedUsersIds"),
+        (service.ACCOUNT, eng.get("clientOrganizationId"), "name,assignedUserName"),
     ]:
         if rid:
-            rec = await client.get(entity, rid, select="name,assignedUserId,assignedUserName")
-            print(f"  {entity} {rid}: assignedUser={rec.get('assignedUserName')}")
+            rec = await client.get(entity, rid, select=sel)
+            print(f"  {entity} {rid}: {rec.get('assignedUserName') or rec.get('assignedUsersIds')}")
 
 
 asyncio.run(main())

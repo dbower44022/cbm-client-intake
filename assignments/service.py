@@ -37,6 +37,19 @@ MENTOR_STATUS_ACTIVE = "Active"
 # Link of CEngagement -> the hasMany of additional/secondary contacts.
 ENGAGEMENT_CONTACTS = "engagementContacts"
 
+# Assignment field differs by entity (verified live crm-test 2026-06-19):
+# Contact/Account use the single `assignedUser`; CEngagement and CClientProfile
+# have `assignedUser` DISABLED and use the multi-user `assignedUsers`
+# (collaborators) field — writing `assignedUserId` to them is silently ignored.
+# These two take `assignedUsersIds=[userId]` instead.
+USES_ASSIGNED_USERS = {ENGAGEMENT, CLIENT_PROFILE}
+
+
+def _assigned_user_payload(entity: str, user_id: str) -> dict[str, Any]:
+    if entity in USES_ASSIGNED_USERS:
+        return {"assignedUsersIds": [user_id]}
+    return {"assignedUserId": user_id}
+
 
 class AssignClient(Protocol):
     """The slice of ``EspoClient`` this module needs (eases test mocking)."""
@@ -130,12 +143,12 @@ async def assign_engagement(
             "new clients). Refresh and try again."
         )
 
-    # 2. The engagement itself.
+    # 2. The engagement itself (assignedUsers, not assignedUser — see above).
     await client.update(
         ENGAGEMENT,
         engagement_id,
         {
-            "assignedUserId": user_id,
+            **_assigned_user_payload(ENGAGEMENT, user_id),
             "mentorProfileId": mentor_profile_id,
             "engagementStatus": STATUS_PENDING,
         },
@@ -156,18 +169,25 @@ async def assign_engagement(
     for r in related.get("list", []):
         contact_ids.add(r["id"])
 
-    # 4. Re-assign contacts, then the client profile + account.
+    # 4. Re-assign contacts, then the client profile + account. Each entity gets
+    # whichever assignment field it actually uses (single vs. collaborators).
     for cid in sorted(contact_ids):
-        await client.update(CONTACT, cid, {"assignedUserId": user_id})
+        await client.update(CONTACT, cid, _assigned_user_payload(CONTACT, user_id))
 
     client_profile_updated = False
     if eng.get("engagementClientId"):
-        await client.update(CLIENT_PROFILE, eng["engagementClientId"], {"assignedUserId": user_id})
+        await client.update(
+            CLIENT_PROFILE, eng["engagementClientId"],
+            _assigned_user_payload(CLIENT_PROFILE, user_id),
+        )
         client_profile_updated = True
 
     account_updated = False
     if eng.get("clientOrganizationId"):
-        await client.update(ACCOUNT, eng["clientOrganizationId"], {"assignedUserId": user_id})
+        await client.update(
+            ACCOUNT, eng["clientOrganizationId"],
+            _assigned_user_payload(ACCOUNT, user_id),
+        )
         account_updated = True
 
     log.info(
