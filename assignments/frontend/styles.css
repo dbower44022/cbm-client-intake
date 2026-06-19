@@ -232,7 +232,18 @@
   font-size: var(--cbm-text-sm);
   color: var(--cbm-navy);
 }
-.modal__needs { white-space: pre-wrap; line-height: var(--cbm-line); color: var(--cbm-slate-700); }
+.modal__section { margin-top: 1.25rem; }
+.modal__rich { line-height: var(--cbm-line); color: var(--cbm-slate-700); word-break: break-word; }
+.modal__rich p { margin: 0 0 0.6rem; }
+.modal__rich p:last-child { margin-bottom: 0; }
+.modal__rich ul, .modal__rich ol { margin: 0 0 0.6rem 1.25rem; padding: 0; }
+.modal__rich li { margin: 0.15rem 0; }
+.modal__rich a { color: var(--cbm-blue); }
+.modal__rich strong, .modal__rich b { font-weight: 600; color: var(--cbm-slate-900); }
+.modal__rich h1, .modal__rich h2, .modal__rich h3,
+.modal__rich h4, .modal__rich h5, .modal__rich h6 {
+  color: var(--cbm-navy); font-size: var(--cbm-text-base); margin: 0.4rem 0 0.3rem;
+}
 
 @media (max-width: 640px) {
   .modal__cols { grid-template-columns: 1fr; gap: 1.25rem; }
