@@ -181,10 +181,12 @@ async def test_submitted_engagements_query_and_shape():
     assert {"type": "equals", "attribute": "engagementStatus", "value": "Submitted"} in where
 
 
-# --- auth role gate ----------------------------------------------------------
+# --- auth team/role gate -----------------------------------------------------
 
-def _settings(roles=""):
-    return Settings(assign_allowed_roles=roles, session_secret="x")
+def _settings(teams="", roles=""):
+    return Settings(
+        assign_allowed_teams=teams, assign_allowed_roles=roles, session_secret="x"
+    )
 
 
 def _app_user(monkeypatch, payload, status=200):
@@ -199,60 +201,83 @@ def _app_user(monkeypatch, payload, status=200):
     monkeypatch.setattr(auth, "_app_user", fake_app_user)
 
 
-async def test_auth_accepts_user_with_allowed_role(monkeypatch):
+def _user(**overrides):
+    """A fake user payload. teamsNames/rolesNames are always present (possibly
+    empty) so the live User-record fallback never fires in unit tests."""
+    base = {"id": "u1", "userName": "jdoe", "name": "Jane Doe",
+            "isActive": True, "type": "regular",
+            "teamsNames": {}, "rolesNames": {}}
+    base.update(overrides)
+    return base
+
+
+async def test_auth_accepts_user_in_allowed_team(monkeypatch):
     _app_user(monkeypatch, {
         "token": "tok-1",
-        "user": {"id": "u1", "userName": "jdoe", "name": "Jane Doe",
-                 "isActive": True, "type": "regular",
-                 "rolesNames": {"r1": "Staff"}},
+        "user": _user(teamsNames={"t1": "Client Administration Team"}),
     })
-    user = await auth.authenticate(_settings(roles="Staff"), "jdoe", "pw")
+    user = await auth.authenticate(
+        _settings(teams="Client Administration Team"), "jdoe", "pw"
+    )
     assert user["userId"] == "u1"
     assert user["token"] == "tok-1"
     assert user["isAdmin"] is False
+    assert user["teams"] == ["Client Administration Team"]
 
 
-async def test_auth_accepts_admin_regardless_of_roles(monkeypatch):
+async def test_auth_accepts_user_with_allowed_role(monkeypatch):
+    _app_user(monkeypatch, {
+        "token": "tok-1b",
+        "user": _user(rolesNames={"r1": "Staff"}),
+    })
+    user = await auth.authenticate(_settings(roles="Staff"), "jdoe", "pw")
+    assert user["isAdmin"] is False
+
+
+async def test_auth_accepts_admin_regardless_of_team_or_role(monkeypatch):
     _app_user(monkeypatch, {
         "token": "tok-2",
-        "user": {"id": "a1", "userName": "admin", "name": "Admin",
-                 "isActive": True, "type": "admin", "rolesNames": {}},
+        "user": _user(userName="admin", name="Admin", type="admin"),
     })
-    user = await auth.authenticate(_settings(roles="Staff"), "admin", "pw")
+    user = await auth.authenticate(
+        _settings(teams="Client Administration Team"), "admin", "pw"
+    )
     assert user["isAdmin"] is True
 
 
-async def test_auth_rejects_regular_user_without_allowed_role(monkeypatch):
+async def test_auth_rejects_regular_user_not_in_team_or_role(monkeypatch):
     _app_user(monkeypatch, {
         "token": "tok-3",
-        "user": {"id": "u2", "userName": "nobody", "name": "No Body",
-                 "isActive": True, "type": "regular", "rolesNames": {"r9": "Mentors"}},
+        "user": _user(userName="nobody", teamsNames={"t9": "Sales"},
+                      rolesNames={"r9": "Mentors"}),
     })
     with pytest.raises(auth.AuthError):
-        await auth.authenticate(_settings(roles="Staff"), "nobody", "pw")
+        await auth.authenticate(
+            _settings(teams="Client Administration Team", roles="Staff"), "nobody", "pw"
+        )
 
 
 async def test_auth_rejects_inactive_user(monkeypatch):
     _app_user(monkeypatch, {
         "token": "tok-4",
-        "user": {"id": "u3", "userName": "old", "name": "Old User",
-                 "isActive": False, "type": "regular", "rolesNames": {"r1": "Staff"}},
+        "user": _user(userName="old", isActive=False,
+                      teamsNames={"t1": "Client Administration Team"}),
     })
     with pytest.raises(auth.AuthError):
-        await auth.authenticate(_settings(roles="Staff"), "old", "pw")
+        await auth.authenticate(_settings(teams="Client Administration Team"), "old", "pw")
 
 
 async def test_auth_rejects_portal_or_api_type(monkeypatch):
     _app_user(monkeypatch, {
         "token": "tok-5",
-        "user": {"id": "u4", "userName": "portal", "name": "Portal User",
-                 "isActive": True, "type": "portal", "rolesNames": {}},
+        "user": _user(userName="portal", type="portal",
+                      teamsNames={"t1": "Client Administration Team"}),
     })
     with pytest.raises(auth.AuthError):
-        await auth.authenticate(_settings(roles="Staff"), "portal", "pw")
+        await auth.authenticate(_settings(teams="Client Administration Team"), "portal", "pw")
 
 
 async def test_auth_rejects_bad_credentials(monkeypatch):
     _app_user(monkeypatch, {"message": "unauthorized"}, status=401)
     with pytest.raises(auth.AuthError):
-        await auth.authenticate(_settings(roles="Staff"), "jdoe", "wrong")
+        await auth.authenticate(_settings(teams="Client Administration Team"), "jdoe", "wrong")

@@ -23,8 +23,10 @@ class Settings(BaseSettings):
     # them. Disabled if no session secret is set (see ``assignments_active``).
     assignments_enabled: bool = True
     session_secret: str = ""
-    # Comma-separated EspoCRM Role names allowed to use the tool. Admins are
-    # always allowed. Empty => admins only.
+    # Comma-separated EspoCRM Team names / Role names allowed to use the tool.
+    # A user passes if they are an admin, belong to an allowed Team, OR hold an
+    # allowed Role. Both empty => admins only.
+    assign_allowed_teams: str = ""
     assign_allowed_roles: str = ""
     # Marks a session cookie Secure; set false only for plain-HTTP local dev.
     session_cookie_secure: bool = True
@@ -32,6 +34,10 @@ class Settings(BaseSettings):
     @property
     def allowed_origins_list(self) -> list[str]:
         return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
+
+    @property
+    def assign_allowed_teams_list(self) -> list[str]:
+        return [t.strip() for t in self.assign_allowed_teams.split(",") if t.strip()]
 
     @property
     def assign_allowed_roles_list(self) -> list[str]:
