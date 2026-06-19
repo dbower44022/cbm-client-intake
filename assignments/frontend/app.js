@@ -437,8 +437,9 @@
   // The review list is the full roster (any status), distinct from the eligible
   // `mentors` used by the assign dropdown.
   var reviewMentors = [];
-  // Default: most available capacity first (best fit to take a new client).
-  var mentorFilter = { q: "", status: "", industry: "", focus: "", availOnly: false,
+  // Default to Active mentors, most available capacity first (best fit to take a
+  // new client); the admin can widen to other statuses.
+  var mentorFilter = { q: "", status: "Active", industry: "", focus: "", availOnly: false,
                        sortKey: "availableCapacity", sortDir: -1 };
 
   function mentorAvail(m) {
@@ -545,6 +546,8 @@
       }
       fillFilterSelect($("mentorStatusFilter"),
         distinct(function (m) { return [m.status]; }), "All statuses");
+      // Reflect the default/persisted status filter in the dropdown.
+      $("mentorStatusFilter").value = mentorFilter.status;
       fillFilterSelect($("mentorIndustryFilter"),
         distinct(function (m) { return [m.industrySector]; }), "All industries");
       fillFilterSelect($("mentorFocusFilter"),
