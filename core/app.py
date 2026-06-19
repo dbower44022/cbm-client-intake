@@ -118,13 +118,21 @@ def _make_handler(spec: FormSpec, settings: Settings, processed: dict[str, dict]
     return handler
 
 
-def _index_html(forms: list[FormSpec]) -> str:
+def _index_html(forms: list[FormSpec], include_assignments: bool = False) -> str:
     items = []
     for f in forms:
         if f.frontend_dir is not None:
             items.append(f'<li><a href="/{f.slug}/">{f.title}</a></li>')
         else:
             items.append(f"<li>{f.title} <em>(API only — UI pending)</em></li>")
+    # The mentor assignment dashboard is a staff-only tool, listed separately.
+    staff = ""
+    if include_assignments:
+        staff = (
+            "<h2>Staff</h2><ul>"
+            '<li><a href="/assignments/">Mentor Assignment dashboard</a> '
+            "<em>(staff sign-in required)</em></li></ul>"
+        )
     year = datetime.now(timezone.utc).year
     footer = (
         f"<footer><p>&copy; {year} Cleveland Business Mentors. "
@@ -133,7 +141,7 @@ def _index_html(forms: list[FormSpec]) -> str:
     return (
         "<!DOCTYPE html><html><head><meta charset='utf-8'>"
         "<title>CBM Intake Forms</title></head><body>"
-        "<h1>CBM Intake Forms</h1><ul>" + "".join(items) + "</ul>" + footer
+        "<h1>CBM Intake Forms</h1><ul>" + "".join(items) + "</ul>" + staff + footer
         + "</body></html>"
     )
 
@@ -210,7 +218,7 @@ def create_app(forms: list[FormSpec]) -> FastAPI:
 
     @app.get("/", response_class=HTMLResponse)
     async def index() -> str:
-        return _index_html(forms)
+        return _index_html(forms, include_assignments=settings.assignments_active)
 
     # Static mounts last so the API routes above take precedence.
     for spec in forms:
