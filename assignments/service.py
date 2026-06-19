@@ -157,7 +157,11 @@ async def list_eligible_mentors(client: AssignClient) -> list[dict[str, Any]]:
             {"type": "equals", "attribute": "mentorStatus", "value": MENTOR_STATUS_ACTIVE},
             {"type": "isNotNull", "attribute": "assignedUserId"},
         ],
-        select="name,assignedUserId,assignedUserName,availableCapacity",
+        select=(
+            "name,assignedUserId,assignedUserName,availableCapacity,"
+            "currentActiveClients,maximumClientCapacity,yearsOfExperience,"
+            "mentorType,industrySector,mentoringFocusAreas,areaOfExpertise"
+        ),
         max_size=200,
         order_by="name",
     )
@@ -173,6 +177,14 @@ async def list_eligible_mentors(client: AssignClient) -> list[dict[str, Any]]:
                 "userId": user_id,
                 "userName": r.get("assignedUserName"),
                 "availableCapacity": r.get("availableCapacity"),
+                # Extra detail for the "Review mentors" comparison view.
+                "assignedClients": r.get("currentActiveClients"),
+                "maxCapacity": r.get("maximumClientCapacity"),
+                "yearsOfExperience": r.get("yearsOfExperience"),
+                "mentorType": r.get("mentorType"),
+                "industrySector": r.get("industrySector"),
+                "focusAreas": r.get("mentoringFocusAreas") or [],
+                "expertise": r.get("areaOfExpertise") or [],
             }
         )
     return mentors
