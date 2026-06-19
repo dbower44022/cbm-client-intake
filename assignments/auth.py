@@ -32,12 +32,17 @@ class AuthError(Exception):
     """Login failed or the user is not authorized to use the tool."""
 
 
-def _role_names(user: dict[str, Any]) -> Optional[list[str]]:
-    """Role names from a user record, or None if the field is absent."""
-    rn = user.get("rolesNames")
-    if rn is None:
+def _names(user: dict[str, Any], field: str) -> Optional[list[str]]:
+    """The names from a linkMultiple ``*Names`` field, or None if absent.
+
+    EspoCRM stores these as ``{id: name}`` maps (e.g. ``teamsNames``,
+    ``rolesNames``). Absent (None) means the field wasn't serialized — the caller
+    falls back to reading the User record directly.
+    """
+    v = user.get(field)
+    if v is None:
         return None
-    return list(rn.values()) if isinstance(rn, dict) else list(rn)
+    return list(v.values()) if isinstance(v, dict) else list(v)
 
 
 async def _app_user(base_url: str, headers: dict[str, str], timeout: int) -> httpx.Response:
@@ -47,18 +52,33 @@ async def _app_user(base_url: str, headers: dict[str, str], timeout: int) -> htt
         )
 
 
-async def _fetch_role_names(
-    settings: Settings, user_name: str, token: str, user_id: str
-) -> list[str]:
-    """Read the user's own roles with their fresh token (App/user fallback)."""
+async def _fetch_names(
+    settings: Settings, user_name: str, token: str, user_id: str, field: str
+) -> tuple[list[str], str]:
+    """Read a ``*Names`` field off the user's own record (App/user fallback).
+
+    Returns ``(names, source)`` where source flags whether the fallback ran.
+    """
     client = EspoClient.for_user_token(
         settings.espo_base_url, user_name, token, settings.request_timeout_seconds
     )
     try:
-        rec = await client.get("User", user_id, select="rolesNames")
+        rec = await client.get("User", user_id, select=field)
     except EspoError:
-        return []
-    return _role_names(rec) or []
+        return [], "fallback-error"
+    return _names(rec, field) or [], "App/user-fallback"
+
+
+async def _names_with_fallback(
+    settings: Settings, user: dict[str, Any], token: str, field: str
+) -> tuple[list[str], str]:
+    """Names from the App/user payload, else from the User record directly."""
+    names = _names(user, field)
+    if names is not None:
+        return names, "App/user"
+    return await _fetch_names(
+        settings, user["userName"], token, user["id"], field
+    )
 
 
 async def authenticate(
@@ -66,8 +86,13 @@ async def authenticate(
 ) -> dict[str, Any]:
     """Validate credentials against EspoCRM and return the session user dict.
 
+    Authorization: EspoCRM admins always pass; otherwise the user must belong to
+    an allowed Team (``ASSIGN_ALLOWED_TEAMS``) or hold an allowed Role
+    (``ASSIGN_ALLOWED_ROLES``). Team/role names are read from the user's own
+    ``App/user`` payload (falling back to their User record).
+
     :raises AuthError: bad credentials, inactive/non-internal account, or the
-        user is not authorized by role.
+        user is not authorized.
     """
     cred = base64.b64encode(f"{username}:{password}".encode()).decode()
     resp = await _app_user(
@@ -91,24 +116,23 @@ async def authenticate(
         raise AuthError("This tool is for internal staff users only.")
 
     is_admin = user.get("type") == "admin" or bool(user.get("isAdmin"))
-    roles = _role_names(user)
-    from_fallback = roles is None
-    if from_fallback:
-        roles = await _fetch_role_names(
-            settings, user["userName"], token, user["id"]
-        )
+    teams, teams_src = await _names_with_fallback(settings, user, token, "teamsNames")
+    roles, roles_src = await _names_with_fallback(settings, user, token, "rolesNames")
 
     if not is_admin:
-        allowed = settings.assign_allowed_roles_list
-        if not allowed or not (set(roles) & set(allowed)):
-            # Diagnostic: shows WHY a valid login was refused — role names are
-            # not secret. Distinguishes "user lacks the role" (roles populated,
-            # no match) from "role names couldn't be read" (roles empty).
+        allowed_teams = settings.assign_allowed_teams_list
+        allowed_roles = settings.assign_allowed_roles_list
+        team_ok = bool(set(teams) & set(allowed_teams))
+        role_ok = bool(set(roles) & set(allowed_roles))
+        if not (team_ok or role_ok):
+            # Diagnostic: shows WHY a valid login was refused — team/role names
+            # are not secret. Empty lists distinguish "not a member" from
+            # "names couldn't be read" (a CRM ACL strip).
             log.warning(
-                "assignment login denied user=%s isAdmin=%s roles=%s "
-                "(source=%s) allowed=%s",
-                user.get("userName"), is_admin, roles,
-                "App/user-fallback" if from_fallback else "App/user", allowed,
+                "assignment login denied user=%s isAdmin=%s teams=%s (%s) "
+                "roles=%s (%s) allowed_teams=%s allowed_roles=%s",
+                user.get("userName"), is_admin, teams, teams_src,
+                roles, roles_src, allowed_teams, allowed_roles,
             )
             raise AuthError("Your account is not authorized to use this tool.")
 
@@ -118,6 +142,7 @@ async def authenticate(
         "name": user.get("name") or user["userName"],
         "token": token,
         "isAdmin": is_admin,
+        "teams": teams,
         "roles": roles,
     }
 
