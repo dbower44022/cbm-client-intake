@@ -65,22 +65,24 @@ async def test_assign_sets_engagement_and_reassigns_related():
 
     res = await service.assign_engagement(client, "eng-1", "mentor-1")
 
-    # Engagement update: status + assigned user + mentor profile.
+    # Engagement update: status + mentor profile + assignedUsers (NOT the
+    # disabled single assignedUser).
     eng_updates = [u for u in client.updates if u[0] == service.ENGAGEMENT]
     assert len(eng_updates) == 1
     _, eng_id, payload = eng_updates[0]
     assert eng_id == "eng-1"
     assert payload["engagementStatus"] == "Pending Acceptance"
-    assert payload["assignedUserId"] == "user-99"
+    assert payload["assignedUsersIds"] == ["user-99"]
+    assert "assignedUserId" not in payload
     assert payload["mentorProfileId"] == "mentor-1"
 
-    # Contacts (primary + extra, deduped) each reassigned to the mentor's user.
+    # Contacts (primary + extra, deduped) each reassigned via single assignedUser.
     contact_updates = {u[1]: u[2] for u in client.updates if u[0] == service.CONTACT}
     assert set(contact_updates) == {"contact-primary", "contact-extra"}
     assert all(p["assignedUserId"] == "user-99" for p in contact_updates.values())
 
-    # Client profile + account reassigned.
-    assert ("CClientProfile", "clientprofile-1", {"assignedUserId": "user-99"}) in client.updates
+    # Client profile uses assignedUsers (assignedUser disabled); account uses single.
+    assert ("CClientProfile", "clientprofile-1", {"assignedUsersIds": ["user-99"]}) in client.updates
     assert ("Account", "account-1", {"assignedUserId": "user-99"}) in client.updates
 
     assert res["contactsUpdated"] == 2
