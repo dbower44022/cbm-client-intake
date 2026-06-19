@@ -97,6 +97,54 @@ async def list_engagements(
     ]
 
 
+async def get_engagement_detail(
+    client: AssignClient, engagement_id: str
+) -> dict[str, Any]:
+    """Engagement detail for the popup: primary contact info + mentoring needs.
+
+    Two reads: the engagement, then its primary Contact (for email/phone/company).
+    ``mentoringNeedsDescription`` is a wysiwyg field but intake stores plain text;
+    the frontend renders it as text.
+    """
+    eng = await client.get(
+        ENGAGEMENT,
+        engagement_id,
+        select=(
+            "name,engagementStatus,createdAt,meetingCadence,mentoringFocusAreas,"
+            "mentoringNeedsDescription,primaryEngagementContactId,engagementClientName"
+        ),
+    )
+    contact = None
+    contact_id = eng.get("primaryEngagementContactId")
+    if contact_id:
+        c = await client.get(
+            CONTACT, contact_id,
+            select="name,emailAddress,phoneNumber,accountName,title",
+        )
+        contact = {
+            "name": c.get("name"),
+            "email": c.get("emailAddress"),
+            "phone": c.get("phoneNumber"),
+            "company": c.get("accountName"),
+            "title": c.get("title"),
+        }
+
+    focus = eng.get("mentoringFocusAreas") or []
+    if isinstance(focus, str):  # single-value enums can come back as a bare string
+        focus = [focus]
+    return {
+        "id": engagement_id,
+        "name": eng.get("name"),
+        "status": eng.get("engagementStatus"),
+        "createdAt": eng.get("createdAt"),
+        "meetingCadence": eng.get("meetingCadence"),
+        "clientName": eng.get("engagementClientName"),
+        "contact": contact,
+        "focusAreas": focus,
+        "needs": eng.get("mentoringNeedsDescription") or "",
+    }
+
+
 async def list_eligible_mentors(client: AssignClient) -> list[dict[str, Any]]:
     """Mentors accepting new clients, Active, with a linked User (the dropdown)."""
     data = await client.list(

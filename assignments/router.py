@@ -85,6 +85,16 @@ async def mentors(request: Request) -> dict:
         raise HTTPException(status_code=502, detail=f"Could not load mentors: {exc}")
 
 
+@router.get("/engagements/{engagement_id}")
+async def engagement_detail(engagement_id: str, request: Request) -> dict:
+    user = _require_user(request)
+    client = client_for(get_settings(), user)
+    try:
+        return await service.get_engagement_detail(client, engagement_id)
+    except EspoError as exc:
+        raise HTTPException(status_code=502, detail=f"Could not load engagement: {exc}")
+
+
 @router.post("/engagements/{engagement_id}/assign")
 async def assign(engagement_id: str, body: AssignIn, request: Request) -> dict:
     user = _require_user(request)
