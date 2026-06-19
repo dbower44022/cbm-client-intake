@@ -434,78 +434,115 @@
     return wrap;
   }
 
-  function statBlock(label, value) {
-    var b = document.createElement("div");
-    b.className = "mentor-stat";
-    var v = document.createElement("span");
-    v.className = "mentor-stat__val";
-    v.textContent = value;
-    var l = document.createElement("span");
-    l.className = "mentor-stat__lbl";
-    l.textContent = label;
-    b.appendChild(v);
-    b.appendChild(l);
-    return b;
+  // Default: most available capacity first (best fit to take a new client).
+  var mentorFilter = { q: "", industry: "", focus: "", availOnly: false,
+                       sortKey: "availableCapacity", sortDir: -1 };
+
+  function mentorAvail(m) {
+    return m.availableCapacity === -1 ? Infinity
+      : (typeof m.availableCapacity === "number" ? m.availableCapacity : -Infinity);
+  }
+  function mentorHasCapacity(m) { return mentorAvail(m) > 0; }
+
+  function mentorHaystack(m) {
+    return [m.name, m.industrySector, (m.expertise || []).join(" "),
+            (m.focusAreas || []).join(" ")].join(" ").toLowerCase();
   }
 
-  function mentorSection(heading, values) {
-    var sec = document.createElement("div");
-    sec.className = "mentor-sec";
-    var h = document.createElement("h4");
-    h.className = "mentor-sec__h";
-    h.textContent = heading;
-    sec.appendChild(h);
-    sec.appendChild(chipRow(values));
-    return sec;
+  function sortVal(m, k) {
+    if (k === "availableCapacity") return mentorAvail(m);
+    if (k === "assignedClients") return m.assignedClients == null ? -Infinity : m.assignedClients;
+    return (m[k] || "").toString().toLowerCase();
   }
 
-  function buildMentorCard(m) {
-    var card = document.createElement("div");
-    card.className = "mentor-card";
+  function distinct(getList) {
+    var set = {};
+    mentors.forEach(function (m) {
+      getList(m).forEach(function (v) { if (v) set[v] = true; });
+    });
+    return Object.keys(set).sort();
+  }
 
-    var head = document.createElement("div");
-    head.className = "mentor-card__head";
-    var name = document.createElement("h3");
-    name.className = "mentor-card__name";
-    name.textContent = m.name || "(unnamed mentor)";
-    head.appendChild(name);
-    if (m.industrySector) {
-      var ind = document.createElement("span");
-      ind.className = "mentor-card__industry";
-      ind.textContent = m.industrySector;
-      head.appendChild(ind);
+  function fillFilterSelect(sel, values, placeholder) {
+    var current = sel.value;
+    sel.innerHTML = "";
+    sel.appendChild(new Option(placeholder, ""));
+    values.forEach(function (v) { sel.appendChild(new Option(v, v)); });
+    sel.value = current;  // preserve selection across re-fills
+  }
+
+  function applyMentorFilter() {
+    var q = mentorFilter.q.trim().toLowerCase();
+    var rows = mentors.filter(function (m) {
+      if (q && mentorHaystack(m).indexOf(q) < 0) return false;
+      if (mentorFilter.industry && m.industrySector !== mentorFilter.industry) return false;
+      if (mentorFilter.focus && (m.focusAreas || []).indexOf(mentorFilter.focus) < 0) return false;
+      if (mentorFilter.availOnly && !mentorHasCapacity(m)) return false;
+      return true;
+    });
+    var k = mentorFilter.sortKey, dir = mentorFilter.sortDir;
+    rows.sort(function (a, b) {
+      var va = sortVal(a, k), vb = sortVal(b, k);
+      return (va < vb ? -1 : va > vb ? 1 : 0) * dir;
+    });
+    renderMentorRows(rows);
+    $("mentorCount").textContent =
+      "Showing " + rows.length + " of " + mentors.length + " mentors";
+    updateSortIndicators();
+  }
+
+  function renderMentorRows(rows) {
+    var tb = $("mentorTbody");
+    tb.innerHTML = "";
+    if (!rows.length) {
+      var tr = document.createElement("tr");
+      var td = document.createElement("td");
+      td.colSpan = 6;
+      td.className = "mentor-empty";
+      td.textContent = "No mentors match the current filters.";
+      tr.appendChild(td);
+      tb.appendChild(tr);
+      return;
     }
-    card.appendChild(head);
-
-    var stats = document.createElement("div");
-    stats.className = "mentor-stats";
-    stats.appendChild(statBlock("Assigned clients", m.assignedClients == null ? "—" : m.assignedClients));
-    var avail = m.availableCapacity === -1 ? "Unlimited"
-      : (m.availableCapacity == null ? "—" : m.availableCapacity);
-    stats.appendChild(statBlock("Available capacity", avail));
-    if (m.yearsOfExperience != null) {
-      stats.appendChild(statBlock("Years experience", m.yearsOfExperience));
-    }
-    card.appendChild(stats);
-
-    card.appendChild(mentorSection("Areas of Expertise", m.expertise));
-    card.appendChild(mentorSection("Mentoring Focus Areas", m.focusAreas));
-    return card;
+    rows.forEach(function (m) {
+      var tr = document.createElement("tr");
+      tr.appendChild(cell(m.name || "(unnamed)", "mentor-name-cell"));
+      tr.appendChild(cell(m.assignedClients == null ? "—" : String(m.assignedClients), "num"));
+      tr.appendChild(cell(m.availableCapacity === -1 ? "Unlimited"
+        : (m.availableCapacity == null ? "—" : String(m.availableCapacity)), "num"));
+      tr.appendChild(cell(m.industrySector || "—"));
+      var exTd = document.createElement("td"); exTd.appendChild(chipRow(m.expertise)); tr.appendChild(exTd);
+      var faTd = document.createElement("td"); faTd.appendChild(chipRow(m.focusAreas)); tr.appendChild(faTd);
+      tb.appendChild(tr);
+    });
   }
 
-  function renderMentorGrid() {
-    var grid = $("mentorGrid");
-    grid.innerHTML = "";
-    if (!mentors.length) { grid.textContent = "No available mentors."; return; }
-    mentors.forEach(function (m) { grid.appendChild(buildMentorCard(m)); });
+  function cell(text, cls) {
+    var td = document.createElement("td");
+    if (cls) td.className = cls;
+    td.textContent = text;
+    return td;
+  }
+
+  function updateSortIndicators() {
+    Array.prototype.forEach.call($("mentorTable").querySelectorAll("th[data-sort]"), function (th) {
+      var active = th.getAttribute("data-sort") === mentorFilter.sortKey;
+      th.setAttribute("aria-sort", active ? (mentorFilter.sortDir === 1 ? "ascending" : "descending") : "none");
+      th.dataset.dir = active ? (mentorFilter.sortDir === 1 ? "asc" : "desc") : "";
+    });
   }
 
   async function openMentorReview() {
     clearNotice();
     try {
       if (!mentors.length) mentors = (await api("/mentors")).mentors || [];
-      renderMentorGrid();
+      fillFilterSelect($("mentorIndustryFilter"),
+        distinct(function (m) { return [m.industrySector]; }), "All industries");
+      fillFilterSelect($("mentorFocusFilter"),
+        distinct(function (m) { return m.focusAreas || []; }), "All focus areas");
+      applyMentorFilter();
       show($("mentorModal"));
+      $("mentorSearch").focus();
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }
       notice(e.message, "error");
@@ -513,6 +550,34 @@
   }
 
   $("reviewMentorsBtn").addEventListener("click", openMentorReview);
+  $("mentorSearch").addEventListener("input", function () {
+    mentorFilter.q = this.value; applyMentorFilter();
+  });
+  $("mentorIndustryFilter").addEventListener("change", function () {
+    mentorFilter.industry = this.value; applyMentorFilter();
+  });
+  $("mentorFocusFilter").addEventListener("change", function () {
+    mentorFilter.focus = this.value; applyMentorFilter();
+  });
+  $("mentorAvailOnly").addEventListener("change", function () {
+    mentorFilter.availOnly = this.checked; applyMentorFilter();
+  });
+  Array.prototype.forEach.call(
+    document.querySelectorAll("#mentorTable th[data-sort]"),
+    function (th) {
+      th.addEventListener("click", function () {
+        var key = th.getAttribute("data-sort");
+        if (mentorFilter.sortKey === key) {
+          mentorFilter.sortDir = -mentorFilter.sortDir;
+        } else {
+          mentorFilter.sortKey = key;
+          // numbers default high→low, text low→high
+          mentorFilter.sortDir = (key === "name" || key === "industrySector") ? 1 : -1;
+        }
+        applyMentorFilter();
+      });
+    }
+  );
 
   async function doAssign(tr, eng, mentorProfileId, mentorLabel) {
     if (!mentorProfileId) return;
