@@ -53,6 +53,9 @@
     n.textContent = text;
     n.className = "assign__notice " + (kind === "error" ? "is-error" : "is-success");
     show(n);
+    // Bring the confirmation into view — the user may have assigned from a row
+    // far down the grid, leaving the notice off-screen at the top.
+    n.scrollIntoView({ behavior: "smooth", block: "center" });
   }
   function clearNotice() { hide($("notice")); }
 
@@ -351,19 +354,26 @@
     var st = $("modalStatus");
     if (d.status) { st.textContent = d.status; st.hidden = false; } else { st.hidden = true; }
 
+    // Top panel split into two columns: contact identity on the left, the
+    // engagement meta (meeting cadence + create date) on the right.
     var c = d.contact || {};
-    var dl = document.createElement("dl");
-    dl.className = "contact-dl";
-    addContactField(dl, "Name", c.name);
-    addContactField(dl, "Title", c.title);
-    addContactField(dl, "Company", c.company || d.clientName);
-    addContactField(dl, "Email", c.email, c.email ? "mailto:" + c.email : null);
-    addContactField(dl, "Phone", c.phone, c.phone ? "tel:" + c.phone : null);
-    addContactField(dl, "Meeting", d.meetingCadence);
-    addContactField(dl, "Created", formatDateTime(d.createdAt));
+    var left = document.createElement("dl");
+    left.className = "contact-dl";
+    addContactField(left, "Name", c.name);
+    addContactField(left, "Title", c.title);
+    addContactField(left, "Company", c.company || d.clientName);
+    addContactField(left, "Email", c.email, c.email ? "mailto:" + c.email : null);
+    addContactField(left, "Phone", c.phone, c.phone ? "tel:" + c.phone : null);
+
+    var right = document.createElement("dl");
+    right.className = "contact-dl";
+    addContactField(right, "Meeting", d.meetingCadence);
+    addContactField(right, "Created", formatDateTime(d.createdAt));
+
     var contact = $("modalContact");
     contact.innerHTML = "";
-    contact.appendChild(dl);
+    contact.appendChild(left);
+    contact.appendChild(right);
 
     var focus = $("modalFocus");
     focus.innerHTML = "";
