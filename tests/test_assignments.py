@@ -11,9 +11,10 @@ from core.config import Settings
 class FakeClient:
     """Mock of the EspoClient slice the service uses; records get/list/update calls."""
 
-    def __init__(self, *, mentor=None, engagement=None, related=None, lists=None):
+    def __init__(self, *, mentor=None, engagement=None, contact=None, related=None, lists=None):
         self._mentor = mentor or {}
         self._engagement = engagement or {}
+        self._contact = contact
         self._related = related or {"list": []}
         self._lists = lists or {}
         self.updates: list[tuple[str, str, dict]] = []
@@ -24,6 +25,8 @@ class FakeClient:
             return {"id": record_id, **self._mentor}
         if entity == service.ENGAGEMENT:
             return {"id": record_id, **self._engagement}
+        if entity == service.CONTACT and self._contact is not None:
+            return {"id": record_id, **self._contact}
         return {"id": record_id}
 
     async def list(self, entity, *, where=None, **kwargs):
@@ -185,6 +188,49 @@ async def test_list_engagements_query_and_shape():
     # Multi-status filter -> an `in` clause over the selected statuses.
     assert {"type": "in", "attribute": "engagementStatus",
             "value": ["Submitted", "Pending Acceptance"]} in where
+
+
+# --- engagement detail -------------------------------------------------------
+
+async def test_get_engagement_detail_shape():
+    client = FakeClient(
+        engagement={
+            "name": "Sharon Rose — Intake",
+            "engagementStatus": "Submitted",
+            "createdAt": "2026-06-18 19:18:39",
+            "meetingCadence": "Weekly",
+            "mentoringFocusAreas": ["Accounting & Tax Services", "Marketing"],
+            "mentoringNeedsDescription": "I need help with my books.",
+            "primaryEngagementContactId": "c1",
+            "engagementClientName": "Rose LLC",
+        },
+        contact={
+            "name": "Sharon Rose", "emailAddress": "sharon@example.com",
+            "phoneNumber": "+12165550000", "accountName": "Rose LLC", "title": "Owner",
+        },
+    )
+    d = await service.get_engagement_detail(client, "e1")
+    assert d["status"] == "Submitted"
+    assert d["contact"] == {
+        "name": "Sharon Rose", "email": "sharon@example.com",
+        "phone": "+12165550000", "company": "Rose LLC", "title": "Owner",
+    }
+    assert d["focusAreas"] == ["Accounting & Tax Services", "Marketing"]
+    assert d["needs"] == "I need help with my books."
+
+
+async def test_get_engagement_detail_no_contact():
+    client = FakeClient(engagement={"name": "X", "primaryEngagementContactId": None})
+    d = await service.get_engagement_detail(client, "e2")
+    assert d["contact"] is None
+    assert d["focusAreas"] == []
+    assert d["needs"] == ""
+
+
+async def test_get_engagement_detail_single_focus_string_coerced():
+    client = FakeClient(engagement={"name": "Y", "mentoringFocusAreas": "Marketing"})
+    d = await service.get_engagement_detail(client, "e3")
+    assert d["focusAreas"] == ["Marketing"]
 
 
 # --- auth team/role gate -----------------------------------------------------

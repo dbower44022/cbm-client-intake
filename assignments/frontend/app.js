@@ -95,10 +95,10 @@
     }
   });
   document.addEventListener("keydown", function (ev) {
-    if (ev.key === "Escape") {
-      var details = $("statusFilter");
-      if (details && details.open) details.open = false;
-    }
+    if (ev.key !== "Escape") return;
+    if (!$("engModal").hidden) { closeModal(); return; }
+    var details = $("statusFilter");
+    if (details && details.open) details.open = false;
   });
 
   // --- status filter ---
@@ -205,9 +205,11 @@
     tr.dataset.engId = eng.id;
 
     var tdEng = document.createElement("td");
-    var name = document.createElement("span");
-    name.className = "eng-name";
+    var name = document.createElement("button");
+    name.type = "button";
+    name.className = "eng-name eng-name--link";
     name.textContent = eng.name || "(unnamed engagement)";
+    name.addEventListener("click", function () { openDetail(eng.id); });
     tdEng.appendChild(name);
     if (eng.status) {
       var badge = document.createElement("span");
@@ -256,6 +258,83 @@
     tr.appendChild(tdAssign);
     return tr;
   }
+
+  // --- engagement detail modal ---
+  function closeModal() { hide($("engModal")); }
+
+  function addContactField(dl, label, value, href) {
+    if (!value) return;
+    var dt = document.createElement("dt");
+    dt.textContent = label;
+    var dd = document.createElement("dd");
+    if (href) {
+      var a = document.createElement("a");
+      a.href = href;
+      a.textContent = value;
+      dd.appendChild(a);
+    } else {
+      dd.textContent = value;
+    }
+    dl.appendChild(dt);
+    dl.appendChild(dd);
+  }
+
+  function fillDetail(d) {
+    $("modalTitle").textContent = d.name || "Engagement";
+    var st = $("modalStatus");
+    if (d.status) { st.textContent = d.status; st.hidden = false; } else { st.hidden = true; }
+
+    var c = d.contact || {};
+    var dl = document.createElement("dl");
+    dl.className = "contact-dl";
+    addContactField(dl, "Name", c.name);
+    addContactField(dl, "Title", c.title);
+    addContactField(dl, "Company", c.company || d.clientName);
+    addContactField(dl, "Email", c.email, c.email ? "mailto:" + c.email : null);
+    addContactField(dl, "Phone", c.phone, c.phone ? "tel:" + c.phone : null);
+    addContactField(dl, "Meeting", d.meetingCadence);
+    var contact = $("modalContact");
+    contact.innerHTML = "";
+    contact.appendChild(dl);
+
+    var focus = $("modalFocus");
+    focus.innerHTML = "";
+    if (d.focusAreas && d.focusAreas.length) {
+      d.focusAreas.forEach(function (f) {
+        var chip = document.createElement("span");
+        chip.className = "chip";
+        chip.textContent = f;
+        focus.appendChild(chip);
+      });
+    } else {
+      focus.textContent = "—";
+    }
+
+    // Needs is a wysiwyg field; DOMParser turns any HTML into plain text safely
+    // (no script execution, no resource loads).
+    var needs = new DOMParser().parseFromString(d.needs || "", "text/html").body.textContent || "";
+    $("modalNeeds").textContent = needs.trim() || "—";
+  }
+
+  async function openDetail(id) {
+    $("modalTitle").textContent = "Loading…";
+    $("modalStatus").hidden = true;
+    $("modalContact").innerHTML = "";
+    $("modalFocus").innerHTML = "";
+    $("modalNeeds").textContent = "";
+    show($("engModal"));
+    try {
+      fillDetail(await api("/engagements/" + encodeURIComponent(id)));
+    } catch (e) {
+      closeModal();
+      if (e.status === 401) { showLogin(); return; }
+      notice(e.message, "error");
+    }
+  }
+
+  $("engModal").addEventListener("click", function (ev) {
+    if (ev.target.hasAttribute("data-close")) closeModal();
+  });
 
   async function doAssign(tr, eng, mentorProfileId, mentorLabel) {
     if (!mentorProfileId) return;
