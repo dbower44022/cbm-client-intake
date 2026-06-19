@@ -66,6 +66,48 @@ The Client Intake process is defined by **MN-INTAKE** in the
 `dbower44022/ClevelandBusinessMentoring` repo; the Requirements Spec here is
 kept aligned to it by carry-forward.
 
+## Mentor Assignment tool — `/assignments` (added 2026-06-19)
+
+A **staff-only** dashboard (NOT a public intake form) that lives in the same
+FastAPI app (`assignments/` package, mounted only when `SESSION_SECRET` is set —
+see `Settings.assignments_active`). It lists `CEngagement` records with
+`engagementStatus="Submitted"` in a grid; each row has a dropdown of mentors
+**accepting new clients** and, on confirm, assigns the engagement to the chosen
+mentor.
+
+- **Auth = per-user, acts as the logged-in user.** Staff log in with their own
+  EspoCRM username/password (`POST /assignments/api/login` → EspoCRM `App/user`
+  with the `Espo-Authorization` header). The returned auth token is kept in a
+  signed session cookie and replayed (`Espo-Authorization` + by-token header) so
+  **all reads/writes run as that user** — EspoCRM enforces their ACL and records
+  them as modifier. Access gated to active internal users who are admin or hold
+  a role in `ASSIGN_ALLOWED_ROLES`. (The shared `customapps` API user is NOT used
+  here — it's create-only and can't read Users/Roles or edit.)
+- **Mentor dropdown** = `CMentorProfile` where `acceptingNewClients=true` AND
+  `mentorStatus="Active"` AND `assignedUser` set. The mentor's login User =
+  `CMentorProfile.assignedUser`.
+- **Assign action** (`assignments/service.py:assign_engagement`): set the
+  engagement's `assignedUser` + `mentorProfile` (the "assigned mentor" field) and
+  `engagementStatus="Pending Acceptance"`; then set `assignedUser` to the mentor's
+  user on every related Contact (`primaryEngagementContact` + `engagementContacts`),
+  the `engagementClient` (CClientProfile), and `clientOrganization` (Account, when
+  present). Source-of-truth mapping is the service module.
+- **CRM schema** (read live from crm-test 2026-06-19): `engagementStatus` enum has
+  `Submitted`/`Pending Acceptance`; `CEngagement.mentorProfile` belongsTo
+  CMentorProfile; `CMentorProfile.acceptingNewClients` (bool) +
+  `availableCapacity`/`currentActiveClients`/`maximumClientCapacity` (int).
+- **Status (2026-06-19): built; 71 tests green; read-path + login mechanism
+  VERIFIED live against crm-test** (7 Submitted engagements; 3 eligible mentors —
+  Douglas Bower, Jane Doe, Matt Mentor; bad-cred login → clean 401). **PENDING:**
+  full login→assign→write path with a real staff login (use a throwaway/ZZTEST
+  engagement). One-off live checker: `scripts/verify_assignment_live.py`.
+- **Deploy-time secrets** (encrypted App Platform env, gitignored
+  `.do/app.prod.yaml`): `SESSION_SECRET` (required to enable), `ASSIGN_ALLOWED_ROLES`
+  (the staff Role name — crm-test has **no Teams**; gate by role), keep
+  `SESSION_COOKIE_SECURE=true` in prod. See `.env.example`.
+- **Note:** `CClientProfile.assignedUser` is `disabled:true` in CRM metadata; the
+  PUT is still attempted but may no-op CRM-side — confirm during live write check.
+
 ## Current status (2026-05-28)
 
 **Goal:** publish the app on DigitalOcean for user feedback. As of 2026-05-28
