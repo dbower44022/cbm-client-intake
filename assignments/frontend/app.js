@@ -10,6 +10,8 @@
 
   var API = "/assignments/api";
   var mentors = [];
+  var selectedStatuses = [];   // engagementStatus values currently filtered to
+  var statusFilterBuilt = false;
 
   // --- tiny DOM helpers ---
   function $(id) { return document.getElementById(id); }
@@ -83,16 +85,86 @@
 
   $("refreshBtn").addEventListener("click", loadData);
 
+  // --- status filter ---
+  function statusQuery() {
+    return selectedStatuses
+      .map(function (s) { return "status=" + encodeURIComponent(s); })
+      .join("&");
+  }
+
+  function updateStatusSummary() {
+    var s = $("statusSummary");
+    if (!selectedStatuses.length) s.textContent = "Status: none selected";
+    else if (selectedStatuses.length <= 2) s.textContent = "Status: " + selectedStatuses.join(", ");
+    else s.textContent = "Status: " + selectedStatuses.length + " selected";
+  }
+
+  function buildStatusFilter(allStatuses) {
+    var panel = $("statusPanel");
+    panel.innerHTML = "";
+    allStatuses.forEach(function (st) {
+      var label = document.createElement("label");
+      label.className = "statusfilter__opt";
+      var cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.value = st;
+      cb.checked = selectedStatuses.indexOf(st) >= 0;
+      cb.addEventListener("change", onStatusChange);
+      label.appendChild(cb);
+      label.appendChild(document.createTextNode(" " + st));
+      panel.appendChild(label);
+    });
+    statusFilterBuilt = true;
+    updateStatusSummary();
+  }
+
+  function onStatusChange() {
+    var cbs = $("statusPanel").querySelectorAll("input[type=checkbox]");
+    selectedStatuses = Array.prototype.filter.call(cbs, function (c) { return c.checked; })
+      .map(function (c) { return c.value; });
+    updateStatusSummary();
+    reloadEngagements();
+  }
+
   // --- data + rendering ---
+  async function fetchEngagements() {
+    var qs = statusQuery();
+    return api("/engagements" + (qs ? "?" + qs : ""));
+  }
+
   async function loadData() {
     clearNotice();
     show($("loadingState"));
     hide($("engTable"));
     hide($("emptyState"));
     try {
-      var results = await Promise.all([api("/mentors"), api("/engagements")]);
+      var results = await Promise.all([api("/mentors"), fetchEngagements()]);
       mentors = results[0].mentors || [];
-      renderTable(results[1].engagements || []);
+      var eng = results[1];
+      selectedStatuses = eng.selectedStatuses || selectedStatuses;
+      buildStatusFilter(eng.allStatuses || []);
+      renderTable(eng.engagements || []);
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      notice(e.message, "error");
+    } finally {
+      hide($("loadingState"));
+    }
+  }
+
+  async function reloadEngagements() {
+    clearNotice();
+    if (!selectedStatuses.length) {
+      renderTable([]);
+      notice("Select at least one status to view engagements.", "error");
+      return;
+    }
+    show($("loadingState"));
+    hide($("engTable"));
+    hide($("emptyState"));
+    try {
+      var eng = await fetchEngagements();
+      renderTable(eng.engagements || []);
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }
       notice(e.message, "error");
@@ -121,12 +193,18 @@
     name.className = "eng-name";
     name.textContent = eng.name || "(unnamed engagement)";
     tdEng.appendChild(name);
+    if (eng.status) {
+      var badge = document.createElement("span");
+      badge.className = "eng-status";
+      badge.textContent = eng.status;
+      tdEng.appendChild(badge);
+    }
     var meta = document.createElement("span");
     meta.className = "eng-meta";
     var bits = [];
     if (eng.clientName) bits.push(eng.clientName);
     if (eng.contactName) bits.push(eng.contactName);
-    if (eng.createdAt) bits.push("submitted " + eng.createdAt.slice(0, 10));
+    if (eng.createdAt) bits.push("created " + eng.createdAt.slice(0, 10));
     meta.textContent = bits.join(" · ");
     tdEng.appendChild(meta);
     tr.appendChild(tdEng);
@@ -179,11 +257,9 @@
         method: "POST",
         body: JSON.stringify({ mentorProfileId: mentorProfileId }),
       });
-      tr.remove();
-      if (!$("engBody").children.length) {
-        hide($("engTable"));
-        show($("emptyState"));
-      }
+      // Re-fetch so the grid reflects the current filter (the engagement is now
+      // Pending Acceptance — it stays if that status is selected, else drops off).
+      await reloadEngagements();
       notice(
         "Assigned “" + (eng.name || "engagement") + "” to " + res.mentorName +
         " — status now Pending Acceptance (" + res.contactsUpdated + " contact(s)" +

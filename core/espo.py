@@ -119,7 +119,13 @@ class EspoClient:
             params.append((f"where[{i}][type]", clause["type"]))
             params.append((f"where[{i}][attribute]", clause["attribute"]))
             if "value" in clause:
-                params.append((f"where[{i}][value]", str(clause["value"])))
+                value = clause["value"]
+                if isinstance(value, (list, tuple)):
+                    # Array filters (e.g. type=in) need indexed value params.
+                    for j, item in enumerate(value):
+                        params.append((f"where[{i}][value][{j}]", str(item)))
+                else:
+                    params.append((f"where[{i}][value]", str(value)))
         async with httpx.AsyncClient(timeout=self._timeout) as client:
             resp = await client.get(
                 f"{self._base}/{entity}", params=params, headers=self._headers

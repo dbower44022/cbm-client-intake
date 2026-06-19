@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from core.config import get_settings
@@ -54,13 +54,25 @@ async def session(request: Request) -> dict:
 
 
 @router.get("/engagements")
-async def engagements(request: Request) -> dict:
+async def engagements(
+    request: Request,
+    status: list[str] | None = Query(default=None),
+) -> dict:
     user = _require_user(request)
     client = client_for(get_settings(), user)
+    # Keep only known statuses; default to Submitted (the primary triage view).
+    statuses = [s for s in (status or []) if s in service.ENGAGEMENT_STATUSES]
+    if not statuses:
+        statuses = [service.STATUS_SUBMITTED]
     try:
-        return {"engagements": await service.list_submitted_engagements(client)}
+        rows = await service.list_engagements(client, statuses)
     except EspoError as exc:
         raise HTTPException(status_code=502, detail=f"Could not load engagements: {exc}")
+    return {
+        "engagements": rows,
+        "allStatuses": service.ENGAGEMENT_STATUSES,
+        "selectedStatuses": statuses,
+    }
 
 
 @router.get("/mentors")
