@@ -111,7 +111,8 @@ async def get_engagement_detail(
         engagement_id,
         select=(
             "name,engagementStatus,createdAt,meetingCadence,mentoringFocusAreas,"
-            "mentoringNeedsDescription,primaryEngagementContactId,engagementClientName"
+            "mentoringNeedsDescription,engagementNotes,primaryEngagementContactId,"
+            "engagementClientName"
         ),
     )
     contact = None
@@ -141,7 +142,9 @@ async def get_engagement_detail(
         "clientName": eng.get("engagementClientName"),
         "contact": contact,
         "focusAreas": focus,
+        # Rich-text (wysiwyg) HTML — sanitized + rendered by the frontend.
         "needs": eng.get("mentoringNeedsDescription") or "",
+        "notes": eng.get("engagementNotes") or "",
     }
 
 

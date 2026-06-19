@@ -200,7 +200,8 @@ async def test_get_engagement_detail_shape():
             "createdAt": "2026-06-18 19:18:39",
             "meetingCadence": "Weekly",
             "mentoringFocusAreas": ["Accounting & Tax Services", "Marketing"],
-            "mentoringNeedsDescription": "I need help with my books.",
+            "mentoringNeedsDescription": "<p>I need help with my books.</p>",
+            "engagementNotes": "<p>Client asked for Bob.</p>",
             "primaryEngagementContactId": "c1",
             "engagementClientName": "Rose LLC",
         },
@@ -216,7 +217,8 @@ async def test_get_engagement_detail_shape():
         "phone": "+12165550000", "company": "Rose LLC", "title": "Owner",
     }
     assert d["focusAreas"] == ["Accounting & Tax Services", "Marketing"]
-    assert d["needs"] == "I need help with my books."
+    assert d["needs"] == "<p>I need help with my books.</p>"
+    assert d["notes"] == "<p>Client asked for Bob.</p>"
 
 
 async def test_get_engagement_detail_no_contact():
@@ -225,6 +227,7 @@ async def test_get_engagement_detail_no_contact():
     assert d["contact"] is None
     assert d["focusAreas"] == []
     assert d["needs"] == ""
+    assert d["notes"] == ""
 
 
 async def test_get_engagement_detail_single_focus_string_coerced():

@@ -262,6 +262,73 @@
   // --- engagement detail modal ---
   function closeModal() { hide($("engModal")); }
 
+  // Rich-text (wysiwyg) rendering. Formatting tags are kept; everything risky is
+  // stripped (scripts, event handlers, styles, unknown tags), so CRM/intake HTML
+  // renders safely without a build step or external sanitizer.
+  var RICH_ALLOWED = {
+    A: 1, B: 1, STRONG: 1, I: 1, EM: 1, U: 1, S: 1, STRIKE: 1, P: 1, BR: 1,
+    UL: 1, OL: 1, LI: 1, H1: 1, H2: 1, H3: 1, H4: 1, H5: 1, H6: 1, BLOCKQUOTE: 1,
+    SPAN: 1, DIV: 1, PRE: 1, CODE: 1, HR: 1, TABLE: 1, THEAD: 1, TBODY: 1,
+    TR: 1, TD: 1, TH: 1, SUB: 1, SUP: 1,
+  };
+  var RICH_DROP = {
+    SCRIPT: 1, STYLE: 1, IFRAME: 1, OBJECT: 1, EMBED: 1, LINK: 1, META: 1,
+    SVG: 1, MATH: 1, FORM: 1, INPUT: 1, BUTTON: 1, TEXTAREA: 1, IMG: 1,
+  };
+
+  function sanitizeBody(body) {
+    var els = Array.prototype.slice.call(body.querySelectorAll("*"));
+    var drop = [], unwrap = [];
+    els.forEach(function (el) {
+      var tag = el.tagName;
+      if (RICH_DROP[tag]) { drop.push(el); return; }
+      Array.prototype.slice.call(el.attributes).forEach(function (a) {
+        var keep = tag === "A" && a.name.toLowerCase() === "href" &&
+          /^(https?:|mailto:|tel:)/i.test(a.value.trim());
+        if (!keep) el.removeAttribute(a.name);
+      });
+      if (!RICH_ALLOWED[tag]) {
+        unwrap.push(el);
+      } else if (tag === "A") {
+        el.setAttribute("target", "_blank");
+        el.setAttribute("rel", "noopener noreferrer");
+      }
+    });
+    drop.forEach(function (n) { if (n.parentNode) n.parentNode.removeChild(n); });
+    unwrap.forEach(function (n) {
+      if (!n.parentNode) return;
+      while (n.firstChild) n.parentNode.insertBefore(n.firstChild, n);
+      n.parentNode.removeChild(n);
+    });
+  }
+
+  function renderRichText(target, html) {
+    target.innerHTML = "";
+    var raw = (html || "").trim();
+    if (!raw) { target.textContent = "—"; return; }
+    var doc = new DOMParser().parseFromString(raw, "text/html");
+    sanitizeBody(doc.body);
+    if (!doc.body.textContent.trim() && !doc.body.querySelector("br,hr")) {
+      target.textContent = "—";
+      return;
+    }
+    // Import the cleaned nodes (no scripts remain) rather than re-parsing a string.
+    Array.prototype.slice.call(doc.body.childNodes).forEach(function (n) {
+      target.appendChild(document.importNode(n, true));
+    });
+  }
+
+  function formatDateTime(s) {
+    if (!s) return null;
+    // EspoCRM datetimes are UTC "YYYY-MM-DD HH:MM:SS".
+    var d = new Date(s.replace(" ", "T") + "Z");
+    if (isNaN(d.getTime())) return s;
+    return d.toLocaleString(undefined, {
+      year: "numeric", month: "short", day: "numeric",
+      hour: "numeric", minute: "2-digit",
+    });
+  }
+
   function addContactField(dl, label, value, href) {
     if (!value) return;
     var dt = document.createElement("dt");
@@ -293,6 +360,7 @@
     addContactField(dl, "Email", c.email, c.email ? "mailto:" + c.email : null);
     addContactField(dl, "Phone", c.phone, c.phone ? "tel:" + c.phone : null);
     addContactField(dl, "Meeting", d.meetingCadence);
+    addContactField(dl, "Created", formatDateTime(d.createdAt));
     var contact = $("modalContact");
     contact.innerHTML = "";
     contact.appendChild(dl);
@@ -310,10 +378,8 @@
       focus.textContent = "—";
     }
 
-    // Needs is a wysiwyg field; DOMParser turns any HTML into plain text safely
-    // (no script execution, no resource loads).
-    var needs = new DOMParser().parseFromString(d.needs || "", "text/html").body.textContent || "";
-    $("modalNeeds").textContent = needs.trim() || "—";
+    renderRichText($("modalNeeds"), d.needs);
+    renderRichText($("modalNotes"), d.notes);
   }
 
   async function openDetail(id) {
@@ -322,6 +388,7 @@
     $("modalContact").innerHTML = "";
     $("modalFocus").innerHTML = "";
     $("modalNeeds").textContent = "";
+    $("modalNotes").textContent = "";
     show($("engModal"));
     try {
       fillDetail(await api("/engagements/" + encodeURIComponent(id)));
