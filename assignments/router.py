@@ -76,11 +76,16 @@ async def engagements(
 
 
 @router.get("/mentors")
-async def mentors(request: Request) -> dict:
+async def mentors(request: Request, all_: bool = Query(default=False, alias="all")) -> dict:
+    """Eligible mentors (assign dropdown) by default; the full roster with ?all=true."""
     user = _require_user(request)
     client = client_for(get_settings(), user)
     try:
-        return {"mentors": await service.list_eligible_mentors(client)}
+        rows = await (
+            service.list_all_mentors(client) if all_
+            else service.list_eligible_mentors(client)
+        )
+        return {"mentors": rows}
     except EspoError as exc:
         raise HTTPException(status_code=502, detail=f"Could not load mentors: {exc}")
 

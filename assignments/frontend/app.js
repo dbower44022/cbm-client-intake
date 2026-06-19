@@ -434,8 +434,11 @@
     return wrap;
   }
 
+  // The review list is the full roster (any status), distinct from the eligible
+  // `mentors` used by the assign dropdown.
+  var reviewMentors = [];
   // Default: most available capacity first (best fit to take a new client).
-  var mentorFilter = { q: "", industry: "", focus: "", availOnly: false,
+  var mentorFilter = { q: "", status: "", industry: "", focus: "", availOnly: false,
                        sortKey: "availableCapacity", sortDir: -1 };
 
   function mentorAvail(m) {
@@ -457,7 +460,7 @@
 
   function distinct(getList) {
     var set = {};
-    mentors.forEach(function (m) {
+    reviewMentors.forEach(function (m) {
       getList(m).forEach(function (v) { if (v) set[v] = true; });
     });
     return Object.keys(set).sort();
@@ -473,8 +476,9 @@
 
   function applyMentorFilter() {
     var q = mentorFilter.q.trim().toLowerCase();
-    var rows = mentors.filter(function (m) {
+    var rows = reviewMentors.filter(function (m) {
       if (q && mentorHaystack(m).indexOf(q) < 0) return false;
+      if (mentorFilter.status && m.status !== mentorFilter.status) return false;
       if (mentorFilter.industry && m.industrySector !== mentorFilter.industry) return false;
       if (mentorFilter.focus && (m.focusAreas || []).indexOf(mentorFilter.focus) < 0) return false;
       if (mentorFilter.availOnly && !mentorHasCapacity(m)) return false;
@@ -487,7 +491,7 @@
     });
     renderMentorRows(rows);
     $("mentorCount").textContent =
-      "Showing " + rows.length + " of " + mentors.length + " mentors";
+      "Showing " + rows.length + " of " + reviewMentors.length + " mentors";
     updateSortIndicators();
   }
 
@@ -497,7 +501,7 @@
     if (!rows.length) {
       var tr = document.createElement("tr");
       var td = document.createElement("td");
-      td.colSpan = 6;
+      td.colSpan = 7;
       td.className = "mentor-empty";
       td.textContent = "No mentors match the current filters.";
       tr.appendChild(td);
@@ -507,6 +511,7 @@
     rows.forEach(function (m) {
       var tr = document.createElement("tr");
       tr.appendChild(cell(m.name || "(unnamed)", "mentor-name-cell"));
+      tr.appendChild(cell(m.status || "—"));
       tr.appendChild(cell(m.assignedClients == null ? "—" : String(m.assignedClients), "num"));
       tr.appendChild(cell(m.availableCapacity === -1 ? "Unlimited"
         : (m.availableCapacity == null ? "—" : String(m.availableCapacity)), "num"));
@@ -535,7 +540,11 @@
   async function openMentorReview() {
     clearNotice();
     try {
-      if (!mentors.length) mentors = (await api("/mentors")).mentors || [];
+      if (!reviewMentors.length) {
+        reviewMentors = (await api("/mentors?all=true")).mentors || [];
+      }
+      fillFilterSelect($("mentorStatusFilter"),
+        distinct(function (m) { return [m.status]; }), "All statuses");
       fillFilterSelect($("mentorIndustryFilter"),
         distinct(function (m) { return [m.industrySector]; }), "All industries");
       fillFilterSelect($("mentorFocusFilter"),
@@ -552,6 +561,9 @@
   $("reviewMentorsBtn").addEventListener("click", openMentorReview);
   $("mentorSearch").addEventListener("input", function () {
     mentorFilter.q = this.value; applyMentorFilter();
+  });
+  $("mentorStatusFilter").addEventListener("change", function () {
+    mentorFilter.status = this.value; applyMentorFilter();
   });
   $("mentorIndustryFilter").addEventListener("change", function () {
     mentorFilter.industry = this.value; applyMentorFilter();

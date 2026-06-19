@@ -144,6 +144,8 @@ async def test_eligible_mentors_query_and_shape():
                         "maximumClientCapacity": 5,
                         "yearsOfExperience": 10,
                         "mentorType": "Mentor",
+                        "mentorStatus": "Active",
+                        "acceptingNewClients": True,
                         "industrySector": "Manufacturing",
                         "mentoringFocusAreas": ["Agriculture"],
                         "areaOfExpertise": ["Lean"],
@@ -157,7 +159,8 @@ async def test_eligible_mentors_query_and_shape():
         {
             "id": "m1", "name": "Tommy Tranell", "userId": "u1", "userName": "Tommy Tranell",
             "availableCapacity": 4, "assignedClients": 2, "maxCapacity": 5,
-            "yearsOfExperience": 10, "mentorType": "Mentor", "industrySector": "Manufacturing",
+            "yearsOfExperience": 10, "mentorType": "Mentor", "status": "Active",
+            "acceptingNewClients": True, "industrySector": "Manufacturing",
             "focusAreas": ["Agriculture"], "expertise": ["Lean"],
         }
     ]
@@ -167,6 +170,25 @@ async def test_eligible_mentors_query_and_shape():
     assert ("acceptingNewClients", "isTrue") in attrs
     assert ("mentorStatus", "equals") in attrs
     assert ("assignedUserId", "isNotNull") in attrs
+
+
+async def test_list_all_mentors_has_no_where_filter():
+    client = FakeClient(
+        lists={
+            service.MENTOR_PROFILE: {
+                "list": [
+                    {"id": "m1", "name": "Cand", "mentorStatus": "Candidate",
+                     "acceptingNewClients": False},
+                ]
+            }
+        }
+    )
+    rows = await service.list_all_mentors(client)
+    assert [r["status"] for r in rows] == ["Candidate"]
+    assert rows[0]["acceptingNewClients"] is False
+    # No eligibility where-clause — the review list spans all statuses.
+    _, where = client.list_calls[0]
+    assert where == []
 
 
 async def test_list_engagements_query_and_shape():

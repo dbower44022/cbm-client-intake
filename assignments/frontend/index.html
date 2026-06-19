@@ -79,6 +79,7 @@
         <div class="mentor-controls">
           <input type="search" id="mentorSearch" class="mentor-search"
                  placeholder="Search name, industry, expertise, focus…" autocomplete="off" />
+          <select id="mentorStatusFilter" aria-label="Filter by status"></select>
           <select id="mentorIndustryFilter" aria-label="Filter by industry"></select>
           <select id="mentorFocusFilter" aria-label="Filter by focus area"></select>
           <label class="mentor-availonly">
@@ -91,6 +92,7 @@
             <thead>
               <tr>
                 <th data-sort="name" class="is-sortable">Mentor</th>
+                <th data-sort="status" class="is-sortable">Status</th>
                 <th data-sort="assignedClients" class="is-sortable num">Assigned</th>
                 <th data-sort="availableCapacity" class="is-sortable num">Capacity</th>
                 <th data-sort="industrySector" class="is-sortable">Industry</th>
