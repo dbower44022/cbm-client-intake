@@ -34,6 +34,14 @@ STATUS_SUBMITTED = "Submitted"
 STATUS_PENDING = "Pending Acceptance"
 MENTOR_STATUS_ACTIVE = "Active"
 
+# Full engagementStatus enum (crm-test metadata 2026-06-19) — the filter's option
+# set. Kept here rather than fetched per-request; refresh if the CRM enum changes.
+ENGAGEMENT_STATUSES = [
+    "Submitted", "Declined", "Pending Acceptance", "Assigned",
+    "Assignment Declined", "Assignment Dormant", "Active", "On-Hold",
+    "Dormant", "Inactive", "Abandoned", "Completed",
+]
+
 # Link of CEngagement -> the hasMany of additional/secondary contacts.
 ENGAGEMENT_CONTACTS = "engagementContacts"
 
@@ -64,12 +72,14 @@ class AssignError(Exception):
     """The chosen mentor is ineligible — a 400-level, user-facing condition."""
 
 
-async def list_submitted_engagements(client: AssignClient) -> list[dict[str, Any]]:
-    """Submitted engagements, newest first, with display fields for the grid."""
+async def list_engagements(
+    client: AssignClient, statuses: list[str]
+) -> list[dict[str, Any]]:
+    """Engagements in any of ``statuses``, newest first, with grid display fields."""
     data = await client.list(
         ENGAGEMENT,
-        where=[{"type": "equals", "attribute": "engagementStatus", "value": STATUS_SUBMITTED}],
-        select="name,createdAt,primaryEngagementContactName,engagementClientName",
+        where=[{"type": "in", "attribute": "engagementStatus", "value": list(statuses)}],
+        select="name,createdAt,engagementStatus,primaryEngagementContactName,engagementClientName",
         max_size=200,
         order_by="createdAt",
         order="desc",
@@ -79,6 +89,7 @@ async def list_submitted_engagements(client: AssignClient) -> list[dict[str, Any
             "id": r["id"],
             "name": r.get("name"),
             "createdAt": r.get("createdAt"),
+            "status": r.get("engagementStatus"),
             "contactName": r.get("primaryEngagementContactName"),
             "clientName": r.get("engagementClientName"),
         }

@@ -154,7 +154,7 @@ async def test_eligible_mentors_query_and_shape():
     assert ("assignedUserId", "isNotNull") in attrs
 
 
-async def test_submitted_engagements_query_and_shape():
+async def test_list_engagements_query_and_shape():
     client = FakeClient(
         lists={
             service.ENGAGEMENT: {
@@ -163,6 +163,7 @@ async def test_submitted_engagements_query_and_shape():
                         "id": "e1",
                         "name": "Sharon Rose — Intake",
                         "createdAt": "2026-06-18 19:18:39",
+                        "engagementStatus": "Submitted",
                         "primaryEngagementContactName": "Sharon Rose",
                         "engagementClientName": "Rose LLC",
                     }
@@ -170,17 +171,20 @@ async def test_submitted_engagements_query_and_shape():
             }
         }
     )
-    rows = await service.list_submitted_engagements(client)
+    rows = await service.list_engagements(client, ["Submitted", "Pending Acceptance"])
     assert rows[0] == {
         "id": "e1",
         "name": "Sharon Rose — Intake",
         "createdAt": "2026-06-18 19:18:39",
+        "status": "Submitted",
         "contactName": "Sharon Rose",
         "clientName": "Rose LLC",
     }
     entity, where = client.list_calls[0]
     assert entity == service.ENGAGEMENT
-    assert {"type": "equals", "attribute": "engagementStatus", "value": "Submitted"} in where
+    # Multi-status filter -> an `in` clause over the selected statuses.
+    assert {"type": "in", "attribute": "engagementStatus",
+            "value": ["Submitted", "Pending Acceptance"]} in where
 
 
 # --- auth team/role gate -----------------------------------------------------

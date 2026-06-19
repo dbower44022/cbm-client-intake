@@ -91,6 +91,9 @@ mentor.
 - **Mentor dropdown** = `CMentorProfile` where `acceptingNewClients=true` AND
   `mentorStatus="Active"` AND `assignedUser` set. The mentor's login User =
   `CMentorProfile.assignedUser`.
+- **Status filter** — the grid has a multi-select (the full `engagementStatus`
+  enum, `service.ENGAGEMENT_STATUSES`); `GET /assignments/api/engagements` takes
+  repeated `?status=` params (`in` filter), defaulting to `Submitted`.
 - **Assign action** (`assignments/service.py:assign_engagement`): set the
   engagement's `assignedUser` + `mentorProfile` (the "assigned mentor" field) and
   `engagementStatus="Pending Acceptance"`; then set `assignedUser` to the mentor's
@@ -102,10 +105,11 @@ mentor.
   CMentorProfile; `CMentorProfile.acceptingNewClients` (bool) +
   `availableCapacity`/`currentActiveClients`/`maximumClientCapacity` (int).
 - **Status (2026-06-19): built; 72 tests green; DEPLOYED LIVE on App Platform
-  against crm-test.** Login (incl. non-admin via Team) + read path VERIFIED live
-  (7 Submitted engagements; 3 eligible mentors — Douglas Bower, Jane Doe, Matt
-  Mentor; admin + `kitty.cat` via `Client Administration Team` both log in).
-  **PENDING:** full assign→write path (use a throwaway/ZZTEST engagement). One-off
+  against crm-test; full path VERIFIED end-to-end.** Login (admin + non-admin
+  `kitty.cat` via `Client Administration Team`), read path (7 Submitted
+  engagements; eligible mentors), AND a real assignment all confirmed live: the
+  mentor lands in the engagement's `assignedUsers`, status → Pending Acceptance,
+  `mentorProfile` set, related contacts/CClientProfile/Account reassigned. One-off
   live checker: `scripts/verify_assignment_live.py`.
 - **Deploy-time secrets** (encrypted App Platform env, gitignored
   `.do/app.prod.yaml`, applied with `doctl apps update <app-id> --spec ...`):
