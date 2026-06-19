@@ -92,7 +92,8 @@ async def authenticate(
 
     is_admin = user.get("type") == "admin" or bool(user.get("isAdmin"))
     roles = _role_names(user)
-    if roles is None:
+    from_fallback = roles is None
+    if from_fallback:
         roles = await _fetch_role_names(
             settings, user["userName"], token, user["id"]
         )
@@ -100,6 +101,15 @@ async def authenticate(
     if not is_admin:
         allowed = settings.assign_allowed_roles_list
         if not allowed or not (set(roles) & set(allowed)):
+            # Diagnostic: shows WHY a valid login was refused — role names are
+            # not secret. Distinguishes "user lacks the role" (roles populated,
+            # no match) from "role names couldn't be read" (roles empty).
+            log.warning(
+                "assignment login denied user=%s isAdmin=%s roles=%s "
+                "(source=%s) allowed=%s",
+                user.get("userName"), is_admin, roles,
+                "App/user-fallback" if from_fallback else "App/user", allowed,
+            )
             raise AuthError("Your account is not authorized to use this tool.")
 
     return {
