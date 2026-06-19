@@ -16,6 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
+from starlette.middleware.sessions import SessionMiddleware
 
 from .config import Settings, get_settings
 from .espo import DryRunEspoClient, EspoApi, EspoClient, EspoError
@@ -34,6 +35,9 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("cbm_intake")
 
 SHARED_DIR = Path(__file__).resolve().parent.parent / "frontend" / "shared"
+ASSIGNMENTS_FRONTEND_DIR = (
+    Path(__file__).resolve().parent.parent / "assignments" / "frontend"
+)
 
 
 def _make_client(settings: Settings) -> EspoApi:
@@ -144,6 +148,17 @@ def create_app(forms: list[FormSpec]) -> FastAPI:
         allow_headers=["*"],
     )
 
+    # Mentor assignment tool: signed-cookie sessions hold each staff user's
+    # EspoCRM auth token. Only mounted when a session secret is configured.
+    if settings.assignments_active:
+        app.add_middleware(
+            SessionMiddleware,
+            secret_key=settings.session_secret,
+            session_cookie="cbm_assign_session",
+            https_only=settings.session_cookie_secure,
+            same_site="lax",
+        )
+
     @app.middleware("http")
     async def _revalidate_frontend(request: Request, call_next):
         """Make the frontend always revalidate so deploys take effect at once.
@@ -175,6 +190,7 @@ def create_app(forms: list[FormSpec]) -> FastAPI:
             "version": __version__,
             "dryRun": settings.espo_dry_run,
             "forms": [f.slug for f in forms],
+            "assignments": settings.assignments_active,
         }
 
     for spec in forms:
@@ -184,6 +200,13 @@ def create_app(forms: list[FormSpec]) -> FastAPI:
             methods=["POST"],
             name=f"intake-{spec.slug}",
         )
+
+    # Assignment tool API routes (registered before the static mount below so
+    # /assignments/api/* resolves to the router, not the static frontend).
+    if settings.assignments_active:
+        from assignments import router as assignments_router
+
+        app.include_router(assignments_router)
 
     @app.get("/", response_class=HTMLResponse)
     async def index() -> str:
@@ -197,6 +220,12 @@ def create_app(forms: list[FormSpec]) -> FastAPI:
                 StaticFiles(directory=str(spec.frontend_dir), html=True),
                 name=f"form-{spec.slug}",
             )
+    if settings.assignments_active and ASSIGNMENTS_FRONTEND_DIR.is_dir():
+        app.mount(
+            "/assignments",
+            StaticFiles(directory=str(ASSIGNMENTS_FRONTEND_DIR), html=True),
+            name="assignments-frontend",
+        )
     app.mount("/shared", StaticFiles(directory=str(SHARED_DIR)), name="shared")
 
     return app

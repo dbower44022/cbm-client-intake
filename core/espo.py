@@ -12,6 +12,7 @@ end-to-end locally without a live instance.
 
 from __future__ import annotations
 
+import base64
 import logging
 from typing import Any, Optional, Protocol
 
@@ -47,10 +48,113 @@ class EspoApi(Protocol):
 
 
 class EspoClient:
-    def __init__(self, base_url: str, api_key: str, timeout: int = 20) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        api_key: str = "",
+        timeout: int = 20,
+        *,
+        auth_headers: Optional[dict[str, str]] = None,
+    ) -> None:
         self._base = base_url.rstrip("/") + "/api/v1"
-        self._headers = {"X-Api-Key": api_key}
+        # Either the shared service API key (X-Api-Key) or, for the assignment
+        # tool, a per-user ``Espo-Authorization`` token header so EspoCRM runs
+        # the request as that logged-in user and enforces their ACL.
+        self._headers = auth_headers if auth_headers is not None else {"X-Api-Key": api_key}
         self._timeout = timeout
+
+    @classmethod
+    def for_user_token(
+        cls, base_url: str, user_name: str, token: str, timeout: int = 20
+    ) -> "EspoClient":
+        """Build a client that authenticates as ``user_name`` via their auth token.
+
+        EspoCRM accepts the login auth token in place of the password in the
+        ``Espo-Authorization`` header (base64 of ``userName:token``), flagged by
+        ``Espo-Authorization-By-Token``. Requests then run as that user.
+        """
+        cred = base64.b64encode(f"{user_name}:{token}".encode()).decode()
+        return cls(
+            base_url,
+            timeout=timeout,
+            auth_headers={
+                "Espo-Authorization": cred,
+                "Espo-Authorization-By-Token": "true",
+            },
+        )
+
+    async def get(
+        self, entity: str, record_id: str, select: Optional[str] = None
+    ) -> dict[str, Any]:
+        params = {"select": select} if select else None
+        async with httpx.AsyncClient(timeout=self._timeout) as client:
+            resp = await client.get(
+                f"{self._base}/{entity}/{record_id}", params=params, headers=self._headers
+            )
+        if resp.status_code >= 400:
+            raise EspoError(
+                f"get {entity}/{record_id} failed: HTTP {resp.status_code} {resp.text[:300]}"
+            )
+        return resp.json()
+
+    async def list(
+        self,
+        entity: str,
+        *,
+        where: Optional[list[dict[str, Any]]] = None,
+        select: Optional[str] = None,
+        max_size: int = 50,
+        order_by: Optional[str] = None,
+        order: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """List records. Returns the raw EspoCRM ``{"total", "list"}`` envelope."""
+        params: list[tuple[str, str]] = [("maxSize", str(max_size))]
+        if select:
+            params.append(("select", select))
+        if order_by:
+            params.append(("orderBy", order_by))
+        if order:
+            params.append(("order", order))
+        for i, clause in enumerate(where or []):
+            params.append((f"where[{i}][type]", clause["type"]))
+            params.append((f"where[{i}][attribute]", clause["attribute"]))
+            if "value" in clause:
+                params.append((f"where[{i}][value]", str(clause["value"])))
+        async with httpx.AsyncClient(timeout=self._timeout) as client:
+            resp = await client.get(
+                f"{self._base}/{entity}", params=params, headers=self._headers
+            )
+        if resp.status_code >= 400:
+            raise EspoError(
+                f"list {entity} failed: HTTP {resp.status_code} {resp.text[:300]}"
+            )
+        return resp.json()
+
+    async def list_related(
+        self,
+        entity: str,
+        record_id: str,
+        link: str,
+        *,
+        select: Optional[str] = None,
+        max_size: int = 200,
+    ) -> dict[str, Any]:
+        """List the records on a hasMany/manyMany link of ``entity/record_id``."""
+        params: list[tuple[str, str]] = [("maxSize", str(max_size))]
+        if select:
+            params.append(("select", select))
+        async with httpx.AsyncClient(timeout=self._timeout) as client:
+            resp = await client.get(
+                f"{self._base}/{entity}/{record_id}/{link}",
+                params=params,
+                headers=self._headers,
+            )
+        if resp.status_code >= 400:
+            raise EspoError(
+                f"list_related {entity}/{record_id}/{link} failed: "
+                f"HTTP {resp.status_code} {resp.text[:300]}"
+            )
+        return resp.json()
 
     async def create(self, entity: str, payload: dict[str, Any]) -> dict[str, Any]:
         async with httpx.AsyncClient(timeout=self._timeout) as client:

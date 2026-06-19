@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cleveland Business Mentors — Mentor Assignment</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/tokens.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="cbm-container assign">
+    <header class="assign__header">
+      <h1>Mentor Assignment</h1>
+      <p class="assign__sub">Assign submitted engagements to a mentor who is accepting new clients.</p>
+    </header>
+
+    <!-- Login -->
+    <section class="assign__login" id="loginView" hidden>
+      <h2>Staff sign in</h2>
+      <p class="cbm-help">Sign in with your EspoCRM username and password.</p>
+      <form id="loginForm" autocomplete="on">
+        <div class="cbm-field">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" autocomplete="username" required />
+        </div>
+        <div class="cbm-field">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" autocomplete="current-password" required />
+        </div>
+        <p class="form-error" id="loginError" role="alert" hidden></p>
+        <button type="submit" class="cbm-button" id="loginBtn">Sign in</button>
+      </form>
+    </section>
+
+    <!-- Dashboard -->
+    <section class="assign__dash" id="dashView" hidden>
+      <div class="assign__toolbar">
+        <span class="assign__who">Signed in as <strong id="whoName"></strong></span>
+        <span class="assign__actions">
+          <button type="button" class="cbm-button cbm-button--secondary" id="refreshBtn">Refresh</button>
+          <button type="button" class="cbm-button cbm-button--secondary" id="logoutBtn">Sign out</button>
+        </span>
+      </div>
+
+      <p class="assign__notice" id="notice" role="status" hidden></p>
+
+      <div id="tableWrap">
+        <table class="assign__table" id="engTable" hidden>
+          <thead>
+            <tr>
+              <th scope="col">Engagement</th>
+              <th scope="col">Assign to mentor</th>
+            </tr>
+          </thead>
+          <tbody id="engBody"></tbody>
+        </table>
+        <p class="assign__empty" id="emptyState" hidden>No submitted engagements awaiting assignment. 🎉</p>
+        <p class="assign__loading" id="loadingState">Loading…</p>
+      </div>
+    </section>
+
+    <footer class="cbm-footer">
+      <p>&copy; <span data-cbm-year>2026</span> Cleveland Business Mentors. All rights reserved.<span class="cbm-footer__version" data-cbm-version></span></p>
+    </footer>
+  </main>
+
+  <script src="app.js"></script>
+  <script src="/shared/footer.js"></script>
+</body>
+</html>

@@ -1,0 +1,258 @@
+"""Tests for the mentor assignment tool: service writes, mentor query, auth gate."""
+
+from __future__ import annotations
+
+import pytest
+
+from assignments import auth, service
+from core.config import Settings
+
+
+class FakeClient:
+    """Mock of the EspoClient slice the service uses; records get/list/update calls."""
+
+    def __init__(self, *, mentor=None, engagement=None, related=None, lists=None):
+        self._mentor = mentor or {}
+        self._engagement = engagement or {}
+        self._related = related or {"list": []}
+        self._lists = lists or {}
+        self.updates: list[tuple[str, str, dict]] = []
+        self.list_calls: list[tuple[str, list]] = []
+
+    async def get(self, entity, record_id, select=None):
+        if entity == service.MENTOR_PROFILE:
+            return {"id": record_id, **self._mentor}
+        if entity == service.ENGAGEMENT:
+            return {"id": record_id, **self._engagement}
+        return {"id": record_id}
+
+    async def list(self, entity, *, where=None, **kwargs):
+        self.list_calls.append((entity, where or []))
+        return self._lists.get(entity, {"total": 0, "list": []})
+
+    async def list_related(self, entity, record_id, link, **kwargs):
+        return self._related
+
+    async def update(self, entity, record_id, payload):
+        self.updates.append((entity, record_id, payload))
+        return {"id": record_id, **payload}
+
+
+def _mentor(**overrides):
+    base = dict(
+        name="Matt Mentor",
+        acceptingNewClients=True,
+        mentorStatus="Active",
+        assignedUserId="user-99",
+        assignedUserName="Matt Mentor",
+    )
+    base.update(overrides)
+    return base
+
+
+# --- assign_engagement -------------------------------------------------------
+
+async def test_assign_sets_engagement_and_reassigns_related():
+    client = FakeClient(
+        mentor=_mentor(),
+        engagement={
+            "primaryEngagementContactId": "contact-primary",
+            "engagementClientId": "clientprofile-1",
+            "clientOrganizationId": "account-1",
+        },
+        related={"list": [{"id": "contact-primary"}, {"id": "contact-extra"}]},
+    )
+
+    res = await service.assign_engagement(client, "eng-1", "mentor-1")
+
+    # Engagement update: status + assigned user + mentor profile.
+    eng_updates = [u for u in client.updates if u[0] == service.ENGAGEMENT]
+    assert len(eng_updates) == 1
+    _, eng_id, payload = eng_updates[0]
+    assert eng_id == "eng-1"
+    assert payload["engagementStatus"] == "Pending Acceptance"
+    assert payload["assignedUserId"] == "user-99"
+    assert payload["mentorProfileId"] == "mentor-1"
+
+    # Contacts (primary + extra, deduped) each reassigned to the mentor's user.
+    contact_updates = {u[1]: u[2] for u in client.updates if u[0] == service.CONTACT}
+    assert set(contact_updates) == {"contact-primary", "contact-extra"}
+    assert all(p["assignedUserId"] == "user-99" for p in contact_updates.values())
+
+    # Client profile + account reassigned.
+    assert ("CClientProfile", "clientprofile-1", {"assignedUserId": "user-99"}) in client.updates
+    assert ("Account", "account-1", {"assignedUserId": "user-99"}) in client.updates
+
+    assert res["contactsUpdated"] == 2
+    assert res["clientProfileUpdated"] is True
+    assert res["accountUpdated"] is True
+    assert res["engagementStatus"] == "Pending Acceptance"
+
+
+async def test_assign_skips_account_when_absent():
+    client = FakeClient(
+        mentor=_mentor(),
+        engagement={
+            "primaryEngagementContactId": "contact-primary",
+            "engagementClientId": "clientprofile-1",
+            "clientOrganizationId": None,
+        },
+        related={"list": [{"id": "contact-primary"}]},
+    )
+
+    res = await service.assign_engagement(client, "eng-2", "mentor-2")
+
+    assert res["accountUpdated"] is False
+    assert not [u for u in client.updates if u[0] == "Account"]
+    assert res["clientProfileUpdated"] is True
+    assert res["contactsUpdated"] == 1
+
+
+async def test_assign_rejects_mentor_without_user():
+    client = FakeClient(mentor=_mentor(assignedUserId=None))
+    with pytest.raises(service.AssignError):
+        await service.assign_engagement(client, "eng-3", "mentor-3")
+    assert client.updates == []  # nothing written
+
+
+async def test_assign_rejects_ineligible_mentor():
+    client = FakeClient(mentor=_mentor(acceptingNewClients=False))
+    with pytest.raises(service.AssignError):
+        await service.assign_engagement(client, "eng-4", "mentor-4")
+    assert client.updates == []
+
+
+# --- queries -----------------------------------------------------------------
+
+async def test_eligible_mentors_query_and_shape():
+    client = FakeClient(
+        lists={
+            service.MENTOR_PROFILE: {
+                "list": [
+                    {
+                        "id": "m1",
+                        "name": "Tommy Tranell",
+                        "assignedUserId": "u1",
+                        "assignedUserName": "Tommy Tranell",
+                        "availableCapacity": 4,
+                    }
+                ]
+            }
+        }
+    )
+    mentors = await service.list_eligible_mentors(client)
+    assert mentors == [
+        {"id": "m1", "name": "Tommy Tranell", "userId": "u1", "userName": "Tommy Tranell", "availableCapacity": 4}
+    ]
+    # The query filters acceptingNewClients + Active + has-user.
+    _, where = client.list_calls[0]
+    attrs = {(c["attribute"], c["type"]) for c in where}
+    assert ("acceptingNewClients", "isTrue") in attrs
+    assert ("mentorStatus", "equals") in attrs
+    assert ("assignedUserId", "isNotNull") in attrs
+
+
+async def test_submitted_engagements_query_and_shape():
+    client = FakeClient(
+        lists={
+            service.ENGAGEMENT: {
+                "list": [
+                    {
+                        "id": "e1",
+                        "name": "Sharon Rose — Intake",
+                        "createdAt": "2026-06-18 19:18:39",
+                        "primaryEngagementContactName": "Sharon Rose",
+                        "engagementClientName": "Rose LLC",
+                    }
+                ]
+            }
+        }
+    )
+    rows = await service.list_submitted_engagements(client)
+    assert rows[0] == {
+        "id": "e1",
+        "name": "Sharon Rose — Intake",
+        "createdAt": "2026-06-18 19:18:39",
+        "contactName": "Sharon Rose",
+        "clientName": "Rose LLC",
+    }
+    entity, where = client.list_calls[0]
+    assert entity == service.ENGAGEMENT
+    assert {"type": "equals", "attribute": "engagementStatus", "value": "Submitted"} in where
+
+
+# --- auth role gate ----------------------------------------------------------
+
+def _settings(roles=""):
+    return Settings(assign_allowed_roles=roles, session_secret="x")
+
+
+def _app_user(monkeypatch, payload, status=200):
+    class FakeResp:
+        status_code = status
+        def json(self):
+            return payload
+
+    async def fake_app_user(base_url, headers, timeout):
+        return FakeResp()
+
+    monkeypatch.setattr(auth, "_app_user", fake_app_user)
+
+
+async def test_auth_accepts_user_with_allowed_role(monkeypatch):
+    _app_user(monkeypatch, {
+        "token": "tok-1",
+        "user": {"id": "u1", "userName": "jdoe", "name": "Jane Doe",
+                 "isActive": True, "type": "regular",
+                 "rolesNames": {"r1": "Staff"}},
+    })
+    user = await auth.authenticate(_settings(roles="Staff"), "jdoe", "pw")
+    assert user["userId"] == "u1"
+    assert user["token"] == "tok-1"
+    assert user["isAdmin"] is False
+
+
+async def test_auth_accepts_admin_regardless_of_roles(monkeypatch):
+    _app_user(monkeypatch, {
+        "token": "tok-2",
+        "user": {"id": "a1", "userName": "admin", "name": "Admin",
+                 "isActive": True, "type": "admin", "rolesNames": {}},
+    })
+    user = await auth.authenticate(_settings(roles="Staff"), "admin", "pw")
+    assert user["isAdmin"] is True
+
+
+async def test_auth_rejects_regular_user_without_allowed_role(monkeypatch):
+    _app_user(monkeypatch, {
+        "token": "tok-3",
+        "user": {"id": "u2", "userName": "nobody", "name": "No Body",
+                 "isActive": True, "type": "regular", "rolesNames": {"r9": "Mentors"}},
+    })
+    with pytest.raises(auth.AuthError):
+        await auth.authenticate(_settings(roles="Staff"), "nobody", "pw")
+
+
+async def test_auth_rejects_inactive_user(monkeypatch):
+    _app_user(monkeypatch, {
+        "token": "tok-4",
+        "user": {"id": "u3", "userName": "old", "name": "Old User",
+                 "isActive": False, "type": "regular", "rolesNames": {"r1": "Staff"}},
+    })
+    with pytest.raises(auth.AuthError):
+        await auth.authenticate(_settings(roles="Staff"), "old", "pw")
+
+
+async def test_auth_rejects_portal_or_api_type(monkeypatch):
+    _app_user(monkeypatch, {
+        "token": "tok-5",
+        "user": {"id": "u4", "userName": "portal", "name": "Portal User",
+                 "isActive": True, "type": "portal", "rolesNames": {}},
+    })
+    with pytest.raises(auth.AuthError):
+        await auth.authenticate(_settings(roles="Staff"), "portal", "pw")
+
+
+async def test_auth_rejects_bad_credentials(monkeypatch):
+    _app_user(monkeypatch, {"message": "unauthorized"}, status=401)
+    with pytest.raises(auth.AuthError):
+        await auth.authenticate(_settings(roles="Staff"), "jdoe", "wrong")

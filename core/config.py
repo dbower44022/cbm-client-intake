@@ -18,9 +18,29 @@ class Settings(BaseSettings):
     allowed_origins: str = "http://localhost:8000"
     request_timeout_seconds: int = 20
 
+    # --- Mentor assignment tool (/assignments) ---
+    # Staff-only dashboard; authenticates each user against EspoCRM and acts as
+    # them. Disabled if no session secret is set (see ``assignments_active``).
+    assignments_enabled: bool = True
+    session_secret: str = ""
+    # Comma-separated EspoCRM Role names allowed to use the tool. Admins are
+    # always allowed. Empty => admins only.
+    assign_allowed_roles: str = ""
+    # Marks a session cookie Secure; set false only for plain-HTTP local dev.
+    session_cookie_secure: bool = True
+
     @property
     def allowed_origins_list(self) -> list[str]:
         return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
+
+    @property
+    def assign_allowed_roles_list(self) -> list[str]:
+        return [r.strip() for r in self.assign_allowed_roles.split(",") if r.strip()]
+
+    @property
+    def assignments_active(self) -> bool:
+        """The tool needs a session secret to sign cookies; off without one."""
+        return self.assignments_enabled and bool(self.session_secret)
 
 
 @lru_cache
