@@ -140,6 +140,13 @@ async def test_eligible_mentors_query_and_shape():
                         "assignedUserId": "u1",
                         "assignedUserName": "Tommy Tranell",
                         "availableCapacity": 4,
+                        "currentActiveClients": 2,
+                        "maximumClientCapacity": 5,
+                        "yearsOfExperience": 10,
+                        "mentorType": "Mentor",
+                        "industrySector": "Manufacturing",
+                        "mentoringFocusAreas": ["Agriculture"],
+                        "areaOfExpertise": ["Lean"],
                     }
                 ]
             }
@@ -147,7 +154,12 @@ async def test_eligible_mentors_query_and_shape():
     )
     mentors = await service.list_eligible_mentors(client)
     assert mentors == [
-        {"id": "m1", "name": "Tommy Tranell", "userId": "u1", "userName": "Tommy Tranell", "availableCapacity": 4}
+        {
+            "id": "m1", "name": "Tommy Tranell", "userId": "u1", "userName": "Tommy Tranell",
+            "availableCapacity": 4, "assignedClients": 2, "maxCapacity": 5,
+            "yearsOfExperience": 10, "mentorType": "Mentor", "industrySector": "Manufacturing",
+            "focusAreas": ["Agriculture"], "expertise": ["Lean"],
+        }
     ]
     # The query filters acceptingNewClients + Active + has-user.
     _, where = client.list_calls[0]

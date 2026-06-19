@@ -99,7 +99,8 @@
   });
   document.addEventListener("keydown", function (ev) {
     if (ev.key !== "Escape") return;
-    if (!$("engModal").hidden) { closeModal(); return; }
+    var openModal = document.querySelector(".modal:not([hidden])");
+    if (openModal) { hide(openModal); return; }
     var details = $("statusFilter");
     if (details && details.open) details.open = false;
   });
@@ -409,9 +410,109 @@
     }
   }
 
-  $("engModal").addEventListener("click", function (ev) {
-    if (ev.target.hasAttribute("data-close")) closeModal();
+  // Generic modal close: clicking a [data-close] element (backdrop or ×) closes
+  // its containing modal.
+  document.addEventListener("click", function (ev) {
+    var t = ev.target;
+    if (t && t.hasAttribute && t.hasAttribute("data-close")) {
+      var m = t.closest(".modal");
+      if (m) hide(m);
+    }
   });
+
+  // --- mentor review ---
+  function chipRow(values) {
+    var wrap = document.createElement("div");
+    wrap.className = "chips";
+    if (!values || !values.length) { wrap.textContent = "—"; return wrap; }
+    values.forEach(function (v) {
+      var chip = document.createElement("span");
+      chip.className = "chip";
+      chip.textContent = v;
+      wrap.appendChild(chip);
+    });
+    return wrap;
+  }
+
+  function statBlock(label, value) {
+    var b = document.createElement("div");
+    b.className = "mentor-stat";
+    var v = document.createElement("span");
+    v.className = "mentor-stat__val";
+    v.textContent = value;
+    var l = document.createElement("span");
+    l.className = "mentor-stat__lbl";
+    l.textContent = label;
+    b.appendChild(v);
+    b.appendChild(l);
+    return b;
+  }
+
+  function mentorSection(heading, values) {
+    var sec = document.createElement("div");
+    sec.className = "mentor-sec";
+    var h = document.createElement("h4");
+    h.className = "mentor-sec__h";
+    h.textContent = heading;
+    sec.appendChild(h);
+    sec.appendChild(chipRow(values));
+    return sec;
+  }
+
+  function buildMentorCard(m) {
+    var card = document.createElement("div");
+    card.className = "mentor-card";
+
+    var head = document.createElement("div");
+    head.className = "mentor-card__head";
+    var name = document.createElement("h3");
+    name.className = "mentor-card__name";
+    name.textContent = m.name || "(unnamed mentor)";
+    head.appendChild(name);
+    if (m.industrySector) {
+      var ind = document.createElement("span");
+      ind.className = "mentor-card__industry";
+      ind.textContent = m.industrySector;
+      head.appendChild(ind);
+    }
+    card.appendChild(head);
+
+    var stats = document.createElement("div");
+    stats.className = "mentor-stats";
+    stats.appendChild(statBlock("Assigned clients", m.assignedClients == null ? "—" : m.assignedClients));
+    var avail = m.availableCapacity === -1 ? "Unlimited"
+      : (m.availableCapacity == null ? "—" : m.availableCapacity);
+    stats.appendChild(statBlock("Available capacity", avail));
+    if (m.yearsOfExperience != null) {
+      stats.appendChild(statBlock("Years experience", m.yearsOfExperience));
+    }
+    card.appendChild(stats);
+
+    card.appendChild(mentorSection("Areas of Expertise", m.expertise));
+    card.appendChild(mentorSection("Mentoring Focus Areas", m.focusAreas));
+    return card;
+  }
+
+  function renderMentorGrid() {
+    var grid = $("mentorGrid");
+    grid.innerHTML = "";
+    if (!mentors.length) { grid.textContent = "No available mentors."; return; }
+    mentors.forEach(function (m) { grid.appendChild(buildMentorCard(m)); });
+  }
+
+  async function openMentorReview() {
+    clearNotice();
+    try {
+      if (!mentors.length) mentors = (await api("/mentors")).mentors || [];
+      renderMentorGrid();
+      show($("mentorModal"));
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      notice(e.message, "error");
+    }
+  }
+
+  $("reviewMentorsBtn").addEventListener("click", openMentorReview);
 
   async function doAssign(tr, eng, mentorProfileId, mentorLabel) {
     if (!mentorProfileId) return;

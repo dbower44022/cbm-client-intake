@@ -258,3 +258,38 @@
   .modal__cols { grid-template-columns: 1fr; gap: 1.25rem; }
   .modal__contact { grid-template-columns: 1fr; gap: 0.5rem; }
 }
+
+/* Mentor review */
+.mentor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.mentor-card {
+  border: 1px solid var(--cbm-border);
+  border-radius: var(--cbm-radius);
+  padding: 1rem 1.1rem;
+  background: var(--cbm-white);
+}
+.mentor-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.mentor-card__name { color: var(--cbm-navy); margin: 0; font-size: var(--cbm-h5); }
+.mentor-card__industry { color: var(--cbm-text); font-size: var(--cbm-text-sm); }
+.mentor-stats { display: flex; gap: 1.4rem; margin: 0.85rem 0 0.3rem; flex-wrap: wrap; }
+.mentor-stat { display: flex; flex-direction: column; }
+.mentor-stat__val { color: var(--cbm-navy); font-weight: 700; font-size: 1.4rem; line-height: 1.1; }
+.mentor-stat__lbl { color: var(--cbm-text); font-size: 12px; }
+.mentor-sec { margin-top: 0.7rem; }
+.mentor-sec__h {
+  color: var(--cbm-slate-700);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 0.35rem;
+}
