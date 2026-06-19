@@ -148,6 +148,33 @@ async def get_engagement_detail(
     }
 
 
+# Shared select for both the assign dropdown and the review list.
+_MENTOR_SELECT = (
+    "name,assignedUserId,assignedUserName,availableCapacity,currentActiveClients,"
+    "maximumClientCapacity,yearsOfExperience,mentorType,mentorStatus,"
+    "acceptingNewClients,industrySector,mentoringFocusAreas,areaOfExpertise"
+)
+
+
+def _mentor_row(r: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": r["id"],
+        "name": r.get("name"),
+        "userId": r.get("assignedUserId"),
+        "userName": r.get("assignedUserName"),
+        "availableCapacity": r.get("availableCapacity"),
+        "assignedClients": r.get("currentActiveClients"),
+        "maxCapacity": r.get("maximumClientCapacity"),
+        "yearsOfExperience": r.get("yearsOfExperience"),
+        "mentorType": r.get("mentorType"),
+        "status": r.get("mentorStatus"),
+        "acceptingNewClients": bool(r.get("acceptingNewClients")),
+        "industrySector": r.get("industrySector"),
+        "focusAreas": r.get("mentoringFocusAreas") or [],
+        "expertise": r.get("areaOfExpertise") or [],
+    }
+
+
 async def list_eligible_mentors(client: AssignClient) -> list[dict[str, Any]]:
     """Mentors accepting new clients, Active, with a linked User (the dropdown)."""
     data = await client.list(
@@ -157,37 +184,20 @@ async def list_eligible_mentors(client: AssignClient) -> list[dict[str, Any]]:
             {"type": "equals", "attribute": "mentorStatus", "value": MENTOR_STATUS_ACTIVE},
             {"type": "isNotNull", "attribute": "assignedUserId"},
         ],
-        select=(
-            "name,assignedUserId,assignedUserName,availableCapacity,"
-            "currentActiveClients,maximumClientCapacity,yearsOfExperience,"
-            "mentorType,industrySector,mentoringFocusAreas,areaOfExpertise"
-        ),
+        select=_MENTOR_SELECT,
         max_size=200,
         order_by="name",
     )
-    mentors = []
-    for r in data.get("list", []):
-        user_id = r.get("assignedUserId")
-        if not user_id:  # defensive: isNotNull should already exclude these
-            continue
-        mentors.append(
-            {
-                "id": r["id"],
-                "name": r.get("name"),
-                "userId": user_id,
-                "userName": r.get("assignedUserName"),
-                "availableCapacity": r.get("availableCapacity"),
-                # Extra detail for the "Review mentors" comparison view.
-                "assignedClients": r.get("currentActiveClients"),
-                "maxCapacity": r.get("maximumClientCapacity"),
-                "yearsOfExperience": r.get("yearsOfExperience"),
-                "mentorType": r.get("mentorType"),
-                "industrySector": r.get("industrySector"),
-                "focusAreas": r.get("mentoringFocusAreas") or [],
-                "expertise": r.get("areaOfExpertise") or [],
-            }
-        )
-    return mentors
+    # Defensive: isNotNull should already exclude userless rows.
+    return [_mentor_row(r) for r in data.get("list", []) if r.get("assignedUserId")]
+
+
+async def list_all_mentors(client: AssignClient) -> list[dict[str, Any]]:
+    """Every mentor profile (any status) for the review/compare list."""
+    data = await client.list(
+        MENTOR_PROFILE, select=_MENTOR_SELECT, max_size=200, order_by="name"
+    )
+    return [_mentor_row(r) for r in data.get("list", [])]
 
 
 async def assign_engagement(
