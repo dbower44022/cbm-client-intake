@@ -85,6 +85,22 @@
 
   $("refreshBtn").addEventListener("click", loadData);
 
+  // Close the status dropdown when clicking outside it (the selection is already
+  // applied live on each change, so closing just dismisses the panel). Escape
+  // closes it too.
+  document.addEventListener("click", function (ev) {
+    var details = $("statusFilter");
+    if (details && details.open && !details.contains(ev.target)) {
+      details.open = false;
+    }
+  });
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key === "Escape") {
+      var details = $("statusFilter");
+      if (details && details.open) details.open = false;
+    }
+  });
+
   // --- status filter ---
   function statusQuery() {
     return selectedStatuses
