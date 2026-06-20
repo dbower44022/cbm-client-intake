@@ -86,10 +86,11 @@ async def test_new_contact_with_company_creates_prospect_account():
     _, contact = client.creates[1]
     assert contact["accountId"] == ids["accountId"]
     assert contact["phoneNumber"] == "+12165550100"
-    # The Information Request links to both the Contact and the Account.
+    # The Information Request links to the Contact and the Account
+    # (via infoRequestCompany, not the standard `account` link).
     _, info = client.creates[2]
     assert info["contactId"] == ids["contactId"]
-    assert info["accountId"] == ids["accountId"]
+    assert info["infoRequestCompanyId"] == ids["accountId"]
     assert info["company"] == "Ada's Bakery"
     assert info["phone"] == "+12165550100"
 
@@ -112,7 +113,7 @@ async def test_existing_contact_appends_description():
     # The request record links to the existing contact (account left untouched).
     _, info = client.creates[0]
     assert info["contactId"] == "contact-99"
-    assert "accountId" not in info
+    assert "infoRequestCompanyId" not in info
 
 
 @pytest.mark.asyncio
@@ -149,6 +150,12 @@ async def test_information_request_fields():
     assert info["source"] == "Online search"
     assert info["name"].startswith("Ada Lovelace — ")
     assert info["contactId"]  # linked to the produced Contact
+    # Mirror-the-submission fields:
+    assert info["form"] == "info-request"
+    assert info["submitterEmail"] == "ada@example.com"
+    assert "submission payload" in info["description"]
+    assert '"message"' in info["description"]  # raw JSON included
+    assert '"company_url": ""' in info["description"]  # honeypot cleared
 
 
 @pytest.mark.asyncio
