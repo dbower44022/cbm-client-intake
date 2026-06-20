@@ -40,10 +40,14 @@ keys:
 | `phone` | varchar | Requester phone, normalized to E.164. Omitted if not given. |
 | `company` | varchar | Company name. Omitted if not given. |
 | `message` | text | The request body — the heart of the submission. |
-| `source` | varchar | How they heard about CBM (`how_did_you_hear`). Omitted if not given. |
+| `source` | text | How they heard about CBM (`how_did_you_hear`). Omitted if not given. |
 | `requestStatus` | enum | Staff worklist state. Options: `New`, `In Progress`, `Responded`, `Closed`. Default `New`; the app sets `New`. |
-| `contact` | link (belongsTo → Contact) | The Contact this request is for (FK `contactId`). Always set. |
-| `account` | link (belongsTo → Account) | The company Account, when one is involved (FK `accountId`). Set only when a new contact + company produced/matched an Account. |
+| `form` | text | The originating form — the app sets `"info-request"`. |
+| `submitterEmail` | varchar | The submitter's email (same value as `email`); mirrors CIntakeSubmission. |
+| `description` | text | Human note + the raw submission JSON (honeypot cleared), mirroring the CIntakeSubmission record. |
+| `response` | wysiwyg | Staff-entered response. NOT written by the app. |
+| `contact` | link (belongsTo → Contact) | The Contact this request is for (FK `contactId`; foreign link `cInformationRequests`). Always set. |
+| `infoRequestCompany` | link (belongsTo → Account) | The company Account, when one is involved (FK `infoRequestCompanyId`; foreign link `cInformationRequests`). Set only when a new contact + company produced/matched an Account. |
 
 Standard `assignedUser` / `teams` links come for free on a `Base`-type entity.
 

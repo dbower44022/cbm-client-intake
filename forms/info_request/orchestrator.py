@@ -28,6 +28,7 @@ Mapping (reconciled against crm-test.clevelandbusinessmentors.org, 2026-06-12):
 
 from __future__ import annotations
 
+import json
 import logging
 from datetime import datetime, timezone
 
@@ -41,6 +42,7 @@ log = logging.getLogger("cbm_intake.orchestrator")
 ACCOUNT = "Account"
 CONTACT = "Contact"
 INFO_REQUEST = "CInformationRequest"  # dedicated entity (see cinformation-request-entity.md)
+FORM_SLUG = "info-request"  # value written to CInformationRequest.form
 
 A_ACCOUNT_TYPE = "cAccountType"    # multiEnum on Account — REQUIRED
 A_COMPANY_TYPE = "cCompanyType"    # multiEnum on Account (legacy, kept in sync)
@@ -81,6 +83,19 @@ async def _find_or_create_account(sub: InfoRequest, client: EspoApi) -> str:
     return created["id"]
 
 
+def _submission_json(sub: InfoRequest) -> str:
+    """The raw submission as a readable note + JSON, for the entity's description
+    (mirrors the CIntakeSubmission audit record)."""
+    data = json.loads(sub.model_dump_json())
+    data["company_url"] = ""            # clear the honeypot field
+    data.pop("submission_token", None)  # internal idempotency token, not useful here
+    body = json.dumps(data, indent=2, sort_keys=True)
+    return (
+        "Information request submitted via the website.\n\n"
+        "----- submission payload -----\n" + body
+    )
+
+
 async def _create_information_request(
     sub: InfoRequest, client: EspoApi, contact_id: str, account_id: str | None
 ) -> str | None:
@@ -90,14 +105,18 @@ async def _create_information_request(
     logged at WARNING and never breaks the submission — so the app deploys
     safely ahead of the CRM build (same pattern as the CIntakeSubmission log).
     Self-contained: the request fields are duplicated here for reporting, with
-    ``contact`` (and ``account``) links back to the canonical records.
+    ``contact`` (and ``infoRequestCompany`` → Account) links back to the
+    canonical records.
     """
     payload: dict = {
         "name": f"{sub.first_name} {sub.last_name} — {datetime.now(timezone.utc):%Y-%m-%d}",
         "firstName": sub.first_name,
         "lastName": sub.last_name,
         "email": str(sub.email),
+        "submitterEmail": str(sub.email),
+        "form": FORM_SLUG,
         "message": sub.message.strip(),
+        "description": _submission_json(sub),
         "requestStatus": REQUEST_STATUS_NEW,
         "contactId": contact_id,
     }
@@ -108,7 +127,7 @@ async def _create_information_request(
     if sub.how_did_you_hear:
         payload["source"] = sub.how_did_you_hear
     if account_id:
-        payload["accountId"] = account_id
+        payload["infoRequestCompanyId"] = account_id  # belongsTo Account link
     try:
         created = await client.create(INFO_REQUEST, payload)
         log.info("created %s %s for contact %s", INFO_REQUEST, created["id"], contact_id)

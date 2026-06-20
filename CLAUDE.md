@@ -23,12 +23,15 @@ linked records in EspoCRM (the system of record). Five forms ship today:
   all GET-verified); left 1 `ZZTEST-INFOREQ` Contact + 1 Account in crm-test
   to clean up in the UI alongside the older ZZTEST records.
   Also creates a dedicated **`CInformationRequest`** record (self-contained:
-  name/email/phone/company/message/source/`requestStatus="New"`) linked to the
-  Contact (and Account), best-effort, on top of the description stamp + the
-  CIntakeSubmission log (added 2026-06-20). **CRM-team build pending** — the
-  entity + fields/links + create grant don't exist in crm-test yet (GET → 403),
-  so the write currently no-ops at WARNING and the submission still succeeds.
-  Spec: `cinformation-request-entity.md`.
+  name/first/last/email/phone/company/message/source/`requestStatus="New"`, plus
+  `form`/`submitterEmail`/`description` mirroring the intake submission) linked to
+  the Contact via `contact` and the Account via `infoRequestCompany` (FK
+  `infoRequestCompanyId`), best-effort, on top of the description stamp + the
+  CIntakeSubmission log (added 2026-06-20). **Built + VERIFIED LIVE against
+  crm-test 2026-06-20** (create + both links + fields GET-verified, with and
+  without company). Spec: `cinformation-request-entity.md`; crmbuilder program:
+  `ClevelandBusinessMentors/programs/MN-InformationRequest.yaml`. Left ZZTEST
+  records to clean up in the UI (see commit / chat).
 - **partner** — Become-a-Partner (3-step). Creates Account
   (`cAccountType=["Partner"]`) → Contact (`cContactType=["Partner"]`) →
   CPartnerProfile (`partnershipStatus="Candidate"`, with `partnershipType` +
