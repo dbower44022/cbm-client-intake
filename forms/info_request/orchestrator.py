@@ -17,6 +17,13 @@ Mapping (reconciled against crm-test.clevelandbusinessmentors.org, 2026-06-12):
     Account keeps its current status.
   * No CClientProfile / CEngagement — those represent an actual mentoring
     relationship; client-intake creates them if the prospect converts.
+  * CInformationRequest — a dedicated, self-contained record of the request
+    (requester name/email/phone/company/message/source/status), linked to the
+    Contact (and Account when one is involved). Created best-effort on every
+    submission, ON TOP OF the Contact.description stamp and the generic
+    CIntakeSubmission log (see cinformation-request-entity.md). The entity is a
+    CRM-team build; until it (and the API user's create grant) exist, the write
+    fails and is logged at WARNING — the submission still succeeds.
 """
 
 from __future__ import annotations
@@ -33,6 +40,7 @@ log = logging.getLogger("cbm_intake.orchestrator")
 
 ACCOUNT = "Account"
 CONTACT = "Contact"
+INFO_REQUEST = "CInformationRequest"  # dedicated entity (see cinformation-request-entity.md)
 
 A_ACCOUNT_TYPE = "cAccountType"    # multiEnum on Account — REQUIRED
 A_COMPANY_TYPE = "cCompanyType"    # multiEnum on Account (legacy, kept in sync)
@@ -41,6 +49,7 @@ C_CONTACT_TYPE = "cContactType"    # multiEnum on Contact
 
 CLIENT = "Client"
 PROSPECT = "Prospect"
+REQUEST_STATUS_NEW = "New"
 
 
 def _description_block(sub: InfoRequest, *, include_company: bool) -> str:
@@ -72,33 +81,79 @@ async def _find_or_create_account(sub: InfoRequest, client: EspoApi) -> str:
     return created["id"]
 
 
+async def _create_information_request(
+    sub: InfoRequest, client: EspoApi, contact_id: str, account_id: str | None
+) -> str | None:
+    """Create the dedicated CInformationRequest record, linked to the Contact.
+
+    BEST-EFFORT: a failure (entity/grant not yet built in the CRM, etc.) is
+    logged at WARNING and never breaks the submission — so the app deploys
+    safely ahead of the CRM build (same pattern as the CIntakeSubmission log).
+    Self-contained: the request fields are duplicated here for reporting, with
+    ``contact`` (and ``account``) links back to the canonical records.
+    """
+    payload: dict = {
+        "name": f"{sub.first_name} {sub.last_name} — {datetime.now(timezone.utc):%Y-%m-%d}",
+        "firstName": sub.first_name,
+        "lastName": sub.last_name,
+        "email": str(sub.email),
+        "message": sub.message.strip(),
+        "requestStatus": REQUEST_STATUS_NEW,
+        "contactId": contact_id,
+    }
+    if sub.phone:
+        payload["phone"] = to_e164(sub.phone)
+    if sub.company:
+        payload["company"] = sub.company
+    if sub.how_did_you_hear:
+        payload["source"] = sub.how_did_you_hear
+    if account_id:
+        payload["accountId"] = account_id
+    try:
+        created = await client.create(INFO_REQUEST, payload)
+        log.info("created %s %s for contact %s", INFO_REQUEST, created["id"], contact_id)
+        return created["id"]
+    except Exception as exc:  # noqa: BLE001 — best-effort; never break the submission
+        log.warning(
+            "%s create failed (best-effort): %s; payload=%s", INFO_REQUEST, exc, payload
+        )
+        return None
+
+
 async def submit_request(sub: InfoRequest, client: EspoApi) -> dict[str, str]:
     existing = await client.find_one(
         CONTACT, "emailAddress", str(sub.email), select="id,description"
     )
     if existing:
+        contact_id = existing["id"]
         prior = (existing.get("description") or "").rstrip()
         block = _description_block(sub, include_company=True)
         description = f"{prior}\n\n{block}" if prior else block
-        await client.update(CONTACT, existing["id"], {"description": description})
-        log.info("appended info request to existing Contact %s", existing["id"])
-        return {"contactId": existing["id"]}
+        await client.update(CONTACT, contact_id, {"description": description})
+        log.info("appended info request to existing Contact %s", contact_id)
+        account_id = None  # existing contact's account is left untouched (by design)
+    else:
+        account_id = await _find_or_create_account(sub, client) if sub.company else None
+        payload = {
+            "firstName": sub.first_name,
+            "lastName": sub.last_name,
+            "emailAddress": str(sub.email),
+            C_CONTACT_TYPE: [PROSPECT],
+            "description": _description_block(sub, include_company=False),
+        }
+        if sub.phone:
+            payload["phoneNumber"] = to_e164(sub.phone)
+        if account_id:
+            payload["accountId"] = account_id
+        created = await client.create(CONTACT, payload)
+        contact_id = created["id"]
 
-    account_id = await _find_or_create_account(sub, client) if sub.company else None
-    payload = {
-        "firstName": sub.first_name,
-        "lastName": sub.last_name,
-        "emailAddress": str(sub.email),
-        C_CONTACT_TYPE: [PROSPECT],
-        "description": _description_block(sub, include_company=False),
-    }
-    if sub.phone:
-        payload["phoneNumber"] = to_e164(sub.phone)
-    if account_id:
-        payload["accountId"] = account_id
-    created = await client.create(CONTACT, payload)
-
-    ids = {"contactId": created["id"]}
+    ids = {"contactId": contact_id}
     if account_id:
         ids["accountId"] = account_id
+    # Additive: a dedicated Information Request record linked to the contact, on
+    # top of the Contact.description stamp and the generic CIntakeSubmission log.
+    info_request_id = await _create_information_request(sub, client, contact_id, account_id)
+    if info_request_id:
+        ids["informationRequestId"] = info_request_id
     return ids

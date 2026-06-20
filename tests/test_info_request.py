@@ -5,21 +5,31 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from forms.info_request.orchestrator import ACCOUNT, CONTACT, PROSPECT, submit_request
+from core.espo import EspoError
+from forms.info_request.orchestrator import (
+    ACCOUNT,
+    CONTACT,
+    INFO_REQUEST,
+    PROSPECT,
+    submit_request,
+)
 from forms.info_request.schemas import InfoRequest
 
 
 class CapturingClient:
-    def __init__(self, existing_contact=None, existing_description=None):
+    def __init__(self, existing_contact=None, existing_description=None, fail_entities=()):
         self.creates: list[tuple[str, dict]] = []
         self.updates: list[tuple[str, str, dict]] = []
         self._existing_contact = existing_contact
         self._existing_description = existing_description
+        self._fail = set(fail_entities)
         self._n = 0
 
     async def create(self, entity, payload):
         self._n += 1
         self.creates.append((entity, payload))
+        if entity in self._fail:
+            raise EspoError(f"simulated failure creating {entity}")
         return {"id": f"{entity}-{self._n}", **payload}
 
     async def update(self, entity, record_id, payload):
@@ -52,13 +62,13 @@ async def test_new_contact_without_company_skips_account():
     client = CapturingClient()
     ids = await submit_request(_request(), client)
 
-    assert [e for e, _ in client.creates] == [CONTACT]
+    assert [e for e, _ in client.creates] == [CONTACT, INFO_REQUEST]
     _, payload = client.creates[0]
     assert payload["cContactType"] == [PROSPECT]
     assert "accountId" not in payload
     assert "I'd like to learn more" in payload["description"]
     assert payload["description"].startswith("[Information request via website")
-    assert ids.keys() == {"contactId"}
+    assert ids.keys() == {"contactId", "informationRequestId"}
 
 
 @pytest.mark.asyncio
@@ -68,7 +78,7 @@ async def test_new_contact_with_company_creates_prospect_account():
         _request(company="Ada's Bakery", phone="216-555-0100"), client
     )
 
-    assert [e for e, _ in client.creates] == [ACCOUNT, CONTACT]
+    assert [e for e, _ in client.creates] == [ACCOUNT, CONTACT, INFO_REQUEST]
     _, account = client.creates[0]
     assert account["name"] == "Ada's Bakery"
     assert account["cAccountType"] == ["Client"]
@@ -76,6 +86,12 @@ async def test_new_contact_with_company_creates_prospect_account():
     _, contact = client.creates[1]
     assert contact["accountId"] == ids["accountId"]
     assert contact["phoneNumber"] == "+12165550100"
+    # The Information Request links to both the Contact and the Account.
+    _, info = client.creates[2]
+    assert info["contactId"] == ids["contactId"]
+    assert info["accountId"] == ids["accountId"]
+    assert info["company"] == "Ada's Bakery"
+    assert info["phone"] == "+12165550100"
 
 
 @pytest.mark.asyncio
@@ -85,13 +101,18 @@ async def test_existing_contact_appends_description():
     )
     ids = await submit_request(_request(company="Ada's Bakery"), client)
 
-    assert client.creates == []  # no new Contact, and no Account either
+    # No new Contact and no Account — but an Information Request IS created.
+    assert [e for e, _ in client.creates] == [INFO_REQUEST]
     [(entity, record_id, payload)] = client.updates
     assert (entity, record_id) == (CONTACT, "contact-99")
     assert payload["description"].startswith("Staff note: VIP.\n\n[Information request")
     assert "Company: Ada's Bakery" in payload["description"]
     assert "cContactType" not in payload  # existing contact's type left untouched
-    assert ids == {"contactId": "contact-99"}
+    assert ids == {"contactId": "contact-99", "informationRequestId": f"{INFO_REQUEST}-1"}
+    # The request record links to the existing contact (account left untouched).
+    _, info = client.creates[0]
+    assert info["contactId"] == "contact-99"
+    assert "accountId" not in info
 
 
 @pytest.mark.asyncio
@@ -110,6 +131,35 @@ async def test_how_did_you_hear_lands_in_description():
 
     _, payload = client.creates[0]
     assert "How they heard about CBM: Online search" in payload["description"]
+
+
+@pytest.mark.asyncio
+async def test_information_request_fields():
+    client = CapturingClient()
+    await submit_request(_request(how_did_you_hear="Online search"), client)
+
+    info_creates = [p for e, p in client.creates if e == INFO_REQUEST]
+    assert len(info_creates) == 1
+    info = info_creates[0]
+    assert info["firstName"] == "Ada"
+    assert info["lastName"] == "Lovelace"
+    assert info["email"] == "ada@example.com"
+    assert info["message"].startswith("I'd like to learn more")
+    assert info["requestStatus"] == "New"
+    assert info["source"] == "Online search"
+    assert info["name"].startswith("Ada Lovelace — ")
+    assert info["contactId"]  # linked to the produced Contact
+
+
+@pytest.mark.asyncio
+async def test_information_request_failure_does_not_break_submission():
+    # The CInformationRequest entity may not exist / be granted yet — best-effort.
+    client = CapturingClient(fail_entities={INFO_REQUEST})
+    ids = await submit_request(_request(), client)
+
+    # Contact still created; no informationRequestId, but the submission succeeds.
+    assert ids.keys() == {"contactId"}
+    assert "informationRequestId" not in ids
 
 
 def test_message_is_required():
