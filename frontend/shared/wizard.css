@@ -71,11 +71,9 @@ body { margin: 0; padding: 2rem 0 4rem; }
 .cbm-footer p { margin: 0; }
 /* Show the separator only once JS has filled in the version. */
 .cbm-footer__version:not(:empty)::before { content: " · "; }
-/* Policy links injected by /shared/legal-links.js */
-.cbm-legal { display: flex; flex-wrap: wrap; justify-content: center;
-  gap: 0.25rem 1.25rem; margin-bottom: 0.6rem; }
-.cbm-legal a { color: var(--cbm-blue); text-decoration: none; }
-.cbm-legal a:hover { text-decoration: underline; }
+/* Policy links inside the consent checkbox (set by /shared/legal-links.js) */
+.cbm-policy-link { color: var(--cbm-blue); text-decoration: underline; }
+.cbm-policy-link:hover { color: var(--cbm-blue-dark); }
 .review dt { font-weight: 600; color: var(--cbm-slate-700); }
 .review dd { margin: 0; color: var(--cbm-slate-900); }
 
