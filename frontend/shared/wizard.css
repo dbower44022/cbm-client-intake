@@ -55,7 +55,12 @@ body { margin: 0; padding: 2rem 0 4rem; }
 .checkgrid label { font-weight: 400; color: var(--cbm-slate-900); display: flex; gap: 0.5rem; align-items: flex-start; }
 .checkgrid input { margin-top: 0.2rem; }
 
-.cbm-field--check label { font-weight: 400; color: var(--cbm-slate-900); display: flex; gap: 0.5rem; align-items: flex-start; }
+/* Block layout with a hanging indent for the checkbox, so the label text (and
+   its inline policy links) wraps as a normal paragraph instead of each link
+   becoming a separate flex item that stacks on a narrow page. */
+.cbm-field--check label { font-weight: 400; color: var(--cbm-slate-900);
+  display: block; position: relative; padding-left: 1.6rem; }
+.cbm-field--check label input[type="checkbox"] { position: absolute; left: 0; top: 0.25rem; }
 
 /* Navigation */
 .wizard__nav { display: flex; justify-content: space-between; gap: 1rem; margin-top: 2rem; }
