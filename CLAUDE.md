@@ -110,8 +110,19 @@ Normal/Error log moves to the worker in async mode. Flag off = Phase 0
 (synchronous). Form registry: `forms.ALL_SPECS`/`SPECS_BY_SLUG`. Worker component
 + pre-deploy migration documented (commented) in `.do/app.yaml`. Verified
 end-to-end against local Postgres (async accept → pending → worker delivers →
-completed). Phase 2 (status/re-drive UI) and Phase 3 (alerting + schema-drift)
-are next.
+completed).
+
+**Phase 2 — operations console, scaffolded 2026-06-22.** A staff-only view of the
+durable store at **`/ops`** (`ops/` package), gated by the same EspoCRM team-auth
+as `/assignments` (reuses `assignments.auth`; one staff session covers both) and
+mounted only when `assignments_active`. `GET /ops/api/submissions` (filter by
+status/form) + counts; `GET /ops/api/submissions/{id}` (payload/progress/error);
+`POST /ops/api/submissions/{id}/redrive` (→ pending, due now, attempts reset — the
+worker re-runs it resumably). Store gains `list_submissions`/`get_submission`/
+`counts_by_status`/`redrive`; the store is exposed via `app.state.submission_store`.
+Endpoints 503 if no store. Linked from the form index under "Staff". Verified
+against local Postgres (list/counts/redrive) + console wiring (serves, 401 unauth).
+Phase 3 (alerting + schema-drift) is next.
 
 ## Mentor Assignment tool — `/assignments` (added 2026-06-19)
 

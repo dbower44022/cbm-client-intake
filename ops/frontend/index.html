@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cleveland Business Mentors — Submission Operations</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/tokens.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="cbm-container ops">
+    <header class="ops__header">
+      <h1>Submission Operations</h1>
+      <p class="ops__sub">Every captured submission, its delivery status, and re-drive for anything stuck.</p>
+    </header>
+
+    <!-- Login -->
+    <section class="ops__login" id="loginView" hidden>
+      <h2>Staff sign in</h2>
+      <p class="cbm-help">Sign in with your EspoCRM username and password.</p>
+      <form id="loginForm" autocomplete="on">
+        <div class="cbm-field"><label for="username">Username</label>
+          <input type="text" id="username" autocomplete="username" required /></div>
+        <div class="cbm-field"><label for="password">Password</label>
+          <input type="password" id="password" autocomplete="current-password" required /></div>
+        <p class="form-error" id="loginError" role="alert" hidden></p>
+        <button type="submit" class="cbm-button" id="loginBtn">Sign in</button>
+      </form>
+    </section>
+
+    <!-- Dashboard -->
+    <section class="ops__dash" id="dashView" hidden>
+      <div class="ops__toolbar">
+        <span class="ops__who">Signed in as <strong id="whoName"></strong></span>
+        <span class="ops__actions">
+          <button type="button" class="cbm-button cbm-button--secondary" id="refreshBtn">Refresh</button>
+          <button type="button" class="cbm-button cbm-button--secondary" id="logoutBtn">Sign out</button>
+        </span>
+      </div>
+
+      <div class="ops__counts" id="counts"></div>
+
+      <div class="ops__filters">
+        <select id="statusFilter" aria-label="Filter by status"></select>
+        <select id="formFilter" aria-label="Filter by form"></select>
+      </div>
+
+      <p class="ops__notice" id="notice" role="status" hidden></p>
+
+      <table class="ops__table" id="subTable" hidden>
+        <thead>
+          <tr>
+            <th>Reference</th><th>Form</th><th>Status</th><th>Submitter</th>
+            <th>Received</th><th class="num">Attempts</th><th>Last error</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="subBody"></tbody>
+      </table>
+      <p class="ops__empty" id="emptyState" hidden>No submissions match.</p>
+      <p class="ops__loading" id="loadingState">Loading…</p>
+    </section>
+
+    <!-- Detail modal -->
+    <div class="modal" id="detailModal" hidden>
+      <div class="modal__backdrop" data-close></div>
+      <div class="modal__dialog" role="dialog" aria-modal="true">
+        <button type="button" class="modal__close" aria-label="Close" data-close>&times;</button>
+        <h2 class="modal__title" id="detailTitle">Submission</h2>
+        <div id="detailBody"></div>
+      </div>
+    </div>
+
+    <footer class="cbm-footer">
+      <p>&copy; <span data-cbm-year>2026</span> Cleveland Business Mentors.<span class="cbm-footer__version" data-cbm-version></span></p>
+    </footer>
+  </main>
+
+  <script src="app.js"></script>
+  <script src="/shared/footer.js"></script>
+</body>
+</html>
