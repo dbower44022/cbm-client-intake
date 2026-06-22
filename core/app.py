@@ -273,7 +273,7 @@ def create_app(
     # mounts below so /assignments/api/* and /ops/api/* resolve to the routers).
     # Both reuse the EspoCRM team-auth session, so they need SESSION_SECRET.
     if settings.assignments_active:
-        from assignments import router as assignments_router
+        from assignments import api_router as assignments_router
         from ops import api_router as ops_router
 
         app.include_router(assignments_router)
