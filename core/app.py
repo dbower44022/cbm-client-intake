@@ -44,6 +44,9 @@ ASSIGNMENTS_FRONTEND_DIR = (
     Path(__file__).resolve().parent.parent / "assignments" / "frontend"
 )
 OPS_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "ops" / "frontend"
+MENTORADMIN_FRONTEND_DIR = (
+    Path(__file__).resolve().parent.parent / "mentoradmin" / "frontend"
+)
 
 
 def _make_client(settings: Settings) -> EspoApi:
@@ -175,6 +178,8 @@ def _index_html(forms: list[FormSpec], include_assignments: bool = False) -> str
             '<li><a href="/assignments/">Mentor Assignment dashboard</a> '
             "<em>(staff sign-in required)</em></li>"
             '<li><a href="/ops/">Submission Operations</a> '
+            "<em>(staff sign-in required)</em></li>"
+            '<li><a href="/mentoradmin/">Mentor Admin</a> '
             "<em>(staff sign-in required)</em></li></ul>"
         )
     year = datetime.now(timezone.utc).year
@@ -274,10 +279,12 @@ def create_app(
     # Both reuse the EspoCRM team-auth session, so they need SESSION_SECRET.
     if settings.assignments_active:
         from assignments import api_router as assignments_router
+        from mentoradmin import api_router as mentoradmin_router
         from ops import api_router as ops_router
 
         app.include_router(assignments_router)
         app.include_router(ops_router)
+        app.include_router(mentoradmin_router)
 
     @app.get("/", response_class=HTMLResponse)
     async def index() -> str:
@@ -302,6 +309,12 @@ def create_app(
             "/ops",
             StaticFiles(directory=str(OPS_FRONTEND_DIR), html=True),
             name="ops-frontend",
+        )
+    if settings.assignments_active and MENTORADMIN_FRONTEND_DIR.is_dir():
+        app.mount(
+            "/mentoradmin",
+            StaticFiles(directory=str(MENTORADMIN_FRONTEND_DIR), html=True),
+            name="mentoradmin-frontend",
         )
     app.mount("/shared", StaticFiles(directory=str(SHARED_DIR)), name="shared")
 

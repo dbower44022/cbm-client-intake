@@ -82,14 +82,21 @@ async def _names_with_fallback(
 
 
 async def authenticate(
-    settings: Settings, username: str, password: str
+    settings: Settings,
+    username: str,
+    password: str,
+    *,
+    allowed_teams: Optional[list[str]] = None,
+    allowed_roles: Optional[list[str]] = None,
 ) -> dict[str, Any]:
     """Validate credentials against EspoCRM and return the session user dict.
 
     Authorization: EspoCRM admins always pass; otherwise the user must belong to
-    an allowed Team (``ASSIGN_ALLOWED_TEAMS``) or hold an allowed Role
-    (``ASSIGN_ALLOWED_ROLES``). Team/role names are read from the user's own
-    ``App/user`` payload (falling back to their User record).
+    an allowed Team or hold an allowed Role. ``allowed_teams``/``allowed_roles``
+    default to the assignment tool's settings (``ASSIGN_ALLOWED_TEAMS`` /
+    ``ASSIGN_ALLOWED_ROLES``); other staff apps (e.g. mentor-admin) pass their
+    own. Team/role names are read from the user's own ``App/user`` payload
+    (falling back to their User record).
 
     :raises AuthError: bad credentials, inactive/non-internal account, or the
         user is not authorized.
@@ -120,8 +127,12 @@ async def authenticate(
     roles, roles_src = await _names_with_fallback(settings, user, token, "rolesNames")
 
     if not is_admin:
-        allowed_teams = settings.assign_allowed_teams_list
-        allowed_roles = settings.assign_allowed_roles_list
+        allowed_teams = (
+            settings.assign_allowed_teams_list if allowed_teams is None else allowed_teams
+        )
+        allowed_roles = (
+            settings.assign_allowed_roles_list if allowed_roles is None else allowed_roles
+        )
         team_ok = bool(set(teams) & set(allowed_teams))
         role_ok = bool(set(roles) & set(allowed_roles))
         if not (team_ok or role_ok):
@@ -149,16 +160,16 @@ async def authenticate(
 
 # --- session helpers (Starlette SessionMiddleware backs request.session) ---
 
-def set_session(request, user: dict[str, Any]) -> None:
-    request.session[SESSION_KEY] = {k: user[k] for k in _SESSION_FIELDS}
+def set_session(request, user: dict[str, Any], key: str = SESSION_KEY) -> None:
+    request.session[key] = {k: user[k] for k in _SESSION_FIELDS}
 
 
-def current_user(request) -> Optional[dict[str, Any]]:
-    return request.session.get(SESSION_KEY)
+def current_user(request, key: str = SESSION_KEY) -> Optional[dict[str, Any]]:
+    return request.session.get(key)
 
 
-def clear_session(request) -> None:
-    request.session.pop(SESSION_KEY, None)
+def clear_session(request, key: str = SESSION_KEY) -> None:
+    request.session.pop(key, None)
 
 
 def session_expired(exc: Exception) -> bool:

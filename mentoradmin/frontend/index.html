@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cleveland Business Mentors — Mentor Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/tokens.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="cbm-container ma">
+    <header class="ma__header">
+      <h1>Mentor Admin</h1>
+      <p class="ma__sub">Review and edit any mentor's profile, status, and details.</p>
+    </header>
+
+    <!-- Login -->
+    <section class="ma__login" id="loginView" hidden>
+      <h2>Staff sign in</h2>
+      <p class="cbm-help">Sign in with your EspoCRM username and password.</p>
+      <form id="loginForm" autocomplete="on">
+        <div class="cbm-field"><label for="username">Username</label>
+          <input type="text" id="username" autocomplete="username" required /></div>
+        <div class="cbm-field"><label for="password">Password</label>
+          <input type="password" id="password" autocomplete="current-password" required /></div>
+        <p class="form-error" id="loginError" role="alert" hidden></p>
+        <button type="submit" class="cbm-button" id="loginBtn">Sign in</button>
+      </form>
+    </section>
+
+    <!-- List -->
+    <section class="ma__list" id="listView" hidden>
+      <div class="ma__toolbar">
+        <span class="ma__who">Signed in as <strong id="whoName"></strong></span>
+        <span class="ma__actions">
+          <button type="button" class="cbm-button cbm-button--secondary" id="refreshBtn">Refresh</button>
+          <button type="button" class="cbm-button cbm-button--secondary" id="logoutBtn">Sign out</button>
+        </span>
+      </div>
+      <div class="ma__controls">
+        <input type="search" id="search" class="ma__search" placeholder="Search name, industry, expertise, focus…" autocomplete="off" />
+        <select id="statusFilter" aria-label="Filter by status"></select>
+        <select id="industryFilter" aria-label="Filter by industry"></select>
+      </div>
+      <p class="ma__count" id="count"></p>
+      <p class="ma__notice" id="listNotice" role="status" hidden></p>
+      <table class="ma__table" id="mentorTable" hidden>
+        <thead><tr>
+          <th data-sort="name" class="is-sortable">Mentor</th>
+          <th data-sort="status" class="is-sortable">Status</th>
+          <th data-sort="assignedClients" class="is-sortable num">Assigned</th>
+          <th data-sort="availableCapacity" class="is-sortable num">Capacity</th>
+          <th data-sort="industrySector" class="is-sortable">Industry</th>
+        </tr></thead>
+        <tbody id="mentorBody"></tbody>
+      </table>
+      <p class="ma__empty" id="emptyState" hidden>No mentors match.</p>
+      <p class="ma__loading" id="loadingState">Loading…</p>
+    </section>
+
+    <!-- Detail / edit -->
+    <section class="ma__detail" id="detailView" hidden>
+      <div class="ma__toolbar">
+        <button type="button" class="cbm-button cbm-button--secondary" id="backBtn">← Back to list</button>
+        <span class="ma__actions">
+          <button type="button" class="cbm-button" id="saveBtn">Save changes</button>
+        </span>
+      </div>
+      <h2 class="ma__detail-name" id="detailName"></h2>
+      <p class="ma__notice" id="detailNotice" role="status" hidden></p>
+      <div class="ma__readonly" id="readonly"></div>
+      <form id="editForm" class="ma__form"></form>
+    </section>
+
+    <footer class="cbm-footer">
+      <p>&copy; <span data-cbm-year>2026</span> Cleveland Business Mentors.<span class="cbm-footer__version" data-cbm-version></span></p>
+    </footer>
+  </main>
+
+  <script src="app.js"></script>
+  <script src="/shared/footer.js"></script>
+</body>
+</html>

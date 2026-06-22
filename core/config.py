@@ -53,6 +53,8 @@ class Settings(BaseSettings):
     # allowed Role. Both empty => admins only.
     assign_allowed_teams: str = ""
     assign_allowed_roles: str = ""
+    # Mentor Admin app (/mentoradmin) — gated to its own team.
+    mentor_admin_allowed_teams: str = "Mentor Administration Team"
     # Marks a session cookie Secure; set false only for plain-HTTP local dev.
     session_cookie_secure: bool = True
 
@@ -67,6 +69,10 @@ class Settings(BaseSettings):
     @property
     def assign_allowed_roles_list(self) -> list[str]:
         return [r.strip() for r in self.assign_allowed_roles.split(",") if r.strip()]
+
+    @property
+    def mentor_admin_allowed_teams_list(self) -> list[str]:
+        return [t.strip() for t in self.mentor_admin_allowed_teams.split(",") if t.strip()]
 
     @property
     def assignments_active(self) -> bool:

@@ -159,6 +159,47 @@ run **live against crm-test** (all 5 contract entries aligned, no false alerts).
 **This completed the V2 build (Phases 0–3) — now ACTIVATED LIVE (see the LIVE
 block at the top of this section).**
 
+## Mentor Admin tool — `/mentoradmin` (added 2026-06-22)
+
+A second **staff-only** tool (NOT a public form), in the same FastAPI app
+(`mentoradmin/` package), mounted only when `SESSION_SECRET` is set (shares the
+`assignments_active` gate + SessionMiddleware). It reuses the assignment tool's
+EspoCRM team-auth but is gated to the **Mentor Administration Team** and kept in
+its **own session key** (`mentoradmin_user`), so a Mentor-Admin login is separate
+from `/assignments`. It lists the **full mentor roster** (reuses
+`assignments.service.list_all_mentors` — same searchable/filterable/sortable grid
+as "Available Mentors", any status), and lets staff **open any mentor** to a
+detail screen that reviews all info (read-only computed totals on top) and
+**edits status + any editable field**, saving back to `CMentorProfile`.
+
+- **Auth = per-user, acts as the logged-in user** (same model as `/assignments`):
+  login via `authenticate(..., allowed_teams=mentor_admin_allowed_teams_list,
+  allowed_roles=[])` → EspoCRM `App/user`; token in a signed session cookie;
+  all reads/writes run as that user so EspoCRM enforces their ACL on
+  CMentorProfile. Gate is **Team-only** (`MENTOR_ADMIN_ALLOWED_TEAMS`, default
+  `Mentor Administration Team`); admins always pass. Session-expired (CRM 401) →
+  clears session + 401 (same `auth.session_expired` handling).
+- **Editable-field set is declared in `mentoradmin/service.py:EDITABLE_FIELDS`**
+  (the single source for both the form layout — grouped Status/Capacity/Expertise/
+  Compliance/Dates/Profile/Bio — and the server-side update **whitelist**:
+  `update_mentor` drops anything not in `EDITABLE_NAMES`). Enum/multi-enum
+  **options are pulled live** from EspoCRM metadata (`GET /Metadata?key=
+  entityDefs.CMentorProfile.fields`, via `EspoClient.metadata`) so the CRM stays
+  the source of truth — see `service.field_options`. Computed totals
+  (`availableCapacity`, `currentActiveClients`, `total*`) are read-only context.
+- **Endpoints** (`/mentoradmin/api`): `login`/`logout`/`session`; `GET /mentors`
+  (roster); `GET /fields` (EDITABLE_FIELDS + live options); `GET /mentors/{id}`
+  (full record); `PUT /mentors/{id}` `{changes:{...}}` (whitelisted update).
+  Frontend: `mentoradmin/frontend/` (vanilla JS, generic type-driven renderer:
+  enum→select, multiEnum→multi-select, bool→checkbox, int/date/text/wysiwyg).
+- **Status (2026-06-22): built; 119 tests green (10 new); TestClient sanity OK
+  (serves, 401 unauth, index link).** NOT yet deployed/verified live — needs the
+  `MENTOR_ADMIN_ALLOWED_TEAMS` default to match a real crm-test Team (defaults to
+  `Mentor Administration Team`; confirm it exists / users are members) and a live
+  edit check. No new deploy secret strictly required (web+worker already carry
+  `SESSION_SECRET`); set `MENTOR_ADMIN_ALLOWED_TEAMS` in the overlay only to
+  override the default.
+
 ## Mentor Assignment tool — `/assignments` (added 2026-06-19)
 
 A **staff-only** dashboard (NOT a public intake form) that lives in the same

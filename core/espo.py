@@ -224,6 +224,18 @@ class EspoClient:
                 f"HTTP {resp.status_code} {resp.text[:300]}"
             )
 
+    async def metadata(self, key: str) -> Any:
+        """Fetch an arbitrary EspoCRM metadata key (e.g. an entity's field defs)."""
+        async with httpx.AsyncClient(timeout=self._timeout) as client:
+            resp = await client.get(
+                f"{self._base}/Metadata", params={"key": key}, headers=self._headers
+            )
+        if resp.status_code >= 400:
+            raise EspoError(
+                f"metadata {key} failed: HTTP {resp.status_code} {resp.text[:200]}"
+            )
+        return resp.json()
+
     async def metadata_enum_options(
         self, entity: str, field: str
     ) -> Optional[list[str]]:
