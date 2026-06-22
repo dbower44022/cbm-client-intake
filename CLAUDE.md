@@ -206,26 +206,32 @@ detail screen that reviews all info (read-only computed totals on top) and
   `isActive=true`, `sendAccessInfo=true` for the welcome email), places it in the
   **`MENTOR_TEAM_NAME`** team (default `Mentor Team`), links it to the profile as
   `assignedUser` (the same link the assignment tool reads), and back-fills
-  `cbmEmail` when blank. **Privilege split (the key design point):** User
-  read/create + Team lookup run under a **privileged backend `admin_client` (the
-  SERVICE API key, `router._provision_client`)**, NOT the staff user's token — so
-  **Mentor Admin staff stay non-admin and need no user-create rights**; only the
-  profile read + `assignedUser`-link write use the staff token (which they can
-  already do). **Off by default** (`mentor_provision_users=False`): with it off,
-  approval just saves the status (no provisioning, no error) — this is what
-  prevented the original 504 when a non-admin staffer approved. Best-effort:
-  failures (missing permission, team not found → reports available team names)
-  return a `provision:{ok:false,error}` summary shown in the UI without rolling
-  back the saved status. userName collisions get a numeric suffix (`…2@…`).
-  Re-saving an already-Approved mentor, or one with a user, does nothing.
-  **TO ENABLE (CRM-side, then flip the flag):** grant the **service API user**
-  (`customapps`) **User read+create + Team read** (it's create-only today — can't
-  read Users/Teams or edit), confirm the **`Mentor Team`** exists, then set
-  `MENTOR_PROVISION_USERS=true` in the overlay. Still unverified live: the
-  `sendAccessInfo` welcome-email mechanism + CBM-email deliverability (if EspoCRM
-  wants a different trigger it's a one-line change in `provision_mentor_user`);
-  watch for a synchronous SMTP send blocking the request. The live script's
-  `MA_APPROVE` path provisions via the admin's own token (run it as an admin).
+  `cbmEmail` when blank. **Privilege split (the key design point):** EspoCRM makes
+  **User creation admin-only — API keys/`api`-type users CANNOT create Users (no
+  role grants it)**, confirmed against EspoCRM docs. So User read/create + Team
+  lookup run as a **DEDICATED ADMIN service account** — the router builds an async
+  `admin_client_factory` (`_provision_factory`) that logs that account in via the
+  `App/user` token flow (`auth.login_token`, no ACL gating) and yields a client
+  via `EspoClient.for_user_token`. This is **NOT the staff user's token and NOT
+  the create-only `customapps` API key** — so **Mentor Admin staff stay non-admin
+  and need no user-create rights**; only the profile read + `assignedUser`-link
+  write use the staff token (which they already can do). The factory is awaited
+  lazily (login only happens on an actual approval transition). **Off by default**
+  (`mentor_provision_users=False`): with it off, approval just saves the status
+  (no provisioning, no error) — this is what fixed the original 504 when a
+  non-admin staffer approved. Best-effort: failures (login rejected, missing
+  permission, team not found → reports available team names) return a
+  `provision:{ok:false,error}` summary shown in the UI without rolling back the
+  saved status. userName collisions get a numeric suffix (`…2@…`). Re-saving an
+  already-Approved mentor, or one with a user, does nothing.
+  **TO ENABLE:** create a dedicated **admin-type EspoCRM user** for provisioning,
+  set `ESPO_PROVISION_USERNAME`/`ESPO_PROVISION_PASSWORD` (encrypted overlay
+  secrets) + `MENTOR_PROVISION_USERS=true`, and confirm the **`Mentor Team`**
+  exists. Still unverified live: the `sendAccessInfo` welcome-email mechanism +
+  CBM-email deliverability (if EspoCRM wants a different trigger it's a one-line
+  change in `provision_mentor_user`); watch for a synchronous SMTP send blocking
+  the request. The live script's `MA_APPROVE` path provisions via the admin's own
+  token (run it as an admin).
 - **Status (2026-06-22): built; 119 tests green (10 new); TestClient sanity OK
   (serves, 401 unauth, index link).** NOT yet deployed/verified live — needs the
   `MENTOR_ADMIN_ALLOWED_TEAMS` default to match a real crm-test Team (defaults to

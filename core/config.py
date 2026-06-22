@@ -57,11 +57,14 @@ class Settings(BaseSettings):
     mentor_admin_allowed_teams: str = "Mentor Administration Team"
     # Team that approved mentors' new login users are placed in.
     mentor_team_name: str = "Mentor Team"
-    # Auto-provision a login User when a mentor is Approved. Runs under the
-    # backend service API key (NEVER the staff user's token), so Mentor Admin
-    # staff need no user-create permission. Off until that API user is granted
-    # User read/create + Team read in the CRM.
+    # Auto-provision a login User when a mentor is Approved. Off by default.
+    # User creation is admin-only in EspoCRM (API keys can't do it), so this runs
+    # as a dedicated admin service account via the App/user token flow — NEVER
+    # the staff user's token. Mentor Admin staff stay non-admin.
     mentor_provision_users: bool = False
+    # Credentials of that dedicated admin account (used only for provisioning).
+    espo_provision_username: str = ""
+    espo_provision_password: str = ""
     # Marks a session cookie Secure; set false only for plain-HTTP local dev.
     session_cookie_secure: bool = True
 

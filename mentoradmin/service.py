@@ -9,7 +9,7 @@ EspoCRM metadata so the CRM stays the source of truth. Computed totals
 from __future__ import annotations
 
 import re
-from typing import Any, Optional, Protocol
+from typing import Any, Awaitable, Callable, Optional, Protocol
 
 MENTOR_PROFILE = "CMentorProfile"
 
@@ -110,19 +110,21 @@ async def update_mentor(
     changes: dict[str, Any],
     *,
     team_name: Optional[str] = None,
-    admin_client: Optional[MentorClient] = None,
+    admin_client_factory: Optional[Callable[[], Awaitable[MentorClient]]] = None,
 ) -> dict[str, Any]:
     """Update whitelisted editable fields; ignore anything else.
 
     Side effect: when ``mentorStatus`` transitions to ``Approved`` (and the
-    mentor has no login user yet) AND an ``admin_client`` is supplied, provision
-    an EspoCRM User for them, link it to the profile, and place it in the mentor
-    team. **User creation/team lookup run under ``admin_client``** (a privileged
-    backend credential), never the staff ``client`` — so Mentor Admin staff need
-    no user-create permission. Without ``admin_client`` (the default), no
-    provisioning is attempted. It runs *after* the status write and is
-    best-effort: a failure is captured in the returned ``provision`` summary
-    rather than failing the save, since the status change already took effect.
+    mentor has no login user yet) AND ``admin_client_factory`` is supplied,
+    provision an EspoCRM User for them, link it to the profile, and place it in
+    the mentor team. **User creation/team lookup run under the privileged client
+    the factory returns** (a dedicated admin service account), never the staff
+    ``client`` — so Mentor Admin staff need no user-create permission. The
+    factory is awaited lazily (and its login errors captured) only when a
+    provisioning transition actually occurs. Without it (the default), no
+    provisioning is attempted. Runs *after* the status write and is best-effort:
+    any failure is captured in the returned ``provision`` summary rather than
+    failing the save, since the status change already took effect.
     """
     payload = {k: v for k, v in changes.items() if k in EDITABLE_NAMES}
     if not payload:
@@ -132,7 +134,7 @@ async def update_mentor(
     # mentor) triggers provisioning, and only if no user is linked yet.
     becoming_approved = payload.get("mentorStatus") == STATUS_APPROVED
     before = None
-    if becoming_approved and admin_client is not None:
+    if becoming_approved and admin_client_factory is not None:
         before = await client.get(
             MENTOR_PROFILE, mentor_id, select="mentorStatus,assignedUserId"
         )
@@ -141,19 +143,20 @@ async def update_mentor(
 
     provision: Optional[dict[str, Any]] = None
     if (
-        admin_client is not None
+        admin_client_factory is not None
         and before is not None
         and before.get("mentorStatus") != STATUS_APPROVED
         and not before.get("assignedUserId")
     ):
         try:
+            admin_client = await admin_client_factory()
             summary = await provision_mentor_user(
                 admin_client, client, mentor_id, team_name=team_name or DEFAULT_MENTOR_TEAM
             )
             provision = {"ok": True, **summary}
         except MentorAdminError as exc:
             provision = {"ok": False, "error": str(exc)}
-        except Exception as exc:  # EspoError etc. — never break the saved status
+        except Exception as exc:  # login/EspoError etc. — never break the saved status
             provision = {"ok": False, "error": str(exc)}
 
     result = await get_mentor(client, mentor_id)

@@ -158,6 +158,30 @@ async def authenticate(
     }
 
 
+async def login_token(
+    base_url: str, username: str, password: str, timeout: int
+) -> tuple[str, str]:
+    """Authenticate a backend service account and return ``(userName, token)``.
+
+    Like :func:`authenticate` but with **no team/role ACL gating** — for trusted
+    server-side accounts (e.g. the dedicated admin used to provision mentor login
+    users), not interactive staff. The returned token is replayed via
+    ``EspoClient.for_user_token`` so calls run with that account's privileges.
+    """
+    cred = base64.b64encode(f"{username}:{password}".encode()).decode()
+    resp = await _app_user(base_url, {"Espo-Authorization": cred}, timeout)
+    if resp.status_code in (401, 403):
+        raise AuthError("Service account credentials were rejected.")
+    if resp.status_code >= 400:
+        raise AuthError(f"Service login failed (HTTP {resp.status_code}).")
+    data = resp.json()
+    user = data.get("user") or {}
+    token = data.get("token")
+    if not token or not user.get("userName"):
+        raise AuthError("Service login did not return a usable token.")
+    return user["userName"], token
+
+
 # --- session helpers (Starlette SessionMiddleware backs request.session) ---
 
 def set_session(request, user: dict[str, Any], key: str = SESSION_KEY) -> None:

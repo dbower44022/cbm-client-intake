@@ -17,6 +17,7 @@ from assignments.auth import (
     authenticate,
     clear_session,
     current_user,
+    login_token,
     session_expired,
     set_session,
 )
@@ -112,18 +113,35 @@ async def mentor_detail(mentor_id: str, request: Request) -> dict:
         raise _crm_failure(request, exc, "Could not load mentor")
 
 
-def _provision_client(settings: Settings):
-    """Privileged backend client for user provisioning, or None when disabled.
+def _provision_factory(settings: Settings):
+    """A lazy login factory for the provisioning admin, or None when disabled.
 
-    Uses the service API key (not the staff user's token), so provisioning never
-    needs the logged-in user to have user-create rights. Gated on
-    ``mentor_provision_users`` and a real (non-dry-run) API key.
+    EspoCRM only lets admins create Users (API keys can't), so provisioning acts
+    as a dedicated admin service account via the App/user token flow — never the
+    staff user's token. The returned async callable logs that account in (once,
+    when a provisioning transition actually happens) and yields a privileged
+    client. Gated on ``mentor_provision_users`` + configured credentials + a real
+    (non-dry-run) base.
     """
-    if not settings.mentor_provision_users or settings.espo_dry_run or not settings.espo_api_key:
+    if (
+        not settings.mentor_provision_users
+        or settings.espo_dry_run
+        or not (settings.espo_provision_username and settings.espo_provision_password)
+    ):
         return None
-    return EspoClient(
-        settings.espo_base_url, settings.espo_api_key, settings.request_timeout_seconds
-    )
+
+    async def factory():
+        user_name, token = await login_token(
+            settings.espo_base_url,
+            settings.espo_provision_username,
+            settings.espo_provision_password,
+            settings.request_timeout_seconds,
+        )
+        return EspoClient.for_user_token(
+            settings.espo_base_url, user_name, token, settings.request_timeout_seconds
+        )
+
+    return factory
 
 
 @router.put("/mentors/{mentor_id}")
@@ -135,7 +153,7 @@ async def mentor_update(mentor_id: str, body: UpdateIn, request: Request) -> dic
         return await service.update_mentor(
             client, mentor_id, body.changes,
             team_name=settings.mentor_team_name,
-            admin_client=_provision_client(settings),
+            admin_client_factory=_provision_factory(settings),
         )
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not save mentor")

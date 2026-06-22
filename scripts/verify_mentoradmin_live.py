@@ -65,10 +65,13 @@ async def approval_check(client, settings, mentor_id: str) -> None:
         print("  NOTE: already has a linked user — provisioning is skipped by design.")
 
     # The script is run by an admin, so the admin's own client is the privileged
-    # provisioning client (the app uses the service API key instead).
+    # provisioning client (the app logs in a dedicated admin service account).
+    async def _admin_factory():
+        return client
+
     result = await service.update_mentor(
         client, mentor_id, {"mentorStatus": service.STATUS_APPROVED},
-        team_name=settings.mentor_team_name, admin_client=client,
+        team_name=settings.mentor_team_name, admin_client_factory=_admin_factory,
     )
     prov = result.get("provision")
     print(f"  provision summary: {prov}")
