@@ -11,6 +11,6 @@ the user's own username/password and runs as that user (their token), so EspoCRM
 enforces their permissions and records them as the modifier.
 """
 
-from .router import router
+from .router import router as api_router
 
-__all__ = ["router"]
+__all__ = ["api_router"]

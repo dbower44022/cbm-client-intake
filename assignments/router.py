@@ -30,6 +30,18 @@ def _require_user(request: Request) -> dict:
     return user
 
 
+def _crm_failure(request: Request, exc: EspoError, message: str) -> HTTPException:
+    """Turn a per-user CRM error into the right HTTP response. An expired token
+    clears the (shared staff) session and returns 401 so the UI re-prompts login,
+    rather than a confusing 502."""
+    if auth.session_expired(exc):
+        auth.clear_session(request)
+        return HTTPException(
+            status_code=401, detail="Your session has expired — please sign in again."
+        )
+    return HTTPException(status_code=502, detail=f"{message}: {exc}")
+
+
 @router.post("/login")
 async def login(body: LoginIn, request: Request) -> dict:
     settings = get_settings()
@@ -67,7 +79,7 @@ async def engagements(
     try:
         rows = await service.list_engagements(client, statuses)
     except EspoError as exc:
-        raise HTTPException(status_code=502, detail=f"Could not load engagements: {exc}")
+        raise _crm_failure(request, exc, "Could not load engagements")
     return {
         "engagements": rows,
         "allStatuses": service.ENGAGEMENT_STATUSES,
@@ -87,7 +99,7 @@ async def mentors(request: Request, all_: bool = Query(default=False, alias="all
         )
         return {"mentors": rows}
     except EspoError as exc:
-        raise HTTPException(status_code=502, detail=f"Could not load mentors: {exc}")
+        raise _crm_failure(request, exc, "Could not load mentors")
 
 
 @router.get("/engagements/{engagement_id}")
@@ -109,4 +121,4 @@ async def assign(engagement_id: str, body: AssignIn, request: Request) -> dict:
     except service.AssignError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:
-        raise HTTPException(status_code=502, detail=f"Assignment failed: {exc}")
+        raise _crm_failure(request, exc, "Assignment failed")

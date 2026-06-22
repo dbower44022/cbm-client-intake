@@ -159,3 +159,12 @@ def current_user(request) -> Optional[dict[str, Any]]:
 
 def clear_session(request) -> None:
     request.session.pop(SESSION_KEY, None)
+
+
+def session_expired(exc: Exception) -> bool:
+    """True if a per-user CRM call failed because the EspoCRM auth token is no
+    longer valid (expired/revoked). The shared staff session is signed but the
+    token inside it has a finite life, so a still-"logged in" session can hit
+    this — callers clear the session and return 401 so the UI re-prompts login.
+    """
+    return "HTTP 401" in str(exc)
