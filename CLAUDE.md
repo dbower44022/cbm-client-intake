@@ -56,11 +56,17 @@ FKs + the `contacts`/`sponsorContacts` hasMany relate confirmed. Tests green
   1. ✅ **DONE** — `create` grant on `CPartnerProfile` + `CSponsorProfile` added
      to the intake API user's role (read + create now granted; verified live
      2026-06-17).
-  2. **OPEN** — sponsor contact typing uses existing `"Donor"` on `cContactType`
-     (no "Sponsor" option) — add a real "Sponsor" option if preferred.
-  3. **OPEN** — add `partner` + `sponsor` options to the `CIntakeSubmission.form`
-     enum so per-submission logging doesn't fall back to a WARNING (best-effort
-     either way; the create still succeeds for the main records).
+  2. ✅ **DONE (CRM, 2026-06-22)** — a `"Sponsor"` option was added to
+     `cContactType`. **App follow-up:** the sponsor orchestrator still writes
+     `cContactType=["Donor"]`; switch it to `["Sponsor"]` if you want sponsors
+     typed distinctly (one-line change in `forms/sponsor/orchestrator.py`).
+  3. ⚠️ **PARTIAL (CRM, 2026-06-22)** — `CIntakeSubmission.form` now lists
+     `Partner`/`Sponsor`, BUT **capitalized**, while the app logs the lowercase
+     slug (`spec.slug` = `partner`/`sponsor`, matching the other three). If
+     EspoCRM enforces the enum on create, partner/sponsor audit logs still
+     WARNING-fallback (main records create fine regardless). Fix: make the CRM
+     options lowercase `partner`/`sponsor`, or normalize in `core/submission_log`.
+     (No partner/sponsor CIntakeSubmission records exist yet to confirm.)
   4. ✅ **RESOLVED** — canonical Account link on `CPartnerProfile` is
      `partnerCompany` (populated bidirectionally; the alternate `account` link
      stays null). The orchestrator writes `partnerCompany` — correct.
@@ -320,12 +326,14 @@ Local `.env` stays `ESPO_DRY_RUN=true`; live tests use an inline
   submission (Normal/Honeypot/OrchestratorError), not just honeypot holds —
   `core/submission_log.py`. V1.0 entity is live in crm-test + create grant
   verified (2026-06-14). **Remaining CRM-side:**
-  1. **Re-run the v1 deploy** of `MN-IntakeSubmission.yaml` (v1.1) to add the
-     `source` field, the `Normal` reason option, and the `contact` link to
-     crm-test. Until then, `Normal` logs fail on the missing `source`/`contact`
-     and fall back to WARNING logs (held records still write fine).
-  2. Add the **`reason != Normal`** alert-on-create workflow (so only review
-     items ping; spec in the doc).
+  1. ✅ **DONE (verified live 2026-06-22)** — the `source` field, the `Normal`
+     reason option, and the `contact → Contact` link all exist in crm-test, so
+     Normal audit logs work for the three original forms. (Partner/Sponsor still
+     pending the form-enum casing fix — see the partner/sponsor item above.)
+  2. **OPEN** — add the **`reason != Normal`** alert-on-create workflow (so only
+     review items ping; spec in `cintake-submission-entity.md`). CRM-owned, not
+     built. Distinct from V2's worker alerting (which covers CRM-delivery
+     failures/backlog, not honeypot/orchestrator holds).
   3. Clean up the `ZZTEST-INTAKE GrantCheck` probe record
      (id `6a2eec00c83e44628`) in the EspoCRM UI.
 - Make the *deployed* app write to EspoCRM: set `ESPO_DRY_RUN=false` plus
