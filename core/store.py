@@ -38,9 +38,13 @@ from .config import Settings
 # --- status values (the submission lifecycle, §4 of the technical design) ---
 STATUS_PENDING = "pending"
 STATUS_PROCESSING = "processing"
+STATUS_RETRY = "retry"
 STATUS_COMPLETED = "completed"
 STATUS_NEEDS_ATTENTION = "needs_attention"
 STATUS_HELD = "held_honeypot"
+
+# Statuses the worker is allowed to claim and deliver.
+CLAIMABLE = (STATUS_PENDING, STATUS_RETRY)
 
 metadata = MetaData()
 
@@ -78,6 +82,18 @@ class Captured:
     result: Optional[dict[str, Any]]
 
 
+@dataclass
+class Claimed:
+    """A submission claimed by the worker for delivery (V2 Phase 1)."""
+
+    id: str
+    form_slug: str
+    submission_token: str
+    payload: dict[str, Any]
+    progress: Optional[dict[str, Any]]
+    attempt_count: int
+
+
 def _now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -89,6 +105,12 @@ class SubmissionStore(Protocol):
     ) -> Captured: ...
     async def mark_completed(self, submission_id: str, result: dict[str, Any]) -> None: ...
     async def mark_failed(self, submission_id: str, *, status: str, error: str) -> None: ...
+    # Phase 1 (worker) operations:
+    async def claim_batch(self, limit: int) -> list[Claimed]: ...
+    async def mark_retry(
+        self, submission_id: str, *, attempt_count: int, next_attempt_at: datetime, error: str
+    ) -> None: ...
+    async def save_progress(self, submission_id: str, progress: dict[str, Any]) -> None: ...
     async def dispose(self) -> None: ...
 
 
@@ -161,6 +183,71 @@ class PostgresStore:
                 update(submission)
                 .where(submission.c.id == submission_id)
                 .values(status=status, last_error=(error or "")[:2000], updated_at=_now())
+            )
+
+    async def claim_batch(self, limit: int) -> list[Claimed]:
+        """Atomically claim up to ``limit`` due submissions for delivery.
+
+        ``FOR UPDATE SKIP LOCKED`` makes concurrent workers safe — each row is
+        handed to exactly one worker. Claimed rows move to ``processing``.
+        """
+        now = _now()
+        due = (
+            select(submission.c.id)
+            .where(submission.c.status.in_(CLAIMABLE))
+            .where(
+                (submission.c.next_attempt_at.is_(None))
+                | (submission.c.next_attempt_at <= now)
+            )
+            .order_by(submission.c.received_at)
+            .limit(limit)
+            .with_for_update(skip_locked=True)
+        )
+        stmt = (
+            update(submission)
+            .where(submission.c.id.in_(due.scalar_subquery()))
+            .values(status=STATUS_PROCESSING, updated_at=now)
+            .returning(
+                submission.c.id,
+                submission.c.form_slug,
+                submission.c.submission_token,
+                submission.c.payload,
+                submission.c.progress,
+                submission.c.attempt_count,
+            )
+        )
+        async with self._engine.begin() as conn:
+            rows = (await conn.execute(stmt)).all()
+        return [
+            Claimed(
+                id=r[0], form_slug=r[1], submission_token=r[2],
+                payload=r[3], progress=r[4], attempt_count=r[5],
+            )
+            for r in rows
+        ]
+
+    async def mark_retry(
+        self, submission_id: str, *, attempt_count: int, next_attempt_at: datetime, error: str
+    ) -> None:
+        async with self._engine.begin() as conn:
+            await conn.execute(
+                update(submission)
+                .where(submission.c.id == submission_id)
+                .values(
+                    status=STATUS_RETRY,
+                    attempt_count=attempt_count,
+                    next_attempt_at=next_attempt_at,
+                    last_error=(error or "")[:2000],
+                    updated_at=_now(),
+                )
+            )
+
+    async def save_progress(self, submission_id: str, progress: dict[str, Any]) -> None:
+        async with self._engine.begin() as conn:
+            await conn.execute(
+                update(submission)
+                .where(submission.c.id == submission_id)
+                .values(progress=progress, updated_at=_now())
             )
 
     async def dispose(self) -> None:

@@ -32,3 +32,36 @@ services:
       - key: ALLOWED_ORIGINS
         scope: RUN_TIME
         value: "http://localhost:8000"
+
+# --- V2 activation (prds/v2) — uncomment when turning on durable capture +
+# asynchronous delivery. Requires a managed Postgres database (which injects
+# DATABASE_URL) and running `alembic upgrade head` (a pre-deploy job).
+#
+# databases:
+#   - name: cbm-db
+#     engine: PG
+#     production: false
+#
+# jobs:
+#   - name: migrate
+#     kind: PRE_DEPLOY
+#     dockerfile_path: Dockerfile
+#     github: { repo: dbower44022/cbm-client-intake, branch: main }
+#     run_command: .venv/bin/alembic upgrade head
+#     envs:
+#       - { key: DATABASE_URL, scope: RUN_TIME, value: "${cbm-db.DATABASE_URL}" }
+#
+# workers:
+#   - name: delivery-worker
+#     dockerfile_path: Dockerfile
+#     github: { repo: dbower44022/cbm-client-intake, branch: main, deploy_on_push: true }
+#     instance_size_slug: basic-xxs
+#     instance_count: 1
+#     run_command: .venv/bin/python -m worker
+#     envs:
+#       - { key: DATABASE_URL, scope: RUN_TIME, value: "${cbm-db.DATABASE_URL}" }
+#       - { key: ASYNC_DELIVERY, scope: RUN_TIME, value: "true" }
+#       # plus ESPO_DRY_RUN / ESPO_BASE_URL / ESPO_API_KEY as the web service has.
+#
+# And add to the web service envs:  DATABASE_URL (${cbm-db.DATABASE_URL}) and
+# ASYNC_DELIVERY=true, so the accept endpoint defers to the worker.

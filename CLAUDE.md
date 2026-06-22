@@ -94,7 +94,24 @@ unchanged until the DB is provisioned. Alembic migration in `alembic/`
 reports `durableStore`. Verified end-to-end against a local Postgres (capture →
 complete, idempotent replay = one row, honeypot captured `held_honeypot`).
 **To activate:** attach DO Managed Postgres, set `DATABASE_URL`, run
-`alembic upgrade head` (pre-deploy). Phase 1 (async worker + retries) is next.
+`alembic upgrade head` (pre-deploy).
+
+**Phase 1 — asynchronous delivery, scaffolded 2026-06-21 (gated by
+`ASYNC_DELIVERY`, default false).** With the flag on (and a store), the accept
+endpoint returns `received`+`reference` as soon as the submission is captured;
+the **worker** (`worker.py`, run as `python -m worker`) claims due rows
+(`claim_batch` = `FOR UPDATE SKIP LOCKED`), delivers them via the orchestrators,
+and retries transient failures with backoff (1m/5m/30m/2h/6h, `MAX_DELIVERY_ATTEMPTS`,
+then `needs_attention`); 4xx = permanent. Delivery is **resumable**
+(`core/resumable.py` `ResumableClient` records each create/upload in the
+`progress` column and skips it on retry) so a half-finished chain converges to
+one complete set — no orchestrator changes needed. The `CIntakeSubmission`
+Normal/Error log moves to the worker in async mode. Flag off = Phase 0
+(synchronous). Form registry: `forms.ALL_SPECS`/`SPECS_BY_SLUG`. Worker component
++ pre-deploy migration documented (commented) in `.do/app.yaml`. Verified
+end-to-end against local Postgres (async accept → pending → worker delivers →
+completed). Phase 2 (status/re-drive UI) and Phase 3 (alerting + schema-drift)
+are next.
 
 ## Mentor Assignment tool — `/assignments` (added 2026-06-19)
 

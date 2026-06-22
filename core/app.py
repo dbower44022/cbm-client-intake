@@ -109,6 +109,12 @@ def _make_handler(
             )
             return {"status": "received"}
 
+        # V2 Phase 1: with async delivery on, return as soon as the submission is
+        # durably captured — the background worker delivers it into the CRM. The
+        # CIntakeSubmission "Normal" log moves to the worker (on success).
+        if captured is not None and settings.async_delivery:
+            return {"status": "received", "reference": captured.id}
+
         # In-memory idempotency only when there is no durable store.
         key = f"{spec.slug}:{submission.submission_token}"
         if store is None and key in processed:
