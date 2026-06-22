@@ -10,6 +10,7 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 
 from core.app import create_app
+from core.config import get_settings
 from core.store import STATUS_COMPLETED, STATUS_HELD, STATUS_PENDING, Captured
 from forms import info_request
 
@@ -114,3 +115,20 @@ def test_healthz_reports_durable_store():
     # And false when there is no store.
     with TestClient(create_app([info_request.SPEC])) as c:
         assert c.get("/healthz").json()["durableStore"] is False
+
+
+def test_async_delivery_defers_processing(monkeypatch):
+    # With ASYNC_DELIVERY on, the accept endpoint captures and returns without
+    # processing — the worker does the CRM work later.
+    monkeypatch.setenv("ASYNC_DELIVERY", "true")
+    get_settings.cache_clear()
+    store = FakeStore()
+    try:
+        with TestClient(create_app([info_request.SPEC], store=store)) as c:
+            r = c.post("/api/info-request/intake", json=_body(submission_token="tok-async-1")).json()
+        assert r["status"] == "received"
+        assert "reference" in r
+        assert len(store.captures) == 1  # captured…
+        assert store.completed == []     # …but not processed inline
+    finally:
+        get_settings.cache_clear()

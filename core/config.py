@@ -24,6 +24,15 @@ class Settings(BaseSettings):
     # behavior (no store), so this is a safe no-op until a database is attached.
     database_url: str = ""
 
+    # --- V2 Phase 1: asynchronous delivery (worker) ---
+    # When true (and a store is configured), the accept endpoint returns as soon
+    # as the submission is captured and the background worker delivers it into the
+    # CRM with retries. False => Phase 0 (synchronous) behavior.
+    async_delivery: bool = False
+    worker_poll_seconds: int = 5
+    worker_batch_size: int = 10
+    max_delivery_attempts: int = 8
+
     # --- Mentor assignment tool (/assignments) ---
     # Staff-only dashboard; authenticates each user against EspoCRM and acts as
     # them. Disabled if no session secret is set (see ``assignments_active``).
