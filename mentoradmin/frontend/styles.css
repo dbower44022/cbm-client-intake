@@ -91,6 +91,21 @@
   border-radius: var(--cbm-radius); font-family: var(--cbm-font-body); font-size: var(--cbm-text-sm);
   width: 100%; box-sizing: border-box; }
 .cbm-field textarea { resize: vertical; }
+
+/* WYSIWYG editor (contenteditable + toolbar) */
+.wysiwyg { border: 1px solid var(--cbm-border); border-radius: var(--cbm-radius); background: var(--cbm-white); }
+.wysiwyg__toolbar { display: flex; flex-wrap: wrap; gap: 0.25rem; padding: 0.35rem 0.4rem;
+  border-bottom: 1px solid var(--cbm-border); background: var(--cbm-surface);
+  border-radius: var(--cbm-radius) var(--cbm-radius) 0 0; }
+.wysiwyg__btn { border: 1px solid var(--cbm-border); background: var(--cbm-white); border-radius: var(--cbm-radius);
+  padding: 0.1rem 0.5rem; min-width: 1.9rem; font-size: var(--cbm-text-sm); line-height: 1.5;
+  color: var(--cbm-navy); cursor: pointer; }
+.wysiwyg__btn:hover { background: var(--cbm-surface); border-color: var(--cbm-blue); }
+.wysiwyg__area { min-height: 7rem; max-height: 24rem; overflow: auto; padding: 0.6rem 0.7rem;
+  font-size: var(--cbm-text-sm); line-height: 1.5; color: var(--cbm-text); }
+.wysiwyg__area:focus { outline: 2px solid var(--cbm-blue); outline-offset: -2px; }
+.wysiwyg__area p:first-child { margin-top: 0; }
+.wysiwyg__area p:last-child { margin-bottom: 0; }
 .cbm-field select[multiple] { padding: 0.2rem; }
 .cbm-field--check { flex-direction: row; align-items: center; }
 .cbm-field--check label { flex-direction: row; align-items: center; gap: 0.4rem; font-weight: 600; color: var(--cbm-navy); }

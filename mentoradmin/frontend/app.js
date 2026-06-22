@@ -259,6 +259,57 @@
     wrap.appendChild(label); wrap.appendChild(input); return wrap;
   }
 
+  // --- WYSIWYG editor (contenteditable + minimal toolbar; no external deps) ---
+  var WYSIWYG_BUTTONS = [
+    { title: "Bold", label: "<b>B</b>", cmd: "bold" },
+    { title: "Italic", label: "<i>I</i>", cmd: "italic" },
+    { title: "Underline", label: "<u>U</u>", cmd: "underline" },
+    { title: "Bulleted list", label: "&bull;", cmd: "insertUnorderedList" },
+    { title: "Numbered list", label: "1.", cmd: "insertOrderedList" },
+    { title: "Link", label: "Link", cmd: "createLink" },
+    { title: "Remove formatting", label: "Clear", cmd: "removeFormat" },
+  ];
+
+  // Strip dangerous markup before loading CRM HTML into a contenteditable
+  // (scripts won't run via innerHTML, but on* handlers / javascript: URLs can).
+  function sanitizeHtml(html) {
+    var tmp = document.createElement("div"); tmp.innerHTML = html || "";
+    Array.prototype.forEach.call(tmp.querySelectorAll("script,style,iframe,object,embed,link,meta"), function (n) { n.remove(); });
+    Array.prototype.forEach.call(tmp.querySelectorAll("*"), function (n) {
+      Array.prototype.slice.call(n.attributes).forEach(function (a) {
+        var name = a.name.toLowerCase(), val = (a.value || "").replace(/\s/g, "").toLowerCase();
+        if (name.indexOf("on") === 0) n.removeAttribute(a.name);
+        else if ((name === "href" || name === "src") && val.indexOf("javascript:") === 0) n.removeAttribute(a.name);
+      });
+    });
+    return tmp.innerHTML;
+  }
+
+  function makeWysiwyg(value) {
+    var el = document.createElement("div"); el.className = "wysiwyg";
+    var area = document.createElement("div");
+    area.className = "wysiwyg__area"; area.contentEditable = "true";
+    area.innerHTML = sanitizeHtml(value == null ? "" : String(value));
+    var bar = document.createElement("div"); bar.className = "wysiwyg__toolbar";
+    WYSIWYG_BUTTONS.forEach(function (b) {
+      var btn = document.createElement("button");
+      btn.type = "button"; btn.className = "wysiwyg__btn"; btn.title = b.title; btn.innerHTML = b.label;
+      // mousedown preventDefault keeps the editor's selection while clicking.
+      btn.addEventListener("mousedown", function (ev) { ev.preventDefault(); });
+      btn.addEventListener("click", function () {
+        if (b.cmd === "createLink") {
+          var url = window.prompt("Link URL:", "https://");
+          if (url) document.execCommand("createLink", false, url);
+        } else {
+          document.execCommand(b.cmd, false, null);
+        }
+      });
+      bar.appendChild(btn);
+    });
+    el.appendChild(bar); el.appendChild(area);
+    return el;
+  }
+
   function makeInput(f, value) {
     var el;
     if (f.type === "enum") {
@@ -286,8 +337,10 @@
       el = document.createElement("input"); el.type = "number"; el.value = (value == null) ? "" : value;
     } else if (f.type === "date") {
       el = document.createElement("input"); el.type = "date"; el.value = value || "";
-    } else if (f.type === "text" || f.type === "wysiwyg") {
-      el = document.createElement("textarea"); el.rows = f.type === "wysiwyg" ? 4 : 2; el.value = value == null ? "" : value;
+    } else if (f.type === "wysiwyg") {
+      el = makeWysiwyg(value);
+    } else if (f.type === "text") {
+      el = document.createElement("textarea"); el.rows = 2; el.value = value == null ? "" : value;
     } else {
       el = document.createElement("input"); el.type = "text"; el.value = value == null ? "" : value;
     }
@@ -300,6 +353,11 @@
     if (t === "bool") return el.checked;
     if (t === "int") return el.value === "" ? null : Number(el.value);
     if (t === "date") return el.value || null;
+    if (t === "wysiwyg") {
+      var a = el.querySelector(".wysiwyg__area");
+      if (!a) return "";
+      return a.textContent.trim() === "" ? "" : a.innerHTML;  // empty -> "" not "<br>"
+    }
     return el.value;
   }
 

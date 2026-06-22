@@ -190,8 +190,13 @@ detail screen that reviews all info (read-only computed totals on top) and
 - **Endpoints** (`/mentoradmin/api`): `login`/`logout`/`session`; `GET /mentors`
   (roster); `GET /fields` (EDITABLE_FIELDS + live options); `GET /mentors/{id}`
   (full record); `PUT /mentors/{id}` `{changes:{...}}` (whitelisted update).
-  Frontend: `mentoradmin/frontend/` (vanilla JS, generic type-driven renderer:
-  enum→select, multiEnum→multi-select, bool→checkbox, int/date/text/wysiwyg).
+  Frontend: `mentoradmin/frontend/` (vanilla JS, no build step). Detail view =
+  a compact read-only summary card (status, accepting, email/phone/address,
+  capacity/session metrics) + a tabbed editor (one tab per field `group`;
+  optional `row` sub-groups fields, e.g. Compliance checks vs dates). Generic
+  type-driven renderer: enum→select (static `options` allowed, e.g. how-heard),
+  multiEnum→checkbox grid, bool→checkbox, int/date, text→textarea,
+  wysiwyg→contenteditable rich-text editor (toolbar + `sanitizeHtml` on load).
 - **Status (2026-06-22): built; 119 tests green (10 new); TestClient sanity OK
   (serves, 401 unauth, index link).** NOT yet deployed/verified live — needs the
   `MENTOR_ADMIN_ALLOWED_TEAMS` default to match a real crm-test Team (defaults to
