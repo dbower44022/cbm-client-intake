@@ -76,6 +76,26 @@ The Client Intake process is defined by **MN-INTAKE** in the
 `dbower44022/ClevelandBusinessMentoring` repo; the Requirements Spec here is
 kept aligned to it by carry-forward.
 
+## V2 (reliability) — `prds/v2/`
+
+V2 makes the forms dependable: never lose a submission, keep working when the CRM
+is down, deliver into the CRM exactly once with retries, alert on trouble. Specs:
+`prds/v2/README.md` (executive), `CBM_Intake_V2_Requirements.md` (6 requirements),
+`CBM_Intake_V2_Technical_Design.md` (durable-capture + async-worker architecture).
+
+**Phase 0 — durable capture, scaffolded 2026-06-21 (gated, no-op until a DB is
+attached).** `core/store.py` (`PostgresStore`/`make_store`, the `submission`
+table), wired into `core/app.py`: when `DATABASE_URL` is set, every submission is
+captured to Postgres BEFORE any CRM call and idempotency is enforced durably (the
+`uq_submission_form_token` unique key replaces the in-memory dict); still
+processes synchronously. Empty `DATABASE_URL` ⇒ exact V1 behavior, so prod is
+unchanged until the DB is provisioned. Alembic migration in `alembic/`
+(`0001_create_submission`); local Postgres via `docker-compose.yml`. `/healthz`
+reports `durableStore`. Verified end-to-end against a local Postgres (capture →
+complete, idempotent replay = one row, honeypot captured `held_honeypot`).
+**To activate:** attach DO Managed Postgres, set `DATABASE_URL`, run
+`alembic upgrade head` (pre-deploy). Phase 1 (async worker + retries) is next.
+
 ## Mentor Assignment tool — `/assignments` (added 2026-06-19)
 
 A **staff-only** dashboard (NOT a public intake form) that lives in the same

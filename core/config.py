@@ -18,6 +18,12 @@ class Settings(BaseSettings):
     allowed_origins: str = "http://localhost:8000"
     request_timeout_seconds: int = 20
 
+    # --- V2 Phase 0: durable submission store (prds/v2) ---
+    # When set, every submission is captured to Postgres before any CRM work and
+    # idempotency is enforced durably. Empty => the app keeps its V1 in-memory
+    # behavior (no store), so this is a safe no-op until a database is attached.
+    database_url: str = ""
+
     # --- Mentor assignment tool (/assignments) ---
     # Staff-only dashboard; authenticates each user against EspoCRM and acts as
     # them. Disabled if no session secret is set (see ``assignments_active``).
@@ -47,6 +53,11 @@ class Settings(BaseSettings):
     def assignments_active(self) -> bool:
         """The tool needs a session secret to sign cookies; off without one."""
         return self.assignments_enabled and bool(self.session_secret)
+
+    @property
+    def store_enabled(self) -> bool:
+        """Durable submission store is active only when a database is configured."""
+        return bool(self.database_url)
 
 
 @lru_cache

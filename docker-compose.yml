@@ -1,0 +1,22 @@
+# Local Postgres for V2 development/parity (prds/v2). Production uses a managed
+# database; this gives the same engine locally so SKIP LOCKED / JSONB behave the
+# same as production.
+#
+#   docker compose up -d db
+#   export DATABASE_URL=postgresql://cbm:cbm@localhost:5432/cbm_intake
+#   uv run alembic upgrade head
+#   uv run uvicorn main:app --reload --port 8000   # now captures durably
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: cbm
+      POSTGRES_PASSWORD: cbm
+      POSTGRES_DB: cbm_intake
+    ports:
+      - "5432:5432"
+    volumes:
+      - cbm_pg:/var/lib/postgresql/data
+
+volumes:
+  cbm_pg:
