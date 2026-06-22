@@ -67,7 +67,7 @@ async def test_creates_three_linked_records():
     assert account["cAccountType"] == ["Donor/Sponsor"]
 
     _, contact = client.creates[1]
-    assert contact["cContactType"] == ["Donor"]
+    assert contact["cContactType"] == ["Sponsor"]
     assert contact["accountId"] == ids["accountId"]
 
     _, profile = client.creates[2]

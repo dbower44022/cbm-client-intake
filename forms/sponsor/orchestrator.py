@@ -1,4 +1,4 @@
-"""Sponsor application -> Account (Donor/Sponsor) + Contact (Donor) + CSponsorProfile.
+"""Sponsor application -> Account (Donor/Sponsor) + Contact (Sponsor) + CSponsorProfile.
 
 Mirrors the partner/mentor pattern: an Account for the sponsoring organization,
 a Contact for the applicant, and a CSponsorProfile hub linking the two.
@@ -7,9 +7,9 @@ INSTANCE MAPPING — reconciled against crm-test.clevelandbusinessmentors.org
 (2026-06-17) by reading the deployed EspoCRM metadata:
 
   * Account.cAccountType (multiEnum, REQUIRED) takes ["Donor/Sponsor"].
-  * Contact.cContactType (multiEnum) takes ["Donor"] — there is NO "Sponsor"
-    option on the deployed enum, so "Donor" is the closest fit (adding a real
-    "Sponsor" option is a CRM follow-up).
+  * Contact.cContactType (multiEnum) takes ["Sponsor"] — option added to the CRM
+    2026-06-22 (previously ["Donor"] as the nearest fit). The CRM enum is the
+    source of truth; the app writes exactly what it expects.
   * CSponsorProfile links: ``sponsorCompany`` (belongsTo Account, set via
     ``sponsorCompanyId``) and ``sponsorContact`` (belongsTo Contact, set via
     ``sponsorContactId``); the applicant is also added to the ``sponsorContacts``
@@ -46,7 +46,7 @@ SPONSOR_CONTACTS = "sponsorContacts"  # CSponsorProfile hasMany Contact
 
 # --- System-set values ---
 ACCOUNT_TYPE_SPONSOR = "Donor/Sponsor"
-CONTACT_TYPE_SPONSOR = "Donor"
+CONTACT_TYPE_SPONSOR = "Sponsor"
 
 
 async def _find_or_create_account(sub: SponsorApplication, client: EspoApi) -> str:

@@ -52,6 +52,12 @@ REASON_ORCHESTRATOR_ERROR = "OrchestratorError"
 STATUS_NEW = "New"
 STATUS_PROCESSED = "Processed"
 
+# The CIntakeSubmission.form enum value per form. The CRM is the source of truth:
+# the original three use the lowercase slug, but partner/sponsor were added to the
+# enum as Title-case, so the app logs exactly that (else the enum rejects it and
+# the audit write falls back to a WARNING).
+_FORM_VALUES = {"partner": "Partner", "sponsor": "Sponsor"}
+
 # Strings longer than this (base64 résumé uploads, mainly) are redacted from
 # the stored payload so the CRM text field stays manageable.
 _MAX_FIELD_CHARS = 2000
@@ -124,7 +130,7 @@ def build_submission_payload(
     email = getattr(submission, "email", None) or "(unknown)"
     payload: dict[str, Any] = {
         "name": f"{slug} — {email} — {datetime.now(timezone.utc):%Y-%m-%d}",
-        S_FORM: slug,
+        S_FORM: _FORM_VALUES.get(slug, slug),
         S_REASON: reason,
         S_STATUS: status,
         S_SUBMITTER_EMAIL: str(email),
