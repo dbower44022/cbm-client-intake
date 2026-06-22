@@ -19,13 +19,24 @@ class MentorClient(Protocol):
     async def metadata(self, key: str) -> Any: ...
 
 
-# Editable fields, grouped for the form. type drives the input + how the value
-# is sent. Order is the display order.
-EDITABLE_FIELDS: list[dict[str, str]] = [
+# "How did you hear about CBM" is a free-text CRM field, but the mentor intake
+# (volunteer) form offers a fixed list — mirror it here so admins pick the same
+# values. Kept in sync with forms/volunteer/frontend/options.js (howDidYouHear).
+HOW_HEARD_OPTIONS = [
+    "Friend or relative", "Newspaper", "Online search", "Radio", "SBA",
+    "CBM client or volunteer", "Social media", "TV", "Workshop/Event", "Other",
+]
+
+# Editable fields, grouped for the form (one tab per group). ``type`` drives the
+# input + how the value is sent; ``row`` (optional) sub-groups fields within a
+# tab; ``options`` (optional) supplies a static dropdown list for a field whose
+# CRM type is free-text. Order is the display order.
+EDITABLE_FIELDS: list[dict[str, Any]] = [
     {"name": "name", "label": "Name", "type": "varchar", "group": "Profile"},
     {"name": "mentorStatus", "label": "Status", "type": "enum", "group": "Status"},
     {"name": "mentorType", "label": "Type", "type": "enum", "group": "Status"},
     {"name": "acceptingNewClients", "label": "Accepting new clients", "type": "bool", "group": "Status"},
+    {"name": "mentorStartDate", "label": "Mentor start date", "type": "date", "group": "Status"},
     {"name": "mentorStatusNotes", "label": "Status notes", "type": "text", "group": "Status"},
     {"name": "maximumClientCapacity", "label": "Maximum client capacity", "type": "int", "group": "Capacity"},
     {"name": "yearsOfExperience", "label": "Years of experience", "type": "int", "group": "Capacity"},
@@ -33,22 +44,22 @@ EDITABLE_FIELDS: list[dict[str, str]] = [
     {"name": "mentoringFocusAreas", "label": "Mentoring focus areas", "type": "multiEnum", "group": "Expertise"},
     {"name": "areaOfExpertise", "label": "Areas of expertise", "type": "multiEnum", "group": "Expertise"},
     {"name": "fluentLanguages", "label": "Fluent languages", "type": "multiEnum", "group": "Expertise"},
-    {"name": "backgroundCheckCompleted", "label": "Background check completed", "type": "bool", "group": "Compliance"},
-    {"name": "backgroundCheckDate", "label": "Background check date", "type": "date", "group": "Compliance"},
-    {"name": "ethicsAgreementAccepted", "label": "Ethics agreement accepted", "type": "bool", "group": "Compliance"},
-    {"name": "trainingCompleted", "label": "Training completed", "type": "bool", "group": "Compliance"},
-    {"name": "trainingCompletionDate", "label": "Training completion date", "type": "date", "group": "Compliance"},
-    {"name": "termsAccepted", "label": "Terms accepted", "type": "bool", "group": "Compliance"},
-    {"name": "felonyConfiction", "label": "Felony conviction", "type": "bool", "group": "Compliance"},
-    {"name": "duesStatus", "label": "Dues status", "type": "enum", "group": "Compliance"},
-    {"name": "duesPaymentDate", "label": "Dues payment date", "type": "date", "group": "Compliance"},
-    {"name": "duesRenewalDate", "label": "Dues renewal date", "type": "date", "group": "Compliance"},
-    {"name": "mentorStartDate", "label": "Mentor start date", "type": "date", "group": "Dates"},
-    {"name": "departureDate", "label": "Departure date", "type": "date", "group": "Dates"},
-    {"name": "departureReason", "label": "Departure reason", "type": "enum", "group": "Dates"},
+    # Compliance: checkboxes on the top row, dates (and dues status) below.
+    {"name": "backgroundCheckCompleted", "label": "Background check completed", "type": "bool", "group": "Compliance", "row": "checks"},
+    {"name": "ethicsAgreementAccepted", "label": "Ethics agreement accepted", "type": "bool", "group": "Compliance", "row": "checks"},
+    {"name": "trainingCompleted", "label": "Training completed", "type": "bool", "group": "Compliance", "row": "checks"},
+    {"name": "termsAccepted", "label": "Terms accepted", "type": "bool", "group": "Compliance", "row": "checks"},
+    {"name": "felonyConfiction", "label": "Felony conviction", "type": "bool", "group": "Compliance", "row": "checks"},
+    {"name": "duesStatus", "label": "Dues status", "type": "enum", "group": "Compliance", "row": "dates"},
+    {"name": "backgroundCheckDate", "label": "Background check date", "type": "date", "group": "Compliance", "row": "dates"},
+    {"name": "trainingCompletionDate", "label": "Training completion date", "type": "date", "group": "Compliance", "row": "dates"},
+    {"name": "duesPaymentDate", "label": "Dues payment date", "type": "date", "group": "Compliance", "row": "dates"},
+    {"name": "duesRenewalDate", "label": "Dues renewal date", "type": "date", "group": "Compliance", "row": "dates"},
+    {"name": "departureDate", "label": "Departure date", "type": "date", "group": "Departure"},
+    {"name": "departureReason", "label": "Departure reason", "type": "enum", "group": "Departure"},
     {"name": "cbmEmail", "label": "CBM email", "type": "varchar", "group": "Profile"},
     {"name": "boardPosition", "label": "Board position", "type": "varchar", "group": "Profile"},
-    {"name": "howDidYouHearAboutCBM", "label": "How they heard about CBM", "type": "varchar", "group": "Profile"},
+    {"name": "howDidYouHearAboutCBM", "label": "How they heard about CBM", "type": "enum", "group": "Profile", "options": HOW_HEARD_OPTIONS},
     {"name": "description", "label": "Description / notes", "type": "text", "group": "Profile"},
     {"name": "aboutMentor", "label": "About the mentor", "type": "wysiwyg", "group": "Bio"},
     {"name": "mentorProfessionalBio", "label": "Professional bio", "type": "wysiwyg", "group": "Bio"},

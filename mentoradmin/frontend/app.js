@@ -121,6 +121,7 @@
       link.addEventListener("click", function () { openMentor(m.id); });
       name.appendChild(link); tr.appendChild(name);
       tr.appendChild(cell(badge(m.status)));
+      tr.appendChild(cell(fmtDate(m.createdAt)));
       tr.appendChild(cell(m.assignedClients == null ? "—" : String(m.assignedClients), "num"));
       tr.appendChild(cell(m.availableCapacity === -1 ? "Unlimited" : (m.availableCapacity == null ? "—" : String(m.availableCapacity)), "num"));
       tr.appendChild(cell(m.industrySector || "—"));
@@ -130,6 +131,7 @@
     updateSortIndicators();
   }
   function cell(content, cls) { var td = document.createElement("td"); if (cls) td.className = cls; if (content instanceof Node) td.appendChild(content); else td.textContent = content; return td; }
+  function fmtDate(v) { return v ? String(v).slice(0, 10) : "—"; }  // ISO date part (YYYY-MM-DD)
   function badge(status) { var s = document.createElement("span"); s.className = "status-badge status-" + (status || "none"); s.textContent = status || "—"; return s; }
   function updateSortIndicators() {
     Array.prototype.forEach.call($("mentorTable").querySelectorAll("th[data-sort]"), function (th) {
@@ -224,7 +226,15 @@
       btn.addEventListener("click", function () { activateTab(group); });
       tabs.appendChild(btn);
       var panel = document.createElement("div"); panel.className = "tab-panel"; panel.dataset.panel = group;
-      groups[group].forEach(function (f) { panel.appendChild(buildField(f, m[f.name])); });
+      // Sub-group fields by optional `row` (e.g. Compliance: checks then dates);
+      // fields with no `row` share one default row, in declaration order.
+      var rows = {}, rowOrder = [];
+      groups[group].forEach(function (f) { var r = f.row || "_default"; if (!rows[r]) { rows[r] = []; rowOrder.push(r); } rows[r].push(f); });
+      rowOrder.forEach(function (r) {
+        var rowEl = document.createElement("div"); rowEl.className = "tab-row" + (r === "checks" ? " tab-row--checks" : "");
+        rows[r].forEach(function (f) { rowEl.appendChild(buildField(f, m[f.name])); });
+        panel.appendChild(rowEl);
+      });
       form.appendChild(panel);
     });
     if (order.length) activateTab(order[0]);
@@ -253,7 +263,11 @@
     var el;
     if (f.type === "enum") {
       el = document.createElement("select");
-      (fieldOptions[f.name] || []).forEach(function (o) { el.appendChild(new Option(o === "" ? "(none)" : o, o)); });
+      var opts = (f.options || fieldOptions[f.name] || []).slice();
+      // Keep an existing free-text value selectable even if it's not in the list.
+      if (value != null && value !== "" && opts.indexOf(value) < 0) opts.unshift(value);
+      if (opts.indexOf("") < 0) opts.unshift("");  // allow clearing
+      opts.forEach(function (o) { el.appendChild(new Option(o === "" ? "(none)" : o, o)); });
       el.value = value == null ? "" : value;
     } else if (f.type === "multiEnum") {
       // A checkbox grid (flows into as many columns as fit) is far more compact

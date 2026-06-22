@@ -70,6 +70,23 @@ async def test_update_mentor_no_editable_changes_skips_update():
     assert client.gets  # still re-reads the record
 
 
+def test_field_spec_layout():
+    """Lock the requested detail-form layout."""
+    by = {f["name"]: f for f in service.EDITABLE_FIELDS}
+    # how-did-you-hear is a dropdown mirroring the mentor intake form
+    assert by["howDidYouHearAboutCBM"]["type"] == "enum"
+    assert by["howDidYouHearAboutCBM"]["options"] == service.HOW_HEARD_OPTIONS
+    # start date moved to Status; Dates tab renamed Departure (no more "Dates")
+    assert by["mentorStartDate"]["group"] == "Status"
+    assert by["departureDate"]["group"] == "Departure"
+    assert by["departureReason"]["group"] == "Departure"
+    assert not any(f["group"] == "Dates" for f in service.EDITABLE_FIELDS)
+    # Compliance: checkboxes on the top row, dates on the bottom
+    comp = [f for f in service.EDITABLE_FIELDS if f["group"] == "Compliance"]
+    assert all(f["row"] == "checks" for f in comp if f["type"] == "bool")
+    assert all(f["row"] == "dates" for f in comp if f["type"] == "date")
+
+
 @pytest.mark.asyncio
 async def test_get_mentor_selects_contact_info_foreign_fields():
     """The read-only summary card needs the Contact-mirrored foreign fields."""
