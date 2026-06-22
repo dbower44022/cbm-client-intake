@@ -62,6 +62,20 @@ def test_normal_payload_processed_with_source_and_contact():
     assert "/api/info-request/intake" not in payload["description"]
 
 
+def test_form_value_matches_crm_enum_casing():
+    # CRM is the source of truth: partner/sponsor are Title-case in the enum;
+    # the original three use the lowercase slug.
+    for slug, expected in [
+        ("partner", "Partner"),
+        ("sponsor", "Sponsor"),
+        ("info-request", "info-request"),
+    ]:
+        payload = build_submission_payload(
+            slug, _submission(), reason=REASON_NORMAL, status=STATUS_PROCESSED
+        )
+        assert payload["form"] == expected
+
+
 def test_honeypot_payload_clears_field_and_has_reprocess_steps():
     payload = build_submission_payload(
         "info-request", _submission(company_url="http://spam.example"),

@@ -56,17 +56,12 @@ FKs + the `contacts`/`sponsorContacts` hasMany relate confirmed. Tests green
   1. ✅ **DONE** — `create` grant on `CPartnerProfile` + `CSponsorProfile` added
      to the intake API user's role (read + create now granted; verified live
      2026-06-17).
-  2. ✅ **DONE (CRM, 2026-06-22)** — a `"Sponsor"` option was added to
-     `cContactType`. **App follow-up:** the sponsor orchestrator still writes
-     `cContactType=["Donor"]`; switch it to `["Sponsor"]` if you want sponsors
-     typed distinctly (one-line change in `forms/sponsor/orchestrator.py`).
-  3. ⚠️ **PARTIAL (CRM, 2026-06-22)** — `CIntakeSubmission.form` now lists
-     `Partner`/`Sponsor`, BUT **capitalized**, while the app logs the lowercase
-     slug (`spec.slug` = `partner`/`sponsor`, matching the other three). If
-     EspoCRM enforces the enum on create, partner/sponsor audit logs still
-     WARNING-fallback (main records create fine regardless). Fix: make the CRM
-     options lowercase `partner`/`sponsor`, or normalize in `core/submission_log`.
-     (No partner/sponsor CIntakeSubmission records exist yet to confirm.)
+  2. ✅ **DONE** — `"Sponsor"` option added to `cContactType` (CRM, 2026-06-22);
+     the sponsor orchestrator now writes `cContactType=["Sponsor"]`.
+  3. ✅ **DONE** — `CIntakeSubmission.form` lists `Partner`/`Sponsor` (CRM,
+     2026-06-22, **Title-case**). CRM is the source of truth, so the app conforms:
+     `core/submission_log._FORM_VALUES` maps the partner/sponsor slug to
+     `Partner`/`Sponsor` (the original three use the lowercase slug).
   4. ✅ **RESOLVED** — canonical Account link on `CPartnerProfile` is
      `partnerCompany` (populated bidirectionally; the alternate `account` link
      stays null). The orchestrator writes `partnerCompany` — correct.
