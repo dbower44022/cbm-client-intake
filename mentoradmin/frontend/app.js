@@ -169,6 +169,28 @@
   }
   function roLink(href, text) { var a = document.createElement("a"); a.className = "ro-link"; a.href = href; a.textContent = text; return a; }
 
+  // US-style phone: (216) 555-1234, tolerating a leading +1 / 1. Non-10-digit
+  // (international, extensions, etc.) values are shown as-is.
+  function formatPhone(raw) {
+    if (!raw) return raw;
+    var d = String(raw).replace(/\D/g, "");
+    if (d.length === 11 && d.charAt(0) === "1") d = d.slice(1);
+    if (d.length !== 10) return raw;
+    return "(" + d.slice(0, 3) + ") " + d.slice(3, 6) + "-" + d.slice(6);
+  }
+
+  // Two-line address: street on line 1, "City  ZIP" on line 2.
+  function addressNode(m) {
+    var line2 = [m.contactCity, m.postalCode].filter(Boolean).join("  ");
+    if (!m.contactStreet && !line2) return null;
+    var wrap = document.createElement("span"); wrap.className = "ro-address";
+    [m.contactStreet, line2].forEach(function (line) {
+      if (!line) return;
+      var s = document.createElement("span"); s.textContent = line; wrap.appendChild(s);
+    });
+    return wrap;
+  }
+
   function renderReadonly(m) {
     var box = $("readonly"); box.innerHTML = "";
     // status
@@ -176,9 +198,8 @@
     roItem(box, "Accepting new clients", m.acceptingNewClients ? "Yes" : "No");
     // contact
     if (m.personalEmail) roItem(box, "Email", roLink("mailto:" + m.personalEmail, m.personalEmail));
-    if (m.contactPhone) roItem(box, "Phone", roLink("tel:" + m.contactPhone, m.contactPhone));
-    var addr = [m.contactStreet, m.contactCity, m.postalCode].filter(Boolean).join(", ");
-    roItem(box, "Address", addr, true);
+    if (m.contactPhone) roItem(box, "Phone", roLink("tel:" + m.contactPhone, formatPhone(m.contactPhone)));
+    roItem(box, "Address", addressNode(m), true);
     // activity / capacity
     roItem(box, "Assigned user", m.assignedUserName);
     roItem(box, "Assigned clients", m.currentActiveClients);
@@ -235,9 +256,16 @@
       (fieldOptions[f.name] || []).forEach(function (o) { el.appendChild(new Option(o === "" ? "(none)" : o, o)); });
       el.value = value == null ? "" : value;
     } else if (f.type === "multiEnum") {
-      el = document.createElement("select"); el.multiple = true; el.size = 6;
+      // A checkbox grid (flows into as many columns as fit) is far more compact
+      // and scannable than a tall <select multiple> for these long lists.
+      el = document.createElement("div"); el.className = "checkgrid";
       var sel = value || [];
-      (fieldOptions[f.name] || []).forEach(function (o) { var op = new Option(o, o); op.selected = sel.indexOf(o) >= 0; el.appendChild(op); });
+      (fieldOptions[f.name] || []).forEach(function (o) {
+        var lab = document.createElement("label"); lab.className = "checkgrid__opt";
+        var cb = document.createElement("input"); cb.type = "checkbox"; cb.value = o; cb.checked = sel.indexOf(o) >= 0;
+        lab.appendChild(cb); lab.appendChild(document.createTextNode(" " + o));
+        el.appendChild(lab);
+      });
     } else if (f.type === "bool") {
       el = document.createElement("input"); el.type = "checkbox"; el.checked = !!value;
     } else if (f.type === "int") {
@@ -254,7 +282,7 @@
 
   function readField(el) {
     var t = el.dataset.type;
-    if (t === "multiEnum") return Array.prototype.map.call(el.selectedOptions, function (o) { return o.value; });
+    if (t === "multiEnum") return Array.prototype.map.call(el.querySelectorAll("input:checked"), function (c) { return c.value; });
     if (t === "bool") return el.checked;
     if (t === "int") return el.value === "" ? null : Number(el.value);
     if (t === "date") return el.value || null;

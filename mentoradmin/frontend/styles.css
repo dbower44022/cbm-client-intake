@@ -1,7 +1,9 @@
 /* Mentor Admin — list (search/filter/sort) + per-mentor review & edit.
    Builds on /shared/tokens.css; mirrors the ops/assignments console styling. */
 
-.ma { padding-top: 2rem; padding-bottom: 3rem; max-width: var(--cbm-container); }
+/* Use most of the viewport — the edit form (esp. the long Expertise lists)
+   benefits from the extra width. */
+.ma { padding-top: 2rem; padding-bottom: 3rem; max-width: min(1480px, 96vw); }
 .ma__header h1 { color: var(--cbm-navy); font-family: var(--cbm-font-serif); margin-bottom: 0.25rem; }
 .ma__sub { color: var(--cbm-text); margin-top: 0; }
 
@@ -63,6 +65,7 @@
 .ro-value { font-weight: 600; color: var(--cbm-navy); }
 .ro-link { color: var(--cbm-blue); text-decoration: none; font-weight: 600; }
 .ro-link:hover { text-decoration: underline; }
+.ro-address { display: flex; flex-direction: column; line-height: 1.3; }
 
 /* edit tabs */
 .ma__tabs { display: flex; flex-wrap: wrap; gap: 0.25rem; border-bottom: 2px solid var(--cbm-border);
@@ -87,5 +90,13 @@
 .cbm-field--check { flex-direction: row; align-items: center; }
 .cbm-field--check label { flex-direction: row; align-items: center; gap: 0.4rem; font-weight: 600; color: var(--cbm-navy); }
 .cbm-field--check input { width: auto; }
-/* full-width inputs for long text */
-.field-text, .field-wysiwyg { grid-column: 1 / -1; }
+/* full-width inputs for long text + the multi-select checkbox grids */
+.field-text, .field-wysiwyg, .field-multiEnum { grid-column: 1 / -1; }
+
+/* multiEnum as a compact checkbox grid that flows across the full width */
+.checkgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 0.1rem 0.9rem; margin-top: 0.1rem; padding: 0.5rem 0.7rem;
+  border: 1px solid var(--cbm-border); border-radius: var(--cbm-radius); background: var(--cbm-white); }
+.checkgrid__opt { display: flex; align-items: center; gap: 0.4rem; font-weight: 400;
+  font-size: var(--cbm-text-sm); color: var(--cbm-text); cursor: pointer; padding: 0.15rem 0; }
+.checkgrid__opt input { width: auto; margin: 0; flex: none; }
