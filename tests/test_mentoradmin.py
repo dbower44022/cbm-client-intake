@@ -168,7 +168,7 @@ def test_cbm_email_for():
 @pytest.mark.asyncio
 async def test_approval_provisions_user():
     c = ProvisionClient()
-    result = await service.update_mentor(c, "m1", {"mentorStatus": "Approved"}, team_name="Mentor Team")
+    result = await service.update_mentor(c, "m1", {"mentorStatus": "Approved"}, team_name="Mentor Team", admin_client=c)
     assert len(c.created) == 1
     entity, payload = c.created[0]
     assert entity == "User"
@@ -187,17 +187,25 @@ async def test_approval_provisions_user():
 
 
 @pytest.mark.asyncio
+async def test_no_admin_client_means_no_provisioning():
+    """Without a privileged client, approval never tries to create a user."""
+    c = ProvisionClient()
+    res = await service.update_mentor(c, "m1", {"mentorStatus": "Approved"}, team_name="Mentor Team")
+    assert c.created == [] and "provision" not in res
+
+
+@pytest.mark.asyncio
 async def test_approval_skips_when_user_already_linked():
     c = ProvisionClient(profile={"id": "m1", "name": "Jane Doe", "mentorStatus": "Candidate",
                                  "assignedUserId": "u9", "cbmEmail": "", "contactRecordId": "c1"})
-    res = await service.update_mentor(c, "m1", {"mentorStatus": "Approved"}, team_name="Mentor Team")
+    res = await service.update_mentor(c, "m1", {"mentorStatus": "Approved"}, team_name="Mentor Team", admin_client=c)
     assert c.created == [] and "provision" not in res
 
 
 @pytest.mark.asyncio
 async def test_non_approval_change_does_not_provision():
     c = ProvisionClient()
-    await service.update_mentor(c, "m1", {"mentorStatus": "Active"}, team_name="Mentor Team")
+    await service.update_mentor(c, "m1", {"mentorStatus": "Active"}, team_name="Mentor Team", admin_client=c)
     assert c.created == []
 
 
@@ -205,14 +213,14 @@ async def test_non_approval_change_does_not_provision():
 async def test_resaving_approved_does_not_provision():
     c = ProvisionClient(profile={"id": "m1", "name": "Jane Doe", "mentorStatus": "Approved",
                                  "assignedUserId": None, "cbmEmail": "", "contactRecordId": "c1"})
-    await service.update_mentor(c, "m1", {"mentorStatus": "Approved"}, team_name="Mentor Team")
+    await service.update_mentor(c, "m1", {"mentorStatus": "Approved"}, team_name="Mentor Team", admin_client=c)
     assert c.created == []
 
 
 @pytest.mark.asyncio
 async def test_username_collision_appends_suffix():
     c = ProvisionClient(existing_users={"jane.doe@cbmentors.org"})
-    await service.update_mentor(c, "m1", {"mentorStatus": "Approved"}, team_name="Mentor Team")
+    await service.update_mentor(c, "m1", {"mentorStatus": "Approved"}, team_name="Mentor Team", admin_client=c)
     assert c.created[0][1]["userName"] == "jane.doe2@cbmentors.org"
 
 
@@ -220,7 +228,7 @@ async def test_username_collision_appends_suffix():
 async def test_existing_cbm_email_reused_and_not_backfilled():
     c = ProvisionClient(profile={"id": "m1", "name": "Jane Doe", "mentorStatus": "Candidate",
                                  "assignedUserId": None, "cbmEmail": "jdoe@cbmentors.org", "contactRecordId": "c1"})
-    await service.update_mentor(c, "m1", {"mentorStatus": "Approved"}, team_name="Mentor Team")
+    await service.update_mentor(c, "m1", {"mentorStatus": "Approved"}, team_name="Mentor Team", admin_client=c)
     assert c.created[0][1]["userName"] == "jdoe@cbmentors.org"
     assert "cbmEmail" not in _link_update(c)
 
@@ -228,7 +236,7 @@ async def test_existing_cbm_email_reused_and_not_backfilled():
 @pytest.mark.asyncio
 async def test_team_not_found_reports_error_without_failing_save():
     c = ProvisionClient(team=None)
-    res = await service.update_mentor(c, "m1", {"mentorStatus": "Approved"}, team_name="Mentor Team")
+    res = await service.update_mentor(c, "m1", {"mentorStatus": "Approved"}, team_name="Mentor Team", admin_client=c)
     assert c.created == []  # never reached user creation
     assert res["provision"]["ok"] is False
     assert "not found" in res["provision"]["error"].lower()

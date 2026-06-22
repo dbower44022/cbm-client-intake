@@ -21,8 +21,8 @@ from assignments.auth import (
     set_session,
 )
 from assignments.espo_user import client_for
-from core.config import get_settings
-from core.espo import EspoError
+from core.config import Settings, get_settings
+from core.espo import EspoClient, EspoError
 
 from . import service
 
@@ -112,6 +112,20 @@ async def mentor_detail(mentor_id: str, request: Request) -> dict:
         raise _crm_failure(request, exc, "Could not load mentor")
 
 
+def _provision_client(settings: Settings):
+    """Privileged backend client for user provisioning, or None when disabled.
+
+    Uses the service API key (not the staff user's token), so provisioning never
+    needs the logged-in user to have user-create rights. Gated on
+    ``mentor_provision_users`` and a real (non-dry-run) API key.
+    """
+    if not settings.mentor_provision_users or settings.espo_dry_run or not settings.espo_api_key:
+        return None
+    return EspoClient(
+        settings.espo_base_url, settings.espo_api_key, settings.request_timeout_seconds
+    )
+
+
 @router.put("/mentors/{mentor_id}")
 async def mentor_update(mentor_id: str, body: UpdateIn, request: Request) -> dict:
     settings = get_settings()
@@ -119,7 +133,9 @@ async def mentor_update(mentor_id: str, body: UpdateIn, request: Request) -> dic
     client = client_for(settings, user)
     try:
         return await service.update_mentor(
-            client, mentor_id, body.changes, team_name=settings.mentor_team_name
+            client, mentor_id, body.changes,
+            team_name=settings.mentor_team_name,
+            admin_client=_provision_client(settings),
         )
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not save mentor")

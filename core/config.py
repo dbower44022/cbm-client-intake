@@ -57,6 +57,11 @@ class Settings(BaseSettings):
     mentor_admin_allowed_teams: str = "Mentor Administration Team"
     # Team that approved mentors' new login users are placed in.
     mentor_team_name: str = "Mentor Team"
+    # Auto-provision a login User when a mentor is Approved. Runs under the
+    # backend service API key (NEVER the staff user's token), so Mentor Admin
+    # staff need no user-create permission. Off until that API user is granted
+    # User read/create + Team read in the CRM.
+    mentor_provision_users: bool = False
     # Marks a session cookie Secure; set false only for plain-HTTP local dev.
     session_cookie_secure: bool = True
 

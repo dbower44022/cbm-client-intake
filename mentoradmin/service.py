@@ -110,15 +110,19 @@ async def update_mentor(
     changes: dict[str, Any],
     *,
     team_name: Optional[str] = None,
+    admin_client: Optional[MentorClient] = None,
 ) -> dict[str, Any]:
     """Update whitelisted editable fields; ignore anything else.
 
     Side effect: when ``mentorStatus`` transitions to ``Approved`` (and the
-    mentor has no login user yet), provision an EspoCRM User for them, link it to
-    the profile, and place it in the mentor team. Provisioning runs *after* the
-    status write and is best-effort: a failure (e.g. missing permission or team)
-    is captured in the returned ``provision`` summary rather than failing the
-    save, since the status change has already taken effect.
+    mentor has no login user yet) AND an ``admin_client`` is supplied, provision
+    an EspoCRM User for them, link it to the profile, and place it in the mentor
+    team. **User creation/team lookup run under ``admin_client``** (a privileged
+    backend credential), never the staff ``client`` — so Mentor Admin staff need
+    no user-create permission. Without ``admin_client`` (the default), no
+    provisioning is attempted. It runs *after* the status write and is
+    best-effort: a failure is captured in the returned ``provision`` summary
+    rather than failing the save, since the status change already took effect.
     """
     payload = {k: v for k, v in changes.items() if k in EDITABLE_NAMES}
     if not payload:
@@ -128,7 +132,7 @@ async def update_mentor(
     # mentor) triggers provisioning, and only if no user is linked yet.
     becoming_approved = payload.get("mentorStatus") == STATUS_APPROVED
     before = None
-    if becoming_approved:
+    if becoming_approved and admin_client is not None:
         before = await client.get(
             MENTOR_PROFILE, mentor_id, select="mentorStatus,assignedUserId"
         )
@@ -137,14 +141,14 @@ async def update_mentor(
 
     provision: Optional[dict[str, Any]] = None
     if (
-        becoming_approved
+        admin_client is not None
         and before is not None
         and before.get("mentorStatus") != STATUS_APPROVED
         and not before.get("assignedUserId")
     ):
         try:
             summary = await provision_mentor_user(
-                client, mentor_id, team_name=team_name or DEFAULT_MENTOR_TEAM
+                admin_client, client, mentor_id, team_name=team_name or DEFAULT_MENTOR_TEAM
             )
             provision = {"ok": True, **summary}
         except MentorAdminError as exc:
@@ -197,24 +201,34 @@ async def _find_team_id(client: MentorClient, team_name: str) -> str:
 
 
 async def provision_mentor_user(
-    client: MentorClient, mentor_id: str, *, team_name: str
+    admin_client: MentorClient,
+    edit_client: MentorClient,
+    mentor_id: str,
+    *,
+    team_name: str,
 ) -> dict[str, Any]:
     """Create a login User for an approved mentor, link it, and team it.
+
+    Privilege split: ``admin_client`` (a backend service credential) does the
+    User read/create + Team lookup — the operations staff users aren't allowed to
+    do. ``edit_client`` (the logged-in staff user) reads the profile/contact and
+    writes the ``assignedUser`` link, which staff already can. So the elevated
+    permission lives only in the backend credential.
 
     userName/email = ``firstname.lastname@cbmentors.org`` (the CBM email; reuses
     the profile's ``cbmEmail`` if already set). The User is active, in
     ``team_name``, and EspoCRM is asked to email access info (``sendAccessInfo``)
     so the mentor sets their own password. The new User becomes the profile's
-    ``assignedUser`` (the same link the assignment tool reads as the mentor's
-    login), and the CBM email is written back to the profile when it was blank.
+    ``assignedUser`` (the same link the assignment tool reads), and the CBM email
+    is written back to the profile when it was blank.
     """
-    profile = await client.get(
+    profile = await edit_client.get(
         MENTOR_PROFILE, mentor_id, select="name,cbmEmail,contactRecordId"
     )
     first, last = "", ""
     contact_id = profile.get("contactRecordId")
     if contact_id:
-        contact = await client.get(
+        contact = await edit_client.get(
             "Contact", contact_id, select="firstName,lastName"
         )
         first = (contact.get("firstName") or "").strip()
@@ -224,8 +238,8 @@ async def provision_mentor_user(
 
     existing_cbm = (profile.get("cbmEmail") or "").strip()
     cbm = existing_cbm or cbm_email_for(first, last)
-    user_name = await _unique_user_name(client, cbm)
-    team_id = await _find_team_id(client, team_name)
+    user_name = await _unique_user_name(admin_client, cbm)
+    team_id = await _find_team_id(admin_client, team_name)
 
     user_payload: dict[str, Any] = {
         "userName": user_name,
@@ -239,13 +253,13 @@ async def provision_mentor_user(
     }
     if first:
         user_payload["firstName"] = first
-    user = await client.create("User", user_payload)
+    user = await admin_client.create("User", user_payload)
     user_id = user.get("id")
 
     link_payload: dict[str, Any] = {"assignedUserId": user_id}
     if not existing_cbm:
         link_payload["cbmEmail"] = cbm
-    await client.update(MENTOR_PROFILE, mentor_id, link_payload)
+    await edit_client.update(MENTOR_PROFILE, mentor_id, link_payload)
 
     return {"userId": user_id, "userName": user_name, "email": cbm, "team": team_name}
 
