@@ -124,6 +124,21 @@ Endpoints 503 if no store. Linked from the form index under "Staff". Verified
 against local Postgres (list/counts/redrive) + console wiring (serves, 401 unauth).
 Phase 3 (alerting + schema-drift) is next.
 
+**Phase 3 — monitoring + alerting, scaffolded 2026-06-22.** The worker runs two
+periodic checks (own timers, no cron dependency): (1) **alerting** —
+`core/monitoring.run_alert_check` reads `store.metrics()` (counts, backlog,
+oldest-pending age, avg latency) and alerts when `needs_attention` ≥ threshold or
+the oldest pending exceeds `ALERT_PENDING_AGE_MINUTES`, with a per-alert cooldown;
+(2) **schema-drift** — `run_schema_drift_check` fetches live enum options
+(`EspoClient.metadata_enum_options`) and compares against `core/schema_contract.py`
+`EXPECTED_ENUMS`, alerting when a value the forms rely on has gone missing.
+Alerts post to `ALERT_WEBHOOK_URL` (Slack-compatible) or log at WARNING. The ops
+console gains `GET /ops/api/metrics` + a backlog/needs-attention summary line.
+Verified: alert thresholds + cooldown + drift diff (unit), and the drift check
+run **live against crm-test** (all 5 contract entries aligned, no false alerts).
+**This completes the V2 build (Phases 0–3); all gated/dormant until a database +
+worker are deployed.**
+
 ## Mentor Assignment tool — `/assignments` (added 2026-06-19)
 
 A **staff-only** dashboard (NOT a public intake form) that lives in the same

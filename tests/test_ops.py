@@ -50,6 +50,10 @@ class FakeOpsStore:
             return True
         return False
 
+    async def metrics(self):
+        return {"counts": {"needs_attention": 1}, "needsAttention": 1,
+                "backlog": 0, "oldestPendingAgeSeconds": None, "avgLatencySeconds": None}
+
 
 def _app(monkeypatch, store):
     monkeypatch.setenv("SESSION_SECRET", "test-secret")  # enables session + ops router
@@ -100,3 +104,10 @@ def test_detail(monkeypatch):
         d = c.get("/ops/api/submissions/abc12345").json()
     assert d["payload"]["first_name"] == "Ada"
     assert d["status"] == "needs_attention"
+
+
+def test_metrics(monkeypatch):
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, FakeOpsStore())) as c:
+        m = c.get("/ops/api/metrics").json()
+    assert m["needsAttention"] == 1 and "backlog" in m

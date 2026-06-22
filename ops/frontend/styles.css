@@ -13,6 +13,8 @@
 .ops__who { color: var(--cbm-slate-700); }
 .ops__actions { display: flex; gap: 0.5rem; }
 
+.ops__metrics { color: var(--cbm-slate-700); font-size: var(--cbm-text-sm); margin: 0 0 0.6rem; }
+.ops__metrics.is-alert { color: var(--cbm-danger); font-weight: 600; }
 .ops__counts { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.85rem; }
 .count-chip { padding: 0.2rem 0.6rem; border-radius: 999px; font-size: var(--cbm-text-sm);
   background: var(--cbm-surface); border: 1px solid var(--cbm-border); color: var(--cbm-slate-700); }

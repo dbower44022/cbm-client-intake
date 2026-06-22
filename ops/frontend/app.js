@@ -68,10 +68,23 @@
       var data = await api("/submissions" + (qs.length ? "?" + qs.join("&") : ""));
       renderCounts(data.counts || {});
       renderTable(data.submissions || []);
+      api("/metrics").then(renderMetrics).catch(function () {});
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }
       notice(e.message, "error");
     } finally { hide($("loadingState")); }
+  }
+
+  function renderMetrics(m) {
+    var el = $("metrics");
+    if (!el) return;
+    var bits = ["backlog: " + (m.backlog || 0), "needs attention: " + (m.needsAttention || 0)];
+    if (m.oldestPendingAgeSeconds != null)
+      bits.push("oldest pending: " + Math.round(m.oldestPendingAgeSeconds / 60) + " min");
+    if (m.avgLatencySeconds != null)
+      bits.push("avg delivery: " + Math.round(m.avgLatencySeconds) + "s");
+    el.textContent = bits.join("  ·  ");
+    el.className = "ops__metrics" + (m.needsAttention ? " is-alert" : "");
   }
 
   function renderCounts(counts) {
