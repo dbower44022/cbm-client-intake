@@ -38,3 +38,26 @@ async def test_capture_idempotency_and_completion():
     assert third.result == {"contactId": "c1"}
 
     await store.dispose()
+
+
+async def test_ops_list_counts_and_redrive():
+    store = PostgresStore(_URL)
+    await store.create_all()
+    token = f"ops-{uuid.uuid4()}"
+    cap = await store.capture(
+        "info-request", token, {"email": "ops@example.com"}, status="needs_attention"
+    )
+
+    rows = await store.list_submissions(status="needs_attention")
+    mine = [r for r in rows if r["id"] == cap.id]
+    assert mine and mine[0]["email"] == "ops@example.com"
+
+    counts = await store.counts_by_status()
+    assert counts.get("needs_attention", 0) >= 1
+
+    assert await store.redrive(cap.id) is True
+    detail = await store.get_submission(cap.id)
+    assert detail["status"] == "pending"
+    assert detail["attempt_count"] == 0
+
+    await store.dispose()

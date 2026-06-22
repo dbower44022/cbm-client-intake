@@ -26,6 +26,7 @@ from sqlalchemy import (
     Table,
     Text,
     UniqueConstraint,
+    func,
     select,
     update,
 )
@@ -111,6 +112,13 @@ class SubmissionStore(Protocol):
         self, submission_id: str, *, attempt_count: int, next_attempt_at: datetime, error: str
     ) -> None: ...
     async def save_progress(self, submission_id: str, progress: dict[str, Any]) -> None: ...
+    # Phase 2 (ops view) operations:
+    async def list_submissions(
+        self, *, status: Optional[str] = None, form: Optional[str] = None, limit: int = 200
+    ) -> list[dict[str, Any]]: ...
+    async def get_submission(self, submission_id: str) -> Optional[dict[str, Any]]: ...
+    async def counts_by_status(self) -> dict[str, int]: ...
+    async def redrive(self, submission_id: str) -> bool: ...
     async def dispose(self) -> None: ...
 
 
@@ -249,6 +257,69 @@ class PostgresStore:
                 .where(submission.c.id == submission_id)
                 .values(progress=progress, updated_at=_now())
             )
+
+    async def list_submissions(
+        self, *, status: Optional[str] = None, form: Optional[str] = None, limit: int = 200
+    ) -> list[dict[str, Any]]:
+        query = (
+            select(
+                submission.c.id,
+                submission.c.form_slug,
+                submission.c.submission_token,
+                submission.c.status,
+                submission.c.attempt_count,
+                submission.c.last_error,
+                submission.c.payload["email"].astext.label("email"),
+                submission.c.received_at,
+                submission.c.processed_at,
+                submission.c.next_attempt_at,
+            )
+            .order_by(submission.c.received_at.desc())
+            .limit(limit)
+        )
+        if status:
+            query = query.where(submission.c.status == status)
+        if form:
+            query = query.where(submission.c.form_slug == form)
+        async with self._engine.begin() as conn:
+            rows = (await conn.execute(query)).mappings().all()
+        return [dict(r) for r in rows]
+
+    async def get_submission(self, submission_id: str) -> Optional[dict[str, Any]]:
+        async with self._engine.begin() as conn:
+            row = (
+                await conn.execute(
+                    select(submission).where(submission.c.id == submission_id)
+                )
+            ).mappings().first()
+        return dict(row) if row else None
+
+    async def counts_by_status(self) -> dict[str, int]:
+        async with self._engine.begin() as conn:
+            rows = (
+                await conn.execute(
+                    select(submission.c.status, func.count().label("n")).group_by(
+                        submission.c.status
+                    )
+                )
+            ).all()
+        return {r[0]: r[1] for r in rows}
+
+    async def redrive(self, submission_id: str) -> bool:
+        """Re-queue a submission: back to pending, due now, fresh attempt budget.
+        The worker re-runs it from saved ``progress`` (no duplication)."""
+        async with self._engine.begin() as conn:
+            result = await conn.execute(
+                update(submission)
+                .where(submission.c.id == submission_id)
+                .values(
+                    status=STATUS_PENDING,
+                    next_attempt_at=None,
+                    attempt_count=0,
+                    updated_at=_now(),
+                )
+            )
+        return result.rowcount > 0
 
     async def dispose(self) -> None:
         await self._engine.dispose()

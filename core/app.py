@@ -43,6 +43,7 @@ SHARED_DIR = Path(__file__).resolve().parent.parent / "frontend" / "shared"
 ASSIGNMENTS_FRONTEND_DIR = (
     Path(__file__).resolve().parent.parent / "assignments" / "frontend"
 )
+OPS_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "ops" / "frontend"
 
 
 def _make_client(settings: Settings) -> EspoApi:
@@ -172,6 +173,8 @@ def _index_html(forms: list[FormSpec], include_assignments: bool = False) -> str
         staff = (
             "<h2>Staff</h2><ul>"
             '<li><a href="/assignments/">Mentor Assignment dashboard</a> '
+            "<em>(staff sign-in required)</em></li>"
+            '<li><a href="/ops/">Submission Operations</a> '
             "<em>(staff sign-in required)</em></li></ul>"
         )
     year = datetime.now(timezone.utc).year
@@ -203,6 +206,8 @@ def create_app(
         yield
 
     app = FastAPI(title="CBM Intake Forms", version=__version__, lifespan=lifespan)
+    # Exposed to the ops console router (V2 Phase 2).
+    app.state.submission_store = store
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.allowed_origins_list,
@@ -264,12 +269,15 @@ def create_app(
             name=f"intake-{spec.slug}",
         )
 
-    # Assignment tool API routes (registered before the static mount below so
-    # /assignments/api/* resolves to the router, not the static frontend).
+    # Assignment tool + ops console API routes (registered before the static
+    # mounts below so /assignments/api/* and /ops/api/* resolve to the routers).
+    # Both reuse the EspoCRM team-auth session, so they need SESSION_SECRET.
     if settings.assignments_active:
         from assignments import router as assignments_router
+        from ops import api_router as ops_router
 
         app.include_router(assignments_router)
+        app.include_router(ops_router)
 
     @app.get("/", response_class=HTMLResponse)
     async def index() -> str:
@@ -288,6 +296,12 @@ def create_app(
             "/assignments",
             StaticFiles(directory=str(ASSIGNMENTS_FRONTEND_DIR), html=True),
             name="assignments-frontend",
+        )
+    if settings.assignments_active and OPS_FRONTEND_DIR.is_dir():
+        app.mount(
+            "/ops",
+            StaticFiles(directory=str(OPS_FRONTEND_DIR), html=True),
+            name="ops-frontend",
         )
     app.mount("/shared", StaticFiles(directory=str(SHARED_DIR)), name="shared")
 
