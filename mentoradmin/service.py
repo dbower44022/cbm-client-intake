@@ -59,11 +59,15 @@ EDITABLE_FIELDS: list[dict[str, str]] = [
 EDITABLE_NAMES = {f["name"] for f in EDITABLE_FIELDS}
 _ENUM_FIELDS = [f["name"] for f in EDITABLE_FIELDS if f["type"] in ("enum", "multiEnum")]
 
-# Read-only context shown above the form.
+# Read-only context shown above the form. Includes the contact-info "foreign"
+# fields CMentorProfile mirrors from the linked Contact (personalEmail/
+# contactPhone/contactStreet/contactCity/postalCode) — not editable here (they
+# live on the Contact), shown read-only in the summary card.
 READ_ONLY_FIELDS = [
     "availableCapacity", "currentActiveClients", "maximumClientCapacity",
     "totalLifetimeSessions", "totalSessionsLast30Days", "totalMentoringHours",
     "contactRecordName", "assignedUserName", "createdAt", "modifiedAt",
+    "personalEmail", "contactPhone", "contactStreet", "contactCity", "postalCode",
 ]
 
 _DETAIL_SELECT = ",".join(["id"] + sorted(EDITABLE_NAMES) + READ_ONLY_FIELDS)

@@ -71,6 +71,19 @@ async def test_update_mentor_no_editable_changes_skips_update():
 
 
 @pytest.mark.asyncio
+async def test_get_mentor_selects_contact_info_foreign_fields():
+    """The read-only summary card needs the Contact-mirrored foreign fields."""
+    client = FakeClient()
+    await service.get_mentor(client, "m1")
+    _, _, select = client.gets[0]
+    cols = select.split(",")
+    for f in ("personalEmail", "contactPhone", "contactStreet", "contactCity", "postalCode"):
+        assert f in cols
+    # these stay read-only — never in the editable whitelist
+    assert not (service.EDITABLE_NAMES & {"personalEmail", "contactPhone", "postalCode"})
+
+
+@pytest.mark.asyncio
 async def test_field_options_reads_live_enums():
     meta = {
         "mentorStatus": {"type": "enum", "options": ["Active", "Inactive"]},

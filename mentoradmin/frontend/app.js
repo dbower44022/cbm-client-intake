@@ -158,33 +158,62 @@
     window.scrollTo(0, 0);
   }
 
+  // Compact, read-only summary card: status + contact + activity, at a glance.
+  function roItem(box, label, value, wide) {
+    if (value == null || value === "") return;
+    var d = document.createElement("div"); d.className = "ro-item" + (wide ? " ro-item--wide" : "");
+    var l = document.createElement("span"); l.className = "ro-label"; l.textContent = label;
+    var v = document.createElement("span"); v.className = "ro-value";
+    if (value instanceof Node) v.appendChild(value); else v.textContent = value;
+    d.appendChild(l); d.appendChild(v); box.appendChild(d);
+  }
+  function roLink(href, text) { var a = document.createElement("a"); a.className = "ro-link"; a.href = href; a.textContent = text; return a; }
+
   function renderReadonly(m) {
     var box = $("readonly"); box.innerHTML = "";
-    var items = [
-      ["Contact", m.contactRecordName], ["Assigned user", m.assignedUserName],
-      ["Assigned clients", m.currentActiveClients], ["Available capacity", m.availableCapacity === -1 ? "Unlimited" : m.availableCapacity],
-      ["Max capacity", m.maximumClientCapacity], ["Lifetime sessions", m.totalLifetimeSessions],
-      ["Sessions (30d)", m.totalSessionsLast30Days], ["Total hours", m.totalMentoringHours],
-    ];
-    items.forEach(function (it) {
-      if (it[1] == null || it[1] === "") return;
-      var d = document.createElement("div"); d.className = "ro-item";
-      var l = document.createElement("span"); l.className = "ro-label"; l.textContent = it[0];
-      var v = document.createElement("span"); v.className = "ro-value"; v.textContent = it[1];
-      d.appendChild(l); d.appendChild(v); box.appendChild(d);
-    });
+    // status
+    roItem(box, "Mentoring status", badge(m.mentorStatus));
+    roItem(box, "Accepting new clients", m.acceptingNewClients ? "Yes" : "No");
+    // contact
+    if (m.personalEmail) roItem(box, "Email", roLink("mailto:" + m.personalEmail, m.personalEmail));
+    if (m.contactPhone) roItem(box, "Phone", roLink("tel:" + m.contactPhone, m.contactPhone));
+    var addr = [m.contactStreet, m.contactCity, m.postalCode].filter(Boolean).join(", ");
+    roItem(box, "Address", addr, true);
+    // activity / capacity
+    roItem(box, "Assigned user", m.assignedUserName);
+    roItem(box, "Assigned clients", m.currentActiveClients);
+    roItem(box, "Available capacity", m.availableCapacity === -1 ? "Unlimited" : m.availableCapacity);
+    roItem(box, "Max capacity", m.maximumClientCapacity);
+    roItem(box, "Lifetime sessions", m.totalLifetimeSessions);
+    roItem(box, "Sessions (30d)", m.totalSessionsLast30Days);
+    roItem(box, "Total hours", m.totalMentoringHours);
   }
 
+  // Editable fields, one tab per major area; all panels stay in the DOM (hidden
+  // when inactive) so Save still reads every field across all tabs.
   function renderForm(m) {
     var form = $("editForm"); form.innerHTML = "";
-    var groups = {};
-    fieldSpec.forEach(function (f) { (groups[f.group] = groups[f.group] || []).push(f); });
-    Object.keys(groups).forEach(function (group) {
-      var section = document.createElement("fieldset"); section.className = "form-group";
-      var legend = document.createElement("legend"); legend.textContent = group; section.appendChild(legend);
-      groups[group].forEach(function (f) { section.appendChild(buildField(f, m[f.name])); });
-      form.appendChild(section);
+    var tabs = $("editTabs"); tabs.innerHTML = "";
+    var groups = {}, order = [];
+    fieldSpec.forEach(function (f) { if (!groups[f.group]) { groups[f.group] = []; order.push(f.group); } groups[f.group].push(f); });
+    order.forEach(function (group) {
+      var btn = document.createElement("button");
+      btn.type = "button"; btn.className = "ma__tab"; btn.textContent = group;
+      btn.dataset.tab = group; btn.setAttribute("role", "tab");
+      btn.addEventListener("click", function () { activateTab(group); });
+      tabs.appendChild(btn);
+      var panel = document.createElement("div"); panel.className = "tab-panel"; panel.dataset.panel = group;
+      groups[group].forEach(function (f) { panel.appendChild(buildField(f, m[f.name])); });
+      form.appendChild(panel);
     });
+    if (order.length) activateTab(order[0]);
+  }
+
+  function activateTab(group) {
+    Array.prototype.forEach.call($("editTabs").children, function (b) {
+      var on = b.dataset.tab === group; b.classList.toggle("is-active", on); b.setAttribute("aria-selected", on);
+    });
+    Array.prototype.forEach.call($("editForm").children, function (p) { p.hidden = p.dataset.panel !== group; });
   }
 
   function buildField(f, value) {
