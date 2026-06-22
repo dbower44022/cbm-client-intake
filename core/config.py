@@ -33,6 +33,16 @@ class Settings(BaseSettings):
     worker_batch_size: int = 10
     max_delivery_attempts: int = 8
 
+    # --- V2 Phase 3: monitoring + alerting (run as periodic worker tasks) ---
+    # Where to send alerts (a Slack-compatible {"text": ...} webhook). Empty =>
+    # alerts are logged at WARNING only.
+    alert_webhook_url: str = ""
+    alert_check_seconds: int = 300          # how often the worker evaluates thresholds
+    alert_needs_attention_threshold: int = 1  # alert when this many are stuck
+    alert_pending_age_minutes: int = 30     # alert when the oldest pending is older
+    alert_cooldown_seconds: int = 3600      # minimum gap between repeats of an alert
+    schema_check_seconds: int = 3600        # CRM schema-drift cadence (0 disables)
+
     # --- Mentor assignment tool (/assignments) ---
     # Staff-only dashboard; authenticates each user against EspoCRM and acts as
     # them. Disabled if no session secret is set (see ``assignments_active``).

@@ -224,6 +224,25 @@ class EspoClient:
                 f"HTTP {resp.status_code} {resp.text[:300]}"
             )
 
+    async def metadata_enum_options(
+        self, entity: str, field: str
+    ) -> Optional[list[str]]:
+        """The live option set of an enum/multiEnum field, for schema-drift checks.
+
+        Returns None if the field/options aren't found (so callers can skip it).
+        """
+        params = {"key": f"entityDefs.{entity}.fields.{field}.options"}
+        async with httpx.AsyncClient(timeout=self._timeout) as client:
+            resp = await client.get(
+                f"{self._base}/Metadata", params=params, headers=self._headers
+            )
+        if resp.status_code >= 400:
+            raise EspoError(
+                f"metadata {entity}.{field} failed: HTTP {resp.status_code} {resp.text[:200]}"
+            )
+        options = resp.json()
+        return options if isinstance(options, list) else None
+
     async def upload_attachment(
         self,
         *,

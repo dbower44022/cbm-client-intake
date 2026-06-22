@@ -78,6 +78,13 @@ async def submissions(
     return {"submissions": rows, "counts": counts}
 
 
+@router.get("/metrics")
+async def metrics(request: Request) -> dict:
+    _require_user(request)
+    store = _store(request)
+    return await store.metrics()
+
+
 @router.get("/submissions/{submission_id}")
 async def submission_detail(submission_id: str, request: Request) -> dict:
     _require_user(request)

@@ -17,6 +17,7 @@ from datetime import datetime, timedelta, timezone
 
 import httpx
 
+from core import monitoring
 from core import store as store_mod
 from core.config import Settings, get_settings
 from core.espo import DryRunEspoClient, EspoApi, EspoClient, EspoError
@@ -132,8 +133,29 @@ async def main() -> None:
         "worker started (async_delivery=%s, dry_run=%s, batch=%s)",
         settings.async_delivery, settings.espo_dry_run, settings.worker_batch_size,
     )
+
+    # Phase 3: alert + schema-drift checks run here on their own cadence.
+    alert_state: dict = {}
+    next_alert = datetime.now(timezone.utc)
+    next_schema = datetime.now(timezone.utc)
+
     while True:
         claimed = await run_once(store, settings)
+
+        now = datetime.now(timezone.utc)
+        if now >= next_alert:
+            try:
+                await monitoring.run_alert_check(store, settings, alert_state)
+            except Exception as exc:  # noqa: BLE001 — monitoring never crashes the worker
+                log.warning("alert check failed: %s", exc)
+            next_alert = now + timedelta(seconds=settings.alert_check_seconds)
+        if settings.schema_check_seconds > 0 and now >= next_schema:
+            try:
+                await monitoring.run_schema_drift_check(settings, alert_state)
+            except Exception as exc:  # noqa: BLE001
+                log.warning("schema-drift check failed: %s", exc)
+            next_schema = now + timedelta(seconds=settings.schema_check_seconds)
+
         if claimed == 0:
             await asyncio.sleep(settings.worker_poll_seconds)
 

@@ -119,6 +119,7 @@ class SubmissionStore(Protocol):
     async def get_submission(self, submission_id: str) -> Optional[dict[str, Any]]: ...
     async def counts_by_status(self) -> dict[str, int]: ...
     async def redrive(self, submission_id: str) -> bool: ...
+    async def metrics(self) -> dict[str, Any]: ...
     async def dispose(self) -> None: ...
 
 
@@ -320,6 +321,44 @@ class PostgresStore:
                 )
             )
         return result.rowcount > 0
+
+    async def metrics(self) -> dict[str, Any]:
+        """Delivery health: counts, backlog, oldest-pending age, avg latency."""
+        async with self._engine.begin() as conn:
+            counts = {
+                r[0]: r[1]
+                for r in (
+                    await conn.execute(
+                        select(submission.c.status, func.count()).group_by(submission.c.status)
+                    )
+                ).all()
+            }
+            oldest = (
+                await conn.execute(
+                    select(func.min(submission.c.received_at)).where(
+                        submission.c.status.in_(CLAIMABLE)
+                    )
+                )
+            ).scalar()
+            avg_latency = (
+                await conn.execute(
+                    select(
+                        func.avg(
+                            func.extract(
+                                "epoch", submission.c.processed_at - submission.c.received_at
+                            )
+                        )
+                    ).where(submission.c.processed_at.isnot(None))
+                )
+            ).scalar()
+        oldest_age = (_now() - oldest).total_seconds() if oldest else None
+        return {
+            "counts": counts,
+            "needsAttention": counts.get(STATUS_NEEDS_ATTENTION, 0),
+            "backlog": counts.get(STATUS_PENDING, 0) + counts.get(STATUS_RETRY, 0),
+            "oldestPendingAgeSeconds": oldest_age,
+            "avgLatencySeconds": float(avg_latency) if avg_latency is not None else None,
+        }
 
     async def dispose(self) -> None:
         await self._engine.dispose()

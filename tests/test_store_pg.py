@@ -60,4 +60,7 @@ async def test_ops_list_counts_and_redrive():
     assert detail["status"] == "pending"
     assert detail["attempt_count"] == 0
 
+    m = await store.metrics()
+    assert "counts" in m and "backlog" in m and "needsAttention" in m
+
     await store.dispose()
