@@ -72,9 +72,14 @@ async def test_alert_cooldown_suppresses_repeat():
 # --- schema drift -----------------------------------------------------------
 
 def _full_options(entity, field):
-    # A superset that satisfies every EXPECTED_ENUMS entry.
-    return ["Submitted", "Pending Acceptance", "Active", "Client", "Partner",
-            "Donor/Sponsor", "Prospect", "Mentor", "Donor"]
+    # A superset that satisfies every EXPECTED_ENUMS entry (derived from the
+    # contract so it stays aligned as fields are added).
+    from core.schema_contract import EXPECTED_ENUMS
+
+    superset: set[str] = set()
+    for values in EXPECTED_ENUMS.values():
+        superset.update(values)
+    return sorted(superset)
 
 
 async def test_schema_drift_alerts_on_missing_value():
