@@ -325,10 +325,11 @@ Local `.env` stays `ESPO_DRY_RUN=true`; live tests use an inline
      reason option, and the `contact → Contact` link all exist in crm-test, so
      Normal audit logs work for the three original forms. (Partner/Sponsor still
      pending the form-enum casing fix — see the partner/sponsor item above.)
-  2. **OPEN** — add the **`reason != Normal`** alert-on-create workflow (so only
-     review items ping; spec in `cintake-submission-entity.md`). CRM-owned, not
-     built. Distinct from V2's worker alerting (which covers CRM-delivery
-     failures/backlog, not honeypot/orchestrator holds).
+  2. **OPEN (CRM build) — spec ready** — the **`reason != Normal`** alert-on-create
+     workflow. Full, reason-aware spec (Email Template + Workflow + conditions +
+     actions + gotchas) in `cintake-submission-entity.md` → "Alerting (CRM-owned)";
+     CRM-owned, not yet built. Distinct from V2's worker alerting (CRM-delivery
+     failures/backlog) — this fires on honeypot/orchestrator holds.
   3. Clean up the `ZZTEST-INTAKE GrantCheck` probe record
      (id `6a2eec00c83e44628`) in the EspoCRM UI.
 - Make the *deployed* app write to EspoCRM: set `ESPO_DRY_RUN=false` plus

@@ -67,15 +67,36 @@ needed. The app does not set `assignedUser`/`teams` (the create-only API user
 not the app payload — and do **not** notify "Created By" / "Followers" (that is
 the API user).
 
+**Two review reasons** trigger this alert (both are non-`Normal`, so both are
+captured by the one condition below):
+- **`Honeypot`** — the submission tripped the spam guard but passed all other
+  validation. Usually a real person; process it without contacting them.
+- **`OrchestratorError`** — the CRM write failed partway, so records may be
+  missing/orphaned. The `description` holds the reprocess-ready payload.
+
+**Relationship to V2 (`prds/v2`):** with V2 live, the durable submission store
+and the **`/ops`** console are the primary place to see and *re-drive* failed
+deliveries, and the worker raises its own alerts on delivery backlog/failures.
+This CRM Workflow is complementary: it pings staff the moment a **held**
+(`Honeypot`) or **errored** (`OrchestratorError`) `CIntakeSubmission` lands, so
+the CRM remains a self-contained review queue. The email body is reason-aware so
+it reads correctly for either case.
+
 ### Step 1 — Email Template (Administration → Email Templates)
 
 - **Name:** `CIntakeSubmission New — Admin Alert`
 - **Type:** Email · **Entity Type:** `CIntakeSubmission`
-- **Subject:** `New intake submission held for review — {{form}} ({{reason}})`
+- **Subject:** `Intake submission needs review — {{form}} ({{reason}})`
 - **Body:**
   ```
-  A web intake submission was held for review (it tripped the spam honeypot
-  but passed all other validation).
+  A web intake submission needs review (reason: {{reason}}).
+
+    • Honeypot          — tripped the spam guard but passed all other
+                          validation; usually a real person. Process it
+                          without contacting them.
+    • OrchestratorError — the CRM write failed partway; some records may be
+                          missing or orphaned. The payload below is
+                          reprocess-ready.
 
   Form:      {{form}}
   Reason:    {{reason}}
