@@ -175,11 +175,11 @@ def _index_html(forms: list[FormSpec], include_assignments: bool = False) -> str
     if include_assignments:
         staff = (
             "<h2>Staff</h2><ul>"
-            '<li><a href="/assignments/">Mentor Assignment dashboard</a> '
+            '<li><a href="/assignments/">Client Administration</a> '
             "<em>(staff sign-in required)</em></li>"
             '<li><a href="/ops/">Submission Operations</a> '
             "<em>(staff sign-in required)</em></li>"
-            '<li><a href="/mentoradmin/">Mentor Admin</a> '
+            '<li><a href="/mentoradmin/">Mentor Administration</a> '
             "<em>(staff sign-in required)</em></li></ul>"
         )
     year = datetime.now(timezone.utc).year
