@@ -55,6 +55,8 @@ class Settings(BaseSettings):
     assign_allowed_roles: str = ""
     # Mentor Admin app (/mentoradmin) — gated to its own team.
     mentor_admin_allowed_teams: str = "Mentor Administration Team"
+    # Team that approved mentors' new login users are placed in.
+    mentor_team_name: str = "Mentor Team"
     # Marks a session cookie Secure; set false only for plain-HTTP local dev.
     session_cookie_secure: bool = True
 

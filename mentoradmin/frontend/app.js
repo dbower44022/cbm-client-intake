@@ -373,7 +373,15 @@
       listDirty = true;
       $("detailName").textContent = current.name || "(unnamed mentor)";
       renderReadonly(current);
-      notice("detailNotice", "Saved.", "success");
+      // Approving a mentor provisions a login user (server-side) — report it.
+      var p = current.provision;
+      if (p && p.ok) {
+        notice("detailNotice", "Saved. Created login " + p.userName + " in " + p.team + " and sent a welcome email.", "success");
+      } else if (p && !p.ok) {
+        notice("detailNotice", "Saved, but the mentor's login could not be created: " + p.error, "error");
+      } else {
+        notice("detailNotice", "Saved.", "success");
+      }
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }
       notice("detailNotice", e.message, "error");

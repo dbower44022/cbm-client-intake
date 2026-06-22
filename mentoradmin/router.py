@@ -114,9 +114,12 @@ async def mentor_detail(mentor_id: str, request: Request) -> dict:
 
 @router.put("/mentors/{mentor_id}")
 async def mentor_update(mentor_id: str, body: UpdateIn, request: Request) -> dict:
+    settings = get_settings()
     user = _require_user(request)
-    client = client_for(get_settings(), user)
+    client = client_for(settings, user)
     try:
-        return await service.update_mentor(client, mentor_id, body.changes)
+        return await service.update_mentor(
+            client, mentor_id, body.changes, team_name=settings.mentor_team_name
+        )
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not save mentor")

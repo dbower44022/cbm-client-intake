@@ -197,6 +197,26 @@ detail screen that reviews all info (read-only computed totals on top) and
   type-driven renderer: enum→select (static `options` allowed, e.g. how-heard),
   multiEnum→checkbox grid, bool→checkbox, int/date, text→textarea,
   wysiwyg→contenteditable rich-text editor (toolbar + `sanitizeHtml` on load).
+- **Approval → user provisioning (added 2026-06-22).** When an edit transitions
+  `mentorStatus` to **`Approved`** (and the mentor has no linked login user yet),
+  `service.update_mentor` provisions a login: creates an EspoCRM **User**
+  (`userName` = `emailAddress` = `firstname.lastname@cbmentors.org` — the CBM
+  email, reusing the profile's `cbmEmail` if already set; `type=regular`,
+  `isActive=true`, `sendAccessInfo=true` for the welcome email), places it in the
+  **`MENTOR_TEAM_NAME`** team (default `Mentor Team`; `teamsIds`/`defaultTeamId`),
+  links it to the profile as `assignedUser` (the same link the assignment tool
+  reads), and back-fills `cbmEmail` when blank. Runs **as the logged-in staff
+  user** after the status write and is **best-effort**: failures (missing
+  permission, team not found — which reports the available team names) are
+  returned in a `provision:{ok:false,error}` summary and surfaced in the UI
+  without rolling back the saved status. userName collisions get a numeric suffix
+  (`…2@…`). Re-saving an already-Approved mentor, or one that already has a user,
+  does nothing. **CRM REQUIREMENTS (not yet verified live):** the acting user
+  needs permission to **create Users** and **relate Teams** (EspoCRM admin, or a
+  role granting it) — a regular Mentor-Admin-Team member likely cannot; the
+  **`Mentor Team`** must exist; and the **`sendAccessInfo`** welcome-email
+  mechanism + CBM-email deliverability need an admin live check (if EspoCRM wants
+  a different trigger it's a one-line change in `provision_mentor_user`).
 - **Status (2026-06-22): built; 119 tests green (10 new); TestClient sanity OK
   (serves, 401 unauth, index link).** NOT yet deployed/verified live — needs the
   `MENTOR_ADMIN_ALLOWED_TEAMS` default to match a real crm-test Team (defaults to

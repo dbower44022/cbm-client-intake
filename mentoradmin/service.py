@@ -8,14 +8,29 @@ EspoCRM metadata so the CRM stays the source of truth. Computed totals
 
 from __future__ import annotations
 
-from typing import Any, Protocol
+import re
+from typing import Any, Optional, Protocol
 
 MENTOR_PROFILE = "CMentorProfile"
+
+# When a mentor is set to this status, a login User is provisioned for them.
+STATUS_APPROVED = "Approved"
+# CBM-issued email/login domain: userName = firstname.lastname@cbmentors.org.
+CBM_EMAIL_DOMAIN = "cbmentors.org"
+DEFAULT_MENTOR_TEAM = "Mentor Team"
+USER_TYPE = "regular"
+
+
+class MentorAdminError(Exception):
+    """A mentor-admin operation could not be completed (e.g. team not found)."""
 
 
 class MentorClient(Protocol):
     async def get(self, entity: str, record_id: str, select: str | None = ...) -> dict[str, Any]: ...
     async def update(self, entity: str, record_id: str, payload: dict[str, Any]) -> dict[str, Any]: ...
+    async def create(self, entity: str, payload: dict[str, Any]) -> dict[str, Any]: ...
+    async def find_one(self, entity: str, attribute: str, value: str, select: str = ...) -> Optional[dict[str, Any]]: ...
+    async def list(self, entity: str, **kwargs: Any) -> dict[str, Any]: ...
     async def metadata(self, key: str) -> Any: ...
 
 
@@ -90,14 +105,149 @@ async def get_mentor(client: MentorClient, mentor_id: str) -> dict[str, Any]:
 
 
 async def update_mentor(
-    client: MentorClient, mentor_id: str, changes: dict[str, Any]
+    client: MentorClient,
+    mentor_id: str,
+    changes: dict[str, Any],
+    *,
+    team_name: Optional[str] = None,
 ) -> dict[str, Any]:
-    """Update only whitelisted editable fields; ignore anything else."""
+    """Update whitelisted editable fields; ignore anything else.
+
+    Side effect: when ``mentorStatus`` transitions to ``Approved`` (and the
+    mentor has no login user yet), provision an EspoCRM User for them, link it to
+    the profile, and place it in the mentor team. Provisioning runs *after* the
+    status write and is best-effort: a failure (e.g. missing permission or team)
+    is captured in the returned ``provision`` summary rather than failing the
+    save, since the status change has already taken effect.
+    """
     payload = {k: v for k, v in changes.items() if k in EDITABLE_NAMES}
     if not payload:
         return await get_mentor(client, mentor_id)
+
+    # Only the transition into Approved (not re-saving an already-approved
+    # mentor) triggers provisioning, and only if no user is linked yet.
+    becoming_approved = payload.get("mentorStatus") == STATUS_APPROVED
+    before = None
+    if becoming_approved:
+        before = await client.get(
+            MENTOR_PROFILE, mentor_id, select="mentorStatus,assignedUserId"
+        )
+
     await client.update(MENTOR_PROFILE, mentor_id, payload)
-    return await get_mentor(client, mentor_id)
+
+    provision: Optional[dict[str, Any]] = None
+    if (
+        becoming_approved
+        and before is not None
+        and before.get("mentorStatus") != STATUS_APPROVED
+        and not before.get("assignedUserId")
+    ):
+        try:
+            summary = await provision_mentor_user(
+                client, mentor_id, team_name=team_name or DEFAULT_MENTOR_TEAM
+            )
+            provision = {"ok": True, **summary}
+        except MentorAdminError as exc:
+            provision = {"ok": False, "error": str(exc)}
+        except Exception as exc:  # EspoError etc. — never break the saved status
+            provision = {"ok": False, "error": str(exc)}
+
+    result = await get_mentor(client, mentor_id)
+    if provision is not None:
+        result["provision"] = provision
+    return result
+
+
+def cbm_email_for(first: str, last: str) -> str:
+    """Build firstname.lastname@cbmentors.org from a contact's name."""
+    f = re.sub(r"[^a-z0-9]", "", (first or "").lower())
+    last_clean = re.sub(r"[^a-z0-9]", "", (last or "").lower())
+    local = ".".join(p for p in (f, last_clean) if p) or "mentor"
+    return f"{local}@{CBM_EMAIL_DOMAIN}"
+
+
+def _split_name(name: Optional[str]) -> tuple[str, str]:
+    parts = (name or "").strip().split()
+    if not parts:
+        return "", ""
+    if len(parts) == 1:
+        return parts[0], ""
+    return parts[0], parts[-1]
+
+
+async def _unique_user_name(client: MentorClient, email: str) -> str:
+    """The CBM email, or firstname.lastname2@… etc. if that login already exists."""
+    local, _, domain = email.partition("@")
+    for i in range(0, 100):
+        candidate = email if i == 0 else f"{local}{i + 1}@{domain}"
+        if not await client.find_one("User", "userName", candidate, select="id"):
+            return candidate
+    return email  # give up after 100; let the CRM enforce uniqueness
+
+
+async def _find_team_id(client: MentorClient, team_name: str) -> str:
+    team = await client.find_one("Team", "name", team_name, select="id,name")
+    if team:
+        return team["id"]
+    available = await client.list("Team", select="name", max_size=200)
+    names = sorted(t.get("name") for t in available.get("list", []) if t.get("name"))
+    raise MentorAdminError(
+        f"Team '{team_name}' not found in EspoCRM. Available teams: {names}"
+    )
+
+
+async def provision_mentor_user(
+    client: MentorClient, mentor_id: str, *, team_name: str
+) -> dict[str, Any]:
+    """Create a login User for an approved mentor, link it, and team it.
+
+    userName/email = ``firstname.lastname@cbmentors.org`` (the CBM email; reuses
+    the profile's ``cbmEmail`` if already set). The User is active, in
+    ``team_name``, and EspoCRM is asked to email access info (``sendAccessInfo``)
+    so the mentor sets their own password. The new User becomes the profile's
+    ``assignedUser`` (the same link the assignment tool reads as the mentor's
+    login), and the CBM email is written back to the profile when it was blank.
+    """
+    profile = await client.get(
+        MENTOR_PROFILE, mentor_id, select="name,cbmEmail,contactRecordId"
+    )
+    first, last = "", ""
+    contact_id = profile.get("contactRecordId")
+    if contact_id:
+        contact = await client.get(
+            "Contact", contact_id, select="firstName,lastName"
+        )
+        first = (contact.get("firstName") or "").strip()
+        last = (contact.get("lastName") or "").strip()
+    if not (first or last):
+        first, last = _split_name(profile.get("name"))
+
+    existing_cbm = (profile.get("cbmEmail") or "").strip()
+    cbm = existing_cbm or cbm_email_for(first, last)
+    user_name = await _unique_user_name(client, cbm)
+    team_id = await _find_team_id(client, team_name)
+
+    user_payload: dict[str, Any] = {
+        "userName": user_name,
+        "lastName": last or "Mentor",
+        "emailAddress": cbm,
+        "type": USER_TYPE,
+        "isActive": True,
+        "teamsIds": [team_id],
+        "defaultTeamId": team_id,
+        "sendAccessInfo": True,  # welcome email; ignored by CRM if unsupported
+    }
+    if first:
+        user_payload["firstName"] = first
+    user = await client.create("User", user_payload)
+    user_id = user.get("id")
+
+    link_payload: dict[str, Any] = {"assignedUserId": user_id}
+    if not existing_cbm:
+        link_payload["cbmEmail"] = cbm
+    await client.update(MENTOR_PROFILE, mentor_id, link_payload)
+
+    return {"userId": user_id, "userName": user_name, "email": cbm, "team": team_name}
 
 
 async def field_options(client: MentorClient) -> dict[str, list[str]]:

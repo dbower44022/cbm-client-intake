@@ -114,6 +114,126 @@ async def test_field_options_reads_live_enums():
     assert "name" not in opts
 
 
+# --- approval -> user provisioning ---
+
+class ProvisionClient:
+    """Captures get/update/create/find_one/list for the approval flow."""
+
+    def __init__(self, *, profile=None, contact=None, team={"id": "team1", "name": "Mentor Team"},
+                 existing_users=frozenset()):
+        self.profile = profile or {
+            "id": "m1", "name": "Jane Doe", "mentorStatus": "Candidate",
+            "assignedUserId": None, "cbmEmail": "", "contactRecordId": "c1",
+        }
+        self.contact = contact or {"id": "c1", "firstName": "Jane", "lastName": "Doe"}
+        self.team = team
+        self.existing_users = existing_users
+        self.created = []
+        self.updates = []
+
+    async def get(self, entity, record_id, select=None):
+        if entity == "Contact":
+            return dict(self.contact)
+        return dict(self.profile, id=record_id)
+
+    async def update(self, entity, record_id, payload):
+        self.updates.append((entity, record_id, payload))
+        self.profile.update(payload)
+        return dict(self.profile, id=record_id)
+
+    async def create(self, entity, payload):
+        self.created.append((entity, payload))
+        return {"id": "user-new"}
+
+    async def find_one(self, entity, attribute, value, select="id"):
+        if entity == "Team":
+            return self.team
+        if entity == "User":
+            return {"id": "u-x"} if value in self.existing_users else None
+        return None
+
+    async def list(self, entity, **kwargs):
+        return {"list": [self.team] if (entity == "Team" and self.team) else []}
+
+
+def _link_update(c):
+    return next(u[2] for u in c.updates if u[2].get("assignedUserId"))
+
+
+def test_cbm_email_for():
+    assert service.cbm_email_for("Mary Jane", "O'Brien") == "maryjane.obrien@cbmentors.org"
+    assert service.cbm_email_for("", "") == "mentor@cbmentors.org"
+
+
+@pytest.mark.asyncio
+async def test_approval_provisions_user():
+    c = ProvisionClient()
+    result = await service.update_mentor(c, "m1", {"mentorStatus": "Approved"}, team_name="Mentor Team")
+    assert len(c.created) == 1
+    entity, payload = c.created[0]
+    assert entity == "User"
+    assert payload["userName"] == "jane.doe@cbmentors.org"
+    assert payload["emailAddress"] == "jane.doe@cbmentors.org"
+    assert payload["type"] == "regular" and payload["isActive"] is True
+    assert payload["teamsIds"] == ["team1"] and payload["defaultTeamId"] == "team1"
+    assert payload["sendAccessInfo"] is True
+    link = _link_update(c)
+    assert link["assignedUserId"] == "user-new"
+    assert link["cbmEmail"] == "jane.doe@cbmentors.org"  # backfilled (was blank)
+    assert result["provision"] == {
+        "ok": True, "userId": "user-new", "userName": "jane.doe@cbmentors.org",
+        "email": "jane.doe@cbmentors.org", "team": "Mentor Team",
+    }
+
+
+@pytest.mark.asyncio
+async def test_approval_skips_when_user_already_linked():
+    c = ProvisionClient(profile={"id": "m1", "name": "Jane Doe", "mentorStatus": "Candidate",
+                                 "assignedUserId": "u9", "cbmEmail": "", "contactRecordId": "c1"})
+    res = await service.update_mentor(c, "m1", {"mentorStatus": "Approved"}, team_name="Mentor Team")
+    assert c.created == [] and "provision" not in res
+
+
+@pytest.mark.asyncio
+async def test_non_approval_change_does_not_provision():
+    c = ProvisionClient()
+    await service.update_mentor(c, "m1", {"mentorStatus": "Active"}, team_name="Mentor Team")
+    assert c.created == []
+
+
+@pytest.mark.asyncio
+async def test_resaving_approved_does_not_provision():
+    c = ProvisionClient(profile={"id": "m1", "name": "Jane Doe", "mentorStatus": "Approved",
+                                 "assignedUserId": None, "cbmEmail": "", "contactRecordId": "c1"})
+    await service.update_mentor(c, "m1", {"mentorStatus": "Approved"}, team_name="Mentor Team")
+    assert c.created == []
+
+
+@pytest.mark.asyncio
+async def test_username_collision_appends_suffix():
+    c = ProvisionClient(existing_users={"jane.doe@cbmentors.org"})
+    await service.update_mentor(c, "m1", {"mentorStatus": "Approved"}, team_name="Mentor Team")
+    assert c.created[0][1]["userName"] == "jane.doe2@cbmentors.org"
+
+
+@pytest.mark.asyncio
+async def test_existing_cbm_email_reused_and_not_backfilled():
+    c = ProvisionClient(profile={"id": "m1", "name": "Jane Doe", "mentorStatus": "Candidate",
+                                 "assignedUserId": None, "cbmEmail": "jdoe@cbmentors.org", "contactRecordId": "c1"})
+    await service.update_mentor(c, "m1", {"mentorStatus": "Approved"}, team_name="Mentor Team")
+    assert c.created[0][1]["userName"] == "jdoe@cbmentors.org"
+    assert "cbmEmail" not in _link_update(c)
+
+
+@pytest.mark.asyncio
+async def test_team_not_found_reports_error_without_failing_save():
+    c = ProvisionClient(team=None)
+    res = await service.update_mentor(c, "m1", {"mentorStatus": "Approved"}, team_name="Mentor Team")
+    assert c.created == []  # never reached user creation
+    assert res["provision"]["ok"] is False
+    assert "not found" in res["provision"]["error"].lower()
+
+
 # --- router tests ---
 
 def _app(monkeypatch):
@@ -164,7 +284,7 @@ def test_get_and_update_mentor(monkeypatch):
     async def fake_get(client, mentor_id):
         return {"id": mentor_id, "name": "Jane", "mentorStatus": "Active"}
 
-    async def fake_update(client, mentor_id, changes):
+    async def fake_update(client, mentor_id, changes, **kwargs):
         return {"id": mentor_id, "name": "Jane", **changes}
 
     monkeypatch.setattr("mentoradmin.router.service.get_mentor", fake_get)
