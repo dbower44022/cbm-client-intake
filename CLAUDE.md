@@ -81,7 +81,26 @@ kept aligned to it by carry-forward.
 V2 makes the forms dependable: never lose a submission, keep working when the CRM
 is down, deliver into the CRM exactly once with retries, alert on trouble. Specs:
 `prds/v2/README.md` (executive), `CBM_Intake_V2_Requirements.md` (6 requirements),
-`CBM_Intake_V2_Technical_Design.md` (durable-capture + async-worker architecture).
+`CBM_Intake_V2_Technical_Design.md` (durable-capture + async-worker architecture),
+`CBM_Intake_V2_Operations_Guide.md` (activation runbook + day-to-day ops).
+
+**LIVE in production since 2026-06-22 (against crm-test).** Both stages activated
+end-to-end: `/healthz` → `durableStore:true`; the **`delivery-worker`** App
+Platform component runs `python -m worker` (`async_delivery=True`); a submission
+returns `received`+`reference` instantly and the worker delivers it (verified:
+capture → idempotent replay → async deliver → `completed`; schema-drift check ran
+on startup, 5 enums aligned). Infra: a DO **managed Postgres** (`cbm-db`, dev
+tier) attached via the gitignored `.do/app.prod.yaml` overlay, which now also
+carries the PRE_DEPLOY `migrate` job (`alembic upgrade head`), the worker, and
+`DATABASE_URL`/`ASYNC_DELIVERY=true` on web + worker. **Gotcha:** DO's
+`DATABASE_URL` ends in `?sslmode=require`, which asyncpg rejects — `core/store.py`
+`make_async_engine` strips `sslmode`/`channel_binding` and sets SSL via
+`connect_args` (this broke the first Stage A deploy; fixed in commit 75ef018).
+Rollback is instant via the overlay (`ASYNC_DELIVERY=false` → sync; drop
+`DATABASE_URL` → V1). Optional: set `ALERT_WEBHOOK_URL` on the worker for Slack
+alerts (else WARNING logs). Cleanup: Stage A/B verification left ZZTEST records in
+crm-test (Contacts/CInformationRequests/CIntakeSubmissions, ids `6a38c48f…`,
+`6a38c636…`, `6a38c6d8…`).
 
 **Phase 0 — durable capture, scaffolded 2026-06-21 (gated, no-op until a DB is
 attached).** `core/store.py` (`PostgresStore`/`make_store`, the `submission`
@@ -136,8 +155,8 @@ Alerts post to `ALERT_WEBHOOK_URL` (Slack-compatible) or log at WARNING. The ops
 console gains `GET /ops/api/metrics` + a backlog/needs-attention summary line.
 Verified: alert thresholds + cooldown + drift diff (unit), and the drift check
 run **live against crm-test** (all 5 contract entries aligned, no false alerts).
-**This completes the V2 build (Phases 0–3); all gated/dormant until a database +
-worker are deployed.**
+**This completed the V2 build (Phases 0–3) — now ACTIVATED LIVE (see the LIVE
+block at the top of this section).**
 
 ## Mentor Assignment tool — `/assignments` (added 2026-06-19)
 
