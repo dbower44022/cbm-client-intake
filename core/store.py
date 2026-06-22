@@ -12,10 +12,12 @@ thing that turns durable capture on.
 
 from __future__ import annotations
 
+import ssl
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Optional, Protocol
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from sqlalchemy import (
     Column,
@@ -124,19 +126,54 @@ class SubmissionStore(Protocol):
 
 
 def _normalize_url(database_url: str) -> str:
-    """Coerce a libpq-style URL to SQLAlchemy's async (asyncpg) driver form."""
-    if database_url.startswith("postgres://"):
-        return "postgresql+asyncpg://" + database_url[len("postgres://"):]
-    if database_url.startswith("postgresql://") and "+asyncpg" not in database_url:
-        return "postgresql+asyncpg://" + database_url[len("postgresql://"):]
-    return database_url
+    """SQLAlchemy async (asyncpg) URL with libpq-only query params removed.
+
+    asyncpg rejects ``sslmode``/``channel_binding`` (they are psycopg/libpq
+    options, and DigitalOcean's managed URL includes ``?sslmode=require``); SSL is
+    configured via ``connect_args`` in :func:`make_async_engine` instead.
+    """
+    url = database_url
+    if url.startswith("postgres://"):
+        url = "postgresql+asyncpg://" + url[len("postgres://"):]
+    elif url.startswith("postgresql://") and "+asyncpg" not in url:
+        url = "postgresql+asyncpg://" + url[len("postgresql://"):]
+    parts = urlsplit(url)
+    kept = [
+        (k, v)
+        for k, v in parse_qsl(parts.query)
+        if k not in ("sslmode", "channel_binding")
+    ]
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(kept), parts.fragment))
+
+
+def _connect_args(database_url: str) -> dict:
+    """Enable an encrypted connection (no CA verification — like sslmode=require)
+    when the URL asked for SSL, as DigitalOcean managed Postgres does."""
+    sslmode = dict(parse_qsl(urlsplit(database_url).query)).get("sslmode")
+    if sslmode in (None, "disable", "allow"):
+        return {}
+    context = ssl.create_default_context()
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    return {"ssl": context}
+
+
+def make_async_engine(database_url: str, **kwargs):
+    """Async engine for a libpq-style URL, handling driver + SSL coercion.
+    Shared by the store and Alembic so both connect identically."""
+    return create_async_engine(
+        _normalize_url(database_url),
+        pool_pre_ping=True,
+        connect_args=_connect_args(database_url),
+        **kwargs,
+    )
 
 
 class PostgresStore:
     """Postgres-backed :class:`SubmissionStore`."""
 
     def __init__(self, database_url: str) -> None:
-        self._engine = create_async_engine(_normalize_url(database_url), pool_pre_ping=True)
+        self._engine = make_async_engine(database_url)
 
     async def create_all(self) -> None:
         """Create the table if absent. Phase-0 convenience; Phase 1 moves schema

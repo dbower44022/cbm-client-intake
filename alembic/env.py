@@ -13,9 +13,8 @@ import os
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy.ext.asyncio import create_async_engine
 
-from core.store import _normalize_url, metadata
+from core.store import _normalize_url, make_async_engine, metadata
 
 config = context.config
 if config.config_file_name:
@@ -46,7 +45,7 @@ def _run(connection) -> None:
 
 
 async def run_migrations_online() -> None:
-    engine = create_async_engine(_url())
+    engine = make_async_engine(os.environ["DATABASE_URL"])
     async with engine.connect() as connection:
         await connection.run_sync(_run)
     await engine.dispose()

@@ -11,8 +11,25 @@ from fastapi.testclient import TestClient
 
 from core.app import create_app
 from core.config import get_settings
-from core.store import STATUS_COMPLETED, STATUS_HELD, STATUS_PENDING, Captured
+from core.store import (
+    STATUS_COMPLETED,
+    STATUS_HELD,
+    STATUS_PENDING,
+    Captured,
+    _connect_args,
+    _normalize_url,
+)
 from forms import info_request
+
+
+def test_normalize_url_strips_libpq_params():
+    url = "postgresql://u:p@db.example.com:25060/cbm?sslmode=require&channel_binding=require"
+    normalized = _normalize_url(url)
+    assert normalized.startswith("postgresql+asyncpg://")
+    assert "sslmode" not in normalized and "channel_binding" not in normalized
+    # SSL is required for the managed URL, not for a plain local one.
+    assert "ssl" in _connect_args(url)
+    assert _connect_args("postgresql://u:p@localhost:5432/cbm") == {}
 
 
 class FakeStore:
