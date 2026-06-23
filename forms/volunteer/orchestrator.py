@@ -29,7 +29,7 @@ import logging
 
 from core.enum_filter import EnumSanitizer
 from core.espo import EspoApi
-from core.phone import to_e164
+from core.phone import e164_or_none
 
 from .schemas import VolunteerApplication
 
@@ -80,10 +80,12 @@ async def _find_or_create_mentor_contact(sub: VolunteerApplication, client: Espo
         "firstName": sub.first_name,
         "lastName": sub.last_name,
         "emailAddress": str(sub.email),
-        "phoneNumber": to_e164(sub.phone),
         "addressPostalCode": sub.zip_code,
         C_CONTACT_TYPE: [CONTACT_TYPE_MENTOR],
     }
+    phone = e164_or_none(sub.phone)  # omit an implausible phone rather than 400
+    if phone:
+        payload["phoneNumber"] = phone
     if sub.middle_initial:
         payload["middleName"] = sub.middle_initial
     if sub.preferred_name:

@@ -39,7 +39,7 @@ from datetime import datetime, timezone
 
 from core.enum_filter import EnumSanitizer
 from core.espo import EspoApi
-from core.phone import to_e164
+from core.phone import e164_or_none
 
 from .schemas import IntakeSubmission
 
@@ -125,11 +125,13 @@ async def _find_or_create_contact(
         "firstName": sub.first_name,
         "lastName": sub.last_name,
         "emailAddress": str(sub.email),
-        "phoneNumber": to_e164(sub.phone),
         "addressPostalCode": sub.zip_code,
         "accountId": account_id,
         C_CONTACT_TYPE: [CLIENT],
     }
+    phone = e164_or_none(sub.phone)  # omit an implausible phone rather than 400
+    if phone:
+        payload["phoneNumber"] = phone
     created = await client.create(CONTACT, payload)
     return created["id"]
 

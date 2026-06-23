@@ -1,4 +1,4 @@
-from core.phone import to_e164
+from core.phone import e164_or_none, to_e164
 
 
 def test_us_ten_digit_dashed():
@@ -23,3 +23,26 @@ def test_already_e164_passthrough():
 
 def test_empty_passthrough():
     assert to_e164("") == ""
+
+
+# --- e164_or_none: drop implausible numbers so the CRM write isn't 400'd ---
+
+def test_e164_or_none_keeps_valid_us_number():
+    assert e164_or_none("216-555-0100") == "+12165550100"
+    assert e164_or_none("2165550100") == "+12165550100"
+    assert e164_or_none("+44 7911 123456") == "+447911123456"
+
+
+def test_e164_or_none_drops_too_short():
+    assert e164_or_none("12345") is None      # the value that sank 4501d077
+    assert e164_or_none("555-0100") is None    # 7 digits
+
+
+def test_e164_or_none_drops_empty_or_none():
+    assert e164_or_none("") is None
+    assert e164_or_none(None) is None
+    assert e164_or_none("   ") is None
+
+
+def test_e164_or_none_drops_too_long():
+    assert e164_or_none("1234567890123456") is None  # 16 digits > E.164 max

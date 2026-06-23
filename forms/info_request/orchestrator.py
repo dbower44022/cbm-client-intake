@@ -33,7 +33,7 @@ import logging
 from datetime import datetime, timezone
 
 from core.espo import EspoApi
-from core.phone import to_e164
+from core.phone import e164_or_none
 
 from .schemas import InfoRequest
 
@@ -120,8 +120,9 @@ async def _create_information_request(
         "requestStatus": REQUEST_STATUS_NEW,
         "contactId": contact_id,
     }
-    if sub.phone:
-        payload["phone"] = to_e164(sub.phone)
+    phone = e164_or_none(sub.phone)  # omit an implausible phone rather than 400
+    if phone:
+        payload["phone"] = phone
     if sub.company:
         payload["company"] = sub.company
     if sub.how_did_you_hear:
@@ -160,8 +161,9 @@ async def submit_request(sub: InfoRequest, client: EspoApi) -> dict[str, str]:
             C_CONTACT_TYPE: [PROSPECT],
             "description": _description_block(sub, include_company=False),
         }
-        if sub.phone:
-            payload["phoneNumber"] = to_e164(sub.phone)
+        phone = e164_or_none(sub.phone)  # omit an implausible phone rather than 400
+        if phone:
+            payload["phoneNumber"] = phone
         if account_id:
             payload["accountId"] = account_id
         created = await client.create(CONTACT, payload)

@@ -25,7 +25,7 @@ from __future__ import annotations
 import logging
 
 from core.espo import EspoApi
-from core.phone import to_e164
+from core.phone import e164_or_none
 
 from .schemas import SponsorApplication
 
@@ -86,8 +86,9 @@ async def _find_or_create_contact(
         "accountId": account_id,
         C_CONTACT_TYPE: [CONTACT_TYPE_SPONSOR],
     }
-    if sub.phone:
-        payload["phoneNumber"] = to_e164(sub.phone)
+    phone = e164_or_none(sub.phone)  # omit an implausible phone rather than 400
+    if phone:
+        payload["phoneNumber"] = phone
     created = await client.create(CONTACT, payload)
     return created["id"]
 

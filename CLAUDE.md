@@ -562,6 +562,14 @@ only matters if a separate frontend origin is ever introduced.
   per delivery spans the whole chain (entity passed per call) and aggregates a
   single note. Fails open (keeps the value if options can't be fetched, e.g.
   dry-run). This is why re-driving a drift-failed submission now succeeds.
+- **Implausible phone numbers are dropped, not fatal (2026-06-23, v0.8.0).**
+  `core/phone.e164_or_none` returns None for a value that can't be a real phone
+  (<10 or >15 digits, e.g. a user typing "12345" → EspoCRM 400 `phoneNumber`
+  "valid"). All orchestrators now use it and **omit** `phoneNumber` when invalid
+  rather than failing the Contact create — email stays the contact channel and
+  the raw value is preserved in the CIntakeSubmission audit log. (This was the
+  one stuck volunteer re-drive that still failed after enum resilience: phone
+  "12345".)
 - **`.dockerignore` must exclude `.venv`** — `COPY . .` otherwise copies the
   host virtualenv over the container's, whose interpreter paths are wrong
   (`sh: .venv/bin/uvicorn: not found`, exit 127). It also keeps `.env` out of
