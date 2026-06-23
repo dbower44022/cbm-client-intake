@@ -305,6 +305,45 @@ async def test_get_engagement_detail_single_focus_string_coerced():
     assert d["focusAreas"] == ["Marketing"]
 
 
+async def test_requested_mentor_absent_is_none():
+    client = FakeClient(engagement={"name": "Y"})
+    d = await service.get_engagement_detail(client, "e1")
+    assert d["requestedMentor"] is None
+
+
+async def test_requested_mentor_uses_inline_name_without_extra_read():
+    client = FakeClient(engagement={
+        "name": "Y", "requestedMentorId": "m1", "requestedMentorName": "Bob Mentor",
+    })
+    d = await service.get_engagement_detail(client, "e1")
+    assert d["requestedMentor"] == {"id": "m1", "name": "Bob Mentor"}
+    # No CMentorProfile read needed when the name accessor is present.
+    assert not any(u for u in client.list_calls if u[0] == service.MENTOR_PROFILE)
+
+
+async def test_requested_mentor_resolves_name_via_profile_read():
+    client = FakeClient(
+        engagement={"name": "Y", "requestedMentorId": "m1"},  # no inline name
+        mentor={"name": "Bob Mentor"},
+    )
+    d = await service.get_engagement_detail(client, "e1")
+    assert d["requestedMentor"] == {"id": "m1", "name": "Bob Mentor"}
+
+
+async def test_requested_mentor_orphaned_link_resolves_to_no_name():
+    from core.espo import EspoError
+
+    class OrphanClient(FakeClient):
+        async def get(self, entity, record_id, select=None):
+            if entity == service.MENTOR_PROFILE:
+                raise EspoError("get CMentorProfile/m1 failed: HTTP 404 Not Found")
+            return await super().get(entity, record_id, select=select)
+
+    client = OrphanClient(engagement={"name": "Y", "requestedMentorId": "m1"})
+    d = await service.get_engagement_detail(client, "e1")
+    assert d["requestedMentor"] == {"id": "m1", "name": None}
+
+
 # --- auth team/role gate -----------------------------------------------------
 
 def _settings(teams="", roles=""):

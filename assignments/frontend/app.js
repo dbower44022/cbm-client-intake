@@ -384,6 +384,11 @@
     right.className = "contact-dl";
     addContactField(right, "Meeting", d.meetingCadence);
     addContactField(right, "Created", formatDateTime(d.createdAt));
+    // Requested mentor (DAT-026), when set. A linked-but-nameless value means the
+    // referenced mentor profile was deleted — surface that rather than hide it.
+    if (d.requestedMentor) {
+      addContactField(right, "Requested mentor", d.requestedMentor.name || "(no longer in the system)");
+    }
 
     var contact = $("modalContact");
     contact.innerHTML = "";

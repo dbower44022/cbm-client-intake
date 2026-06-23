@@ -114,9 +114,25 @@ async def get_engagement_detail(
         select=(
             "name,engagementStatus,createdAt,meetingCadence,mentoringFocusAreas,"
             "mentoringNeedsDescription,engagementNotes,primaryEngagementContactId,"
-            "engagementClientName"
+            "engagementClientName,requestedMentorId,requestedMentorName"
         ),
     )
+
+    # Requested mentor (DAT-026): a belongsTo → CMentorProfile the client/staff
+    # asked for. The `*Name` accessor isn't a defined field, so fall back to a
+    # CMentorProfile read; a deleted target (orphaned FK) resolves to no name.
+    requested_mentor = None
+    requested_id = eng.get("requestedMentorId")
+    if requested_id:
+        name = eng.get("requestedMentorName")
+        if not name:
+            try:
+                prof = await client.get(MENTOR_PROFILE, requested_id, select="name")
+                name = prof.get("name")
+            except EspoError:
+                name = None
+        requested_mentor = {"id": requested_id, "name": name}
+
     contact = None
     contact_id = eng.get("primaryEngagementContactId")
     if contact_id:
@@ -142,6 +158,7 @@ async def get_engagement_detail(
         "createdAt": eng.get("createdAt"),
         "meetingCadence": eng.get("meetingCadence"),
         "clientName": eng.get("engagementClientName"),
+        "requestedMentor": requested_mentor,
         "contact": contact,
         "focusAreas": focus,
         # Rich-text (wysiwyg) HTML — sanitized + rendered by the frontend.
