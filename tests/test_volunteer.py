@@ -14,11 +14,16 @@ from forms.volunteer.schemas import VolunteerApplication
 
 
 class CapturingClient:
-    def __init__(self, existing_contact=None):
+    def __init__(self, existing_contact=None, enum_options=None):
         self.creates: list[tuple[str, dict]] = []
         self.uploads: list[dict] = []
         self._existing_contact = existing_contact
+        # {field: [valid options]}; a field absent here returns None => "keep all".
+        self._enum_options = enum_options or {}
         self._n = 0
+
+    async def metadata_enum_options(self, entity, field):
+        return self._enum_options.get(field)
 
     async def create(self, entity, payload):
         self._n += 1
@@ -79,6 +84,31 @@ async def test_creates_contact_and_mentor_profile():
     assert profile["mentoringFocusAreas"] == ["Marketing", "Sales"]
     # Multi-select industry stored into a single enum -> first value only.
     assert profile["industrySector"] == "Information Technology"
+
+
+async def test_invalid_enum_values_dropped_record_still_created():
+    """A drifted industry/language value is dropped (not fatal); the profile is
+    created with the valid data + a note, so contact info is always captured."""
+    client = CapturingClient(enum_options={
+        "industrySector": ["Technology & Software", "Healthcare & Medical"],
+        "fluentLanguages": ["English", "Spanish"],
+        # mentoringFocusAreas absent => not validated (kept as-is).
+    })
+    sub = _application(
+        industry_experience=["Utilities"],          # not in the live enum
+        fluent_languages=["English", "Klingon"],     # Klingon invalid
+    )
+    ids = await submit_application(sub, client)
+
+    assert set(ids) == {"contactId", "mentorProfileId"}
+    _, profile = client.creates[1]
+    # Invalid industry omitted entirely; invalid language filtered out.
+    assert "industrySector" not in profile
+    assert profile["fluentLanguages"] == ["English"]
+    # A note records what was dropped, for staff follow-up.
+    assert "industrySector" in profile["description"]
+    assert "Utilities" in profile["description"]
+    assert "Klingon" in profile["description"]
 
 
 async def test_matched_contact_is_reused_profile_still_created():

@@ -46,6 +46,10 @@ class EspoApi(Protocol):
         field: str,
     ) -> str: ...
 
+    async def metadata_enum_options(
+        self, entity: str, field: str
+    ) -> Optional[list[str]]: ...
+
 
 class EspoClient:
     def __init__(
@@ -330,3 +334,8 @@ class DryRunEspoClient:
             filename, content_type, len(data_base64), fake_id, related_type, field,
         )
         return fake_id
+
+    async def metadata_enum_options(self, entity: str, field: str):
+        # No live CRM to validate against; None => callers skip enum sanitization.
+        log.info("DRY_RUN metadata_enum_options %s.%s -> None", entity, field)
+        return None

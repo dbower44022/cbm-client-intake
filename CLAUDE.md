@@ -546,6 +546,18 @@ only matters if a separate frontend origin is ever introduced.
 
 ## Gotchas / things learned
 
+- **Enum drift is tolerated on the volunteer create (2026-06-23, v0.6.0).**
+  `core/enum_filter.py` `EnumSanitizer` validates enum/multiEnum payload values
+  against the live CRM options (`EspoApi.metadata_enum_options`, now on the
+  protocol + dry-run + `ResumableClient`) and **drops** unrecognized ones instead
+  of letting a single drifted value 400 the whole create — the
+  `forms/volunteer` orchestrator uses it for `industrySector`/`mentoringFocusAreas`/
+  `fluentLanguages`, so the mentor record + the applicant's contact info are always
+  captured; dropped values are noted on `CMentorProfile.description` for follow-up.
+  Fails open (keeps the value if options can't be fetched, e.g. dry-run). This is
+  why re-driving a drift-failed volunteer submission now succeeds. Not yet applied
+  to the other orchestrators (client-intake/partner/sponsor) — they still fail
+  hard on a bad enum.
 - **`.dockerignore` must exclude `.venv`** — `COPY . .` otherwise copies the
   host virtualenv over the container's, whose interpreter paths are wrong
   (`sh: .venv/bin/uvicorn: not found`, exit 127). It also keeps `.env` out of

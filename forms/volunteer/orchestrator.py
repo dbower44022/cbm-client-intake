@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import logging
 
+from core.enum_filter import EnumSanitizer
 from core.espo import EspoApi
 from core.phone import to_e164
 
@@ -54,6 +55,7 @@ P_INDUSTRY = "industrySector"         # enum (single)
 P_HOW_HEARD = "howDidYouHearAboutCBM"  # varchar
 P_FELONY = "felonyConfiction"         # bool (note: CRM field name is misspelled)
 P_TERMS = "termsAccepted"             # bool
+P_DESCRIPTION = "description"          # text — used to note any dropped values
 P_RESUME_ID = "resumeUploadId"        # file field FK (-> Attachment)
 RESUME_FIELD = "resumeUpload"         # the file field the attachment binds to
 
@@ -98,26 +100,43 @@ async def _find_or_create_mentor_contact(sub: VolunteerApplication, client: Espo
 async def _create_mentor_profile(
     sub: VolunteerApplication, client: EspoApi, contact_id: str
 ) -> str:
-    """Create the CMentorProfile holding the mentor-specific data."""
+    """Create the CMentorProfile holding the mentor-specific data.
+
+    Enum-backed fields are sanitized against the live CRM options first: an
+    unrecognized value (e.g. a drifted industry/language option) is dropped rather
+    than failing the whole create, so the mentor record — and the applicant's
+    contact details — are always captured. Anything dropped is noted on the record
+    (``description``) for staff follow-up.
+    """
+    san = EnumSanitizer(client, MENTOR_PROFILE)
+    focus_areas = await san.multi(P_FOCUS_AREAS, sub.areas_of_expertise)
+
     payload: dict = {
         "name": f"{sub.first_name} {sub.last_name}",
         P_CONTACT_LINK: contact_id,
         P_STATUS: MENTOR_STATUS_NEW,
         P_TYPE: MENTOR_TYPE_DEFAULT,
         P_WHY: sub.why_volunteer,
-        P_FOCUS_AREAS: sub.areas_of_expertise,
+        P_FOCUS_AREAS: focus_areas,
         P_FELONY: sub.felony_conviction,
         P_TERMS: sub.terms_accepted,
     }
     if sub.work_experience:
         payload[P_BIO] = sub.work_experience
     if sub.fluent_languages:
-        payload[P_LANGUAGES] = sub.fluent_languages
+        languages = await san.multi(P_LANGUAGES, sub.fluent_languages)
+        if languages:
+            payload[P_LANGUAGES] = languages
     if sub.industry_experience:
         # Single-enum field — store only the first selection for now.
-        payload[P_INDUSTRY] = sub.industry_experience[0]
+        industry = await san.enum(P_INDUSTRY, sub.industry_experience[0])
+        if industry:
+            payload[P_INDUSTRY] = industry
     if sub.how_did_you_hear:
         payload[P_HOW_HEARD] = sub.how_did_you_hear
+    note = san.note()
+    if note:
+        payload[P_DESCRIPTION] = note
     if sub.resume is not None:
         # Upload the file as an Attachment bound to CMentorProfile.resumeUpload,
         # then set its id so it links when the profile is created.

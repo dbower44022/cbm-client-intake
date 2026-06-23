@@ -69,3 +69,6 @@ class ResumableClient:
 
     async def relate(self, *args: Any, **kwargs: Any):
         return await self._inner.relate(*args, **kwargs)
+
+    async def metadata_enum_options(self, *args: Any, **kwargs: Any):
+        return await self._inner.metadata_enum_options(*args, **kwargs)
