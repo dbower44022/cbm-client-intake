@@ -179,6 +179,12 @@ async def login_token(
     token = data.get("token")
     if not token or not user.get("userName"):
         raise AuthError("Service login did not return a usable token.")
+    # Diagnostic: confirms whether the service account actually has admin rights
+    # (User creation is admin-only, so a non-admin here is why provisioning 403s).
+    log.info(
+        "service login OK: userName=%s type=%s isAdmin=%s",
+        user.get("userName"), user.get("type"), user.get("isAdmin"),
+    )
     return user["userName"], token
 
 
