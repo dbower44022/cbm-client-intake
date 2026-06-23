@@ -114,6 +114,65 @@ async def test_field_options_reads_live_enums():
     assert "name" not in opts
 
 
+# --- data-structure completeness ---
+
+class CompletenessClient:
+    """Returns a Contact with a given assignedUserId (for the Active checks)."""
+    def __init__(self, contact_user=None):
+        self.contact_user = contact_user
+
+    async def get(self, entity, record_id, select=None):
+        return {"id": record_id, "assignedUserId": self.contact_user}
+
+
+def _complete_rec(**over):
+    rec = {
+        "contactRecordId": "c1", "assignedUserId": "u1", "mentorStatus": "Active",
+        "backgroundCheckCompleted": True, "ethicsAgreementAccepted": True,
+        "trainingCompleted": True, "termsAccepted": True,
+    }
+    rec.update(over)
+    return rec
+
+
+@pytest.mark.asyncio
+async def test_completeness_complete_active():
+    r = await service.check_completeness(CompletenessClient(contact_user="u1"), _complete_rec())
+    assert r == {"status": "Complete", "issues": []}
+
+
+@pytest.mark.asyncio
+async def test_completeness_missing_signoff_flag():
+    r = await service.check_completeness(CompletenessClient("u1"), _complete_rec(trainingCompleted=False))
+    assert r["status"] == "Incomplete" and any("training" in i for i in r["issues"])
+
+
+@pytest.mark.asyncio
+async def test_completeness_no_contact_record():
+    r = await service.check_completeness(CompletenessClient(), _complete_rec(contactRecordId=None, mentorStatus="Candidate"))
+    assert r["status"] == "Incomplete" and any("Contact" in i for i in r["issues"])
+
+
+@pytest.mark.asyncio
+async def test_completeness_active_requires_user_on_member_and_contact():
+    # member has no user
+    r = await service.check_completeness(CompletenessClient("u1"), _complete_rec(assignedUserId=None))
+    assert r["status"] == "Incomplete" and any("no User assigned to the mentor" in i for i in r["issues"])
+    # contact assigned to a different user
+    r2 = await service.check_completeness(CompletenessClient("uX"), _complete_rec())
+    assert r2["status"] == "Incomplete" and any("different User" in i for i in r2["issues"])
+    # contact has no user
+    r3 = await service.check_completeness(CompletenessClient(None), _complete_rec())
+    assert r3["status"] == "Incomplete" and any("no User assigned to the Contact" in i for i in r3["issues"])
+
+
+@pytest.mark.asyncio
+async def test_completeness_non_active_ignores_user_links():
+    # Not Active -> user/contact-user not required; flags + contact still are.
+    r = await service.check_completeness(CompletenessClient(), _complete_rec(mentorStatus="Candidate", assignedUserId=None))
+    assert r == {"status": "Complete", "issues": []}
+
+
 # --- approval -> user provisioning ---
 
 class ProvisionClient:
@@ -336,9 +395,13 @@ def test_get_and_update_mentor(monkeypatch):
     monkeypatch.setattr("mentoradmin.router.service.get_mentor", fake_get)
     monkeypatch.setattr("mentoradmin.router.service.update_mentor", fake_update)
     with TestClient(_app(monkeypatch)) as c:
-        assert c.get("/mentoradmin/api/mentors/m1").json()["mentorStatus"] == "Active"
+        got = c.get("/mentoradmin/api/mentors/m1").json()
         r = c.put("/mentoradmin/api/mentors/m1", json={"changes": {"mentorStatus": "Inactive"}})
+    assert got["mentorStatus"] == "Active"
+    # the router attaches a completeness summary to both responses
+    assert got["completeness"]["status"] in ("Complete", "Incomplete")
     assert r.json()["mentorStatus"] == "Inactive"
+    assert "completeness" in r.json()
 
 
 def test_expired_token_returns_401(monkeypatch):

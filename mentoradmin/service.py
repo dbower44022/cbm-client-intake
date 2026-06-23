@@ -15,6 +15,15 @@ MENTOR_PROFILE = "CMentorProfile"
 
 # When a mentor is set to this status, a login User is provisioned for them.
 STATUS_APPROVED = "Approved"
+STATUS_ACTIVE = "Active"
+
+# Sign-off flags every complete mentor must have set (field -> label).
+COMPLETENESS_FLAGS = [
+    ("backgroundCheckCompleted", "background check"),
+    ("ethicsAgreementAccepted", "ethics agreement"),
+    ("trainingCompleted", "training completed"),
+    ("termsAccepted", "terms accepted"),
+]
 # CBM-issued email/login domain: userName = firstname.lastname@cbmentors.org.
 CBM_EMAIL_DOMAIN = "cbmentors.org"
 DEFAULT_MENTOR_TEAM = "Mentor Team"
@@ -92,7 +101,8 @@ _ENUM_FIELDS = [f["name"] for f in EDITABLE_FIELDS if f["type"] in ("enum", "mul
 READ_ONLY_FIELDS = [
     "availableCapacity", "currentActiveClients", "maximumClientCapacity",
     "totalLifetimeSessions", "totalSessionsLast30Days", "totalMentoringHours",
-    "contactRecordName", "assignedUserName", "createdAt", "modifiedAt",
+    "contactRecordName", "contactRecordId", "assignedUserName", "assignedUserId",
+    "createdAt", "modifiedAt",
     "personalEmail", "contactPhone", "contactStreet", "contactCity", "postalCode",
 ]
 
@@ -102,6 +112,43 @@ _DETAIL_SELECT = ",".join(["id"] + sorted(EDITABLE_NAMES) + READ_ONLY_FIELDS)
 async def get_mentor(client: MentorClient, mentor_id: str) -> dict[str, Any]:
     """The full mentor record: every editable field + read-only context."""
     return await client.get(MENTOR_PROFILE, mentor_id, select=_DETAIL_SELECT)
+
+
+async def check_completeness(client: MentorClient, rec: dict[str, Any]) -> dict[str, Any]:
+    """Verify the mentor's data structure is complete & correct.
+
+    A ``CMentorProfile`` *is* the "CBM member" record (present by definition when
+    viewing it). Always required: a linked **Contact** record + the four sign-off
+    flags (``COMPLETENESS_FLAGS``). For an **Active** mentor, additionally: a
+    login **User** assigned to the member, and that same User assigned to the
+    Contact. Returns ``{"status": "Complete"|"Incomplete", "issues": [...]}`` —
+    ``issues`` explains an Incomplete result.
+    """
+    issues: list[str] = []
+    contact_id = rec.get("contactRecordId")
+    if not contact_id:
+        issues.append("no linked Contact record")
+    for field, label in COMPLETENESS_FLAGS:
+        if not rec.get(field):
+            issues.append(f"{label} not confirmed")
+
+    if rec.get("mentorStatus") == STATUS_ACTIVE:
+        user_id = rec.get("assignedUserId")
+        if not user_id:
+            issues.append("no User assigned to the mentor")
+        contact_user = None
+        if contact_id:
+            try:
+                contact = await client.get("Contact", contact_id, select="assignedUserId")
+                contact_user = contact.get("assignedUserId")
+            except Exception:
+                issues.append("could not read the Contact record")
+        if contact_id and not contact_user:
+            issues.append("no User assigned to the Contact")
+        elif user_id and contact_user and contact_user != user_id:
+            issues.append("Contact is assigned to a different User than the mentor")
+
+    return {"status": "Complete" if not issues else "Incomplete", "issues": issues}
 
 
 async def update_mentor(

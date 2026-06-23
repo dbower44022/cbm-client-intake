@@ -67,6 +67,12 @@
 .ro-link:hover { text-decoration: underline; }
 .ro-address { display: flex; flex-direction: column; align-items: center; line-height: 1.3; }
 
+/* data-structure completeness badge (hover for the reasons) */
+.complete-badge { display: inline-block; padding: 0.1rem 0.6rem; border-radius: 999px;
+  font-size: 12px; font-weight: 700; border: 1px solid var(--cbm-border); cursor: default; }
+.complete-complete { background: #eafaef; color: #2f7a3f; border-color: var(--cbm-success); }
+.complete-incomplete { background: #fdeaea; color: #a23b38; border-color: var(--cbm-danger); }
+
 /* edit tabs */
 .ma__tabs { display: flex; flex-wrap: wrap; gap: 0.25rem; border-bottom: 2px solid var(--cbm-border);
   margin-bottom: 1.25rem; }

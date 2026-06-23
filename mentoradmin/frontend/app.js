@@ -193,8 +193,18 @@
     return wrap;
   }
 
+  function completenessNode(c) {
+    var s = document.createElement("span");
+    s.className = "complete-badge complete-" + (c.status || "").toLowerCase();
+    s.textContent = c.status;
+    if (c.issues && c.issues.length) s.title = "Missing/incorrect: " + c.issues.join("; ");
+    return s;
+  }
+
   function renderReadonly(m) {
     var box = $("readonly"); box.innerHTML = "";
+    // data-structure completeness (first, most prominent)
+    if (m.completeness) roItem(box, "Data completeness", completenessNode(m.completeness));
     // status
     roItem(box, "Mentoring status", badge(m.mentorStatus));
     roItem(box, "Accepting new clients", m.acceptingNewClients ? "Yes" : "No");

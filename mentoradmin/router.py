@@ -114,7 +114,9 @@ async def mentor_detail(mentor_id: str, request: Request) -> dict:
     user = _require_user(request)
     client = client_for(get_settings(), user)
     try:
-        return await service.get_mentor(client, mentor_id)
+        rec = await service.get_mentor(client, mentor_id)
+        rec["completeness"] = await service.check_completeness(client, rec)
+        return rec
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not load mentor")
 
@@ -156,10 +158,12 @@ async def mentor_update(mentor_id: str, body: UpdateIn, request: Request) -> dic
     user = _require_user(request)
     client = client_for(settings, user)
     try:
-        return await service.update_mentor(
+        result = await service.update_mentor(
             client, mentor_id, body.changes,
             team_name=settings.mentor_team_name,
             admin_client_factory=_provision_factory(settings),
         )
+        result["completeness"] = await service.check_completeness(client, result)
+        return result
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not save mentor")
