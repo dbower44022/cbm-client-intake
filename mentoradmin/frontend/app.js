@@ -421,16 +421,61 @@
     return el.value;
   }
 
-  $("saveBtn").addEventListener("click", async function () {
-    if (!current) return;
-    var changes = {};
+  function currentFormValues() {
+    var v = {};
     Array.prototype.forEach.call($("editForm").querySelectorAll("[data-field]"), function (el) {
-      var cur = readField(el);
-      // Only send fields the user actually changed (see buildField snapshot).
-      if (JSON.stringify(cur) !== el.dataset.original) changes[el.dataset.field] = cur;
+      v[el.dataset.field] = readField(el);
     });
-    // Always submit (even with no field changes) so the server can reconcile the
-    // mentor's User onto the member + Contact and refresh completeness.
+    return v;
+  }
+  function hasText(html) {
+    if (!html) return false;
+    return String(html).replace(/<[^>]+>/g, "").replace(/\u00a0/g, " ").trim().length > 0;
+  }
+  // Completeness issues the staffer must address before saving. Excludes the
+  // member/Contact User assignments — the save auto-creates/reconciles those.
+  function pendingCompletenessIssues(v) {
+    var issues = [];
+    if (!current.contactRecordId) issues.push("no linked Contact record");
+    [["backgroundCheckCompleted", "background check"], ["ethicsAgreementAccepted", "ethics agreement"],
+     ["trainingCompleted", "training completed"], ["termsAccepted", "terms accepted"]].forEach(function (f) {
+      if (!v[f[0]]) issues.push(f[1] + " not confirmed");
+    });
+    if (v.mentorStatus === "Active" && !(v.cbmEmail || "").trim()) issues.push("no CBM email address");
+    if (v.publicProfile) {
+      if (!hasText(v.aboutMentor)) issues.push("public profile: About the mentor is empty");
+      if (!(v.mentoringFocusAreas || []).length) issues.push("public profile: no mentoring focus area selected");
+      if (!(v.areaOfExpertise || []).length) issues.push("public profile: no area of expertise selected");
+      if (!v.industrySector) issues.push("public profile: no industry sector selected");
+    }
+    return issues;
+  }
+
+  function showConfirmModal(issues, onConfirm) {
+    var prev = document.getElementById("confirmModal"); if (prev) prev.remove();
+    var overlay = document.createElement("div"); overlay.id = "confirmModal"; overlay.className = "modal-overlay";
+    var card = document.createElement("div"); card.className = "modal-card";
+    var h = document.createElement("h3"); h.textContent = "This record is still incomplete"; card.appendChild(h);
+    var p = document.createElement("p"); p.textContent = "The following still need attention:"; card.appendChild(p);
+    var ul = document.createElement("ul");
+    issues.forEach(function (i) { var li = document.createElement("li"); li.textContent = i; ul.appendChild(li); });
+    card.appendChild(ul);
+    var p2 = document.createElement("p"); p2.textContent = "Save anyway?"; card.appendChild(p2);
+    var actions = document.createElement("div"); actions.className = "modal-actions";
+    var cancel = document.createElement("button"); cancel.type = "button"; cancel.className = "cbm-button cbm-button--secondary"; cancel.textContent = "Cancel";
+    var ok = document.createElement("button"); ok.type = "button"; ok.className = "cbm-button"; ok.textContent = "Save anyway";
+    function close() { overlay.remove(); document.removeEventListener("keydown", onKey); }
+    function onKey(e) { if (e.key === "Escape") close(); }
+    cancel.addEventListener("click", close);
+    ok.addEventListener("click", function () { close(); onConfirm(); });
+    overlay.addEventListener("click", function (e) { if (e.target === overlay) close(); });
+    document.addEventListener("keydown", onKey);
+    actions.appendChild(cancel); actions.appendChild(ok); card.appendChild(actions);
+    overlay.appendChild(card); document.body.appendChild(overlay);
+    cancel.focus();
+  }
+
+  async function doSave(changes) {
     $("saveBtn").disabled = true;
     try {
       current = await api("/mentors/" + encodeURIComponent(current.id), { method: "PUT", body: JSON.stringify({ changes: changes }) });
@@ -455,6 +500,21 @@
       if (e.status === 401) { showLogin(); return; }
       notice("detailNotice", e.message, "error");
     } finally { $("saveBtn").disabled = false; }
+  }
+
+  $("saveBtn").addEventListener("click", function () {
+    if (!current) return;
+    var changes = {};
+    Array.prototype.forEach.call($("editForm").querySelectorAll("[data-field]"), function (el) {
+      var cur = readField(el);
+      // Only send fields the user actually changed (see buildField snapshot).
+      if (JSON.stringify(cur) !== el.dataset.original) changes[el.dataset.field] = cur;
+    });
+    // Pre-save completeness check: if the record will still be incomplete, ask
+    // for confirmation (styled modal). Cancel -> stay in edit mode, no save.
+    var issues = pendingCompletenessIssues(currentFormValues());
+    if (issues.length) showConfirmModal(issues, function () { doSave(changes); });
+    else doSave(changes);
   });
 
   // --- boot ---

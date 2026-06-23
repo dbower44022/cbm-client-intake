@@ -211,6 +211,11 @@ detail screen that reviews all info (read-only computed totals on top) and
   The frontend re-baselines the snapshots after each save (so reverting a field
   to its render-time value is still detected), and **always submits on Save**
   (even with no field changes) so the server-side reconciliation below runs.
+  On Save, a **client-side pre-check** (`pendingCompletenessIssues`, mirroring the
+  server rules from the form values) pops a **styled confirm modal** ("Save
+  anyway?" / Cancel) listing what's still missing; it **omits the User/login
+  assignment checks** (the save auto-creates/reconciles those, so warning about
+  them would be a false alarm). Cancel = stay in edit, no save.
 - **Data-completeness badge + save-time user-link reconciliation (added
   2026-06-22).** The detail header shows a **Complete/Incomplete** badge
   (`service.check_completeness`, attached to the detail GET + save response by the

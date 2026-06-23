@@ -88,6 +88,7 @@
 .modal-card p { margin: 0 0 0.6rem; color: var(--cbm-text); }
 .modal-card ul { margin: 0.3rem 0 1.1rem; padding-left: 1.2rem; }
 .modal-card li { margin: 0.3rem 0; color: var(--cbm-text); }
+.modal-actions { display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 0.4rem; }
 
 /* edit tabs */
 .ma__tabs { display: flex; flex-wrap: wrap; gap: 0.25rem; border-bottom: 2px solid var(--cbm-border);
