@@ -114,27 +114,30 @@ async def update_mentor(
 ) -> dict[str, Any]:
     """Update whitelisted editable fields; ignore anything else.
 
-    Side effect: when ``mentorStatus`` transitions to ``Approved`` (and the
-    mentor has no login user yet) AND ``admin_client_factory`` is supplied,
-    provision an EspoCRM User for them, link it to the profile, and place it in
-    the mentor team. **User creation/team lookup run under the privileged client
-    the factory returns** (a dedicated admin service account), never the staff
-    ``client`` — so Mentor Admin staff need no user-create permission. The
-    factory is awaited lazily (and its login errors captured) only when a
-    provisioning transition actually occurs. Without it (the default), no
-    provisioning is attempted. Runs *after* the status write and is best-effort:
-    any failure is captured in the returned ``provision`` summary rather than
-    failing the save, since the status change already took effect.
+    Side effect: when a save leaves the mentor at status ``Approved`` with **no
+    linked login user yet** AND ``admin_client_factory`` is supplied, provision
+    an EspoCRM User for them, link it to the profile, and place it in the mentor
+    team. This is recovery-friendly: it fires whether this save flips the status
+    to Approved OR the mentor was already Approved but never got a user (e.g. a
+    prior provisioning attempt failed) — so the next save self-heals, rather than
+    requiring the admin to toggle the status to re-trigger it. **User
+    creation/team lookup run under the privileged client the factory returns** (a
+    dedicated admin service account), never the staff ``client`` — so Mentor
+    Admin staff need no user-create permission. The factory is awaited lazily
+    (and its login errors captured) only when provisioning actually applies.
+    Without it (the default), no provisioning is attempted. Runs *after* the
+    status write and is best-effort: any failure is captured in the returned
+    ``provision`` summary rather than failing the save.
     """
     payload = {k: v for k, v in changes.items() if k in EDITABLE_NAMES}
     if not payload:
         return await get_mentor(client, mentor_id)
 
-    # Only the transition into Approved (not re-saving an already-approved
-    # mentor) triggers provisioning, and only if no user is linked yet.
-    becoming_approved = payload.get("mentorStatus") == STATUS_APPROVED
+    # When provisioning is possible, read the pre-save status + user link so we
+    # can decide on the *effective* status (the change, or the stored value if
+    # this save didn't touch status).
     before = None
-    if becoming_approved and admin_client_factory is not None:
+    if admin_client_factory is not None:
         before = await client.get(
             MENTOR_PROFILE, mentor_id, select="mentorStatus,assignedUserId"
         )
@@ -142,10 +145,13 @@ async def update_mentor(
     await client.update(MENTOR_PROFILE, mentor_id, payload)
 
     provision: Optional[dict[str, Any]] = None
+    effective_status = (
+        payload.get("mentorStatus", before.get("mentorStatus")) if before else None
+    )
     if (
         admin_client_factory is not None
         and before is not None
-        and before.get("mentorStatus") != STATUS_APPROVED
+        and effective_status == STATUS_APPROVED
         and not before.get("assignedUserId")
     ):
         try:

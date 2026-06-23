@@ -217,11 +217,23 @@ async def test_non_approval_change_does_not_provision():
 
 
 @pytest.mark.asyncio
-async def test_resaving_approved_does_not_provision():
+async def test_already_approved_without_user_provisions_on_resave():
+    # Recovery: a mentor left Approved by a failed prior attempt (no user) gets
+    # provisioned on the next save even if this save re-sends the same status.
     c = ProvisionClient(profile={"id": "m1", "name": "Jane Doe", "mentorStatus": "Approved",
                                  "assignedUserId": None, "cbmEmail": "", "contactRecordId": "c1"})
-    await service.update_mentor(c, "m1", {"mentorStatus": "Approved"}, team_name="Mentor Team", admin_client_factory=_afactory(c))
-    assert c.created == []
+    res = await service.update_mentor(c, "m1", {"mentorStatus": "Approved"}, team_name="Mentor Team", admin_client_factory=_afactory(c))
+    assert len(c.created) == 1 and res["provision"]["ok"] is True
+
+
+@pytest.mark.asyncio
+async def test_already_approved_provisions_on_unrelated_field_save():
+    # Recovery via a non-status edit (the real-world case): mentor already
+    # Approved, no user, save only changes cbmEmail -> still provisions.
+    c = ProvisionClient(profile={"id": "m1", "name": "Jane Doe", "mentorStatus": "Approved",
+                                 "assignedUserId": None, "cbmEmail": "", "contactRecordId": "c1"})
+    res = await service.update_mentor(c, "m1", {"description": "note"}, team_name="Mentor Team", admin_client_factory=_afactory(c))
+    assert len(c.created) == 1 and res["provision"]["ok"] is True
 
 
 @pytest.mark.asyncio

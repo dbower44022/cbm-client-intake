@@ -205,8 +205,10 @@ detail screen that reviews all info (read-only computed totals on top) and
   values 400'd on re-save; see [[crm-test-schema-drift]].) `_crm_failure` logs
   the full CRM error body so such rejections are diagnosable from the run logs.
 - **Approval → user provisioning (added 2026-06-22; privilege model fixed
-  2026-06-22).** When an edit transitions `mentorStatus` to **`Approved`** (and
-  the mentor has no linked login user yet) **and `MENTOR_PROVISION_USERS` is on**,
+  2026-06-22).** When a save leaves `mentorStatus` at **`Approved`** with **no
+  linked login user yet** **and `MENTOR_PROVISION_USERS` is on** (recovery-
+  friendly: fires whether this save flips the status to Approved OR the mentor
+  was already Approved but a prior attempt failed to create the user),
   `service.update_mentor` provisions a login: creates an EspoCRM **User**
   (`userName` = `emailAddress` = `firstname.lastname@cbmentors.org` — the CBM
   email, reusing the profile's `cbmEmail` if already set; `type=regular`,
