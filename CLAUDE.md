@@ -224,7 +224,9 @@ detail screen that reviews all info (read-only computed totals on top) and
   sets the member's User only) and self-healing one-sided assignments, so the
   "no User assigned to the Contact" completeness issue auto-resolves on save.
 - **Approval → user provisioning (added 2026-06-22; privilege model fixed
-  2026-06-22).** When a save leaves `mentorStatus` at **`Approved`** with **no
+  2026-06-22).** When a save leaves `mentorStatus` at **`Approved` or `Active`**
+  (a mentor set straight to Active skips Approved but still needs a login) with
+  **no
   linked login user yet** **and `MENTOR_PROVISION_USERS` is on** (recovery-
   friendly: fires whether this save flips the status to Approved OR the mentor
   was already Approved but a prior attempt failed to create the user),

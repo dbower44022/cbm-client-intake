@@ -269,10 +269,19 @@ async def test_approval_skips_when_user_already_linked():
 
 
 @pytest.mark.asyncio
-async def test_non_approval_change_does_not_provision():
+async def test_non_provisioning_status_does_not_provision():
+    # A status that isn't Approved or Active never provisions.
     c = ProvisionClient()
-    await service.update_mentor(c, "m1", {"mentorStatus": "Active"}, team_name="Mentor Team", admin_client_factory=_afactory(c))
+    await service.update_mentor(c, "m1", {"mentorStatus": "Inactive"}, team_name="Mentor Team", admin_client_factory=_afactory(c))
     assert c.created == []
+
+
+@pytest.mark.asyncio
+async def test_active_without_user_provisions():
+    # Set straight to Active (skipping Approved) with no user -> provisions.
+    c = ProvisionClient()
+    res = await service.update_mentor(c, "m1", {"mentorStatus": "Active"}, team_name="Mentor Team", admin_client_factory=_afactory(c))
+    assert len(c.created) == 1 and res["provision"]["ok"] is True
 
 
 @pytest.mark.asyncio

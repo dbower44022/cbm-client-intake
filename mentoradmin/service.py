@@ -161,13 +161,14 @@ async def update_mentor(
 ) -> dict[str, Any]:
     """Update whitelisted editable fields; ignore anything else.
 
-    Side effect: when a save leaves the mentor at status ``Approved`` with **no
-    linked login user yet** AND ``admin_client_factory`` is supplied, provision
-    an EspoCRM User for them, link it to the profile, and place it in the mentor
-    team. This is recovery-friendly: it fires whether this save flips the status
-    to Approved OR the mentor was already Approved but never got a user (e.g. a
-    prior provisioning attempt failed) — so the next save self-heals, rather than
-    requiring the admin to toggle the status to re-trigger it. **User
+    Side effect: when a save leaves the mentor at status ``Approved`` **or
+    ``Active``** with **no linked login user yet** AND ``admin_client_factory`` is
+    supplied, provision an EspoCRM User for them, link it to the profile, and
+    place it in the mentor team. This is recovery-friendly: it fires whether this
+    save flips the status OR the mentor was already Approved/Active but never got
+    a user (e.g. set straight to Active, skipping Approved, or a prior attempt
+    failed) — so the next save self-heals, rather than requiring the admin to
+    toggle the status to re-trigger it. **User
     creation/team lookup run under the privileged client the factory returns** (a
     dedicated admin service account), never the staff ``client`` — so Mentor
     Admin staff need no user-create permission. The factory is awaited lazily
@@ -197,7 +198,7 @@ async def update_mentor(
     if (
         admin_client_factory is not None
         and before is not None
-        and effective_status == STATUS_APPROVED
+        and effective_status in (STATUS_APPROVED, STATUS_ACTIVE)
         and not before.get("assignedUserId")
     ):
         try:
