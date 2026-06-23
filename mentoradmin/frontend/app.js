@@ -378,6 +378,11 @@
     try {
       current = await api("/mentors/" + encodeURIComponent(current.id), { method: "PUT", body: JSON.stringify({ changes: changes }) });
       listDirty = true;
+      // Re-baseline the change snapshots to the just-saved state, so a later
+      // edit that reverts a field to its render-time value is still sent.
+      Array.prototype.forEach.call($("editForm").querySelectorAll("[data-field]"), function (el) {
+        el.dataset.original = JSON.stringify(readField(el));
+      });
       $("detailName").textContent = current.name || "(unnamed mentor)";
       renderReadonly(current);
       // Approving a mentor provisions a login user (server-side) — report it.
