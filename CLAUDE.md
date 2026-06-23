@@ -208,6 +208,21 @@ detail screen that reviews all info (read-only computed totals on top) and
   `mentorStatus`/`industrySector` enums had drifted, so a mentor's stale stored
   values 400'd on re-save; see [[crm-test-schema-drift]].) `_crm_failure` logs
   the full CRM error body so such rejections are diagnosable from the run logs.
+  The frontend re-baselines the snapshots after each save (so reverting a field
+  to its render-time value is still detected), and **always submits on Save**
+  (even with no field changes) so the server-side reconciliation below runs.
+- **Data-completeness badge + save-time user-link reconciliation (added
+  2026-06-22).** The detail header shows a **Complete/Incomplete** badge
+  (`service.check_completeness`, attached to the detail GET + save response by the
+  router; click it for the reasons). A mentor is Complete when: a Contact is
+  linked (the `CMentorProfile` *is* the "CBM member" record), and background
+  check / ethics / training / terms are all true; plus, **if Active**, a User is
+  assigned to the member AND the same User to its Contact. On **every save**,
+  `service.reconcile_user_links` (best-effort) assigns the mentor's User
+  (`CMentorProfile.assignedUser`, or the Contact's if only that side has one) to
+  **both** the member and its Contact — filling the gap provisioning leaves (it
+  sets the member's User only) and self-healing one-sided assignments, so the
+  "no User assigned to the Contact" completeness issue auto-resolves on save.
 - **Approval → user provisioning (added 2026-06-22; privilege model fixed
   2026-06-22).** When a save leaves `mentorStatus` at **`Approved`** with **no
   linked login user yet** **and `MENTOR_PROVISION_USERS` is on** (recovery-

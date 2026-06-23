@@ -177,8 +177,6 @@ async def update_mentor(
     ``provision`` summary rather than failing the save.
     """
     payload = {k: v for k, v in changes.items() if k in EDITABLE_NAMES}
-    if not payload:
-        return await get_mentor(client, mentor_id)
 
     # When provisioning is possible, read the pre-save status + user link so we
     # can decide on the *effective* status (the change, or the stored value if
@@ -189,7 +187,8 @@ async def update_mentor(
             MENTOR_PROFILE, mentor_id, select="mentorStatus,assignedUserId"
         )
 
-    await client.update(MENTOR_PROFILE, mentor_id, payload)
+    if payload:
+        await client.update(MENTOR_PROFILE, mentor_id, payload)
 
     provision: Optional[dict[str, Any]] = None
     effective_status = (
@@ -212,10 +211,43 @@ async def update_mentor(
         except Exception as exc:  # login/EspoError etc. — never break the saved status
             provision = {"ok": False, "error": str(exc)}
 
+    # On every save, make sure the mentor's User is assigned to BOTH the CBM
+    # member record and its Contact (provisioning sets it only on the member, and
+    # this self-heals records assigned on only one side). Best-effort.
+    try:
+        await reconcile_user_links(client, mentor_id)
+    except Exception:
+        pass
+
     result = await get_mentor(client, mentor_id)
     if provision is not None:
         result["provision"] = provision
     return result
+
+
+async def reconcile_user_links(client: MentorClient, mentor_id: str) -> None:
+    """Assign the mentor's User to both the CBM member record (CMentorProfile)
+    and its Contact. The mentor's User is the member's ``assignedUser`` (or the
+    Contact's, if only that side has one). Idempotent — a no-op when there is no
+    User or both sides already match. Run on every save.
+    """
+    prof = await client.get(
+        MENTOR_PROFILE, mentor_id, select="assignedUserId,contactRecordId"
+    )
+    member_user = prof.get("assignedUserId")
+    contact_id = prof.get("contactRecordId")
+    contact_user = None
+    if contact_id:
+        contact = await client.get("Contact", contact_id, select="assignedUserId")
+        contact_user = contact.get("assignedUserId")
+
+    user = member_user or contact_user
+    if not user:
+        return  # no User to assign anywhere
+    if member_user != user:
+        await client.update(MENTOR_PROFILE, mentor_id, {"assignedUserId": user})
+    if contact_id and contact_user != user:
+        await client.update("Contact", contact_id, {"assignedUserId": user})
 
 
 def cbm_email_for(first: str, last: str) -> str:

@@ -339,6 +339,37 @@ async def test_admin_login_failure_is_captured_and_status_still_saved():
     assert "rejected" in res["provision"]["error"].lower()
 
 
+# --- user-link reconciliation on save ---
+
+@pytest.mark.asyncio
+async def test_save_assigns_member_user_to_contact():
+    # member has a User, Contact doesn't -> saving assigns it to the Contact.
+    c = ProvisionClient(profile={"id": "m1", "name": "Jane", "mentorStatus": "Active",
+                                 "assignedUserId": "u1", "cbmEmail": "", "contactRecordId": "c1"})
+    await service.update_mentor(c, "m1", {"mentorStatusNotes": "x"})
+    contact_updates = [u for u in c.updates if u[0] == "Contact"]
+    assert contact_updates and contact_updates[-1][2]["assignedUserId"] == "u1"
+
+
+@pytest.mark.asyncio
+async def test_save_reconcile_noop_when_already_aligned():
+    c = ProvisionClient(
+        profile={"id": "m1", "name": "Jane", "mentorStatus": "Active",
+                 "assignedUserId": "u1", "cbmEmail": "", "contactRecordId": "c1"},
+        contact={"id": "c1", "firstName": "Jane", "lastName": "Doe", "assignedUserId": "u1"},
+    )
+    await service.update_mentor(c, "m1", {"mentorStatusNotes": "x"})
+    assert not [u for u in c.updates if u[0] == "Contact"]
+
+
+@pytest.mark.asyncio
+async def test_save_reconcile_noop_when_no_user_anywhere():
+    c = ProvisionClient(profile={"id": "m1", "name": "Jane", "mentorStatus": "Active",
+                                 "assignedUserId": None, "cbmEmail": "", "contactRecordId": "c1"})
+    await service.update_mentor(c, "m1", {"mentorStatusNotes": "x"})
+    assert not [u for u in c.updates if u[0] == "Contact"]
+
+
 # --- router tests ---
 
 def _app(monkeypatch):

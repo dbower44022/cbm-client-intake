@@ -421,7 +421,8 @@
       // Only send fields the user actually changed (see buildField snapshot).
       if (JSON.stringify(cur) !== el.dataset.original) changes[el.dataset.field] = cur;
     });
-    if (!Object.keys(changes).length) { notice("detailNotice", "No changes to save.", "success"); return; }
+    // Always submit (even with no field changes) so the server can reconcile the
+    // mentor's User onto the member + Contact and refresh completeness.
     $("saveBtn").disabled = true;
     try {
       current = await api("/mentors/" + encodeURIComponent(current.id), { method: "PUT", body: JSON.stringify({ changes: changes }) });
