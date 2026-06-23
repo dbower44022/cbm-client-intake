@@ -12,6 +12,7 @@ import pytest
 
 from core.store import (
     STATUS_COMPLETED,
+    STATUS_DISCARDED,
     STATUS_PENDING,
     STATUS_PROCESSING,
     PostgresStore,
@@ -67,6 +68,32 @@ async def test_ops_list_counts_and_redrive():
 
     m = await store.metrics()
     assert "counts" in m and "backlog" in m and "needsAttention" in m
+
+    await store.dispose()
+
+
+async def test_discard_resolves_stuck_but_not_completed():
+    store = PostgresStore(_URL)
+    await store.create_all()
+
+    # A needs_attention row can be discarded (terminal) and then no longer claimed.
+    stuck = await store.capture(
+        "volunteer", f"disc-{uuid.uuid4()}", {"email": "stuck@example.com"},
+        status="needs_attention",
+    )
+    assert await store.discard(stuck.id) is True
+    assert (await store.get_submission(stuck.id))["status"] == STATUS_DISCARDED
+    claimed = await store.claim_batch(50, lease_seconds=900)
+    assert all(c.id != stuck.id for c in claimed)
+
+    # A completed delivery must never be discarded.
+    done = await store.capture(
+        "volunteer", f"done-{uuid.uuid4()}", {"email": "done@example.com"},
+        status=STATUS_PENDING,
+    )
+    await store.mark_completed(done.id, {"contactId": "c1"})
+    assert await store.discard(done.id) is False
+    assert (await store.get_submission(done.id))["status"] == STATUS_COMPLETED
 
     await store.dispose()
 

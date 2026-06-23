@@ -102,3 +102,15 @@ async def redrive(submission_id: str, request: Request) -> dict:
     if not await store.redrive(submission_id):
         raise HTTPException(status_code=404, detail="Submission not found.")
     return {"status": "requeued"}
+
+
+@router.post("/submissions/{submission_id}/discard")
+async def discard(submission_id: str, request: Request) -> dict:
+    _require_user(request)
+    store = _store(request)
+    if not await store.discard(submission_id):
+        # Either not found, or already completed (which must not be discarded).
+        raise HTTPException(
+            status_code=404, detail="Submission not found or already completed."
+        )
+    return {"status": "discarded"}

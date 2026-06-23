@@ -3,9 +3,12 @@
   "use strict";
 
   var API = "/ops/api";
-  var STATUSES = ["pending", "processing", "retry", "completed", "needs_attention", "held_honeypot"];
+  var STATUSES = ["pending", "processing", "retry", "completed", "needs_attention", "held_honeypot", "discarded"];
   var FORMS = ["client-intake", "volunteer", "info-request", "partner", "sponsor"];
-  var REDRIVABLE = { held_honeypot: 1, needs_attention: 1, retry: 1 };
+  // Re-drive includes discarded so a mistaken discard can be undone (re-queued).
+  var REDRIVABLE = { held_honeypot: 1, needs_attention: 1, retry: 1, discarded: 1 };
+  // Discard resolves a stuck row that can't be re-driven (e.g. a bad payload).
+  var DISCARDABLE = { held_honeypot: 1, needs_attention: 1, retry: 1 };
   var state = { status: "", form: "" };
 
   function $(id) { return document.getElementById(id); }
@@ -163,6 +166,13 @@
       btn.addEventListener("click", function () { redrive(r); });
       act.appendChild(btn);
     }
+    if (DISCARDABLE[r.status]) {
+      var dbtn = document.createElement("button");
+      dbtn.type = "button"; dbtn.className = "cbm-button cbm-button--secondary discard-btn";
+      dbtn.textContent = "Discard";
+      dbtn.addEventListener("click", function () { discard(r); });
+      act.appendChild(dbtn);
+    }
     tr.appendChild(act);
     return tr;
   }
@@ -172,6 +182,23 @@
     try {
       await api("/submissions/" + encodeURIComponent(r.id) + "/redrive", { method: "POST" });
       notice("Re-queued " + r.id.slice(0, 8) + " — the worker will pick it up.", "success");
+      loadData();
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      notice(e.message, "error");
+    }
+  }
+
+  async function discard(r) {
+    if (!window.confirm(
+      "Discard " + (r.id || "").slice(0, 8) + " (" + r.form_slug + ")?\n\n" +
+      "Use this for a stuck submission that can't be delivered (e.g. a bad " +
+      "payload). It's marked 'discarded' and kept for the record, but leaves the " +
+      "queue and stops the needs-attention alert. You can Re-drive it later to undo."
+    )) return;
+    try {
+      await api("/submissions/" + encodeURIComponent(r.id) + "/discard", { method: "POST" });
+      notice("Discarded " + r.id.slice(0, 8) + ".", "success");
       loadData();
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }

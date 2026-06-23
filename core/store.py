@@ -48,6 +48,10 @@ STATUS_RETRY = "retry"
 STATUS_COMPLETED = "completed"
 STATUS_NEEDS_ATTENTION = "needs_attention"
 STATUS_HELD = "held_honeypot"
+# Terminal, staff-set: a stuck submission resolved manually in /ops (e.g. a bad
+# payload that can't be re-driven). Kept in the table for audit; excluded from
+# the backlog / needs-attention alerting and never claimed by the worker.
+STATUS_DISCARDED = "discarded"
 
 # Statuses the worker is allowed to claim and deliver.
 CLAIMABLE = (STATUS_PENDING, STATUS_RETRY)
@@ -130,6 +134,7 @@ class SubmissionStore(Protocol):
     async def get_submission(self, submission_id: str) -> Optional[dict[str, Any]]: ...
     async def counts_by_status(self) -> dict[str, int]: ...
     async def redrive(self, submission_id: str) -> bool: ...
+    async def discard(self, submission_id: str) -> bool: ...
     async def metrics(self) -> dict[str, Any]: ...
     async def ping(self) -> bool: ...
     async def dispose(self) -> None: ...
@@ -384,6 +389,25 @@ class PostgresStore:
                     status=STATUS_PENDING,
                     next_attempt_at=None,
                     attempt_count=0,
+                    updated_at=_now(),
+                )
+            )
+        return result.rowcount > 0
+
+    async def discard(self, submission_id: str) -> bool:
+        """Resolve a stuck submission manually: move it to the terminal
+        ``discarded`` status so it leaves the worker queue and stops counting
+        toward the needs-attention alert. Never touches a completed delivery.
+        The row (payload, error, progress) is kept for audit."""
+        async with self._engine.begin() as conn:
+            result = await conn.execute(
+                update(submission)
+                .where(submission.c.id == submission_id)
+                .where(submission.c.status != STATUS_COMPLETED)
+                .values(
+                    status=STATUS_DISCARDED,
+                    next_attempt_at=None,
+                    locked_until=None,
                     updated_at=_now(),
                 )
             )

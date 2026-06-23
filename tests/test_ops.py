@@ -50,6 +50,13 @@ class FakeOpsStore:
             return True
         return False
 
+    async def discard(self, submission_id):
+        row = self.rows.get(submission_id)
+        if row is None or row["status"] == "completed":
+            return False
+        row["status"] = "discarded"
+        return True
+
     async def metrics(self):
         return {"counts": {"needs_attention": 1}, "needsAttention": 1,
                 "backlog": 0, "oldestPendingAgeSeconds": None, "avgLatencySeconds": None}
@@ -95,6 +102,17 @@ def test_redrive(monkeypatch):
         missing = c.post("/ops/api/submissions/nope/redrive")
     assert ok.status_code == 200 and ok.json()["status"] == "requeued"
     assert store.redriven == ["abc12345"]
+    assert missing.status_code == 404
+
+
+def test_discard(monkeypatch):
+    store = FakeOpsStore()
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, store)) as c:
+        ok = c.post("/ops/api/submissions/abc12345/discard")
+        missing = c.post("/ops/api/submissions/nope/discard")
+    assert ok.status_code == 200 and ok.json()["status"] == "discarded"
+    assert store.rows["abc12345"]["status"] == "discarded"
     assert missing.status_code == 404
 
 
