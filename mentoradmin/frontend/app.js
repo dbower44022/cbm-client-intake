@@ -197,8 +197,46 @@
     var s = document.createElement("span");
     s.className = "complete-badge complete-" + (c.status || "").toLowerCase();
     s.textContent = c.status;
-    if (c.issues && c.issues.length) s.title = "Missing/incorrect: " + c.issues.join("; ");
+    s.title = "Click for details";
+    s.setAttribute("role", "button");
+    s.tabIndex = 0;
+    s.addEventListener("click", function () { showCompletenessModal(c); });
+    s.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); showCompletenessModal(c); }
+    });
     return s;
+  }
+
+  function showCompletenessModal(c) {
+    var prev = document.getElementById("compModal");
+    if (prev) prev.remove();
+    var overlay = document.createElement("div");
+    overlay.id = "compModal"; overlay.className = "modal-overlay";
+    var card = document.createElement("div"); card.className = "modal-card";
+    var h = document.createElement("h3");
+    h.textContent = c.status === "Complete"
+      ? "Mentor data is complete" : "Mentor data is incomplete";
+    card.appendChild(h);
+    if (c.issues && c.issues.length) {
+      var p = document.createElement("p"); p.textContent = "The following must be resolved:";
+      card.appendChild(p);
+      var ul = document.createElement("ul");
+      c.issues.forEach(function (i) { var li = document.createElement("li"); li.textContent = i; ul.appendChild(li); });
+      card.appendChild(ul);
+    } else {
+      var ok = document.createElement("p");
+      ok.textContent = "All required records, links, and sign-offs are in place.";
+      card.appendChild(ok);
+    }
+    var btn = document.createElement("button");
+    btn.type = "button"; btn.className = "cbm-button"; btn.textContent = "Close";
+    function close() { overlay.remove(); document.removeEventListener("keydown", onKey); }
+    function onKey(e) { if (e.key === "Escape") close(); }
+    btn.addEventListener("click", close);
+    overlay.addEventListener("click", function (e) { if (e.target === overlay) close(); });
+    document.addEventListener("keydown", onKey);
+    card.appendChild(btn); overlay.appendChild(card); document.body.appendChild(overlay);
+    btn.focus();
   }
 
   function renderReadonly(m) {
