@@ -53,8 +53,10 @@ This is a multi-form app: a shared core hosts any number of intake forms.
   - `ops/` — **Submission Operations** (`/ops/`): a console over the V2 durable
     store (list/inspect/redrive submissions, backlog metrics).
   - `mentoradmin/` — **Mentor Administration** (`/mentoradmin/`): browse the mentor
-    roster and edit any mentor's profile; setting a mentor to *Approved* can
-    auto-provision their EspoCRM login (see CLAUDE.md).
+    roster and edit any mentor's profile; verifies each record is complete and
+    can auto-provision a mentor's EspoCRM login. See
+    [`mentor-administration.md`](mentor-administration.md) for the functionality
+    and the complete-record requirements.
 - **V2 reliability platform** (`prds/v2/`): optional durable capture
   (`core/store.py`) + an async delivery `worker.py`, gated by `DATABASE_URL` /
   `ASYNC_DELIVERY` so behavior is unchanged until a Postgres DB is attached.

@@ -569,6 +569,9 @@ only matters if a separate frontend origin is ever introduced.
 - `DEPLOYMENT.md` — engineer deploy runbook (App Platform), incl. the staff-tool
   + mentor-provisioning env vars. `STAFF-DEPLOYMENT-GUIDE.md` — plain-language
   console-only companion for CBM staff.
+- `mentor-administration.md` — functional reference for the `/mentoradmin` tool:
+  overall functionality + the **complete-record requirements** (the completeness
+  rules, in plain language).
 - `prds/v2/` — the V2 reliability platform specs (durable capture + async worker
   + ops + alerting).
 
