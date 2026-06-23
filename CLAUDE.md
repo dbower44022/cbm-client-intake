@@ -225,7 +225,9 @@ detail screen that reviews all info (read-only computed totals on top) and
   "no User assigned to the Contact" completeness issue auto-resolves on save.
   The computed status is **persisted** to the CRM `recordStatus` enum
   (`Complete`/`Incomplete`; a manual `Duplicate` is preserved, never overwritten)
-  on every view/save when it changes (`service.sync_record_status`), so the
+  **on save** when it changes (`service.sync_record_status`; not on view, to
+  avoid churning modifiedAt/modifiedBy — the detail GET still computes it for the
+  badge), so the
   **roster grid** shows a **Record** column + filter (read from the stored field
   — fresh for any mentor that's been viewed/saved) to spot who needs work without
   recomputing per row. `recordStatus` is in the shared `assignments` mentor row.

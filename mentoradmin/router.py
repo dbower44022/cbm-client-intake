@@ -115,9 +115,9 @@ async def mentor_detail(mentor_id: str, request: Request) -> dict:
     client = client_for(get_settings(), user)
     try:
         rec = await service.get_mentor(client, mentor_id)
-        comp = await service.check_completeness(client, rec)
-        rec["completeness"] = comp
-        rec["recordStatus"] = await service.sync_record_status(client, mentor_id, rec, comp["status"])
+        # Completeness is computed for the header badge, but recordStatus is only
+        # persisted on save (not on view) to avoid churning modifiedAt/modifiedBy.
+        rec["completeness"] = await service.check_completeness(client, rec)
         return rec
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not load mentor")
