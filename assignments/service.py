@@ -20,6 +20,8 @@ from __future__ import annotations
 import logging
 from typing import Any, Protocol
 
+from core.espo import EspoError
+
 log = logging.getLogger("cbm_intake.assignments.service")
 
 # --- Entity names ---
@@ -240,47 +242,71 @@ async def assign_engagement(
         },
     )
 
+    # The core assignment (steps 1-2) is done. The downstream re-homing below is
+    # best-effort and per-target: a CRM failure on one record is recorded in
+    # ``reassignmentErrors`` and reported to the staffer, rather than raising and
+    # leaving them unsure whether the engagement itself was assigned (it was).
+    reassignment_errors: list[dict[str, str]] = []
+
     # 3. Gather related records.
-    eng = await client.get(
-        ENGAGEMENT,
-        engagement_id,
-        select="primaryEngagementContactId,engagementClientId,clientOrganizationId",
-    )
     contact_ids: set[str] = set()
-    if eng.get("primaryEngagementContactId"):
-        contact_ids.add(eng["primaryEngagementContactId"])
-    related = await client.list_related(
-        ENGAGEMENT, engagement_id, ENGAGEMENT_CONTACTS, select="id", max_size=200
-    )
-    for r in related.get("list", []):
-        contact_ids.add(r["id"])
+    client_id = None
+    account_id = None
+    try:
+        eng = await client.get(
+            ENGAGEMENT,
+            engagement_id,
+            select="primaryEngagementContactId,engagementClientId,clientOrganizationId",
+        )
+        if eng.get("primaryEngagementContactId"):
+            contact_ids.add(eng["primaryEngagementContactId"])
+        related = await client.list_related(
+            ENGAGEMENT, engagement_id, ENGAGEMENT_CONTACTS, select="id", max_size=200
+        )
+        for r in related.get("list", []):
+            contact_ids.add(r["id"])
+        client_id = eng.get("engagementClientId")
+        account_id = eng.get("clientOrganizationId")
+    except EspoError as exc:
+        reassignment_errors.append({"entity": ENGAGEMENT, "id": engagement_id, "error": str(exc)})
 
     # 4. Re-assign contacts, then the client profile + account. Each entity gets
     # whichever assignment field it actually uses (single vs. collaborators).
+    contacts_updated = 0
     for cid in sorted(contact_ids):
-        await client.update(CONTACT, cid, _assigned_user_payload(CONTACT, user_id))
+        try:
+            await client.update(CONTACT, cid, _assigned_user_payload(CONTACT, user_id))
+            contacts_updated += 1
+        except EspoError as exc:
+            reassignment_errors.append({"entity": CONTACT, "id": cid, "error": str(exc)})
 
     client_profile_updated = False
-    if eng.get("engagementClientId"):
-        await client.update(
-            CLIENT_PROFILE, eng["engagementClientId"],
-            _assigned_user_payload(CLIENT_PROFILE, user_id),
-        )
-        client_profile_updated = True
+    if client_id:
+        try:
+            await client.update(
+                CLIENT_PROFILE, client_id, _assigned_user_payload(CLIENT_PROFILE, user_id)
+            )
+            client_profile_updated = True
+        except EspoError as exc:
+            reassignment_errors.append({"entity": CLIENT_PROFILE, "id": client_id, "error": str(exc)})
 
     account_updated = False
-    if eng.get("clientOrganizationId"):
-        await client.update(
-            ACCOUNT, eng["clientOrganizationId"],
-            _assigned_user_payload(ACCOUNT, user_id),
-        )
-        account_updated = True
+    if account_id:
+        try:
+            await client.update(
+                ACCOUNT, account_id, _assigned_user_payload(ACCOUNT, user_id)
+            )
+            account_updated = True
+        except EspoError as exc:
+            reassignment_errors.append({"entity": ACCOUNT, "id": account_id, "error": str(exc)})
 
     log.info(
-        "assigned engagement=%s -> mentor=%s user=%s contacts=%d client=%s account=%s",
-        engagement_id, mentor_profile_id, user_id, len(contact_ids),
-        client_profile_updated, account_updated,
+        "assigned engagement=%s -> mentor=%s user=%s contacts=%d/%d client=%s account=%s errors=%d",
+        engagement_id, mentor_profile_id, user_id, contacts_updated, len(contact_ids),
+        client_profile_updated, account_updated, len(reassignment_errors),
     )
+    if reassignment_errors:
+        log.warning("assign engagement=%s partial re-homing: %s", engagement_id, reassignment_errors)
     return {
         "engagementId": engagement_id,
         "engagementStatus": STATUS_PENDING,
@@ -288,7 +314,9 @@ async def assign_engagement(
         "mentorName": mentor.get("name"),
         "assignedUserId": user_id,
         "assignedUserName": mentor.get("assignedUserName"),
-        "contactsUpdated": len(contact_ids),
+        "contactsUpdated": contacts_updated,
+        "contactsTotal": len(contact_ids),
         "clientProfileUpdated": client_profile_updated,
         "accountUpdated": account_updated,
+        "reassignmentErrors": reassignment_errors,
     }

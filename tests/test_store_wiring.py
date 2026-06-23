@@ -43,6 +43,9 @@ class FakeStore:
     async def create_all(self) -> None:
         pass
 
+    async def ping(self) -> bool:
+        return True
+
     async def dispose(self) -> None:
         pass
 
@@ -128,10 +131,25 @@ def test_honeypot_captured_held_and_not_processed():
 def test_healthz_reports_durable_store():
     store = FakeStore()
     with _client(store) as c:
-        assert c.get("/healthz").json()["durableStore"] is True
+        body = c.get("/healthz").json()
+        assert body["durableStore"] is True
+        assert body["database"] == "ok"  # ping succeeded
     # And false when there is no store.
     with TestClient(create_app([info_request.SPEC])) as c:
-        assert c.get("/healthz").json()["durableStore"] is False
+        body = c.get("/healthz").json()
+        assert body["durableStore"] is False
+        assert body["database"] is None  # nothing to ping
+
+
+def test_healthz_503_when_database_unreachable():
+    class DownStore(FakeStore):
+        async def ping(self) -> bool:
+            raise RuntimeError("connection refused")
+
+    with _client(DownStore()) as c:
+        resp = c.get("/healthz")
+        assert resp.status_code == 503
+        assert resp.json()["database"] == "error"
 
 
 def test_async_delivery_defers_processing(monkeypatch):

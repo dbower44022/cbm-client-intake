@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import base64
 import logging
+import re
 from typing import Any, Optional
 
 import httpx
@@ -202,10 +203,18 @@ def clear_session(request, key: str = SESSION_KEY) -> None:
     request.session.pop(key, None)
 
 
+_HTTP_STATUS_RE = re.compile(r"HTTP (\d{3})")
+
+
 def session_expired(exc: Exception) -> bool:
     """True if a per-user CRM call failed because the EspoCRM auth token is no
     longer valid (expired/revoked). The shared staff session is signed but the
     token inside it has a finite life, so a still-"logged in" session can hit
     this — callers clear the session and return 401 so the UI re-prompts login.
+
+    Match the *first* ``HTTP <code>`` in the message — ``EspoError`` always puts
+    the real status code there, ahead of the (echoed) response body, so a 502
+    whose body merely contains the text "HTTP 401" is not misread as expiry.
     """
-    return "HTTP 401" in str(exc)
+    match = _HTTP_STATUS_RE.search(str(exc))
+    return bool(match) and match.group(1) == "401"

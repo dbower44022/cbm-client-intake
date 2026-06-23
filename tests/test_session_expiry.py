@@ -28,6 +28,15 @@ def test_session_expired_detects_401_only():
     assert not session_expired(EspoError("create failed: HTTP 403 Forbidden"))
 
 
+def test_session_expired_ignores_status_text_in_body():
+    # The real status code is the FIRST "HTTP <code>" in the message; an echoed
+    # response body that merely mentions "HTTP 401" must not be misread as expiry.
+    assert not session_expired(
+        EspoError("update failed: HTTP 502 Bad Gateway — upstream said HTTP 401")
+    )
+    assert session_expired(EspoError("HTTP 401 token expired"))
+
+
 def _app(monkeypatch, raises: EspoError):
     monkeypatch.setenv("SESSION_SECRET", "test-secret")  # enables the assignments router
     get_settings.cache_clear()

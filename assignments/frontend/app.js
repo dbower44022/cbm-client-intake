@@ -627,13 +627,24 @@
       // Re-fetch so the grid reflects the current filter (the engagement is now
       // Pending Acceptance — it stays if that status is selected, else drops off).
       await reloadEngagements();
-      notice(
+      var summary =
         "Assigned “" + (eng.name || "engagement") + "” to " + res.mentorName +
         " — status now Pending Acceptance (" + res.contactsUpdated + " contact(s)" +
         (res.clientProfileUpdated ? ", client profile" : "") +
-        (res.accountUpdated ? ", account" : "") + " reassigned).",
-        "success"
-      );
+        (res.accountUpdated ? ", account" : "") + " reassigned).";
+      var errs = res.reassignmentErrors || [];
+      if (errs.length) {
+        // The engagement WAS assigned, but some related records didn't re-home —
+        // tell the staffer exactly which, so they can fix them in the CRM.
+        notice(
+          summary + " ⚠ " + errs.length + " related record(s) could not be reassigned: " +
+          errs.map(function (e) { return e.entity; }).join(", ") +
+          ". The assignment itself succeeded; reassign those records in the CRM.",
+          "error"
+        );
+      } else {
+        notice(summary, "success");
+      }
     } catch (e) {
       tr.classList.remove("row-busy");
       if (e.status === 401) { showLogin(); return; }

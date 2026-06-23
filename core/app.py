@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -256,14 +256,29 @@ def create_app(
     processed: dict[str, dict] = {}
 
     @app.get("/healthz")
-    async def healthz() -> dict:
+    async def healthz(response: Response) -> dict:
+        # Verify the durable store is actually reachable — if it's configured but
+        # down, capture would fail, so the app is genuinely unhealthy (503).
+        # The CRM is deliberately NOT pinged: a CRM outage must not take the web
+        # tier down, since durable capture + the async worker exist precisely to
+        # ride it out.
+        database = None
+        if store is not None:
+            try:
+                await store.ping()
+                database = "ok"
+            except Exception as exc:  # noqa: BLE001 — report, don't raise
+                database = "error"
+                response.status_code = 503
+                log.warning("healthz: database ping failed: %s", exc)
         return {
-            "status": "ok",
+            "status": "ok" if database != "error" else "degraded",
             "version": __version__,
             "dryRun": settings.espo_dry_run,
             "forms": [f.slug for f in forms],
             "assignments": settings.assignments_active,
             "durableStore": store is not None,
+            "database": database,
         }
 
     for spec in forms:

@@ -131,6 +131,7 @@ class SubmissionStore(Protocol):
     async def counts_by_status(self) -> dict[str, int]: ...
     async def redrive(self, submission_id: str) -> bool: ...
     async def metrics(self) -> dict[str, Any]: ...
+    async def ping(self) -> bool: ...
     async def dispose(self) -> None: ...
 
 
@@ -425,6 +426,12 @@ class PostgresStore:
             "oldestPendingAgeSeconds": oldest_age,
             "avgLatencySeconds": float(avg_latency) if avg_latency is not None else None,
         }
+
+    async def ping(self) -> bool:
+        """Liveness check for the database connection (``/healthz``)."""
+        async with self._engine.connect() as conn:
+            await conn.execute(select(1))
+        return True
 
     async def dispose(self) -> None:
         await self._engine.dispose()

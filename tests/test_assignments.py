@@ -94,6 +94,41 @@ async def test_assign_sets_engagement_and_reassigns_related():
     assert res["engagementStatus"] == "Pending Acceptance"
 
 
+async def test_assign_reports_partial_reassignment_failures():
+    """A CRM failure re-homing a related record is captured + reported, not
+    raised — the core assignment (engagement → Pending Acceptance) still stands."""
+    from core.espo import EspoError
+
+    class FlakyClient(FakeClient):
+        async def update(self, entity, record_id, payload):
+            if entity == service.CONTACT and record_id == "contact-extra":
+                raise EspoError("update Contact/contact-extra failed: HTTP 403 denied")
+            return await super().update(entity, record_id, payload)
+
+    client = FlakyClient(
+        mentor=_mentor(),
+        engagement={
+            "primaryEngagementContactId": "contact-primary",
+            "engagementClientId": "clientprofile-1",
+            "clientOrganizationId": "account-1",
+        },
+        related={"list": [{"id": "contact-primary"}, {"id": "contact-extra"}]},
+    )
+
+    res = await service.assign_engagement(client, "eng-1", "mentor-1")
+
+    # The engagement itself was assigned despite the downstream failure.
+    assert res["engagementStatus"] == "Pending Acceptance"
+    # One contact succeeded, one failed and is reported (the rest still re-homed).
+    assert res["contactsUpdated"] == 1
+    assert res["contactsTotal"] == 2
+    assert res["clientProfileUpdated"] is True
+    assert res["accountUpdated"] is True
+    assert len(res["reassignmentErrors"]) == 1
+    assert res["reassignmentErrors"][0]["entity"] == service.CONTACT
+    assert res["reassignmentErrors"][0]["id"] == "contact-extra"
+
+
 async def test_assign_skips_account_when_absent():
     client = FakeClient(
         mentor=_mentor(),
