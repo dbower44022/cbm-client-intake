@@ -10,7 +10,12 @@ import uuid
 
 import pytest
 
-from core.store import STATUS_COMPLETED, STATUS_PENDING, PostgresStore
+from core.store import (
+    STATUS_COMPLETED,
+    STATUS_PENDING,
+    STATUS_PROCESSING,
+    PostgresStore,
+)
 
 _URL = os.environ.get("TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(not _URL, reason="set TEST_DATABASE_URL to run")
@@ -62,5 +67,37 @@ async def test_ops_list_counts_and_redrive():
 
     m = await store.metrics()
     assert "counts" in m and "backlog" in m and "needsAttention" in m
+
+    await store.dispose()
+
+
+async def test_claim_leases_and_reclaims_stranded_processing():
+    """A claimed row is leased (not re-claimable while the lease holds); once the
+    lease expires it is reclaimed — the crash-recovery guarantee."""
+    store = PostgresStore(_URL)
+    await store.create_all()
+
+    # Row A: claimed with a live lease must NOT be handed out again.
+    held = await store.capture(
+        "info-request", f"held-{uuid.uuid4()}", {"email": "held@example.com"},
+        status=STATUS_PENDING,
+    )
+    claimed = await store.claim_batch(50, lease_seconds=900)
+    assert any(c.id == held.id for c in claimed)
+    again = await store.claim_batch(50, lease_seconds=900)
+    assert all(c.id != held.id for c in again)
+    assert (await store.get_submission(held.id))["status"] == STATUS_PROCESSING
+
+    # Row B: claimed with a zero-length lease (its lease is immediately in the
+    # past), simulating a worker that died mid-delivery — the next claim reclaims
+    # it rather than leaving it stranded in "processing" forever.
+    stranded = await store.capture(
+        "info-request", f"stranded-{uuid.uuid4()}", {"email": "stranded@example.com"},
+        status=STATUS_PENDING,
+    )
+    first = await store.claim_batch(50, lease_seconds=0)
+    assert any(c.id == stranded.id for c in first)
+    reclaimed = await store.claim_batch(50, lease_seconds=900)
+    assert any(c.id == stranded.id for c in reclaimed)
 
     await store.dispose()

@@ -32,6 +32,12 @@ class Settings(BaseSettings):
     worker_poll_seconds: int = 5
     worker_batch_size: int = 10
     max_delivery_attempts: int = 8
+    # How long a claimed ("processing") row stays leased to a worker. If the
+    # worker dies mid-delivery (redeploy, OOM, SIGKILL), the row is reclaimable
+    # once this lease expires — without it, a crash strands the row in
+    # "processing" forever. Generous, because delivery is resumable: a rare
+    # double-claim re-runs the same chain and skips already-created records.
+    worker_lease_seconds: int = 900
 
     # --- V2 Phase 3: monitoring + alerting (run as periodic worker tasks) ---
     # Where to send alerts (a Slack-compatible {"text": ...} webhook). Empty =>

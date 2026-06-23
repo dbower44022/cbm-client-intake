@@ -29,6 +29,17 @@
   }
 
   function showLogin() { hide($("dashView")); show($("loginView")); $("username").focus(); }
+  // On boot, a 401 just means "not signed in" (show the form silently). A 5xx or
+  // a network failure means the server is down — say so, rather than implying the
+  // user needs to re-authenticate.
+  function bootFail(e) {
+    showLogin();
+    if (!e || !e.status || e.status >= 500) {
+      var le = $("loginError");
+      le.textContent = "The server isn't responding right now. Please try again in a moment.";
+      show(le);
+    }
+  }
   function showDash(user) { hide($("loginView")); $("whoName").textContent = user.name || user.userName; show($("dashView")); loadData(); }
   function notice(text, kind) { var n = $("notice"); n.textContent = text; n.className = "ops__notice " + (kind === "error" ? "is-error" : "is-success"); show(n); }
   function clearNotice() { hide($("notice")); }
@@ -68,7 +79,10 @@
       var data = await api("/submissions" + (qs.length ? "?" + qs.join("&") : ""));
       renderCounts(data.counts || {});
       renderTable(data.submissions || []);
-      api("/metrics").then(renderMetrics).catch(function () {});
+      api("/metrics").then(renderMetrics).catch(function () {
+        var el = $("metrics");
+        if (el) { el.textContent = "metrics unavailable"; el.className = "ops__metrics is-muted"; }
+      });
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }
       notice(e.message, "error");
@@ -199,6 +213,6 @@
   fillSelect($("statusFilter"), STATUSES, "All statuses");
   fillSelect($("formFilter"), FORMS, "All forms");
   (async function init() {
-    try { showDash(await api("/session")); } catch (e) { showLogin(); }
+    try { showDash(await api("/session")); } catch (e) { bootFail(e); }
   })();
 })();

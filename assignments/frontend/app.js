@@ -41,6 +41,18 @@
     $("username").focus();
   }
 
+  // On boot, a 401 just means "not signed in" (show the form silently). A 5xx or
+  // network failure means the server is down — say so, rather than implying the
+  // user needs to re-authenticate.
+  function bootFail(e) {
+    showLogin();
+    if (!e || !e.status || e.status >= 500) {
+      var le = $("loginError");
+      le.textContent = "The server isn't responding right now. Please try again in a moment.";
+      show(le);
+    }
+  }
+
   function showDashboard(user) {
     hide($("loginView"));
     $("whoName").textContent = user.name || user.userName;
@@ -157,16 +169,18 @@
     show($("loadingState"));
     hide($("engTable"));
     hide($("emptyState"));
+    // Load each independently with a labeled error, so a failure tells the user
+    // which part broke (mentors vs. engagements) instead of one generic message.
     try {
-      var results = await Promise.all([api("/mentors"), fetchEngagements()]);
-      mentors = results[0].mentors || [];
-      var eng = results[1];
+      var mres, eng;
+      try { mres = await api("/mentors"); }
+      catch (e) { if (e.status === 401) { showLogin(); return; } notice("Couldn't load mentors: " + e.message, "error"); return; }
+      try { eng = await fetchEngagements(); }
+      catch (e) { if (e.status === 401) { showLogin(); return; } notice("Couldn't load engagements: " + e.message, "error"); return; }
+      mentors = mres.mentors || [];
       selectedStatuses = eng.selectedStatuses || selectedStatuses;
       buildStatusFilter(eng.allStatuses || []);
       renderTable(eng.engagements || []);
-    } catch (e) {
-      if (e.status === 401) { showLogin(); return; }
-      notice(e.message, "error");
     } finally {
       hide($("loadingState"));
     }
@@ -633,7 +647,7 @@
       var user = await api("/session");
       showDashboard(user);
     } catch (e) {
-      showLogin();
+      bootFail(e);
     }
   })();
 })();

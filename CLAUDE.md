@@ -120,7 +120,12 @@ complete, idempotent replay = one row, honeypot captured `held_honeypot`).
 `ASYNC_DELIVERY`, default false).** With the flag on (and a store), the accept
 endpoint returns `received`+`reference` as soon as the submission is captured;
 the **worker** (`worker.py`, run as `python -m worker`) claims due rows
-(`claim_batch` = `FOR UPDATE SKIP LOCKED`), delivers them via the orchestrators,
+(`claim_batch` = `FOR UPDATE SKIP LOCKED`, with a **lease**: a claimed row gets
+`locked_until = now + worker_lease_seconds`, default 900s; a `processing` row
+whose lease has expired — i.e. a worker that died mid-delivery — is reclaimed on
+the next claim, so a crash/redeploy can't strand a submission in `processing`
+forever. Safe because delivery is resumable. Added 2026-06-23, Alembic migration
+`0002_processing_lease`), delivers them via the orchestrators,
 and retries transient failures with backoff (1m/5m/30m/2h/6h, `MAX_DELIVERY_ATTEMPTS`,
 then `needs_attention`); 4xx = permanent. Delivery is **resumable**
 (`core/resumable.py` `ResumableClient` records each create/upload in the

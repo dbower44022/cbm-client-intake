@@ -32,6 +32,17 @@
 
   // --- views ---
   function showLogin() { hide($("listView")); hide($("detailView")); show($("loginView")); $("username").focus(); }
+  // On boot, a 401 just means "not signed in" (show the form silently). A 5xx or
+  // network failure means the server is down — say so, rather than implying the
+  // user needs to re-authenticate.
+  function bootFail(e) {
+    showLogin();
+    if (!e || !e.status || e.status >= 500) {
+      var le = $("loginError");
+      le.textContent = "The server isn't responding right now. Please try again in a moment.";
+      show(le);
+    }
+  }
   function showList() { hide($("loginView")); hide($("detailView")); show($("listView")); }
   function showDetail() { hide($("loginView")); hide($("listView")); show($("detailView")); }
 
@@ -73,8 +84,19 @@
   async function bootList() {
     showList();
     // field spec/options loaded once (used by the detail form)
-    try { var f = await api("/fields"); fieldSpec = f.fields || []; fieldOptions = f.options || {}; } catch (e) { if (e.status === 401) { showLogin(); return; } }
-    await loadMentors();
+    var fieldsError = null;
+    try {
+      var f = await api("/fields"); fieldSpec = f.fields || []; fieldOptions = f.options || {};
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      fieldsError = e.message;
+    }
+    await loadMentors();  // hides listNotice on entry, so warn afterwards
+    // Without the field spec the editor can't render — warn, but still show the
+    // roster (read-only) rather than failing the whole view.
+    if (fieldsError) {
+      notice("listNotice", "Could not load the editable-field definitions, so mentor editing is unavailable. Refresh to retry. (" + fieldsError + ")", "error");
+    }
   }
 
   async function loadMentors() {
@@ -434,39 +456,61 @@
   }
   // Completeness issues the staffer must address before saving. Excludes the
   // member/Contact User assignments — the save auto-creates/reconciles those.
+  // Each issue carries the editable field it maps to (or null) so the confirm
+  // modal can both list it and jump the user to it on Cancel.
   function pendingCompletenessIssues(v) {
     var issues = [];
-    if (!current.contactRecordId) issues.push("no linked Contact record");
+    if (!current.contactRecordId) issues.push({ field: null, text: "no linked Contact record" });
     [["backgroundCheckCompleted", "background check"], ["ethicsAgreementAccepted", "ethics agreement"],
      ["trainingCompleted", "training completed"], ["termsAccepted", "terms accepted"]].forEach(function (f) {
-      if (!v[f[0]]) issues.push(f[1] + " not confirmed");
+      if (!v[f[0]]) issues.push({ field: f[0], text: f[1] + " not confirmed" });
     });
-    if (v.mentorStatus === "Active" && !(v.cbmEmail || "").trim()) issues.push("no CBM email address");
+    if (v.mentorStatus === "Active" && !(v.cbmEmail || "").trim()) issues.push({ field: "cbmEmail", text: "no CBM email address" });
     if (v.publicProfile) {
-      if (!hasText(v.aboutMentor)) issues.push("public profile: About the mentor is empty");
-      if (!(v.mentoringFocusAreas || []).length) issues.push("public profile: no mentoring focus area selected");
-      if (!(v.areaOfExpertise || []).length) issues.push("public profile: no area of expertise selected");
-      if (!v.industrySector) issues.push("public profile: no industry sector selected");
+      if (!hasText(v.aboutMentor)) issues.push({ field: "aboutMentor", text: "public profile: About the mentor is empty" });
+      if (!(v.mentoringFocusAreas || []).length) issues.push({ field: "mentoringFocusAreas", text: "public profile: no mentoring focus area selected" });
+      if (!(v.areaOfExpertise || []).length) issues.push({ field: "areaOfExpertise", text: "public profile: no area of expertise selected" });
+      if (!v.industrySector) issues.push({ field: "industrySector", text: "public profile: no industry sector selected" });
     }
     return issues;
   }
 
-  function showConfirmModal(issues, onConfirm) {
+  // Jump to the first issue that maps to an editable field: switch to its tab,
+  // focus it (the rich-text area / first checkbox for compound fields), scroll in.
+  function focusFirstIssue(issues) {
+    for (var i = 0; i < issues.length; i++) {
+      if (!issues[i].field) continue;
+      var el = $("f_" + issues[i].field);
+      if (!el) continue;
+      var panel = el.closest && el.closest(".tab-panel");
+      if (panel) activateTab(panel.dataset.panel);
+      var focusEl = el;
+      if (el.classList && el.classList.contains("wysiwyg")) focusEl = el.querySelector(".wysiwyg__area") || el;
+      else if (el.classList && el.classList.contains("checkgrid")) focusEl = el.querySelector("input") || el;
+      if (focusEl && focusEl.focus) focusEl.focus();
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+  }
+
+  function showConfirmModal(issues, onConfirm, onCancel) {
     var prev = document.getElementById("confirmModal"); if (prev) prev.remove();
     var overlay = document.createElement("div"); overlay.id = "confirmModal"; overlay.className = "modal-overlay";
     var card = document.createElement("div"); card.className = "modal-card";
     var h = document.createElement("h3"); h.textContent = "This record is still incomplete"; card.appendChild(h);
     var p = document.createElement("p"); p.textContent = "The following still need attention:"; card.appendChild(p);
     var ul = document.createElement("ul");
-    issues.forEach(function (i) { var li = document.createElement("li"); li.textContent = i; ul.appendChild(li); });
+    issues.forEach(function (i) { var li = document.createElement("li"); li.textContent = i.text; ul.appendChild(li); });
     card.appendChild(ul);
-    var p2 = document.createElement("p"); p2.textContent = "Save anyway?"; card.appendChild(p2);
+    var p2 = document.createElement("p"); p2.textContent = "Cancel to fix it, or save anyway?"; card.appendChild(p2);
     var actions = document.createElement("div"); actions.className = "modal-actions";
     var cancel = document.createElement("button"); cancel.type = "button"; cancel.className = "cbm-button cbm-button--secondary"; cancel.textContent = "Cancel";
     var ok = document.createElement("button"); ok.type = "button"; ok.className = "cbm-button"; ok.textContent = "Save anyway";
     function close() { overlay.remove(); document.removeEventListener("keydown", onKey); }
     function onKey(e) { if (e.key === "Escape") close(); }
-    cancel.addEventListener("click", close);
+    // Cancel returns the user to the first unresolved field rather than dropping
+    // them into a multi-tab form with nothing highlighted.
+    cancel.addEventListener("click", function () { close(); if (onCancel) onCancel(); });
     ok.addEventListener("click", function () { close(); onConfirm(); });
     overlay.addEventListener("click", function (e) { if (e.target === overlay) close(); });
     document.addEventListener("keydown", onKey);
@@ -513,13 +557,13 @@
     // Pre-save completeness check: if the record will still be incomplete, ask
     // for confirmation (styled modal). Cancel -> stay in edit mode, no save.
     var issues = pendingCompletenessIssues(currentFormValues());
-    if (issues.length) showConfirmModal(issues, function () { doSave(changes); });
+    if (issues.length) showConfirmModal(issues, function () { doSave(changes); }, function () { focusFirstIssue(issues); });
     else doSave(changes);
   });
 
   // --- boot ---
   (async function init() {
     try { var u = await api("/session"); $("whoName").textContent = u.name || u.userName; await bootList(); }
-    catch (e) { showLogin(); }
+    catch (e) { bootFail(e); }
   })();
 })();

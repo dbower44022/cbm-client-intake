@@ -48,6 +48,11 @@ window.CBMWizard = (function () {
     function fail(msg) {
       formError.textContent = msg;
       formError.hidden = false;
+      // role="alert" announces the text to screen readers; move keyboard/visual
+      // focus to it too so the error isn't missed (a <p> needs a tabindex first).
+      formError.tabIndex = -1;
+      formError.focus();
+      formError.scrollIntoView({ behavior: "smooth", block: "center" });
     }
 
     function validate(n) {
@@ -78,12 +83,19 @@ window.CBMWizard = (function () {
     });
     backBtn.addEventListener("click", () => showStep(current - 1));
 
+    let submitting = false;
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
+      if (submitting) return; // guard against a double-fire (e.g. Enter + click)
       if (!validate(TOTAL)) return;
+      submitting = true;
       submitBtn.disabled = true;
       const originalLabel = submitBtn.textContent;
       submitBtn.textContent = "Submitting…";
+      // Don't leave the user staring at "Submitting…" forever if the network
+      // (or server) hangs — abort after 30s with a clear, retryable message.
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
       try {
         const payload = Object.assign({}, opts.buildPayload(), {
           submission_token: token,
@@ -94,9 +106,10 @@ window.CBMWizard = (function () {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
+          signal: controller.signal,
         });
+        const body = await resp.json().catch(() => ({}));
         if (!resp.ok) {
-          const body = await resp.json().catch(() => ({}));
           const msg =
             typeof body.detail === "string"
               ? body.detail
@@ -107,14 +120,42 @@ window.CBMWizard = (function () {
         const progress = document.getElementById("progress");
         if (progress) progress.hidden = true;
         const confirmation = document.getElementById("confirmation");
-        if (confirmation) confirmation.hidden = false;
+        if (confirmation) {
+          showReference(confirmation, body.reference);
+          confirmation.hidden = false;
+          confirmation.tabIndex = -1;
+          confirmation.focus();
+        }
         window.scrollTo({ top: 0, behavior: "smooth" });
       } catch (err) {
-        fail(err.message);
+        const msg =
+          err.name === "AbortError"
+            ? "This is taking longer than expected — your connection may be slow. Please try again."
+            : err.message;
+        fail(msg);
         submitBtn.disabled = false;
         submitBtn.textContent = originalLabel;
+        submitting = false;
+      } finally {
+        clearTimeout(timeout);
       }
     });
+
+    // Show the submission reference number on the confirmation screen so the
+    // user has something to quote when following up (and staff can correlate it
+    // in the operations console). Only present in async-delivery mode.
+    function showReference(confirmation, reference) {
+      const existing = confirmation.querySelector(".confirmation__ref");
+      if (existing) existing.remove();
+      if (!reference) return;
+      const p = document.createElement("p");
+      p.className = "confirmation__ref";
+      p.append("Your reference number is ");
+      const code = document.createElement("strong");
+      code.textContent = reference;
+      p.append(code, ". Please keep it for your records.");
+      confirmation.appendChild(p);
+    }
 
     showStep(1);
   }

@@ -15,20 +15,23 @@ from __future__ import annotations
 import ssl
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional, Protocol
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from sqlalchemy import (
     Column,
     DateTime,
+    Index,
     Integer,
     MetaData,
     String,
     Table,
     Text,
     UniqueConstraint,
+    and_,
     func,
+    or_,
     select,
     update,
 )
@@ -64,6 +67,10 @@ submission = Table(
     Column("status", String(32), nullable=False),
     Column("attempt_count", Integer, nullable=False, server_default="0"),
     Column("next_attempt_at", DateTime(timezone=True)),
+    # Lease expiry for a claimed ("processing") row. NULL on a row that was never
+    # leased (pre-lease rows, or rows in any other status). The worker reclaims a
+    # processing row whose lease has expired, so a crash can't strand it forever.
+    Column("locked_until", DateTime(timezone=True)),
     Column("last_error", Text),
     Column("progress", JSONB),
     Column("result", JSONB),
@@ -71,6 +78,8 @@ submission = Table(
     Column("processed_at", DateTime(timezone=True)),
     Column("updated_at", DateTime(timezone=True), nullable=False),
     UniqueConstraint("form_slug", "submission_token", name="uq_submission_form_token"),
+    # Supports the worker's claim query (status + due/lease scan, oldest first).
+    Index("ix_submission_claim", "status", "next_attempt_at", "received_at"),
 )
 
 
@@ -109,7 +118,7 @@ class SubmissionStore(Protocol):
     async def mark_completed(self, submission_id: str, result: dict[str, Any]) -> None: ...
     async def mark_failed(self, submission_id: str, *, status: str, error: str) -> None: ...
     # Phase 1 (worker) operations:
-    async def claim_batch(self, limit: int) -> list[Claimed]: ...
+    async def claim_batch(self, limit: int, *, lease_seconds: int = 900) -> list[Claimed]: ...
     async def mark_retry(
         self, submission_id: str, *, attempt_count: int, next_attempt_at: datetime, error: str
     ) -> None: ...
@@ -231,19 +240,39 @@ class PostgresStore:
                 .values(status=status, last_error=(error or "")[:2000], updated_at=_now())
             )
 
-    async def claim_batch(self, limit: int) -> list[Claimed]:
+    async def claim_batch(self, limit: int, *, lease_seconds: int = 900) -> list[Claimed]:
         """Atomically claim up to ``limit`` due submissions for delivery.
 
         ``FOR UPDATE SKIP LOCKED`` makes concurrent workers safe — each row is
-        handed to exactly one worker. Claimed rows move to ``processing``.
+        handed to exactly one worker. Claimed rows move to ``processing`` with a
+        lease (``locked_until``).
+
+        A claim picks up two kinds of rows: (a) pending/retry rows that are due,
+        and (b) ``processing`` rows whose lease has expired (or is NULL) — these
+        were stranded by a worker that died mid-delivery, and reclaiming them is
+        safe because delivery is resumable.
         """
         now = _now()
+        lease_until = now + timedelta(seconds=lease_seconds)
         due = (
             select(submission.c.id)
-            .where(submission.c.status.in_(CLAIMABLE))
             .where(
-                (submission.c.next_attempt_at.is_(None))
-                | (submission.c.next_attempt_at <= now)
+                or_(
+                    and_(
+                        submission.c.status.in_(CLAIMABLE),
+                        or_(
+                            submission.c.next_attempt_at.is_(None),
+                            submission.c.next_attempt_at <= now,
+                        ),
+                    ),
+                    and_(
+                        submission.c.status == STATUS_PROCESSING,
+                        or_(
+                            submission.c.locked_until.is_(None),
+                            submission.c.locked_until <= now,
+                        ),
+                    ),
+                )
             )
             .order_by(submission.c.received_at)
             .limit(limit)
@@ -252,7 +281,7 @@ class PostgresStore:
         stmt = (
             update(submission)
             .where(submission.c.id.in_(due.scalar_subquery()))
-            .values(status=STATUS_PROCESSING, updated_at=now)
+            .values(status=STATUS_PROCESSING, locked_until=lease_until, updated_at=now)
             .returning(
                 submission.c.id,
                 submission.c.form_slug,

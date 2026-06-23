@@ -188,10 +188,19 @@
     return ok;
 
     function fail(msg) {
-      formError.textContent = msg;
-      formError.hidden = false;
+      showError(msg);
       return false;
     }
+  }
+
+  // Surface an error: announce it (role="alert"), move focus to it, scroll it
+  // into view. A <p> needs a tabindex before it can take focus.
+  function showError(msg) {
+    formError.textContent = msg;
+    formError.hidden = false;
+    formError.tabIndex = -1;
+    formError.focus();
+    formError.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
   nextBtn.addEventListener("click", () => {
@@ -286,30 +295,65 @@
     };
   }
 
+  // Show the submission reference number on the confirmation screen so the user
+  // can quote it when following up (and staff can correlate it in the ops
+  // console). Only present in async-delivery mode.
+  function showReference(reference) {
+    const confirmation = document.getElementById("confirmation");
+    const existing = confirmation.querySelector(".confirmation__ref");
+    if (existing) existing.remove();
+    if (!reference) return;
+    const p = document.createElement("p");
+    p.className = "confirmation__ref";
+    p.append("Your reference number is ");
+    const code = document.createElement("strong");
+    code.textContent = reference;
+    p.append(code, ". Please keep it for your records.");
+    confirmation.appendChild(p);
+  }
+
+  let submitting = false;
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (submitting) return; // guard against a double-fire (e.g. Enter + click)
     if (!validateStep(TOTAL)) return;
+    submitting = true;
     submitBtn.disabled = true;
     submitBtn.textContent = "Submitting…";
+    // Abort a hung request after 30s rather than leave the user stuck on
+    // "Submitting…" with no feedback.
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
     try {
       const resp = await fetch("/api/client-intake/intake", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(buildPayload()),
+        signal: controller.signal,
       });
+      const body = await resp.json().catch(() => ({}));
       if (!resp.ok) {
-        const body = await resp.json().catch(() => ({}));
         throw new Error(body.detail || "Submission failed. Please try again.");
       }
       form.hidden = true;
       document.getElementById("progress").hidden = true;
-      document.getElementById("confirmation").hidden = false;
+      const confirmation = document.getElementById("confirmation");
+      showReference(body.reference);
+      confirmation.hidden = false;
+      confirmation.tabIndex = -1;
+      confirmation.focus();
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
-      formError.textContent = err.message;
-      formError.hidden = false;
+      showError(
+        err.name === "AbortError"
+          ? "This is taking longer than expected — your connection may be slow. Please try again."
+          : err.message
+      );
       submitBtn.disabled = false;
       submitBtn.textContent = "Submit Request";
+      submitting = false;
+    } finally {
+      clearTimeout(timeout);
     }
   });
 

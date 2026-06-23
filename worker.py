@@ -111,7 +111,9 @@ async def process_one(store: SubmissionStore, settings: Settings, claimed: Claim
 
 async def run_once(store: SubmissionStore, settings: Settings) -> int:
     """Claim and deliver one batch. Returns how many were claimed."""
-    claimed = await store.claim_batch(settings.worker_batch_size)
+    claimed = await store.claim_batch(
+        settings.worker_batch_size, lease_seconds=settings.worker_lease_seconds
+    )
     for item in claimed:
         await process_one(store, settings, item)
     return len(claimed)
