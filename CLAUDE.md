@@ -161,6 +161,10 @@ block at the top of this section).**
 
 ## Mentor Admin tool — `/mentoradmin` (added 2026-06-22)
 
+**User-facing page title: "Mentor Administration"** (the package/route stay
+`mentoradmin`/`/mentoradmin`; retitled 2026-06-22 — pairs with `/assignments`'s
+"Client Administration").
+
 A second **staff-only** tool (NOT a public form), in the same FastAPI app
 (`mentoradmin/` package), mounted only when `SESSION_SECRET` is set (shares the
 `assignments_active` gate + SessionMiddleware). It reuses the assignment tool's
@@ -259,6 +263,10 @@ detail screen that reviews all info (read-only computed totals on top) and
 
 ## Mentor Assignment tool — `/assignments` (added 2026-06-19)
 
+**User-facing page title: "Client Administration"** (the package/route stay
+`assignments`/`/assignments`; retitled 2026-06-22 — it's gated by the
+`Client Administration Team`, hence the name).
+
 A **staff-only** dashboard (NOT a public intake form) that lives in the same
 FastAPI app (`assignments/` package, mounted only when `SESSION_SECRET` is set —
 see `Settings.assignments_active`). It lists `CEngagement` records with
@@ -317,12 +325,23 @@ mentor.
   (`assignments/service.py:_assigned_user_payload`). Writing `assignedUserId` to a
   disabled-field entity is silently ignored.
 
-## Current status (2026-05-28)
+## Current status (updated 2026-06-22)
 
-**Goal:** publish the app on DigitalOcean for user feedback. As of 2026-05-28
-it is **deployed and live on App Platform against crm-test** (go-live verified —
-see the LIVE block below). The original "feedback first in dry-run, wire CRM
-later" plan was overtaken by Doug's decision to verify and keep go-live live.
+**As of 2026-06-22 — live on App Platform against `crm-test`:** all **five**
+intake forms (client-intake, volunteer, info-request, partner, sponsor), the
+**V2** reliability platform (durable Postgres capture + async `delivery-worker` +
+`/ops` console + alerting/schema-drift, Phases 0–3 activated), and all three
+**staff tools** — **Client Administration** (`/assignments`), **Submission
+Operations** (`/ops`), and **Mentor Administration** (`/mentoradmin`, incl.
+approval → EspoCRM login provisioning, enabled + verified live). Each feature's
+live-verification record is in its section above. The detailed go-live history
+for the original two forms is preserved below.
+
+**Goal (original, 2026-05-28):** publish the app on DigitalOcean for user
+feedback. As of 2026-05-28 it was **deployed and live on App Platform against
+crm-test** (go-live verified — see the LIVE block below). The original "feedback
+first in dry-run, wire CRM later" plan was overtaken by Doug's decision to verify
+and keep go-live live.
 
 **Chosen path:** **DigitalOcean App Platform**, building the `Dockerfile`
 straight from this GitHub repo (`dbower44022/cbm-client-intake`, branch `main`).
@@ -507,9 +526,18 @@ only matters if a separate frontend origin is ever introduced.
 
 ## Documentation
 
+- `README.md` — repo overview: the forms, the staff tools, the V2 platform, how
+  to run locally / add a form.
 - `prds/CBM_Client_Intake_Requirements_Specification.md` — what it must do.
 - `prds/CBM_Client_Intake_Technical_Design.md` — how it's built (deployment in
-  §6, open issues in §7, EspoCRM mapping in §3).
+  §6, open issues in §7, EspoCRM mapping in §3). NOTE: the formal prds focus on
+  the **client-intake** form/process; the other forms + staff tools + V2 are
+  documented here in CLAUDE.md and in `prds/v2/` (V2 specs).
+- `DEPLOYMENT.md` — engineer deploy runbook (App Platform), incl. the staff-tool
+  + mentor-provisioning env vars. `STAFF-DEPLOYMENT-GUIDE.md` — plain-language
+  console-only companion for CBM staff.
+- `prds/v2/` — the V2 reliability platform specs (durable capture + async worker
+  + ops + alerting).
 
 ## Conventions
 

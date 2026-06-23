@@ -117,6 +117,38 @@ The API user must be scoped **create-only** on `Account`, `Contact`,
 `CClientProfile`, `CEngagement`, and `CMentorProfile` (verified: it cannot
 delete — DELETE returns 403).
 
+### Staff tools + mentor-login provisioning (optional, web component)
+
+The staff tools (`/assignments` = **Client Administration**, `/ops` = Submission
+Operations, `/mentoradmin` = **Mentor Administration**) mount only when
+`SESSION_SECRET` is set. Staff authenticate with their own EspoCRM
+username/password; access is gated by EspoCRM **Team**. All are on the **web**
+component:
+
+| Variable | Value |
+|---|---|
+| `SESSION_SECRET` | random string, **`type: SECRET`** — enables the staff tools + signed sessions |
+| `ASSIGN_ALLOWED_TEAMS` | `Client Administration Team` (gate for `/assignments`) |
+| `MENTOR_ADMIN_ALLOWED_TEAMS` | `Mentor Administration Team` (gate for `/mentoradmin`; default) |
+| `SESSION_COOKIE_SECURE` | `true` in prod (false only for plain-HTTP local dev) |
+
+**Mentor-login provisioning** — approving a mentor in `/mentoradmin` can
+auto-create their EspoCRM login. EspoCRM makes User creation **admin-only**
+(API keys / `api`-type users 403, and a *regular* user with roles also 403), so
+this runs as a dedicated **admin-type** EspoCRM service account via the
+`App/user` token flow — never a staff token. Off unless enabled:
+
+| Variable | Value |
+|---|---|
+| `MENTOR_PROVISION_USERS` | `true` to enable |
+| `ESPO_PROVISION_USERNAME` | the dedicated admin account's username |
+| `ESPO_PROVISION_PASSWORD` | its password, **`type: SECRET`** |
+| `MENTOR_TEAM_NAME` | team the new login is added to (default `Mentor Team`) |
+
+The service account's **Type must be Admin** in EspoCRM. Verified live against
+`crm-test` 2026-06-22. (The async delivery worker — `worker.py` — does **not**
+need these; provisioning runs synchronously in the web request.)
+
 > **CRITICAL — do not clobber a live app.** The committed `.do/app.yaml` is the
 > *dry-run* spec: it hardcodes `ESPO_DRY_RUN=true` and contains **no secrets**.
 > Running `doctl apps update --spec .do/app.yaml` (i.e. `deploy.sh`) against a
@@ -131,9 +163,11 @@ redeploys using the stored spec, leaving your env vars intact. Do **not** run
 `deploy.sh` against this app again.
 
 **Option B — gitignored prod spec overlay (reproducible).** Copy `.do/app.yaml`
-to `.do/app.prod.yaml`, set `ESPO_DRY_RUN=false`, add the two secret env vars
-(as `type: SECRET`), and keep it **out of git** (`.do/app.prod.yaml` is
-gitignored). Apply intentional updates with
+to `.do/app.prod.yaml`, set `ESPO_DRY_RUN=false`, add the secret env vars above
+(each as `type: SECRET`), and keep it **out of git** (`.do/app.prod.yaml` is
+gitignored). This is how the live app is managed today (web + worker + a
+PRE_DEPLOY `migrate` job + the managed Postgres for V2). Apply intentional
+updates with
 `doctl apps update <app-id> --spec .do/app.prod.yaml --wait`. This makes the
 live config reproducible without committing secrets.
 

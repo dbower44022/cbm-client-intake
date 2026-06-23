@@ -39,16 +39,32 @@ This is a multi-form app: a shared core hosts any number of intake forms.
   submission schema, its EspoCRM mapping (`orchestrator`), and an optional
   `frontend/` directory.
   - `forms/client_intake/` — SCORE form 111 reconciled to the CBM model; creates
-    Account + Contact + Engagement; ships the four-step wizard UI.
-  - `forms/volunteer/` — SCORE form 6 (MR-APPLY); creates a single Contact
-    (Mentor) with an optional resume upload; ships its own four-step wizard UI.
+    Account → Contact → CClientProfile → CEngagement; ships the multi-step wizard.
+  - `forms/volunteer/` — SCORE form 6 (MR-APPLY); creates a Contact (Mentor) +
+    CMentorProfile; ships its own wizard UI.
+  - `forms/info_request/` — generic request-for-information; creates a Contact
+    (+ Account when a company is given) and a CInformationRequest record.
+  - `forms/partner/` — Become-a-Partner; creates Account → Contact → CPartnerProfile.
+  - `forms/sponsor/` — Become-a-Sponsor; creates Account → Contact → CSponsorProfile.
+- **Staff tools** — not public forms; signed-in EspoCRM staff only, gated by team
+  membership and mounted only when `SESSION_SECRET` is set:
+  - `assignments/` — **Client Administration** (`/assignments/`): assign submitted
+    engagements to mentors who are accepting new clients.
+  - `ops/` — **Submission Operations** (`/ops/`): a console over the V2 durable
+    store (list/inspect/redrive submissions, backlog metrics).
+  - `mentoradmin/` — **Mentor Administration** (`/mentoradmin/`): browse the mentor
+    roster and edit any mentor's profile; setting a mentor to *Approved* can
+    auto-provision their EspoCRM login (see CLAUDE.md).
+- **V2 reliability platform** (`prds/v2/`): optional durable capture
+  (`core/store.py`) + an async delivery `worker.py`, gated by `DATABASE_URL` /
+  `ASYNC_DELIVERY` so behavior is unchanged until a Postgres DB is attached.
 - `frontend/shared/` — shared assets served at `/shared/`: the CBM design tokens
   (`tokens.css`), the wizard styles (`wizard.css`), and the shared wizard
-  controller (`wizard.js`) that both forms' page scripts build on.
+  controller (`wizard.js`) that the forms' page scripts build on.
 - `main.py` — composition root; registers the forms.
 
 Each registered form is reachable at `POST /api/<slug>/intake`, and (if it ships
-a UI) at `/<slug>/`. The root lists the available forms.
+a UI) at `/<slug>/`. The root lists the available forms (and the staff tools).
 
 ### Run locally
 
@@ -76,10 +92,11 @@ an `orchestrator.py` (`async def submit(sub, client) -> dict`), and an
 `frontend/` directory (its `index.html` + `app.js` build on the shared
 `/shared/wizard.js` controller) and point `SPEC.frontend_dir` at it.
 
-> **Before going live:** the EspoCRM entity/attribute names in each form's
-> `orchestrator.py` are provisional guesses and must be reconciled against the
-> deployed instance metadata (Technical Design §3.4, §7); the §7 open issues
-> (Pre-Startup Account mapping, anti-spam provider, admin auth, host) must be
-> resolved; and `forms/client_intake/frontend/app.js` is still bespoke — it can
-> migrate onto the shared `wizard.js` controller (the volunteer form already
-> uses it) for full frontend reuse.
+> **Status:** the app is **deployed and live on DigitalOcean App Platform,
+> writing to `crm-test`** — all five forms and the three staff tools have been
+> verified end-to-end against the deployed EspoCRM (see CLAUDE.md for the live
+> verification record per feature). Each `orchestrator.py` was reconciled against
+> the deployed instance metadata and is the source-of-truth mapping; the form
+> dropdowns are aligned to the live CRM enums. Note `forms/client_intake/`
+> ships a bespoke `frontend/app.js`; it can still migrate onto the shared
+> `wizard.js` controller (the other forms use it) for fuller frontend reuse.

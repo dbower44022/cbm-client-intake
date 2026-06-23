@@ -14,14 +14,30 @@ terminal or type any commands.
 ## 1. What this app is
 
 It's a website that hosts CBM's **intake forms** — branded, step-by-step forms
-that people fill out. There are two:
+that people fill out. There are five:
 
 - **Client intake** — a business owner requesting a SCORE mentor.
 - **Volunteer** — someone applying to become a mentor.
+- **Information request** — a general "tell me more" inquiry.
+- **Partner** — an organization applying to become a partner.
+- **Sponsor** — an organization applying to become a sponsor/donor.
 
 When someone finishes a form, the app creates the matching records in **EspoCRM**
-(CBM's customer database — the "system of record"). The app itself stores
-nothing; it just passes completed forms into EspoCRM.
+(CBM's customer database — the "system of record").
+
+The same website also hosts three **staff tools** — internal pages that CBM staff
+sign in to (with their own EspoCRM username and password); the public never sees
+them:
+
+- **Client Administration** (`/assignments/`) — assign incoming mentoring
+  requests to a mentor.
+- **Mentor Administration** (`/mentoradmin/`) — review and edit mentor records,
+  and approve mentors (which can automatically create their EspoCRM login).
+- **Submission Operations** (`/ops/`) — a behind-the-scenes view of submissions
+  for troubleshooting.
+
+Other than that internal record-keeping, the app stores nothing itself; it passes
+completed forms into EspoCRM.
 
 ## 2. Where it lives (the key facts)
 
@@ -31,8 +47,11 @@ nothing; it just passes completed forms into EspoCRM.
 | **DigitalOcean login** | `admin@cbmentors.org` |
 | **App name** | `cbm-client-intake` |
 | **Live address** | https://cbm-client-intake-svxs3.ondigitalocean.app |
+| **Forms index** | the live address `/` lists every form and the staff tools |
 | **Client form** | https://cbm-client-intake-svxs3.ondigitalocean.app/client-intake/ |
 | **Volunteer form** | https://cbm-client-intake-svxs3.ondigitalocean.app/volunteer/ |
+| **Client Administration** (staff) | …ondigitalocean.app/assignments/ |
+| **Mentor Administration** (staff) | …ondigitalocean.app/mentoradmin/ |
 | **Source code** | GitHub repo `dbower44022/cbm-client-intake` |
 
 App Platform handles the server, security certificates (the padlock in the
@@ -123,6 +142,38 @@ it requires a secret key from EspoCRM. In the console:
 The EspoCRM key belongs to a dedicated "intake" user that can only **create**
 records (it cannot delete) — so test records you create through the forms have
 to be removed by hand in EspoCRM (Section 11).
+
+### The staff tools (optional)
+
+The staff pages (Client Administration, Mentor Administration, Submission
+Operations) only turn on when a few extra environment variables are set on the
+**web** component (same Edit screen as above). Staff sign in with their own
+EspoCRM username/password; access is restricted by EspoCRM **Team**.
+
+| Setting | Value |
+|---|---|
+| `SESSION_SECRET` | a long random string — **Encrypted**. Turns the staff tools on. |
+| `ASSIGN_ALLOWED_TEAMS` | EspoCRM team allowed into Client Administration — `Client Administration Team` |
+| `MENTOR_ADMIN_ALLOWED_TEAMS` | EspoCRM team allowed into Mentor Administration — `Mentor Administration Team` |
+
+### Auto-creating mentor logins on approval (optional)
+
+In Mentor Administration, setting a mentor to **Approved** can automatically
+create their EspoCRM login, place it in a team, and email them a welcome link.
+Because creating users is an admin-only action in EspoCRM, this runs as a
+dedicated **admin** EspoCRM account (never a staff member's own login). To turn
+it on, add these to the **web** component and create that admin account first:
+
+| Setting | Value |
+|---|---|
+| `MENTOR_PROVISION_USERS` | `true` |
+| `ESPO_PROVISION_USERNAME` | the dedicated admin account's username |
+| `ESPO_PROVISION_PASSWORD` | that account's password — **Encrypted** |
+| `MENTOR_TEAM_NAME` | the team to put new mentor logins in — `Mentor Team` (only needed if your team has a different name) |
+
+The admin account's **Type must be "Admin"** in EspoCRM (a regular user with
+roles is not enough). Leave `MENTOR_PROVISION_USERS` unset (or `false`) to keep
+this off — approving a mentor then just changes their status.
 
 > **Important:** these settings stick through normal automatic updates. The one
 > thing that could wipe them is running the engineers' command-line deploy script
