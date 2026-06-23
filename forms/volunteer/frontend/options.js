@@ -15,19 +15,24 @@ window.VOL_OPTIONS = {
     "CBM client or volunteer", "Social media", "TV", "Workshop/Event", "Other",
   ],
 
-  // Aligned to CMentorProfile.industrySector (20 NAICS sectors).
+  // MUST match CMentorProfile.industrySector verbatim — a value outside this enum
+  // 400s the whole CMentorProfile create. Mirrored from the live crm-test enum
+  // (2026-06-23); the misspellings ("Livestoack", "Archtecture", "Group  homes")
+  // are the CRM's actual option strings, so they are kept exactly. Fix CRM-side
+  // first, then update here.
   industryExperience: [
-    "Agriculture, Forestry, Fishing and Hunting",
-    "Mining, Quarrying, and Oil and Gas Extraction", "Utilities", "Construction",
-    "Manufacturing", "Wholesale Trade", "Retail Trade",
-    "Transportation and Warehousing", "Information", "Finance and Insurance",
-    "Real Estate and Rental and Leasing",
-    "Professional, Scientific, and Technical Services",
-    "Management of Companies and Enterprises",
-    "Administrative and Support and Waste Management", "Educational Services",
-    "Health Care and Social Assistance", "Arts, Entertainment, and Recreation",
-    "Accommodation and Food Services",
-    "Other Services (except Public Administration)", "Public Administration",
+    "Accounting and bookkeeping", "Advertising, Design, Marketing",
+    "Agriculture, Farming, Livestoack", "Archtecture, Engineering",
+    "Arts, Entertainment and Recreation", "Auto Repair",
+    "Beauty, Cosmetics and Salon Services", "Business Consulting and Coaching",
+    "Childcare", "Commercial and Residential Services", "Construction & Real Estate",
+    "Counseling and Therapy", "Cybersecurity", "E-Commerce & Online Business",
+    "Education", "Energy & Utilities", "Financial Services & Banking",
+    "Group  homes", "Healthcare & Medical",
+    "Hospitality, Restaurants & Food Service", "Manufacturing & Industrial",
+    "Media, Marketing & Publishing", "Nonprofit & Social Impact",
+    "Professional Services", "Retail & Consumer Products", "Technology & Software",
+    "Transportation and Logistics", "Wellness and Fitness",
   ],
 
   // Aligned to CMentorProfile.mentoringFocusAreas.
@@ -50,15 +55,11 @@ window.VOL_OPTIONS = {
     "Website Development", "Wellness, Healthcare, & Home Health",
   ],
 
-  // Aligned to CMentorProfile.fluentLanguages.
-  fluentLanguages: [
-    "American Sign Language", "Arabic", "Bengali", "Cantonese", "Chinese",
-    "Czech", "Danish", "Dutch", "English", "French", "German", "Greek",
-    "Gujarati", "Hebrew", "Hindi", "Hungarian", "Indonesian", "Italian",
-    "Japanese", "Korean", "Lithuanian", "Malay", "Mandarin", "Marathi",
-    "Norwegian", "Pashto", "Polish", "Portuguese", "Punjabi", "Russian",
-    "Spanish", "Swedish", "Tagalog", "Telugu", "Urdu", "Other",
-  ],
+  // MUST match CMentorProfile.fluentLanguages verbatim — values outside this enum
+  // 400 the create. The live crm-test enum currently holds only these two
+  // (2026-06-23); it looks under-populated and should be expanded CRM-side, after
+  // which this list can grow to match.
+  fluentLanguages: ["English", "Spanish"],
 
   // "Choose up to N" constraint applied to industry + expertise.
   maxChoices: 6,

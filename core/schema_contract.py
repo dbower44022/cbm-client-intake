@@ -32,8 +32,48 @@ EXPECTED_ENUMS: dict[tuple[str, str], list[str]] = {
         "Startup Launch & Entrepreneurship", "Strategic Planning",
         "Technology & Digital Transformation", "Transportation and Logistics", "Websites",
     ],
-    # The assignment dropdown filters mentors on this exact value.
-    ("CMentorProfile", "mentorStatus"): ["Active"],
+    # The assignment dropdown filters on "Active"; the volunteer orchestrator
+    # writes "Candidate" on a new mentor.
+    ("CMentorProfile", "mentorStatus"): ["Active", "Candidate"],
+    ("CMentorProfile", "mentorType"): ["Mentor"],
+    # The volunteer ("Become a Mentor") form writes these — their options.js lists
+    # must stay aligned or the CMentorProfile create 400s (drift caused a live
+    # failure 2026-06-23). Mirrors the live crm-test enums verbatim, typos and all.
+    ("CMentorProfile", "industrySector"): [
+        "Accounting and bookkeeping", "Advertising, Design, Marketing",
+        "Agriculture, Farming, Livestoack", "Archtecture, Engineering",
+        "Arts, Entertainment and Recreation", "Auto Repair",
+        "Beauty, Cosmetics and Salon Services", "Business Consulting and Coaching",
+        "Childcare", "Commercial and Residential Services", "Construction & Real Estate",
+        "Counseling and Therapy", "Cybersecurity", "E-Commerce & Online Business",
+        "Education", "Energy & Utilities", "Financial Services & Banking",
+        "Group  homes", "Healthcare & Medical",
+        "Hospitality, Restaurants & Food Service", "Manufacturing & Industrial",
+        "Media, Marketing & Publishing", "Nonprofit & Social Impact",
+        "Professional Services", "Retail & Consumer Products", "Technology & Software",
+        "Transportation and Logistics", "Wellness and Fitness",
+    ],
+    ("CMentorProfile", "fluentLanguages"): ["English", "Spanish"],
+    # "Areas of Expertise" checkboxes write here (aligned today; monitored so the
+    # next drift is caught before a submission fails).
+    ("CMentorProfile", "mentoringFocusAreas"): [
+        "Accounting & Tax Services", "Advertising, Design, & Marketing", "Agriculture",
+        "Animal & Veterinary Services", "Architecture, Engineering, & Related Services",
+        "Arts, Entertainment, & Recreation", "Auto Repair & Mechanic",
+        "Beauty, Cosmetics & Salon Services", "Business Consulting & Coaching",
+        "Childcare", "Commercial & Residential Services", "Construction",
+        "Counseling & Therapy", "Distribution & Transportation of Goods", "Education",
+        "Farming & Livestock", "Fine Arts, Artisan, & Craft Work", "Fishing & Hunting",
+        "Food & Beverage", "Forestry", "Funeral & Death Care Services",
+        "Information Technology", "Manufacturing", "Media & Publishing",
+        "Mining, Quarry, & Utilities", "Nonprofit", "Personal Care Services",
+        "Photography & Video Services", "Professional Services",
+        "Public Relations & Communications", "Real Estate", "Recruiting & Staffing",
+        "Rental & Leasing", "Restaurant & Bar", "Retail",
+        "Social Assistance & Family Services", "Transportation",
+        "Travel, Hospitality, & Tourism", "Warehousing", "Waste Management & Disposal",
+        "Website Development", "Wellness, Healthcare, & Home Health",
+    ],
     # Discriminators the orchestrators write.
     ("Account", "cAccountType"): ["Client", "Partner", "Donor/Sponsor"],
     ("Account", "cClientStatus"): ["Prospect"],
