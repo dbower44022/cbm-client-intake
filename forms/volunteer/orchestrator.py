@@ -108,8 +108,8 @@ async def _create_mentor_profile(
     contact details — are always captured. Anything dropped is noted on the record
     (``description``) for staff follow-up.
     """
-    san = EnumSanitizer(client, MENTOR_PROFILE)
-    focus_areas = await san.multi(P_FOCUS_AREAS, sub.areas_of_expertise)
+    san = EnumSanitizer(client)
+    focus_areas = await san.multi(MENTOR_PROFILE, P_FOCUS_AREAS, sub.areas_of_expertise)
 
     payload: dict = {
         "name": f"{sub.first_name} {sub.last_name}",
@@ -124,12 +124,12 @@ async def _create_mentor_profile(
     if sub.work_experience:
         payload[P_BIO] = sub.work_experience
     if sub.fluent_languages:
-        languages = await san.multi(P_LANGUAGES, sub.fluent_languages)
+        languages = await san.multi(MENTOR_PROFILE, P_LANGUAGES, sub.fluent_languages)
         if languages:
             payload[P_LANGUAGES] = languages
     if sub.industry_experience:
         # Single-enum field — store only the first selection for now.
-        industry = await san.enum(P_INDUSTRY, sub.industry_experience[0])
+        industry = await san.enum(MENTOR_PROFILE, P_INDUSTRY, sub.industry_experience[0])
         if industry:
             payload[P_INDUSTRY] = industry
     if sub.how_did_you_hear:

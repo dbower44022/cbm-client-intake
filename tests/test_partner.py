@@ -18,17 +18,22 @@ from forms.partner.schemas import PartnerApplication
 class CapturingClient:
     """Fake EspoApi that records calls and returns sequential ids."""
 
-    def __init__(self, existing_contact=None, existing_account=None):
+    def __init__(self, existing_contact=None, existing_account=None, enum_options=None):
         self.creates: list[tuple[str, dict]] = []
         self.relates: list[tuple[str, str, str, str]] = []
         self._existing_contact = existing_contact
         self._existing_account = existing_account
+        # {(entity, field): [valid options]}; absent => None ("keep all").
+        self._enum_options = enum_options or {}
         self._n = 0
 
     async def create(self, entity, payload):
         self._n += 1
         self.creates.append((entity, payload))
         return {"id": f"{entity}-{self._n}", **payload}
+
+    async def metadata_enum_options(self, entity, field):
+        return self._enum_options.get((entity, field))
 
     async def find_one(self, entity, attribute, value, select="id"):
         if entity == ACCOUNT and self._existing_account:
@@ -53,6 +58,29 @@ def _application(**overrides) -> PartnerApplication:
     )
     base.update(overrides)
     return PartnerApplication(**base)
+
+
+@pytest.mark.asyncio
+async def test_drifted_enums_dropped_but_records_created():
+    """A drifted partnershipType/Value is dropped (not fatal); the records are
+    still created and the drops noted on the profile description."""
+    client = CapturingClient(enum_options={
+        (PARTNER_PROFILE, "partnershipType"): ["Sponsor", "Vendor"],   # not Referral Partner
+        (PARTNER_PROFILE, "partnershipValue"): ["Co-Hosted Events"],   # not Link on Website
+    })
+    sub = _application(
+        partnership_type="Referral Partner",                # dropped
+        partnership_value=["Co-Hosted Events", "Link on Website"],  # 2nd dropped
+    )
+    ids = await submit_partner(sub, client)
+    assert set(ids) == {"accountId", "contactId", "partnerProfileId"}
+    _, profile = client.creates[2]
+    assert "partnershipType" not in profile                  # dropped
+    assert profile["partnershipValue"] == ["Co-Hosted Events"]  # filtered
+    assert profile["partnershipStatus"] == "Candidate"       # system value untouched
+    assert "partnershipType" in profile["description"]
+    assert "Referral Partner" in profile["description"]
+    assert "Link on Website" in profile["description"]
 
 
 @pytest.mark.asyncio

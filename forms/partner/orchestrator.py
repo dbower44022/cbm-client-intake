@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import logging
 
+from core.enum_filter import EnumSanitizer
 from core.espo import EspoApi
 from core.phone import to_e164
 
@@ -53,6 +54,7 @@ P_PRIMARY_CONTACT_LINK = "primaryPartnercontactId"  # belongsTo Contact (FK)
 P_STATUS = "partnershipStatus"               # enum
 P_TYPE = "partnershipType"                   # enum
 P_VALUE = "partnershipValue"                 # multiEnum
+P_DESCRIPTION = "description"                 # text — notes any dropped values
 PARTNER_CONTACTS = "contacts"                # CPartnerProfile hasMany Contact
 
 # --- System-set values ---
@@ -107,7 +109,13 @@ async def _find_or_create_contact(
 async def _create_partner_profile(
     sub: PartnerApplication, client: EspoApi, account_id: str, contact_id: str
 ) -> str:
-    """Create the CPartnerProfile hub linked to the Account and Contact."""
+    """Create the CPartnerProfile hub linked to the Account and Contact.
+
+    User-supplied enums (partnershipType/Value) are sanitized against the live CRM
+    options — a drifted value is dropped (not fatal) and noted on ``description``
+    — so the partner record + contact info are always captured.
+    """
+    san = EnumSanitizer(client)
     payload: dict = {
         "name": sub.company,
         P_COMPANY_LINK: account_id,
@@ -115,9 +123,16 @@ async def _create_partner_profile(
         P_STATUS: PARTNERSHIP_STATUS_NEW,
     }
     if sub.partnership_type:
-        payload[P_TYPE] = sub.partnership_type
+        partnership_type = await san.enum(PARTNER_PROFILE, P_TYPE, sub.partnership_type)
+        if partnership_type:
+            payload[P_TYPE] = partnership_type
     if sub.partnership_value:
-        payload[P_VALUE] = sub.partnership_value
+        partnership_value = await san.multi(PARTNER_PROFILE, P_VALUE, sub.partnership_value)
+        if partnership_value:
+            payload[P_VALUE] = partnership_value
+    note = san.note()
+    if note:
+        payload[P_DESCRIPTION] = note
     created = await client.create(PARTNER_PROFILE, payload)
     return created["id"]
 

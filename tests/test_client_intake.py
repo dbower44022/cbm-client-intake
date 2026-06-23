@@ -17,17 +17,22 @@ from forms.client_intake.schemas import IntakeSubmission
 class CapturingClient:
     """Fake EspoApi that records create calls and returns sequential ids."""
 
-    def __init__(self, existing_contact=None, existing_account=None):
+    def __init__(self, existing_contact=None, existing_account=None, enum_options=None):
         self.creates: list[tuple[str, dict]] = []
         self.relates: list[tuple[str, str, str, str]] = []
         self._existing_contact = existing_contact
         self._existing_account = existing_account
+        # {(entity, field): [valid options]}; absent => None ("keep all").
+        self._enum_options = enum_options or {}
         self._n = 0
 
     async def create(self, entity, payload):
         self._n += 1
         self.creates.append((entity, payload))
         return {"id": f"{entity}-{self._n}", **payload}
+
+    async def metadata_enum_options(self, entity, field):
+        return self._enum_options.get((entity, field))
 
     async def find_one(self, entity, attribute, value):
         if entity == CONTACT and self._existing_contact:
@@ -66,6 +71,36 @@ def _submission(**overrides) -> IntakeSubmission:
     )
     base.update(overrides)
     return IntakeSubmission(**base)
+
+
+async def test_drifted_enums_dropped_but_records_created():
+    """Drifted business-stage / industry / focus-area values are dropped (not
+    fatal); the four records are still created and the drops noted on the
+    engagement, so the request + contact info are always captured."""
+    client = CapturingClient(enum_options={
+        (ACCOUNT, "cBusinessStage"): ["Startup", "Growth"],
+        (ACCOUNT, "cIndustrySector"): ["Technology & Software"],
+        (ENGAGEMENT, "mentoringFocusAreas"): ["Manufacturing", "Marketing & Branding"],
+    })
+    sub = _submission(
+        business_stage="Startup",                       # valid -> kept
+        industry_sector="Manufacturing",                # not in enum -> dropped
+        mentoring_focus_areas=["Manufacturing", "Retail"],  # Retail dropped
+    )
+    ids = await submit_intake(sub, client)
+    assert set(ids) == {"accountId", "contactId", "clientProfileId", "engagementId"}
+
+    _, account_payload = client.creates[0]
+    assert account_payload["cBusinessStage"] == "Startup"
+    assert "cIndustrySector" not in account_payload      # dropped
+    assert account_payload["cAccountType"] == ["Client"]  # discriminator untouched
+
+    _, eng_payload = client.creates[3]
+    assert eng_payload["mentoringFocusAreas"] == ["Manufacturing"]  # Retail filtered
+    # The aggregated note (Account + Engagement drops) lands on the engagement.
+    assert "cIndustrySector" in eng_payload["description"]
+    assert "Manufacturing" in eng_payload["description"]  # the dropped industry value
+    assert "Retail" in eng_payload["description"]
 
 
 async def test_creates_four_linked_records():

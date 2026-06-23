@@ -37,6 +37,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 
+from core.enum_filter import EnumSanitizer
 from core.espo import EspoApi
 from core.phone import to_e164
 
@@ -66,7 +67,9 @@ CLIENT = "Client"
 STATUS_SUBMITTED = "Submitted"
 
 
-async def _find_or_create_account(sub: IntakeSubmission, client: EspoApi) -> str:
+async def _find_or_create_account(
+    sub: IntakeSubmission, client: EspoApi, san: EnumSanitizer
+) -> str:
     """Find-or-create the client Account by name and return its id.
 
     Reusing a same-named Account dedupes repeat submitters and avoids EspoCRM's
@@ -91,15 +94,20 @@ async def _find_or_create_account(sub: IntakeSubmission, client: EspoApi) -> str
 
     payload: dict = {
         "name": name,
-        A_ACCOUNT_TYPE: [CLIENT],   # required discriminator
+        A_ACCOUNT_TYPE: [CLIENT],   # required discriminator — never sanitized
         A_COMPANY_TYPE: [CLIENT],   # legacy discriminator, kept in sync
-        A_BUSINESS_STAGE: sub.business_stage,
     }
+    # User-supplied enums: drop a drifted value rather than 400 the create.
+    business_stage = await san.enum(ACCOUNT, A_BUSINESS_STAGE, sub.business_stage)
+    if business_stage:
+        payload[A_BUSINESS_STAGE] = business_stage
     if sub.business_stage != "Pre-Startup":
         if sub.business_website:
             payload["website"] = sub.business_website
         if sub.industry_sector:
-            payload[A_INDUSTRY_SECTOR] = sub.industry_sector
+            industry = await san.enum(ACCOUNT, A_INDUSTRY_SECTOR, sub.industry_sector)
+            if industry:
+                payload[A_INDUSTRY_SECTOR] = industry
     created = await client.create(ACCOUNT, payload)
     return created["id"]
 
@@ -141,17 +149,27 @@ async def _create_client_profile(
 
 
 async def _create_engagement(
-    sub: IntakeSubmission, client: EspoApi, client_profile_id: str, contact_id: str
+    sub: IntakeSubmission, client: EspoApi, client_profile_id: str, contact_id: str,
+    san: EnumSanitizer,
 ) -> str:
-    """Create the Engagement linked to the CClientProfile and the Contact."""
+    """Create the Engagement linked to the CClientProfile and the Contact.
+
+    Drops any drifted ``mentoringFocusAreas`` value and records everything dropped
+    across the whole chain (Account + Engagement) on ``description`` for follow-up,
+    so a stale enum option never blocks capturing the request + contact info.
+    """
+    focus_areas = await san.multi(ENGAGEMENT, "mentoringFocusAreas", sub.mentoring_focus_areas)
     payload = {
         "name": f"{sub.first_name} {sub.last_name} — Intake {datetime.now(timezone.utc):%Y-%m-%d}",
         ENGAGEMENT_STATUS: STATUS_SUBMITTED,
-        "mentoringFocusAreas": sub.mentoring_focus_areas,
+        "mentoringFocusAreas": focus_areas,
         "mentoringNeedsDescription": sub.mentoring_needs_description,
         "engagementClientId": client_profile_id,      # belongsTo CClientProfile
         "primaryEngagementContactId": contact_id,     # belongsTo Contact
     }
+    note = san.note()
+    if note:
+        payload["description"] = note
     created = await client.create(ENGAGEMENT, payload)
     return created["id"]
 
@@ -163,10 +181,11 @@ async def submit_intake(sub: IntakeSubmission, client: EspoApi) -> dict[str, str
     routes to the failed-submission store (Technical Design §4.3); already-created
     records are valid canonical data and are not deleted.
     """
-    account_id = await _find_or_create_account(sub, client)
+    san = EnumSanitizer(client)
+    account_id = await _find_or_create_account(sub, client, san)
     contact_id = await _find_or_create_contact(sub, client, account_id)
     client_profile_id = await _create_client_profile(sub, client, account_id, contact_id)
-    engagement_id = await _create_engagement(sub, client, client_profile_id, contact_id)
+    engagement_id = await _create_engagement(sub, client, client_profile_id, contact_id, san)
     # Also add the applicant to the Engagement Contacts (hasMany) link, alongside
     # the primaryEngagementContact set on the engagement itself.
     await client.relate(ENGAGEMENT, engagement_id, ENGAGEMENT_CONTACTS, contact_id)

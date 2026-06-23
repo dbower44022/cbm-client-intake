@@ -546,18 +546,22 @@ only matters if a separate frontend origin is ever introduced.
 
 ## Gotchas / things learned
 
-- **Enum drift is tolerated on the volunteer create (2026-06-23, v0.6.0).**
-  `core/enum_filter.py` `EnumSanitizer` validates enum/multiEnum payload values
-  against the live CRM options (`EspoApi.metadata_enum_options`, now on the
-  protocol + dry-run + `ResumableClient`) and **drops** unrecognized ones instead
-  of letting a single drifted value 400 the whole create — the
-  `forms/volunteer` orchestrator uses it for `industrySector`/`mentoringFocusAreas`/
-  `fluentLanguages`, so the mentor record + the applicant's contact info are always
-  captured; dropped values are noted on `CMentorProfile.description` for follow-up.
-  Fails open (keeps the value if options can't be fetched, e.g. dry-run). This is
-  why re-driving a drift-failed volunteer submission now succeeds. Not yet applied
-  to the other orchestrators (client-intake/partner/sponsor) — they still fail
-  hard on a bad enum.
+- **Enum drift is tolerated on record creates (2026-06-23, v0.6.0 volunteer →
+  v0.7.0 all forms).** `core/enum_filter.py` `EnumSanitizer` validates
+  enum/multiEnum payload values against the live CRM options
+  (`EspoApi.metadata_enum_options`, now on the protocol + dry-run +
+  `ResumableClient`) and **drops** unrecognized ones instead of letting a single
+  drifted value 400 the whole create. Applied to the **user-supplied** enum
+  fields (NOT the system discriminators `cAccountType`/`cContactType`/status,
+  which are required/monitored): volunteer → `industrySector`/`mentoringFocusAreas`/
+  `fluentLanguages` (note on `CMentorProfile.description`); client-intake →
+  `cBusinessStage`/`cIndustrySector` (Account) + `mentoringFocusAreas` (CEngagement,
+  aggregated note on `CEngagement.description`); partner → `partnershipType`/
+  `partnershipValue` (note on `CPartnerProfile.description`). Sponsor writes no
+  user enum (just a free-text message), so nothing to sanitize. One `EnumSanitizer`
+  per delivery spans the whole chain (entity passed per call) and aggregates a
+  single note. Fails open (keeps the value if options can't be fetched, e.g.
+  dry-run). This is why re-driving a drift-failed submission now succeeds.
 - **`.dockerignore` must exclude `.venv`** — `COPY . .` otherwise copies the
   host virtualenv over the container's, whose interpreter paths are wrong
   (`sh: .venv/bin/uvicorn: not found`, exit 127). It also keeps `.env` out of

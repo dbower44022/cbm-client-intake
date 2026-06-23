@@ -25,50 +25,52 @@ log = logging.getLogger("cbm_intake.enum_filter")
 
 
 class EnumSanitizer:
-    """Validate enum-backed payload values for one entity against live CRM options."""
+    """Validate enum-backed payload values against live CRM options.
 
-    def __init__(self, client: EspoApi, entity: str) -> None:
+    One instance can span a whole create chain (Account → … → Profile): the
+    entity is passed per call, options are cached per ``(entity, field)``, and all
+    dropped values aggregate into a single :meth:`note`.
+    """
+
+    def __init__(self, client: EspoApi) -> None:
         self._client = client
-        self._entity = entity
-        self._cache: dict[str, Optional[list[str]]] = {}
+        self._cache: dict[tuple[str, str], Optional[list[str]]] = {}
         # field -> values that were dropped (for note()/visibility)
         self.dropped: dict[str, list[str]] = {}
 
-    async def _options(self, field: str) -> Optional[list[str]]:
-        if field not in self._cache:
+    async def _options(self, entity: str, field: str) -> Optional[list[str]]:
+        key = (entity, field)
+        if key not in self._cache:
             try:
-                self._cache[field] = await self._client.metadata_enum_options(
-                    self._entity, field
-                )
+                self._cache[key] = await self._client.metadata_enum_options(entity, field)
             except Exception as exc:  # noqa: BLE001 — fail open, never block the create
                 log.warning(
                     "enum options fetch failed for %s.%s (%s); keeping value as-is",
-                    self._entity, field, exc,
+                    entity, field, exc,
                 )
-                self._cache[field] = None
-        return self._cache[field]
+                self._cache[key] = None
+        return self._cache[key]
 
-    async def enum(self, field: str, value: Any) -> Any:
+    async def enum(self, entity: str, field: str, value: Any) -> Any:
         """A single enum: return ``value`` if valid (or unverifiable), else ``None``."""
         if value in (None, ""):
             return value
-        options = await self._options(field)
+        options = await self._options(entity, field)
         if options is None:  # couldn't verify — keep
             return value
         if value in options:
             return value
         self.dropped.setdefault(field, []).append(value)
         log.warning(
-            "%s.%s: dropping unrecognized value %r (not in live enum)",
-            self._entity, field, value,
+            "%s.%s: dropping unrecognized value %r (not in live enum)", entity, field, value,
         )
         return None
 
-    async def multi(self, field: str, values: Any) -> Any:
+    async def multi(self, entity: str, field: str, values: Any) -> Any:
         """A multiEnum: return only the valid values (or all, if unverifiable)."""
         if not values:
             return values
-        options = await self._options(field)
+        options = await self._options(entity, field)
         if options is None:
             return values
         kept = [v for v in values if v in options]
@@ -77,7 +79,7 @@ class EnumSanitizer:
             self.dropped.setdefault(field, []).extend(dropped)
             log.warning(
                 "%s.%s: dropping unrecognized values %s (not in live enum)",
-                self._entity, field, dropped,
+                entity, field, dropped,
             )
         return kept
 
