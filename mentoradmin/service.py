@@ -60,6 +60,7 @@ EDITABLE_FIELDS: list[dict[str, Any]] = [
     {"name": "mentorStatus", "label": "Status", "type": "enum", "group": "Status"},
     {"name": "mentorType", "label": "Type", "type": "enum", "group": "Status"},
     {"name": "acceptingNewClients", "label": "Accepting new clients", "type": "bool", "group": "Status"},
+    {"name": "publicProfile", "label": "Public profile", "type": "bool", "group": "Status"},
     {"name": "mentorStartDate", "label": "Mentor start date", "type": "date", "group": "Status"},
     {"name": "mentorStatusNotes", "label": "Status notes", "type": "text", "group": "Status"},
     {"name": "maximumClientCapacity", "label": "Maximum client capacity", "type": "int", "group": "Capacity"},
@@ -117,15 +118,23 @@ async def get_mentor(client: MentorClient, mentor_id: str) -> dict[str, Any]:
     return await client.get(MENTOR_PROFILE, mentor_id, select=_DETAIL_SELECT)
 
 
+def _has_text(html: Any) -> bool:
+    """True if a wysiwyg/text value has real text (ignoring HTML tags + nbsp)."""
+    if not html:
+        return False
+    return bool(re.sub(r"<[^>]+>", "", str(html)).replace("\xa0", " ").strip())
+
+
 async def check_completeness(client: MentorClient, rec: dict[str, Any]) -> dict[str, Any]:
     """Verify the mentor's data structure is complete & correct.
 
     A ``CMentorProfile`` *is* the "CBM member" record (present by definition when
     viewing it). Always required: a linked **Contact** record + the four sign-off
-    flags (``COMPLETENESS_FLAGS``). For an **Active** mentor, additionally: a
-    login **User** assigned to the member, and that same User assigned to the
-    Contact. Returns ``{"status": "Complete"|"Incomplete", "issues": [...]}`` —
-    ``issues`` explains an Incomplete result.
+    flags (``COMPLETENESS_FLAGS``). For an **Active** mentor, additionally: a CBM
+    email address, plus a login **User** assigned to the member and that same User
+    on the Contact. For a **public profile** (``publicProfile`` true): About-the-
+    mentor text, ≥1 mentoring focus area, ≥1 area of expertise, and an industry
+    sector. Returns ``{"status": "Complete"|"Incomplete", "issues": [...]}``.
     """
     issues: list[str] = []
     contact_id = rec.get("contactRecordId")
@@ -136,6 +145,8 @@ async def check_completeness(client: MentorClient, rec: dict[str, Any]) -> dict[
             issues.append(f"{label} not confirmed")
 
     if rec.get("mentorStatus") == STATUS_ACTIVE:
+        if not rec.get("cbmEmail"):
+            issues.append("no CBM email address")
         user_id = rec.get("assignedUserId")
         if not user_id:
             issues.append("no User assigned to the mentor")
@@ -150,6 +161,16 @@ async def check_completeness(client: MentorClient, rec: dict[str, Any]) -> dict[
             issues.append("no User assigned to the Contact")
         elif user_id and contact_user and contact_user != user_id:
             issues.append("Contact is assigned to a different User than the mentor")
+
+    if rec.get("publicProfile"):
+        if not _has_text(rec.get("aboutMentor")):
+            issues.append("public profile: About the mentor is empty")
+        if not rec.get("mentoringFocusAreas"):
+            issues.append("public profile: no mentoring focus area selected")
+        if not rec.get("areaOfExpertise"):
+            issues.append("public profile: no area of expertise selected")
+        if not rec.get("industrySector"):
+            issues.append("public profile: no industry sector selected")
 
     return {"status": "Complete" if not issues else "Incomplete", "issues": issues}
 

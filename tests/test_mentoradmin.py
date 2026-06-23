@@ -128,6 +128,7 @@ class CompletenessClient:
 def _complete_rec(**over):
     rec = {
         "contactRecordId": "c1", "assignedUserId": "u1", "mentorStatus": "Active",
+        "cbmEmail": "jane.doe@cbmentors.org",
         "backgroundCheckCompleted": True, "ethicsAgreementAccepted": True,
         "trainingCompleted": True, "termsAccepted": True,
     }
@@ -164,6 +165,30 @@ async def test_completeness_active_requires_user_on_member_and_contact():
     # contact has no user
     r3 = await service.check_completeness(CompletenessClient(None), _complete_rec())
     assert r3["status"] == "Incomplete" and any("no User assigned to the Contact" in i for i in r3["issues"])
+
+
+@pytest.mark.asyncio
+async def test_completeness_active_requires_cbm_email():
+    r = await service.check_completeness(CompletenessClient("u1"), _complete_rec(cbmEmail=""))
+    assert r["status"] == "Incomplete" and any("CBM email" in i for i in r["issues"])
+
+
+@pytest.mark.asyncio
+async def test_completeness_public_profile_requirements():
+    # publicProfile true but nothing filled in -> four extra issues
+    r = await service.check_completeness(CompletenessClient("u1"), _complete_rec(
+        publicProfile=True, aboutMentor="<p></p>", mentoringFocusAreas=[],
+        areaOfExpertise=[], industrySector=None))
+    assert r["status"] == "Incomplete"
+    joined = " ".join(r["issues"])
+    for token in ("About the mentor", "mentoring focus area", "area of expertise", "industry sector"):
+        assert token in joined
+    # fully filled in -> Complete
+    r2 = await service.check_completeness(CompletenessClient("u1"), _complete_rec(
+        publicProfile=True, aboutMentor="<p>Experienced founder.</p>",
+        mentoringFocusAreas=["Finance"], areaOfExpertise=["Construction"],
+        industrySector="Information"))
+    assert r2 == {"status": "Complete", "issues": []}
 
 
 @pytest.mark.asyncio
