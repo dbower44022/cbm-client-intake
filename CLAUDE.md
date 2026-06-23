@@ -233,14 +233,22 @@ detail screen that reviews all info (read-only computed totals on top) and
   `provision:{ok:false,error}` summary shown in the UI without rolling back the
   saved status. userName collisions get a numeric suffix (`…2@…`). Re-saving an
   already-Approved mentor, or one with a user, does nothing.
-  **TO ENABLE:** create a dedicated **admin-type EspoCRM user** for provisioning,
-  set `ESPO_PROVISION_USERNAME`/`ESPO_PROVISION_PASSWORD` (encrypted overlay
-  secrets) + `MENTOR_PROVISION_USERS=true`, and confirm the **`Mentor Team`**
-  exists. Still unverified live: the `sendAccessInfo` welcome-email mechanism +
-  CBM-email deliverability (if EspoCRM wants a different trigger it's a one-line
-  change in `provision_mentor_user`); watch for a synchronous SMTP send blocking
-  the request. The live script's `MA_APPROVE` path provisions via the admin's own
-  token (run it as an admin).
+  **ENABLED + VERIFIED LIVE 2026-06-22** against crm-test: a dedicated admin
+  EspoCRM user (`mentoradminuser@cbmentors.org`, **Type=Admin**) was created, its
+  username/password set in the gitignored overlay (`ESPO_PROVISION_USERNAME`/
+  `ESPO_PROVISION_PASSWORD` + `MENTOR_PROVISION_USERS=true`, on the **web**
+  component), and approving a mentor in `/mentoradmin` provisioned a User
+  end-to-end (verified in the run logs: status PUT → `App/user` login
+  `type=admin` → `Team?name=Mentor Team` → `POST /User 200` → `assignedUser`
+  link). **Gotcha that cost time:** an `api`-type user can't create Users, and a
+  *regular* user (even with roles) 403s — the service account's **Type must be
+  Admin** (not just a role). Still worth a real check: the `sendAccessInfo`
+  welcome-email actually *delivering* (POST returned 200, SMTP delivery not
+  confirmed) and the CBM-email mailbox existing. The live script's `MA_APPROVE`
+  path provisions via the admin's own token (run it as an admin).
+  **Cleanup:** the live verification created real test User accounts in crm-test
+  (e.g. for mentor `6a2f137fa58eea5a3` with `cbmEmail=jb@gmail.com`, and
+  `6a3616686904f6449`) + left those mentors Approved — delete in the EspoCRM UI.
 - **Status (2026-06-22): built; 119 tests green (10 new); TestClient sanity OK
   (serves, 401 unauth, index link).** NOT yet deployed/verified live — needs the
   `MENTOR_ADMIN_ALLOWED_TEAMS` default to match a real crm-test Team (defaults to
