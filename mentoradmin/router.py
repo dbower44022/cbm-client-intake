@@ -115,7 +115,9 @@ async def mentor_detail(mentor_id: str, request: Request) -> dict:
     client = client_for(get_settings(), user)
     try:
         rec = await service.get_mentor(client, mentor_id)
-        rec["completeness"] = await service.check_completeness(client, rec)
+        comp = await service.check_completeness(client, rec)
+        rec["completeness"] = comp
+        rec["recordStatus"] = await service.sync_record_status(client, mentor_id, rec, comp["status"])
         return rec
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not load mentor")
@@ -163,7 +165,9 @@ async def mentor_update(mentor_id: str, body: UpdateIn, request: Request) -> dic
             team_name=settings.mentor_team_name,
             admin_client_factory=_provision_factory(settings),
         )
-        result["completeness"] = await service.check_completeness(client, result)
+        comp = await service.check_completeness(client, result)
+        result["completeness"] = comp
+        result["recordStatus"] = await service.sync_record_status(client, mentor_id, result, comp["status"])
         return result
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not save mentor")

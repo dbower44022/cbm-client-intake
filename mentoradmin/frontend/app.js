@@ -8,7 +8,7 @@
   var fieldOptions = {};   // {fieldName: [options]}
   var current = null;      // the mentor being edited
   var listDirty = false;   // reload list after an edit
-  var filter = { q: "", status: "", industry: "", sortKey: "name", sortDir: 1 };
+  var filter = { q: "", status: "", record: "", industry: "", sortKey: "name", sortDir: 1 };
 
   function $(id) { return document.getElementById(id); }
   function show(el) { el.hidden = false; }
@@ -66,6 +66,7 @@
   $("backBtn").addEventListener("click", function () { showList(); if (listDirty) { listDirty = false; loadMentors(); } });
   $("search").addEventListener("input", function () { filter.q = this.value; renderTable(); });
   $("statusFilter").addEventListener("change", function () { filter.status = this.value; renderTable(); });
+  $("recordFilter").addEventListener("change", function () { filter.record = this.value; renderTable(); });
   $("industryFilter").addEventListener("change", function () { filter.industry = this.value; renderTable(); });
 
   // --- list ---
@@ -82,6 +83,7 @@
     try {
       mentors = (await api("/mentors")).mentors || [];
       fillSelect($("statusFilter"), distinct(function (m) { return [m.status]; }), "All statuses");
+      fillSelect($("recordFilter"), distinct(function (m) { return [m.recordStatus]; }), "All record statuses");
       fillSelect($("industryFilter"), distinct(function (m) { return [m.industrySector]; }), "All industries");
       renderTable();
     } catch (e) {
@@ -103,6 +105,7 @@
     var rows = mentors.filter(function (m) {
       if (q && haystack(m).indexOf(q) < 0) return false;
       if (filter.status && m.status !== filter.status) return false;
+      if (filter.record && m.recordStatus !== filter.record) return false;
       if (filter.industry && m.industrySector !== filter.industry) return false;
       return true;
     });
@@ -120,6 +123,7 @@
       link.textContent = m.name || "(unnamed)";
       link.addEventListener("click", function () { openMentor(m.id); });
       name.appendChild(link); tr.appendChild(name);
+      tr.appendChild(cell(recordBadge(m.recordStatus)));
       tr.appendChild(cell(badge(m.status)));
       tr.appendChild(cell(fmtDate(m.createdAt)));
       tr.appendChild(cell(m.assignedClients == null ? "—" : String(m.assignedClients), "num"));
@@ -133,6 +137,10 @@
   function cell(content, cls) { var td = document.createElement("td"); if (cls) td.className = cls; if (content instanceof Node) td.appendChild(content); else td.textContent = content; return td; }
   function fmtDate(v) { return v ? String(v).slice(0, 10) : "—"; }  // ISO date part (YYYY-MM-DD)
   function badge(status) { var s = document.createElement("span"); s.className = "status-badge status-" + (status || "none"); s.textContent = status || "—"; return s; }
+  function recordBadge(rs) {
+    if (!rs) { var d = document.createElement("span"); d.className = "ro-muted"; d.textContent = "—"; return d; }
+    var s = document.createElement("span"); s.className = "complete-badge complete-" + rs.toLowerCase(); s.textContent = rs; return s;
+  }
   function updateSortIndicators() {
     Array.prototype.forEach.call($("mentorTable").querySelectorAll("th[data-sort]"), function (th) {
       th.dataset.dir = th.getAttribute("data-sort") === filter.sortKey ? (filter.sortDir === 1 ? "asc" : "desc") : "";

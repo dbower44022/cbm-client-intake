@@ -173,6 +173,37 @@ async def test_completeness_non_active_ignores_user_links():
     assert r == {"status": "Complete", "issues": []}
 
 
+class _RecordStatusClient:
+    def __init__(self):
+        self.updates = []
+
+    async def update(self, entity, record_id, payload):
+        self.updates.append((entity, record_id, payload))
+        return {"id": record_id}
+
+
+@pytest.mark.asyncio
+async def test_sync_record_status_writes_on_change():
+    c = _RecordStatusClient()
+    out = await service.sync_record_status(c, "m1", {"recordStatus": "Incomplete"}, "Complete")
+    assert out == "Complete"
+    assert c.updates == [("CMentorProfile", "m1", {"recordStatus": "Complete"})]
+
+
+@pytest.mark.asyncio
+async def test_sync_record_status_noop_when_unchanged():
+    c = _RecordStatusClient()
+    out = await service.sync_record_status(c, "m1", {"recordStatus": "Complete"}, "Complete")
+    assert out == "Complete" and c.updates == []
+
+
+@pytest.mark.asyncio
+async def test_sync_record_status_preserves_manual_duplicate():
+    c = _RecordStatusClient()
+    out = await service.sync_record_status(c, "m1", {"recordStatus": "Duplicate"}, "Incomplete")
+    assert out == "Duplicate" and c.updates == []
+
+
 # --- approval -> user provisioning ---
 
 class ProvisionClient:

@@ -151,7 +151,7 @@ async def get_engagement_detail(
 # Shared select for both the assign dropdown and the review list.
 _MENTOR_SELECT = (
     "name,createdAt,assignedUserId,assignedUserName,availableCapacity,currentActiveClients,"
-    "maximumClientCapacity,yearsOfExperience,mentorType,mentorStatus,"
+    "maximumClientCapacity,yearsOfExperience,mentorType,mentorStatus,recordStatus,"
     "acceptingNewClients,industrySector,mentoringFocusAreas,areaOfExpertise"
 )
 
@@ -170,6 +170,7 @@ def _mentor_row(r: dict[str, Any]) -> dict[str, Any]:
         "mentorType": r.get("mentorType"),
         "status": r.get("mentorStatus"),
         "acceptingNewClients": bool(r.get("acceptingNewClients")),
+        "recordStatus": r.get("recordStatus"),
         "industrySector": r.get("industrySector"),
         "focusAreas": r.get("mentoringFocusAreas") or [],
         "expertise": r.get("areaOfExpertise") or [],

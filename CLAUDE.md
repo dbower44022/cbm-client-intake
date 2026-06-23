@@ -223,6 +223,12 @@ detail screen that reviews all info (read-only computed totals on top) and
   **both** the member and its Contact — filling the gap provisioning leaves (it
   sets the member's User only) and self-healing one-sided assignments, so the
   "no User assigned to the Contact" completeness issue auto-resolves on save.
+  The computed status is **persisted** to the CRM `recordStatus` enum
+  (`Complete`/`Incomplete`; a manual `Duplicate` is preserved, never overwritten)
+  on every view/save when it changes (`service.sync_record_status`), so the
+  **roster grid** shows a **Record** column + filter (read from the stored field
+  — fresh for any mentor that's been viewed/saved) to spot who needs work without
+  recomputing per row. `recordStatus` is in the shared `assignments` mentor row.
 - **Approval → user provisioning (added 2026-06-22; privilege model fixed
   2026-06-22).** When a save leaves `mentorStatus` at **`Approved` or `Active`**
   (a mentor set straight to Active skips Approved but still needs a login) with

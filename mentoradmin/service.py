@@ -102,9 +102,12 @@ READ_ONLY_FIELDS = [
     "availableCapacity", "currentActiveClients", "maximumClientCapacity",
     "totalLifetimeSessions", "totalSessionsLast30Days", "totalMentoringHours",
     "contactRecordName", "contactRecordId", "assignedUserName", "assignedUserId",
-    "createdAt", "modifiedAt",
+    "createdAt", "modifiedAt", "recordStatus",
     "personalEmail", "contactPhone", "contactStreet", "contactCity", "postalCode",
 ]
+
+# recordStatus enum value set manually (in the CRM) — never auto-overwritten.
+RECORD_STATUS_MANUAL = "Duplicate"
 
 _DETAIL_SELECT = ",".join(["id"] + sorted(EDITABLE_NAMES) + READ_ONLY_FIELDS)
 
@@ -149,6 +152,26 @@ async def check_completeness(client: MentorClient, rec: dict[str, Any]) -> dict[
             issues.append("Contact is assigned to a different User than the mentor")
 
     return {"status": "Complete" if not issues else "Incomplete", "issues": issues}
+
+
+async def sync_record_status(
+    client: MentorClient, mentor_id: str, rec: dict[str, Any], status: str
+) -> str:
+    """Persist the computed completeness ``status`` to the ``recordStatus`` enum
+    so the roster grid can show it without recomputing per row. Skips a manual
+    ``Duplicate`` marking, and only writes when the value actually changes.
+    Best-effort. Returns the effective recordStatus.
+    """
+    current = rec.get("recordStatus")
+    if current == RECORD_STATUS_MANUAL:
+        return current
+    if status and status != current:
+        try:
+            await client.update(MENTOR_PROFILE, mentor_id, {"recordStatus": status})
+            return status
+        except Exception:
+            return current
+    return current or status
 
 
 async def update_mentor(

@@ -74,6 +74,10 @@
 .complete-badge:focus-visible { outline: 2px solid var(--cbm-blue); outline-offset: 2px; }
 .complete-complete { background: #eafaef; color: #2f7a3f; border-color: var(--cbm-success); }
 .complete-incomplete { background: #fdeaea; color: #a23b38; border-color: var(--cbm-danger); }
+.complete-duplicate { background: #fff6e6; color: #8a5a00; border-color: var(--cbm-warning); }
+/* the badge is a status indicator in the grid (not the clickable detail one) */
+.ma__table .complete-badge { cursor: default; }
+.ro-muted { color: var(--cbm-slate-700); }
 
 /* completeness detail popup */
 .modal-overlay { position: fixed; inset: 0; z-index: 1000; padding: 1rem;

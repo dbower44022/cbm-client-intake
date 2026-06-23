@@ -160,7 +160,7 @@ async def test_eligible_mentors_query_and_shape():
             "id": "m1", "name": "Tommy Tranell", "createdAt": None, "userId": "u1", "userName": "Tommy Tranell",
             "availableCapacity": 4, "assignedClients": 2, "maxCapacity": 5,
             "yearsOfExperience": 10, "mentorType": "Mentor", "status": "Active",
-            "acceptingNewClients": True, "industrySector": "Manufacturing",
+            "acceptingNewClients": True, "recordStatus": None, "industrySector": "Manufacturing",
             "focusAreas": ["Agriculture"], "expertise": ["Lean"],
         }
     ]
