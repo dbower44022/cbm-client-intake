@@ -251,6 +251,10 @@
     var wrap = document.createElement("div"); wrap.className = "cbm-field field-" + f.type;
     var label = document.createElement("label"); label.textContent = f.label; label.setAttribute("for", "f_" + f.name);
     var input = makeInput(f, value); input.id = "f_" + f.name; input.dataset.field = f.name; input.dataset.type = f.type;
+    // Snapshot the initial (normalized) value so Save can send only changed
+    // fields — re-sending an unchanged value that has drifted out of its CRM
+    // enum options would 400 the whole update.
+    input.dataset.original = JSON.stringify(readField(input));
     if (f.type === "bool") {
       wrap.className += " cbm-field--check";
       var lab = document.createElement("label"); lab.appendChild(input); lab.appendChild(document.createTextNode(" " + f.label));
@@ -365,8 +369,11 @@
     if (!current) return;
     var changes = {};
     Array.prototype.forEach.call($("editForm").querySelectorAll("[data-field]"), function (el) {
-      changes[el.dataset.field] = readField(el);
+      var cur = readField(el);
+      // Only send fields the user actually changed (see buildField snapshot).
+      if (JSON.stringify(cur) !== el.dataset.original) changes[el.dataset.field] = cur;
     });
+    if (!Object.keys(changes).length) { notice("detailNotice", "No changes to save.", "success"); return; }
     $("saveBtn").disabled = true;
     try {
       current = await api("/mentors/" + encodeURIComponent(current.id), { method: "PUT", body: JSON.stringify({ changes: changes }) });

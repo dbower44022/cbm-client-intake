@@ -8,6 +8,8 @@ isolated from the assignment tool. All reads/writes run as the logged-in user
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
@@ -28,6 +30,7 @@ from core.espo import EspoClient, EspoError
 from . import service
 
 router = APIRouter(prefix="/mentoradmin/api", tags=["mentoradmin"])
+log = logging.getLogger("cbm_intake.mentoradmin")
 
 # Distinct session key so a Mentor-Admin login is separate from /assignments.
 SESSION_KEY = "mentoradmin_user"
@@ -53,6 +56,9 @@ def _crm_failure(request: Request, exc: EspoError, message: str) -> HTTPExceptio
     if session_expired(exc):
         clear_session(request, SESSION_KEY)
         return HTTPException(status_code=401, detail="Your session has expired — please sign in again.")
+    # Log the full CRM error (includes the response body) so failures like a
+    # value rejected by EspoCRM are diagnosable from the run logs.
+    log.warning("%s: %s", message, exc)
     return HTTPException(status_code=502, detail=f"{message}: {exc}")
 
 

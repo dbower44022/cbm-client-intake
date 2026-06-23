@@ -197,6 +197,13 @@ detail screen that reviews all info (read-only computed totals on top) and
   type-driven renderer: enum→select (static `options` allowed, e.g. how-heard),
   multiEnum→checkbox grid, bool→checkbox, int/date, text→textarea,
   wysiwyg→contenteditable rich-text editor (toolbar + `sanitizeHtml` on load).
+  **Save sends only the fields the user actually changed** (diffed against a
+  per-field snapshot taken at render): re-sending an *unchanged* value that has
+  since drifted out of its CRM enum options would make EspoCRM 400 the whole
+  update. (This was the cause of a live approval failure 2026-06-22 — crm-test's
+  `mentorStatus`/`industrySector` enums had drifted, so a mentor's stale stored
+  values 400'd on re-save; see [[crm-test-schema-drift]].) `_crm_failure` logs
+  the full CRM error body so such rejections are diagnosable from the run logs.
 - **Approval → user provisioning (added 2026-06-22; privilege model fixed
   2026-06-22).** When an edit transitions `mentorStatus` to **`Approved`** (and
   the mentor has no linked login user yet) **and `MENTOR_PROVISION_USERS` is on**,
