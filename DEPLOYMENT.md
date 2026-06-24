@@ -165,11 +165,41 @@ outage can't freeze approvals. Off unless enabled:
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | the service-account JSON key, **`type: SECRET`** |
 | `GOOGLE_DELEGATED_ADMIN` | a Workspace admin to impersonate, **`type: SECRET`** |
 
-Setup: in **Google Cloud**, enable the **Admin SDK API** and create a service
-account + JSON key; in the **Workspace Admin console** (Security → API controls →
-**Domain-wide delegation**) authorize that service account's Client ID for scope
-`https://www.googleapis.com/auth/admin.directory.user.readonly`. The app reads the
-Directory API as that delegated admin (read-only). Not yet stood up for prod.
+**Not yet stood up for prod.** Standing it up requires two halves that must *both*
+be in place — a plain service account has zero directory access until a Workspace
+super-admin grants it **domain-wide delegation** (permission to impersonate a real
+user for one named scope).
+
+*In Google Cloud Console* (any project):
+1. **Enable the Admin SDK API** (APIs & Services → Library → "Admin SDK API").
+2. **Create a service account** (IAM & Admin → Service Accounts). It needs **no GCP
+   IAM roles** — its power comes from the Workspace delegation, not GCP.
+3. **Create a JSON key** for it (Keys → Add Key → JSON). This is the secret the app
+   signs tokens with — keep it encrypted, rotate by replacing the key.
+4. Note the service account's **OAuth client ID** (the numeric "Unique ID").
+
+*In the Google Workspace Admin console* (admin.google.com, as a super-admin):
+5. **Security → Access and data control → API controls → Domain-wide delegation →
+   Add new.**
+6. Paste the service account's **Client ID** and, for scopes, exactly:
+   `https://www.googleapis.com/auth/admin.directory.user.readonly` (read-only, user
+   directory only).
+7. Pick a Workspace admin for the service account to **impersonate** (any user that
+   can read the directory) — this becomes `GOOGLE_DELEGATED_ADMIN`.
+
+*In the overlay:* set the three vars above and re-apply. (Delegation changes can
+take ~5–10 min to propagate — a brief `UNKNOWN`/auth error right after setup isn't
+necessarily wrong.)
+
+**How it works at runtime** (`core/google_directory.py`): on a mentor-approval
+save the app mints a short-lived OAuth token from the JSON key, signed as the
+service account but with `subject = GOOGLE_DELEGATED_ADMIN` (the impersonation),
+scoped read-only; it calls `GET admin/directory/v1/users/{email}` → **200** = exists
+(provision proceeds), **404** = missing (block: status saved, no login, "create the
+mailbox first"), **anything else / token-mint / network error** = `UNKNOWN` → **fails
+open** (proceeds), so a Google outage can't freeze approvals. Least privilege: the
+one read-only scope can't change Workspace or read mail — only check user existence;
+it's a separate credential from the EspoCRM admin service account.
 
 > **CRITICAL — do not clobber a live app.** The committed `.do/app.yaml` is the
 > *dry-run* spec: it hardcodes `ESPO_DRY_RUN=true` and contains **no secrets**.
