@@ -363,9 +363,33 @@ mentor.
   (`assignments/service.py:_assigned_user_payload`). Writing `assignedUserId` to a
   disabled-field entity is silently ignored.
 
-## Current status (updated 2026-06-22)
+## Current status (updated 2026-06-24)
 
-**As of 2026-06-22 — live on App Platform against `crm-test`:** all **five**
+**PRODUCTION IS LIVE (2026-06-24).** A **separate prod app** —
+`cbm-client-intake-prod` (App ID `aa1ddf69-f359-4b53-91ba-035cbed7bd53`,
+`https://cbm-client-intake-prod-a9li7.ondigitalocean.app`) — runs against the
+**production CRM** `https://crm.clevelandbusinessmentors.org` with its own managed
+Postgres (`cbm-db-prod`) + `delivery-worker`. Config in the gitignored
+`.do/app.prod-crm.yaml` (separate from the crm-test overlay `.do/app.prod.yaml`).
+Go-live **verified end-to-end (v0.9.0)**: one labelled `ZZTEST-PROD-GOLIVE`
+submission per form delivered through capture → worker → CRM, all entity
+create-grants proven (Account, Contact, CClientProfile, CEngagement,
+CMentorProfile, CPartnerProfile, CSponsorProfile, CInformationRequest +
+CIntakeSubmission Normal/Processed log). **Prep that made it work:** the prod
+intake API user (`customappsproduction`) needed the role `CustomAppAPIRole`
+(create/read/edit on the 9 entities) — the migration didn't copy it; and prod is a
+**stock** instance where CEngagement/CClientProfile use the single `assignedUser`
+(crm-test used the `assignedUsers` collaborators field) — the assignment tool now
+writes BOTH so it works on either (commit a0d95f2). Read-only readiness checker:
+`scripts/preflight_crm.py` (went green pre-go-live). **Still pending for full
+parity:** the staff-tool Teams (`Client Administration Team`,
+`Mentor Administration Team`) must exist in prod with staff users; mentor
+provisioning is OFF (no prod admin service account yet). **Cleanup:** delete the
+`ZZTEST-PROD-GOLIVE` records in the prod EspoCRM UI (create-only key can't) — 5
+Contacts, 3 Accounts, CClientProfile+CEngagement, CMentorProfile,
+CInformationRequest, CPartnerProfile, CSponsorProfile, + 5 CIntakeSubmission logs.
+
+**As of 2026-06-22 — also live on App Platform against `crm-test`:** all **five**
 intake forms (client-intake, volunteer, info-request, partner, sponsor), the
 **V2** reliability platform (durable Postgres capture + async `delivery-worker` +
 `/ops` console + alerting/schema-drift, Phases 0–3 activated), and all three
