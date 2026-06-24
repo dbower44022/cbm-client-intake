@@ -4,17 +4,26 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.10.4] — 2026-06-24
+
+### Changed
+- **Reverted 0.10.3's `submitterEmailData` approach — the real fix is CRM-side.**
+  Live testing showed `CIntakeSubmission.submitterEmail` stays null whether the app
+  sends a plain string **or** the `submitterEmailData` array, because the field was
+  built as EspoCRM type **`email`**, which is bound to the entity's single primary
+  `emailAddress` field — a custom-named email-type field stores nothing. The fix is
+  to change that field's type to **varchar** in the CRM (the sister
+  `CInformationRequest.submitterEmail` is varchar and stores fine). The log reverts
+  to the simple string write, which works once the field is varchar
+  (`core/submission_log.py`). **CRM action required** — see
+  `cintake-submission-entity.md`.
+
 ## [0.10.3] — 2026-06-24
 
 ### Fixed
-- **`CIntakeSubmission.submitterEmail` is now actually stored.** The field is an
-  EspoCRM **email-type** field, and EspoCRM silently drops a bare string for such
-  fields on create — so every audit record had a null `submitterEmail` even though
-  the address was present in the JSON payload (and in the record `name`). The log
-  now sets it via the `submitterEmailData` array (as EspoCRM's own UI does), so the
-  email lands on the record. Only affected `CIntakeSubmission` —
-  `CInformationRequest.submitterEmail` is a plain varchar and was always fine
-  (`core/submission_log.py`).
+- *(superseded by 0.10.4 — the `submitterEmailData` array did not work either; the
+  field type itself is the problem.)* Attempted to store
+  `CIntakeSubmission.submitterEmail` via the `submitterEmailData` array.
 
 ## [0.10.2] — 2026-06-24
 

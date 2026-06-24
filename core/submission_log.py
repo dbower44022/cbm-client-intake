@@ -127,25 +127,21 @@ def build_submission_payload(
     contact_id: Optional[str] = None,
 ) -> dict[str, Any]:
     """Build the ``CIntakeSubmission`` record body (pure; no I/O)."""
-    raw_email = getattr(submission, "email", None)
-    email = str(raw_email) if raw_email else "(unknown)"
+    email = getattr(submission, "email", None) or "(unknown)"
     payload: dict[str, Any] = {
         "name": f"{slug} — {email} — {datetime.now(timezone.utc):%Y-%m-%d}",
         S_FORM: _FORM_VALUES.get(slug, slug),
         S_REASON: reason,
         S_STATUS: status,
+        # ``submitterEmail`` must be a **varchar** field in the CRM (like the
+        # sister ``CInformationRequest.submitterEmail``). EspoCRM's ``email`` field
+        # *type* is bound to the entity's single primary ``emailAddress`` field, so
+        # a custom-named email-type field silently stores nothing — neither a plain
+        # string nor a ``<field>Data`` array (both verified null live). With a
+        # varchar field this plain string is stored. See cintake-submission-entity.md.
+        S_SUBMITTER_EMAIL: str(email),
         S_DESCRIPTION: _description(slug, submission, reason),
     }
-    # ``submitterEmail`` is an EspoCRM **email-type** field — a bare string is
-    # silently dropped on create (real records came back with a null
-    # submitterEmail), so set it via the ``<field>Data`` array the way EspoCRM's
-    # own UI does. The plain string is kept alongside for readability/back-compat.
-    # (Every form requires email, so the guard only covers the degenerate case.)
-    if raw_email:
-        payload[S_SUBMITTER_EMAIL] = email
-        payload[f"{S_SUBMITTER_EMAIL}Data"] = [
-            {"emailAddress": email, "primary": True, "optOut": False, "invalid": False}
-        ]
     source = getattr(submission, "how_did_you_hear", None)
     if source:
         payload[S_SOURCE] = source
