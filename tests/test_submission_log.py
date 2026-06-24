@@ -56,6 +56,10 @@ def test_normal_payload_processed_with_source_and_contact():
     assert payload["reason"] == "Normal"
     assert payload["status"] == "Processed"
     assert payload["submitterEmail"] == "ada@example.com"
+    # email-type field: also sent as the *Data array so EspoCRM actually stores it
+    assert payload["submitterEmailData"] == [
+        {"emailAddress": "ada@example.com", "primary": True, "optOut": False, "invalid": False}
+    ]
     assert payload["source"] == "Online search"
     assert payload["contactId"] == "contact-9"
     # A processed record is an audit log — no reprocess instructions.

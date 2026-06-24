@@ -4,6 +4,18 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.10.3] — 2026-06-24
+
+### Fixed
+- **`CIntakeSubmission.submitterEmail` is now actually stored.** The field is an
+  EspoCRM **email-type** field, and EspoCRM silently drops a bare string for such
+  fields on create — so every audit record had a null `submitterEmail` even though
+  the address was present in the JSON payload (and in the record `name`). The log
+  now sets it via the `submitterEmailData` array (as EspoCRM's own UI does), so the
+  email lands on the record. Only affected `CIntakeSubmission` —
+  `CInformationRequest.submitterEmail` is a plain varchar and was always fine
+  (`core/submission_log.py`).
+
 ## [0.10.2] — 2026-06-24
 
 ### Changed
