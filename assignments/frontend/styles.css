@@ -154,6 +154,15 @@
 .row-busy { opacity: 0.55; pointer-events: none; }
 .assign__empty, .assign__loading { color: var(--cbm-text); padding: 1.5rem 0; }
 
+/* Confirm dialog — shared modal-card pattern (matches Mentor Administration). */
+.modal-overlay { position: fixed; inset: 0; z-index: 1000; padding: 1rem;
+  background: rgba(23, 59, 96, 0.55); display: flex; align-items: center; justify-content: center; }
+.modal-card { background: var(--cbm-white); border-radius: var(--cbm-radius); width: 100%;
+  max-width: 460px; padding: 1.5rem 1.6rem; box-shadow: 0 18px 48px rgba(0, 0, 0, 0.3); }
+.modal-card h3 { margin: 0 0 0.6rem; color: var(--cbm-navy); font-family: var(--cbm-font-serif); }
+.modal-card p { margin: 0 0 0.6rem; color: var(--cbm-text); }
+.modal-actions { display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 0.4rem; }
+
 /* Engagement detail modal */
 .modal {
   position: fixed;

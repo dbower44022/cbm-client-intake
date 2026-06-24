@@ -4,6 +4,14 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.10.5] — 2026-06-24
+
+### Changed
+- **The mentor-assignment confirmation is now a styled modal**, matching the
+  `modal-card` popups used elsewhere in the app (e.g. Mentor Administration),
+  instead of the browser's native `window.confirm()`. Same Assign/Cancel flow,
+  Escape/backdrop to dismiss (`assignments/frontend/app.js` + `styles.css`).
+
 ## [0.10.4] — 2026-06-24
 
 > **Live in production** (`cbm-client-intake-prod`) — `/healthz` reports `0.10.4`.

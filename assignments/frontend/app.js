@@ -632,15 +632,17 @@
     }
   );
 
-  async function doAssign(tr, eng, mentorProfileId, mentorLabel) {
+  function doAssign(tr, eng, mentorProfileId, mentorLabel) {
     if (!mentorProfileId) return;
-    var ok = window.confirm(
-      "Assign \"" + (eng.name || "this engagement") + "\" to " + mentorLabel + "?\n\n" +
-      "This sets the engagement to “Pending Acceptance” and reassigns its " +
-      "contact(s) and client records to the mentor's user."
-    );
-    if (!ok) return;
+    showConfirmModal({
+      title: "Assign “" + (eng.name || "this engagement") + "” to " + mentorLabel + "?",
+      body: "This sets the engagement to “Pending Acceptance” and reassigns its " +
+        "contact(s) and client records to the mentor's user.",
+      confirmLabel: "Assign",
+    }, function () { performAssign(tr, eng, mentorProfileId); });
+  }
 
+  async function performAssign(tr, eng, mentorProfileId) {
     clearNotice();
     tr.classList.add("row-busy");
     try {
@@ -674,6 +676,32 @@
       if (e.status === 401) { showLogin(); return; }
       notice(e.message, "error");
     }
+  }
+
+  // Styled confirm dialog — matches the modal-card popups used elsewhere in the
+  // app (e.g. Mentor Administration) instead of the browser's native confirm().
+  function showConfirmModal(opts, onConfirm) {
+    var prev = document.getElementById("confirmModal");
+    if (prev) prev.remove();
+    var overlay = document.createElement("div");
+    overlay.id = "confirmModal"; overlay.className = "modal-overlay";
+    var card = document.createElement("div"); card.className = "modal-card";
+    var h = document.createElement("h3"); h.textContent = opts.title; card.appendChild(h);
+    if (opts.body) { var p = document.createElement("p"); p.textContent = opts.body; card.appendChild(p); }
+    var actions = document.createElement("div"); actions.className = "modal-actions";
+    var cancel = document.createElement("button"); cancel.type = "button";
+    cancel.className = "cbm-button cbm-button--secondary"; cancel.textContent = opts.cancelLabel || "Cancel";
+    var ok = document.createElement("button"); ok.type = "button";
+    ok.className = "cbm-button"; ok.textContent = opts.confirmLabel || "Confirm";
+    function close() { overlay.remove(); document.removeEventListener("keydown", onKey); }
+    function onKey(e) { if (e.key === "Escape") close(); }
+    cancel.addEventListener("click", close);
+    ok.addEventListener("click", function () { close(); onConfirm(); });
+    overlay.addEventListener("click", function (e) { if (e.target === overlay) close(); });
+    document.addEventListener("keydown", onKey);
+    actions.appendChild(cancel); actions.appendChild(ok); card.appendChild(actions);
+    overlay.appendChild(card); document.body.appendChild(overlay);
+    ok.focus();
   }
 
   // --- boot ---
