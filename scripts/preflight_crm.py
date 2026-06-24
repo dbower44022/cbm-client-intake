@@ -82,12 +82,13 @@ REQUIRED_FIELDS: dict[str, list[str]] = {
 }
 
 
-async def _entity_exists(client: EspoClient, entity: str) -> bool:
+async def _safe_metadata(client: EspoClient, key: str):
+    """Fetch a metadata key, treating any error or empty/non-JSON body (EspoCRM
+    returns an empty 200 for a path the API user can't see) as 'not available'."""
     try:
-        defs = await client.metadata(f"entityDefs.{entity}.fields")
-        return isinstance(defs, dict) and bool(defs)
-    except EspoError:
-        return False
+        return await client.metadata(key)
+    except Exception:  # noqa: BLE001 — EspoError, JSON decode (empty 200), transport
+        return None
 
 
 async def run(url: str, key: str) -> int:
@@ -100,19 +101,16 @@ async def run(url: str, key: str) -> int:
     #    a link FK attribute (``<link>Id`` / hasMany ``<link>Ids``) — link FKs live
     #    under .links, not .fields.
     print("\n[entities + fields]")
+    visible = 0
     for entity in REQUIRED_ENTITIES:
-        try:
-            defs = await client.metadata(f"entityDefs.{entity}.fields")
-        except EspoError:
-            defs = None
+        defs = await _safe_metadata(client, f"entityDefs.{entity}.fields")
         if not isinstance(defs, dict) or not defs:
-            print(f"  ✗ {entity}: MISSING (entity not found)")
+            print(f"  ✗ {entity}: not visible (entity absent, or the API user has "
+                  f"no grant on this scope)")
             critical += 1
             continue
-        try:
-            links = await client.metadata(f"entityDefs.{entity}.links")
-        except EspoError:
-            links = None
+        visible += 1
+        links = await _safe_metadata(client, f"entityDefs.{entity}.links")
         names = set(defs) | set(links or {})
 
         def present(name: str) -> bool:
@@ -136,7 +134,7 @@ async def run(url: str, key: str) -> int:
     for (entity, field), expected in EXPECTED_ENUMS.items():
         try:
             options = await client.metadata_enum_options(entity, field)
-        except EspoError:
+        except Exception:  # noqa: BLE001 — empty 200 / transport, like _safe_metadata
             options = None
         if options is None:
             print(f"  ? {entity}.{field}: no options found (field missing or not an enum)")
@@ -153,7 +151,13 @@ async def run(url: str, key: str) -> int:
     print("\n" + "=" * 64)
     print(f"CRITICAL issues (missing entity/field): {critical}")
     print(f"Advisory issues (enum values that won't store): {advisory}")
-    if critical:
+    if visible == 0:
+        print("\nRESULT: NOT READY — the API user can't see ANY of the app's scopes."
+              "\n  This key has no role/grants (record reads 403, scopes empty), so it's"
+              "\n  either unprovisioned or the custom entities don't exist yet. Re-run with"
+              "\n  an ADMIN key to confirm which, then grant create on every entity above"
+              "\n  to the intake API user (+ edit on Contact for info-request append).")
+    elif critical:
         print("\nRESULT: NOT READY — resolve the missing entities/fields in the CRM first.")
     else:
         print("\nRESULT: schema looks ready. Next: deploy dry-run, then a labelled test "
