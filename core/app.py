@@ -167,7 +167,9 @@ def _index_html(forms: list[FormSpec], include_assignments: bool = False) -> str
     items = []
     for f in forms:
         if f.frontend_dir is not None:
-            items.append(f'<li><a href="/{f.slug}/">{f.title}</a></li>')
+            items.append(
+                f'<li><a href="/{f.slug}/" target="_blank" rel="noopener">{f.title}</a></li>'
+            )
         else:
             items.append(f"<li>{f.title} <em>(API only — UI pending)</em></li>")
     # The mentor assignment dashboard is a staff-only tool, listed separately.
@@ -175,11 +177,11 @@ def _index_html(forms: list[FormSpec], include_assignments: bool = False) -> str
     if include_assignments:
         staff = (
             "<h2>Staff</h2><ul>"
-            '<li><a href="/assignments/">Client Administration</a> '
+            '<li><a href="/assignments/" target="_blank" rel="noopener">Client Administration</a> '
             "<em>(staff sign-in required)</em></li>"
-            '<li><a href="/ops/">Submission Operations</a> '
+            '<li><a href="/ops/" target="_blank" rel="noopener">Submission Operations</a> '
             "<em>(staff sign-in required)</em></li>"
-            '<li><a href="/mentoradmin/">Mentor Administration</a> '
+            '<li><a href="/mentoradmin/" target="_blank" rel="noopener">Mentor Administration</a> '
             "<em>(staff sign-in required)</em></li></ul>"
         )
     year = datetime.now(timezone.utc).year

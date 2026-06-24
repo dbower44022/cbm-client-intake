@@ -4,6 +4,13 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.10.1] — 2026-06-24
+
+### Changed
+- **The form index opens each form/staff-tool link in a new browser tab**
+  (`target="_blank"` + `rel="noopener"`), so the landing page stays put when a
+  user opens a form or staff tool (`core/app.py` `_index_html`).
+
 ## [0.10.0] — 2026-06-24
 
 ### Added
