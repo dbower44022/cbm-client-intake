@@ -75,8 +75,10 @@ async def test_assign_sets_engagement_and_reassigns_related():
     _, eng_id, payload = eng_updates[0]
     assert eng_id == "eng-1"
     assert payload["engagementStatus"] == "Pending Acceptance"
+    # Both assignment attributes are written; EspoCRM keeps whichever the instance
+    # has (collaborators on crm-test, single assignedUser on prod).
     assert payload["assignedUsersIds"] == ["user-99"]
-    assert "assignedUserId" not in payload
+    assert payload["assignedUserId"] == "user-99"
     assert payload["mentorProfileId"] == "mentor-1"
 
     # Contacts (primary + extra, deduped) each reassigned via single assignedUser.
@@ -84,8 +86,9 @@ async def test_assign_sets_engagement_and_reassigns_related():
     assert set(contact_updates) == {"contact-primary", "contact-extra"}
     assert all(p["assignedUserId"] == "user-99" for p in contact_updates.values())
 
-    # Client profile uses assignedUsers (assignedUser disabled); account uses single.
-    assert ("CClientProfile", "clientprofile-1", {"assignedUsersIds": ["user-99"]}) in client.updates
+    # Client profile gets both assignment attributes; account uses the single one.
+    assert ("CClientProfile", "clientprofile-1",
+            {"assignedUsersIds": ["user-99"], "assignedUserId": "user-99"}) in client.updates
     assert ("Account", "account-1", {"assignedUserId": "user-99"}) in client.updates
 
     assert res["contactsUpdated"] == 2

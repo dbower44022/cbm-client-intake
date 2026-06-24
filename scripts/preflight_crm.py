@@ -55,8 +55,10 @@ REQUIRED_FIELDS: dict[str, list[str]] = {
     "CEngagement": [
         "name", "engagementStatus", "mentoringFocusAreas", "mentoringNeedsDescription",
         "engagementClientId", "primaryEngagementContactId", "description",
-        # staff tools (assignments):
-        "mentorProfileId", "requestedMentorId", "assignedUsersIds",
+        # staff tools (assignments). The assignment tool writes BOTH assignedUser
+        # and assignedUsers (the app adapts per instance), so either one suffices —
+        # not listed here as a hard requirement.
+        "mentorProfileId", "requestedMentorId",
     ],
     "CMentorProfile": [
         "name", "contactRecordId", "mentorStatus", "mentorType", "mentoringWhyInterested",

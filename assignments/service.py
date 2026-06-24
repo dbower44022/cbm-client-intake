@@ -47,17 +47,20 @@ ENGAGEMENT_STATUSES = [
 # Link of CEngagement -> the hasMany of additional/secondary contacts.
 ENGAGEMENT_CONTACTS = "engagementContacts"
 
-# Assignment field differs by entity (verified live crm-test 2026-06-19):
-# Contact/Account use the single `assignedUser`; CEngagement and CClientProfile
-# have `assignedUser` DISABLED and use the multi-user `assignedUsers`
-# (collaborators) field — writing `assignedUserId` to them is silently ignored.
-# These two take `assignedUsersIds=[userId]` instead.
+# Assignment field differs by entity AND by instance. Contact/Account always use
+# the single `assignedUser`. CEngagement/CClientProfile vary: crm-test customized
+# them to the multi-user `assignedUsers` (collaborators) field with `assignedUser`
+# DISABLED, while a stock instance (e.g. production) keeps the single
+# `assignedUser`. So for those two we write BOTH attributes — EspoCRM silently
+# ignores the one the entity doesn't have, so the assignment sticks on either
+# config without per-instance branching. (verified crm-test 2026-06-19; prod uses
+# single assignedUser — 2026-06-24.)
 USES_ASSIGNED_USERS = {ENGAGEMENT, CLIENT_PROFILE}
 
 
 def _assigned_user_payload(entity: str, user_id: str) -> dict[str, Any]:
     if entity in USES_ASSIGNED_USERS:
-        return {"assignedUsersIds": [user_id]}
+        return {"assignedUsersIds": [user_id], "assignedUserId": user_id}
     return {"assignedUserId": user_id}
 
 
