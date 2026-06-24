@@ -590,6 +590,8 @@ only matters if a separate frontend origin is ever introduced.
 
 - `README.md` — repo overview: the forms, the staff tools, the V2 platform, how
   to run locally / add a form.
+- `CHANGELOG.md` — notable changes by version (the value `/healthz`/footer report,
+  which is also the App Platform deploy marker).
 - `prds/CBM_Client_Intake_Requirements_Specification.md` — what it must do.
 - `prds/CBM_Client_Intake_Technical_Design.md` — how it's built (deployment in
   §6, open issues in §7, EspoCRM mapping in §3). NOTE: the formal prds focus on
