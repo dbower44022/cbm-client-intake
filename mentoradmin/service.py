@@ -267,6 +267,21 @@ async def update_mentor(
     result = await get_mentor(client, mentor_id)
     if provision is not None:
         result["provision"] = provision
+    elif (
+        admin_client_factory is None
+        and result.get("mentorStatus") in (STATUS_APPROVED, STATUS_ACTIVE)
+        and not result.get("assignedUserId")
+    ):
+        # The mentor is Approved/Active but has no login User, and provisioning is
+        # disabled on this server (no admin service account configured). Surface
+        # it so the UI doesn't silently imply a login was created — without this,
+        # an approval looks identical to a successful one. See the overlay's
+        # MENTOR_PROVISION_USERS / ESPO_PROVISION_* to enable it.
+        result["provision"] = {
+            "ok": False,
+            "disabled": True,
+            "error": "mentor login provisioning is disabled on this server",
+        }
     return result
 
 

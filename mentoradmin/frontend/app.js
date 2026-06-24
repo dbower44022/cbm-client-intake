@@ -535,6 +535,8 @@
       var p = current.provision;
       if (p && p.ok) {
         notice("detailNotice", "Saved. Created login " + p.userName + " in " + p.team + " and sent a welcome email.", "success");
+      } else if (p && p.disabled) {
+        notice("detailNotice", "Status saved, but no login was created — mentor login provisioning is turned off on this server. An administrator must provision the mentor's EspoCRM login (or enable provisioning).", "error");
       } else if (p && !p.ok) {
         notice("detailNotice", "Saved, but the mentor's login could not be created: " + p.error, "error");
       } else {

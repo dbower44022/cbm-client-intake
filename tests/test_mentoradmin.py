@@ -310,10 +310,15 @@ async def test_approval_provisions_user():
 
 @pytest.mark.asyncio
 async def test_no_admin_client_means_no_provisioning():
-    """Without a privileged client, approval never tries to create a user."""
+    """Without a privileged client, approval never tries to create a user — but
+    it reports that provisioning is disabled so the UI can say so."""
     c = ProvisionClient()
     res = await service.update_mentor(c, "m1", {"mentorStatus": "Approved"}, team_name="Mentor Team")
-    assert c.created == [] and "provision" not in res
+    assert c.created == []
+    assert res["provision"] == {
+        "ok": False, "disabled": True,
+        "error": "mentor login provisioning is disabled on this server",
+    }
 
 
 @pytest.mark.asyncio
