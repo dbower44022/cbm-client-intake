@@ -381,10 +381,23 @@ intake API user (`customappsproduction`) needed the role `CustomAppAPIRole`
 **stock** instance where CEngagement/CClientProfile use the single `assignedUser`
 (crm-test used the `assignedUsers` collaborators field) — the assignment tool now
 writes BOTH so it works on either (commit a0d95f2). Read-only readiness checker:
-`scripts/preflight_crm.py` (went green pre-go-live). **Still pending for full
-parity:** the staff-tool Teams (`Client Administration Team`,
-`Mentor Administration Team`) must exist in prod with staff users; mentor
-provisioning is OFF (no prod admin service account yet). **Cleanup:** delete the
+`scripts/preflight_crm.py` (went green pre-go-live). **Mentor-login provisioning
+is LIVE in prod (2026-06-24, v0.9.1):** `MENTOR_PROVISION_USERS=true` in
+`.do/app.prod-crm.yaml` with a dedicated prod admin service account
+(`ESPO_PROVISION_USERNAME=mentoradmin@cbmentors.org`, **Type=Admin** — User
+creation is admin-only) + `MENTOR_TEAM_NAME="Mentor Team"`. **VERIFIED LIVE
+end-to-end:** approving `doug@dougbower.com` in `/mentoradmin` provisioned his
+login (logs showed `App/user` admin login `type=admin` → `Team?name=Mentor Team`
+→ `POST /User 200` → `assignedUser` link on profile + Contact). Still worth a
+real check: the `sendAccessInfo` welcome email actually *delivering* (POST 200 ≠
+SMTP delivery) and the `doug.bower@cbmentors.org` mailbox existing. Any mentor
+approved during the earlier off-window self-heals on the next Save.
+Also note: v0.9.1 added a UI signal so an approval saved while provisioning is
+disabled shows "no login was created" instead of a silent "Saved"
+(`mentoradmin/service.py` `provision={disabled:true}`; was the original
+"failed to properly update doug" report). **Still pending for full parity:** the
+staff-tool Teams (`Client Administration Team`, `Mentor Administration Team`)
+must exist in prod with staff users. **Cleanup:** delete the
 `ZZTEST-PROD-GOLIVE` records in the prod EspoCRM UI (create-only key can't) — 5
 Contacts, 3 Accounts, CClientProfile+CEngagement, CMentorProfile,
 CInformationRequest, CPartnerProfile, CSponsorProfile, + 5 CIntakeSubmission logs.
