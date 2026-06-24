@@ -365,6 +365,111 @@ async def test_already_approved_provisions_on_unrelated_field_save():
     assert len(c.created) == 1 and res["provision"]["ok"] is True
 
 
+# --- Google Workspace mailbox gate ---
+
+def _mailbox(status):
+    async def check(email):
+        return status
+    return check
+
+
+@pytest.mark.asyncio
+async def test_missing_mailbox_blocks_provisioning():
+    from core.google_directory import MailboxStatus
+    c = ProvisionClient()
+    res = await service.update_mentor(
+        c, "m1", {"mentorStatus": "Approved"}, team_name="Mentor Team",
+        admin_client_factory=_afactory(c), mailbox_checker=_mailbox(MailboxStatus.MISSING),
+    )
+    assert c.created == []  # the EspoCRM User is NOT created
+    assert res["provision"]["ok"] is False
+    assert "does not exist" in res["provision"]["error"].lower()
+
+
+@pytest.mark.asyncio
+async def test_existing_mailbox_allows_provisioning():
+    from core.google_directory import MailboxStatus
+    c = ProvisionClient()
+    res = await service.update_mentor(
+        c, "m1", {"mentorStatus": "Approved"}, team_name="Mentor Team",
+        admin_client_factory=_afactory(c), mailbox_checker=_mailbox(MailboxStatus.EXISTS),
+    )
+    assert len(c.created) == 1 and res["provision"]["ok"] is True
+
+
+@pytest.mark.asyncio
+async def test_unknown_mailbox_fails_open():
+    # An inconclusive check must NOT block — a Google outage can't freeze approvals.
+    from core.google_directory import MailboxStatus
+    c = ProvisionClient()
+    res = await service.update_mentor(
+        c, "m1", {"mentorStatus": "Approved"}, team_name="Mentor Team",
+        admin_client_factory=_afactory(c), mailbox_checker=_mailbox(MailboxStatus.UNKNOWN),
+    )
+    assert len(c.created) == 1 and res["provision"]["ok"] is True
+
+
+def test_google_directory_disabled_without_config():
+    from core.google_directory import GoogleDirectory
+
+    class S:
+        google_directory_check = False
+        google_service_account_json = ""
+        google_delegated_admin = ""
+        request_timeout_seconds = 20
+
+    assert GoogleDirectory.from_settings(S()) is None
+
+
+def test_google_directory_bad_json_disables():
+    from core.google_directory import GoogleDirectory
+
+    class S:
+        google_directory_check = True
+        google_service_account_json = "not-json"
+        google_delegated_admin = "admin@cbmentors.org"
+        request_timeout_seconds = 20
+
+    assert GoogleDirectory.from_settings(S()) is None
+
+
+@pytest.mark.asyncio
+async def test_google_directory_unknown_when_no_token(monkeypatch):
+    from core.google_directory import GoogleDirectory, MailboxStatus
+    gd = GoogleDirectory({"x": 1}, "admin@cbmentors.org")
+
+    async def no_token():
+        return None
+
+    monkeypatch.setattr(gd, "_access_token", no_token)
+    assert await gd.mailbox_status("x@cbmentors.org") is MailboxStatus.UNKNOWN
+
+
+@pytest.mark.asyncio
+async def test_google_directory_maps_status_codes(monkeypatch):
+    import httpx
+    from core.google_directory import GoogleDirectory, MailboxStatus
+    gd = GoogleDirectory({"x": 1}, "admin@cbmentors.org")
+
+    async def tok():
+        return "tok"
+
+    monkeypatch.setattr(gd, "_access_token", tok)
+
+    def handler(request):
+        return httpx.Response(200 if "exists" in str(request.url) else 404)
+
+    real = httpx.AsyncClient
+
+    def fake_client(*a, **k):
+        k["transport"] = httpx.MockTransport(handler)
+        return real(*a, **k)
+
+    monkeypatch.setattr(httpx, "AsyncClient", fake_client)
+    assert await gd.mailbox_status("exists@cbmentors.org") is MailboxStatus.EXISTS
+    assert await gd.mailbox_status("missing@cbmentors.org") is MailboxStatus.MISSING
+
+
 @pytest.mark.asyncio
 async def test_username_collision_appends_suffix():
     c = ProvisionClient(existing_users={"jane.doe@cbmentors.org"})

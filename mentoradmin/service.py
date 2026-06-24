@@ -11,7 +11,12 @@ from __future__ import annotations
 import re
 from typing import Any, Awaitable, Callable, Optional, Protocol
 
+from core.google_directory import MailboxStatus
+
 MENTOR_PROFILE = "CMentorProfile"
+
+# A callable that returns whether a CBM mailbox exists in Google Workspace.
+MailboxChecker = Callable[[str], Awaitable[MailboxStatus]]
 
 # When a mentor is set to this status, a login User is provisioned for them.
 STATUS_APPROVED = "Approved"
@@ -202,6 +207,7 @@ async def update_mentor(
     *,
     team_name: Optional[str] = None,
     admin_client_factory: Optional[Callable[[], Awaitable[MentorClient]]] = None,
+    mailbox_checker: Optional[MailboxChecker] = None,
 ) -> dict[str, Any]:
     """Update whitelisted editable fields; ignore anything else.
 
@@ -248,7 +254,9 @@ async def update_mentor(
         try:
             admin_client = await admin_client_factory()
             summary = await provision_mentor_user(
-                admin_client, client, mentor_id, team_name=team_name or DEFAULT_MENTOR_TEAM
+                admin_client, client, mentor_id,
+                team_name=team_name or DEFAULT_MENTOR_TEAM,
+                mailbox_checker=mailbox_checker,
             )
             provision = {"ok": True, **summary}
         except MentorAdminError as exc:
@@ -354,6 +362,7 @@ async def provision_mentor_user(
     mentor_id: str,
     *,
     team_name: str,
+    mailbox_checker: Optional[MailboxChecker] = None,
 ) -> dict[str, Any]:
     """Create a login User for an approved mentor, link it, and team it.
 
@@ -386,6 +395,20 @@ async def provision_mentor_user(
 
     existing_cbm = (profile.get("cbmEmail") or "").strip()
     cbm = existing_cbm or cbm_email_for(first, last)
+
+    # Hard gate: don't create a login (and bounce its welcome email) for a CBM
+    # address that has no Google Workspace mailbox. Only a *confirmed*-missing
+    # mailbox blocks; an inconclusive check (UNKNOWN) falls through so a Google
+    # outage can't freeze approvals.
+    if mailbox_checker is not None:
+        status = await mailbox_checker(cbm)
+        if status is MailboxStatus.MISSING:
+            raise MentorAdminError(
+                f"the Google Workspace mailbox {cbm} does not exist — create it "
+                "before approving this mentor (the login's welcome email would "
+                "otherwise bounce and they could never sign in)."
+            )
+
     user_name = await _unique_user_name(admin_client, cbm)
     team_id = await _find_team_id(admin_client, team_name)
 

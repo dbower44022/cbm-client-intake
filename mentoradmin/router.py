@@ -26,6 +26,7 @@ from assignments.auth import (
 from assignments.espo_user import client_for
 from core.config import Settings, get_settings
 from core.espo import EspoClient, EspoError
+from core.google_directory import GoogleDirectory
 
 from . import service
 
@@ -154,6 +155,14 @@ def _provision_factory(settings: Settings):
     return factory
 
 
+def _mailbox_checker(settings: Settings):
+    """The Google Workspace mailbox lookup used to hard-gate provisioning, or
+    ``None`` when the check is disabled/unconfigured (then provisioning proceeds
+    as before)."""
+    gd = GoogleDirectory.from_settings(settings)
+    return gd.mailbox_status if gd else None
+
+
 @router.put("/mentors/{mentor_id}")
 async def mentor_update(mentor_id: str, body: UpdateIn, request: Request) -> dict:
     settings = get_settings()
@@ -164,6 +173,7 @@ async def mentor_update(mentor_id: str, body: UpdateIn, request: Request) -> dic
             client, mentor_id, body.changes,
             team_name=settings.mentor_team_name,
             admin_client_factory=_provision_factory(settings),
+            mailbox_checker=_mailbox_checker(settings),
         )
         comp = await service.check_completeness(client, result)
         result["completeness"] = comp

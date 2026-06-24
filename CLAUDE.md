@@ -388,10 +388,20 @@ is LIVE in prod (2026-06-24, v0.9.1):** `MENTOR_PROVISION_USERS=true` in
 creation is admin-only) + `MENTOR_TEAM_NAME="Mentor Team"`. **VERIFIED LIVE
 end-to-end:** approving `doug@dougbower.com` in `/mentoradmin` provisioned his
 login (logs showed `App/user` admin login `type=admin` → `Team?name=Mentor Team`
-→ `POST /User 200` → `assignedUser` link on profile + Contact). Still worth a
-real check: the `sendAccessInfo` welcome email actually *delivering* (POST 200 ≠
-SMTP delivery) and the `doug.bower@cbmentors.org` mailbox existing. Any mentor
-approved during the earlier off-window self-heals on the next Save.
+→ `POST /User 200` → `assignedUser` link on profile + Contact). The
+`sendAccessInfo` welcome email **does deliver** — confirmed: it arrived at the
+mentor's **CBM address** (`doug.bower@cbmentors.org`, = the User's userName/email),
+which is correct. (Outbound email works despite `/Settings` reporting
+`smtpServer=None` — it routes via a group/alternate account, not the system SMTP.)
+Any mentor approved during the earlier off-window self-heals on the next Save.
+**Mailbox gate (v0.10.0, built but OFF):** provisioning can hard-gate on whether
+the mentor's `…@cbmentors.org` mailbox actually exists in Google Workspace (else
+the welcome email bounces and strands them). `core/google_directory.py`
+(`GoogleDirectory.mailbox_status`, Admin SDK Directory API, read-only, domain-wide
+delegation); a confirmed-missing mailbox blocks with a clear error, inconclusive
+fails open. Enable with `GOOGLE_DIRECTORY_CHECK=true` + `GOOGLE_SERVICE_ACCOUNT_JSON`
++ `GOOGLE_DELEGATED_ADMIN` (overlay placeholders in `.do/app.prod-crm.yaml`) —
+needs a GCP service account with domain-wide delegation (not yet created).
 Also note: v0.9.1 added a UI signal so an approval saved while provisioning is
 disabled shows "no login was created" instead of a silent "Saved"
 (`mentoradmin/service.py` `provision={disabled:true}`; was the original

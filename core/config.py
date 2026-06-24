@@ -74,6 +74,19 @@ class Settings(BaseSettings):
     # Marks a session cookie Secure; set false only for plain-HTTP local dev.
     session_cookie_secure: bool = True
 
+    # --- Google Workspace mailbox check (hard-gates mentor provisioning) ---
+    # When on (and creds set), provisioning first verifies the mentor's CBM
+    # mailbox actually exists in Google Workspace before creating the EspoCRM
+    # login + welcome email — otherwise the credentials email bounces and the
+    # mentor is stranded. A *confirmed-missing* mailbox blocks provisioning; an
+    # inconclusive check (not configured, API/auth error) fails OPEN so a Google
+    # outage can never freeze all approvals. Needs a Google Cloud service account
+    # with domain-wide delegation for the read-only Directory scope, impersonating
+    # a Workspace admin. Off (a no-op) until both values below are set.
+    google_directory_check: bool = False
+    google_service_account_json: str = ""   # the service-account JSON key (secret)
+    google_delegated_admin: str = ""        # a Workspace admin to impersonate
+
     @property
     def allowed_origins_list(self) -> list[str]:
         return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]

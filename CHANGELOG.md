@@ -4,6 +4,23 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.10.0] — 2026-06-24
+
+### Added
+- **Mentor provisioning hard-gates on the Google Workspace mailbox.** Before
+  creating an EspoCRM login (and firing its `sendAccessInfo` welcome email) for an
+  approved mentor, the app can verify their `firstname.lastname@cbmentors.org`
+  mailbox actually exists in Google Workspace — otherwise the credentials email
+  bounces and the mentor is stranded with a login they can't receive. A
+  *confirmed-missing* mailbox blocks provisioning with a clear error ("create it
+  before approving"); an inconclusive check (not configured, API/auth error) fails
+  **open** so a Google outage can't freeze approvals. New `core/google_directory.py`
+  (`GoogleDirectory.mailbox_status` → `EXISTS`/`MISSING`/`UNKNOWN`, via the Admin
+  SDK Directory API with a domain-wide-delegated service account, read-only scope).
+  **Off by default** — a no-op until `GOOGLE_DIRECTORY_CHECK=true` +
+  `GOOGLE_SERVICE_ACCOUNT_JSON` + `GOOGLE_DELEGATED_ADMIN` are set, so prod is
+  unchanged until the Google credentials exist.
+
 ## [0.9.1] — 2026-06-24
 
 ### Fixed
