@@ -21,6 +21,9 @@ The business-level definition of the Client Intake process is **not** owned
 here. It lives in the Mentoring Domain Client Intake process document
 (MN-INTAKE) in the Cleveland Business Mentoring repository.
 
+Change history: [`CHANGELOG.md`](CHANGELOG.md) (per-version) and
+[`RELEASE_NOTES.md`](RELEASE_NOTES.md) (narrative summaries of release cycles).
+
 ### Deployment
 
 - [`DEPLOYMENT.md`](DEPLOYMENT.md) — the engineer-level runbook (DigitalOcean
