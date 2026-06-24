@@ -202,6 +202,14 @@ Two viable shapes — pick one:
 
 1. **Prereqs** — `doctl` installed + `doctl auth init`; GitHub repo connected
    once in the console (see [Prerequisites](#prerequisites-one-time)).
+1a. **Schema pre-flight (read-only, do this first).** Verify the *production* CRM
+   has every entity/field/link/enum the app writes — a missing one silently sinks
+   a live submission (the crm-test drift saga, see CHANGELOG.md). Run:
+   `uv run python scripts/preflight_crm.py --url <PROD_CRM_URL> --key <READ_KEY>`.
+   It exits non-zero and lists what's missing if the CRM isn't ready; fix those in
+   EspoCRM first. (It can't check the API user's *create grants* — those are proven
+   by the labelled test submissions in step 6. Enum gaps are advisory: orchestrators
+   drop unknown values rather than failing.)
 2. **Pick the app name.** For a separate prod app, copy `.do/app.yaml` to a
    gitignored `.do/app.prod.yaml` and change `name:` to `cbm-client-intake-prod`
    (the `deploy.sh` `APP_NAME` only matches `cbm-client-intake`, so a renamed
