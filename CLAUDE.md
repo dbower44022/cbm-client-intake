@@ -365,6 +365,23 @@ mentor.
 
 ## Current status (updated 2026-06-24)
 
+**Prod is on v0.10.4** (`/healthz` confirmed). Changes shipped since the v0.9.0
+go-live, all live + verified against the prod CRM:
+- **Mentor-login provisioning ENABLED in prod** (v0.9.1) — admin service account
+  `mentoradmin@cbmentors.org` (Type=Admin); approving a mentor creates their
+  EspoCRM login + welcome email (delivered to the CBM address). v0.9.1 also added a
+  UI signal so an approval saved while provisioning is OFF says "no login created"
+  instead of a silent "Saved".
+- **Google Workspace mailbox gate** (v0.10.0) — provisioning can hard-gate on
+  whether the mentor's `@cbmentors.org` mailbox exists (built, **OFF** pending a GCP
+  service account; see the `/mentoradmin` section).
+- **Form index** opens links in a new tab (v0.10.1) + is served `Cache-Control:
+  no-store` so a redeploy never shows a stale landing page (v0.10.2).
+- **`CIntakeSubmission.submitterEmail` now stores** (v0.10.3→0.10.4) — root cause
+  was the CRM field being type `email` (stores nothing on a non-primary email
+  field); recreated as `varchar` in dev + prod, verified live (see the
+  CIntakeSubmission follow-up below).
+
 **PRODUCTION IS LIVE (2026-06-24).** A **separate prod app** —
 `cbm-client-intake-prod` (App ID `aa1ddf69-f359-4b53-91ba-035cbed7bd53`,
 `https://cbm-client-intake-prod-a9li7.ondigitalocean.app`) — runs against the
