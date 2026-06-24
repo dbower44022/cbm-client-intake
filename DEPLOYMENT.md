@@ -210,6 +210,18 @@ Two viable shapes — pick one:
    EspoCRM first. (It can't check the API user's *create grants* — those are proven
    by the labelled test submissions in step 6. Enum gaps are advisory: orchestrators
    drop unknown values rather than failing.)
+1b. **Provision the intake API user's role (CRM admin, one time).** A fresh CRM
+   has no role for the create-only API user, so it can't create anything (every
+   create 403s; the pre-flight shows all scopes "not visible"). Recreate the
+   crm-test role in the prod CRM admin UI (Administration → Roles) and assign it to
+   the intake API user. For EACH of these 9 entities — **Account, Contact,
+   CClientProfile, CEngagement, CMentorProfile, CPartnerProfile, CSponsorProfile,
+   CInformationRequest, CIntakeSubmission** — set **Create=Yes, Read=All, Edit=All,
+   Delete=No** (Stream=All, except CInformationRequest=No). No field-level
+   restrictions; Export=No, Mass Update=No, Assignment Permission=all. (Role
+   creation is admin-only — an API key can't do it. Derived from the crm-test
+   user's computed ACL via `GET /api/v1/App/user`.) Re-run the pre-flight (1a) — it
+   should go green once the role is assigned.
 2. **Pick the app name.** For a separate prod app, copy `.do/app.yaml` to a
    gitignored `.do/app.prod.yaml` and change `name:` to `cbm-client-intake-prod`
    (the `deploy.sh` `APP_NAME` only matches `cbm-client-intake`, so a renamed
