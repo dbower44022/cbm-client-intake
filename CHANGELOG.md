@@ -4,6 +4,14 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.10.2] — 2026-06-24
+
+### Changed
+- **The form index is served with `Cache-Control: no-store`**, so a freshly
+  deployed landing page is never shown stale from a browser/edge cache (a
+  redeploy briefly served the previous index from cache otherwise)
+  (`core/app.py` `index`).
+
 ## [0.10.1] — 2026-06-24
 
 ### Changed

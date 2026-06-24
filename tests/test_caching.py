@@ -14,11 +14,19 @@ client = TestClient(app)
 
 
 def test_frontend_assets_revalidate():
-    # HTML, JS, and CSS served to the browser must carry no-cache.
-    for path in ("/", "/client-intake/", "/client-intake/app.js", "/shared/wizard.css"):
+    # Form HTML, JS, and CSS served to the browser must carry no-cache.
+    for path in ("/client-intake/", "/client-intake/app.js", "/shared/wizard.css"):
         resp = client.get(path)
         assert resp.status_code == 200, path
         assert resp.headers.get("cache-control") == "no-cache", path
+
+
+def test_index_is_no_store():
+    # The landing page uses the stronger no-store so a freshly deployed index is
+    # never served stale from a browser/edge cache.
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert resp.headers.get("cache-control") == "no-store"
 
 
 def test_unchanged_asset_returns_304():

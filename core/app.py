@@ -250,6 +250,7 @@ def create_app(
             request.method in ("GET", "HEAD")
             and not path.startswith("/api/")
             and path != "/healthz"
+            and path != "/"  # the index sets its own stronger no-store (see index())
         ):
             response.headers["Cache-Control"] = "no-cache"
         return response
@@ -304,8 +305,13 @@ def create_app(
         app.include_router(mentoradmin_router)
 
     @app.get("/", response_class=HTMLResponse)
-    async def index() -> str:
-        return _index_html(forms, include_assignments=settings.assignments_active)
+    async def index() -> HTMLResponse:
+        # no-store so a freshly-deployed index is never served stale from a
+        # browser/edge cache (the landing page is tiny — nothing to gain caching).
+        return HTMLResponse(
+            _index_html(forms, include_assignments=settings.assignments_active),
+            headers={"Cache-Control": "no-store"},
+        )
 
     # Static mounts last so the API routes above take precedence.
     for spec in forms:
