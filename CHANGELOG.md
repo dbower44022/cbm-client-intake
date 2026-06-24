@@ -4,6 +4,18 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.9.1] — 2026-06-24
+
+### Fixed
+- **Mentor Admin no longer silently hides "no login created" on approval.** When a
+  mentor is saved at `Approved`/`Active` but login provisioning is disabled on the
+  server (no admin service account configured — the production state), the save now
+  returns `provision={ok:false, disabled:true}` and the UI shows *"Status saved, but
+  no login was created — mentor login provisioning is turned off on this server."*
+  Previously this case was indistinguishable from a successful approval, so an
+  approval in prod silently created no EspoCRM User and no welcome email
+  (`mentoradmin/service.py`, `mentoradmin/frontend/app.js`).
+
 ## [0.8.0] — 2026-06-23
 
 ### Fixed
