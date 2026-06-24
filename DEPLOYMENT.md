@@ -146,8 +146,30 @@ this runs as a dedicated **admin-type** EspoCRM service account via the
 | `MENTOR_TEAM_NAME` | team the new login is added to (default `Mentor Team`) |
 
 The service account's **Type must be Admin** in EspoCRM. Verified live against
-`crm-test` 2026-06-22. (The async delivery worker — `worker.py` — does **not**
-need these; provisioning runs synchronously in the web request.)
+`crm-test` 2026-06-22 **and against the production CRM 2026-06-24** (provisioned a
+real mentor login end-to-end; the `sendAccessInfo` welcome email delivered to the
+mentor's CBM address). (The async delivery worker — `worker.py` — does **not** need
+these; provisioning runs synchronously in the web request.)
+
+**Google Workspace mailbox gate (optional, web component)** — provisioning can
+hard-gate on whether the mentor's `firstname.lastname@cbmentors.org` mailbox
+actually exists in Google Workspace before creating the login + welcome email
+(otherwise the credentials email bounces and the mentor is stranded). A
+*confirmed-missing* mailbox blocks provisioning with a clear error; an
+inconclusive check (unconfigured, API/auth error) **fails open** so a Google
+outage can't freeze approvals. Off unless enabled:
+
+| Variable | Value |
+|---|---|
+| `GOOGLE_DIRECTORY_CHECK` | `true` to enable |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | the service-account JSON key, **`type: SECRET`** |
+| `GOOGLE_DELEGATED_ADMIN` | a Workspace admin to impersonate, **`type: SECRET`** |
+
+Setup: in **Google Cloud**, enable the **Admin SDK API** and create a service
+account + JSON key; in the **Workspace Admin console** (Security → API controls →
+**Domain-wide delegation**) authorize that service account's Client ID for scope
+`https://www.googleapis.com/auth/admin.directory.user.readonly`. The app reads the
+Directory API as that delegated admin (read-only). Not yet stood up for prod.
 
 > **CRITICAL — do not clobber a live app.** The committed `.do/app.yaml` is the
 > *dry-run* spec: it hardcodes `ESPO_DRY_RUN=true` and contains **no secrets**.

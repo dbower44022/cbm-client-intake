@@ -175,6 +175,16 @@ The admin account's **Type must be "Admin"** in EspoCRM (a regular user with
 roles is not enough). Leave `MENTOR_PROVISION_USERS` unset (or `false`) to keep
 this off — approving a mentor then just changes their status.
 
+**Optional safety check — does the mentor's `@cbmentors.org` mailbox exist?**
+You can have the app confirm a mentor's CBM mailbox actually exists in Google
+Workspace *before* it creates their login. If the mailbox is missing, the login
+isn't created and the screen tells you to create the mailbox first — this stops a
+welcome email from bouncing into nowhere and leaving the mentor unable to sign in.
+It needs a Google service account set up by an engineer (see the engineers'
+`DEPLOYMENT.md`); once that exists, turn it on with `GOOGLE_DIRECTORY_CHECK` =
+`true` plus `GOOGLE_SERVICE_ACCOUNT_JSON` and `GOOGLE_DELEGATED_ADMIN`
+(**Encrypted**). Left off, approval works exactly as above.
+
 > **Important:** these settings stick through normal automatic updates. The one
 > thing that could wipe them is running the engineers' command-line deploy script
 > against the live app — which is why that script has a built-in safety block.

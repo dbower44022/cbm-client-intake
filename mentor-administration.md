@@ -110,6 +110,12 @@ When you press **Save**:
    `firstname.lastname@cbmentors.org` (the CBM email — reusing `cbmEmail` if
    already set), places it in the **Mentor Team**, assigns it to the mentor
    record, and emails the mentor a welcome / set-password link.
+   - **Mailbox gate (when enabled).** If the Google Workspace check is on, the
+     app first verifies that the `firstname.lastname@cbmentors.org` mailbox
+     actually exists. If it **definitely does not**, the login is **not** created
+     and the save reports *"the Google Workspace mailbox … does not exist — create
+     it before approving"* (otherwise the welcome email would bounce and the
+     mentor could never sign in). If the check can't run, provisioning proceeds.
 4. **User reconciliation.** The mentor's User is assigned to **both** the member
    record and its **Contact** (filling any one-sided assignment).
 5. <a id="record-status"></a>**Record Status persisted.** The freshly computed
@@ -147,6 +153,10 @@ for any mentor that has been saved since the field was introduced.
   join is `MENTOR_TEAM_NAME` (default *Mentor Team*). Creating EspoCRM Users is
   admin-only, which is why a dedicated admin account is required — staff stay
   non-admin. See `DEPLOYMENT.md` → *Staff tools + mentor-login provisioning*.
+- **Google Workspace mailbox gate** is off unless `GOOGLE_DIRECTORY_CHECK=true`
+  with a service account (`GOOGLE_SERVICE_ACCOUNT_JSON` / `GOOGLE_DELEGATED_ADMIN`).
+  When on, a confirmed-missing CBM mailbox blocks provisioning; an inconclusive
+  check fails open. See `DEPLOYMENT.md` → *Google Workspace mailbox gate*.
 
 Implementation lives in the `mentoradmin/` package (`service.py` is the
 source-of-truth for the editable-field set + completeness rules); the grid reuses
