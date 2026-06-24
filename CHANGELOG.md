@@ -6,6 +6,10 @@ deploy marker on App Platform.
 
 ## [0.10.4] — 2026-06-24
 
+> **Live in production** (`cbm-client-intake-prod`) — `/healthz` reports `0.10.4`.
+> The CRM-side fix is applied: `CIntakeSubmission.submitterEmail` is now `varchar`
+> in dev + prod, and a live test submission confirmed the email is stored.
+
 ### Changed
 - **Reverted 0.10.3's `submitterEmailData` approach — the real fix is CRM-side.**
   Live testing showed `CIntakeSubmission.submitterEmail` stays null whether the app
