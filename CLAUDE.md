@@ -532,20 +532,18 @@ Local `.env` stays `ESPO_DRY_RUN=true`; live tests use an inline
      actions + gotchas) in `cintake-submission-entity.md` → "Alerting (CRM-owned)";
      CRM-owned, not yet built. Distinct from V2's worker alerting (CRM-delivery
      failures/backlog) — this fires on honeypot/orchestrator holds.
-  3. **OPEN (prod CRM action) — `submitterEmail` must be type `varchar`, not
-     `email`.** In the **production** CRM it was built as EspoCRM type `email`,
-     which binds to the entity's primary `emailAddress` field, so it silently
-     stored NOTHING — every record had a null `submitterEmail` despite the address
-     being in `name`/`description`. Verified live the value stays null whether the
-     app sends a plain string OR a `submitterEmailData` array (0.10.3 tried the
-     array; reverted in 0.10.4). **Fix:** change the field type to `varchar` in the
-     Entity Manager + rebuild (the sister `CInformationRequest.submitterEmail` is
-     varchar and stores fine); then the app's plain-string write populates it — no
-     code change needed. See `cintake-submission-entity.md`.
+  3. ✅ **DONE (verified live 2026-06-24)** — `submitterEmail` now stores. It had
+     been built as EspoCRM type `email`, which binds to the entity's primary
+     `emailAddress` field, so a custom-named email-type field silently stored
+     NOTHING — every record had a null `submitterEmail` despite the address being in
+     `name`/`description` (the value stayed null whether the app sent a plain string
+     OR a `submitterEmailData` array; 0.10.3 tried the array, reverted in 0.10.4).
+     Fixed CRM-side: the field was deleted + recreated as **`varchar`** in dev +
+     prod; the app's plain-string write now populates it (verified live via a test
+     submission — `submitterEmail` stored). No code change beyond the 0.10.4 revert.
   4. Clean up the `ZZTEST-INTAKE GrantCheck` probe record
-     (id `6a2eec00c83e44628`) in the EspoCRM UI, plus the `ZZTEST EmailFix
-     7c4977` records this diagnosis left in **prod** (Contact + CInformationRequest
-     + CIntakeSubmission `6a3b59a61c86c4d4f`).
+     (id `6a2eec00c83e44628`) in the EspoCRM UI. (The `ZZTEST EmailFix` records from
+     the 2026-06-24 submitterEmail diagnosis were already cleaned up.)
 - Make the *deployed* app write to EspoCRM: set `ESPO_DRY_RUN=false` plus
   `ESPO_BASE_URL` + `ESPO_API_KEY` as **encrypted** App Platform env vars.
 - Clean up the `ZZTEST` test records left in crm-test by the wiring tests
