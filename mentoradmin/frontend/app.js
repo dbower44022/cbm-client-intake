@@ -92,6 +92,15 @@
   $("setupBackBtn").addEventListener("click", function () { showList(); });
   $("setupSaveBtn").addEventListener("click", function () { saveSetup(); });
   $("setupTestBtn").addEventListener("click", function () { testSetup(); });
+  // Copy-to-clipboard for the scope strings in the setup guide.
+  $("setupView").addEventListener("click", function (ev) {
+    var btn = ev.target.closest && ev.target.closest(".ma__copy");
+    if (!btn) return;
+    var text = btn.getAttribute("data-copy") || "";
+    var done = function () { btn.classList.add("is-copied"); btn.textContent = "✓"; setTimeout(function () { btn.classList.remove("is-copied"); btn.textContent = "⧉"; }, 1200); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, function () {});
+    else { try { var t = document.createElement("textarea"); t.value = text; document.body.appendChild(t); t.select(); document.execCommand("copy"); document.body.removeChild(t); done(); } catch (e) {} }
+  });
 
   // --- list ---
   async function bootList() {

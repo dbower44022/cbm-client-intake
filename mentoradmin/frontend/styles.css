@@ -110,7 +110,34 @@
 .ma__setup .cbm-help code { background: var(--cbm-surface); padding: 0.05rem 0.3rem; border-radius: 4px; }
 .ma__setup-status { margin: 0.5rem 0 1rem; color: var(--cbm-slate-700); font-size: var(--cbm-text-sm); }
 .ma__setup #su_json { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
-.ma__setup .ma__form { max-width: 720px; display: flex; flex-direction: column; gap: 1rem; }
+.ma__setup .ma__form { display: flex; flex-direction: column; gap: 1rem; }
+.ma__setup .cbm-field .cbm-help { font-weight: 400; margin: 0; }
+.ma__setup-toggles { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+
+/* two-column layout: form left, step-by-step guide right */
+.ma__setup-grid { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 1.75rem; align-items: start; }
+.ma__setup-main { min-width: 0; }
+@media (max-width: 960px) { .ma__setup-grid { grid-template-columns: 1fr; } }
+
+.ma__setup-guide { background: var(--cbm-surface); border: 1px solid var(--cbm-border);
+  border-radius: var(--cbm-radius); padding: 1.1rem 1.25rem; position: sticky; top: 1rem;
+  font-size: var(--cbm-text-sm); color: var(--cbm-text); }
+.ma__setup-guide h3 { margin: 0 0 0.5rem; color: var(--cbm-navy); font-family: var(--cbm-font-serif); }
+.ma__setup-guide h4 { margin: 1.1rem 0 0.4rem; color: var(--cbm-navy); font-size: var(--cbm-text-sm);
+  text-transform: uppercase; letter-spacing: 0.03em; }
+.ma__guide-sub { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--cbm-slate-700); }
+.ma__guide-note { margin: 0 0 0.6rem; color: var(--cbm-slate-700); }
+.ma__guide-steps { margin: 0.2rem 0 0; padding-left: 1.25rem; }
+.ma__guide-steps li { margin: 0.45rem 0; line-height: 1.45; }
+.ma__guide-steps em { color: var(--cbm-slate-700); font-style: normal; }
+.ma__guide-hint { display: block; margin-top: 0.3rem; color: var(--cbm-slate-700); font-size: 12px; line-height: 1.4; }
+.ma__guide-scopes { display: flex; align-items: center; gap: 0.4rem; margin: 0.35rem 0; }
+.ma__guide-scopes code { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; background: var(--cbm-white);
+  border: 1px solid var(--cbm-border); border-radius: 4px; padding: 0.2rem 0.4rem; font-size: 11px; }
+.ma__copy { flex: none; border: 1px solid var(--cbm-border); background: var(--cbm-white); cursor: pointer;
+  border-radius: 4px; padding: 0.1rem 0.4rem; color: var(--cbm-navy); line-height: 1.4; }
+.ma__copy:hover { background: var(--cbm-surface); border-color: var(--cbm-blue); }
+.ma__copy.is-copied { color: #2f7a3f; border-color: var(--cbm-success); }
 
 /* edit tabs */
 .ma__tabs { display: flex; flex-wrap: wrap; gap: 0.25rem; border-bottom: 2px solid var(--cbm-border);

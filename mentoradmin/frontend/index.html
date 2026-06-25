@@ -89,28 +89,81 @@
         Configure the Google Workspace connection used to check for and create mentor
         <code>@cbmentors.org</code> mailboxes during approval. The service account needs
         domain-wide delegation for the Directory <em>read-only</em> and (to create mailboxes)
-        <em>read-write</em> scopes. The key is stored encrypted.
+        <em>read-write</em> scopes. The key is stored encrypted. New here? Follow the
+        <strong>step-by-step guide</strong> on the right, then fill in the form.
       </p>
-      <p class="ma__notice" id="setupNotice" role="status" hidden></p>
-      <div class="ma__setup-status" id="setupStatus"></div>
-      <form id="setupForm" class="ma__form" autocomplete="off">
-        <div class="cbm-field">
-          <label for="su_admin">Delegated Workspace admin email</label>
-          <input type="email" id="su_admin" placeholder="admin@cbmentors.org" />
+
+      <div class="ma__setup-grid">
+        <!-- left: the config form -->
+        <div class="ma__setup-main">
+          <p class="ma__notice" id="setupNotice" role="status" hidden></p>
+          <div class="ma__setup-status" id="setupStatus"></div>
+          <form id="setupForm" class="ma__form" autocomplete="off">
+            <div class="cbm-field">
+              <label for="su_admin">Delegated Workspace admin email</label>
+              <input type="email" id="su_admin" placeholder="admin@cbmentors.org" />
+              <span class="cbm-help">The Workspace admin the service account impersonates (step 7). To <em>create</em> mailboxes this admin needs the User Management privilege.</span>
+            </div>
+            <div class="cbm-field">
+              <label for="su_json">Service-account JSON key</label>
+              <textarea id="su_json" rows="8" placeholder="Paste the whole service-account JSON key here (starts with { &quot;type&quot;: &quot;service_account&quot;, … }). Leave blank to keep the stored key."></textarea>
+              <span class="cbm-help">The JSON key file downloaded in step 3. Stored encrypted — it is never shown again after saving.</span>
+            </div>
+            <div class="ma__setup-toggles">
+              <div class="cbm-field cbm-field--check"><label><input type="checkbox" id="su_check" checked /> Check whether the mailbox exists before approving</label></div>
+              <div class="cbm-field cbm-field--check"><label><input type="checkbox" id="su_create" /> Create the mailbox automatically when it is missing</label></div>
+            </div>
+            <p class="cbm-help">Creating mailboxes requires the read-write scope (step 6) and an admin with User Management rights.</p>
+            <div class="modal-actions" style="justify-content:flex-start;">
+              <button type="button" class="cbm-button" id="setupSaveBtn">Save</button>
+              <button type="button" class="cbm-button cbm-button--secondary" id="setupTestBtn">Test connection</button>
+            </div>
+          </form>
         </div>
-        <div class="cbm-field">
-          <label for="su_json">Service-account JSON key</label>
-          <textarea id="su_json" rows="8" placeholder="Paste the service-account JSON key. Leave blank to keep the stored key."></textarea>
-        </div>
-        <div class="tab-row--checks" style="display:flex;gap:1.5rem;flex-wrap:wrap;">
-          <div class="cbm-field cbm-field--check"><label><input type="checkbox" id="su_check" checked /> Check whether the mailbox exists before approving</label></div>
-          <div class="cbm-field cbm-field--check"><label><input type="checkbox" id="su_create" /> Create the mailbox automatically when it is missing</label></div>
-        </div>
-        <div class="modal-actions" style="justify-content:flex-start;">
-          <button type="button" class="cbm-button" id="setupSaveBtn">Save</button>
-          <button type="button" class="cbm-button cbm-button--secondary" id="setupTestBtn">Test connection</button>
-        </div>
-      </form>
+
+        <!-- right: step-by-step setup guide -->
+        <aside class="ma__setup-guide" aria-label="Google Workspace setup instructions">
+          <h3>How to set this up</h3>
+          <p class="ma__guide-note">
+            A one-time setup by someone with access to both the organization's
+            <strong>Google Cloud Console</strong> and the <strong>Google Workspace Admin
+            console</strong> (a super-admin). Takes ~15 minutes.
+          </p>
+
+          <h4>In Google Cloud Console <span class="ma__guide-sub">(console.cloud.google.com)</span></h4>
+          <ol class="ma__guide-steps">
+            <li><strong>Enable the Admin SDK API.</strong> APIs &amp; Services → Library → search <em>“Admin SDK API”</em> → Enable.</li>
+            <li><strong>Create a service account.</strong> IAM &amp; Admin → Service Accounts → Create. Give it a name (e.g. <em>cbm-mentor-mailboxes</em>). It needs <strong>no</strong> GCP roles — its access comes from the Workspace delegation below.</li>
+            <li><strong>Create a JSON key.</strong> Open the service account → Keys → Add key → Create new key → <strong>JSON</strong>. A file downloads — this is the key you paste into the form. Keep it secret.</li>
+            <li><strong>Copy the Client ID.</strong> On the service account's Details tab, copy the <strong>Unique ID</strong> (a long number) — you'll need it in step 5.</li>
+          </ol>
+
+          <h4>In Google Workspace Admin <span class="ma__guide-sub">(admin.google.com, as a super-admin)</span></h4>
+          <ol class="ma__guide-steps" start="5">
+            <li><strong>Add domain-wide delegation.</strong> Security → Access and data control → API controls → <em>Manage Domain-Wide Delegation</em> → Add new. Paste the Client ID from step 4.</li>
+            <li>
+              <strong>Authorize these scopes</strong> (comma-separated), then Authorize:
+              <div class="ma__guide-scopes">
+                <code>https://www.googleapis.com/auth/admin.directory.user.readonly</code>
+                <button type="button" class="ma__copy" data-copy="https://www.googleapis.com/auth/admin.directory.user.readonly" title="Copy">⧉</button>
+              </div>
+              <div class="ma__guide-scopes">
+                <code>https://www.googleapis.com/auth/admin.directory.user</code>
+                <button type="button" class="ma__copy" data-copy="https://www.googleapis.com/auth/admin.directory.user" title="Copy">⧉</button>
+              </div>
+              <span class="ma__guide-hint">The first (read-only) is enough to <em>check</em>; the second (read-write) is required to <em>create</em> mailboxes. Add both.</span>
+            </li>
+            <li><strong>Pick the admin to impersonate.</strong> Any admin who can read the directory works for checking; to <em>create</em> mailboxes they need the <strong>User Management</strong> admin privilege. Use that email as <em>Delegated Workspace admin email</em>.</li>
+          </ol>
+
+          <h4>Back here</h4>
+          <ol class="ma__guide-steps" start="8">
+            <li>Paste the <strong>JSON key</strong> and enter the <strong>delegated admin email</strong>.</li>
+            <li>Tick <strong>Check…</strong> (and <strong>Create…</strong> if you want missing mailboxes auto-created), then <strong>Save</strong>.</li>
+            <li>Click <strong>Test connection</strong> to confirm it works. Delegation can take 5–10 minutes to take effect — if the test fails right after setup, wait a few minutes and retry.</li>
+          </ol>
+        </aside>
+      </div>
     </section>
 
     <footer class="cbm-footer">
