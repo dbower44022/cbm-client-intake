@@ -104,18 +104,26 @@ When you press **Save**:
    - (The popup does *not* warn about missing logins/User assignments — the save
      creates and assigns those automatically; see below.)
 2. **The edited fields are written** to the mentor record.
-3. <a id="logins-on-save"></a>**Login provisioning.** If the mentor's status is
-   **Approved or Active** and they have **no login yet**, the app automatically
-   creates an EspoCRM **User** for them:
-   `firstname.lastname@cbmentors.org` (the CBM email — reusing `cbmEmail` if
-   already set), places it in the **Mentor Team**, assigns it to the mentor
-   record, and emails the mentor a welcome / set-password link.
-   - **Mailbox gate (when enabled).** If the Google Workspace check is on, the
-     app first verifies that the `firstname.lastname@cbmentors.org` mailbox
-     actually exists. If it **definitely does not**, the login is **not** created
-     and the save reports *"the Google Workspace mailbox … does not exist — create
-     it before approving"* (otherwise the welcome email would bounce and the
-     mentor could never sign in). If the check can't run, provisioning proceeds.
+3. <a id="logins-on-save"></a>**Login provisioning (with a live status window).**
+   If the mentor's status is **Approved or Active** and they have **no login
+   yet**, saving opens a **status window** that narrates each step and provisions
+   their access. The CBM email `firstname.lastname@cbmentors.org` is filled in
+   automatically (reusing `cbmEmail` if already set). Then, depending on the
+   Google Workspace configuration:
+   - **Mailbox check (when enabled).** The app checks whether that mailbox exists.
+   - **Mailbox creation (when enabled).** If the mailbox is **missing**, the app
+     **creates** it in Google Workspace (a temporary password the mentor changes
+     at first sign-in; their personal email is set as the Google **recovery
+     email**), waits for it to become active, and shows the temp password in the
+     status window to relay to the mentor. *If creation is off*, a missing mailbox
+     instead **blocks** with *"the Google Workspace mailbox … does not exist —
+     create it before approving"*. If the check can't run, provisioning proceeds.
+   - **EspoCRM login.** Finally the app creates an EspoCRM **User**, places it in
+     the **Mentor Team**, assigns it to the mentor record, and emails the welcome /
+     set-password link to the new CBM mailbox.
+   - The Google connection is configured in the admin-only **Email Setup** screen
+     (top of the list view) — service-account key, delegated admin, and the
+     check / create toggles, with a **Test connection** button.
 4. **User reconciliation.** The mentor's User is assigned to **both** the member
    record and its **Contact** (filling any one-sided assignment).
 5. <a id="record-status"></a>**Record Status persisted.** The freshly computed
@@ -153,10 +161,14 @@ for any mentor that has been saved since the field was introduced.
   join is `MENTOR_TEAM_NAME` (default *Mentor Team*). Creating EspoCRM Users is
   admin-only, which is why a dedicated admin account is required — staff stay
   non-admin. See `DEPLOYMENT.md` → *Staff tools + mentor-login provisioning*.
-- **Google Workspace mailbox gate** is off unless `GOOGLE_DIRECTORY_CHECK=true`
-  with a service account (`GOOGLE_SERVICE_ACCOUNT_JSON` / `GOOGLE_DELEGATED_ADMIN`).
-  When on, a confirmed-missing CBM mailbox blocks provisioning; an inconclusive
-  check fails open. See `DEPLOYMENT.md` → *Google Workspace mailbox gate*.
+- **Google Workspace mailbox check / creation** is off unless configured — via
+  the admin **Email Setup** screen (stored encrypted; needs `APP_ENCRYPTION_KEY` +
+  `DATABASE_URL`) or the `GOOGLE_DIRECTORY_CHECK` / `GOOGLE_CREATE_MAILBOX` +
+  `GOOGLE_SERVICE_ACCOUNT_JSON` / `GOOGLE_DELEGATED_ADMIN` env vars. When the
+  check is on but creation is off, a confirmed-missing CBM mailbox blocks
+  provisioning; with creation on, it's created instead; an inconclusive check
+  fails open. Creating mailboxes needs the service account's read-write Directory
+  scope. See `DEPLOYMENT.md` → *Google Workspace mailbox check + creation*.
 
 Implementation lives in the `mentoradmin/` package (`service.py` is the
 source-of-truth for the editable-field set + completeness rules); the grid reuses

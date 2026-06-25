@@ -14,6 +14,7 @@ from logging.config import fileConfig
 
 from alembic import context
 
+import core.app_config  # noqa: F401 — registers app_config on the shared metadata
 from core.store import _normalize_url, make_async_engine, metadata
 
 config = context.config

@@ -35,6 +35,7 @@
       <div class="ma__toolbar">
         <span class="ma__who">Signed in as <strong id="whoName"></strong></span>
         <span class="ma__actions">
+          <button type="button" class="cbm-button cbm-button--secondary" id="setupBtn" hidden>Email Setup</button>
           <button type="button" class="cbm-button cbm-button--secondary" id="refreshBtn">Refresh</button>
           <button type="button" class="cbm-button cbm-button--secondary" id="logoutBtn">Sign out</button>
         </span>
@@ -76,6 +77,40 @@
       <div class="ma__readonly" id="readonly"></div>
       <nav class="ma__tabs" id="editTabs" role="tablist"></nav>
       <form id="editForm" class="ma__form"></form>
+    </section>
+
+    <!-- Email Setup (admin only) -->
+    <section class="ma__setup" id="setupView" hidden>
+      <div class="ma__toolbar">
+        <button type="button" class="cbm-button cbm-button--secondary" id="setupBackBtn">← Back to list</button>
+      </div>
+      <h2 class="ma__detail-name">Email account setup</h2>
+      <p class="cbm-help">
+        Configure the Google Workspace connection used to check for and create mentor
+        <code>@cbmentors.org</code> mailboxes during approval. The service account needs
+        domain-wide delegation for the Directory <em>read-only</em> and (to create mailboxes)
+        <em>read-write</em> scopes. The key is stored encrypted.
+      </p>
+      <p class="ma__notice" id="setupNotice" role="status" hidden></p>
+      <div class="ma__setup-status" id="setupStatus"></div>
+      <form id="setupForm" class="ma__form" autocomplete="off">
+        <div class="cbm-field">
+          <label for="su_admin">Delegated Workspace admin email</label>
+          <input type="email" id="su_admin" placeholder="admin@cbmentors.org" />
+        </div>
+        <div class="cbm-field">
+          <label for="su_json">Service-account JSON key</label>
+          <textarea id="su_json" rows="8" placeholder="Paste the service-account JSON key. Leave blank to keep the stored key."></textarea>
+        </div>
+        <div class="tab-row--checks" style="display:flex;gap:1.5rem;flex-wrap:wrap;">
+          <div class="cbm-field cbm-field--check"><label><input type="checkbox" id="su_check" checked /> Check whether the mailbox exists before approving</label></div>
+          <div class="cbm-field cbm-field--check"><label><input type="checkbox" id="su_create" /> Create the mailbox automatically when it is missing</label></div>
+        </div>
+        <div class="modal-actions" style="justify-content:flex-start;">
+          <button type="button" class="cbm-button" id="setupSaveBtn">Save</button>
+          <button type="button" class="cbm-button cbm-button--secondary" id="setupTestBtn">Test connection</button>
+        </div>
+      </form>
     </section>
 
     <footer class="cbm-footer">

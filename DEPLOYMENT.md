@@ -151,19 +151,30 @@ real mentor login end-to-end; the `sendAccessInfo` welcome email delivered to th
 mentor's CBM address). (The async delivery worker — `worker.py` — does **not** need
 these; provisioning runs synchronously in the web request.)
 
-**Google Workspace mailbox gate (optional, web component)** — provisioning can
-hard-gate on whether the mentor's `firstname.lastname@cbmentors.org` mailbox
-actually exists in Google Workspace before creating the login + welcome email
-(otherwise the credentials email bounces and the mentor is stranded). A
-*confirmed-missing* mailbox blocks provisioning with a clear error; an
-inconclusive check (unconfigured, API/auth error) **fails open** so a Google
-outage can't freeze approvals. Off unless enabled:
+**Google Workspace mailbox check + creation (optional, web component)** — during
+mentor approval the app handles the `firstname.lastname@cbmentors.org` mailbox:
+**check** whether it exists, and (v0.11.0) **create** it when missing instead of
+blocking — then provision the EspoCRM login once it verifies, with a live status
+window. A *confirmed-missing* mailbox blocks (when creation is off) or is created
+(when on); an inconclusive check (unconfigured, API/auth error) **fails open** so a
+Google outage can't freeze approvals. Off unless enabled. **Preferred config path:
+the in-app admin "Email Setup" screen** (`/mentoradmin`, admin-only) which stores
+the creds **encrypted in Postgres** and takes precedence over the env vars below;
+the env vars are the fallback.
 
 | Variable | Value |
 |---|---|
-| `GOOGLE_DIRECTORY_CHECK` | `true` to enable |
+| `GOOGLE_DIRECTORY_CHECK` | `true` to enable the existence check |
+| `GOOGLE_CREATE_MAILBOX` | `true` to CREATE a missing mailbox (needs the read-write scope) |
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | the service-account JSON key, **`type: SECRET`** |
 | `GOOGLE_DELEGATED_ADMIN` | a Workspace admin to impersonate, **`type: SECRET`** |
+| `APP_ENCRYPTION_KEY` | Fernet key encrypting the Email-Setup creds in Postgres, **`type: SECRET`**, web **+ worker** |
+
+`APP_ENCRYPTION_KEY` is required for the in-app Email Setup screen (with
+`DATABASE_URL`); generate one with
+`python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`.
+The Alembic `0003_app_config` migration (run by the pre-deploy migrate job) adds
+the `app_config` table the encrypted config lives in.
 
 **Not yet stood up for prod.** Standing it up requires two halves that must *both*
 be in place — a plain service account has zero directory access until a Workspace
@@ -181,25 +192,37 @@ user for one named scope).
 *In the Google Workspace Admin console* (admin.google.com, as a super-admin):
 5. **Security → Access and data control → API controls → Domain-wide delegation →
    Add new.**
-6. Paste the service account's **Client ID** and, for scopes, exactly:
-   `https://www.googleapis.com/auth/admin.directory.user.readonly` (read-only, user
-   directory only).
-7. Pick a Workspace admin for the service account to **impersonate** (any user that
-   can read the directory) — this becomes `GOOGLE_DELEGATED_ADMIN`.
+6. Paste the service account's **Client ID** and, for scopes, list **both** (the
+   read-only scope is enough to *check*; the read-write scope is required to
+   *create* a mailbox):
+   `https://www.googleapis.com/auth/admin.directory.user.readonly`,
+   `https://www.googleapis.com/auth/admin.directory.user`
+   (If you only ever want the check-and-block behavior, the read-only scope alone
+   suffices and `GOOGLE_CREATE_MAILBOX` must stay off.)
+7. Pick a Workspace admin for the service account to **impersonate** — to *create*
+   users it must be an admin with the **User Management** privilege; this becomes
+   `GOOGLE_DELEGATED_ADMIN`.
 
-*In the overlay:* set the three vars above and re-apply. (Delegation changes can
-take ~5–10 min to propagate — a brief `UNKNOWN`/auth error right after setup isn't
-necessarily wrong.)
+*Config:* either paste the JSON key + delegated admin into the **Email Setup**
+screen (`/mentoradmin`, admin-only — stored encrypted; needs `APP_ENCRYPTION_KEY`
++ `DATABASE_URL`), **or** set the `GOOGLE_*` vars in the overlay and re-apply.
+(Delegation changes can take ~5–10 min to propagate — a brief `UNKNOWN`/auth error
+right after setup isn't necessarily wrong. The Email Setup **Test connection**
+button confirms it.)
 
-**How it works at runtime** (`core/google_directory.py`): on a mentor-approval
-save the app mints a short-lived OAuth token from the JSON key, signed as the
-service account but with `subject = GOOGLE_DELEGATED_ADMIN` (the impersonation),
-scoped read-only; it calls `GET admin/directory/v1/users/{email}` → **200** = exists
-(provision proceeds), **404** = missing (block: status saved, no login, "create the
-mailbox first"), **anything else / token-mint / network error** = `UNKNOWN` → **fails
-open** (proceeds), so a Google outage can't freeze approvals. Least privilege: the
-one read-only scope can't change Workspace or read mail — only check user existence;
-it's a separate credential from the EspoCRM admin service account.
+**How it works at runtime** (`core/google_directory.py` + `mentoradmin/service.py`
+`provision_mentor_user_steps`): the browser saves the mentor's fields, then opens a
+**status window** that streams `POST /mentoradmin/api/mentors/{id}/provision`
+(Server-Sent Events). The app mints a short-lived OAuth token from the JSON key,
+signed as the service account with `subject = GOOGLE_DELEGATED_ADMIN` (read-only to
+check, read-write to create), and calls `admin/directory/v1/users`:
+**check** → 200 = exists (proceed), 404 = missing, anything else = `UNKNOWN` (fail
+open). On **missing** with `GOOGLE_CREATE_MAILBOX` on, it `POST`s a new user (temp
+password + change-at-first-login + the mentor's personal email as **recovery
+email**), polls ≤60s for it to go live, then creates the EspoCRM login + welcome
+email; the window shows the temp password to relay. If the mailbox doesn't verify
+in time the mentor stays Approved and the next Save self-heals. The creds are a
+separate credential from the EspoCRM admin service account.
 
 > **CRITICAL — do not clobber a live app.** The committed `.do/app.yaml` is the
 > *dry-run* spec: it hardcodes `ESPO_DRY_RUN=true` and contains **no secrets**.

@@ -365,21 +365,44 @@ async def test_already_approved_provisions_on_unrelated_field_save():
     assert len(c.created) == 1 and res["provision"]["ok"] is True
 
 
-# --- Google Workspace mailbox gate ---
+# --- Google Workspace mailbox gate + creation ---
 
-def _mailbox(status):
-    async def check(email):
-        return status
-    return check
+class FakeDirectory:
+    """A stand-in for core.google_directory.GoogleDirectory. ``status`` is the
+    mailbox state; after a create_user() call it flips to EXISTS (so polling
+    succeeds), unless ``create_error`` is set or ``stays_missing`` is True."""
+
+    def __init__(self, status, *, create_error=None, stays_missing=False):
+        self._status = status
+        self.create_error = create_error
+        self.stays_missing = stays_missing
+        self.created = []
+
+    async def mailbox_status(self, email):
+        return self._status
+
+    async def create_user(self, primary_email, first, last, *, recovery_email, temp_password):
+        from core.google_directory import GoogleDirectoryError
+        if self.create_error:
+            raise GoogleDirectoryError(self.create_error)
+        self.created.append({"email": primary_email, "recovery": recovery_email, "password": temp_password})
+        if not self.stays_missing:
+            from core.google_directory import MailboxStatus
+            self._status = MailboxStatus.EXISTS
+
+
+async def _drain(gen):
+    return [ev async for ev in gen]
 
 
 @pytest.mark.asyncio
-async def test_missing_mailbox_blocks_provisioning():
+async def test_missing_mailbox_blocks_when_create_disabled():
+    # Inline update_mentor never creates; a missing mailbox still blocks.
     from core.google_directory import MailboxStatus
     c = ProvisionClient()
     res = await service.update_mentor(
         c, "m1", {"mentorStatus": "Approved"}, team_name="Mentor Team",
-        admin_client_factory=_afactory(c), mailbox_checker=_mailbox(MailboxStatus.MISSING),
+        admin_client_factory=_afactory(c), directory=FakeDirectory(MailboxStatus.MISSING),
     )
     assert c.created == []  # the EspoCRM User is NOT created
     assert res["provision"]["ok"] is False
@@ -392,7 +415,7 @@ async def test_existing_mailbox_allows_provisioning():
     c = ProvisionClient()
     res = await service.update_mentor(
         c, "m1", {"mentorStatus": "Approved"}, team_name="Mentor Team",
-        admin_client_factory=_afactory(c), mailbox_checker=_mailbox(MailboxStatus.EXISTS),
+        admin_client_factory=_afactory(c), directory=FakeDirectory(MailboxStatus.EXISTS),
     )
     assert len(c.created) == 1 and res["provision"]["ok"] is True
 
@@ -404,9 +427,82 @@ async def test_unknown_mailbox_fails_open():
     c = ProvisionClient()
     res = await service.update_mentor(
         c, "m1", {"mentorStatus": "Approved"}, team_name="Mentor Team",
-        admin_client_factory=_afactory(c), mailbox_checker=_mailbox(MailboxStatus.UNKNOWN),
+        admin_client_factory=_afactory(c), directory=FakeDirectory(MailboxStatus.UNKNOWN),
     )
     assert len(c.created) == 1 and res["provision"]["ok"] is True
+
+
+# --- streaming provisioning generator (the live status window) ---
+
+async def _noop_sleep(_seconds):
+    return None
+
+
+@pytest.mark.asyncio
+async def test_steps_existing_mailbox_sequence():
+    from core.google_directory import MailboxStatus
+    c = ProvisionClient()
+    events = await _drain(service.provision_mentor_user_steps(
+        c, c, "m1", team_name="Mentor Team",
+        directory=FakeDirectory(MailboxStatus.EXISTS), create_mailbox=True, sleep=_noop_sleep,
+    ))
+    steps = [(e["step"], e["status"]) for e in events]
+    assert ("mailbox", "done") in steps
+    assert ("login", "done") in steps
+    assert events[-1]["step"] == "done"
+    assert events[-1]["result"]["userName"] == "jane.doe@cbmentors.org"
+    assert len(c.created) == 1  # EspoCRM User created
+
+
+@pytest.mark.asyncio
+async def test_steps_missing_creates_then_provisions():
+    from core.google_directory import MailboxStatus
+    c = ProvisionClient(contact={"id": "c1", "firstName": "Jane", "lastName": "Doe",
+                                 "emailAddress": "jane.personal@example.com"})
+    d = FakeDirectory(MailboxStatus.MISSING)
+    events = await _drain(service.provision_mentor_user_steps(
+        c, c, "m1", team_name="Mentor Team",
+        directory=d, create_mailbox=True, poll_seconds=1, poll_timeout=5, sleep=_noop_sleep,
+    ))
+    # the mailbox was created with the personal email as recovery
+    assert d.created and d.created[0]["recovery"] == "jane.personal@example.com"
+    assert d.created[0]["email"] == "jane.doe@cbmentors.org"
+    # provisioning completed; the final result advertises the new mailbox + temp pw
+    final = events[-1]
+    assert final["step"] == "done"
+    assert final["result"]["mailboxCreated"] is True
+    assert final["result"]["tempPassword"]
+    assert len(c.created) == 1
+
+
+@pytest.mark.asyncio
+async def test_steps_create_failure_stops_before_espo_user():
+    from core.google_directory import MailboxStatus
+    c = ProvisionClient()
+    d = FakeDirectory(MailboxStatus.MISSING, create_error="license exhausted")
+    events = await _drain(service.provision_mentor_user_steps(
+        c, c, "m1", team_name="Mentor Team",
+        directory=d, create_mailbox=True, sleep=_noop_sleep,
+    ))
+    assert events[-1]["status"] == "error"
+    assert "license exhausted" in events[-1]["message"]
+    assert c.created == []  # never reached EspoCRM User creation
+
+
+@pytest.mark.asyncio
+async def test_steps_created_but_not_active_reports_pending():
+    from core.google_directory import MailboxStatus
+    c = ProvisionClient()
+    d = FakeDirectory(MailboxStatus.MISSING, stays_missing=True)  # never becomes active
+    events = await _drain(service.provision_mentor_user_steps(
+        c, c, "m1", team_name="Mentor Team",
+        directory=d, create_mailbox=True, poll_seconds=1, poll_timeout=3, sleep=_noop_sleep,
+    ))
+    assert d.created  # the create was attempted
+    assert events[-1]["status"] == "error"
+    assert "not active yet" in events[-1]["message"]
+    assert events[-1].get("mailboxCreated") is True
+    assert c.created == []  # login deferred to a later save
 
 
 def test_google_directory_disabled_without_config():
@@ -650,3 +746,45 @@ def test_login_gated_to_mentor_admin_team(monkeypatch):
     assert r.status_code == 200
     assert captured["teams"] == ["Mentor Administration Team"]
     assert captured["roles"] == []
+
+
+def _authed_nonadmin(monkeypatch):
+    user = dict(_USER, isAdmin=False)
+    monkeypatch.setattr("mentoradmin.router.current_user", lambda request, key=None: user)
+    monkeypatch.setattr("mentoradmin.router.client_for", lambda settings, user: object())
+
+
+def test_setup_get_requires_admin(monkeypatch):
+    _authed_nonadmin(monkeypatch)
+    with TestClient(_app(monkeypatch)) as c:
+        assert c.get("/mentoradmin/api/setup/google").status_code == 403
+
+
+def test_setup_get_reports_unavailable_without_db(monkeypatch):
+    # No DATABASE_URL/APP_ENCRYPTION_KEY in the test env -> the in-app store is off.
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch)) as c:
+        data = c.get("/mentoradmin/api/setup/google").json()
+    assert data["available"] is False
+
+
+def test_setup_put_requires_admin(monkeypatch):
+    _authed_nonadmin(monkeypatch)
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.put("/mentoradmin/api/setup/google", json={"delegated_admin": "a@b.org"})
+    assert r.status_code == 403
+
+
+def test_provision_stream_reports_disabled(monkeypatch):
+    # With provisioning unconfigured, the SSE stream emits a clear error event
+    # rather than touching the CRM.
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.post("/mentoradmin/api/mentors/m1/provision")
+    assert r.status_code == 200
+    assert "turned off" in r.text.lower()
+
+
+def test_provision_stream_requires_auth(monkeypatch):
+    with TestClient(_app(monkeypatch)) as c:
+        assert c.post("/mentoradmin/api/mentors/m1/provision").status_code == 401

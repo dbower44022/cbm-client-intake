@@ -365,8 +365,12 @@ mentor.
 
 ## Current status (updated 2026-06-24)
 
-**Prod is on v0.10.4** (`/healthz` confirmed). Changes shipped since the v0.9.0
-go-live, all live + verified against the prod CRM:
+**Prod is on v0.10.4** (`/healthz` confirmed). **v0.11.0 is built locally but NOT
+yet deployed** — it adds Google Workspace **mailbox creation** + a **live status
+window** + an admin **Email Setup** screen to the mentor-approval flow (see the
+`/mentoradmin` "Mailbox check + CREATION" block above for the full design, deploy
+secrets, and the read-write Directory scope it needs). Changes shipped since the
+v0.9.0 go-live, all live + verified against the prod CRM:
 - **Mentor-login provisioning ENABLED in prod** (v0.9.1) — admin service account
   `mentoradmin@cbmentors.org` (Type=Admin); approving a mentor creates their
   EspoCRM login + welcome email (delivered to the CBM address). v0.9.1 also added a
@@ -411,14 +415,39 @@ mentor's **CBM address** (`doug.bower@cbmentors.org`, = the User's userName/emai
 which is correct. (Outbound email works despite `/Settings` reporting
 `smtpServer=None` — it routes via a group/alternate account, not the system SMTP.)
 Any mentor approved during the earlier off-window self-heals on the next Save.
-**Mailbox gate (v0.10.0, built but OFF):** provisioning can hard-gate on whether
-the mentor's `…@cbmentors.org` mailbox actually exists in Google Workspace (else
-the welcome email bounces and strands them). `core/google_directory.py`
-(`GoogleDirectory.mailbox_status`, Admin SDK Directory API, read-only, domain-wide
-delegation); a confirmed-missing mailbox blocks with a clear error, inconclusive
-fails open. Enable with `GOOGLE_DIRECTORY_CHECK=true` + `GOOGLE_SERVICE_ACCOUNT_JSON`
-+ `GOOGLE_DELEGATED_ADMIN` (overlay placeholders in `.do/app.prod-crm.yaml`) —
-needs a GCP service account with domain-wide delegation (not yet created).
+**Mailbox check + CREATION + live status window (v0.11.0, built 2026-06-24 — NOT
+yet deployed/verified live).** Approval provisioning now has a Google-Workspace
+mailbox stage with a **streaming status modal** (SSE). `core/google_directory.py`
+(`GoogleDirectory.mailbox_status` read-only check; **`create_user`** read-write
+create; `resolve_google_directory` picks DB config over env);
+`mentoradmin/service.py` `provision_mentor_user_steps` is an async generator that
+yields a human-readable event per step (check → create-if-missing → poll ≤60s for
+the new mailbox to go live → create EspoCRM login). The endpoint is the SSE
+**`POST /mentoradmin/api/mentors/{id}/provision`**; the frontend Save sends the
+field PUT with `provision:false`, then opens the status window and streams. On a
+new mailbox the modal shows the **temp password** to relay (Google has no
+email-the-credentials API; the mentor's personal email is set as the Workspace
+**recovery email** so they can also self-reset). Behavior modes (effective config
+= in-app Email Setup first, else `GOOGLE_*` env): check off ⇒ no Google stage;
+check on + `create_mailbox` off ⇒ a confirmed-missing mailbox **blocks**
+(pre-existing gate; inconclusive fails open); `create_mailbox` on ⇒ a missing
+mailbox is **created** then provisioned; if it doesn't verify within ~60s the
+mentor stays Approved and the next Save self-heals. **Creating** needs the service
+account's **read-write** Directory scope (`admin.directory.user`) authorized for
+domain-wide delegation, on top of the read-only scope. The inline (JS-off /
+redrive) `update_mentor` path never creates — that long-running flow is the SSE
+window's job.
+**Admin-only "Email Setup" screen** (`GET/PUT/POST /mentoradmin/api/setup/google`,
+gated on `isAdmin`) configures the Google auth at runtime: service-account JSON +
+delegated admin + check/create toggles + a **Test connection** button (looks up
+the delegated admin's own mailbox). The key is stored **encrypted** in Postgres
+(`core/crypto.py` Fernet keyed by **`APP_ENCRYPTION_KEY`**; `core/app_config.py`
+`AppConfigStore` + the `app_config` table, Alembic **`0003_app_config`**) and
+takes precedence over the env vars. Disabled (shows "unavailable") without both
+`DATABASE_URL` and `APP_ENCRYPTION_KEY`. To enable live: authorize both Directory
+scopes for the service account in Google Admin, set `APP_ENCRYPTION_KEY` (web +
+worker) + `GOOGLE_CREATE_MAILBOX=true`, then paste creds in Email Setup (or set
+`GOOGLE_*` in the overlay) and run the pre-deploy migrate. 190 tests green.
 Also note: v0.9.1 added a UI signal so an approval saved while provisioning is
 disabled shows "no login was created" instead of a silent "Saved"
 (`mentoradmin/service.py` `provision={disabled:true}`; was the original

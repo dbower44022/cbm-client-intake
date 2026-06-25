@@ -86,6 +86,21 @@ class Settings(BaseSettings):
     google_directory_check: bool = False
     google_service_account_json: str = ""   # the service-account JSON key (secret)
     google_delegated_admin: str = ""        # a Workspace admin to impersonate
+    # When on (and the service account has the read-WRITE Directory scope), a
+    # confirmed-missing CBM mailbox is CREATED in Google Workspace during mentor
+    # approval instead of blocking — then the EspoCRM login is provisioned once
+    # the new mailbox verifies. Off => the missing-mailbox check only blocks
+    # (the pre-existing behavior). Can also be set via the in-app Email Setup
+    # screen (DB config takes precedence over these env vars).
+    google_create_mailbox: bool = False
+
+    # --- Encrypted runtime config (core/app_config.py) ---
+    # Fernet key (urlsafe base64, 32 bytes) used to encrypt secrets stored in the
+    # app_config table — currently the Google service-account credentials set via
+    # the Email Setup screen. Empty => the in-app setup store is disabled and the
+    # app uses only the GOOGLE_* env vars above. Generate with:
+    #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    app_encryption_key: str = ""
 
     @property
     def allowed_origins_list(self) -> list[str]:

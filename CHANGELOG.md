@@ -4,6 +4,38 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.11.0] — 2026-06-24
+
+### Added
+- **Mentor approval now creates the CBM Google Workspace mailbox when it's
+  missing, with a live status window.** Approving a mentor (`/mentoradmin`)
+  auto-fills `cbmEmail` (`firstname.lastname@cbmentors.org`) if blank, checks
+  Google Workspace for that mailbox, and — when `GOOGLE_CREATE_MAILBOX` is on —
+  **creates** the mailbox (temp password + change-at-first-login + the mentor's
+  personal email as Google recovery) instead of blocking, polls up to ~60s for it
+  to go live, then creates the EspoCRM login + welcome email. The Save button
+  opens a **streaming status modal** (Server-Sent Events) that narrates each step
+  ("Checking for the mentor email account…", "No account found, creating…",
+  "Creating the EspoCRM login…") and shows the temp password to relay.
+  (`core/google_directory.py` `create_user`/`resolve_google_directory`,
+  `mentoradmin/service.py` `provision_mentor_user_steps`, the SSE
+  `POST /mentoradmin/api/mentors/{id}/provision`.)
+- **Admin-only "Email Setup" screen** in `/mentoradmin` to configure the Google
+  Workspace authentication at runtime (service-account JSON, delegated admin,
+  check/create toggles, a **Test connection** button). The service-account key is
+  stored **encrypted at rest** in Postgres (Fernet, keyed by the new
+  `APP_ENCRYPTION_KEY`) and takes precedence over the `GOOGLE_*` env vars.
+  (`core/crypto.py`, `core/app_config.py`, Alembic `0003_app_config`,
+  `GET/PUT/POST /mentoradmin/api/setup/google`.)
+
+### Notes
+- Creating a mailbox needs the service account's **read-write** Directory scope
+  (`admin.directory.user`) authorized for domain-wide delegation, in addition to
+  the existing read-only scope. The GCP service account + delegation must still be
+  set up in Google Admin (the Email Setup *Test* button verifies it).
+- New deploy secret: `APP_ENCRYPTION_KEY` (web + worker). `GOOGLE_CREATE_MAILBOX`
+  defaults off. Alembic `0003` adds the `app_config` table (pre-deploy migrate).
+
 ## [0.10.5] — 2026-06-24
 
 ### Changed

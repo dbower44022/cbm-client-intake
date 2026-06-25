@@ -8,6 +8,7 @@
   var fieldOptions = {};   // {fieldName: [options]}
   var current = null;      // the mentor being edited
   var listDirty = false;   // reload list after an edit
+  var isAdmin = false;     // gates the Email Setup screen
   var filter = { q: "", status: "", record: "", industry: "", sortKey: "name", sortDir: 1 };
 
   function $(id) { return document.getElementById(id); }
@@ -31,7 +32,7 @@
   }
 
   // --- views ---
-  function showLogin() { hide($("listView")); hide($("detailView")); show($("loginView")); $("username").focus(); }
+  function showLogin() { hideAll(); show($("loginView")); $("username").focus(); }
   // On boot, a 401 just means "not signed in" (show the form silently). A 5xx or
   // network failure means the server is down — say so, rather than implying the
   // user needs to re-authenticate.
@@ -43,8 +44,16 @@
       show(le);
     }
   }
-  function showList() { hide($("loginView")); hide($("detailView")); show($("listView")); }
-  function showDetail() { hide($("loginView")); hide($("listView")); show($("detailView")); }
+  function hideAll() { hide($("loginView")); hide($("listView")); hide($("detailView")); hide($("setupView")); }
+  function showList() { hideAll(); show($("listView")); }
+  function showDetail() { hideAll(); show($("detailView")); }
+  function showSetup() { hideAll(); show($("setupView")); }
+
+  function setUser(user) {
+    $("whoName").textContent = user.name || user.userName;
+    isAdmin = !!user.isAdmin;
+    $("setupBtn").hidden = !isAdmin;
+  }
 
   function notice(elId, text, kind) {
     var n = $(elId); n.textContent = text;
@@ -66,7 +75,7 @@
     try {
       var user = await api("/login", { method: "POST", body: JSON.stringify({ username: $("username").value, password: $("password").value }) });
       $("password").value = "";
-      $("whoName").textContent = user.name || user.userName;
+      setUser(user);
       await bootList();
     } catch (e) {
       var le = $("loginError"); le.textContent = e.message; show(le);
@@ -79,6 +88,10 @@
   $("statusFilter").addEventListener("change", function () { filter.status = this.value; renderTable(); });
   $("recordFilter").addEventListener("change", function () { filter.record = this.value; renderTable(); });
   $("industryFilter").addEventListener("change", function () { filter.industry = this.value; renderTable(); });
+  $("setupBtn").addEventListener("click", function () { openSetup(); });
+  $("setupBackBtn").addEventListener("click", function () { showList(); });
+  $("setupSaveBtn").addEventListener("click", function () { saveSetup(); });
+  $("setupTestBtn").addEventListener("click", function () { testSetup(); });
 
   // --- list ---
   async function bootList() {
@@ -519,26 +532,33 @@
     cancel.focus();
   }
 
+  // An Approved/Active mentor with no login User needs one provisioned (mailbox
+  // check/create + EspoCRM user) — done via the live status window, not the PUT.
+  function needsProvisioning(m) {
+    return (m.mentorStatus === "Approved" || m.mentorStatus === "Active") && !m.assignedUserId;
+  }
+
+  function rebaseline() {
+    // Re-baseline the change snapshots to the just-saved state, so a later edit
+    // that reverts a field to its render-time value is still sent.
+    Array.prototype.forEach.call($("editForm").querySelectorAll("[data-field]"), function (el) {
+      el.dataset.original = JSON.stringify(readField(el));
+    });
+  }
+
   async function doSave(changes) {
     $("saveBtn").disabled = true;
     try {
-      current = await api("/mentors/" + encodeURIComponent(current.id), { method: "PUT", body: JSON.stringify({ changes: changes }) });
+      // provision:false — the field save never provisions inline; if a login is
+      // needed we drive it through the streaming status window below.
+      current = await api("/mentors/" + encodeURIComponent(current.id), { method: "PUT", body: JSON.stringify({ changes: changes, provision: false }) });
       listDirty = true;
-      // Re-baseline the change snapshots to the just-saved state, so a later
-      // edit that reverts a field to its render-time value is still sent.
-      Array.prototype.forEach.call($("editForm").querySelectorAll("[data-field]"), function (el) {
-        el.dataset.original = JSON.stringify(readField(el));
-      });
+      rebaseline();
       $("detailName").textContent = current.name || "(unnamed mentor)";
       renderReadonly(current);
-      // Approving a mentor provisions a login user (server-side) — report it.
-      var p = current.provision;
-      if (p && p.ok) {
-        notice("detailNotice", "Saved. Created login " + p.userName + " in " + p.team + " and sent a welcome email.", "success");
-      } else if (p && p.disabled) {
-        notice("detailNotice", "Status saved, but no login was created — mentor login provisioning is turned off on this server. An administrator must provision the mentor's EspoCRM login (or enable provisioning).", "error");
-      } else if (p && !p.ok) {
-        notice("detailNotice", "Saved, but the mentor's login could not be created: " + p.error, "error");
+      if (needsProvisioning(current)) {
+        notice("detailNotice", "Saved. Setting up the mentor's login…", "success");
+        startProvision(current.id);
       } else {
         notice("detailNotice", "Saved.", "success");
       }
@@ -546,6 +566,172 @@
       if (e.status === 401) { showLogin(); return; }
       notice("detailNotice", e.message, "error");
     } finally { $("saveBtn").disabled = false; }
+  }
+
+  // --- live provisioning status window (Server-Sent Events) ---
+  var PROV_ICON = { running: "⏳", done: "✓", error: "✗" };
+
+  function startProvision(id) {
+    var modal = buildProvisionModal();
+    streamProvision(id, modal.onEvent)
+      .catch(function (e) {
+        if (e && e.status === 401) { modal.close(); showLogin(); return; }
+        modal.onEvent({ step: "login", status: "error", message: (e && e.message) || "Provisioning failed." });
+      })
+      .finally(function () { modal.finish(); });
+  }
+
+  // POST + read the text/event-stream body (EventSource is GET-only). Parses
+  // "data: {json}\n\n" frames and forwards each parsed event.
+  async function streamProvision(id, onEvent) {
+    var resp = await fetch(API + "/mentors/" + encodeURIComponent(id) + "/provision", {
+      method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }
+    });
+    if (!resp.ok) {
+      if (resp.status === 401) { var err = new Error("auth"); err.status = 401; throw err; }
+      onEvent({ step: "login", status: "error", message: "Could not start provisioning (" + resp.status + ")." });
+      return;
+    }
+    var reader = resp.body.getReader(), dec = new TextDecoder(), buf = "";
+    while (true) {
+      var r = await reader.read();
+      if (r.done) break;
+      buf += dec.decode(r.value, { stream: true });
+      var frames = buf.split("\n\n"); buf = frames.pop();
+      frames.forEach(function (frame) {
+        var data = frame.split("\n").filter(function (l) { return l.indexOf("data:") === 0; })
+          .map(function (l) { return l.slice(5).trim(); }).join("");
+        if (!data) return;
+        try { onEvent(JSON.parse(data)); } catch (e) {}
+      });
+    }
+  }
+
+  function buildProvisionModal() {
+    var prev = document.getElementById("provModal"); if (prev) prev.remove();
+    var overlay = document.createElement("div"); overlay.id = "provModal"; overlay.className = "modal-overlay";
+    var card = document.createElement("div"); card.className = "modal-card";
+    var h = document.createElement("h3"); h.textContent = "Setting up the mentor's login"; card.appendChild(h);
+    var ul = document.createElement("ul"); ul.className = "prov-steps"; card.appendChild(ul);
+    var extra = document.createElement("div"); card.appendChild(extra);
+    var actions = document.createElement("div"); actions.className = "modal-actions";
+    var closeBtn = document.createElement("button"); closeBtn.type = "button"; closeBtn.className = "cbm-button";
+    closeBtn.textContent = "Working…"; closeBtn.disabled = true;
+    var finished = false;
+    function close() {
+      overlay.remove(); document.removeEventListener("keydown", onKey);
+      // Refresh the detail so the badge + assigned-user reflect the new login.
+      if (current) openMentor(current.id);
+    }
+    function onKey(e) { if (e.key === "Escape" && finished) close(); }
+    closeBtn.addEventListener("click", function () { if (finished) close(); });
+    document.addEventListener("keydown", onKey);
+    actions.appendChild(closeBtn); card.appendChild(actions);
+    overlay.appendChild(card); document.body.appendChild(overlay);
+
+    var lines = {};  // step -> <li>
+    function upsert(step, status, message) {
+      var li = lines[step];
+      if (!li) {
+        li = document.createElement("li"); li.className = "prov-step";
+        var icon = document.createElement("span"); icon.className = "prov-step__icon";
+        var txt = document.createElement("span"); txt.className = "prov-step__text";
+        li.appendChild(icon); li.appendChild(txt); ul.appendChild(li); lines[step] = li;
+      }
+      li.className = "prov-step is-" + status;
+      li.querySelector(".prov-step__icon").textContent = PROV_ICON[status] || "";
+      li.querySelector(".prov-step__text").textContent = message;
+    }
+    function done() {
+      finished = true; closeBtn.disabled = false; closeBtn.textContent = "Close"; closeBtn.focus();
+    }
+    function showCreds(result) {
+      if (!result || !result.tempPassword) return;
+      var box = document.createElement("div"); box.className = "prov-creds";
+      box.innerHTML = "The mentor's mailbox was just created. Give them this temporary password (they'll be asked to change it at first sign-in):<br>" +
+        "Sign-in: <code>" + escapeHtml(result.email || "") + "</code><br>" +
+        "Temp password: <code>" + escapeHtml(result.tempPassword) + "</code>" +
+        (result.recoveryEmail ? "<br>A password-reset can also be sent to their personal email: <code>" + escapeHtml(result.recoveryEmail) + "</code>." : "");
+      extra.appendChild(box);
+    }
+    return {
+      onEvent: function (ev) {
+        if (ev.step === "done") { showCreds(ev.result); done(); return; }
+        if (!ev.step) return;
+        upsert(ev.step, ev.status, ev.message || "");
+        if (ev.status === "error") { if (ev.mailboxCreated) showCreds(ev); done(); }
+      },
+      finish: function () { if (!finished) done(); },
+      close: close,
+    };
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  // --- Email Setup (admin only) ---
+  async function openSetup() {
+    hide($("setupNotice"));
+    $("setupStatus").textContent = "Loading…";
+    showSetup();
+    try {
+      var s = await api("/setup/google");
+      if (!s.available) {
+        $("setupStatus").textContent = s.reason || "In-app setup is unavailable on this server.";
+        $("setupForm").hidden = true;
+        return;
+      }
+      $("setupForm").hidden = false;
+      $("su_admin").value = s.delegatedAdmin || "";
+      $("su_json").value = "";
+      $("su_json").placeholder = s.configured
+        ? "A key is already stored. Leave blank to keep it, or paste a new key to replace it."
+        : "Paste the service-account JSON key.";
+      $("su_check").checked = s.directoryCheck !== false;
+      $("su_create").checked = !!s.createMailbox;
+      $("setupStatus").textContent = s.configured
+        ? ("Configured ✓" + (s.updatedAt ? " — last updated " + String(s.updatedAt).slice(0, 10) : ""))
+        : "Not configured yet.";
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      $("setupStatus").textContent = ""; notice("setupNotice", e.message, "error");
+    }
+  }
+
+  function setupPayload() {
+    return {
+      service_account_json: $("su_json").value,
+      delegated_admin: $("su_admin").value.trim(),
+      directory_check: $("su_check").checked,
+      create_mailbox: $("su_create").checked,
+    };
+  }
+
+  async function saveSetup() {
+    hide($("setupNotice")); $("setupSaveBtn").disabled = true;
+    try {
+      await api("/setup/google", { method: "PUT", body: JSON.stringify(setupPayload()) });
+      notice("setupNotice", "Saved.", "success");
+      openSetup();
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      notice("setupNotice", e.message, "error");
+    } finally { $("setupSaveBtn").disabled = false; }
+  }
+
+  async function testSetup() {
+    hide($("setupNotice")); $("setupTestBtn").disabled = true;
+    notice("setupNotice", "Testing the connection…", "success");
+    try {
+      var r = await api("/setup/google/test", { method: "POST", body: JSON.stringify(setupPayload()) });
+      notice("setupNotice", r.message, r.ok ? "success" : "error");
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      notice("setupNotice", e.message, "error");
+    } finally { $("setupTestBtn").disabled = false; }
   }
 
   $("saveBtn").addEventListener("click", function () {
@@ -565,7 +751,7 @@
 
   // --- boot ---
   (async function init() {
-    try { var u = await api("/session"); $("whoName").textContent = u.name || u.userName; await bootList(); }
+    try { var u = await api("/session"); setUser(u); await bootList(); }
     catch (e) { bootFail(e); }
   })();
 })();

@@ -8,9 +8,12 @@ isolated from the assignment tool. All reads/writes run as the logged-in user
 
 from __future__ import annotations
 
+import json
 import logging
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from assignments import service as assign_service
@@ -24,9 +27,10 @@ from assignments.auth import (
     set_session,
 )
 from assignments.espo_user import client_for
+from core.app_config import make_app_config_store
 from core.config import Settings, get_settings
 from core.espo import EspoClient, EspoError
-from core.google_directory import GoogleDirectory
+from core.google_directory import ResolvedGoogle, resolve_google_directory
 
 from . import service
 
@@ -44,12 +48,33 @@ class LoginIn(BaseModel):
 
 class UpdateIn(BaseModel):
     changes: dict
+    # When False (the browser default), the save only writes fields — the
+    # provisioning of a mentor's login is driven separately by the live status
+    # window via the streaming /provision endpoint. True keeps the inline
+    # (non-streaming) provisioning for API clients / the JS-off fallback.
+    provision: bool = True
+
+
+class GoogleSetupIn(BaseModel):
+    # Blank service_account_json on an update keeps the stored key (lets an admin
+    # toggle flags / change the delegated admin without re-pasting the secret).
+    service_account_json: str = ""
+    delegated_admin: str = ""
+    directory_check: bool = True
+    create_mailbox: bool = False
 
 
 def _require_user(request: Request) -> dict:
     user = current_user(request, SESSION_KEY)
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated.")
+    return user
+
+
+def _require_admin(request: Request) -> dict:
+    user = _require_user(request)
+    if not user.get("isAdmin"):
+        raise HTTPException(status_code=403, detail="Administrator access required.")
     return user
 
 
@@ -155,12 +180,20 @@ def _provision_factory(settings: Settings):
     return factory
 
 
-def _mailbox_checker(settings: Settings):
-    """The Google Workspace mailbox lookup used to hard-gate provisioning, or
-    ``None`` when the check is disabled/unconfigured (then provisioning proceeds
-    as before)."""
-    gd = GoogleDirectory.from_settings(settings)
-    return gd.mailbox_status if gd else None
+async def _resolve_google(settings: Settings) -> ResolvedGoogle:
+    """The effective Google-Workspace integration: the in-app Email-Setup config
+    (encrypted in Postgres) takes precedence, falling back to the GOOGLE_* env
+    vars. Reads the stored config (best-effort) then resolves capabilities."""
+    db_config = None
+    store = make_app_config_store(settings)
+    if store is not None:
+        try:
+            db_config = await store.get_google_config()
+        except Exception:  # DB hiccup — fall back to env config
+            db_config = None
+        finally:
+            await store.dispose()
+    return resolve_google_directory(settings, db_config)
 
 
 @router.put("/mentors/{mentor_id}")
@@ -168,12 +201,15 @@ async def mentor_update(mentor_id: str, body: UpdateIn, request: Request) -> dic
     settings = get_settings()
     user = _require_user(request)
     client = client_for(settings, user)
+    # Inline provisioning is the JS-off / API fallback only; it never creates a
+    # mailbox (directory=None) — the browser drives the full check+create flow via
+    # the streaming /provision endpoint, so the common path leaves PUT cheap.
+    factory = _provision_factory(settings) if body.provision else None
     try:
         result = await service.update_mentor(
             client, mentor_id, body.changes,
             team_name=settings.mentor_team_name,
-            admin_client_factory=_provision_factory(settings),
-            mailbox_checker=_mailbox_checker(settings),
+            admin_client_factory=factory,
         )
         comp = await service.check_completeness(client, result)
         result["completeness"] = comp
@@ -181,3 +217,174 @@ async def mentor_update(mentor_id: str, body: UpdateIn, request: Request) -> dic
         return result
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not save mentor")
+
+
+def _sse(event: dict[str, Any]) -> str:
+    return f"data: {json.dumps(event)}\n\n"
+
+
+@router.post("/mentors/{mentor_id}/provision")
+async def mentor_provision(mentor_id: str, request: Request) -> StreamingResponse:
+    """Provision the mentor's CBM mailbox + EspoCRM login, streaming a status
+    event per step (Server-Sent Events) to drive the live status window."""
+    settings = get_settings()
+    user = _require_user(request)
+    client = client_for(settings, user)
+    factory = _provision_factory(settings)
+    resolved = await _resolve_google(settings)
+
+    async def stream():
+        if factory is None:
+            yield _sse(service._step(
+                "login", "error",
+                "Mentor login provisioning is turned off on this server. An "
+                "administrator must enable it (MENTOR_PROVISION_USERS + a service "
+                "account).",
+            ))
+            return
+        # Idempotency: skip a mentor that already has a login, or one not at an
+        # approval status (the button is only offered for Approved/Active anyway).
+        try:
+            prof = await client.get(
+                service.MENTOR_PROFILE, mentor_id, select="assignedUserId,mentorStatus"
+            )
+        except EspoError as exc:
+            yield _sse(service._step("login", "error", f"Could not read the mentor: {exc}"))
+            return
+        if prof.get("assignedUserId"):
+            yield _sse(service._step("login", "done", "This mentor already has an EspoCRM login — nothing to provision."))
+            yield _sse({"step": "done", "status": "done", "message": "No provisioning needed", "result": {"skipped": True}})
+            return
+        if prof.get("mentorStatus") not in (service.STATUS_APPROVED, service.STATUS_ACTIVE):
+            yield _sse(service._step("login", "error", "A login is only created for an Approved or Active mentor."))
+            return
+        try:
+            admin_client = await factory()
+        except Exception as exc:  # admin service-account login failed
+            yield _sse(service._step("login", "error", f"Could not sign in the provisioning service account: {exc}"))
+            return
+        try:
+            async for event in service.provision_mentor_user_steps(
+                admin_client, client, mentor_id,
+                team_name=settings.mentor_team_name,
+                directory=resolved.directory,
+                create_mailbox=resolved.create_enabled,
+            ):
+                yield _sse(event)
+        except Exception as exc:  # never leak a raw 500 into the stream
+            yield _sse(service._step("login", "error", f"Provisioning failed: {exc}"))
+
+    return StreamingResponse(
+        stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
+    )
+
+
+# --- Email Setup (admin-only): configure the Google Workspace integration ---
+
+@router.get("/setup/google")
+async def google_setup_get(request: Request) -> dict:
+    """Current Google-Workspace config status (never the private key)."""
+    _require_admin(request)
+    settings = get_settings()
+    store = make_app_config_store(settings)
+    if store is None:
+        # No DB + encryption key: the in-app store is unavailable; report whether
+        # the env-var fallback is configured so the UI can explain the options.
+        return {
+            "available": False,
+            "reason": "Set DATABASE_URL and APP_ENCRYPTION_KEY to configure Google from here.",
+            "envConfigured": bool(settings.google_service_account_json and settings.google_delegated_admin),
+        }
+    try:
+        cfg = await store.get_google_config()
+        meta = await store.get_meta("google_workspace")
+    finally:
+        await store.dispose()
+    cfg = cfg or {}
+    return {
+        "available": True,
+        "configured": bool(cfg.get("service_account_json") and cfg.get("delegated_admin")),
+        "delegatedAdmin": cfg.get("delegated_admin", ""),
+        "directoryCheck": bool(cfg.get("directory_check", True)),
+        "createMailbox": bool(cfg.get("create_mailbox", False)),
+        "updatedAt": (meta or {}).get("updatedAt"),
+    }
+
+
+def _validate_service_account(raw: str) -> dict:
+    try:
+        info = json.loads(raw)
+    except (json.JSONDecodeError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail=f"Service-account JSON is not valid JSON: {exc}")
+    if not isinstance(info, dict) or info.get("type") != "service_account":
+        raise HTTPException(status_code=400, detail="That does not look like a Google service-account key (expected a JSON object with \"type\": \"service_account\").")
+    return info
+
+
+def _build_google_payload(body: GoogleSetupIn, existing: dict) -> dict:
+    raw = body.service_account_json.strip()
+    if raw:
+        _validate_service_account(raw)
+    else:
+        raw = (existing or {}).get("service_account_json", "")
+        if not raw:
+            raise HTTPException(status_code=400, detail="Paste the service-account JSON key (none is stored yet).")
+    if not body.delegated_admin.strip():
+        raise HTTPException(status_code=400, detail="A delegated Workspace admin email is required.")
+    return {
+        "service_account_json": raw,
+        "delegated_admin": body.delegated_admin.strip(),
+        "directory_check": body.directory_check,
+        "create_mailbox": body.create_mailbox,
+    }
+
+
+@router.put("/setup/google")
+async def google_setup_put(body: GoogleSetupIn, request: Request) -> dict:
+    _require_admin(request)
+    store = make_app_config_store(get_settings())
+    if store is None:
+        raise HTTPException(status_code=503, detail="In-app Google setup is unavailable (set DATABASE_URL and APP_ENCRYPTION_KEY).")
+    try:
+        existing = await store.get_google_config() or {}
+        payload = _build_google_payload(body, existing)
+        await store.set_google_config(payload)
+    finally:
+        await store.dispose()
+    return {"status": "saved", "createMailbox": payload["create_mailbox"], "directoryCheck": payload["directory_check"]}
+
+
+@router.post("/setup/google/test")
+async def google_setup_test(body: GoogleSetupIn, request: Request) -> dict:
+    """Verify the configured credentials by looking up the delegated admin's own
+    mailbox — a successful EXISTS proves auth + the read scope + delegation."""
+    _require_admin(request)
+    settings = get_settings()
+    store = make_app_config_store(settings)
+    existing: dict = {}
+    if store is not None:
+        try:
+            existing = await store.get_google_config() or {}
+        finally:
+            await store.dispose()
+    # Use the submitted values if present, else what's stored.
+    raw = body.service_account_json.strip() or existing.get("service_account_json", "")
+    admin = body.delegated_admin.strip() or existing.get("delegated_admin", "")
+    if not raw or not admin:
+        raise HTTPException(status_code=400, detail="Provide (or save) a service-account JSON and a delegated admin email first.")
+    _validate_service_account(raw)
+    from core.google_directory import GoogleDirectory, MailboxStatus
+
+    directory = GoogleDirectory.from_config(
+        {"service_account_json": raw, "delegated_admin": admin}, settings.request_timeout_seconds
+    )
+    if directory is None:
+        raise HTTPException(status_code=400, detail="Could not build a Google client from the provided values.")
+    status = await directory.mailbox_status(admin)
+    if status is MailboxStatus.EXISTS:
+        return {"ok": True, "message": f"Connected to Google Workspace and found {admin}."}
+    if status is MailboxStatus.MISSING:
+        return {"ok": True, "message": f"Authenticated, but {admin} was not found — double-check the delegated admin address."}
+    return {"ok": False, "message": "Could not authenticate. Check the service-account key, that the Admin SDK API is enabled, and that domain-wide delegation is authorized for the Directory scopes."}

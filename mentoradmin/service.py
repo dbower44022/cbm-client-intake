@@ -8,15 +8,32 @@ EspoCRM metadata so the CRM stays the source of truth. Computed totals
 
 from __future__ import annotations
 
+import asyncio
 import re
-from typing import Any, Awaitable, Callable, Optional, Protocol
+from typing import Any, AsyncIterator, Awaitable, Callable, Optional, Protocol
 
-from core.google_directory import MailboxStatus
+from core.google_directory import (
+    GoogleDirectoryError,
+    MailboxStatus,
+    gen_temp_password,
+)
 
 MENTOR_PROFILE = "CMentorProfile"
 
-# A callable that returns whether a CBM mailbox exists in Google Workspace.
-MailboxChecker = Callable[[str], Awaitable[MailboxStatus]]
+# How long the status window waits for a just-created mailbox to become live
+# before handing off to the EspoCRM login (poll every N seconds, up to a cap).
+MAILBOX_POLL_SECONDS = 5
+MAILBOX_POLL_TIMEOUT = 60
+
+
+class MailboxDirectory(Protocol):
+    """The slice of ``core.google_directory.GoogleDirectory`` provisioning uses."""
+
+    async def mailbox_status(self, email: str) -> MailboxStatus: ...
+    async def create_user(
+        self, primary_email: str, first_name: str, last_name: str,
+        *, recovery_email: Optional[str], temp_password: str,
+    ) -> None: ...
 
 # When a mentor is set to this status, a login User is provisioned for them.
 STATUS_APPROVED = "Approved"
@@ -207,7 +224,7 @@ async def update_mentor(
     *,
     team_name: Optional[str] = None,
     admin_client_factory: Optional[Callable[[], Awaitable[MentorClient]]] = None,
-    mailbox_checker: Optional[MailboxChecker] = None,
+    directory: Optional[MailboxDirectory] = None,
 ) -> dict[str, Any]:
     """Update whitelisted editable fields; ignore anything else.
 
@@ -253,10 +270,13 @@ async def update_mentor(
     ):
         try:
             admin_client = await admin_client_factory()
+            # Inline (non-streaming) provisioning is a fallback for the redrive /
+            # JS-off path; it never *creates* a mailbox (that long-running flow is
+            # the SSE status window's job) — a missing mailbox still blocks here.
             summary = await provision_mentor_user(
                 admin_client, client, mentor_id,
                 team_name=team_name or DEFAULT_MENTOR_TEAM,
-                mailbox_checker=mailbox_checker,
+                directory=directory, create_mailbox=False,
             )
             provision = {"ok": True, **summary}
         except MentorAdminError as exc:
@@ -356,83 +376,187 @@ async def _find_team_id(client: MentorClient, team_name: str) -> str:
     )
 
 
-async def provision_mentor_user(
+def _step(step: str, status: str, message: str, **extra: Any) -> dict[str, Any]:
+    """A status event for the live provisioning window. ``status`` is one of
+    ``running`` / ``done`` / ``error``; ``step`` groups events into one UI line."""
+    return {"step": step, "status": status, "message": message, **extra}
+
+
+async def _mailbox_becomes_active(
+    directory: MailboxDirectory, email: str, *, poll_seconds: int, timeout: int,
+    sleep: Callable[[float], Awaitable[None]],
+) -> bool:
+    """Poll until the just-created mailbox resolves, up to ``timeout`` seconds."""
+    waited = 0
+    while waited < timeout:
+        await sleep(poll_seconds)
+        waited += poll_seconds
+        if await directory.mailbox_status(email) is MailboxStatus.EXISTS:
+            return True
+    return False
+
+
+async def provision_mentor_user_steps(
     admin_client: MentorClient,
     edit_client: MentorClient,
     mentor_id: str,
     *,
     team_name: str,
-    mailbox_checker: Optional[MailboxChecker] = None,
-) -> dict[str, Any]:
-    """Create a login User for an approved mentor, link it, and team it.
+    directory: Optional[MailboxDirectory] = None,
+    create_mailbox: bool = False,
+    poll_seconds: int = MAILBOX_POLL_SECONDS,
+    poll_timeout: int = MAILBOX_POLL_TIMEOUT,
+    sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+) -> AsyncIterator[dict[str, Any]]:
+    """Provision an approved mentor's CBM mailbox + EspoCRM login, yielding a
+    human-readable status event for each step (for the live status window).
 
-    Privilege split: ``admin_client`` (a backend service credential) does the
-    User read/create + Team lookup — the operations staff users aren't allowed to
-    do. ``edit_client`` (the logged-in staff user) reads the profile/contact and
-    writes the ``assignedUser`` link, which staff already can. So the elevated
-    permission lives only in the backend credential.
+    Steps, in order: (1) resolve the ``firstname.lastname@cbmentors.org`` address;
+    (2) if a ``directory`` is given, check whether that Workspace mailbox exists —
+    if MISSING and ``create_mailbox`` is on, create it (temp password +
+    change-at-first-login + the mentor's personal email as recovery) and poll
+    until it's live, else block; an inconclusive (UNKNOWN) check proceeds (fail
+    open); (3) create the EspoCRM **User** (welcome email via ``sendAccessInfo``),
+    link it as ``assignedUser``, and back-fill ``cbmEmail`` when blank.
 
-    userName/email = ``firstname.lastname@cbmentors.org`` (the CBM email; reuses
-    the profile's ``cbmEmail`` if already set). The User is active, in
-    ``team_name``, and EspoCRM is asked to email access info (``sendAccessInfo``)
-    so the mentor sets their own password. The new User becomes the profile's
-    ``assignedUser`` (the same link the assignment tool reads), and the CBM email
-    is written back to the profile when it was blank.
+    Privilege split (unchanged): ``admin_client`` (a backend admin credential)
+    does the User read/create + Team lookup; ``edit_client`` (the staff user)
+    reads the profile/contact and writes the link. A terminal event has
+    ``status`` ``error`` (and stops) or is the final ``{"step":"done", ...,
+    "result": {...}}`` carrying the created login (and, if a mailbox was created,
+    the temp password + recovery email to relay to the mentor).
     """
     profile = await edit_client.get(
         MENTOR_PROFILE, mentor_id, select="name,cbmEmail,contactRecordId"
     )
-    first, last = "", ""
+    first, last, recovery_email = "", "", None
     contact_id = profile.get("contactRecordId")
     if contact_id:
         contact = await edit_client.get(
-            "Contact", contact_id, select="firstName,lastName"
+            "Contact", contact_id, select="firstName,lastName,emailAddress"
         )
         first = (contact.get("firstName") or "").strip()
         last = (contact.get("lastName") or "").strip()
+        recovery_email = (contact.get("emailAddress") or "").strip() or None
     if not (first or last):
         first, last = _split_name(profile.get("name"))
 
     existing_cbm = (profile.get("cbmEmail") or "").strip()
     cbm = existing_cbm or cbm_email_for(first, last)
 
-    # Hard gate: don't create a login (and bounce its welcome email) for a CBM
-    # address that has no Google Workspace mailbox. Only a *confirmed*-missing
-    # mailbox blocks; an inconclusive check (UNKNOWN) falls through so a Google
-    # outage can't freeze approvals.
-    if mailbox_checker is not None:
-        status = await mailbox_checker(cbm)
-        if status is MailboxStatus.MISSING:
-            raise MentorAdminError(
-                f"the Google Workspace mailbox {cbm} does not exist — create it "
-                "before approving this mentor (the login's welcome email would "
-                "otherwise bounce and they could never sign in)."
+    created_mailbox = False
+    temp_password: Optional[str] = None
+
+    if directory is not None:
+        yield _step("mailbox", "running", f"Checking for the mentor email account — {cbm}")
+        status = await directory.mailbox_status(cbm)
+        if status is MailboxStatus.EXISTS:
+            yield _step("mailbox", "done", f"Email account found for {cbm}")
+        elif status is MailboxStatus.MISSING:
+            if not create_mailbox:
+                yield _step(
+                    "mailbox", "error",
+                    f"the Google Workspace mailbox {cbm} does not exist — create it "
+                    "before approving this mentor (the login's welcome email would "
+                    "otherwise bounce and they could never sign in).",
+                )
+                return
+            recovery_note = f" (recovery to {recovery_email})" if recovery_email else ""
+            yield _step(
+                "mailbox", "running",
+                f"No email account found — creating a new account for {cbm}{recovery_note}",
             )
+            temp_password = gen_temp_password()
+            try:
+                await directory.create_user(
+                    cbm, first, last,
+                    recovery_email=recovery_email, temp_password=temp_password,
+                )
+            except GoogleDirectoryError as exc:
+                yield _step("mailbox", "error", f"Could not create the email account: {exc}")
+                return
+            created_mailbox = True
+            yield _step("mailbox", "running", f"Created {cbm} — waiting for it to become active…")
+            active = await _mailbox_becomes_active(
+                directory, cbm, poll_seconds=poll_seconds, timeout=poll_timeout, sleep=sleep
+            )
+            if not active:
+                yield _step(
+                    "mailbox", "error",
+                    f"The mailbox {cbm} was created but is not active yet. Save this "
+                    "mentor again in a few minutes to finish creating their login.",
+                    mailboxCreated=True, tempPassword=temp_password, recoveryEmail=recovery_email,
+                )
+                return
+            yield _step("mailbox", "done", f"The mailbox {cbm} is active")
+        else:  # UNKNOWN — fail open so a Google outage can't freeze approvals
+            yield _step("mailbox", "done", "Could not verify the mailbox — continuing anyway")
 
-    user_name = await _unique_user_name(admin_client, cbm)
-    team_id = await _find_team_id(admin_client, team_name)
+    yield _step("login", "running", "Creating the EspoCRM login…")
+    try:
+        user_name = await _unique_user_name(admin_client, cbm)
+        team_id = await _find_team_id(admin_client, team_name)
+        user_payload: dict[str, Any] = {
+            "userName": user_name,
+            "lastName": last or "Mentor",
+            "emailAddress": cbm,
+            "type": USER_TYPE,
+            "isActive": True,
+            "teamsIds": [team_id],
+            "defaultTeamId": team_id,
+            "sendAccessInfo": True,  # welcome email; ignored by CRM if unsupported
+        }
+        if first:
+            user_payload["firstName"] = first
+        user = await admin_client.create("User", user_payload)
+        user_id = user.get("id")
 
-    user_payload: dict[str, Any] = {
-        "userName": user_name,
-        "lastName": last or "Mentor",
-        "emailAddress": cbm,
-        "type": USER_TYPE,
-        "isActive": True,
-        "teamsIds": [team_id],
-        "defaultTeamId": team_id,
-        "sendAccessInfo": True,  # welcome email; ignored by CRM if unsupported
-    }
-    if first:
-        user_payload["firstName"] = first
-    user = await admin_client.create("User", user_payload)
-    user_id = user.get("id")
+        link_payload: dict[str, Any] = {"assignedUserId": user_id}
+        if not existing_cbm:
+            link_payload["cbmEmail"] = cbm
+        await edit_client.update(MENTOR_PROFILE, mentor_id, link_payload)
+    except MentorAdminError as exc:
+        yield _step("login", "error", str(exc))
+        return
+    except Exception as exc:  # EspoError etc. — surface, don't crash the stream
+        yield _step("login", "error", f"Could not create the EspoCRM login: {exc}")
+        return
 
-    link_payload: dict[str, Any] = {"assignedUserId": user_id}
-    if not existing_cbm:
-        link_payload["cbmEmail"] = cbm
-    await edit_client.update(MENTOR_PROFILE, mentor_id, link_payload)
+    result = {"userId": user_id, "userName": user_name, "email": cbm, "team": team_name}
+    if created_mailbox:
+        result["mailboxCreated"] = True
+        result["tempPassword"] = temp_password
+        result["recoveryEmail"] = recovery_email
+    yield _step(
+        "login", "done",
+        f"Created login {user_name} in {team_name} and sent a welcome email.",
+    )
+    yield {"step": "done", "status": "done", "message": "Provisioning complete", "result": result}
 
-    return {"userId": user_id, "userName": user_name, "email": cbm, "team": team_name}
+
+async def provision_mentor_user(
+    admin_client: MentorClient,
+    edit_client: MentorClient,
+    mentor_id: str,
+    *,
+    team_name: str,
+    directory: Optional[MailboxDirectory] = None,
+    create_mailbox: bool = False,
+) -> dict[str, Any]:
+    """Non-streaming wrapper over :func:`provision_mentor_user_steps`: drains the
+    generator and returns the final result, raising :class:`MentorAdminError` on
+    the first error event (so the inline ``update_mentor`` path reports it as a
+    provisioning failure). Used by the redrive / JS-off fallback."""
+    result: dict[str, Any] = {}
+    async for event in provision_mentor_user_steps(
+        admin_client, edit_client, mentor_id,
+        team_name=team_name, directory=directory, create_mailbox=create_mailbox,
+    ):
+        if event.get("status") == "error":
+            raise MentorAdminError(event.get("message") or "provisioning failed")
+        if event.get("step") == "done":
+            result = event.get("result") or {}
+    return result
 
 
 async def field_options(client: MentorClient) -> dict[str, list[str]]:
