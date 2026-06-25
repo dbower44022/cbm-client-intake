@@ -4,6 +4,17 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.11.1] — 2026-06-25
+
+### Added
+- **Step-by-step Google Workspace setup guide on the Email Setup page.** The page
+  is now a two-column layout: the config form on the left, and a sticky "How to
+  set this up" instructions box on the right (Google Cloud Console → service
+  account + JSON key; Workspace Admin → domain-wide delegation with both Directory
+  scopes, each with a copy button; then the steps back in the app). Per-field
+  helper text ties each input to the relevant step. (Version bump doubles as the
+  deploy marker for this UI change.)
+
 ## [0.11.0] — 2026-06-24
 
 ### Added
