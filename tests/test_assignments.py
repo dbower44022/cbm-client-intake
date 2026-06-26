@@ -187,7 +187,11 @@ async def test_eligible_mentors_query_and_shape():
                         "industrySector": "Manufacturing",
                         "mentoringFocusAreas": ["Agriculture"],
                         "areaOfExpertise": ["Lean"],
-                    }
+                    },
+                    # Userless row: must be dropped in Python (the query no longer
+                    # filters on assignedUserId — prod forbids it in `where`).
+                    {"id": "m2", "name": "No User", "assignedUserId": None,
+                     "mentorStatus": "Active", "acceptingNewClients": True},
                 ]
             }
         }
@@ -202,12 +206,14 @@ async def test_eligible_mentors_query_and_shape():
             "focusAreas": ["Agriculture"], "expertise": ["Lean"],
         }
     ]
-    # The query filters acceptingNewClients + Active + has-user.
+    # The query filters acceptingNewClients + Active; the has-user filter is done
+    # in Python, NOT in `where` — prod EspoCRM forbids filtering CMentorProfile by
+    # assignedUserId ("Forbidden attribute 'assignedUserId' in where" → 400).
     _, where = client.list_calls[0]
     attrs = {(c["attribute"], c["type"]) for c in where}
     assert ("acceptingNewClients", "isTrue") in attrs
     assert ("mentorStatus", "equals") in attrs
-    assert ("assignedUserId", "isNotNull") in attrs
+    assert ("assignedUserId", "isNotNull") not in attrs
 
 
 async def test_list_all_mentors_has_no_where_filter():

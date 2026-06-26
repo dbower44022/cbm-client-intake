@@ -206,13 +206,16 @@ async def list_eligible_mentors(client: AssignClient) -> list[dict[str, Any]]:
         where=[
             {"type": "isTrue", "attribute": "acceptingNewClients"},
             {"type": "equals", "attribute": "mentorStatus", "value": MENTOR_STATUS_ACTIVE},
-            {"type": "isNotNull", "attribute": "assignedUserId"},
         ],
         select=_MENTOR_SELECT,
         max_size=200,
         order_by="name",
     )
-    # Defensive: isNotNull should already exclude userless rows.
+    # Filter userless rows in Python rather than the query: prod EspoCRM's ACL
+    # forbids *filtering* CMentorProfile by assignedUserId in a `where` clause
+    # ("Forbidden attribute 'assignedUserId' in where" → 400), even though it's
+    # readable in `select`. crm-test allows it; prod (stock, tighter field ACL)
+    # does not. Dropping the clause keeps the dropdown working on both.
     return [_mentor_row(r) for r in data.get("list", []) if r.get("assignedUserId")]
 
 
