@@ -301,11 +301,36 @@ async def test_approval_provisions_user():
     assert payload["sendAccessInfo"] is True
     link = _link_update(c)
     assert link["assignedUserId"] == "user-new"
+    # Write BOTH the single and collaborators link so it persists on prod
+    # (CMentorProfile.assignedUser is disabled there — assignedUsers is used).
+    assert link["assignedUsersIds"] == ["user-new"]
     assert link["cbmEmail"] == "jane.doe@cbmentors.org"  # backfilled (was blank)
     assert result["provision"] == {
         "ok": True, "userId": "user-new", "userName": "jane.doe@cbmentors.org",
-        "email": "jane.doe@cbmentors.org", "team": "Mentor Team",
+        "email": "jane.doe@cbmentors.org", "team": "Mentor Team", "reused": False,
     }
+
+
+@pytest.mark.asyncio
+async def test_provision_reuses_existing_login_no_duplicate():
+    """A mentor whose cbmEmail is already set and whose CBM User already exists
+    must be LINKED to that User — never get a duplicate (jane.doe2@…) created."""
+    c = ProvisionClient(
+        profile={"id": "m1", "name": "Jane Doe", "mentorStatus": "Candidate",
+                 "assignedUserId": None, "cbmEmail": "jane.doe@cbmentors.org",
+                 "contactRecordId": "c1"},
+        existing_users={"jane.doe@cbmentors.org"},
+    )
+    result = await service.update_mentor(
+        c, "m1", {"mentorStatus": "Active"},
+        team_name="Mentor Team", admin_client_factory=_afactory(c),
+    )
+    assert c.created == []                      # no new User created
+    link = _link_update(c)
+    assert link["assignedUserId"] == "u-x"      # the EXISTING user
+    assert link["assignedUsersIds"] == ["u-x"]  # both fields, for prod
+    assert result["provision"]["reused"] is True
+    assert result["provision"]["userId"] == "u-x"
 
 
 @pytest.mark.asyncio

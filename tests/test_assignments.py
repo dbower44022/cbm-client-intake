@@ -216,6 +216,32 @@ async def test_eligible_mentors_query_and_shape():
     assert ("assignedUserId", "isNotNull") not in attrs
 
 
+def test_assigned_user_id_reads_either_field_shape():
+    # Single assignedUser (crm-test) and multi-user assignedUsers (prod) both resolve.
+    assert service.assigned_user_id({"assignedUserId": "u1"}) == "u1"
+    assert service.assigned_user_id({"assignedUsersIds": ["u2"]}) == "u2"
+    assert service.assigned_user_id({"assignedUsersIds": []}) is None
+    assert service.assigned_user_id({}) is None
+    assert service.assigned_user_name(
+        {"assignedUsersIds": ["u2"], "assignedUsersNames": {"u2": "Pat Smith"}}
+    ) == "Pat Smith"
+
+
+@pytest.mark.asyncio
+async def test_eligible_mentor_with_only_collaborators_field_is_included():
+    """A prod mentor whose User is on assignedUsers (assignedUser disabled) must
+    still resolve a userId and appear in the dropdown."""
+    client = FakeClient(lists={service.MENTOR_PROFILE: {"list": [
+        {"id": "m1", "name": "Collab Mentor", "assignedUserId": None,
+         "assignedUsersIds": ["u7"], "assignedUsersNames": {"u7": "Collab Mentor"},
+         "mentorStatus": "Active", "acceptingNewClients": True},
+    ]}})
+    mentors = await service.list_eligible_mentors(client)
+    assert len(mentors) == 1
+    assert mentors[0]["userId"] == "u7"
+    assert mentors[0]["userName"] == "Collab Mentor"
+
+
 async def test_list_all_mentors_has_no_where_filter():
     client = FakeClient(
         lists={

@@ -17,6 +17,10 @@ from core.google_directory import (
     MailboxStatus,
     gen_temp_password,
 )
+# The mentor's User link uses the single `assignedUser` on crm-test but the
+# multi-user `assignedUsers` (collaborators) on prod. These helpers read/write
+# both shapes so the link sticks on either (see assignments.service).
+from assignments.service import assigned_user_id, assigned_user_payload
 
 MENTOR_PROFILE = "CMentorProfile"
 
@@ -124,7 +128,8 @@ _ENUM_FIELDS = [f["name"] for f in EDITABLE_FIELDS if f["type"] in ("enum", "mul
 READ_ONLY_FIELDS = [
     "availableCapacity", "currentActiveClients", "maximumClientCapacity",
     "totalLifetimeSessions", "totalSessionsLast30Days", "totalMentoringHours",
-    "contactRecordName", "contactRecordId", "assignedUserName", "assignedUserId",
+    "contactRecordName", "contactRecordId",
+    "assignedUserName", "assignedUserId", "assignedUsersNames", "assignedUsersIds",
     "createdAt", "modifiedAt", "recordStatus",
     "personalEmail", "contactPhone", "contactStreet", "contactCity", "postalCode",
 ]
@@ -169,7 +174,7 @@ async def check_completeness(client: MentorClient, rec: dict[str, Any]) -> dict[
     if rec.get("mentorStatus") == STATUS_ACTIVE:
         if not rec.get("cbmEmail"):
             issues.append("no CBM email address")
-        user_id = rec.get("assignedUserId")
+        user_id = assigned_user_id(rec)
         if not user_id:
             issues.append("no User assigned to the mentor")
         contact_user = None
@@ -252,7 +257,8 @@ async def update_mentor(
     before = None
     if admin_client_factory is not None:
         before = await client.get(
-            MENTOR_PROFILE, mentor_id, select="mentorStatus,assignedUserId"
+            MENTOR_PROFILE, mentor_id,
+            select="mentorStatus,assignedUserId,assignedUsersIds,assignedUsersNames",
         )
 
     if payload:
@@ -266,7 +272,7 @@ async def update_mentor(
         admin_client_factory is not None
         and before is not None
         and effective_status in (STATUS_APPROVED, STATUS_ACTIVE)
-        and not before.get("assignedUserId")
+        and not assigned_user_id(before)
     ):
         try:
             admin_client = await admin_client_factory()
@@ -298,7 +304,7 @@ async def update_mentor(
     elif (
         admin_client_factory is None
         and result.get("mentorStatus") in (STATUS_APPROVED, STATUS_ACTIVE)
-        and not result.get("assignedUserId")
+        and not assigned_user_id(result)
     ):
         # The mentor is Approved/Active but has no login User, and provisioning is
         # disabled on this server (no admin service account configured). Surface
@@ -320,9 +326,10 @@ async def reconcile_user_links(client: MentorClient, mentor_id: str) -> None:
     User or both sides already match. Run on every save.
     """
     prof = await client.get(
-        MENTOR_PROFILE, mentor_id, select="assignedUserId,contactRecordId"
+        MENTOR_PROFILE, mentor_id,
+        select="assignedUserId,assignedUsersIds,assignedUsersNames,contactRecordId",
     )
-    member_user = prof.get("assignedUserId")
+    member_user = assigned_user_id(prof)
     contact_id = prof.get("contactRecordId")
     contact_user = None
     if contact_id:
@@ -333,8 +340,10 @@ async def reconcile_user_links(client: MentorClient, mentor_id: str) -> None:
     if not user:
         return  # no User to assign anywhere
     if member_user != user:
-        await client.update(MENTOR_PROFILE, mentor_id, {"assignedUserId": user})
+        # CMentorProfile uses assignedUsers (collaborators) on prod — write both.
+        await client.update(MENTOR_PROFILE, mentor_id, assigned_user_payload(MENTOR_PROFILE, user))
     if contact_id and contact_user != user:
+        # Contact uses the single assignedUser on both instances.
         await client.update("Contact", contact_id, {"assignedUserId": user})
 
 
@@ -492,26 +501,52 @@ async def provision_mentor_user_steps(
         else:  # UNKNOWN — fail open so a Google outage can't freeze approvals
             yield _step("mailbox", "done", "Could not verify the mailbox — continuing anyway")
 
-    yield _step("login", "running", "Creating the EspoCRM login…")
-    try:
-        user_name = await _unique_user_name(admin_client, cbm)
-        team_id = await _find_team_id(admin_client, team_name)
-        user_payload: dict[str, Any] = {
-            "userName": user_name,
-            "lastName": last or "Mentor",
-            "emailAddress": cbm,
-            "type": USER_TYPE,
-            "isActive": True,
-            "teamsIds": [team_id],
-            "defaultTeamId": team_id,
-            "sendAccessInfo": True,  # welcome email; ignored by CRM if unsupported
-        }
-        if first:
-            user_payload["firstName"] = first
-        user = await admin_client.create("User", user_payload)
-        user_id = user.get("id")
+    # Reuse the mentor's existing CBM login rather than creating a duplicate,
+    # suffixed account on every save. Only reuse when the profile ALREADY had a
+    # cbmEmail (existing_cbm): that means this mentor was assigned `cbm` before, so
+    # a User with that userName IS their login (it just wasn't linked — the link
+    # write was silently failing on prod; see below). When cbmEmail is blank we're
+    # assigning a fresh address, so a userName clash is a DIFFERENT person and the
+    # create path suffixes it (jane.doe2@…). This fixes the doug.bower2/doug.bower3
+    # duplicate-User pileup without merging two same-named mentors onto one login.
+    existing_user = None
+    if existing_cbm:
+        try:
+            existing_user = await admin_client.find_one("User", "userName", cbm, select="id")
+        except Exception:
+            existing_user = None  # fall through to create on a lookup failure
 
-        link_payload: dict[str, Any] = {"assignedUserId": user_id}
+    reused = bool(existing_user)
+    try:
+        if existing_user:
+            user_id = existing_user["id"]
+            user_name = cbm
+            yield _step("login", "running", f"Linking the existing login {cbm} to the mentor…")
+        else:
+            yield _step("login", "running", "Creating the EspoCRM login…")
+            user_name = await _unique_user_name(admin_client, cbm)
+            team_id = await _find_team_id(admin_client, team_name)
+            user_payload: dict[str, Any] = {
+                "userName": user_name,
+                "lastName": last or "Mentor",
+                "emailAddress": cbm,
+                "type": USER_TYPE,
+                "isActive": True,
+                "teamsIds": [team_id],
+                "defaultTeamId": team_id,
+                "sendAccessInfo": True,  # welcome email; ignored by CRM if unsupported
+            }
+            if first:
+                user_payload["firstName"] = first
+            user = await admin_client.create("User", user_payload)
+            user_id = user.get("id")
+
+        # Link the User to the member. CMentorProfile.assignedUser is DISABLED on
+        # prod (it uses the multi-user assignedUsers collaborators field), where a
+        # plain {"assignedUserId": …} PUT returns 200 but stores nothing — which is
+        # why provisioned mentors stayed userless. Write BOTH attributes so the
+        # link persists on crm-test (single) and prod (collaborators) alike.
+        link_payload: dict[str, Any] = dict(assigned_user_payload(MENTOR_PROFILE, user_id))
         if not existing_cbm:
             link_payload["cbmEmail"] = cbm
         await edit_client.update(MENTOR_PROFILE, mentor_id, link_payload)
@@ -519,18 +554,23 @@ async def provision_mentor_user_steps(
         yield _step("login", "error", str(exc))
         return
     except Exception as exc:  # EspoError etc. — surface, don't crash the stream
-        yield _step("login", "error", f"Could not create the EspoCRM login: {exc}")
+        yield _step("login", "error", f"Could not provision the EspoCRM login: {exc}")
         return
 
-    result = {"userId": user_id, "userName": user_name, "email": cbm, "team": team_name}
+    result = {
+        "userId": user_id, "userName": user_name, "email": cbm,
+        "team": team_name, "reused": reused,
+    }
     if created_mailbox:
         result["mailboxCreated"] = True
         result["tempPassword"] = temp_password
         result["recoveryEmail"] = recovery_email
-    yield _step(
-        "login", "done",
-        f"Created login {user_name} in {team_name} and sent a welcome email.",
+    done_msg = (
+        f"Linked the existing login {user_name} to the mentor."
+        if reused
+        else f"Created login {user_name} in {team_name} and sent a welcome email."
     )
+    yield _step("login", "done", done_msg)
     yield {"step": "done", "status": "done", "message": "Provisioning complete", "result": result}
 
 

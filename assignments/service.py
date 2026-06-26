@@ -18,7 +18,7 @@ Field/link names and enum values reconciled live against crm-test (2026-06-19):
 from __future__ import annotations
 
 import logging
-from typing import Any, Protocol
+from typing import Any, Optional, Protocol
 
 from core.espo import EspoError
 
@@ -51,17 +51,45 @@ ENGAGEMENT_CONTACTS = "engagementContacts"
 # the single `assignedUser`. CEngagement/CClientProfile vary: crm-test customized
 # them to the multi-user `assignedUsers` (collaborators) field with `assignedUser`
 # DISABLED, while a stock instance (e.g. production) keeps the single
-# `assignedUser`. So for those two we write BOTH attributes — EspoCRM silently
+# `assignedUser`. So for those we write BOTH attributes — EspoCRM silently
 # ignores the one the entity doesn't have, so the assignment sticks on either
-# config without per-instance branching. (verified crm-test 2026-06-19; prod uses
-# single assignedUser — 2026-06-24.)
-USES_ASSIGNED_USERS = {ENGAGEMENT, CLIENT_PROFILE}
+# config without per-instance branching. (verified crm-test 2026-06-19.)
+# **CMentorProfile is in this set too**: prod has its `assignedUser` DISABLED and
+# uses `assignedUsers` — a PUT of `assignedUserId` returned 200 but silently
+# stored nothing, so provisioning created Users that never linked to the mentor
+# (verified live on prod 2026-06-26). See [[crm-test-assignment-acl-fields]].
+USES_ASSIGNED_USERS = {ENGAGEMENT, CLIENT_PROFILE, MENTOR_PROFILE}
 
 
 def _assigned_user_payload(entity: str, user_id: str) -> dict[str, Any]:
     if entity in USES_ASSIGNED_USERS:
         return {"assignedUsersIds": [user_id], "assignedUserId": user_id}
     return {"assignedUserId": user_id}
+
+
+# Public alias for other staff-tool packages (e.g. mentoradmin) that write the
+# mentor's User link.
+assigned_user_payload = _assigned_user_payload
+
+
+def assigned_user_id(rec: dict[str, Any]) -> Optional[str]:
+    """The assigned User id from a record that may use the single ``assignedUser``
+    OR the multi-user ``assignedUsers`` (collaborators) field — whichever holds it.
+    Read the mentor's User through this, never ``rec['assignedUserId']`` directly,
+    so it works on both crm-test (single) and prod (collaborators)."""
+    return rec.get("assignedUserId") or next(iter(rec.get("assignedUsersIds") or []), None)
+
+
+def assigned_user_name(rec: dict[str, Any]) -> Optional[str]:
+    """The assigned User's display name, from either field shape (see
+    :func:`assigned_user_id`)."""
+    if rec.get("assignedUserName"):
+        return rec["assignedUserName"]
+    ids = rec.get("assignedUsersIds") or []
+    names = rec.get("assignedUsersNames") or {}
+    if ids and isinstance(names, dict):
+        return names.get(ids[0])
+    return None
 
 
 class AssignClient(Protocol):
@@ -172,7 +200,8 @@ async def get_engagement_detail(
 
 # Shared select for both the assign dropdown and the review list.
 _MENTOR_SELECT = (
-    "name,createdAt,assignedUserId,assignedUserName,availableCapacity,currentActiveClients,"
+    "name,createdAt,assignedUserId,assignedUserName,assignedUsersIds,assignedUsersNames,"
+    "availableCapacity,currentActiveClients,"
     "maximumClientCapacity,yearsOfExperience,mentorType,mentorStatus,recordStatus,"
     "acceptingNewClients,industrySector,mentoringFocusAreas,areaOfExpertise"
 )
@@ -183,8 +212,8 @@ def _mentor_row(r: dict[str, Any]) -> dict[str, Any]:
         "id": r["id"],
         "name": r.get("name"),
         "createdAt": r.get("createdAt"),
-        "userId": r.get("assignedUserId"),
-        "userName": r.get("assignedUserName"),
+        "userId": assigned_user_id(r),
+        "userName": assigned_user_name(r),
         "availableCapacity": r.get("availableCapacity"),
         "assignedClients": r.get("currentActiveClients"),
         "maxCapacity": r.get("maximumClientCapacity"),
@@ -215,8 +244,9 @@ async def list_eligible_mentors(client: AssignClient) -> list[dict[str, Any]]:
     # forbids *filtering* CMentorProfile by assignedUserId in a `where` clause
     # ("Forbidden attribute 'assignedUserId' in where" → 400), even though it's
     # readable in `select`. crm-test allows it; prod (stock, tighter field ACL)
-    # does not. Dropping the clause keeps the dropdown working on both.
-    return [_mentor_row(r) for r in data.get("list", []) if r.get("assignedUserId")]
+    # does not. Dropping the clause keeps the dropdown working on both. The
+    # has-user test reads either assignedUser/assignedUsers (prod uses the latter).
+    return [_mentor_row(r) for r in data.get("list", []) if assigned_user_id(r)]
 
 
 async def list_all_mentors(client: AssignClient) -> list[dict[str, Any]]:
@@ -243,9 +273,10 @@ async def assign_engagement(
     mentor = await client.get(
         MENTOR_PROFILE,
         mentor_profile_id,
-        select="name,acceptingNewClients,mentorStatus,assignedUserId,assignedUserName",
+        select="name,acceptingNewClients,mentorStatus,"
+        "assignedUserId,assignedUserName,assignedUsersIds,assignedUsersNames",
     )
-    user_id = mentor.get("assignedUserId")
+    user_id = assigned_user_id(mentor)
     if not user_id:
         raise AssignError("The selected mentor has no linked user account.")
     if not mentor.get("acceptingNewClients") or mentor.get("mentorStatus") != MENTOR_STATUS_ACTIVE:
