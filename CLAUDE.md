@@ -482,9 +482,16 @@ worker) + `GOOGLE_CREATE_MAILBOX=true`, then paste creds in Email Setup (or set
 Also note: v0.9.1 added a UI signal so an approval saved while provisioning is
 disabled shows "no login was created" instead of a silent "Saved"
 (`mentoradmin/service.py` `provision={disabled:true}`; was the original
-"failed to properly update doug" report). **Still pending for full parity:** the
-staff-tool Teams (`Client Administration Team`, `Mentor Administration Team`)
-must exist in prod with staff users. **Cleanup: DONE (verified 2026-06-26)** — the
+"failed to properly update doug" report). **Staff-tool Teams — created, membership still to assign (verified 2026-06-26):**
+all three exist in prod with the exact names the overlay expects —
+`Client Administration Team` (gates `/assignments`), `Mentor Administration Team`
+(gates `/mentoradmin`), `Mentor Team` (provisioned mentor logins land here, and it
+correctly holds `doug.bower@cbmentors.org`). **But the two staff-gate teams have no
+non-admin members yet** — Client Administration Team = 0 members, Mentor
+Administration Team = 1 (only the `mentoradmin@cbmentors.org` admin service
+account). So today the tools are usable **only by admins** (admins always pass the
+gate). To hand them to CBM staff, add the real (non-admin) staff EspoCRM users to
+those two teams in the CRM UI — that is the remaining gate for full parity. **Cleanup: DONE (verified 2026-06-26)** — the
 `ZZTEST-PROD-GOLIVE` go-live records (5 Contacts, 3 Accounts,
 CClientProfile+CEngagement, CMentorProfile, CInformationRequest, CPartnerProfile,
 CSponsorProfile, + 5 CIntakeSubmission logs) are all gone. A full sweep of prod
