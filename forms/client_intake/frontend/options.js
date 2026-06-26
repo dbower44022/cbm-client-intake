@@ -9,9 +9,17 @@
  * so the dependent dropdown (BR-2) is demonstrable. Reconcile before go-live.
  */
 window.CBM_OPTIONS = {
+  // To change CRM-backed lists, edit the CRM enum then run:
+  //   uv run python scripts/sync_form_options.py --write
+  // >>> crm-enum key=businessStage field=Account.cBusinessStage — generated; do not hand-edit between the markers.
   businessStage: [
-    "Pre-Startup", "Startup", "Early Stage", "Growth Stage", "Established",
+    "Pre-Startup",
+    "Startup",
+    "Early Stage",
+    "Growth Stage",
+    "Established",
   ],
+  // <<< crm-enum
 
   meetingPreference: ["No Preference", "Video", "Phone", "Email", "In Person"],
 
@@ -22,6 +30,11 @@ window.CBM_OPTIONS = {
     "Search Engine", "News or Media", "Personal Referral", "Other",
   ],
 
+  // NOTE: this is the NAICS sector taxonomy. The orchestrator sanitizes it against
+  // Account.cIndustrySector, so if the CRM enum uses a different taxonomy the synced
+  // list will replace these values — and industrySubsector (below) is keyed by them.
+  // Review the sync diff before --write; reconcile the subsector keys to match.
+  // >>> crm-enum key=industrySector field=Account.cIndustrySector — generated; do not hand-edit between the markers.
   industrySector: [
     "Agriculture, Forestry, Fishing and Hunting",
     "Mining, Quarrying, and Oil and Gas Extraction",
@@ -44,25 +57,45 @@ window.CBM_OPTIONS = {
     "Other Services (except Public Administration)",
     "Public Administration",
   ],
+  // <<< crm-enum
 
   // Aligned to the CRM's CEngagement.mentoringFocusAreas enum (the field the
   // orchestrator writes — the client's mentoring request). Keep in sync with it.
+  // >>> crm-enum key=mentoringFocusAreas field=CEngagement.mentoringFocusAreas — generated; do not hand-edit between the markers.
   mentoringFocusAreas: [
-    "Accounting", "Artificial Intelligence for Small Businesses",
-    "Arts: Visual, Crafts, Music, etc.", "Business Strategy & Planning",
-    "Compliance & Accreditation Audits", "Customer Experience & Service Excellence",
-    "Digital Marketing & Social Media", "E-Commerce", "Finance & Cash Flow Management",
-    "Franchising", "Funding & Capital Access", "Government Contracting and Regulations",
-    "Group Homes", "Hospitality, Restaurants, Food Trucks, Lodging",
-    "Human Resources & Talent Management", "International Business & Market Expansion",
-    "Leadership & Executive Coaching", "Marketing & Branding",
-    "Mergers, Acquisitions & Exit Planning", "Nonprofit Management & Fundraising",
-    "Operations & Process Improvement", "Product Development & Innovation",
-    "Program Design & Implementation", "Retail and Merchandising",
-    "Sales & Business Development", "Social Assistance & Family Services",
-    "Startup Launch & Entrepreneurship", "Strategic Planning",
-    "Technology & Digital Transformation", "Transportation and Logistics", "Websites",
+    "Accounting",
+    "Artificial Intelligence for Small Businesses",
+    "Arts: Visual, Crafts, Music, etc.",
+    "Business Strategy & Planning",
+    "Compliance & Accreditation Audits",
+    "Customer Experience & Service Excellence",
+    "Digital Marketing & Social Media",
+    "E-Commerce",
+    "Finance & Cash Flow Management",
+    "Franchising",
+    "Funding & Capital Access",
+    "Government Contracting and Regulations",
+    "Group Homes",
+    "Hospitality, Restaurants, Food Trucks, Lodging",
+    "Human Resources & Talent Management",
+    "International Business & Market Expansion",
+    "Leadership & Executive Coaching",
+    "Marketing & Branding",
+    "Mergers, Acquisitions & Exit Planning",
+    "Nonprofit Management & Fundraising",
+    "Operations & Process Improvement",
+    "Product Development & Innovation",
+    "Program Design & Implementation",
+    "Retail and Merchandising",
+    "Sales & Business Development",
+    "Social Assistance & Family Services",
+    "Startup Launch & Entrepreneurship",
+    "Strategic Planning",
+    "Technology & Digital Transformation",
+    "Transportation and Logistics",
+    "Websites",
   ],
+  // <<< crm-enum
 
   // PLACEHOLDER — canonical ~100-value list is unresolved upstream (Req Spec §11).
   // Keyed by industry sector; sectors not listed fall back to ["Other"].
