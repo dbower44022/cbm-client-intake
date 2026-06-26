@@ -608,6 +608,8 @@ uv run uvicorn main:app --reload --port 8000   # run locally -> http://localhost
 uv run pytest -q                         # tests
 docker build -t cbm-intake . && docker run --rm -p 8099:8080 cbm-intake  # prod-like run
 ./scripts/deploy.sh                      # deploy to DO App Platform (see DEPLOYMENT.md)
+uv run python scripts/sync_form_options.py          # dry-run: form dropdowns vs live CRM enums
+uv run python scripts/sync_form_options.py --write  # apply the sync (review the git diff)
 ```
 
 ## Architecture
@@ -646,6 +648,55 @@ A shared core hosts any number of per-form packages.
 The frontend is plain HTML/CSS/vanilla JS — **no build step**. The wizard posts
 to its own origin, so CORS is not in the form's request path; `ALLOWED_ORIGINS`
 only matters if a separate frontend origin is ever introduced.
+
+### Form dropdown lists — static, synced from the CRM on demand
+
+Each form's `frontend/options.js` ships **hand-curated, static** value lists (the
+forms stay fast/stateless — no CRM call at page load). The lists that are backed
+by a CRM enum **must match the live options verbatim** or a value outside the
+enum 400s the record create (the orchestrators' `EnumSanitizer` then drops the
+drifted value, so the field silently stores nothing). To keep them aligned
+**without** going live-fetch, each CRM-backed array is wrapped in sentinel
+comments and refreshed by a script:
+
+```js
+// >>> crm-enum key=industryExperience field=CMentorProfile.industrySector — generated; do not hand-edit between the markers.
+industryExperience: [ ... ],
+// <<< crm-enum
+```
+
+`scripts/sync_form_options.py` scans `forms/*/frontend/options.js` for those
+markers, fetches each `Entity.field`'s live options
+(`EspoClient.metadata_enum_options`), and rewrites **only** the marked arrays —
+presentational lists (how-did-you-hear, phone type) and all comments are left
+untouched. The marker is self-describing (no mapping duplicated in the script);
+it supports `exclude="A|B"` for CRM values the form deliberately omits (e.g.
+partner `partnershipValue` excludes `"None"`), and blank/whitespace-only enum
+options are auto-dropped. Default run is a **non-destructive dry-run** (value-level
+summary + unified diff, exits non-zero on drift so it doubles as a CI check);
+`--write` applies, then **review the git diff and commit** (per the push
+convention). 8 lists are managed today: volunteer `industryExperience`/
+`areasOfExpertise`/`fluentLanguages`; client-intake `businessStage`/
+`industrySector`/`mentoringFocusAreas` (it warns if a synced `industrySector`
+orphans an `industrySubsector` key); partner `partnershipType`/`partnershipValue`.
+
+The script reads `ESPO_BASE_URL`/`ESPO_API_KEY` from the env/`.env` (defaults to
+crm-test). To check **prod**, override them for one run (read-only — metadata
+GETs only); the prod key lives in the gitignored `.do/app.prod-crm.yaml`:
+
+```bash
+ESPO_BASE_URL=https://crm.clevelandbusinessmentors.org \
+ESPO_API_KEY=$(grep -m1 'key: ESPO_API_KEY' .do/app.prod-crm.yaml \
+  | grep -oE 'value: "[^"]+"' | sed -E 's/value: "([^"]+)"/\1/') \
+uv run python scripts/sync_form_options.py
+```
+
+Since the static file serves **both** deploys, the synced values must be valid on
+crm-test *and* prod — the dry-run is also how you'd catch the two CRMs diverging.
+First sync (2026-06-25): volunteer `industryExperience` was 100% stale (the live
+`CMentorProfile.industrySector` is now the 20-value NAICS taxonomy on both
+crm-test and prod, so volunteer industry was being dropped on real submissions);
+the synced lists were verified identical on crm-test and prod.
 
 ## Gotchas / things learned
 
