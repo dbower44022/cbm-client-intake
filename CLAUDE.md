@@ -363,14 +363,45 @@ mentor.
   (`assignments/service.py:_assigned_user_payload`). Writing `assignedUserId` to a
   disabled-field entity is silently ignored.
 
-## Current status (updated 2026-06-24)
+## Current status (updated 2026-06-26)
 
-**Prod is on v0.10.4** (`/healthz` confirmed). **v0.11.0 is built locally but NOT
-yet deployed** — it adds Google Workspace **mailbox creation** + a **live status
-window** + an admin **Email Setup** screen to the mentor-approval flow (see the
-`/mentoradmin` "Mailbox check + CREATION" block above for the full design, deploy
-secrets, and the read-write Directory scope it needs). Changes shipped since the
-v0.9.0 go-live, all live + verified against the prod CRM:
+**Prod is on v0.11.2** (`/healthz` confirmed, App `33dbecd`). The Google Workspace
+**mailbox creation** + **live status window** + admin **Email Setup** code (v0.11.0)
+IS deployed to prod but **gated OFF** (`GOOGLE_CREATE_MAILBOX` unset, no
+`APP_ENCRYPTION_KEY`) — a dormant no-op until enabled (see the `/mentoradmin`
+"Mailbox check + CREATION" block for the design, deploy secrets, and the
+read-write Directory scope it needs).
+
+**Fixed 2026-06-26 (v0.11.2), all verified live on the prod CRM:**
+- **Mentor login now actually links on prod — the "approved mentor isn't
+  selectable" bug.** Prod's `CMentorProfile` has the single `assignedUser`
+  **disabled** and uses the multi-user `assignedUsers` (collaborators) field (like
+  `CEngagement`/`CClientProfile`); writing `assignedUserId` returned 200 but stored
+  nothing, so provisioned mentors stayed userless (never Active-eligible, always
+  "Incomplete: no User assigned"). The mentor's User link is now written as BOTH
+  `assignedUserId` + `assignedUsersIds` and read via `assigned_user_id`/
+  `assigned_user_name` (resolve either shape) across both staff tools. See
+  [[crm-test-assignment-acl-fields]]. `assignments/service.py`
+  (`USES_ASSIGNED_USERS` now includes `CMentorProfile`) + `mentoradmin/service.py`.
+- **Approval no longer creates duplicate login Users.** When the link silently
+  failed, each re-save created `firstname.lastname`, then `…2`, then `…3`.
+  Provisioning now **reuses** the existing CBM login (when the profile already has a
+  `cbmEmail`) instead of duplicating; the suffix path remains only for a genuinely
+  new email clashing with a different person. (Cleaned up the 2 prod duplicates
+  `doug.bower2`/`doug.bower3` via the admin API; `doug.bower` is the linked login.)
+- **"Couldn't load mentors" (504) on Client Administration.** The eligible-mentor
+  query filtered `CMentorProfile` by `assignedUserId` in a `where` clause, which
+  prod forbids ("Forbidden attribute 'assignedUserId' in where" → 400 → 502/504);
+  the clause was dropped (userless rows filtered in Python — the field is still
+  readable in `select`).
+- **Static form dropdowns ← live CRM enums.** New `scripts/sync_form_options.py`
+  refreshes the marker-wrapped CRM-backed arrays in `forms/*/frontend/options.js`
+  from the live enums (dry-run by default, `--write` applies); see the "Form
+  dropdown lists" subsection in Architecture. First sync realigned the volunteer
+  industry list (it had drifted to the NAICS taxonomy on both crm-test and prod, so
+  volunteer industry was being dropped on submit).
+
+Changes shipped since the v0.9.0 go-live, all live + verified against the prod CRM:
 - **Mentor-login provisioning ENABLED in prod** (v0.9.1) — admin service account
   `mentoradmin@cbmentors.org` (Type=Admin); approving a mentor creates their
   EspoCRM login + welcome email (delivered to the CBM address). v0.9.1 also added a
