@@ -86,10 +86,13 @@ async def test_assign_sets_engagement_and_reassigns_related():
     assert set(contact_updates) == {"contact-primary", "contact-extra"}
     assert all(p["assignedUserId"] == "user-99" for p in contact_updates.values())
 
-    # Client profile gets both assignment attributes; account uses the single one.
+    # Client profile AND account get both assignment attributes — both have
+    # assignedUser disabled on prod (collaborators field), so writing only the
+    # single attribute would silently no-op there.
     assert ("CClientProfile", "clientprofile-1",
             {"assignedUsersIds": ["user-99"], "assignedUserId": "user-99"}) in client.updates
-    assert ("Account", "account-1", {"assignedUserId": "user-99"}) in client.updates
+    assert ("Account", "account-1",
+            {"assignedUsersIds": ["user-99"], "assignedUserId": "user-99"}) in client.updates
 
     assert res["contactsUpdated"] == 2
     assert res["clientProfileUpdated"] is True

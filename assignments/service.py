@@ -47,18 +47,19 @@ ENGAGEMENT_STATUSES = [
 # Link of CEngagement -> the hasMany of additional/secondary contacts.
 ENGAGEMENT_CONTACTS = "engagementContacts"
 
-# Assignment field differs by entity AND by instance. Contact/Account always use
-# the single `assignedUser`. CEngagement/CClientProfile vary: crm-test customized
-# them to the multi-user `assignedUsers` (collaborators) field with `assignedUser`
-# DISABLED, while a stock instance (e.g. production) keeps the single
-# `assignedUser`. So for those we write BOTH attributes — EspoCRM silently
-# ignores the one the entity doesn't have, so the assignment sticks on either
-# config without per-instance branching. (verified crm-test 2026-06-19.)
-# **CMentorProfile is in this set too**: prod has its `assignedUser` DISABLED and
-# uses `assignedUsers` — a PUT of `assignedUserId` returned 200 but silently
-# stored nothing, so provisioning created Users that never linked to the mentor
-# (verified live on prod 2026-06-26). See [[crm-test-assignment-acl-fields]].
-USES_ASSIGNED_USERS = {ENGAGEMENT, CLIENT_PROFILE, MENTOR_PROFILE}
+# Assignment field differs by entity AND by instance. Some entities use the single
+# `assignedUser`; others have it DISABLED and use the multi-user `assignedUsers`
+# (collaborators) field. The split also differs across instances (crm-test vs
+# prod). For entities that use `assignedUsers` anywhere we write BOTH attributes —
+# EspoCRM silently ignores the one the entity doesn't have, so the assignment
+# sticks on either config without per-instance branching.
+# Prod field audit (2026-06-26, verified live): `assignedUser` is DISABLED on
+# CEngagement, CClientProfile, CMentorProfile **and Account** (all use
+# `assignedUsers`); only **Contact** keeps the single `assignedUser`. A plain
+# `assignedUserId` PUT to a disabled-field entity returns 200 but stores nothing
+# (the bug that left provisioned mentors userless / Accounts un-rehomed). See
+# [[crm-test-assignment-acl-fields]].
+USES_ASSIGNED_USERS = {ENGAGEMENT, CLIENT_PROFILE, MENTOR_PROFILE, ACCOUNT}
 
 
 def _assigned_user_payload(entity: str, user_id: str) -> dict[str, Any]:
