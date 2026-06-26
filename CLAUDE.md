@@ -484,10 +484,13 @@ disabled shows "no login was created" instead of a silent "Saved"
 (`mentoradmin/service.py` `provision={disabled:true}`; was the original
 "failed to properly update doug" report). **Still pending for full parity:** the
 staff-tool Teams (`Client Administration Team`, `Mentor Administration Team`)
-must exist in prod with staff users. **Cleanup:** delete the
-`ZZTEST-PROD-GOLIVE` records in the prod EspoCRM UI (create-only key can't) — 5
-Contacts, 3 Accounts, CClientProfile+CEngagement, CMentorProfile,
-CInformationRequest, CPartnerProfile, CSponsorProfile, + 5 CIntakeSubmission logs.
+must exist in prod with staff users. **Cleanup: DONE (verified 2026-06-26)** — the
+`ZZTEST-PROD-GOLIVE` go-live records (5 Contacts, 3 Accounts,
+CClientProfile+CEngagement, CMentorProfile, CInformationRequest, CPartnerProfile,
+CSponsorProfile, + 5 CIntakeSubmission logs) are all gone. A full sweep of prod
+(name/lastName `contains ZZTEST`/`GOLIVE` across all 9 entities → 0 matches; every
+record listed) found no test records remaining — what's left is real intake data,
+so nothing was deleted.
 
 **As of 2026-06-22 — also live on App Platform against `crm-test`:** all **five**
 intake forms (client-intake, volunteer, info-request, partner, sponsor), the
