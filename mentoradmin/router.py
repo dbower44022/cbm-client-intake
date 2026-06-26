@@ -246,12 +246,13 @@ async def mentor_provision(mentor_id: str, request: Request) -> StreamingRespons
         # approval status (the button is only offered for Approved/Active anyway).
         try:
             prof = await client.get(
-                service.MENTOR_PROFILE, mentor_id, select="assignedUserId,mentorStatus"
+                service.MENTOR_PROFILE, mentor_id,
+                select="assignedUserId,assignedUsersIds,assignedUsersNames,mentorStatus",
             )
         except EspoError as exc:
             yield _sse(service._step("login", "error", f"Could not read the mentor: {exc}"))
             return
-        if prof.get("assignedUserId"):
+        if service.assigned_user_id(prof):
             yield _sse(service._step("login", "done", "This mentor already has an EspoCRM login — nothing to provision."))
             yield _sse({"step": "done", "status": "done", "message": "No provisioning needed", "result": {"skipped": True}})
             return
