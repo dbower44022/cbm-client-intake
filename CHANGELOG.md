@@ -4,6 +4,43 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.11.2] — 2026-06-26
+
+### Fixed
+- **Mentor login now actually links on production (the "approved mentor isn't
+  selectable" bug).** Prod's `CMentorProfile` has the single `assignedUser` field
+  **disabled** and uses the multi-user `assignedUsers` (collaborators) field — like
+  `CEngagement`/`CClientProfile`. The app wrote `assignedUserId`, which prod
+  accepts with HTTP 200 but silently stores nothing, so provisioned mentors stayed
+  userless: never "truly Active", never eligible for the assignment dropdown,
+  always "Incomplete: no User assigned". The mentor's User link is now **written as
+  both** `assignedUserId` + `assignedUsersIds` and **read from whichever holds it**
+  (`assigned_user_id`/`assigned_user_name` helpers) across both staff tools —
+  assignments (`_mentor_row`, `list_eligible_mentors`, `assign_engagement`) and
+  mentoradmin (provision link, `reconcile_user_links`, `check_completeness`,
+  `update_mentor`, the `/provision` idempotency guard). Verified live on the
+  production CRM.
+- **Approval no longer creates duplicate login Users.** When the link write
+  silently failed, each re-save re-provisioned and created `firstname.lastname`,
+  then `…2`, then `…3`. Provisioning now **reuses** the mentor's existing CBM login
+  (when the profile already has a `cbmEmail`) instead of creating a suffixed
+  duplicate; the suffix path remains only for a genuinely new email that clashes
+  with a different person.
+- **"Couldn't load mentors" (504) on Client Administration in production.** The
+  eligible-mentor query filtered `CMentorProfile` by `assignedUserId` in a `where`
+  clause, which prod EspoCRM forbids ("Forbidden attribute 'assignedUserId' in
+  where" → 400, surfaced as 502/504). The clause is dropped; userless rows are
+  filtered in Python (the field is still readable in `select`). Works on crm-test
+  and prod.
+
+### Added
+- **`scripts/sync_form_options.py`** — refresh the static form dropdown lists from
+  the live EspoCRM enums. Rewrites only the arrays wrapped in `crm-enum` marker
+  comments in `forms/*/frontend/options.js` (presentational lists untouched);
+  dry-run by default (diff + non-zero exit on drift, so it doubles as a CI check),
+  `--write` to apply. First sync aligned the volunteer industry list (it had
+  drifted to a different taxonomy on both crm-test and prod).
+
 ## [0.11.1] — 2026-06-25
 
 ### Added
