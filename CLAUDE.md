@@ -363,7 +363,25 @@ mentor.
   (`assignments/service.py:_assigned_user_payload`). Writing `assignedUserId` to a
   disabled-field entity is silently ignored.
 
-## Current status (updated 2026-06-26)
+## Current status (updated 2026-06-29)
+
+### Deployment URLs (three App Platform apps, all from `dbower44022/cbm-client-intake`, branch `main`, deploy-on-push)
+
+The **root `/` of each app is the form index** — it lists every intake form and,
+when the staff tools are enabled, the review-tool links (Client Administration
+`/assignments/`, Submission Operations `/ops/`, Mentor Administration
+`/mentoradmin/`).
+
+| Env | Root URL (form + review index) | CRM | `dryRun` | Staff tools | App ID |
+|-----|-------------------------------|-----|----------|-------------|--------|
+| **prod** | https://cbm-client-intake-prod-a9li7.ondigitalocean.app/ | production (`crm.clevelandbusinessmentors.org`) | false | yes | `aa1ddf69-f359-4b53-91ba-035cbed7bd53` |
+| **crm-test** (staging) | https://cbm-client-intake-svxs3.ondigitalocean.app/ | crm-test | false | yes | `509b4370-b9ca-42c7-b251-04d6820fe88e` |
+| **dev** (`lobster-app`) | https://lobster-app-w6h5m.ondigitalocean.app/ | none — dry-run | true | no | `b3b28113-6113-4ba7-ae99-efd5ea633fcd` |
+
+The **crm-test root** is the page with links to *both* the intake forms and the
+review/staff apps. The **dev app** (DO default name `lobster-app`, no spec in
+`.do/`) is dry-run only — submissions are logged, never written; no Postgres, no
+staff tools — for exercising the form UIs. Local dev = `localhost:8000`.
 
 **Prod is on v0.11.2** (`/healthz` confirmed, App `33dbecd`). The Google Workspace
 **mailbox creation** + **live status window** + admin **Email Setup** code (v0.11.0)
