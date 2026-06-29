@@ -42,3 +42,11 @@ def test_healthz_reports_environment():
     assert resp.status_code == 200
     # Default test config is dry-run, so the app reports the dev environment.
     assert resp.json()["environment"] == "dev"
+
+
+def test_index_page_shows_environment_badge():
+    # The server-rendered landing page (no shared footer.js) embeds the badge
+    # directly; default test config is dry-run => the DEV badge.
+    html = TestClient(app).get("/").text
+    assert 'role="status"' in html
+    assert "DEV · DRY-RUN" in html

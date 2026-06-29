@@ -4,6 +4,16 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.12.1] — 2026-06-29
+
+### Added
+- **Environment badge now also on the landing page.** The form index (`GET /`) is
+  server-rendered without the shared `footer.js`, so the 0.12.0 badge appeared on
+  the forms but not on the home page. The badge is now rendered server-side into
+  the index HTML (`_env_badge_html`, self-contained inline styles matching
+  `.cbm-env-badge`) using `settings.environment` — so the prod/test/dev home pages
+  each show their badge too.
+
 ## [0.12.0] — 2026-06-29
 
 ### Added

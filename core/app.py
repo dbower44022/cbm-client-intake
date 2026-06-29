@@ -163,7 +163,35 @@ def _make_handler(
     return handler
 
 
-def _index_html(forms: list[FormSpec], include_assignments: bool = False) -> str:
+# Corner-badge styling per environment, matching frontend/shared/wizard.css
+# (.cbm-env-badge--*). The index page is server-rendered without that stylesheet,
+# so the colors are inlined here to keep the landing page self-contained.
+_ENV_BADGE = {
+    "production": ("PRODUCTION", "#e7f6ec", "#1b6b38", "#b6e0c4"),
+    "test": ("TEST", "#fdf3d8", "#8a6100", "#f0dca0"),
+    "dev": ("DEV · DRY-RUN", "#fde4e2", "#a3271c", "#f4bcb6"),
+}
+
+
+def _env_badge_html(environment: str) -> str:
+    label, bg, fg, border = _ENV_BADGE.get(
+        environment, (environment.upper(), "#eceff3", "#44505f", "#d3dae2")
+    )
+    return (
+        f'<div role="status" title="Environment: {label}" style="position:fixed;'
+        "top:0.6rem;right:0.6rem;z-index:1000;padding:0.25rem 0.6rem;"
+        "border-radius:999px;font-size:0.72rem;font-weight:700;letter-spacing:0.04em;"
+        "line-height:1;white-space:nowrap;font-family:Roboto,Arial,sans-serif;"
+        f"background:{bg};color:{fg};border:1px solid {border};"
+        f'box-shadow:0 1px 3px rgba(0,0,0,0.18)">{label}</div>'
+    )
+
+
+def _index_html(
+    forms: list[FormSpec],
+    include_assignments: bool = False,
+    environment: str = "",
+) -> str:
     items = []
     for f in forms:
         if f.frontend_dir is not None:
@@ -189,10 +217,12 @@ def _index_html(forms: list[FormSpec], include_assignments: bool = False) -> str
         f"<footer><p>&copy; {year} Cleveland Business Mentors. "
         f"All rights reserved. &middot; v{__version__}</p></footer>"
     )
+    badge = _env_badge_html(environment) if environment else ""
     return (
         "<!DOCTYPE html><html><head><meta charset='utf-8'>"
         "<title>CBM Intake Forms</title></head><body>"
-        "<h1>CBM Intake Forms</h1><ul>" + "".join(items) + "</ul>" + staff + footer
+        + badge
+        + "<h1>CBM Intake Forms</h1><ul>" + "".join(items) + "</ul>" + staff + footer
         + "</body></html>"
     )
 
@@ -310,7 +340,11 @@ def create_app(
         # no-store so a freshly-deployed index is never served stale from a
         # browser/edge cache (the landing page is tiny — nothing to gain caching).
         return HTMLResponse(
-            _index_html(forms, include_assignments=settings.assignments_active),
+            _index_html(
+                forms,
+                include_assignments=settings.assignments_active,
+                environment=settings.environment,
+            ),
             headers={"Cache-Control": "no-store"},
         )
 
