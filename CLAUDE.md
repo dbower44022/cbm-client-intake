@@ -383,7 +383,8 @@ review/staff apps. The **dev app** (DO default name `lobster-app`, no spec in
 `.do/`) is dry-run only — submissions are logged, never written; no Postgres, no
 staff tools — for exercising the form UIs. Local dev = `localhost:8000`.
 
-**Prod is on v0.11.2** (`/healthz` confirmed, App `33dbecd`). The Google Workspace
+**Prod is on v0.12.1** (`/healthz` confirmed; all three apps deployed + verified
+2026-06-29 — see the per-form **Environment badge** in Architecture). The Google Workspace
 **mailbox creation** + **live status window** + admin **Email Setup** code (v0.11.0)
 IS deployed to prod but **gated OFF** (`GOOGLE_CREATE_MAILBOX` unset, no
 `APP_ENCRYPTION_KEY`) — a dormant no-op until enabled (see the `/mentoradmin`
@@ -707,6 +708,24 @@ A shared core hosts any number of per-form packages.
 The frontend is plain HTML/CSS/vanilla JS — **no build step**. The wizard posts
 to its own origin, so CORS is not in the form's request path; `ALLOWED_ORIGINS`
 only matters if a separate frontend origin is ever introduced.
+
+### Environment badge — which deploy am I looking at? (added 2026-06-29, v0.12.0–0.12.1)
+
+Every page shows a color-coded badge in the top-right corner naming the deploy
+target — **🟢 PRODUCTION / 🟡 TEST / 🔴 DEV · DRY-RUN** — so a tester or staffer can
+tell at a glance whether a form writes to the production CRM, crm-test, or nothing
+(dry-run). The label is **derived server-side**, not configured per deploy:
+`core/config.Settings.environment` returns `dev` when `espo_dry_run` is on, `test`
+when `espo_base_url` contains `crm-test`, else `production` (an explicit `ENV_LABEL`
+env var overrides the wording). It auto-resolves correctly for all three App
+Platform apps (dev/lobster, crm-test, prod) with **no overlay changes**. Surfaced on
+`/healthz` as `environment`. Rendered two ways:
+- **Forms** — the shared `frontend/shared/footer.js` reads `/healthz` and injects
+  the badge (styles `.cbm-env-badge--{prod,test,dev,neutral}` in `wizard.css`); one
+  change covers all five forms.
+- **Landing page** (`GET /`) — server-rendered without `footer.js`, so the badge is
+  emitted directly into the index HTML by `core/app.py:_env_badge_html`
+  (self-contained inline styles matching the CSS variants).
 
 ### Form dropdown lists — static, synced from the CRM on demand
 
