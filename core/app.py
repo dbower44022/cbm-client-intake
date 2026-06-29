@@ -277,6 +277,7 @@ def create_app(
         return {
             "status": "ok" if database != "error" else "degraded",
             "version": __version__,
+            "environment": settings.environment,
             "dryRun": settings.espo_dry_run,
             "forms": [f.slug for f in forms],
             "assignments": settings.assignments_active,

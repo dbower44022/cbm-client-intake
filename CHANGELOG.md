@@ -4,6 +4,20 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.12.0] — 2026-06-29
+
+### Added
+- **Environment badge on every form.** Each form now shows a color-coded badge in
+  the top-right corner indicating the deploy target — 🟢 `PRODUCTION`, 🟡 `TEST`,
+  🔴 `DEV · DRY-RUN` — so testers and staff can tell at a glance whether a form
+  writes to the production CRM, crm-test, or nothing (dry-run). The label is
+  derived server-side from the CRM target (`core/config.Settings.environment`:
+  dry-run ⇒ `dev`, a `crm-test` base URL ⇒ `test`, any other live CRM ⇒
+  `production`), surfaced on `/healthz` as `environment`, and rendered by the
+  shared `frontend/shared/footer.js` (one change covers all five forms; no
+  per-form HTML edits, no build step). Auto-resolves correctly for all three App
+  Platform apps with no overlay changes; set `ENV_LABEL` to override the wording.
+
 ## [0.11.2] — 2026-06-26
 
 ### Fixed

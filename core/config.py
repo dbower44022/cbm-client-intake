@@ -18,6 +18,11 @@ class Settings(BaseSettings):
     allowed_origins: str = "http://localhost:8000"
     request_timeout_seconds: int = 20
 
+    # Environment label shown as a corner badge on every form (via /healthz ->
+    # shared/footer.js). Empty => auto-derived from the CRM target below
+    # ("production" / "test" / "dev"); set explicitly to override the wording.
+    env_label: str = ""
+
     # --- V2 Phase 0: durable submission store (prds/v2) ---
     # When set, every submission is captured to Postgres before any CRM work and
     # idempotency is enforced durably. Empty => the app keeps its V1 in-memory
@@ -127,6 +132,23 @@ class Settings(BaseSettings):
     def store_enabled(self) -> bool:
         """Durable submission store is active only when a database is configured."""
         return bool(self.database_url)
+
+    @property
+    def environment(self) -> str:
+        """Canonical deploy label for the form badge.
+
+        Honors an explicit ``env_label`` override; otherwise derives from the
+        CRM target: a dry-run app is ``"dev"``, a ``crm-test`` base URL is
+        ``"test"``, and any other live CRM is ``"production"``. This resolves
+        correctly for all three App Platform apps without per-deploy config.
+        """
+        if self.env_label:
+            return self.env_label
+        if self.espo_dry_run:
+            return "dev"
+        if "crm-test" in self.espo_base_url.lower():
+            return "test"
+        return "production"
 
 
 @lru_cache

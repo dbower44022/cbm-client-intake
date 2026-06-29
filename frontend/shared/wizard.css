@@ -79,6 +79,23 @@ body { margin: 0; padding: 2rem 0 4rem; }
 /* Policy links inside the consent checkbox (set by /shared/legal-links.js) */
 .cbm-policy-link { color: var(--cbm-blue); text-decoration: underline; }
 .cbm-policy-link:hover { color: var(--cbm-blue-dark); }
+
+/* Environment badge (top-right corner; injected by /shared/footer.js from
+   /healthz). Color signals the deploy target: green=prod, amber=test, red=dev. */
+.cbm-env-badge {
+  position: fixed; top: 0.6rem; right: 0.6rem; z-index: 1000;
+  padding: 0.25rem 0.6rem; border-radius: 999px;
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em;
+  line-height: 1; white-space: nowrap; pointer-events: none;
+  border: 1px solid transparent; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+}
+.cbm-env-badge--prod    { background: #e7f6ec; color: #1b6b38; border-color: #b6e0c4; }
+.cbm-env-badge--test    { background: #fdf3d8; color: #8a6100; border-color: #f0dca0; }
+.cbm-env-badge--dev     { background: #fde4e2; color: #a3271c; border-color: #f4bcb6; }
+.cbm-env-badge--neutral { background: #eceff3; color: #44505f; border-color: #d3dae2; }
+@media (max-width: 600px) {
+  .cbm-env-badge { top: 0.4rem; right: 0.4rem; font-size: 0.66rem; padding: 0.2rem 0.5rem; }
+}
 .review dt { font-weight: 600; color: var(--cbm-slate-700); }
 .review dd { margin: 0; color: var(--cbm-slate-900); }
 
