@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 from typing import Literal, Optional
 
-from pydantic import EmailStr, Field, field_validator
+from pydantic import EmailStr, Field, field_validator, model_validator
 
 from core.forms import BaseSubmission
 
@@ -46,8 +46,16 @@ class PartnerApplication(BaseSubmission):
     # (CPartnerProfile.partnershipValue), like the volunteer form's checkgrids.
     partnership_value: list[str] = Field(default_factory=list)
     how_did_you_hear: Optional[str] = Field(default=None, max_length=255)
+    # Single consent checkbox: Code of Conduct + Terms of Use + Privacy Policy.
+    terms_accepted: bool = False
 
     # submission_token + company_url (honeypot) are inherited from BaseSubmission.
+
+    @model_validator(mode="after")
+    def _require_terms(self) -> "PartnerApplication":
+        if not self.terms_accepted:
+            raise ValueError("terms_accepted must be true")
+        return self
 
     @field_validator("business_website", mode="after")
     @classmethod

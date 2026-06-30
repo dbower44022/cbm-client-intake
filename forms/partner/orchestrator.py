@@ -49,10 +49,17 @@ PARTNER_PROFILE = "CPartnerProfile"
 A_ACCOUNT_TYPE = "cAccountType"   # multiEnum on Account — REQUIRED
 C_CONTACT_TYPE = "cContactType"   # multiEnum on Contact
 C_HOW_HEARD = "cHowDidYouHear"    # enum on Contact
+# The single consent checkbox sets all three Contact bools.
+C_TERMS_ACCEPTED = "cTermsOfUseAccepted"       # bool on Contact
+C_PRIVACY_ACCEPTED = "cPrivacyPolicyAccepted"  # bool on Contact
+C_CODE_OF_CONDUCT = "cCodeOfConductAccepted"   # bool on Contact
 
 # Contact fields eligible for null-fill on a repeat submission (match key, FK,
 # and discriminator excluded so they are never back-written).
-_CONTACT_FILL_KEYS = ("firstName", "lastName", "phoneNumber", C_HOW_HEARD)
+_CONTACT_FILL_KEYS = (
+    "firstName", "lastName", "phoneNumber", C_HOW_HEARD,
+    C_TERMS_ACCEPTED, C_PRIVACY_ACCEPTED, C_CODE_OF_CONDUCT,
+)
 
 # --- CPartnerProfile attributes / links ---
 P_COMPANY_LINK = "partnerCompanyId"          # belongsTo Account (FK)
@@ -104,6 +111,9 @@ async def _find_or_create_contact(
         "emailAddress": str(sub.email),
         "accountId": account_id,
         C_CONTACT_TYPE: [CONTACT_TYPE_PARTNER],
+        C_TERMS_ACCEPTED: bool(sub.terms_accepted),
+        C_PRIVACY_ACCEPTED: bool(sub.terms_accepted),
+        C_CODE_OF_CONDUCT: bool(sub.terms_accepted),
     }
     phone = e164_or_none(sub.phone)  # omit an implausible phone rather than 400
     if phone:

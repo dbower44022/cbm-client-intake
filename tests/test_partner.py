@@ -60,6 +60,7 @@ def _application(**overrides) -> PartnerApplication:
         partnership_type="Referral Partner",
         partnership_value=["Co-Hosted Events", "Link on Website"],
         how_did_you_hear="Partner Referral",
+        terms_accepted=True,
         submission_token="tok-partner1",
     )
     base.update(overrides)
@@ -105,6 +106,10 @@ async def test_creates_three_linked_records():
     assert contact["cContactType"] == ["Partner"]
     assert contact["accountId"] == ids["accountId"]
     assert contact["cHowDidYouHear"] == "Partner Referral"  # Pass A
+    # Single consent checkbox -> all three Contact bools.
+    assert contact["cTermsOfUseAccepted"] is True
+    assert contact["cPrivacyPolicyAccepted"] is True
+    assert contact["cCodeOfConductAccepted"] is True
 
     _, profile = client.creates[2]
     assert profile["partnerCompanyId"] == ids["accountId"]
@@ -170,3 +175,8 @@ def test_company_is_required():
 def test_invalid_partnership_type_rejected():
     with pytest.raises(ValidationError):
         _application(partnership_type="Not A Real Type")
+
+
+def test_consent_required():
+    with pytest.raises(ValidationError):
+        _application(terms_accepted=False)

@@ -235,12 +235,13 @@ and `CMentorProfile.mentorCodeAccepted` — the CRM team built them 2026-06-30).
 - ✅ **volunteer** — the three Contact bools + `CMentorProfile.mentorCodeAccepted`
   (live-verified crm-test; works on prod).
 
-### Pass D — Form changes (Bucket 2, REMAINING) 📝
+### Pass D — Form changes (Bucket 2) — ✅ DONE (v0.16.0, 2026-06-30)
 
-- **partner** + **sponsor** collect **no** consent yet → add the **single** consent
-  checkbox to `index.html` + collect in `app.js` + accept in `schemas.py` (required,
-  submit-gating), then write the three Contact bools (same as client-intake). This is
-  a public-facing form change — the only remaining consent work.
+**partner + sponsor** now collect the single required consent checkbox (added to
+`index.html` + `app.js` + `schemas.py` with a submit-gating `model_validator` +
+`legal-links.js` for the policy links), and write the three Contact bools. This
+**completes the consent model across all four forms.** Live-verified on crm-test;
+checkbox + linkified policies confirmed rendering in the browser.
 
 ---
 

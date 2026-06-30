@@ -59,6 +59,7 @@ def _application(**overrides) -> SponsorApplication:
         email="sam@generous.com",
         message="We'd love to sponsor a cohort this fall.",
         how_did_you_hear="CBM Email",
+        terms_accepted=True,
         submission_token="tok-sponsor1",
     )
     base.update(overrides)
@@ -81,6 +82,10 @@ async def test_creates_three_linked_records():
     assert contact["cContactType"] == ["Sponsor"]
     assert contact["accountId"] == ids["accountId"]
     assert contact["cHowDidYouHear"] == "CBM Email"  # Pass A
+    # Single consent checkbox -> all three Contact bools.
+    assert contact["cTermsOfUseAccepted"] is True
+    assert contact["cPrivacyPolicyAccepted"] is True
+    assert contact["cCodeOfConductAccepted"] is True
 
     _, profile = client.creates[2]
     assert profile["sponsorCompanyId"] == ids["accountId"]
@@ -126,3 +131,8 @@ def test_message_is_required():
 def test_company_is_required():
     with pytest.raises(ValidationError):
         _application(company="")
+
+
+def test_consent_required():
+    with pytest.raises(ValidationError):
+        _application(terms_accepted=False)

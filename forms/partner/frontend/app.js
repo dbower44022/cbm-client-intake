@@ -73,6 +73,7 @@
       partnership_type: strOrNull("partnership_type"),
       partnership_value: checked("partnership_value"),
       how_did_you_hear: strOrNull("how_did_you_hear"),
+      terms_accepted: document.getElementById("terms_accepted").checked,
     };
   }
 

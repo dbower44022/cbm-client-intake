@@ -44,6 +44,7 @@
       phone: strOrNull("phone"),
       message: val("message"),
       how_did_you_hear: strOrNull("how_did_you_hear"),
+      terms_accepted: document.getElementById("terms_accepted").checked,
     };
   }
 

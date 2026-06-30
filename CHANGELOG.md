@@ -4,6 +4,19 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.16.0] — 2026-06-30
+
+### Added (field-mapping — consent on partner & sponsor)
+- **Partner & sponsor forms now collect consent.** Both gained the same single
+  required consent checkbox ("I have read and agree to the Code of Conduct, Terms of
+  Use, and Privacy Policy", with the policies linkified via `shared/legal-links.js`)
+  on their final step. On submit it sets the three Contact bools
+  `cTermsOfUseAccepted` + `cPrivacyPolicyAccepted` + `cCodeOfConductAccepted` (like
+  client-intake). Submission is gated on it (schema `model_validator`). This
+  **completes the consent model across all four forms.** Live-verified on crm-test
+  (both forms wrote all three bools) and the checkbox + policy links confirmed
+  rendering in the browser. 209 tests green (2 new).
+
 ## [0.15.0] — 2026-06-30
 
 ### Added (field-mapping — consent capture)

@@ -383,14 +383,15 @@ review/staff apps. The **dev app** (DO default name `lobster-app`, no spec in
 `.do/`) is dry-run only — submissions are logged, never written; no Postgres, no
 staff tools — for exercising the form UIs. Local dev = `localhost:8000`.
 
-**Field-mapping completion — consent capture DONE for client-intake + volunteer
-(v0.15.0, 2026-06-30).** The single consent checkbox now records all three
-acceptances: Contact `cTermsOfUseAccepted` + `cPrivacyPolicyAccepted` +
-`cCodeOfConductAccepted` (both forms) + `CMentorProfile.mentorCodeAccepted`
-(volunteer). All four bools exist on both CRMs (CRM team built them 2026-06-30), so
-it works on prod. Live-verified crm-test. **Remaining consent work:** add the single
-checkbox to **partner + sponsor** (they collect none yet — a public-facing form
-change). **Also note: the Pass A prod-parity gap is now CLOSED** — the CRM team added
+**Field-mapping completion — consent capture DONE across ALL FOUR forms (v0.16.0,
+2026-06-30).** The single consent checkbox records all three acceptances: Contact
+`cTermsOfUseAccepted` + `cPrivacyPolicyAccepted` + `cCodeOfConductAccepted` on every
+form + `CMentorProfile.mentorCodeAccepted` (volunteer). client-intake & volunteer
+already had the checkbox; **partner & sponsor got it added (v0.16.0)** — a public form
+change (HTML + app.js + schema submit-gate + `legal-links.js`). All four bools exist
+on both CRMs (CRM team built them 2026-06-30). Live-verified crm-test; checkbox +
+linkified policies confirmed in-browser. **Also note: the Pass A prod-parity gap is
+now CLOSED** — the CRM team added
 all 7 missing fields to prod (2026-06-30, verified), so v0.13.0 Pass A now stores on
 production too.
 
