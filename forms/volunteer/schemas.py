@@ -14,7 +14,7 @@ from pydantic import BaseModel, EmailStr, Field, model_validator
 from core.forms import BaseSubmission
 
 PhoneType = Literal["Mobile", "Home", "Work"]
-ContactPreference = Literal["Email", "Phone", "Text", "No Preference"]
+ContactPreference = Literal["Email", "Phone", "Text"]
 EmploymentStatus = Literal["Yes, Full-time", "Yes, Part-time", "No"]
 
 # ~5 MB file ≈ 6.8 MB base64; cap a little above that.

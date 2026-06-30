@@ -4,6 +4,31 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.13.0] — 2026-06-30
+
+### Added (field-mapping completion — Pass A)
+- **More collected fields now land on the CRM.** Previously-dropped inputs are
+  written to the fields the business intends (see `field-mapping-completion-plan.md`):
+  - **client-intake** → Contact `cHowDidYouHear` / `cMarketingOptIn` /
+    `cTermsOfUseAccepted`; CClientProfile `numberOfEmployees` and `formationDate`
+    (the form's year → `YYYY-01-01`).
+  - **volunteer** → Contact `cPreferredContactMethod` (from "how should we contact
+    you") and `cEmploymentStatus` (from "are you employed").
+  - **partner** + **sponsor** → Contact `cHowDidYouHear`.
+  The how-did-you-hear / contact-method / employment dropdowns are now **CRM-backed**
+  (synced from the live Contact enums via `scripts/sync_form_options.py`) so a value
+  outside the enum is dropped by the sanitizer rather than 400-ing the create.
+- **Repeat submitters backfill empty fields without clobbering.** New
+  `core/crm_upsert.find_create_or_fill`: a Contact matched by email is reused and
+  only its **null/empty** fields are filled — a value the CRM already holds (or a
+  staffer curated) is never overwritten. Replaces the old "matched → reuse as-is".
+  Verified live against crm-test (a second submission backfilled a null phone while
+  leaving the existing how-heard untouched).
+
+All four orchestrators share one `EnumSanitizer` across the Contact + profile
+steps. 207 tests green (8 new). Live-verified end-to-end on crm-test; ZZTEST-PASSA
+records left for UI cleanup (ids in the commit/chat).
+
 ## [0.12.1] — 2026-06-29
 
 ### Added

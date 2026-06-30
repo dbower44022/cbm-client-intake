@@ -118,7 +118,22 @@ Legend: ✅ ready (field exists, orchestrator edit only) · 🟢 already correct
 
 ## Work, grouped into passes
 
-### Pass A — Ready orchestrator edits (fields already exist)
+### Pass A — Ready orchestrator edits (fields already exist) — ✅ DONE (v0.13.0, 2026-06-30)
+
+**Shipped + live-verified on crm-test.** All targets below now write; the Contact
+null-fill (`core/crm_upsert.find_create_or_fill`) reuses a matched Contact and
+backfills only empty fields. The how-heard / contact-method / employment dropdowns
+are CRM-backed via the options sync. Live check (ZZTEST-PASSA, **clean up in the
+EspoCRM UI**): Contact `6a435376193680811` + Account `6a4353756c4bfcac3` +
+CClientProfile `6a435376582ac897c`/`6a4353785b42f39f9` + CEngagement
+`6a435376b4324c603`/`6a435378cf76f063f`; volunteer Contact `6a43537a24b1f051b` +
+CMentorProfile `6a43537ad30d6e3ed`; partner Contact `6a43537c766baa2f5` + Account
+`6a43537bd1134a980` + CPartnerProfile `6a43537d2c1259c36`. **Prod parity still to
+verify** before this helps prod (the fill-null path needs the Contact edit grant —
+confirmed on crm-test).
+
+Original scope (all implemented):
+
 
 No CRM build, no form change. All enum/multiEnum writes go through the existing
 `EnumSanitizer` (`san.enum`/`san.multi`) so a drifted option is dropped, not fatal.

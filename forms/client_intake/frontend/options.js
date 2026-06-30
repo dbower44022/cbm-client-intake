@@ -25,10 +25,19 @@ window.CBM_OPTIONS = {
 
   notificationPreference: ["Email", "Text Message"],
 
+  // >>> crm-enum key=howDidYouHear field=Contact.cHowDidYouHear — generated; do not hand-edit between the markers.
   howDidYouHear: [
-    "Partner Referral", "Social Media", "CBM Email", "Workshop or Event",
-    "Search Engine", "News or Media", "Personal Referral", "Other",
+    "CBM Client or Volunteer",
+    "CBM Email",
+    "News or Media",
+    "Online Search",
+    "Partner Referral",
+    "Personal Referral",
+    "Social Media",
+    "Workshop or Event",
+    "Other",
   ],
+  // <<< crm-enum
 
   // NOTE: this is the NAICS sector taxonomy. The orchestrator sanitizes it against
   // Account.cIndustrySector, so if the CRM enum uses a different taxonomy the synced

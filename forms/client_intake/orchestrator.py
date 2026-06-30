@@ -37,6 +37,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 
+from core.crm_upsert import find_create_or_fill
 from core.enum_filter import EnumSanitizer
 from core.espo import EspoApi
 from core.phone import e164_or_none
@@ -57,7 +58,18 @@ A_COMPANY_TYPE = "cCompanyType"      # multiEnum on Account (legacy, now optiona
 A_BUSINESS_STAGE = "cBusinessStage"  # enum
 A_INDUSTRY_SECTOR = "cIndustrySector"  # enum
 C_CONTACT_TYPE = "cContactType"      # multiEnum on Contact
+C_HOW_HEARD = "cHowDidYouHear"       # enum on Contact
+C_MARKETING_OPT_IN = "cMarketingOptIn"     # bool on Contact
+C_TERMS_ACCEPTED = "cTermsOfUseAccepted"   # bool on Contact
 ENGAGEMENT_STATUS = "engagementStatus"
+
+# Contact fields eligible for null-fill on a repeat submission (the match key
+# emailAddress, the accountId FK, and the cContactType discriminator are excluded
+# so they are never back-written over a curated record).
+_CONTACT_FILL_KEYS = (
+    "firstName", "lastName", "addressPostalCode", "phoneNumber",
+    C_HOW_HEARD, C_MARKETING_OPT_IN, C_TERMS_ACCEPTED,
+)
 
 # --- Link names ---
 ENGAGEMENT_CONTACTS = "engagementContacts"  # CEngagement hasMany Contact
@@ -113,14 +125,13 @@ async def _find_or_create_account(
 
 
 async def _find_or_create_contact(
-    sub: IntakeSubmission, client: EspoApi, account_id: str
+    sub: IntakeSubmission, client: EspoApi, account_id: str, san: EnumSanitizer
 ) -> str:
-    """Find-or-create the Contact by email (Technical Design §4.2)."""
-    existing = await client.find_one(CONTACT, "emailAddress", str(sub.email))
-    if existing:
-        log.info("matched existing Contact %s for %s", existing["id"], sub.email)
-        return existing["id"]
+    """Find-or-create the Contact by email (Technical Design §4.2).
 
+    On a repeat email the matched Contact is reused and any *empty* field is
+    backfilled — never overwriting curated data (see ``find_create_or_fill``).
+    """
     payload = {
         "firstName": sub.first_name,
         "lastName": sub.last_name,
@@ -128,12 +139,23 @@ async def _find_or_create_contact(
         "addressPostalCode": sub.zip_code,
         "accountId": account_id,
         C_CONTACT_TYPE: [CLIENT],
+        C_MARKETING_OPT_IN: bool(sub.marketing_consent),
+        C_TERMS_ACCEPTED: bool(sub.terms_accepted),
     }
     phone = e164_or_none(sub.phone)  # omit an implausible phone rather than 400
     if phone:
         payload["phoneNumber"] = phone
-    created = await client.create(CONTACT, payload)
-    return created["id"]
+    if sub.how_did_you_hear:
+        how_heard = await san.enum(CONTACT, C_HOW_HEARD, sub.how_did_you_hear)
+        if how_heard:
+            payload[C_HOW_HEARD] = how_heard
+    contact_id, action = await find_create_or_fill(
+        client, CONTACT,
+        match_attr="emailAddress", match_value=str(sub.email),
+        create_payload=payload, fill_keys=_CONTACT_FILL_KEYS,
+    )
+    log.info("Contact %s (%s) for %s", contact_id, action, sub.email)
+    return contact_id
 
 
 async def _create_client_profile(
@@ -146,6 +168,11 @@ async def _create_client_profile(
         "clientcontactId": contact_id,   # belongsTo Contact
         "linkedCompanyId": account_id,   # hasOne Account
     }
+    if sub.number_of_employees is not None:
+        payload["numberOfEmployees"] = sub.number_of_employees
+    if sub.year_formed is not None:
+        # formationDate is a date; the form collects a year -> Jan 1 of that year.
+        payload["formationDate"] = f"{sub.year_formed:04d}-01-01"
     created = await client.create(CLIENT_PROFILE, payload)
     return created["id"]
 
@@ -185,7 +212,7 @@ async def submit_intake(sub: IntakeSubmission, client: EspoApi) -> dict[str, str
     """
     san = EnumSanitizer(client)
     account_id = await _find_or_create_account(sub, client, san)
-    contact_id = await _find_or_create_contact(sub, client, account_id)
+    contact_id = await _find_or_create_contact(sub, client, account_id, san)
     client_profile_id = await _create_client_profile(sub, client, account_id, contact_id)
     engagement_id = await _create_engagement(sub, client, client_profile_id, contact_id, san)
     # Also add the applicant to the Engagement Contacts (hasMany) link, alongside

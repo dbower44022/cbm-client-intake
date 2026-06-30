@@ -34,8 +34,17 @@ window.PARTNER_OPTIONS = {
   ],
   // <<< crm-enum
 
+  // >>> crm-enum key=howDidYouHear field=Contact.cHowDidYouHear — generated; do not hand-edit between the markers.
   howDidYouHear: [
-    "Friend or relative", "Newspaper", "Online search", "Radio", "SBA",
-    "CBM client or volunteer", "Social media", "TV", "Workshop/Event", "Other",
+    "CBM Client or Volunteer",
+    "CBM Email",
+    "News or Media",
+    "Online Search",
+    "Partner Referral",
+    "Personal Referral",
+    "Social Media",
+    "Workshop or Event",
+    "Other",
   ],
+  // <<< crm-enum
 };

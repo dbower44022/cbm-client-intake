@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import logging
 
+from core.crm_upsert import find_create_or_fill
 from core.enum_filter import EnumSanitizer
 from core.espo import EspoApi
 from core.phone import e164_or_none
@@ -42,6 +43,16 @@ MENTOR_PROFILE = "CMentorProfile"
 C_CONTACT_TYPE = "cContactType"       # multiEnum
 C_LINKEDIN = "cLinkedInProfile"       # url
 C_PREFERRED_NAME = "cPreferredName"   # varchar
+C_CONTACT_METHOD = "cPreferredContactMethod"  # enum
+C_EMPLOYMENT = "cEmploymentStatus"    # enum
+
+# Contact fields eligible for null-fill on a repeat submission (the match key,
+# any FK, and the cContactType discriminator are excluded so they are never
+# back-written over a curated record).
+_CONTACT_FILL_KEYS = (
+    "firstName", "lastName", "middleName", C_PREFERRED_NAME, "addressStreet",
+    "addressPostalCode", "phoneNumber", C_LINKEDIN, C_CONTACT_METHOD, C_EMPLOYMENT,
+)
 
 # --- CMentorProfile attributes ---
 P_CONTACT_LINK = "contactRecordId"    # belongsTo Contact (link FK)
@@ -65,17 +76,14 @@ MENTOR_STATUS_NEW = "Candidate"
 MENTOR_TYPE_DEFAULT = "Mentor"
 
 
-async def _find_or_create_mentor_contact(sub: VolunteerApplication, client: EspoApi) -> str:
+async def _find_or_create_mentor_contact(
+    sub: VolunteerApplication, client: EspoApi, san: EnumSanitizer
+) -> str:
     """Find-or-create the mentor's Contact by email and return its id.
 
-    A matched Contact is reused without overwrite (the create-only API user
-    cannot update it anyway); the mentor profile still links to it.
+    On a repeat email the matched Contact is reused and any *empty* field is
+    backfilled — never overwriting curated data (see ``find_create_or_fill``).
     """
-    existing = await client.find_one(CONTACT, "emailAddress", str(sub.email))
-    if existing:
-        log.info("matched existing Contact %s for %s", existing["id"], sub.email)
-        return existing["id"]
-
     payload: dict = {
         "firstName": sub.first_name,
         "lastName": sub.last_name,
@@ -94,13 +102,26 @@ async def _find_or_create_mentor_contact(sub: VolunteerApplication, client: Espo
         payload["addressStreet"] = sub.street
     if sub.linkedin_profile:
         payload[C_LINKEDIN] = sub.linkedin_profile
+    if sub.contact_preference:
+        method = await san.enum(CONTACT, C_CONTACT_METHOD, sub.contact_preference)
+        if method:
+            payload[C_CONTACT_METHOD] = method
+    if sub.currently_employed:
+        employment = await san.enum(CONTACT, C_EMPLOYMENT, sub.currently_employed)
+        if employment:
+            payload[C_EMPLOYMENT] = employment
 
-    created = await client.create(CONTACT, payload)
-    return created["id"]
+    contact_id, action = await find_create_or_fill(
+        client, CONTACT,
+        match_attr="emailAddress", match_value=str(sub.email),
+        create_payload=payload, fill_keys=_CONTACT_FILL_KEYS,
+    )
+    log.info("Contact %s (%s) for %s", contact_id, action, sub.email)
+    return contact_id
 
 
 async def _create_mentor_profile(
-    sub: VolunteerApplication, client: EspoApi, contact_id: str
+    sub: VolunteerApplication, client: EspoApi, contact_id: str, san: EnumSanitizer
 ) -> str:
     """Create the CMentorProfile holding the mentor-specific data.
 
@@ -108,9 +129,9 @@ async def _create_mentor_profile(
     unrecognized value (e.g. a drifted industry/language option) is dropped rather
     than failing the whole create, so the mentor record — and the applicant's
     contact details — are always captured. Anything dropped is noted on the record
-    (``description``) for staff follow-up.
+    (``description``) for staff follow-up. The shared ``san`` spans the whole
+    delivery (Contact + profile) so all dropped values aggregate into one note.
     """
-    san = EnumSanitizer(client)
     focus_areas = await san.multi(MENTOR_PROFILE, P_FOCUS_AREAS, sub.areas_of_expertise)
 
     payload: dict = {
@@ -135,7 +156,11 @@ async def _create_mentor_profile(
         if industry:
             payload[P_INDUSTRY] = industry
     if sub.how_did_you_hear:
-        payload[P_HOW_HEARD] = sub.how_did_you_hear
+        # Sanitized: the form list tracks Contact.cHowDidYouHear, whose options may
+        # differ from this profile enum — drop a mismatch rather than 400 the create.
+        how_heard = await san.enum(MENTOR_PROFILE, P_HOW_HEARD, sub.how_did_you_hear)
+        if how_heard:
+            payload[P_HOW_HEARD] = how_heard
     note = san.note()
     if note:
         payload[P_DESCRIPTION] = note
@@ -161,6 +186,7 @@ async def submit_application(sub: VolunteerApplication, client: EspoApi) -> dict
     A resume, if provided, is uploaded as an Attachment and linked on the
     profile's ``resumeUpload`` file field (see ``_create_mentor_profile``).
     """
-    contact_id = await _find_or_create_mentor_contact(sub, client)
-    profile_id = await _create_mentor_profile(sub, client, contact_id)
+    san = EnumSanitizer(client)
+    contact_id = await _find_or_create_mentor_contact(sub, client, san)
+    profile_id = await _create_mentor_profile(sub, client, contact_id, san)
     return {"contactId": contact_id, "mentorProfileId": profile_id}

@@ -383,6 +383,19 @@ review/staff apps. The **dev app** (DO default name `lobster-app`, no spec in
 `.do/`) is dry-run only — submissions are logged, never written; no Postgres, no
 staff tools — for exercising the form UIs. Local dev = `localhost:8000`.
 
+**Field-mapping completion — Pass A DONE (v0.13.0, 2026-06-30, live-verified on
+crm-test).** Previously-dropped form inputs now write to their intended CRM
+fields: client-intake → Contact `cHowDidYouHear`/`cMarketingOptIn`/
+`cTermsOfUseAccepted` + CClientProfile `numberOfEmployees`/`formationDate` (year →
+`YYYY-01-01`); volunteer → Contact `cPreferredContactMethod`/`cEmploymentStatus`;
+partner+sponsor → Contact `cHowDidYouHear`. Repeat submitters **null-fill** the
+Contact (`core/crm_upsert.find_create_or_fill` — reuse + backfill empties, never
+overwrite; needs the Contact edit grant, confirmed on crm-test). How-heard/contact-
+method/employment dropdowns are now CRM-backed (Contact enums, via the options
+sync). Full plan + remaining passes (B retargets, C CRM-field builds, D/E consent):
+`field-mapping-completion-plan.md`. **Prod parity (fields + edit grant) still to
+verify.** ZZTEST-PASSA cleanup pending in crm-test UI.
+
 **Prod is on v0.12.1** (`/healthz` confirmed; all three apps deployed + verified
 2026-06-29 — see the per-form **Environment badge** in Architecture). The Google Workspace
 **mailbox creation** + **live status window** + admin **Email Setup** code (v0.11.0)

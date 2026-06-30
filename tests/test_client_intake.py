@@ -19,6 +19,7 @@ class CapturingClient:
 
     def __init__(self, existing_contact=None, existing_account=None, enum_options=None):
         self.creates: list[tuple[str, dict]] = []
+        self.updates: list[tuple[str, str, dict]] = []
         self.relates: list[tuple[str, str, str, str]] = []
         self._existing_contact = existing_contact
         self._existing_account = existing_account
@@ -31,10 +32,16 @@ class CapturingClient:
         self.creates.append((entity, payload))
         return {"id": f"{entity}-{self._n}", **payload}
 
+    async def update(self, entity, record_id, payload):
+        self.updates.append((entity, record_id, payload))
+        return {"id": record_id, **payload}
+
     async def metadata_enum_options(self, entity, field):
         return self._enum_options.get((entity, field))
 
-    async def find_one(self, entity, attribute, value):
+    async def find_one(self, entity, attribute, value, select="id"):
+        # Matched records report only an id, so every other field reads as empty
+        # (null) -> the orchestrator's null-fill path updates them.
         if entity == CONTACT and self._existing_contact:
             return {"id": self._existing_contact}
         if entity == ACCOUNT and self._existing_account:
@@ -135,6 +142,38 @@ async def test_creates_four_linked_records():
     # Fields not deployed on the instance must not be sent.
     assert "termsAccepted" not in eng_payload
     assert "meetingPreference" not in eng_payload
+
+
+async def test_new_contact_and_client_profile_fields_written():
+    """Pass A mappings: how-heard / marketing / terms land on the Contact, and
+    year-formed (as a date) + employee count land on the CClientProfile."""
+    client = CapturingClient()
+    await submit_intake(
+        _submission(how_did_you_hear="Online Search", year_formed=2024,
+                    number_of_employees=3, marketing_consent=True, terms_accepted=True),
+        client,
+    )
+    _, contact_payload = client.creates[1]
+    assert contact_payload["cHowDidYouHear"] == "Online Search"
+    assert contact_payload["cMarketingOptIn"] is True
+    assert contact_payload["cTermsOfUseAccepted"] is True
+
+    _, profile_payload = client.creates[2]
+    assert profile_payload["numberOfEmployees"] == 3
+    assert profile_payload["formationDate"] == "2024-01-01"  # year -> Jan 1
+
+
+async def test_repeat_contact_backfills_only_null_fields():
+    """A matched Contact is reused (not re-created) and the null-fill update
+    carries the new fields without a second Contact create."""
+    client = CapturingClient(existing_contact="c-existing")
+    await submit_intake(_submission(how_did_you_hear="Online Search"), client)
+    # No Contact create — it was matched.
+    assert CONTACT not in [e for e, _ in client.creates]
+    # The fill-nulls update targets the matched Contact with the new fields.
+    contact_updates = [u for u in client.updates if u[0] == CONTACT]
+    assert contact_updates and contact_updates[0][1] == "c-existing"
+    assert "cHowDidYouHear" in contact_updates[0][2]
 
 
 async def test_matched_contact_is_reused_not_created():

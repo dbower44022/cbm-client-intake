@@ -20,6 +20,7 @@ class CapturingClient:
 
     def __init__(self, existing_contact=None, existing_account=None, enum_options=None):
         self.creates: list[tuple[str, dict]] = []
+        self.updates: list[tuple[str, str, dict]] = []
         self.relates: list[tuple[str, str, str, str]] = []
         self._existing_contact = existing_contact
         self._existing_account = existing_account
@@ -31,6 +32,10 @@ class CapturingClient:
         self._n += 1
         self.creates.append((entity, payload))
         return {"id": f"{entity}-{self._n}", **payload}
+
+    async def update(self, entity, record_id, payload):
+        self.updates.append((entity, record_id, payload))
+        return {"id": record_id, **payload}
 
     async def metadata_enum_options(self, entity, field):
         return self._enum_options.get((entity, field))
@@ -54,6 +59,7 @@ def _application(**overrides) -> PartnerApplication:
         email="pat@acmepartners.com",
         partnership_type="Referral Partner",
         partnership_value=["Co-Hosted Events", "Link on Website"],
+        how_did_you_hear="Partner Referral",
         submission_token="tok-partner1",
     )
     base.update(overrides)
@@ -98,6 +104,7 @@ async def test_creates_three_linked_records():
     _, contact = client.creates[1]
     assert contact["cContactType"] == ["Partner"]
     assert contact["accountId"] == ids["accountId"]
+    assert contact["cHowDidYouHear"] == "Partner Referral"  # Pass A
 
     _, profile = client.creates[2]
     assert profile["partnerCompanyId"] == ids["accountId"]

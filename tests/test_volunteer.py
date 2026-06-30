@@ -16,6 +16,7 @@ from forms.volunteer.schemas import VolunteerApplication
 class CapturingClient:
     def __init__(self, existing_contact=None, enum_options=None):
         self.creates: list[tuple[str, dict]] = []
+        self.updates: list[tuple[str, str, dict]] = []
         self.uploads: list[dict] = []
         self._existing_contact = existing_contact
         # {field: [valid options]}; a field absent here returns None => "keep all".
@@ -30,7 +31,11 @@ class CapturingClient:
         self.creates.append((entity, payload))
         return {"id": f"{entity}-{self._n}", **payload}
 
-    async def find_one(self, entity, attribute, value):
+    async def update(self, entity, record_id, payload):
+        self.updates.append((entity, record_id, payload))
+        return {"id": record_id, **payload}
+
+    async def find_one(self, entity, attribute, value, select="id"):
         if entity == CONTACT and self._existing_contact:
             return {"id": self._existing_contact}
         return None
@@ -84,6 +89,18 @@ async def test_creates_contact_and_mentor_profile():
     assert profile["mentoringFocusAreas"] == ["Marketing", "Sales"]
     # Multi-select industry stored into a single enum -> first value only.
     assert profile["industrySector"] == "Information Technology"
+
+
+async def test_contact_method_and_employment_written_to_contact():
+    """Pass A: 'how should we contact you' + employment status land on the
+    Contact as cPreferredContactMethod / cEmploymentStatus."""
+    client = CapturingClient()
+    await submit_application(
+        _application(contact_preference="Email", currently_employed="No"), client
+    )
+    _, contact = client.creates[0]
+    assert contact["cPreferredContactMethod"] == "Email"
+    assert contact["cEmploymentStatus"] == "No"
 
 
 async def test_invalid_enum_values_dropped_record_still_created():

@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import logging
 
+from core.crm_upsert import find_create_or_fill
 from core.enum_filter import EnumSanitizer
 from core.espo import EspoApi
 from core.phone import e164_or_none
@@ -47,6 +48,11 @@ PARTNER_PROFILE = "CPartnerProfile"
 # --- Discriminator attributes (reconciled against the deployed instance) ---
 A_ACCOUNT_TYPE = "cAccountType"   # multiEnum on Account — REQUIRED
 C_CONTACT_TYPE = "cContactType"   # multiEnum on Contact
+C_HOW_HEARD = "cHowDidYouHear"    # enum on Contact
+
+# Contact fields eligible for null-fill on a repeat submission (match key, FK,
+# and discriminator excluded so they are never back-written).
+_CONTACT_FILL_KEYS = ("firstName", "lastName", "phoneNumber", C_HOW_HEARD)
 
 # --- CPartnerProfile attributes / links ---
 P_COMPANY_LINK = "partnerCompanyId"          # belongsTo Account (FK)
@@ -85,14 +91,13 @@ async def _find_or_create_account(sub: PartnerApplication, client: EspoApi) -> s
 
 
 async def _find_or_create_contact(
-    sub: PartnerApplication, client: EspoApi, account_id: str
+    sub: PartnerApplication, client: EspoApi, account_id: str, san: EnumSanitizer
 ) -> str:
-    """Find-or-create the applicant Contact by email and return its id."""
-    existing = await client.find_one(CONTACT, "emailAddress", str(sub.email))
-    if existing:
-        log.info("matched existing Contact %s for %s", existing["id"], sub.email)
-        return existing["id"]
+    """Find-or-create the applicant Contact by email and return its id.
 
+    On a repeat email the matched Contact is reused and any *empty* field is
+    backfilled — never overwriting curated data (see ``find_create_or_fill``).
+    """
     payload: dict = {
         "firstName": sub.first_name,
         "lastName": sub.last_name,
@@ -103,20 +108,30 @@ async def _find_or_create_contact(
     phone = e164_or_none(sub.phone)  # omit an implausible phone rather than 400
     if phone:
         payload["phoneNumber"] = phone
-    created = await client.create(CONTACT, payload)
-    return created["id"]
+    if sub.how_did_you_hear:
+        how_heard = await san.enum(CONTACT, C_HOW_HEARD, sub.how_did_you_hear)
+        if how_heard:
+            payload[C_HOW_HEARD] = how_heard
+    contact_id, action = await find_create_or_fill(
+        client, CONTACT,
+        match_attr="emailAddress", match_value=str(sub.email),
+        create_payload=payload, fill_keys=_CONTACT_FILL_KEYS,
+    )
+    log.info("Contact %s (%s) for %s", contact_id, action, sub.email)
+    return contact_id
 
 
 async def _create_partner_profile(
-    sub: PartnerApplication, client: EspoApi, account_id: str, contact_id: str
+    sub: PartnerApplication, client: EspoApi, account_id: str, contact_id: str,
+    san: EnumSanitizer,
 ) -> str:
     """Create the CPartnerProfile hub linked to the Account and Contact.
 
     User-supplied enums (partnershipType/Value) are sanitized against the live CRM
     options — a drifted value is dropped (not fatal) and noted on ``description``
-    — so the partner record + contact info are always captured.
+    — so the partner record + contact info are always captured. The shared ``san``
+    spans the whole delivery (Contact + profile).
     """
-    san = EnumSanitizer(client)
     payload: dict = {
         "name": sub.company,
         P_COMPANY_LINK: account_id,
@@ -144,9 +159,10 @@ async def submit_partner(sub: PartnerApplication, client: EspoApi) -> dict[str, 
     Each id is captured as its step succeeds; on a later-step failure the caller
     routes to the failed-submission store and already-created records are kept.
     """
+    san = EnumSanitizer(client)
     account_id = await _find_or_create_account(sub, client)
-    contact_id = await _find_or_create_contact(sub, client, account_id)
-    profile_id = await _create_partner_profile(sub, client, account_id, contact_id)
+    contact_id = await _find_or_create_contact(sub, client, account_id, san)
+    profile_id = await _create_partner_profile(sub, client, account_id, contact_id, san)
     # Add the applicant to the profile's Contacts (hasMany), alongside the
     # primaryPartnercontact set on the profile itself.
     await client.relate(PARTNER_PROFILE, profile_id, PARTNER_CONTACTS, contact_id)
