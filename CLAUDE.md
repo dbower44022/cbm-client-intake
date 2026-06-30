@@ -383,6 +383,13 @@ review/staff apps. The **dev app** (DO default name `lobster-app`, no spec in
 `.do/`) is dry-run only — submissions are logged, never written; no Postgres, no
 staff tools — for exercising the form UIs. Local dev = `localhost:8000`.
 
+**Field-mapping — areas-of-expertise retargeted (v0.21.0, 2026-06-30).** Volunteer
+"Areas of Expertise" now writes to `CMentorProfile.areaOfExpertise` (31 *skill* values,
+identical both CRMs) instead of `mentoringFocusAreas` (42 industries) — a clean split
+now that "Industry Experience" maps to `industryExperience`. `mentoringFocusAreas` is
+no longer set by the volunteer form (it stays the CEngagement client-request field).
+Revises the earlier Pass B "keep mentoringFocusAreas" call. Live-verified.
+
 **Field-mapping effort COMPLETE (v0.18.0, 2026-06-30).** Meeting + notification
 preference now write to `Contact.cMeetingPreference` / `cNotificationPreference`
 (options reconciled to identical, typo-free sets on both CRMs; forms re-synced;

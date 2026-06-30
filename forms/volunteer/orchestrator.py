@@ -65,7 +65,7 @@ P_STATUS = "mentorStatus"             # enum
 P_TYPE = "mentorType"                 # enum
 P_WHY = "mentoringWhyInterested"      # wysiwyg
 P_BIO = "mentorProfessionalBio"       # wysiwyg
-P_FOCUS_AREAS = "mentoringFocusAreas"  # multiEnum
+P_AREA_OF_EXPERTISE = "areaOfExpertise"  # multiEnum (the mentor's skill areas)
 P_LANGUAGES = "fluentLanguages"       # multiEnum
 P_INDUSTRY_EXP = "industryExperience"  # multiEnum (all selections)
 P_HOW_HEARD = "howDidYouHearAboutCBM"  # varchar
@@ -141,7 +141,7 @@ async def _create_mentor_profile(
     (``description``) for staff follow-up. The shared ``san`` spans the whole
     delivery (Contact + profile) so all dropped values aggregate into one note.
     """
-    focus_areas = await san.multi(MENTOR_PROFILE, P_FOCUS_AREAS, sub.areas_of_expertise)
+    expertise = await san.multi(MENTOR_PROFILE, P_AREA_OF_EXPERTISE, sub.areas_of_expertise)
 
     payload: dict = {
         "name": f"{sub.first_name} {sub.last_name}",
@@ -149,7 +149,7 @@ async def _create_mentor_profile(
         P_STATUS: MENTOR_STATUS_NEW,
         P_TYPE: MENTOR_TYPE_DEFAULT,
         P_WHY: sub.why_volunteer,
-        P_FOCUS_AREAS: focus_areas,
+        P_AREA_OF_EXPERTISE: expertise,
         P_FELONY: sub.felony_conviction,
         P_TERMS: sub.terms_accepted,
         P_MENTOR_CODE: bool(sub.terms_accepted),

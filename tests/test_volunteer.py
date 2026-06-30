@@ -58,7 +58,7 @@ def _application(**overrides) -> VolunteerApplication:
         zip_code="44113",
         phone="216-555-0144",
         why_volunteer="I want to give back to small businesses.",
-        areas_of_expertise=["Marketing", "Sales"],
+        areas_of_expertise=["Marketing & Branding", "Sales & Business Development"],
         industry_experience=["Technology & Software", "Manufacturing & Industrial"],
         fluent_languages=["English"],
         currently_employed="No",
@@ -91,7 +91,7 @@ async def test_creates_contact_and_mentor_profile():
     assert profile["mentorType"] == "Mentor"
     assert profile["termsAccepted"] is True
     assert profile["mentorCodeAccepted"] is True  # mentor-specific code-of-conduct
-    assert profile["mentoringFocusAreas"] == ["Marketing", "Sales"]
+    assert profile["areaOfExpertise"] == ["Marketing & Branding", "Sales & Business Development"]
     # Multi-select industry stored as a multiEnum -> all selections kept.
     assert profile["industryExperience"] == ["Technology & Software", "Manufacturing & Industrial"]
 
@@ -114,7 +114,7 @@ async def test_invalid_enum_values_dropped_record_still_created():
     client = CapturingClient(enum_options={
         "industryExperience": ["Technology & Software", "Healthcare & Medical"],
         "fluentLanguages": ["English", "Spanish"],
-        # mentoringFocusAreas absent => not validated (kept as-is).
+        # areaOfExpertise absent => not validated (kept as-is).
     })
     sub = _application(
         industry_experience=["Utilities"],          # not in the live enum

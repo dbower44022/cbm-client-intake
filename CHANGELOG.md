@@ -4,6 +4,20 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.21.0] — 2026-06-30
+
+### Changed (field-mapping — mentor areas of expertise)
+- **Volunteer "Areas of Expertise" now maps to the skills field.** It previously
+  wrote 42 *industry* values to `CMentorProfile.mentoringFocusAreas` — redundant with
+  the "Industry Experience" question (which maps to `industryExperience`). It now
+  writes to the purpose-named **`CMentorProfile.areaOfExpertise`** (31 *skill* values:
+  Business Strategy, Digital Marketing, Leadership, Sales, Strategic Planning, …),
+  giving a clean split: Industry Experience = industries, Areas of Expertise = skills.
+  The form dropdown is re-synced to that field; `areaOfExpertise` is identical on both
+  CRMs (31 values). `mentoringFocusAreas` is no longer set by the volunteer form (it
+  remains the client-engagement field on CEngagement). Live-verified on crm-test.
+  (Revises the earlier Pass B decision to keep it on `mentoringFocusAreas`.)
+
 ## [0.20.0] — 2026-06-30
 
 ### Changed (form keyboard UX)

@@ -187,12 +187,15 @@ not the same list under two names:
 - `CPartnerProfile.partnershipValue` = 7 partner-offering options;
   `cBMValueProvided` = 6 differently-worded options.
 
-**Decision (Doug):** the current fields are canonical — do **not** switch.
-- Volunteer `areas_of_expertise` stays on **`mentoringFocusAreas`** (the crm-test
-  42-value list is the canonical one for both crm-test + prod + the form).
+**Decision (Doug):**
+- ~~Volunteer `areas_of_expertise` stays on `mentoringFocusAreas`~~ — **REVISED
+  2026-06-30 (v0.21.0): switched to `CMentorProfile.areaOfExpertise`** (the skills
+  field, 31 values, identical on both CRMs). With "Industry Experience" now mapping to
+  `industryExperience`, "Areas of Expertise" → the skills field gives a clean split
+  (industries vs skills) and matches the field's name. `mentoringFocusAreas` is no
+  longer set by the volunteer form. Live-verified.
 - Partner `partnership_value` stays on **`partnershipValue`** (its 7 options are the
-  canonical enum for both crm-test + prod + the form).
-The mapping's `areaOfExpertise` / `cBMValueProvided` targets are **not** used.
+  canonical enum for both crm-test + prod + the form). `cBMValueProvided` unused.
 
 **No code change needed** — this is exactly what ships today. Verified 2026-06-30:
 both fields' option sets are **identical on crm-test and prod**, and both form
