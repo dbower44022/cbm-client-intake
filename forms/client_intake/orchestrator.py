@@ -60,7 +60,11 @@ A_INDUSTRY_SECTOR = "cIndustrySector"  # enum
 C_CONTACT_TYPE = "cContactType"      # multiEnum on Contact
 C_HOW_HEARD = "cHowDidYouHear"       # enum on Contact
 C_MARKETING_OPT_IN = "cMarketingOptIn"     # bool on Contact
-C_TERMS_ACCEPTED = "cTermsOfUseAccepted"   # bool on Contact
+# The single consent checkbox ("...agree to the Code of Conduct, Terms of Use, and
+# Privacy Policy") sets all three Contact bools.
+C_TERMS_ACCEPTED = "cTermsOfUseAccepted"      # bool on Contact
+C_PRIVACY_ACCEPTED = "cPrivacyPolicyAccepted"  # bool on Contact
+C_CODE_OF_CONDUCT = "cCodeOfConductAccepted"   # bool on Contact
 ENGAGEMENT_STATUS = "engagementStatus"
 
 # Contact fields eligible for null-fill on a repeat submission (the match key
@@ -68,7 +72,8 @@ ENGAGEMENT_STATUS = "engagementStatus"
 # so they are never back-written over a curated record).
 _CONTACT_FILL_KEYS = (
     "firstName", "lastName", "addressPostalCode", "phoneNumber",
-    C_HOW_HEARD, C_MARKETING_OPT_IN, C_TERMS_ACCEPTED,
+    C_HOW_HEARD, C_MARKETING_OPT_IN, C_TERMS_ACCEPTED, C_PRIVACY_ACCEPTED,
+    C_CODE_OF_CONDUCT,
 )
 
 # --- Link names ---
@@ -141,6 +146,8 @@ async def _find_or_create_contact(
         C_CONTACT_TYPE: [CLIENT],
         C_MARKETING_OPT_IN: bool(sub.marketing_consent),
         C_TERMS_ACCEPTED: bool(sub.terms_accepted),
+        C_PRIVACY_ACCEPTED: bool(sub.terms_accepted),
+        C_CODE_OF_CONDUCT: bool(sub.terms_accepted),
     }
     phone = e164_or_none(sub.phone)  # omit an implausible phone rather than 400
     if phone:

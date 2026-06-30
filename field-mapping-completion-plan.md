@@ -222,27 +222,25 @@ Cannot be written until they exist in the CRM (name + type + enum options):
 Each new enum also needs its options reflected into the relevant form via the
 options.js sync.
 
-### Pass D — Form changes (input not collected today) 📝
+### Pass E — Consent model — ✅ DECIDED + client-intake/volunteer DONE (v0.15.0, 2026-06-30)
 
-- **partner** + **sponsor** forms collect **no** consent at all → add the consent
-  checkbox(es) to `index.html` + collect in `app.js` + accept in `schemas.py`
-  (with the submit-gating validator) per the consent model chosen below.
-- **client-intake** + **volunteer**: if the consent model is "three separate
-  checkboxes," split the single `terms_accepted` into three.
+**Decision (Doug): ONE checkbox sets all three.** The forms' single "I have read and
+agree to the Code of Conduct, Terms of Use, and Privacy Policy" checkbox sets all
+three Contact bools on submit. All four target bools now exist on **both** CRMs
+(`Contact.cTermsOfUseAccepted`, `cPrivacyPolicyAccepted`, `cCodeOfConductAccepted`,
+and `CMentorProfile.mentorCodeAccepted` — the CRM team built them 2026-06-30).
 
-### Pass E — Consent model 📝 (the key open decision)
+- ✅ **client-intake** — Contact `cTermsOfUseAccepted` + `cPrivacyPolicyAccepted` +
+  `cCodeOfConductAccepted` (live-verified crm-test; works on prod).
+- ✅ **volunteer** — the three Contact bools + `CMentorProfile.mentorCodeAccepted`
+  (live-verified crm-test; works on prod).
 
-Forms today: client-intake & volunteer collect ONE `terms_accepted`; partner &
-sponsor collect none. Targets: `Contact.cTermsOfUseAccepted` ✅,
-`Contact.cPrivacyPolicyAccepted` ✅, code-of-conduct (Contact 🏗️ / mentor
-`mentorCodeAccepted` ✅). Two options:
-- **One checkbox sets all** — single "I accept the Code of Conduct, Terms &
-  Privacy Policy" per form; on submit set every applicable CRM bool true. Add that
-  one checkbox to partner/sponsor.
-- **Three separate checkboxes** — three required boxes per form, each → its own
-  bool.
-Either way, the Contact code-of-conduct bool (Pass C) must exist before that part
-can be written; mentor uses `mentorCodeAccepted` which already exists.
+### Pass D — Form changes (Bucket 2, REMAINING) 📝
+
+- **partner** + **sponsor** collect **no** consent yet → add the **single** consent
+  checkbox to `index.html` + collect in `app.js` + accept in `schemas.py` (required,
+  submit-gating), then write the three Contact bools (same as client-intake). This is
+  a public-facing form change — the only remaining consent work.
 
 ---
 

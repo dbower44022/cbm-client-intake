@@ -45,6 +45,10 @@ C_LINKEDIN = "cLinkedInProfile"       # url
 C_PREFERRED_NAME = "cPreferredName"   # varchar
 C_CONTACT_METHOD = "cPreferredContactMethod"  # enum
 C_EMPLOYMENT = "cEmploymentStatus"    # enum
+# The single consent checkbox sets all three Contact bools.
+C_TERMS_ACCEPTED = "cTermsOfUseAccepted"       # bool on Contact
+C_PRIVACY_ACCEPTED = "cPrivacyPolicyAccepted"  # bool on Contact
+C_CODE_OF_CONDUCT = "cCodeOfConductAccepted"   # bool on Contact
 
 # Contact fields eligible for null-fill on a repeat submission (the match key,
 # any FK, and the cContactType discriminator are excluded so they are never
@@ -52,6 +56,7 @@ C_EMPLOYMENT = "cEmploymentStatus"    # enum
 _CONTACT_FILL_KEYS = (
     "firstName", "lastName", "middleName", C_PREFERRED_NAME, "addressStreet",
     "addressPostalCode", "phoneNumber", C_LINKEDIN, C_CONTACT_METHOD, C_EMPLOYMENT,
+    C_TERMS_ACCEPTED, C_PRIVACY_ACCEPTED, C_CODE_OF_CONDUCT,
 )
 
 # --- CMentorProfile attributes ---
@@ -66,6 +71,7 @@ P_INDUSTRY_EXP = "industryExperience"  # multiEnum (all selections)
 P_HOW_HEARD = "howDidYouHearAboutCBM"  # varchar
 P_FELONY = "felonyConfiction"         # bool (note: CRM field name is misspelled)
 P_TERMS = "termsAccepted"             # bool
+P_MENTOR_CODE = "mentorCodeAccepted"  # bool — the mentor-specific code-of-conduct
 P_DESCRIPTION = "description"          # text — used to note any dropped values
 P_RESUME_ID = "resumeUploadId"        # file field FK (-> Attachment)
 RESUME_FIELD = "resumeUpload"         # the file field the attachment binds to
@@ -90,6 +96,9 @@ async def _find_or_create_mentor_contact(
         "emailAddress": str(sub.email),
         "addressPostalCode": sub.zip_code,
         C_CONTACT_TYPE: [CONTACT_TYPE_MENTOR],
+        C_TERMS_ACCEPTED: bool(sub.terms_accepted),
+        C_PRIVACY_ACCEPTED: bool(sub.terms_accepted),
+        C_CODE_OF_CONDUCT: bool(sub.terms_accepted),
     }
     phone = e164_or_none(sub.phone)  # omit an implausible phone rather than 400
     if phone:
@@ -143,6 +152,7 @@ async def _create_mentor_profile(
         P_FOCUS_AREAS: focus_areas,
         P_FELONY: sub.felony_conviction,
         P_TERMS: sub.terms_accepted,
+        P_MENTOR_CODE: bool(sub.terms_accepted),
     }
     if sub.work_experience:
         payload[P_BIO] = sub.work_experience

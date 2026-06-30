@@ -4,6 +4,19 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.15.0] — 2026-06-30
+
+### Added (field-mapping — consent capture)
+- **The single consent checkbox now records all three acceptances in the CRM.** The
+  forms' one checkbox ("I have read and agree to the Code of Conduct, Terms of Use,
+  and Privacy Policy") now sets all three Contact bools — `cTermsOfUseAccepted`,
+  `cPrivacyPolicyAccepted`, `cCodeOfConductAccepted` — on **client-intake** and
+  **volunteer**, plus `CMentorProfile.mentorCodeAccepted` (the mentor-specific
+  code-of-conduct) for volunteers. All four bools exist on both CRMs (crm-test +
+  prod, verified), so this works on production immediately. Live-verified on crm-test.
+  (Consent capture for **partner & sponsor** is pending — those forms need the
+  checkbox added; tracked as the next step.)
+
 ## [0.14.0] — 2026-06-30
 
 ### Changed (field-mapping — mentor industry experience)

@@ -156,7 +156,10 @@ async def test_new_contact_and_client_profile_fields_written():
     _, contact_payload = client.creates[1]
     assert contact_payload["cHowDidYouHear"] == "Online Search"
     assert contact_payload["cMarketingOptIn"] is True
+    # The single consent checkbox sets all three Contact bools.
     assert contact_payload["cTermsOfUseAccepted"] is True
+    assert contact_payload["cPrivacyPolicyAccepted"] is True
+    assert contact_payload["cCodeOfConductAccepted"] is True
 
     _, profile_payload = client.creates[2]
     assert profile_payload["numberOfEmployees"] == 3

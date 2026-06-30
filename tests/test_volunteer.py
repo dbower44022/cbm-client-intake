@@ -79,6 +79,10 @@ async def test_creates_contact_and_mentor_profile():
 
     _, contact = client.creates[0]
     assert contact["cContactType"] == [CONTACT_TYPE_MENTOR]  # array, not string
+    # The single consent checkbox sets all three Contact bools.
+    assert contact["cTermsOfUseAccepted"] is True
+    assert contact["cPrivacyPolicyAccepted"] is True
+    assert contact["cCodeOfConductAccepted"] is True
 
     _, profile = client.creates[1]
     assert profile["name"] == "Grace Hopper"
@@ -86,6 +90,7 @@ async def test_creates_contact_and_mentor_profile():
     assert profile["mentorStatus"] == "Candidate"
     assert profile["mentorType"] == "Mentor"
     assert profile["termsAccepted"] is True
+    assert profile["mentorCodeAccepted"] is True  # mentor-specific code-of-conduct
     assert profile["mentoringFocusAreas"] == ["Marketing", "Sales"]
     # Multi-select industry stored as a multiEnum -> all selections kept.
     assert profile["industryExperience"] == ["Technology & Software", "Manufacturing & Industrial"]

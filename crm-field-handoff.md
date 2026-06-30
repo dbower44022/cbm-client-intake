@@ -15,12 +15,11 @@ Status verified **2026-06-30** against crm-test + prod.
 
 ---
 
-## Part 1 — Prod parity: build on PROD to match crm-test (unblocks v0.13.0 / Pass A)
+## Part 1 — Prod parity — ✅ DONE (2026-06-30)
 
-These already exist on **crm-test** and are live there; **production is missing
-them**. Build on the prod CRM (`crm.clevelandbusinessmentors.org`) with the **exact
-same names, types, and enum options** as crm-test. Until then, Pass A stores nothing
-on prod (no error — just no-ops).
+**All 7 fields below were added to the prod CRM 2026-06-30 (verified), plus the
+consent fields in Part 2/3. Pass A (v0.13.0) now stores on production.** The
+original spec is kept for reference.
 
 | Entity | Field (API name) | Type | Enum options (verbatim) | Captures |
 |--------|------------------|------|-------------------------|----------|
