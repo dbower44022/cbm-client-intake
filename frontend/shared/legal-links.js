@@ -46,6 +46,9 @@
       a.target = "_blank";
       a.rel = "noopener noreferrer";
       a.className = "cbm-policy-link";
+      // Keep Tab moving field-to-field: the policy links are reference material,
+      // not data entry, so they stay clickable but out of the tab order.
+      a.tabIndex = -1;
       frag.appendChild(a);
       idx = best.pos + best.p.text.length;
     }

@@ -62,6 +62,15 @@ window.CBMWizard = (function () {
       return false;
     }
 
+    // The first data-entry control of a step (text/select/textarea/checkbox),
+    // skipping the hidden honeypot and anything pulled out of the tab order.
+    function firstField(step) {
+      return step.querySelector(
+        'input:not([type=hidden]):not([disabled]):not([tabindex="-1"]),' +
+          " select:not([disabled]), textarea:not([disabled])"
+      );
+    }
+
     function showStep(n) {
       current = n;
       steps.forEach((s) => (s.hidden = Number(s.dataset.step) !== n));
@@ -76,6 +85,11 @@ window.CBMWizard = (function () {
       formError.hidden = true;
       if (opts.onShowStep) opts.onShowStep(n);
       window.scrollTo({ top: 0, behavior: "smooth" });
+      // Put the cursor in the step's first data-entry field (on initial load and
+      // when moving between steps). preventScroll so it doesn't fight scrollTo.
+      const active = steps.find((s) => Number(s.dataset.step) === n);
+      const field = active && firstField(active);
+      if (field) field.focus({ preventScroll: true });
     }
 
     nextBtn.addEventListener("click", () => {

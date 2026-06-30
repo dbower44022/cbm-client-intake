@@ -150,6 +150,13 @@
     formError.hidden = true;
     if (n === TOTAL) buildReview();
     window.scrollTo({ top: 0, behavior: "smooth" });
+    // Put the cursor in the step's first data-entry field (skipping the hidden
+    // honeypot / anything out of the tab order). preventScroll vs the scrollTo.
+    const field = steps[n - 1].querySelector(
+      'input:not([type=hidden]):not([disabled]):not([tabindex="-1"]),' +
+        " select:not([disabled]), textarea:not([disabled])"
+    );
+    if (field) field.focus({ preventScroll: true });
   }
 
   function validateStep(n) {

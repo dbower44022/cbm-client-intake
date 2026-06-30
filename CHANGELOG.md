@@ -4,6 +4,19 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.20.0] — 2026-06-30
+
+### Changed (form keyboard UX)
+- **Cursor starts in the first field, and Tab moves field-to-field.** Every form now
+  focuses the first data-entry control of the active step on load (and when moving
+  between steps). The consent policy links (Code of Conduct / Terms / Privacy) are
+  pulled out of the tab order (`tabindex=-1`, still mouse-clickable) so tabbing flows
+  between data fields. Labels were never tabbable; the nav buttons (Back/Next/Submit)
+  stay tabbable so keyboard users can still reach them. Implemented in the shared
+  `wizard.js` (covers volunteer/info-request/partner/sponsor) and in
+  `client_intake/app.js` (it has its own wizard), plus `legal-links.js`. Verified
+  in-browser across all five forms.
+
 ## [0.19.0] — 2026-06-30
 
 ### Changed
