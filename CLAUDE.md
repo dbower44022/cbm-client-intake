@@ -393,8 +393,15 @@ Contact (`core/crm_upsert.find_create_or_fill` — reuse + backfill empties, nev
 overwrite; needs the Contact edit grant, confirmed on crm-test). How-heard/contact-
 method/employment dropdowns are now CRM-backed (Contact enums, via the options
 sync). Full plan + remaining passes (B retargets, C CRM-field builds, D/E consent):
-`field-mapping-completion-plan.md`. **Prod parity (fields + edit grant) still to
-verify.** ZZTEST-PASSA cleanup pending in crm-test UI.
+`field-mapping-completion-plan.md`. **Prod parity (checked 2026-06-30): the Pass A
+fields are NOT on the prod CRM yet** (all the new Contact fields + CClientProfile
+`numberOfEmployees` are MISSING; only `formationDate` exists). v0.13.0 is **safe on
+prod regardless** — the writes are no-ops until the fields exist (find_one tolerates
+the unknown select, the EnumSanitizer fails open, EspoCRM ignores unknown
+attributes), and will start storing automatically once the CRM team builds the 7
+fields on prod (MN-INTAKE hand-off; then re-sync options against prod). ZZTEST-PASSA
+cleanup pending in crm-test UI; ZZTEST-PARITY check left no prod records (write was
+sandbox-blocked).
 
 **Prod is on v0.12.1** (`/healthz` confirmed; all three apps deployed + verified
 2026-06-29 — see the per-form **Environment badge** in Architecture). The Google Workspace

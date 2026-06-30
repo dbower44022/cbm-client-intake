@@ -128,9 +128,23 @@ EspoCRM UI**): Contact `6a435376193680811` + Account `6a4353756c4bfcac3` +
 CClientProfile `6a435376582ac897c`/`6a4353785b42f39f9` + CEngagement
 `6a435376b4324c603`/`6a435378cf76f063f`; volunteer Contact `6a43537a24b1f051b` +
 CMentorProfile `6a43537ad30d6e3ed`; partner Contact `6a43537c766baa2f5` + Account
-`6a43537bd1134a980` + CPartnerProfile `6a43537d2c1259c36`. **Prod parity still to
-verify** before this helps prod (the fill-null path needs the Contact edit grant —
-confirmed on crm-test).
+`6a43537bd1134a980` + CPartnerProfile `6a43537d2c1259c36`.
+
+**PROD PARITY — checked 2026-06-30 (read-only): the Pass A fields are NOT on prod
+yet.** Prod (`crm.clevelandbusinessmentors.org`) is MISSING `Contact.cHowDidYouHear`,
+`cMarketingOptIn`, `cTermsOfUseAccepted`, `cPreferredContactMethod`,
+`cEmploymentStatus`, `cPrivacyPolicyAccepted`, and `CClientProfile.numberOfEmployees`;
+only `CClientProfile.formationDate` exists. **v0.13.0 is SAFE on prod regardless** —
+the writes are no-ops until the fields exist: `find_one` with an unknown-field
+`select` returns 200 (verified on prod), the `EnumSanitizer` fails open on the
+missing-field metadata lookup, and EspoCRM ignores unknown create/update attributes
+(corroborated by the prod `submitterEmail`/`assignedUserId` precedents). So Pass A
+stores these fields on crm-test today and will start storing them on prod the moment
+the CRM team adds them — **no app change needed then.** **MN-INTAKE hand-off:** build
+those 7 fields on the prod CRM (same names/types/enum options as crm-test), then
+re-run `scripts/sync_form_options.py` against prod to confirm the dropdown values
+match. The Contact edit grant (needed by the fill-null path) is present on prod via
+`CustomAppAPIRole` per CLAUDE.md.
 
 Original scope (all implemented):
 
