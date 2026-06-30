@@ -44,9 +44,10 @@ def test_healthz_reports_environment():
     assert resp.json()["environment"] == "dev"
 
 
-def test_index_page_shows_environment_badge():
-    # The server-rendered landing page (no shared footer.js) embeds the badge
-    # directly; default test config is dry-run => the DEV badge.
+def test_index_page_footer_shows_environment_name():
+    # The server-rendered landing page appends the environment name after the
+    # version in the footer; default test config is dry-run => "(Dev)".
+    from core.version import __version__
+
     html = TestClient(app).get("/").text
-    assert 'role="status"' in html
-    assert "DEV · DRY-RUN" in html
+    assert f"v{__version__} (Dev)" in html

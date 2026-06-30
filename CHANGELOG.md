@@ -4,6 +4,15 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.19.0] — 2026-06-30
+
+### Changed
+- **Environment indicator moved from the corner badge into the footer.** Instead of
+  the colored top-right tag, the deploy environment now appears as the server name
+  right after the version, e.g. `v0.19.0 (Production)` / `(Test)` / `(Dev)`. Applies
+  to both the forms (shared `footer.js`) and the server-rendered landing page; the
+  `.cbm-env-badge` styles and the index badge HTML were removed.
+
 ## [0.18.0] — 2026-06-30
 
 ### Added (field-mapping — meeting preference; mapping effort COMPLETE)

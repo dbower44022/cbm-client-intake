@@ -763,23 +763,23 @@ The frontend is plain HTML/CSS/vanilla JS — **no build step**. The wizard post
 to its own origin, so CORS is not in the form's request path; `ALLOWED_ORIGINS`
 only matters if a separate frontend origin is ever introduced.
 
-### Environment badge — which deploy am I looking at? (added 2026-06-29, v0.12.0–0.12.1)
+### Environment indicator — which deploy am I looking at? (added v0.12.0; moved to footer v0.19.0)
 
-Every page shows a color-coded badge in the top-right corner naming the deploy
-target — **🟢 PRODUCTION / 🟡 TEST / 🔴 DEV · DRY-RUN** — so a tester or staffer can
-tell at a glance whether a form writes to the production CRM, crm-test, or nothing
-(dry-run). The label is **derived server-side**, not configured per deploy:
-`core/config.Settings.environment` returns `dev` when `espo_dry_run` is on, `test`
-when `espo_base_url` contains `crm-test`, else `production` (an explicit `ENV_LABEL`
-env var overrides the wording). It auto-resolves correctly for all three App
-Platform apps (dev/lobster, crm-test, prod) with **no overlay changes**. Surfaced on
-`/healthz` as `environment`. Rendered two ways:
-- **Forms** — the shared `frontend/shared/footer.js` reads `/healthz` and injects
-  the badge (styles `.cbm-env-badge--{prod,test,dev,neutral}` in `wizard.css`); one
-  change covers all five forms.
-- **Landing page** (`GET /`) — server-rendered without `footer.js`, so the badge is
-  emitted directly into the index HTML by `core/app.py:_env_badge_html`
-  (self-contained inline styles matching the CSS variants).
+Every page names the deploy target in the **footer, right after the version** —
+`v0.19.0 (Production)` / `(Test)` / `(Dev)` — so a tester or staffer can tell whether
+a form writes to the production CRM, crm-test, or nothing (dry-run). The label is
+**derived server-side**, not configured per deploy: `core/config.Settings.environment`
+returns `dev` when `espo_dry_run` is on, `test` when `espo_base_url` contains
+`crm-test`, else `production` (an explicit `ENV_LABEL` env var overrides the wording).
+It auto-resolves for all three App Platform apps (dev/lobster, crm-test, prod) with
+**no overlay changes**. Surfaced on `/healthz` as `environment`. Rendered two ways:
+- **Forms** — the shared `frontend/shared/footer.js` reads `/healthz` and appends the
+  env name to the `[data-cbm-version]` text; one change covers all five forms.
+- **Landing page** (`GET /`) — server-rendered, so `core/app.py:_env_name` appends it
+  to the footer version string directly.
+
+(Until v0.19.0 this was a color-coded corner badge; replaced by the inline footer
+label per request. The old `.cbm-env-badge` CSS + `_env_badge_html` were removed.)
 
 ### Form dropdown lists — static, synced from the CRM on demand
 
