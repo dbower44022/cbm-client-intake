@@ -59,6 +59,7 @@ A_BUSINESS_STAGE = "cBusinessStage"  # enum
 A_INDUSTRY_SECTOR = "cIndustrySector"  # enum
 C_CONTACT_TYPE = "cContactType"      # multiEnum on Contact
 C_HOW_HEARD = "cHowDidYouHear"       # enum on Contact
+C_NOTIFICATION_PREF = "cNotificationPreference"  # enum on Contact
 C_MARKETING_OPT_IN = "cMarketingOptIn"     # bool on Contact
 # The single consent checkbox ("...agree to the Code of Conduct, Terms of Use, and
 # Privacy Policy") sets all three Contact bools.
@@ -72,8 +73,8 @@ ENGAGEMENT_STATUS = "engagementStatus"
 # so they are never back-written over a curated record).
 _CONTACT_FILL_KEYS = (
     "firstName", "lastName", "addressPostalCode", "phoneNumber",
-    C_HOW_HEARD, C_MARKETING_OPT_IN, C_TERMS_ACCEPTED, C_PRIVACY_ACCEPTED,
-    C_CODE_OF_CONDUCT,
+    C_HOW_HEARD, C_NOTIFICATION_PREF, C_MARKETING_OPT_IN, C_TERMS_ACCEPTED,
+    C_PRIVACY_ACCEPTED, C_CODE_OF_CONDUCT,
 )
 
 # --- Link names ---
@@ -156,6 +157,10 @@ async def _find_or_create_contact(
         how_heard = await san.enum(CONTACT, C_HOW_HEARD, sub.how_did_you_hear)
         if how_heard:
             payload[C_HOW_HEARD] = how_heard
+    if sub.notification_preference:
+        notif = await san.enum(CONTACT, C_NOTIFICATION_PREF, sub.notification_preference)
+        if notif:
+            payload[C_NOTIFICATION_PREF] = notif
     contact_id, action = await find_create_or_fill(
         client, CONTACT,
         match_attr="emailAddress", match_value=str(sub.email),

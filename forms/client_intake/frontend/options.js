@@ -23,7 +23,12 @@ window.CBM_OPTIONS = {
 
   meetingPreference: ["No Preference", "Video", "Phone", "Email", "In Person"],
 
-  notificationPreference: ["Email", "Text Message"],
+  // >>> crm-enum key=notificationPreference field=Contact.cNotificationPreference — generated; do not hand-edit between the markers.
+  notificationPreference: [
+    "Email",
+    "Text",
+  ],
+  // <<< crm-enum
 
   // >>> crm-enum key=howDidYouHear field=Contact.cHowDidYouHear — generated; do not hand-edit between the markers.
   howDidYouHear: [

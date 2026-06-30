@@ -22,7 +22,7 @@ BusinessStage = Literal[
     "Pre-Startup", "Startup", "Early Stage", "Growth Stage", "Established"
 ]
 MeetingPreference = Literal["No Preference", "Video", "Phone", "Email", "In Person"]
-NotificationPreference = Literal["Email", "Text Message"]
+NotificationPreference = Literal["Email", "Text"]  # matches Contact.cNotificationPreference
 
 
 class IntakeSubmission(BaseSubmission):

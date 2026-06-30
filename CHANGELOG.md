@@ -4,6 +4,18 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.17.0] — 2026-06-30
+
+### Added (field-mapping — notification preference)
+- **Client-intake "Notification preference" now stores.** The CRM team added
+  `Contact.cNotificationPreference` (enum: `Email`/`Text`) on both CRMs, so the form
+  value now writes there (was collected but dropped). The form dropdown is CRM-backed
+  and re-synced (`Text Message` → `Text` to match the enum). Live-verified on crm-test;
+  works on prod (same field/options). **Meeting preference** (`cMeetingPreference`)
+  also now exists but is **not yet mapped** — its CRM options need a cleanup first
+  (a `No Preferrence` typo on both CRMs + an `In Person`/`In-Person` divergence
+  between them); tracked in `crm-field-handoff.md`.
+
 ## [0.16.0] — 2026-06-30
 
 ### Added (field-mapping — consent on partner & sponsor)

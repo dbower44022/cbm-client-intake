@@ -206,11 +206,14 @@ dropdowns are already synced to them (`sync_form_options.py` reports no drift). 
 > below. Give that to whoever owns the MN-INTAKE CRM build.
 
 Cannot be written until they exist in the CRM (name + type + enum options):
-- **Contact** meeting-preference (or decide to use `CEngagement.meetingCadence` /
-  `Contact.acceptanceStatusMeetings` instead — both already exist).
-- **Contact** notification-preference.
-- **Contact** code-of-conduct bool (note `CMentorProfile.mentorCodeAccepted`
-  already exists for the mentor side).
+- **Contact** `cMeetingPreference` — ⚠️ EXISTS on both CRMs but needs an options
+  cleanup before mapping: `No Preferrence` typo (both) → `No Preference`, and
+  `In Person`/`In-Person` divergence (crm-test vs prod) → one spelling on both. The
+  only remaining unmapped field. Specced in `crm-field-handoff.md`.
+- ~~**Contact** notification-preference~~ — ✅ **DONE (v0.17.0)** —
+  `Contact.cNotificationPreference` (Email/Text) built on both CRMs, mapped, live.
+- ~~**Contact** code-of-conduct bool~~ — ✅ **DONE (v0.16.0)** —
+  `Contact.cCodeOfConductAccepted`, mapped across all forms.
 - ~~**CMentorProfile** `industryExperience`~~ — ✅ **DONE (v0.14.0, 2026-06-30).** The
   CRM team made it a multiEnum with the canonical 28-value list on **both** CRMs
   (verified identical); the app now writes all selections to `industryExperience`
