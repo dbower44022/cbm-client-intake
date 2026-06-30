@@ -422,17 +422,12 @@ attributes), and will start storing automatically once the CRM team builds the 7
 fields on prod (MN-INTAKE hand-off; then re-sync options against prod). ZZTEST-PARITY
 check left no prod records (write was sandbox-blocked).
 
-**crm-test ZZTEST cleanup — PENDING (list generated 2026-06-30).** A read-only sweep
-found **59 ZZTEST test records** across 9 entities in crm-test (this session's
-field-mapping live checks — `ZZTEST-PASSA`/`ZZTEST-IE`/`ZZTEST-CONSENT`/`ZZTEST-PC`/
-`PCS` — plus older accumulated ones: `StageA/B`, `GrantCheck`, `InfoReq`, `SMOKE`,
-`RebuildCheck`). Counts: Contact 19, Account 11, CInformationRequest 6, CEngagement 5,
-CIntakeSubmission 5, CClientProfile 4, CMentorProfile 4, CPartnerProfile 3,
-CSponsorProfile 2. **Delete in the EspoCRM UI** (the intake API user is create/read/
-edit only — no delete grant): in each entity's list view, search "ZZTEST" → select
-all → bulk-delete (every match is test data; delete child records — profiles/
-engagements/submissions — before Contacts, then Accounts). Re-run a `contains ZZTEST`
-sweep to confirm 0 remain.
+**crm-test ZZTEST cleanup — ✅ DONE (verified 2026-06-30).** All 59 ZZTEST test
+records (this session's field-mapping live checks — `ZZTEST-PASSA`/`ZZTEST-IE`/
+`ZZTEST-CONSENT`/`ZZTEST-PC`/`PCS` — plus older accumulated `StageA/B`/`GrantCheck`/
+`InfoReq`/`SMOKE`/`RebuildCheck` records) were deleted in the EspoCRM UI; a
+`contains ZZTEST` sweep across all 9 entities now returns **0**. crm-test holds no
+leftover test data from the field-mapping work.
 
 **Prod is on v0.12.1** (`/healthz` confirmed; all three apps deployed + verified
 2026-06-29 — see the per-form **Environment badge** in Architecture). The Google Workspace

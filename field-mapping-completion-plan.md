@@ -126,16 +126,11 @@ backfills only empty fields. The how-heard / contact-method / employment dropdow
 are CRM-backed via the options sync. (Live check left `ZZTEST-PASSA` records — see
 the consolidated crm-test ZZTEST cleanup note below.)
 
-## crm-test ZZTEST cleanup — ⏳ PENDING (deletion in the EspoCRM UI)
+## crm-test ZZTEST cleanup — ✅ DONE (verified 2026-06-30)
 
-The field-mapping live checks (Pass A `ZZTEST-PASSA`, industry `ZZTEST-IE`, consent
-`ZZTEST-CONSENT`/`ZZTEST-PC`/`PCS`) plus older accumulated test records total **59
-ZZTEST records** in crm-test (read-only sweep 2026-06-30): Contact 19, Account 11,
-CInformationRequest 6, CEngagement 5, CIntakeSubmission 5, CClientProfile 4,
-CMentorProfile 4, CPartnerProfile 3, CSponsorProfile 2. **Delete in the UI** (the
-intake API user has no delete grant): per entity, search "ZZTEST" → select all →
-bulk-delete (children — profiles/engagements/submissions — before Contacts, then
-Accounts). Re-run a `contains ZZTEST` sweep to confirm 0 remain, then mark this done.
+All 59 ZZTEST test records (the field-mapping live checks — `ZZTEST-PASSA`/
+`ZZTEST-IE`/`ZZTEST-CONSENT`/`ZZTEST-PC`/`PCS` — plus older accumulated ones) were
+deleted in the EspoCRM UI; a `contains ZZTEST` sweep across all 9 entities returns 0.
 
 **PROD PARITY — checked 2026-06-30 (read-only): the Pass A fields are NOT on prod
 yet.** Prod (`crm.clevelandbusinessmentors.org`) is MISSING `Contact.cHowDidYouHear`,
