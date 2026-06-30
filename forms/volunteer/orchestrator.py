@@ -10,9 +10,9 @@ did not match the instance — only ``cContactType`` existed there.
 Mapping decisions (confirmed with the product owner):
   * mentorStatus  -> "Candidate" (new applicant; enum has no "Submitted")
   * mentorType    -> "Mentor"
-  * industry_experience is multi-select on the form but ``industrySector`` is a
-    single enum on the instance, so only the FIRST value is stored for now
-    (multi-store deferred until a multi-value field is deployed).
+  * industry_experience (multi-select) -> ``industryExperience`` (multiEnum) — all
+    selections stored (the field was made a multiEnum with the canonical 28-value
+    list on both CRMs 2026-06-30).
   * terms_accepted -> CMentorProfile.termsAccepted (a dedicated bool field).
 
 Resume upload is stored on ``CMentorProfile.resumeUpload`` (a file field): the
@@ -62,7 +62,7 @@ P_WHY = "mentoringWhyInterested"      # wysiwyg
 P_BIO = "mentorProfessionalBio"       # wysiwyg
 P_FOCUS_AREAS = "mentoringFocusAreas"  # multiEnum
 P_LANGUAGES = "fluentLanguages"       # multiEnum
-P_INDUSTRY = "industrySector"         # enum (single)
+P_INDUSTRY_EXP = "industryExperience"  # multiEnum (all selections)
 P_HOW_HEARD = "howDidYouHearAboutCBM"  # varchar
 P_FELONY = "felonyConfiction"         # bool (note: CRM field name is misspelled)
 P_TERMS = "termsAccepted"             # bool
@@ -151,10 +151,9 @@ async def _create_mentor_profile(
         if languages:
             payload[P_LANGUAGES] = languages
     if sub.industry_experience:
-        # Single-enum field — store only the first selection for now.
-        industry = await san.enum(MENTOR_PROFILE, P_INDUSTRY, sub.industry_experience[0])
-        if industry:
-            payload[P_INDUSTRY] = industry
+        industries = await san.multi(MENTOR_PROFILE, P_INDUSTRY_EXP, sub.industry_experience)
+        if industries:
+            payload[P_INDUSTRY_EXP] = industries
     if sub.how_did_you_hear:
         # Sanitized: the form list tracks Contact.cHowDidYouHear, whose options may
         # differ from this profile enum — drop a mismatch rather than 400 the create.

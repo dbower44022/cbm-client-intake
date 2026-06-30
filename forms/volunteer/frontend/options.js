@@ -1,7 +1,7 @@
 /*
  * Volunteer form value lists (SCORE form 6). The industry, expertise, and
  * language lists are aligned to the deployed CRM enum options
- * (CMentorProfile.industrySector / mentoringFocusAreas / fluentLanguages), so
+ * (CMentorProfile.industryExperience / mentoringFocusAreas / fluentLanguages), so
  * every selectable value is accepted on submit. Contact-method, employment, and
  * "how did you hear" are also CRM-backed (Contact enums) — all CRM-backed lists
  * are kept in sync via: uv run python scripts/sync_form_options.py --write
@@ -37,32 +37,39 @@ window.VOL_OPTIONS = {
   ],
   // <<< crm-enum
 
-  // MUST match CMentorProfile.industrySector verbatim — a value outside this enum
-  // 400s the whole CMentorProfile create. The misspellings ("Livestoack",
-  // "Archtecture", "Group  homes") are the CRM's actual option strings. To change
-  // them, fix the CRM enum then run: uv run python scripts/sync_form_options.py --write
-  // >>> crm-enum key=industryExperience field=CMentorProfile.industrySector — generated; do not hand-edit between the markers.
+  // The mentor "Industry Experience" multi-select maps to the multiEnum
+  // CMentorProfile.industryExperience (all selections stored). Keep in sync with it:
+  //   uv run python scripts/sync_form_options.py --write
+  // >>> crm-enum key=industryExperience field=CMentorProfile.industryExperience — generated; do not hand-edit between the markers.
   industryExperience: [
-    "Accommodation and Food Services",
-    "Administrative and Support and Waste Management",
-    "Agriculture, Forestry, Fishing and Hunting",
-    "Arts, Entertainment, and Recreation",
-    "Construction",
-    "Educational Services",
-    "Finance and Insurance",
-    "Health Care and Social Assistance",
-    "Information",
-    "Management of Companies and Enterprises",
-    "Manufacturing",
-    "Mining, Quarrying, and Oil and Gas Extraction",
-    "Other Services (except Public Administration)",
-    "Professional, Scientific, and Technical Services",
-    "Public Administration",
-    "Real Estate and Rental and Leasing",
-    "Retail Trade",
-    "Transportation and Warehousing",
-    "Utilities",
-    "Wholesale Trade",
+    "Accounting and Bookkeeping",
+    "Advertising, Design, Marketing",
+    "Agriculture, Farming, Livestock",
+    "Architecture, Engineering",
+    "Arts, Entertainment and Recreation",
+    "Auto Repair",
+    "Beauty, Cosmetics and Salon Services",
+    "Business Consulting and Coaching",
+    "Childcare",
+    "Commercial and Residential Services",
+    "Construction & Real Estate",
+    "Counseling and Therapy",
+    "Cybersecurity",
+    "E-Commerce & Online Business",
+    "Education",
+    "Energy & Utilities",
+    "Financial Services & Banking",
+    "Group Homes",
+    "Healthcare & Medical",
+    "Hospitality, Restaurants & Food Service",
+    "Manufacturing & Industrial",
+    "Media, Marketing & Publishing",
+    "Nonprofit & Social Impact",
+    "Professional Services",
+    "Retail & Consumer Products",
+    "Technology & Software",
+    "Transportation and Logistics",
+    "Wellness and Fitness",
   ],
   // <<< crm-enum
 

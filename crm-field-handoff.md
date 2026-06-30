@@ -51,8 +51,13 @@ dropped. Two are **decisions** (reuse an existing field, or build a new one).
 | Contact | notification-preference (e.g. `cNotificationPreference`) | enum | `Email`, `Text Message` | Client-intake "Notification preference" | new field |
 | Contact | code-of-conduct (e.g. `cCodeOfConductAccepted`) | bool | — | "Code of Conduct" acceptance (client-intake, partner, sponsor) | mentor side already has `CMentorProfile.mentorCodeAccepted` |
 
-**Mentor "Industry Experience" — fix `industryExperience` so it can hold all picks
-(decided 2026-06-30, Doug).** The form's multi-select "Industry Experience (choose up
+**Mentor "Industry Experience" — ✅ DONE (2026-06-30, v0.14.0).** `industryExperience`
+is now a multiEnum with the canonical 28-value list on **both** CRMs (verified
+identical), the app writes all selections to it, and the form is re-synced. The
+original ask is kept below for history.
+
+~~**Fix `industryExperience` so it can hold all picks
+(decided 2026-06-30, Doug).**~~ The form's multi-select "Industry Experience (choose up
 to 6)" currently stores **only the first value** into the single-enum
 `CMentorProfile.industrySector` — selections 2–6 are dropped. The intended field
 `industryExperience` exists but is **broken/divergent** and must be reconciled:

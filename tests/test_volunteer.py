@@ -59,7 +59,7 @@ def _application(**overrides) -> VolunteerApplication:
         phone="216-555-0144",
         why_volunteer="I want to give back to small businesses.",
         areas_of_expertise=["Marketing", "Sales"],
-        industry_experience=["Information Technology", "Manufacturing"],
+        industry_experience=["Technology & Software", "Manufacturing & Industrial"],
         fluent_languages=["English"],
         currently_employed="No",
         terms_accepted=True,
@@ -87,8 +87,8 @@ async def test_creates_contact_and_mentor_profile():
     assert profile["mentorType"] == "Mentor"
     assert profile["termsAccepted"] is True
     assert profile["mentoringFocusAreas"] == ["Marketing", "Sales"]
-    # Multi-select industry stored into a single enum -> first value only.
-    assert profile["industrySector"] == "Information Technology"
+    # Multi-select industry stored as a multiEnum -> all selections kept.
+    assert profile["industryExperience"] == ["Technology & Software", "Manufacturing & Industrial"]
 
 
 async def test_contact_method_and_employment_written_to_contact():
@@ -107,7 +107,7 @@ async def test_invalid_enum_values_dropped_record_still_created():
     """A drifted industry/language value is dropped (not fatal); the profile is
     created with the valid data + a note, so contact info is always captured."""
     client = CapturingClient(enum_options={
-        "industrySector": ["Technology & Software", "Healthcare & Medical"],
+        "industryExperience": ["Technology & Software", "Healthcare & Medical"],
         "fluentLanguages": ["English", "Spanish"],
         # mentoringFocusAreas absent => not validated (kept as-is).
     })
@@ -120,10 +120,10 @@ async def test_invalid_enum_values_dropped_record_still_created():
     assert set(ids) == {"contactId", "mentorProfileId"}
     _, profile = client.creates[1]
     # Invalid industry omitted entirely; invalid language filtered out.
-    assert "industrySector" not in profile
+    assert "industryExperience" not in profile
     assert profile["fluentLanguages"] == ["English"]
     # A note records what was dropped, for staff follow-up.
-    assert "industrySector" in profile["description"]
+    assert "industryExperience" in profile["description"]
     assert "Utilities" in profile["description"]
     assert "Klingon" in profile["description"]
 

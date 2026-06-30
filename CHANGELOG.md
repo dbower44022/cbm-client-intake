@@ -4,6 +4,19 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.14.0] — 2026-06-30
+
+### Changed (field-mapping — mentor industry experience)
+- **Mentor "Industry Experience" now captures ALL selections.** The multi-select
+  (up to 6) previously stored only the **first** pick into the single-enum
+  `CMentorProfile.industrySector`; it now writes every selection to the multiEnum
+  **`CMentorProfile.industryExperience`**. The CRM team made that field a multiEnum
+  with a canonical 28-value list on both CRMs (crm-test + prod, verified identical),
+  so this works on production immediately. The volunteer form's industry dropdown is
+  re-synced to that field (28 CBM industry values, replacing the 20 NAICS sectors).
+  Live-verified on crm-test (a 3-industry submission stored all three). `industrySector`
+  is no longer written for mentors.
+
 ## [0.13.0] — 2026-06-30
 
 ### Added (field-mapping completion — Pass A)

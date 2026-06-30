@@ -383,6 +383,14 @@ review/staff apps. The **dev app** (DO default name `lobster-app`, no spec in
 `.do/`) is dry-run only — submissions are logged, never written; no Postgres, no
 staff tools — for exercising the form UIs. Local dev = `localhost:8000`.
 
+**Field-mapping completion — mentor industry experience DONE (v0.14.0,
+2026-06-30).** Mentor "Industry Experience" (multi-select) now stores ALL selections
+to the multiEnum `CMentorProfile.industryExperience` (was first-value-only →
+`industrySector`); the CRM team made that field a multiEnum with a canonical 28-value
+list on **both** CRMs (verified identical → works on prod), and the volunteer form's
+industry dropdown is re-synced to it. Live-verified on crm-test. Pass B resolved
+(no other retargets). See `field-mapping-completion-plan.md`.
+
 **Field-mapping completion — Pass A DONE (v0.13.0, 2026-06-30, live-verified on
 crm-test).** Previously-dropped form inputs now write to their intended CRM
 fields: client-intake → Contact `cHowDidYouHear`/`cMarketingOptIn`/
