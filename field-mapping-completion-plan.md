@@ -123,12 +123,19 @@ Legend: ✅ ready (field exists, orchestrator edit only) · 🟢 already correct
 **Shipped + live-verified on crm-test.** All targets below now write; the Contact
 null-fill (`core/crm_upsert.find_create_or_fill`) reuses a matched Contact and
 backfills only empty fields. The how-heard / contact-method / employment dropdowns
-are CRM-backed via the options sync. Live check (ZZTEST-PASSA, **clean up in the
-EspoCRM UI**): Contact `6a435376193680811` + Account `6a4353756c4bfcac3` +
-CClientProfile `6a435376582ac897c`/`6a4353785b42f39f9` + CEngagement
-`6a435376b4324c603`/`6a435378cf76f063f`; volunteer Contact `6a43537a24b1f051b` +
-CMentorProfile `6a43537ad30d6e3ed`; partner Contact `6a43537c766baa2f5` + Account
-`6a43537bd1134a980` + CPartnerProfile `6a43537d2c1259c36`.
+are CRM-backed via the options sync. (Live check left `ZZTEST-PASSA` records — see
+the consolidated crm-test ZZTEST cleanup note below.)
+
+## crm-test ZZTEST cleanup — ⏳ PENDING (deletion in the EspoCRM UI)
+
+The field-mapping live checks (Pass A `ZZTEST-PASSA`, industry `ZZTEST-IE`, consent
+`ZZTEST-CONSENT`/`ZZTEST-PC`/`PCS`) plus older accumulated test records total **59
+ZZTEST records** in crm-test (read-only sweep 2026-06-30): Contact 19, Account 11,
+CInformationRequest 6, CEngagement 5, CIntakeSubmission 5, CClientProfile 4,
+CMentorProfile 4, CPartnerProfile 3, CSponsorProfile 2. **Delete in the UI** (the
+intake API user has no delete grant): per entity, search "ZZTEST" → select all →
+bulk-delete (children — profiles/engagements/submissions — before Contacts, then
+Accounts). Re-run a `contains ZZTEST` sweep to confirm 0 remain, then mark this done.
 
 **PROD PARITY — checked 2026-06-30 (read-only): the Pass A fields are NOT on prod
 yet.** Prod (`crm.clevelandbusinessmentors.org`) is MISSING `Contact.cHowDidYouHear`,
