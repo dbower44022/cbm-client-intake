@@ -176,12 +176,26 @@ No CRM build, no form change. All enum/multiEnum writes go through the existing
 - **Live verify** against crm-test (real `EspoClient`), GET-verify the written
   values, clean up `ZZTEST` records in the UI afterward.
 
-### Pass B — Retarget decisions (current code intentionally chose another field)
+### Pass B — Retarget decisions — ✅ RESOLVED (2026-06-30, Doug): KEEP current fields, no switch
 
-Do **not** switch silently. For each, decide: move, or write **both**.
-- Volunteer `areas_of_expertise`: `mentoringFocusAreas` → `areaOfExpertise`?
-  (If moved, what — if anything — should feed `mentoringFocusAreas`?)
-- Partner `partnership_value`: `partnershipValue` → `cBMValueProvided`?
+Investigation found the "current" and "target" fields hold **different taxonomies**,
+not the same list under two names:
+- `CMentorProfile.mentoringFocusAreas` = 42 **industry** categories;
+  `areaOfExpertise` = 29 **skill** categories (zero overlap).
+- `CPartnerProfile.partnershipValue` = 7 partner-offering options;
+  `cBMValueProvided` = 6 differently-worded options.
+
+**Decision (Doug):** the current fields are canonical — do **not** switch.
+- Volunteer `areas_of_expertise` stays on **`mentoringFocusAreas`** (the crm-test
+  42-value list is the canonical one for both crm-test + prod + the form).
+- Partner `partnership_value` stays on **`partnershipValue`** (its 7 options are the
+  canonical enum for both crm-test + prod + the form).
+The mapping's `areaOfExpertise` / `cBMValueProvided` targets are **not** used.
+
+**No code change needed** — this is exactly what ships today. Verified 2026-06-30:
+both fields' option sets are **identical on crm-test and prod**, and both form
+dropdowns are already synced to them (`sync_form_options.py` reports no drift). The
+`areaOfExpertise` / `cBMValueProvided` fields are simply left unused by the forms.
 
 ### Pass C — CRM fields to build first (hand-off to MN-INTAKE) 🏗️
 
