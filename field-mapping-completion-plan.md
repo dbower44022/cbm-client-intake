@@ -209,10 +209,15 @@ Cannot be written until they exist in the CRM (name + type + enum options):
 - **Contact** notification-preference.
 - **Contact** code-of-conduct bool (note `CMentorProfile.mentorCodeAccepted`
   already exists for the mentor side).
-- **CMentorProfile** work-experience field — OR accept `mentorProfessionalBio` as
-  the target (already used today).
-- **CMentorProfile** multi `industryExperience` — OR accept single `industrySector`
-  (first value only, as today).
+- **CMentorProfile** `industryExperience` → **make it a multiEnum on BOTH CRMs with
+  the 20 NAICS options** (decided 2026-06-30; it's currently multiEnum-empty on
+  crm-test and a divergent single-enum on prod). Then repoint
+  `industry_experience` → `industryExperience` + the form sync marker. Until built,
+  stays first-value-only → `industrySector`. Specced in `crm-field-handoff.md`.
+
+**Mentor decisions resolved (2026-06-30, Doug):**
+- Work experience → **keep `mentorProfessionalBio`** (no build, already correct).
+- Industry experience → **fix + map `industryExperience`** (the bullet above).
 
 Each new enum also needs its options reflected into the relevant form via the
 options.js sync.

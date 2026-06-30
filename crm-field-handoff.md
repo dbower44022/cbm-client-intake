@@ -51,20 +51,37 @@ dropped. Two are **decisions** (reuse an existing field, or build a new one).
 | Contact | notification-preference (e.g. `cNotificationPreference`) | enum | `Email`, `Text Message` | Client-intake "Notification preference" | new field |
 | Contact | code-of-conduct (e.g. `cCodeOfConductAccepted`) | bool | — | "Code of Conduct" acceptance (client-intake, partner, sponsor) | mentor side already has `CMentorProfile.mentorCodeAccepted` |
 
-**Two mentor decisions (build vs. accept the existing field):**
-- **Work experience** — the form's "Describe your work experience" currently writes
-  to `CMentorProfile.mentorProfessionalBio`. Either accept that as the home, or
-  build a dedicated `workExperience` field. **Decide.**
-- **Industry experience** — the form's multi-select "Industry Experience" currently
-  stores **only the first value** into the single-enum `CMentorProfile.industrySector`.
-  To keep all selections, build a **multiEnum** `industryExperience` (options = the
-  20 NAICS sectors already in `industrySector`). Otherwise it stays first-value-only.
-  **Decide.**
+**Mentor "Industry Experience" — fix `industryExperience` so it can hold all picks
+(decided 2026-06-30, Doug).** The form's multi-select "Industry Experience (choose up
+to 6)" currently stores **only the first value** into the single-enum
+`CMentorProfile.industrySector` — selections 2–6 are dropped. The intended field
+`industryExperience` exists but is **broken/divergent** and must be reconciled:
 
-> Resolved already (Pass B, no build needed): volunteer "Areas of Expertise" stays on
-> `mentoringFocusAreas` and partner "What could you offer" stays on `partnershipValue`
-> — the alternate `areaOfExpertise` / `cBMValueProvided` fields are intentionally
-> unused.
+- **crm-test:** `industryExperience` is a `multiEnum` with **no options** (unusable).
+- **prod:** `industryExperience` is a **single `enum`** with 20 options in a *different,
+  typo-laden* taxonomy (`Group  homes`, `TRANSPORTATION & LOGISTICS`, etc.).
+
+**Make `CMentorProfile.industryExperience` a `multiEnum` on BOTH CRMs with the same
+20 NAICS sector options** that `industrySector` / the form already use:
+
+> Agriculture, Forestry, Fishing and Hunting · Mining, Quarrying, and Oil and Gas
+> Extraction · Utilities · Construction · Manufacturing · Wholesale Trade · Retail
+> Trade · Transportation and Warehousing · Information · Finance and Insurance · Real
+> Estate and Rental and Leasing · Professional, Scientific, and Technical Services ·
+> Management of Companies and Enterprises · Administrative and Support and Waste
+> Management · Educational Services · Health Care and Social Assistance · Arts,
+> Entertainment, and Recreation · Accommodation and Food Services · Other Services
+> (except Public Administration) · Public Administration
+
+Once it's a multiEnum with those options on both CRMs, the app change is a one-line
+orchestrator repoint (`industry_experience` → `industryExperience`, all values) plus
+re-pointing the form's `industryExperience` sync marker — captures every selection,
+no data loss. **Until then, the app keeps first-value-only (no change).**
+
+> **Resolved, NO build needed:**
+> - **Work experience** stays on `CMentorProfile.mentorProfessionalBio` (Doug, 2026-06-30).
+> - **Areas of Expertise** stays on `mentoringFocusAreas`; **partner value** stays on
+>   `partnershipValue` (Pass B) — `areaOfExpertise` / `cBMValueProvided` left unused.
 
 ---
 
