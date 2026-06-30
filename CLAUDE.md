@@ -383,12 +383,13 @@ review/staff apps. The **dev app** (DO default name `lobster-app`, no spec in
 `.do/`) is dry-run only — submissions are logged, never written; no Postgres, no
 staff tools — for exercising the form UIs. Local dev = `localhost:8000`.
 
-**Field-mapping — notification preference DONE (v0.17.0, 2026-06-30).** Client-intake
-"Notification preference" now writes to `Contact.cNotificationPreference` (Email/Text,
-built on both CRMs; form re-synced `Text Message`→`Text`; live-verified). **Last
-unmapped field: `Contact.cMeetingPreference`** — it now exists but needs a CRM options
-cleanup first (`No Preferrence` typo on both + `In Person`/`In-Person` divergence);
-see `crm-field-handoff.md`.
+**Field-mapping effort COMPLETE (v0.18.0, 2026-06-30).** Meeting + notification
+preference now write to `Contact.cMeetingPreference` / `cNotificationPreference`
+(options reconciled to identical, typo-free sets on both CRMs; forms re-synced;
+live-verified). **Every input collected across all five forms now maps to its
+intended CRM field — nothing is silently dropped.** Full record:
+`field-mapping-completion-plan.md` (Passes A–E all done) + `crm-field-handoff.md`
+(all CRM builds complete).
 
 **Field-mapping completion — consent capture DONE across ALL FOUR forms (v0.16.0,
 2026-06-30).** The single consent checkbox records all three acceptances: Contact

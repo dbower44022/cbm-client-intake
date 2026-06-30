@@ -4,6 +4,18 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.18.0] — 2026-06-30
+
+### Added (field-mapping — meeting preference; mapping effort COMPLETE)
+- **Client-intake "Meeting preference" now stores** to `Contact.cMeetingPreference`
+  (`Video`/`Phone`/`Email`/`In Person`/`No Preference`) — the field was reconciled to
+  an identical, typo-free option set on both CRMs, the form dropdown is CRM-backed and
+  re-synced, and the orchestrator writes it via the sanitizer with null-fill.
+  Live-verified on crm-test (`In Person` stored; works on prod, same options).
+- **This completes the field-mapping effort** (`field-mapping-completion-plan.md`):
+  every input collected across all five forms now maps to its intended CRM field. No
+  collected field is silently dropped anymore.
+
 ## [0.17.0] — 2026-06-30
 
 ### Added (field-mapping — notification preference)

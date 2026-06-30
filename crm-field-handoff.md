@@ -46,17 +46,13 @@ dropped. Two are **decisions** (reuse an existing field, or build a new one).
 
 | Entity | Proposed field | Type | Options | Captures | Note |
 |--------|----------------|------|---------|----------|------|
-| Contact | `cMeetingPreference` | enum | (see below) | Client-intake "Meeting preference" | ⚠️ **EXISTS but needs an options cleanup before mapping** |
+| ~~Contact `cMeetingPreference`~~ | ✅ DONE | enum | `Video`/`Phone`/`Email`/`In Person`/`No Preference` | Client-intake "Meeting preference" | mapped + live (v0.18.0) — options reconciled on both CRMs |
 | ~~Contact `cNotificationPreference`~~ | ✅ DONE | enum | `Email`, `Text` | Client-intake "Notification preference" | mapped + live (v0.17.0) |
 | ~~Contact `cCodeOfConductAccepted`~~ | ✅ DONE | bool | — | code-of-conduct acceptance | mapped + live (v0.16.0) |
 
-**`cMeetingPreference` — fix the options before it can be mapped.** The field exists
-on both CRMs but its options aren't clean/identical, so the form values would drop:
-- `No Preferrence` (double "r" typo) on **both** CRMs → should be `No Preference`.
-- `In Person` on crm-test vs `In-Person` on prod → pick one spelling, apply to both.
-Target canonical set (apply identically to both CRMs): `Video`, `Phone`, `Email`,
-`In Person`, `No Preference`. Once they match, the app re-syncs the form dropdown and
-adds the one-line mapping (same drill as `industryExperience`).
+**✅ Part 2 fully done.** All fields above are built on both CRMs and mapped. The
+`cMeetingPreference` options were reconciled (the `No Preferrence` typo fixed on both,
+and `In Person`/`In-Person` settled on `In Person` for both) and the field is live.
 
 **Mentor "Industry Experience" — ✅ DONE (2026-06-30, v0.14.0).** `industryExperience`
 is now a multiEnum with the canonical 28-value list on **both** CRMs (verified

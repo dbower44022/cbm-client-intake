@@ -21,7 +21,15 @@ window.CBM_OPTIONS = {
   ],
   // <<< crm-enum
 
-  meetingPreference: ["No Preference", "Video", "Phone", "Email", "In Person"],
+  // >>> crm-enum key=meetingPreference field=Contact.cMeetingPreference — generated; do not hand-edit between the markers.
+  meetingPreference: [
+    "Video",
+    "Phone",
+    "Email",
+    "In Person",
+    "No Preference",
+  ],
+  // <<< crm-enum
 
   // >>> crm-enum key=notificationPreference field=Contact.cNotificationPreference — generated; do not hand-edit between the markers.
   notificationPreference: [

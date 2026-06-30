@@ -205,15 +205,17 @@ dropdowns are already synced to them (`sync_form_options.py` reports no drift). 
 > for the CRM team, covering (1) the Pass A prod-parity gap and (2) the new fields
 > below. Give that to whoever owns the MN-INTAKE CRM build.
 
-Cannot be written until they exist in the CRM (name + type + enum options):
-- **Contact** `cMeetingPreference` — ⚠️ EXISTS on both CRMs but needs an options
-  cleanup before mapping: `No Preferrence` typo (both) → `No Preference`, and
-  `In Person`/`In-Person` divergence (crm-test vs prod) → one spelling on both. The
-  only remaining unmapped field. Specced in `crm-field-handoff.md`.
+✅ **Pass C complete** — all CRM-build-gated fields are now built + mapped:
+- ~~**Contact** `cMeetingPreference`~~ — ✅ **DONE (v0.18.0)** — options reconciled on
+  both CRMs (typo + In Person/In-Person divergence fixed), mapped, live. **The last
+  field.**
 - ~~**Contact** notification-preference~~ — ✅ **DONE (v0.17.0)** —
-  `Contact.cNotificationPreference` (Email/Text) built on both CRMs, mapped, live.
+  `Contact.cNotificationPreference` (Email/Text), mapped, live.
 - ~~**Contact** code-of-conduct bool~~ — ✅ **DONE (v0.16.0)** —
   `Contact.cCodeOfConductAccepted`, mapped across all forms.
+
+> 🎉 **Field-mapping effort COMPLETE (2026-06-30).** Every input collected across all
+> five forms now maps to its intended CRM field — nothing is silently dropped.
 - ~~**CMentorProfile** `industryExperience`~~ — ✅ **DONE (v0.14.0, 2026-06-30).** The
   CRM team made it a multiEnum with the canonical 28-value list on **both** CRMs
   (verified identical); the app now writes all selections to `industryExperience`
