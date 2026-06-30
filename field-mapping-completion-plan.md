@@ -199,6 +199,10 @@ dropdowns are already synced to them (`sync_form_options.py` reports no drift). 
 
 ### Pass C — CRM fields to build first (hand-off to MN-INTAKE) 🏗️
 
+> **Hand-off list drafted: `crm-field-handoff.md`** — exact field names/types/options
+> for the CRM team, covering (1) the Pass A prod-parity gap and (2) the new fields
+> below. Give that to whoever owns the MN-INTAKE CRM build.
+
 Cannot be written until they exist in the CRM (name + type + enum options):
 - **Contact** meeting-preference (or decide to use `CEngagement.meetingCadence` /
   `Contact.acceptanceStatusMeetings` instead — both already exist).
