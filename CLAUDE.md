@@ -363,7 +363,34 @@ mentor.
   (`assignments/service.py:_assigned_user_payload`). Writing `assignedUserId` to a
   disabled-field entity is silently ignored.
 
-## Current status (updated 2026-06-29)
+## Current status (updated 2026-06-30)
+
+**Prod is on v0.21.1** (all three apps — prod / crm-test / dev — confirmed on
+`/healthz` and redeployed on each push). The big 2026-06-30 push (v0.12.0 → v0.21.1):
+
+- **Field-mapping effort COMPLETE + code-reviewed.** Every input collected across all
+  five forms now writes to its intended CRM field — nothing is silently dropped.
+  Shipped: Pass A previously-dropped fields + **null-fill on repeat Contacts**
+  (`core/crm_upsert.find_create_or_fill`); mentor **industry experience** →
+  `industryExperience` (all selections); **consent** (one checkbox → three Contact
+  bools + `mentorCodeAccepted`) across all four consent-collecting forms (added the
+  checkbox to partner + sponsor); **notification + meeting preference**; **areas of
+  expertise** → `areaOfExpertise` (skills, distinct from industry experience). The CRM
+  team built/reconciled all the needed fields on **both** CRMs during this push (prod
+  parity closed). A high-effort multi-agent code review (v0.13.0→v0.21.0) found **no
+  runtime bugs**; only doc-accuracy + one sync-alignment fix (v0.21.1). Detailed
+  per-field record: the blocks below + `field-mapping-completion-plan.md` +
+  `crm-field-handoff.md`.
+- **Environment shown in the footer** (v0.19.0): `v0.21.1 (Production/Test/Dev)` after
+  the version — replaced the old corner badge.
+- **Form keyboard UX** (v0.20.0): cursor starts in the first field on load/step-change;
+  Tab moves field-to-field (consent policy links pulled out of the tab order).
+- **crm-test ZZTEST cleanup DONE** (verified 0 remain, 2026-06-30).
+
+**Open (all on the CRM/ops side, no app work):** add real non-admin staff to the two
+staff-gate Teams in prod (tools are admin-only until then — see the staff-Teams note
+below); the `CIntakeSubmission` `reason != Normal` alert workflow (CRM-owned, spec
+ready); enabling Google Workspace mailbox creation (built + deployed, gated OFF).
 
 ### Deployment URLs (three App Platform apps, all from `dbower44022/cbm-client-intake`, branch `main`, deploy-on-push)
 
@@ -444,8 +471,7 @@ records (this session's field-mapping live checks — `ZZTEST-PASSA`/`ZZTEST-IE`
 `contains ZZTEST` sweep across all 9 entities now returns **0**. crm-test holds no
 leftover test data from the field-mapping work.
 
-**Prod is on v0.12.1** (`/healthz` confirmed; all three apps deployed + verified
-2026-06-29 — see the per-form **Environment badge** in Architecture). The Google Workspace
+**(historical — current version is v0.21.1, see the top of this section.)** The Google Workspace
 **mailbox creation** + **live status window** + admin **Email Setup** code (v0.11.0)
 IS deployed to prod but **gated OFF** (`GOOGLE_CREATE_MAILBOX` unset, no
 `APP_ENCRYPTION_KEY`) — a dormant no-op until enabled (see the `/mentoradmin`
