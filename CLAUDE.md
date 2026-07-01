@@ -14,6 +14,12 @@ linked records in EspoCRM (the system of record). Five forms ship today:
   to the CBM model. Creates Account → Contact → CClientProfile → CEngagement.
 - **volunteer** — SCORE volunteer/become-a-mentor (form 6 / MR-APPLY). Creates
   a single Contact (Mentor) with an optional in-memory resume upload.
+  **Form-required (v0.21.2, frontend only — deliberately NOT enforced in the
+  Pydantic schema):** "How should we contact you?" (`contact_preference`), "Are you
+  currently employed?" (`currently_employed`), and "How did you hear about CBM?"
+  (`how_did_you_hear`) carry the `required` attribute + a required-asterisk; the
+  wizard's `checkValidity()` blocks the step until they're chosen. Required in the
+  form regardless of the CRM's own optionality; a direct API call may still omit them.
 - **info-request** — generic request-for-information (single step). Creates a
   Contact (`cContactType=["Prospect"]`) with the message in `description`,
   plus an Account (`cClientStatus="Prospect"`) only when a company name is
@@ -365,8 +371,10 @@ mentor.
 
 ## Current status (updated 2026-06-30)
 
-**Prod is on v0.21.1** (all three apps — prod / crm-test / dev — confirmed on
-`/healthz` and redeployed on each push). The big 2026-06-30 push (v0.12.0 → v0.21.1):
+**Prod is on v0.21.2** (all three apps — prod / crm-test / dev — confirmed on
+`/healthz` and redeployed on each push). The big 2026-06-30/07-01 push (v0.12.0 →
+v0.21.2). Latest (v0.21.2): three mentor-form fields made **required on the form**
+(frontend only — see the volunteer bullet up top). Earlier in the push:
 
 - **Field-mapping effort COMPLETE + code-reviewed.** Every input collected across all
   five forms now writes to its intended CRM field — nothing is silently dropped.
