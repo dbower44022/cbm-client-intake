@@ -23,13 +23,18 @@ INSTANCE MAPPING — reconciled against crm-test.clevelandbusinessmentors.org
     hasMany Contact link, via a relationship POST after the engagement create.
   * Engagement status field is `engagementStatus` (value "Submitted").
 
-NOT DEPLOYED on this instance (Requirements Specification §11.1 pending
-carry-forward) — therefore omitted from the payloads until they exist:
-  - Account: year formed, number of employees, industry subsector (placeholder
-    options only)
-  - Contact: marketing consent, how-did-you-hear, applicant-since timestamp
-  - CEngagement: meeting preference, notification preference, terms accepted
-The form still collects these; they are simply not written until the fields land.
+Field coverage (updated 2026-06-30, v0.13.0–0.21.0). Most of the fields that were
+deferred under Requirements Specification §11.1 are now written to their intended
+CRM field:
+  - CClientProfile: year formed -> formationDate, number of employees ->
+    numberOfEmployees
+  - Contact: marketing consent -> cMarketingOptIn, how-did-you-hear ->
+    cHowDidYouHear, meeting preference -> cMeetingPreference, notification
+    preference -> cNotificationPreference, and the single consent checkbox ->
+    cTermsOfUseAccepted + cPrivacyPolicyAccepted + cCodeOfConductAccepted
+STILL not written (no target field yet): the Account industry subsector
+(placeholder options only) and a Contact "applicant-since" timestamp. The form
+collects these; they are simply not written until the fields land.
 """
 
 from __future__ import annotations

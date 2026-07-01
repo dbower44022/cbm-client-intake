@@ -2,9 +2,10 @@
  * Volunteer form value lists (SCORE form 6). The industry, expertise, and
  * language lists are aligned to the deployed CRM enum options
  * (CMentorProfile.industryExperience / mentoringFocusAreas / fluentLanguages), so
- * every selectable value is accepted on submit. Contact-method, employment, and
- * "how did you hear" are also CRM-backed (Contact enums) — all CRM-backed lists
- * are kept in sync via: uv run python scripts/sync_form_options.py --write
+ * every selectable value is accepted on submit. Contact-method + employment are
+ * CRM-backed Contact enums, and "how did you hear" tracks the profile field it's
+ * written to — all CRM-backed lists are kept in sync via:
+ *   uv run python scripts/sync_form_options.py --write
  */
 window.VOL_OPTIONS = {
   phoneType: ["Mobile", "Home", "Work"],
@@ -23,15 +24,18 @@ window.VOL_OPTIONS = {
   ],
   // <<< crm-enum
 
-  // >>> crm-enum key=howDidYouHear field=Contact.cHowDidYouHear — generated; do not hand-edit between the markers.
+  // Synced to the field the volunteer orchestrator actually writes
+  // (CMentorProfile.howDidYouHearAboutCBM), not Contact.cHowDidYouHear — keeps the
+  // dropdown aligned with the write target so a future enum drift can't silently drop it.
+  // >>> crm-enum key=howDidYouHear field=CMentorProfile.howDidYouHearAboutCBM — generated; do not hand-edit between the markers.
   howDidYouHear: [
-    "CBM Client or Volunteer",
     "CBM Email",
-    "News or Media",
-    "Online Search",
     "Partner Referral",
     "Personal Referral",
+    "News or Media",
     "Social Media",
+    "Online Search",
+    "CBM Client or Volunteer",
     "Workshop or Event",
     "Other",
   ],

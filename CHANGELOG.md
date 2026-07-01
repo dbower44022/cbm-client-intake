@@ -4,6 +4,20 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.21.1] — 2026-06-30
+
+### Fixed (code-review cleanups — no behavior change)
+- **Corrected the stale field-coverage docstring** in `client_intake/orchestrator.py`
+  (it claimed marketing-consent / how-heard / year-formed / # employees / meeting +
+  notification preference / terms were "NOT DEPLOYED / omitted" — they're all written
+  now; only industry-subsector + applicant-since remain deferred).
+- **Aligned the volunteer how-did-you-hear dropdown to its write target.** It was
+  synced to `Contact.cHowDidYouHear` but written to
+  `CMentorProfile.howDidYouHearAboutCBM` — identical options today, but two separate
+  enums that could drift and silently drop the value. The form now syncs to the field
+  it actually writes.
+- Fixed a stale `# varchar` comment on `P_HOW_HEARD` (it's an enum, sanitized).
+
 ## [0.21.0] — 2026-06-30
 
 ### Changed (field-mapping — mentor areas of expertise)
