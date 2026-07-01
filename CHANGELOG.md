@@ -4,6 +4,16 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.21.2] — 2026-07-01
+
+### Changed
+- **Three mentor-form fields are now required on the form:** "How should we contact
+  you?", "Are you currently employed?", and "How did you hear about Cleveland Business
+  Mentoring?" — each `<select>` got the `required` attribute + a required-asterisk
+  label, so the wizard's `checkValidity()` blocks the step until they're chosen
+  (required in the form regardless of the CRM's own optionality). Frontend-level
+  enforcement; the schema still accepts them as optional for a direct API call.
+
 ## [0.21.1] — 2026-06-30
 
 ### Fixed (code-review cleanups — no behavior change)
