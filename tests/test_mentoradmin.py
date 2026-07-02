@@ -134,10 +134,12 @@ class CompletenessClient:
 
 
 def _complete_rec(**over):
+    # NB: background check is deliberately NOT set here — it is optional, so a rec
+    # without it must still be Complete.
     rec = {
         "contactRecordId": "c1", "assignedUserId": "u1", "mentorStatus": "Active",
         "cbmEmail": "jane.doe@cbmentors.org",
-        "backgroundCheckCompleted": True, "ethicsAgreementAccepted": True,
+        "ethicsAgreementAccepted": True,
         "trainingCompleted": True, "termsAccepted": True,
     }
     rec.update(over)
@@ -182,22 +184,22 @@ async def test_completeness_active_requires_cbm_email():
 
 
 @pytest.mark.asyncio
-async def test_completeness_public_profile_requirements():
-    # publicProfile true but nothing filled in -> two extra issues (focus areas +
-    # industry sector are no longer part of the public-profile requirement)
+async def test_completeness_ignores_public_profile():
+    # publicProfile is not part of completeness: on, with no About/expertise, a
+    # record with the required flags is still Complete.
     r = await service.check_completeness(CompletenessClient("u1"), _complete_rec(
         publicProfile=True, aboutMentor="<p></p>", areaOfExpertise=[]))
-    assert r["status"] == "Incomplete"
+    assert r == {"status": "Complete", "issues": []}
+
+
+@pytest.mark.asyncio
+async def test_completeness_background_check_optional():
+    # Background check false (or absent) must NOT make a record Incomplete.
+    r = await service.check_completeness(CompletenessClient("u1"), _complete_rec(
+        backgroundCheckCompleted=False))
+    assert r == {"status": "Complete", "issues": []}
     joined = " ".join(r["issues"])
-    for token in ("About the mentor", "area of expertise"):
-        assert token in joined
-    assert "mentoring focus area" not in joined
-    assert "industry sector" not in joined
-    # fully filled in -> Complete (no industry sector required)
-    r2 = await service.check_completeness(CompletenessClient("u1"), _complete_rec(
-        publicProfile=True, aboutMentor="<p>Experienced founder.</p>",
-        areaOfExpertise=["Construction"]))
-    assert r2 == {"status": "Complete", "issues": []}
+    assert "background check" not in joined
 
 
 @pytest.mark.asyncio

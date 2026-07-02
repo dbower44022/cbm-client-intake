@@ -231,11 +231,12 @@ detail screen that reviews all info (read-only computed totals on top) and
   2026-06-22).** The detail header shows a **Complete/Incomplete** badge
   (`service.check_completeness`, attached to the detail GET + save response by the
   router; click it for the reasons). A mentor is Complete when: a Contact is
-  linked (the `CMentorProfile` *is* the "CBM member" record), and background
-  check / ethics / training / terms are all true; plus, **if Active**, a CBM
-  email address + a User assigned to the member AND the same User to its Contact;
-  plus, if **`publicProfile`** is set (editable bool on the Status tab),
-  About-the-mentor text + ≥1 area of expertise. On **every save**,
+  linked (the `CMentorProfile` *is* the "CBM member" record), and ethics /
+  training / terms are all true (**background check is optional — not required**);
+  plus, **if Active**, a CBM email address + a User assigned to the member AND the
+  same User to its Contact. **`publicProfile` is not part of completeness** (v0.23.1
+  — removed the publicProfile-gated About/expertise checks; the field stays an
+  editable bool on the Status tab). On **every save**,
   `service.reconcile_user_links` (best-effort) assigns the mentor's User
   (`CMentorProfile.assignedUser`, or the Contact's if only that side has one) to
   **both** the member and its Contact — filling the gap provisioning leaves (it

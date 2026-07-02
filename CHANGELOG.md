@@ -4,6 +4,19 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.23.1] — 2026-07-02
+
+### Changed (Mentor Administration `/mentoradmin` — completeness)
+- **`publicProfile` no longer affects completeness.** Removed the publicProfile-gated
+  checks (About-the-mentor text + area of expertise) from the completeness rule
+  (server + frontend pre-save modal + docs). The Public-profile checkbox stays an
+  editable field on the Status tab; it just no longer drives Complete/Incomplete.
+- **Background check is optional.** Removed `backgroundCheckCompleted` from the
+  required sign-off flags, so a mentor is no longer flagged Incomplete for a missing
+  background check. The field (and its date) remain editable on the Compliance tab.
+- Completeness now requires: a linked Contact + ethics/training/terms; plus, if
+  Active, a CBM email and matching User on the member and its Contact.
+
 ## [0.23.0] — 2026-07-02
 
 ### Changed (Client Administration `/assignments`)

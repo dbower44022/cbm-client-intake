@@ -44,8 +44,8 @@ STATUS_APPROVED = "Approved"
 STATUS_ACTIVE = "Active"
 
 # Sign-off flags every complete mentor must have set (field -> label).
+# (Background check is optional — deliberately not required for completeness.)
 COMPLETENESS_FLAGS = [
-    ("backgroundCheckCompleted", "background check"),
     ("ethicsAgreementAccepted", "ethics agreement"),
     ("trainingCompleted", "training completed"),
     ("termsAccepted", "terms accepted"),
@@ -147,22 +147,15 @@ async def get_mentor(client: MentorClient, mentor_id: str) -> dict[str, Any]:
     return await client.get(MENTOR_PROFILE, mentor_id, select=_DETAIL_SELECT)
 
 
-def _has_text(html: Any) -> bool:
-    """True if a wysiwyg/text value has real text (ignoring HTML tags + nbsp)."""
-    if not html:
-        return False
-    return bool(re.sub(r"<[^>]+>", "", str(html)).replace("\xa0", " ").strip())
-
-
 async def check_completeness(client: MentorClient, rec: dict[str, Any]) -> dict[str, Any]:
     """Verify the mentor's data structure is complete & correct.
 
     A ``CMentorProfile`` *is* the "CBM member" record (present by definition when
-    viewing it). Always required: a linked **Contact** record + the four sign-off
-    flags (``COMPLETENESS_FLAGS``). For an **Active** mentor, additionally: a CBM
-    email address, plus a login **User** assigned to the member and that same User
-    on the Contact. For a **public profile** (``publicProfile`` true): About-the-
-    mentor text and ≥1 area of expertise. Returns
+    viewing it). Always required: a linked **Contact** record + the sign-off flags
+    (``COMPLETENESS_FLAGS`` — ethics, training, terms; background check is optional).
+    For an **Active** mentor, additionally: a CBM email address, plus a login
+    **User** assigned to the member and that same User on the Contact. (``publicProfile``
+    is not part of completeness.) Returns
     ``{"status": "Complete"|"Incomplete", "issues": [...]}``.
     """
     issues: list[str] = []
@@ -190,12 +183,6 @@ async def check_completeness(client: MentorClient, rec: dict[str, Any]) -> dict[
             issues.append("no User assigned to the Contact")
         elif user_id and contact_user and contact_user != user_id:
             issues.append("Contact is assigned to a different User than the mentor")
-
-    if rec.get("publicProfile"):
-        if not _has_text(rec.get("aboutMentor")):
-            issues.append("public profile: About the mentor is empty")
-        if not rec.get("areaOfExpertise"):
-            issues.append("public profile: no area of expertise selected")
 
     return {"status": "Complete" if not issues else "Incomplete", "issues": issues}
 

@@ -489,10 +489,6 @@
     });
     return v;
   }
-  function hasText(html) {
-    if (!html) return false;
-    return String(html).replace(/<[^>]+>/g, "").replace(/\u00a0/g, " ").trim().length > 0;
-  }
   // Completeness issues the staffer must address before saving. Excludes the
   // member/Contact User assignments — the save auto-creates/reconciles those.
   // Each issue carries the editable field it maps to (or null) so the confirm
@@ -500,15 +496,12 @@
   function pendingCompletenessIssues(v) {
     var issues = [];
     if (!current.contactRecordId) issues.push({ field: null, text: "no linked Contact record" });
-    [["backgroundCheckCompleted", "background check"], ["ethicsAgreementAccepted", "ethics agreement"],
+    // Background check is optional; publicProfile is not part of completeness.
+    [["ethicsAgreementAccepted", "ethics agreement"],
      ["trainingCompleted", "training completed"], ["termsAccepted", "terms accepted"]].forEach(function (f) {
       if (!v[f[0]]) issues.push({ field: f[0], text: f[1] + " not confirmed" });
     });
     if (v.mentorStatus === "Active" && !(v.cbmEmail || "").trim()) issues.push({ field: "cbmEmail", text: "no CBM email address" });
-    if (v.publicProfile) {
-      if (!hasText(v.aboutMentor)) issues.push({ field: "aboutMentor", text: "public profile: About the mentor is empty" });
-      if (!(v.areaOfExpertise || []).length) issues.push({ field: "areaOfExpertise", text: "public profile: no area of expertise selected" });
-    }
     return issues;
   }
 

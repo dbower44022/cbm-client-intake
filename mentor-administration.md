@@ -68,10 +68,12 @@ specific reasons.
 | Requirement | Field |
 |---|---|
 | A linked **Contact** record | `contactRecord` |
-| **Background check** completed | `backgroundCheckCompleted` = true |
 | **Ethics agreement** accepted | `ethicsAgreementAccepted` = true |
 | **Training** completed | `trainingCompleted` = true |
 | **Terms** accepted | `termsAccepted` = true |
+
+(**Background check** is optional — it is *not* required for completeness. **Public
+profile** does not affect completeness either.)
 
 ### Additionally, if the mentor's status is **Active**
 
@@ -80,15 +82,6 @@ specific reasons.
 | A **CBM email address** is set | `cbmEmail` |
 | A login **User** is assigned to the mentor (the CBM member record) | `assignedUser` |
 | The **same User** is assigned to the mentor's **Contact** | `Contact.assignedUser` |
-
-### Additionally, if **Public profile** is turned on
-
-(`publicProfile` = true — a checkbox on the **Status** tab.)
-
-| Requirement | Field |
-|---|---|
-| **About the mentor** contains text | `aboutMentor` |
-| At least one **Area of expertise** | `areaOfExpertise` |
 
 ---
 
