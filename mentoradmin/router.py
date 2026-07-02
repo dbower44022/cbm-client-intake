@@ -141,9 +141,14 @@ async def mentor_detail(mentor_id: str, request: Request) -> dict:
     client = client_for(get_settings(), user)
     try:
         rec = await service.get_mentor(client, mentor_id)
-        # Completeness is computed for the header badge, but recordStatus is only
-        # persisted on save (not on view) to avoid churning modifiedAt/modifiedBy.
         rec["completeness"] = await service.check_completeness(client, rec)
+        # Self-heal the stored recordStatus so the roster grid matches this live
+        # badge. sync_record_status only writes when the value actually changed
+        # (and never over a manual "Duplicate"), so a view corrects a drifted
+        # record once, then is a no-op — the grid no longer goes stale.
+        rec["recordStatus"] = await service.sync_record_status(
+            client, mentor_id, rec, rec["completeness"]["status"]
+        )
         return rec
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not load mentor")

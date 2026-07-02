@@ -209,6 +209,10 @@
     try {
       current = await api("/mentors/" + encodeURIComponent(id));
     } catch (e) { if (e.status === 401) { showLogin(); return; } notice("listNotice", e.message, "error"); return; }
+    // The detail GET self-heals a drifted recordStatus (persist-on-view). If it
+    // changed the stored value, reload the grid on return so the Record column matches.
+    var row = mentors.filter(function (m) { return m.id === id; })[0];
+    if (row && current.recordStatus && row.recordStatus !== current.recordStatus) listDirty = true;
     $("detailName").textContent = current.name || "(unnamed mentor)";
     hide($("detailNotice"));
     renderReadonly(current);

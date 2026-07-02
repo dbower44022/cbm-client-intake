@@ -4,6 +4,18 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.22.1] — 2026-07-02
+
+### Fixed (Mentor Administration `/mentoradmin`)
+- **Roster "Record" column no longer goes stale vs. the detail badge.** The grid
+  reads the stored `recordStatus`, which was only written on Save; a record made
+  complete outside a save-through-this-tool (e.g. the v0.11.2 login-link fix) stayed
+  Incomplete in the grid while the detail page computed Complete (reported for prod's
+  Douglas Bower). The detail GET now **persists the recomputed status on view** when
+  it changed (`sync_record_status`, still a no-op when unchanged and still preserving a
+  manual `Duplicate`), so the stored value self-heals; the frontend reloads the roster
+  on return when the status changed.
+
 ## [0.22.0] — 2026-07-02
 
 ### Changed (Mentor Administration `/mentoradmin`)
