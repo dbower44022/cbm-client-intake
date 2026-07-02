@@ -113,7 +113,10 @@ async def list_engagements(
     data = await client.list(
         ENGAGEMENT,
         where=[{"type": "in", "attribute": "engagementStatus", "value": list(statuses)}],
-        select="name,createdAt,engagementStatus,primaryEngagementContactName,engagementClientName",
+        select=(
+            "name,createdAt,engagementStatus,primaryEngagementContactName,"
+            "engagementClientName,mentorProfileId,mentorProfileName"
+        ),
         max_size=200,
         order_by="createdAt",
         order="desc",
@@ -126,6 +129,10 @@ async def list_engagements(
             "status": r.get("engagementStatus"),
             "contactName": r.get("primaryEngagementContactName"),
             "clientName": r.get("engagementClientName"),
+            # The assigned mentor (CEngagement.mentorProfile). Present => the row
+            # shows the mentor name instead of the Select-a-Mentor picker + button.
+            "mentorId": r.get("mentorProfileId"),
+            "mentorName": r.get("mentorProfileName"),
         }
         for r in data.get("list", [])
     ]

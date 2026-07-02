@@ -246,6 +246,16 @@
     tr.appendChild(tdEng);
 
     var tdAssign = document.createElement("td");
+    if (eng.mentorId) {
+      // Already assigned — show the mentor; no picker/Assign button.
+      var assigned = document.createElement("span");
+      assigned.className = "assigned-mentor";
+      assigned.textContent = eng.mentorName || "Assigned";
+      tdAssign.appendChild(assigned);
+      tr.appendChild(tdAssign);
+      return tr;
+    }
+
     var cell = document.createElement("div");
     cell.className = "assign-cell";
 

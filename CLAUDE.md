@@ -318,9 +318,13 @@ detail screen that reviews all info (read-only computed totals on top) and
 A **staff-only** dashboard (NOT a public intake form) that lives in the same
 FastAPI app (`assignments/` package, mounted only when `SESSION_SECRET` is set —
 see `Settings.assignments_active`). It lists `CEngagement` records with
-`engagementStatus="Submitted"` in a grid; each row has a dropdown of mentors
-**accepting new clients** and, on confirm, assigns the engagement to the chosen
-mentor.
+`engagementStatus="Submitted"` in a grid; each **unassigned** row has a dropdown
+of mentors **accepting new clients** and, on confirm, assigns the engagement to the
+chosen mentor. A row whose engagement **already has a mentor**
+(`CEngagement.mentorProfile`) shows the **assigned mentor's name** instead of the
+picker/Assign button (so filtering to Active/Pending Acceptance etc. shows the
+mentor, not a redundant control); `list_engagements` returns `mentorId`/`mentorName`
+(v0.23.0).
 
 - **Auth = per-user, acts as the logged-in user.** Staff log in with their own
   EspoCRM username/password (`POST /assignments/api/login` → EspoCRM `App/user`

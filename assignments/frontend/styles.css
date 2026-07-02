@@ -150,6 +150,7 @@
 }
 .assign-cell .cbm-button { padding: 0.5rem 1rem; font-size: var(--cbm-text-sm); }
 .assign-cell .cbm-button[disabled] { opacity: 0.5; cursor: not-allowed; }
+.assigned-mentor { font-weight: 600; color: var(--cbm-navy); }
 
 .row-busy { opacity: 0.55; pointer-events: none; }
 .assign__empty, .assign__loading { color: var(--cbm-text); padding: 1.5rem 0; }

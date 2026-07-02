@@ -4,6 +4,18 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.23.0] — 2026-07-02
+
+### Changed (Client Administration `/assignments`)
+- **Engagements that already have a mentor no longer show the picker.** The grid's
+  "Assign to mentor" column now shows the **assigned mentor's name** for any
+  engagement that already has one (`CEngagement.mentorProfile`), instead of the
+  Select-a-Mentor dropdown + Assign button. The picker/button appear **only** when
+  no mentor is assigned. So filtering to Active (or any status whose engagements are
+  already assigned) shows the mentor, not a redundant assign control. `list_engagements`
+  now returns `mentorId`/`mentorName`; after an assign the grid reloads and the row
+  flips to showing the name.
+
 ## [0.22.3] — 2026-07-02
 
 ### Changed (Mentor Administration `/mentoradmin`)

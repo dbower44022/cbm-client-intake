@@ -278,12 +278,23 @@ async def test_list_engagements_query_and_shape():
                         "engagementStatus": "Submitted",
                         "primaryEngagementContactName": "Sharon Rose",
                         "engagementClientName": "Rose LLC",
-                    }
+                    },
+                    {
+                        "id": "e2",
+                        "name": "Al Green — Intake",
+                        "createdAt": "2026-06-17 10:00:00",
+                        "engagementStatus": "Pending Acceptance",
+                        "primaryEngagementContactName": "Al Green",
+                        "engagementClientName": "Green Co",
+                        "mentorProfileId": "mp9",
+                        "mentorProfileName": "Pat Mentor",
+                    },
                 ]
             }
         }
     )
     rows = await service.list_engagements(client, ["Submitted", "Pending Acceptance"])
+    # Unassigned engagement -> no mentor (the row renders the picker).
     assert rows[0] == {
         "id": "e1",
         "name": "Sharon Rose — Intake",
@@ -291,7 +302,11 @@ async def test_list_engagements_query_and_shape():
         "status": "Submitted",
         "contactName": "Sharon Rose",
         "clientName": "Rose LLC",
+        "mentorId": None,
+        "mentorName": None,
     }
+    # Assigned engagement -> mentor surfaced (the row shows the name, no picker).
+    assert rows[1]["mentorId"] == "mp9" and rows[1]["mentorName"] == "Pat Mentor"
     entity, where = client.list_calls[0]
     assert entity == service.ENGAGEMENT
     # Multi-status filter -> an `in` clause over the selected statuses.
