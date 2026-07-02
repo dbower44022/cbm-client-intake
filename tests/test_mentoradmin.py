@@ -81,6 +81,13 @@ def test_field_spec_layout():
     assert by["departureDate"]["group"] == "Departure"
     assert by["departureReason"]["group"] == "Departure"
     assert not any(f["group"] == "Dates" for f in service.EDITABLE_FIELDS)
+    # Status: status/type share a row, pause window on the line beneath them
+    assert by["mentorStatus"]["row"] == "statustype" and by["mentorType"]["row"] == "statustype"
+    assert by["mentorPauseStartDate"]["group"] == "Status" and by["mentorPauseStartDate"]["row"] == "pause"
+    assert by["mentorPauseEndDate"]["group"] == "Status" and by["mentorPauseEndDate"]["row"] == "pause"
+    # Expertise carries industry experience, not the (removed) mentoring focus areas
+    assert by["industryExperience"]["group"] == "Expertise"
+    assert "mentoringFocusAreas" not in by
     # Compliance: checkboxes on the top row, dates on the bottom
     comp = [f for f in service.EDITABLE_FIELDS if f["group"] == "Compliance"]
     assert all(f["row"] == "checks" for f in comp if f["type"] == "bool")
@@ -104,13 +111,13 @@ async def test_get_mentor_selects_contact_info_foreign_fields():
 async def test_field_options_reads_live_enums():
     meta = {
         "mentorStatus": {"type": "enum", "options": ["Active", "Inactive"]},
-        "mentoringFocusAreas": {"type": "multiEnum", "options": ["Finance", "Marketing"]},
+        "industryExperience": {"type": "multiEnum", "options": ["Finance", "Marketing"]},
         "name": {"type": "varchar"},  # not an enum -> excluded
     }
     client = FakeClient(metadata=meta)
     opts = await service.field_options(client)
     assert opts["mentorStatus"] == ["Active", "Inactive"]
-    assert opts["mentoringFocusAreas"] == ["Finance", "Marketing"]
+    assert opts["industryExperience"] == ["Finance", "Marketing"]
     assert "name" not in opts
 
 
@@ -175,19 +182,20 @@ async def test_completeness_active_requires_cbm_email():
 
 @pytest.mark.asyncio
 async def test_completeness_public_profile_requirements():
-    # publicProfile true but nothing filled in -> four extra issues
+    # publicProfile true but nothing filled in -> three extra issues (focus areas
+    # are no longer part of the public-profile requirement)
     r = await service.check_completeness(CompletenessClient("u1"), _complete_rec(
-        publicProfile=True, aboutMentor="<p></p>", mentoringFocusAreas=[],
+        publicProfile=True, aboutMentor="<p></p>",
         areaOfExpertise=[], industrySector=None))
     assert r["status"] == "Incomplete"
     joined = " ".join(r["issues"])
-    for token in ("About the mentor", "mentoring focus area", "area of expertise", "industry sector"):
+    for token in ("About the mentor", "area of expertise", "industry sector"):
         assert token in joined
+    assert "mentoring focus area" not in joined
     # fully filled in -> Complete
     r2 = await service.check_completeness(CompletenessClient("u1"), _complete_rec(
         publicProfile=True, aboutMentor="<p>Experienced founder.</p>",
-        mentoringFocusAreas=["Finance"], areaOfExpertise=["Construction"],
-        industrySector="Information"))
+        areaOfExpertise=["Construction"], industrySector="Information"))
     assert r2 == {"status": "Complete", "issues": []}
 
 

@@ -87,7 +87,6 @@ specific reasons.
 | Requirement | Field |
 |---|---|
 | **About the mentor** contains text | `aboutMentor` |
-| At least one **Mentoring focus area** | `mentoringFocusAreas` |
 | At least one **Area of expertise** | `areaOfExpertise` |
 | An **Industry sector** is selected | `industrySector` |
 

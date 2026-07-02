@@ -4,6 +4,25 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.22.0] — 2026-07-02
+
+### Changed (Mentor Administration `/mentoradmin`)
+- **Expertise tab now edits `industryExperience` instead of `mentoringFocusAreas`.**
+  The mentoring-focus-areas multi-select was replaced by an Industry experience
+  multi-select (the field the mentor intake form now writes). Auto-propagates to the
+  detail-select, update whitelist, and live enum-options.
+- **Status tab gained a mentor-pause window.** `mentorPauseStartDate` +
+  `mentorPauseEndDate` (date) render on their own line directly beneath the
+  Status/Type selectors (which now share a row).
+- **"Back to list" warns on unsaved edits.** Leaving the detail view with changed,
+  unsaved fields now pops a styled "Discard unsaved changes?" modal listing the
+  changed fields ("Keep editing" / "Discard changes"). A clean save re-baselines the
+  snapshots, so no false warning after saving.
+- **Completeness rule: dropped the mentoring-focus-area requirement.** A public-profile
+  mentor no longer needs ≥1 mentoring focus area to count as Complete (still requires
+  About text + ≥1 area of expertise + an industry sector) — keeps the rule satisfiable
+  now that focus areas aren't editable here. Updated server, frontend mirror, and docs.
+
 ## [0.21.3] — 2026-07-01
 
 ### Fixed

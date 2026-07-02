@@ -83,8 +83,11 @@ HOW_HEARD_OPTIONS = [
 # CRM type is free-text. Order is the display order.
 EDITABLE_FIELDS: list[dict[str, Any]] = [
     {"name": "name", "label": "Name", "type": "varchar", "group": "Profile"},
-    {"name": "mentorStatus", "label": "Status", "type": "enum", "group": "Status"},
-    {"name": "mentorType", "label": "Type", "type": "enum", "group": "Status"},
+    {"name": "mentorStatus", "label": "Status", "type": "enum", "group": "Status", "row": "statustype"},
+    {"name": "mentorType", "label": "Type", "type": "enum", "group": "Status", "row": "statustype"},
+    # Pause window on its own line, directly under the status/type selectors.
+    {"name": "mentorPauseStartDate", "label": "Mentor pause start date", "type": "date", "group": "Status", "row": "pause"},
+    {"name": "mentorPauseEndDate", "label": "Mentor pause end date", "type": "date", "group": "Status", "row": "pause"},
     {"name": "acceptingNewClients", "label": "Accepting new clients", "type": "bool", "group": "Status"},
     {"name": "publicProfile", "label": "Public profile", "type": "bool", "group": "Status"},
     {"name": "mentorStartDate", "label": "Mentor start date", "type": "date", "group": "Status"},
@@ -92,7 +95,7 @@ EDITABLE_FIELDS: list[dict[str, Any]] = [
     {"name": "maximumClientCapacity", "label": "Maximum client capacity", "type": "int", "group": "Capacity"},
     {"name": "yearsOfExperience", "label": "Years of experience", "type": "int", "group": "Capacity"},
     {"name": "industrySector", "label": "Industry sector", "type": "enum", "group": "Expertise"},
-    {"name": "mentoringFocusAreas", "label": "Mentoring focus areas", "type": "multiEnum", "group": "Expertise"},
+    {"name": "industryExperience", "label": "Industry experience", "type": "multiEnum", "group": "Expertise"},
     {"name": "areaOfExpertise", "label": "Areas of expertise", "type": "multiEnum", "group": "Expertise"},
     {"name": "fluentLanguages", "label": "Fluent languages", "type": "multiEnum", "group": "Expertise"},
     # Compliance: checkboxes on the top row, dates (and dues status) below.
@@ -160,8 +163,8 @@ async def check_completeness(client: MentorClient, rec: dict[str, Any]) -> dict[
     flags (``COMPLETENESS_FLAGS``). For an **Active** mentor, additionally: a CBM
     email address, plus a login **User** assigned to the member and that same User
     on the Contact. For a **public profile** (``publicProfile`` true): About-the-
-    mentor text, ≥1 mentoring focus area, ≥1 area of expertise, and an industry
-    sector. Returns ``{"status": "Complete"|"Incomplete", "issues": [...]}``.
+    mentor text, ≥1 area of expertise, and an industry sector. Returns
+    ``{"status": "Complete"|"Incomplete", "issues": [...]}``.
     """
     issues: list[str] = []
     contact_id = rec.get("contactRecordId")
@@ -192,8 +195,6 @@ async def check_completeness(client: MentorClient, rec: dict[str, Any]) -> dict[
     if rec.get("publicProfile"):
         if not _has_text(rec.get("aboutMentor")):
             issues.append("public profile: About the mentor is empty")
-        if not rec.get("mentoringFocusAreas"):
-            issues.append("public profile: no mentoring focus area selected")
         if not rec.get("areaOfExpertise"):
             issues.append("public profile: no area of expertise selected")
         if not rec.get("industrySector"):

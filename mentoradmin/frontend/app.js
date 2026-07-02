@@ -83,7 +83,12 @@
   });
   $("logoutBtn").addEventListener("click", async function () { try { await api("/logout", { method: "POST" }); } catch (e) {} showLogin(); });
   $("refreshBtn").addEventListener("click", function () { loadMentors(); });
-  $("backBtn").addEventListener("click", function () { showList(); if (listDirty) { listDirty = false; loadMentors(); } });
+  function returnToList() { showList(); if (listDirty) { listDirty = false; loadMentors(); } }
+  $("backBtn").addEventListener("click", function () {
+    var changed = unsavedFieldLabels();
+    if (changed.length) showDiscardModal(changed, returnToList);
+    else returnToList();
+  });
   $("search").addEventListener("input", function () { filter.q = this.value; renderTable(); });
   $("statusFilter").addEventListener("change", function () { filter.status = this.value; renderTable(); });
   $("recordFilter").addEventListener("change", function () { filter.record = this.value; renderTable(); });
@@ -490,7 +495,6 @@
     if (v.mentorStatus === "Active" && !(v.cbmEmail || "").trim()) issues.push({ field: "cbmEmail", text: "no CBM email address" });
     if (v.publicProfile) {
       if (!hasText(v.aboutMentor)) issues.push({ field: "aboutMentor", text: "public profile: About the mentor is empty" });
-      if (!(v.mentoringFocusAreas || []).length) issues.push({ field: "mentoringFocusAreas", text: "public profile: no mentoring focus area selected" });
       if (!(v.areaOfExpertise || []).length) issues.push({ field: "areaOfExpertise", text: "public profile: no area of expertise selected" });
       if (!v.industrySector) issues.push({ field: "industrySector", text: "public profile: no industry sector selected" });
     }
@@ -515,30 +519,70 @@
     }
   }
 
-  function showConfirmModal(issues, onConfirm, onCancel) {
+  // Generic confirm modal. `opts`: {title, intro, items[], outro, cancelLabel,
+  // confirmLabel, onConfirm, onCancel}. Cancel is the safe/default action (focused).
+  function modalConfirm(opts) {
     var prev = document.getElementById("confirmModal"); if (prev) prev.remove();
     var overlay = document.createElement("div"); overlay.id = "confirmModal"; overlay.className = "modal-overlay";
     var card = document.createElement("div"); card.className = "modal-card";
-    var h = document.createElement("h3"); h.textContent = "This record is still incomplete"; card.appendChild(h);
-    var p = document.createElement("p"); p.textContent = "The following still need attention:"; card.appendChild(p);
-    var ul = document.createElement("ul");
-    issues.forEach(function (i) { var li = document.createElement("li"); li.textContent = i.text; ul.appendChild(li); });
-    card.appendChild(ul);
-    var p2 = document.createElement("p"); p2.textContent = "Cancel to fix it, or save anyway?"; card.appendChild(p2);
+    var h = document.createElement("h3"); h.textContent = opts.title; card.appendChild(h);
+    if (opts.intro) { var p = document.createElement("p"); p.textContent = opts.intro; card.appendChild(p); }
+    if (opts.items && opts.items.length) {
+      var ul = document.createElement("ul");
+      opts.items.forEach(function (t) { var li = document.createElement("li"); li.textContent = t; ul.appendChild(li); });
+      card.appendChild(ul);
+    }
+    if (opts.outro) { var p2 = document.createElement("p"); p2.textContent = opts.outro; card.appendChild(p2); }
     var actions = document.createElement("div"); actions.className = "modal-actions";
-    var cancel = document.createElement("button"); cancel.type = "button"; cancel.className = "cbm-button cbm-button--secondary"; cancel.textContent = "Cancel";
-    var ok = document.createElement("button"); ok.type = "button"; ok.className = "cbm-button"; ok.textContent = "Save anyway";
+    var cancel = document.createElement("button"); cancel.type = "button"; cancel.className = "cbm-button cbm-button--secondary"; cancel.textContent = opts.cancelLabel;
+    var ok = document.createElement("button"); ok.type = "button"; ok.className = "cbm-button"; ok.textContent = opts.confirmLabel;
     function close() { overlay.remove(); document.removeEventListener("keydown", onKey); }
     function onKey(e) { if (e.key === "Escape") close(); }
-    // Cancel returns the user to the first unresolved field rather than dropping
-    // them into a multi-tab form with nothing highlighted.
-    cancel.addEventListener("click", function () { close(); if (onCancel) onCancel(); });
-    ok.addEventListener("click", function () { close(); onConfirm(); });
+    cancel.addEventListener("click", function () { close(); if (opts.onCancel) opts.onCancel(); });
+    ok.addEventListener("click", function () { close(); opts.onConfirm(); });
     overlay.addEventListener("click", function (e) { if (e.target === overlay) close(); });
     document.addEventListener("keydown", onKey);
     actions.appendChild(cancel); actions.appendChild(ok); card.appendChild(actions);
     overlay.appendChild(card); document.body.appendChild(overlay);
     cancel.focus();
+  }
+
+  function showConfirmModal(issues, onConfirm, onCancel) {
+    // Cancel returns the user to the first unresolved field rather than dropping
+    // them into a multi-tab form with nothing highlighted.
+    modalConfirm({
+      title: "This record is still incomplete",
+      intro: "The following still need attention:",
+      items: issues.map(function (i) { return i.text; }),
+      outro: "Cancel to fix it, or save anyway?",
+      cancelLabel: "Cancel", confirmLabel: "Save anyway",
+      onConfirm: onConfirm, onCancel: onCancel,
+    });
+  }
+
+  // Fields the user has changed but not yet saved (readField != render snapshot).
+  function unsavedFieldLabels() {
+    var labels = [];
+    Array.prototype.forEach.call($("editForm").querySelectorAll("[data-field]"), function (el) {
+      if (JSON.stringify(readField(el)) !== el.dataset.original) {
+        var spec = fieldSpec.filter(function (f) { return f.name === el.dataset.field; })[0];
+        labels.push(spec ? spec.label : el.dataset.field);
+      }
+    });
+    return labels;
+  }
+
+  // Warn before leaving the detail view with unsaved edits (Save re-baselines the
+  // snapshots, so a clean save leaves nothing to warn about).
+  function showDiscardModal(labels, onDiscard) {
+    modalConfirm({
+      title: "Discard unsaved changes?",
+      intro: "You have unsaved changes to these fields:",
+      items: labels,
+      outro: "Keep editing to save them, or discard and return to the list.",
+      cancelLabel: "Keep editing", confirmLabel: "Discard changes",
+      onConfirm: onDiscard,
+    });
   }
 
   // An Approved/Active mentor with no login User needs one provisioned (mailbox
