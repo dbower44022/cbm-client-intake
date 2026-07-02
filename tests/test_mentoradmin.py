@@ -85,9 +85,10 @@ def test_field_spec_layout():
     assert by["mentorStatus"]["row"] == "statustype" and by["mentorType"]["row"] == "statustype"
     assert by["mentorPauseStartDate"]["group"] == "Status" and by["mentorPauseStartDate"]["row"] == "pause"
     assert by["mentorPauseEndDate"]["group"] == "Status" and by["mentorPauseEndDate"]["row"] == "pause"
-    # Expertise carries industry experience, not the (removed) mentoring focus areas
+    # Expertise carries industry experience, not the (removed) focus areas / sector
     assert by["industryExperience"]["group"] == "Expertise"
     assert "mentoringFocusAreas" not in by
+    assert "industrySector" not in by
     # Compliance: checkboxes on the top row, dates on the bottom
     comp = [f for f in service.EDITABLE_FIELDS if f["group"] == "Compliance"]
     assert all(f["row"] == "checks" for f in comp if f["type"] == "bool")
@@ -182,20 +183,20 @@ async def test_completeness_active_requires_cbm_email():
 
 @pytest.mark.asyncio
 async def test_completeness_public_profile_requirements():
-    # publicProfile true but nothing filled in -> three extra issues (focus areas
-    # are no longer part of the public-profile requirement)
+    # publicProfile true but nothing filled in -> two extra issues (focus areas +
+    # industry sector are no longer part of the public-profile requirement)
     r = await service.check_completeness(CompletenessClient("u1"), _complete_rec(
-        publicProfile=True, aboutMentor="<p></p>",
-        areaOfExpertise=[], industrySector=None))
+        publicProfile=True, aboutMentor="<p></p>", areaOfExpertise=[]))
     assert r["status"] == "Incomplete"
     joined = " ".join(r["issues"])
-    for token in ("About the mentor", "area of expertise", "industry sector"):
+    for token in ("About the mentor", "area of expertise"):
         assert token in joined
     assert "mentoring focus area" not in joined
-    # fully filled in -> Complete
+    assert "industry sector" not in joined
+    # fully filled in -> Complete (no industry sector required)
     r2 = await service.check_completeness(CompletenessClient("u1"), _complete_rec(
         publicProfile=True, aboutMentor="<p>Experienced founder.</p>",
-        areaOfExpertise=["Construction"], industrySector="Information"))
+        areaOfExpertise=["Construction"]))
     assert r2 == {"status": "Complete", "issues": []}
 
 

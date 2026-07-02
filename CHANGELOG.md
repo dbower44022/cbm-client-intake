@@ -4,6 +4,22 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.22.2] — 2026-07-02
+
+### Changed (Mentor Administration `/mentoradmin`)
+- **Removed Industry sector from the mentor admin app.** Dropped the Industry column
+  and industry filter from the roster grid and the Industry-sector field from the
+  Expertise detail tab. (`industrySector` is unchanged in the Client Administration
+  tool, which still uses it.)
+- **Roster grid gained Mentor Email + Type.** New columns: **Mentor Email** (the CBM
+  `@cbmentors.org` login address, `cbmEmail`) and **Type** (`mentorType`), with a
+  matching mentor-type filter replacing the old industry filter. Column order is now
+  Mentor · Mentor Email · Record · Status · Type · Created · Assigned · Capacity.
+- **Completeness: dropped the industry-sector requirement.** A public-profile mentor
+  no longer needs an Industry sector to count as Complete (still requires About text +
+  ≥1 area of expertise), consistent with removing the field. Server, frontend mirror,
+  and docs updated.
+
 ## [0.22.1] — 2026-07-02
 
 ### Fixed (Mentor Administration `/mentoradmin`)

@@ -235,8 +235,7 @@ detail screen that reviews all info (read-only computed totals on top) and
   check / ethics / training / terms are all true; plus, **if Active**, a CBM
   email address + a User assigned to the member AND the same User to its Contact;
   plus, if **`publicProfile`** is set (editable bool on the Status tab),
-  About-the-mentor text + ≥1 mentoring focus area + ≥1 area of expertise + an
-  industry sector. On **every save**,
+  About-the-mentor text + ≥1 area of expertise. On **every save**,
   `service.reconcile_user_links` (best-effort) assigns the mentor's User
   (`CMentorProfile.assignedUser`, or the Contact's if only that side has one) to
   **both** the member and its Contact — filling the gap provisioning leaves (it

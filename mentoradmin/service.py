@@ -94,7 +94,6 @@ EDITABLE_FIELDS: list[dict[str, Any]] = [
     {"name": "mentorStatusNotes", "label": "Status notes", "type": "text", "group": "Status"},
     {"name": "maximumClientCapacity", "label": "Maximum client capacity", "type": "int", "group": "Capacity"},
     {"name": "yearsOfExperience", "label": "Years of experience", "type": "int", "group": "Capacity"},
-    {"name": "industrySector", "label": "Industry sector", "type": "enum", "group": "Expertise"},
     {"name": "industryExperience", "label": "Industry experience", "type": "multiEnum", "group": "Expertise"},
     {"name": "areaOfExpertise", "label": "Areas of expertise", "type": "multiEnum", "group": "Expertise"},
     {"name": "fluentLanguages", "label": "Fluent languages", "type": "multiEnum", "group": "Expertise"},
@@ -163,7 +162,7 @@ async def check_completeness(client: MentorClient, rec: dict[str, Any]) -> dict[
     flags (``COMPLETENESS_FLAGS``). For an **Active** mentor, additionally: a CBM
     email address, plus a login **User** assigned to the member and that same User
     on the Contact. For a **public profile** (``publicProfile`` true): About-the-
-    mentor text, ≥1 area of expertise, and an industry sector. Returns
+    mentor text and ≥1 area of expertise. Returns
     ``{"status": "Complete"|"Incomplete", "issues": [...]}``.
     """
     issues: list[str] = []
@@ -197,8 +196,6 @@ async def check_completeness(client: MentorClient, rec: dict[str, Any]) -> dict[
             issues.append("public profile: About the mentor is empty")
         if not rec.get("areaOfExpertise"):
             issues.append("public profile: no area of expertise selected")
-        if not rec.get("industrySector"):
-            issues.append("public profile: no industry sector selected")
 
     return {"status": "Complete" if not issues else "Incomplete", "issues": issues}
 

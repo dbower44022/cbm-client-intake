@@ -19,11 +19,12 @@ logins. It is **not** a public form.
 
 The landing screen lists every mentor. You can:
 
-- **Search** by name, industry, expertise, or focus area.
-- **Filter** by mentoring status, **Record** (completeness) status, or industry.
+- **Search** by name, email, expertise, or focus area.
+- **Filter** by mentoring status, **Record** (completeness) status, or mentor type.
 - **Sort** by any column.
 
-Columns: **Mentor · Record · Status · Created · Assigned · Capacity · Industry**.
+Columns: **Mentor · Mentor Email · Record · Status · Type · Created · Assigned · Capacity**.
+(Mentor Email is the CBM `@cbmentors.org` login address, set once a mentor is provisioned.)
 
 The **Record** column shows each mentor's stored completeness status
 (**Complete / Incomplete / Duplicate**, or "—" if not yet calculated). Use the
@@ -88,7 +89,6 @@ specific reasons.
 |---|---|
 | **About the mentor** contains text | `aboutMentor` |
 | At least one **Area of expertise** | `areaOfExpertise` |
-| An **Industry sector** is selected | `industrySector` |
 
 ---
 

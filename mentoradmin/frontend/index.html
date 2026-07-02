@@ -41,22 +41,23 @@
         </span>
       </div>
       <div class="ma__controls">
-        <input type="search" id="search" class="ma__search" placeholder="Search name, industry, expertise, focus…" autocomplete="off" />
+        <input type="search" id="search" class="ma__search" placeholder="Search name, email, expertise, focus…" autocomplete="off" />
         <select id="statusFilter" aria-label="Filter by status"></select>
         <select id="recordFilter" aria-label="Filter by record status"></select>
-        <select id="industryFilter" aria-label="Filter by industry"></select>
+        <select id="typeFilter" aria-label="Filter by mentor type"></select>
       </div>
       <p class="ma__count" id="count"></p>
       <p class="ma__notice" id="listNotice" role="status" hidden></p>
       <table class="ma__table" id="mentorTable" hidden>
         <thead><tr>
           <th data-sort="name" class="is-sortable">Mentor</th>
+          <th data-sort="cbmEmail" class="is-sortable">Mentor Email</th>
           <th data-sort="recordStatus" class="is-sortable">Record</th>
           <th data-sort="status" class="is-sortable">Status</th>
+          <th data-sort="mentorType" class="is-sortable">Type</th>
           <th data-sort="createdAt" class="is-sortable">Created</th>
           <th data-sort="assignedClients" class="is-sortable num">Assigned</th>
           <th data-sort="availableCapacity" class="is-sortable num">Capacity</th>
-          <th data-sort="industrySector" class="is-sortable">Industry</th>
         </tr></thead>
         <tbody id="mentorBody"></tbody>
       </table>

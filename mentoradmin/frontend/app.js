@@ -9,7 +9,7 @@
   var current = null;      // the mentor being edited
   var listDirty = false;   // reload list after an edit
   var isAdmin = false;     // gates the Email Setup screen
-  var filter = { q: "", status: "", record: "", industry: "", sortKey: "name", sortDir: 1 };
+  var filter = { q: "", status: "", record: "", type: "", sortKey: "name", sortDir: 1 };
 
   function $(id) { return document.getElementById(id); }
   function show(el) { el.hidden = false; }
@@ -92,7 +92,7 @@
   $("search").addEventListener("input", function () { filter.q = this.value; renderTable(); });
   $("statusFilter").addEventListener("change", function () { filter.status = this.value; renderTable(); });
   $("recordFilter").addEventListener("change", function () { filter.record = this.value; renderTable(); });
-  $("industryFilter").addEventListener("change", function () { filter.industry = this.value; renderTable(); });
+  $("typeFilter").addEventListener("change", function () { filter.type = this.value; renderTable(); });
   $("setupBtn").addEventListener("click", function () { openSetup(); });
   $("setupBackBtn").addEventListener("click", function () { showList(); });
   $("setupSaveBtn").addEventListener("click", function () { saveSetup(); });
@@ -133,7 +133,7 @@
       mentors = (await api("/mentors")).mentors || [];
       fillSelect($("statusFilter"), distinct(function (m) { return [m.status]; }), "All statuses");
       fillSelect($("recordFilter"), distinct(function (m) { return [m.recordStatus]; }), "All record statuses");
-      fillSelect($("industryFilter"), distinct(function (m) { return [m.industrySector]; }), "All industries");
+      fillSelect($("typeFilter"), distinct(function (m) { return [m.mentorType]; }), "All types");
       renderTable();
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }
@@ -146,7 +146,7 @@
     return Object.keys(set).sort();
   }
   function avail(m) { return m.availableCapacity === -1 ? Infinity : (typeof m.availableCapacity === "number" ? m.availableCapacity : -Infinity); }
-  function haystack(m) { return [m.name, m.status, m.industrySector, (m.expertise || []).join(" "), (m.focusAreas || []).join(" ")].join(" ").toLowerCase(); }
+  function haystack(m) { return [m.name, m.status, m.cbmEmail, m.mentorType, (m.expertise || []).join(" "), (m.focusAreas || []).join(" ")].join(" ").toLowerCase(); }
   function sortVal(m, k) { if (k === "availableCapacity") return avail(m); if (k === "assignedClients") return m.assignedClients == null ? -Infinity : m.assignedClients; return (m[k] || "").toString().toLowerCase(); }
 
   function renderTable() {
@@ -155,7 +155,7 @@
       if (q && haystack(m).indexOf(q) < 0) return false;
       if (filter.status && m.status !== filter.status) return false;
       if (filter.record && m.recordStatus !== filter.record) return false;
-      if (filter.industry && m.industrySector !== filter.industry) return false;
+      if (filter.type && m.mentorType !== filter.type) return false;
       return true;
     });
     var k = filter.sortKey, dir = filter.sortDir;
@@ -172,12 +172,13 @@
       link.textContent = m.name || "(unnamed)";
       link.addEventListener("click", function () { openMentor(m.id); });
       name.appendChild(link); tr.appendChild(name);
+      tr.appendChild(cell(m.cbmEmail || "—"));
       tr.appendChild(cell(recordBadge(m.recordStatus)));
       tr.appendChild(cell(badge(m.status)));
+      tr.appendChild(cell(m.mentorType || "—"));
       tr.appendChild(cell(fmtDate(m.createdAt)));
       tr.appendChild(cell(m.assignedClients == null ? "—" : String(m.assignedClients), "num"));
       tr.appendChild(cell(m.availableCapacity === -1 ? "Unlimited" : (m.availableCapacity == null ? "—" : String(m.availableCapacity)), "num"));
-      tr.appendChild(cell(m.industrySector || "—"));
       tb.appendChild(tr);
     });
     show($("mentorTable"));
@@ -199,7 +200,7 @@
     th.addEventListener("click", function () {
       var key = th.getAttribute("data-sort");
       if (filter.sortKey === key) filter.sortDir = -filter.sortDir;
-      else { filter.sortKey = key; filter.sortDir = (key === "name" || key === "status" || key === "industrySector") ? 1 : -1; }
+      else { filter.sortKey = key; filter.sortDir = (key === "name" || key === "status" || key === "cbmEmail" || key === "mentorType") ? 1 : -1; }
       renderTable();
     });
   });
@@ -500,7 +501,6 @@
     if (v.publicProfile) {
       if (!hasText(v.aboutMentor)) issues.push({ field: "aboutMentor", text: "public profile: About the mentor is empty" });
       if (!(v.areaOfExpertise || []).length) issues.push({ field: "areaOfExpertise", text: "public profile: no area of expertise selected" });
-      if (!v.industrySector) issues.push({ field: "industrySector", text: "public profile: no industry sector selected" });
     }
     return issues;
   }
