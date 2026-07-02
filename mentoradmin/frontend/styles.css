@@ -44,6 +44,8 @@
 .name-link { background: none; border: 0; padding: 0; font: inherit; font-weight: 600;
   color: var(--cbm-blue); cursor: pointer; text-align: left; }
 .name-link:hover { text-decoration: underline; }
+.email-link { color: var(--cbm-blue); text-decoration: none; font-weight: 600; }
+.email-link:hover { text-decoration: underline; }
 
 /* status badge */
 .status-badge { display: inline-block; padding: 0.1rem 0.55rem; border-radius: 999px;

@@ -4,6 +4,13 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.22.3] — 2026-07-02
+
+### Changed (Mentor Administration `/mentoradmin`)
+- **Mentor Email in the roster is now a `mailto:` link** — clicking it opens the
+  staffer's email client addressed to the mentor's CBM email. Blank emails still
+  render as "—".
+
 ## [0.22.2] — 2026-07-02
 
 ### Changed (Mentor Administration `/mentoradmin`)

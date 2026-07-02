@@ -172,7 +172,7 @@
       link.textContent = m.name || "(unnamed)";
       link.addEventListener("click", function () { openMentor(m.id); });
       name.appendChild(link); tr.appendChild(name);
-      tr.appendChild(cell(m.cbmEmail || "—"));
+      tr.appendChild(cell(emailLink(m.cbmEmail)));
       tr.appendChild(cell(recordBadge(m.recordStatus)));
       tr.appendChild(cell(badge(m.status)));
       tr.appendChild(cell(m.mentorType || "—"));
@@ -185,6 +185,13 @@
     updateSortIndicators();
   }
   function cell(content, cls) { var td = document.createElement("td"); if (cls) td.className = cls; if (content instanceof Node) td.appendChild(content); else td.textContent = content; return td; }
+  // Clickable mailto: link so staff can email the mentor in one click.
+  function emailLink(email) {
+    if (!email) return document.createTextNode("—");
+    var a = document.createElement("a"); a.className = "email-link";
+    a.href = "mailto:" + email; a.textContent = email;
+    return a;
+  }
   function fmtDate(v) { return v ? String(v).slice(0, 10) : "—"; }  // ISO date part (YYYY-MM-DD)
   function badge(status) { var s = document.createElement("span"); s.className = "status-badge status-" + (status || "none"); s.textContent = status || "—"; return s; }
   function recordBadge(rs) {
