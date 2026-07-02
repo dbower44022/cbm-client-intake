@@ -4,6 +4,18 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.21.3] — 2026-07-01
+
+### Fixed
+- **Volunteer/mentor form now records "How did you hear" on the Contact too.** It
+  was written only to `CMentorProfile.howDidYouHearAboutCBM`, so the person's
+  Contact ("client") record showed a blank "How did you hear" while the other three
+  forms populate `Contact.cHowDidYouHear`. The volunteer orchestrator now also writes
+  `Contact.cHowDidYouHear` (sanitized against the Contact enum, added to the null-fill
+  keys) alongside the existing profile field. Not enum drift — the form's dropdown
+  values match both fields verbatim on crm-test and prod. Existing records are not
+  backfilled; a repeat submission from the same email null-fills the blank Contact field.
+
 ## [0.21.2] — 2026-07-01
 
 ### Changed

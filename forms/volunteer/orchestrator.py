@@ -45,6 +45,7 @@ C_LINKEDIN = "cLinkedInProfile"       # url
 C_PREFERRED_NAME = "cPreferredName"   # varchar
 C_CONTACT_METHOD = "cPreferredContactMethod"  # enum
 C_EMPLOYMENT = "cEmploymentStatus"    # enum
+C_HOW_HEARD = "cHowDidYouHear"        # enum on Contact (same as the other forms)
 # The single consent checkbox sets all three Contact bools.
 C_TERMS_ACCEPTED = "cTermsOfUseAccepted"       # bool on Contact
 C_PRIVACY_ACCEPTED = "cPrivacyPolicyAccepted"  # bool on Contact
@@ -56,7 +57,7 @@ C_CODE_OF_CONDUCT = "cCodeOfConductAccepted"   # bool on Contact
 _CONTACT_FILL_KEYS = (
     "firstName", "lastName", "middleName", C_PREFERRED_NAME, "addressStreet",
     "addressPostalCode", "phoneNumber", C_LINKEDIN, C_CONTACT_METHOD, C_EMPLOYMENT,
-    C_TERMS_ACCEPTED, C_PRIVACY_ACCEPTED, C_CODE_OF_CONDUCT,
+    C_HOW_HEARD, C_TERMS_ACCEPTED, C_PRIVACY_ACCEPTED, C_CODE_OF_CONDUCT,
 )
 
 # --- CMentorProfile attributes ---
@@ -119,6 +120,12 @@ async def _find_or_create_mentor_contact(
         employment = await san.enum(CONTACT, C_EMPLOYMENT, sub.currently_employed)
         if employment:
             payload[C_EMPLOYMENT] = employment
+    if sub.how_did_you_hear:
+        # Also record how-heard on the Contact (like the other forms) so it shows
+        # on the person/"client" record, not only on the linked CMentorProfile.
+        how_heard = await san.enum(CONTACT, C_HOW_HEARD, sub.how_did_you_hear)
+        if how_heard:
+            payload[C_HOW_HEARD] = how_heard
 
     contact_id, action = await find_create_or_fill(
         client, CONTACT,
