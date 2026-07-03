@@ -378,12 +378,20 @@ mentor, not a redundant control); `list_engagements` returns `mentorId`/`mentorN
   (`assignments/service.py:_assigned_user_payload`). Writing `assignedUserId` to a
   disabled-field entity is silently ignored.
 
-## Current status (updated 2026-06-30)
+## Current status (updated 2026-07-03)
 
-**Prod is on v0.21.2** (all three apps — prod / crm-test / dev — confirmed on
-`/healthz` and redeployed on each push). The big 2026-06-30/07-01 push (v0.12.0 →
-v0.21.2). Latest (v0.21.2): three mentor-form fields made **required on the form**
-(frontend only — see the volunteer bullet up top). Earlier in the push:
+**Prod is on v0.23.1** (all three apps — prod / crm-test / dev — confirmed on
+`/healthz` 2026-07-03 and redeployed on each push). Shipped since v0.21.2 (the
+2026-07-02 push, see CHANGELOG for detail): volunteer how-did-you-hear also
+writes `Contact.cHowDidYouHear` (v0.21.3); `/mentoradmin` roster + editor
+refinements — industry experience on the Expertise tab, pause dates on Status,
+unsaved-changes warning (v0.22.0), self-healing Record status on view (v0.22.1),
+roster columns reworked with Mentor Email as a mailto link (v0.22.2/3);
+`/assignments` grid shows the assigned mentor and hides the picker on
+already-assigned rows (v0.23.0); completeness no longer requires publicProfile
+checks or a background check (v0.23.1). Earlier, the big 2026-06-30/07-01 push
+(v0.12.0 → v0.21.2; v0.21.2 = three mentor-form fields made **required on the
+form**, frontend only — see the volunteer bullet up top):
 
 - **Field-mapping effort COMPLETE + code-reviewed.** Every input collected across all
   five forms now writes to its intended CRM field — nothing is silently dropped.
