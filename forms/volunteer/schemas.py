@@ -13,9 +13,12 @@ from pydantic import BaseModel, EmailStr, Field, model_validator
 
 from core.forms import BaseSubmission
 
+# Static, presentational list (phone_type has no CRM target field).
 PhoneType = Literal["Mobile", "Home", "Work"]
-ContactPreference = Literal["Email", "Phone", "Text"]
-EmploymentStatus = Literal["Yes, Full-time", "Yes, Part-time", "No"]
+# contact_preference / currently_employed are free strings, NOT Literal copies
+# of the CRM enums: their dropdowns are synced from the live CRM (options.js),
+# so a hard-coded list here would 422 the whole submission the moment a CRM
+# enum gains a value. The orchestrator sanitizes both against the live enum.
 
 # ~5 MB file ≈ 6.8 MB base64; cap a little above that.
 MAX_RESUME_B64_CHARS = 7_000_000
@@ -51,13 +54,13 @@ class VolunteerApplication(BaseSubmission):
     zip_code: str = Field(min_length=1, max_length=10)
     phone: str = Field(min_length=1, max_length=40)
     phone_type: Optional[PhoneType] = None
-    contact_preference: Optional[ContactPreference] = None
+    contact_preference: Optional[str] = Field(default=None, max_length=100)
 
     # Motivation & background
     why_volunteer: str = Field(min_length=1)
     work_experience: Optional[str] = None
     resume: Optional[ResumeUpload] = None
-    currently_employed: Optional[EmploymentStatus] = None
+    currently_employed: Optional[str] = Field(default=None, max_length=100)
     linkedin_profile: Optional[str] = None
 
     # Expertise & matching ("choose up to 6")

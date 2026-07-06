@@ -18,11 +18,11 @@ from core.forms import BaseSubmission
 # Used to drop non-URL website input that EspoCRM's url field would reject.
 _PLAUSIBLE_URL = re.compile(r"^https?://[^\s/]+\.[^\s/]+", re.IGNORECASE)
 
-BusinessStage = Literal[
-    "Pre-Startup", "Startup", "Early Stage", "Growth Stage", "Established"
-]
-MeetingPreference = Literal["No Preference", "Video", "Phone", "Email", "In Person"]
-NotificationPreference = Literal["Email", "Text"]  # matches Contact.cNotificationPreference
+# business_stage / meeting_preference / notification_preference are free
+# strings, NOT Literal copies of the CRM enums: their dropdowns are synced from
+# the live CRM (options.js), so a hard-coded list here would 422 the whole
+# submission the moment a CRM enum gains a value. The orchestrator sanitizes
+# each against the live enum before writing.
 
 
 class IntakeSubmission(BaseSubmission):
@@ -38,12 +38,12 @@ class IntakeSubmission(BaseSubmission):
     # --- Step 2: Your Mentoring Request (-> Engagement) ---
     mentoring_focus_areas: list[str] = Field(min_length=1)
     mentoring_needs_description: str = Field(min_length=1)
-    meeting_preference: Optional[MeetingPreference] = None
-    notification_preference: Optional[NotificationPreference] = None
+    meeting_preference: Optional[str] = Field(default=None, max_length=100)
+    notification_preference: Optional[str] = Field(default=None, max_length=100)
 
     # --- Step 3: Your Business (-> Account). All optional even when shown,
     # per Requirements Specification §5.2; business_stage is the branch trigger. ---
-    business_stage: BusinessStage
+    business_stage: str = Field(min_length=1, max_length=100)
     business_name: Optional[str] = None
     business_website: Optional[str] = None
     industry_sector: Optional[str] = None

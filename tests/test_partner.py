@@ -172,9 +172,13 @@ def test_company_is_required():
         _application(company="")
 
 
-def test_invalid_partnership_type_rejected():
-    with pytest.raises(ValidationError):
-        _application(partnership_type="Not A Real Type")
+def test_unknown_partnership_type_accepted_not_rejected():
+    # The schema must NOT hard-code the CRM enum: the dropdown syncs from the
+    # live CRM, so a value the schema doesn't know (e.g. "other", added to the
+    # CRM 2026-07) must validate — the orchestrator's EnumSanitizer decides
+    # whether it stores. A Literal here 422'd every such submission.
+    sub = _application(partnership_type="other")
+    assert sub.partnership_type == "other"
 
 
 def test_consent_required():

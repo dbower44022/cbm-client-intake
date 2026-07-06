@@ -70,11 +70,25 @@ def _make_handler(
         except ValidationError as exc:
             # exc.errors() can carry a raw exception in ctx (non-serializable);
             # project to a JSON-safe shape.
-            detail = [
+            errors = [
                 {"loc": list(e["loc"]), "msg": e["msg"], "type": e["type"]}
                 for e in exc.errors()
             ]
-            return JSONResponse(status_code=422, content={"detail": detail})
+            # ``detail`` is a human-readable string naming each failing field
+            # and why — the frontends display it verbatim, so the user (and
+            # whoever they screenshot it to) sees the exact reason, never a
+            # generic "check your entries". The structured list rides along
+            # as ``errors`` for programmatic clients.
+            detail = "; ".join(
+                f"{'.'.join(str(p) for p in e['loc']) or 'submission'}: {e['msg']}"
+                for e in errors
+            )
+            # Log it too — otherwise a validation failure (e.g. a form/schema
+            # mismatch after CRM enum drift) is invisible in the run logs.
+            log.warning("%s validation failed: %s", spec.slug, detail)
+            return JSONResponse(
+                status_code=422, content={"detail": detail, "errors": errors}
+            )
 
         client = _make_client(settings)
         is_honeypot = bool(submission.company_url.strip())

@@ -8,7 +8,7 @@ partner can offer). Maps to Account + Contact + CPartnerProfile.
 from __future__ import annotations
 
 import re
-from typing import Literal, Optional
+from typing import Optional
 
 from pydantic import EmailStr, Field, field_validator, model_validator
 
@@ -17,16 +17,6 @@ from core.forms import BaseSubmission
 # http(s):// + a host containing a dot and no whitespace (e.g. example.com).
 # Used to drop non-URL website input that EspoCRM's url field would reject.
 _PLAUSIBLE_URL = re.compile(r"^https?://[^\s/]+\.[^\s/]+", re.IGNORECASE)
-
-# Aligned to CPartnerProfile.partnershipType (enum) on the deployed instance.
-PartnershipType = Literal[
-    "Referral Partner",
-    "Training Partner",
-    "Cohort",
-    "Service Partner",
-    "Funding Partner",
-    "Community Partner",
-]
 
 
 class PartnerApplication(BaseSubmission):
@@ -41,7 +31,12 @@ class PartnerApplication(BaseSubmission):
     phone: Optional[str] = Field(default=None, max_length=40)
 
     # --- Step 3: Partnership Details (-> CPartnerProfile) ---
-    partnership_type: Optional[PartnershipType] = None
+    # Free string, NOT a Literal copy of the CRM enum: the dropdown is synced
+    # from the live CRM (options.js), so a hard-coded list here 422s the whole
+    # submission the moment the CRM enum gains a value (this happened —
+    # "other" was added to partnershipType and every "other" submission
+    # failed). The orchestrator sanitizes against the live enum instead.
+    partnership_type: Optional[str] = Field(default=None, max_length=100)
     # Free-form passthrough; the frontend list is aligned to the CRM multiEnum
     # (CPartnerProfile.partnershipValue), like the volunteer form's checkgrids.
     partnership_value: list[str] = Field(default_factory=list)

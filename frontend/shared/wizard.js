@@ -124,11 +124,7 @@ window.CBMWizard = (function () {
         });
         const body = await resp.json().catch(() => ({}));
         if (!resp.ok) {
-          const msg =
-            typeof body.detail === "string"
-              ? body.detail
-              : "Please check your entries and try again.";
-          throw new Error(msg);
+          throw new Error(errorMessage(body, resp.status));
         }
         form.hidden = true;
         const progress = document.getElementById("progress");
@@ -154,6 +150,25 @@ window.CBMWizard = (function () {
         clearTimeout(timeout);
       }
     });
+
+    // Always surface the exact server-reported reason. The server sends
+    // ``detail`` as a readable string; a structured error list (older deploys,
+    // FastAPI-default 422s) is formatted field-by-field; only a completely
+    // bodyless failure falls back to naming the HTTP status.
+    function errorMessage(body, status) {
+      if (typeof body.detail === "string" && body.detail) return body.detail;
+      const errs = Array.isArray(body.detail)
+        ? body.detail
+        : Array.isArray(body.errors)
+          ? body.errors
+          : null;
+      if (errs && errs.length) {
+        return errs
+          .map((e) => ((e.loc || []).join(".") || "submission") + ": " + e.msg)
+          .join("; ");
+      }
+      return "The server rejected the submission (HTTP " + status + ") without a reason. Please try again or contact CBM.";
+    }
 
     // Show the submission reference number on the confirmation screen so the
     // user has something to quote when following up (and staff can correlate it

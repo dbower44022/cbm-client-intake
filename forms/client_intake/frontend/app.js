@@ -340,7 +340,18 @@
       });
       const body = await resp.json().catch(() => ({}));
       if (!resp.ok) {
-        throw new Error(body.detail || "Submission failed. Please try again.");
+        // Surface the exact server-reported reason (string detail, or a
+        // structured error list formatted field-by-field) — never a generic
+        // "try again" that hides what actually failed.
+        let msg = typeof body.detail === "string" && body.detail ? body.detail : "";
+        if (!msg) {
+          const errs = Array.isArray(body.detail) ? body.detail
+            : Array.isArray(body.errors) ? body.errors : null;
+          msg = errs && errs.length
+            ? errs.map((e) => ((e.loc || []).join(".") || "submission") + ": " + e.msg).join("; ")
+            : "The server rejected the submission (HTTP " + resp.status + ") without a reason. Please try again or contact CBM.";
+        }
+        throw new Error(msg);
       }
       form.hidden = true;
       document.getElementById("progress").hidden = true;

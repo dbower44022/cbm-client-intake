@@ -4,6 +4,27 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.25.2] — 2026-07-06
+
+### Fixed
+- **Partner form failed for anyone choosing partnership type "other".** The CRM's
+  `partnershipType` enum gained a (lowercase) `"other"` value; the options sync
+  correctly put it in the form dropdown, but the Pydantic schema still hard-coded
+  the original six values as a `Literal`, so picking it 422'd the whole submission
+  — shown to the user as the generic "Please check your entries and try again."
+  All schema fields whose dropdowns are CRM-synced are now free strings
+  (partner `partnership_type`; client-intake `business_stage`/
+  `meeting_preference`/`notification_preference`; volunteer `contact_preference`/
+  `currently_employed`) — the orchestrators already sanitize each against the
+  live CRM enum, which is the single source of truth. A future CRM enum change
+  can no longer break a form.
+- **Error messages now state the exact reason — never generic.** Validation
+  failures return a human-readable `detail` string naming each failing field and
+  why (structured list preserved under `errors`), and are logged at WARNING so
+  they're visible in the run logs. The shared wizard and the client-intake form
+  display the server's reason verbatim; the only remaining fallback (a bodyless
+  response) names the HTTP status.
+
 ## [0.25.1] — 2026-07-06
 
 ### Changed
