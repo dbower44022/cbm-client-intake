@@ -4,6 +4,24 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.26.0] — 2026-07-06
+
+### Added (Mentor Administration `/mentoradmin`)
+- **"Update Mentor Status"** — a roster-toolbar action that sweeps every mentor
+  and reports, per mentor: does the linked EspoCRM **login User actually exist**
+  (a dangling link to a deleted User, a deactivated User, and "no User linked"
+  are all distinguished) and does the **@cbmentors.org mailbox exist** in Google
+  Workspace. The sweep also recomputes completeness and **re-syncs the stored
+  Record status** for every mentor (same write rules as the detail view — only
+  on change, never over a manual Duplicate), so the whole grid self-heals in one
+  click. Results shown in a wide modal table; the roster reloads after.
+  Endpoint: `POST /mentoradmin/api/mentors/status-check` (staff session
+  required). User reads run as the provisioning admin service account when
+  configured (regular staff can't read Users — reported "could not verify"
+  instead of failing). The mailbox column reports **"n/a — check not
+  configured"** until the Google Directory integration is connected in Email
+  Setup; nothing fails when it's absent.
+
 ## [0.25.2] — 2026-07-06
 
 ### Fixed

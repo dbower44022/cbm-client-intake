@@ -308,6 +308,118 @@
     btn.focus();
   }
 
+  // --- "Update Mentor Status" — bulk login-user + mailbox verification ---
+  $("verifyBtn").addEventListener("click", function () { runStatusVerify(); });
+
+  async function runStatusVerify() {
+    var btn = $("verifyBtn");
+    btn.disabled = true;
+    var orig = btn.textContent;
+    btn.textContent = "Checking…";
+    hide($("listNotice"));
+    try {
+      var res = await api("/mentors/status-check", { method: "POST" });
+      showVerifyModal(res);
+      loadMentors(); // the sweep may have re-synced recordStatus values
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      notice("listNotice", e.message, "error");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = orig;
+    }
+  }
+
+  function verifyMark(ok, text) {
+    var s = document.createElement("span");
+    s.className = ok === true ? "verify-ok" : ok === false ? "verify-bad" : "verify-warn";
+    s.textContent = (ok === true ? "✓ " : ok === false ? "✗ " : "? ") + text;
+    return s;
+  }
+
+  function userCell(row) {
+    if (row.error) return verifyMark(false, "check failed: " + row.error);
+    var u = row.user || {};
+    if (u.exists === true) {
+      return verifyMark(true, (u.userName || "user") + (u.active ? "" : " (deactivated)"));
+    }
+    if (u.exists === false) return verifyMark(false, u.detail || "no login User");
+    return verifyMark(null, u.detail || "could not verify");
+  }
+
+  function mailboxCell(row) {
+    if (row.error) return document.createTextNode("—");
+    var mb = row.mailbox || {};
+    if (mb.status === "exists") return verifyMark(true, mb.email);
+    if (mb.status === "missing") return verifyMark(false, "no mailbox for " + mb.email);
+    if (mb.status === "no-email") return verifyMark(false, "no CBM email on the profile");
+    if (mb.status === "unavailable") {
+      var s = document.createElement("span");
+      s.className = "verify-na";
+      s.textContent = "n/a — check not configured";
+      return s;
+    }
+    return verifyMark(null, mb.detail || "could not determine");
+  }
+
+  function showVerifyModal(res) {
+    var prev = document.getElementById("verifyModal");
+    if (prev) prev.remove();
+    var overlay = document.createElement("div");
+    overlay.id = "verifyModal"; overlay.className = "modal-overlay";
+    var card = document.createElement("div"); card.className = "modal-card modal-card--wide";
+    var h = document.createElement("h3");
+    h.textContent = "Mentor status check";
+    card.appendChild(h);
+
+    var rows = res.mentors || [];
+    var intro = document.createElement("p");
+    intro.textContent = "Checked " + rows.length + " mentor(s): does the login user exist, " +
+      "and does the @cbmentors.org mailbox exist. Record statuses were refreshed.";
+    card.appendChild(intro);
+    if (!res.mailboxCheckEnabled) {
+      var warn = document.createElement("p");
+      warn.className = "verify-na";
+      warn.textContent = "Mailbox checking is not configured — connect Google Workspace under Email Setup to enable it.";
+      card.appendChild(warn);
+    }
+
+    var wrap = document.createElement("div"); wrap.className = "verify-tablewrap";
+    var table = document.createElement("table"); table.className = "ma__table verify-table";
+    var thead = document.createElement("thead");
+    var htr = document.createElement("tr");
+    ["Mentor", "Status", "Record", "Login user", "Mailbox"].forEach(function (t) {
+      var th = document.createElement("th"); th.textContent = t; htr.appendChild(th);
+    });
+    thead.appendChild(htr); table.appendChild(thead);
+    var tbody = document.createElement("tbody");
+    rows.forEach(function (row) {
+      var tr = document.createElement("tr");
+      tr.appendChild(cell(row.name || row.id));
+      tr.appendChild(cell(row.mentorStatus || "—"));
+      tr.appendChild(cell(row.error ? "—" : (row.recordStatus || "—")));
+      tr.appendChild(cell(userCell(row)));
+      tr.appendChild(cell(mailboxCell(row)));
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    card.appendChild(wrap);
+
+    var btn = document.createElement("button");
+    btn.type = "button"; btn.className = "cbm-button"; btn.textContent = "Close";
+    function close() { overlay.remove(); document.removeEventListener("keydown", onKey); }
+    function onKey(e) { if (e.key === "Escape") close(); }
+    btn.addEventListener("click", close);
+    overlay.addEventListener("click", function (e) { if (e.target === overlay) close(); });
+    document.addEventListener("keydown", onKey);
+    var actions = document.createElement("div"); actions.className = "modal-actions";
+    actions.appendChild(btn);
+    card.appendChild(actions);
+    overlay.appendChild(card); document.body.appendChild(overlay);
+    btn.focus();
+  }
+
   function renderReadonly(m) {
     var box = $("readonly"); box.innerHTML = "";
     // data-structure completeness (first, most prominent)

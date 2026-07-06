@@ -824,3 +824,127 @@ def test_provision_stream_reports_disabled(monkeypatch):
 def test_provision_stream_requires_auth(monkeypatch):
     with TestClient(_app(monkeypatch)) as c:
         assert c.post("/mentoradmin/api/mentors/m1/provision").status_code == 401
+
+
+# --- "Update Mentor Status" verification sweep ---
+
+class VerifyClient:
+    """Roster of mentors + a User table, for the status-check sweep."""
+
+    def __init__(self, mentors, users=None, contact_user=None):
+        # mentors: list of full CMentorProfile records (dicts with id).
+        self.mentors = {m["id"]: dict(m) for m in mentors}
+        self.users = users or {}
+        self.contact_user = contact_user
+        self.updates = []
+
+    async def list(self, entity, **kwargs):
+        assert entity == "CMentorProfile"
+        return {"list": [{"id": m["id"], "name": m.get("name")} for m in self.mentors.values()]}
+
+    async def get(self, entity, record_id, select=None):
+        if entity == "CMentorProfile":
+            return dict(self.mentors[record_id])
+        if entity == "User":
+            if record_id in self.users:
+                return dict(self.users[record_id])
+            raise EspoError(f"GET User/{record_id} -> 404 Not Found")
+        if entity == "Contact":
+            return {"id": record_id, "assignedUserId": self.contact_user}
+        raise AssertionError(f"unexpected get {entity}")
+
+    async def update(self, entity, record_id, payload):
+        self.updates.append((entity, record_id, payload))
+        if entity == "CMentorProfile":
+            self.mentors[record_id].update(payload)
+        return {"id": record_id}
+
+
+class VerifyDirectory:
+    """mailbox_status keyed by email; anything else -> MISSING."""
+
+    def __init__(self, existing=()):
+        self.existing = set(existing)
+        self.checked = []
+
+    async def mailbox_status(self, email):
+        from core.google_directory import MailboxStatus
+        self.checked.append(email)
+        return MailboxStatus.EXISTS if email in self.existing else MailboxStatus.MISSING
+
+
+def _mentor(id, name, *, user=None, cbm=None, status="Active", record="Complete"):
+    return {
+        "id": id, "name": name, "mentorStatus": status, "recordStatus": record,
+        "assignedUserId": user, "cbmEmail": cbm, "contactRecordId": None,
+        "ethicsAgreementAccepted": True, "trainingCompleted": True, "termsAccepted": True,
+    }
+
+
+@pytest.mark.asyncio
+async def test_verify_sweep_reports_user_and_mailbox():
+    client = VerifyClient(
+        mentors=[
+            _mentor("m1", "Has Everything", user="u9", cbm="a.b@cbmentors.org"),
+            _mentor("m2", "No User", user=None, cbm="c.d@cbmentors.org"),
+            _mentor("m3", "Dangling User", user="gone", cbm=None),
+        ],
+        users={"u9": {"id": "u9", "userName": "a.b@cbmentors.org", "isActive": True}},
+    )
+    directory = VerifyDirectory(existing={"a.b@cbmentors.org"})
+    rows = await service.verify_all_mentor_statuses(client, directory=directory)
+    by = {r["id"]: r for r in rows}
+
+    assert by["m1"]["user"]["exists"] is True and by["m1"]["user"]["active"] is True
+    assert by["m1"]["mailbox"]["status"] == "exists"
+
+    assert by["m2"]["user"] == {"linked": False, "exists": False, "detail": "no login User linked"}
+    assert by["m2"]["mailbox"]["status"] == "missing"
+
+    assert by["m3"]["user"]["linked"] is True and by["m3"]["user"]["exists"] is False
+    assert by["m3"]["mailbox"]["status"] == "no-email"
+    # only mentors with a CBM email hit the directory
+    assert sorted(directory.checked) == ["a.b@cbmentors.org", "c.d@cbmentors.org"]
+
+
+@pytest.mark.asyncio
+async def test_verify_sweep_without_directory_reports_unavailable():
+    client = VerifyClient(
+        mentors=[_mentor("m1", "Jane", user=None, cbm="j@cbmentors.org")],
+    )
+    rows = await service.verify_all_mentor_statuses(client, directory=None)
+    assert rows[0]["mailbox"]["status"] == "unavailable"
+
+
+@pytest.mark.asyncio
+async def test_verify_sweep_resyncs_record_status():
+    # Stored recordStatus says Complete but the sign-offs are missing ->
+    # the sweep recomputes Incomplete and persists it.
+    m = _mentor("m1", "Stale", user=None, cbm=None, status="Candidate", record="Complete")
+    m["ethicsAgreementAccepted"] = False
+    m["contactRecordId"] = None
+    client = VerifyClient(mentors=[m])
+    rows = await service.verify_all_mentor_statuses(client)
+    assert rows[0]["recordStatus"] == "Incomplete"
+    assert ("CMentorProfile", "m1", {"recordStatus": "Incomplete"}) in client.updates
+
+
+def test_status_check_endpoint_requires_auth(monkeypatch):
+    with TestClient(_app(monkeypatch)) as c:
+        assert c.post("/mentoradmin/api/mentors/status-check").status_code == 401
+
+
+def test_status_check_endpoint_returns_rows(monkeypatch):
+    _authed(monkeypatch)
+
+    async def fake_verify(client, *, user_client=None, directory=None):
+        return [{"id": "m1", "name": "Jane", "user": {"exists": True},
+                 "mailbox": {"status": "unavailable"}}]
+
+    monkeypatch.setattr("mentoradmin.router.service.verify_all_mentor_statuses", fake_verify)
+    with TestClient(_app(monkeypatch)) as c:
+        resp = c.post("/mentoradmin/api/mentors/status-check")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["mailboxCheckEnabled"] is False
+        assert data["mentors"][0]["id"] == "m1"

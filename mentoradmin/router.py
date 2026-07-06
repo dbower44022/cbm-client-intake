@@ -124,6 +124,42 @@ async def mentors(request: Request) -> dict:
         raise _crm_failure(request, exc, "Could not load mentors")
 
 
+@router.post("/mentors/status-check")
+async def mentor_status_check(request: Request) -> dict:
+    """"Update Mentor Status" — verify every mentor's login User + mailbox.
+
+    Sweeps the roster and reports, per mentor, whether the linked EspoCRM
+    login User actually exists (and is active) and whether the
+    ``@cbmentors.org`` mailbox exists in Google Workspace; also re-syncs the
+    stored recordStatus from live completeness. The User reads run as the
+    provisioning admin when that account is configured (regular staff can't
+    read Users); the mailbox check reports ``unavailable`` until the Google
+    Directory integration is configured in Email Setup.
+    """
+    user = _require_user(request)
+    settings = get_settings()
+    client = client_for(settings, user)
+
+    user_client = client
+    factory = _provision_factory(settings)
+    if factory is not None:
+        try:
+            user_client = await factory()
+        except Exception:  # admin login unavailable — staff token still tries
+            user_client = client
+
+    google = await _resolve_google(settings)
+    directory = google.directory if google.check_enabled else None
+
+    try:
+        rows = await service.verify_all_mentor_statuses(
+            client, user_client=user_client, directory=directory
+        )
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not verify mentor statuses")
+    return {"mentors": rows, "mailboxCheckEnabled": directory is not None}
+
+
 @router.get("/fields")
 async def fields(request: Request) -> dict:
     """The editable-field spec + live enum options, for the detail form."""

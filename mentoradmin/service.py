@@ -12,6 +12,7 @@ import asyncio
 import re
 from typing import Any, AsyncIterator, Awaitable, Callable, Optional, Protocol
 
+from core.espo import EspoError
 from core.google_directory import (
     GoogleDirectoryError,
     MailboxStatus,
@@ -581,6 +582,120 @@ async def provision_mentor_user(
         if event.get("step") == "done":
             result = event.get("result") or {}
     return result
+
+
+# --- "Update Mentor Status" — bulk verification sweep -----------------------
+
+async def verify_mentor_status(
+    client: MentorClient,
+    mentor_id: str,
+    *,
+    user_client: Optional[MentorClient] = None,
+    directory: Optional[MailboxDirectory] = None,
+) -> dict[str, Any]:
+    """One mentor's row for the Update-Mentor-Status sweep.
+
+    Verifies (1) the linked login **User** actually exists in EspoCRM and is
+    active — not just that the profile carries a link (a deleted User leaves a
+    dangling FK), and (2) the mentor's ``@cbmentors.org`` **mailbox** exists in
+    Google Workspace (when the Directory integration is configured — else
+    reported ``unavailable``, never a failure). Also recomputes completeness
+    and self-heals the stored ``recordStatus`` (same write rules as a detail
+    view: only on change, never over a manual Duplicate).
+
+    ``user_client``: privileged client for the User read — regular staff can't
+    read Users, so the router passes the provisioning admin's client when that
+    account is configured. Falls back to ``client``; an ACL rejection reports
+    the check as unverifiable rather than failing the sweep.
+    """
+    rec = await get_mentor(client, mentor_id)
+    completeness = await check_completeness(client, rec)
+    record_status = await sync_record_status(
+        client, mentor_id, rec, completeness["status"]
+    )
+
+    user_id = assigned_user_id(rec)
+    if not user_id:
+        user_check: dict[str, Any] = {
+            "linked": False, "exists": False, "detail": "no login User linked",
+        }
+    else:
+        reader = user_client or client
+        try:
+            u = await reader.get("User", user_id, select="userName,isActive")
+            active = bool(u.get("isActive"))
+            user_check = {
+                "linked": True, "exists": True,
+                "userName": u.get("userName"), "active": active,
+                "detail": None if active else "User exists but is deactivated",
+            }
+        except EspoError as exc:
+            if "404" in str(exc):
+                user_check = {
+                    "linked": True, "exists": False,
+                    "detail": "linked User no longer exists (deleted?)",
+                }
+            else:
+                user_check = {
+                    "linked": True, "exists": None,
+                    "detail": f"could not verify the User: {exc}",
+                }
+
+    email = (rec.get("cbmEmail") or "").strip()
+    if not email:
+        mailbox: dict[str, Any] = {
+            "status": "no-email", "detail": "no CBM email on the profile",
+        }
+    elif directory is None:
+        mailbox = {
+            "status": "unavailable",
+            "detail": "mailbox check not configured (see Email Setup)",
+        }
+    else:
+        try:
+            status = await directory.mailbox_status(email)
+            mailbox = {"status": status.value, "email": email}
+        except Exception as exc:  # mailbox_status fails open; belt-and-braces
+            mailbox = {"status": MailboxStatus.UNKNOWN.value, "email": email,
+                       "detail": str(exc)}
+
+    return {
+        "id": mentor_id,
+        "name": rec.get("name"),
+        "mentorStatus": rec.get("mentorStatus"),
+        "cbmEmail": email or None,
+        "recordStatus": record_status,
+        "issues": completeness["issues"],
+        "user": user_check,
+        "mailbox": mailbox,
+    }
+
+
+async def verify_all_mentor_statuses(
+    client: MentorClient,
+    *,
+    user_client: Optional[MentorClient] = None,
+    directory: Optional[MailboxDirectory] = None,
+) -> list[dict[str, Any]]:
+    """Run :func:`verify_mentor_status` over the whole roster (bounded
+    concurrency). A per-mentor CRM failure becomes an ``error`` row so one bad
+    record can't sink the sweep."""
+    data = await client.list(
+        MENTOR_PROFILE, select="id,name", max_size=200, order_by="name"
+    )
+    roster = data.get("list", [])
+    sem = asyncio.Semaphore(5)
+
+    async def one(row: dict[str, Any]) -> dict[str, Any]:
+        async with sem:
+            try:
+                return await verify_mentor_status(
+                    client, row["id"], user_client=user_client, directory=directory
+                )
+            except EspoError as exc:
+                return {"id": row["id"], "name": row.get("name"), "error": str(exc)}
+
+    return list(await asyncio.gather(*(one(r) for r in roster)))
 
 
 async def field_options(client: MentorClient) -> dict[str, list[str]]:

@@ -194,3 +194,14 @@
 .checkgrid__opt { display: flex; align-items: center; gap: 0.4rem; font-weight: 400;
   font-size: var(--cbm-text-sm); color: var(--cbm-text); cursor: pointer; padding: 0.15rem 0; }
 .checkgrid__opt input { width: auto; margin: 0; flex: none; }
+
+/* "Update Mentor Status" verification results */
+.modal-card--wide { max-width: 960px; max-height: 88vh; display: flex; flex-direction: column; }
+.verify-tablewrap { overflow: auto; margin: 0.4rem 0 0.8rem; border: 1px solid var(--cbm-border);
+  border-radius: var(--cbm-radius); }
+.verify-table { margin: 0; }
+.verify-table th { position: sticky; top: 0; background: var(--cbm-surface); z-index: 1; }
+.verify-ok { color: #2f7a3f; font-weight: 600; }
+.verify-bad { color: var(--cbm-danger); font-weight: 600; }
+.verify-warn { color: #9a6a00; font-weight: 600; }
+.verify-na { color: var(--cbm-text); font-style: italic; }
