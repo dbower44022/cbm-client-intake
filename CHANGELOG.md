@@ -4,6 +4,17 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.25.0] — 2026-07-06
+
+### Added
+- **Friendly URL aliases.** A single-segment path is normalized (lowercase,
+  alphanumerics only) and redirected (307) to the matching form or staff tool —
+  so `/clientintake`, `/ClientIntake`, `/client_intake` all land directly on
+  `/client-intake/` without showing the index. Works for all five forms and
+  (when the staff tools are mounted) `/assignments`, `/ops`, `/mentoradmin`.
+  Unknown paths still 404. Built for the upcoming
+  `apps.clevelandbusinessmentors.org` custom domain, but live on every deploy.
+
 ## [0.24.1] — 2026-07-06
 
 ### Fixed

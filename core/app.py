@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -16,7 +17,7 @@ from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 from starlette.middleware.sessions import SessionMiddleware
@@ -334,6 +335,33 @@ def create_app(
             ),
             headers={"Cache-Control": "no-store"},
         )
+
+    # Friendly URL aliases — a typed shortcut like /clientintake (or
+    # /Client-Intake, /client_intake, …) goes straight to the form without
+    # showing the index. Any single-segment path is normalized (lowercase,
+    # alphanumerics only) and, if it matches a form slug or staff tool,
+    # redirected to the canonical /{slug}/; anything else is a plain 404.
+    # Registered BEFORE the static mounts: an exact /{slug} (no trailing
+    # slash) now hits this route and redirects to /{slug}/ — same landing
+    # place as the StaticFiles redirect it replaces.
+    alias_targets = {
+        re.sub(r"[^a-z0-9]", "", spec.slug): f"/{spec.slug}/"
+        for spec in forms
+        if spec.frontend_dir is not None
+    }
+    if settings.assignments_active:
+        alias_targets.update(
+            {"assignments": "/assignments/", "ops": "/ops/", "mentoradmin": "/mentoradmin/"}
+        )
+
+    @app.get("/{alias}", include_in_schema=False)
+    async def form_alias(alias: str) -> RedirectResponse:
+        dest = alias_targets.get(re.sub(r"[^a-z0-9]", "", alias.lower()))
+        if dest is None:
+            raise HTTPException(status_code=404, detail="Not found")
+        # 307 (not 308/301): permanent redirects get cached hard by browsers,
+        # which would outlive a future change to where an alias points.
+        return RedirectResponse(dest, status_code=307)
 
     # Static mounts last so the API routes above take precedence.
     for spec in forms:
