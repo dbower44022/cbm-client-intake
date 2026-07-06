@@ -15,7 +15,7 @@ window.PARTNER_OPTIONS = {
     "Service Partner",
     "Funding Partner",
     "Community Partner",
-    "other",
+    "Other",
   ],
   // <<< crm-enum
 

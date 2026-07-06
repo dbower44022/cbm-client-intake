@@ -7,14 +7,15 @@ follow-on and is not part of this schema yet.
 
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field, model_validator
 
 from core.forms import BaseSubmission
 
-# Static, presentational list (phone_type has no CRM target field).
-PhoneType = Literal["Mobile", "Home", "Work"]
+# Policy (Doug, 2026-07-06): a non-required field must never block a
+# submission over an unrecognized enumerated value — accept the string and let
+# the orchestrator's EnumSanitizer decide what stores.
 # contact_preference / currently_employed are free strings, NOT Literal copies
 # of the CRM enums: their dropdowns are synced from the live CRM (options.js),
 # so a hard-coded list here would 422 the whole submission the moment a CRM
@@ -53,7 +54,7 @@ class VolunteerApplication(BaseSubmission):
     street: Optional[str] = None
     zip_code: str = Field(min_length=1, max_length=10)
     phone: str = Field(min_length=1, max_length=40)
-    phone_type: Optional[PhoneType] = None
+    phone_type: Optional[str] = Field(default=None, max_length=40)
     contact_preference: Optional[str] = Field(default=None, max_length=100)
 
     # Motivation & background

@@ -18,6 +18,13 @@ deploy marker on App Platform.
   `currently_employed`) — the orchestrators already sanitize each against the
   live CRM enum, which is the single source of truth. A future CRM enum change
   can no longer break a form.
+- **Follow-up (same day):** the CRM entry was corrected to Title-case **`Other`**
+  on both CRMs; the partner dropdown was re-synced (`sync_form_options.py --write`).
+  Prod parity checked read-only: all 16 managed lists match prod except a harmless
+  ordering difference in volunteer how-did-you-hear (same values). Volunteer
+  `phone_type` (static list, no CRM target) was loosened to a free string too —
+  policy: **a non-required field must never block a submission over an
+  unrecognized enumerated value.**
 - **Error messages now state the exact reason — never generic.** Validation
   failures return a human-readable `detail` string naming each failing field and
   why (structured list preserved under `errors`), and are logged at WARNING so
