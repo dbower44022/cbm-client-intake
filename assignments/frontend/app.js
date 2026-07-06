@@ -466,10 +466,10 @@
   // The review list is the full roster (any status), distinct from the eligible
   // `mentors` used by the assign dropdown.
   var reviewMentors = [];
-  // Default to Active mentors, most available capacity first (best fit to take a
+  // Default to Active mentors, highest capacity first (best fit to take a
   // new client); the admin can widen to other statuses.
-  var mentorFilter = { q: "", status: "Active", type: "", industry: "", focus: "", availOnly: false,
-                       sortKey: "availableCapacity", sortDir: -1 };
+  var mentorFilter = { q: "", status: "Active", type: "", industry: "", expertise: "", availOnly: false,
+                       sortKey: "maxCapacity", sortDir: -1 };
 
   // mentorType may be a single enum (string) or a multi-enum (array); normalize
   // to a list so the column/filter/search handle both.
@@ -485,15 +485,16 @@
   function mentorHasCapacity(m) { return mentorAvail(m) > 0; }
 
   function mentorHaystack(m) {
-    return [m.name, m.industrySector, mentorTypes(m).join(" "), (m.expertise || []).join(" "),
-            (m.focusAreas || []).join(" ")].join(" ").toLowerCase();
+    return [m.name, (m.industryExperience || []).join(" "), mentorTypes(m).join(" "),
+            (m.expertise || []).join(" ")].join(" ").toLowerCase();
   }
 
   function sortVal(m, k) {
-    if (k === "availableCapacity") return mentorAvail(m);
+    if (k === "maxCapacity") return m.maxCapacity == null ? -Infinity : m.maxCapacity;
     if (k === "assignedClients") return m.assignedClients == null ? -Infinity : m.assignedClients;
     if (k === "acceptingNewClients") return m.acceptingNewClients ? 1 : 0;
     if (k === "mentorType") return mentorTypes(m).join(", ").toLowerCase();
+    if (k === "industryExperience") return (m.industryExperience || []).join(", ").toLowerCase();
     return (m[k] || "").toString().toLowerCase();
   }
 
@@ -519,8 +520,8 @@
       if (q && mentorHaystack(m).indexOf(q) < 0) return false;
       if (mentorFilter.status && m.status !== mentorFilter.status) return false;
       if (mentorFilter.type && mentorTypes(m).indexOf(mentorFilter.type) < 0) return false;
-      if (mentorFilter.industry && m.industrySector !== mentorFilter.industry) return false;
-      if (mentorFilter.focus && (m.focusAreas || []).indexOf(mentorFilter.focus) < 0) return false;
+      if (mentorFilter.industry && (m.industryExperience || []).indexOf(mentorFilter.industry) < 0) return false;
+      if (mentorFilter.expertise && (m.expertise || []).indexOf(mentorFilter.expertise) < 0) return false;
       if (mentorFilter.availOnly && !mentorHasCapacity(m)) return false;
       return true;
     });
@@ -541,7 +542,7 @@
     if (!rows.length) {
       var tr = document.createElement("tr");
       var td = document.createElement("td");
-      td.colSpan = 9;
+      td.colSpan = 8;
       td.className = "mentor-empty";
       td.textContent = "No mentors match the current filters.";
       tr.appendChild(td);
@@ -556,11 +557,11 @@
       tr.appendChild(cell(types.length ? types.join(", ") : "—"));
       tr.appendChild(cell(m.acceptingNewClients ? "Yes" : "No"));
       tr.appendChild(cell(m.assignedClients == null ? "—" : String(m.assignedClients), "num"));
-      tr.appendChild(cell(m.availableCapacity === -1 ? "Unlimited"
-        : (m.availableCapacity == null ? "—" : String(m.availableCapacity)), "num"));
-      tr.appendChild(cell(m.industrySector || "—"));
+      // Capacity = the stored maximumClientCapacity, exactly as on the CRM record
+      // (blank there = blank here — NOT the CRM-computed availableCapacity).
+      tr.appendChild(cell(m.maxCapacity == null ? "—" : String(m.maxCapacity), "num"));
+      var ieTd = document.createElement("td"); ieTd.appendChild(chipRow(m.industryExperience)); tr.appendChild(ieTd);
       var exTd = document.createElement("td"); exTd.appendChild(chipRow(m.expertise)); tr.appendChild(exTd);
-      var faTd = document.createElement("td"); faTd.appendChild(chipRow(m.focusAreas)); tr.appendChild(faTd);
       tb.appendChild(tr);
     });
   }
@@ -594,9 +595,9 @@
         distinct(function (m) { return mentorTypes(m); }), "All types");
       $("mentorTypeFilter").value = mentorFilter.type;
       fillFilterSelect($("mentorIndustryFilter"),
-        distinct(function (m) { return [m.industrySector]; }), "All industries");
-      fillFilterSelect($("mentorFocusFilter"),
-        distinct(function (m) { return m.focusAreas || []; }), "All focus areas");
+        distinct(function (m) { return m.industryExperience || []; }), "All industry experience");
+      fillFilterSelect($("mentorExpertiseFilter"),
+        distinct(function (m) { return m.expertise || []; }), "All areas of expertise");
       applyMentorFilter();
       show($("mentorModal"));
       $("mentorSearch").focus();
@@ -619,8 +620,8 @@
   $("mentorIndustryFilter").addEventListener("change", function () {
     mentorFilter.industry = this.value; applyMentorFilter();
   });
-  $("mentorFocusFilter").addEventListener("change", function () {
-    mentorFilter.focus = this.value; applyMentorFilter();
+  $("mentorExpertiseFilter").addEventListener("change", function () {
+    mentorFilter.expertise = this.value; applyMentorFilter();
   });
   $("mentorAvailOnly").addEventListener("change", function () {
     mentorFilter.availOnly = this.checked; applyMentorFilter();
@@ -635,7 +636,7 @@
         } else {
           mentorFilter.sortKey = key;
           // numbers default high→low, text low→high
-          mentorFilter.sortDir = (key === "name" || key === "industrySector" || key === "mentorType") ? 1 : -1;
+          mentorFilter.sortDir = (key === "name" || key === "industryExperience" || key === "mentorType") ? 1 : -1;
         }
         applyMentorFilter();
       });

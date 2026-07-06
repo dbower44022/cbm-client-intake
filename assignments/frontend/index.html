@@ -78,11 +78,11 @@
         <h2 class="modal__title" id="mentorModalTitle">Available Mentors</h2>
         <div class="mentor-controls">
           <input type="search" id="mentorSearch" class="mentor-search"
-                 placeholder="Search name, industry, expertise, focus…" autocomplete="off" />
+                 placeholder="Search name, industry experience, expertise…" autocomplete="off" />
           <select id="mentorStatusFilter" aria-label="Filter by status"></select>
           <select id="mentorTypeFilter" aria-label="Filter by mentor type"></select>
-          <select id="mentorIndustryFilter" aria-label="Filter by industry"></select>
-          <select id="mentorFocusFilter" aria-label="Filter by focus area"></select>
+          <select id="mentorIndustryFilter" aria-label="Filter by industry experience"></select>
+          <select id="mentorExpertiseFilter" aria-label="Filter by area of expertise"></select>
           <label class="mentor-availonly">
             <input type="checkbox" id="mentorAvailOnly" /> Has capacity
           </label>
@@ -97,10 +97,9 @@
                 <th data-sort="mentorType" class="is-sortable">Type</th>
                 <th data-sort="acceptingNewClients" class="is-sortable">Accepting</th>
                 <th data-sort="assignedClients" class="is-sortable num">Assigned</th>
-                <th data-sort="availableCapacity" class="is-sortable num">Capacity</th>
-                <th data-sort="industrySector" class="is-sortable">Industry</th>
+                <th data-sort="maxCapacity" class="is-sortable num">Capacity</th>
+                <th data-sort="industryExperience" class="is-sortable">Industry Experience</th>
                 <th>Areas of Expertise</th>
-                <th>Focus Areas</th>
               </tr>
             </thead>
             <tbody id="mentorTbody"></tbody>

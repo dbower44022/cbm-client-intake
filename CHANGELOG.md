@@ -4,6 +4,28 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.24.0] — 2026-07-05
+
+### Changed (Client Administration `/assignments` — Available Mentors)
+- **Focus Areas column removed** from the mentor grid (the engagement's focus areas
+  are still shown in the engagement detail popup — that's a client-request field,
+  not a mentor attribute).
+- **Industry column now shows `CMentorProfile.industryExperience`** (the multi-value
+  field the volunteer form writes) instead of the legacy single `industrySector`;
+  rendered as chips, header "Industry Experience", sortable.
+- **Filters reworked:** the "All industries" (industrySector) and "All focus areas"
+  filters are replaced by **Industry Experience** and **Areas of Expertise** filters
+  (each matches any of the mentor's values). Search now covers name, type, industry
+  experience, and expertise.
+- **Capacity column shows the stored value.** It now displays
+  `maximumClientCapacity` exactly as on the CRM record (blank = "—"), instead of the
+  CRM-computed `availableCapacity` (which showed "Unlimited" for −1 and drifted from
+  what staff saw on the record). The "Has capacity" checkbox and the assign
+  dropdown's "(capacity N)" label still use the computed available capacity, since
+  those express eligibility to take a new client.
+- **Available Mentors opens much wider** — the dialog defaults to ~96% of the window
+  (the engagement detail popup keeps its previous sizing; both remain drag-resizable).
+
 ## [0.23.1] — 2026-07-02
 
 ### Changed (Mentor Administration `/mentoradmin` — completeness)

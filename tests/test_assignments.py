@@ -189,6 +189,7 @@ async def test_eligible_mentors_query_and_shape():
                         "acceptingNewClients": True,
                         "cbmEmail": "tommy.tranell@cbmentors.org",
                         "industrySector": "Manufacturing",
+                        "industryExperience": ["Manufacturing", "Retail Trade"],
                         "mentoringFocusAreas": ["Agriculture"],
                         "areaOfExpertise": ["Lean"],
                     },
@@ -208,6 +209,7 @@ async def test_eligible_mentors_query_and_shape():
             "yearsOfExperience": 10, "mentorType": "Mentor", "status": "Active",
             "acceptingNewClients": True, "recordStatus": None,
             "cbmEmail": "tommy.tranell@cbmentors.org", "industrySector": "Manufacturing",
+            "industryExperience": ["Manufacturing", "Retail Trade"],
             "focusAreas": ["Agriculture"], "expertise": ["Lean"],
         }
     ]

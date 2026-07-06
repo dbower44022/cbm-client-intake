@@ -191,6 +191,11 @@
   padding: 1.6rem 1.8rem;
   resize: both;
 }
+/* Available Mentors is a wide roster grid — default it to nearly the full
+   window (uncapped, unlike the engagement popup) so more columns are visible
+   without resizing. The corner drag still overrides. */
+#mentorModal .modal__dialog { width: 96vw; }
+
 .modal__close {
   position: absolute;
   top: 0.6rem;

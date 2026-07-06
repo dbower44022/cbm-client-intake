@@ -211,7 +211,8 @@ _MENTOR_SELECT = (
     "name,createdAt,assignedUserId,assignedUserName,assignedUsersIds,assignedUsersNames,"
     "availableCapacity,currentActiveClients,"
     "maximumClientCapacity,yearsOfExperience,mentorType,mentorStatus,recordStatus,"
-    "acceptingNewClients,cbmEmail,industrySector,mentoringFocusAreas,areaOfExpertise"
+    "acceptingNewClients,cbmEmail,industrySector,industryExperience,"
+    "mentoringFocusAreas,areaOfExpertise"
 )
 
 
@@ -232,6 +233,7 @@ def _mentor_row(r: dict[str, Any]) -> dict[str, Any]:
         "recordStatus": r.get("recordStatus"),
         "cbmEmail": r.get("cbmEmail"),
         "industrySector": r.get("industrySector"),
+        "industryExperience": r.get("industryExperience") or [],
         "focusAreas": r.get("mentoringFocusAreas") or [],
         "expertise": r.get("areaOfExpertise") or [],
     }
