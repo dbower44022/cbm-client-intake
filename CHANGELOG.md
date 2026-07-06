@@ -4,6 +4,14 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.25.1] — 2026-07-06
+
+### Changed
+- **Landing page shows each entry's shortcut path.** Every form and staff-tool
+  link on `GET /` now displays its normalized alias (e.g. `/clientintake`,
+  `/mentoradmin`) in a small code chip, so nobody has to remember where the
+  dashes or capitals go.
+
 ## [0.25.0] — 2026-07-06
 
 ### Added

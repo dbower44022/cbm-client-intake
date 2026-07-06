@@ -180,11 +180,18 @@ def _index_html(
     include_assignments: bool = False,
     environment: str = "",
 ) -> str:
+    # Each entry shows its shortcut path (the normalized alias the /{alias}
+    # redirect accepts — no dashes or caps to remember; see form_alias).
+    def shortcut(slug: str) -> str:
+        alias = re.sub(r"[^a-z0-9]", "", slug)
+        return f' <code class="shortcut">/{alias}</code>'
+
     items = []
     for f in forms:
         if f.frontend_dir is not None:
             items.append(
-                f'<li><a href="/{f.slug}/" target="_blank" rel="noopener">{f.title}</a></li>'
+                f'<li><a href="/{f.slug}/" target="_blank" rel="noopener">{f.title}</a>'
+                f"{shortcut(f.slug)}</li>"
             )
         else:
             items.append(f"<li>{f.title} <em>(API only — UI pending)</em></li>")
@@ -193,12 +200,12 @@ def _index_html(
     if include_assignments:
         staff = (
             "<h2>Staff</h2><ul>"
-            '<li><a href="/assignments/" target="_blank" rel="noopener">Client Administration</a> '
-            "<em>(staff sign-in required)</em></li>"
-            '<li><a href="/ops/" target="_blank" rel="noopener">Submission Operations</a> '
-            "<em>(staff sign-in required)</em></li>"
-            '<li><a href="/mentoradmin/" target="_blank" rel="noopener">Mentor Administration</a> '
-            "<em>(staff sign-in required)</em></li></ul>"
+            '<li><a href="/assignments/" target="_blank" rel="noopener">Client Administration</a>'
+            f"{shortcut('assignments')} <em>(staff sign-in required)</em></li>"
+            '<li><a href="/ops/" target="_blank" rel="noopener">Submission Operations</a>'
+            f"{shortcut('ops')} <em>(staff sign-in required)</em></li>"
+            '<li><a href="/mentoradmin/" target="_blank" rel="noopener">Mentor Administration</a>'
+            f"{shortcut('mentoradmin')} <em>(staff sign-in required)</em></li></ul>"
         )
     year = datetime.now(timezone.utc).year
     name = _env_name(environment)
@@ -209,7 +216,10 @@ def _index_html(
     )
     return (
         "<!DOCTYPE html><html><head><meta charset='utf-8'>"
-        "<title>CBM Intake Forms</title></head><body>"
+        "<title>CBM Intake Forms</title>"
+        "<style>.shortcut{background:#f0f2f5;border:1px solid #d7dce2;"
+        "border-radius:4px;padding:0.05em 0.4em;font-size:0.85em;color:#556}"
+        "li{margin:0.3em 0}</style></head><body>"
         + "<h1>CBM Intake Forms</h1><ul>" + "".join(items) + "</ul>" + staff + footer
         + "</body></html>"
     )
