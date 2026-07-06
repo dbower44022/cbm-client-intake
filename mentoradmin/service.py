@@ -116,7 +116,6 @@ EDITABLE_FIELDS: list[dict[str, Any]] = [
     {"name": "description", "label": "Description / notes", "type": "text", "group": "Profile"},
     {"name": "aboutMentor", "label": "About the mentor", "type": "wysiwyg", "group": "Bio"},
     {"name": "mentorProfessionalBio", "label": "Professional bio", "type": "wysiwyg", "group": "Bio"},
-    {"name": "mentoringSkills", "label": "Mentoring skills", "type": "wysiwyg", "group": "Bio"},
     {"name": "mentoringWhyInterested", "label": "Why interested in mentoring", "type": "wysiwyg", "group": "Bio"},
 ]
 

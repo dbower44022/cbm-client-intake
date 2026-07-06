@@ -4,6 +4,26 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.24.1] — 2026-07-06
+
+### Fixed
+- **Volunteer consent now sets `CMentorProfile.ethicsAgreementAccepted`.** The
+  mentor-intake consent checkbox set `termsAccepted` + `mentorCodeAccepted` (and the
+  three Contact bools) but NOT the ethics flag `/mentoradmin`'s completeness rule
+  requires — so every form-submitted mentor started with an "ethics agreement"
+  completeness gap staff had to tick manually. Verified live on crm-test (left
+  `ZZTEST-ETHICS LiveCheck` Contact `6a4b2bc43a7dd4681` + CMentorProfile
+  `6a4b2bc4c3c1f0d55` to clean up in the UI).
+
+### Changed
+- **Mentor code-of-conduct link.** On the volunteer (mentor intake) form, the
+  consent checkbox's "Code of Conduct" now links to the mentor code of ethics —
+  `https://clevelandbusinessmentors.org/mentor-code-of-ethics/`. The other forms'
+  Code of Conduct keeps pointing at the client code (`frontend/shared/legal-links.js`).
+- **Mentor Administration: "Mentoring skills" editor removed** from the Bio tab
+  (dropped from `EDITABLE_FIELDS`, so it also leaves the server-side update
+  whitelist; the CRM field itself is untouched).
+
 ## [0.24.0] — 2026-07-05
 
 ### Changed (Client Administration `/assignments` — Available Mentors)

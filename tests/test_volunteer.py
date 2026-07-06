@@ -91,6 +91,9 @@ async def test_creates_contact_and_mentor_profile():
     assert profile["mentorType"] == "Mentor"
     assert profile["termsAccepted"] is True
     assert profile["mentorCodeAccepted"] is True  # mentor-specific code-of-conduct
+    # Accepting the Code of Conduct IS the mentor code of ethics — sets the flag
+    # /mentoradmin's completeness rule requires.
+    assert profile["ethicsAgreementAccepted"] is True
     assert profile["areaOfExpertise"] == ["Marketing & Branding", "Sales & Business Development"]
     # Multi-select industry stored as a multiEnum -> all selections kept.
     assert profile["industryExperience"] == ["Technology & Software", "Manufacturing & Industrial"]

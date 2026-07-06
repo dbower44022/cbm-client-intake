@@ -9,16 +9,22 @@
 
   var URLS = {
     conduct: "https://cbmentostagdev.wpenginepowered.com/client-code-of-conduct/",
+    mentorConduct: "https://clevelandbusinessmentors.org/mentor-code-of-ethics/",
     terms: "https://cbmentostagdev.wpenginepowered.com/legal-notices/",
     privacy: "https://cbmentostagdev.wpenginepowered.com/privacy-policy/",
   };
+
+  // The volunteer (mentor intake) form's "Code of Conduct" is the *mentor* code
+  // of ethics — a different document from the client code the other forms cite.
+  var conductUrl = location.pathname.indexOf("/volunteer/") === 0
+    ? URLS.mentorConduct : URLS.conduct;
 
   // Phrases to linkify. "Client Code of Conduct" is listed before "Code of
   // Conduct" but matching is by earliest position, so the longer variant wins
   // wherever it appears.
   var PHRASES = [
     { text: "Client Code of Conduct", url: URLS.conduct },
-    { text: "Code of Conduct", url: URLS.conduct },
+    { text: "Code of Conduct", url: conductUrl },
     { text: "Terms of Use", url: URLS.terms },
     { text: "Privacy Policy", url: URLS.privacy },
   ];

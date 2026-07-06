@@ -73,6 +73,9 @@ P_HOW_HEARD = "howDidYouHearAboutCBM"  # enum (sanitized via san.enum)
 P_FELONY = "felonyConfiction"         # bool (note: CRM field name is misspelled)
 P_TERMS = "termsAccepted"             # bool
 P_MENTOR_CODE = "mentorCodeAccepted"  # bool — the mentor-specific code-of-conduct
+P_ETHICS = "ethicsAgreementAccepted"  # bool — the form's Code of Conduct IS the
+                                      # mentor code of ethics; /mentoradmin's
+                                      # completeness rule requires this flag
 P_DESCRIPTION = "description"          # text — used to note any dropped values
 P_RESUME_ID = "resumeUploadId"        # file field FK (-> Attachment)
 RESUME_FIELD = "resumeUpload"         # the file field the attachment binds to
@@ -160,6 +163,7 @@ async def _create_mentor_profile(
         P_FELONY: sub.felony_conviction,
         P_TERMS: sub.terms_accepted,
         P_MENTOR_CODE: bool(sub.terms_accepted),
+        P_ETHICS: bool(sub.terms_accepted),
     }
     if sub.work_experience:
         payload[P_BIO] = sub.work_experience
