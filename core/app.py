@@ -48,6 +48,7 @@ OPS_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "ops" / "frontend"
 MENTORADMIN_FRONTEND_DIR = (
     Path(__file__).resolve().parent.parent / "mentoradmin" / "frontend"
 )
+PORTAL_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "portal" / "frontend"
 
 
 def _make_client(settings: Settings) -> EspoApi:
@@ -191,9 +192,11 @@ def _env_name(environment: str) -> str:
 
 def _index_html(
     forms: list[FormSpec],
-    include_assignments: bool = False,
     environment: str = "",
 ) -> str:
+    """The PUBLIC form index — served at ``/`` only when the staff stack is off
+    (no ``SESSION_SECRET``, e.g. the dry-run dev app). With the staff stack on,
+    the root serves the authenticated portal instead (``portal/frontend``)."""
     # Each entry shows its shortcut path (the normalized alias the /{alias}
     # redirect accepts — no dashes or caps to remember; see form_alias).
     def shortcut(slug: str) -> str:
@@ -209,18 +212,6 @@ def _index_html(
             )
         else:
             items.append(f"<li>{f.title} <em>(API only — UI pending)</em></li>")
-    # The mentor assignment dashboard is a staff-only tool, listed separately.
-    staff = ""
-    if include_assignments:
-        staff = (
-            "<h2>Staff</h2><ul>"
-            '<li><a href="/assignments/" target="_blank" rel="noopener">Client Administration</a>'
-            f"{shortcut('assignments')} <em>(staff sign-in required)</em></li>"
-            '<li><a href="/ops/" target="_blank" rel="noopener">Submission Operations</a>'
-            f"{shortcut('ops')} <em>(staff sign-in required)</em></li>"
-            '<li><a href="/mentoradmin/" target="_blank" rel="noopener">Mentor Administration</a>'
-            f"{shortcut('mentoradmin')} <em>(staff sign-in required)</em></li></ul>"
-        )
     year = datetime.now(timezone.utc).year
     name = _env_name(environment)
     version_label = f"v{__version__}" + (f" ({name})" if name else "")
@@ -234,7 +225,7 @@ def _index_html(
         "<style>.shortcut{background:#f0f2f5;border:1px solid #d7dce2;"
         "border-radius:4px;padding:0.05em 0.4em;font-size:0.85em;color:#556}"
         "li{margin:0.3em 0}</style></head><body>"
-        + "<h1>CBM Intake Forms</h1><ul>" + "".join(items) + "</ul>" + staff + footer
+        + "<h1>CBM Intake Forms</h1><ul>" + "".join(items) + "</ul>" + footer
         + "</body></html>"
     )
 
@@ -257,6 +248,8 @@ def create_app(
     app = FastAPI(title="CBM Intake Forms", version=__version__, lifespan=lifespan)
     # Exposed to the ops console router (V2 Phase 2).
     app.state.submission_store = store
+    # Exposed to the portal router (the public-form links on the home page).
+    app.state.form_specs = forms
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.allowed_origins_list,
@@ -342,23 +335,25 @@ def create_app(
         from assignments import api_router as assignments_router
         from mentoradmin import api_router as mentoradmin_router
         from ops import api_router as ops_router
+        from portal import api_router as portal_router
 
         app.include_router(assignments_router)
         app.include_router(ops_router)
         app.include_router(mentoradmin_router)
+        app.include_router(portal_router)
 
     @app.get("/", response_class=HTMLResponse)
     async def index() -> HTMLResponse:
-        # no-store so a freshly-deployed index is never served stale from a
-        # browser/edge cache (the landing page is tiny — nothing to gain caching).
-        return HTMLResponse(
-            _index_html(
-                forms,
-                include_assignments=settings.assignments_active,
-                environment=settings.environment,
-            ),
-            headers={"Cache-Control": "no-store"},
-        )
+        # With the staff stack on, the root is the authenticated portal (sign in
+        # once, see the links your teams allow). Without it (e.g. the dry-run
+        # dev app, which has no session support), the public form index remains.
+        # no-store so a freshly-deployed page is never served stale from a
+        # browser/edge cache (either page is tiny — nothing to gain caching).
+        if settings.assignments_active:
+            html = (PORTAL_FRONTEND_DIR / "index.html").read_text(encoding="utf-8")
+        else:
+            html = _index_html(forms, environment=settings.environment)
+        return HTMLResponse(html, headers={"Cache-Control": "no-store"})
 
     # Friendly URL aliases — a typed shortcut like /clientintake (or
     # /Client-Intake, /client_intake, …) goes straight to the form without
@@ -412,6 +407,13 @@ def create_app(
             "/mentoradmin",
             StaticFiles(directory=str(MENTORADMIN_FRONTEND_DIR), html=True),
             name="mentoradmin-frontend",
+        )
+    if settings.assignments_active and PORTAL_FRONTEND_DIR.is_dir():
+        # The portal's assets (its index.html is served at "/" above).
+        app.mount(
+            "/portal",
+            StaticFiles(directory=str(PORTAL_FRONTEND_DIR), html=True),
+            name="portal-frontend",
         )
     app.mount("/shared", StaticFiles(directory=str(SHARED_DIR)), name="shared")
 

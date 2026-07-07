@@ -33,19 +33,21 @@
   }
 
   // --- views ---
-  function showLogin() { hideAll(); show($("loginView")); $("username").focus(); }
-  // On boot, a 401 just means "not signed in" (show the form silently). A 5xx or
-  // network failure means the server is down — say so, rather than implying the
-  // user needs to re-authenticate.
-  function bootFail(e) {
-    showLogin();
-    if (!e || !e.status || e.status >= 500) {
-      var le = $("loginError");
-      le.textContent = "The server isn't responding right now. Please try again in a moment.";
-      show(le);
-    }
+  // Not signed in: hand off to the portal, which brings the user back here
+  // after login (single sign-on — this app has no login form of its own).
+  function showLogin() {
+    location.href = "/?next=" + encodeURIComponent("/mentoradmin/");
   }
-  function hideAll() { hide($("loginView")); hide($("listView")); hide($("detailView")); hide($("setupView")); }
+  function showMessage(text) { hideAll(); $("msgText").textContent = text; show($("msgView")); }
+  // On boot: 401 = not signed in (go sign in at the portal); 403 = signed in
+  // but not entitled to this app (show the exact reason); anything else = the
+  // server is down — say so.
+  function bootFail(e) {
+    if (e && e.status === 401) { showLogin(); return; }
+    if (e && e.status === 403) { showMessage(e.message); return; }
+    showMessage("The server isn't responding right now. Please try again in a moment.");
+  }
+  function hideAll() { hide($("msgView")); hide($("listView")); hide($("detailView")); hide($("setupView")); }
   function showList() { hideAll(); show($("listView")); }
   function showDetail() { hideAll(); show($("detailView")); }
   function showSetup() { hideAll(); show($("setupView")); }
@@ -69,20 +71,10 @@
     sel.value = cur;
   }
 
-  // --- login ---
-  $("loginForm").addEventListener("submit", async function (ev) {
-    ev.preventDefault();
-    hide($("loginError")); $("loginBtn").disabled = true;
-    try {
-      var user = await api("/login", { method: "POST", body: JSON.stringify({ username: $("username").value, password: $("password").value }) });
-      $("password").value = "";
-      setUser(user);
-      await bootList();
-    } catch (e) {
-      var le = $("loginError"); le.textContent = e.message; show(le);
-    } finally { $("loginBtn").disabled = false; }
+  $("logoutBtn").addEventListener("click", async function () {
+    try { await api("/logout", { method: "POST" }); } catch (e) {}
+    location.href = "/";  // back to the portal sign-in
   });
-  $("logoutBtn").addEventListener("click", async function () { try { await api("/logout", { method: "POST" }); } catch (e) {} showLogin(); });
   $("refreshBtn").addEventListener("click", function () { loadMentors(); });
   function returnToList() { showList(); if (listDirty) { listDirty = false; loadMentors(); } }
   $("backBtn").addEventListener("click", function () {

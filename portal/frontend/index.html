@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cleveland Business Mentors — Home</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/tokens.css" />
+  <link rel="stylesheet" href="/portal/styles.css" />
+</head>
+<body>
+  <main class="cbm-container portal">
+    <header class="portal__header">
+      <h1>Cleveland Business Mentors</h1>
+      <p class="portal__sub">Sign in to access your applications.</p>
+    </header>
+
+    <!-- Login -->
+    <section class="portal__login" id="loginView" hidden>
+      <h2>Sign in</h2>
+      <p class="cbm-help">Use your CRM username and password.</p>
+      <form id="loginForm" autocomplete="on">
+        <div class="cbm-field">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" autocomplete="username" required />
+        </div>
+        <div class="cbm-field">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" autocomplete="current-password" required />
+        </div>
+        <p class="form-error" id="loginError" role="alert" hidden></p>
+        <button type="submit" class="cbm-button" id="loginBtn">Sign in</button>
+      </form>
+    </section>
+
+    <!-- Home (post-login) -->
+    <section class="portal__home" id="homeView" hidden>
+      <div class="portal__toolbar">
+        <span class="portal__who">Signed in as <strong id="whoName"></strong></span>
+        <button type="button" class="cbm-button cbm-button--secondary" id="logoutBtn">Sign out</button>
+      </div>
+
+      <section id="appsSection" hidden>
+        <h2>Applications</h2>
+        <ul class="portal__list" id="appsList"></ul>
+      </section>
+
+      <section id="crmSection" hidden>
+        <h2>CRM</h2>
+        <ul class="portal__list" id="crmList"></ul>
+      </section>
+
+      <section id="formsSection" hidden>
+        <h2>Public intake forms</h2>
+        <ul class="portal__list" id="formsList"></ul>
+      </section>
+    </section>
+
+    <footer class="cbm-footer">
+      <p>&copy; <span data-cbm-year>2026</span> Cleveland Business Mentors. All rights reserved.<span class="cbm-footer__version" data-cbm-version></span></p>
+    </footer>
+  </main>
+
+  <script src="/portal/app.js"></script>
+  <script src="/shared/footer.js"></script>
+</body>
+</html>

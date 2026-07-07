@@ -33,8 +33,12 @@ them:
   requests to a mentor.
 - **Mentor Administration** (`/mentoradmin/`) — review and edit mentor records,
   and approve mentors (which can automatically create their EspoCRM login).
-- **Submission Operations** (`/ops/`) — a behind-the-scenes view of submissions
-  for troubleshooting.
+- **Submission Admin** (`/ops/`) — a behind-the-scenes view of submissions
+  for troubleshooting (for the "Marketing Admin Team").
+
+Staff sign in **once** on the home page (`/`) with their CRM username and
+password; the page then shows only the applications their CRM teams allow.
+Mentors (the "Mentor Team") see a link to the CRM plus the public form links.
 
 Other than that internal record-keeping, the app stores nothing itself; it passes
 completed forms into EspoCRM.

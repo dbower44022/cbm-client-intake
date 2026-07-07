@@ -79,6 +79,23 @@ def test_requires_auth(monkeypatch):
         assert c.get("/ops/api/submissions").status_code == 401
 
 
+def test_gated_to_marketing_admin_team(monkeypatch):
+    """/ops has its own request-time gate (Marketing Admin Team by default) —
+    membership in the other staff teams is not enough."""
+    outsider = {"userName": "cc", "name": "C", "isAdmin": False,
+                "teams": ["Client Administration Team"], "roles": []}
+    monkeypatch.setattr("ops.router.current_user", lambda request: outsider)
+    with TestClient(_app(monkeypatch, FakeOpsStore())) as c:
+        r = c.get("/ops/api/submissions")
+    assert r.status_code == 403
+    assert "Marketing Admin Team" in r.json()["detail"]
+
+    member = dict(outsider, teams=["Marketing Admin Team"])
+    monkeypatch.setattr("ops.router.current_user", lambda request: member)
+    with TestClient(_app(monkeypatch, FakeOpsStore())) as c:
+        assert c.get("/ops/api/submissions").status_code == 200
+
+
 def test_lists_submissions_and_counts(monkeypatch):
     store = FakeOpsStore()
     _authed(monkeypatch)

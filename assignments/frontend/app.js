@@ -1,9 +1,10 @@
 /* Mentor assignment dashboard — vanilla JS, no build step.
  *
- * Flow: check session -> show login or dashboard. The dashboard lists Submitted
- * engagements, each with a dropdown of eligible mentors; choosing one and
- * confirming POSTs the assignment, which the server performs as the logged-in
- * EspoCRM user.
+ * Flow: check session -> dashboard (sign-in happens once at the portal `/`;
+ * unauthenticated visits are sent there and come back after login). The
+ * dashboard lists Submitted engagements, each with a dropdown of eligible
+ * mentors; choosing one and confirming POSTs the assignment, which the server
+ * performs as the logged-in EspoCRM user.
  */
 (function () {
   "use strict";
@@ -35,26 +36,30 @@
   }
 
   // --- views ---
+  // Not signed in: hand off to the portal, which brings the user back here
+  // after login (single sign-on — this app has no login form of its own).
   function showLogin() {
-    hide($("dashView"));
-    show($("loginView"));
-    $("username").focus();
+    location.href = "/?next=" + encodeURIComponent("/assignments/");
   }
 
-  // On boot, a 401 just means "not signed in" (show the form silently). A 5xx or
-  // network failure means the server is down — say so, rather than implying the
-  // user needs to re-authenticate.
+  function showMessage(text) {
+    hide($("dashView"));
+    var m = $("msgView");
+    $("msgText").textContent = text;
+    show(m);
+  }
+
+  // On boot: 401 = not signed in (go sign in at the portal); 403 = signed in
+  // but not entitled to this app (show the exact reason); anything else = the
+  // server is down — say so.
   function bootFail(e) {
-    showLogin();
-    if (!e || !e.status || e.status >= 500) {
-      var le = $("loginError");
-      le.textContent = "The server isn't responding right now. Please try again in a moment.";
-      show(le);
-    }
+    if (e && e.status === 401) { showLogin(); return; }
+    if (e && e.status === 403) { showMessage(e.message); return; }
+    showMessage("The server isn't responding right now. Please try again in a moment.");
   }
 
   function showDashboard(user) {
-    hide($("loginView"));
+    hide($("msgView"));
     $("whoName").textContent = user.name || user.userName;
     show($("dashView"));
     loadData();
@@ -71,31 +76,9 @@
   }
   function clearNotice() { hide($("notice")); }
 
-  // --- login ---
-  $("loginForm").addEventListener("submit", async function (ev) {
-    ev.preventDefault();
-    hide($("loginError"));
-    var btn = $("loginBtn");
-    btn.disabled = true;
-    try {
-      var user = await api("/login", {
-        method: "POST",
-        body: JSON.stringify({ username: $("username").value, password: $("password").value }),
-      });
-      $("password").value = "";
-      showDashboard(user);
-    } catch (e) {
-      var le = $("loginError");
-      le.textContent = e.message;
-      show(le);
-    } finally {
-      btn.disabled = false;
-    }
-  });
-
   $("logoutBtn").addEventListener("click", async function () {
     try { await api("/logout", { method: "POST" }); } catch (e) { /* ignore */ }
-    showLogin();
+    location.href = "/";  // back to the portal sign-in
   });
 
   $("refreshBtn").addEventListener("click", loadData);

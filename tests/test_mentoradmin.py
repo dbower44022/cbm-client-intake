@@ -901,21 +901,30 @@ def test_other_crm_error_returns_502(monkeypatch):
     assert r.status_code == 502
 
 
-def test_login_gated_to_mentor_admin_team(monkeypatch):
-    """Login passes the Mentor Administration Team as the allowed team."""
-    captured = {}
-
-    async def fake_auth(settings, username, password, *, allowed_teams=None, allowed_roles=None):
-        captured["teams"] = allowed_teams
-        captured["roles"] = allowed_roles
-        return _USER
-
-    monkeypatch.setattr("mentoradmin.router.authenticate", fake_auth)
+def test_request_gate_rejects_wrong_team_with_team_name(monkeypatch):
+    """Sign-in is shared (portal); THIS app's team is enforced per request —
+    a signed-in user outside the Mentor Administration Team gets a 403 that
+    names the required team."""
+    outsider = dict(_USER, isAdmin=False, teams=["Client Administration Team"], roles=[])
+    monkeypatch.setattr("mentoradmin.router.current_user", lambda request, key=None: outsider)
+    monkeypatch.setattr("mentoradmin.router.client_for", lambda settings, user: object())
     with TestClient(_app(monkeypatch)) as c:
-        r = c.post("/mentoradmin/api/login", json={"username": "boss", "password": "pw"})
-    assert r.status_code == 200
-    assert captured["teams"] == ["Mentor Administration Team"]
-    assert captured["roles"] == []
+        r = c.get("/mentoradmin/api/mentors")
+    assert r.status_code == 403
+    assert "Mentor Administration Team" in r.json()["detail"]
+
+
+def test_request_gate_passes_team_member(monkeypatch):
+    member = dict(_USER, isAdmin=False, teams=["Mentor Administration Team"], roles=[])
+    monkeypatch.setattr("mentoradmin.router.current_user", lambda request, key=None: member)
+    monkeypatch.setattr("mentoradmin.router.client_for", lambda settings, user: object())
+
+    async def fake_list(client):
+        return {"mentors": [], "metricsAvailable": True}
+
+    monkeypatch.setattr("mentoradmin.router.assign_service.list_all_mentors", fake_list)
+    with TestClient(_app(monkeypatch)) as c:
+        assert c.get("/mentoradmin/api/mentors").status_code == 200
 
 
 def _authed_nonadmin(monkeypatch):

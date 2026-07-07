@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import pytest
+from fastapi.testclient import TestClient
 
 from assignments import auth, service
-from core.config import Settings
+from core.config import Settings, get_settings
 
 
 class FakeClient:
@@ -622,3 +623,52 @@ async def test_auth_rejects_bad_credentials(monkeypatch):
     _app_user(monkeypatch, {"message": "unauthorized"}, status=401)
     with pytest.raises(auth.AuthError):
         await auth.authenticate(_settings(teams="Client Administration Team"), "jdoe", "wrong")
+
+
+async def test_auth_ungated_accepts_any_active_internal_user(monkeypatch):
+    """The portal signs in any active internal user (gate=False); team checks
+    happen per request in each staff app instead."""
+    _app_user(monkeypatch, {
+        "token": "tok-6",
+        "user": _user(userName="mentor", teamsNames={"t9": "Mentor Team"}),
+    })
+    user = await auth.authenticate(
+        _settings(teams="Client Administration Team"), "mentor", "pw", gate=False
+    )
+    assert user["teams"] == ["Mentor Team"]
+
+
+async def test_auth_ungated_still_rejects_inactive_and_portal_types(monkeypatch):
+    _app_user(monkeypatch, {"token": "t", "user": _user(isActive=False)})
+    with pytest.raises(auth.AuthError):
+        await auth.authenticate(_settings(), "x", "pw", gate=False)
+    _app_user(monkeypatch, {"token": "t", "user": _user(type="portal")})
+    with pytest.raises(auth.AuthError):
+        await auth.authenticate(_settings(), "x", "pw", gate=False)
+
+
+def test_is_member_team_role_and_admin():
+    assert auth.is_member({"isAdmin": True}, ["Team A"])
+    assert auth.is_member({"teams": ["Team A"]}, ["Team A"])
+    assert auth.is_member({"roles": ["Role R"]}, [], ["Role R"])
+    assert not auth.is_member({"teams": ["Other"]}, ["Team A"])
+    assert not auth.is_member({}, ["Team A"])
+
+
+def test_request_gate_rejects_wrong_team_with_team_name(monkeypatch):
+    """A signed-in user outside ASSIGN_ALLOWED_TEAMS gets a 403 naming the team."""
+    monkeypatch.setenv("SESSION_SECRET", "test-secret")
+    monkeypatch.setenv("ASSIGN_ALLOWED_TEAMS", "Client Administration Team")
+    get_settings.cache_clear()
+    outsider = {"userId": "u", "userName": "x", "name": "X", "isAdmin": False,
+                "token": "t", "teams": ["Mentor Team"], "roles": []}
+    monkeypatch.setattr("assignments.auth.current_user", lambda request: outsider)
+    from core.app import create_app
+    from forms import info_request
+    try:
+        with TestClient(create_app([info_request.SPEC])) as c:
+            r = c.get("/assignments/api/engagements")
+        assert r.status_code == 403
+        assert "Client Administration Team" in r.json()["detail"]
+    finally:
+        get_settings.cache_clear()  # don't leak the patched env into other tests

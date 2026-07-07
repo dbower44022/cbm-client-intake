@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cleveland Business Mentors — Submission Operations</title>
+  <title>Cleveland Business Mentors — Submission Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/shared/tokens.css" />
@@ -12,22 +12,14 @@
 <body>
   <main class="cbm-container ops">
     <header class="ops__header">
-      <h1>Submission Operations</h1>
+      <h1>Submission Admin</h1>
       <p class="ops__sub">Every captured submission, its delivery status, and re-drive for anything stuck.</p>
     </header>
 
-    <!-- Login -->
-    <section class="ops__login" id="loginView" hidden>
-      <h2>Staff sign in</h2>
-      <p class="cbm-help">Sign in with your EspoCRM username and password.</p>
-      <form id="loginForm" autocomplete="on">
-        <div class="cbm-field"><label for="username">Username</label>
-          <input type="text" id="username" autocomplete="username" required /></div>
-        <div class="cbm-field"><label for="password">Password</label>
-          <input type="password" id="password" autocomplete="current-password" required /></div>
-        <p class="form-error" id="loginError" role="alert" hidden></p>
-        <button type="submit" class="cbm-button" id="loginBtn">Sign in</button>
-      </form>
+    <!-- Sign-in happens at the portal (/); this shows access/server errors. -->
+    <section class="ops__login" id="msgView" hidden>
+      <p class="form-error" id="msgText" role="alert"></p>
+      <p><a href="/">Return to the sign-in page</a></p>
     </section>
 
     <!-- Dashboard -->

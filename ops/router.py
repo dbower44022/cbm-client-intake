@@ -1,8 +1,9 @@
-"""FastAPI routes for the operations console (``/ops/api``).
+"""FastAPI routes for the Submission Admin console (``/ops/api``).
 
-Reuses the assignment dashboard's EspoCRM team-based login/session
-(``assignments.auth``) — one staff session covers both tools. The durable store
-is read from ``request.app.state.submission_store`` (set by ``create_app``).
+Uses the shared staff session (sign in once at the portal ``/``), gated per
+request to the OPS_ALLOWED_TEAMS team ("Marketing Admin Team" by default;
+admins always pass). The durable store is read from
+``request.app.state.submission_store`` (set by ``create_app``).
 """
 
 from __future__ import annotations
@@ -10,29 +11,26 @@ from __future__ import annotations
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
-from pydantic import BaseModel, Field
 
-from assignments.auth import (
-    AuthError,
-    authenticate,
-    clear_session,
-    current_user,
-    set_session,
-)
+from assignments.auth import clear_session, current_user, is_member
 from core.config import get_settings
 
 router = APIRouter(prefix="/ops/api", tags=["ops"])
-
-
-class LoginIn(BaseModel):
-    username: str = Field(min_length=1)
-    password: str = Field(min_length=1)
 
 
 def _require_user(request: Request) -> dict:
     user = current_user(request)
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated.")
+    settings = get_settings()
+    if not is_member(user, settings.ops_allowed_teams_list):
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Your account is not authorized to use Submission Admin "
+                f"(requires the {', '.join(settings.ops_allowed_teams_list) or 'admin'} team)."
+            ),
+        )
     return user
 
 
@@ -41,16 +39,6 @@ def _store(request: Request):
     if store is None:
         raise HTTPException(status_code=503, detail="Durable store is not configured.")
     return store
-
-
-@router.post("/login")
-async def login(body: LoginIn, request: Request) -> dict:
-    try:
-        user = await authenticate(get_settings(), body.username, body.password)
-    except AuthError as exc:
-        raise HTTPException(status_code=401, detail=str(exc))
-    set_session(request, user)
-    return {"userName": user["userName"], "name": user["name"], "isAdmin": user["isAdmin"]}
 
 
 @router.post("/logout")

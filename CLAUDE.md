@@ -143,15 +143,18 @@ Normal/Error log moves to the worker in async mode. Flag off = Phase 0
 end-to-end against local Postgres (async accept → pending → worker delivers →
 completed).
 
-**Phase 2 — operations console, scaffolded 2026-06-22.** A staff-only view of the
-durable store at **`/ops`** (`ops/` package), gated by the same EspoCRM team-auth
-as `/assignments` (reuses `assignments.auth`; one staff session covers both) and
+**Phase 2 — operations console, scaffolded 2026-06-22; retitled **Submission
+Admin** + own gate v0.30.0.** A staff-only view of the
+durable store at **`/ops`** (`ops/` package), using the shared staff session
+(sign in at the portal `/`) with a per-request gate on **`OPS_ALLOWED_TEAMS`**
+(default `Marketing Admin Team`; admins pass) and
 mounted only when `assignments_active`. `GET /ops/api/submissions` (filter by
 status/form) + counts; `GET /ops/api/submissions/{id}` (payload/progress/error);
 `POST /ops/api/submissions/{id}/redrive` (→ pending, due now, attempts reset — the
 worker re-runs it resumably). Store gains `list_submissions`/`get_submission`/
 `counts_by_status`/`redrive`; the store is exposed via `app.state.submission_store`.
-Endpoints 503 if no store. Linked from the form index under "Staff". Verified
+Endpoints 503 if no store. Linked from the portal for Marketing-Admin members.
+Verified
 against local Postgres (list/counts/redrive) + console wiring (serves, 401 unauth).
 Phase 3 (alerting + schema-drift) is next.
 
@@ -178,21 +181,22 @@ block at the top of this section).**
 
 A second **staff-only** tool (NOT a public form), in the same FastAPI app
 (`mentoradmin/` package), mounted only when `SESSION_SECRET` is set (shares the
-`assignments_active` gate + SessionMiddleware). It reuses the assignment tool's
-EspoCRM team-auth but is gated to the **Mentor Administration Team** and kept in
-its **own session key** (`mentoradmin_user`), so a Mentor-Admin login is separate
-from `/assignments`. It lists the **full mentor roster** (reuses
+`assignments_active` gate + SessionMiddleware). **Sign-in is the portal's
+(v0.30.0)** — one shared staff session (`assignments.auth.SESSION_KEY =
+"staff_user"`); this app enforces the **Mentor Administration Team** gate **per
+request** (`_require_user` → `is_member`; 403 names the team, admins pass).
+It lists the **full mentor roster** (reuses
 `assignments.service.list_all_mentors` — same searchable/filterable/sortable grid
 as "Available Mentors", any status), and lets staff **open any mentor** to a
 detail screen that reviews all info (read-only computed totals on top) and
 **edits status + any editable field**, saving back to `CMentorProfile`.
 
-- **Auth = per-user, acts as the logged-in user** (same model as `/assignments`):
-  login via `authenticate(..., allowed_teams=mentor_admin_allowed_teams_list,
-  allowed_roles=[])` → EspoCRM `App/user`; token in a signed session cookie;
-  all reads/writes run as that user so EspoCRM enforces their ACL on
-  CMentorProfile. Gate is **Team-only** (`MENTOR_ADMIN_ALLOWED_TEAMS`, default
-  `Mentor Administration Team`); admins always pass. Session-expired (CRM 401) →
+- **Auth = per-user, acts as the logged-in user**: the portal login (EspoCRM
+  `App/user`) put the user's token in the shared signed session cookie; all
+  reads/writes run as that user so EspoCRM enforces their ACL on CMentorProfile.
+  Gate is **Team-only, per request** (`MENTOR_ADMIN_ALLOWED_TEAMS`, default
+  `Mentor Administration Team`); admins always pass; 401 → the frontend
+  redirects to `/?next=/mentoradmin/`. Session-expired (CRM 401) →
   clears session + 401 (same `auth.session_expired` handling).
 - **Editable-field set is declared in `mentoradmin/service.py:EDITABLE_FIELDS`**
   (the single source for both the form layout — grouped Profile/Contact/Status/
@@ -338,14 +342,17 @@ picker/Assign button (so filtering to Active/Pending Acceptance etc. shows the
 mentor, not a redundant control); `list_engagements` returns `mentorId`/`mentorName`
 (v0.23.0).
 
-- **Auth = per-user, acts as the logged-in user.** Staff log in with their own
-  EspoCRM username/password (`POST /assignments/api/login` → EspoCRM `App/user`
-  with the `Espo-Authorization` header). The returned auth token is kept in a
-  signed session cookie and replayed (`Espo-Authorization` + by-token header) so
+- **Auth = per-user, acts as the logged-in user.** Staff sign in **once at the
+  portal `/`** (v0.30.0 — `POST /api/portal/login` → EspoCRM `App/user` with the
+  `Espo-Authorization` header; the per-app login endpoints are gone). The
+  returned auth token is kept in the shared signed session cookie and replayed
+  (`Espo-Authorization` + by-token header) so
   **all reads/writes run as that user** — EspoCRM enforces their ACL and records
-  them as modifier. Access gated to active internal users who are admin, belong
-  to an allowed **Team** (`ASSIGN_ALLOWED_TEAMS`, the primary gate — set to
-  `Client Administration Team`), OR hold an allowed Role (`ASSIGN_ALLOWED_ROLES`).
+  them as modifier. This app's gate runs **per request** (`_require_user`):
+  admin, an allowed **Team** (`ASSIGN_ALLOWED_TEAMS`, the primary gate — set to
+  `Client Administration Team`), OR an allowed Role (`ASSIGN_ALLOWED_ROLES`);
+  403 names the required team, 401 → the frontend redirects to
+  `/?next=/assignments/`.
   **Gate by Team, not Role:** a regular user's own token can read its `teamsNames`
   but NOT its `rolesNames` (EspoCRM strips role names for users without Role-scope
   read — verified live: a valid non-admin login returned `roles=[]`). (The shared
@@ -406,7 +413,16 @@ redeployed on each push), and prod answers on the
 app as PRIMARY, Cloudflare CNAME grey-cloud → the app's default hostname; the
 `…ondigitalocean.app` URL still works). Shipped 2026-07-05..07 (see CHANGELOG):
 
-- **v0.29.0** (built 2026-07-07, NOT yet pushed) — `/mentoradmin` detail editor
+- **v0.30.0** (built 2026-07-07, NOT yet pushed) — **authenticated portal at
+  `/` + single sign-on**: root becomes a CRM login; team-based links (Mentor
+  Team → CRM + public forms; the three admin teams → their apps; admins → all;
+  everyone signed-in → public form links); staff apps share ONE session
+  (`staff_user`) with **per-request team gates** (401 → `/?next=<app>` redirect,
+  403 names the team); per-app login screens/endpoints removed; `/ops` retitled
+  **Submission Admin** and gated by its own `OPS_ALLOWED_TEAMS` (default
+  `Marketing Admin Team` — **create this team in both CRMs**); dev app keeps
+  the public form index. See the Deployment-URLs section. NOT yet verified live.
+- **v0.29.0** — `/mentoradmin` detail editor
   gains a **Contact tab**: view/edit the mentor's first/last name, email, phone,
   and street/city/state/ZIP. The fields live on the linked **Contact** record —
   see the Contact-tab note in the `/mentoradmin` section (routing, E.164 phone,
@@ -498,22 +514,31 @@ ready); enabling Google Workspace mailbox creation (built + deployed, gated OFF)
 
 ### Deployment URLs (three App Platform apps, all from `dbower44022/cbm-client-intake`, branch `main`, deploy-on-push)
 
-The **root `/` of each app is the form index** — it lists every intake form and,
-when the staff tools are enabled, the review-tool links (Client Administration
-`/assignments/`, Submission Operations `/ops/`, Mentor Administration
-`/mentoradmin/`), each with its shortcut path shown as a code chip. Friendly
-aliases (v0.25.0): any single-segment path, lowercased with punctuation
-stripped, 307-redirects to the matching form/tool (`/clientintake`,
-`/MentorAdmin`, …).
+The **root `/` is the authenticated PORTAL** on the two staff-stack apps
+(v0.30.0, `portal/` package): a CRM login (single sign-on for all staff apps —
+`POST /api/portal/login`, ungated `authenticate(gate=False)`, shared session
+key `staff_user`), then exactly the links the user's teams entitle them to:
+every signed-in user → the five public form links; **Mentor Team** → a CRM
+link; **Client Administration Team** → `/assignments/`; **Mentor Administration
+Team** → `/mentoradmin/`; **Marketing Admin Team** → `/ops/` (**Submission
+Admin**, retitled v0.30.0); admins → everything. Each staff app enforces its
+own team **per request** (`auth.is_member`; 401 → redirect to `/?next=<app>`,
+403 names the required team) — the portal listing is convenience, not the
+security boundary. The **dev app** (no `SESSION_SECRET`) keeps the old public
+form index at `/`. The forms themselves stay public by direct URL everywhere.
+Friendly aliases (v0.25.0): any single-segment path, lowercased with
+punctuation stripped, 307-redirects to the matching form/tool
+(`/clientintake`, `/MentorAdmin`, …).
+**CRM prerequisite: create the `Marketing Admin Team` in prod + crm-test** (the
+`/ops` gate; the other three teams already exist) and add staff to the teams.
 
-| Env | Root URL (form + review index) | CRM | `dryRun` | Staff tools | App ID |
+| Env | Root URL (portal / form index on dev) | CRM | `dryRun` | Staff tools | App ID |
 |-----|-------------------------------|-----|----------|-------------|--------|
 | **prod** | **https://apps.clevelandbusinessmentors.org/** (custom domain, PRIMARY; also https://cbm-client-intake-prod-a9li7.ondigitalocean.app/) | production (`crm.clevelandbusinessmentors.org`) | false | yes | `aa1ddf69-f359-4b53-91ba-035cbed7bd53` |
 | **crm-test** (staging) | https://cbm-client-intake-svxs3.ondigitalocean.app/ | crm-test | false | yes | `509b4370-b9ca-42c7-b251-04d6820fe88e` |
 | **dev** (`lobster-app`) | https://lobster-app-w6h5m.ondigitalocean.app/ | none — dry-run | true | no | `b3b28113-6113-4ba7-ae99-efd5ea633fcd` |
 
-The **crm-test root** is the page with links to *both* the intake forms and the
-review/staff apps. The **dev app** (DO default name `lobster-app`, no spec in
+The **dev app** (DO default name `lobster-app`, no spec in
 `.do/`) is dry-run only — submissions are logged, never written; no Postgres, no
 staff tools — for exercising the form UIs. Local dev = `localhost:8000`.
 

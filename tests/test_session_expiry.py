@@ -12,7 +12,10 @@ from core.config import get_settings
 from core.espo import EspoError
 from forms import info_request
 
-_USER = {"userId": "u", "userName": "x", "name": "X", "isAdmin": False, "token": "tok"}
+# A non-admin who IS entitled to the app (on the gate team) — the point of these
+# tests is what happens when an entitled user's CRM token has expired.
+_USER = {"userId": "u", "userName": "x", "name": "X", "isAdmin": False, "token": "tok",
+         "teams": ["Client Administration Team"], "roles": []}
 
 
 @pytest.fixture(autouse=True)
@@ -39,6 +42,7 @@ def test_session_expired_ignores_status_text_in_body():
 
 def _app(monkeypatch, raises: EspoError):
     monkeypatch.setenv("SESSION_SECRET", "test-secret")  # enables the assignments router
+    monkeypatch.setenv("ASSIGN_ALLOWED_TEAMS", "Client Administration Team")
     get_settings.cache_clear()
     monkeypatch.setattr("assignments.auth.current_user", lambda request: _USER)
     monkeypatch.setattr("assignments.router.client_for", lambda settings, user: object())

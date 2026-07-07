@@ -1,0 +1,57 @@
+/* Portal home page — builds on /shared/tokens.css. */
+
+.portal {
+  padding-top: 2rem;
+  padding-bottom: 3rem;
+  max-width: var(--cbm-container-narrow);
+}
+
+.portal__header h1 {
+  color: var(--cbm-navy);
+  font-family: var(--cbm-font-serif);
+  margin-bottom: 0.25rem;
+}
+.portal__sub { color: var(--cbm-text); margin-top: 0; }
+
+/* Login */
+.portal__login {
+  max-width: 420px;
+  margin: 2rem auto;
+  background: var(--cbm-surface);
+  padding: 2rem;
+  border-radius: var(--cbm-radius);
+  border: 1px solid var(--cbm-border);
+}
+.portal__login h2 { color: var(--cbm-navy); margin-top: 0; }
+
+/* Home */
+.portal__toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 1rem 0 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--cbm-border);
+}
+.portal__who { color: var(--cbm-slate-700); }
+
+.portal__home h2 {
+  color: var(--cbm-navy);
+  font-family: var(--cbm-font-serif);
+  font-size: 1.15rem;
+  margin: 1.5rem 0 0.5rem;
+}
+.portal__list { list-style: none; margin: 0; padding: 0; }
+.portal__list li { margin: 0.3em 0; }
+.portal__list a { color: var(--cbm-navy); font-weight: 500; }
+
+.shortcut {
+  background: var(--cbm-surface);
+  border: 1px solid var(--cbm-border);
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  font-size: 0.85em;
+  color: var(--cbm-slate-700);
+}

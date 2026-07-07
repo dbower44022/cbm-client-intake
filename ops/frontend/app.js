@@ -1,4 +1,5 @@
-/* Submission Operations console — vanilla JS. Auth + table + re-drive. */
+/* Submission Admin console — vanilla JS. Table + re-drive; sign-in happens
+   once at the portal (/), which sends the user back here after login. */
 (function () {
   "use strict";
 
@@ -31,19 +32,19 @@
     return data;
   }
 
-  function showLogin() { hide($("dashView")); show($("loginView")); $("username").focus(); }
-  // On boot, a 401 just means "not signed in" (show the form silently). A 5xx or
-  // a network failure means the server is down — say so, rather than implying the
-  // user needs to re-authenticate.
+  // Not signed in: hand off to the portal, which brings the user back here
+  // after login (single sign-on — this app has no login form of its own).
+  function showLogin() { location.href = "/?next=" + encodeURIComponent("/ops/"); }
+  function showMessage(text) { hide($("dashView")); $("msgText").textContent = text; show($("msgView")); }
+  // On boot: 401 = not signed in (go sign in at the portal); 403 = signed in
+  // but not entitled to this app (show the exact reason); anything else = the
+  // server is down — say so.
   function bootFail(e) {
-    showLogin();
-    if (!e || !e.status || e.status >= 500) {
-      var le = $("loginError");
-      le.textContent = "The server isn't responding right now. Please try again in a moment.";
-      show(le);
-    }
+    if (e && e.status === 401) { showLogin(); return; }
+    if (e && e.status === 403) { showMessage(e.message); return; }
+    showMessage("The server isn't responding right now. Please try again in a moment.");
   }
-  function showDash(user) { hide($("loginView")); $("whoName").textContent = user.name || user.userName; show($("dashView")); loadData(); }
+  function showDash(user) { hide($("msgView")); $("whoName").textContent = user.name || user.userName; show($("dashView")); loadData(); }
   function notice(text, kind) { var n = $("notice"); n.textContent = text; n.className = "ops__notice " + (kind === "error" ? "is-error" : "is-success"); show(n); }
   function clearNotice() { hide($("notice")); }
 
@@ -53,20 +54,10 @@
     values.forEach(function (v) { sel.appendChild(new Option(v, v)); });
   }
 
-  // --- login ---
-  $("loginForm").addEventListener("submit", async function (ev) {
-    ev.preventDefault();
-    hide($("loginError"));
-    $("loginBtn").disabled = true;
-    try {
-      var user = await api("/login", { method: "POST", body: JSON.stringify({ username: $("username").value, password: $("password").value }) });
-      $("password").value = "";
-      showDash(user);
-    } catch (e) {
-      var le = $("loginError"); le.textContent = e.message; show(le);
-    } finally { $("loginBtn").disabled = false; }
+  $("logoutBtn").addEventListener("click", async function () {
+    try { await api("/logout", { method: "POST" }); } catch (e) {}
+    location.href = "/";  // back to the portal sign-in
   });
-  $("logoutBtn").addEventListener("click", async function () { try { await api("/logout", { method: "POST" }); } catch (e) {} showLogin(); });
   $("refreshBtn").addEventListener("click", loadData);
   $("statusFilter").addEventListener("change", function () { state.status = this.value; loadData(); });
   $("formFilter").addEventListener("change", function () { state.form = this.value; loadData(); });

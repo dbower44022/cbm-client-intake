@@ -66,6 +66,9 @@ class Settings(BaseSettings):
     assign_allowed_roles: str = ""
     # Mentor Admin app (/mentoradmin) — gated to its own team.
     mentor_admin_allowed_teams: str = "Mentor Administration Team"
+    # Submission Admin app (/ops) — gated to its own team (v0.30.0; it
+    # previously shared the assignments gate). The team must exist in the CRM.
+    ops_allowed_teams: str = "Marketing Admin Team"
     # Team that approved mentors' new login users are placed in.
     mentor_team_name: str = "Mentor Team"
     # Auto-provision a login User when a mentor is Approved. Off by default.
@@ -122,6 +125,10 @@ class Settings(BaseSettings):
     @property
     def mentor_admin_allowed_teams_list(self) -> list[str]:
         return [t.strip() for t in self.mentor_admin_allowed_teams.split(",") if t.strip()]
+
+    @property
+    def ops_allowed_teams_list(self) -> list[str]:
+        return [t.strip() for t in self.ops_allowed_teams.split(",") if t.strip()]
 
     @property
     def assignments_active(self) -> bool:

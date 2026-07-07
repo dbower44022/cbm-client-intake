@@ -4,6 +4,35 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.30.0] — 2026-07-07
+
+### Added
+- **Authenticated portal at `/` with single sign-on for all apps.** The root
+  page (on deployments with the staff stack, i.e. `SESSION_SECRET` set) is now
+  a CRM login; after signing in, the user sees exactly the links their EspoCRM
+  **teams** entitle them to: every signed-in user gets the five public
+  intake-form links; **Mentor Team** adds a link to the CRM itself; **Client
+  Administration Team** → `/assignments/`; **Mentor Administration Team** →
+  `/mentoradmin/`; **Marketing Admin Team** → `/ops/` (**Submission Admin** —
+  retitled from "Submission Operations"). CRM admins see everything. New
+  `portal/` package (`/api/portal/login|session|logout` + the page); the login
+  is **ungated** (any active internal user) — the portal listing is a
+  convenience, never the security boundary.
+
+### Changed
+- **One login, no second prompts.** All staff apps now share one session
+  (sign in once at the portal) and enforce their team gates **per request**
+  instead of at login: 401 sends the browser to `/?next=<app>` (and back after
+  login); 403 shows exactly which team is required. The per-app login
+  screens/endpoints are gone; per-user CRM access (ACL, audit) is unchanged —
+  every call still runs under the signed-in user's own token.
+- `/ops` is now gated by its own `OPS_ALLOWED_TEAMS` (default **"Marketing
+  Admin Team"** — the team must be created in the CRM) instead of sharing the
+  assignments gate.
+- The public form index at `/` remains only on deployments without the staff
+  stack (the dry-run dev app); the forms themselves stay public everywhere by
+  direct URL.
+
 ## [0.29.0] — 2026-07-07
 
 ### Added

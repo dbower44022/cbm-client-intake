@@ -16,18 +16,10 @@
       <p class="ma__sub">Review and edit any mentor's profile, status, and details.</p>
     </header>
 
-    <!-- Login -->
-    <section class="ma__login" id="loginView" hidden>
-      <h2>Staff sign in</h2>
-      <p class="cbm-help">Sign in with your EspoCRM username and password.</p>
-      <form id="loginForm" autocomplete="on">
-        <div class="cbm-field"><label for="username">Username</label>
-          <input type="text" id="username" autocomplete="username" required /></div>
-        <div class="cbm-field"><label for="password">Password</label>
-          <input type="password" id="password" autocomplete="current-password" required /></div>
-        <p class="form-error" id="loginError" role="alert" hidden></p>
-        <button type="submit" class="cbm-button" id="loginBtn">Sign in</button>
-      </form>
+    <!-- Sign-in happens at the portal (/); this shows access/server errors. -->
+    <section class="ma__login" id="msgView" hidden>
+      <p class="form-error" id="msgText" role="alert"></p>
+      <p><a href="/">Return to the sign-in page</a></p>
     </section>
 
     <!-- List -->

@@ -1,9 +1,9 @@
 """FastAPI routes for the Mentor Admin app (``/mentoradmin/api``).
 
-Same EspoCRM team-based auth as the assignment dashboard, but gated to the
-**Mentor Administration Team** and kept in its own session key, so it is
-isolated from the assignment tool. All reads/writes run as the logged-in user
-(their token) — EspoCRM enforces their edit permissions on CMentorProfile.
+Uses the shared staff session (sign in once at the portal ``/``), gated per
+request to the **Mentor Administration Team** (admins always pass). All
+reads/writes run as the logged-in user (their token) — EspoCRM enforces their
+edit permissions on CMentorProfile.
 """
 
 from __future__ import annotations
@@ -14,17 +14,15 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from assignments import service as assign_service
 from assignments.auth import (
-    AuthError,
-    authenticate,
     clear_session,
     current_user,
+    is_member,
     login_token,
     session_expired,
-    set_session,
 )
 from assignments.espo_user import client_for
 from core.app_config import make_app_config_store
@@ -36,15 +34,6 @@ from . import service
 
 router = APIRouter(prefix="/mentoradmin/api", tags=["mentoradmin"])
 log = logging.getLogger("cbm_intake.mentoradmin")
-
-# Distinct session key so a Mentor-Admin login is separate from /assignments.
-SESSION_KEY = "mentoradmin_user"
-
-
-class LoginIn(BaseModel):
-    username: str = Field(min_length=1)
-    password: str = Field(min_length=1)
-
 
 class UpdateIn(BaseModel):
     changes: dict
@@ -65,9 +54,21 @@ class GoogleSetupIn(BaseModel):
 
 
 def _require_user(request: Request) -> dict:
-    user = current_user(request, SESSION_KEY)
+    """The shared staff session + THIS app's team gate, per request (401 = not
+    signed in — the frontend sends the user to the portal; 403 = signed in but
+    not on the Mentor Administration Team; admins always pass)."""
+    user = current_user(request)
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated.")
+    settings = get_settings()
+    if not is_member(user, settings.mentor_admin_allowed_teams_list):
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Your account is not authorized to use Mentor Administration "
+                f"(requires the {', '.join(settings.mentor_admin_allowed_teams_list) or 'admin'} team)."
+            ),
+        )
     return user
 
 
@@ -80,7 +81,7 @@ def _require_admin(request: Request) -> dict:
 
 def _crm_failure(request: Request, exc: EspoError, message: str) -> HTTPException:
     if session_expired(exc):
-        clear_session(request, SESSION_KEY)
+        clear_session(request)
         return HTTPException(status_code=401, detail="Your session has expired — please sign in again.")
     # Log the full CRM error (includes the response body) so failures like a
     # value rejected by EspoCRM are diagnosable from the run logs.
@@ -88,23 +89,9 @@ def _crm_failure(request: Request, exc: EspoError, message: str) -> HTTPExceptio
     return HTTPException(status_code=502, detail=f"{message}: {exc}")
 
 
-@router.post("/login")
-async def login(body: LoginIn, request: Request) -> dict:
-    settings = get_settings()
-    try:
-        user = await authenticate(
-            settings, body.username, body.password,
-            allowed_teams=settings.mentor_admin_allowed_teams_list, allowed_roles=[],
-        )
-    except AuthError as exc:
-        raise HTTPException(status_code=401, detail=str(exc))
-    set_session(request, user, SESSION_KEY)
-    return {"userName": user["userName"], "name": user["name"], "isAdmin": user["isAdmin"]}
-
-
 @router.post("/logout")
 async def logout(request: Request) -> dict:
-    clear_session(request, SESSION_KEY)
+    clear_session(request)
     return {"status": "ok"}
 
 

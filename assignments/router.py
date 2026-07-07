@@ -14,19 +14,32 @@ from .espo_user import client_for
 router = APIRouter(prefix="/assignments/api", tags=["assignments"])
 
 
-class LoginIn(BaseModel):
-    username: str = Field(min_length=1)
-    password: str = Field(min_length=1)
-
-
 class AssignIn(BaseModel):
     mentorProfileId: str = Field(min_length=1)
 
 
 def _require_user(request: Request) -> dict:
+    """The shared staff session + THIS app's team gate, per request.
+
+    Sign-in happens once at the portal (`/`, ungated); authorization is
+    enforced here: the user must be an admin, in an ASSIGN_ALLOWED_TEAMS team,
+    or hold an ASSIGN_ALLOWED_ROLES role. 401 = not signed in (the frontend
+    sends the user to the portal); 403 = signed in but not entitled to this app.
+    """
     user = auth.current_user(request)
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated.")
+    settings = get_settings()
+    if not auth.is_member(
+        user, settings.assign_allowed_teams_list, settings.assign_allowed_roles_list
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Your account is not authorized to use Client Administration "
+                f"(requires the {', '.join(settings.assign_allowed_teams_list) or 'admin'} team)."
+            ),
+        )
     return user
 
 
@@ -40,17 +53,6 @@ def _crm_failure(request: Request, exc: EspoError, message: str) -> HTTPExceptio
             status_code=401, detail="Your session has expired — please sign in again."
         )
     return HTTPException(status_code=502, detail=f"{message}: {exc}")
-
-
-@router.post("/login")
-async def login(body: LoginIn, request: Request) -> dict:
-    settings = get_settings()
-    try:
-        user = await auth.authenticate(settings, body.username, body.password)
-    except auth.AuthError as exc:
-        raise HTTPException(status_code=401, detail=str(exc))
-    auth.set_session(request, user)
-    return {"userName": user["userName"], "name": user["name"], "isAdmin": user["isAdmin"]}
 
 
 @router.post("/logout")

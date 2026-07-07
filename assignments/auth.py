@@ -5,8 +5,10 @@ Login posts the credentials to EspoCRM's ``App/user`` endpoint via the
 reusable auth ``token``; that token (not the password) is stored in the signed
 session cookie and replayed as the user on every later request.
 
-Access is gated to active internal users (type ``admin``/``regular``) who are
-either an admin or hold one of ``ASSIGN_ALLOWED_ROLES``.
+Login itself only requires an active internal user (type ``admin``/``regular``);
+the **portal** (``/``) signs everyone in once, stores the session under the
+shared ``SESSION_KEY``, and each staff app enforces its own team gate **per
+request** via :func:`is_member` (admins always pass).
 """
 
 from __future__ import annotations
@@ -23,10 +25,14 @@ from core.espo import EspoClient, EspoError
 
 log = logging.getLogger("cbm_intake.assignments.auth")
 
-SESSION_KEY = "assign_user"
+# ONE shared staff session for the portal and all staff apps — sign in once at
+# /, each app checks its own team against the session's ``teams`` per request.
+# (Was "assign_user" per-app keys; renaming invalidates old sessions — re-login.)
+SESSION_KEY = "staff_user"
 # Keys persisted in the (signed) session cookie. Excludes nothing sensitive
 # beyond the EspoCRM token, which is the user's own and travels over HTTPS.
-_SESSION_FIELDS = ("userId", "userName", "name", "token", "isAdmin")
+# teams/roles ride along so per-request gates don't re-query the CRM.
+_SESSION_FIELDS = ("userId", "userName", "name", "token", "isAdmin", "teams", "roles")
 
 
 class AuthError(Exception):
@@ -89,18 +95,22 @@ async def authenticate(
     *,
     allowed_teams: Optional[list[str]] = None,
     allowed_roles: Optional[list[str]] = None,
+    gate: bool = True,
 ) -> dict[str, Any]:
     """Validate credentials against EspoCRM and return the session user dict.
 
-    Authorization: EspoCRM admins always pass; otherwise the user must belong to
-    an allowed Team or hold an allowed Role. ``allowed_teams``/``allowed_roles``
-    default to the assignment tool's settings (``ASSIGN_ALLOWED_TEAMS`` /
-    ``ASSIGN_ALLOWED_ROLES``); other staff apps (e.g. mentor-admin) pass their
-    own. Team/role names are read from the user's own ``App/user`` payload
-    (falling back to their User record).
+    Authorization (``gate=True``): EspoCRM admins always pass; otherwise the
+    user must belong to an allowed Team or hold an allowed Role.
+    ``allowed_teams``/``allowed_roles`` default to the assignment tool's
+    settings (``ASSIGN_ALLOWED_TEAMS`` / ``ASSIGN_ALLOWED_ROLES``). With
+    ``gate=False`` (the portal's single sign-on), any active internal user
+    signs in — each staff app then enforces its own team per request via
+    :func:`is_member` on the session's ``teams``. Team/role names are read
+    from the user's own ``App/user`` payload (falling back to their User
+    record).
 
-    :raises AuthError: bad credentials, inactive/non-internal account, or the
-        user is not authorized.
+    :raises AuthError: bad credentials, inactive/non-internal account, or
+        (when gated) the user is not authorized.
     """
     cred = base64.b64encode(f"{username}:{password}".encode()).decode()
     resp = await _app_user(
@@ -127,7 +137,7 @@ async def authenticate(
     teams, teams_src = await _names_with_fallback(settings, user, token, "teamsNames")
     roles, roles_src = await _names_with_fallback(settings, user, token, "rolesNames")
 
-    if not is_admin:
+    if gate and not is_admin:
         allowed_teams = (
             settings.assign_allowed_teams_list if allowed_teams is None else allowed_teams
         )
@@ -189,10 +199,25 @@ async def login_token(
     return user["userName"], token
 
 
+def is_member(
+    user: dict[str, Any],
+    allowed_teams: list[str],
+    allowed_roles: Optional[list[str]] = None,
+) -> bool:
+    """Whether a session user may use an app gated by ``allowed_teams`` /
+    ``allowed_roles``. Admins always pass. Used by each staff router's
+    per-request gate (the portal signs users in ungated)."""
+    if user.get("isAdmin"):
+        return True
+    if set(user.get("teams") or []) & set(allowed_teams):
+        return True
+    return bool(set(user.get("roles") or []) & set(allowed_roles or []))
+
+
 # --- session helpers (Starlette SessionMiddleware backs request.session) ---
 
 def set_session(request, user: dict[str, Any], key: str = SESSION_KEY) -> None:
-    request.session[key] = {k: user[k] for k in _SESSION_FIELDS}
+    request.session[key] = {k: user.get(k) for k in _SESSION_FIELDS}
 
 
 def current_user(request, key: str = SESSION_KEY) -> Optional[dict[str, Any]]:

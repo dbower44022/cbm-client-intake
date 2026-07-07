@@ -91,7 +91,7 @@ public `…ondigitalocean.app` URL → checks `/healthz`. Expect `"dryRun": true
 
 Then sanity-check in a browser:
 
-- `…/` — form index
+- `…/` — the public form index (dry-run app; with `SESSION_SECRET` set it is the staff sign-in portal instead)
 - `…/client-intake/` and `…/volunteer/` — the two wizards
 - Submissions are validated and **logged only** (no records created) while in
   dry-run.
@@ -119,17 +119,23 @@ delete — DELETE returns 403).
 
 ### Staff tools + mentor-login provisioning (optional, web component)
 
-The staff tools (`/assignments` = **Client Administration**, `/ops` = Submission
-Operations, `/mentoradmin` = **Mentor Administration**) mount only when
-`SESSION_SECRET` is set. Staff authenticate with their own EspoCRM
-username/password; access is gated by EspoCRM **Team**. All are on the **web**
-component:
+The staff tools (`/assignments` = **Client Administration**, `/ops` =
+**Submission Admin**, `/mentoradmin` = **Mentor Administration**) mount only
+when `SESSION_SECRET` is set — and with it the root `/` becomes the
+**authenticated portal**: staff sign in **once** with their own EspoCRM
+username/password and see the links their **Teams** allow; each app enforces
+its own team per request (admins always pass). The four gate teams must exist
+in the CRM: `Client Administration Team`, `Mentor Administration Team`,
+`Marketing Admin Team` (create it — new with v0.30.0), and `Mentor Team`
+(mentors get a CRM link + the public form links on the portal). All are on the
+**web** component:
 
 | Variable | Value |
 |---|---|
-| `SESSION_SECRET` | random string, **`type: SECRET`** — enables the staff tools + signed sessions |
+| `SESSION_SECRET` | random string, **`type: SECRET`** — enables the portal + staff tools + signed sessions |
 | `ASSIGN_ALLOWED_TEAMS` | `Client Administration Team` (gate for `/assignments`) |
 | `MENTOR_ADMIN_ALLOWED_TEAMS` | `Mentor Administration Team` (gate for `/mentoradmin`; default) |
+| `OPS_ALLOWED_TEAMS` | `Marketing Admin Team` (gate for `/ops`; default) |
 | `SESSION_COOKIE_SECURE` | `true` in prod (false only for plain-HTTP local dev) |
 
 **Mentor-login provisioning** — approving a mentor in `/mentoradmin` can

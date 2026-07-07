@@ -50,11 +50,15 @@ This is a multi-form app: a shared core hosts any number of intake forms.
   - `forms/partner/` — Become-a-Partner; creates Account → Contact → CPartnerProfile.
   - `forms/sponsor/` — Become-a-Sponsor; creates Account → Contact → CSponsorProfile.
 - **Staff tools** — not public forms; signed-in EspoCRM staff only, gated by team
-  membership and mounted only when `SESSION_SECRET` is set:
+  membership and mounted only when `SESSION_SECRET` is set. Sign-in is **single
+  sign-on at the portal** (`portal/`, the root `/` page): log in once with your
+  CRM account and see the links your teams allow; each app still enforces its
+  own team per request:
   - `assignments/` — **Client Administration** (`/assignments/`): assign submitted
     engagements to mentors who are accepting new clients.
-  - `ops/` — **Submission Operations** (`/ops/`): a console over the V2 durable
-    store (list/inspect/redrive submissions, backlog metrics).
+  - `ops/` — **Submission Admin** (`/ops/`): a console over the V2 durable
+    store (list/inspect/redrive submissions, backlog metrics); gated by
+    `OPS_ALLOWED_TEAMS` (default "Marketing Admin Team").
   - `mentoradmin/` — **Mentor Administration** (`/mentoradmin/`): browse the mentor
     roster and edit any mentor's profile; verifies each record is complete and
     can auto-provision a mentor's EspoCRM login (optionally gated on whether their
