@@ -192,8 +192,8 @@
       // Acceptance = active); Available = Max Clients − Active Clients.
       tr.appendChild(cell(num(m.activeClients), "num"));
       tr.appendChild(cell(num(m.maxCapacity), "num"));
-      tr.appendChild(cell(num(m.assignedLast30), "num"));
       tr.appendChild(cell(m.availableCapacity === -1 ? "Unlimited" : num(m.availableCapacity), "num"));
+      tr.appendChild(cell(num(m.assignedLast30), "num"));
       tr.appendChild(cell(num(m.lifetimeClients), "num"));
       tb.appendChild(tr);
     });

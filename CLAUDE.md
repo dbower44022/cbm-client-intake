@@ -350,7 +350,7 @@ mentor, not a redundant control); `list_engagements` returns `mentorId`/`mentorN
   three — diagnosed live 2026-07-06: crm-test had 0 eligible, prod 4.)
 - **"Review Mentors" (Available Mentors) grid** (reworked v0.24.0; analytics
   v0.27.0): columns Mentor/Status/Type/Accepting/Active Clients/Max Clients/
-  Assigned (30d)/Available/Lifetime/Industry Experience/Areas of Expertise.
+  Available/Assigned (30d)/Lifetime/Industry Experience/Areas of Expertise.
   Client counts are app-computed from CEngagement (see the v0.27.0 bullet in
   Current status); the "Has capacity" checkbox + the assign dropdown's
   "(capacity N)" label use the computed Available (= max − active). Filters:

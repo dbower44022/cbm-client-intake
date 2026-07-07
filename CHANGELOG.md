@@ -4,6 +4,13 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.27.2] — 2026-07-06
+
+### Changed
+- Client-count column order in both staff mentor grids is now **Active Clients ·
+  Max Clients · Available · Assigned (30d) · Lifetime** (Available moved before
+  Assigned (30d)).
+
 ## [0.27.1] — 2026-07-06
 
 ### Changed

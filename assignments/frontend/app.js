@@ -569,8 +569,8 @@
       // maximumClientCapacity exactly as on the CRM record (blank there = blank here).
       tr.appendChild(cell(numText(m.activeClients), "num"));
       tr.appendChild(cell(numText(m.maxCapacity), "num"));
-      tr.appendChild(cell(numText(m.assignedLast30), "num"));
       tr.appendChild(cell(m.availableCapacity === -1 ? "Unlimited" : numText(m.availableCapacity), "num"));
+      tr.appendChild(cell(numText(m.assignedLast30), "num"));
       tr.appendChild(cell(numText(m.lifetimeClients), "num"));
       var ieTd = document.createElement("td"); ieTd.appendChild(chipRow(m.industryExperience)); tr.appendChild(ieTd);
       var exTd = document.createElement("td"); exTd.appendChild(chipRow(m.expertise)); tr.appendChild(exTd);
