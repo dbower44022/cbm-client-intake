@@ -348,13 +348,14 @@ mentor, not a redundant control); `list_engagements` returns `mentorId`/`mentorN
   `mentorStatus="Active"` AND `assignedUser` set. The mentor's login User =
   `CMentorProfile.assignedUser`. (An empty dropdown = no mentor passes all
   three — diagnosed live 2026-07-06: crm-test had 0 eligible, prod 4.)
-- **"Review Mentors" (Available Mentors) grid** (reworked v0.24.0): columns
-  Mentor/Status/Type/Accepting/Assigned/Capacity/Industry Experience/Areas of
-  Expertise. Capacity = the **stored `maximumClientCapacity`** (NOT the
-  CRM-computed `availableCapacity`; the "Has capacity" checkbox + the assign
-  dropdown's "(capacity N)" label still use availableCapacity — eligibility
-  semantics). Filters: Industry Experience + Areas of Expertise (match any of
-  the mentor's values). Dialog defaults to ~96vw.
+- **"Review Mentors" (Available Mentors) grid** (reworked v0.24.0; analytics
+  v0.27.0): columns Mentor/Status/Type/Accepting/Active Clients/Max Clients/
+  Assigned (30d)/Available/Lifetime/Industry Experience/Areas of Expertise.
+  Client counts are app-computed from CEngagement (see the v0.27.0 bullet in
+  Current status); the "Has capacity" checkbox + the assign dropdown's
+  "(capacity N)" label use the computed Available (= max − active). Filters:
+  Industry Experience + Areas of Expertise (match any of the mentor's values).
+  Dialog defaults to ~96vw.
 - **Status filter** — the grid has a multi-select (the full `engagementStatus`
   enum, `service.ENGAGEMENT_STATUSES`); `GET /assignments/api/engagements` takes
   repeated `?status=` params (`in` filter), defaulting to `Submitted`.
@@ -431,6 +432,22 @@ app as PRIMARY, Cloudflare CNAME grey-cloud → the app's default hostname; the
   when configured), checks the `@cbmentors.org` mailbox (reports "n/a" until
   Email Setup is configured — still true in prod), and bulk re-syncs
   `recordStatus`. Results in a modal; roster reloads.
+- **v0.27.0** (built 2026-07-06, NOT yet pushed/deployed) — **mentor client-count
+  analytics** in both staff mentor grids (`/mentoradmin` roster + `/assignments`
+  Review Mentors): Active Clients / Max Clients / Assigned (30d) / Available /
+  Lifetime, all sortable. App-computed from `CEngagement` in one paginated sweep
+  (`assignments/service.py:mentor_engagement_metrics`, grouped by
+  `mentorProfileId`; active set = Active/Assigned/Pending Acceptance; Available
+  = max − active, -1 max = Unlimited) — the CRM's buggy computed
+  `currentActiveClients`/`availableCapacity` are no longer read. The Assign
+  action now **stamps `engagementAssignedDate`** (nothing CRM-side fills it;
+  pre-0.27.0 assignments have a null date, so Assigned-(30d) undercounts until
+  backfilled CRM-side). `list_all_mentors`/`list_eligible_mentors` now return
+  `{"mentors": [...], "metricsAvailable": bool}`; a staffer whose role can't
+  read CEngagement still gets the roster, with blank counts + a notice (grant
+  CEngagement read to the staff-gate Teams' role for full data). Both
+  frontends' Has-capacity filter + "(capacity N)" label use the computed
+  Available. 226 tests green.
 
 Before that, the 2026-07-02 push (v0.21.3 → v0.23.1): volunteer how-heard also
 writes `Contact.cHowDidYouHear`; `/mentoradmin` roster/editor refinements +

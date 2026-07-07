@@ -700,12 +700,14 @@ def test_lists_mentors(monkeypatch):
     _authed(monkeypatch)
 
     async def fake_list(client):
-        return [{"id": "m1", "name": "Jane", "status": "Active"}]
+        return {"mentors": [{"id": "m1", "name": "Jane", "status": "Active"}],
+                "metricsAvailable": True}
 
     monkeypatch.setattr("mentoradmin.router.assign_service.list_all_mentors", fake_list)
     with TestClient(_app(monkeypatch)) as c:
         data = c.get("/mentoradmin/api/mentors").json()
     assert data["mentors"][0]["name"] == "Jane"
+    assert data["metricsAvailable"] is True
 
 
 def test_fields_endpoint_returns_spec_and_options(monkeypatch):

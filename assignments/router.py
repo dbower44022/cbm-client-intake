@@ -93,11 +93,11 @@ async def mentors(request: Request, all_: bool = Query(default=False, alias="all
     user = _require_user(request)
     client = client_for(get_settings(), user)
     try:
-        rows = await (
+        # {"mentors": [...], "metricsAvailable": bool} — served as-is.
+        return await (
             service.list_all_mentors(client) if all_
             else service.list_eligible_mentors(client)
         )
-        return {"mentors": rows}
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not load mentors")
 

@@ -80,6 +80,10 @@ async def test_assign_sets_engagement_and_reassigns_related():
     assert payload["assignedUsersIds"] == ["user-99"]
     assert payload["assignedUserId"] == "user-99"
     assert payload["mentorProfileId"] == "mentor-1"
+    # The assignment stamps engagementAssignedDate (feeds the Assigned-last-30
+    # metric) in EspoCRM's UTC datetime format.
+    import re
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}", payload["engagementAssignedDate"])
 
     # Contacts (primary + extra, deduped) each reassigned via single assignedUser.
     contact_updates = {u[1]: u[2] for u in client.updates if u[0] == service.CONTACT}
@@ -180,8 +184,6 @@ async def test_eligible_mentors_query_and_shape():
                         "name": "Tommy Tranell",
                         "assignedUserId": "u1",
                         "assignedUserName": "Tommy Tranell",
-                        "availableCapacity": 4,
-                        "currentActiveClients": 2,
                         "maximumClientCapacity": 5,
                         "yearsOfExperience": 10,
                         "mentorType": "Mentor",
@@ -198,14 +200,20 @@ async def test_eligible_mentors_query_and_shape():
                     {"id": "m2", "name": "No User", "assignedUserId": None,
                      "mentorStatus": "Active", "acceptingNewClients": True},
                 ]
-            }
+            },
+            # One active engagement for m1 → activeClients 1, available 5-1=4.
+            service.ENGAGEMENT: {
+                "list": [{"mentorProfileId": "m1", "engagementStatus": "Active"}]
+            },
         }
     )
-    mentors = await service.list_eligible_mentors(client)
-    assert mentors == [
+    res = await service.list_eligible_mentors(client)
+    assert res["metricsAvailable"] is True
+    assert res["mentors"] == [
         {
             "id": "m1", "name": "Tommy Tranell", "createdAt": None, "userId": "u1", "userName": "Tommy Tranell",
-            "availableCapacity": 4, "assignedClients": 2, "maxCapacity": 5,
+            "activeClients": 1, "assignedLast30": 0, "lifetimeClients": 1,
+            "availableCapacity": 4, "maxCapacity": 5,
             "yearsOfExperience": 10, "mentorType": "Mentor", "status": "Active",
             "acceptingNewClients": True, "recordStatus": None,
             "cbmEmail": "tommy.tranell@cbmentors.org", "industrySector": "Manufacturing",
@@ -243,7 +251,7 @@ async def test_eligible_mentor_with_only_collaborators_field_is_included():
          "assignedUsersIds": ["u7"], "assignedUsersNames": {"u7": "Collab Mentor"},
          "mentorStatus": "Active", "acceptingNewClients": True},
     ]}})
-    mentors = await service.list_eligible_mentors(client)
+    mentors = (await service.list_eligible_mentors(client))["mentors"]
     assert len(mentors) == 1
     assert mentors[0]["userId"] == "u7"
     assert mentors[0]["userName"] == "Collab Mentor"
@@ -260,12 +268,103 @@ async def test_list_all_mentors_has_no_where_filter():
             }
         }
     )
-    rows = await service.list_all_mentors(client)
+    rows = (await service.list_all_mentors(client))["mentors"]
     assert [r["status"] for r in rows] == ["Candidate"]
     assert rows[0]["acceptingNewClients"] is False
     # No eligibility where-clause — the review list spans all statuses.
     _, where = client.list_calls[0]
     assert where == []
+
+
+# --- mentor engagement metrics -------------------------------------------------
+
+def _eng(mentor_id, status, assigned=None):
+    return {"mentorProfileId": mentor_id, "engagementStatus": status,
+            "engagementAssignedDate": assigned}
+
+
+async def test_mentor_engagement_metrics_grouping_and_windows():
+    from datetime import datetime, timedelta, timezone
+
+    recent = (datetime.now(timezone.utc) - timedelta(days=5)).strftime("%Y-%m-%d %H:%M:%S")
+    old = (datetime.now(timezone.utc) - timedelta(days=45)).strftime("%Y-%m-%d %H:%M:%S")
+    client = FakeClient(lists={service.ENGAGEMENT: {"list": [
+        _eng("m1", "Active", recent),            # active + assigned last 30
+        _eng("m1", "Assigned", old),             # active, too old for last-30
+        _eng("m1", "Pending Acceptance", None),  # active, no date -> not last-30
+        _eng("m1", "Completed", recent),         # lifetime only (not an active status)
+        _eng("m2", "Declined", None),            # lifetime only
+        _eng(None, "Active", recent),            # unlinked -> counts toward nobody
+    ]}})
+    metrics = await service.mentor_engagement_metrics(client)
+    assert metrics == {
+        "m1": {"activeClients": 3, "assignedLast30": 1, "lifetimeClients": 4},
+        "m2": {"activeClients": 0, "assignedLast30": 0, "lifetimeClients": 1},
+    }
+
+
+async def test_mentor_engagement_metrics_paginates():
+    """A roster with more engagements than one page walks every page via offset."""
+
+    class PagedClient(FakeClient):
+        async def list(self, entity, *, where=None, offset=0, max_size=200, **kw):
+            self.list_calls.append((entity, offset))
+            rows = [_eng("m1", "Active")] * 450
+            return {"list": rows[offset:offset + max_size]}
+
+    client = PagedClient()
+    metrics = await service.mentor_engagement_metrics(client)
+    assert metrics["m1"]["activeClients"] == 450
+    assert metrics["m1"]["lifetimeClients"] == 450
+    assert [offset for _, offset in client.list_calls] == [0, 200, 400]
+
+
+async def test_metrics_failure_leaves_roster_with_blank_counts():
+    """No CEngagement read grant -> the roster still loads; metrics are None and
+    the envelope says so (the UI shows blanks, not zeros)."""
+    from core.espo import EspoError
+
+    class NoEngClient(FakeClient):
+        async def list(self, entity, **kwargs):
+            if entity == service.ENGAGEMENT:
+                raise EspoError("list CEngagement failed: HTTP 403 forbidden")
+            return await super().list(entity, **kwargs)
+
+    client = NoEngClient(lists={service.MENTOR_PROFILE: {"list": [
+        {"id": "m1", "name": "Jane", "maximumClientCapacity": 5, "mentorStatus": "Active"},
+    ]}})
+    res = await service.list_all_mentors(client)
+    assert res["metricsAvailable"] is False
+    row = res["mentors"][0]
+    assert row["activeClients"] is None
+    assert row["assignedLast30"] is None
+    assert row["lifetimeClients"] is None
+    assert row["availableCapacity"] is None
+    assert row["maxCapacity"] == 5  # the stored field still shows
+
+
+async def test_available_capacity_unlimited_and_blank_semantics():
+    client = FakeClient(lists={
+        service.MENTOR_PROFILE: {"list": [
+            {"id": "m1", "name": "Unlimited", "maximumClientCapacity": -1},
+            {"id": "m2", "name": "NoMax"},
+        ]},
+        service.ENGAGEMENT: {"list": [_eng("m1", "Active")]},
+    })
+    rows = (await service.list_all_mentors(client))["mentors"]
+    by_id = {r["id"]: r for r in rows}
+    assert by_id["m1"]["availableCapacity"] == -1    # -1 = unlimited, passed through
+    assert by_id["m2"]["availableCapacity"] is None  # no max -> not computable
+    assert by_id["m2"]["activeClients"] == 0         # metrics known, just zero
+
+
+def test_parse_espo_datetime():
+    from datetime import timezone
+
+    dt = service._parse_espo_datetime("2026-06-19 12:30:00")
+    assert dt.tzinfo == timezone.utc and dt.hour == 12
+    assert service._parse_espo_datetime(None) is None
+    assert service._parse_espo_datetime("not-a-date") is None
 
 
 async def test_list_engagements_query_and_shape():

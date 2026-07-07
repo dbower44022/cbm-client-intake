@@ -263,6 +263,8 @@
     select.appendChild(new Option("Select a mentor…", ""));
     mentors.forEach(function (m) {
       var label = m.name;
+      // availableCapacity is app-computed (Max Clients − Active Clients);
+      // -1 = unlimited, shown with no suffix.
       if (typeof m.availableCapacity === "number" && m.availableCapacity >= 0) {
         label += " (capacity " + m.availableCapacity + ")";
       }
@@ -466,6 +468,9 @@
   // The review list is the full roster (any status), distinct from the eligible
   // `mentors` used by the assign dropdown.
   var reviewMentors = [];
+  // False when the server couldn't read CEngagement (metric columns come back
+  // blank) — surfaced on the count line so blanks aren't mistaken for zeros.
+  var reviewMetricsAvailable = true;
   // Default to Active mentors, highest capacity first (best fit to take a
   // new client); the admin can widen to other statuses.
   var mentorFilter = { q: "", status: "Active", type: "", industry: "", expertise: "", availOnly: false,
@@ -490,8 +495,9 @@
   }
 
   function sortVal(m, k) {
-    if (k === "maxCapacity") return m.maxCapacity == null ? -Infinity : m.maxCapacity;
-    if (k === "assignedClients") return m.assignedClients == null ? -Infinity : m.assignedClients;
+    if (k === "maxCapacity" || k === "activeClients" || k === "assignedLast30" || k === "lifetimeClients")
+      return m[k] == null ? -Infinity : m[k];
+    if (k === "availableCapacity") return mentorAvail(m);
     if (k === "acceptingNewClients") return m.acceptingNewClients ? 1 : 0;
     if (k === "mentorType") return mentorTypes(m).join(", ").toLowerCase();
     if (k === "industryExperience") return (m.industryExperience || []).join(", ").toLowerCase();
@@ -532,7 +538,9 @@
     });
     renderMentorRows(rows);
     $("mentorCount").textContent =
-      "Showing " + rows.length + " of " + reviewMentors.length + " mentors";
+      "Showing " + rows.length + " of " + reviewMentors.length + " mentors" +
+      (reviewMetricsAvailable ? "" :
+        " — client counts unavailable (your account can't read engagements)");
     updateSortIndicators();
   }
 
@@ -542,7 +550,7 @@
     if (!rows.length) {
       var tr = document.createElement("tr");
       var td = document.createElement("td");
-      td.colSpan = 8;
+      td.colSpan = 11;
       td.className = "mentor-empty";
       td.textContent = "No mentors match the current filters.";
       tr.appendChild(td);
@@ -556,10 +564,14 @@
       var types = mentorTypes(m);
       tr.appendChild(cell(types.length ? types.join(", ") : "—"));
       tr.appendChild(cell(m.acceptingNewClients ? "Yes" : "No"));
-      tr.appendChild(cell(m.assignedClients == null ? "—" : String(m.assignedClients), "num"));
-      // Capacity = the stored maximumClientCapacity, exactly as on the CRM record
-      // (blank there = blank here — NOT the CRM-computed availableCapacity).
-      tr.appendChild(cell(m.maxCapacity == null ? "—" : String(m.maxCapacity), "num"));
+      // Client counts are app-computed from CEngagement (Active/Assigned/Pending
+      // Acceptance = active); Available = Max − Active; Max is the stored
+      // maximumClientCapacity exactly as on the CRM record (blank there = blank here).
+      tr.appendChild(cell(numText(m.activeClients), "num"));
+      tr.appendChild(cell(numText(m.maxCapacity), "num"));
+      tr.appendChild(cell(numText(m.assignedLast30), "num"));
+      tr.appendChild(cell(m.availableCapacity === -1 ? "Unlimited" : numText(m.availableCapacity), "num"));
+      tr.appendChild(cell(numText(m.lifetimeClients), "num"));
       var ieTd = document.createElement("td"); ieTd.appendChild(chipRow(m.industryExperience)); tr.appendChild(ieTd);
       var exTd = document.createElement("td"); exTd.appendChild(chipRow(m.expertise)); tr.appendChild(exTd);
       tb.appendChild(tr);
@@ -573,6 +585,8 @@
     return td;
   }
 
+  function numText(v) { return v == null ? "—" : String(v); }
+
   function updateSortIndicators() {
     Array.prototype.forEach.call($("mentorTable").querySelectorAll("th[data-sort]"), function (th) {
       var active = th.getAttribute("data-sort") === mentorFilter.sortKey;
@@ -585,7 +599,9 @@
     clearNotice();
     try {
       if (!reviewMentors.length) {
-        reviewMentors = (await api("/mentors?all=true")).mentors || [];
+        var res = await api("/mentors?all=true");
+        reviewMentors = res.mentors || [];
+        reviewMetricsAvailable = res.metricsAvailable !== false;
       }
       fillFilterSelect($("mentorStatusFilter"),
         distinct(function (m) { return [m.status]; }), "All statuses");

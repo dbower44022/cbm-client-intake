@@ -4,6 +4,7 @@
 
   var API = "/mentoradmin/api";
   var mentors = [];
+  var metricsAvailable = true;   // false = server couldn't read CEngagement
   var fieldSpec = [];      // [{name,label,type,group}]
   var fieldOptions = {};   // {fieldName: [options]}
   var current = null;      // the mentor being edited
@@ -130,7 +131,11 @@
     var ln = $("listNotice"); hide(ln);
     show($("loadingState")); hide($("mentorTable")); hide($("emptyState"));
     try {
-      mentors = (await api("/mentors")).mentors || [];
+      var res = await api("/mentors");
+      mentors = res.mentors || [];
+      // False when the server couldn't read CEngagement (metric columns come
+      // back blank) — noted on the count line so blanks aren't read as zeros.
+      metricsAvailable = res.metricsAvailable !== false;
       fillSelect($("statusFilter"), distinct(function (m) { return [m.status]; }), "All statuses");
       fillSelect($("recordFilter"), distinct(function (m) { return [m.recordStatus]; }), "All record statuses");
       fillSelect($("typeFilter"), distinct(function (m) { return [m.mentorType]; }), "All types");
@@ -147,7 +152,12 @@
   }
   function avail(m) { return m.availableCapacity === -1 ? Infinity : (typeof m.availableCapacity === "number" ? m.availableCapacity : -Infinity); }
   function haystack(m) { return [m.name, m.status, m.cbmEmail, m.mentorType, (m.expertise || []).join(" "), (m.focusAreas || []).join(" ")].join(" ").toLowerCase(); }
-  function sortVal(m, k) { if (k === "availableCapacity") return avail(m); if (k === "assignedClients") return m.assignedClients == null ? -Infinity : m.assignedClients; return (m[k] || "").toString().toLowerCase(); }
+  function sortVal(m, k) {
+    if (k === "availableCapacity") return avail(m);
+    if (k === "activeClients" || k === "maxCapacity" || k === "assignedLast30" || k === "lifetimeClients")
+      return m[k] == null ? -Infinity : m[k];
+    return (m[k] || "").toString().toLowerCase();
+  }
 
   function renderTable() {
     var q = filter.q.trim().toLowerCase();
@@ -162,7 +172,8 @@
     rows.sort(function (a, b) { var x = sortVal(a, k), y = sortVal(b, k); return (x < y ? -1 : x > y ? 1 : 0) * dir; });
 
     var tb = $("mentorBody"); tb.innerHTML = "";
-    $("count").textContent = "Showing " + rows.length + " of " + mentors.length + " mentors";
+    $("count").textContent = "Showing " + rows.length + " of " + mentors.length + " mentors" +
+      (metricsAvailable ? "" : " — client counts unavailable (your account can't read engagements)");
     if (!rows.length) { show($("emptyState")); hide($("mentorTable")); return; }
     hide($("emptyState"));
     rows.forEach(function (m) {
@@ -177,8 +188,13 @@
       tr.appendChild(cell(badge(m.status)));
       tr.appendChild(cell(m.mentorType || "—"));
       tr.appendChild(cell(fmtDate(m.createdAt)));
-      tr.appendChild(cell(m.assignedClients == null ? "—" : String(m.assignedClients), "num"));
-      tr.appendChild(cell(m.availableCapacity === -1 ? "Unlimited" : (m.availableCapacity == null ? "—" : String(m.availableCapacity)), "num"));
+      // Client counts are app-computed from CEngagement (Active/Assigned/Pending
+      // Acceptance = active); Available = Max Clients − Active Clients.
+      tr.appendChild(cell(num(m.activeClients), "num"));
+      tr.appendChild(cell(num(m.maxCapacity), "num"));
+      tr.appendChild(cell(num(m.assignedLast30), "num"));
+      tr.appendChild(cell(m.availableCapacity === -1 ? "Unlimited" : num(m.availableCapacity), "num"));
+      tr.appendChild(cell(num(m.lifetimeClients), "num"));
       tb.appendChild(tr);
     });
     show($("mentorTable"));
@@ -193,6 +209,7 @@
     return a;
   }
   function fmtDate(v) { return v ? String(v).slice(0, 10) : "—"; }  // ISO date part (YYYY-MM-DD)
+  function num(v) { return v == null ? "—" : String(v); }
   function badge(status) { var s = document.createElement("span"); s.className = "status-badge status-" + (status || "none"); s.textContent = status || "—"; return s; }
   function recordBadge(rs) {
     if (!rs) { var d = document.createElement("span"); d.className = "ro-muted"; d.textContent = "—"; return d; }

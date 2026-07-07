@@ -40,7 +40,7 @@ async def main() -> None:
     for e in engs:
         print(f"  {e['id']}  {e['name']}  | client={e['clientName']} contact={e['contactName']}")
 
-    mentors = await service.list_eligible_mentors(client)
+    mentors = (await service.list_eligible_mentors(client))["mentors"]
     print(f"\nEligible mentors ({len(mentors)}):")
     for m in mentors:
         print(f"  {m['id']}  {m['name']}  | userId={m['userId']} cap={m['availableCapacity']}")

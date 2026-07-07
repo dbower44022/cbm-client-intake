@@ -4,6 +4,33 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.27.0] — 2026-07-06
+
+### Added (both staff mentor grids)
+- **Mentor client-count analytics** in the `/mentoradmin` roster and the
+  `/assignments` "Review Mentors" grid — five columns, all sortable:
+  **Active Clients** (engagements with status Active / Assigned / Pending
+  Acceptance), **Max Clients** (the stored `maximumClientCapacity`),
+  **Assigned (30d)** (active-set engagements whose `engagementAssignedDate` is
+  within the last 30 days), **Available** (Max − Active, app-computed), and
+  **Lifetime** (every engagement ever linked to the mentor, any status).
+  Counts are computed by the app from `CEngagement` in one paginated sweep
+  (grouped by `mentorProfile`) — the CRM's own computed
+  `currentActiveClients`/`availableCapacity` fields are no longer read (the
+  crm-test formula computes 1 for every mentor). The "Has capacity" filter and
+  the assign dropdown's "(capacity N)" label use the same computed Available,
+  so the grid and eligibility can't disagree.
+- The **Assign action now stamps `CEngagement.engagementAssignedDate`** (UTC
+  now) alongside mentor + Pending Acceptance — nothing CRM-side fills it, and
+  the Assigned-(30d) count depends on it. Engagements assigned before 0.27.0
+  have no date and won't count until backfilled CRM-side.
+
+### Changed
+- `GET /assignments/api/mentors` and `GET /mentoradmin/api/mentors` responses
+  gained `metricsAvailable`. If the logged-in staffer's EspoCRM role can't read
+  `CEngagement`, the roster still loads with blank count columns and the count
+  line says so (grant CEngagement read to the staff Teams' role to fix).
+
 ## [0.26.0] — 2026-07-06
 
 ### Added (Mentor Administration `/mentoradmin`)

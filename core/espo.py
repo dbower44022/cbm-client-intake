@@ -108,11 +108,14 @@ class EspoClient:
         where: Optional[list[dict[str, Any]]] = None,
         select: Optional[str] = None,
         max_size: int = 50,
+        offset: int = 0,
         order_by: Optional[str] = None,
         order: Optional[str] = None,
     ) -> dict[str, Any]:
         """List records. Returns the raw EspoCRM ``{"total", "list"}`` envelope."""
         params: list[tuple[str, str]] = [("maxSize", str(max_size))]
+        if offset:
+            params.append(("offset", str(offset)))
         if select:
             params.append(("select", select))
         if order_by:

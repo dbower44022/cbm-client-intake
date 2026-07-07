@@ -128,7 +128,7 @@ async def main() -> None:
     print(f"Logged in as {user['name']} ({user['userName']}), admin={user['isAdmin']}")
     client = client_for(settings, user)
 
-    roster = await assign_service.list_all_mentors(client)
+    roster = (await assign_service.list_all_mentors(client))["mentors"]
     print(f"\nMentor roster ({len(roster)}):")
     for m in roster[:25]:
         print(f"  {m['id']}  {m['name']!r:32}  status={m['status']}  "

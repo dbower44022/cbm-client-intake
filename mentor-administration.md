@@ -23,8 +23,25 @@ The landing screen lists every mentor. You can:
 - **Filter** by mentoring status, **Record** (completeness) status, or mentor type.
 - **Sort** by any column.
 
-Columns: **Mentor · Mentor Email · Record · Status · Type · Created · Assigned · Capacity**.
+Columns: **Mentor · Mentor Email · Record · Status · Type · Created · Active
+Clients · Max Clients · Assigned (30d) · Available · Lifetime**.
 (Mentor Email is the CBM `@cbmentors.org` login address, set once a mentor is provisioned.)
+
+The five client-count columns are computed live from the mentor's engagements:
+
+- **Active Clients** — engagements whose status is *Active*, *Assigned*, or
+  *Pending Acceptance*.
+- **Max Clients** — the mentor's stored maximum client capacity (blank if not set).
+- **Assigned (30d)** — active-set engagements assigned within the last 30 days
+  (from the engagement's *assigned date*, which the Client Administration
+  Assign action stamps).
+- **Available** — Max Clients minus Active Clients (blank when no max is set;
+  "Unlimited" when the max is unlimited).
+- **Lifetime** — every engagement ever linked to the mentor, in any status.
+
+If your EspoCRM account can't read engagements, these columns show "—" and the
+count line under the toolbar says so — ask an administrator to grant your role
+read access to Engagements.
 
 The **Record** column shows each mentor's stored completeness status
 (**Complete / Incomplete / Duplicate**, or "—" if not yet calculated). Use the

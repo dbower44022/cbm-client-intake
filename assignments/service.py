@@ -18,6 +18,7 @@ Field/link names and enum values reconciled live against crm-test (2026-06-19):
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional, Protocol
 
 from core.espo import EspoError
@@ -35,6 +36,10 @@ CLIENT_PROFILE = "CClientProfile"
 STATUS_SUBMITTED = "Submitted"
 STATUS_PENDING = "Pending Acceptance"
 MENTOR_STATUS_ACTIVE = "Active"
+
+# Engagement statuses that count toward a mentor's Active Clients (and, when
+# engagementAssignedDate is within 30 days, the Assigned-last-30-days count).
+ACTIVE_CLIENT_STATUSES = {"Active", "Assigned", STATUS_PENDING}
 
 # Full engagementStatus enum (crm-test metadata 2026-06-19) — the filter's option
 # set. Kept here rather than fetched per-request; refresh if the CRM enum changes.
@@ -206,26 +211,119 @@ async def get_engagement_detail(
     }
 
 
-# Shared select for both the assign dropdown and the review list.
+# Shared select for both the assign dropdown and the review list. The CRM's own
+# computed availableCapacity/currentActiveClients are deliberately NOT read —
+# crm-test's formula is known-buggy (computes 1 for every mentor), so the client
+# counts are derived from CEngagement instead (mentor_engagement_metrics).
 _MENTOR_SELECT = (
     "name,createdAt,assignedUserId,assignedUserName,assignedUsersIds,assignedUsersNames,"
-    "availableCapacity,currentActiveClients,"
     "maximumClientCapacity,yearsOfExperience,mentorType,mentorStatus,recordStatus,"
     "acceptingNewClients,cbmEmail,industrySector,industryExperience,"
     "mentoringFocusAreas,areaOfExpertise"
 )
 
+_METRICS_PAGE = 200
+_EMPTY_METRICS = {"activeClients": 0, "assignedLast30": 0, "lifetimeClients": 0}
 
-def _mentor_row(r: dict[str, Any]) -> dict[str, Any]:
+
+def _parse_espo_datetime(value: Any) -> Optional[datetime]:
+    """EspoCRM datetimes are UTC ``YYYY-MM-DD HH:MM:SS`` (dates ``YYYY-MM-DD``)."""
+    if not value:
+        return None
+    try:
+        dt = datetime.fromisoformat(str(value).replace(" ", "T"))
+    except ValueError:
+        return None
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+def espo_now() -> str:
+    """Current UTC time in EspoCRM's datetime format."""
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
+
+async def mentor_engagement_metrics(client: AssignClient) -> dict[str, dict[str, int]]:
+    """Per-mentor client counts, from one paginated sweep over CEngagement.
+
+    Grouped by ``mentorProfileId`` in Python — no ``where`` clause, both because
+    every engagement contributes to lifetime counts and because prod's field ACL
+    rejects filtering on link attributes (the assignedUserId lesson above).
+
+      * ``activeClients``   — status in :data:`ACTIVE_CLIENT_STATUSES`
+      * ``assignedLast30``  — active-set AND assigned within the last 30 days
+      * ``lifetimeClients`` — every engagement ever linked to the mentor
+    """
+    cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+    metrics: dict[str, dict[str, int]] = {}
+    offset = 0
+    while True:
+        data = await client.list(
+            ENGAGEMENT,
+            select="mentorProfileId,engagementStatus,engagementAssignedDate",
+            max_size=_METRICS_PAGE,
+            offset=offset,
+            order_by="createdAt",
+            order="asc",
+        )
+        rows = data.get("list", [])
+        for r in rows:
+            mentor_id = r.get("mentorProfileId")
+            if not mentor_id:
+                continue
+            m = metrics.setdefault(mentor_id, dict(_EMPTY_METRICS))
+            m["lifetimeClients"] += 1
+            if r.get("engagementStatus") in ACTIVE_CLIENT_STATUSES:
+                m["activeClients"] += 1
+                assigned = _parse_espo_datetime(r.get("engagementAssignedDate"))
+                if assigned and assigned >= cutoff:
+                    m["assignedLast30"] += 1
+        if len(rows) < _METRICS_PAGE:
+            break
+        offset += _METRICS_PAGE
+    return metrics
+
+
+async def _metrics_or_none(client: AssignClient) -> Optional[dict[str, dict[str, int]]]:
+    """Metrics, or None when CEngagement can't be read (e.g. a Mentor Admin user
+    whose EspoCRM role lacks the grant) — the roster still loads, metrics blank."""
+    try:
+        return await mentor_engagement_metrics(client)
+    except EspoError as exc:
+        log.warning("mentor engagement metrics unavailable (CEngagement read failed): %s", exc)
+        return None
+
+
+def _mentor_row(
+    r: dict[str, Any], metrics: Optional[dict[str, dict[str, int]]]
+) -> dict[str, Any]:
+    m = metrics.get(r["id"], _EMPTY_METRICS) if metrics is not None else None
+    max_cap = r.get("maximumClientCapacity")
+    if m is None:
+        active: Optional[int] = None
+        last30: Optional[int] = None
+        lifetime: Optional[int] = None
+        available: Optional[int] = None
+    else:
+        active = m["activeClients"]
+        last30 = m["assignedLast30"]
+        lifetime = m["lifetimeClients"]
+        if max_cap is None:
+            available = None
+        elif max_cap == -1:  # CRM convention: -1 = unlimited capacity
+            available = -1
+        else:
+            available = max_cap - active
     return {
         "id": r["id"],
         "name": r.get("name"),
         "createdAt": r.get("createdAt"),
         "userId": assigned_user_id(r),
         "userName": assigned_user_name(r),
-        "availableCapacity": r.get("availableCapacity"),
-        "assignedClients": r.get("currentActiveClients"),
-        "maxCapacity": r.get("maximumClientCapacity"),
+        "activeClients": active,
+        "assignedLast30": last30,
+        "lifetimeClients": lifetime,
+        "availableCapacity": available,
+        "maxCapacity": max_cap,
         "yearsOfExperience": r.get("yearsOfExperience"),
         "mentorType": r.get("mentorType"),
         "status": r.get("mentorStatus"),
@@ -239,8 +337,12 @@ def _mentor_row(r: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-async def list_eligible_mentors(client: AssignClient) -> list[dict[str, Any]]:
-    """Mentors accepting new clients, Active, with a linked User (the dropdown)."""
+async def list_eligible_mentors(client: AssignClient) -> dict[str, Any]:
+    """Mentors accepting new clients, Active, with a linked User (the dropdown).
+
+    Returns ``{"mentors": [...], "metricsAvailable": bool}`` — the same envelope
+    as :func:`list_all_mentors`, ready to serve as the endpoint response.
+    """
     data = await client.list(
         MENTOR_PROFILE,
         where=[
@@ -251,21 +353,25 @@ async def list_eligible_mentors(client: AssignClient) -> list[dict[str, Any]]:
         max_size=200,
         order_by="name",
     )
+    metrics = await _metrics_or_none(client)
     # Filter userless rows in Python rather than the query: prod EspoCRM's ACL
     # forbids *filtering* CMentorProfile by assignedUserId in a `where` clause
     # ("Forbidden attribute 'assignedUserId' in where" → 400), even though it's
     # readable in `select`. crm-test allows it; prod (stock, tighter field ACL)
     # does not. Dropping the clause keeps the dropdown working on both. The
     # has-user test reads either assignedUser/assignedUsers (prod uses the latter).
-    return [_mentor_row(r) for r in data.get("list", []) if assigned_user_id(r)]
+    rows = [_mentor_row(r, metrics) for r in data.get("list", []) if assigned_user_id(r)]
+    return {"mentors": rows, "metricsAvailable": metrics is not None}
 
 
-async def list_all_mentors(client: AssignClient) -> list[dict[str, Any]]:
-    """Every mentor profile (any status) for the review/compare list."""
+async def list_all_mentors(client: AssignClient) -> dict[str, Any]:
+    """Every mentor profile (any status) for the review/roster lists."""
     data = await client.list(
         MENTOR_PROFILE, select=_MENTOR_SELECT, max_size=200, order_by="name"
     )
-    return [_mentor_row(r) for r in data.get("list", [])]
+    metrics = await _metrics_or_none(client)
+    rows = [_mentor_row(r, metrics) for r in data.get("list", [])]
+    return {"mentors": rows, "metricsAvailable": metrics is not None}
 
 
 async def assign_engagement(
@@ -297,6 +403,8 @@ async def assign_engagement(
         )
 
     # 2. The engagement itself (assignedUsers, not assignedUser — see above).
+    # engagementAssignedDate is stamped here — nothing CRM-side fills it, and the
+    # Assigned-last-30-days metric depends on it.
     await client.update(
         ENGAGEMENT,
         engagement_id,
@@ -304,6 +412,7 @@ async def assign_engagement(
             **_assigned_user_payload(ENGAGEMENT, user_id),
             "mentorProfileId": mentor_profile_id,
             "engagementStatus": STATUS_PENDING,
+            "engagementAssignedDate": espo_now(),
         },
     )
 
