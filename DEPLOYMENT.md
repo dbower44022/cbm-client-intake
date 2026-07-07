@@ -250,6 +250,15 @@ After either, confirm `curl https://<app-url>/healthz` shows `"dryRun": false`.
 
 ## Custom domain (optional, recommended for production)
 
+**LIVE for prod (2026-07-06):** `https://apps.clevelandbusinessmentors.org` is
+attached to the prod app as its PRIMARY domain (phase ACTIVE, Let's Encrypt
+cert auto-provisioned). DNS is a Cloudflare CNAME `apps` →
+`cbm-client-intake-prod-a9li7.ondigitalocean.app` set to **DNS only (grey
+cloud)** — the orange-cloud proxy must stay off or DO's cert
+validation/renewal fails. The default `…ondigitalocean.app` URL still works.
+(Gotcha: right after creating the record, resolvers that had already looked up
+the name cache the failure for up to 30 min — the zone's negative TTL.)
+
 The default `…ondigitalocean.app` URL works, but a public production form
 usually wants a branded host (e.g. `intake.clevelandbusinessmentors.org`):
 

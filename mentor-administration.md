@@ -34,6 +34,29 @@ The Record value is refreshed whenever a mentor is **saved** (see
 
 Click a mentor's name to open their detail screen.
 
+### "Update Mentor Status" (bulk verification)
+
+The **Update Mentor Status** button on the roster toolbar sweeps **every**
+mentor and opens a results table showing, per mentor:
+
+- **Login user** — whether the linked EspoCRM login **User actually exists**
+  and is active. It distinguishes ✓ exists (with the username), ✗ *no login
+  User linked*, ✗ *linked User no longer exists* (deleted), and *exists but
+  deactivated*. The User lookups run as the provisioning admin service account
+  when configured (regular staff can't read Users); without it the result is
+  "could not verify" rather than an error.
+- **Mailbox** — whether the mentor's `@cbmentors.org` mailbox exists in
+  **Google Workspace** (via the same Directory integration as approval-time
+  checks). Shows *"n/a — check not configured"* until Google is connected in
+  **Email Setup**; a mentor with no CBM email is flagged.
+- **Record** — while sweeping, each mentor's completeness is recomputed and the
+  stored **Record status is re-synced** (same rules as a save: written only
+  when it changed, never over a manual *Duplicate*). The roster reloads
+  afterward, so the whole grid self-heals in one click.
+
+A mentor whose record fails to load shows an error row; the rest of the sweep
+still completes.
+
 ---
 
 ## The mentor detail screen

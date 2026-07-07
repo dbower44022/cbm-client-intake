@@ -58,7 +58,9 @@ This is a multi-form app: a shared core hosts any number of intake forms.
   - `mentoradmin/` — **Mentor Administration** (`/mentoradmin/`): browse the mentor
     roster and edit any mentor's profile; verifies each record is complete and
     can auto-provision a mentor's EspoCRM login (optionally gated on whether their
-    Google Workspace mailbox exists). See
+    Google Workspace mailbox exists). The roster's **Update Mentor Status** action
+    bulk-verifies every mentor's login user + mailbox and refreshes Record
+    statuses. See
     [`mentor-administration.md`](mentor-administration.md) for the functionality
     and the complete-record requirements.
 - **V2 reliability platform** (`prds/v2/`): optional durable capture

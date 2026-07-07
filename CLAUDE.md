@@ -204,7 +204,11 @@ detail screen that reviews all info (read-only computed totals on top) and
   (`availableCapacity`, `currentActiveClients`, `total*`) are read-only context.
 - **Endpoints** (`/mentoradmin/api`): `login`/`logout`/`session`; `GET /mentors`
   (roster); `GET /fields` (EDITABLE_FIELDS + live options); `GET /mentors/{id}`
-  (full record); `PUT /mentors/{id}` `{changes:{...}}` (whitelisted update).
+  (full record); `PUT /mentors/{id}` `{changes:{...}}` (whitelisted update);
+  `POST /mentors/status-check` (the "Update Mentor Status" sweep, v0.26.0 —
+  see the Current-status bullet: verifies each mentor's login User exists/is
+  active + the `@cbmentors.org` mailbox exists, and bulk re-syncs
+  `recordStatus`; `service.verify_all_mentor_statuses`).
   Frontend: `mentoradmin/frontend/` (vanilla JS, no build step). Detail view =
   a compact read-only summary card (status, accepting, email/phone/address,
   capacity/session metrics) + a tabbed editor (one tab per field `group`;
@@ -342,7 +346,15 @@ mentor, not a redundant control); `list_engagements` returns `mentorId`/`mentorN
   Teams/Users/Roles.)
 - **Mentor dropdown** = `CMentorProfile` where `acceptingNewClients=true` AND
   `mentorStatus="Active"` AND `assignedUser` set. The mentor's login User =
-  `CMentorProfile.assignedUser`.
+  `CMentorProfile.assignedUser`. (An empty dropdown = no mentor passes all
+  three — diagnosed live 2026-07-06: crm-test had 0 eligible, prod 4.)
+- **"Review Mentors" (Available Mentors) grid** (reworked v0.24.0): columns
+  Mentor/Status/Type/Accepting/Assigned/Capacity/Industry Experience/Areas of
+  Expertise. Capacity = the **stored `maximumClientCapacity`** (NOT the
+  CRM-computed `availableCapacity`; the "Has capacity" checkbox + the assign
+  dropdown's "(capacity N)" label still use availableCapacity — eligibility
+  semantics). Filters: Industry Experience + Areas of Expertise (match any of
+  the mentor's values). Dialog defaults to ~96vw.
 - **Status filter** — the grid has a multi-select (the full `engagementStatus`
   enum, `service.ENGAGEMENT_STATUSES`); `GET /assignments/api/engagements` takes
   repeated `?status=` params (`in` filter), defaulting to `Submitted`.
@@ -378,18 +390,53 @@ mentor, not a redundant control); `list_engagements` returns `mentorId`/`mentorN
   (`assignments/service.py:_assigned_user_payload`). Writing `assignedUserId` to a
   disabled-field entity is silently ignored.
 
-## Current status (updated 2026-07-03)
+## Current status (updated 2026-07-06)
 
-**Prod is on v0.23.1** (all three apps — prod / crm-test / dev — confirmed on
-`/healthz` 2026-07-03 and redeployed on each push). Shipped since v0.21.2 (the
-2026-07-02 push, see CHANGELOG for detail): volunteer how-did-you-hear also
-writes `Contact.cHowDidYouHear` (v0.21.3); `/mentoradmin` roster + editor
-refinements — industry experience on the Expertise tab, pause dates on Status,
-unsaved-changes warning (v0.22.0), self-healing Record status on view (v0.22.1),
-roster columns reworked with Mentor Email as a mailto link (v0.22.2/3);
-`/assignments` grid shows the assigned mentor and hides the picker on
-already-assigned rows (v0.23.0); completeness no longer requires publicProfile
-checks or a background check (v0.23.1). Earlier, the big 2026-06-30/07-01 push
+**Prod is on v0.26.0** (all three apps — prod / crm-test / dev — confirmed on
+`/healthz` 2026-07-06 and redeployed on each push), and prod now answers on the
+**custom domain `https://apps.clevelandbusinessmentors.org`** (added to the DO
+app as PRIMARY, Cloudflare CNAME grey-cloud → the app's default hostname; the
+`…ondigitalocean.app` URL still works). Shipped 2026-07-05/06 (see CHANGELOG):
+
+- **v0.24.0** — `/assignments` Available Mentors grid reworked: Focus Areas
+  column dropped; Industry column → multi-value `industryExperience` (chips);
+  filters → Industry Experience + Areas of Expertise; **Capacity column shows
+  the stored `maximumClientCapacity`** (not the CRM-computed
+  `availableCapacity`); dialog defaults to ~96vw. (NOTE: crm-test's
+  `currentActiveClients` formula computes 1 for every mentor — CRM-side bug,
+  feeds the Assigned column + availableCapacity.)
+- **v0.24.1** — volunteer consent now also sets
+  `CMentorProfile.ethicsAgreementAccepted` (the completeness flag — was never
+  set by the form; verified live); volunteer form's "Code of Conduct" links to
+  the **mentor code of ethics**
+  (`https://clevelandbusinessmentors.org/mentor-code-of-ethics/`, scoped to
+  `/volunteer/` in `frontend/shared/legal-links.js`); Mentoring-skills editor
+  removed from `/mentoradmin` Bio tab. Pre-existing mentors may still lack the
+  ethics flag (offered backfill — not requested yet).
+- **v0.25.0/1** — **friendly URL aliases**: any single-segment path is
+  normalized (lowercase, alphanumerics) and 307-redirects to the matching
+  form/staff tool (`/clientintake` → `/client-intake/`; `core/app.py`
+  `form_alias`); the landing page shows each entry's shortcut as a code chip.
+- **v0.25.2** — **partner form 422 fix + exact-error policy.** The CRM's
+  `partnershipType` gained "other" (later corrected to "Other"); the schema's
+  hard-coded `Literal` 422'd those submissions with a generic message. ALL
+  CRM-synced dropdown fields are now free strings in the schemas (orchestrators'
+  `EnumSanitizer` = the gate; see the [[non-required-enums-never-block]] policy:
+  a non-required field must never block a save over enum drift). Validation
+  failures now return a **readable string `detail`** (field: reason; structured
+  list under `errors`) and log at WARNING; both frontends show it verbatim.
+- **v0.26.0** — `/mentoradmin` **"Update Mentor Status"** roster action
+  (`POST /mentoradmin/api/mentors/status-check`): sweeps all mentors, verifies
+  the linked login User exists/is active (via the provisioning admin account
+  when configured), checks the `@cbmentors.org` mailbox (reports "n/a" until
+  Email Setup is configured — still true in prod), and bulk re-syncs
+  `recordStatus`. Results in a modal; roster reloads.
+
+Before that, the 2026-07-02 push (v0.21.3 → v0.23.1): volunteer how-heard also
+writes `Contact.cHowDidYouHear`; `/mentoradmin` roster/editor refinements +
+self-healing Record status on view; `/assignments` shows the assigned mentor on
+assigned rows; completeness dropped the publicProfile + background-check
+requirements. Earlier, the big 2026-06-30/07-01 push
 (v0.12.0 → v0.21.2; v0.21.2 = three mentor-form fields made **required on the
 form**, frontend only — see the volunteer bullet up top):
 
@@ -422,11 +469,14 @@ ready); enabling Google Workspace mailbox creation (built + deployed, gated OFF)
 The **root `/` of each app is the form index** — it lists every intake form and,
 when the staff tools are enabled, the review-tool links (Client Administration
 `/assignments/`, Submission Operations `/ops/`, Mentor Administration
-`/mentoradmin/`).
+`/mentoradmin/`), each with its shortcut path shown as a code chip. Friendly
+aliases (v0.25.0): any single-segment path, lowercased with punctuation
+stripped, 307-redirects to the matching form/tool (`/clientintake`,
+`/MentorAdmin`, …).
 
 | Env | Root URL (form + review index) | CRM | `dryRun` | Staff tools | App ID |
 |-----|-------------------------------|-----|----------|-------------|--------|
-| **prod** | https://cbm-client-intake-prod-a9li7.ondigitalocean.app/ | production (`crm.clevelandbusinessmentors.org`) | false | yes | `aa1ddf69-f359-4b53-91ba-035cbed7bd53` |
+| **prod** | **https://apps.clevelandbusinessmentors.org/** (custom domain, PRIMARY; also https://cbm-client-intake-prod-a9li7.ondigitalocean.app/) | production (`crm.clevelandbusinessmentors.org`) | false | yes | `aa1ddf69-f359-4b53-91ba-035cbed7bd53` |
 | **crm-test** (staging) | https://cbm-client-intake-svxs3.ondigitalocean.app/ | crm-test | false | yes | `509b4370-b9ca-42c7-b251-04d6820fe88e` |
 | **dev** (`lobster-app`) | https://lobster-app-w6h5m.ondigitalocean.app/ | none — dry-run | true | no | `b3b28113-6113-4ba7-ae99-efd5ea633fcd` |
 
