@@ -37,15 +37,21 @@
 }
 .portal__who { color: var(--cbm-slate-700); }
 
+/* Section labels: clearly larger than the link items beneath them, with a
+   rule underneath so each group reads as its own block at a glance. */
 .portal__home h2 {
   color: var(--cbm-navy);
   font-family: var(--cbm-font-serif);
-  font-size: 1.15rem;
-  margin: 1.5rem 0 0.5rem;
+  font-size: 1.45rem;
+  font-weight: 600;
+  margin: 2rem 0 0.6rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 2px solid var(--cbm-border);
 }
 .portal__list { list-style: none; margin: 0; padding: 0; }
-.portal__list li { margin: 0.3em 0; }
-.portal__list a { color: var(--cbm-navy); font-weight: 500; }
+.portal__list li { margin: 0.45em 0; }
+.portal__list a { color: var(--cbm-blue); font-weight: 400; font-size: 1rem; }
+.portal__list a:hover { color: var(--cbm-blue-dark); text-decoration: underline; }
 
 .shortcut {
   background: var(--cbm-surface);

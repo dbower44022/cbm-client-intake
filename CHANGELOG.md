@@ -4,6 +4,14 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.30.1] — 2026-07-07
+
+### Changed
+- Portal home page: section labels (Applications / CRM / Public intake forms)
+  are larger (1.45rem serif with an underline rule) and the links beneath them
+  render in the standard link blue — headings and links are now clearly
+  distinct.
+
 ## [0.30.0] — 2026-07-07
 
 ### Added
