@@ -4,6 +4,14 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.28.0] — 2026-07-07
+
+### Added
+- The `/assignments` engagement **status filter now has an "All" option** at the
+  top of the dropdown — one click selects (or clears) every status. It shows a
+  checked/indeterminate state as individual statuses are toggled, and the
+  summary reads "Status: All" when everything is selected.
+
 ## [0.27.4] — 2026-07-07
 
 ### Fixed

@@ -124,22 +124,47 @@
       .join("&");
   }
 
+  function statusOptionBoxes() {
+    return $("statusPanel").querySelectorAll("input[type=checkbox][data-status]");
+  }
+
   function updateStatusSummary() {
     var s = $("statusSummary");
+    var total = statusOptionBoxes().length;
     if (!selectedStatuses.length) s.textContent = "Status: none selected";
+    else if (total && selectedStatuses.length === total) s.textContent = "Status: All";
     else if (selectedStatuses.length <= 2) s.textContent = "Status: " + selectedStatuses.join(", ");
     else s.textContent = "Status: " + selectedStatuses.length + " selected";
+  }
+
+  function syncStatusAllToggle() {
+    var all = $("statusAllToggle");
+    if (!all) return;
+    var total = statusOptionBoxes().length;
+    all.checked = total > 0 && selectedStatuses.length === total;
+    all.indeterminate = selectedStatuses.length > 0 && selectedStatuses.length < total;
   }
 
   function buildStatusFilter(allStatuses) {
     var panel = $("statusPanel");
     panel.innerHTML = "";
+    // "All" master toggle — one click to see engagements in every status.
+    var allLabel = document.createElement("label");
+    allLabel.className = "statusfilter__opt statusfilter__opt--all";
+    var allCb = document.createElement("input");
+    allCb.type = "checkbox";
+    allCb.id = "statusAllToggle";
+    allCb.addEventListener("change", onStatusAllChange);
+    allLabel.appendChild(allCb);
+    allLabel.appendChild(document.createTextNode(" All"));
+    panel.appendChild(allLabel);
     allStatuses.forEach(function (st) {
       var label = document.createElement("label");
       label.className = "statusfilter__opt";
       var cb = document.createElement("input");
       cb.type = "checkbox";
       cb.value = st;
+      cb.dataset.status = st;
       cb.checked = selectedStatuses.indexOf(st) >= 0;
       cb.addEventListener("change", onStatusChange);
       label.appendChild(cb);
@@ -147,13 +172,21 @@
       panel.appendChild(label);
     });
     statusFilterBuilt = true;
+    syncStatusAllToggle();
     updateStatusSummary();
   }
 
+  function onStatusAllChange() {
+    var check = this.checked;
+    Array.prototype.forEach.call(statusOptionBoxes(), function (c) { c.checked = check; });
+    onStatusChange();
+  }
+
   function onStatusChange() {
-    var cbs = $("statusPanel").querySelectorAll("input[type=checkbox]");
+    var cbs = statusOptionBoxes();
     selectedStatuses = Array.prototype.filter.call(cbs, function (c) { return c.checked; })
       .map(function (c) { return c.value; });
+    syncStatusAllToggle();
     updateStatusSummary();
     reloadEngagements();
   }

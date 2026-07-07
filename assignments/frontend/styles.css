@@ -83,6 +83,12 @@
   font-size: var(--cbm-text-sm);
 }
 .statusfilter__opt:hover { background: var(--cbm-surface); }
+.statusfilter__opt--all {
+  font-weight: 600;
+  border-bottom: 1px solid var(--cbm-border);
+  border-radius: 0;
+  margin-bottom: 0.25rem;
+}
 
 .eng-status {
   display: inline-block;
