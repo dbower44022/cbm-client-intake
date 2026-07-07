@@ -9,6 +9,7 @@ EspoCRM metadata so the CRM stays the source of truth. Computed totals
 from __future__ import annotations
 
 import asyncio
+import logging
 import re
 from typing import Any, AsyncIterator, Awaitable, Callable, Optional, Protocol
 
@@ -21,7 +22,14 @@ from core.google_directory import (
 # The mentor's User link uses the single `assignedUser` on crm-test but the
 # multi-user `assignedUsers` (collaborators) on prod. These helpers read/write
 # both shapes so the link sticks on either (see assignments.service).
-from assignments.service import assigned_user_id, assigned_user_payload
+from assignments.service import (
+    assigned_user_id,
+    assigned_user_payload,
+    client_counts_for,
+    mentor_engagement_metrics,
+)
+
+log = logging.getLogger("cbm_intake.mentoradmin.service")
 
 MENTOR_PROFILE = "CMentorProfile"
 
@@ -128,7 +136,10 @@ _ENUM_FIELDS = [f["name"] for f in EDITABLE_FIELDS if f["type"] in ("enum", "mul
 # contactPhone/contactStreet/contactCity/postalCode) — not editable here (they
 # live on the Contact), shown read-only in the summary card.
 READ_ONLY_FIELDS = [
-    "availableCapacity", "currentActiveClients", "maximumClientCapacity",
+    # (The CRM-computed availableCapacity/currentActiveClients are deliberately
+    # NOT read — the detail card shows the same app-computed clientCounts as the
+    # roster grid; see get_mentor.)
+    "maximumClientCapacity",
     "totalLifetimeSessions", "totalSessionsLast30Days", "totalMentoringHours",
     "contactRecordName", "contactRecordId",
     "assignedUserName", "assignedUserId", "assignedUsersNames", "assignedUsersIds",
@@ -143,8 +154,21 @@ _DETAIL_SELECT = ",".join(["id"] + sorted(EDITABLE_NAMES) + READ_ONLY_FIELDS)
 
 
 async def get_mentor(client: MentorClient, mentor_id: str) -> dict[str, Any]:
-    """The full mentor record: every editable field + read-only context."""
-    return await client.get(MENTOR_PROFILE, mentor_id, select=_DETAIL_SELECT)
+    """The full mentor record: every editable field + read-only context, plus
+    ``clientCounts`` — the same app-computed counts the roster grid shows
+    (Active/Max/Available/Assigned-30d/Lifetime), so the detail card and the
+    grid always agree. Counts are best-effort (None when engagements can't be
+    read); ``update_mentor`` returns through here, so a save refreshes them."""
+    rec = await client.get(MENTOR_PROFILE, mentor_id, select=_DETAIL_SELECT)
+    try:
+        metrics = await mentor_engagement_metrics(client)
+    except Exception as exc:  # no CEngagement grant, or a test fake without list()
+        log.warning("mentor clientCounts unavailable for %s: %s", mentor_id, exc)
+        metrics = None
+    rec["clientCounts"] = client_counts_for(
+        metrics, mentor_id, rec.get("maximumClientCapacity")
+    )
+    return rec
 
 
 async def check_completeness(client: MentorClient, rec: dict[str, Any]) -> dict[str, Any]:

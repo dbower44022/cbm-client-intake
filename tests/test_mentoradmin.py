@@ -109,6 +109,46 @@ async def test_get_mentor_selects_contact_info_foreign_fields():
 
 
 @pytest.mark.asyncio
+async def test_get_mentor_attaches_app_computed_client_counts():
+    """The detail card shows the SAME counts as the roster grid — computed from
+    CEngagement, not the CRM's buggy currentActiveClients/availableCapacity."""
+
+    class Client(FakeClient):
+        async def list(self, entity, **kwargs):
+            assert entity == "CEngagement"
+            return {"list": [
+                {"mentorProfileId": "m1", "engagementStatus": "Active"},
+                {"mentorProfileId": "m1", "engagementStatus": "Completed"},
+                {"mentorProfileId": "other", "engagementStatus": "Active"},
+            ]}
+
+    client = Client(record={"id": "m1", "name": "Jane", "maximumClientCapacity": 5})
+    rec = await service.get_mentor(client, "m1")
+    assert rec["clientCounts"] == {
+        "activeClients": 1, "assignedLast30": 0, "lifetimeClients": 2,
+        "availableCapacity": 4, "maxCapacity": 5,
+    }
+    # The CRM-computed fields are no longer selected.
+    _, _, select = client.gets[0]
+    cols = select.split(",")
+    assert "currentActiveClients" not in cols and "availableCapacity" not in cols
+
+
+@pytest.mark.asyncio
+async def test_get_mentor_counts_blank_when_engagements_unreadable():
+    class Client(FakeClient):
+        async def list(self, entity, **kwargs):
+            raise EspoError("list CEngagement failed: HTTP 403 forbidden")
+
+    client = Client(record={"id": "m1", "maximumClientCapacity": 3})
+    rec = await service.get_mentor(client, "m1")
+    cc = rec["clientCounts"]
+    assert cc["activeClients"] is None and cc["lifetimeClients"] is None
+    assert cc["availableCapacity"] is None
+    assert cc["maxCapacity"] == 3  # the stored field still shows
+
+
+@pytest.mark.asyncio
 async def test_field_options_reads_live_enums():
     meta = {
         "mentorStatus": {"type": "enum", "options": ["Active", "Inactive"]},

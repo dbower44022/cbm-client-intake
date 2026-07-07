@@ -461,9 +461,14 @@
     roItem(box, "Address", addressNode(m), true);
     // activity / capacity
     roItem(box, "Assigned user", m.assignedUserName);
-    roItem(box, "Assigned clients", m.currentActiveClients);
-    roItem(box, "Available capacity", m.availableCapacity === -1 ? "Unlimited" : m.availableCapacity);
-    roItem(box, "Max capacity", m.maximumClientCapacity);
+    // The same app-computed client counts as the roster grid (clientCounts on
+    // the detail response), always shown — "—" when unknown, never omitted.
+    var cc = m.clientCounts || {};
+    roItem(box, "Active clients", num(cc.activeClients));
+    roItem(box, "Max clients", num(cc.maxCapacity));
+    roItem(box, "Available", cc.availableCapacity === -1 ? "Unlimited" : num(cc.availableCapacity));
+    roItem(box, "Assigned (30d)", num(cc.assignedLast30));
+    roItem(box, "Lifetime clients", num(cc.lifetimeClients));
     roItem(box, "Lifetime sessions", m.totalLifetimeSessions);
     roItem(box, "Sessions (30d)", m.totalSessionsLast30Days);
     roItem(box, "Total hours", m.totalMentoringHours);

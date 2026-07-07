@@ -309,37 +309,47 @@ async def _metrics_or_none(client: AssignClient) -> Optional[dict[str, dict[str,
         return None
 
 
+def client_counts_for(
+    metrics: Optional[dict[str, dict[str, int]]],
+    mentor_id: str,
+    max_cap: Optional[int],
+) -> dict[str, Any]:
+    """The five client-count fields for one mentor, from a metrics sweep.
+
+    Shared by the grid rows AND the /mentoradmin detail card so both views
+    always agree. ``metrics=None`` (sweep unavailable) → all-None counts.
+    """
+    m = metrics.get(mentor_id, _EMPTY_METRICS) if metrics is not None else None
+    if m is None:
+        return {
+            "activeClients": None, "assignedLast30": None, "lifetimeClients": None,
+            "availableCapacity": None, "maxCapacity": max_cap,
+        }
+    if max_cap is None:
+        available: Optional[int] = None
+    elif max_cap == -1:  # CRM convention: -1 = unlimited capacity
+        available = -1
+    else:
+        available = max_cap - m["activeClients"]
+    return {
+        "activeClients": m["activeClients"],
+        "assignedLast30": m["assignedLast30"],
+        "lifetimeClients": m["lifetimeClients"],
+        "availableCapacity": available,
+        "maxCapacity": max_cap,
+    }
+
+
 def _mentor_row(
     r: dict[str, Any], metrics: Optional[dict[str, dict[str, int]]]
 ) -> dict[str, Any]:
-    m = metrics.get(r["id"], _EMPTY_METRICS) if metrics is not None else None
-    max_cap = r.get("maximumClientCapacity")
-    if m is None:
-        active: Optional[int] = None
-        last30: Optional[int] = None
-        lifetime: Optional[int] = None
-        available: Optional[int] = None
-    else:
-        active = m["activeClients"]
-        last30 = m["assignedLast30"]
-        lifetime = m["lifetimeClients"]
-        if max_cap is None:
-            available = None
-        elif max_cap == -1:  # CRM convention: -1 = unlimited capacity
-            available = -1
-        else:
-            available = max_cap - active
     return {
         "id": r["id"],
         "name": r.get("name"),
         "createdAt": r.get("createdAt"),
         "userId": assigned_user_id(r),
         "userName": assigned_user_name(r),
-        "activeClients": active,
-        "assignedLast30": last30,
-        "lifetimeClients": lifetime,
-        "availableCapacity": available,
-        "maxCapacity": max_cap,
+        **client_counts_for(metrics, r["id"], r.get("maximumClientCapacity")),
         "yearsOfExperience": r.get("yearsOfExperience"),
         "mentorType": r.get("mentorType"),
         "status": r.get("mentorStatus"),

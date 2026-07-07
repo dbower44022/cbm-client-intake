@@ -4,6 +4,20 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.27.4] — 2026-07-07
+
+### Fixed
+- The `/mentoradmin` **mentor detail summary card now shows the same five
+  client counts as the roster grid** (Active clients · Max clients · Available ·
+  Assigned (30d) · Lifetime clients), computed from CEngagement via the shared
+  `client_counts_for` helper — attached to the detail response as
+  `clientCounts` (a save refreshes it, since the save returns through the same
+  read). Previously the card showed the CRM's computed
+  `currentActiveClients`/`availableCapacity` (known-buggy formula) and omitted
+  any null value, so counts were wrong, incomplete, or vanished entirely. The
+  five counts are always rendered ("—" when unknown); the CRM-computed fields
+  are no longer read.
+
 ## [0.27.3] — 2026-07-07
 
 ### Fixed

@@ -80,7 +80,9 @@ still completes.
 
 **Summary card (read-only, top of the page).** At-a-glance facts that aren't
 edited here: the **Data completeness** badge (see below), mentoring status,
-accepting-new-clients, the mentor's email / phone / address, and capacity /
+accepting-new-clients, the mentor's email / phone / address, the **same five
+client counts as the roster grid** (Active clients · Max clients · Available ·
+Assigned (30d) · Lifetime clients — always shown, "—" when unknown), and the
 session metrics.
 
 - The **Data completeness** badge reads **Complete** (green) or **Incomplete**
