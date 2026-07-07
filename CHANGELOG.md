@@ -4,6 +4,12 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.27.1] — 2026-07-06
+
+### Changed
+- Numeric columns in both staff mentor grids (the five client-count columns)
+  are now **centered** under their headings (were right-aligned).
+
 ## [0.27.0] — 2026-07-06
 
 ### Added (both staff mentor grids)

@@ -33,7 +33,7 @@
 .ma__table th, .ma__table td { text-align: left; padding: 0.55rem 0.7rem;
   border-bottom: 1px solid var(--cbm-border); vertical-align: middle; font-size: var(--cbm-text-sm); }
 .ma__table thead th { color: var(--cbm-navy); background: var(--cbm-surface); font-weight: var(--cbm-fw-heading); }
-.ma__table th.num, .ma__table td.num { text-align: right; }
+.ma__table th.num, .ma__table td.num { text-align: center; }
 .ma__table th.is-sortable { cursor: pointer; user-select: none; }
 .ma__table th.is-sortable:hover { color: var(--cbm-blue); }
 .ma__table th[data-dir="asc"]::after { content: " ▲"; font-size: 10px; }

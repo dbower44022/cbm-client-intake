@@ -323,7 +323,7 @@
   font-weight: var(--cbm-fw-heading);
   z-index: 1;
 }
-.mentor-table th.num, .mentor-table td.num { text-align: right; white-space: nowrap; }
+.mentor-table th.num, .mentor-table td.num { text-align: center; white-space: nowrap; }
 .mentor-table th.is-sortable { cursor: pointer; user-select: none; }
 .mentor-table th.is-sortable:hover { color: var(--cbm-blue); }
 .mentor-table th[data-dir="asc"]::after { content: " ▲"; font-size: 0.7em; }
