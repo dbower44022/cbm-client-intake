@@ -4,6 +4,16 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.27.3] — 2026-07-07
+
+### Fixed
+- The mentor-type filter in both staff mentor grids now offers **every**
+  `mentorType` enum value (Mentor, Co-Mentor Only, Subject Matter Expert,
+  Presenter, Volunteer, Other) — previously it listed only the types present in
+  the loaded roster, so types with no current mentor couldn't be selected. The
+  roster response carries the live CRM enum (`mentorTypeOptions`, best-effort);
+  the frontend unions it with any stored value the enum no longer declares.
+
 ## [0.27.2] — 2026-07-06
 
 ### Changed

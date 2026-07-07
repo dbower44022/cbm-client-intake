@@ -283,6 +283,22 @@ async def mentor_engagement_metrics(client: AssignClient) -> dict[str, dict[str,
     return metrics
 
 
+async def _mentor_type_options(client: AssignClient) -> list[str]:
+    """The live ``mentorType`` enum options (CRM = source of truth), so the grid
+    filters offer every type — not just the ones present in the current roster.
+    Best-effort: no metadata access (or a client without the method, e.g. test
+    fakes) → [] and the frontend falls back to the values found in the rows."""
+    fetch = getattr(client, "metadata_enum_options", None)
+    if fetch is None:
+        return []
+    try:
+        options = await fetch(MENTOR_PROFILE, "mentorType")
+    except EspoError as exc:
+        log.warning("mentorType options unavailable: %s", exc)
+        return []
+    return [o for o in options or [] if o and o.strip()]
+
+
 async def _metrics_or_none(client: AssignClient) -> Optional[dict[str, dict[str, int]]]:
     """Metrics, or None when CEngagement can't be read (e.g. a Mentor Admin user
     whose EspoCRM role lacks the grant) — the roster still loads, metrics blank."""
@@ -371,7 +387,11 @@ async def list_all_mentors(client: AssignClient) -> dict[str, Any]:
     )
     metrics = await _metrics_or_none(client)
     rows = [_mentor_row(r, metrics) for r in data.get("list", [])]
-    return {"mentors": rows, "metricsAvailable": metrics is not None}
+    return {
+        "mentors": rows,
+        "metricsAvailable": metrics is not None,
+        "mentorTypeOptions": await _mentor_type_options(client),
+    }
 
 
 async def assign_engagement(

@@ -138,7 +138,11 @@
       metricsAvailable = res.metricsAvailable !== false;
       fillSelect($("statusFilter"), distinct(function (m) { return [m.status]; }), "All statuses");
       fillSelect($("recordFilter"), distinct(function (m) { return [m.recordStatus]; }), "All record statuses");
-      fillSelect($("typeFilter"), distinct(function (m) { return [m.mentorType]; }), "All types");
+      // Type filter = the CRM's full mentorType enum (every type selectable, not
+      // just the ones in the roster), plus any stored value the enum no longer has.
+      fillSelect($("typeFilter"),
+        withOptions(res.mentorTypeOptions || [], distinct(function (m) { return [m.mentorType]; })),
+        "All types");
       renderTable();
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }
@@ -149,6 +153,13 @@
   function distinct(getList) {
     var set = {}; mentors.forEach(function (m) { getList(m).forEach(function (v) { if (v) set[v] = true; }); });
     return Object.keys(set).sort();
+  }
+  // CRM-declared options first (their order), then any row values not in the
+  // declared list (e.g. a since-removed enum value still stored on a mentor).
+  function withOptions(declared, found) {
+    var out = (declared || []).slice();
+    found.forEach(function (v) { if (out.indexOf(v) < 0) out.push(v); });
+    return out;
   }
   function avail(m) { return m.availableCapacity === -1 ? Infinity : (typeof m.availableCapacity === "number" ? m.availableCapacity : -Infinity); }
   function haystack(m) { return [m.name, m.status, m.cbmEmail, m.mentorType, (m.expertise || []).join(" "), (m.focusAreas || []).join(" ")].join(" ").toLowerCase(); }

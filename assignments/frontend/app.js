@@ -471,6 +471,9 @@
   // False when the server couldn't read CEngagement (metric columns come back
   // blank) — surfaced on the count line so blanks aren't mistaken for zeros.
   var reviewMetricsAvailable = true;
+  // The CRM's full mentorType enum — the filter offers every type, not just the
+  // ones present in the current roster.
+  var reviewMentorTypes = [];
   // Default to Active mentors, highest capacity first (best fit to take a
   // new client); the admin can widen to other statuses.
   var mentorFilter = { q: "", status: "Active", type: "", industry: "", expertise: "", availOnly: false,
@@ -510,6 +513,14 @@
       getList(m).forEach(function (v) { if (v) set[v] = true; });
     });
     return Object.keys(set).sort();
+  }
+
+  // CRM-declared options first (their order), then any row values not in the
+  // declared list (e.g. a since-removed enum value still stored on a mentor).
+  function withOptions(declared, found) {
+    var out = (declared || []).slice();
+    found.forEach(function (v) { if (out.indexOf(v) < 0) out.push(v); });
+    return out;
   }
 
   function fillFilterSelect(sel, values, placeholder) {
@@ -602,13 +613,15 @@
         var res = await api("/mentors?all=true");
         reviewMentors = res.mentors || [];
         reviewMetricsAvailable = res.metricsAvailable !== false;
+        reviewMentorTypes = res.mentorTypeOptions || [];
       }
       fillFilterSelect($("mentorStatusFilter"),
         distinct(function (m) { return [m.status]; }), "All statuses");
       // Reflect the default/persisted status filter in the dropdown.
       $("mentorStatusFilter").value = mentorFilter.status;
       fillFilterSelect($("mentorTypeFilter"),
-        distinct(function (m) { return mentorTypes(m); }), "All types");
+        withOptions(reviewMentorTypes, distinct(function (m) { return mentorTypes(m); })),
+        "All types");
       $("mentorTypeFilter").value = mentorFilter.type;
       fillFilterSelect($("mentorIndustryFilter"),
         distinct(function (m) { return m.industryExperience || []; }), "All industry experience");

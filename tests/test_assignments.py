@@ -276,6 +276,28 @@ async def test_list_all_mentors_has_no_where_filter():
     assert where == []
 
 
+async def test_mentor_type_options_in_roster_envelope():
+    """The roster envelope carries the CRM's full mentorType enum (blanks
+    dropped) so the grid filters can offer types no current mentor has."""
+
+    class MetaClient(FakeClient):
+        async def metadata_enum_options(self, entity, field):
+            assert (entity, field) == (service.MENTOR_PROFILE, "mentorType")
+            return ["", "Mentor", "Co-Mentor Only", "Presenter", "Volunteer", "Other"]
+
+    res = await service.list_all_mentors(MetaClient())
+    assert res["mentorTypeOptions"] == [
+        "Mentor", "Co-Mentor Only", "Presenter", "Volunteer", "Other"
+    ]
+
+
+async def test_mentor_type_options_empty_without_metadata_access():
+    # FakeClient has no metadata_enum_options — the envelope still serves, with
+    # [] so the frontend falls back to the values found in the rows.
+    res = await service.list_all_mentors(FakeClient())
+    assert res["mentorTypeOptions"] == []
+
+
 # --- mentor engagement metrics -------------------------------------------------
 
 def _eng(mentor_id, status, assigned=None):
