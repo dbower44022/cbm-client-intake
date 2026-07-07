@@ -195,9 +195,16 @@ detail screen that reviews all info (read-only computed totals on top) and
   `Mentor Administration Team`); admins always pass. Session-expired (CRM 401) →
   clears session + 401 (same `auth.session_expired` handling).
 - **Editable-field set is declared in `mentoradmin/service.py:EDITABLE_FIELDS`**
-  (the single source for both the form layout — grouped Status/Capacity/Expertise/
-  Compliance/Dates/Profile/Bio — and the server-side update **whitelist**:
-  `update_mentor` drops anything not in `EDITABLE_NAMES`). Enum/multi-enum
+  (the single source for both the form layout — grouped Profile/Contact/Status/
+  Capacity/Expertise/Compliance/Departure/Bio — and the server-side update
+  **whitelist**: `update_mentor` drops anything not in `EDITABLE_NAMES`).
+  **Contact tab (v0.29.0):** fields marked `entity: "Contact"` (firstName/
+  lastName/emailAddress/phoneNumber/addressStreet/City/State/PostalCode) live on
+  the mentor's **linked Contact record** — `get_mentor` merges them into the
+  detail response and `update_mentor` routes their changes to the Contact
+  (phone normalized to E.164 via `core.phone.to_e164`; no linked Contact ⇒
+  `MentorAdminError` raised **before any write** → a 400 with the exact reason).
+  Enum/multi-enum
   **options are pulled live** from EspoCRM metadata (`GET /Metadata?key=
   entityDefs.CMentorProfile.fields`, via `EspoClient.metadata`) so the CRM stays
   the source of truth — see `service.field_options`. Computed totals
@@ -391,14 +398,22 @@ mentor, not a redundant control); `list_engagements` returns `mentorId`/`mentorN
   (`assignments/service.py:_assigned_user_payload`). Writing `assignedUserId` to a
   disabled-field entity is silently ignored.
 
-## Current status (updated 2026-07-06)
+## Current status (updated 2026-07-07)
 
-**Prod is on v0.26.0** (all three apps — prod / crm-test / dev — confirmed on
-`/healthz` 2026-07-06 and redeployed on each push), and prod now answers on the
+**Prod is on v0.28.0** (prod + crm-test confirmed on `/healthz` 2026-07-07;
+redeployed on each push), and prod answers on the
 **custom domain `https://apps.clevelandbusinessmentors.org`** (added to the DO
 app as PRIMARY, Cloudflare CNAME grey-cloud → the app's default hostname; the
-`…ondigitalocean.app` URL still works). Shipped 2026-07-05/06 (see CHANGELOG):
+`…ondigitalocean.app` URL still works). Shipped 2026-07-05..07 (see CHANGELOG):
 
+- **v0.29.0** (built 2026-07-07, NOT yet pushed) — `/mentoradmin` detail editor
+  gains a **Contact tab**: view/edit the mentor's first/last name, email, phone,
+  and street/city/state/ZIP. The fields live on the linked **Contact** record —
+  see the Contact-tab note in the `/mentoradmin` section (routing, E.164 phone,
+  no-Contact 400). Not yet verified live.
+- **v0.28.0** — `/assignments` engagement status filter gains an **"All"**
+  master checkbox (one click = every status; indeterminate when partial;
+  summary reads "Status: All").
 - **v0.24.0** — `/assignments` Available Mentors grid reworked: Focus Areas
   column dropped; Industry column → multi-value `industryExperience` (chips);
   filters → Industry Experience + Areas of Expertise; **Capacity column shows

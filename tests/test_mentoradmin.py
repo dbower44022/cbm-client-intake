@@ -108,6 +108,83 @@ async def test_get_mentor_selects_contact_info_foreign_fields():
     assert not (service.EDITABLE_NAMES & {"personalEmail", "contactPhone", "postalCode"})
 
 
+# --- Contact tab: view + edit the linked Contact's info from the detail form ---
+
+def test_contact_tab_field_spec():
+    contact = [f for f in service.EDITABLE_FIELDS if f.get("entity") == service.CONTACT_ENTITY]
+    assert {f["name"] for f in contact} == {
+        "firstName", "lastName", "emailAddress", "phoneNumber",
+        "addressStreet", "addressCity", "addressState", "addressPostalCode",
+    }
+    assert all(f["group"] == "Contact" for f in contact)
+    # Contact fields never leak into the CMentorProfile select/update whitelist,
+    # but they ARE editable (accepted by the update endpoint).
+    assert not (service.PROFILE_EDIT_NAMES & service.CONTACT_NAMES)
+    assert service.CONTACT_NAMES <= service.EDITABLE_NAMES
+
+
+class ContactClient(FakeClient):
+    """A fake whose Contact record is distinct from the mentor profile."""
+
+    def __init__(self, record=None, contact=None):
+        super().__init__(record=record)
+        self.contact = contact or {}
+
+    async def get(self, entity, record_id, select=None):
+        self.gets.append((entity, record_id, select))
+        if entity == "Contact":
+            return dict(self.contact, id=record_id)
+        return dict(self.record, id=record_id)
+
+
+@pytest.mark.asyncio
+async def test_get_mentor_merges_linked_contact_fields():
+    client = ContactClient(
+        record={"id": "m1", "name": "Jane Mentor", "contactRecordId": "c1"},
+        contact={"firstName": "Jane", "lastName": "Doe", "emailAddress": "jane@example.com",
+                 "phoneNumber": "+12165551234", "addressCity": "Cleveland"},
+    )
+    rec = await service.get_mentor(client, "m1")
+    assert rec["firstName"] == "Jane" and rec["lastName"] == "Doe"
+    assert rec["emailAddress"] == "jane@example.com"
+    assert rec["addressCity"] == "Cleveland"
+    assert rec["addressStreet"] is None  # unset Contact fields render blank
+    contact_get = [g for g in client.gets if g[0] == "Contact"][0]
+    assert set(contact_get[2].split(",")) == service.CONTACT_NAMES
+
+
+@pytest.mark.asyncio
+async def test_get_mentor_without_contact_still_loads():
+    client = FakeClient()  # record has no contactRecordId
+    rec = await service.get_mentor(client, "m1")
+    assert not [g for g in client.gets if g[0] == "Contact"]
+    assert "firstName" not in rec
+
+
+@pytest.mark.asyncio
+async def test_update_mentor_routes_contact_fields_to_contact():
+    client = ContactClient(record={"id": "m1", "name": "Jane", "contactRecordId": "c1"})
+    await service.update_mentor(client, "m1", {
+        "firstName": "Janet", "addressCity": "Cleveland",
+        "phoneNumber": "(216) 555-1234",  # normalized to E.164 at the CRM boundary
+        "mentorStatusNotes": "x",
+    })
+    profile_updates = [u for u in client.updates if u[0] == service.MENTOR_PROFILE]
+    contact_updates = [u for u in client.updates if u[0] == "Contact"]
+    assert profile_updates[0][2] == {"mentorStatusNotes": "x"}
+    assert contact_updates[0] == ("Contact", "c1", {
+        "firstName": "Janet", "addressCity": "Cleveland", "phoneNumber": "+12165551234",
+    })
+
+
+@pytest.mark.asyncio
+async def test_contact_changes_without_linked_contact_fail_before_any_write():
+    client = FakeClient()  # no contactRecordId
+    with pytest.raises(service.MentorAdminError, match="no linked Contact"):
+        await service.update_mentor(client, "m1", {"phoneNumber": "2165551234", "name": "New"})
+    assert client.updates == []  # nothing half-saved — not even the profile part
+
+
 @pytest.mark.asyncio
 async def test_get_mentor_attaches_app_computed_client_counts():
     """The detail card shows the SAME counts as the roster grid — computed from
@@ -782,6 +859,21 @@ def test_get_and_update_mentor(monkeypatch):
     assert got["completeness"]["status"] in ("Complete", "Incomplete")
     assert r.json()["mentorStatus"] == "Inactive"
     assert "completeness" in r.json()
+
+
+def test_update_reports_mentor_admin_error_as_400(monkeypatch):
+    """A save rejected by the service (e.g. contact info on a mentor with no
+    linked Contact) surfaces its exact message, not a generic 500/502."""
+    _authed(monkeypatch)
+
+    async def fake_update(client, mentor_id, changes, **kwargs):
+        raise service.MentorAdminError("This mentor has no linked Contact record, so contact information can't be saved.")
+
+    monkeypatch.setattr("mentoradmin.router.service.update_mentor", fake_update)
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.put("/mentoradmin/api/mentors/m1", json={"changes": {"phoneNumber": "2165551234"}})
+    assert r.status_code == 400
+    assert "no linked Contact" in r.json()["detail"]
 
 
 def test_expired_token_returns_401(monkeypatch):

@@ -257,6 +257,10 @@ async def mentor_update(mentor_id: str, body: UpdateIn, request: Request) -> dic
         result["completeness"] = comp
         result["recordStatus"] = await service.sync_record_status(client, mentor_id, result, comp["status"])
         return result
+    except service.MentorAdminError as exc:
+        # e.g. contact fields saved on a mentor with no linked Contact record —
+        # nothing was written; tell the user exactly why.
+        raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not save mentor")
 

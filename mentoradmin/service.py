@@ -14,6 +14,7 @@ import re
 from typing import Any, AsyncIterator, Awaitable, Callable, Optional, Protocol
 
 from core.espo import EspoError
+from core.phone import to_e164
 from core.google_directory import (
     GoogleDirectoryError,
     MailboxStatus,
@@ -86,12 +87,25 @@ HOW_HEARD_OPTIONS = [
     "CBM client or volunteer", "Social media", "TV", "Workshop/Event", "Other",
 ]
 
+CONTACT_ENTITY = "Contact"
+
 # Editable fields, grouped for the form (one tab per group). ``type`` drives the
 # input + how the value is sent; ``row`` (optional) sub-groups fields within a
 # tab; ``options`` (optional) supplies a static dropdown list for a field whose
-# CRM type is free-text. Order is the display order.
+# CRM type is free-text. Order is the display order. ``entity: "Contact"`` marks
+# a field that lives on the mentor's linked Contact record (the Contact tab):
+# its value is merged into the detail response and a change is saved to the
+# Contact, not the profile.
 EDITABLE_FIELDS: list[dict[str, Any]] = [
     {"name": "name", "label": "Name", "type": "varchar", "group": "Profile"},
+    {"name": "firstName", "label": "First name", "type": "varchar", "group": "Contact", "row": "personname", "entity": CONTACT_ENTITY},
+    {"name": "lastName", "label": "Last name", "type": "varchar", "group": "Contact", "row": "personname", "entity": CONTACT_ENTITY},
+    {"name": "emailAddress", "label": "Email", "type": "varchar", "group": "Contact", "row": "reach", "entity": CONTACT_ENTITY},
+    {"name": "phoneNumber", "label": "Phone", "type": "varchar", "group": "Contact", "row": "reach", "entity": CONTACT_ENTITY},
+    {"name": "addressStreet", "label": "Street address", "type": "text", "group": "Contact", "entity": CONTACT_ENTITY},
+    {"name": "addressCity", "label": "City", "type": "varchar", "group": "Contact", "row": "citystate", "entity": CONTACT_ENTITY},
+    {"name": "addressState", "label": "State", "type": "varchar", "group": "Contact", "row": "citystate", "entity": CONTACT_ENTITY},
+    {"name": "addressPostalCode", "label": "ZIP code", "type": "varchar", "group": "Contact", "row": "citystate", "entity": CONTACT_ENTITY},
     {"name": "mentorStatus", "label": "Status", "type": "enum", "group": "Status", "row": "statustype"},
     {"name": "mentorType", "label": "Type", "type": "enum", "group": "Status", "row": "statustype"},
     # Pause window on its own line, directly under the status/type selectors.
@@ -128,8 +142,13 @@ EDITABLE_FIELDS: list[dict[str, Any]] = [
     {"name": "mentoringWhyInterested", "label": "Why interested in mentoring", "type": "wysiwyg", "group": "Bio"},
 ]
 
-EDITABLE_NAMES = {f["name"] for f in EDITABLE_FIELDS}
-_ENUM_FIELDS = [f["name"] for f in EDITABLE_FIELDS if f["type"] in ("enum", "multiEnum")]
+# The update whitelist, split by target entity: profile fields go to
+# CMentorProfile, contact fields to the linked Contact.
+PROFILE_EDIT_NAMES = {f["name"] for f in EDITABLE_FIELDS if not f.get("entity")}
+CONTACT_NAMES = {f["name"] for f in EDITABLE_FIELDS if f.get("entity") == CONTACT_ENTITY}
+EDITABLE_NAMES = PROFILE_EDIT_NAMES | CONTACT_NAMES
+_ENUM_FIELDS = [f["name"] for f in EDITABLE_FIELDS
+                if f["type"] in ("enum", "multiEnum") and not f.get("entity")]
 
 # Read-only context shown above the form. Includes the contact-info "foreign"
 # fields CMentorProfile mirrors from the linked Contact (personalEmail/
@@ -150,7 +169,8 @@ READ_ONLY_FIELDS = [
 # recordStatus enum value set manually (in the CRM) — never auto-overwritten.
 RECORD_STATUS_MANUAL = "Duplicate"
 
-_DETAIL_SELECT = ",".join(["id"] + sorted(EDITABLE_NAMES) + READ_ONLY_FIELDS)
+_DETAIL_SELECT = ",".join(["id"] + sorted(PROFILE_EDIT_NAMES) + READ_ONLY_FIELDS)
+_CONTACT_SELECT = ",".join(sorted(CONTACT_NAMES))
 
 
 async def get_mentor(client: MentorClient, mentor_id: str) -> dict[str, Any]:
@@ -160,6 +180,17 @@ async def get_mentor(client: MentorClient, mentor_id: str) -> dict[str, Any]:
     grid always agree. Counts are best-effort (None when engagements can't be
     read); ``update_mentor`` returns through here, so a save refreshes them."""
     rec = await client.get(MENTOR_PROFILE, mentor_id, select=_DETAIL_SELECT)
+    # Merge the linked Contact's editable fields (name/email/phone/address) into
+    # the record for the Contact tab. Best-effort: a mentor with no Contact (or
+    # an unreadable one) still opens — the fields just render blank.
+    contact_id = rec.get("contactRecordId")
+    if contact_id:
+        try:
+            contact = await client.get(CONTACT_ENTITY, contact_id, select=_CONTACT_SELECT)
+            for name in CONTACT_NAMES:
+                rec[name] = contact.get(name)
+        except Exception as exc:
+            log.warning("contact info unavailable for mentor %s: %s", mentor_id, exc)
     try:
         metrics = await mentor_engagement_metrics(client)
     except Exception as exc:  # no CEngagement grant, or a test fake without list()
@@ -240,7 +271,10 @@ async def update_mentor(
     admin_client_factory: Optional[Callable[[], Awaitable[MentorClient]]] = None,
     directory: Optional[MailboxDirectory] = None,
 ) -> dict[str, Any]:
-    """Update whitelisted editable fields; ignore anything else.
+    """Update whitelisted editable fields; ignore anything else. Profile fields
+    write to CMentorProfile; Contact-tab fields (``CONTACT_NAMES``) write to the
+    mentor's linked Contact record (raising :class:`MentorAdminError` before any
+    write when no Contact is linked).
 
     Side effect: when a save leaves the mentor at status ``Approved`` **or
     ``Active``** with **no linked login user yet** AND ``admin_client_factory`` is
@@ -258,7 +292,25 @@ async def update_mentor(
     status write and is best-effort: any failure is captured in the returned
     ``provision`` summary rather than failing the save.
     """
-    payload = {k: v for k, v in changes.items() if k in EDITABLE_NAMES}
+    payload = {k: v for k, v in changes.items() if k in PROFILE_EDIT_NAMES}
+    contact_payload = {k: v for k, v in changes.items() if k in CONTACT_NAMES}
+
+    # Contact-tab fields save to the linked Contact record. Resolve the link
+    # BEFORE any write, so a mentor with no Contact fails fast with a clear
+    # error instead of half-saving. Phone is normalized to E.164 at the CRM
+    # boundary (EspoCRM rejects other formats with a phone "valid" 400).
+    contact_id = None
+    if contact_payload:
+        prof = await client.get(MENTOR_PROFILE, mentor_id, select="contactRecordId")
+        contact_id = prof.get("contactRecordId")
+        if not contact_id:
+            raise MentorAdminError(
+                "This mentor has no linked Contact record, so contact "
+                "information can't be saved. Link a Contact in the CRM first."
+            )
+        phone = contact_payload.get("phoneNumber")
+        if isinstance(phone, str) and phone.strip():
+            contact_payload["phoneNumber"] = to_e164(phone)
 
     # When provisioning is possible, read the pre-save status + user link so we
     # can decide on the *effective* status (the change, or the stored value if
@@ -272,6 +324,8 @@ async def update_mentor(
 
     if payload:
         await client.update(MENTOR_PROFILE, mentor_id, payload)
+    if contact_payload:
+        await client.update(CONTACT_ENTITY, contact_id, contact_payload)
 
     provision: Optional[dict[str, Any]] = None
     effective_status = (

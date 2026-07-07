@@ -89,9 +89,18 @@ session metrics.
   (red). **Click it** for a popup listing exactly what is missing or incorrect.
 
 **Tabbed editor (below the card).** The editable fields, grouped into tabs:
-**Status · Capacity · Expertise · Compliance · Departure · Profile · Bio**.
-Inputs match the field type (dropdowns, checkboxes, dates, multi-select checkbox
-grids, and a rich-text editor for the biography fields).
+**Profile · Contact · Status · Capacity · Expertise · Compliance · Departure ·
+Bio**. Inputs match the field type (dropdowns, checkboxes, dates, multi-select
+checkbox grids, and a rich-text editor for the biography fields).
+
+- The **Contact** tab edits the mentor's contact information — first/last
+  name, email, phone, and street / city / state / ZIP. These fields live on
+  the mentor's linked **Contact** record (not the mentor profile), and saving
+  them updates that Contact. Phone numbers are normalized automatically (e.g.
+  "(216) 555-1234" is stored as +12165551234). If the mentor has **no linked
+  Contact record**, these fields can't be saved — the save is rejected with a
+  message saying so, and nothing else is written; link a Contact in the CRM
+  first (this is also a Data-completeness issue).
 
 **Saving.** Only fields you actually changed are sent. Before saving, the app
 runs the completeness check and — if the record will still be incomplete —

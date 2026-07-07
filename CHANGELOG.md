@@ -4,6 +4,19 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.29.0] — 2026-07-07
+
+### Added
+- The `/mentoradmin` detail editor gains a **Contact tab** to view and edit the
+  mentor's contact information — first/last name, email, phone, and street /
+  city / state / ZIP. These fields live on the mentor's linked **Contact**
+  record (the profile only mirrors them read-only in the summary card), so the
+  save routes them to the Contact while profile fields keep writing to
+  `CMentorProfile`. Phone is normalized to E.164 at the CRM boundary (EspoCRM
+  rejects other formats). Saving contact fields on a mentor with **no linked
+  Contact** fails fast — before anything is written — with a clear message
+  (400), instead of half-saving.
+
 ## [0.28.0] — 2026-07-07
 
 ### Added
