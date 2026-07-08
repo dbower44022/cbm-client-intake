@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cleveland Business Mentors — Sessions</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/tokens.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="cbm-container sx">
+    <header class="sx__header">
+      <h1 id="title">Sessions</h1>
+      <p class="sx__sub" id="subtitle"></p>
+    </header>
+
+    <!-- Sign-in happens at the portal (/); this shows access/server errors. -->
+    <section id="msgView" hidden>
+      <p class="form-error" id="msgText" role="alert"></p>
+      <p><a href="/">Return to the sign-in page</a></p>
+    </section>
+
+    <!-- List of the records the user owns -->
+    <section id="listView" hidden>
+      <div class="sx__toolbar">
+        <span class="sx__who">Signed in as <strong id="whoName"></strong></span>
+        <span class="sx__actions">
+          <button type="button" class="cbm-button cbm-button--secondary" id="refreshBtn">Refresh</button>
+          <button type="button" class="cbm-button cbm-button--secondary" id="logoutBtn">Sign out</button>
+        </span>
+      </div>
+      <input type="search" id="search" class="sx__search" placeholder="Search…" autocomplete="off" />
+      <p class="sx__notice" id="listNotice" role="status" hidden></p>
+      <p class="sx__count" id="count"></p>
+      <table class="sx__table" id="recordsTable" hidden>
+        <thead id="recordsHead"></thead>
+        <tbody id="recordsBody"></tbody>
+      </table>
+      <p class="sx__empty" id="emptyState" hidden>No records to show.</p>
+      <p class="sx__loading" id="loadingState">Loading…</p>
+    </section>
+
+    <!-- Detail of one record: summary + contacts + sessions (+ co-mentors) -->
+    <section id="detailView" hidden>
+      <div class="sx__toolbar">
+        <button type="button" class="cbm-button cbm-button--secondary" id="backBtn">← Back to list</button>
+        <button type="button" class="cbm-button" id="newSessionBtn">+ New session</button>
+      </div>
+      <h2 class="sx__detail-name" id="detailName"></h2>
+      <p class="sx__notice" id="detailNotice" role="status" hidden></p>
+
+      <div class="sx__cols">
+        <div class="sx__panel">
+          <h3>Details</h3>
+          <div class="sx__summary" id="summary"></div>
+        </div>
+        <div class="sx__panel">
+          <h3>Contacts</h3>
+          <ul class="sx__contacts" id="contacts"></ul>
+          <p class="sx__muted" id="noContacts" hidden>No related contacts.</p>
+        </div>
+      </div>
+
+      <div class="sx__panel" id="coMentorSection" hidden>
+        <h3>Co-mentors</h3>
+        <ul class="sx__contacts" id="coMentors"></ul>
+        <p class="sx__muted" id="noCoMentors" hidden>No co-mentors on this engagement.</p>
+        <div class="sx__inline">
+          <select id="coMentorSelect" aria-label="Choose a co-mentor"></select>
+          <button type="button" class="cbm-button cbm-button--secondary" id="addCoMentorBtn">Add co-mentor</button>
+        </div>
+      </div>
+
+      <div class="sx__panel">
+        <h3>Sessions</h3>
+        <table class="sx__table" id="sessionsTable" hidden>
+          <thead><tr><th>Session</th><th>Status</th><th>Type</th><th>When</th><th></th></tr></thead>
+          <tbody id="sessionsBody"></tbody>
+        </table>
+        <p class="sx__muted" id="noSessions" hidden>No sessions recorded yet.</p>
+      </div>
+    </section>
+
+    <!-- Create / edit a session -->
+    <section id="editorView" hidden>
+      <div class="sx__toolbar">
+        <button type="button" class="cbm-button cbm-button--secondary" id="editorBackBtn">← Back to record</button>
+        <button type="button" class="cbm-button" id="saveSessionBtn">Save session</button>
+      </div>
+      <h2 class="sx__detail-name" id="editorTitle">New session</h2>
+      <p class="sx__notice" id="editorNotice" role="status" hidden></p>
+      <nav class="sx__tabs" id="editorTabs" role="tablist"></nav>
+      <form id="sessionForm" class="sx__form"></form>
+      <div class="sx__panel">
+        <h3>Attendees</h3>
+        <p class="sx__muted">Which of this record's contacts attended (or are invited to) the session.</p>
+        <div class="checkgrid" id="attendees"></div>
+        <p class="sx__muted" id="noAttendeeOptions" hidden>No related contacts to choose from.</p>
+      </div>
+    </section>
+
+    <footer class="cbm-footer">
+      <p>&copy; <span data-cbm-year>2026</span> Cleveland Business Mentors.<span class="cbm-footer__version" data-cbm-version></span></p>
+    </footer>
+  </main>
+
+  <script src="app.js"></script>
+  <script src="/shared/footer.js"></script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+/* Session Management — shared across the three domains. Relies on
+   /shared/tokens.css for the CBM design tokens (colors, fonts, .cbm-button,
+   .cbm-container, .cbm-field base) and defines the tool-specific layout here. */
+
+.sx { padding-bottom: 3rem; }
+.sx__header { margin-bottom: 1.25rem; }
+.sx__header h1 { margin: 0 0 0.15rem; }
+.sx__sub { margin: 0; color: var(--cbm-slate-700, #556); }
+
+.sx__toolbar {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem;
+}
+.sx__actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.sx__who { color: var(--cbm-slate-700, #556); }
+
+.sx__search {
+  width: 100%; max-width: 24rem; padding: 0.5rem 0.6rem; margin-bottom: 0.75rem;
+  border: 1px solid var(--cbm-border, #d7dce2); border-radius: var(--cbm-radius, 6px);
+  font-size: var(--cbm-text-base, 1rem);
+}
+.sx__count { color: var(--cbm-slate-700, #556); font-size: var(--cbm-text-sm, 0.9rem); margin: 0.25rem 0 0.5rem; }
+
+.sx__notice { padding: 0.6rem 0.8rem; border-radius: var(--cbm-radius, 6px); margin: 0.5rem 0; }
+.sx__notice.is-success { background: #e9f7ef; color: #1e6b3f; border: 1px solid #bfe3cd; }
+.sx__notice.is-error { background: #fdecea; color: #a12; border: 1px solid #f5c6c2; }
+.sx__muted { color: var(--cbm-slate-700, #667); font-size: var(--cbm-text-sm, 0.9rem); }
+.sx__loading { color: var(--cbm-slate-700, #667); }
+
+/* Tables */
+.sx__table { width: 100%; border-collapse: collapse; margin-top: 0.25rem; }
+.sx__table th, .sx__table td {
+  text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--cbm-border, #e3e7ec);
+  vertical-align: top; font-size: var(--cbm-text-sm, 0.92rem);
+}
+.sx__table th { color: var(--cbm-slate-700, #556); font-weight: 600; }
+.sx__table tbody tr:hover { background: #f7f9fc; }
+.sx__link {
+  background: none; border: none; padding: 0; cursor: pointer;
+  color: var(--cbm-blue, #1a5fb4); font: inherit; font-weight: 600; text-align: left;
+}
+.sx__link:hover { text-decoration: underline; }
+.sx__sm { padding: 0.25rem 0.6rem; font-size: 0.85rem; }
+
+/* Detail */
+.sx__detail-name { margin: 0.25rem 0 0.75rem; }
+.sx__cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+@media (max-width: 720px) { .sx__cols { grid-template-columns: 1fr; } }
+.sx__panel {
+  border: 1px solid var(--cbm-border, #e3e7ec); border-radius: var(--cbm-radius, 8px);
+  padding: 0.9rem 1rem; margin-top: 1rem; background: var(--cbm-surface, #fff);
+}
+.sx__panel h3 { margin: 0 0 0.6rem; font-size: var(--cbm-h4, 1.05rem); }
+.sx__summary { display: grid; gap: 0.35rem; }
+.sx__srow { display: flex; gap: 0.5rem; }
+.sx__slabel { flex: 0 0 9rem; color: var(--cbm-slate-700, #667); font-size: var(--cbm-text-sm, 0.9rem); }
+.sx__svalue { font-weight: 500; }
+.sx__contacts { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; }
+.sx__contacts li { line-height: 1.35; }
+.sx__cname { font-weight: 600; }
+.sx__cmail { color: var(--cbm-blue, #1a5fb4); font-size: var(--cbm-text-sm, 0.9rem); }
+.sx__inline { display: flex; gap: 0.5rem; align-items: center; margin-top: 0.75rem; flex-wrap: wrap; }
+.sx__inline select { padding: 0.45rem 0.5rem; border: 1px solid var(--cbm-border, #d7dce2); border-radius: var(--cbm-radius, 6px); }
+
+/* Editor form */
+.sx__tabs { display: flex; gap: 0.25rem; border-bottom: 2px solid var(--cbm-border, #e3e7ec); margin: 0.75rem 0 1rem; flex-wrap: wrap; }
+.sx__tab {
+  background: none; border: none; padding: 0.5rem 0.9rem; cursor: pointer; font: inherit;
+  color: var(--cbm-slate-700, #556); border-bottom: 3px solid transparent; margin-bottom: -2px;
+}
+.sx__tab.is-active { color: var(--cbm-navy, #123); font-weight: 700; border-bottom-color: var(--cbm-blue, #1a5fb4); }
+.sx__form .tab-panel { display: block; }
+.tab-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+.tab-row > .cbm-field { flex: 1 1 14rem; }
+
+/* cbm-field inputs (tokens.css styles the base; ensure our types are covered) */
+.cbm-field { display: flex; flex-direction: column; gap: 0.3rem; }
+.cbm-field label { font-size: var(--cbm-text-sm, 0.9rem); font-weight: 600; color: var(--cbm-slate-700, #556); }
+.cbm-field input[type="text"], .cbm-field input[type="number"], .cbm-field input[type="date"],
+.cbm-field input[type="datetime-local"], .cbm-field select, .cbm-field textarea {
+  padding: 0.5rem 0.6rem; border: 1px solid var(--cbm-border, #d7dce2);
+  border-radius: var(--cbm-radius, 6px); font: inherit; width: 100%;
+}
+.cbm-field textarea { resize: vertical; }
+.cbm-field--check { flex-direction: row; align-items: center; }
+.cbm-field--check label { flex-direction: row; align-items: center; gap: 0.4rem; }
+
+/* Multi-select / attendee checkbox grid */
+.checkgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: 0.35rem 0.75rem; }
+.checkgrid__opt { display: flex; align-items: flex-start; gap: 0.35rem; font-weight: 400; font-size: var(--cbm-text-sm, 0.9rem); }
+
+/* WYSIWYG */
+.wysiwyg { border: 1px solid var(--cbm-border, #d7dce2); border-radius: var(--cbm-radius, 6px); overflow: hidden; }
+.wysiwyg__toolbar { display: flex; gap: 0.15rem; padding: 0.3rem; background: #f4f6f9; border-bottom: 1px solid var(--cbm-border, #e3e7ec); }
+.wysiwyg__btn { border: 1px solid transparent; background: none; padding: 0.2rem 0.5rem; cursor: pointer; border-radius: 4px; font-size: 0.85rem; }
+.wysiwyg__btn:hover { background: #e6ebf1; }
+.wysiwyg__area { min-height: 6rem; padding: 0.6rem; outline: none; }
+.wysiwyg__area:focus { box-shadow: inset 0 0 0 2px var(--cbm-blue, #1a5fb4); }
+
+.cbm-footer { margin-top: 2.5rem; color: var(--cbm-slate-700, #667); font-size: var(--cbm-text-sm, 0.85rem); border-top: 1px solid var(--cbm-border, #e3e7ec); padding-top: 1rem; }
