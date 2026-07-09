@@ -405,7 +405,100 @@ mentor, not a redundant control); `list_engagements` returns `mentorId`/`mentorN
   (`assignments/service.py:_assigned_user_payload`). Writing `assignedUserId` to a
   disabled-field entity is silently ignored.
 
-## Current status (updated 2026-07-07)
+## Session Management tools — `/mentorsessions`, `/partnersessions`, `/sponsorsessions` (added 2026-07-08)
+
+**One configurable engine, three team-gated routes.** Mentors, Partner Managers,
+and Sponsor Managers each review the records they own and record **meetings**
+against them as **`CSession`** records. It is **one `CSession` entity with the
+parent link swapped** — the domains differ only by a per-domain
+`sessions/config.py:DomainConfig` (the `sessionType` discriminator + the parent FK
+distinguish them). The whole feature is one engine (`sessions/service.py`) + one
+router factory (`sessions/router.make_router`) + one shared frontend
+(`sessions/frontend/`, vanilla JS that derives its domain/API base from the first
+segment of its own URL). Mounted only when `assignments_active` (needs
+`SESSION_SECRET`), linked from the portal per team.
+
+- **The three domains** (source of truth: `sessions/config.py`, `DOMAINS`):
+  | slug | parent | "records I own" reverse link on the user's `CMentorProfile` | co-mentor? |
+  |------|--------|-------------------------------------------------------------|------------|
+  | `mentorsessions` | `CEngagement` | `engagements1` (reverse of `CEngagement.mentorProfile`) | yes |
+  | `partnersessions` | `CPartnerProfile` | `managedPartners` (reverse of `CPartnerProfile.partnerManager`) | no |
+  | `sponsorsessions` | `CSponsorProfile` | `managedSponsors` (reverse of `CSponsorProfile.cBMSponsorManager`) | no |
+  Mentor sessions restrict the owned list to active engagement statuses
+  (`Active`/`Assigned`/`Pending Acceptance`/`On-Hold`, filtered in Python).
+- **All three managers are `CMentorProfile` records** — the one whose
+  `assignedUser` is their login. `service.resolve_manager_profile` scans the
+  `CMentorProfile` rows readable by this user and **matches `assignedUser` in
+  Python — never a `where` on `assignedUserId`** (prod's field ACL forbids it; see
+  [[crm-test-assignment-acl-fields]]). Then it reads the owned parents through the
+  domain's reverse link (`list_related` on the profile), so a regular user whose
+  ACL scopes `CMentorProfile`/the parents to "own" simply gets their own rows.
+  `list_records` returns `{"records":[...], "profileFound": bool}` —
+  `profileFound=false` means the user has no linked profile.
+- **Auth = per-user, acts as the logged-in user.** Portal SSO (shared staff
+  session `staff_user`); each route enforces **its own team per request**
+  (`_require_user` → `is_member`; 401 → frontend sends the user to the portal, 403
+  names the team, admins pass). Teams: `SESSION_MENTOR_ALLOWED_TEAMS` (default
+  `Mentor Team`), `SESSION_PARTNER_ALLOWED_TEAMS` (default `Partner Management
+  Team`), `SESSION_SPONSOR_ALLOWED_TEAMS` (default `Sponsor Management Team`).
+- **Endpoints** (`/{slug}/api`): `GET /session` (identity + domain UI config);
+  `POST /logout`; `GET /records` (owned parents as grid rows); `GET /fields`
+  (`SESSION_FIELDS` spec + live enum options); `GET /records/{parent_id}`
+  (read-only detail = parent summary + related contacts + existing sessions,
+  +co-mentors on mentor); `GET /sessions/{id}`; `POST /records/{parent_id}/sessions`
+  (create); `PUT /sessions/{id}` (whitelisted update). Mentor-only: `GET /mentors`
+  (co-mentor picker) + `POST /records/{parent_id}/comentors` (attach a
+  `CMentorProfile` via `additionalMentors`).
+- **Editable-field set = `sessions/config.py:SESSION_FIELDS`** — the single source
+  for both the type-driven editor layout (grouped Session/Notes, optional `row`
+  sub-groups) and the server-side update **whitelist** (`SESSION_EDIT_NAMES`;
+  `_session_payload` drops anything else). Enum/multiEnum **options are pulled live**
+  from CRM metadata (`service.field_options`). **Attendees** are handled separately
+  from the generic fields: a picker over the parent's related contacts; setting the
+  `sessionAttendeesIds` list **replaces** the attendee set (m2m link, no per-row
+  relate). `attendees=None` on edit = leave untouched; `[]` = clear.
+- **Owner-stamping so a read-own role can see its own new session (the fix
+  2026-07-08).** These tools run under roles whose `CSession` read/edit scope is
+  `own`, so an **unassigned** new session would be invisible to its own author
+  right after create. `create_session` stamps the creating user
+  (`owner_user_id=user["userId"]` passed from the router) as **both**
+  `assignedUserId` **and** `assignedUsersIds` (CSession has both, like CEngagement)
+  so it sticks whichever the instance uses. `setdefault`, so an explicit assignment
+  in `changes` wins. **Live-testing caveat (2026-07-08):** the fix only makes
+  *newly-created* sessions visible to their author. Under read-own, a **pre-existing**
+  session (from seed/migration, or created by staff/a co-mentor) stays invisible
+  until its `assignedUser`/`assignedUsers` includes the viewer — so a mentor does
+  **not** automatically see every session on their engagement. If that's the desired
+  UX, the gate role's `CSession` read needs to be broader than plain `own`
+  (parent-based ACL) — a CRM-side decision, not an app change.
+- **Enum-drift resilience on save (2026-07-08, two layers; [[non-required-enums-never-block]]).**
+  A session's stored enum value can fall outside the field's live options (seed data
+  put meeting-modality strings like `In-Person`/`Video Call` into `sessionType`,
+  whose real options are `Client Session`/`Partner Session`/`Sponsor Session`/`Other
+  Session`); re-sending it would make EspoCRM 400 the whole update
+  (`validationFailure`, `sessionType:valid`). (1) **Frontend** (`app.js`): the editor
+  snapshots each field at render (`snapshotForm`) and `saveSession` sends only the
+  fields the user actually changed, so an untouched drifted enum never enters the
+  payload. (2) **Server** (`service._sanitize_enum_payload`, on create + update):
+  drops enum/multiEnum values not in the live options before the CRM call — single
+  enum omitted (preserves the stored value on update), multiEnum keeps only the valid
+  members; **fails open** if options can't be fetched. The domain `default_session_type`
+  values are all valid options, so new sessions get a valid type.
+- **Phase 1 (CRUD) only.** Google Calendar/Meet scheduling (populating
+  `videoMeetingLink`) and Meet transcription (a new `sessionTranscription` wysiwyg
+  field) are Phases 2–3, not built.
+- **Status (2026-07-08): built + first live drive against crm-test (mentor domain,
+  as an admin); 281 tests green (28 in `tests/test_sessions.py`).** Live testing
+  surfaced + fixed the two items above (owner-stamping for read-own visibility;
+  enum-drift-on-save resilience). **Still NOT driven live as a non-admin team
+  member.** **CRM prerequisites: create the `Partner Management Team` + `Sponsor
+  Management Team` in both CRMs** (`Mentor Team` already exists), grant the gate
+  roles `CSession` read/create/edit (+ the parent/reverse links), and decide the
+  read-own-vs-broader ACL question above. On branch `feat/session-management`
+  (not pushed). Note: crm-test seed sessions carry out-of-enum `sessionType`
+  values (a data-hygiene cleanup, harmless to the app).
+
+## Current status (updated 2026-07-08)
 
 **Prod is on v0.28.0** (prod + crm-test confirmed on `/healthz` 2026-07-07;
 redeployed on each push), and prod answers on the
@@ -413,6 +506,11 @@ redeployed on each push), and prod answers on the
 app as PRIMARY, Cloudflare CNAME grey-cloud → the app's default hostname; the
 `…ondigitalocean.app` URL still works). Shipped 2026-07-05..07 (see CHANGELOG):
 
+- **Session Management tools** (built 2026-07-08, branch `feat/session-management`,
+  NOT yet pushed/deployed/live-verified) — `/mentorsessions` `/partnersessions`
+  `/sponsorsessions`: one engine, three team-gated routes, recording `CSession`
+  meetings against the records each manager owns. Full detail + the CRM
+  prerequisites in the **Session Management tools** section above.
 - **v0.30.0** (built 2026-07-07, NOT yet pushed) — **authenticated portal at
   `/` + single sign-on**: root becomes a CRM login; team-based links (Mentor
   Team → CRM + public forms; the three admin teams → their apps; admins → all;

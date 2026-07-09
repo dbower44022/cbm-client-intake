@@ -215,6 +215,16 @@ async def test_create_session_keeps_explicit_type_and_status():
 
 
 @pytest.mark.asyncio
+async def test_create_session_stamps_owner_for_read_own():
+    # The creating user is set as assignedUser (both shapes) so a read-own role
+    # can still see the session they just made.
+    fake = Fake()
+    await service.create_session(MENTOR, fake, "E1", {"name": "S"}, None, owner_user_id="u1")
+    _, payload = fake.created[0]
+    assert payload["assignedUserId"] == "u1" and payload["assignedUsersIds"] == ["u1"]
+
+
+@pytest.mark.asyncio
 async def test_update_session_whitelists_and_sets_attendees():
     fake = Fake(records={("CSession", "s1"): {"name": "old"}})
     await service.update_session(fake, "s1", {"name": "new", "hack": 1}, ["c3"])
@@ -222,6 +232,40 @@ async def test_update_session_whitelists_and_sets_attendees():
     assert (entity, rid) == ("CSession", "s1")
     assert payload["name"] == "new" and payload["sessionAttendeesIds"] == ["c3"]
     assert "hack" not in payload
+
+
+@pytest.mark.asyncio
+async def test_update_drops_drifted_enum_but_keeps_valid_fields():
+    # A stored sessionType value that's no longer a live option must be omitted
+    # (not sent) rather than 400 the whole update; other fields still save.
+    meta = {"sessionType": {"options": ["Client Session", "Follow-up"]}}
+    fake = Fake(records={("CSession", "s1"): {}}, meta_fields=meta)
+    await service.update_session(
+        fake, "s1", {"sessionType": "In-Person", "name": "Kickoff"}, None
+    )
+    _, _, payload = fake.updates[0]
+    assert "sessionType" not in payload      # drifted value dropped, not sent
+    assert payload["name"] == "Kickoff"      # valid field still updated
+
+
+@pytest.mark.asyncio
+async def test_multienum_keeps_only_valid_values():
+    meta = {"meetingType": {"options": ["Virtual", "Phone"]}}
+    fake = Fake(records={("CSession", "s1"): {}}, meta_fields=meta)
+    await service.update_session(
+        fake, "s1", {"meetingType": ["Virtual", "Carrier Pigeon"]}, None
+    )
+    _, _, payload = fake.updates[0]
+    assert payload["meetingType"] == ["Virtual"]
+
+
+@pytest.mark.asyncio
+async def test_sanitizer_fails_open_when_options_unavailable():
+    # No metadata options => can't verify => keep the value (never drop unverified).
+    fake = Fake(records={("CSession", "s1"): {}})  # meta_fields={} => no options
+    await service.update_session(fake, "s1", {"sessionType": "Anything"}, None)
+    _, _, payload = fake.updates[0]
+    assert payload["sessionType"] == "Anything"
 
 
 @pytest.mark.asyncio
@@ -315,8 +359,9 @@ def test_partner_has_no_comentor_endpoints(monkeypatch):
 def test_create_session_endpoint(monkeypatch):
     _as(monkeypatch, _USER)
 
-    async def fake_create(cfg, client, parent_id, changes, attendees):
-        return {"id": "s1", "parent": parent_id, "attendees": attendees, **changes}
+    async def fake_create(cfg, client, parent_id, changes, attendees, owner_user_id=None):
+        return {"id": "s1", "parent": parent_id, "attendees": attendees,
+                "owner": owner_user_id, **changes}
 
     monkeypatch.setattr("sessions.service.create_session", fake_create)
     with TestClient(_app(monkeypatch)) as c:

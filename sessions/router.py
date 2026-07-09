@@ -131,7 +131,8 @@ def make_router(cfg: DomainConfig) -> APIRouter:
         client = client_for(get_settings(), user)
         try:
             return await service.create_session(
-                cfg, client, parent_id, body.changes, body.attendees
+                cfg, client, parent_id, body.changes, body.attendees,
+                owner_user_id=user["userId"],
             )
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not create session")

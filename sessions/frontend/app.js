@@ -14,6 +14,7 @@
   var records = [];         // owned parents (grid)
   var currentDetail = null; // the open parent detail (has contacts/sessions)
   var currentSession = null;// the session being edited (null attendees only for new)
+  var editorSnapshot = {};  // {field: JSON of value at render} — save diffs against this
   var search = "";
 
   function $(id) { return document.getElementById(id); }
@@ -268,9 +269,21 @@
     }
     hide($("editorNotice"));
     renderForm(currentSession);
+    snapshotForm();
     renderAttendees();
     showEditor();
     window.scrollTo(0, 0);
+  }
+
+  // Baseline every field's rendered value so saveSession can send only what the
+  // user actually changed. Re-sending an unchanged enum whose stored value has
+  // drifted out of the CRM's current options would make EspoCRM 400 the whole
+  // update (validationFailure), so an untouched field must never be resent.
+  function snapshotForm() {
+    editorSnapshot = {};
+    Array.prototype.forEach.call($("sessionForm").querySelectorAll("[data-field]"), function (el) {
+      editorSnapshot[el.dataset.field] = JSON.stringify(readField(el));
+    });
   }
 
   function renderForm(values) {
@@ -433,7 +446,10 @@
     if (!currentDetail) return;
     var changes = {};
     Array.prototype.forEach.call($("sessionForm").querySelectorAll("[data-field]"), function (el) {
-      changes[el.dataset.field] = readField(el);
+      var v = readField(el);
+      // Only send fields the user actually changed (diff vs. the render-time
+      // snapshot) — leaves drifted, untouched enums out of the payload.
+      if (JSON.stringify(v) !== editorSnapshot[el.dataset.field]) changes[el.dataset.field] = v;
     });
     var attendees = chosenAttendees();
     $("saveSessionBtn").disabled = true;

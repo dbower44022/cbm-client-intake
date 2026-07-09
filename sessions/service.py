@@ -197,18 +197,73 @@ def _session_payload(
     return payload
 
 
+async def _sanitize_enum_payload(client: SessionClient, payload: dict[str, Any]) -> None:
+    """Drop enum/multiEnum values the live ``CSession`` no longer accepts, in place.
+
+    So one drifted option can't 400 the whole create/update
+    (``validationFailure``) — a non-required enum must never block a save (Doug's
+    policy). Mirrors ``core.enum_filter.EnumSanitizer`` for the intake
+    orchestrators, using the same live-options fetch this module already does for
+    the editor (:func:`field_options`).
+
+    - **single enum:** an unrecognized value is *omitted* (the key removed) — on an
+      update that preserves the record's existing value rather than clearing it; on
+      a create the field is left unset (server default / null).
+    - **multiEnum:** only the unrecognized members are dropped; valid selections
+      are kept.
+
+    **Fails open:** if options can't be fetched (metadata error, dry-run) the
+    payload is left untouched, so it never drops data it couldn't verify.
+    """
+    enum_keys = [k for k in payload if k in SESSION_ENUM_FIELDS]
+    if not enum_keys:
+        return
+    try:
+        options = await field_options(client)
+    except Exception as exc:  # noqa: BLE001 — fail open, never block the save
+        log.warning("could not fetch CSession enum options (%s); keeping values as-is", exc)
+        return
+    for key in enum_keys:
+        opts = options.get(key)
+        if opts is None:  # field not in the live options map — unverifiable, keep
+            continue
+        value = payload[key]
+        if isinstance(value, list):  # multiEnum
+            kept = [v for v in value if v in opts]
+            dropped = [v for v in value if v not in opts]
+            if dropped:
+                log.warning("CSession.%s: dropping unrecognized %s (not in live enum)", key, dropped)
+            payload[key] = kept
+        elif value not in (None, "") and value not in opts:
+            log.warning("CSession.%s: dropping unrecognized value %r (not in live enum)", key, value)
+            del payload[key]
+
+
 async def create_session(
     cfg: DomainConfig,
     client: SessionClient,
     parent_id: str,
     changes: dict[str, Any],
     attendees: Optional[list[str]] = None,
+    owner_user_id: Optional[str] = None,
 ) -> dict[str, Any]:
-    """Create a ``CSession`` linked to ``parent_id`` and return it (with id)."""
+    """Create a ``CSession`` linked to ``parent_id`` and return it (with id).
+
+    Stamps the creating user as the session's assigned user so it is theirs to
+    read/edit — required because these tools run under a role whose ``CSession``
+    read/edit scope is ``own``: an unassigned session would be invisible to its
+    own author right after creation. Written to BOTH ``assignedUser`` and
+    ``assignedUsers`` (CSession has both, like CEngagement) so it sticks whichever
+    the instance uses.
+    """
     payload = _session_payload(changes, attendees)
     payload[cfg.session_parent_fk] = parent_id
     payload.setdefault("sessionType", cfg.default_session_type)
     payload.setdefault("status", "Planned")
+    if owner_user_id:
+        payload.setdefault("assignedUserId", owner_user_id)
+        payload.setdefault("assignedUsersIds", [owner_user_id])
+    await _sanitize_enum_payload(client, payload)
     created = await client.create(SESSION, payload)
     log.info(
         "created session %s on %s/%s type=%s",
@@ -225,6 +280,7 @@ async def update_session(
 ) -> dict[str, Any]:
     """Update whitelisted fields (+ attendees) on an existing session."""
     payload = _session_payload(changes, attendees)
+    await _sanitize_enum_payload(client, payload)
     if payload:
         await client.update(SESSION, session_id, payload)
     return await get_session(client, session_id)
