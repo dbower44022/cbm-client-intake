@@ -260,6 +260,20 @@ async def test_multienum_keeps_only_valid_values():
 
 
 @pytest.mark.asyncio
+async def test_field_required_reads_crm_metadata():
+    # Only fields the CRM marks required (and are editable) are returned.
+    meta = {
+        "dateStart": {"type": "datetime", "required": True},
+        "name": {"type": "varchar", "required": True},
+        "status": {"type": "enum"},          # not required
+        "notAField": {"required": True},      # not in the editable set
+    }
+    fake = Fake(meta_fields=meta)
+    required = await service.field_required(fake)
+    assert set(required) == {"dateStart", "name"}
+
+
+@pytest.mark.asyncio
 async def test_sanitizer_fails_open_when_options_unavailable():
     # No metadata options => can't verify => keep the value (never drop unverified).
     fake = Fake(records={("CSession", "s1"): {}})  # meta_fields={} => no options

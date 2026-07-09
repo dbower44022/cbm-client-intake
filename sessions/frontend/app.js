@@ -11,6 +11,7 @@
   var config = null;        // from /session (title, columns, parentLabel, …)
   var fieldSpec = [];       // CSession editable-field spec
   var fieldOptions = {};    // {fieldName: [options]}
+  var fieldRequired = [];   // field names the CRM marks required (e.g. dateStart)
   var records = [];         // owned parents (grid)
   var currentDetail = null; // the open parent detail (has contacts/sessions)
   var currentSession = null;// the session being edited (null attendees only for new)
@@ -84,7 +85,7 @@
     showList();
     var fieldsError = null;
     try {
-      var f = await api("/fields"); fieldSpec = f.fields || []; fieldOptions = f.options || {};
+      var f = await api("/fields"); fieldSpec = f.fields || []; fieldOptions = f.options || {}; fieldRequired = f.required || [];
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }
       fieldsError = e.message;
@@ -320,12 +321,15 @@
   function buildField(f, value) {
     var wrap = document.createElement("div"); wrap.className = "cbm-field field-" + f.type;
     var input = makeInput(f, value); input.dataset.field = f.name; input.dataset.type = f.type;
+    var required = fieldRequired.indexOf(f.name) >= 0;
+    if (required) { input.dataset.required = "1"; input.dataset.label = f.label; }
     if (f.type === "bool") {
       wrap.className += " cbm-field--check";
       var lab = document.createElement("label"); lab.appendChild(input); lab.appendChild(document.createTextNode(" " + f.label));
       wrap.appendChild(lab); return wrap;
     }
     var label = document.createElement("label"); label.textContent = f.label;
+    if (required) { var star = document.createElement("span"); star.className = "sx__req"; star.textContent = " *"; label.appendChild(star); }
     wrap.appendChild(label); wrap.appendChild(input); return wrap;
   }
 
@@ -444,6 +448,14 @@
 
   async function saveSession() {
     if (!currentDetail) return;
+    // Enforce the CRM's required fields (e.g. dateStart) client-side so the user
+    // gets a clear message instead of a raw CRM 400 (validationFailure).
+    var missing = [];
+    Array.prototype.forEach.call($("sessionForm").querySelectorAll("[data-required]"), function (el) {
+      var v = readField(el);
+      if (v == null || v === "" || (Array.isArray(v) && v.length === 0)) missing.push(el.dataset.label || el.dataset.field);
+    });
+    if (missing.length) { notice("editorNotice", "Please complete: " + missing.join(", "), "error"); return; }
     var changes = {};
     Array.prototype.forEach.call($("sessionForm").querySelectorAll("[data-field]"), function (el) {
       var v = readField(el);

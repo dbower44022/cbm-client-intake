@@ -103,7 +103,11 @@ def make_router(cfg: DomainConfig) -> APIRouter:
         user = _require_user(request)
         client = client_for(get_settings(), user)
         try:
-            return {"fields": service.field_spec(), "options": await service.field_options(client)}
+            return {
+                "fields": service.field_spec(),
+                "options": await service.field_options(client),
+                "required": await service.field_required(client),
+            }
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not load field options")
 

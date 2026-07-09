@@ -310,6 +310,20 @@ async def field_options(client: SessionClient) -> dict[str, list[str]]:
     return options
 
 
+async def field_required(client: SessionClient) -> list[str]:
+    """Names of editable ``CSession`` fields the CRM marks **required**.
+
+    Read live from metadata (CRM = truth) so the form requires exactly what the
+    CRM does — e.g. ``dateStart`` — instead of hard-coding it and drifting.
+    """
+    fields = await client.metadata(f"entityDefs.{SESSION}.fields")
+    return [
+        name
+        for name in SESSION_EDIT_NAMES
+        if isinstance(fields.get(name), dict) and fields[name].get("required")
+    ]
+
+
 def field_spec() -> list[dict]:
     """The editor field spec served to the frontend."""
     return SESSION_FIELDS

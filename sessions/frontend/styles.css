@@ -98,3 +98,5 @@
 .wysiwyg__area:focus { box-shadow: inset 0 0 0 2px var(--cbm-blue, #1a5fb4); }
 
 .cbm-footer { margin-top: 2.5rem; color: var(--cbm-slate-700, #667); font-size: var(--cbm-text-sm, 0.85rem); border-top: 1px solid var(--cbm-border, #e3e7ec); padding-top: 1rem; }
+
+.sx__req { color: #a12; font-weight: 700; }
