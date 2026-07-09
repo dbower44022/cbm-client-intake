@@ -166,7 +166,7 @@ SESSION_ENUM_FIELDS = [f["name"] for f in SESSION_FIELDS if f["type"] in ("enum"
 # with the session time).
 DETAIL_SESSION_SELECT = (
     "name,status,sessionType,dateStart,dateStartDate,sessionNotes,nextSteps,"
-    "sessionAttendeesNames"
+    "videoMeetingLink,sessionAttendeesNames"
 )
 
 

@@ -304,9 +304,26 @@
     var l = document.createElement("div"); l.className = "sx__next-l"; l.textContent = "Next session";
     var when = document.createElement("div"); when.className = "sx__next-when"; when.textContent = fmtWhen(ns.dateStart);
     card.appendChild(l); card.appendChild(when);
-    var sub = [ns.name, ns.sessionType].filter(Boolean).join(" · ");
-    if (sub) { var s = document.createElement("div"); s.className = "sx__next-sub"; s.textContent = sub; card.appendChild(s); }
+    // Start/Open: a quick way to open the session (and launch the video call if
+    // one is scheduled) for editing.
+    var hasVideo = !!(ns.videoMeetingLink && String(ns.videoMeetingLink).trim());
+    var btn = document.createElement("button");
+    btn.type = "button"; btn.className = "cbm-button sx__next-btn";
+    btn.textContent = hasVideo ? "Start Session" : "Open Session";
+    btn.addEventListener("click", function () { startSession(ns); });
+    card.appendChild(btn);
     box.appendChild(card);
+  }
+
+  // Launch the video call (if the session has a link) in a new tab, then open the
+  // session for editing.
+  function startSession(ns) {
+    var link = ns.videoMeetingLink && String(ns.videoMeetingLink).trim();
+    if (link) {
+      if (!/^https?:\/\//i.test(link)) link = "https://" + link;
+      window.open(link, "_blank", "noopener");
+    }
+    openEditor(ns.id);
   }
 
   // Overall notes about the whole engagement / partner / sponsor — above the

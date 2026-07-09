@@ -206,13 +206,14 @@ async def test_get_detail_next_session_is_soonest_upcoming():
         related={"sessions": [
             {"id": "past", "dateStart": "2020-01-01 09:00:00"},
             {"id": "soon", "name": "Check-in", "sessionType": "Partner Session",
-             "dateStart": "2099-03-01 09:00:00"},
+             "dateStart": "2099-03-01 09:00:00", "videoMeetingLink": "https://meet.example/x"},
             {"id": "later", "dateStart": "2099-09-01 09:00:00"},
         ]},
     )
     d = await service.get_detail(PARTNER, fake, "P1")
     assert d["nextSession"]["id"] == "soon"  # earliest still in the future
     assert d["nextSession"]["name"] == "Check-in"
+    assert d["nextSession"]["videoMeetingLink"] == "https://meet.example/x"
 
 
 @pytest.mark.asyncio

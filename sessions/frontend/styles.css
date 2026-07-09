@@ -161,7 +161,7 @@
 }
 .sx__next-l { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--cbm-blue, #1a5fb4); font-weight: 700; }
 .sx__next-when { font-size: 1.35rem; font-weight: 800; color: var(--cbm-navy, #123); line-height: 1.15; font-variant-numeric: tabular-nums; }
-.sx__next-sub { font-size: 0.82rem; color: var(--cbm-slate-700, #556); margin-top: 0.1rem; }
+.sx__next-btn { margin-top: 0.55rem; width: 100%; padding: 0.5rem 0.75rem; font-size: 0.95rem; }
 
 /* Overall (engagement/partner/sponsor) notes — above the session feed. Gold
    accent to set them apart from the blue-accented per-session notes. */

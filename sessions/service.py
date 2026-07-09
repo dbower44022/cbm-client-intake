@@ -14,6 +14,7 @@ forbids (see the assignedUserId lesson in assignments.service).
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import datetime, timezone
 from typing import Any, Optional, Protocol
@@ -212,6 +213,20 @@ def _note_entry(s: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+async def _note_attendees(client: SessionClient, s: dict[str, Any]) -> list[str]:
+    """Attendee names for a session. EspoCRM omits custom link-multiple fields
+    (``sessionAttendees``) from LIST queries, so when the list row didn't include
+    them, fetch them with a single ``get`` (which does load them)."""
+    names = _attendee_names(s)
+    if names:
+        return names
+    try:
+        rec = await client.get(SESSION, s["id"], select="sessionAttendeesIds,sessionAttendeesNames")
+    except EspoError:
+        return []
+    return _attendee_names(rec)
+
+
 def _next_session(sessions: list[dict[str, Any]]) -> Optional[dict[str, Any]]:
     """The soonest upcoming session (earliest start still in the future), derived
     from the actual session records so it's accurate for every domain. Compares
@@ -229,6 +244,7 @@ def _next_session(sessions: list[dict[str, Any]]) -> Optional[dict[str, Any]]:
         "name": nxt.get("name"),
         "sessionType": nxt.get("sessionType"),
         "dateStart": nxt.get("dateStart") or nxt.get("dateStartDate"),
+        "videoMeetingLink": nxt.get("videoMeetingLink") or "",
     }
 
 
@@ -305,6 +321,13 @@ async def get_detail(
     )
     sessions = [_session_row(s) for s in raw_sessions]
     note_feed = [_note_entry(s) for s in raw_sessions]
+    # Fill in attendees (custom link-multiple, absent from the list query) with a
+    # concurrent per-session get where the list row didn't carry them.
+    attendee_lists = await asyncio.gather(
+        *(_note_attendees(client, s) for s in raw_sessions)
+    )
+    for entry, names in zip(note_feed, attendee_lists):
+        entry["attendees"] = names
 
     # Overall notes about the whole engagement/partner/sponsor (not a session).
     overall_notes = None
