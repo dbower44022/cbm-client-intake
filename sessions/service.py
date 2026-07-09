@@ -414,9 +414,12 @@ async def _sync_attendees(
     so we relate the added contacts and unrelate the removed ones."""
     current = set((await get_session(client, session_id)).get("attendees") or [])
     target = set(attendees or [])
-    for cid in target - current:
+    add, remove = target - current, current - target
+    log.info("sync attendees %s: current=%s target=%s +%s -%s",
+             session_id, sorted(current), sorted(target), sorted(add), sorted(remove))
+    for cid in add:
         await client.relate(SESSION, session_id, _ATTENDEE_LINK, cid)
-    for cid in current - target:
+    for cid in remove:
         await client.unrelate(SESSION, session_id, _ATTENDEE_LINK, cid)
 
 
