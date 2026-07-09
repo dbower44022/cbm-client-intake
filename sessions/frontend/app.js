@@ -254,6 +254,18 @@
     } finally { $("addCoMentorBtn").disabled = false; }
   }
 
+  // Default title shown pre-filled for a NEW session so the user sees what will
+  // be stored if they don't change it: "YYYY-MM-DD - <parent name>". The user can
+  // edit it; on create the app always sends the name (see saveSession), and the
+  // CRM name formula is set to keep any value already present.
+  function defaultSessionName() {
+    var d = new Date();
+    function p(n) { return (n < 10 ? "0" : "") + n; }
+    var date = d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
+    var parent = (currentDetail && currentDetail.name) || "";
+    return parent ? date + " - " + parent : date;
+  }
+
   // --- session editor ---
   async function openEditor(sessionId) {
     if (sessionId) {
@@ -265,6 +277,7 @@
         id: null, attendees: [],
         status: "Planned",
         sessionType: (config && config.defaultSessionType) || "",
+        name: defaultSessionName(),
       };
       $("editorTitle").textContent = "New session";
     }
@@ -456,12 +469,15 @@
       if (v == null || v === "" || (Array.isArray(v) && v.length === 0)) missing.push(el.dataset.label || el.dataset.field);
     });
     if (missing.length) { notice("editorNotice", "Please complete: " + missing.join(", "), "error"); return; }
+    var isNew = !(currentSession && currentSession.id);
     var changes = {};
     Array.prototype.forEach.call($("sessionForm").querySelectorAll("[data-field]"), function (el) {
       var v = readField(el);
-      // Only send fields the user actually changed (diff vs. the render-time
-      // snapshot) — leaves drifted, untouched enums out of the payload.
-      if (JSON.stringify(v) !== editorSnapshot[el.dataset.field]) changes[el.dataset.field] = v;
+      // On create send every field (it's a new record, and the pre-filled name
+      // must reach the CRM verbatim). On update send only fields the user changed
+      // (diff vs. the render-time snapshot) so a drifted, untouched enum isn't
+      // re-sent and rejected.
+      if (isNew || JSON.stringify(v) !== editorSnapshot[el.dataset.field]) changes[el.dataset.field] = v;
     });
     var attendees = chosenAttendees();
     $("saveSessionBtn").disabled = true;
