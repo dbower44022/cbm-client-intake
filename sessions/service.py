@@ -406,8 +406,8 @@ async def _sync_attendees(
     current = set((await get_session(client, session_id)).get("attendees") or [])
     target = set(attendees or [])
     add, remove = target - current, current - target
-    log.info("sync attendees %s: current=%s target=%s +%s -%s",
-             session_id, sorted(current), sorted(target), sorted(add), sorted(remove))
+    if add or remove:
+        log.info("session %s attendees: +%d -%d", session_id, len(add), len(remove))
     for cid in add:
         await client.relate(SESSION, session_id, _ATTENDEE_LINK, cid)
     for cid in remove:
