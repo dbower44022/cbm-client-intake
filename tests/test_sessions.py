@@ -35,6 +35,7 @@ class Fake:
         self.created = []
         self.updates = []
         self.relates = []
+        self.unrelates = []
         self._seq = 0
 
     async def list(self, entity, **kw):
@@ -63,6 +64,9 @@ class Fake:
 
     async def relate(self, entity, record_id, link, related_id):
         self.relates.append((entity, record_id, link, related_id))
+
+    async def unrelate(self, entity, record_id, link, related_id):
+        self.unrelates.append((entity, record_id, link, related_id))
 
     async def metadata(self, key):
         return self.meta_fields
@@ -364,8 +368,11 @@ async def test_create_session_sets_parent_and_defaults_and_whitelists():
     assert payload["sessionType"] == "Partner Session"  # domain default
     assert payload["status"] == "Planned"               # default
     assert payload["name"] == "Check-in" and payload["sessionNotes"] == "<p>notes</p>"
-    assert payload["sessionAttendeesIds"] == ["c1", "c2"]
     assert "id" not in payload and "bogus" not in payload
+    # attendees are attached via the relationship endpoint, not the create payload
+    assert "sessionAttendeesIds" not in payload
+    related = {(r[2], r[3]) for r in fake.relates}
+    assert ("sessionAttendees", "c1") in related and ("sessionAttendees", "c2") in related
 
 
 @pytest.mark.asyncio
@@ -391,13 +398,25 @@ async def test_create_session_stamps_owner_for_read_own():
 
 
 @pytest.mark.asyncio
-async def test_update_session_whitelists_and_sets_attendees():
-    fake = Fake(records={("CSession", "s1"): {"name": "old"}})
-    await service.update_session(fake, "s1", {"name": "new", "hack": 1}, ["c3"])
+async def test_update_session_whitelists_fields_and_syncs_attendees():
+    # existing attendee c1; user submits {c1, c3} -> relate c3, unrelate nothing;
+    # c2 (not present, not submitted) untouched.
+    fake = Fake(records={("CSession", "s1"): {"name": "old", "sessionAttendeesIds": ["c1"]}})
+    await service.update_session(fake, "s1", {"name": "new", "hack": 1}, ["c1", "c3"])
     entity, rid, payload = fake.updates[0]
     assert (entity, rid) == ("CSession", "s1")
-    assert payload["name"] == "new" and payload["sessionAttendeesIds"] == ["c3"]
-    assert "hack" not in payload
+    assert payload["name"] == "new" and "hack" not in payload
+    assert "sessionAttendeesIds" not in payload            # synced via relate, not payload
+    assert ("CSession", "s1", "sessionAttendees", "c3") in fake.relates  # added
+    assert not fake.unrelates                              # nothing removed
+
+
+@pytest.mark.asyncio
+async def test_update_session_unrelates_removed_attendees():
+    fake = Fake(records={("CSession", "s1"): {"name": "s", "sessionAttendeesIds": ["c1", "c2"]}})
+    await service.update_session(fake, "s1", {}, ["c1"])   # drop c2
+    assert ("CSession", "s1", "sessionAttendees", "c2") in fake.unrelates
+    assert not fake.relates                                # c1 already present
 
 
 @pytest.mark.asyncio

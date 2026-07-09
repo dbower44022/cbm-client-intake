@@ -101,6 +101,7 @@ class SessionClient(Protocol):
     async def create(self, entity: str, payload: dict[str, Any]) -> dict[str, Any]: ...
     async def update(self, entity: str, record_id: str, payload: dict[str, Any]) -> dict[str, Any]: ...
     async def relate(self, entity: str, record_id: str, link: str, related_id: str) -> None: ...
+    async def unrelate(self, entity: str, record_id: str, link: str, related_id: str) -> None: ...
     async def metadata(self, key: str) -> Any: ...
     async def app_user(self) -> dict[str, Any]: ...
 
@@ -395,15 +396,28 @@ async def get_session(client: SessionClient, session_id: str) -> dict[str, Any]:
     return rec
 
 
-def _session_payload(
-    changes: dict[str, Any], attendees: Optional[list[str]]
-) -> dict[str, Any]:
-    payload = {k: v for k, v in changes.items() if k in SESSION_EDIT_NAMES}
-    if attendees is not None:
-        # sessionAttendees is a many-to-many link; setting the id list replaces
-        # the attendee set (no per-row relate/unrelate needed).
-        payload["sessionAttendeesIds"] = attendees
-    return payload
+_ATTENDEE_LINK = "sessionAttendees"
+
+
+def _session_payload(changes: dict[str, Any]) -> dict[str, Any]:
+    """Whitelisted scalar-field payload for a session write (attendees are synced
+    separately via the relationship endpoints, not here)."""
+    return {k: v for k, v in changes.items() if k in SESSION_EDIT_NAMES}
+
+
+async def _sync_attendees(
+    client: SessionClient, session_id: str, attendees: list[str]
+) -> None:
+    """Make the session's attendee set exactly ``attendees``, via the relationship
+    link endpoints. Setting ``sessionAttendeesIds`` on a record update does NOT
+    reliably sync this custom many-to-many (same reason co-mentors use ``relate``),
+    so we relate the added contacts and unrelate the removed ones."""
+    current = set((await get_session(client, session_id)).get("attendees") or [])
+    target = set(attendees or [])
+    for cid in target - current:
+        await client.relate(SESSION, session_id, _ATTENDEE_LINK, cid)
+    for cid in current - target:
+        await client.unrelate(SESSION, session_id, _ATTENDEE_LINK, cid)
 
 
 async def _sanitize_enum_payload(client: SessionClient, payload: dict[str, Any]) -> None:
@@ -465,7 +479,7 @@ async def create_session(
     ``assignedUsers`` (CSession has both, like CEngagement) so it sticks whichever
     the instance uses.
     """
-    payload = _session_payload(changes, attendees)
+    payload = _session_payload(changes)
     payload[cfg.session_parent_fk] = parent_id
     payload.setdefault("sessionType", cfg.default_session_type)
     payload.setdefault("status", "Planned")
@@ -474,9 +488,13 @@ async def create_session(
         payload.setdefault("assignedUsersIds", [owner_user_id])
     await _sanitize_enum_payload(client, payload)
     created = await client.create(SESSION, payload)
+    if attendees:  # new record => relate all chosen attendees
+        for cid in attendees:
+            await client.relate(SESSION, created["id"], _ATTENDEE_LINK, cid)
     log.info(
-        "created session %s on %s/%s type=%s",
+        "created session %s on %s/%s type=%s attendees=%d",
         created.get("id"), cfg.parent_entity, parent_id, payload.get("sessionType"),
+        len(attendees or []),
     )
     return await get_session(client, created["id"])
 
@@ -487,11 +505,16 @@ async def update_session(
     changes: dict[str, Any],
     attendees: Optional[list[str]] = None,
 ) -> dict[str, Any]:
-    """Update whitelisted fields (+ attendees) on an existing session."""
-    payload = _session_payload(changes, attendees)
+    """Update whitelisted fields on a session; sync attendees separately.
+
+    ``attendees=None`` leaves the attendee set untouched; a list (incl. ``[]``)
+    replaces it via the relationship endpoints (see :func:`_sync_attendees`)."""
+    payload = _session_payload(changes)
     await _sanitize_enum_payload(client, payload)
     if payload:
         await client.update(SESSION, session_id, payload)
+    if attendees is not None:
+        await _sync_attendees(client, session_id, attendees)
     return await get_session(client, session_id)
 
 
