@@ -4,6 +4,14 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.32.3] — 2026-07-09
+
+### Changed
+- **Session editor layout.** The two most important fields — **Session notes** and
+  **Action items / next steps** — are now large, prominent editors side by side
+  (stacked on narrow screens). Removed the meeting **End** date; **Status /
+  Session type / Start** now share one line. Tighter, more efficient use of space.
+
 ## [0.32.2] — 2026-07-09
 
 ### Fixed

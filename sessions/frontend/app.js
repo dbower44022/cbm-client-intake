@@ -856,6 +856,7 @@
 
   function buildField(f, value) {
     var wrap = document.createElement("div"); wrap.className = "cbm-field field-" + f.type;
+    if (f.big) wrap.className += " cbm-field--big";  // large, prominent editor (notes/action items)
     var input = makeInput(f, value); input.dataset.field = f.name; input.dataset.type = f.type;
     var required = fieldRequired.indexOf(f.name) >= 0;
     if (required) { input.dataset.required = "1"; input.dataset.label = f.label; }

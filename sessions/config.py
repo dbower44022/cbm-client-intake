@@ -143,18 +143,19 @@ class DomainConfig:
 # separately (a picker over the parent's contacts), not as a generic field.
 SESSION_FIELDS: list[dict] = [
     {"name": "name", "label": "Session title", "type": "varchar", "group": "Session"},
-    {"name": "status", "label": "Status", "type": "enum", "group": "Session", "row": "statustype"},
-    {"name": "sessionType", "label": "Session type", "type": "enum", "group": "Session", "row": "statustype"},
-    {"name": "dateStart", "label": "Start", "type": "datetime", "group": "Session", "row": "when"},
-    {"name": "dateEnd", "label": "End", "type": "datetime", "group": "Session", "row": "when"},
+    # Status / Session type / Start on one line (no End date — meetings don't need it).
+    {"name": "status", "label": "Status", "type": "enum", "group": "Session", "row": "top"},
+    {"name": "sessionType", "label": "Session type", "type": "enum", "group": "Session", "row": "top"},
+    {"name": "dateStart", "label": "Start", "type": "datetime", "group": "Session", "row": "top"},
     {"name": "meetingType", "label": "Meeting type", "type": "multiEnum", "group": "Session"},
     {"name": "meetingLocationType", "label": "Location type", "type": "enum", "group": "Session", "row": "loc"},
     {"name": "locationDetails", "label": "Location details", "type": "varchar", "group": "Session", "row": "loc"},
     {"name": "videoMeetingLink", "label": "Video meeting link", "type": "varchar", "group": "Session"},
-    {"name": "sessionNotes", "label": "Session notes", "type": "wysiwyg", "group": "Notes"},
-    {"name": "nextSteps", "label": "Action items / next steps", "type": "wysiwyg", "group": "Notes"},
-    {"name": "nextSessionDateTime", "label": "Next session", "type": "datetime", "group": "Notes"},
-    {"name": "topicsCovered", "label": "Topics covered", "type": "multiEnum", "group": "Notes"},
+    # The two most important fields — rendered large (see `big`) and side by side.
+    {"name": "sessionNotes", "label": "Session notes", "type": "wysiwyg", "group": "Notes", "row": "content", "big": True},
+    {"name": "nextSteps", "label": "Action items / next steps", "type": "wysiwyg", "group": "Notes", "row": "content", "big": True},
+    {"name": "nextSessionDateTime", "label": "Next session", "type": "datetime", "group": "Notes", "row": "meta"},
+    {"name": "topicsCovered", "label": "Topics covered", "type": "multiEnum", "group": "Notes", "row": "meta"},
     {"name": "description", "label": "Description", "type": "text", "group": "Notes"},
 ]
 

@@ -77,6 +77,12 @@
 .sx__form .tab-panel { display: block; }
 .tab-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
 .tab-row > .cbm-field { flex: 1 1 14rem; }
+/* The important fields (session notes / action items): large editors, side by
+   side on wide screens, stacked on narrow — the focus of the form. */
+.tab-row > .cbm-field--big { flex: 1 1 26rem; }
+.cbm-field--big > label { font-size: var(--cbm-text-base, 1rem); font-weight: 700; color: var(--cbm-navy, #123); }
+.cbm-field--big .wysiwyg__area { min-height: 20rem; }
+.cbm-field--big textarea { min-height: 20rem; }
 
 /* cbm-field inputs (tokens.css styles the base; ensure our types are covered) */
 .cbm-field { display: flex; flex-direction: column; gap: 0.3rem; }
