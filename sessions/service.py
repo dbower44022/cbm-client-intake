@@ -37,6 +37,7 @@ log = logging.getLogger("cbm_intake.sessions.service")
 
 _PAGE = 200
 _COMENTOR_LINK = "additionalMentors"
+_ATTENDEE_LINK = "sessionAttendees"
 
 # Pop-up "peek" detail: the record types a contact/company/client link can open,
 # with the curated field set each shows. An allowlist so the endpoint can't be
@@ -188,44 +189,38 @@ def _session_row(s: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _attendee_names(s: dict[str, Any]) -> list[str]:
-    """Attendee display names off a session's ``sessionAttendeesNames`` (a link-
-    multiple, returned by EspoCRM as an ``{id: name}`` map)."""
-    names = s.get("sessionAttendeesNames")
-    if isinstance(names, dict):
-        return [n for n in names.values() if n]
-    if isinstance(names, list):
-        return [n for n in names if n]
-    return []
+async def _attendees(client: SessionClient, session_id: str) -> list[dict[str, Any]]:
+    """A session's attendee contacts (id + name). ``sessionAttendees`` is a
+    RELATIONSHIP, not a select-field, so it must be read through the link
+    (``list_related``) — reading ``sessionAttendeesIds`` off the record returns
+    nothing (which is why attendees looked empty). Same pattern as co-mentors."""
+    try:
+        data = await client.list_related(
+            SESSION, session_id, _ATTENDEE_LINK, select="name", max_size=_PAGE
+        )
+    except EspoError:
+        return []
+    return data.get("list", [])
 
 
 def _note_entry(s: dict[str, Any]) -> dict[str, Any]:
-    """A session's contribution to the Overview note feed: attendees + notes +
-    next steps stamped with when it happened, so the history reads at a glance."""
+    """A session's contribution to the Overview note feed: notes + next steps
+    stamped with when it happened (attendees are attached by the caller)."""
     return {
         "id": s["id"],
         "name": s.get("name"),
         "sessionType": s.get("sessionType"),
         "status": s.get("status"),
         "dateStart": s.get("dateStart") or s.get("dateStartDate"),
-        "attendees": _attendee_names(s),
+        "attendees": [],
         "notes": s.get("sessionNotes") or "",
         "nextSteps": s.get("nextSteps") or "",
     }
 
 
 async def _note_attendees(client: SessionClient, s: dict[str, Any]) -> list[str]:
-    """Attendee names for a session. EspoCRM omits custom link-multiple fields
-    (``sessionAttendees``) from LIST queries, so when the list row didn't include
-    them, fetch them with a single ``get`` (which does load them)."""
-    names = _attendee_names(s)
-    if names:
-        return names
-    try:
-        rec = await client.get(SESSION, s["id"], select="sessionAttendeesIds,sessionAttendeesNames")
-    except EspoError:
-        return []
-    return _attendee_names(rec)
+    """Attendee display names for a session's note-feed entry."""
+    return [c.get("name") for c in await _attendees(client, s["id"]) if c.get("name")]
 
 
 def _next_session(sessions: list[dict[str, Any]]) -> Optional[dict[str, Any]]:
@@ -384,19 +379,15 @@ async def peek(client: SessionClient, entity: str, record_id: str) -> dict[str, 
     return {"entity": entity, "name": rec.get("name"), "fields": fields}
 
 
-_SESSION_SELECT = ",".join(
-    ["id", *sorted(SESSION_EDIT_NAMES), "sessionAttendeesIds", "sessionAttendeesNames"]
-)
+_SESSION_SELECT = ",".join(["id", *sorted(SESSION_EDIT_NAMES)])
 
 
 async def get_session(client: SessionClient, session_id: str) -> dict[str, Any]:
-    """An existing session's editable values + its attendee contact ids."""
+    """An existing session's editable values + its attendee contact ids (read via
+    the sessionAttendees relationship — see :func:`_attendees`)."""
     rec = await client.get(SESSION, session_id, select=_SESSION_SELECT)
-    rec["attendees"] = rec.get("sessionAttendeesIds") or []
+    rec["attendees"] = [c["id"] for c in await _attendees(client, session_id)]
     return rec
-
-
-_ATTENDEE_LINK = "sessionAttendees"
 
 
 def _session_payload(changes: dict[str, Any]) -> dict[str, Any]:

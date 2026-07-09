@@ -4,18 +4,19 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
-## [0.32.1] — 2026-07-09
+## [0.32.2] — 2026-07-09
 
 ### Fixed
 - **Details tab respects the user's edit permission** — reads the ACL and, for an
   `edit: own` role, checks per-record ownership; sections you can't edit are
   read-only (no doomed edit → 403). Save is per-entity with a plain-language
   permission message.
-- **Session-note attendees** now show in the Overview feed (EspoCRM omits custom
-  link-multiple fields from list queries, so they're backfilled per session).
-- **Attendee edits persist** — synced via the relationship endpoints
-  (relate/unrelate), not by setting `sessionAttendeesIds` on the record update
-  (which doesn't sync this custom many-to-many).
+- **Attendees now read and write correctly.** `sessionAttendees` is a CRM
+  *relationship*, not a select-field: reads go through the link (`list_related`,
+  like co-mentors) — reading `sessionAttendeesIds` off the record always returned
+  empty, which is why attendees never displayed and edits looked lost. Writes sync
+  via the relationship endpoints (relate added / unrelate removed). Both the
+  session editor and the Overview note feed use the link read.
 - **Friendlier empty grid** — "No client engagements / partners / sponsors found"
   instead of the "ask an administrator to link your profile" error.
 

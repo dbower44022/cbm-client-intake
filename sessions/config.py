@@ -162,11 +162,11 @@ SESSION_EDIT_NAMES = {f["name"] for f in SESSION_FIELDS}
 SESSION_ENUM_FIELDS = [f["name"] for f in SESSION_FIELDS if f["type"] in ("enum", "multiEnum")]
 
 # Fields read for each session on the parent detail — feeds both the Sessions
-# table and the Overview note feed (attendees + sessionNotes/nextSteps stamped
-# with the session time).
+# table and the Overview note feed (sessionNotes/nextSteps stamped with the time;
+# attendees are read separately via the sessionAttendees relationship link).
 DETAIL_SESSION_SELECT = (
     "name,status,sessionType,dateStart,dateStartDate,sessionNotes,nextSteps,"
-    "videoMeetingLink,sessionAttendeesNames"
+    "videoMeetingLink"
 )
 
 

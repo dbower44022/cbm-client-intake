@@ -171,8 +171,9 @@ async def test_get_detail_assembles_partner():
         related={
             "contacts": [{"id": "c1", "name": "Pat", "emailAddress": "pat@x.org"}],
             "sessions": [{"id": "s1", "name": "Kickoff", "status": "Held",
-                          "dateStart": "2026-02-01 10:00:00", "sessionNotes": "<p>went well</p>",
-                          "sessionAttendeesNames": {"c1": "Pat", "c9": "Dana"}}],
+                          "dateStart": "2026-02-01 10:00:00", "sessionNotes": "<p>went well</p>"}],
+            # attendees are read via the sessionAttendees relationship link
+            "sessionAttendees": [{"id": "c1", "name": "Pat"}, {"id": "c9", "name": "Dana"}],
         },
     )
     d = await service.get_detail(PARTNER, fake, "P1")
@@ -401,7 +402,8 @@ async def test_create_session_stamps_owner_for_read_own():
 async def test_update_session_whitelists_fields_and_syncs_attendees():
     # existing attendee c1; user submits {c1, c3} -> relate c3, unrelate nothing;
     # c2 (not present, not submitted) untouched.
-    fake = Fake(records={("CSession", "s1"): {"name": "old", "sessionAttendeesIds": ["c1"]}})
+    fake = Fake(records={("CSession", "s1"): {"name": "old"}},
+                related={"sessionAttendees": [{"id": "c1"}]})
     await service.update_session(fake, "s1", {"name": "new", "hack": 1}, ["c1", "c3"])
     entity, rid, payload = fake.updates[0]
     assert (entity, rid) == ("CSession", "s1")
@@ -413,7 +415,8 @@ async def test_update_session_whitelists_fields_and_syncs_attendees():
 
 @pytest.mark.asyncio
 async def test_update_session_unrelates_removed_attendees():
-    fake = Fake(records={("CSession", "s1"): {"name": "s", "sessionAttendeesIds": ["c1", "c2"]}})
+    fake = Fake(records={("CSession", "s1"): {"name": "s"}},
+                related={"sessionAttendees": [{"id": "c1"}, {"id": "c2"}]})
     await service.update_session(fake, "s1", {}, ["c1"])   # drop c2
     assert ("CSession", "s1", "sessionAttendees", "c2") in fake.unrelates
     assert not fake.relates                                # c1 already present
@@ -469,7 +472,8 @@ async def test_sanitizer_fails_open_when_options_unavailable():
 
 @pytest.mark.asyncio
 async def test_get_session_exposes_attendees():
-    fake = Fake(records={("CSession", "s1"): {"name": "x", "sessionAttendeesIds": ["c1", "c2"]}})
+    fake = Fake(records={("CSession", "s1"): {"name": "x"}},
+                related={"sessionAttendees": [{"id": "c1"}, {"id": "c2"}]})
     rec = await service.get_session(fake, "s1")
     assert rec["attendees"] == ["c1", "c2"]
 
