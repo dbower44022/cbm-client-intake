@@ -243,6 +243,15 @@ class EspoClient:
             )
         return resp.json()
 
+    async def app_user(self) -> dict[str, Any]:
+        """The ``App/user`` payload for the current auth — includes the user's
+        ACL table (per-entity create/read/edit/delete levels)."""
+        async with httpx.AsyncClient(timeout=self._timeout) as client:
+            resp = await client.get(f"{self._base}/App/user", headers=self._headers)
+        if resp.status_code >= 400:
+            raise EspoError(f"App/user failed: HTTP {resp.status_code} {resp.text[:200]}")
+        return resp.json()
+
     async def metadata_enum_options(
         self, entity: str, field: str
     ) -> Optional[list[str]]:

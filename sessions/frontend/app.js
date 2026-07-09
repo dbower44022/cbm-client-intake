@@ -574,25 +574,32 @@
 
   // editing=false => read-optimized view (no edit controls); true => whole page
   // becomes the field editor with Save/Cancel.
+  function detailsAnyEditable() {
+    return ((currentDetails && currentDetails.sections) || []).some(function (s) { return s.editable; });
+  }
+
   function renderDetails(editing) {
     if (!currentDetails) return;
-    $("detailsEditBtn").hidden = editing;
+    // Edit button only if the user can actually edit at least one section.
+    $("detailsEditBtn").hidden = editing || !detailsAnyEditable();
     $("detailsEditActions").hidden = !editing;
     hide($("detailsNotice"));
     var host = $("detailsSections"); host.innerHTML = "";
     (currentDetails.sections || []).forEach(function (sec, si) {
+      var sectionEditing = editing && sec.editable;  // read-only sections never show inputs
       var card = document.createElement("div"); card.className = "sx__dsection";
       var h = document.createElement("div"); h.className = "sx__dsection-h";
       var t = document.createElement("span"); t.className = "sx__dsection-t"; t.textContent = sec.title;
       h.appendChild(t);
       if (sec.entity === "Contact") { var k = document.createElement("span"); k.className = "sx__dsection-k"; k.textContent = "Contact"; h.appendChild(k); }
+      if (editing && !sec.editable) { var ro = document.createElement("span"); ro.className = "sx__dsection-ro"; ro.textContent = "Read-only"; h.appendChild(ro); }
       card.appendChild(h);
-      var body = document.createElement("div"); body.className = editing ? "sx__dform" : "sx__dgrid";
+      var body = document.createElement("div"); body.className = sectionEditing ? "sx__dform" : "sx__dgrid";
       body.dataset.sectionIndex = si;
       var rendered = 0;
       sec.fields.forEach(function (f) {
-        if (editing) { body.appendChild(f.editable ? detailsEditField(f) : detailsReadField(f)); rendered++; return; }
-        // read view hides empty fields for readability
+        if (sectionEditing) { body.appendChild(f.editable ? detailsEditField(f) : detailsReadField(f)); rendered++; return; }
+        // read rendering (read mode, or a section the user can't edit): hide empties
         if (f.value == null || f.value === "" || (Array.isArray(f.value) && !f.value.length)) return;
         body.appendChild(detailsReadField(f)); rendered++;
       });
@@ -659,17 +666,39 @@
     });
     if (!updates.length) { renderDetails(false); return; }
     $("detailsSaveBtn").disabled = true;
-    try {
-      for (var i = 0; i < updates.length; i++) {
+    // Save each entity independently so one denied record doesn't lose the rest.
+    var okCount = 0, failures = [];
+    for (var i = 0; i < updates.length; i++) {
+      try {
         await api("/details/" + encodeURIComponent(updates[i].entity) + "/" + encodeURIComponent(updates[i].id),
           { method: "PUT", body: JSON.stringify({ changes: updates[i].changes }) });
+        okCount++;
+      } catch (e) {
+        if (e.status === 401) { showLogin(); return; }
+        failures.push({ entity: updates[i].entity, id: updates[i].id, status: e.status, msg: e.message });
       }
-      await loadDetails(currentDetail.id);
-      notice("detailsNotice", "Changes saved.", "success");
-    } catch (e) {
-      if (e.status === 401) { showLogin(); return; }
-      notice("detailsNotice", e.message, "error");
-    } finally { $("detailsSaveBtn").disabled = false; }
+    }
+    $("detailsSaveBtn").disabled = false;
+    await loadDetails(currentDetail.id);  // reflect whatever saved, back to read view
+    if (!failures.length) { notice("detailsNotice", "Changes saved.", "success"); return; }
+    var names = failures.map(function (f) { return sectionTitleFor(f.entity, f.id); });
+    var msg;
+    if (failures.every(function (f) { return f.status === 403; })) {
+      msg = "You don't have permission to edit " + names.join(", ") +
+            (okCount ? ". Your other changes were saved." : ".");
+    } else {
+      msg = (okCount ? "Saved " + okCount + " section(s). " : "") +
+            "Couldn't save " + names.join(", ") + ": " + failures[0].msg;
+    }
+    notice("detailsNotice", msg, "error");
+  }
+
+  function sectionTitleFor(entity, id) {
+    var list = (currentDetails && currentDetails.sections) || [];
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].entity === entity && list[i].id === id) return list[i].title;
+    }
+    return entity;
   }
 
   function renderSessions(d) {

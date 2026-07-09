@@ -78,14 +78,38 @@ def _select_for(spec: list[dict[str, Any]]) -> str:
     return ",".join(["id", "name", *(f["name"] for f in spec)])
 
 
-def _section(title: str, entity: str, rec: dict[str, Any], spec: list[dict[str, Any]]) -> dict[str, Any]:
+def _section(
+    title: str, entity: str, rec: dict[str, Any], spec: list[dict[str, Any]], editable: bool
+) -> dict[str, Any]:
     fields = []
     for f in spec:
         value = rec.get(f["name"])
         if value in (None, "", []) and not f["editable"]:
             continue  # hide empty read-only fields; keep empty editable ones
         fields.append({**f, "value": value})
-    return {"title": title, "entity": entity, "id": rec.get("id"), "name": rec.get("name"), "fields": fields}
+    return {
+        "title": title, "entity": entity, "id": rec.get("id"),
+        "name": rec.get("name"), "editable": editable, "fields": fields,
+    }
+
+
+async def _editable_entities(client: SessionClient, entities: set[str]) -> dict[str, bool]:
+    """Per-entity edit permission for the current user (from their ACL table).
+    ``edit == "no"`` => not editable here (rendered read-only). Fails open (treats
+    as editable) if the ACL can't be read, so the graceful per-entity save still
+    catches any real denial."""
+    try:
+        table = (await client.app_user()).get("acl", {}).get("table", {})
+    except Exception:  # noqa: BLE001 — fail open; save-time 403s are handled too
+        return {e: True for e in entities}
+    result: dict[str, bool] = {}
+    for e in entities:
+        perm = table.get(e)
+        level = perm.get("edit") if isinstance(perm, dict) else perm
+        # Only an explicit "no" (or False) means read-only; a missing entry is
+        # permissive (fail open — a real record-level denial is caught on save).
+        result[e] = level not in ("no", False)
+    return result
 
 
 class _MetaCache:
@@ -108,6 +132,8 @@ async def build_details(
     one per related contact, each with its editable field spec and current values."""
     meta = _MetaCache(client)
     parent = await client.get(cfg.parent_entity, parent_id, select=cfg.detail_select)
+    entities = {e for _, e, _ in cfg.details_entities} | {CONTACT}
+    can_edit = await _editable_entities(client, entities)
 
     sections: list[dict[str, Any]] = []
     for title, entity, id_attr in cfg.details_entities:
@@ -116,7 +142,7 @@ async def build_details(
             continue
         spec = await meta.spec(entity)
         rec = await client.get(entity, rec_id, select=_select_for(spec))
-        sections.append(_section(title, entity, rec, spec))
+        sections.append(_section(title, entity, rec, spec, can_edit.get(entity, True)))
 
     # A section per related contact.
     contact_spec = await meta.spec(CONTACT)
@@ -125,7 +151,9 @@ async def build_details(
         select=_select_for(contact_spec), max_size=200,
     )
     for c in contacts.get("list", []):
-        sections.append(_section(c.get("name") or "Contact", CONTACT, c, contact_spec))
+        sections.append(_section(
+            c.get("name") or "Contact", CONTACT, c, contact_spec, can_edit.get(CONTACT, True)
+        ))
 
     return {"id": parent_id, "sections": sections}
 

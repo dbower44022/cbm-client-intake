@@ -133,6 +133,7 @@
 }
 .sx__dsection-t { font-weight: 700; color: var(--cbm-navy, #123); }
 .sx__dsection-k { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--cbm-slate-700, #667); }
+.sx__dsection-ro { margin-left: auto; font-size: 0.72rem; font-weight: 600; color: var(--cbm-slate-700, #667); background: #eef1f6; border: 1px solid #dbe2ec; border-radius: 999px; padding: 0.05rem 0.5rem; }
 /* read view: dense multi-column definition grid */
 .sx__dgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr)); gap: 0 1.5rem; padding: 0.5rem 1rem; }
 .sx__dgrid .sx__fact { grid-template-columns: 11rem 1fr; border-bottom: 1px solid #f0f3f7; }

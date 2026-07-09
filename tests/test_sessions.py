@@ -26,11 +26,12 @@ def _clear_settings_cache():
 # --- fake CRM client -------------------------------------------------------
 
 class Fake:
-    def __init__(self, *, mentors=None, related=None, records=None, meta_fields=None):
+    def __init__(self, *, mentors=None, related=None, records=None, meta_fields=None, acl=None):
         self.mentors = mentors or []            # rows returned by list(CMentorProfile)
         self.related = related or {}            # link name -> [rows]
         self.records = dict(records or {})      # (entity, id) -> dict
         self.meta_fields = meta_fields or {}
+        self.acl = acl or {}                    # {entity: {"edit": "no"|"all"|...}}
         self.created = []
         self.updates = []
         self.relates = []
@@ -65,6 +66,9 @@ class Fake:
 
     async def metadata(self, key):
         return self.meta_fields
+
+    async def app_user(self):
+        return {"acl": {"table": self.acl}}
 
 
 # --- config ----------------------------------------------------------------
@@ -304,6 +308,24 @@ async def test_build_details_has_company_profile_and_contact_sections():
     assert ("Company", "Account") in kinds
     assert ("Partnership Profile", "CPartnerProfile") in kinds
     assert ("Pat", "Contact") in kinds
+    # no ACL restrictions => every section editable
+    assert all(s["editable"] for s in d["sections"])
+
+
+@pytest.mark.asyncio
+async def test_build_details_marks_readonly_when_user_cannot_edit():
+    fake = Fake(
+        records={("CPartnerProfile", "P1"): {"name": "Acme", "partnerCompanyId": "acct1"},
+                 ("Account", "acct1"): {"name": "Acme Co"}},
+        related={},
+        meta_fields={"title": {"type": "varchar"}},
+        acl={"Account": {"read": "all", "edit": "no"},          # can't edit companies
+             "CPartnerProfile": {"read": "all", "edit": "all"}},  # can edit the profile
+    )
+    d = await details.build_details(PARTNER, fake, "P1")
+    by_entity = {s["entity"]: s for s in d["sections"]}
+    assert by_entity["Account"]["editable"] is False
+    assert by_entity["CPartnerProfile"]["editable"] is True
 
 
 # --- create / update session ----------------------------------------------
