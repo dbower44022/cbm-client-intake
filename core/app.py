@@ -37,7 +37,13 @@ from .submission_log import (
 )
 from .version import __version__
 
-logging.basicConfig(level=logging.INFO)
+# Prefix every app log line with the date/time so run logs show when each
+# event happened, e.g. "INFO: 2026-01-01 01:00 - created session ...".
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s: %(asctime)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M",
+)
 log = logging.getLogger("cbm_intake")
 
 SHARED_DIR = Path(__file__).resolve().parent.parent / "frontend" / "shared"
