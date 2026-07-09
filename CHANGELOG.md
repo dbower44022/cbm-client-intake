@@ -10,10 +10,18 @@ deploy marker on App Platform.
 - **Session Management — redesigned record detail into a tabbed, information-
   dense view.** Opening an engagement / partner / sponsor now shows a tab bar
   common to all three domains: **Overview · Details · Sessions · Communications ·
-  Documents** (`/session` → `detailTabs`). Phase-one delivery builds **Overview**
-  and **Sessions**; **Details** (full editable company/contact/profile fields),
-  **Communications** (email/SMS threads), and **Documents** (uploads) ship as
-  placeholders.
+  Documents** (`/session` → `detailTabs`). Phase-one delivery builds **Overview**,
+  **Details**, and **Sessions**; **Communications** (email/SMS threads) and
+  **Documents** (uploads) ship as placeholders.
+- **Details tab** — a **read-optimized** view of the org records behind a record
+  (the company Account, the client/partnership/sponsor profile, and each related
+  contact), with an **Edit** button that flips the whole page into a field editor
+  (Save / Cancel). Fields are read **live from CRM metadata** (filtered to the
+  editable scalar fields, humanized labels) so it tracks the schema; the read view
+  hides empties for scannability, the edit view exposes every editable field.
+  Enum/multiEnum drift is dropped on save (per the non-required-enum policy);
+  each changed entity is saved with its own `PUT` as the logged-in user (ACL
+  enforced). New endpoints `GET/PUT /{slug}/api/details/…` (`sessions/details.py`).
 - **Overview tab** — a full-width, review-oriented screen:
   - **Facts rail** (left, resizable via a drag splitter): key identity (status
     badge, a single aggregated **Company** link, primary contact, meeting

@@ -109,6 +109,11 @@ class DomainConfig:
     # simply owns no records yet — no action implied; a refresh picks up new ones).
     empty_message: str = "No records found."
 
+    # Details tab: the org records shown as editable sections — (title, entity,
+    # id_attr on the parent). id_attr "id" means the parent record itself.
+    # Related contacts are added as their own sections automatically.
+    details_entities: tuple[tuple[str, str, str], ...] = ()
+
     # Overview tab: the curated "most important" facts (top of the detail view).
     overview_items: tuple[OverviewItem, ...] = ()
 
@@ -234,6 +239,10 @@ MENTOR = DomainConfig(
     overall_notes_attr="engagementNotes",
     overall_notes_label="Engagement Notes",
     overall_notes_type="html",
+    details_entities=(
+        ("Company", "Account", "clientOrganizationId"),
+        ("Client Business Profile", "CClientProfile", "engagementClientId"),
+    ),
     supports_comentor=True,
     status_attr="engagementStatus",
     status_values=MENTOR_ACTIVE_STATUSES,
@@ -293,6 +302,10 @@ PARTNER = DomainConfig(
     overall_notes_attr="partnerNotes",
     overall_notes_label="Partner Notes",
     overall_notes_type="html",
+    details_entities=(
+        ("Company", "Account", "partnerCompanyId"),
+        ("Partnership Profile", "CPartnerProfile", "id"),
+    ),
 )
 
 SPONSOR = DomainConfig(
@@ -340,6 +353,10 @@ SPONSOR = DomainConfig(
     overall_notes_attr="description",
     overall_notes_label="Sponsor Notes",
     overall_notes_type="longtext",
+    details_entities=(
+        ("Company", "Account", "sponsorCompanyId"),
+        ("Sponsor Profile", "CSponsorProfile", "id"),
+    ),
 )
 
 DOMAINS: dict[str, DomainConfig] = {d.slug: d for d in (MENTOR, PARTNER, SPONSOR)}

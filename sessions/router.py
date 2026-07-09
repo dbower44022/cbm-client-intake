@@ -20,6 +20,7 @@ from assignments.espo_user import client_for
 from core.config import get_settings
 from core.espo import EspoError
 
+from . import details as details_svc
 from . import service
 from .config import DomainConfig
 
@@ -37,12 +38,16 @@ class CoMentorIn(BaseModel):
     mentorProfileId: str
 
 
+class DetailsSaveIn(BaseModel):
+    changes: dict = {}
+
+
 # Phase-one detail tabs, common to all three domains. Overview + Sessions are
 # built; Details (full company/contact/profile fields, editable), Communications
 # (email/SMS threads), and Documents (uploads) are placeholders for now.
 COMMON_DETAIL_TABS = [
     {"key": "overview", "label": "Overview"},
-    {"key": "details", "label": "Details", "placeholder": True},
+    {"key": "details", "label": "Details"},
     {"key": "sessions", "label": "Sessions"},
     {"key": "communications", "label": "Communications", "placeholder": True},
     {"key": "documents", "label": "Documents", "placeholder": True},
@@ -133,6 +138,26 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             return await service.get_detail(cfg, client, parent_id)
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not load record")
+
+    @router.get("/details/{parent_id}")
+    async def details(parent_id: str, request: Request) -> dict:
+        """The Details tab: editable field sections for the company, profile, and
+        related contacts behind this record."""
+        user = _require_user(request)
+        client = client_for(get_settings(), user)
+        try:
+            return await details_svc.build_details(cfg, client, parent_id)
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not load details")
+
+    @router.put("/details/{entity}/{record_id}")
+    async def save_details(entity: str, record_id: str, body: DetailsSaveIn, request: Request) -> dict:
+        user = _require_user(request)
+        client = client_for(get_settings(), user)
+        try:
+            return await details_svc.save_details(client, entity, record_id, body.changes)
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not save details")
 
     @router.get("/peek/{entity}/{record_id}")
     async def peek(entity: str, record_id: str, request: Request) -> dict:

@@ -10,7 +10,7 @@ from core.app import create_app
 from core.config import get_settings
 from core.espo import EspoError
 from forms import info_request
-from sessions import service
+from sessions import details, service
 from sessions.config import DOMAINS, MENTOR, PARTNER, SPONSOR
 
 _USER = {"userId": "u1", "userName": "boss", "name": "The Boss", "isAdmin": True, "token": "tok"}
@@ -249,6 +249,63 @@ async def test_get_detail_includes_comentors_for_mentor():
     assert d["coMentors"] == [{"id": "m2", "name": "Co Mentor"}]
 
 
+# --- Details tab -----------------------------------------------------------
+
+def test_details_label_humanizes_field_names():
+    assert details._label("partnershipStartDate") == "Partnership Start Date"
+    assert details._label("cIndustrySector") == "Industry Sector"
+    assert details._label("cBMValueProvided") == "CBM Value Provided"
+
+
+def test_details_field_spec_filters_and_flags():
+    spec = {f["name"]: f for f in details._field_spec({
+        "name": {"type": "personName"},              # composite name — excluded
+        "title": {"type": "varchar"},                # editable
+        "industrySector": {"type": "enum", "options": ["A", "B", ""]},  # blank dropped
+        "assignedUser": {"type": "link"},            # link — excluded
+        "createdAt": {"type": "datetime"},           # system — excluded
+        "emailAddressIsInvalid": {"type": "bool"},   # noise suffix — excluded
+        "totalContribution": {"type": "currency"},   # shown but read-only
+    })}
+    assert spec["title"]["editable"] is True
+    assert spec["industrySector"]["options"] == ["A", "B"]
+    assert spec["totalContribution"]["editable"] is False
+    for gone in ("name", "assignedUser", "createdAt", "emailAddressIsInvalid"):
+        assert gone not in spec
+
+
+@pytest.mark.asyncio
+async def test_save_details_whitelists_and_drops_drifted_enum():
+    fake = Fake(meta_fields={
+        "title": {"type": "varchar"},
+        "industrySector": {"type": "enum", "options": ["A", "B"]},
+    })
+    res = await details.save_details(
+        fake, "Account", "acct1",
+        {"title": "COO", "industrySector": "Z", "bogus": "x", "id": "hack"},
+    )
+    # non-editable/unknown keys dropped, drifted enum "Z" dropped, title kept
+    assert fake.updates == [("Account", "acct1", {"title": "COO"})]
+    assert res["saved"] == ["title"]
+
+
+@pytest.mark.asyncio
+async def test_build_details_has_company_profile_and_contact_sections():
+    fake = Fake(
+        records={
+            ("CPartnerProfile", "P1"): {"name": "Acme", "partnerCompanyId": "acct1"},
+            ("Account", "acct1"): {"name": "Acme Co"},
+        },
+        related={"contacts": [{"id": "c1", "name": "Pat", "title": "COO"}]},
+        meta_fields={"title": {"type": "varchar"}, "website": {"type": "url"}},
+    )
+    d = await details.build_details(PARTNER, fake, "P1")
+    kinds = [(s["title"], s["entity"]) for s in d["sections"]]
+    assert ("Company", "Account") in kinds
+    assert ("Partnership Profile", "CPartnerProfile") in kinds
+    assert ("Pat", "Contact") in kinds
+
+
 # --- create / update session ----------------------------------------------
 
 @pytest.mark.asyncio
@@ -427,8 +484,9 @@ def test_session_endpoint_reports_domain(monkeypatch):
     assert [t["key"] for t in tabs] == [
         "overview", "details", "sessions", "communications", "documents",
     ]
-    assert next(t for t in tabs if t["key"] == "details")["placeholder"] is True
-    assert "placeholder" not in next(t for t in tabs if t["key"] == "sessions")
+    # Overview/Details/Sessions are built; Communications/Documents are placeholders
+    assert next(t for t in tabs if t["key"] == "communications")["placeholder"] is True
+    assert "placeholder" not in next(t for t in tabs if t["key"] == "details")
 
 
 def test_partner_has_no_comentor_endpoints(monkeypatch):

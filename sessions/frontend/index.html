@@ -80,6 +80,21 @@
         </div>
       </div>
 
+      <!-- Details: read-optimized view of company / profile / contacts, with an
+           Edit button that flips the whole page into edit mode -->
+      <div class="sx__dpanel" data-dpanel="details" hidden>
+        <div class="sx__details-bar">
+          <button type="button" class="cbm-button" id="detailsEditBtn">Edit</button>
+          <span id="detailsEditActions" hidden>
+            <button type="button" class="cbm-button" id="detailsSaveBtn">Save changes</button>
+            <button type="button" class="cbm-button cbm-button--secondary" id="detailsCancelBtn">Cancel</button>
+          </span>
+        </div>
+        <p class="sx__notice" id="detailsNotice" role="status" hidden></p>
+        <p class="sx__loading" id="detailsLoading" hidden>Loading…</p>
+        <div id="detailsSections"></div>
+      </div>
+
       <!-- Sessions list (+ CBM contacts on the mentor domain) -->
       <div class="sx__dpanel" data-dpanel="sessions" hidden>
         <table class="sx__table" id="sessionsTable" hidden>

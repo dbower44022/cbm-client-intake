@@ -16,6 +16,8 @@
   var currentDetail = null; // the open parent detail (has contacts/sessions)
   var currentSession = null;// the session being edited (null attendees only for new)
   var editorSnapshot = {};  // {field: JSON of value at render} — save diffs against this
+  var currentDetails = null;// Details tab payload for the open record (lazy-loaded)
+  var detailsSnapshot = {}; // "sectionIndex:field" -> JSON of value at edit-render
   var search = "";
 
   function $(id) { return document.getElementById(id); }
@@ -71,6 +73,10 @@
 
   // Detail tabs are built from the domain config (see buildDetailTabs, called
   // once config loads).
+  // Details tab (read view + Edit toggle).
+  $("detailsEditBtn").addEventListener("click", function () { renderDetails(true); });
+  $("detailsSaveBtn").addEventListener("click", function () { saveDetails(); });
+  $("detailsCancelBtn").addEventListener("click", function () { renderDetails(false); });
   // Pop-up detail modal.
   $("peekClose").addEventListener("click", closePeek);
   $("peekBackdrop").addEventListener("click", closePeek);
@@ -118,6 +124,7 @@
     Array.prototype.forEach.call(document.querySelectorAll("[data-dpanel]"), function (p) {
       p.hidden = p.dataset.dpanel !== tab;
     });
+    if (tab === "details") ensureDetails();
   }
 
   // Draggable splitter: resize the facts rail (wider = more room for the
@@ -246,6 +253,7 @@
     catch (e) { if (e.status === 401) { showLogin(); return; } notice("listNotice", e.message, "error"); return; }
     $("detailName").textContent = currentDetail.name || "(unnamed)";
     $("detailKind").textContent = currentDetail.parentLabel || "";
+    currentDetails = null;  // Details tab reloads for the new record on activation
     hide($("detailNotice"));
     renderOverview(currentDetail);
     renderSessions(currentDetail);
@@ -544,6 +552,126 @@
 
   function closePeek() { hide($("peekModal")); }
 
+  // --- Details tab: read-optimized by default, whole page flips to edit ---
+  async function ensureDetails() {
+    if (!currentDetail) return;
+    if (currentDetails && currentDetails._for === currentDetail.id) return;
+    await loadDetails(currentDetail.id);
+  }
+
+  async function loadDetails(id) {
+    show($("detailsLoading")); $("detailsSections").innerHTML = ""; hide($("detailsNotice"));
+    $("detailsEditBtn").hidden = true; $("detailsEditActions").hidden = true;
+    try {
+      var res = await api("/details/" + encodeURIComponent(id));
+      res._for = id; currentDetails = res;
+      renderDetails(false);
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      notice("detailsNotice", e.message, "error");
+    } finally { hide($("detailsLoading")); }
+  }
+
+  // editing=false => read-optimized view (no edit controls); true => whole page
+  // becomes the field editor with Save/Cancel.
+  function renderDetails(editing) {
+    if (!currentDetails) return;
+    $("detailsEditBtn").hidden = editing;
+    $("detailsEditActions").hidden = !editing;
+    hide($("detailsNotice"));
+    var host = $("detailsSections"); host.innerHTML = "";
+    (currentDetails.sections || []).forEach(function (sec, si) {
+      var card = document.createElement("div"); card.className = "sx__dsection";
+      var h = document.createElement("div"); h.className = "sx__dsection-h";
+      var t = document.createElement("span"); t.className = "sx__dsection-t"; t.textContent = sec.title;
+      h.appendChild(t);
+      if (sec.entity === "Contact") { var k = document.createElement("span"); k.className = "sx__dsection-k"; k.textContent = "Contact"; h.appendChild(k); }
+      card.appendChild(h);
+      var body = document.createElement("div"); body.className = editing ? "sx__dform" : "sx__dgrid";
+      body.dataset.sectionIndex = si;
+      var rendered = 0;
+      sec.fields.forEach(function (f) {
+        if (editing) { body.appendChild(f.editable ? detailsEditField(f) : detailsReadField(f)); rendered++; return; }
+        // read view hides empty fields for readability
+        if (f.value == null || f.value === "" || (Array.isArray(f.value) && !f.value.length)) return;
+        body.appendChild(detailsReadField(f)); rendered++;
+      });
+      if (!rendered) {
+        var none = document.createElement("p"); none.className = "sx__muted"; none.textContent = "No details on file.";
+        body.appendChild(none);
+      }
+      card.appendChild(body); host.appendChild(card);
+    });
+    if (editing) snapshotDetails();
+    window.scrollTo(0, 0);
+  }
+
+  function detailsReadField(f) {
+    var row = document.createElement("div"); row.className = "sx__fact";
+    var l = document.createElement("span"); l.className = "sx__fact-l"; l.textContent = f.label;
+    var v = document.createElement("span"); v.className = "sx__fact-v";
+    var t = f.type, val = f.value;
+    if (val == null || val === "" || (Array.isArray(val) && !val.length)) { v.textContent = "—"; v.className += " sx__muted"; }
+    else if (t === "multiEnum" && Array.isArray(val)) { val.forEach(function (o) { var c = document.createElement("span"); c.className = "sx__chip"; c.textContent = o; v.appendChild(c); }); }
+    else if (t === "bool") { v.textContent = val ? "Yes" : "No"; }
+    else if (t === "date") { v.textContent = fmtDate(val); }
+    else if (t === "datetime") { v.textContent = fmtWhen(val); }
+    else if (t === "wysiwyg") { v.innerHTML = sanitizeHtml(String(val)); }
+    else if (t === "text") { v.className += " sx__pre"; v.textContent = String(val); }
+    else { v.textContent = String(val); }
+    row.appendChild(l); row.appendChild(v); return row;
+  }
+
+  function detailsEditField(f) {
+    var wrap = document.createElement("div"); wrap.className = "cbm-field field-" + f.type;
+    var input = makeInput(f, f.value); input.dataset.field = f.name; input.dataset.type = f.type;
+    if (f.type === "bool") {
+      wrap.className += " cbm-field--check";
+      var lab = document.createElement("label"); lab.appendChild(input); lab.appendChild(document.createTextNode(" " + f.label));
+      wrap.appendChild(lab); return wrap;
+    }
+    var label = document.createElement("label"); label.textContent = f.label;
+    wrap.appendChild(label); wrap.appendChild(input); return wrap;
+  }
+
+  function snapshotDetails() {
+    detailsSnapshot = {};
+    Array.prototype.forEach.call($("detailsSections").querySelectorAll("[data-section-index]"), function (body) {
+      var si = body.dataset.sectionIndex;
+      Array.prototype.forEach.call(body.querySelectorAll("[data-field]"), function (el) {
+        detailsSnapshot[si + ":" + el.dataset.field] = JSON.stringify(readField(el));
+      });
+    });
+  }
+
+  // Save = one PUT per entity that has changed fields (diffed vs. the edit-render
+  // snapshot, so a drifted untouched enum is never resent), then reload the read view.
+  async function saveDetails() {
+    var sections = currentDetails.sections || [];
+    var updates = [];
+    Array.prototype.forEach.call($("detailsSections").querySelectorAll("[data-section-index]"), function (body) {
+      var si = body.dataset.sectionIndex, sec = sections[si], changes = {};
+      Array.prototype.forEach.call(body.querySelectorAll("[data-field]"), function (el) {
+        var v = readField(el);
+        if (JSON.stringify(v) !== detailsSnapshot[si + ":" + el.dataset.field]) changes[el.dataset.field] = v;
+      });
+      if (Object.keys(changes).length) updates.push({ entity: sec.entity, id: sec.id, changes: changes });
+    });
+    if (!updates.length) { renderDetails(false); return; }
+    $("detailsSaveBtn").disabled = true;
+    try {
+      for (var i = 0; i < updates.length; i++) {
+        await api("/details/" + encodeURIComponent(updates[i].entity) + "/" + encodeURIComponent(updates[i].id),
+          { method: "PUT", body: JSON.stringify({ changes: updates[i].changes }) });
+      }
+      await loadDetails(currentDetail.id);
+      notice("detailsNotice", "Changes saved.", "success");
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      notice("detailsNotice", e.message, "error");
+    } finally { $("detailsSaveBtn").disabled = false; }
+  }
+
   function renderSessions(d) {
     var list = d.sessions || [];
     var tb = $("sessionsBody"); tb.innerHTML = "";
@@ -712,7 +840,7 @@
     } else if (f.type === "multiEnum") {
       el = document.createElement("div"); el.className = "checkgrid";
       var sel = value || [];
-      (fieldOptions[f.name] || []).forEach(function (o) {
+      (f.options || fieldOptions[f.name] || []).forEach(function (o) {
         var lab = document.createElement("label"); lab.className = "checkgrid__opt";
         var cb = document.createElement("input"); cb.type = "checkbox"; cb.value = o; cb.checked = sel.indexOf(o) >= 0;
         lab.appendChild(cb); lab.appendChild(document.createTextNode(" " + o));
