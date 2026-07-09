@@ -4,7 +4,7 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
-## [0.31.0] — 2026-07-08
+## [0.31.0] — 2026-07-09
 
 ### Added
 - **Session Management tools** — three staff-only, team-gated routes
@@ -32,6 +32,23 @@ deploy marker on App Platform.
 - **Required fields are enforced in the editor**, read live from CRM metadata
   (e.g. `CSession.dateStart`): required fields show a `*` and Save is blocked
   with a readable message instead of surfacing a raw CRM `validationFailure`.
+- **Session name is pre-filled and the user's value wins.** The New Session
+  editor pre-fills a default title (`YYYY-MM-DD - <parent name>`) so the user
+  sees what will be stored; create now sends the name verbatim. Pairs with the
+  CRM name formula being set to keep any value already present (else it would
+  overwrite the app's name).
+
+### Changed
+- App log lines are timestamped — `LEVEL: YYYY-MM-DD HH:MM - message` — so run
+  logs show when each event (session create, CRM error) happened.
+
+### Notes
+- Mentor domain driven live end-to-end on crm-test. CRM prerequisites to run
+  the tool (per CLAUDE.md): create the Partner/Sponsor Management Teams, grant
+  the gate roles CSession create + read-own/edit-own, enable `assignedUsers`
+  (collaborators) on `CSession` (so read-own credits the creator — otherwise
+  create 403s and sessions are invisible), and make the `CSession` name formula
+  keep-if-present.
 
 ## [0.30.1] — 2026-07-07
 

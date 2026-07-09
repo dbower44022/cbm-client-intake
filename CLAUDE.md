@@ -484,21 +484,54 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   enum omitted (preserves the stored value on update), multiEnum keeps only the valid
   members; **fails open** if options can't be fetched. The domain `default_session_type`
   values are all valid options, so new sessions get a valid type.
+- **Required fields enforced from CRM metadata (2026-07-08).** `CSession.dateStart`
+  is required; the editor reads which fields the CRM marks required
+  (`service.field_required` → `/fields` → the frontend), renders a `*`, and blocks
+  Save with a readable "Please complete: …" message instead of surfacing a raw CRM
+  400 (`validationFailure`, `dateStart:required`). Metadata-driven, not hard-coded,
+  so any required field is caught.
+- **Session name: default pre-filled, user value wins (2026-07-08).** `CSession`
+  has a before-save **name formula**; left unconditional it overwrites whatever the
+  app sends. The editor pre-fills a default title (`YYYY-MM-DD - <parent name>`,
+  `defaultSessionName` in `app.js`) so the user sees what will be stored, and
+  **create sends every field** (name verbatim; update still diffs). **CRM
+  prerequisite:** the name formula must be *keep-if-present* —
+  `ifThen(name == null || name == '', name = <expr>)` — so a supplied/edited name
+  survives; otherwise the formula clobbers it.
+- **CRM ACL prerequisite — `CSession` must have a working owner field (2026-07-08,
+  live).** With the gate role's `CSession` read = `own`, EspoCRM ACL-checks the
+  **read-back** that a create does to return the new record: if the record isn't
+  owned by the creator, the **create itself returns 403** (and it's invisible in
+  lists). Fix is CRM-side: enable an assignment field `read-own` credits — **enable
+  `assignedUsers` (collaborators) on `CSession`, as `CEngagement` has** (its single
+  `assignedUser` is disabled — the app's `assignedUserId` write is ignored, but
+  `assignedUsersIds` sticks). With assignment enabled, the owner-stamp makes the
+  creator the owner → create 200 + the session shows. This was the "created but
+  doesn't show" + "403 on create" chain in live testing — resolved CRM-side.
 - **Phase 1 (CRUD) only.** Google Calendar/Meet scheduling (populating
   `videoMeetingLink`) and Meet transcription (a new `sessionTranscription` wysiwyg
   field) are Phases 2–3, not built.
-- **Status (2026-07-08): built + first live drive against crm-test (mentor domain,
-  as an admin); 281 tests green (28 in `tests/test_sessions.py`).** Live testing
-  surfaced + fixed the two items above (owner-stamping for read-own visibility;
-  enum-drift-on-save resilience). **Still NOT driven live as a non-admin team
-  member.** **CRM prerequisites: create the `Partner Management Team` + `Sponsor
-  Management Team` in both CRMs** (`Mentor Team` already exists), grant the gate
-  roles `CSession` read/create/edit (+ the parent/reverse links), and decide the
-  read-own-vs-broader ACL question above. On branch `feat/session-management`
-  (not pushed). Note: crm-test seed sessions carry out-of-enum `sessionType`
-  values (a data-hygiene cleanup, harmless to the app).
+- **Status (2026-07-09): built + driven live end-to-end against crm-test (mentor
+  domain — create-and-show working); v0.31.0; 282 tests green (29 in
+  `tests/test_sessions.py`).** Live testing surfaced + fixed: owner-stamping
+  (read-own visibility), enum-drift-on-save resilience, required-field enforcement,
+  and the name pre-fill / verbatim-on-create — and clarified the CRM prerequisites
+  below. **Still NOT driven live as a non-admin team member, nor for the
+  partner/sponsor domains.** On branch `feat/session-management` (**not pushed**).
+  **CRM prerequisites** (done on crm-test during testing; **replicate on prod**):
+  1. Create `Partner Management Team` + `Sponsor Management Team` (`Mentor Team`
+     exists); add staff.
+  2. Grant the gate roles `CSession` **create + read-own/edit-own** (+ the parent /
+     reverse links).
+  3. **Enable `assignedUsers` (collaborators) on `CSession`** so read-own credits
+     the owner-stamp — else create 403s / sessions invisible (see the ACL bullet).
+  4. Make the `CSession` **name formula keep-if-present** (see the name bullet).
+  5. Decide the read-own-vs-broader ACL question (whether a mentor should see
+     pre-existing / others' sessions on their engagement).
+  Note: crm-test seed sessions carry out-of-enum `sessionType` values (harmless; a
+  data-hygiene cleanup). **UI polish is the next work item** (a follow-up session).
 
-## Current status (updated 2026-07-08)
+## Current status (updated 2026-07-09)
 
 **Prod is on v0.28.0** (prod + crm-test confirmed on `/healthz` 2026-07-07;
 redeployed on each push), and prod answers on the
@@ -506,11 +539,16 @@ redeployed on each push), and prod answers on the
 app as PRIMARY, Cloudflare CNAME grey-cloud → the app's default hostname; the
 `…ondigitalocean.app` URL still works). Shipped 2026-07-05..07 (see CHANGELOG):
 
-- **Session Management tools** (built 2026-07-08, branch `feat/session-management`,
-  NOT yet pushed/deployed/live-verified) — `/mentorsessions` `/partnersessions`
-  `/sponsorsessions`: one engine, three team-gated routes, recording `CSession`
-  meetings against the records each manager owns. Full detail + the CRM
-  prerequisites in the **Session Management tools** section above.
+- **Session Management tools — v0.31.0** (built 2026-07-08, branch
+  `feat/session-management`, **NOT yet pushed/deployed**; mentor domain **driven
+  live end-to-end on crm-test** 2026-07-08..09) — `/mentorsessions`
+  `/partnersessions` `/sponsorsessions`: one engine, three team-gated routes,
+  recording `CSession` meetings against the records each manager owns. Live testing
+  hardened it (owner-stamp visibility, enum-drift/required-field save resilience,
+  name pre-fill) and pinned the CRM prerequisites (CSession `assignedUsers`
+  enabled, name formula keep-if-present, gate teams + ACL). Full detail in the
+  **Session Management tools** section above. **Next: a UI-polish pass** (planned
+  follow-up session).
 - **v0.30.0** (built 2026-07-07, NOT yet pushed) — **authenticated portal at
   `/` + single sign-on**: root becomes a CRM login; team-based links (Mentor
   Team → CRM + public forms; the three admin teams → their apps; admins → all;
