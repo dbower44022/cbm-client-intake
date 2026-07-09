@@ -4,6 +4,35 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.31.0] — 2026-07-08
+
+### Added
+- **Session Management tools** — three staff-only, team-gated routes
+  (`/mentorsessions`, `/partnersessions`, `/sponsorsessions`) from one
+  configurable engine. Each manager (mentor / partner manager / sponsor manager)
+  reviews the records they own (engagements / managed partners / managed
+  sponsors), opens one to a read-only detail (parent + related contacts +
+  existing sessions), and creates/edits **`CSession`** meetings (notes, next
+  steps, attendees, status). Mentors can also attach co-mentors. It's one
+  `CSession` entity with the parent link swapped, driven by a per-domain
+  `DomainConfig`; reuses the portal SSO, per-request team gate, per-user
+  EspoClient, and the type-driven field editor. New settings:
+  `SESSION_{MENTOR,PARTNER,SPONSOR}_ALLOWED_TEAMS`. Phase 1 (CRUD); Google
+  Calendar/Meet + transcription are later phases. On branch, not yet deployed.
+
+### Fixed
+- **Sessions are stamped with their creator** (`assignedUser`/`assignedUsers`)
+  on create, so a role whose `CSession` scope is read-own can see the session it
+  just made.
+- **Enum drift can't 400 a session save.** The editor sends only changed fields
+  (diffed against a render-time snapshot), and the service drops enum/multiEnum
+  values not in the live CRM options before create/update (fails open) — so a
+  stored value that has drifted out of its field's options no longer fails the
+  whole save.
+- **Required fields are enforced in the editor**, read live from CRM metadata
+  (e.g. `CSession.dateStart`): required fields show a `*` and Save is blocked
+  with a readable message instead of surfacing a raw CRM `validationFailure`.
+
 ## [0.30.1] — 2026-07-07
 
 ### Changed
