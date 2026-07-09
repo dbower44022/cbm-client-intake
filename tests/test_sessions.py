@@ -157,18 +157,85 @@ async def test_mentor_list_filters_active_statuses():
 async def test_get_detail_assembles_partner():
     fake = Fake(
         records={("CPartnerProfile", "P1"): {
-            "name": "Acme", "partnershipStatus": "Active", "partnerCompanyName": "Acme Co"}},
+            "name": "Acme", "partnershipStatus": "Active",
+            "partnerCompanyName": "Acme Co", "partnerCompanyId": "acct1",
+            "primaryPartnercontactId": "cprimary", "partnerNotes": "<p>key relationship</p>"}},
         related={
             "contacts": [{"id": "c1", "name": "Pat", "emailAddress": "pat@x.org"}],
-            "sessions": [{"id": "s1", "name": "Kickoff", "status": "Held", "dateStart": "2026-02-01 10:00:00"}],
+            "sessions": [{"id": "s1", "name": "Kickoff", "status": "Held",
+                          "dateStart": "2026-02-01 10:00:00", "sessionNotes": "<p>went well</p>",
+                          "sessionAttendeesNames": {"c1": "Pat", "c9": "Dana"}}],
         },
     )
     d = await service.get_detail(PARTNER, fake, "P1")
     assert d["name"] == "Acme"
-    assert {"label": "Partnership status", "value": "Active"} in d["summary"]
+    # curated Overview facts (in config order), grouped into sections, with the
+    # company linkable to a peek
+    status = next(i for i in d["overview"] if i["label"] == "Partnership status")
+    assert status == {"label": "Partnership status", "value": "Active",
+                      "type": "badge", "block": False, "section": "key"}
+    # single "Company" link aggregates the Account + the partner profile (parent)
+    company = next(i for i in d["overview"] if i["label"] == "Company")
+    assert company["value"] == "Acme Co"
+    assert company["link"]["aggregate"] == [
+        {"entity": "Account", "id": "acct1"},
+        {"entity": "CPartnerProfile", "id": "P1"},
+    ]
+    # aggregated note feed carries each session's notes + attendees, stamped with time
+    assert d["noteFeed"][0]["notes"] == "<p>went well</p>"
+    assert d["noteFeed"][0]["dateStart"] == "2026-02-01 10:00:00"
+    assert d["noteFeed"][0]["attendees"] == ["Pat", "Dana"]
     assert d["contacts"][0]["email"] == "pat@x.org"
+    assert d["primaryContactId"] == "cprimary"
     assert d["sessions"][0]["status"] == "Held"
+    # overall (partner-level) notes surface above the per-session feed
+    assert d["overallNotes"] == {"label": "Partner Notes", "value": "<p>key relationship</p>", "type": "html"}
+    # the only session is in the past => nothing scheduled ahead
+    assert d["nextSession"] is None
     assert "coMentors" not in d  # partner domain has no co-mentors
+
+
+@pytest.mark.asyncio
+async def test_get_detail_next_session_is_soonest_upcoming():
+    fake = Fake(
+        records={("CPartnerProfile", "P1"): {"name": "Acme"}},
+        related={"sessions": [
+            {"id": "past", "dateStart": "2020-01-01 09:00:00"},
+            {"id": "soon", "name": "Check-in", "sessionType": "Partner Session",
+             "dateStart": "2099-03-01 09:00:00"},
+            {"id": "later", "dateStart": "2099-09-01 09:00:00"},
+        ]},
+    )
+    d = await service.get_detail(PARTNER, fake, "P1")
+    assert d["nextSession"]["id"] == "soon"  # earliest still in the future
+    assert d["nextSession"]["name"] == "Check-in"
+
+
+@pytest.mark.asyncio
+async def test_get_detail_note_feed_sorted_desc():
+    fake = Fake(
+        records={("CPartnerProfile", "P1"): {"name": "Acme"}},
+        related={"sessions": [
+            {"id": "old", "dateStart": "2026-01-01 09:00:00", "sessionNotes": "first"},
+            {"id": "new", "dateStart": "2026-03-01 09:00:00", "sessionNotes": "latest"},
+        ]},
+    )
+    d = await service.get_detail(PARTNER, fake, "P1")
+    assert [n["id"] for n in d["noteFeed"]] == ["new", "old"]  # most recent first
+
+
+@pytest.mark.asyncio
+async def test_peek_allowlists_entities_and_drops_empties():
+    fake = Fake(records={("Contact", "c1"): {
+        "name": "Pat Lee", "emailAddress": "pat@x.org", "title": "COO", "phoneNumber": ""}})
+    res = await service.peek(fake, "Contact", "c1")
+    assert res["name"] == "Pat Lee"
+    labels = {f["label"]: f["value"] for f in res["fields"]}
+    assert labels["Email"] == "pat@x.org" and labels["Title"] == "COO"
+    assert "Phone" not in labels  # empty value dropped
+
+    with pytest.raises(service.SessionError):
+        await service.peek(fake, "User", "u1")  # not on the allowlist
 
 
 @pytest.mark.asyncio
@@ -355,6 +422,13 @@ def test_session_endpoint_reports_domain(monkeypatch):
     assert data["domain"] == "mentorsessions"
     assert data["supportsComentor"] is True
     assert data["defaultSessionType"] == "Client Session"
+    # phase-one common detail tabs (same for every domain)
+    tabs = data["detailTabs"]
+    assert [t["key"] for t in tabs] == [
+        "overview", "details", "sessions", "communications", "documents",
+    ]
+    assert next(t for t in tabs if t["key"] == "details")["placeholder"] is True
+    assert "placeholder" not in next(t for t in tabs if t["key"] == "sessions")
 
 
 def test_partner_has_no_comentor_endpoints(monkeypatch):

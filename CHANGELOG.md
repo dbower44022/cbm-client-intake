@@ -4,6 +4,33 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.32.0] — 2026-07-09
+
+### Changed
+- **Session Management — redesigned record detail into a tabbed, information-
+  dense view.** Opening an engagement / partner / sponsor now shows a tab bar
+  common to all three domains: **Overview · Details · Sessions · Communications ·
+  Documents** (`/session` → `detailTabs`). Phase-one delivery builds **Overview**
+  and **Sessions**; **Details** (full editable company/contact/profile fields),
+  **Communications** (email/SMS threads), and **Documents** (uploads) ship as
+  placeholders.
+- **Overview tab** — a full-width, review-oriented screen:
+  - **Facts rail** (left, resizable via a drag splitter): key identity (status
+    badge, a single aggregated **Company** link, primary contact, meeting
+    cadence, referring partner), session activity (start/last/next counts, focus
+    areas), **Other contacts** + **CBM Contacts**, and the mentoring need.
+  - The **Company** link aggregates the company Account **and** its profile
+    (client business / partnership / sponsor) into one pop-up; contact/referring-
+    partner links open their own pop-up (read-only `/{slug}/api/peek`, entity
+    allowlisted, ACL-enforced).
+  - **Overall notes** (Engagement / Partner / Sponsor Notes) above an aggregated
+    **session-notes feed** — every session's notes + next steps, most-recent
+    first, each stamped with date/time and its **attendees**.
+  - A bold **Next session** callout (soonest upcoming session, derived from the
+    records).
+- Detail tabs are built from config; the standalone Contacts tab folds into
+  Overview (Other/CBM Contacts) and the forthcoming Details tab.
+
 ## [0.31.0] — 2026-07-09
 
 ### Added

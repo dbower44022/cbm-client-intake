@@ -2,6 +2,11 @@
    /shared/tokens.css for the CBM design tokens (colors, fonts, .cbm-button,
    .cbm-container, .cbm-field base) and defines the tool-specific layout here. */
 
+/* This tool is data-dense and review-oriented: use the whole window rather than
+   the default 1200px reading column, so the Overview facts + note feed fill the
+   screen with no wasted whitespace. */
+.sx.cbm-container { max-width: 100%; padding: 0 1.5rem; }
+
 .sx { padding-bottom: 3rem; }
 .sx__header { margin-bottom: 1.25rem; }
 .sx__header h1 { margin: 0 0 0.15rem; }
@@ -100,3 +105,175 @@
 .cbm-footer { margin-top: 2.5rem; color: var(--cbm-slate-700, #667); font-size: var(--cbm-text-sm, 0.85rem); border-top: 1px solid var(--cbm-border, #e3e7ec); padding-top: 1rem; }
 
 .sx__req { color: #a12; font-weight: 700; }
+
+/* === Tabbed detail view ================================================== */
+.sx__detail-heading { display: flex; align-items: baseline; gap: 0.6rem; flex: 1 1 auto; min-width: 0; }
+.sx__detail-heading .sx__detail-name { margin: 0; overflow-wrap: anywhere; }
+.sx__detail-kind {
+  font-size: var(--cbm-text-sm, 0.8rem); text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--cbm-slate-700, #667); font-weight: 600; white-space: nowrap;
+}
+.sx__dpanel { margin-top: 0.5rem; }
+.sx__placeholder {
+  border: 1px dashed var(--cbm-border, #d7dce2); border-radius: var(--cbm-radius, 8px);
+  padding: 2rem 1.5rem; text-align: center; background: #fafbfd;
+}
+.sx__placeholder h3 { margin: 0 0 0.35rem; }
+
+/* Overview: resizable facts rail (left) + note feed (fills the rest). The
+   splitter is the middle grid track; --ov-left is set by the drag handler. */
+.sx__ov { display: grid; grid-template-columns: var(--ov-left, 340px) 6px 1fr; gap: 1rem; align-items: start; }
+@media (max-width: 900px) { .sx__ov { grid-template-columns: 1fr; } }
+/* min-width:0 lets these grid tracks shrink below their content (else the note
+   feed overflows the viewport horizontally). */
+.sx__ov-facts, .sx__ov-notes { min-width: 0; }
+.sx__ov-facts { position: sticky; top: 0.5rem; }
+.sx__ov-facts > * + * { margin-top: 0.9rem; }
+.sx__ov-facts > :empty { display: none; }  /* nextSession/otherContacts/blocks when empty */
+#factSections > * + * { margin-top: 0.9rem; }
+@media (max-width: 900px) { .sx__ov-facts { position: static; } }
+
+/* Bold "Next session" callout on the rail. */
+.sx__next {
+  border: 1px solid var(--cbm-blue, #1a5fb4); background: #eef5fe; border-radius: var(--cbm-radius, 8px);
+  border-left: 4px solid var(--cbm-blue, #1a5fb4); padding: 0.6rem 0.9rem;
+}
+.sx__next-l { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--cbm-blue, #1a5fb4); font-weight: 700; }
+.sx__next-when { font-size: 1.35rem; font-weight: 800; color: var(--cbm-navy, #123); line-height: 1.15; font-variant-numeric: tabular-nums; }
+.sx__next-sub { font-size: 0.82rem; color: var(--cbm-slate-700, #556); margin-top: 0.1rem; }
+
+/* Overall (engagement/partner/sponsor) notes — above the session feed. Gold
+   accent to set them apart from the blue-accented per-session notes. */
+.sx__overall {
+  border: 1px solid var(--cbm-border, #e3e7ec); border-left: 4px solid var(--cbm-gold, #CB963B);
+  border-radius: var(--cbm-radius, 8px); background: #fffdf7; padding: 0.7rem 0.95rem; margin-bottom: 1.1rem;
+}
+.sx__overall-h { margin: 0 0 0.4rem; font-size: 1.05rem; }
+.sx__overall-body { font-size: 0.94rem; line-height: 1.5; }
+.sx__overall-body :first-child { margin-top: 0; } .sx__overall-body :last-child { margin-bottom: 0; }
+
+/* Drag handle between the two panels. */
+.sx__splitter {
+  align-self: stretch; min-height: 6rem; cursor: col-resize; border-radius: 3px;
+  background: var(--cbm-border, #e3e7ec); position: relative;
+}
+.sx__splitter:hover, .sx__splitter:focus-visible { background: var(--cbm-blue, #1a5fb4); outline: none; }
+.sx__splitter::after {
+  content: ""; position: absolute; inset: 0 -5px; /* wider hit area */
+}
+@media (max-width: 900px) { .sx__splitter { display: none; } }
+body.sx--resizing { cursor: col-resize; user-select: none; }
+
+/* Dense fact grid (label / value pairs). */
+.sx__facts {
+  border: 1px solid var(--cbm-border, #e3e7ec); border-radius: var(--cbm-radius, 8px);
+  background: var(--cbm-surface, #fff); overflow: hidden;
+}
+/* Section / card header inside a facts card. */
+.sx__facts-h {
+  padding: 0.4rem 0.8rem; background: #f4f7fb; border-bottom: 1px solid var(--cbm-border, #eef1f4);
+  font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; color: var(--cbm-slate-700, #556);
+}
+.sx__facts-h + .sx__facts-h, .sx__oc + .sx__facts-h { border-top: 1px solid var(--cbm-border, #eef1f4); }
+/* Other-contacts rows. */
+.sx__oc { display: flex; align-items: baseline; gap: 0.4rem; flex-wrap: wrap; padding: 0.4rem 0.8rem; border-bottom: 1px solid #eef1f4; }
+.sx__oc:last-child { border-bottom: none; }
+.sx__oc-role { color: var(--cbm-slate-700, #667); font-size: 0.8rem; }
+.sx__fact {
+  display: grid; grid-template-columns: 9rem 1fr; gap: 0.5rem;
+  padding: 0.45rem 0.8rem; border-bottom: 1px solid var(--cbm-border, #eef1f4);
+}
+.sx__fact:last-child { border-bottom: none; }
+.sx__fact-l { color: var(--cbm-slate-700, #667); font-size: var(--cbm-text-sm, 0.82rem); }
+.sx__fact-v { font-weight: 500; font-size: var(--cbm-text-sm, 0.9rem); display: flex; flex-wrap: wrap; gap: 0.25rem; align-items: center; overflow-wrap: anywhere; }
+.sx__fact-v.sx__stat { font-size: 1.15rem; font-weight: 700; color: var(--cbm-navy, #123); }
+
+/* Full-width emphasized blocks (mentoring need / notes / message). */
+.sx__block {
+  border: 1px solid var(--cbm-border, #e3e7ec); border-left: 3px solid var(--cbm-blue, #1a5fb4);
+  border-radius: var(--cbm-radius, 8px); background: var(--cbm-surface, #fff);
+  padding: 0.7rem 0.9rem; margin-top: 0.9rem;
+}
+.sx__block-h { margin: 0 0 0.35rem; font-size: var(--cbm-text-sm, 0.82rem); text-transform: uppercase; letter-spacing: 0.03em; color: var(--cbm-slate-700, #667); }
+.sx__block-body { font-size: var(--cbm-text-sm, 0.92rem); line-height: 1.45; }
+.sx__block-body :first-child { margin-top: 0; }
+.sx__block-body :last-child { margin-bottom: 0; }
+.sx__pre { white-space: pre-wrap; }
+
+/* Status badge + multi-value chips + link buttons. */
+.sx__badge {
+  display: inline-block; padding: 0.12rem 0.5rem; border-radius: 999px;
+  font-size: 0.78rem; font-weight: 600; background: #eef1f6; color: #3a4a5e; border: 1px solid #dbe2ec;
+}
+.sx__badge--active, .sx__badge--mou-contract-signed { background: #e9f7ef; color: #1e6b3f; border-color: #bfe3cd; }
+.sx__badge--on-hold, .sx__badge--pending-acceptance, .sx__badge--proposal-sent, .sx__badge--mou-contract-sent { background: #fff6e5; color: #8a5a00; border-color: #f3dfab; }
+.sx__badge--declined, .sx__badge--assignment-declined, .sx__badge--inactive { background: #fdecea; color: #a12; border-color: #f5c6c2; }
+.sx__chip {
+  display: inline-block; padding: 0.1rem 0.45rem; border-radius: 4px;
+  background: #eef2f7; color: #37485c; font-size: 0.78rem; border: 1px solid #e0e6ee;
+}
+.sx__peek {
+  background: none; border: none; padding: 0; cursor: pointer; font: inherit; font-weight: 600;
+  color: var(--cbm-blue, #1a5fb4); text-align: left; text-decoration: underline; text-decoration-style: dotted;
+}
+.sx__peek:hover { text-decoration-style: solid; }
+
+/* Aggregated session-notes feed. */
+.sx__notes-head { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.5rem; }
+.sx__notes-head h3 { margin: 0; }
+.sx__feed { display: grid; gap: 0.7rem; }
+.sx__note {
+  border: 1px solid var(--cbm-border, #e3e7ec); border-radius: var(--cbm-radius, 8px);
+  background: var(--cbm-surface, #fff); padding: 0.7rem 0.9rem;
+}
+.sx__note-head { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.4rem; }
+.sx__note-when { font-weight: 700; color: var(--cbm-navy, #123); font-size: 0.9rem; }
+.sx__note-name { color: var(--cbm-slate-700, #667); font-size: var(--cbm-text-sm, 0.85rem); }
+.sx__note-edit {
+  margin-left: auto; background: none; border: 1px solid var(--cbm-border, #d7dce2);
+  border-radius: 5px; padding: 0.12rem 0.55rem; cursor: pointer; font: inherit; font-size: 0.8rem; color: var(--cbm-slate-700, #556);
+}
+.sx__note-edit:hover { background: #f2f5f9; }
+.sx__tag { display: inline-block; padding: 0.08rem 0.45rem; border-radius: 4px; font-size: 0.74rem; font-weight: 600; }
+.sx__tag--type { background: #eaf1fb; color: #1a4f93; }
+.sx__tag--status { background: #eef1f6; color: #4a5a6e; }
+/* Note body: attendees rail on the left, notes + next steps on the right. */
+.sx__note-main { display: grid; grid-template-columns: 9.5rem 1fr; gap: 1rem; }
+@media (max-width: 600px) { .sx__note-main { grid-template-columns: 1fr; gap: 0.5rem; } }
+.sx__note-att { display: flex; flex-direction: column; gap: 0.15rem; border-right: 1px solid var(--cbm-border, #eef1f4); padding-right: 0.8rem; }
+@media (max-width: 600px) { .sx__note-att { border-right: none; border-bottom: 1px solid var(--cbm-border, #eef1f4); padding: 0 0 0.4rem; flex-flow: row wrap; gap: 0.35rem; align-items: baseline; } }
+.sx__note-att-l { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--cbm-slate-700, #667); font-weight: 700; }
+.sx__note-att-n { font-size: var(--cbm-text-sm, 0.85rem); font-weight: 500; }
+.sx__note-content { min-width: 0; }
+.sx__note-body { font-size: var(--cbm-text-sm, 0.9rem); line-height: 1.45; overflow-wrap: anywhere; }
+.sx__note-body :first-child { margin-top: 0; } .sx__note-body :last-child { margin-bottom: 0; }
+.sx__note-next { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--cbm-border, #e3e7ec); font-size: var(--cbm-text-sm, 0.88rem); }
+.sx__note-next-l { display: block; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--cbm-slate-700, #667); margin-bottom: 0.15rem; }
+.sx__note-empty { margin: 0; font-style: italic; }
+
+/* === Pop-up detail modal ================================================= */
+.sx__modal { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-start; justify-content: center; padding: 4vh 1rem; }
+/* The base display:flex overrides the browser's [hidden]{display:none}; restore
+   it so the modal stays hidden until opened (was covering the whole screen). */
+.sx__modal[hidden] { display: none; }
+.sx__modal-backdrop { position: fixed; inset: 0; background: rgba(18, 28, 42, 0.45); }
+.sx__modal-card {
+  position: relative; z-index: 1; width: 100%; max-width: 30rem; max-height: 88vh; overflow: auto;
+  background: var(--cbm-surface, #fff); border-radius: var(--cbm-radius, 10px);
+  box-shadow: 0 12px 40px rgba(18, 28, 42, 0.25);
+}
+.sx__modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; padding: 0.9rem 1rem 0.6rem; border-bottom: 1px solid var(--cbm-border, #eef1f4); }
+.sx__modal-kind { margin: 0; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--cbm-slate-700, #667); }
+.sx__modal-name { margin: 0.1rem 0 0; }
+.sx__modal-close { background: none; border: none; font-size: 1.5rem; line-height: 1; cursor: pointer; color: var(--cbm-slate-700, #667); padding: 0 0.2rem; }
+.sx__modal-close:hover { color: var(--cbm-navy, #123); }
+.sx__modal-body { padding: 0.4rem 0; }
+.sx__modal-body .sx__fact { grid-template-columns: 7rem 1fr; }
+/* One titled section per aggregated record (company Account + profile). */
+.sx__peek-sec + .sx__peek-sec { margin-top: 0.5rem; }
+.sx__peek-sec-h {
+  padding: 0.4rem 1rem; background: #f4f7fb; border-top: 1px solid var(--cbm-border, #eef1f4);
+  border-bottom: 1px solid var(--cbm-border, #eef1f4); font-size: 0.72rem; text-transform: uppercase;
+  letter-spacing: 0.04em; font-weight: 700; color: var(--cbm-slate-700, #556);
+}
+.sx__peek-empty { padding: 0.4rem 1rem; }

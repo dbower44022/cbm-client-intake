@@ -37,6 +37,18 @@ class CoMentorIn(BaseModel):
     mentorProfileId: str
 
 
+# Phase-one detail tabs, common to all three domains. Overview + Sessions are
+# built; Details (full company/contact/profile fields, editable), Communications
+# (email/SMS threads), and Documents (uploads) are placeholders for now.
+COMMON_DETAIL_TABS = [
+    {"key": "overview", "label": "Overview"},
+    {"key": "details", "label": "Details", "placeholder": True},
+    {"key": "sessions", "label": "Sessions"},
+    {"key": "communications", "label": "Communications", "placeholder": True},
+    {"key": "documents", "label": "Documents", "placeholder": True},
+]
+
+
 def make_router(cfg: DomainConfig) -> APIRouter:
     router = APIRouter(prefix=f"/{cfg.slug}/api", tags=[cfg.slug])
 
@@ -80,6 +92,8 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             "subtitle": cfg.subtitle,
             "parentLabel": cfg.parent_label,
             "columns": [{"key": c.key, "label": c.label} for c in cfg.list_columns],
+            "emptyMessage": cfg.empty_message,
+            "detailTabs": COMMON_DETAIL_TABS,
             "supportsComentor": cfg.supports_comentor,
             "defaultSessionType": cfg.default_session_type,
         }
@@ -119,6 +133,18 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             return await service.get_detail(cfg, client, parent_id)
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not load record")
+
+    @router.get("/peek/{entity}/{record_id}")
+    async def peek(entity: str, record_id: str, request: Request) -> dict:
+        """Pop-up detail for a linked contact / company / client on the Overview."""
+        user = _require_user(request)
+        client = client_for(get_settings(), user)
+        try:
+            return await service.peek(client, entity, record_id)
+        except service.SessionError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not load details")
 
     @router.get("/sessions/{session_id}")
     async def session_detail(session_id: str, request: Request) -> dict:

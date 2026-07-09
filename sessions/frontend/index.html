@@ -38,48 +38,65 @@
         <thead id="recordsHead"></thead>
         <tbody id="recordsBody"></tbody>
       </table>
-      <p class="sx__empty" id="emptyState" hidden>No records to show.</p>
+      <p class="sx__empty" id="emptyState" hidden>No records found.</p>
       <p class="sx__loading" id="loadingState">Loading…</p>
     </section>
 
-    <!-- Detail of one record: summary + contacts + sessions (+ co-mentors) -->
+    <!-- Detail of one record: tabbed — Overview / Contacts / Sessions -->
     <section id="detailView" hidden>
       <div class="sx__toolbar">
         <button type="button" class="cbm-button cbm-button--secondary" id="backBtn">← Back to list</button>
+        <span class="sx__detail-heading">
+          <h2 class="sx__detail-name" id="detailName"></h2>
+          <span class="sx__detail-kind" id="detailKind"></span>
+        </span>
         <button type="button" class="cbm-button" id="newSessionBtn">+ New session</button>
       </div>
-      <h2 class="sx__detail-name" id="detailName"></h2>
       <p class="sx__notice" id="detailNotice" role="status" hidden></p>
 
-      <div class="sx__cols">
-        <div class="sx__panel">
-          <h3>Details</h3>
-          <div class="sx__summary" id="summary"></div>
-        </div>
-        <div class="sx__panel">
-          <h3>Contacts</h3>
-          <ul class="sx__contacts" id="contacts"></ul>
-          <p class="sx__muted" id="noContacts" hidden>No related contacts.</p>
+      <!-- tabs are built from the domain config (/session detailTabs) -->
+      <nav class="sx__tabs" id="detailTabs" role="tablist"></nav>
+
+      <!-- Overview: resizable facts rail + aggregated session-notes feed -->
+      <div class="sx__dpanel" data-dpanel="overview">
+        <div class="sx__ov" id="ovGrid">
+          <aside class="sx__ov-facts">
+            <div id="factSections"></div>
+            <div id="nextSession"></div>
+            <div id="otherContacts"></div>
+            <div id="factBlocks"></div>
+          </aside>
+          <div class="sx__splitter" id="ovSplitter" role="separator" aria-orientation="vertical"
+               tabindex="0" aria-label="Resize panels" title="Drag to resize"></div>
+          <div class="sx__ov-notes">
+            <div id="overallNotes"></div>
+            <div class="sx__notes-head">
+              <h3>Session notes</h3>
+              <span class="sx__muted" id="notesCount"></span>
+            </div>
+            <div class="sx__feed" id="noteFeed"></div>
+            <p class="sx__muted" id="noNotes" hidden>No sessions recorded yet.</p>
+          </div>
         </div>
       </div>
 
-      <div class="sx__panel" id="coMentorSection" hidden>
-        <h3>Co-mentors</h3>
-        <ul class="sx__contacts" id="coMentors"></ul>
-        <p class="sx__muted" id="noCoMentors" hidden>No co-mentors on this engagement.</p>
-        <div class="sx__inline">
-          <select id="coMentorSelect" aria-label="Choose a co-mentor"></select>
-          <button type="button" class="cbm-button cbm-button--secondary" id="addCoMentorBtn">Add co-mentor</button>
-        </div>
-      </div>
-
-      <div class="sx__panel">
-        <h3>Sessions</h3>
+      <!-- Sessions list (+ CBM contacts on the mentor domain) -->
+      <div class="sx__dpanel" data-dpanel="sessions" hidden>
         <table class="sx__table" id="sessionsTable" hidden>
           <thead><tr><th>Session</th><th>Status</th><th>Type</th><th>When</th><th></th></tr></thead>
           <tbody id="sessionsBody"></tbody>
         </table>
         <p class="sx__muted" id="noSessions" hidden>No sessions recorded yet.</p>
+
+        <div class="sx__panel" id="coMentorSection" hidden>
+          <h3>CBM Contacts</h3>
+          <ul class="sx__contacts" id="coMentors"></ul>
+          <p class="sx__muted" id="noCoMentors" hidden>No CBM contacts on this engagement.</p>
+          <div class="sx__inline">
+            <select id="coMentorSelect" aria-label="Choose a CBM contact"></select>
+            <button type="button" class="cbm-button cbm-button--secondary" id="addCoMentorBtn">Add CBM contact</button>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -105,6 +122,21 @@
       <p>&copy; <span data-cbm-year>2026</span> Cleveland Business Mentors.<span class="cbm-footer__version" data-cbm-version></span></p>
     </footer>
   </main>
+
+  <!-- Pop-up detail for a contact / company / client link on the Overview -->
+  <div class="sx__modal" id="peekModal" hidden role="dialog" aria-modal="true" aria-labelledby="peekName">
+    <div class="sx__modal-backdrop" id="peekBackdrop"></div>
+    <div class="sx__modal-card" role="document">
+      <div class="sx__modal-head">
+        <div>
+          <p class="sx__modal-kind" id="peekKind"></p>
+          <h3 class="sx__modal-name" id="peekName"></h3>
+        </div>
+        <button type="button" class="sx__modal-close" id="peekClose" aria-label="Close">×</button>
+      </div>
+      <div class="sx__modal-body" id="peekBody"></div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
   <script src="/shared/footer.js"></script>

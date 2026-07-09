@@ -69,6 +69,87 @@
   $("saveSessionBtn").addEventListener("click", function () { saveSession(); });
   $("addCoMentorBtn").addEventListener("click", function () { addCoMentor(); });
 
+  // Detail tabs are built from the domain config (see buildDetailTabs, called
+  // once config loads).
+  // Pop-up detail modal.
+  $("peekClose").addEventListener("click", closePeek);
+  $("peekBackdrop").addEventListener("click", closePeek);
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !$("peekModal").hidden) closePeek();
+  });
+
+  // Build the detail tab bar from config.detailTabs. Built-in keys (overview/
+  // contacts/sessions) map to the static panels in index.html; a tab flagged
+  // placeholder gets a generated "coming soon" panel.
+  function buildDetailTabs() {
+    var nav = $("detailTabs"); nav.innerHTML = "";
+    var tabs = (config && config.detailTabs) || [
+      { key: "overview", label: "Overview" },
+      { key: "contacts", label: "Contacts" },
+      { key: "sessions", label: "Sessions" },
+    ];
+    tabs.forEach(function (t, i) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "sx__tab" + (i === 0 ? " is-active" : "");
+      b.dataset.dtab = t.key; b.setAttribute("role", "tab"); b.textContent = t.label;
+      b.addEventListener("click", function () { activateDetailTab(t.key); });
+      nav.appendChild(b);
+      if (t.placeholder) ensurePlaceholderPanel(t);
+    });
+  }
+
+  function ensurePlaceholderPanel(t) {
+    if (document.querySelector('[data-dpanel="' + t.key + '"]')) return;
+    var div = document.createElement("div");
+    div.className = "sx__dpanel"; div.dataset.dpanel = t.key; div.hidden = true;
+    var box = document.createElement("div"); box.className = "sx__placeholder";
+    var h = document.createElement("h3"); h.textContent = t.label;
+    var p = document.createElement("p"); p.className = "sx__muted";
+    p.textContent = "This section is coming soon.";
+    box.appendChild(h); box.appendChild(p); div.appendChild(box);
+    $("detailView").appendChild(div);
+  }
+
+  function activateDetailTab(tab) {
+    Array.prototype.forEach.call($("detailTabs").children, function (b) {
+      var on = b.dataset.dtab === tab;
+      b.classList.toggle("is-active", on); b.setAttribute("aria-selected", on);
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-dpanel]"), function (p) {
+      p.hidden = p.dataset.dpanel !== tab;
+    });
+  }
+
+  // Draggable splitter: resize the facts rail (wider = more room for the
+  // mentoring need). Sets --ov-left on the Overview grid; clamped to sane bounds.
+  (function setupSplitter() {
+    var sp = $("ovSplitter"), grid = $("ovGrid");
+    if (!sp || !grid) return;
+    var dragging = false;
+    function clampedWidth(clientX) {
+      var rect = grid.getBoundingClientRect();
+      var min = 260, max = Math.max(min, rect.width * 0.72);
+      return Math.min(max, Math.max(min, clientX - rect.left));
+    }
+    function onMove(e) {
+      if (!dragging) return;
+      grid.style.setProperty("--ov-left", clampedWidth(e.clientX) + "px");
+      e.preventDefault();
+    }
+    function stop() { dragging = false; document.body.classList.remove("sx--resizing"); }
+    sp.addEventListener("pointerdown", function (e) {
+      dragging = true; document.body.classList.add("sx--resizing"); e.preventDefault();
+    });
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
+    sp.addEventListener("keydown", function (e) {
+      var cur = parseInt(getComputedStyle(grid).getPropertyValue("--ov-left"), 10) || 340;
+      if (e.key === "ArrowLeft") { grid.style.setProperty("--ov-left", Math.max(260, cur - 24) + "px"); e.preventDefault(); }
+      else if (e.key === "ArrowRight") { grid.style.setProperty("--ov-left", (cur + 24) + "px"); e.preventDefault(); }
+    });
+  })();
+
   // --- boot ---
   (async function init() {
     try {
@@ -77,6 +158,8 @@
       $("subtitle").textContent = config.subtitle || "";
       document.title = "CBM — " + (config.title || "Sessions");
       $("whoName").textContent = config.name || config.userName;
+      if (config.emptyMessage) $("emptyState").textContent = config.emptyMessage;
+      buildDetailTabs();
       await bootList();
     } catch (e) { bootFail(e); }
   })();
@@ -103,9 +186,9 @@
     try {
       var res = await api("/records");
       records = res.records || [];
-      if (res.profileFound === false) {
-        notice("listNotice", "We couldn't find a CBM profile linked to your login, so there are no records to show. Ask an administrator to link your login to your CBM profile.", "error");
-      }
+      // No linked profile / no owned records is a normal empty state, not an
+      // error — the grid just shows the domain's empty message. If a record is
+      // later assigned to this user, a Refresh picks it up (re-queried each call).
       renderTable();
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }
@@ -129,7 +212,7 @@
     head.appendChild(htr);
 
     var rows = records.filter(matches);
-    $("count").textContent = "Showing " + rows.length + " of " + records.length;
+    $("count").textContent = records.length ? "Showing " + rows.length + " of " + records.length : "";
     var tb = $("recordsBody"); tb.innerHTML = "";
     if (!rows.length) { show($("emptyState")); hide($("recordsTable")); return; }
     hide($("emptyState"));
@@ -162,38 +245,304 @@
     try { currentDetail = await api("/records/" + encodeURIComponent(id)); }
     catch (e) { if (e.status === 401) { showLogin(); return; } notice("listNotice", e.message, "error"); return; }
     $("detailName").textContent = currentDetail.name || "(unnamed)";
+    $("detailKind").textContent = currentDetail.parentLabel || "";
     hide($("detailNotice"));
-    renderSummary(currentDetail);
-    renderContacts(currentDetail);
+    renderOverview(currentDetail);
     renderSessions(currentDetail);
     renderCoMentors(currentDetail);
+    activateDetailTab("overview");
     showDetail();
     window.scrollTo(0, 0);
   }
 
-  function renderSummary(d) {
-    var box = $("summary"); box.innerHTML = "";
-    (d.summary || []).forEach(function (item) {
-      var row = document.createElement("div"); row.className = "sx__srow";
-      var l = document.createElement("span"); l.className = "sx__slabel"; l.textContent = item.label;
-      var v = document.createElement("span"); v.className = "sx__svalue"; v.textContent = item.value == null ? "—" : item.value;
-      row.appendChild(l); row.appendChild(v); box.appendChild(row);
+  // --- Overview tab: facts rail + aggregated session-notes feed ---
+  function renderOverview(d) {
+    var sections = $("factSections"); sections.innerHTML = "";
+    var blocks = $("factBlocks"); blocks.innerHTML = "";
+
+    // Fact cards, one per section (key identity, then activity), in config order.
+    var order = [], bySection = {};
+    (d.overview || []).forEach(function (item) {
+      if (item.block) { blocks.appendChild(factBlock(item)); return; }
+      var s = item.section || "key";
+      if (!bySection[s]) { bySection[s] = []; order.push(s); }
+      bySection[s].push(item);
+    });
+    order.forEach(function (s) {
+      var card = document.createElement("div"); card.className = "sx__facts";
+      bySection[s].forEach(function (item) {
+        var row = document.createElement("div"); row.className = "sx__fact";
+        var l = document.createElement("span"); l.className = "sx__fact-l"; l.textContent = item.label;
+        var v = document.createElement("span"); v.className = "sx__fact-v";
+        renderValue(v, item);
+        row.appendChild(l); row.appendChild(v); card.appendChild(row);
+      });
+      sections.appendChild(card);
+    });
+
+    renderNextSession(d);
+    renderOtherContacts(d);
+    renderOverallNotes(d);
+    renderNoteFeed(d.noteFeed || []);
+  }
+
+  // Bold, easy-to-read "Next session" panel (soonest upcoming session), on the
+  // rail under the activity facts and above Other contacts.
+  function renderNextSession(d) {
+    var box = $("nextSession"); box.innerHTML = "";
+    var ns = d.nextSession;
+    if (!ns) return;
+    var card = document.createElement("div"); card.className = "sx__next";
+    var l = document.createElement("div"); l.className = "sx__next-l"; l.textContent = "Next session";
+    var when = document.createElement("div"); when.className = "sx__next-when"; when.textContent = fmtWhen(ns.dateStart);
+    card.appendChild(l); card.appendChild(when);
+    var sub = [ns.name, ns.sessionType].filter(Boolean).join(" · ");
+    if (sub) { var s = document.createElement("div"); s.className = "sx__next-sub"; s.textContent = sub; card.appendChild(s); }
+    box.appendChild(card);
+  }
+
+  // Overall notes about the whole engagement / partner / sponsor — above the
+  // per-session feed, since they're usually the most important.
+  function renderOverallNotes(d) {
+    var box = $("overallNotes"); box.innerHTML = "";
+    var n = d.overallNotes;
+    if (!n) return;
+    var card = document.createElement("div"); card.className = "sx__overall";
+    var h = document.createElement("h3"); h.className = "sx__overall-h"; h.textContent = n.label;
+    var body = document.createElement("div"); body.className = "sx__overall-body";
+    if (n.type === "html") { body.innerHTML = sanitizeHtml(String(n.value || "")); }
+    else { body.className += " sx__pre"; body.textContent = n.value == null ? "" : String(n.value); }
+    card.appendChild(h); card.appendChild(body); box.appendChild(card);
+  }
+
+  // "Other contacts" (engagement contacts besides the primary, labeled) + the
+  // co-mentors list — on the Overview rail, above the mentoring-need block.
+  function renderOtherContacts(d) {
+    var box = $("otherContacts"); box.innerHTML = "";
+    var others = (d.contacts || []).filter(function (c) { return c.id !== d.primaryContactId; });
+    var coMentors = (d.supportsComentor && d.coMentors) || [];
+    if (!others.length && !coMentors.length) return;
+
+    var card = document.createElement("div"); card.className = "sx__facts sx__ocard";
+    if (others.length) {
+      card.appendChild(cardHead("Other contacts"));
+      others.forEach(function (c) {
+        var row = document.createElement("div"); row.className = "sx__oc";
+        var b = document.createElement("button"); b.type = "button"; b.className = "sx__peek";
+        b.textContent = c.name || "(unnamed)";
+        b.addEventListener("click", function () { openPeek("Contact", c.id, c.name || ""); });
+        row.appendChild(b);
+        if (c.title) { var t = document.createElement("span"); t.className = "sx__oc-role"; t.textContent = c.title; row.appendChild(t); }
+        card.appendChild(row);
+      });
+    }
+    if (coMentors.length) {
+      card.appendChild(cardHead("CBM Contacts"));
+      coMentors.forEach(function (m) {
+        var row = document.createElement("div"); row.className = "sx__oc";
+        var n = document.createElement("span"); n.textContent = m.name || m.id; row.appendChild(n);
+        card.appendChild(row);
+      });
+    }
+    box.appendChild(card);
+  }
+
+  function cardHead(text) {
+    var h = document.createElement("div"); h.className = "sx__facts-h"; h.textContent = text; return h;
+  }
+
+  // A full-width emphasized block for a long rich-text/message overview item
+  // (the mentoring need, partner notes, sponsor message).
+  function factBlock(item) {
+    var box = document.createElement("div"); box.className = "sx__block";
+    var h = document.createElement("h4"); h.className = "sx__block-h"; h.textContent = item.label;
+    var body = document.createElement("div"); body.className = "sx__block-body";
+    if (item.type === "html") { body.innerHTML = sanitizeHtml(String(item.value || "")); }
+    else { body.className += " sx__pre"; body.textContent = item.value == null ? "—" : String(item.value); }
+    box.appendChild(h); box.appendChild(body); return box;
+  }
+
+  // Render a single overview value into `el` by its type (badge/chips/date/
+  // currency/link/text). Links become buttons that open the pop-up detail panel.
+  function renderValue(el, item) {
+    var t = item.type, v = item.value;
+    if (item.link) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "sx__peek"; b.textContent = v == null ? "(view)" : String(v);
+      if (item.link.aggregate) {
+        b.addEventListener("click", function () { openAggregatePeek(item.link.aggregate, String(v || "")); });
+      } else {
+        b.addEventListener("click", function () { openPeek(item.link.entity, item.link.id, String(v || "")); });
+      }
+      el.appendChild(b); return;
+    }
+    if (t === "badge") { el.appendChild(badge(v)); return; }
+    if (t === "multiEnum" && Array.isArray(v)) {
+      v.forEach(function (o) { var c = document.createElement("span"); c.className = "sx__chip"; c.textContent = o; el.appendChild(c); });
+      return;
+    }
+    if (t === "date") { el.textContent = fmtDate(v); return; }
+    if (t === "datetime") { el.textContent = fmtWhen(v); return; }
+    if (t === "currency") { el.className += " sx__stat"; el.textContent = fmtMoney(v, item.currency); return; }
+    el.textContent = v == null || v === "" ? "—" : String(v);
+  }
+
+  function badge(v) {
+    var s = document.createElement("span"); s.className = "sx__badge";
+    s.classList.add("sx__badge--" + String(v || "").toLowerCase().replace(/[^a-z0-9]+/g, "-"));
+    s.textContent = v || "—"; return s;
+  }
+
+  function fmtMoney(v, cur) {
+    if (v == null || v === "") return "—";
+    var n = Number(v); if (isNaN(n)) return String(v);
+    var s = n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    return (cur === "USD" || !cur ? "$" : cur + " ") + s;
+  }
+
+  function renderNoteFeed(feed) {
+    var box = $("noteFeed"); box.innerHTML = "";
+    $("notesCount").textContent = feed.length ? "(" + feed.length + ")" : "";
+    $("noNotes").hidden = feed.length > 0;
+    feed.forEach(function (s) {
+      var card = document.createElement("div"); card.className = "sx__note";
+      var head = document.createElement("div"); head.className = "sx__note-head";
+      var when = document.createElement("span"); when.className = "sx__note-when"; when.textContent = fmtWhen(s.dateStart);
+      head.appendChild(when);
+      if (s.sessionType) { head.appendChild(tag(s.sessionType, "type")); }
+      if (s.status) { head.appendChild(tag(s.status, "status")); }
+      if (s.name) { var nm = document.createElement("span"); nm.className = "sx__note-name"; nm.textContent = s.name; head.appendChild(nm); }
+      var editBtn = document.createElement("button");
+      editBtn.type = "button"; editBtn.className = "sx__note-edit"; editBtn.textContent = "Edit";
+      editBtn.addEventListener("click", function () { openEditor(s.id); });
+      head.appendChild(editBtn);
+      card.appendChild(head);
+
+      // Body: attendees on the left, notes + next steps on the right.
+      var main = document.createElement("div"); main.className = "sx__note-main";
+      var att = document.createElement("div"); att.className = "sx__note-att";
+      var atts = s.attendees || [];
+      var al = document.createElement("span"); al.className = "sx__note-att-l"; al.textContent = "Attendees";
+      att.appendChild(al);
+      if (atts.length) {
+        atts.forEach(function (n) { var a = document.createElement("span"); a.className = "sx__note-att-n"; a.textContent = n; att.appendChild(a); });
+      } else {
+        var none = document.createElement("span"); none.className = "sx__muted"; none.textContent = "—"; att.appendChild(none);
+      }
+      main.appendChild(att);
+
+      var content = document.createElement("div"); content.className = "sx__note-content";
+      var hasNotes = s.notes && String(s.notes).trim() !== "";
+      var hasNext = s.nextSteps && String(s.nextSteps).trim() !== "";
+      if (hasNotes) {
+        var body = document.createElement("div"); body.className = "sx__note-body";
+        body.innerHTML = sanitizeHtml(String(s.notes)); content.appendChild(body);
+      }
+      if (hasNext) {
+        var ns = document.createElement("div"); ns.className = "sx__note-next";
+        var nl = document.createElement("span"); nl.className = "sx__note-next-l"; nl.textContent = "Next steps";
+        var nb = document.createElement("div"); nb.innerHTML = sanitizeHtml(String(s.nextSteps));
+        ns.appendChild(nl); ns.appendChild(nb); content.appendChild(ns);
+      }
+      if (!hasNotes && !hasNext) {
+        var em = document.createElement("p"); em.className = "sx__muted sx__note-empty"; em.textContent = "No notes recorded for this session.";
+        content.appendChild(em);
+      }
+      main.appendChild(content);
+      card.appendChild(main);
+      box.appendChild(card);
     });
   }
 
-  function renderContacts(d) {
-    var ul = $("contacts"); ul.innerHTML = "";
-    var list = d.contacts || [];
-    $("noContacts").hidden = list.length > 0;
-    list.forEach(function (c) {
-      var li = document.createElement("li");
-      var name = document.createElement("span"); name.className = "sx__cname"; name.textContent = c.name || "(unnamed)";
-      li.appendChild(name);
-      if (c.title) { var t = document.createElement("span"); t.className = "sx__muted"; t.textContent = " · " + c.title; li.appendChild(t); }
-      if (c.email) { var a = document.createElement("a"); a.href = "mailto:" + c.email; a.className = "sx__cmail"; a.textContent = c.email; li.appendChild(document.createElement("br")); li.appendChild(a); }
-      ul.appendChild(li);
+  function tag(text, kind) {
+    var s = document.createElement("span"); s.className = "sx__tag sx__tag--" + kind; s.textContent = text; return s;
+  }
+
+  // --- pop-up detail (peek) ---
+  function peekOpen(name) {
+    $("peekName").textContent = name || "…"; $("peekKind").textContent = "";
+    $("peekBody").innerHTML = "<p class='sx__muted'>Loading…</p>";
+    show($("peekModal"));
+  }
+  function peekFail(e) {
+    if (e.status === 401) { closePeek(); showLogin(); return true; }
+    var body = $("peekBody"); body.innerHTML = "";
+    var p = document.createElement("p"); p.className = "form-error"; p.textContent = e.message; body.appendChild(p);
+    return true;
+  }
+  function peekFieldsInto(container, fields) {
+    (fields || []).forEach(function (f) {
+      var row = document.createElement("div"); row.className = "sx__fact";
+      var l = document.createElement("span"); l.className = "sx__fact-l"; l.textContent = f.label;
+      var v = document.createElement("span"); v.className = "sx__fact-v"; renderPeekValue(v, f);
+      row.appendChild(l); row.appendChild(v); container.appendChild(row);
     });
   }
+
+  // Single record.
+  async function openPeek(entity, id, name) {
+    peekOpen(name);
+    try {
+      var res = await api("/peek/" + encodeURIComponent(entity) + "/" + encodeURIComponent(id));
+      $("peekName").textContent = res.name || name || "(unnamed)";
+      $("peekKind").textContent = peekLabel(entity);
+      var body = $("peekBody"); body.innerHTML = "";
+      if (!res.fields || !res.fields.length) { body.innerHTML = "<p class='sx__muted'>No additional details available.</p>"; return; }
+      peekFieldsInto(body, res.fields);
+    } catch (e) { peekFail(e); }
+  }
+
+  // Aggregated: several 1:1 org records (company Account + profile) in one modal,
+  // one titled section each.
+  async function openAggregatePeek(pairs, name) {
+    peekOpen(name);
+    $("peekKind").textContent = "Company";
+    var results = [];
+    for (var i = 0; i < pairs.length; i++) {
+      try {
+        results.push({ entity: pairs[i].entity,
+          data: await api("/peek/" + encodeURIComponent(pairs[i].entity) + "/" + encodeURIComponent(pairs[i].id)) });
+      } catch (e) {
+        if (e.status === 401) { closePeek(); showLogin(); return; }
+        results.push({ entity: pairs[i].entity, error: e.message });
+      }
+    }
+    var title = name;
+    results.forEach(function (r) { if (!title && r.data && r.data.name) title = r.data.name; });
+    $("peekName").textContent = title || "(details)";
+    var body = $("peekBody"); body.innerHTML = "";
+    results.forEach(function (r) {
+      var sec = document.createElement("div"); sec.className = "sx__peek-sec";
+      var h = document.createElement("div"); h.className = "sx__peek-sec-h"; h.textContent = peekLabel(r.entity);
+      sec.appendChild(h);
+      if (r.error) { var p = document.createElement("p"); p.className = "form-error"; p.textContent = r.error; sec.appendChild(p); }
+      else if (!r.data.fields || !r.data.fields.length) { var m = document.createElement("p"); m.className = "sx__muted sx__peek-empty"; m.textContent = "No details available."; sec.appendChild(m); }
+      else { peekFieldsInto(sec, r.data.fields); }
+      body.appendChild(sec);
+    });
+  }
+
+  function renderPeekValue(el, f) {
+    var v = f.value;
+    if (f.type === "email" && v) { var a = document.createElement("a"); a.href = "mailto:" + v; a.textContent = v; el.appendChild(a); return; }
+    if (f.type === "url" && v) { var u = document.createElement("a"); u.href = v; u.target = "_blank"; u.rel = "noopener"; u.textContent = v; el.appendChild(u); return; }
+    if (f.type === "multiEnum" && Array.isArray(v)) { v.forEach(function (o) { var c = document.createElement("span"); c.className = "sx__chip"; c.textContent = o; el.appendChild(c); }); return; }
+    if (f.type === "date") { el.textContent = fmtDate(v); return; }
+    if (f.type === "currency") { el.textContent = fmtMoney(v, null); return; }
+    if (f.type === "longtext") { el.className += " sx__pre"; el.textContent = v == null ? "—" : String(v); return; }
+    el.textContent = v == null || v === "" ? "—" : String(v);
+  }
+
+  function peekLabel(entity) {
+    if (entity === "Contact") return "Contact";
+    if (entity === "Account") return "Company";
+    if (entity === "CClientProfile") return "Client business profile";
+    if (entity === "CPartnerProfile") return "Partnership profile";
+    if (entity === "CSponsorProfile") return "Sponsor profile";
+    return entity;
+  }
+
+  function closePeek() { hide($("peekModal")); }
 
   function renderSessions(d) {
     var list = d.sessions || [];
@@ -232,7 +581,7 @@
     try {
       var res = await api("/mentors");
       sel.innerHTML = "";
-      sel.appendChild(new Option("Choose a co-mentor…", ""));
+      sel.appendChild(new Option("Choose a CBM contact…", ""));
       (res.mentors || []).forEach(function (m) { sel.appendChild(new Option(m.name || m.id, m.id)); });
       sel.dataset.loaded = "1";
     } catch (e) { /* leave the picker empty; the section still shows current co-mentors */ }
@@ -246,7 +595,7 @@
       await api("/records/" + encodeURIComponent(currentDetail.id) + "/comentors", {
         method: "POST", body: JSON.stringify({ mentorProfileId: id })
       });
-      notice("detailNotice", "Co-mentor added.", "success");
+      notice("detailNotice", "CBM contact added.", "success");
       openDetail(currentDetail.id);
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }
