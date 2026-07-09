@@ -146,7 +146,7 @@ def make_router(cfg: DomainConfig) -> APIRouter:
         user = _require_user(request)
         client = client_for(get_settings(), user)
         try:
-            return await details_svc.build_details(cfg, client, parent_id)
+            return await details_svc.build_details(cfg, client, parent_id, user.get("userId"))
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not load details")
 

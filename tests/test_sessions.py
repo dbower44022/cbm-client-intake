@@ -322,10 +322,29 @@ async def test_build_details_marks_readonly_when_user_cannot_edit():
         acl={"Account": {"read": "all", "edit": "no"},          # can't edit companies
              "CPartnerProfile": {"read": "all", "edit": "all"}},  # can edit the profile
     )
-    d = await details.build_details(PARTNER, fake, "P1")
+    d = await details.build_details(PARTNER, fake, "P1", user_id="u1")
     by_entity = {s["entity"]: s for s in d["sections"]}
     assert by_entity["Account"]["editable"] is False
     assert by_entity["CPartnerProfile"]["editable"] is True
+
+
+@pytest.mark.asyncio
+async def test_build_details_own_level_checks_record_ownership():
+    # edit:"own" — editable only on the record the user is assigned to. The
+    # unowned Account (like crm-test's admin-created accounts) reads as read-only.
+    fake = Fake(
+        records={
+            ("CPartnerProfile", "P1"): {"name": "Acme", "partnerCompanyId": "acct1", "assignedUserId": "u1"},
+            ("Account", "acct1"): {"name": "Acme Co", "assignedUserId": None},
+        },
+        related={},
+        meta_fields={"title": {"type": "varchar"}, "assignedUser": {"type": "link"}},
+        acl={"Account": {"edit": "own"}, "CPartnerProfile": {"edit": "own"}},
+    )
+    d = await details.build_details(PARTNER, fake, "P1", user_id="u1")
+    by_entity = {s["entity"]: s for s in d["sections"]}
+    assert by_entity["Account"]["editable"] is False        # unassigned -> not owned
+    assert by_entity["CPartnerProfile"]["editable"] is True  # assigned to u1
 
 
 # --- create / update session ----------------------------------------------

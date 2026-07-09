@@ -74,8 +74,16 @@ def _field_spec(meta_fields: dict[str, Any]) -> list[dict[str, Any]]:
     return spec
 
 
-def _select_for(spec: list[dict[str, Any]]) -> str:
-    return ",".join(["id", "name", *(f["name"] for f in spec)])
+def _select_for(spec: list[dict[str, Any]], raw: dict[str, Any]) -> str:
+    """Field select for a record read — the shown fields plus the ownership fields
+    (only those that exist on the entity, to avoid a bad-select 400)."""
+    fields = ["id", "name"]
+    if "assignedUser" in raw:
+        fields.append("assignedUserId")
+    if "assignedUsers" in raw:
+        fields.append("assignedUsersIds")
+    fields += [f["name"] for f in spec]
+    return ",".join(dict.fromkeys(fields))
 
 
 def _section(
@@ -93,23 +101,37 @@ def _section(
     }
 
 
-async def _editable_entities(client: SessionClient, entities: set[str]) -> dict[str, bool]:
-    """Per-entity edit permission for the current user (from their ACL table).
-    ``edit == "no"`` => not editable here (rendered read-only). Fails open (treats
-    as editable) if the ACL can't be read, so the graceful per-entity save still
-    catches any real denial."""
+async def _acl_edit_levels(client: SessionClient, entities: set[str]) -> dict[str, Optional[str]]:
+    """The current user's ``edit`` ACL level per entity (``"no"`` / ``"own"`` /
+    ``"team"`` / ``"all"`` / ``"yes"``), from their ACL table. Fails open (empty =>
+    treated as permissive) if the ACL can't be read."""
     try:
         table = (await client.app_user()).get("acl", {}).get("table", {})
     except Exception:  # noqa: BLE001 — fail open; save-time 403s are handled too
-        return {e: True for e in entities}
-    result: dict[str, bool] = {}
+        return {}
+    levels: dict[str, Optional[str]] = {}
     for e in entities:
         perm = table.get(e)
-        level = perm.get("edit") if isinstance(perm, dict) else perm
-        # Only an explicit "no" (or False) means read-only; a missing entry is
-        # permissive (fail open — a real record-level denial is caught on save).
-        result[e] = level not in ("no", False)
-    return result
+        levels[e] = perm.get("edit") if isinstance(perm, dict) else perm
+    return levels
+
+
+def _editable_for(level: Optional[str], rec: dict[str, Any], user_id: Optional[str]) -> bool:
+    """Whether the user can edit THIS record given their ``edit`` ACL level.
+
+    ``"no"`` never; ``"own"`` only when they're the record's assigned user (so an
+    unassigned record, editable by nobody but admins, reads as read-only rather
+    than offering a doomed edit); everything else (``all``/``yes``/``team``/unknown)
+    is treated as editable — ``team`` is left to the save to confirm."""
+    if level in ("no", False):
+        return False
+    if level == "own":
+        if not user_id:
+            return False
+        if rec.get("assignedUserId") == user_id:
+            return True
+        return user_id in (rec.get("assignedUsersIds") or [])
+    return True
 
 
 class _MetaCache:
@@ -119,21 +141,25 @@ class _MetaCache:
         self._client = client
         self._cache: dict[str, dict[str, Any]] = {}
 
-    async def spec(self, entity: str) -> list[dict[str, Any]]:
+    async def raw(self, entity: str) -> dict[str, Any]:
         if entity not in self._cache:
             self._cache[entity] = await self._client.metadata(f"entityDefs.{entity}.fields")
-        return _field_spec(self._cache[entity])
+        return self._cache[entity]
+
+    async def spec(self, entity: str) -> list[dict[str, Any]]:
+        return _field_spec(await self.raw(entity))
 
 
 async def build_details(
-    cfg: DomainConfig, client: SessionClient, parent_id: str
+    cfg: DomainConfig, client: SessionClient, parent_id: str, user_id: Optional[str] = None
 ) -> dict[str, Any]:
     """The Details payload: one section per org entity (company + profile) plus
-    one per related contact, each with its editable field spec and current values."""
+    one per related contact, each with its editable field spec, current values,
+    and whether THIS user can edit THIS record (entity ACL + per-record ownership)."""
     meta = _MetaCache(client)
     parent = await client.get(cfg.parent_entity, parent_id, select=cfg.detail_select)
     entities = {e for _, e, _ in cfg.details_entities} | {CONTACT}
-    can_edit = await _editable_entities(client, entities)
+    levels = await _acl_edit_levels(client, entities)
 
     sections: list[dict[str, Any]] = []
     for title, entity, id_attr in cfg.details_entities:
@@ -141,19 +167,19 @@ async def build_details(
         if not rec_id:
             continue
         spec = await meta.spec(entity)
-        rec = await client.get(entity, rec_id, select=_select_for(spec))
-        sections.append(_section(title, entity, rec, spec, can_edit.get(entity, True)))
+        rec = await client.get(entity, rec_id, select=_select_for(spec, await meta.raw(entity)))
+        editable = _editable_for(levels.get(entity), rec, user_id)
+        sections.append(_section(title, entity, rec, spec, editable))
 
     # A section per related contact.
     contact_spec = await meta.spec(CONTACT)
     contacts = await client.list_related(
         cfg.parent_entity, parent_id, cfg.parent_contacts_link,
-        select=_select_for(contact_spec), max_size=200,
+        select=_select_for(contact_spec, await meta.raw(CONTACT)), max_size=200,
     )
     for c in contacts.get("list", []):
-        sections.append(_section(
-            c.get("name") or "Contact", CONTACT, c, contact_spec, can_edit.get(CONTACT, True)
-        ))
+        editable = _editable_for(levels.get(CONTACT), c, user_id)
+        sections.append(_section(c.get("name") or "Contact", CONTACT, c, contact_spec, editable))
 
     return {"id": parent_id, "sections": sections}
 
