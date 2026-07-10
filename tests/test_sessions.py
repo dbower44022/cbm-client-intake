@@ -738,6 +738,8 @@ def test_session_endpoint_reports_domain(monkeypatch):
     assert data["domain"] == "mentorsessions"
     assert data["supportsComentor"] is True
     assert data["defaultSessionType"] == "Client Session"
+    # distinct empty-state text for profileFound=false (no linked CMentorProfile)
+    assert "Assigned User" in data["noProfileMessage"]
     # phase-one common detail tabs (same for every domain)
     tabs = data["detailTabs"]
     assert [t["key"] for t in tabs] == [

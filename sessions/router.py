@@ -63,6 +63,16 @@ COMMON_DETAIL_TABS = [
     {"key": "documents", "label": "Documents", "placeholder": True},
 ]
 
+# Shown instead of the domain's empty message when /records returns
+# profileFound=false: the user passed the team gate but no CMentorProfile has
+# them as its assigned User, so nothing can be scoped to them. Only an
+# administrator can create that link (in the CRM), so this one names them.
+NO_PROFILE_MESSAGE = (
+    "Your login isn't linked to a CBM Mentor profile yet, so there are no "
+    "records to show. Ask an administrator to set your user as the Assigned "
+    "User on your profile in the CRM, then Refresh."
+)
+
 
 def make_router(cfg: DomainConfig) -> APIRouter:
     router = APIRouter(prefix=f"/{cfg.slug}/api", tags=[cfg.slug])
@@ -115,6 +125,7 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             "statusKey": cfg.list_status_key,
             "contactKey": cfg.list_contact_key,
             "emptyMessage": cfg.empty_message,
+            "noProfileMessage": NO_PROFILE_MESSAGE,
             "detailTabs": COMMON_DETAIL_TABS,
             "supportsComentor": cfg.supports_comentor,
             "defaultSessionType": cfg.default_session_type,

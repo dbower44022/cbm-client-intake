@@ -4,6 +4,19 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.33.1] — 2026-07-10
+
+### Added
+- **Sessions apps: distinct empty state when the login has no linked profile.**
+  When `/records` returns `profileFound: false` (no `CMentorProfile` has the
+  signed-in user as its Assigned User, so nothing can be scoped to them), the
+  grid now explains that and says an administrator must link the user — instead
+  of the domain's generic "No partners/sponsors/engagements found." The message
+  ships in the `/session` config (`noProfileMessage`, `sessions/router.py`).
+  Diagnosed live on crm-test: a hand-created "Partner Manager" profile managed
+  3 partners but had no Assigned User, so `/partnersessions` looked empty with
+  no hint why.
+
 ## [0.33.0] — 2026-07-10
 
 ### Changed

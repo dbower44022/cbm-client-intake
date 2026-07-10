@@ -232,9 +232,14 @@
     try {
       var res = await api("/records");
       records = res.records || [];
-      // No linked profile / no owned records is a normal empty state, not an
-      // error — the grid just shows the domain's empty message. If a record is
-      // later assigned to this user, a Refresh picks it up (re-queried each call).
+      // Both empty states are normal, not errors, but they read differently:
+      // profileFound=false means no CMentorProfile is linked to this login (an
+      // administrator has to link it — say so), while an empty list on a linked
+      // profile just gets the domain's plain empty message. A Refresh picks up
+      // either fix (re-queried each call).
+      $("emptyState").textContent = res.profileFound === false
+        ? (config.noProfileMessage || "Your login isn't linked to a profile — ask an administrator.")
+        : (config.emptyMessage || "No records found.");
       refreshStatusFilter();
       renderTable();
     } catch (e) {
