@@ -154,10 +154,13 @@ class DomainConfig:
 # separately (a picker over the parent's contacts), not as a generic field.
 SESSION_FIELDS: list[dict] = [
     {"name": "name", "label": "Session title", "type": "varchar", "group": "Session"},
-    # Status / Session type / Start on one line (no End date — meetings don't need it).
+    # Status / Session type / Start / Duration on one line (no raw End date —
+    # the CRM's ``duration`` is virtual: dateEnd − dateStart. The editor shows a
+    # duration select and the frontend translates it to ``dateEnd`` on save).
     {"name": "status", "label": "Status", "type": "enum", "group": "Session", "row": "top"},
     {"name": "sessionType", "label": "Session type", "type": "enum", "group": "Session", "row": "top"},
     {"name": "dateStart", "label": "Start", "type": "datetime", "group": "Session", "row": "top"},
+    {"name": "duration", "label": "Duration", "type": "duration", "group": "Session", "row": "top"},
     {"name": "meetingType", "label": "Meeting type", "type": "multiEnum", "group": "Session"},
     {"name": "meetingLocationType", "label": "Location type", "type": "enum", "group": "Session", "row": "loc"},
     {"name": "locationDetails", "label": "Location details", "type": "varchar", "group": "Session", "row": "loc"},
@@ -170,15 +173,23 @@ SESSION_FIELDS: list[dict] = [
     {"name": "description", "label": "Description", "type": "text", "group": "Notes"},
 ]
 
-SESSION_EDIT_NAMES = {f["name"] for f in SESSION_FIELDS}
+# ``duration`` is EspoCRM's virtual duration type (notStorable — computed as
+# dateEnd − dateStart), so the writable/readable scalar is ``dateEnd``: the
+# editor sends dateEnd (start + chosen duration) and reads compute the difference.
+SESSION_EDIT_NAMES = ({f["name"] for f in SESSION_FIELDS} - {"duration"}) | {"dateEnd"}
 SESSION_ENUM_FIELDS = [f["name"] for f in SESSION_FIELDS if f["type"] in ("enum", "multiEnum")]
+# Fields whose live *options* the editor needs from CRM metadata (enums + the
+# duration presets, which are seconds ints on the duration field's metadata).
+SESSION_OPTION_FIELDS = SESSION_ENUM_FIELDS + [
+    f["name"] for f in SESSION_FIELDS if f["type"] == "duration"
+]
 
 # Fields read for each session on the parent detail — feeds both the Sessions
 # table and the Overview note feed (sessionNotes/nextSteps stamped with the time;
 # attendees are read separately via the sessionAttendees relationship link).
 DETAIL_SESSION_SELECT = (
-    "name,status,sessionType,dateStart,dateStartDate,sessionNotes,nextSteps,"
-    "videoMeetingLink"
+    "name,status,sessionType,dateStart,dateStartDate,dateEnd,sessionNotes,"
+    "nextSteps,videoMeetingLink"
 )
 
 

@@ -464,6 +464,15 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   most important fields — `sessionNotes` + `nextSteps` — carry `big: True` and share
   a `row`, rendering as large side-by-side rich-text editors (`.cbm-field--big`);
   the meeting **End date was removed**; Status/Session type/Start share one line.
+  **Duration (v0.34.1):** `CSession.duration` is EspoCRM's *virtual* duration type
+  (notStorable, = `dateEnd − dateStart`, preset choices 5m–3h read from metadata,
+  default 1h) — the editor's **Duration** select (Status/Type/Start/Duration on one
+  line) is translated by the frontend into a recomputed `dateEnd` on save (moving
+  Start preserves the duration); `SESSION_EDIT_NAMES` excludes `duration` and
+  whitelists `dateEnd` instead. Duration displays on the Overview session-summary
+  cards (next to the date), the Sessions-tab table (own column), and the read-only
+  session view (KV grid); a session without `dateEnd` shows none. Verified in the
+  stub harness, not yet live.
 - **Attendees are a RELATIONSHIP, not a select-field (the v0.32.2 fix; see
   [[espo-custom-linkmultiple-is-a-relationship]]).** `sessionAttendees` (→ Contact)
   is read via the link (`service._attendees` → `list_related`) and written via

@@ -32,6 +32,7 @@ from .config import (
     SESSION,
     SESSION_EDIT_NAMES,
     SESSION_ENUM_FIELDS,
+    SESSION_OPTION_FIELDS,
     SESSION_FIELDS,
     DomainConfig,
 )
@@ -205,6 +206,7 @@ def _session_row(s: dict[str, Any]) -> dict[str, Any]:
         "status": s.get("status"),
         "sessionType": s.get("sessionType"),
         "dateStart": s.get("dateStart") or s.get("dateStartDate"),
+        "dateEnd": s.get("dateEnd"),
     }
 
 
@@ -231,6 +233,7 @@ def _note_entry(s: dict[str, Any]) -> dict[str, Any]:
         "sessionType": s.get("sessionType"),
         "status": s.get("status"),
         "dateStart": s.get("dateStart") or s.get("dateStartDate"),
+        "dateEnd": s.get("dateEnd"),
         "attendees": [],
         "notes": s.get("sessionNotes") or "",
         "nextSteps": s.get("nextSteps") or "",
@@ -604,11 +607,12 @@ async def mentor_options(client: SessionClient) -> list[dict[str, Any]]:
     return [{"id": r["id"], "name": r.get("name")} for r in data.get("list", [])]
 
 
-async def field_options(client: SessionClient) -> dict[str, list[str]]:
-    """Live option lists for the CSession enum/multi-enum fields (CRM = truth)."""
+async def field_options(client: SessionClient) -> dict[str, list[Any]]:
+    """Live option lists for the CSession enum/multi-enum/duration fields (CRM =
+    truth). Duration options are seconds ints (the CRM's preset choices)."""
     fields = await client.metadata(f"entityDefs.{SESSION}.fields")
-    options: dict[str, list[str]] = {}
-    for name in SESSION_ENUM_FIELDS:
+    options: dict[str, list[Any]] = {}
+    for name in SESSION_OPTION_FIELDS:
         opts = (fields.get(name) or {}).get("options")
         if isinstance(opts, list):
             options[name] = [o for o in opts if o != ""]

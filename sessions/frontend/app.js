@@ -583,6 +583,8 @@
     var date = document.createElement("span"); date.className = "sx__scard-date";
     date.textContent = fmtSessionDate(s.dateStart); date.title = s.dateStart || "";  // ISO in tooltip
     head.appendChild(date);
+    var dur = fmtDuration(sessionDurationSeconds(s));
+    if (dur) { var du = document.createElement("span"); du.className = "sx__scard-dur"; du.textContent = dur; head.appendChild(du); }
     if (s.sessionType) { var tc = document.createElement("span"); tc.className = "sx__chip-type"; tc.textContent = s.sessionType; head.appendChild(tc); }
     if (s.status) { var sc = document.createElement("span"); sc.className = "sx__chip-status sx__chip-" + scls; sc.textContent = s.status; head.appendChild(sc); }
     var custom = customSessionTitle(s.name);
@@ -664,6 +666,33 @@
     var da = parseNaive(a.dateStart), db = parseNaive(b.dateStart);
     return (da ? da.getTime() : 0) - (db ? db.getTime() : 0);
   }
+  // --- duration (CRM-virtual: dateEnd − dateStart, in seconds) ---
+  // Preset choices mirroring the CRM duration field's options; used only when
+  // the live metadata options aren't available.
+  var DURATION_OPTIONS = [300, 600, 900, 1800, 2700, 3600, 7200, 10800];
+  function sessionDurationSeconds(s) {
+    var a = parseNaive(s && s.dateStart), b = parseNaive(s && s.dateEnd);
+    if (!a || !b) return null;
+    var secs = Math.round((b.getTime() - a.getTime()) / 1000);
+    return secs > 0 ? secs : null;
+  }
+  function fmtDuration(secs) {
+    if (secs == null || !(secs > 0)) return "";
+    var h = Math.floor(secs / 3600), m = Math.round((secs % 3600) / 60);
+    if (h && m) return h + "h " + m + "m";
+    if (h) return h + (h === 1 ? " hour" : " hours");
+    return m + " min";
+  }
+  // "YYYY-MM-DD HH:MM:SS" + seconds → same format (wall-clock, no tz shift).
+  function stampPlusSeconds(stamp, secs) {
+    var d = parseNaive(stamp);
+    if (!d) return null;
+    d = new Date(d.getTime() + secs * 1000);
+    function p(n) { return (n < 10 ? "0" : "") + n; }
+    return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) +
+           " " + p(d.getHours()) + ":" + p(d.getMinutes()) + ":00";
+  }
+
   // "Weekday, Month D — h:mm AM/PM"; year appended only when not the current year.
   // weekdayStyle: "long" (default, e.g. Monday) or "short" (e.g. Mon).
   function fmtSessionDate(v, weekdayStyle) {
@@ -1628,6 +1657,7 @@
       tr.appendChild(td(s.status || "—"));
       tr.appendChild(td(s.sessionType || "—"));
       tr.appendChild(td(fmtWhen(s.dateStart)));
+      tr.appendChild(td(fmtDuration(sessionDurationSeconds(s)) || "—"));
       var actions = document.createElement("td");
       var edit = document.createElement("button"); edit.type = "button"; edit.className = "cbm-button cbm-button--secondary sx__sm";
       edit.textContent = "Edit"; edit.addEventListener("click", function () { openEditor(s.id); });
@@ -1702,6 +1732,7 @@
     hcard.appendChild(band);
 
     var grid = document.createElement("div"); grid.className = "sx__vgrid";
+    addKV(grid, "Duration", fmtDuration(sessionDurationSeconds(s)), "text");
     addKV(grid, "Meeting type", s.meetingType, "multiEnum");
     addKV(grid, "Location", locationValue(s), "text");
     addKV(grid, "Video meeting link", s.videoMeetingLink, "link");
@@ -1833,6 +1864,8 @@
     if (sessionId) {
       try { currentSession = await api("/sessions/" + encodeURIComponent(sessionId)); }
       catch (e) { if (e.status === 401) { showLogin(); return; } notice("detailNotice", e.message, "error"); return; }
+      // Duration is virtual (dateEnd − dateStart) — derive the select's value.
+      currentSession.duration = sessionDurationSeconds(currentSession);
       $("editorTitle").textContent = "Edit session";
     } else {
       currentSession = {
@@ -1840,6 +1873,7 @@
         status: "Scheduled",
         sessionType: (config && config.defaultSessionType) || "",
         name: defaultSessionName(),
+        duration: 3600,  // the CRM duration field's default (1 hour)
       };
       $("editorTitle").textContent = "New session";
     }
@@ -1940,6 +1974,15 @@
       el = document.createElement("input"); el.type = "date"; el.value = value || "";
     } else if (f.type === "datetime") {
       el = document.createElement("input"); el.type = "datetime-local"; el.value = toLocalInput(value);
+    } else if (f.type === "duration") {
+      // Select of the CRM's preset choices (seconds); a stored duration outside
+      // the presets is offered as-is so an existing value is never lost.
+      el = document.createElement("select");
+      var dopts = (fieldOptions[f.name] || DURATION_OPTIONS).slice();
+      if (value != null && dopts.indexOf(value) < 0) { dopts.push(value); dopts.sort(function (a, b) { return a - b; }); }
+      if (value == null) el.appendChild(new Option("(not set)", ""));
+      dopts.forEach(function (secs) { el.appendChild(new Option(fmtDuration(secs), String(secs))); });
+      el.value = value == null ? "" : String(value);
     } else if (f.type === "wysiwyg") {
       el = makeWysiwyg(value);
     } else if (f.type === "text") {
@@ -1957,6 +2000,7 @@
     if (t === "int") return el.value === "" ? null : Number(el.value);
     if (t === "date") return el.value || null;
     if (t === "datetime") return fromLocalInput(el.value);
+    if (t === "duration") return el.value === "" ? null : Number(el.value);
     if (t === "wysiwyg") {
       var a = el.querySelector(".wysiwyg__area");
       if (!a) return "";
@@ -2022,6 +2066,12 @@
     return Array.prototype.map.call($("attendees").querySelectorAll(".sx__attendee:checked"), function (c) { return c.value; });
   }
 
+  // The editor form's CURRENT value for a field (changed or not).
+  function editorFieldValue(name) {
+    var el = $("sessionForm").querySelector('[data-field="' + name + '"]');
+    return el ? readField(el) : null;
+  }
+
   // True if the editor form or attendees differ from their render-time values.
   function editorHasUnsavedChanges() {
     var dirty = false;
@@ -2065,6 +2115,13 @@
       // re-sent and rejected.
       if (isNew || JSON.stringify(v) !== editorSnapshot[el.dataset.field]) changes[el.dataset.field] = v;
     });
+    // Duration is virtual in the CRM (dateEnd − dateStart): when the start or the
+    // duration changed, store it by sending the recomputed dateEnd instead.
+    if ("dateStart" in changes || "duration" in changes) {
+      var ds = editorFieldValue("dateStart"), dur = editorFieldValue("duration");
+      if (ds && dur) changes.dateEnd = stampPlusSeconds(ds, dur);
+    }
+    delete changes.duration;
     var attendees = chosenAttendees();
     $("saveSessionBtn").disabled = true;
     try {

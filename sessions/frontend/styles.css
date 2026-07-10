@@ -362,6 +362,7 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
 .sx__scard-date { font-size: 15px; font-weight: 500; }
 .sx__scard-head.is-future .sx__scard-date { color: var(--session-accent-text); }
 .sx__scard-head.is-past .sx__scard-date { color: var(--cbm-slate-900, #1E293B); }
+.sx__scard-dur { font-size: 13px; color: var(--cbm-slate-700, #556); }
 .sx__scard-title { font-size: 13px; color: var(--cbm-slate-700, #556); }
 .sx__scard-acts { margin-left: auto; display: inline-flex; gap: 0.35rem; }
 .sx__scard-btn { font: inherit; font-size: 12px; line-height: 1.3; padding: 3px 10px; border: 1px solid var(--session-border); background: #fff; border-radius: 5px; cursor: pointer; color: var(--cbm-slate-700, #556); }

@@ -692,6 +692,28 @@ async def test_field_options_reads_live_enums_and_drops_blank():
     assert "name" not in opts
 
 
+@pytest.mark.asyncio
+async def test_field_options_includes_duration_presets():
+    # The CRM's virtual duration field carries its preset choices (seconds ints)
+    # in metadata options — served to the editor like the enum options.
+    fake = Fake(meta_fields={
+        "duration": {"type": "duration", "options": [300, 1800, 3600]},
+    })
+    opts = await service.field_options(fake)
+    assert opts["duration"] == [300, 1800, 3600]
+
+
+def test_duration_is_not_writable_but_date_end_is():
+    # duration is notStorable in the CRM (dateEnd − dateStart): the editor sends
+    # the recomputed dateEnd; a stray duration key must never reach the payload.
+    payload = service._session_payload(
+        {"duration": 3600, "dateEnd": "2026-07-10 15:00:00", "dateStart": "2026-07-10 14:00:00"}
+    )
+    assert "duration" not in payload
+    assert payload["dateEnd"] == "2026-07-10 15:00:00"
+    assert payload["dateStart"] == "2026-07-10 14:00:00"
+
+
 # --- router ----------------------------------------------------------------
 
 def _app(monkeypatch):

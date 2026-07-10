@@ -4,6 +4,30 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.34.1] — 2026-07-10
+
+### Added
+- **Session duration across the session tools.** `CSession.duration` is
+  EspoCRM's *virtual* duration type — not stored, computed as
+  `dateEnd − dateStart` (presets 5 min–3 hours, default 1 hour) — so the app
+  writes `dateEnd` and displays the difference:
+  - **Editor (session detail form):** a **Duration** select on the
+    Status/Type/Start line, with the preset choices read live from CRM
+    metadata (a stored non-preset value is offered as-is so it is never
+    lost; new sessions default to 1 hour). On save the frontend recomputes
+    and sends `dateEnd` whenever the start or the duration changed — moving
+    the start keeps the duration; the virtual `duration` key never reaches
+    the CRM (`SESSION_EDIT_NAMES` now excludes it and whitelists `dateEnd`).
+  - **Engagement/record view:** the Sessions tab table gains a **Duration**
+    column.
+  - **Session summary cards** (Overview note feed): the duration is stamped
+    next to the session date in the header band.
+  - **Read-only session view:** a **Duration** entry in the key-value grid.
+  Sessions without a `dateEnd` (recorded before this change) simply show no
+  duration. Verified in the stubbed-API browser harness (cards/table/view
+  render; update sends only `dateEnd`; create sends start + 1h; moving the
+  start preserves the duration) — not yet driven against the live CRM.
+
 ## [0.34.0] — 2026-07-10
 
 ### Fixed
