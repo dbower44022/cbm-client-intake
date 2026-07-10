@@ -153,8 +153,9 @@ def _grid_row(cfg: DomainConfig, r: dict[str, Any]) -> dict[str, Any]:
     row = {"id": r["id"], "createdAt": r.get("createdAt")}
     for col in cfg.list_columns:
         row[col.key] = r.get(col.attr)
-    dkey, _, dattr = cfg.list_date_column
-    row[dkey] = r.get(dattr)  # trailing date column (Start Date / Created)
+    if cfg.list_date_column:  # optional trailing date column (Start Date / Created)
+        dkey, _, dattr = cfg.list_date_column
+        row[dkey] = r.get(dattr)
     if cfg.list_contact_id_attr:
         row["contactId"] = r.get(cfg.list_contact_id_attr)  # for the contact pop-up link
     return row
@@ -368,10 +369,15 @@ async def get_detail(
     }
     if cfg.supports_comentor:
         co_data = await client.list_related(
-            cfg.parent_entity, parent_id, _COMENTOR_LINK, select="name", max_size=_PAGE
+            cfg.parent_entity, parent_id, _COMENTOR_LINK,
+            select="name,contactRecordId", max_size=_PAGE,
         )
+        # ``contactId`` = the co-mentor's linked Contact, so the Overview can link
+        # each CBM contact to its contact-info pop-up (email/phone). None when the
+        # mentor profile has no linked Contact — the frontend shows plain text then.
         detail["coMentors"] = [
-            {"id": m["id"], "name": m.get("name")} for m in co_data.get("list", [])
+            {"id": m["id"], "name": m.get("name"), "contactId": m.get("contactRecordId")}
+            for m in co_data.get("list", [])
         ]
     return detail
 

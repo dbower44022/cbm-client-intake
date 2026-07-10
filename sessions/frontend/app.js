@@ -18,8 +18,9 @@
   var editorSnapshot = {};  // {field: JSON of value at render} — save diffs against this
   var confirmOnSave = null, confirmOnDiscard = null;  // unsaved-changes dialog callbacks
   var currentDetails = null;// Details tab payload for the open record (lazy-loaded)
-  var detailsSnapshot = {}; // "sectionIndex:field" -> JSON of value at edit-render
-  var detailsEditSet = {};  // sectionIndex -> true when that panel is in edit mode
+  var detailsSnapshot = {}; // editKey -> {field: JSON of value at edit-render}
+  var detailsEditSet = {};  // editKey ("parent"/"orgN"/"cN"/"bN") -> true when editing
+  var detailsAdd = null;    // open add-contact flow: "client-menu"|"client-existing"|"client-new"|"cbm-menu"|"cbm-pick"
   var currentViewSessions = []; // ordered session rows for the read-only view's prev/next
   var currentViewIndex = -1;    // position within currentViewSessions
   var search = "";
@@ -105,6 +106,10 @@
     } else { fallbackCopy(peekCopyText); done(); }
   });
   $("peekBackdrop").addEventListener("click", closePeek);
+  // Communications: compose + view/reply modal.
+  $("composeBtn").addEventListener("click", function () { composeMessage(null); });
+  $("commModalClose").addEventListener("click", closeComm);
+  $("commBackdrop").addEventListener("click", closeComm);
   // Unsaved-changes confirm dialog (leaving the session editor).
   $("confirmSave").addEventListener("click", function () { hide($("confirmModal")); if (confirmOnSave) confirmOnSave(); });
   $("confirmDiscard").addEventListener("click", function () { hide($("confirmModal")); if (confirmOnDiscard) confirmOnDiscard(); });
@@ -113,6 +118,7 @@
   document.addEventListener("keydown", function (e) {
     if (e.key !== "Escape") return;
     if (!$("confirmModal").hidden) { hide($("confirmModal")); }  // Escape = keep editing
+    else if (!$("commModal").hidden) closeComm();
     else if (!$("peekModal").hidden) closePeek();
   });
 
@@ -157,6 +163,7 @@
       p.hidden = p.dataset.dpanel !== tab;
     });
     if (tab === "details") ensureDetails();
+    if (tab === "communications") renderComms();
   }
 
   // Draggable splitter: resize the facts rail (wider = more room for the
@@ -312,8 +319,10 @@
           link.textContent = r[c.key] || "(unnamed)";
           link.addEventListener("click", function () { openDetail(r.id); });
           td.appendChild(link);
-        } else if (c.date) {
+        } else if (c.date || c.type === "date") {
           td.textContent = fmtDate(r[c.key]);
+        } else if (c.type === "datetime") {
+          td.textContent = fmtSessionDate(r[c.key], "short");  // "Mon, Aug 4 — 3:30 PM"
         } else if (c.key === contactKey && r.contactId && r[c.key]) {
           var cl = document.createElement("button");
           cl.type = "button"; cl.className = "sx__link";
@@ -452,7 +461,14 @@
       card.appendChild(cardHead("CBM Contacts"));
       coMentors.forEach(function (m) {
         var row = document.createElement("div"); row.className = "sx__oc";
-        var n = document.createElement("span"); n.textContent = m.name || m.id; row.appendChild(n);
+        if (m.contactId) {  // link to the co-mentor's contact info (email/phone) pop-up
+          var b = document.createElement("button"); b.type = "button"; b.className = "sx__peek";
+          b.textContent = m.name || m.id;
+          b.addEventListener("click", function () { openPeek("Contact", m.contactId, m.name || ""); });
+          row.appendChild(b);
+        } else {
+          var n = document.createElement("span"); n.textContent = m.name || m.id; row.appendChild(n);
+        }
         card.appendChild(row);
       });
     }
@@ -645,6 +661,150 @@
     var s = document.createElement("span"); s.className = "sx__tag sx__tag--" + kind; s.textContent = text; return s;
   }
 
+  // --- Communications tab: email inbox (UI only) ---------------------------
+  // NOTE: no email data is read from or written to the CRM yet — the CRM email
+  // structure is still being designed. These example messages exist only so the
+  // inbox layout and the view / reply / compose flow can be reviewed. When the
+  // CRM side is ready, swap SAMPLE_MESSAGES for a `/records/{id}/messages` fetch
+  // and wire the Send handler to a real endpoint.
+  var SAMPLE_MESSAGES = [
+    { id: "s1", direction: "received", from: "Pat Rivera <pat.rivera@example.com>",
+      to: "mentor@cbmentors.org", subject: "Re: Agenda for our next meeting",
+      date: "2026-07-08 14:22:00", unread: true,
+      body: "Thanks for sending the agenda over. I had a couple of questions about the marketing plan we discussed — mainly around budget and timing. Could we walk through those first? Looking forward to it." },
+    { id: "s2", direction: "sent", from: "mentor@cbmentors.org",
+      to: "Pat Rivera <pat.rivera@example.com>", subject: "Agenda for our next meeting",
+      date: "2026-07-07 09:10:00", unread: false,
+      body: "Hi Pat,\n\nHere's what I'd like to cover on Thursday:\n\n1. Review last month's numbers\n2. Marketing plan next steps\n3. Hiring timeline\n\nLet me know if you'd like to add anything.\n\nBest," },
+    { id: "s3", direction: "received", from: "Pat Rivera <pat.rivera@example.com>",
+      to: "mentor@cbmentors.org", subject: "Thank you!",
+      date: "2026-06-30 17:45:00", unread: false,
+      body: "Just wanted to say thanks for all your help this month — the introductions you made were incredibly valuable." },
+  ];
+
+  function partyName(addr) {
+    // "Name <email>" -> "Name"; a bare address -> the address.
+    var m = /^\s*"?([^"<]+?)"?\s*</.exec(addr || "");
+    return (m ? m[1] : (addr || "")).trim() || "(unknown)";
+  }
+  function snippet(body, n) {
+    var t = String(body || "").replace(/\s+/g, " ").trim();
+    n = n || 90;
+    return t.length > n ? t.slice(0, n - 1) + "…" : t;
+  }
+  function replySubject(subj) {
+    var s = String(subj || "");
+    return /^re:/i.test(s) ? s : "Re: " + s;
+  }
+
+  function renderComms() {
+    var body = $("inboxBody"); if (!body) return;
+    body.innerHTML = "";
+    var msgs = SAMPLE_MESSAGES;
+    if (!msgs.length) { hide($("inboxTable")); show($("noMessages")); return; }
+    hide($("noMessages")); show($("inboxTable"));
+    msgs.forEach(function (m) {
+      var tr = document.createElement("tr");
+      tr.className = "sx__inbox-row" + (m.unread ? " is-unread" : "");
+      tr.tabIndex = 0; tr.setAttribute("role", "button");
+
+      var c0 = document.createElement("td"); c0.className = "sx__inbox-dir";
+      c0.appendChild(tag(m.direction === "sent" ? "Sent" : "Received",
+        m.direction === "sent" ? "type" : "status"));
+
+      var c1 = document.createElement("td"); c1.className = "sx__inbox-party";
+      c1.textContent = (m.direction === "sent" ? "To: " : "") + partyName(m.direction === "sent" ? m.to : m.from);
+
+      var c2 = document.createElement("td"); c2.className = "sx__inbox-subj";
+      var subj = document.createElement("span"); subj.className = "sx__inbox-subject";
+      subj.textContent = m.subject || "(no subject)";
+      var sn = document.createElement("span"); sn.className = "sx__inbox-snippet";
+      sn.textContent = snippet(m.body);
+      c2.appendChild(subj); c2.appendChild(sn);
+
+      var c3 = document.createElement("td"); c3.className = "sx__inbox-date";
+      c3.textContent = fmtSessionDate(m.date, "short");
+
+      tr.appendChild(c0); tr.appendChild(c1); tr.appendChild(c2); tr.appendChild(c3);
+      tr.addEventListener("click", function () { viewMessage(m); });
+      tr.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); viewMessage(m); } });
+      body.appendChild(tr);
+    });
+  }
+
+  // --- Communications: view / compose / reply modal ---
+  function openComm(kind, title) {
+    $("commModalKind").textContent = kind || "";
+    $("commModalTitle").textContent = title || "";
+    $("commModalBody").innerHTML = ""; $("commModalFoot").innerHTML = "";
+    show($("commModal"));
+  }
+  function closeComm() { hide($("commModal")); }
+
+  function commHeaderRow(label, value) {
+    var row = document.createElement("div"); row.className = "sx__fact";
+    var l = document.createElement("span"); l.className = "sx__fact-l"; l.textContent = label;
+    var v = document.createElement("span"); v.className = "sx__fact-v"; v.textContent = value || "—";
+    row.appendChild(l); row.appendChild(v); return row;
+  }
+
+  function viewMessage(m) {
+    if (m.unread) { m.unread = false; renderComms(); }
+    openComm(m.direction === "sent" ? "Sent message" : "Received message", m.subject || "(no subject)");
+    var body = $("commModalBody");
+    body.appendChild(commHeaderRow("From", m.from));
+    body.appendChild(commHeaderRow("To", m.to));
+    body.appendChild(commHeaderRow("Date", fmtSessionDate(m.date, "short")));
+    var pre = document.createElement("div"); pre.className = "sx__msg-body"; pre.textContent = m.body || "";
+    body.appendChild(pre);
+    var reply = document.createElement("button"); reply.type = "button"; reply.className = "cbm-button";
+    reply.textContent = "↩ Reply";
+    reply.addEventListener("click", function () {
+      composeMessage({ to: m.from, subject: replySubject(m.subject) });
+    });
+    var close = document.createElement("button"); close.type = "button";
+    close.className = "cbm-button cbm-button--secondary"; close.textContent = "Close";
+    close.addEventListener("click", closeComm);
+    $("commModalFoot").appendChild(reply); $("commModalFoot").appendChild(close);
+  }
+
+  function commField(label, id, value, isTextarea) {
+    var wrap = document.createElement("label"); wrap.className = "sx__msg-field";
+    var l = document.createElement("span"); l.className = "sx__msg-label"; l.textContent = label;
+    var input = isTextarea ? document.createElement("textarea") : document.createElement("input");
+    input.id = id; input.className = "sx__msg-input";
+    if (isTextarea) { input.rows = 10; } else { input.type = "text"; }
+    input.value = value || "";
+    wrap.appendChild(l); wrap.appendChild(input); return wrap;
+  }
+
+  function composeMessage(pre) {
+    pre = pre || {};
+    openComm("New email", pre.to ? "Reply" : "Compose");
+    var body = $("commModalBody");
+    body.appendChild(commField("To", "commTo", pre.to, false));
+    body.appendChild(commField("Subject", "commSubject", pre.subject, false));
+    body.appendChild(commField("Message", "commBody", "", true));
+
+    var send = document.createElement("button"); send.type = "button";
+    send.className = "cbm-button"; send.textContent = "Send";
+    send.addEventListener("click", function () {
+      // No delivery yet — communicate that plainly rather than pretend it sent.
+      $("commModalBody").innerHTML = "";
+      var note = document.createElement("p"); note.className = "sx__notice is-success";
+      note.textContent = "Sending isn't available yet — email delivery will be wired up once the CRM email structure is finalized.";
+      $("commModalBody").appendChild(note);
+      $("commModalFoot").innerHTML = "";
+      var ok = document.createElement("button"); ok.type = "button";
+      ok.className = "cbm-button"; ok.textContent = "OK"; ok.addEventListener("click", closeComm);
+      $("commModalFoot").appendChild(ok);
+    });
+    var cancel = document.createElement("button"); cancel.type = "button";
+    cancel.className = "cbm-button cbm-button--secondary"; cancel.textContent = "Cancel";
+    cancel.addEventListener("click", closeComm);
+    $("commModalFoot").appendChild(send); $("commModalFoot").appendChild(cancel);
+  }
+
   // --- pop-up detail (peek) ---
   var peekCopyText = "";  // paste-ready contact card for the modal's Copy button
   function peekOpen(name) {
@@ -746,7 +906,8 @@
     document.body.removeChild(ta);
   }
 
-  // --- Details tab: read-optimized by default, whole page flips to edit ---
+  // --- Details tab (mockup v4): engagement summary strip + composed org cards +
+  //     contact tables (Client Contacts / CBM Contacts) with per-section editing ---
   async function ensureDetails() {
     if (!currentDetail) return;
     if (currentDetails && currentDetails._for === currentDetail.id) return;
@@ -755,7 +916,7 @@
 
   async function loadDetails(id) {
     show($("detailsLoading")); $("detailsSections").innerHTML = ""; hide($("detailsNotice"));
-    detailsEditSet = {};
+    detailsEditSet = {}; detailsSnapshot = {}; detailsAdd = null;
     try {
       var res = await api("/details/" + encodeURIComponent(id));
       res._for = id; currentDetails = res;
@@ -766,45 +927,52 @@
     } finally { hide($("detailsLoading")); }
   }
 
-  // Each section renders as a panel with its OWN Edit/Save/Cancel (no page-global
-  // bar). View mode composes fields into readable summary blocks per entity type;
-  // Edit mode keeps the full field-level form.
+  // Top to bottom, single column: summary strip (the parent record) → org cards
+  // (Company / profile) → Client Contacts table → CBM Contacts table. No
+  // page-global Edit bar — the strip, each card, and each contact row edit
+  // independently.
   function renderDetails() {
     if (!currentDetails) return;
     hide($("detailsNotice"));
     var host = $("detailsSections"); host.innerHTML = "";
-    (currentDetails.sections || []).forEach(function (sec, si) {
-      host.appendChild(detailPanel(sec, si));
+    (currentDetails.sections || []).forEach(function (sec, i) {
+      host.appendChild(sec.kind === "parent" ? parentStrip(sec, "parent") : orgCard(sec, "org" + i));
     });
+    host.appendChild(clientContactsCard());
+    if (currentDetails.cbmContacts) host.appendChild(cbmContactsCard());
   }
 
-  function detailPanel(sec, si) {
-    var editing = !!detailsEditSet[si];
-    var card = document.createElement("div"); card.className = "sx__dsection";
-    var h = document.createElement("div"); h.className = "sx__dsection-h";
-    var t = document.createElement("span"); t.className = "sx__dsection-t"; t.textContent = sec.title;
-    h.appendChild(t);
-    if (sec.entity === "Contact") { var k = document.createElement("span"); k.className = "sx__dsection-k"; k.textContent = "Contact"; h.appendChild(k); }
-    if (!editing && sec.editable) {
-      var edit = document.createElement("button"); edit.type = "button"; edit.className = "sx__dpanel-edit"; edit.textContent = "Edit";
-      edit.addEventListener("click", function () { detailsEditSet[si] = true; replaceDetailPanel(si); });
-      h.appendChild(edit);
-    }
-    card.appendChild(h);
-    card.appendChild(editing ? detailPanelEdit(sec, si) : detailPanelView(sec));
-    return card;
-  }
-
-  // Re-render just one panel (toggle view/edit) without disturbing the others.
-  function replaceDetailPanel(si) {
+  // Re-render only the element owning `key` so an open edit form elsewhere keeps
+  // its typed input. A contact-row key repaints its whole card (the row lives in
+  // its table); an unknown/missing key falls back to a full re-render.
+  function repaintDetails(key) {
+    if (!currentDetails) return;
+    if (key.charAt(0) === "c" && key !== "clientContacts") key = "clientContacts";
+    if (key.charAt(0) === "b") key = "cbmContacts";
     var host = $("detailsSections");
-    var next = detailPanel(currentDetails.sections[si], si);
-    if (host.children[si]) host.replaceChild(next, host.children[si]); else host.appendChild(next);
+    var el = host.querySelector('[data-dkey="' + key + '"]');
+    var next = buildDetailsKey(key);
+    if (el && next) { el.parentNode.replaceChild(next, el); } else { renderDetails(); }
   }
 
-  // === Edit mode (per panel): the full field-level form + Save/Cancel ===
-  function detailPanelEdit(sec, si) {
-    var body = document.createElement("div"); body.className = "sx__dform"; body.dataset.sectionIndex = si;
+  function buildDetailsKey(key) {
+    var secs = (currentDetails && currentDetails.sections) || [];
+    if (key === "parent") {
+      for (var i = 0; i < secs.length; i++) if (secs[i].kind === "parent") return parentStrip(secs[i], key);
+      return null;
+    }
+    if (key.indexOf("org") === 0) {
+      var idx = Number(key.slice(3));
+      return secs[idx] ? orgCard(secs[idx], key) : null;
+    }
+    if (key === "clientContacts") return clientContactsCard();
+    if (key === "cbmContacts") return cbmContactsCard();
+    return null;
+  }
+
+  // === Edit mode (per section): the full field-level form + Save/Cancel ===
+  function panelEditForm(sec, key) {
+    var body = document.createElement("div"); body.className = "sx__dform";
     var snap = {};
     sec.fields.forEach(function (f) {
       if (!f.editable) { body.appendChild(detailsReadField(f)); return; }
@@ -812,32 +980,32 @@
       body.appendChild(field);
       var el = field.querySelector("[data-field]"); if (el) snap[el.dataset.field] = JSON.stringify(readField(el));
     });
-    detailsSnapshot[si] = snap;
+    detailsSnapshot[key] = snap;
     var actions = document.createElement("div"); actions.className = "sx__dpanel-actions";
     var notice = document.createElement("p"); notice.className = "sx__dpanel-error"; notice.hidden = true;
     var save = document.createElement("button"); save.type = "button"; save.className = "cbm-button"; save.textContent = "Save changes";
     var cancel = document.createElement("button"); cancel.type = "button"; cancel.className = "cbm-button cbm-button--secondary"; cancel.textContent = "Cancel";
-    save.addEventListener("click", function () { savePanel(sec, si, body, save, notice); });
-    cancel.addEventListener("click", function () { detailsEditSet[si] = false; replaceDetailPanel(si); });
+    save.addEventListener("click", function () { savePanel(sec, key, body, save, notice); });
+    cancel.addEventListener("click", function () { delete detailsEditSet[key]; repaintDetails(key); });
     actions.appendChild(cancel); actions.appendChild(save);
     var wrap = document.createElement("div"); wrap.appendChild(body); wrap.appendChild(notice); wrap.appendChild(actions);
     return wrap;
   }
 
-  // Save one panel; on failure keep the edit view open and show the error inline.
-  async function savePanel(sec, si, body, saveBtn, errEl) {
-    var snap = detailsSnapshot[si] || {}, changes = {};
+  // Save one section; on failure keep the edit view open and show the error inline.
+  async function savePanel(sec, key, body, saveBtn, errEl) {
+    var snap = detailsSnapshot[key] || {}, changes = {};
     Array.prototype.forEach.call(body.querySelectorAll("[data-field]"), function (el) {
       var v = readField(el);
       if (JSON.stringify(v) !== snap[el.dataset.field]) changes[el.dataset.field] = v;
     });
-    if (!Object.keys(changes).length) { detailsEditSet[si] = false; replaceDetailPanel(si); return; }
+    if (!Object.keys(changes).length) { delete detailsEditSet[key]; repaintDetails(key); return; }
     saveBtn.disabled = true; errEl.hidden = true;
     try {
       await api("/details/" + encodeURIComponent(sec.entity) + "/" + encodeURIComponent(sec.id),
         { method: "PUT", body: JSON.stringify({ changes: changes }) });
-      detailsEditSet[si] = false;
-      await loadDetails(currentDetail.id);  // refresh values, all panels back to view
+      delete detailsEditSet[key];
+      await loadDetails(currentDetail.id);  // refresh values, everything back to view
       notice("detailsNotice", sec.title + " saved.", "success");
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }
@@ -877,17 +1045,7 @@
     wrap.appendChild(label); wrap.appendChild(input); return wrap;
   }
 
-  // === View mode: composed summary blocks per entity type (no field grids) ===
-  function detailPanelView(sec) {
-    var e = sec.entity;
-    if (e === "Contact") return contactSummary(sec);
-    if (e === "Account") return companySummary(sec);
-    if (e === "CClientProfile") return clientProfileSummary(sec);
-    if (e === "CEngagement") return engagementSummary(sec);
-    return genericSummary(sec);  // CPartnerProfile / CSponsorProfile
-  }
-
-  // --- summary helpers ---
+  // --- shared value helpers ---
   function dv(sec, name) { return (sec.values || {})[name]; }
   function dvs(sec, name) { var v = dv(sec, name); return v == null ? "" : String(v); }
   function dvArr(sec, name) { var v = dv(sec, name); return Array.isArray(v) ? v : []; }
@@ -899,145 +1057,542 @@
   function fmtLongDate(v) { var d = parseNaive(v); return d ? d.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) : String(v); }
   function fmtMonthYear(v) { var d = parseNaive(v); return d ? d.toLocaleDateString(undefined, { year: "numeric", month: "long" }) : String(v); }
   function txtLine(t) { var d = document.createElement("div"); d.textContent = t; return d; }
-  function factsLine(html) { var d = document.createElement("div"); d.className = "sx__dfacts"; d.innerHTML = html; return d; }
-  function ledeLine(html) { var d = document.createElement("div"); d.className = "sx__lede"; d.innerHTML = html; return d; }
-  function badgeRow(label, vals) {
-    var row = document.createElement("div"); row.className = "sx__chips";
-    var l = document.createElement("span"); l.className = "sx__chip-l"; l.textContent = label; row.appendChild(l);
-    vals.forEach(function (o) { var c = document.createElement("span"); c.className = "sx__chip"; c.textContent = o; row.appendChild(c); });
-    return row;
-  }
-  function noDetails() { var p = document.createElement("p"); p.className = "sx__muted sx__dbody"; p.textContent = "No details on file."; return p; }
-  // Acceptance flag — surfaces only when NOT accepted (operationally meaningful).
-  function acceptFlag(label, v) { return v === true ? null : label + ' <span class="sx__flag-no">not accepted</span>'; }
-
-  function contactSummary(sec) {
-    var wrap = document.createElement("div"); wrap.className = "sx__dbody sx__cols2";
-    var dir = document.createElement("div"); dir.className = "sx__dir";
-    var name = [dvs(sec, "salutationName"), dvs(sec, "firstName"), dvs(sec, "lastName")].filter(Boolean).join(" ");
-    var pref = dvs(sec, "cPreferredName");
-    if (pref && pref !== dvs(sec, "firstName")) name += " (" + pref + ")";
-    var nm = document.createElement("div"); nm.className = "sx__dir-name"; nm.textContent = name || sec.name || "(unnamed)"; dir.appendChild(nm);
-    if (dvs(sec, "addressStreet")) dir.appendChild(txtLine(dvs(sec, "addressStreet")));
-    var cl = cityLine(dvs(sec, "addressCity"), dvs(sec, "addressState"), dvs(sec, "addressPostalCode")); if (cl) dir.appendChild(txtLine(cl));
-    if (dvs(sec, "addressCountry")) dir.appendChild(txtLine(dvs(sec, "addressCountry")));
-    if (dvs(sec, "phoneNumber")) dir.appendChild(txtLine(dvs(sec, "phoneNumber")));
-    var email = dvs(sec, "emailAddress");
-    if (email) { var ed = document.createElement("div"); var a = document.createElement("a"); a.href = "mailto:" + email; a.textContent = email; ed.appendChild(a); dir.appendChild(ed); }
-    wrap.appendChild(dir);
-    var right = document.createElement("div");
-    var bits = [];
-    var ct = dvArr(sec, "cContactType"); if (ct.length) bits.push("<b>" + esc(ct.join(", ")) + "</b> contact");
-    if (dvs(sec, "cPreferredContactMethod")) bits.push("prefers <b>" + esc(dvs(sec, "cPreferredContactMethod").toLowerCase()) + "</b>");
-    if (dvs(sec, "cNotificationPreference")) bits.push("notifications by <b>" + esc(dvs(sec, "cNotificationPreference").toLowerCase()) + "</b>");
-    if (bits.length) right.appendChild(factsLine(bits.join(" &middot; ")));
-    var flags = [acceptFlag("Privacy policy", dv(sec, "cPrivacyPolicyAccepted")),
-                 acceptFlag("Terms of use", dv(sec, "cTermsOfUseAccepted")),
-                 acceptFlag("Code of conduct", dv(sec, "cCodeOfConductAccepted"))].filter(Boolean);
-    if (flags.length) right.appendChild(factsLine(flags.join(" &middot; ")));
-    if (right.children.length) wrap.appendChild(right);
-    return wrap;
-  }
-
-  function companySummary(sec) {
-    var wrap = document.createElement("div"); wrap.className = "sx__dbody sx__cols2";
-    var dir = document.createElement("div"); dir.className = "sx__dir";
-    var nm = document.createElement("div"); nm.className = "sx__dir-name"; nm.textContent = sec.name || "Company"; dir.appendChild(nm);
-    if (dvs(sec, "billingAddressStreet")) dir.appendChild(txtLine(dvs(sec, "billingAddressStreet")));
-    var bcl = cityLine(dvs(sec, "billingAddressCity"), dvs(sec, "billingAddressState"), dvs(sec, "billingAddressPostalCode")); if (bcl) dir.appendChild(txtLine(bcl));
-    if (dvs(sec, "phoneNumber")) dir.appendChild(txtLine(dvs(sec, "phoneNumber")));
-    var web = dvs(sec, "website");
-    if (web) { var wd = document.createElement("div"); var a = document.createElement("a"); a.href = /^https?:\/\//i.test(web) ? web : "https://" + web; a.target = "_blank"; a.rel = "noopener"; a.textContent = web; wd.appendChild(a); dir.appendChild(wd); }
-    wrap.appendChild(dir);
-    var right = document.createElement("div");
-    var lede = [];
-    if (dvs(sec, "cOrganizationType")) lede.push("<strong>" + esc(dvs(sec, "cOrganizationType")) + "</strong>");
-    if (dvs(sec, "cBusinessStage")) lede.push("<strong>" + esc(dvs(sec, "cBusinessStage")) + "</strong>");
-    var ledeStr = lede.join(", ");
-    if (dvs(sec, "cIndustrySector")) ledeStr += (ledeStr ? " &mdash; " : "") + esc(dvs(sec, "cIndustrySector"));
-    if (ledeStr) right.appendChild(ledeLine(ledeStr));
-    var bits = [];
-    var at = dvArr(sec, "cAccountType"); if (at.length) bits.push("Account type <b>" + esc(at.join(", ")) + "</b>");
-    if (dvs(sec, "cClientStatus")) bits.push("Client status <b>" + esc(dvs(sec, "cClientStatus")) + "</b>");
-    if (dvs(sec, "cPartnerContactCadence")) bits.push("Contact cadence <b>" + esc(dvs(sec, "cPartnerContactCadence")) + "</b>");
-    if (dv(sec, "cPublicAnnouncementAllowed") === false) bits.push('Public announcement <span class="sx__flag-no">not allowed</span>');
-    if (bits.length) right.appendChild(factsLine(bits.join(" &middot; ")));
-    var bill = [dvs(sec, "billingAddressStreet"), bcl].filter(Boolean).join(", ");
-    var ship = [dvs(sec, "shippingAddressStreet"), cityLine(dvs(sec, "shippingAddressCity"), dvs(sec, "shippingAddressState"), dvs(sec, "shippingAddressPostalCode"))].filter(Boolean).join(", ");
-    if (ship && ship !== bill) right.appendChild(factsLine("Shipping: " + esc(ship)));
-    if (right.children.length) wrap.appendChild(right);
-    return wrap;
-  }
-
-  function clientProfileSummary(sec) {
-    var wrap = document.createElement("div"); wrap.className = "sx__dbody";
-    var struct = [];
-    if (dvs(sec, "legalEntityType")) struct.push("<strong>" + esc(dvs(sec, "legalEntityType")) + "</strong>");
-    if (dv(sec, "formationDate")) struct.push("formed " + esc(fmtMonthYear(dv(sec, "formationDate"))));
-    if (dv(sec, "isHomeBased") === true) struct.push("home-based");
-    var fin = [];
-    if (dvs(sec, "annualRevenueRange")) fin.push("revenue <strong>" + esc(dvs(sec, "annualRevenueRange")) + "</strong>");
-    if (dvs(sec, "revenueTrend")) fin.push(esc(dvs(sec, "revenueTrend").toLowerCase()));
-    if (dvs(sec, "profitabilityStatus")) fin.push("currently <strong>" + esc(dvs(sec, "profitabilityStatus").toLowerCase()) + "</strong>");
-    var ledeStr = [struct.join(", "), fin.join(", ")].filter(Boolean).join(" &middot; ");
-    if (ledeStr) wrap.appendChild(ledeLine(ledeStr));
-    var sells = [];
-    var ct = dvArr(sec, "primaryCustomerType"); if (ct.length) sells.push("Sells <b>" + esc(ct.join(", ")) + "</b>");
-    var sc = dvArr(sec, "salesChannels"); if (sc.length) sells.push("through <b>" + esc(sc.join(", ")) + "</b>");
-    if (dvs(sec, "geographicMarketReach")) sells.push("reaching a <b>" + esc(dvs(sec, "geographicMarketReach")) + "</b> market");
-    if (sells.length) wrap.appendChild(factsLine(sells.join(" ")));
-    var desc = dvs(sec, "description");
-    if (desc) { var q = document.createElement("div"); q.className = "sx__dquote"; q.textContent = "“" + desc + "”"; wrap.appendChild(q); }
-    var certs = dvArr(sec, "certificationsHeld"); if (certs.length) wrap.appendChild(badgeRow("Certifications", certs));
-    var funds = dvArr(sec, "fundingSourcesUsedToDate"); if (funds.length) wrap.appendChild(badgeRow("Funding to date", funds));
-    return wrap.children.length ? wrap : noDetails();
-  }
-
-  function engagementSummary(sec) {
-    var wrap = document.createElement("div"); wrap.className = "sx__dbody";
-    var lede = document.createElement("div"); lede.className = "sx__lede";
-    var nm = document.createElement("strong"); nm.textContent = sec.name || "Engagement"; lede.appendChild(nm);
-    if (dvs(sec, "engagementStatus")) { var pill = document.createElement("span"); pill.className = "sx__status-pill"; pill.textContent = dvs(sec, "engagementStatus"); lede.appendChild(pill); }
-    wrap.appendChild(lede);
-    var facts = [];
-    if (dv(sec, "engagementStartDate")) facts.push("Started <b>" + esc(fmtLongDate(dv(sec, "engagementStartDate"))) + "</b>");
-    var mentor = dvs(sec, "mentorProfileName") || namesOf(dv(sec, "assignedUsersNames"));
-    if (mentor) facts.push("Mentor <b>" + esc(mentor) + "</b>");
-    if (dvs(sec, "meetingCadence")) facts.push("Cadence <b>" + esc(dvs(sec, "meetingCadence")) + "</b>");
-    if (facts.length) wrap.appendChild(factsLine(facts.join(" &middot; ")));
-    var f2 = [];
-    if (dv(sec, "lastSessionDate")) f2.push("Last session <b>" + esc(fmtLongDate(dv(sec, "lastSessionDate"))) + "</b>");
-    var tot = dv(sec, "totalSessions");
-    if (tot != null) f2.push("<b>" + tot + "</b> session" + (tot === 1 ? "" : "s") + " to date");
-    if (f2.length) wrap.appendChild(factsLine(f2.join(" &middot; ")));
-    return wrap;
-  }
-
   function namesOf(v) { return v && typeof v === "object" ? Object.keys(v).map(function (k) { return v[k]; }).join(", ") : ""; }
-
-  // Fallback composed summary (partner/sponsor profile): facts + badges + quotes.
-  function genericSummary(sec) {
-    var wrap = document.createElement("div"); wrap.className = "sx__dbody";
-    var facts = [], quotes = [];
-    (sec.fields || []).forEach(function (f) {
-      var v = f.value;
-      if (v == null || v === "" || (Array.isArray(v) && !v.length)) return;
-      if (f.type === "multiEnum" && Array.isArray(v)) { wrap.appendChild(badgeRow(f.label, v)); return; }
-      if (f.type === "text" || f.type === "wysiwyg") { quotes.push(f); return; }
-      var out = f.type === "bool" ? (v ? "Yes" : "No") : (f.type === "date" ? fmtDate(v) : (f.type === "datetime" ? fmtWhen(v) : String(v)));
-      facts.push(esc(f.label) + " <b>" + esc(out) + "</b>");
-    });
-    if (facts.length) wrap.insertBefore(factsLine(facts.join(" &middot; ")), wrap.firstChild);
-    quotes.forEach(function (f) { var q = document.createElement("div"); q.className = "sx__dquote"; if (f.type === "wysiwyg") q.innerHTML = sanitizeHtml(String(f.value)); else q.textContent = String(f.value); wrap.appendChild(q); });
-    return wrap.children.length ? wrap : noDetails();
+  function noDetails() { var p = document.createElement("p"); p.className = "sx__muted sxd__none"; p.textContent = "No details on file."; return p; }
+  function badgeEl(cls, text) { var s = document.createElement("span"); s.className = cls; s.textContent = text; return s; }
+  function bold(s) { return "<b>" + esc(s) + "</b>"; }
+  var SEP = '<span class="sxd__sep">|</span>';
+  function chipsNode(vals) {
+    var wrap = document.createElement("span"); wrap.className = "sxd__chips";
+    vals.forEach(function (o) { var c = document.createElement("span"); c.className = "sx__chip"; c.textContent = o; wrap.appendChild(c); });
+    return wrap;
+  }
+  // A labeled card row: fixed small uppercase label, composed value. `value` is
+  // a Node or a PRE-ESCAPED html string (composers escape via esc()/bold()).
+  function drow(label, value) {
+    var row = document.createElement("div"); row.className = "sxd__row";
+    var k = document.createElement("span"); k.className = "sxd__row-k"; k.textContent = label;
+    var v = document.createElement("span"); v.className = "sxd__row-v";
+    if (typeof value === "string") v.innerHTML = value; else v.appendChild(value);
+    row.appendChild(k); row.appendChild(v); return row;
+  }
+  function detailsEditBtn(key) {
+    var b = document.createElement("button"); b.type = "button"; b.className = "sxd__btn"; b.textContent = "Edit";
+    b.addEventListener("click", function () { detailsEditSet[key] = true; repaintDetails(key); });
+    return b;
+  }
+  function cardHeadEl(title, countText) {
+    var h = document.createElement("div"); h.className = "sxd__card-h";
+    var t = document.createElement("span"); t.className = "sxd__card-t"; t.textContent = title;
+    h.appendChild(t);
+    if (countText) { var c = document.createElement("span"); c.className = "sxd__count"; c.textContent = countText; h.appendChild(c); }
+    return h;
   }
 
-  function sectionTitleFor(entity, id) {
-    var list = (currentDetails && currentDetails.sections) || [];
-    for (var i = 0; i < list.length; i++) {
-      if (list[i].entity === entity && list[i].id === id) return list[i].title;
+  // === 1. Summary strip: the parent record as one slim labeled bar ===========
+  // Short strip labels for the known parent fields (fallback: the spec label).
+  var STRIP_LABELS = {
+    engagementStatus: "Status", engagementStartDate: "Started", meetingCadence: "Cadence",
+    totalSessions: "Sessions", totalSessionHours: "Hours", totalSessionsLast30Days: "Last 30 days",
+    lastSessionDate: "Last session", nextSessionDateTime: "Next session",
+    engagementAssignedDate: "Assigned", closeDate: "Closed", closeReason: "Close reason",
+    holdEndDate: "Hold ends", mentoringFocusAreas: "Focus areas",
+    revenueIncreasePercentage: "Revenue growth %", employmentIncreasePercentage: "Employment growth %",
+    significantRevenueIncrease: "Sig. revenue growth", significantEmploymentIncrease: "Sig. employment growth",
+    newBusinessStarted: "New business", newLocationOpened: "New location",
+    partnershipStatus: "Status", partnershipType: "Type", partnershipStartDate: "Started",
+    partnershipAgreementDate: "Agreement", partnerContactCadence: "Cadence",
+    lastContacted: "Last contacted", lastContribution: "Last contribution",
+  };
+  // Lead cells in mockup order; "@mentor" is the display-only mentor link.
+  var STRIP_ORDER = [
+    "engagementStatus", "engagementStartDate", "@mentor", "meetingCadence", "totalSessions",
+    "partnershipStatus", "partnershipType", "partnershipStartDate",
+  ];
+
+  function parentStrip(sec, key) {
+    if (detailsEditSet[key]) {  // editing: the strip becomes a full-form card
+      var card = document.createElement("div"); card.className = "sxd__card"; card.dataset.dkey = key;
+      card.appendChild(cardHeadEl(sec.title, null));
+      card.appendChild(panelEditForm(sec, key));
+      return card;
     }
-    return entity;
+    var strip = document.createElement("div"); strip.className = "sxd__strip"; strip.dataset.dkey = key;
+    stripCells(sec).forEach(function (c) { strip.appendChild(c); });
+    if (sec.editable) {
+      var b = detailsEditBtn(key); b.className += " sxd__strip-edit";
+      strip.appendChild(b);
+    }
+    return strip;
+  }
+
+  // Every parent field that carries information becomes a cell (long-form text/
+  // wysiwyg stays on the Overview and in the edit form; empties and "No" omitted).
+  function stripCells(sec) {
+    var cells = [], done = {};
+    function add(label, value) {
+      var cell = document.createElement("span"); cell.className = "sxd__cell";
+      var k = document.createElement("span"); k.className = "sxd__cell-k"; k.textContent = label;
+      var v = document.createElement("span"); v.className = "sxd__cell-v";
+      if (typeof value === "string") v.textContent = value; else v.appendChild(value);
+      cell.appendChild(k); cell.appendChild(v); cells.push(cell);
+    }
+    function addField(f) {
+      if (done[f.name]) return; done[f.name] = 1;
+      if (f.type === "text" || f.type === "wysiwyg") return;
+      var v = f.value;
+      if (v == null || v === "" || v === false || (Array.isArray(v) && !v.length)) return;
+      var label = STRIP_LABELS[f.name] || f.label;
+      if (f.type === "enum" && /status$/i.test(f.name)) {
+        add(label, badgeEl("sxd__pill", String(v))); return;
+      }
+      add(label, f.type === "bool" ? "Yes"
+        : f.type === "date" ? fmtLongDate(v)
+        : f.type === "datetime" ? fmtSessionDate(v, "short")
+        : Array.isArray(v) ? v.join(", ") : String(v));
+    }
+    var byName = {};
+    (sec.fields || []).forEach(function (f) { byName[f.name] = f; });
+    STRIP_ORDER.forEach(function (name) {
+      if (name === "@mentor") {
+        var m = dvs(sec, "mentorProfileName") || namesOf(dv(sec, "assignedUsersNames"));
+        if (m) add("Mentor", m);
+        return;
+      }
+      if (byName[name]) addField(byName[name]);
+    });
+    (sec.fields || []).forEach(addField);
+    return cells;
+  }
+
+  // === 2/3. Org cards (Company / profile): two-column labeled row grid =======
+  function orgCard(sec, key) {
+    var card = document.createElement("div"); card.className = "sxd__card"; card.dataset.dkey = key;
+    var editing = !!detailsEditSet[key];
+    var head = cardHeadEl(sec.title, null);
+    if (!editing && sec.editable) head.appendChild(detailsEditBtn(key));
+    card.appendChild(head);
+    card.appendChild(editing ? panelEditForm(sec, key) : orgCardBody(sec));
+    return card;
+  }
+
+  function orgCardBody(sec) {
+    var used = {};  // field names the composed rows consumed
+    var cols = sec.entity === "Account" ? companyRows(sec, used)
+      : sec.entity === "CClientProfile" ? clientProfileRows(sec, used)
+      : { left: [], right: [] };
+    appendLeftoverRows(sec, used, cols);
+    if (!cols.left.length && !cols.right.length) return noDetails();
+    var body = document.createElement("div"); body.className = "sxd__card-b";
+    var grid = document.createElement("div"); grid.className = "sxd__rows2";
+    [cols.left, cols.right].forEach(function (rows) {
+      var col = document.createElement("div");
+      rows.forEach(function (r, i) { if (i === 0) r.className += " nb"; col.appendChild(r); });
+      grid.appendChild(col);
+    });
+    body.appendChild(grid);
+    return body;
+  }
+
+  function companyRows(sec, used) {
+    ["billingAddressStreet", "billingAddressCity", "billingAddressState", "billingAddressPostalCode",
+     "billingAddressCountry", "phoneNumber", "website", "emailAddress",
+     "cOrganizationType", "cBusinessStage", "cIndustrySector", "cIndustrySubsector",
+     "shippingAddressStreet", "shippingAddressCity", "shippingAddressState",
+     "shippingAddressPostalCode", "shippingAddressCountry",
+     "cAccountType", "cClientStatus", "cPartnerContactCadence", "cPublicAnnouncementAllowed",
+    ].forEach(function (n) { used[n] = 1; });
+    var left = [], right = [];
+    // Directory block: name, billing address, phone · website, email.
+    var dir = document.createElement("div"); dir.className = "sxd__dir";
+    var nm = document.createElement("div"); nm.className = "sxd__dir-name"; nm.textContent = sec.name || "Company"; dir.appendChild(nm);
+    if (dvs(sec, "billingAddressStreet")) dir.appendChild(txtLine(dvs(sec, "billingAddressStreet")));
+    var bcl = cityLine(dvs(sec, "billingAddressCity"), dvs(sec, "billingAddressState"), dvs(sec, "billingAddressPostalCode"));
+    if (bcl) dir.appendChild(txtLine(bcl));
+    var line3 = document.createElement("div");
+    if (dvs(sec, "phoneNumber")) line3.appendChild(document.createTextNode(dvs(sec, "phoneNumber")));
+    var web = dvs(sec, "website");
+    if (web) {
+      if (line3.childNodes.length) line3.appendChild(document.createTextNode(" · "));
+      var a = document.createElement("a"); a.href = /^https?:\/\//i.test(web) ? web : "https://" + web;
+      a.target = "_blank"; a.rel = "noopener"; a.textContent = web.replace(/^https?:\/\//i, "");
+      line3.appendChild(a);
+    }
+    if (line3.childNodes.length) dir.appendChild(line3);
+    var email = dvs(sec, "emailAddress");
+    if (email) { var ed = document.createElement("div"); var ml = document.createElement("a"); ml.href = "mailto:" + email; ml.textContent = email; ed.appendChild(ml); dir.appendChild(ed); }
+    var dirRow = document.createElement("div"); dirRow.className = "sxd__row sxd__row--dir"; dirRow.appendChild(dir);
+    left.push(dirRow);
+    // Business: org type | stage | industry (sector / subsector).
+    var biz = [];
+    if (dvs(sec, "cOrganizationType")) biz.push(bold(dvs(sec, "cOrganizationType")));
+    if (dvs(sec, "cBusinessStage")) biz.push(bold(dvs(sec, "cBusinessStage")));
+    var ind = [dvs(sec, "cIndustrySector"), dvs(sec, "cIndustrySubsector")].filter(Boolean).join(" / ");
+    if (ind) biz.push(esc(ind));
+    if (biz.length) left.push(drow("Business", biz.join(SEP)));
+    // Shipping — only when it differs from billing.
+    var bill = [dvs(sec, "billingAddressStreet"), bcl].filter(Boolean).join(", ");
+    var ship = [dvs(sec, "shippingAddressStreet"),
+                cityLine(dvs(sec, "shippingAddressCity"), dvs(sec, "shippingAddressState"), dvs(sec, "shippingAddressPostalCode"))].filter(Boolean).join(", ");
+    if (ship && ship !== bill) left.push(drow("Shipping", esc(ship)));
+    // Right: account type/status, cadence, announcements (meaningful negative).
+    var acct = [];
+    var at = dvArr(sec, "cAccountType"); if (at.length) acct.push(bold(at.join(", ")));
+    if (dvs(sec, "cClientStatus")) acct.push("status " + bold(dvs(sec, "cClientStatus")));
+    if (acct.length) right.push(drow("Account", acct.join(" &middot; ")));
+    if (dvs(sec, "cPartnerContactCadence")) right.push(drow("Cadence", bold(dvs(sec, "cPartnerContactCadence")) + " partner contact"));
+    if (dv(sec, "cPublicAnnouncementAllowed") === false) right.push(drow("Announcements", badgeEl("sxd__badge-warn", "Not allowed")));
+    return { left: left, right: right };
+  }
+
+  function clientProfileRows(sec, used) {
+    ["legalEntityType", "formationDate", "isHomeBased", "annualRevenueRange", "revenueTrend",
+     "profitabilityStatus", "primaryCustomerType", "salesChannels", "geographicMarketReach",
+     "federalEinOnFile", "hasGoogleBusinessProfile", "ohioVendorsLicenseOnFile", "registeredOnSamGov",
+     "certificationsHeld", "fundingSourcesUsedToDate", "description",
+    ].forEach(function (n) { used[n] = 1; });
+    var left = [], right = [];
+    var ent = [];
+    if (dvs(sec, "legalEntityType")) ent.push(bold(dvs(sec, "legalEntityType")));
+    if (dv(sec, "formationDate")) ent.push("formed " + esc(fmtMonthYear(dv(sec, "formationDate"))));
+    if (dv(sec, "isHomeBased") === true) ent.push("home-based");
+    if (ent.length) left.push(drow("Entity", ent.join(", ")));
+    var rev = [];
+    if (dvs(sec, "annualRevenueRange")) rev.push(bold(dvs(sec, "annualRevenueRange")));
+    if (dvs(sec, "revenueTrend")) rev.push(esc(dvs(sec, "revenueTrend").toLowerCase()));
+    if (dvs(sec, "profitabilityStatus")) rev.push(bold(dvs(sec, "profitabilityStatus").toLowerCase()));
+    if (rev.length) left.push(drow("Revenue", rev.join(SEP)));
+    var sells = [];
+    var ct = dvArr(sec, "primaryCustomerType"); if (ct.length) sells.push(bold(ct.join(", ")));
+    var sc = dvArr(sec, "salesChannels"); if (sc.length) sells.push(esc(sc.join(", ")));
+    if (dvs(sec, "geographicMarketReach")) sells.push(esc(dvs(sec, "geographicMarketReach")) + " reach");
+    if (sells.length) left.push(drow("Sells", sells.join(SEP)));
+    var onfile = [];
+    if (dv(sec, "federalEinOnFile") === true) onfile.push("Federal EIN");
+    if (dv(sec, "hasGoogleBusinessProfile") === true) onfile.push("Google Business Profile");
+    if (dv(sec, "ohioVendorsLicenseOnFile") === true) onfile.push("Ohio vendor's license");
+    if (dv(sec, "registeredOnSamGov") === true) onfile.push("SAM.gov registration");
+    if (onfile.length) left.push(drow("On file", esc(onfile.join(" · "))));
+    var certs = dvArr(sec, "certificationsHeld"); if (certs.length) right.push(drow("Certifications", chipsNode(certs)));
+    var funds = dvArr(sec, "fundingSourcesUsedToDate"); if (funds.length) right.push(drow("Funding to date", chipsNode(funds)));
+    var goal = dvs(sec, "description");
+    if (goal) { var q = document.createElement("i"); q.textContent = "“" + goal + "”"; right.push(drow("Client goal", q)); }
+    return { left: left, right: right };
+  }
+
+  // Any informative field the curated rows didn't consume still shows as a
+  // labeled row (balanced across the two columns) — nothing with a value hides.
+  function appendLeftoverRows(sec, used, cols) {
+    (sec.fields || []).forEach(function (f) {
+      if (used[f.name]) return;
+      if (f.type === "text" || f.type === "wysiwyg") return;  // long-form: edit/Overview only
+      var v = f.value;
+      if (v == null || v === "" || v === false || (Array.isArray(v) && !v.length)) return;
+      var node = (f.type === "multiEnum" && Array.isArray(v)) ? chipsNode(v)
+        : bold(f.type === "bool" ? "Yes"
+          : f.type === "date" ? fmtLongDate(v)
+          : f.type === "datetime" ? fmtSessionDate(v, "short") : String(v));
+      (cols.left.length <= cols.right.length ? cols.left : cols.right).push(drow(f.label, node));
+    });
+  }
+
+  // === 4/5. Contact tables (Client Contacts / CBM Contacts) ==================
+  var CONTACT_AGREEMENTS = ["cPrivacyPolicyAccepted", "cTermsOfUseAccepted", "cCodeOfConductAccepted"];
+
+  function clientContactsCard() {
+    var contacts = currentDetails.contacts || [];
+    var card = document.createElement("div"); card.className = "sxd__card"; card.dataset.dkey = "clientContacts";
+    var head = cardHeadEl("Client Contacts", "(" + contacts.length + ")");
+    head.appendChild(addMenuEl("client"));
+    card.appendChild(head);
+    if (detailsAdd === "client-existing") card.appendChild(addExistingPanel());
+    if (detailsAdd === "client-new") card.appendChild(addNewPanel());
+    card.appendChild(contactsTable(contacts, true));
+    return card;
+  }
+
+  function cbmContactsCard() {
+    var rows = currentDetails.cbmContacts || [];
+    var card = document.createElement("div"); card.className = "sxd__card"; card.dataset.dkey = "cbmContacts";
+    var head = cardHeadEl("CBM Contacts", "(" + rows.length + ")");
+    head.appendChild(addMenuEl("cbm"));
+    card.appendChild(head);
+    if (detailsAdd === "cbm-pick") card.appendChild(cbmPickPanel());
+    card.appendChild(contactsTable(rows, false));
+    return card;
+  }
+
+  // One table for all of a card's contacts. Client rows are contact sections;
+  // CBM rows wrap {role, name, contact: section|null}. A row's Edit expands a
+  // full-width row holding that contact's field form. Empty cells stay empty.
+  function contactsTable(items, isClient) {
+    var wrap = document.createElement("div"); wrap.className = "sxd__scroll";
+    if (!items.length) {
+      var p = document.createElement("p"); p.className = "sx__muted sxd__none"; p.textContent = "No contacts on file.";
+      wrap.appendChild(p); return wrap;
+    }
+    var table = document.createElement("table"); table.className = "sxd__contacts";
+    var thead = document.createElement("thead"); var htr = document.createElement("tr");
+    var cols = isClient
+      ? ["Name", "Role", "Phone", "Email", "City", "Contact via", "Agreements", ""]
+      : ["Name", "Role", "Phone", "Email", "Contact via", ""];
+    cols.forEach(function (c) { var th = document.createElement("th"); th.textContent = c; htr.appendChild(th); });
+    thead.appendChild(htr); table.appendChild(thead);
+    var tb = document.createElement("tbody");
+    items.forEach(function (item, i) {
+      var sec = isClient ? item : item.contact;
+      var vals = (sec && sec.values) || {};
+      var editKey = (isClient ? "c" : "b") + i;
+      var tr = document.createElement("tr");
+      tr.appendChild(nameCell(item, sec, isClient));
+      tr.appendChild(roleCell(item, vals, isClient));
+      tr.appendChild(tdText(vals.phoneNumber || ""));
+      tr.appendChild(emailCell(vals.emailAddress));
+      if (isClient) tr.appendChild(tdText(vals.addressCity || ""));
+      tr.appendChild(tdText(vals.cPreferredContactMethod || ""));
+      if (isClient) tr.appendChild(agreementsCell(vals));
+      var act = document.createElement("td"); act.className = "sxd__actions";
+      if (sec && sec.editable && !detailsEditSet[editKey]) {
+        var e = document.createElement("button"); e.type = "button"; e.className = "sxd__rowedit"; e.textContent = "Edit";
+        e.addEventListener("click", function () { detailsEditSet[editKey] = true; repaintDetails(editKey); });
+        act.appendChild(e);
+      }
+      tr.appendChild(act);
+      tb.appendChild(tr);
+      if (detailsEditSet[editKey] && sec) {
+        var er = document.createElement("tr"); er.className = "sxd__editrow";
+        var td = document.createElement("td"); td.colSpan = cols.length;
+        td.appendChild(panelEditForm(sec, editKey));
+        er.appendChild(td); tb.appendChild(er);
+      }
+    });
+    table.appendChild(tb); wrap.appendChild(table);
+    return wrap;
+  }
+
+  function nameCell(item, sec, isClient) {
+    var td = document.createElement("td"); td.className = "sxd__cname";
+    var vals = (sec && sec.values) || {};
+    if (isClient && vals.salutationName) {
+      var s = document.createElement("span"); s.className = "sxd__sal"; s.textContent = vals.salutationName + " ";
+      td.appendChild(s);
+    }
+    var name = isClient
+      ? ([vals.firstName, vals.lastName].filter(Boolean).join(" ") || sec.name || "(unnamed)")
+      : (item.name || (sec && sec.name) || "(unnamed)");
+    td.appendChild(document.createTextNode(name));
+    return td;
+  }
+  function roleCell(item, vals, isClient) {
+    var td = document.createElement("td"); td.className = "sxd__roles";
+    if (isClient) {
+      (Array.isArray(vals.cContactType) ? vals.cContactType : []).forEach(function (r) {
+        td.appendChild(badgeEl("sxd__badge-role", r));
+      });
+      if (vals.title) { var t = document.createElement("span"); t.className = "sx__muted"; t.textContent = vals.title; td.appendChild(t); }
+    } else if (item.role) {
+      td.appendChild(badgeEl("sxd__badge-role", item.role));
+    }
+    return td;
+  }
+  function tdText(t) { var td = document.createElement("td"); td.textContent = t; return td; }
+  function emailCell(email) {
+    var td = document.createElement("td");
+    if (email) { var a = document.createElement("a"); a.href = "mailto:" + email; a.textContent = email; td.appendChild(a); }
+    return td;
+  }
+  // One status badge for privacy policy + terms + code of conduct — never three
+  // separate lines. Unset counts as pending.
+  function agreementsCell(vals) {
+    var td = document.createElement("td");
+    var pending = CONTACT_AGREEMENTS.filter(function (n) { return vals[n] !== true; }).length;
+    td.appendChild(pending === 0 ? badgeEl("sxd__badge-ok", "Complete") : badgeEl("sxd__badge-warn", pending + " pending"));
+    return td;
+  }
+
+  // === + Add flows ============================================================
+  function addMenuEl(side) {  // side: "client" | "cbm"
+    var wrap = document.createElement("span"); wrap.className = "sxd__addwrap";
+    var btn = document.createElement("button"); btn.type = "button"; btn.className = "sxd__btn"; btn.textContent = "+ Add";
+    var menuKey = side + "-menu", cardKey = side === "client" ? "clientContacts" : "cbmContacts";
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      detailsAdd = detailsAdd === menuKey ? null : menuKey;
+      repaintDetails(cardKey);
+    });
+    wrap.appendChild(btn);
+    if (detailsAdd === menuKey) {
+      var menu = document.createElement("div"); menu.className = "sxd__menu";
+      if (side === "client") {
+        menu.appendChild(menuItem("Select existing contact…", function () { detailsAdd = "client-existing"; repaintDetails(cardKey); }));
+        menu.appendChild(menuItem("Create new contact…", function () { detailsAdd = "client-new"; repaintDetails(cardKey); }));
+      } else {
+        // CBM contacts are mentor profiles; new ones are onboarded via Mentor
+        // Administration, so only select-existing is offered here.
+        menu.appendChild(menuItem("Select existing CBM contact…", function () { detailsAdd = "cbm-pick"; repaintDetails(cardKey); }));
+      }
+      wrap.appendChild(menu);
+    }
+    return wrap;
+  }
+  function menuItem(label, fn) {
+    var b = document.createElement("button"); b.type = "button"; b.textContent = label;
+    b.addEventListener("click", function (e) { e.stopPropagation(); fn(); });
+    return b;
+  }
+  // Any outside click closes an open + Add menu (matches the mockup behavior).
+  document.addEventListener("click", function () {
+    if (!currentDetails) return;
+    if (detailsAdd === "client-menu" || detailsAdd === "cbm-menu") {
+      var key = detailsAdd === "client-menu" ? "clientContacts" : "cbmContacts";
+      detailsAdd = null; repaintDetails(key);
+    }
+  });
+
+  function addPanelShell(title) {
+    var panel = document.createElement("div"); panel.className = "sxd__addpanel";
+    var h = document.createElement("div"); h.className = "sxd__addpanel-h"; h.textContent = title;
+    panel.appendChild(h);
+    return panel;
+  }
+  function addCancelBtn(cardKey) {
+    var cancel = document.createElement("button"); cancel.type = "button";
+    cancel.className = "cbm-button cbm-button--secondary"; cancel.textContent = "Cancel";
+    cancel.addEventListener("click", function () { detailsAdd = null; repaintDetails(cardKey); });
+    return cancel;
+  }
+
+  // Select existing contact: search the CRM (as the user), click a result to link
+  // it to this record (engagementContacts / contacts / sponsorContacts relation).
+  function addExistingPanel() {
+    var panel = addPanelShell("Link an existing contact");
+    var input = document.createElement("input"); input.type = "search";
+    input.className = "sx__search sxd__addsearch"; input.placeholder = "Search contacts by name (2+ characters)…";
+    panel.appendChild(input);
+    var results = document.createElement("div"); results.className = "sxd__results"; panel.appendChild(results);
+    var err = document.createElement("p"); err.className = "sx__dpanel-error"; err.hidden = true; panel.appendChild(err);
+    var timer = null;
+    input.addEventListener("input", function () {
+      clearTimeout(timer);
+      var q = input.value.trim();
+      if (q.length < 2) { results.innerHTML = ""; return; }
+      timer = setTimeout(async function () {
+        try {
+          var res = await api("/contacts?q=" + encodeURIComponent(q));
+          results.innerHTML = "";
+          var list = res.contacts || [];
+          if (!list.length) { results.innerHTML = "<p class='sx__muted'>No matching contacts.</p>"; return; }
+          list.forEach(function (c) {
+            var b = document.createElement("button"); b.type = "button"; b.className = "sxd__result";
+            b.textContent = (c.name || "(unnamed)") + (c.email ? " — " + c.email : "") + (c.company ? " (" + c.company + ")" : "");
+            b.addEventListener("click", function () { linkExistingContact(c.id, b, err); });
+            results.appendChild(b);
+          });
+        } catch (e) {
+          if (e.status === 401) { showLogin(); return; }
+          err.textContent = e.message; err.hidden = false;
+        }
+      }, 250);
+    });
+    var actions = document.createElement("div"); actions.className = "sx__dpanel-actions";
+    actions.appendChild(addCancelBtn("clientContacts"));
+    panel.appendChild(actions);
+    setTimeout(function () { input.focus(); }, 0);
+    return panel;
+  }
+
+  async function linkExistingContact(id, btn, errEl) {
+    btn.disabled = true; errEl.hidden = true;
+    try {
+      await api("/records/" + encodeURIComponent(currentDetail.id) + "/contacts",
+        { method: "POST", body: JSON.stringify({ contactId: id }) });
+      detailsAdd = null;
+      await loadDetails(currentDetail.id);
+      notice("detailsNotice", "Contact linked.", "success");
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      btn.disabled = false;
+      errEl.textContent = e.message; errEl.hidden = false;
+    }
+  }
+
+  // Create new contact: the full contact form (from the live field spec), saved
+  // and linked in one operation.
+  function addNewPanel() {
+    var panel = addPanelShell("New contact");
+    var body = document.createElement("div"); body.className = "sx__dform";
+    (currentDetails.contactSpec || []).forEach(function (f) {
+      if (!f.editable) return;
+      body.appendChild(detailsEditField(Object.assign({}, f, { value: f.type === "multiEnum" ? [] : null })));
+    });
+    panel.appendChild(body);
+    var err = document.createElement("p"); err.className = "sx__dpanel-error"; err.hidden = true; panel.appendChild(err);
+    var actions = document.createElement("div"); actions.className = "sx__dpanel-actions";
+    var save = document.createElement("button"); save.type = "button"; save.className = "cbm-button"; save.textContent = "Create contact";
+    save.addEventListener("click", async function () {
+      var changes = {};
+      Array.prototype.forEach.call(body.querySelectorAll("[data-field]"), function (el) {
+        var v = readField(el);
+        if (v == null || v === "" || v === false || (Array.isArray(v) && !v.length)) return;
+        changes[el.dataset.field] = v;
+      });
+      if (!changes.firstName && !changes.lastName) {
+        err.textContent = "A first or last name is required."; err.hidden = false; return;
+      }
+      save.disabled = true; err.hidden = true;
+      try {
+        await api("/records/" + encodeURIComponent(currentDetail.id) + "/contacts",
+          { method: "POST", body: JSON.stringify({ changes: changes }) });
+        detailsAdd = null;
+        await loadDetails(currentDetail.id);
+        notice("detailsNotice", "Contact created and linked.", "success");
+      } catch (e) {
+        if (e.status === 401) { showLogin(); return; }
+        save.disabled = false;
+        err.textContent = e.message; err.hidden = false;
+      }
+    });
+    actions.appendChild(addCancelBtn("clientContacts")); actions.appendChild(save);
+    panel.appendChild(actions);
+    return panel;
+  }
+
+  // Add a CBM contact: pick an existing mentor profile (attached via the
+  // engagement's additionalMentors relation — same as the Sessions-tab picker).
+  function cbmPickPanel() {
+    var panel = addPanelShell("Add a CBM contact");
+    var row = document.createElement("div"); row.className = "sx__inline";
+    var sel = document.createElement("select"); sel.className = "sxd__addselect";
+    sel.setAttribute("aria-label", "Choose a CBM contact");
+    sel.appendChild(new Option("Loading…", ""));
+    api("/mentors").then(function (res) {
+      sel.innerHTML = "";
+      sel.appendChild(new Option("Choose a CBM contact…", ""));
+      (res.mentors || []).forEach(function (m) { sel.appendChild(new Option(m.name || m.id, m.id)); });
+    }).catch(function (e) {
+      if (e.status === 401) { showLogin(); return; }
+      sel.innerHTML = ""; sel.appendChild(new Option("Couldn't load CBM contacts", ""));
+    });
+    var err = document.createElement("p"); err.className = "sx__dpanel-error"; err.hidden = true;
+    var add = document.createElement("button"); add.type = "button"; add.className = "cbm-button"; add.textContent = "Add";
+    add.addEventListener("click", async function () {
+      if (!sel.value) return;
+      add.disabled = true; err.hidden = true;
+      try {
+        await api("/records/" + encodeURIComponent(currentDetail.id) + "/comentors",
+          { method: "POST", body: JSON.stringify({ mentorProfileId: sel.value }) });
+        detailsAdd = null;
+        await loadDetails(currentDetail.id);
+        notice("detailsNotice", "CBM contact added.", "success");
+      } catch (e) {
+        if (e.status === 401) { showLogin(); return; }
+        add.disabled = false;
+        err.textContent = e.message; err.hidden = false;
+      }
+    });
+    row.appendChild(sel); row.appendChild(add); row.appendChild(addCancelBtn("cbmContacts"));
+    panel.appendChild(row); panel.appendChild(err);
+    return panel;
   }
 
   function renderSessions(d) {

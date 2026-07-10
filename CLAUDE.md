@@ -447,7 +447,10 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   `GET /records/{parent_id}` (the tabbed **detail** payload — Overview facts +
   aggregated note feed + overall notes + next session + contacts + sessions,
   +co-mentors on mentor); `GET /details/{parent_id}` + `PUT /details/{entity}/{id}`
-  (the **Details** tab — editable company/profile/contact sections);
+  (the **Details** tab — summary strip + editable company/profile sections +
+  contact tables); `GET /contacts?q=` (add-contact picker search) +
+  `POST /records/{parent_id}/contacts` (link an existing contact or
+  create-and-link a new one — the + Add flows);
   `GET /peek/{entity}/{record_id}` (pop-up detail, entity-allowlisted);
   `GET /sessions/{id}`; `POST /records/{parent_id}/sessions` (create);
   `PUT /sessions/{id}` (whitelisted update + attendee sync). Mentor-only:
@@ -525,8 +528,10 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 - **Detail view — tabbed & information-dense (redesigned v0.32.0–.3).** Opening a
   record shows a tab bar common to all three domains (`/session` → `detailTabs`,
   `router.COMMON_DETAIL_TABS`): **Overview · Details · Sessions · Communications ·
-  Documents**. Overview + Details + Sessions are built; Communications + Documents
-  are "coming soon" placeholders. The tab bar is built by the frontend from config
+  Documents**. Overview + Details + Sessions are built; **Communications** has a
+  built email-inbox UI (scaffold only — no CRM email data yet; see the
+  Communications bullet below for the wiring contract); **Documents** is still a
+  "coming soon" placeholder. The tab bar is built by the frontend from config
   (placeholder tabs get a generic panel); the standalone Contacts tab folded into
   Overview / Details.
   - **Overview** (`get_detail` → `_overview_items`, `sessions/config.py:OverviewItem`):
@@ -543,16 +548,42 @@ segment of its own URL). Mounted only when `assignments_active` (needs
     (soonest upcoming session, derived) with a **Start / Open Session** button:
     launches `videoMeetingLink` in a new tab when present, then opens the session
     for editing.
-  - **Details** (`sessions/details.py`, `DomainConfig.details_entities`): a
-    **read-optimized** view of the org's Account + profile + each related contact,
-    with an **Edit** button that flips the whole page into a field editor
-    (Save/Cancel). Fields are read **live from CRM metadata** (filtered to editable
-    scalars; humanized labels — `cBMValueProvided` → "CBM Value Provided"); read
-    view hides empties, edit view exposes every editable field. **Permission-aware:**
-    reads the user's ACL (`EspoClient.app_user` → `acl.table`) and, for `edit:own`,
-    checks **per-record ownership** (assignedUser/assignedUsers) — sections the user
-    can't edit are read-only, the Edit button shows only when something is editable,
-    and Save is per-entity with a plain-language 403 message (enum drift dropped).
+  - **Details** (`sessions/details.py`, `DomainConfig.details_entities`;
+    **rebuilt to the approved mockup v4, v0.33.0** — design target:
+    `prds/Details Screen files2/engagement-details-mockup-v4.html`, prompt
+    `edit-engagement-details-ui-prompt-v0.2.md`): single column, top to bottom —
+    (1) a slim **summary strip** for the parent record (Status navy pill +
+    Started / Mentor / Cadence / Sessions + every other informative scalar field;
+    long-form text stays on Overview/edit; the strip's Edit opens the full form);
+    (2) **Company** + **Client Business Profile** cards as a **two-column labeled
+    row grid** — Company: directory block + Business / Shipping-when-different
+    rows, Account / Cadence / Announcements-"Not allowed" badge right; profile:
+    Entity / Revenue / Sells / On-file rows + Certifications / Funding chips +
+    the quoted Client goal; uncurated informative fields still render as generic
+    labeled rows (columns balanced); (3) **Client Contacts** — ALL related
+    contacts in one table (Name / Role chips / Phone / Email / City / Contact via
+    / **one Agreements badge** — green "Complete" or red "N pending" across the
+    three acceptance bools); (4) **CBM Contacts** table (mentor domain) — the
+    assigned mentor (`CEngagement.mentorProfile`) + co-mentors
+    (`additionalMentors`), each resolved through the profile's `contactRecord`
+    Contact for phone/email (schema verified live 2026-07-10: no other
+    staff/person link exists on CEngagement). **No page-global edit bar** — the
+    strip, each card, and each contact row edit independently (per-row Edit
+    expands the full contact form inline under the row). **+ Add** on Client
+    Contacts = *Select existing* (live `GET /contacts?q=` search; relates via the
+    domain's contacts link — `engagementContacts`/`contacts`/`sponsorContacts` —
+    and backfills `Contact.account` only when the contact has no company) or
+    *Create new* (full contact form; `POST /records/{id}/contacts` creates +
+    links in one compound write, company stamped at create); CBM + Add = pick an
+    existing mentor profile (via `additionalMentors`; new CBM people are
+    onboarded through `/mentoradmin`, so no create-new there). Fields are read
+    **live from CRM metadata** (filtered to editable scalars; humanized labels —
+    `cBMValueProvided` → "CBM Value Provided"); view hides empties/"No" (except
+    meaningful negatives), edit exposes every editable field.
+    **Permission-aware:** reads the user's ACL (`EspoClient.app_user` →
+    `acl.table`) and, for `edit:own`, checks **per-record ownership**
+    (assignedUser/assignedUsers) — read-only records show no Edit, saves are
+    per-entity with a plain-language 403 message (enum drift dropped).
   - **Peek** (`service.peek`, `PEEK_FIELDS` allowlist: Contact/Account/CClientProfile/
     CPartnerProfile/CSponsorProfile): a read-only pop-up; the aggregated Company link
     fetches each member and renders titled sections.
@@ -560,25 +591,61 @@ segment of its own URL). Mounted only when `assignments_active` (needs
     / partners / sponsors found" — no "ask an administrator" alarm (past the team
     gate = you have permission); a Refresh picks up newly-assigned records (the
     manager profile is re-resolved each `/records` call).
+  - **Communications tab — email inbox (UI-only scaffold; added 2026-07-10).** An
+    inbox-style grid + a view/reply/compose modal, so a manager can eventually read
+    and answer the email thread for a record. **It is 100% frontend today: NOTHING
+    is read from or written to the CRM** — the CRM email structure is still being
+    designed. All the code is in `sessions/frontend/` (`app.js` "Communications tab"
+    section, `index.html` `data-dpanel="communications"` panel + `#commModal`,
+    `styles.css` `.sx__inbox`/`.sx__msg-*`); the router just un-flagged the tab as a
+    placeholder (`router.COMMON_DETAIL_TABS`) so the static panel is used. A muted
+    banner tells the user the rows are examples. **To wire it to the CRM later:**
+    1. **Design the CRM side** — decide where email lives (likely an `Email`/custom
+       entity related to the parent `CEngagement`/`CPartnerProfile`/`CSponsorProfile`,
+       or EspoCRM's built-in `Email` with a parent link + inbound/outbound flag).
+    2. **Add backend endpoints** in `sessions/router.py` + `sessions/service.py`,
+       all running as the logged-in user (ACL-enforced, like every other read):
+       `GET /{slug}/api/records/{parent_id}/messages` (list, newest-first),
+       optionally `GET /{slug}/api/messages/{id}` (full body if the list omits it),
+       and `POST /{slug}/api/records/{parent_id}/messages` (send/reply). Follow the
+       existing `_crm_failure` 401/403/502 handling.
+    3. **Frontend swap** (`sessions/frontend/app.js`): replace the `SAMPLE_MESSAGES`
+       array with a fetch in `renderComms()` (`await api("/records/" + id +
+       "/messages")`), and point the compose modal's **Send** handler (currently a
+       "not available yet" stub) at the `POST` endpoint.
+    4. **Message contract the UI already expects** (produce this shape from the
+       backend, or adjust the tiny render fns `renderComms`/`viewMessage`): each
+       message = `{ id, direction: "sent"|"received", from, to, subject, date
+       ("YYYY-MM-DD HH:MM:SS"), unread: bool, body }`. `from`/`to` may be
+       `"Name <email>"` (the UI extracts the display name via `partyName`); `body`
+       is plain text rendered pre-wrapped; `date` is formatted with `fmtSessionDate`
+       (abbreviated weekday). Compose sends To/Subject/Message from `#commTo`/
+       `#commSubject`/`#commBody`.
 - **Phase 1 (CRUD + review UI).** The **Start/Open Session** button uses
   `videoMeetingLink` when set. Google Calendar/Meet *scheduling* (auto-populating
   `videoMeetingLink`) and Meet *transcription* (a new `sessionTranscription` wysiwyg
-  field) are Phases 2–3, not built. **Communications** (email/SMS threads) +
-  **Documents** (uploads) tabs are placeholders for a later phase.
-- **Status (2026-07-09): CRUD hardened live on crm-test (mentor domain) AND the
-  detail view redesigned into the tabbed Overview/Details/… experience; v0.32.3;
-  292 tests green (`tests/test_sessions.py`).** Since v0.31.0 (all live-diagnosed
-  against crm-test as an admin): tabbed detail; information-dense **Overview**
+  field) are Phases 2–3, not built. The **Communications** tab now has a built
+  email-inbox UI scaffold (no CRM data yet — wiring contract in the Communications
+  bullet above); the **Documents** (uploads) tab is still a placeholder.
+- **Status (2026-07-10): Details tab rebuilt to mockup v4 (summary strip + row-grid
+  cards + contact tables + add-contact flows); v0.33.0; 304 tests green.** The
+  redesign was verified against a **stubbed-API preview harness** in the browser
+  (strip/cards/tables render, per-row edit expansion, + Add menu, search-link flow,
+  create-new form, strip edit — all exercised; no console errors) — **NOT yet driven
+  against the live CRM** (the new pieces to check live: the contacts search
+  `where contains name` under a non-admin ACL, link/backfill/create writes, and the
+  CBM card's per-profile `contactRecord` reads under read-own). Earlier (v0.32.x,
+  live-diagnosed on crm-test as admin): tabbed detail; information-dense **Overview**
   (aggregated Company peek, notes feed with attendees, splitter, Next-session
-  Start/Open button); the editable **permission-aware Details** tab; friendlier
-  empty states; bigger session-notes editors; and two significant live-diagnosed
-  fixes — the **attendee relationship** read/write (`sessionAttendees` is a link,
-  not a field — [[espo-custom-linkmultiple-is-a-relationship]]) and **per-record
-  edit-permission** gating in Details. Still on branch `feat/session-management`
-  (**NOT pushed**). **Still NOT driven live as a non-admin team member, nor for the
-  partner/sponsor domains.** Communications + Documents tabs are placeholders. Open
-  polish items: trimming generic Contact/Account fields in Details (metadata-driven,
-  so `acceptanceStatus`/`doNotCall` etc. appear), and whether to drop the editor's
+  Start/Open button); friendlier empty states; bigger session-notes editors; the
+  **attendee relationship** read/write fix (`sessionAttendees` is a link, not a
+  field — [[espo-custom-linkmultiple-is-a-relationship]]) and **per-record
+  edit-permission** gating in Details. Branch `feat/session-view` (**NOT pushed**).
+  **Still NOT driven live as a non-admin team member, nor for the partner/sponsor
+  domains.** Communications has an email-inbox UI scaffold (no CRM data — wiring
+  contract documented above); Documents is a placeholder. Open polish items:
+  trimming generic Contact/Account fields in the edit forms (metadata-driven, so
+  `acceptanceStatus`/`doNotCall` etc. appear), and whether to drop the editor's
   Session/Notes tab split for one scrolling form. **Deploy note:** all three App
   Platform apps build from `main`, so a push deploys crm-test **and** prod — and
   prod lacks the partner/sponsor CRM prereqs below.
@@ -603,23 +670,33 @@ redeployed on each push), and prod answers on the
 app as PRIMARY, Cloudflare CNAME grey-cloud → the app's default hostname; the
 `…ondigitalocean.app` URL still works). Shipped 2026-07-05..07 (see CHANGELOG):
 
-- **Session Management tools — v0.32.3** (built 2026-07-08, branch
-  `feat/session-management`, **NOT yet pushed/deployed**; mentor domain **driven
+- **Session Management tools — v0.33.0** (built 2026-07-08..10, branch
+  `feat/session-view`, **NOT yet pushed/deployed**; mentor domain CRUD **driven
   live end-to-end on crm-test** 2026-07-08..09) — `/mentorsessions`
   `/partnersessions` `/sponsorsessions`: one engine, three team-gated routes,
   recording `CSession` meetings against the records each manager owns. Since the
   v0.31.0 CRUD baseline the **record detail was redesigned** into a tabbed
   (Overview · Details · Sessions · Communications · Documents), information-dense
   review UI: a full-width Overview (aggregated Company peek, session-notes feed
-  with attendees, Next-session Start/Open button), an editable **permission-aware
-  Details** tab (metadata-driven fields, per-record ownership), friendlier empty
-  states, bigger notes editors. Live-diagnosed fixes: the **attendee relationship**
-  read/write (`sessionAttendees` is a link, not a field —
+  with attendees, Next-session Start/Open button), friendlier empty states, bigger
+  notes editors. **v0.33.0 (2026-07-10) rebuilt the Details tab to the approved
+  mockup v4** (`prds/Details Screen files2/`): engagement **summary strip** +
+  Company / Client-Business-Profile cards as two-column labeled row grids +
+  **Client Contacts / CBM Contacts tables** (one Agreements badge per contact,
+  per-row inline editing) + **+ Add contact** flows (select-existing via live
+  search, create-and-link, CBM mentor-profile pick) — new endpoints
+  `GET /{slug}/api/contacts` + `POST /{slug}/api/records/{id}/contacts`; verified
+  in a stubbed-API browser harness, NOT yet against the live CRM. Earlier
+  live-diagnosed fixes: the **attendee relationship** read/write
+  (`sessionAttendees` is a link, not a field —
   [[espo-custom-linkmultiple-is-a-relationship]]) and per-record edit-permission
   gating. Full detail in the **Session Management tools** section above.
-  **Remaining:** drive live for partner/sponsor + as a non-admin; Communications +
-  Documents tabs; Details field trimming. (Deploy = push `main` ⇒ crm-test **and**
-  prod; prod needs the partner/sponsor CRM prereqs first.)
+  **Remaining:** drive the Details redesign + contact-add writes live; drive live
+  for partner/sponsor + as a non-admin; wire the Communications inbox (UI scaffold
+  built; CRM email structure + endpoints still to do — wiring contract documented
+  in the Session Management section); Documents tab; edit-form field trimming.
+  (Deploy = push `main` ⇒ crm-test **and** prod; prod needs the partner/sponsor
+  CRM prereqs first.)
 - **v0.30.0** (built 2026-07-07, NOT yet pushed) — **authenticated portal at
   `/` + single sign-on**: root becomes a CRM login; team-based links (Mentor
   Team → CRM + public forms; the three admin teams → their apps; admins → all;

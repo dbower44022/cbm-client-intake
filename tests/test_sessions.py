@@ -26,8 +26,9 @@ def _clear_settings_cache():
 # --- fake CRM client -------------------------------------------------------
 
 class Fake:
-    def __init__(self, *, mentors=None, related=None, records=None, meta_fields=None, acl=None):
+    def __init__(self, *, mentors=None, contacts=None, related=None, records=None, meta_fields=None, acl=None):
         self.mentors = mentors or []            # rows returned by list(CMentorProfile)
+        self.contacts = contacts or []          # rows returned by list(Contact)
         self.related = related or {}            # link name -> [rows]
         self.records = dict(records or {})      # (entity, id) -> dict
         self.meta_fields = meta_fields or {}
@@ -36,11 +37,15 @@ class Fake:
         self.updates = []
         self.relates = []
         self.unrelates = []
+        self.list_calls = []
         self._seq = 0
 
     async def list(self, entity, **kw):
+        self.list_calls.append((entity, kw))
         if entity == "CMentorProfile":
             return {"list": self.mentors}
+        if entity == "Contact":
+            return {"list": self.contacts}
         return {"list": []}
 
     async def list_related(self, entity, record_id, link, **kw):
@@ -148,6 +153,30 @@ async def test_list_records_maps_columns():
     # trailing date column (Start Date) + primary-contact id for the pop-up link
     assert row["startDate"] == "2026-01-15"
     assert row["contact"] == "Pat" and row["contactId"] == "c1"
+
+
+@pytest.mark.asyncio
+async def test_mentor_list_maps_next_session_and_start_inline():
+    # Mentor grid lays both date columns out inline (Next Session + Start Date),
+    # so no trailing date column is added.
+    fake = Fake(
+        mentors=[{"id": "p9", "assignedUserId": "u1"}],
+        related={"engagements1": [
+            {"id": "E1", "name": "Acme Eng", "engagementStatus": "Active",
+             "engagementClientName": "Acme LLC", "clientOrganizationName": "Acme Co",
+             "primaryEngagementContactName": "Pat", "primaryEngagementContactId": "c1",
+             "nextSessionDateTime": "2026-08-04 15:30:00",
+             "engagementStartDate": "2026-01-15", "createdAt": "2026-01-02 00:00:00"},
+        ]},
+    )
+    res = await service.list_records(MENTOR, fake, _USER)
+    row = res["records"][0]
+    assert row["nextSession"] == "2026-08-04 15:30:00"
+    assert row["startDate"] == "2026-01-15"
+    assert row["company"] == "Acme Co" and row["client"] == "Acme LLC"
+    assert row["contact"] == "Pat" and row["contactId"] == "c1"
+    assert "created" not in row  # no trailing Created date column for mentor
+    assert MENTOR.list_date_column is None
 
 
 @pytest.mark.asyncio
@@ -303,11 +332,19 @@ async def test_peek_contact_builds_copy_card_and_address():
 async def test_get_detail_includes_comentors_for_mentor():
     fake = Fake(
         records={("CEngagement", "E1"): {"name": "Eng", "engagementStatus": "Active"}},
-        related={"additionalMentors": [{"id": "m2", "name": "Co Mentor"}]},
+        related={"additionalMentors": [
+            {"id": "m2", "name": "Co Mentor", "contactRecordId": "ct9"},
+            {"id": "m3", "name": "No Contact"},  # no linked Contact => not linkable
+        ]},
     )
     d = await service.get_detail(MENTOR, fake, "E1")
     assert d["supportsComentor"] is True
-    assert d["coMentors"] == [{"id": "m2", "name": "Co Mentor"}]
+    # each CBM contact carries its linked Contact id so the Overview can link to
+    # the contact-info pop-up (None when no Contact is linked).
+    assert d["coMentors"] == [
+        {"id": "m2", "name": "Co Mentor", "contactId": "ct9"},
+        {"id": "m3", "name": "No Contact", "contactId": None},
+    ]
 
 
 # --- Details tab -----------------------------------------------------------
@@ -351,7 +388,7 @@ async def test_save_details_whitelists_and_drops_drifted_enum():
 
 
 @pytest.mark.asyncio
-async def test_build_details_has_company_profile_and_contact_sections():
+async def test_build_details_splits_sections_and_contacts():
     fake = Fake(
         records={
             ("CPartnerProfile", "P1"): {"name": "Acme", "partnerCompanyId": "acct1"},
@@ -361,12 +398,117 @@ async def test_build_details_has_company_profile_and_contact_sections():
         meta_fields={"title": {"type": "varchar"}, "website": {"type": "url"}},
     )
     d = await details.build_details(PARTNER, fake, "P1")
-    kinds = [(s["title"], s["entity"]) for s in d["sections"]]
-    assert ("Company", "Account") in kinds
-    assert ("Partnership", "CPartnerProfile") in kinds
-    assert ("Pat", "Contact") in kinds
-    # no ACL restrictions => every section editable
-    assert all(s["editable"] for s in d["sections"])
+    # org sections carry a kind: the parent record (summary strip) vs. org cards.
+    kinds = [(s["title"], s["entity"], s["kind"]) for s in d["sections"]]
+    assert kinds == [("Partnership", "CPartnerProfile", "parent"), ("Company", "Account", "org")]
+    # related contacts are their own list (one table), not sections.
+    assert [c["name"] for c in d["contacts"]] == ["Pat"]
+    assert d["contacts"][0]["entity"] == "Contact"
+    # the Contact field spec ships for the create-new-contact form.
+    assert [f["name"] for f in d["contactSpec"]] == ["title", "website"]
+    # no ACL restrictions => everything editable; partner domain has no CBM card.
+    assert all(s["editable"] for s in d["sections"]) and d["contacts"][0]["editable"]
+    assert "cbmContacts" not in d
+
+
+@pytest.mark.asyncio
+async def test_build_details_mentor_cbm_contacts():
+    """Mentor domain: the CBM Contacts card = the assigned mentor
+    (CEngagement.mentorProfile) + co-mentors (additionalMentors), deduped, each
+    resolved through the profile's linked Contact (contactRecord)."""
+    fake = Fake(
+        records={
+            ("CEngagement", "E1"): {
+                "name": "Eng", "clientOrganizationId": "acct1", "engagementClientId": "cp1",
+                "mentorProfileId": "m1", "mentorProfileName": "Mentor One",
+            },
+            ("Account", "acct1"): {"name": "Acme Co"},
+            ("CClientProfile", "cp1"): {"name": "Acme profile"},
+            ("CMentorProfile", "m1"): {"name": "Mentor One", "contactRecordId": "ct1"},
+            ("Contact", "ct1"): {"name": "Mentor One", "title": "Mentor"},
+        },
+        related={
+            "engagementContacts": [{"id": "c1", "name": "Pat"}],
+            "additionalMentors": [
+                {"id": "m2", "name": "Co M", "contactRecordId": "ct2"},
+                {"id": "m1", "name": "Mentor One"},  # also the primary -> deduped
+            ],
+        },
+        meta_fields={"title": {"type": "varchar"}},
+    )
+    d = await details.build_details(MENTOR, fake, "E1")
+    assert [s["kind"] for s in d["sections"]] == ["parent", "org", "org"]
+    rows = d["cbmContacts"]
+    assert [(p["role"], p["profileId"], p["name"]) for p in rows] == [
+        ("Mentor", "m1", "Mentor One"), ("Co-mentor", "m2", "Co M"),
+    ]
+    # the mentor's linked Contact came back as a full editable section
+    assert rows[0]["contact"]["entity"] == "Contact"
+    assert rows[0]["contact"]["values"]["title"] == "Mentor"
+
+
+@pytest.mark.asyncio
+async def test_search_contacts_shape_and_min_length():
+    fake = Fake(contacts=[{"id": "c1", "name": "Pat K", "emailAddress": "p@x.com",
+                           "phoneNumber": "+12165550100", "accountName": "Acme"}])
+    assert await details.search_contacts(fake, " a ") == []  # under 2 chars: no CRM call
+    assert fake.list_calls == []
+    res = await details.search_contacts(fake, "Pat")
+    assert res == [{"id": "c1", "name": "Pat K", "email": "p@x.com",
+                    "phone": "+12165550100", "company": "Acme"}]
+    _, kw = fake.list_calls[0]
+    assert kw["where"] == [{"type": "contains", "attribute": "name", "value": "Pat"}]
+
+
+@pytest.mark.asyncio
+async def test_link_contact_relates_and_backfills_missing_company():
+    fake = Fake(records={
+        ("CEngagement", "E1"): {"clientOrganizationId": "acct1"},
+        ("Contact", "c9"): {"accountId": None},
+    })
+    await details.link_contact(MENTOR, fake, "E1", "c9")
+    assert fake.relates == [("CEngagement", "E1", "engagementContacts", "c9")]
+    assert fake.updates == [("Contact", "c9", {"accountId": "acct1"})]
+
+
+@pytest.mark.asyncio
+async def test_link_contact_never_overwrites_existing_company():
+    fake = Fake(records={
+        ("CEngagement", "E1"): {"clientOrganizationId": "acct1"},
+        ("Contact", "c9"): {"accountId": "other-co"},
+    })
+    await details.link_contact(MENTOR, fake, "E1", "c9")
+    assert fake.relates == [("CEngagement", "E1", "engagementContacts", "c9")]
+    assert fake.updates == []
+
+
+@pytest.mark.asyncio
+async def test_create_contact_whitelists_stamps_company_and_links():
+    fake = Fake(
+        records={("CEngagement", "E1"): {"clientOrganizationId": "acct1"}},
+        meta_fields={
+            "firstName": {"type": "varchar"}, "lastName": {"type": "varchar"},
+            "cPreferredContactMethod": {"type": "enum", "options": ["Email"]},
+        },
+    )
+    res = await details.create_contact(MENTOR, fake, "E1", {
+        "firstName": "Pat", "lastName": "K",
+        "cPreferredContactMethod": "Fax",  # drifted enum -> dropped, never 400s
+        "bogus": "x",                      # not a Contact field -> dropped
+    })
+    entity, payload = fake.created[0]
+    assert entity == "Contact"
+    assert payload == {"firstName": "Pat", "lastName": "K", "accountId": "acct1"}
+    # created AND linked in the same operation, via the real relation
+    assert fake.relates == [("CEngagement", "E1", "engagementContacts", res["id"])]
+
+
+@pytest.mark.asyncio
+async def test_create_contact_requires_a_name():
+    fake = Fake(meta_fields={"firstName": {"type": "varchar"}, "title": {"type": "varchar"}})
+    with pytest.raises(service.SessionError):
+        await details.create_contact(MENTOR, fake, "E1", {"title": "COO"})
+    assert fake.created == []
 
 
 @pytest.mark.asyncio
@@ -601,8 +743,9 @@ def test_session_endpoint_reports_domain(monkeypatch):
     assert [t["key"] for t in tabs] == [
         "overview", "details", "sessions", "communications", "documents",
     ]
-    # Overview/Details/Sessions are built; Communications/Documents are placeholders
-    assert next(t for t in tabs if t["key"] == "communications")["placeholder"] is True
+    # Overview/Details/Sessions/Communications are built; only Documents is a placeholder
+    assert next(t for t in tabs if t["key"] == "documents")["placeholder"] is True
+    assert "placeholder" not in next(t for t in tabs if t["key"] == "communications")
     assert "placeholder" not in next(t for t in tabs if t["key"] == "details")
 
 
@@ -633,6 +776,40 @@ def test_create_session_endpoint(monkeypatch):
     assert r.status_code == 200
     body = r.json()
     assert body["parent"] == "SP1" and body["attendees"] == ["c1"] and body["name"] == "Visit"
+
+
+def test_contact_search_and_add_endpoints(monkeypatch):
+    _as(monkeypatch, _USER)
+
+    async def fake_search(client, q):
+        return [{"id": "c1", "name": "Pat (" + q + ")"}]
+
+    linked, created = [], []
+
+    async def fake_link(cfg, client, parent_id, contact_id):
+        linked.append((cfg.slug, parent_id, contact_id))
+
+    async def fake_create(cfg, client, parent_id, changes):
+        created.append((cfg.slug, parent_id, changes))
+        return {"id": "new1"}
+
+    monkeypatch.setattr("sessions.details.search_contacts", fake_search)
+    monkeypatch.setattr("sessions.details.link_contact", fake_link)
+    monkeypatch.setattr("sessions.details.create_contact", fake_create)
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.get("/mentorsessions/api/contacts", params={"q": "Pat"})
+        assert r.status_code == 200 and r.json()["contacts"][0]["name"] == "Pat (Pat)"
+        r = c.post("/mentorsessions/api/records/E1/contacts", json={"contactId": "c9"})
+        assert r.status_code == 200 and linked == [("mentorsessions", "E1", "c9")]
+        r = c.post("/mentorsessions/api/records/E1/contacts", json={"changes": {"lastName": "K"}})
+        assert r.status_code == 200 and r.json()["id"] == "new1"
+        assert created == [("mentorsessions", "E1", {"lastName": "K"})]
+
+
+def test_contact_endpoints_require_auth(monkeypatch):
+    with TestClient(_app(monkeypatch)) as c:
+        assert c.get("/mentorsessions/api/contacts?q=x").status_code == 401
+        assert c.post("/mentorsessions/api/records/E1/contacts", json={"contactId": "c1"}).status_code == 401
 
 
 def test_expired_token_returns_401(monkeypatch):

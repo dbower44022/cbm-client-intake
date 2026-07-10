@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup v4 — Engagement Details (contacts as true grid)</title>
+<style>
+  :root{
+    --navy:#1f3a5f;
+    --gold:#d29b2f;
+    --gold-dark:#b8861f;
+    --ink:#25313f;
+    --muted:#77828f;
+    --line:#dfe3e8;
+    --panel-head:#f4f6f8;
+    --chip-bg:#eef1f4;
+    --chip-line:#c9d0d8;
+    --warn:#a33c2f;
+    --warn-bg:#faf0ee;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:#fff;padding:24px 36px 60px;max-width:1440px;margin:0 auto;font-size:13.5px}
+
+  .app-sub{color:var(--muted);margin:0 0 16px;font-size:13px}
+  .page-head{display:flex;align-items:center;gap:16px;margin-bottom:4px}
+  .btn{border:none;border-radius:4px;padding:8px 15px;font-size:13.5px;font-weight:600;cursor:pointer}
+  .btn-navy{background:var(--navy);color:#fff}
+  .btn-gold{background:var(--gold);color:#fff}
+  .btn-gold:hover{background:var(--gold-dark)}
+  .eng-title{font-size:26px;font-weight:700;color:var(--navy)}
+  .eng-tag{font-size:10px;letter-spacing:.08em;color:var(--muted);margin-left:8px;vertical-align:middle}
+  .spacer{flex:1}
+
+  .tabs{display:flex;gap:24px;border-bottom:1px solid var(--line);margin:14px 0 0}
+  .tab{padding:9px 2px;font-size:14px;color:var(--muted);cursor:pointer}
+  .tab.active{color:var(--navy);font-weight:600;border-bottom:3px solid var(--navy)}
+
+  .eng-strip{display:flex;align-items:center;background:var(--panel-head);border:1px solid var(--line);border-radius:6px;padding:10px 16px;margin:16px 0 18px;flex-wrap:wrap}
+  .eng-strip .cell{padding:0 18px;border-right:1px solid var(--line)}
+  .eng-strip .cell:first-child{padding-left:0}
+  .eng-strip .cell:last-of-type{border-right:none}
+  .eng-strip .k{display:block;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:1px}
+  .eng-strip .v{font-size:14px;font-weight:600}
+  .status-pill{display:inline-block;background:var(--navy);color:#fff;border-radius:11px;padding:2px 11px;font-size:12px;font-weight:600}
+  .eng-strip .btn-edit{margin-left:auto}
+
+  .card{border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-bottom:16px}
+  .card-head{display:flex;align-items:center;gap:8px;background:var(--panel-head);border-bottom:1px solid var(--line);padding:8px 14px}
+  .card-title{font-size:14px;font-weight:700}
+  .count{font-size:12px;color:var(--muted);font-weight:400;margin-left:4px}
+  .btn-edit,.btn-add{background:#fff;color:var(--navy);border:1px solid var(--navy);border-radius:4px;padding:3px 12px;font-size:12.5px;font-weight:600;cursor:pointer}
+  .btn-edit:hover,.btn-add:hover{background:var(--navy);color:#fff}
+  .card-head .btn-edit,.card-head .add-wrap{margin-left:auto}
+  .card-body{padding:12px 16px}
+  .card-body.flush{padding:0}
+
+  .rows2{display:grid;grid-template-columns:1fr 1fr;column-gap:44px}
+  @media(max-width:900px){.rows2{grid-template-columns:1fr}}
+  .row{display:flex;padding:4px 0;border-top:1px solid #f0f2f4}
+  .row.nb{border-top:none}
+  .row .k{flex:0 0 122px;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding-top:2px}
+  .row .v{flex:1;line-height:1.45}
+  .row .v b{font-weight:600}
+  .sep{color:var(--chip-line);padding:0 5px}
+
+  .directory{line-height:1.45}
+  .directory .name{font-size:15px;font-weight:700;color:var(--navy)}
+  .directory a{color:var(--navy)}
+
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{background:var(--chip-bg);border:1px solid var(--chip-line);border-radius:4px;padding:1.5px 9px;font-size:12px}
+  .badge-warn{display:inline-block;background:var(--warn-bg);color:var(--warn);border:1px solid #e3c4be;border-radius:4px;padding:1.5px 8px;font-size:11.5px;font-weight:600;white-space:nowrap}
+  .badge-ok{display:inline-block;background:#eef4ee;color:#2e6b3a;border:1px solid #c3d6c6;border-radius:4px;padding:1.5px 8px;font-size:11.5px;font-weight:600;white-space:nowrap}
+  .badge-role{display:inline-block;background:var(--chip-bg);border:1px solid var(--chip-line);border-radius:4px;padding:1.5px 8px;font-size:11.5px;font-weight:600;white-space:nowrap}
+
+  /* CONTACTS TABLE — true grid */
+  table.contacts{width:100%;border-collapse:collapse}
+  table.contacts th{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;text-align:left;padding:8px 14px;border-bottom:1px solid var(--line);background:#fbfcfd}
+  table.contacts td{padding:8px 14px;border-bottom:1px solid #f0f2f4;vertical-align:middle;line-height:1.4}
+  table.contacts tr:last-child td{border-bottom:none}
+  table.contacts tr:hover td{background:#fafbfc}
+  td.name{font-weight:700;color:var(--navy);white-space:nowrap}
+  td.name .sal{font-weight:400;color:var(--muted)}
+  table.contacts a{color:var(--navy)}
+  td.actions{text-align:right;white-space:nowrap}
+  .edit-link{font-size:12.5px;color:var(--navy);font-weight:600;cursor:pointer;background:none;border:none}
+  .edit-link:hover{text-decoration:underline}
+
+  .add-wrap{position:relative}
+  .add-menu{display:none;position:absolute;right:0;top:30px;background:#fff;border:1px solid var(--line);border-radius:5px;box-shadow:0 4px 14px rgba(31,58,95,.12);min-width:220px;z-index:5}
+  .add-menu.open{display:block}
+  .add-menu button{display:block;width:100%;text-align:left;padding:9px 14px;font-size:13px;background:none;border:none;cursor:pointer}
+  .add-menu button:hover{background:var(--panel-head)}
+
+  .note{font-size:12px;color:var(--muted);margin:0 0 14px}
+</style>
+</head>
+<body>
+
+<div class="app-sub">Review your engagements and record mentoring sessions.</div>
+
+<div class="page-head">
+  <button class="btn btn-navy">&larr; Back to list</button>
+  <div class="eng-title">Agape W8 Loss 2026-05-15<span class="eng-tag">ENGAGEMENT</span></div>
+  <div class="spacer"></div>
+  <button class="btn btn-gold">+ New session</button>
+</div>
+
+<div class="tabs">
+  <div class="tab">Overview</div>
+  <div class="tab active">Details</div>
+  <div class="tab">Sessions</div>
+  <div class="tab">Communications</div>
+  <div class="tab">Documents</div>
+</div>
+
+<div class="eng-strip">
+  <div class="cell"><span class="k">Status</span><span class="status-pill">Assigned</span></div>
+  <div class="cell"><span class="k">Started</span><span class="v">July 1, 2026</span></div>
+  <div class="cell"><span class="k">Mentor</span><span class="v">Douglas Bower</span></div>
+  <div class="cell"><span class="k">Cadence</span><span class="v">Weekly</span></div>
+  <div class="cell"><span class="k">Sessions</span><span class="v">17</span></div>
+  <button class="btn-edit">Edit</button>
+</div>
+
+<p class="note">Mockup v4 — contacts as a true grid, shown with five client contacts to demonstrate scale. + Add on Client Contacts is live.</p>
+
+<!-- COMPANY (unchanged from v3) -->
+<div class="card">
+  <div class="card-head">
+    <span class="card-title">Company</span>
+    <button class="btn-edit">Edit</button>
+  </div>
+  <div class="card-body">
+    <div class="rows2">
+      <div>
+        <div class="row nb" style="padding-bottom:8px">
+          <div class="directory">
+            <div class="name">Agape W8Loss</div>
+            7550 Lucerne Drive, Suite 303<br>
+            Middleburg Heights, OH 44130<br>
+            +1 404-815-1610 &middot; <a href="#">agapew8loss.com</a>
+          </div>
+        </div>
+        <div class="row"><span class="k">Business</span><span class="v"><b>For-Profit</b><span class="sep">|</span><b>Early Stage</b><span class="sep">|</span>Health Care and Social Assistance</span></div>
+        <div class="row"><span class="k">Shipping</span><span class="v">345 N. Main St, Chagrin Falls, OH 44022</span></div>
+      </div>
+      <div>
+        <div class="row nb"><span class="k">Account</span><span class="v"><b>Client</b> &middot; status <b>Prospect</b></span></div>
+        <div class="row"><span class="k">Cadence</span><span class="v"><b>Monthly</b> partner contact</span></div>
+        <div class="row"><span class="k">Announcements</span><span class="v"><span class="badge-warn">Not allowed</span></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CLIENT BUSINESS PROFILE (unchanged from v3) -->
+<div class="card">
+  <div class="card-head">
+    <span class="card-title">Client Business Profile</span>
+    <button class="btn-edit">Edit</button>
+  </div>
+  <div class="card-body">
+    <div class="rows2">
+      <div>
+        <div class="row nb"><span class="k">Entity</span><span class="v"><b>Sole Proprietorship</b>, formed June 2026</span></div>
+        <div class="row"><span class="k">Revenue</span><span class="v"><b>$50,000–$100,000</b><span class="sep">|</span>growing significantly<span class="sep">|</span><b>operating at a loss</b></span></div>
+        <div class="row"><span class="k">Sells</span><span class="v"><b>B2C</b><span class="sep">|</span>Direct Sales, Retail Storefront<span class="sep">|</span>Hyper-Local reach</span></div>
+        <div class="row"><span class="k">On file</span><span class="v">Federal EIN &middot; Google Business Profile</span></div>
+      </div>
+      <div>
+        <div class="row nb"><span class="k">Certifications</span><span class="v"><span class="chips"><span class="chip">Cuyahoga County MBE</span><span class="chip">Ohio MBE</span></span></span></div>
+        <div class="row"><span class="k">Funding to date</span><span class="v"><span class="chips"><span class="chip">Friends and Family</span><span class="chip">SBA Loan</span><span class="chip">Credit Cards</span></span></span></div>
+        <div class="row"><span class="k">Client goal</span><span class="v"><i>&ldquo;We want help with Marketing&rdquo;</i></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CLIENT CONTACTS — true grid -->
+<div class="card">
+  <div class="card-head">
+    <span class="card-title">Client Contacts<span class="count">(5)</span></span>
+    <div class="add-wrap">
+      <button class="btn-add" onclick="toggleMenu()">+ Add</button>
+      <div class="add-menu" id="add-menu">
+        <button>Select existing contact&hellip;</button>
+        <button>Create new contact&hellip;</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-body flush">
+    <table class="contacts">
+      <thead>
+        <tr>
+          <th>Name</th><th>Role</th><th>Phone</th><th>Email</th><th>City</th><th>Contact via</th><th>Agreements</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="name"><span class="sal">Mr.</span> James Koran</td>
+          <td><span class="badge-role">Client</span></td>
+          <td>+1 216-903-2786</td>
+          <td><a href="#">james@agapew8loss.com</a></td>
+          <td>Middleburg Heights</td>
+          <td>Email</td>
+          <td><span class="badge-warn">3 pending</span></td>
+          <td class="actions"><button class="edit-link">Edit</button></td>
+        </tr>
+        <tr>
+          <td class="name"><span class="sal">Ms.</span> Sheila Marszal</td>
+          <td></td>
+          <td></td>
+          <td><a href="#">sheila@agapew8loss.com</a></td>
+          <td></td>
+          <td>Email</td>
+          <td><span class="badge-warn">3 pending</span></td>
+          <td class="actions"><button class="edit-link">Edit</button></td>
+        </tr>
+        <tr>
+          <td class="name"><span class="sal">Mr.</span> Robert Chen</td>
+          <td><span class="badge-role">Bookkeeper</span></td>
+          <td>+1 216-555-0142</td>
+          <td><a href="#">rchen@example.com</a></td>
+          <td>Cleveland</td>
+          <td>Phone</td>
+          <td><span class="badge-ok">Complete</span></td>
+          <td class="actions"><button class="edit-link">Edit</button></td>
+        </tr>
+        <tr>
+          <td class="name"><span class="sal">Ms.</span> Maria Vasquez</td>
+          <td><span class="badge-role">Co-owner</span></td>
+          <td>+1 440-555-0198</td>
+          <td><a href="#">maria@agapew8loss.com</a></td>
+          <td>Parma</td>
+          <td>Email</td>
+          <td><span class="badge-ok">Complete</span></td>
+          <td class="actions"><button class="edit-link">Edit</button></td>
+        </tr>
+        <tr>
+          <td class="name"><span class="sal">Mr.</span> David Okafor</td>
+          <td><span class="badge-role">Attorney</span></td>
+          <td>+1 216-555-0177</td>
+          <td><a href="#">dokafor@lawfirm.example.com</a></td>
+          <td>Cleveland</td>
+          <td>Email</td>
+          <td><span class="badge-warn">1 pending</span></td>
+          <td class="actions"><button class="edit-link">Edit</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- CBM CONTACTS — same grid -->
+<div class="card">
+  <div class="card-head">
+    <span class="card-title">CBM Contacts<span class="count">(2)</span></span>
+    <div class="add-wrap"><button class="btn-add">+ Add</button></div>
+  </div>
+  <div class="card-body flush">
+    <table class="contacts">
+      <thead>
+        <tr>
+          <th>Name</th><th>Role</th><th>Phone</th><th>Email</th><th>Contact via</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="name">Douglas Bower</td>
+          <td><span class="badge-role">Mentor</span></td>
+          <td>+1 216-612-4870</td>
+          <td><a href="#">doug@dougbower.com</a></td>
+          <td>Email</td>
+          <td class="actions"><button class="edit-link">Edit</button></td>
+        </tr>
+        <tr>
+          <td class="name">Kim Sarver</td>
+          <td><span class="badge-role">Program Manager</span></td>
+          <td></td>
+          <td><a href="#">kim@clevelandbusinessmentors.org</a></td>
+          <td>Email</td>
+          <td class="actions"><button class="edit-link">Edit</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+function toggleMenu(){
+  document.getElementById('add-menu').classList.toggle('open');
+}
+document.addEventListener('click', e=>{
+  if(!e.target.closest('.add-wrap')) document.getElementById('add-menu').classList.remove('open');
+});
+</script>
+</body>
+</html>

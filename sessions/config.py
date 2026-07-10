@@ -30,11 +30,14 @@ SPONSOR_PROFILE = "CSponsorProfile"
 @dataclass(frozen=True)
 class Column:
     """A grid column / detail row: ``key`` in the API row, ``label`` for the UI,
-    ``attr`` read from the raw EspoCRM record."""
+    ``attr`` read from the raw EspoCRM record. ``type`` tells the grid how to
+    render the cell: ``text`` (default), ``date`` (YYYY-MM-DD), or ``datetime``
+    (friendly "Mon, Aug 4 — 3:30 PM" with abbreviated weekday)."""
 
     key: str
     label: str
     attr: str
+    type: str = "text"
 
 
 @dataclass(frozen=True)
@@ -106,8 +109,10 @@ class DomainConfig:
     # simply owns no records yet — no action implied; a refresh picks up new ones).
     empty_message: str = "No records found."
 
-    # Trailing "date" column on the grid: (key, label, attr). Defaults to Created.
-    list_date_column: tuple[str, str, str] = ("created", "Created", "createdAt")
+    # Trailing "date" column on the grid: (key, label, attr). Defaults to Created;
+    # None => no trailing date column (a domain that lays its date columns out
+    # inline via ``list_columns`` sets this None).
+    list_date_column: Optional[tuple[str, str, str]] = ("created", "Created", "createdAt")
     # Grid column key that is the primary contact + the parent attr holding its id
     # (so the cell links to the contact pop-up). None => not linkable.
     list_contact_key: Optional[str] = None
@@ -194,16 +199,21 @@ MENTOR = DomainConfig(
     list_select=(
         "name,engagementStatus,engagementClientName,clientOrganizationName,"
         "primaryEngagementContactName,primaryEngagementContactId,"
-        "engagementStartDate,createdAt"
+        "nextSessionDateTime,engagementStartDate,createdAt"
     ),
+    # Order: Engagement, Status, Primary contact, Next session, Start date,
+    # Company, Client. Both date columns are laid out inline (so no trailing
+    # date column — list_date_column=None below).
     list_columns=(
         Column("name", "Engagement", "name"),
         Column("status", "Status", "engagementStatus"),
-        Column("client", "Client", "engagementClientName"),
-        Column("company", "Company", "clientOrganizationName"),
         Column("contact", "Primary contact", "primaryEngagementContactName"),
+        Column("nextSession", "Next Session", "nextSessionDateTime", type="datetime"),
+        Column("startDate", "Start Date", "engagementStartDate", type="date"),
+        Column("company", "Company", "clientOrganizationName"),
+        Column("client", "Client", "engagementClientName"),
     ),
-    list_date_column=("startDate", "Start Date", "engagementStartDate"),
+    list_date_column=None,
     list_contact_key="contact",
     list_contact_id_attr="primaryEngagementContactId",
     list_status_key="status",

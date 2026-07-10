@@ -42,14 +42,24 @@ class DetailsSaveIn(BaseModel):
     changes: dict = {}
 
 
-# Phase-one detail tabs, common to all three domains. Overview + Sessions are
-# built; Details (full company/contact/profile fields, editable), Communications
-# (email/SMS threads), and Documents (uploads) are placeholders for now.
+class ContactAddIn(BaseModel):
+    """Add a contact to the record: link an existing one (``contactId``) OR
+    create a new one from ``changes`` and link it — exactly one of the two."""
+
+    contactId: Optional[str] = None
+    changes: Optional[dict] = None
+
+
+# Phase-one detail tabs, common to all three domains. Overview + Sessions +
+# Details (full company/contact/profile fields, editable) are built. The
+# Communications tab renders an email-inbox grid (UI only — no CRM email data is
+# read yet; the CRM email structure is still being designed). Documents (uploads)
+# is a placeholder for now.
 COMMON_DETAIL_TABS = [
     {"key": "overview", "label": "Overview"},
     {"key": "details", "label": "Details"},
     {"key": "sessions", "label": "Sessions"},
-    {"key": "communications", "label": "Communications", "placeholder": True},
+    {"key": "communications", "label": "Communications"},
     {"key": "documents", "label": "Documents", "placeholder": True},
 ]
 
@@ -96,8 +106,12 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             "title": cfg.title,
             "subtitle": cfg.subtitle,
             "parentLabel": cfg.parent_label,
-            "columns": [{"key": c.key, "label": c.label} for c in cfg.list_columns],
-            "dateColumn": {"key": cfg.list_date_column[0], "label": cfg.list_date_column[1]},
+            "columns": [{"key": c.key, "label": c.label, "type": c.type} for c in cfg.list_columns],
+            "dateColumn": (
+                {"key": cfg.list_date_column[0], "label": cfg.list_date_column[1]}
+                if cfg.list_date_column
+                else None
+            ),
             "statusKey": cfg.list_status_key,
             "contactKey": cfg.list_contact_key,
             "emptyMessage": cfg.empty_message,
@@ -161,6 +175,33 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             return await details_svc.save_details(client, entity, record_id, body.changes)
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not save details")
+
+    @router.get("/contacts")
+    async def contacts_search(request: Request, q: str = "") -> dict:
+        """Search existing contacts for the add-contact picker (as the user)."""
+        user = _require_user(request)
+        client = client_for(get_settings(), user)
+        try:
+            return {"contacts": await details_svc.search_contacts(client, q)}
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not search contacts")
+
+    @router.post("/records/{parent_id}/contacts")
+    async def add_contact(parent_id: str, body: ContactAddIn, request: Request) -> dict:
+        """Link an existing contact to this record, or create-and-link a new one
+        (see sessions.details.link_contact / create_contact for the CRM relations)."""
+        user = _require_user(request)
+        client = client_for(get_settings(), user)
+        try:
+            if body.contactId:
+                await details_svc.link_contact(cfg, client, parent_id, body.contactId)
+                return {"status": "ok"}
+            created = await details_svc.create_contact(cfg, client, parent_id, body.changes or {})
+            return {"status": "ok", "id": created["id"]}
+        except service.SessionError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not add the contact")
 
     @router.get("/peek/{entity}/{record_id}")
     async def peek(entity: str, record_id: str, request: Request) -> dict:

@@ -4,6 +4,61 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.33.0] — 2026-07-10
+
+### Changed
+- **Details tab rebuilt to the approved mockup v4 layout**
+  (`prds/Details Screen files2/`): top to bottom, single column —
+  1. **Engagement summary strip** (replaces the Engagement panel): a slim labeled
+     bar under the tab row — Status as a navy pill, then Started / Mentor / Cadence /
+     Sessions and every other engagement field that carries information (long-form
+     text stays on the Overview and in the edit form; empties and "No" omitted),
+     with the strip's own **Edit** flipping it into the full engagement form.
+  2. **Company** and **Client Business Profile** cards: a **two-column labeled row
+     grid** (fixed small uppercase labels, composed bold values with light `|`
+     separators) — Company leads with a directory block (name, billing address,
+     phone · website) then Business / Shipping-when-different rows, with Account /
+     Cadence / Announcements (red "Not allowed" badge) on the right; the profile
+     composes Entity / Revenue / Sells / On-file rows with Certifications + Funding
+     chips and the quoted Client goal. Any informative field the curated rows don't
+     cover still renders as a generic labeled row (columns kept balanced); empty /
+     false fields are hidden except operationally meaningful negatives.
+  3. **Client Contacts** card: ALL related contacts in one true table — Name
+     (muted salutation + navy bold), Role chips (contact type + title), Phone,
+     Email, City, Contact via, and the three acceptance flags collapsed to **one
+     Agreements badge** (green "Complete" / red "N pending"); empty cells stay
+     empty. Per-row **Edit** expands the full contact form inline under the row.
+  4. **CBM Contacts** card: the same table (no City/Agreements) for the CBM-side
+     people, populated from the real CRM relations — the assigned mentor
+     (`CEngagement.mentorProfile`) + co-mentors (`additionalMentors`), each
+     resolved through the profile's linked Contact (`contactRecord`) for
+     phone/email; verified live against crm-test, there is no other staff link on
+     the engagement.
+- No page-global Edit/Save/Cancel bar remains; every section (strip, card,
+  contact row) edits independently with inline errors on failure.
+
+### Added
+- **+ Add contact flows** on both contact cards. Client side: a two-option menu —
+  **Select existing contact…** (live search over CRM contacts as the signed-in
+  user; picking one relates it via the domain's contacts link
+  (`engagementContacts` / `contacts` / `sponsorContacts`) and backfills the
+  contact's company affiliation (`Contact.account`) only when it has none) and
+  **Create new contact…** (the full contact form; create + link is one compound
+  operation, with the company stamped at create). CBM side: select an existing
+  mentor profile (attached via `additionalMentors` — new CBM people are onboarded
+  through Mentor Administration, so no create-new there). New endpoints:
+  `GET /{slug}/api/contacts?q=` (picker search) and
+  `POST /{slug}/api/records/{id}/contacts` (`contactId` to link, `changes` to
+  create-and-link), both running as the user.
+- **Grid columns rework (mentor list)** — carried in from the prior session
+  (previously uncommitted): Next Session (friendly datetime) + Start Date columns
+  inline, Company/Client moved right; `Column.type` drives date/datetime cells.
+- **Communications tab email-inbox UI scaffold** — carried in from the prior
+  session (previously uncommitted): an inbox grid + view/reply/compose modal,
+  **frontend-only** (no CRM email data yet; the wiring contract is documented in
+  CLAUDE.md); Overview CBM contacts now link to each co-mentor's Contact pop-up
+  (`coMentors[].contactId`).
+
 ## [0.32.12] — 2026-07-10
 
 ### Changed

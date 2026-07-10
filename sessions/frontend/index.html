@@ -86,9 +86,9 @@
         </div>
       </div>
 
-      <!-- Details: read-optimized view of company / profile / contacts, with an
-           Edit button that flips the whole page into edit mode -->
-      <!-- Details: per-panel editing (each panel has its own Edit/Save/Cancel) -->
+      <!-- Details (mockup v4): engagement summary strip, Company + profile cards
+           (two-column labeled rows), then Client Contacts / CBM Contacts tables.
+           Each section edits independently; contacts edit per row. -->
       <div class="sx__dpanel" data-dpanel="details" hidden>
         <p class="sx__notice" id="detailsNotice" role="status" hidden></p>
         <p class="sx__loading" id="detailsLoading" hidden>Loading…</p>
@@ -112,6 +112,25 @@
             <button type="button" class="cbm-button cbm-button--secondary" id="addCoMentorBtn">Add CBM contact</button>
           </div>
         </div>
+      </div>
+
+      <!-- Communications: email inbox for this record. UI only for now — no CRM
+           email data is read yet (structure still being designed). -->
+      <div class="sx__dpanel" data-dpanel="communications" hidden>
+        <div class="sx__comm-head">
+          <h3>Communications</h3>
+          <button type="button" class="cbm-button" id="composeBtn">✉ Compose</button>
+        </div>
+        <p class="sx__notice is-success" id="commBanner" role="status">
+          Email integration with the CRM is still being designed — the messages below are examples that show the inbox layout.
+        </p>
+        <table class="sx__table sx__inbox" id="inboxTable" hidden>
+          <thead>
+            <tr><th scope="col">Direction</th><th scope="col">Correspondent</th><th scope="col">Subject</th><th scope="col">Date</th></tr>
+          </thead>
+          <tbody id="inboxBody"></tbody>
+        </table>
+        <p class="sx__muted" id="noMessages" hidden>No messages yet.</p>
       </div>
     </section>
 
@@ -168,6 +187,24 @@
         </span>
       </div>
       <div class="sx__modal-body" id="peekBody"></div>
+    </div>
+  </div>
+
+  <!-- View / compose / reply an email (Communications tab). UI only for now. -->
+  <div class="sx__modal" id="commModal" hidden role="dialog" aria-modal="true" aria-labelledby="commModalTitle">
+    <div class="sx__modal-backdrop" id="commBackdrop"></div>
+    <div class="sx__modal-card" role="document">
+      <div class="sx__modal-head">
+        <div>
+          <p class="sx__modal-kind" id="commModalKind"></p>
+          <h3 class="sx__modal-name" id="commModalTitle"></h3>
+        </div>
+        <span class="sx__modal-actions">
+          <button type="button" class="sx__modal-close" id="commModalClose" aria-label="Close">×</button>
+        </span>
+      </div>
+      <div class="sx__modal-body" id="commModalBody"></div>
+      <div class="sx__modal-foot" id="commModalFoot"></div>
     </div>
   </div>
 
