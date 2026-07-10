@@ -37,7 +37,13 @@ from .submission_log import (
 )
 from .version import __version__
 
-logging.basicConfig(level=logging.INFO)
+# Prefix every app log line with the date/time so run logs show when each
+# event happened, e.g. "INFO: 2026-01-01 01:00 - created session ...".
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s: %(asctime)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M",
+)
 log = logging.getLogger("cbm_intake")
 
 SHARED_DIR = Path(__file__).resolve().parent.parent / "frontend" / "shared"
@@ -49,6 +55,9 @@ MENTORADMIN_FRONTEND_DIR = (
     Path(__file__).resolve().parent.parent / "mentoradmin" / "frontend"
 )
 PORTAL_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "portal" / "frontend"
+# One shared frontend served at all three Session Management routes; the JS reads
+# the domain from its own URL path (see sessions/frontend/app.js).
+SESSIONS_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "sessions" / "frontend"
 
 
 def _make_client(settings: Settings) -> EspoApi:
@@ -336,11 +345,16 @@ def create_app(
         from mentoradmin import api_router as mentoradmin_router
         from ops import api_router as ops_router
         from portal import api_router as portal_router
+        from sessions import DOMAINS as SESSION_DOMAINS
+        from sessions import make_router as make_sessions_router
 
         app.include_router(assignments_router)
         app.include_router(ops_router)
         app.include_router(mentoradmin_router)
         app.include_router(portal_router)
+        # Session Management: one router per domain, all from the same engine.
+        for _cfg in SESSION_DOMAINS.values():
+            app.include_router(make_sessions_router(_cfg))
 
     @app.get("/", response_class=HTMLResponse)
     async def index() -> HTMLResponse:
@@ -371,6 +385,11 @@ def create_app(
     if settings.assignments_active:
         alias_targets.update(
             {"assignments": "/assignments/", "ops": "/ops/", "mentoradmin": "/mentoradmin/"}
+        )
+        from sessions import DOMAINS as _SESSION_DOMAINS
+
+        alias_targets.update(
+            {slug: f"/{slug}/" for slug in _SESSION_DOMAINS}
         )
 
     @app.get("/{alias}", include_in_schema=False)
@@ -415,6 +434,17 @@ def create_app(
             StaticFiles(directory=str(PORTAL_FRONTEND_DIR), html=True),
             name="portal-frontend",
         )
+    if settings.assignments_active and SESSIONS_FRONTEND_DIR.is_dir():
+        # One shared frontend, mounted at each domain's route. The JS derives its
+        # domain (and API base) from the first path segment of its own URL.
+        from sessions import DOMAINS as _SESSION_DOMAINS
+
+        for _slug in _SESSION_DOMAINS:
+            app.mount(
+                f"/{_slug}",
+                StaticFiles(directory=str(SESSIONS_FRONTEND_DIR), html=True),
+                name=f"sessions-frontend-{_slug}",
+            )
     app.mount("/shared", StaticFiles(directory=str(SHARED_DIR)), name="shared")
 
     return app

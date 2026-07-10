@@ -67,6 +67,18 @@ This is a multi-form app: a shared core hosts any number of intake forms.
     statuses. See
     [`mentor-administration.md`](mentor-administration.md) for the functionality
     and the complete-record requirements.
+  - `sessions/` — **Session Management** (`/mentorsessions/`, `/partnersessions/`,
+    `/sponsorsessions/`): one configurable engine, three team-gated routes. Each
+    manager reviews the records they own (engagements / managed partners / managed
+    sponsors) and records `CSession` **meetings** against them (notes, next steps,
+    attendees, status; mentors can add co-mentors). Opening a record shows a tabbed,
+    information-dense detail — an **Overview** (aggregated company pop-up, a
+    session-notes feed, a Next-session Start/Open button), an editable
+    permission-aware **Details** tab (`sessions/details.py`), the Sessions list, and
+    Communications/Documents placeholders. Gated by
+    `SESSION_{MENTOR,PARTNER,SPONSOR}_ALLOWED_TEAMS`. Phase 1 (CRUD + review UI); see
+    CLAUDE.md for the CRM prerequisites (CSession `assignedUsers` + name formula) and
+    the later Calendar/Meet phases.
 - **V2 reliability platform** (`prds/v2/`): optional durable capture
   (`core/store.py`) + an async delivery `worker.py`, gated by `DATABASE_URL` /
   `ASYNC_DELIVERY` so behavior is unchanged until a Postgres DB is attached.
@@ -105,9 +117,11 @@ an `orchestrator.py` (`async def submit(sub, client) -> dict`), and an
 `/shared/wizard.js` controller) and point `SPEC.frontend_dir` at it.
 
 > **Status:** the app is **deployed and live on DigitalOcean App Platform,
-> writing to `crm-test`** — all five forms and the three staff tools have been
-> verified end-to-end against the deployed EspoCRM (see CLAUDE.md for the live
-> verification record per feature). Each `orchestrator.py` was reconciled against
+> writing to `crm-test`** — all five forms and the first three staff tools
+> (Client Administration, Submission Admin, Mentor Administration) have been
+> verified end-to-end against the deployed EspoCRM. The fourth, **Session
+> Management** (v0.31.0), is built and driven live on crm-test but **not yet
+> pushed/deployed** — see CLAUDE.md for the live verification record per feature. Each `orchestrator.py` was reconciled against
 > the deployed instance metadata and is the source-of-truth mapping; the form
 > dropdowns are aligned to the live CRM enums. Note `forms/client_intake/`
 > ships a bespoke `frontend/app.js`; it can still migrate onto the shared

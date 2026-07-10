@@ -104,9 +104,11 @@ def _login_payload(monkeypatch, user):
         return c.post("/api/portal/login", json={"username": "x", "password": "y"}).json()
 
 
-def test_mentor_team_sees_crm_and_forms_only(monkeypatch):
+def test_mentor_team_sees_crm_forms_and_mentor_sessions(monkeypatch):
+    # Mentor Team gates the CRM link, the public forms, AND the Mentor Sessions
+    # tool (SESSION_MENTOR_ALLOWED_TEAMS defaults to Mentor Team).
     data = _login_payload(monkeypatch, _user(teams=["Mentor Team"]))
-    assert data["apps"] == []
+    assert data["apps"] == [{"title": "Mentor Sessions", "url": "/mentorsessions/"}]
     assert data["crmUrl"]  # the deploy's CRM base URL
     assert len(data["forms"]) == 2
 
@@ -126,7 +128,10 @@ def test_each_admin_team_maps_to_its_app(monkeypatch):
 
 def test_admin_sees_everything(monkeypatch):
     data = _login_payload(monkeypatch, _user(isAdmin=True))
-    assert [a["url"] for a in data["apps"]] == ["/assignments/", "/mentoradmin/", "/ops/"]
+    assert [a["url"] for a in data["apps"]] == [
+        "/assignments/", "/mentoradmin/", "/ops/",
+        "/mentorsessions/", "/partnersessions/", "/sponsorsessions/",
+    ]
     assert data["crmUrl"]
 
 
@@ -135,7 +140,7 @@ def test_multiple_teams_union(monkeypatch):
         monkeypatch,
         _user(teams=["Client Administration Team", "Marketing Admin Team", "Mentor Team"]),
     )
-    assert [a["url"] for a in data["apps"]] == ["/assignments/", "/ops/"]
+    assert [a["url"] for a in data["apps"]] == ["/assignments/", "/ops/", "/mentorsessions/"]
     assert data["crmUrl"]
 
 

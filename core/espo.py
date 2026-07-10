@@ -231,6 +231,21 @@ class EspoClient:
                 f"HTTP {resp.status_code} {resp.text[:300]}"
             )
 
+    async def unrelate(
+        self, entity: str, record_id: str, link: str, related_id: str
+    ) -> None:
+        """Remove a record from a hasMany/manyMany link (relationship DELETE)."""
+        async with httpx.AsyncClient(timeout=self._timeout) as client:
+            resp = await client.delete(
+                f"{self._base}/{entity}/{record_id}/{link}/{related_id}",
+                headers=self._headers,
+            )
+        if resp.status_code >= 400:
+            raise EspoError(
+                f"unrelate {entity}/{record_id}/{link}/{related_id} failed: "
+                f"HTTP {resp.status_code} {resp.text[:300]}"
+            )
+
     async def metadata(self, key: str) -> Any:
         """Fetch an arbitrary EspoCRM metadata key (e.g. an entity's field defs)."""
         async with httpx.AsyncClient(timeout=self._timeout) as client:
@@ -241,6 +256,15 @@ class EspoClient:
             raise EspoError(
                 f"metadata {key} failed: HTTP {resp.status_code} {resp.text[:200]}"
             )
+        return resp.json()
+
+    async def app_user(self) -> dict[str, Any]:
+        """The ``App/user`` payload for the current auth — includes the user's
+        ACL table (per-entity create/read/edit/delete levels)."""
+        async with httpx.AsyncClient(timeout=self._timeout) as client:
+            resp = await client.get(f"{self._base}/App/user", headers=self._headers)
+        if resp.status_code >= 400:
+            raise EspoError(f"App/user failed: HTTP {resp.status_code} {resp.text[:200]}")
         return resp.json()
 
     async def metadata_enum_options(

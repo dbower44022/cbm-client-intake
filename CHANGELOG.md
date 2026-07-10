@@ -4,6 +4,116 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.32.3] — 2026-07-09
+
+### Changed
+- **Session editor layout.** The two most important fields — **Session notes** and
+  **Action items / next steps** — are now large, prominent editors side by side
+  (stacked on narrow screens). Removed the meeting **End** date; **Status /
+  Session type / Start** now share one line. Tighter, more efficient use of space.
+
+## [0.32.2] — 2026-07-09
+
+### Fixed
+- **Details tab respects the user's edit permission** — reads the ACL and, for an
+  `edit: own` role, checks per-record ownership; sections you can't edit are
+  read-only (no doomed edit → 403). Save is per-entity with a plain-language
+  permission message.
+- **Attendees now read and write correctly.** `sessionAttendees` is a CRM
+  *relationship*, not a select-field: reads go through the link (`list_related`,
+  like co-mentors) — reading `sessionAttendeesIds` off the record always returned
+  empty, which is why attendees never displayed and edits looked lost. Writes sync
+  via the relationship endpoints (relate added / unrelate removed). Both the
+  session editor and the Overview note feed use the link read.
+- **Friendlier empty grid** — "No client engagements / partners / sponsors found"
+  instead of the "ask an administrator to link your profile" error.
+
+### Changed
+- **Next session** panel: dropped the session name/type line; added a button that
+  opens the upcoming session for editing — **Start Session** (also launches the
+  call) when it has a video link, else **Open Session**.
+
+## [0.32.0] — 2026-07-09
+
+### Changed
+- **Session Management — redesigned record detail into a tabbed, information-
+  dense view.** Opening an engagement / partner / sponsor now shows a tab bar
+  common to all three domains: **Overview · Details · Sessions · Communications ·
+  Documents** (`/session` → `detailTabs`). Phase-one delivery builds **Overview**,
+  **Details**, and **Sessions**; **Communications** (email/SMS threads) and
+  **Documents** (uploads) ship as placeholders.
+- **Details tab** — a **read-optimized** view of the org records behind a record
+  (the company Account, the client/partnership/sponsor profile, and each related
+  contact), with an **Edit** button that flips the whole page into a field editor
+  (Save / Cancel). Fields are read **live from CRM metadata** (filtered to the
+  editable scalar fields, humanized labels) so it tracks the schema; the read view
+  hides empties for scannability, the edit view exposes every editable field.
+  Enum/multiEnum drift is dropped on save (per the non-required-enum policy);
+  each changed entity is saved with its own `PUT` as the logged-in user (ACL
+  enforced). New endpoints `GET/PUT /{slug}/api/details/…` (`sessions/details.py`).
+- **Overview tab** — a full-width, review-oriented screen:
+  - **Facts rail** (left, resizable via a drag splitter): key identity (status
+    badge, a single aggregated **Company** link, primary contact, meeting
+    cadence, referring partner), session activity (start/last/next counts, focus
+    areas), **Other contacts** + **CBM Contacts**, and the mentoring need.
+  - The **Company** link aggregates the company Account **and** its profile
+    (client business / partnership / sponsor) into one pop-up; contact/referring-
+    partner links open their own pop-up (read-only `/{slug}/api/peek`, entity
+    allowlisted, ACL-enforced).
+  - **Overall notes** (Engagement / Partner / Sponsor Notes) above an aggregated
+    **session-notes feed** — every session's notes + next steps, most-recent
+    first, each stamped with date/time and its **attendees**.
+  - A bold **Next session** callout (soonest upcoming session, derived from the
+    records).
+- Detail tabs are built from config; the standalone Contacts tab folds into
+  Overview (Other/CBM Contacts) and the forthcoming Details tab.
+
+## [0.31.0] — 2026-07-09
+
+### Added
+- **Session Management tools** — three staff-only, team-gated routes
+  (`/mentorsessions`, `/partnersessions`, `/sponsorsessions`) from one
+  configurable engine. Each manager (mentor / partner manager / sponsor manager)
+  reviews the records they own (engagements / managed partners / managed
+  sponsors), opens one to a read-only detail (parent + related contacts +
+  existing sessions), and creates/edits **`CSession`** meetings (notes, next
+  steps, attendees, status). Mentors can also attach co-mentors. It's one
+  `CSession` entity with the parent link swapped, driven by a per-domain
+  `DomainConfig`; reuses the portal SSO, per-request team gate, per-user
+  EspoClient, and the type-driven field editor. New settings:
+  `SESSION_{MENTOR,PARTNER,SPONSOR}_ALLOWED_TEAMS`. Phase 1 (CRUD); Google
+  Calendar/Meet + transcription are later phases. On branch, not yet deployed.
+
+### Fixed
+- **Sessions are stamped with their creator** (`assignedUser`/`assignedUsers`)
+  on create, so a role whose `CSession` scope is read-own can see the session it
+  just made.
+- **Enum drift can't 400 a session save.** The editor sends only changed fields
+  (diffed against a render-time snapshot), and the service drops enum/multiEnum
+  values not in the live CRM options before create/update (fails open) — so a
+  stored value that has drifted out of its field's options no longer fails the
+  whole save.
+- **Required fields are enforced in the editor**, read live from CRM metadata
+  (e.g. `CSession.dateStart`): required fields show a `*` and Save is blocked
+  with a readable message instead of surfacing a raw CRM `validationFailure`.
+- **Session name is pre-filled and the user's value wins.** The New Session
+  editor pre-fills a default title (`YYYY-MM-DD - <parent name>`) so the user
+  sees what will be stored; create now sends the name verbatim. Pairs with the
+  CRM name formula being set to keep any value already present (else it would
+  overwrite the app's name).
+
+### Changed
+- App log lines are timestamped — `LEVEL: YYYY-MM-DD HH:MM - message` — so run
+  logs show when each event (session create, CRM error) happened.
+
+### Notes
+- Mentor domain driven live end-to-end on crm-test. CRM prerequisites to run
+  the tool (per CLAUDE.md): create the Partner/Sponsor Management Teams, grant
+  the gate roles CSession create + read-own/edit-own, enable `assignedUsers`
+  (collaborators) on `CSession` (so read-own credits the creator — otherwise
+  create 403s and sessions are invisible), and make the `CSession` name formula
+  keep-if-present.
+
 ## [0.30.1] — 2026-07-07
 
 ### Changed

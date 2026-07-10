@@ -405,7 +405,197 @@ mentor, not a redundant control); `list_engagements` returns `mentorId`/`mentorN
   (`assignments/service.py:_assigned_user_payload`). Writing `assignedUserId` to a
   disabled-field entity is silently ignored.
 
-## Current status (updated 2026-07-07)
+## Session Management tools — `/mentorsessions`, `/partnersessions`, `/sponsorsessions` (added 2026-07-08)
+
+**One configurable engine, three team-gated routes.** Mentors, Partner Managers,
+and Sponsor Managers each review the records they own and record **meetings**
+against them as **`CSession`** records. It is **one `CSession` entity with the
+parent link swapped** — the domains differ only by a per-domain
+`sessions/config.py:DomainConfig` (the `sessionType` discriminator + the parent FK
+distinguish them). The whole feature is one engine (`sessions/service.py`) + one
+router factory (`sessions/router.make_router`) + one shared frontend
+(`sessions/frontend/`, vanilla JS that derives its domain/API base from the first
+segment of its own URL). Mounted only when `assignments_active` (needs
+`SESSION_SECRET`), linked from the portal per team.
+
+- **The three domains** (source of truth: `sessions/config.py`, `DOMAINS`):
+  | slug | parent | "records I own" reverse link on the user's `CMentorProfile` | co-mentor? |
+  |------|--------|-------------------------------------------------------------|------------|
+  | `mentorsessions` | `CEngagement` | `engagements1` (reverse of `CEngagement.mentorProfile`) | yes |
+  | `partnersessions` | `CPartnerProfile` | `managedPartners` (reverse of `CPartnerProfile.partnerManager`) | no |
+  | `sponsorsessions` | `CSponsorProfile` | `managedSponsors` (reverse of `CSponsorProfile.cBMSponsorManager`) | no |
+  Mentor sessions restrict the owned list to active engagement statuses
+  (`Active`/`Assigned`/`Pending Acceptance`/`On-Hold`, filtered in Python).
+- **All three managers are `CMentorProfile` records** — the one whose
+  `assignedUser` is their login. `service.resolve_manager_profile` scans the
+  `CMentorProfile` rows readable by this user and **matches `assignedUser` in
+  Python — never a `where` on `assignedUserId`** (prod's field ACL forbids it; see
+  [[crm-test-assignment-acl-fields]]). Then it reads the owned parents through the
+  domain's reverse link (`list_related` on the profile), so a regular user whose
+  ACL scopes `CMentorProfile`/the parents to "own" simply gets their own rows.
+  `list_records` returns `{"records":[...], "profileFound": bool}` —
+  `profileFound=false` means the user has no linked profile.
+- **Auth = per-user, acts as the logged-in user.** Portal SSO (shared staff
+  session `staff_user`); each route enforces **its own team per request**
+  (`_require_user` → `is_member`; 401 → frontend sends the user to the portal, 403
+  names the team, admins pass). Teams: `SESSION_MENTOR_ALLOWED_TEAMS` (default
+  `Mentor Team`), `SESSION_PARTNER_ALLOWED_TEAMS` (default `Partner Management
+  Team`), `SESSION_SPONSOR_ALLOWED_TEAMS` (default `Sponsor Management Team`).
+- **Endpoints** (`/{slug}/api`): `GET /session` (identity + domain UI config, incl.
+  `detailTabs` + `emptyMessage`); `POST /logout`; `GET /records` (owned parents as
+  grid rows); `GET /fields` (`SESSION_FIELDS` spec + live enum options + required);
+  `GET /records/{parent_id}` (the tabbed **detail** payload — Overview facts +
+  aggregated note feed + overall notes + next session + contacts + sessions,
+  +co-mentors on mentor); `GET /details/{parent_id}` + `PUT /details/{entity}/{id}`
+  (the **Details** tab — editable company/profile/contact sections);
+  `GET /peek/{entity}/{record_id}` (pop-up detail, entity-allowlisted);
+  `GET /sessions/{id}`; `POST /records/{parent_id}/sessions` (create);
+  `PUT /sessions/{id}` (whitelisted update + attendee sync). Mentor-only:
+  `GET /mentors` (co-mentor picker) + `POST /records/{parent_id}/comentors` (attach
+  a `CMentorProfile` via `additionalMentors`).
+- **Editable-field set = `sessions/config.py:SESSION_FIELDS`** — the single source
+  for both the type-driven editor layout (grouped Session/Notes, optional `row`
+  sub-groups) and the server-side update **whitelist** (`SESSION_EDIT_NAMES`;
+  `_session_payload` drops anything else). Enum/multiEnum **options are pulled live**
+  from CRM metadata (`service.field_options`). **Editor layout (v0.32.3):** the two
+  most important fields — `sessionNotes` + `nextSteps` — carry `big: True` and share
+  a `row`, rendering as large side-by-side rich-text editors (`.cbm-field--big`);
+  the meeting **End date was removed**; Status/Session type/Start share one line.
+- **Attendees are a RELATIONSHIP, not a select-field (the v0.32.2 fix; see
+  [[espo-custom-linkmultiple-is-a-relationship]]).** `sessionAttendees` (→ Contact)
+  is read via the link (`service._attendees` → `list_related`) and written via
+  **relate/unrelate** (`service._sync_attendees` diffs current vs. submitted) —
+  exactly like co-mentors' `additionalMentors`. Reading `sessionAttendeesIds` off
+  the record ALWAYS returns empty and setting it on an update is silently ignored,
+  which is why attendees "didn't save" (write) and "didn't show" (read) until this
+  fix; both the editor and the note feed now use the link read. The editor picker is
+  over the parent's related contacts; `attendees=None` on edit = leave untouched,
+  `[]` = clear. `EspoClient.unrelate` (relationship DELETE) was added for this.
+- **Owner-stamping so a read-own role can see its own new session (the fix
+  2026-07-08).** These tools run under roles whose `CSession` read/edit scope is
+  `own`, so an **unassigned** new session would be invisible to its own author
+  right after create. `create_session` stamps the creating user
+  (`owner_user_id=user["userId"]` passed from the router) as **both**
+  `assignedUserId` **and** `assignedUsersIds` (CSession has both, like CEngagement)
+  so it sticks whichever the instance uses. `setdefault`, so an explicit assignment
+  in `changes` wins. **Live-testing caveat (2026-07-08):** the fix only makes
+  *newly-created* sessions visible to their author. Under read-own, a **pre-existing**
+  session (from seed/migration, or created by staff/a co-mentor) stays invisible
+  until its `assignedUser`/`assignedUsers` includes the viewer — so a mentor does
+  **not** automatically see every session on their engagement. If that's the desired
+  UX, the gate role's `CSession` read needs to be broader than plain `own`
+  (parent-based ACL) — a CRM-side decision, not an app change.
+- **Enum-drift resilience on save (2026-07-08, two layers; [[non-required-enums-never-block]]).**
+  A session's stored enum value can fall outside the field's live options (seed data
+  put meeting-modality strings like `In-Person`/`Video Call` into `sessionType`,
+  whose real options are `Client Session`/`Partner Session`/`Sponsor Session`/`Other
+  Session`); re-sending it would make EspoCRM 400 the whole update
+  (`validationFailure`, `sessionType:valid`). (1) **Frontend** (`app.js`): the editor
+  snapshots each field at render (`snapshotForm`) and `saveSession` sends only the
+  fields the user actually changed, so an untouched drifted enum never enters the
+  payload. (2) **Server** (`service._sanitize_enum_payload`, on create + update):
+  drops enum/multiEnum values not in the live options before the CRM call — single
+  enum omitted (preserves the stored value on update), multiEnum keeps only the valid
+  members; **fails open** if options can't be fetched. The domain `default_session_type`
+  values are all valid options, so new sessions get a valid type.
+- **Required fields enforced from CRM metadata (2026-07-08).** `CSession.dateStart`
+  is required; the editor reads which fields the CRM marks required
+  (`service.field_required` → `/fields` → the frontend), renders a `*`, and blocks
+  Save with a readable "Please complete: …" message instead of surfacing a raw CRM
+  400 (`validationFailure`, `dateStart:required`). Metadata-driven, not hard-coded,
+  so any required field is caught.
+- **Session name: default pre-filled, user value wins (2026-07-08).** `CSession`
+  has a before-save **name formula**; left unconditional it overwrites whatever the
+  app sends. The editor pre-fills a default title (`YYYY-MM-DD - <parent name>`,
+  `defaultSessionName` in `app.js`) so the user sees what will be stored, and
+  **create sends every field** (name verbatim; update still diffs). **CRM
+  prerequisite:** the name formula must be *keep-if-present* —
+  `ifThen(name == null || name == '', name = <expr>)` — so a supplied/edited name
+  survives; otherwise the formula clobbers it.
+- **CRM ACL prerequisite — `CSession` must have a working owner field (2026-07-08,
+  live).** With the gate role's `CSession` read = `own`, EspoCRM ACL-checks the
+  **read-back** that a create does to return the new record: if the record isn't
+  owned by the creator, the **create itself returns 403** (and it's invisible in
+  lists). Fix is CRM-side: enable an assignment field `read-own` credits — **enable
+  `assignedUsers` (collaborators) on `CSession`, as `CEngagement` has** (its single
+  `assignedUser` is disabled — the app's `assignedUserId` write is ignored, but
+  `assignedUsersIds` sticks). With assignment enabled, the owner-stamp makes the
+  creator the owner → create 200 + the session shows. This was the "created but
+  doesn't show" + "403 on create" chain in live testing — resolved CRM-side.
+- **Detail view — tabbed & information-dense (redesigned v0.32.0–.3).** Opening a
+  record shows a tab bar common to all three domains (`/session` → `detailTabs`,
+  `router.COMMON_DETAIL_TABS`): **Overview · Details · Sessions · Communications ·
+  Documents**. Overview + Details + Sessions are built; Communications + Documents
+  are "coming soon" placeholders. The tab bar is built by the frontend from config
+  (placeholder tabs get a generic panel); the standalone Contacts tab folded into
+  Overview / Details.
+  - **Overview** (`get_detail` → `_overview_items`, `sessions/config.py:OverviewItem`):
+    a full-width **facts-rail-left / note-feed-right** layout with a drag **splitter**.
+    Rail: key facts (status badge, a single aggregated **Company** link, primary
+    contact, meeting cadence, referring partner), session activity + focus areas,
+    **Other contacts + CBM Contacts** (co-mentors relabelled), then the mentoring
+    need. The **Company** link aggregates the Account **and** its profile
+    (client/partnership/sponsor) into ONE `/peek` pop-up (`OverviewItem.aggregate`);
+    contact / referring-partner links open their own. **Overall notes**
+    (Engagement/Partner/Sponsor Notes, `overall_notes_*`) sit above an aggregated
+    **session-notes feed** — every session's notes + next steps, most-recent-first,
+    stamped with date/time + **attendees**. A bold **Next session** callout
+    (soonest upcoming session, derived) with a **Start / Open Session** button:
+    launches `videoMeetingLink` in a new tab when present, then opens the session
+    for editing.
+  - **Details** (`sessions/details.py`, `DomainConfig.details_entities`): a
+    **read-optimized** view of the org's Account + profile + each related contact,
+    with an **Edit** button that flips the whole page into a field editor
+    (Save/Cancel). Fields are read **live from CRM metadata** (filtered to editable
+    scalars; humanized labels — `cBMValueProvided` → "CBM Value Provided"); read
+    view hides empties, edit view exposes every editable field. **Permission-aware:**
+    reads the user's ACL (`EspoClient.app_user` → `acl.table`) and, for `edit:own`,
+    checks **per-record ownership** (assignedUser/assignedUsers) — sections the user
+    can't edit are read-only, the Edit button shows only when something is editable,
+    and Save is per-entity with a plain-language 403 message (enum drift dropped).
+  - **Peek** (`service.peek`, `PEEK_FIELDS` allowlist: Contact/Account/CClientProfile/
+    CPartnerProfile/CSponsorProfile): a read-only pop-up; the aggregated Company link
+    fetches each member and renders titled sections.
+  - **Friendlier empty grid** (`DomainConfig.empty_message`): "No client engagements
+    / partners / sponsors found" — no "ask an administrator" alarm (past the team
+    gate = you have permission); a Refresh picks up newly-assigned records (the
+    manager profile is re-resolved each `/records` call).
+- **Phase 1 (CRUD + review UI).** The **Start/Open Session** button uses
+  `videoMeetingLink` when set. Google Calendar/Meet *scheduling* (auto-populating
+  `videoMeetingLink`) and Meet *transcription* (a new `sessionTranscription` wysiwyg
+  field) are Phases 2–3, not built. **Communications** (email/SMS threads) +
+  **Documents** (uploads) tabs are placeholders for a later phase.
+- **Status (2026-07-09): CRUD hardened live on crm-test (mentor domain) AND the
+  detail view redesigned into the tabbed Overview/Details/… experience; v0.32.3;
+  292 tests green (`tests/test_sessions.py`).** Since v0.31.0 (all live-diagnosed
+  against crm-test as an admin): tabbed detail; information-dense **Overview**
+  (aggregated Company peek, notes feed with attendees, splitter, Next-session
+  Start/Open button); the editable **permission-aware Details** tab; friendlier
+  empty states; bigger session-notes editors; and two significant live-diagnosed
+  fixes — the **attendee relationship** read/write (`sessionAttendees` is a link,
+  not a field — [[espo-custom-linkmultiple-is-a-relationship]]) and **per-record
+  edit-permission** gating in Details. Still on branch `feat/session-management`
+  (**NOT pushed**). **Still NOT driven live as a non-admin team member, nor for the
+  partner/sponsor domains.** Communications + Documents tabs are placeholders. Open
+  polish items: trimming generic Contact/Account fields in Details (metadata-driven,
+  so `acceptanceStatus`/`doNotCall` etc. appear), and whether to drop the editor's
+  Session/Notes tab split for one scrolling form. **Deploy note:** all three App
+  Platform apps build from `main`, so a push deploys crm-test **and** prod — and
+  prod lacks the partner/sponsor CRM prereqs below.
+  **CRM prerequisites** (done on crm-test during testing; **replicate on prod**):
+  1. Create `Partner Management Team` + `Sponsor Management Team` (`Mentor Team`
+     exists); add staff.
+  2. Grant the gate roles `CSession` **create + read-own/edit-own** (+ the parent /
+     reverse links).
+  3. **Enable `assignedUsers` (collaborators) on `CSession`** so read-own credits
+     the owner-stamp — else create 403s / sessions invisible (see the ACL bullet).
+  4. Make the `CSession` **name formula keep-if-present** (see the name bullet).
+  5. Decide the read-own-vs-broader ACL question (whether a mentor should see
+     pre-existing / others' sessions on their engagement).
+  Note: crm-test seed sessions carry out-of-enum `sessionType` values (harmless; a
+  data-hygiene cleanup). **UI polish is the next work item** (a follow-up session).
+
+## Current status (updated 2026-07-09)
 
 **Prod is on v0.28.0** (prod + crm-test confirmed on `/healthz` 2026-07-07;
 redeployed on each push), and prod answers on the
@@ -413,6 +603,23 @@ redeployed on each push), and prod answers on the
 app as PRIMARY, Cloudflare CNAME grey-cloud → the app's default hostname; the
 `…ondigitalocean.app` URL still works). Shipped 2026-07-05..07 (see CHANGELOG):
 
+- **Session Management tools — v0.32.3** (built 2026-07-08, branch
+  `feat/session-management`, **NOT yet pushed/deployed**; mentor domain **driven
+  live end-to-end on crm-test** 2026-07-08..09) — `/mentorsessions`
+  `/partnersessions` `/sponsorsessions`: one engine, three team-gated routes,
+  recording `CSession` meetings against the records each manager owns. Since the
+  v0.31.0 CRUD baseline the **record detail was redesigned** into a tabbed
+  (Overview · Details · Sessions · Communications · Documents), information-dense
+  review UI: a full-width Overview (aggregated Company peek, session-notes feed
+  with attendees, Next-session Start/Open button), an editable **permission-aware
+  Details** tab (metadata-driven fields, per-record ownership), friendlier empty
+  states, bigger notes editors. Live-diagnosed fixes: the **attendee relationship**
+  read/write (`sessionAttendees` is a link, not a field —
+  [[espo-custom-linkmultiple-is-a-relationship]]) and per-record edit-permission
+  gating. Full detail in the **Session Management tools** section above.
+  **Remaining:** drive live for partner/sponsor + as a non-admin; Communications +
+  Documents tabs; Details field trimming. (Deploy = push `main` ⇒ crm-test **and**
+  prod; prod needs the partner/sponsor CRM prereqs first.)
 - **v0.30.0** (built 2026-07-07, NOT yet pushed) — **authenticated portal at
   `/` + single sign-on**: root becomes a CRM login; team-based links (Mentor
   Team → CRM + public forms; the three admin teams → their apps; admins → all;

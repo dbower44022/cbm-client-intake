@@ -60,6 +60,13 @@ def _apps_for(user: dict[str, Any], settings: Settings) -> list[dict[str, str]]:
         apps.append({"title": "Mentor Administration", "url": "/mentoradmin/"})
     if is_member(user, settings.ops_allowed_teams_list):
         apps.append({"title": "Submission Admin", "url": "/ops/"})
+    # Session Management tools — each gated to its own team.
+    if is_member(user, settings.session_mentor_allowed_teams_list):
+        apps.append({"title": "Mentor Sessions", "url": "/mentorsessions/"})
+    if is_member(user, settings.session_partner_allowed_teams_list):
+        apps.append({"title": "Partner Sessions", "url": "/partnersessions/"})
+    if is_member(user, settings.session_sponsor_allowed_teams_list):
+        apps.append({"title": "Sponsor Sessions", "url": "/sponsorsessions/"})
     return apps
 
 
