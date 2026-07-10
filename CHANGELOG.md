@@ -4,6 +4,30 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.34.0] — 2026-07-10
+
+### Fixed
+- **The portal now reviews ALL of a user's current teams — two causes fixed.**
+  Reported as "when I log in, it only shows mentor admin, even though I am also
+  on other teams."
+  1. **Stale cached membership.** Teams/roles were captured into the signed
+     session cookie at LOGIN time and never re-checked, so a team granted in
+     the CRM after sign-in stayed invisible until a full sign-out/sign-in —
+     and revisiting the portal "logs you in" silently from the cookie, so it
+     looked like a fresh login was ignoring teams. `GET /api/portal/session`
+     now **re-reads the user's teams, roles, and admin flag from the CRM**
+     (as the user, via their token — `assignments.auth.refresh_membership`)
+     on every session restore and re-saves the session, so the portal links
+     AND the staff apps' per-request gates always see current membership.
+     Best-effort on CRM blips (keeps cached values); an expired token now
+     signs the user out (401) instead of serving stale entitlements.
+     Verified live against crm-test (login → session restore → CRM re-read).
+  2. **`ASSIGN_ALLOWED_TEAMS` defaulted to empty**, unlike every other gate —
+     a deploy (or local run) that didn't set it hid Client Administration from
+     every non-admin regardless of their teams. It now defaults to
+     `Client Administration Team`, matching the real team name in both CRMs
+     (an env override still wins).
+
 ## [0.33.3] — 2026-07-10
 
 ### Fixed

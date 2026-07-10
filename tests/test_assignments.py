@@ -672,3 +672,65 @@ def test_request_gate_rejects_wrong_team_with_team_name(monkeypatch):
         assert "Client Administration Team" in r.json()["detail"]
     finally:
         get_settings.cache_clear()  # don't leak the patched env into other tests
+
+
+# --- refresh_membership (portal session restore re-reads CRM teams) ----------
+
+class _RefreshClient:
+    def __init__(self, rec=None, exc=None):
+        self.rec, self.exc = rec, exc
+
+    async def get(self, entity, record_id, select=None):
+        assert entity == "User" and record_id == "u1"
+        if self.exc:
+            raise self.exc
+        return self.rec
+
+
+def _patch_refresh_client(monkeypatch, client):
+    class FakeEspo:
+        @staticmethod
+        def for_user_token(base_url, user_name, token, timeout):
+            return client
+
+    monkeypatch.setattr(auth, "EspoClient", FakeEspo)
+
+
+_SESSION_USER = {"userId": "u1", "userName": "jdoe", "name": "J", "token": "tok",
+                 "isAdmin": False, "teams": ["Old Team"], "roles": []}
+
+
+async def test_refresh_membership_updates_teams_roles_and_admin(monkeypatch):
+    _patch_refresh_client(monkeypatch, _RefreshClient(rec={
+        "type": "admin",
+        "teamsNames": {"t1": "Mentor Administration Team",
+                       "t2": "Client Administration Team"},
+        "rolesNames": {"r1": "Staff"},
+    }))
+    user = await auth.refresh_membership(_settings(), dict(_SESSION_USER))
+    assert sorted(user["teams"]) == ["Client Administration Team", "Mentor Administration Team"]
+    assert user["roles"] == ["Staff"]
+    assert user["isAdmin"] is True
+
+
+async def test_refresh_membership_keeps_cache_when_fields_absent(monkeypatch):
+    # a field the CRM didn't serialize is NOT treated as "no teams"
+    _patch_refresh_client(monkeypatch, _RefreshClient(rec={}))
+    user = await auth.refresh_membership(_settings(), dict(_SESSION_USER))
+    assert user["teams"] == ["Old Team"] and user["isAdmin"] is False
+
+
+async def test_refresh_membership_keeps_cache_on_crm_error(monkeypatch):
+    from core.espo import EspoError
+
+    _patch_refresh_client(monkeypatch, _RefreshClient(exc=EspoError("get failed: HTTP 500 boom")))
+    user = await auth.refresh_membership(_settings(), dict(_SESSION_USER))
+    assert user["teams"] == ["Old Team"]  # a blip never wipes entitlements
+
+
+async def test_refresh_membership_expired_token_raises(monkeypatch):
+    from core.espo import EspoError
+
+    _patch_refresh_client(monkeypatch, _RefreshClient(exc=EspoError("get failed: HTTP 401 Unauthorized")))
+    with pytest.raises(auth.AuthError):
+        await auth.refresh_membership(_settings(), dict(_SESSION_USER))

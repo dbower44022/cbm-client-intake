@@ -808,7 +808,14 @@ Team** → `/mentoradmin/`; **Marketing Admin Team** → `/ops/` (**Submission
 Admin**, retitled v0.30.0); admins → everything. Each staff app enforces its
 own team **per request** (`auth.is_member`; 401 → redirect to `/?next=<app>`,
 403 names the required team) — the portal listing is convenience, not the
-security boundary. The **dev app** (no `SESSION_SECRET`) keeps the old public
+security boundary. **Membership is re-read from the CRM on every portal
+session restore** (v0.34.0, `auth.refresh_membership` — `GET /api/portal/
+session` re-reads teams/roles/admin flag as the user and re-saves the session),
+so a team granted after sign-in shows without a re-login; an expired token now
+401s instead of serving stale entitlements. (Fixed alongside:
+`ASSIGN_ALLOWED_TEAMS` now defaults to `Client Administration Team` — it
+defaulted EMPTY, so an unset deploy hid `/assignments` from every non-admin.)
+The **dev app** (no `SESSION_SECRET`) keeps the old public
 form index at `/`. The forms themselves stay public by direct URL everywhere.
 Friendly aliases (v0.25.0): any single-segment path, lowercased with
 punctuation stripped, 307-redirects to the matching form/tool

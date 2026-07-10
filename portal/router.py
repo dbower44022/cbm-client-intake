@@ -29,6 +29,7 @@ from assignments.auth import (
     clear_session,
     current_user,
     is_member,
+    refresh_membership,
     set_session,
 )
 from core.config import Settings, get_settings
@@ -104,7 +105,19 @@ async def session(request: Request) -> dict:
     user = current_user(request)
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated.")
-    return _home_payload(user, request, get_settings())
+    settings = get_settings()
+    # Re-read team/role membership from the CRM on every session restore: the
+    # cookie caches teams at login time, so without this a team granted (or
+    # removed) in the CRM never showed until the user signed out and back in.
+    # The refreshed session is re-saved, so the staff apps' per-request gates
+    # see the same up-to-date membership.
+    try:
+        user = await refresh_membership(settings, user)
+    except AuthError as exc:
+        clear_session(request)
+        raise HTTPException(status_code=401, detail=str(exc))
+    set_session(request, user)
+    return _home_payload(user, request, settings)
 
 
 @router.post("/logout")

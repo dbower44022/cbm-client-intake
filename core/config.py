@@ -61,8 +61,10 @@ class Settings(BaseSettings):
     session_secret: str = ""
     # Comma-separated EspoCRM Team names / Role names allowed to use the tool.
     # A user passes if they are an admin, belong to an allowed Team, OR hold an
-    # allowed Role. Both empty => admins only.
-    assign_allowed_teams: str = ""
+    # allowed Role. Both empty => admins only. Defaults to the real team name
+    # (same convention as every other gate below) so a deploy that doesn't set
+    # ASSIGN_ALLOWED_TEAMS doesn't silently hide the tool from team members.
+    assign_allowed_teams: str = "Client Administration Team"
     assign_allowed_roles: str = ""
     # Mentor Admin app (/mentoradmin) — gated to its own team.
     mentor_admin_allowed_teams: str = "Mentor Administration Team"

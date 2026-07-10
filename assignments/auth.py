@@ -31,7 +31,9 @@ log = logging.getLogger("cbm_intake.assignments.auth")
 SESSION_KEY = "staff_user"
 # Keys persisted in the (signed) session cookie. Excludes nothing sensitive
 # beyond the EspoCRM token, which is the user's own and travels over HTTPS.
-# teams/roles ride along so per-request gates don't re-query the CRM.
+# teams/roles ride along so per-request gates don't re-query the CRM; the
+# portal refreshes them from the CRM on every session restore (see
+# :func:`refresh_membership`) so membership changes don't need a re-login.
 _SESSION_FIELDS = ("userId", "userName", "name", "token", "isAdmin", "teams", "roles")
 
 
@@ -167,6 +169,50 @@ async def authenticate(
         "teams": teams,
         "roles": roles,
     }
+
+
+async def refresh_membership(settings: Settings, user: dict[str, Any]) -> dict[str, Any]:
+    """Re-read the session user's team/role membership (and admin flag) from the
+    CRM, as the user, and return the updated session dict.
+
+    The signed session cookie caches ``teams``/``roles`` at LOGIN time, so a
+    membership change made in the CRM afterwards stayed invisible until the user
+    signed out and back in — the portal looked like it "wasn't reviewing all
+    teams". The portal calls this on every session restore and re-saves the
+    session, so entitlements always reflect current CRM membership (the staff
+    apps' per-request gates read the same refreshed cookie).
+
+    Best-effort on CRM hiccups: a failed read keeps the cached values (never
+    locks a user out over a blip). A field the CRM didn't serialize is also
+    kept from cache rather than treated as "no teams".
+
+    :raises AuthError: the stored token is no longer valid — the caller clears
+        the session so the user signs in again.
+    """
+    client = EspoClient.for_user_token(
+        settings.espo_base_url, user["userName"], user["token"],
+        settings.request_timeout_seconds,
+    )
+    try:
+        rec = await client.get("User", user["userId"], select="type,teamsNames,rolesNames")
+    except EspoError as exc:
+        if session_expired(exc):
+            raise AuthError("Your session has expired — please sign in again.")
+        log.warning(
+            "membership refresh failed for %s (keeping cached teams): %s",
+            user.get("userName"), exc,
+        )
+        return user
+    updated = dict(user)
+    teams = _names(rec, "teamsNames")
+    if teams is not None:
+        updated["teams"] = teams
+    roles = _names(rec, "rolesNames")
+    if roles is not None:
+        updated["roles"] = roles
+    if rec.get("type"):
+        updated["isAdmin"] = rec["type"] == "admin"
+    return updated
 
 
 async def login_token(

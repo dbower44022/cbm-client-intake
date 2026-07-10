@@ -19,7 +19,9 @@ def _clear_settings_cache():
 
 def _app(monkeypatch, **env):
     monkeypatch.setenv("SESSION_SECRET", "test-secret")
-    monkeypatch.setenv("ASSIGN_ALLOWED_TEAMS", "Client Administration Team")
+    # ASSIGN_ALLOWED_TEAMS deliberately NOT set: the default must be the real
+    # team name ("Client Administration Team") so unset deploys still gate
+    # correctly (it used to default empty, hiding the tool from team members).
     # TestClient talks plain HTTP; a Secure cookie would never be replayed.
     monkeypatch.setenv("SESSION_COOKIE_SECURE", "false")
     for k, v in env.items():
@@ -28,12 +30,17 @@ def _app(monkeypatch, **env):
     return create_app([info_request.SPEC, volunteer.SPEC])
 
 
-def _fake_login(monkeypatch, user):
+def _fake_login(monkeypatch, user, refreshed=None):
     async def fake_auth(settings, username, password, *, gate=True, **kwargs):
         assert gate is False  # the portal must sign in ungated
         return user
 
+    async def fake_refresh(settings, session_user):
+        # default: membership unchanged since login (pass-through)
+        return dict(session_user, **(refreshed or {}))
+
     monkeypatch.setattr("portal.router.authenticate", fake_auth)
+    monkeypatch.setattr("portal.router.refresh_membership", fake_refresh)
 
 
 def _user(**overrides):
@@ -142,6 +149,40 @@ def test_multiple_teams_union(monkeypatch):
     )
     assert [a["url"] for a in data["apps"]] == ["/assignments/", "/ops/", "/mentorsessions/"]
     assert data["crmUrl"]
+
+
+def test_session_picks_up_new_team_memberships(monkeypatch):
+    """Teams granted in the CRM AFTER login show on the next portal visit — the
+    session restore re-reads membership from the CRM instead of trusting the
+    teams cached in the cookie at login time."""
+    _fake_login(
+        monkeypatch, _user(teams=["Mentor Administration Team"]),
+        refreshed={"teams": ["Mentor Administration Team", "Client Administration Team"]},
+    )
+    with TestClient(_app(monkeypatch)) as c:
+        login = c.post("/api/portal/login", json={"username": "x", "password": "y"}).json()
+        assert [a["url"] for a in login["apps"]] == ["/mentoradmin/"]
+        data = c.get("/api/portal/session").json()
+        assert [a["url"] for a in data["apps"]] == ["/assignments/", "/mentoradmin/"]
+
+
+def test_session_expired_token_clears_session(monkeypatch):
+    """A dead CRM token on session restore signs the user out (401 + cleared
+    session) instead of serving stale entitlements."""
+    from assignments.auth import AuthError
+
+    _fake_login(monkeypatch, _user())
+
+    async def expired(settings, session_user):
+        raise AuthError("Your session has expired — please sign in again.")
+
+    with TestClient(_app(monkeypatch)) as c:
+        c.post("/api/portal/login", json={"username": "x", "password": "y"})
+        monkeypatch.setattr("portal.router.refresh_membership", expired)
+        r = c.get("/api/portal/session")
+        assert r.status_code == 401 and "expired" in r.json()["detail"].lower()
+        # the session was cleared — the next restore is plain unauthenticated
+        assert c.get("/api/portal/session").status_code == 401
 
 
 # --- SSO: one portal login works in the staff apps ---------------------------
