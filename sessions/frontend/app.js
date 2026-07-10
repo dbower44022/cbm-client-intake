@@ -21,6 +21,9 @@
   var currentViewSessions = []; // ordered session rows for the read-only view's prev/next
   var currentViewIndex = -1;    // position within currentViewSessions
   var search = "";
+  var statusFilter = "";        // selected status value ("" = all)
+  var sortKey = null;           // grid column key to sort by (null = default order)
+  var sortDir = 1;              // 1 asc, -1 desc
 
   function $(id) { return document.getElementById(id); }
   function show(el) { el.hidden = false; }
@@ -68,6 +71,7 @@
   });
   $("refreshBtn").addEventListener("click", function () { loadRecords(); });
   $("search").addEventListener("input", function () { search = this.value; renderTable(); });
+  $("statusFilter").addEventListener("change", function () { statusFilter = this.value; renderTable(); });
   $("backBtn").addEventListener("click", function () { showList(); });
   $("newSessionBtn").addEventListener("click", function () { openEditor(null); });
   $("editorBackBtn").addEventListener("click", function () { if (currentDetail) openDetail(currentDetail.id); });
@@ -93,6 +97,14 @@
   $("detailsCancelBtn").addEventListener("click", function () { renderDetails(false); });
   // Pop-up detail modal.
   $("peekClose").addEventListener("click", closePeek);
+  $("peekCopy").addEventListener("click", function () {
+    if (!peekCopyText) return;
+    var btn = $("peekCopy");
+    var done = function () { btn.textContent = "✓ Copied"; setTimeout(function () { btn.textContent = "⧉ Copy"; }, 1500); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(peekCopyText).then(done, function () { fallbackCopy(peekCopyText); done(); });
+    } else { fallbackCopy(peekCopyText); done(); }
+  });
   $("peekBackdrop").addEventListener("click", closePeek);
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && !$("peekModal").hidden) closePeek();
@@ -210,6 +222,7 @@
       // No linked profile / no owned records is a normal empty state, not an
       // error — the grid just shows the domain's empty message. If a record is
       // later assigned to this user, a Refresh picks it up (re-queried each call).
+      refreshStatusFilter();
       renderTable();
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }
@@ -218,28 +231,74 @@
   }
 
   function columns() { return (config && config.columns) || []; }
+  // All grid columns = the configured columns + the trailing date column.
+  function allColumns() {
+    var cols = columns().slice();
+    if (config && config.dateColumn) cols.push({ key: config.dateColumn.key, label: config.dateColumn.label, date: true });
+    return cols;
+  }
 
   function matches(r) {
+    if (statusFilter && config && config.statusKey && (r[config.statusKey] || "") !== statusFilter) return false;
     if (!search.trim()) return true;
     var hay = columns().map(function (c) { return r[c.key] || ""; }).join(" ").toLowerCase();
     return hay.indexOf(search.trim().toLowerCase()) >= 0;
   }
 
+  // Populate the status filter from the distinct statuses present (keeps the
+  // current selection if still available).
+  function refreshStatusFilter() {
+    var wrap = $("statusFilterWrap"); var key = config && config.statusKey;
+    if (!key) { wrap.hidden = true; return; }
+    wrap.hidden = false;
+    var seen = {}, vals = [];
+    records.forEach(function (r) { var v = r[key]; if (v && !seen[v]) { seen[v] = 1; vals.push(v); } });
+    vals.sort();
+    var sel = $("statusFilter"); sel.innerHTML = "";
+    sel.appendChild(new Option("All", ""));
+    vals.forEach(function (v) { sel.appendChild(new Option(v, v)); });
+    if (vals.indexOf(statusFilter) < 0) statusFilter = "";
+    sel.value = statusFilter;
+  }
+
+  function setSort(key) {
+    if (sortKey === key) { sortDir = -sortDir; } else { sortKey = key; sortDir = 1; }
+    renderTable();
+  }
+
+  function sortRows(rows) {
+    if (!sortKey) return rows;
+    return rows.slice().sort(function (a, b) {
+      var x = a[sortKey], y = b[sortKey];
+      if (x == null || x === "") return y == null || y === "" ? 0 : 1;   // blanks last
+      if (y == null || y === "") return -1;
+      var c = String(x).localeCompare(String(y), undefined, { numeric: true, sensitivity: "base" });
+      return c * sortDir;
+    });
+  }
+
   function renderTable() {
+    var cols = allColumns();
     var head = $("recordsHead"); head.innerHTML = "";
     var htr = document.createElement("tr");
-    columns().forEach(function (c) { var th = document.createElement("th"); th.textContent = c.label; htr.appendChild(th); });
-    var created = document.createElement("th"); created.textContent = "Created"; htr.appendChild(created);
+    cols.forEach(function (c) {
+      var th = document.createElement("th"); th.className = "sx__th-sort";
+      th.textContent = c.label;
+      if (sortKey === c.key) { var ind = document.createElement("span"); ind.className = "sx__sortind"; ind.textContent = sortDir > 0 ? " ▲" : " ▼"; th.appendChild(ind); th.setAttribute("aria-sort", sortDir > 0 ? "ascending" : "descending"); }
+      th.addEventListener("click", function () { setSort(c.key); });
+      htr.appendChild(th);
+    });
     head.appendChild(htr);
 
-    var rows = records.filter(matches);
+    var rows = sortRows(records.filter(matches));
     $("count").textContent = records.length ? "Showing " + rows.length + " of " + records.length : "";
     var tb = $("recordsBody"); tb.innerHTML = "";
     if (!rows.length) { show($("emptyState")); hide($("recordsTable")); return; }
     hide($("emptyState"));
+    var contactKey = config && config.contactKey;
     rows.forEach(function (r) {
       var tr = document.createElement("tr");
-      columns().forEach(function (c, i) {
+      cols.forEach(function (c, i) {
         var td = document.createElement("td");
         if (i === 0) {
           var link = document.createElement("button");
@@ -247,12 +306,19 @@
           link.textContent = r[c.key] || "(unnamed)";
           link.addEventListener("click", function () { openDetail(r.id); });
           td.appendChild(link);
+        } else if (c.date) {
+          td.textContent = fmtDate(r[c.key]);
+        } else if (c.key === contactKey && r.contactId && r[c.key]) {
+          var cl = document.createElement("button");
+          cl.type = "button"; cl.className = "sx__link";
+          cl.textContent = r[c.key];
+          cl.addEventListener("click", function () { openPeek("Contact", r.contactId, r[c.key]); });
+          td.appendChild(cl);
         } else {
           td.textContent = r[c.key] || "—";
         }
         tr.appendChild(td);
       });
-      var cd = document.createElement("td"); cd.textContent = fmtDate(r.createdAt); tr.appendChild(cd);
       tb.appendChild(tr);
     });
     show($("recordsTable"));
@@ -502,9 +568,11 @@
   }
 
   // --- pop-up detail (peek) ---
+  var peekCopyText = "";  // paste-ready contact card for the modal's Copy button
   function peekOpen(name) {
     $("peekName").textContent = name || "…"; $("peekKind").textContent = "";
     $("peekBody").innerHTML = "<p class='sx__muted'>Loading…</p>";
+    peekCopyText = ""; $("peekCopy").hidden = true; $("peekCopy").textContent = "⧉ Copy";
     show($("peekModal"));
   }
   function peekFail(e) {
@@ -529,6 +597,7 @@
       var res = await api("/peek/" + encodeURIComponent(entity) + "/" + encodeURIComponent(id));
       $("peekName").textContent = res.name || name || "(unnamed)";
       $("peekKind").textContent = peekLabel(entity);
+      if (res.copyText) { peekCopyText = res.copyText; $("peekCopy").hidden = false; }
       var body = $("peekBody"); body.innerHTML = "";
       if (!res.fields || !res.fields.length) { body.innerHTML = "<p class='sx__muted'>No additional details available.</p>"; return; }
       peekFieldsInto(body, res.fields);
@@ -586,6 +655,16 @@
   }
 
   function closePeek() { hide($("peekModal")); }
+
+  // Clipboard fallback for when the async Clipboard API is unavailable (e.g.
+  // non-secure origins) or denied.
+  function fallbackCopy(text) {
+    var ta = document.createElement("textarea"); ta.value = text;
+    ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); } catch (e) { /* best effort */ }
+    document.body.removeChild(ta);
+  }
 
   // --- Details tab: read-optimized by default, whole page flips to edit ---
   async function ensureDetails() {

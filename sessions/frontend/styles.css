@@ -19,11 +19,14 @@
 .sx__actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .sx__who { color: var(--cbm-slate-700, #556); }
 
+.sx__filters { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.75rem; }
 .sx__search {
-  width: 100%; max-width: 24rem; padding: 0.5rem 0.6rem; margin-bottom: 0.75rem;
+  flex: 1 1 16rem; max-width: 24rem; padding: 0.5rem 0.6rem;
   border: 1px solid var(--cbm-border, #d7dce2); border-radius: var(--cbm-radius, 6px);
   font-size: var(--cbm-text-base, 1rem);
 }
+.sx__statusfilter { display: inline-flex; align-items: center; gap: 0.4rem; font-size: var(--cbm-text-sm, 0.9rem); color: var(--cbm-slate-700, #556); }
+.sx__statusfilter select { padding: 0.45rem 0.5rem; border: 1px solid var(--cbm-border, #d7dce2); border-radius: var(--cbm-radius, 6px); font: inherit; }
 .sx__count { color: var(--cbm-slate-700, #556); font-size: var(--cbm-text-sm, 0.9rem); margin: 0.25rem 0 0.5rem; }
 
 .sx__notice { padding: 0.6rem 0.8rem; border-radius: var(--cbm-radius, 6px); margin: 0.5rem 0; }
@@ -39,7 +42,12 @@
   vertical-align: top; font-size: var(--cbm-text-sm, 0.92rem);
 }
 .sx__table th { color: var(--cbm-slate-700, #556); font-weight: 600; }
-.sx__table tbody tr:hover { background: #f7f9fc; }
+.sx__table tbody tr:nth-child(even) { background: #f6f8fb; }   /* zebra striping */
+.sx__table tbody tr:hover { background: #eaf1f9; }
+/* Sortable column headers. */
+.sx__th-sort { cursor: pointer; user-select: none; white-space: nowrap; }
+.sx__th-sort:hover { color: var(--cbm-navy, #123); }
+.sx__sortind { color: var(--cbm-blue, #1a5fb4); }
 .sx__link {
   background: none; border: none; padding: 0; cursor: pointer;
   color: var(--cbm-blue, #1a5fb4); font: inherit; font-weight: 600; text-align: left;
@@ -293,6 +301,9 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
 .sx__modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; padding: 0.9rem 1rem 0.6rem; border-bottom: 1px solid var(--cbm-border, #eef1f4); }
 .sx__modal-kind { margin: 0; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--cbm-slate-700, #667); }
 .sx__modal-name { margin: 0.1rem 0 0; }
+.sx__modal-actions { display: inline-flex; align-items: center; gap: 0.4rem; }
+.sx__modal-copy { background: none; border: 1px solid var(--cbm-border, #d7dce2); border-radius: 5px; padding: 0.2rem 0.55rem; font: inherit; font-size: 0.8rem; cursor: pointer; color: var(--cbm-blue, #1a5fb4); white-space: nowrap; }
+.sx__modal-copy:hover { background: #f2f5f9; }
 .sx__modal-close { background: none; border: none; font-size: 1.5rem; line-height: 1; cursor: pointer; color: var(--cbm-slate-700, #667); padding: 0 0.2rem; }
 .sx__modal-close:hover { color: var(--cbm-navy, #123); }
 .sx__modal-body { padding: 0.4rem 0; }

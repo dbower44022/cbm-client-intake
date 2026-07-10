@@ -134,7 +134,9 @@ async def test_list_records_maps_columns():
         mentors=[{"id": "p9", "assignedUserId": "u1"}],
         related={"managedPartners": [
             {"id": "P1", "name": "Acme", "partnershipStatus": "Active",
-             "partnerCompanyName": "Acme Co", "createdAt": "2026-01-02 00:00:00"},
+             "partnerCompanyName": "Acme Co", "primaryPartnercontactName": "Pat",
+             "primaryPartnercontactId": "c1", "partnershipStartDate": "2026-01-15",
+             "createdAt": "2026-01-02 00:00:00"},
         ]},
     )
     res = await service.list_records(PARTNER, fake, _USER)
@@ -142,6 +144,9 @@ async def test_list_records_maps_columns():
     row = res["records"][0]
     assert row["id"] == "P1" and row["name"] == "Acme"
     assert row["status"] == "Active" and row["company"] == "Acme Co"
+    # trailing date column (Start Date) + primary-contact id for the pop-up link
+    assert row["startDate"] == "2026-01-15"
+    assert row["contact"] == "Pat" and row["contactId"] == "c1"
 
 
 @pytest.mark.asyncio
@@ -246,6 +251,19 @@ async def test_peek_allowlists_entities_and_drops_empties():
 
     with pytest.raises(service.SessionError):
         await service.peek(fake, "User", "u1")  # not on the allowlist
+
+
+@pytest.mark.asyncio
+async def test_peek_contact_builds_copy_card_and_address():
+    fake = Fake(records={("Contact", "c1"): {
+        "name": "Pat Lee", "emailAddress": "pat@x.org", "phoneNumber": "+12165550142",
+        "addressStreet": "1 Main St", "addressCity": "Cleveland",
+        "addressState": "OH", "addressPostalCode": "44113"}})
+    res = await service.peek(fake, "Contact", "c1")
+    # paste-ready card: name, full address, email, phone
+    assert res["copyText"] == "Pat Lee\n1 Main St\nCleveland, OH 44113\npat@x.org\n+12165550142"
+    # a combined Address field is shown in the pop-up
+    assert {"label": "Address", "value": "1 Main St\nCleveland, OH 44113", "type": "longtext"} in res["fields"]
 
 
 @pytest.mark.asyncio

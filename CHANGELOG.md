@@ -4,6 +4,20 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.32.5] — 2026-07-09
+
+### Added
+- **Records grid: filter, sort, and richer columns.** A **Status** filter (the
+  statuses present in the grid); **click any column header to sort** (toggles
+  asc/desc, arrow indicator); alternating row shading for readability. The
+  **Created** column is now **Start Date** (the engagement/partnership start date).
+- **Primary contact is a link** — clicking it opens the contact pop-up with the
+  email as a `mailto:` link (opens the user's mail client) and a combined address.
+- **Copy contact details.** The contact pop-up has a **⧉ Copy** button (top-right)
+  that copies a paste-ready block — name, full address, email, phone — to the
+  clipboard. `service.peek` returns a `copyText` card + a combined Address field
+  for contacts; `get_session`/grid rows carry the needed ids.
+
 ## [0.32.4] — 2026-07-09
 
 ### Added

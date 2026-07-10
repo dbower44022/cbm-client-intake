@@ -23,6 +23,7 @@ from assignments.service import assigned_user_id
 from core.espo import EspoError
 
 from .config import (
+    CONTACT,
     DETAIL_SESSION_SELECT,
     ENGAGEMENT,
     MENTOR_PROFILE,
@@ -48,8 +49,6 @@ PEEK_FIELDS: dict[str, tuple[tuple[str, str, str], ...]] = {
         ("emailAddress", "Email", "email"),
         ("phoneNumber", "Phone", "phone"),
         ("accountName", "Company", "text"),
-        ("addressCity", "City", "text"),
-        ("addressState", "State", "text"),
         ("cLinkedInProfile", "LinkedIn", "url"),
         ("description", "Notes", "longtext"),
     ),
@@ -140,6 +139,10 @@ def _grid_row(cfg: DomainConfig, r: dict[str, Any]) -> dict[str, Any]:
     row = {"id": r["id"], "createdAt": r.get("createdAt")}
     for col in cfg.list_columns:
         row[col.key] = r.get(col.attr)
+    dkey, _, dattr = cfg.list_date_column
+    row[dkey] = r.get(dattr)  # trailing date column (Start Date / Created)
+    if cfg.list_contact_id_attr:
+        row["contactId"] = r.get(cfg.list_contact_id_attr)  # for the contact pop-up link
     return row
 
 
@@ -359,24 +362,65 @@ async def get_detail(
     return detail
 
 
+# Address parts read for a Contact peek (shown as one combined "Address" field
+# and used to build the copy-to-clipboard contact card).
+_CONTACT_ADDRESS_ATTRS = (
+    "addressStreet", "addressCity", "addressState", "addressPostalCode", "addressCountry",
+)
+
+
+def _address_lines(rec: dict[str, Any]) -> list[str]:
+    """A postal address as display lines: street / "City, ST 12345" / country."""
+    lines: list[str] = []
+    if rec.get("addressStreet"):
+        lines.append(str(rec["addressStreet"]))
+    region = " ".join(
+        str(rec[k]) for k in ("addressState", "addressPostalCode") if rec.get(k)
+    )
+    city_line = ", ".join(p for p in [rec.get("addressCity"), region] if p)
+    if city_line:
+        lines.append(city_line)
+    if rec.get("addressCountry"):
+        lines.append(str(rec["addressCountry"]))
+    return lines
+
+
+def _contact_card(rec: dict[str, Any], address_lines: list[str]) -> str:
+    """A paste-ready contact block: name, full address, email, phone."""
+    parts = [rec.get("name") or "", *address_lines]
+    if rec.get("emailAddress"):
+        parts.append(str(rec["emailAddress"]))
+    if rec.get("phoneNumber"):
+        parts.append(str(rec["phoneNumber"]))
+    return "\n".join(p for p in parts if p)
+
+
 async def peek(client: SessionClient, entity: str, record_id: str) -> dict[str, Any]:
     """A pop-up detail read for a linked contact / company / client.
 
     ``entity`` must be in :data:`PEEK_FIELDS` (allowlist). Returns the record's
-    name + its curated non-empty fields for the modal. Runs as the user, so
-    EspoCRM enforces their ACL on the record.
+    name + its curated non-empty fields for the modal. For a Contact it also adds a
+    combined "Address" field and a ``copyText`` contact card (name/address/email/
+    phone) for the copy-to-clipboard button. Runs as the user (ACL enforced).
     """
     spec = PEEK_FIELDS.get(entity)
     if spec is None:
         raise SessionError(f"Cannot look up {entity} records.")
-    select = ",".join(["name", *(attr for attr, _, _ in spec)])
+    extra = _CONTACT_ADDRESS_ATTRS if entity == CONTACT else ()
+    select = ",".join(dict.fromkeys(["name", *(attr for attr, _, _ in spec), *extra]))
     rec = await client.get(entity, record_id, select=select)
     fields = [
         {"label": label, "value": rec.get(attr), "type": ftype}
         for attr, label, ftype in spec
         if rec.get(attr) not in (None, "", [])
     ]
-    return {"entity": entity, "name": rec.get("name"), "fields": fields}
+    result: dict[str, Any] = {"entity": entity, "name": rec.get("name"), "fields": fields}
+    if entity == CONTACT:
+        address = _address_lines(rec)
+        if address:
+            fields.append({"label": "Address", "value": "\n".join(address), "type": "longtext"})
+        result["copyText"] = _contact_card(rec, address)
+    return result
 
 
 _SESSION_SELECT = ",".join(["id", *sorted(SESSION_EDIT_NAMES)])

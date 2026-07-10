@@ -31,7 +31,13 @@
           <button type="button" class="cbm-button cbm-button--secondary" id="logoutBtn">Sign out</button>
         </span>
       </div>
-      <input type="search" id="search" class="sx__search" placeholder="Search…" autocomplete="off" />
+      <div class="sx__filters">
+        <input type="search" id="search" class="sx__search" placeholder="Search…" autocomplete="off" />
+        <label class="sx__statusfilter" id="statusFilterWrap" hidden>
+          <span>Status</span>
+          <select id="statusFilter"><option value="">All</option></select>
+        </label>
+      </div>
       <p class="sx__notice" id="listNotice" role="status" hidden></p>
       <p class="sx__count" id="count"></p>
       <table class="sx__table" id="recordsTable" hidden>
@@ -167,7 +173,10 @@
           <p class="sx__modal-kind" id="peekKind"></p>
           <h3 class="sx__modal-name" id="peekName"></h3>
         </div>
-        <button type="button" class="sx__modal-close" id="peekClose" aria-label="Close">×</button>
+        <span class="sx__modal-actions">
+          <button type="button" class="sx__modal-copy" id="peekCopy" hidden title="Copy contact details" aria-label="Copy contact details">⧉ Copy</button>
+          <button type="button" class="sx__modal-close" id="peekClose" aria-label="Close">×</button>
+        </span>
       </div>
       <div class="sx__modal-body" id="peekBody"></div>
     </div>

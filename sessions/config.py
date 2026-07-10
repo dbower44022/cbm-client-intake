@@ -109,6 +109,15 @@ class DomainConfig:
     # simply owns no records yet — no action implied; a refresh picks up new ones).
     empty_message: str = "No records found."
 
+    # Trailing "date" column on the grid: (key, label, attr). Defaults to Created.
+    list_date_column: tuple[str, str, str] = ("created", "Created", "createdAt")
+    # Grid column key that is the primary contact + the parent attr holding its id
+    # (so the cell links to the contact pop-up). None => not linkable.
+    list_contact_key: Optional[str] = None
+    list_contact_id_attr: Optional[str] = None
+    # Grid column key that holds the record's status (enables the status filter).
+    list_status_key: Optional[str] = None
+
     # Details tab: the org records shown as editable sections — (title, entity,
     # id_attr on the parent). id_attr "id" means the parent record itself.
     # Related contacts are added as their own sections automatically.
@@ -187,7 +196,8 @@ MENTOR = DomainConfig(
     default_session_type="Client Session",
     list_select=(
         "name,engagementStatus,engagementClientName,clientOrganizationName,"
-        "primaryEngagementContactName,createdAt"
+        "primaryEngagementContactName,primaryEngagementContactId,"
+        "engagementStartDate,createdAt"
     ),
     list_columns=(
         Column("name", "Engagement", "name"),
@@ -196,6 +206,10 @@ MENTOR = DomainConfig(
         Column("company", "Company", "clientOrganizationName"),
         Column("contact", "Primary contact", "primaryEngagementContactName"),
     ),
+    list_date_column=("startDate", "Start Date", "engagementStartDate"),
+    list_contact_key="contact",
+    list_contact_id_attr="primaryEngagementContactId",
+    list_status_key="status",
     detail_select=(
         "name,engagementStatus,meetingCadence,"
         "engagementClientName,engagementClientId,"
@@ -263,13 +277,20 @@ PARTNER = DomainConfig(
     parent_contacts_link="contacts",
     primary_contact_id_attr="primaryPartnercontactId",
     default_session_type="Partner Session",
-    list_select="name,partnershipStatus,partnerCompanyName,primaryPartnercontactName,createdAt",
+    list_select=(
+        "name,partnershipStatus,partnerCompanyName,primaryPartnercontactName,"
+        "primaryPartnercontactId,partnershipStartDate,createdAt"
+    ),
     list_columns=(
         Column("name", "Partner", "name"),
         Column("status", "Partnership status", "partnershipStatus"),
         Column("company", "Company", "partnerCompanyName"),
         Column("contact", "Primary contact", "primaryPartnercontactName"),
     ),
+    list_date_column=("startDate", "Start Date", "partnershipStartDate"),
+    list_contact_key="contact",
+    list_contact_id_attr="primaryPartnercontactId",
+    list_status_key="status",
     detail_select=(
         "name,partnershipStatus,partnershipType,"
         "partnerCompanyName,partnerCompanyId,"
@@ -323,12 +344,14 @@ SPONSOR = DomainConfig(
     parent_contacts_link="sponsorContacts",
     primary_contact_id_attr="sponsorContactId",
     default_session_type="Sponsor Session",
-    list_select="name,sponsorCompanyName,sponsorContactName,createdAt",
+    list_select="name,sponsorCompanyName,sponsorContactName,sponsorContactId,createdAt",
     list_columns=(
         Column("name", "Sponsor", "name"),
         Column("company", "Company", "sponsorCompanyName"),
         Column("contact", "Primary contact", "sponsorContactName"),
     ),
+    list_contact_key="contact",
+    list_contact_id_attr="sponsorContactId",
     detail_select=(
         "name,sponsorCompanyName,sponsorCompanyId,"
         "sponsorContactName,sponsorContactId,"
