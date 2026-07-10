@@ -71,10 +71,14 @@ This is a multi-form app: a shared core hosts any number of intake forms.
     `/sponsorsessions/`): one configurable engine, three team-gated routes. Each
     manager reviews the records they own (engagements / managed partners / managed
     sponsors) and records `CSession` **meetings** against them (notes, next steps,
-    attendees, status; mentors can add co-mentors). Gated by
-    `SESSION_{MENTOR,PARTNER,SPONSOR}_ALLOWED_TEAMS`. Phase 1 (CRUD); see CLAUDE.md
-    for the CRM prerequisites (CSession `assignedUsers` + name formula) and the
-    later Calendar/Meet phases.
+    attendees, status; mentors can add co-mentors). Opening a record shows a tabbed,
+    information-dense detail — an **Overview** (aggregated company pop-up, a
+    session-notes feed, a Next-session Start/Open button), an editable
+    permission-aware **Details** tab (`sessions/details.py`), the Sessions list, and
+    Communications/Documents placeholders. Gated by
+    `SESSION_{MENTOR,PARTNER,SPONSOR}_ALLOWED_TEAMS`. Phase 1 (CRUD + review UI); see
+    CLAUDE.md for the CRM prerequisites (CSession `assignedUsers` + name formula) and
+    the later Calendar/Meet phases.
 - **V2 reliability platform** (`prds/v2/`): optional durable capture
   (`core/store.py`) + an async delivery `worker.py`, gated by `DATABASE_URL` /
   `ASYNC_DELIVERY` so behavior is unchanged until a Postgres DB is attached.
