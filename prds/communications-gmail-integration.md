@@ -20,7 +20,7 @@ we port its cleaning architecture and sync patterns rather than reinvent them.
 | Email source | **Gmail direct** — the existing Google service account with domain-wide delegation, extended with Gmail scopes; no per-user OAuth, no EspoCRM IMAP accounts. |
 | Source of truth for display | **CRM entities** — new `CConversation` + `CCommunication` records, parent-linked to the engagement/partner/sponsor and readable by CRM users on the record. |
 | Cleaning | Deterministic (libraries + tuned regex, ported from CRM_Extender) at ingest time. Raw mail is **not** copied into the CRM — Gmail remains the immutable original; each stored message keeps its Gmail ids for deep-linking. |
-| LLM layer | **Yes, from the start** — per-conversation summary, open/closed status, action items via the Claude API, refreshed when new mail arrives, behind a free triage gate. |
+| LLM layer | **Built in v1 but OPTIONAL** (revised 2026-07-10): per-conversation summary, open/closed status, action items via the Claude API, refreshed when new mail arrives, behind a free triage gate — the whole layer is gated by a `COMMS_AI_SUMMARY` flag (default **off**) + an Email Setup toggle, and the UI degrades cleanly when disabled. |
 | Ingest scope | **Active records only** — engagements in active statuses, current partners/sponsors. A record turning active triggers a retroactive backfill of its contacts' mail history. |
 | v1 scope | **Read + send** — the compose/reply modal ships working in v1 (`gmail.readonly` + `gmail.send`). |
 | Record attachment | Live contact-address matching at thread level + record-level include/exclude overrides (shared across co-mentors, stored app-side). |
@@ -104,9 +104,10 @@ The Email Setup screen gains a "Gmail integration" toggle + a test button
 ("read 1 message from my own mailbox") so the whole feature can be turned
 on/off at runtime without a deploy.
 
-New deploy secrets: `ANTHROPIC_API_KEY` (worker; for summaries) and a
-`GMAIL_SYNC` master flag (default **false** — the entire pipeline is a no-op
-until enabled, matching the project's gated-rollout convention).
+New deploy config: a `GMAIL_SYNC` master flag (default **false** — the entire
+pipeline is a no-op until enabled, matching the project's gated-rollout
+convention); `COMMS_AI_SUMMARY` (default **false**) + `ANTHROPIC_API_KEY`
+(worker) only if/when the optional summary layer is enabled (§5.6).
 
 ### 3.4 Trust note (recorded, accepted)
 
@@ -291,7 +292,19 @@ Testing: build a fixture corpus (their approach: audit old-vs-new on a real
 set before trusting it) from real CBM mail during crm-test verification;
 sanitize with the existing `sanitizeHtml` on render regardless.
 
-### 5.6 LLM layer — triage + summaries
+### 5.6 LLM layer — triage + summaries (OPTIONAL — flag-gated)
+
+**The summary layer is an option, not a dependency** (Doug, 2026-07-10). It is
+gated by **`COMMS_AI_SUMMARY`** (default **false**) plus a runtime toggle on
+the admin Email Setup screen (same pattern as the Gmail toggle, §3.3) — so CBM
+can run the whole pipeline (ingest, clean, store, display, send) with no LLM,
+no `ANTHROPIC_API_KEY`, and no email content leaving Google/the CRM. With the
+flag off: `summary`/`actionItems`/`keyTopics` stay null,
+`conversationStatus` stays at its `Open` default, and the frontend simply
+omits the summary block (it already renders nothing for empty fields).
+Turning it on later summarizes go-forward and backfills any conversation with
+`summarizedAt` null — no migration needed. The triage filter (below) runs
+regardless of the flag, since it also keeps junk out of the store.
 
 - **Triage (free, pre-LLM)** — port of CRM_Extender `triage.py`: drop
   automated senders (`no-reply@`, `billing@`…), auto-reply/OOO subjects,
@@ -361,8 +374,9 @@ Replace the `SAMPLE_MESSAGES` scaffold in `renderComms()`:
 - **Conversation list** (per record): subject, participants, message count,
   last activity, status chip (Open/Closed), one-line summary — replaces the
   flat message grid.
-- **Thread view**: summary + action-items callout on top (reuses the session
-  card callout styles), then messages newest-last; `bodyCleaned` rendered
+- **Thread view**: summary + action-items callout on top when populated
+  (reuses the session card callout styles; omitted entirely when the AI layer
+  is off — §5.6), then messages newest-last; `bodyCleaned` rendered
   through `sanitizeHtml`, `blockquote.quoted-reply` styled muted/indented
   (two-zone); per-message "Open in Gmail" link.
 - **Curation UI**: row action "Not related…", an "Add emails…" search modal
@@ -379,7 +393,7 @@ Replace the `SAMPLE_MESSAGES` scaffold in `renderComms()`:
 | M2 | Cleaning module ported + fixture corpus | Unit corpus green; spot-check real CBM emails |
 | M3 | CRM entities built (CRM team handoff, §4) + grants | GET/POST both entities as API user + read as a gate-role user, live |
 | M4 | Sync worker: enumerate → pull → match → clean → dedup → upsert → link; sync-state + overrides migrations | Seeded mailbox ↔ crm-test: conversations appear on an engagement; co-mentor CC dedups to one message; cursor expiry backfill exercised |
-| M5 | LLM triage + summaries (`ANTHROPIC_API_KEY` on worker) | Summaries/status/action items on real threads; junk mail absent |
+| M5 | LLM summaries — optional layer behind `COMMS_AI_SUMMARY` (+ `ANTHROPIC_API_KEY` on worker); triage ships in M4 regardless | Flag off: pipeline + UI fully functional, no summary block, no API calls. Flag on: summaries/status/action items appear on real threads + backfill runs |
 | M6 | Endpoints + frontend (read, curation, send) | Browser: full loop — read thread, exclude, include-by-search, reply lands in Gmail thread AND back in the tab |
 
 Rollout: everything behind `GMAIL_SYNC` (off in prod until crm-test verified

@@ -608,7 +608,9 @@ segment of its own URL). Mounted only when `assignments_active` (needs
     Gmail via the existing service-account delegation + new gmail.readonly/send
     scopes; worker ingests → cleans (CRM_Extender pipeline port) → stores as new
     `CConversation`/`CCommunication` CRM entities linked to the parent record;
-    Claude summaries from the start; active records only; read+send in v1).
+    Claude summaries built in v1 but OPTIONAL — `COMMS_AI_SUMMARY` flag, default
+    off; active records only; read+send in v1; sends go out as the manager's
+    own @cbmentors.org address).
     All the current scaffold code is in `sessions/frontend/` (`app.js` "Communications tab"
     section, `index.html` `data-dpanel="communications"` panel + `#commModal`,
     `styles.css` `.sx__inbox`/`.sx__msg-*`); the router just un-flagged the tab as a
