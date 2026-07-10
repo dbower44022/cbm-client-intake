@@ -600,18 +600,37 @@ segment of its own URL). Mounted only when `assignments_active` (needs
     / partners / sponsors found" — no "ask an administrator" alarm (past the team
     gate = you have permission); a Refresh picks up newly-assigned records (the
     manager profile is re-resolved each `/records` call).
-  - **Communications tab — email inbox (UI-only scaffold; added 2026-07-10).** An
-    inbox-style grid + a view/reply/compose modal, so a manager can eventually read
-    and answer the email thread for a record. **It is 100% frontend today: NOTHING
-    is read from or written to the CRM** — but the integration is now fully designed:
-    **`prds/communications-gmail-integration.md`** (approved plan, 2026-07-10 —
-    Gmail via the existing service-account delegation + new gmail.readonly/send
-    scopes; worker ingests → cleans (CRM_Extender pipeline port) → stores as new
-    `CConversation`/`CCommunication` CRM entities linked to the parent record;
-    Claude summaries built in v1 but OPTIONAL — `COMMS_AI_SUMMARY` flag, default
-    off; active records only; read+send in v1; sends go out as the manager's
-    own @cbmentors.org address).
-    All the current scaffold code is in `sessions/frontend/` (`app.js` "Communications tab"
+  - **Communications tab — Gmail conversation integration (BUILT v0.35.0,
+    2026-07-10; gated OFF by `GMAIL_SYNC` until activated).** Plan:
+    **`prds/communications-gmail-integration.md`**; CRM build handoff:
+    **`cconversation-entity.md`**. The app side is complete: `core/gmail.py`
+    (delegated per-mailbox Gmail client — subject ALWAYS derived server-side,
+    never from request input), `core/email_clean.py` (the CRM_Extender
+    stripping pipeline ported, two-zone output — quoted reply demoted into
+    `blockquote.quoted-reply`, signatures/boilerplate deleted; raw stays in
+    Gmail), `comms/` (sync engine: historyId cursors + expired-cursor and
+    new-address backfills, active-records-only scope, RFC Message-ID dedup
+    across co-mentor mailboxes, triage, CConversation/CCommunication upsert +
+    parent/contact links + assignedUsers owner-stamp; Postgres state via
+    Alembic `0004_comms_sync`; runs in the worker on `gmail_sync_seconds`),
+    `comms/summarize.py` (OPTIONAL Claude summaries — `COMMS_AI_SUMMARY`,
+    default off, `messages.parse` structured outputs, degrades to Uncertain),
+    per-domain endpoints (list/thread read as the user; exclude; mailsearch +
+    include; add-contact-address; send/reply **as the manager's own
+    @cbmentors.org**, In-Reply-To threading, write-through ingest, unknown
+    recipients need an explicit confirm), and the frontend (real conversation
+    list + thread view + curation + compose when `commsEnabled`; the
+    sample-data scaffold remains when off). 25 new tests; full UI loop
+    verified in the stub harness. **Activation prerequisites (NOT done):**
+    (1) build the CRM entities/links/grants per `cconversation-entity.md`
+    (crm-test first); (2) authorize `gmail.readonly` + `gmail.send` for the
+    service account's domain-wide delegation in Google Admin; (3) set
+    `GMAIL_SYNC=true` (web + worker) — and optionally `COMMS_AI_SUMMARY=true`
+    + `ANTHROPIC_API_KEY` (worker) after the privacy sign-off; (4) run the
+    pre-deploy migrate (0004). Then drive the §6 verification in
+    `cconversation-entity.md` live.
+    The superseded scaffold wiring notes below describe the pre-0.35.0 stub
+    (kept for context): scaffold code was in `sessions/frontend/` (`app.js` "Communications tab"
     section, `index.html` `data-dpanel="communications"` panel + `#commModal`,
     `styles.css` `.sx__inbox`/`.sx__msg-*`); the router just un-flagged the tab as a
     placeholder (`router.COMMON_DETAIL_TABS`) so the static panel is used. A muted
@@ -702,13 +721,23 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-10)
 
-**Prod is on v0.28.0** (prod + crm-test confirmed on `/healthz` 2026-07-07;
-redeployed on each push), and prod answers on the
+**Main is at v0.35.0** (342 tests green). v0.34.1 was merged to `main` and
+PUSHED 2026-07-10 (deploy-on-push ⇒ crm-test + prod redeployed to 0.34.1 —
+verify `/healthz`); **v0.35.0 (the Communications build, below) is committed
+on `main` but NOT pushed**. Prod answers on the
 **custom domain `https://apps.clevelandbusinessmentors.org`** (added to the DO
 app as PRIMARY, Cloudflare CNAME grey-cloud → the app's default hostname; the
-`…ondigitalocean.app` URL still works). The working branch is
-**`feat/session-view` at v0.34.0** (a4aa147..bb32ed4, NOT pushed) — 315 tests
-green. Shipped 2026-07-05..10 (see CHANGELOG):
+`…ondigitalocean.app` URL still works). Shipped 2026-07-05..10 (see CHANGELOG):
+
+- **Communications: Gmail conversation integration BUILT — v0.35.0**
+  (2026-07-10, gated OFF by `GMAIL_SYNC`; safe to deploy — a no-op until
+  activated). Full detail + activation prerequisites in the **Communications
+  tab** bullet of the Session Management section above; plan in
+  `prds/communications-gmail-integration.md`; CRM build handoff in
+  `cconversation-entity.md`. Remaining to activate: CRM entities (CRM team),
+  Google Admin scope authorization, `GMAIL_SYNC=true` + migrate, then the live
+  verification; AI summaries additionally need the privacy sign-off +
+  `ANTHROPIC_API_KEY` + `COMMS_AI_SUMMARY=true`.
 
 - **Session Management tools — v0.34.0** (built 2026-07-08..10, branch
   `feat/session-view`, **NOT yet pushed/deployed**; mentor domain CRUD **driven

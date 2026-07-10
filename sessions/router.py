@@ -17,8 +17,10 @@ from pydantic import BaseModel
 
 from assignments.auth import clear_session, current_user, is_member, session_expired
 from assignments.espo_user import client_for
+from comms import service as comms_service
 from core.config import get_settings
 from core.espo import EspoError
+from core.gmail import GmailError
 
 from . import details as details_svc
 from . import service
@@ -40,6 +42,24 @@ class CoMentorIn(BaseModel):
 
 class DetailsSaveIn(BaseModel):
     changes: dict = {}
+
+
+class IncludeIn(BaseModel):
+    gmailThreadId: str
+
+
+class SendIn(BaseModel):
+    to: list[str] = []
+    subject: str = ""
+    body: str = ""
+    replyToCommunicationId: Optional[str] = None
+    # True after the user confirms sending to an address that isn't one of the
+    # record's contacts (the server refuses otherwise).
+    allowUnknownRecipients: bool = False
+
+
+class AddressIn(BaseModel):
+    address: str
 
 
 class ContactAddIn(BaseModel):
@@ -129,6 +149,9 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             "detailTabs": COMMON_DETAIL_TABS,
             "supportsComentor": cfg.supports_comentor,
             "defaultSessionType": cfg.default_session_type,
+            # True => the Communications tab talks to the real endpoints below;
+            # false => the frontend keeps its sample-data scaffold.
+            "commsEnabled": get_settings().gmail_sync,
         }
 
     @router.post("/logout")
@@ -278,5 +301,139 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 return {"status": "ok"}
             except EspoError as exc:
                 raise _crm_failure(request, exc, "Could not add co-mentor")
+
+    # --- Communications tab (Gmail conversation integration) -----------------
+    # Everything below 503s unless GMAIL_SYNC is enabled; the frontend keeps
+    # its sample-data scaffold in that case (config.commsEnabled).
+
+    def _comms_ready():
+        """(settings, comms_store) — or a 503 when the integration is off."""
+        settings = get_settings()
+        if not settings.gmail_sync:
+            raise HTTPException(status_code=503, detail="The email integration isn't enabled.")
+        store = comms_service.get_store(settings)
+        if store is None:
+            raise HTTPException(
+                status_code=503, detail="The email integration needs the database."
+            )
+        return settings, store
+
+    def _api_client(settings):
+        from core.espo import DryRunEspoClient, EspoClient
+
+        if settings.espo_dry_run:
+            return DryRunEspoClient()
+        return EspoClient(
+            settings.espo_base_url, settings.espo_api_key, settings.request_timeout_seconds
+        )
+
+    def _comms_error(exc: comms_service.CommsError) -> HTTPException:
+        return HTTPException(status_code=400, detail=str(exc))
+
+    @router.get("/records/{parent_id}/conversations")
+    async def conversations(parent_id: str, request: Request) -> dict:
+        user = _require_user(request)
+        _comms_ready()
+        client = client_for(get_settings(), user)
+        try:
+            rows = await comms_service.list_conversations(client, cfg.parent_entity, parent_id)
+            return {"conversations": rows}
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not load conversations")
+
+    @router.get("/conversations/{conversation_id}")
+    async def conversation_detail(conversation_id: str, request: Request) -> dict:
+        user = _require_user(request)
+        _comms_ready()
+        client = client_for(get_settings(), user)
+        try:
+            return await comms_service.get_conversation(client, conversation_id)
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not load the conversation")
+
+    @router.post("/records/{parent_id}/conversations/{conversation_id}/exclude")
+    async def exclude_conversation(
+        parent_id: str, conversation_id: str, request: Request
+    ) -> dict:
+        user = _require_user(request)
+        settings, store = _comms_ready()
+        await comms_service.exclude_conversation(
+            _api_client(settings), store, cfg.parent_entity, parent_id,
+            conversation_id, user.get("userName", ""),
+        )
+        return {"status": "ok"}
+
+    @router.get("/mailsearch")
+    async def mailsearch(q: str, request: Request) -> dict:
+        user = _require_user(request)
+        settings, _ = _comms_ready()
+        client = client_for(settings, user)
+        try:
+            gmail = await comms_service.gmail_for_user(settings, client, user)
+            return {"threads": await comms_service.search_mailbox(gmail, q)}
+        except comms_service.CommsError as exc:
+            raise _comms_error(exc)
+        except GmailError as exc:
+            log.warning("mailsearch failed (%s): %s", cfg.slug, exc)
+            raise HTTPException(status_code=502, detail="Couldn't reach the mailbox — try again.")
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not search the mailbox")
+
+    @router.post("/records/{parent_id}/conversations/include")
+    async def include_thread(parent_id: str, body: IncludeIn, request: Request) -> dict:
+        user = _require_user(request)
+        settings, store = _comms_ready()
+        client = client_for(settings, user)
+        try:
+            gmail = await comms_service.gmail_for_user(settings, client, user)
+            conv_id = await comms_service.include_thread(
+                settings=settings, api_client=_api_client(settings), store=store,
+                gmail=gmail, cfg=cfg, parent_id=parent_id,
+                gmail_thread_id=body.gmailThreadId, user=user,
+            )
+            return {"status": "ok", "conversationId": conv_id}
+        except comms_service.CommsError as exc:
+            raise _comms_error(exc)
+        except GmailError as exc:
+            log.warning("include failed (%s): %s", cfg.slug, exc)
+            raise HTTPException(status_code=502, detail="Couldn't reach the mailbox — try again.")
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not add the conversation")
+
+    @router.post("/records/{parent_id}/messages")
+    async def send_message(parent_id: str, body: SendIn, request: Request) -> dict:
+        user = _require_user(request)
+        settings, store = _comms_ready()
+        client = client_for(settings, user)
+        try:
+            gmail = await comms_service.gmail_for_user(settings, client, user)
+            result = await comms_service.send_message(
+                settings=settings, api_client=_api_client(settings), store=store,
+                gmail=gmail, cfg=cfg, parent_id=parent_id, user=user,
+                to=body.to, subject=body.subject, body_html=body.body,
+                reply_to_communication_id=body.replyToCommunicationId,
+                allow_unknown_recipients=body.allowUnknownRecipients,
+            )
+            return {"status": "ok", **result}
+        except comms_service.CommsError as exc:
+            raise _comms_error(exc)
+        except GmailError as exc:
+            log.warning("send failed (%s): %s", cfg.slug, exc)
+            raise HTTPException(status_code=502, detail="Couldn't send the message — try again.")
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not send the message")
+
+    @router.post("/contacts/{contact_id}/addresses")
+    async def add_contact_address(contact_id: str, body: AddressIn, request: Request) -> dict:
+        user = _require_user(request)
+        _comms_ready()
+        client = client_for(get_settings(), user)
+        try:
+            await comms_service.add_contact_address(client, contact_id, body.address)
+            return {"status": "ok"}
+        except comms_service.CommsError as exc:
+            raise _comms_error(exc)
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not update the contact")
 
     return router

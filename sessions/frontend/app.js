@@ -108,6 +108,7 @@
   $("peekBackdrop").addEventListener("click", closePeek);
   // Communications: compose + view/reply modal.
   $("composeBtn").addEventListener("click", function () { composeMessage(null); });
+  $("addEmailsBtn").addEventListener("click", function () { addEmailsDialog(); });
   $("commModalClose").addEventListener("click", closeComm);
   $("commBackdrop").addEventListener("click", closeComm);
   // Unsaved-changes confirm dialog (leaving the session editor).
@@ -707,12 +708,235 @@
     var s = document.createElement("span"); s.className = "sx__tag sx__tag--" + kind; s.textContent = text; return s;
   }
 
-  // --- Communications tab: email inbox (UI only) ---------------------------
-  // NOTE: no email data is read from or written to the CRM yet — the CRM email
-  // structure is still being designed. These example messages exist only so the
-  // inbox layout and the view / reply / compose flow can be reviewed. When the
-  // CRM side is ready, swap SAMPLE_MESSAGES for a `/records/{id}/messages` fetch
-  // and wire the Send handler to a real endpoint.
+  // --- Communications tab -----------------------------------------------------
+  // Two modes, switched by config.commsEnabled (GMAIL_SYNC server-side):
+  //  * ENABLED: real conversations from the CRM (synced from the managers'
+  //    Gmail — prds/communications-gmail-integration.md): conversation list →
+  //    thread view (two-zone bodies, optional AI summary) → reply/compose →
+  //    curation (remove / add-by-search).
+  //  * DISABLED: the original sample-data scaffold so the layout stays
+  //    reviewable before the integration is switched on.
+
+  function commsOn() { return !!(config && config.commsEnabled); }
+
+  function renderComms() {
+    if (!commsOn()) { renderSampleComms(); return; }
+    hide($("commBanner"));
+    $("addEmailsBtn").hidden = false;
+    hide($("commError"));
+    $("inboxHead").innerHTML =
+      "<th scope='col'>Status</th><th scope='col'>Participants</th>" +
+      "<th scope='col'>Conversation</th><th scope='col'>Last activity</th>";
+    loadConversations();
+  }
+
+  async function loadConversations() {
+    if (!currentDetail) return;
+    var body = $("inboxBody"); body.innerHTML = "";
+    $("noMessages").textContent = "Loading conversations…"; show($("noMessages")); hide($("inboxTable"));
+    try {
+      var res = await api("/records/" + encodeURIComponent(currentDetail.id) + "/conversations");
+      renderConversationRows(res.conversations || []);
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      hide($("noMessages"));
+      $("commError").textContent = e.message; show($("commError"));
+    }
+  }
+
+  function renderConversationRows(rows) {
+    var body = $("inboxBody"); body.innerHTML = "";
+    if (!rows.length) {
+      $("noMessages").textContent = "No email conversations found for this record yet.";
+      show($("noMessages")); hide($("inboxTable")); return;
+    }
+    hide($("noMessages")); show($("inboxTable"));
+    rows.forEach(function (c) {
+      var tr = document.createElement("tr");
+      tr.className = "sx__inbox-row";
+      tr.tabIndex = 0; tr.setAttribute("role", "button");
+
+      var c0 = document.createElement("td"); c0.className = "sx__inbox-dir";
+      if (c.status) c0.appendChild(tag(c.status, c.status === "Open" ? "status" : "type"));
+
+      var c1 = document.createElement("td"); c1.className = "sx__inbox-party";
+      c1.textContent = c.participants || "—";
+
+      var c2 = document.createElement("td"); c2.className = "sx__inbox-subj";
+      var subj = document.createElement("span"); subj.className = "sx__inbox-subject";
+      subj.textContent = (c.subject || "(no subject)") + (c.messageCount ? " (" + c.messageCount + ")" : "");
+      var sn = document.createElement("span"); sn.className = "sx__inbox-snippet";
+      sn.textContent = snippet(c.summary || "", 110);
+      c2.appendChild(subj); c2.appendChild(sn);
+
+      var c3 = document.createElement("td"); c3.className = "sx__inbox-date";
+      c3.textContent = fmtSessionDate(c.lastMessageAt, "short");
+
+      tr.appendChild(c0); tr.appendChild(c1); tr.appendChild(c2); tr.appendChild(c3);
+      tr.addEventListener("click", function () { viewConversation(c.id); });
+      tr.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); viewConversation(c.id); } });
+      body.appendChild(tr);
+    });
+  }
+
+  async function viewConversation(convId) {
+    openComm("Conversation", "Loading…");
+    var body = $("commModalBody");
+    try {
+      var c = await api("/conversations/" + encodeURIComponent(convId));
+    } catch (e) {
+      if (e.status === 401) { closeComm(); showLogin(); return; }
+      body.innerHTML = ""; var p = document.createElement("p"); p.className = "form-error";
+      p.textContent = e.message; body.appendChild(p); return;
+    }
+    $("commModalTitle").textContent = c.subject || "(no subject)";
+    body.innerHTML = "";
+
+    // Optional AI summary block (empty when the summary layer is off).
+    if (c.summary || (c.actionItems || []).length) {
+      var sum = document.createElement("div"); sum.className = "sx__conv-summary";
+      if (c.status) sum.appendChild(tag(c.status, c.status === "Open" ? "status" : "type"));
+      if (c.summary) { var st = document.createElement("p"); st.textContent = c.summary; sum.appendChild(st); }
+      if ((c.actionItems || []).length) {
+        var cal = document.createElement("div"); cal.className = "sx__scallout";
+        var l = document.createElement("span"); l.className = "sx__scallout-l"; l.textContent = "Action items";
+        var b = document.createElement("div"); b.className = "sx__scallout-b";
+        var ul = document.createElement("ul");
+        c.actionItems.forEach(function (a) { var li = document.createElement("li"); li.textContent = a; ul.appendChild(li); });
+        b.appendChild(ul); cal.appendChild(l); cal.appendChild(b); sum.appendChild(cal);
+      }
+      body.appendChild(sum);
+    }
+
+    var lastInbound = null;
+    (c.messages || []).forEach(function (m) {
+      if (m.direction === "Inbound") lastInbound = m;
+      var card = document.createElement("div"); card.className = "sx__msg-card";
+      var head = document.createElement("div"); head.className = "sx__msg-head";
+      var who = document.createElement("span"); who.className = "sx__msg-who";
+      who.textContent = (m.direction === "Outbound" ? "To: " + (m.to || "") : (m.from || m.fromAddress || ""));
+      var when = document.createElement("span"); when.className = "sx__msg-when";
+      when.textContent = fmtSessionDate(m.sentAt, "short");
+      head.appendChild(who); head.appendChild(when);
+      if (m.gmailMessageId && m.sourceMailbox) {
+        var a = document.createElement("a");
+        a.href = "https://mail.google.com/mail/u/" + encodeURIComponent(m.sourceMailbox) + "/#all/" + encodeURIComponent(m.gmailMessageId);
+        a.target = "_blank"; a.rel = "noopener"; a.className = "sx__msg-gmail"; a.textContent = "Open in Gmail";
+        head.appendChild(a);
+      }
+      card.appendChild(head);
+      var mb = document.createElement("div"); mb.className = "sx__msg-html";
+      mb.innerHTML = sanitizeHtml(m.bodyHtml || "");
+      card.appendChild(mb);
+      body.appendChild(card);
+    });
+    if (!(c.messages || []).length) {
+      var none = document.createElement("p"); none.className = "sx__muted";
+      none.textContent = "No messages stored for this conversation."; body.appendChild(none);
+    }
+
+    var foot = $("commModalFoot"); foot.innerHTML = "";
+    var reply = document.createElement("button"); reply.type = "button"; reply.className = "cbm-button";
+    reply.textContent = "↩ Reply";
+    reply.addEventListener("click", function () {
+      composeMessage({
+        to: lastInbound ? lastInbound.fromAddress : "",
+        subject: replySubject(c.subject),
+        replyToId: lastInbound ? lastInbound.id : null,
+      });
+    });
+    foot.appendChild(reply);
+    foot.appendChild(removeConversationBtn(convId));
+    var close = document.createElement("button"); close.type = "button";
+    close.className = "cbm-button cbm-button--secondary"; close.textContent = "Close";
+    close.addEventListener("click", closeComm);
+    foot.appendChild(close);
+  }
+
+  // Two-step "Not related — remove" (no browser confirm dialogs).
+  function removeConversationBtn(convId) {
+    var btn = document.createElement("button"); btn.type = "button";
+    btn.className = "cbm-button cbm-button--secondary"; btn.textContent = "Not related — remove";
+    var armed = false;
+    btn.addEventListener("click", async function () {
+      if (!armed) { armed = true; btn.textContent = "Really remove from this record?"; return; }
+      btn.disabled = true;
+      try {
+        await api("/records/" + encodeURIComponent(currentDetail.id) +
+                  "/conversations/" + encodeURIComponent(convId) + "/exclude", { method: "POST" });
+        closeComm(); loadConversations();
+      } catch (e) {
+        if (e.status === 401) { closeComm(); showLogin(); return; }
+        btn.disabled = false; btn.textContent = e.message;
+      }
+    });
+    return btn;
+  }
+
+  // "Add emails…": live search of YOUR mailbox, add a thread to this record.
+  function addEmailsDialog() {
+    openComm("Add emails", "Find a conversation in your mailbox");
+    var body = $("commModalBody");
+    var row = document.createElement("div"); row.className = "sx__msg-field";
+    var input = document.createElement("input"); input.type = "text"; input.className = "sx__msg-input";
+    input.placeholder = "Search your mailbox (sender, subject, words…)";
+    var go = document.createElement("button"); go.type = "button"; go.className = "cbm-button"; go.textContent = "Search";
+    row.appendChild(input); row.appendChild(go); body.appendChild(row);
+    var results = document.createElement("div"); body.appendChild(results);
+
+    async function run() {
+      var q = input.value.trim(); if (!q) return;
+      results.innerHTML = "<p class='sx__muted'>Searching…</p>";
+      try {
+        var res = await api("/mailsearch?q=" + encodeURIComponent(q));
+        results.innerHTML = "";
+        var threads = res.threads || [];
+        if (!threads.length) { results.innerHTML = "<p class='sx__muted'>No matching conversations.</p>"; return; }
+        threads.forEach(function (t) {
+          var card = document.createElement("div"); card.className = "sx__msg-card";
+          var head = document.createElement("div"); head.className = "sx__msg-head";
+          var who = document.createElement("span"); who.className = "sx__msg-who";
+          who.textContent = (t.from || "") + " — " + (t.subject || "(no subject)");
+          var when = document.createElement("span"); when.className = "sx__msg-when";
+          when.textContent = fmtSessionDate(t.date, "short");
+          head.appendChild(who); head.appendChild(when);
+          var add = document.createElement("button"); add.type = "button";
+          add.className = "cbm-button sx__sm"; add.textContent = "Add to this record";
+          add.addEventListener("click", async function () {
+            add.disabled = true; add.textContent = "Adding…";
+            try {
+              await api("/records/" + encodeURIComponent(currentDetail.id) + "/conversations/include", {
+                method: "POST", body: JSON.stringify({ gmailThreadId: t.gmailThreadId })
+              });
+              add.textContent = "Added ✓"; loadConversations();
+            } catch (e) {
+              if (e.status === 401) { closeComm(); showLogin(); return; }
+              add.disabled = false; add.textContent = e.message;
+            }
+          });
+          head.appendChild(add);
+          card.appendChild(head);
+          var sn = document.createElement("p"); sn.className = "sx__muted"; sn.textContent = t.snippet || "";
+          card.appendChild(sn);
+          results.appendChild(card);
+        });
+      } catch (e) {
+        if (e.status === 401) { closeComm(); showLogin(); return; }
+        results.innerHTML = ""; var p = document.createElement("p"); p.className = "form-error";
+        p.textContent = e.message; results.appendChild(p);
+      }
+    }
+    go.addEventListener("click", run);
+    input.addEventListener("keydown", function (e) { if (e.key === "Enter") run(); });
+    var foot = $("commModalFoot"); foot.innerHTML = "";
+    var close = document.createElement("button"); close.type = "button";
+    close.className = "cbm-button cbm-button--secondary"; close.textContent = "Close";
+    close.addEventListener("click", closeComm);
+    foot.appendChild(close);
+    input.focus();
+  }
+
+  // --- sample-data scaffold (shown until GMAIL_SYNC is enabled) ---------------
   var SAMPLE_MESSAGES = [
     { id: "s1", direction: "received", from: "Pat Rivera <pat.rivera@example.com>",
       to: "mentor@cbmentors.org", subject: "Re: Agenda for our next meeting",
@@ -743,8 +967,9 @@
     return /^re:/i.test(s) ? s : "Re: " + s;
   }
 
-  function renderComms() {
+  function renderSampleComms() {
     var body = $("inboxBody"); if (!body) return;
+    show($("commBanner")); $("addEmailsBtn").hidden = true;
     body.innerHTML = "";
     var msgs = SAMPLE_MESSAGES;
     if (!msgs.length) { hide($("inboxTable")); show($("noMessages")); return; }
@@ -795,7 +1020,7 @@
   }
 
   function viewMessage(m) {
-    if (m.unread) { m.unread = false; renderComms(); }
+    if (m.unread) { m.unread = false; renderSampleComms(); }
     openComm(m.direction === "sent" ? "Sent message" : "Received message", m.subject || "(no subject)");
     var body = $("commModalBody");
     body.appendChild(commHeaderRow("From", m.from));
@@ -824,26 +1049,71 @@
     wrap.appendChild(l); wrap.appendChild(input); return wrap;
   }
 
+  function primaryContactEmail() {
+    var d = currentDetail; if (!d) return "";
+    var list = d.contacts || [];
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].id === d.primaryContactId && list[i].email) return list[i].email;
+    }
+    return list.length && list[0].email ? list[0].email : "";
+  }
+
   function composeMessage(pre) {
     pre = pre || {};
-    openComm("New email", pre.to ? "Reply" : "Compose");
+    openComm("New email", pre.replyToId ? "Reply" : "Compose");
     var body = $("commModalBody");
-    body.appendChild(commField("To", "commTo", pre.to, false));
+    var to = pre.to || (commsOn() ? primaryContactEmail() : "");
+    body.appendChild(commField("To", "commTo", to, false));
     body.appendChild(commField("Subject", "commSubject", pre.subject, false));
     body.appendChild(commField("Message", "commBody", "", true));
+    var err = document.createElement("p"); err.className = "form-error"; err.hidden = true;
+    body.appendChild(err);
 
+    var allowUnknown = false;
     var send = document.createElement("button"); send.type = "button";
     send.className = "cbm-button"; send.textContent = "Send";
-    send.addEventListener("click", function () {
-      // No delivery yet — communicate that plainly rather than pretend it sent.
-      $("commModalBody").innerHTML = "";
-      var note = document.createElement("p"); note.className = "sx__notice is-success";
-      note.textContent = "Sending isn't available yet — email delivery will be wired up once the CRM email structure is finalized.";
-      $("commModalBody").appendChild(note);
-      $("commModalFoot").innerHTML = "";
-      var ok = document.createElement("button"); ok.type = "button";
-      ok.className = "cbm-button"; ok.textContent = "OK"; ok.addEventListener("click", closeComm);
-      $("commModalFoot").appendChild(ok);
+    send.addEventListener("click", async function () {
+      if (!commsOn()) {
+        // No delivery in scaffold mode — communicate that plainly.
+        $("commModalBody").innerHTML = "";
+        var note = document.createElement("p"); note.className = "sx__notice is-success";
+        note.textContent = "Sending isn't available yet — the email integration hasn't been enabled for this deployment.";
+        $("commModalBody").appendChild(note);
+        $("commModalFoot").innerHTML = "";
+        var ok = document.createElement("button"); ok.type = "button";
+        ok.className = "cbm-button"; ok.textContent = "OK"; ok.addEventListener("click", closeComm);
+        $("commModalFoot").appendChild(ok);
+        return;
+      }
+      var recipients = $("commTo").value.split(/[,;\s]+/).filter(Boolean);
+      err.hidden = true; send.disabled = true; send.textContent = "Sending…";
+      try {
+        await api("/records/" + encodeURIComponent(currentDetail.id) + "/messages", {
+          method: "POST",
+          body: JSON.stringify({
+            to: recipients,
+            subject: $("commSubject").value,
+            body: $("commBody").value,
+            replyToCommunicationId: pre.replyToId || null,
+            allowUnknownRecipients: allowUnknown,
+          }),
+        });
+        closeComm();
+        notice("detailNotice", "Email sent.", "success");
+        loadConversations();
+      } catch (e) {
+        if (e.status === 401) { closeComm(); showLogin(); return; }
+        err.textContent = e.message; err.hidden = false;
+        send.disabled = false;
+        // A recipient outside the record's contacts: the server refused once —
+        // offer an explicit "send anyway" as the confirmation step.
+        if (e.status === 400 && /aren't contacts/.test(e.message || "")) {
+          allowUnknown = true;
+          send.textContent = "Send anyway";
+        } else {
+          send.textContent = "Send";
+        }
+      }
     });
     var cancel = document.createElement("button"); cancel.type = "button";
     cancel.className = "cbm-button cbm-button--secondary"; cancel.textContent = "Cancel";

@@ -4,6 +4,56 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.35.0] — 2026-07-10
+
+### Added
+- **Communications: the Gmail conversation integration is BUILT** (app side —
+  per `prds/communications-gmail-integration.md`; gated OFF by `GMAIL_SYNC`
+  until the CRM entities + Google scopes exist):
+  - **Gmail access** (`core/gmail.py`): the existing Google service account
+    with domain-wide delegation, extended to `gmail.readonly`/`gmail.send`,
+    minting per-mailbox tokens. The impersonation subject is always derived
+    server-side (the sync's enumerated managers; the signed-in user's own
+    `cbmEmail` for search/send) — never from request input. Every access
+    is logged.
+  - **Email cleaning** (`core/email_clean.py`): the CRM_Extender pipeline
+    ported (dual-track: quotequail + BeautifulSoup structural stripping with
+    the tuned edge-case guards, mail-parser-reply + regex fallback), producing
+    two-zone output — the author's new content, plus the quoted reply chain
+    demoted into `<blockquote class="quoted-reply">`. Signatures, disclaimers,
+    and boilerplate are deleted; the raw original stays in Gmail (deep links).
+  - **Sync engine** (`comms/`): per-mailbox Gmail `historyId` incremental sync
+    with expired-cursor date-window backfill and new-address targeted
+    backfill; scope = ACTIVE records' contact addresses only; RFC Message-ID
+    dedup across co-mentor mailboxes; conversation formation (thread id +
+    cross-mailbox References merge); triage (no-reply/OOO/marketing mail is
+    never stored); CRM upsert as `CConversation`/`CCommunication` linked to
+    the engagement/partner/sponsor + contacts, owner-stamped via
+    `assignedUsers`. Runs in the delivery worker on its own timer. State in
+    Postgres (Alembic `0004_comms_sync`: cursors + curation overrides).
+  - **Optional AI summaries** (`comms/summarize.py`, `COMMS_AI_SUMMARY`,
+    default off): Claude summaries/status/action items per conversation via
+    structured outputs, refreshed when new mail arrives; failures degrade to
+    `Uncertain`. No Anthropic key or data egress when off.
+  - **Endpoints** (per session-tool domain): conversation list + thread read
+    (as the user, ACL-enforced), record-level exclude, mailbox search +
+    include-thread, add-contact-address, and **send/reply as the manager's own
+    @cbmentors.org address** (proper In-Reply-To/References threading, sent
+    into their real Sent folder, written through immediately; recipients
+    outside the record's contacts require an explicit confirm).
+  - **Frontend**: the Communications tab now renders real conversations when
+    enabled (status/participants/summary list → thread view with two-zone
+    bodies, action-items callout, Open-in-Gmail links, reply/compose wired,
+    "Not related — remove" and "Add emails…" curation). With the flag off it
+    keeps the sample-data scaffold.
+  - **CRM handoff spec**: `cconversation-entity.md` (entities, links, grants,
+    layouts) — the CRM-side build is the activation prerequisite, along with
+    authorizing the two Gmail scopes on the delegation grant.
+  Verified: 25 new unit tests (cleaning corpus, sync engine with fakes,
+  endpoint gating) — 342 total green — plus the full UI loop in the stubbed
+  browser harness. NOT yet run against a real mailbox or CRM (blocked on the
+  CRM entities + scope authorization).
+
 ## [0.34.1] — 2026-07-10
 
 ### Added

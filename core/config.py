@@ -110,6 +110,24 @@ class Settings(BaseSettings):
     # screen (DB config takes precedence over these env vars).
     google_create_mailbox: bool = False
 
+    # --- Communications: Gmail conversation integration (prds/communications-
+    # gmail-integration.md). Master flag; the whole pipeline (sync, endpoints,
+    # send) is a no-op until enabled. Needs the Google service account (above /
+    # Email Setup) with gmail.readonly + gmail.send authorized for delegation.
+    gmail_sync: bool = False
+    gmail_sync_seconds: int = 300           # worker sync cadence
+    gmail_backfill: str = "newer_than:365d"  # initial-sync history window
+    # Statuses that make a record "active" (mail is only ingested for active
+    # records). Comma-separated; engagement set matches the sessions tools.
+    comms_engagement_statuses: str = "Active,Assigned,Pending Acceptance,On-Hold"
+    comms_partner_excluded_statuses: str = "Ended,Declined"
+    # OPTIONAL AI layer: per-conversation Claude summaries/status/action items.
+    # Off by default — with it off, nothing leaves Google/the CRM and no
+    # Anthropic key is needed. Requires ANTHROPIC_API_KEY when on.
+    comms_ai_summary: bool = False
+    anthropic_api_key: str = ""
+    summary_model: str = "claude-opus-4-8"
+
     # --- Encrypted runtime config (core/app_config.py) ---
     # Fernet key (urlsafe base64, 32 bytes) used to encrypt secrets stored in the
     # app_config table — currently the Google service-account credentials set via
@@ -149,6 +167,14 @@ class Settings(BaseSettings):
     @property
     def session_sponsor_allowed_teams_list(self) -> list[str]:
         return [t.strip() for t in self.session_sponsor_allowed_teams.split(",") if t.strip()]
+
+    @property
+    def comms_engagement_statuses_list(self) -> list[str]:
+        return [s.strip() for s in self.comms_engagement_statuses.split(",") if s.strip()]
+
+    @property
+    def comms_partner_excluded_statuses_list(self) -> list[str]:
+        return [s.strip() for s in self.comms_partner_excluded_statuses.split(",") if s.strip()]
 
     @property
     def assignments_active(self) -> bool:

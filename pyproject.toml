@@ -1,6 +1,6 @@
 [project]
 name = "cbm-client-intake"
-version = "0.34.1"
+version = "0.35.0"
 description = "CBM Client Intake — multi-step wizard frontend + FastAPI proxy that creates Account/Contact/Engagement records in EspoCRM."
 requires-python = ">=3.12"
 dependencies = [
@@ -16,6 +16,11 @@ dependencies = [
     "alembic>=1.13",
     "google-auth>=2.0",
     "cryptography>=42.0",
+    "beautifulsoup4>=4.12",
+    "lxml>=5.0",
+    "quotequail>=0.3",
+    "mail-parser-reply>=1.4",
+    "anthropic>=0.4",
 ]
 
 [dependency-groups]

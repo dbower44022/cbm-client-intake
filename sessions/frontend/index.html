@@ -119,18 +119,22 @@
       <div class="sx__dpanel" data-dpanel="communications" hidden>
         <div class="sx__comm-head">
           <h3>Communications</h3>
-          <button type="button" class="cbm-button" id="composeBtn">✉ Compose</button>
+          <span class="sx__comm-acts">
+            <button type="button" class="cbm-button cbm-button--secondary" id="addEmailsBtn" hidden>+ Add emails…</button>
+            <button type="button" class="cbm-button" id="composeBtn">✉ Compose</button>
+          </span>
         </div>
         <p class="sx__notice is-success" id="commBanner" role="status">
           Email integration with the CRM is still being designed — the messages below are examples that show the inbox layout.
         </p>
         <table class="sx__table sx__inbox" id="inboxTable" hidden>
           <thead>
-            <tr><th scope="col">Direction</th><th scope="col">Correspondent</th><th scope="col">Subject</th><th scope="col">Date</th></tr>
+            <tr id="inboxHead"><th scope="col">Direction</th><th scope="col">Correspondent</th><th scope="col">Subject</th><th scope="col">Date</th></tr>
           </thead>
           <tbody id="inboxBody"></tbody>
         </table>
         <p class="sx__muted" id="noMessages" hidden>No messages yet.</p>
+        <p class="form-error" id="commError" hidden></p>
       </div>
     </section>
 

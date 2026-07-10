@@ -141,6 +141,20 @@ async def main() -> None:
     next_alert = datetime.now(timezone.utc)
     next_schema = datetime.now(timezone.utc)
 
+    # Communications: Gmail conversation sync (+ optional AI summaries), on its
+    # own timer. Inert unless GMAIL_SYNC is on and the pieces are configured.
+    comms_store = None
+    next_gmail = datetime.now(timezone.utc)
+    if settings.gmail_sync:
+        from comms.store import make_comms_store
+
+        comms_store = make_comms_store(settings)
+        if comms_store is None:
+            log.warning("GMAIL_SYNC is on but DATABASE_URL is not set — sync disabled")
+        else:
+            await comms_store.create_all()
+            log.info("gmail sync enabled (every %ss)", settings.gmail_sync_seconds)
+
     while True:
         claimed = await run_once(store, settings)
 
@@ -157,9 +171,40 @@ async def main() -> None:
             except Exception as exc:  # noqa: BLE001
                 log.warning("schema-drift check failed: %s", exc)
             next_schema = now + timedelta(seconds=settings.schema_check_seconds)
+        if comms_store is not None and now >= next_gmail:
+            try:
+                await run_gmail_cycle(settings, comms_store)
+            except Exception as exc:  # noqa: BLE001 — comms never crashes delivery
+                log.warning("gmail sync cycle failed: %s", exc)
+            next_gmail = now + timedelta(seconds=settings.gmail_sync_seconds)
 
         if claimed == 0:
             await asyncio.sleep(settings.worker_poll_seconds)
+
+
+async def run_gmail_cycle(settings: Settings, comms_store) -> None:
+    """One Communications cycle: sync every manager mailbox, then the optional
+    summary pass. Credentials resolve like the mailbox check does — the in-app
+    Email-Setup config first, else the GOOGLE_* env vars."""
+    from comms.summarize import run_summary_pass
+    from comms.sync import run_gmail_sync
+    from core.app_config import make_app_config_store
+    from core.gmail import resolve_gmail_service_account
+
+    google_cfg = None
+    cfg_store = make_app_config_store(settings)
+    if cfg_store is not None:
+        try:
+            google_cfg = await cfg_store.get_google_config()
+        finally:
+            await cfg_store.dispose()
+    sa_info = resolve_gmail_service_account(settings, google_cfg)
+    if sa_info is None:
+        log.warning("gmail sync: no Google service-account credentials configured")
+        return
+    espo = _client(settings)
+    await run_gmail_sync(settings, comms_store, espo, sa_info)
+    await run_summary_pass(settings, espo)
 
 
 if __name__ == "__main__":

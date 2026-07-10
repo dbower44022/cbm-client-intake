@@ -464,6 +464,23 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
 .sx__msg-input { width: 100%; box-sizing: border-box; padding: 0.45rem 0.55rem; font: inherit; border: 1px solid var(--cbm-border, #d7dce2); border-radius: 6px; }
 .sx__msg-input:focus { outline: 2px solid var(--cbm-blue, #1a5fb4); outline-offset: -1px; border-color: transparent; }
 textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
+.sx__comm-acts { display: inline-flex; gap: 0.5rem; }
+/* Live conversation thread view: summary block + per-message cards. */
+.sx__conv-summary { padding: 0.6rem 1rem 0.4rem; border-bottom: 1px solid var(--cbm-border, #eef1f4); }
+.sx__conv-summary p { margin: 0.4rem 0; line-height: 1.5; color: var(--cbm-navy, #223); }
+.sx__msg-card { margin: 0.6rem 1rem; border: 1px solid var(--cbm-border, #e3e8ee); border-radius: 8px; overflow: hidden; }
+.sx__msg-head { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; padding: 0.45rem 0.7rem; background: var(--cbm-slate-050, #f5f7fa); border-bottom: 1px solid var(--cbm-border, #eef1f4); }
+.sx__msg-who { font-weight: 600; font-size: 0.9rem; color: var(--cbm-navy, #123); }
+.sx__msg-when { color: var(--cbm-slate-700, #667); font-size: 0.82rem; }
+.sx__msg-gmail { margin-left: auto; font-size: 0.8rem; }
+.sx__msg-html { padding: 0.55rem 0.75rem; line-height: 1.55; color: var(--cbm-navy, #223); overflow-wrap: anywhere; }
+.sx__msg-html p { margin: 0 0 0.6rem; }
+/* Two-zone rendering: the quoted reply chain is kept but demoted. */
+.sx__msg-html blockquote.quoted-reply {
+  margin: 0.5rem 0 0; padding: 0.3rem 0 0.3rem 0.75rem;
+  border-left: 3px solid var(--cbm-border, #d7dce2);
+  color: var(--cbm-slate-700, #778); opacity: 0.85; font-size: 0.92em;
+}
 
 /* === Session detail View (Display Standard §12) =========================== */
 /* §12.1 navigation row (unchanged from the prior build). */
