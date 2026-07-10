@@ -4,6 +4,15 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.32.11] — 2026-07-10
+
+### Added
+- **Unsaved-changes guard on the session editor.** Clicking **Back** with unsaved
+  edits (any field or the attendee set changed) now opens a dialog — **Save changes**
+  (persists, then returns), **Discard** (drops them, returns), or **Keep editing** —
+  so you don't have to go back and press Save separately. No prompt when nothing
+  changed.
+
 ## [0.32.10] — 2026-07-10
 
 ### Changed

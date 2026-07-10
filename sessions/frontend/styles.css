@@ -347,6 +347,12 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
   letter-spacing: 0.04em; font-weight: 700; color: var(--cbm-slate-700, #556);
 }
 .sx__peek-empty { padding: 0.4rem 1rem; }
+/* Unsaved-changes confirm dialog (reuses the .sx__modal shell). */
+.sx__confirm { max-width: 26rem; padding: 1.1rem 1.25rem 1.2rem; }
+.sx__confirm-title { margin: 0 0 0.4rem; font-size: 1.1rem; color: var(--cbm-navy, #123); }
+.sx__confirm-msg { margin: 0 0 1rem; color: var(--cbm-slate-700, #556); font-size: var(--cbm-text-sm, 0.9rem); line-height: 1.5; }
+.sx__confirm-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end; }
+.sx__confirm-actions .cbm-button { padding: 0.5rem 0.9rem; font-size: 0.9rem; }
 
 /* === Session detail View (Display Standard §12) =========================== */
 /* §12.1 navigation row (unchanged from the prior build). */

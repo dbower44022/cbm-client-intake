@@ -16,6 +16,7 @@
   var currentDetail = null; // the open parent detail (has contacts/sessions)
   var currentSession = null;// the session being edited (null attendees only for new)
   var editorSnapshot = {};  // {field: JSON of value at render} — save diffs against this
+  var confirmOnSave = null, confirmOnDiscard = null;  // unsaved-changes dialog callbacks
   var currentDetails = null;// Details tab payload for the open record (lazy-loaded)
   var detailsSnapshot = {}; // "sectionIndex:field" -> JSON of value at edit-render
   var currentViewSessions = []; // ordered session rows for the read-only view's prev/next
@@ -74,7 +75,7 @@
   $("statusFilter").addEventListener("change", function () { statusFilter = this.value; renderTable(); });
   $("backBtn").addEventListener("click", function () { showList(); });
   $("newSessionBtn").addEventListener("click", function () { openEditor(null); });
-  $("editorBackBtn").addEventListener("click", function () { if (currentDetail) openDetail(currentDetail.id); });
+  $("editorBackBtn").addEventListener("click", function () { leaveEditor(); });
   $("saveSessionBtn").addEventListener("click", function () { saveSession(); });
   $("addCoMentorBtn").addEventListener("click", function () { addCoMentor(); });
   // Read-only session view.
@@ -106,8 +107,15 @@
     } else { fallbackCopy(peekCopyText); done(); }
   });
   $("peekBackdrop").addEventListener("click", closePeek);
+  // Unsaved-changes confirm dialog (leaving the session editor).
+  $("confirmSave").addEventListener("click", function () { hide($("confirmModal")); if (confirmOnSave) confirmOnSave(); });
+  $("confirmDiscard").addEventListener("click", function () { hide($("confirmModal")); if (confirmOnDiscard) confirmOnDiscard(); });
+  $("confirmCancel").addEventListener("click", function () { hide($("confirmModal")); });
+  $("confirmBackdrop").addEventListener("click", function () { hide($("confirmModal")); });
   document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape" && !$("peekModal").hidden) closePeek();
+    if (e.key !== "Escape") return;
+    if (!$("confirmModal").hidden) { hide($("confirmModal")); }  // Escape = keep editing
+    else if (!$("peekModal").hidden) closePeek();
   });
 
   // Build the detail tab bar from config.detailTabs. Built-in keys (overview/
@@ -1295,6 +1303,29 @@
 
   function chosenAttendees() {
     return Array.prototype.map.call($("attendees").querySelectorAll(".sx__attendee:checked"), function (c) { return c.value; });
+  }
+
+  // True if the editor form or attendees differ from their render-time values.
+  function editorHasUnsavedChanges() {
+    var dirty = false;
+    Array.prototype.forEach.call($("sessionForm").querySelectorAll("[data-field]"), function (el) {
+      if (JSON.stringify(readField(el)) !== editorSnapshot[el.dataset.field]) dirty = true;
+    });
+    if (dirty) return true;
+    var orig = ((currentSession && currentSession.attendees) || []).slice().sort().join(",");
+    var now = chosenAttendees().slice().sort().join(",");
+    return orig !== now;
+  }
+
+  // Leaving the editor: if there are unsaved changes, offer to Save / Discard /
+  // Keep editing (Save persists then returns; Discard drops them and returns).
+  function leaveEditor() {
+    if (!currentDetail) return;
+    if (!editorHasUnsavedChanges()) { openDetail(currentDetail.id); return; }
+    confirmOnSave = function () { saveSession(); };  // saveSession returns to the record on success
+    confirmOnDiscard = function () { openDetail(currentDetail.id); };
+    show($("confirmModal"));
+    $("confirmSave").focus();
   }
 
   async function saveSession() {
