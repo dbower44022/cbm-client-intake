@@ -4,6 +4,19 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.33.3] — 2026-07-10
+
+### Fixed
+- **Website links open the actual site in a new tab.** The contact/company
+  pop-up (peek) rendered a stored bare-domain website (`agapew8loss.com`) as a
+  relative href, so clicking it tried to open
+  `/mentorsessions/agapew8loss.com` on the app itself. All external-link
+  renders in the sessions frontend now share one `externalHref()` helper
+  (prepends `https://` when the stored value has no scheme; trims whitespace):
+  the peek Website/LinkedIn fields, the Company card's directory link, the
+  session view's video-meeting link, and the Next-session Start button. All
+  open with `target="_blank"` + `noopener`.
+
 ## [0.33.2] — 2026-07-10
 
 ### Changed

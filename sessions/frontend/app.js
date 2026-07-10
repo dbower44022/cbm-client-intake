@@ -352,6 +352,13 @@
     if (!v) return "";
     return window.CBM && CBM.formatPhone ? CBM.formatPhone(v) : String(v);
   }
+  // Absolute external URL for a stored website/link value — a bare
+  // "example.com" would otherwise resolve relative to this app's own path
+  // (e.g. /mentorsessions/example.com).
+  function externalHref(v) {
+    v = String(v || "").trim();
+    return /^https?:\/\//i.test(v) ? v : "https://" + v;
+  }
 
   // --- detail ---
   async function openDetail(id) {
@@ -427,8 +434,7 @@
   function startSession(ns) {
     var link = ns.videoMeetingLink && String(ns.videoMeetingLink).trim();
     if (link) {
-      if (!/^https?:\/\//i.test(link)) link = "https://" + link;
-      window.open(link, "_blank", "noopener");
+      window.open(externalHref(link), "_blank", "noopener");
     }
     openEditor(ns.id);
   }
@@ -889,7 +895,7 @@
     var v = f.value;
     if (f.type === "email" && v) { var a = document.createElement("a"); a.href = "mailto:" + v; a.textContent = v; el.appendChild(a); return; }
     if (f.type === "phone" && v) { var p = document.createElement("a"); p.href = "tel:" + v; p.textContent = fmtPhone(v); p.title = String(v); el.appendChild(p); return; }
-    if (f.type === "url" && v) { var u = document.createElement("a"); u.href = v; u.target = "_blank"; u.rel = "noopener"; u.textContent = v; el.appendChild(u); return; }
+    if (f.type === "url" && v) { var u = document.createElement("a"); u.href = externalHref(v); u.target = "_blank"; u.rel = "noopener"; u.textContent = v; el.appendChild(u); return; }
     if (f.type === "multiEnum" && Array.isArray(v)) { v.forEach(function (o) { var c = document.createElement("span"); c.className = "sx__chip"; c.textContent = o; el.appendChild(c); }); return; }
     if (f.type === "date") { el.textContent = fmtDate(v); return; }
     if (f.type === "currency") { el.textContent = fmtMoney(v, null); return; }
@@ -1226,7 +1232,7 @@
     var web = dvs(sec, "website");
     if (web) {
       if (line3.childNodes.length) line3.appendChild(document.createTextNode(" · "));
-      var a = document.createElement("a"); a.href = /^https?:\/\//i.test(web) ? web : "https://" + web;
+      var a = document.createElement("a"); a.href = externalHref(web);
       a.target = "_blank"; a.rel = "noopener"; a.textContent = web.replace(/^https?:\/\//i, "");
       line3.appendChild(a);
     }
@@ -1766,8 +1772,7 @@
       value.forEach(function (o) { var c = document.createElement("span"); c.className = "sx__chip"; c.textContent = o; v.appendChild(c); });
     } else if (type === "datetime") { v.textContent = fmtSessionDate(value); v.title = value || ""; }
     else if (type === "link") {
-      var href = /^https?:\/\//i.test(value) ? value : "https://" + value;
-      var a = document.createElement("a"); a.href = href; a.target = "_blank"; a.rel = "noopener"; a.textContent = value; v.appendChild(a);
+      var a = document.createElement("a"); a.href = externalHref(value); a.target = "_blank"; a.rel = "noopener"; a.textContent = value; v.appendChild(a);
     } else { v.textContent = String(value); }
     cell.appendChild(l); cell.appendChild(v); grid.appendChild(cell);
   }
