@@ -677,6 +677,7 @@
       $("peekKind").textContent = peekLabel(entity);
       if (res.copyText) { peekCopyText = res.copyText; $("peekCopy").hidden = false; }
       var body = $("peekBody"); body.innerHTML = "";
+      if (res.restricted) { body.innerHTML = "<p class='sx__muted'>You don't have permission to view this record.</p>"; return; }
       if (!res.fields || !res.fields.length) { body.innerHTML = "<p class='sx__muted'>No additional details available.</p>"; return; }
       peekFieldsInto(body, res.fields);
     } catch (e) { peekFail(e); }
@@ -706,6 +707,7 @@
       var h = document.createElement("div"); h.className = "sx__peek-sec-h"; h.textContent = peekLabel(r.entity);
       sec.appendChild(h);
       if (r.error) { var p = document.createElement("p"); p.className = "form-error"; p.textContent = r.error; sec.appendChild(p); }
+      else if (r.data.restricted) { var rm = document.createElement("p"); rm.className = "sx__muted sx__peek-empty"; rm.textContent = "You don't have permission to view this record."; sec.appendChild(rm); }
       else if (!r.data.fields || !r.data.fields.length) { var m = document.createElement("p"); m.className = "sx__muted sx__peek-empty"; m.textContent = "No details available."; sec.appendChild(m); }
       else { peekFieldsInto(sec, r.data.fields); }
       body.appendChild(sec);

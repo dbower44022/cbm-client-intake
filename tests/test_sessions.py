@@ -256,6 +256,37 @@ async def test_peek_allowlists_entities_and_drops_empties():
 
 
 @pytest.mark.asyncio
+async def test_peek_forbidden_read_degrades_to_restricted():
+    """A 403 from the CRM (the user lacks read ACL on, e.g., the client's
+    CClientProfile) must not become a 502 — peek returns a ``restricted`` marker
+    so the pop-up shows a friendly note and the aggregate still renders the rest."""
+    from core.espo import EspoError
+
+    class Forbidden(Fake):
+        async def get(self, entity, record_id, select=None):
+            raise EspoError(
+                f"get {entity}/{record_id} failed: HTTP 403 Forbidden"
+            )
+
+    res = await service.peek(Forbidden(), "CClientProfile", "cp1")
+    assert res["restricted"] is True
+    assert res["fields"] == [] and res["name"] is None
+
+
+@pytest.mark.asyncio
+async def test_peek_non_forbidden_error_propagates():
+    """A non-403 CRM failure is still surfaced (mapped to 502 by the router)."""
+    from core.espo import EspoError
+
+    class Broken(Fake):
+        async def get(self, entity, record_id, select=None):
+            raise EspoError("get failed: HTTP 500 boom")
+
+    with pytest.raises(EspoError):
+        await service.peek(Broken(), "CClientProfile", "cp1")
+
+
+@pytest.mark.asyncio
 async def test_peek_contact_builds_copy_card_and_address():
     fake = Fake(records={("Contact", "c1"): {
         "name": "Pat Lee", "emailAddress": "pat@x.org", "phoneNumber": "+12165550142",

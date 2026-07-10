@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from datetime import datetime, timezone
 from typing import Any, Optional, Protocol
 
@@ -108,6 +109,19 @@ class SessionClient(Protocol):
 
 class SessionError(Exception):
     """A user-facing, non-CRM error (e.g. the user has no linked profile)."""
+
+
+_HTTP_STATUS_RE = re.compile(r"HTTP (\d{3})")
+
+
+def _is_forbidden(exc: EspoError) -> bool:
+    """True when a CRM read failed with 403 — the user simply lacks the ACL to
+    read this record (e.g. a mentor with no read grant on ``CClientProfile``).
+    Matches the *first* ``HTTP <code>`` in the message (``EspoError`` puts the
+    real status ahead of the echoed body), so it's not fooled by a 403 that only
+    appears in a response body."""
+    m = _HTTP_STATUS_RE.search(str(exc))
+    return bool(m) and m.group(1) == "403"
 
 
 async def resolve_manager_profile(client: SessionClient, user_id: str) -> Optional[str]:
@@ -408,7 +422,17 @@ async def peek(client: SessionClient, entity: str, record_id: str) -> dict[str, 
         raise SessionError(f"Cannot look up {entity} records.")
     extra = _CONTACT_ADDRESS_ATTRS if entity == CONTACT else ()
     select = ",".join(dict.fromkeys(["name", *(attr for attr, _, _ in spec), *extra]))
-    rec = await client.get(entity, record_id, select=select)
+    try:
+        rec = await client.get(entity, record_id, select=select)
+    except EspoError as exc:
+        # A forbidden read is an expected ACL outcome, not a server failure — a
+        # manager may not be granted read on a linked record (e.g. the client's
+        # CClientProfile). Degrade to a "restricted" marker so the pop-up shows a
+        # friendly note (and, for the aggregated Company link, the sections the
+        # user CAN read still render) instead of a 502.
+        if _is_forbidden(exc):
+            return {"entity": entity, "name": None, "fields": [], "restricted": True}
+        raise
     fields = [
         {"label": label, "value": rec.get(attr), "type": ftype}
         for attr, label, ftype in spec
