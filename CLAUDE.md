@@ -603,8 +603,13 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   - **Communications tab — email inbox (UI-only scaffold; added 2026-07-10).** An
     inbox-style grid + a view/reply/compose modal, so a manager can eventually read
     and answer the email thread for a record. **It is 100% frontend today: NOTHING
-    is read from or written to the CRM** — the CRM email structure is still being
-    designed. All the code is in `sessions/frontend/` (`app.js` "Communications tab"
+    is read from or written to the CRM** — but the integration is now fully designed:
+    **`prds/communications-gmail-integration.md`** (approved plan, 2026-07-10 —
+    Gmail via the existing service-account delegation + new gmail.readonly/send
+    scopes; worker ingests → cleans (CRM_Extender pipeline port) → stores as new
+    `CConversation`/`CCommunication` CRM entities linked to the parent record;
+    Claude summaries from the start; active records only; read+send in v1).
+    All the current scaffold code is in `sessions/frontend/` (`app.js` "Communications tab"
     section, `index.html` `data-dpanel="communications"` panel + `#commModal`,
     `styles.css` `.sx__inbox`/`.sx__msg-*`); the router just un-flagged the tab as a
     placeholder (`router.COMMON_DETAIL_TABS`) so the static panel is used. A muted
