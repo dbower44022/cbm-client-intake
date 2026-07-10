@@ -473,9 +473,10 @@ async def test_sanitizer_fails_open_when_options_unavailable():
 @pytest.mark.asyncio
 async def test_get_session_exposes_attendees():
     fake = Fake(records={("CSession", "s1"): {"name": "x"}},
-                related={"sessionAttendees": [{"id": "c1"}, {"id": "c2"}]})
+                related={"sessionAttendees": [{"id": "c1", "name": "Pat"}, {"id": "c2", "name": "Dana"}]})
     rec = await service.get_session(fake, "s1")
-    assert rec["attendees"] == ["c1", "c2"]
+    assert rec["attendees"] == ["c1", "c2"]           # ids for the editor picker
+    assert rec["attendeeNames"] == ["Pat", "Dana"]    # names for the read-only view
 
 
 @pytest.mark.asyncio

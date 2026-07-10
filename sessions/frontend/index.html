@@ -133,6 +133,26 @@
       </div>
     </section>
 
+    <!-- Read-only session view: the whole session at a glance, with prev/next -->
+    <section id="sessionView" hidden>
+      <div class="sx__toolbar">
+        <button type="button" class="cbm-button cbm-button--secondary" id="viewBackBtn">← Back</button>
+        <span class="sx__viewnav">
+          <button type="button" class="cbm-button cbm-button--secondary sx__navbtn" id="viewPrevBtn" title="Previous session" aria-label="Previous session">‹</button>
+          <span class="sx__viewpos" id="viewPos"></span>
+          <button type="button" class="cbm-button cbm-button--secondary sx__navbtn" id="viewNextBtn" title="Next session" aria-label="Next session">›</button>
+        </span>
+        <button type="button" class="cbm-button" id="viewEditBtn">Edit</button>
+      </div>
+      <p class="sx__notice" id="viewNotice" role="status" hidden></p>
+      <div class="sx__vhead">
+        <h2 class="sx__detail-name" id="viewTitle"></h2>
+        <div class="sx__vsub" id="viewSub"></div>
+      </div>
+      <div class="sx__vfacts" id="viewFacts"></div>
+      <div id="viewBlocks"></div>
+    </section>
+
     <footer class="cbm-footer">
       <p>&copy; <span data-cbm-year>2026</span> Cleveland Business Mentors.<span class="cbm-footer__version" data-cbm-version></span></p>
     </footer>

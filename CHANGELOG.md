@@ -4,6 +4,18 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.32.4] — 2026-07-09
+
+### Added
+- **Read-only Session view.** Clicking a session's name (in the Overview note feed
+  or the Sessions tab) or its **View** button opens a view-optimized page showing
+  the whole session at a glance — a compact facts grid (status, type, start,
+  meeting type, location, video link, next session, topics, **attendees**) plus the
+  prominent Session notes / Action items blocks. **‹ / ›** buttons (and ← / →
+  keys) walk to the previous / next session so a user can quickly page through the
+  record's sessions; **Edit** jumps to the editor. `get_session` now returns
+  `attendeeNames` for display.
+
 ## [0.32.3] — 2026-07-09
 
 ### Changed

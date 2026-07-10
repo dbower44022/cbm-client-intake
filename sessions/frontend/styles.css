@@ -256,8 +256,9 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
 .sx__note-head { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.4rem; }
 .sx__note-when { font-weight: 700; color: var(--cbm-navy, #123); font-size: 0.9rem; }
 .sx__note-name { color: var(--cbm-slate-700, #667); font-size: var(--cbm-text-sm, 0.85rem); }
+.sx__note-acts { margin-left: auto; display: inline-flex; gap: 0.35rem; }
 .sx__note-edit {
-  margin-left: auto; background: none; border: 1px solid var(--cbm-border, #d7dce2);
+  background: none; border: 1px solid var(--cbm-border, #d7dce2);
   border-radius: 5px; padding: 0.12rem 0.55rem; cursor: pointer; font: inherit; font-size: 0.8rem; color: var(--cbm-slate-700, #556);
 }
 .sx__note-edit:hover { background: #f2f5f9; }
@@ -304,3 +305,25 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
   letter-spacing: 0.04em; font-weight: 700; color: var(--cbm-slate-700, #556);
 }
 .sx__peek-empty { padding: 0.4rem 1rem; }
+
+/* === Read-only session view =============================================== */
+.sx__viewnav { display: inline-flex; align-items: center; gap: 0.5rem; }
+.sx__navbtn { padding: 0.35rem 0.7rem; font-size: 1.1rem; line-height: 1; }
+.sx__navbtn:disabled { opacity: 0.4; cursor: default; }
+.sx__viewpos { font-size: var(--cbm-text-sm, 0.85rem); color: var(--cbm-slate-700, #556); min-width: 4.5rem; text-align: center; font-variant-numeric: tabular-nums; }
+.sx__vhead { margin: 0.25rem 0 1rem; }
+.sx__vhead .sx__detail-name { margin: 0 0 0.35rem; }
+.sx__vsub { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.sx__vsub-when { font-weight: 700; color: var(--cbm-navy, #123); font-variant-numeric: tabular-nums; }
+/* Compact multi-column facts card. */
+.sx__vfacts {
+  border: 1px solid var(--cbm-border, #e3e7ec); border-radius: var(--cbm-radius, 8px);
+  background: var(--cbm-surface, #fff); display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr)); gap: 0 1.5rem; padding: 0.5rem 1rem;
+}
+.sx__vfacts .sx__fact { grid-template-columns: 10rem 1fr; border-bottom: 1px solid #f0f3f7; }
+#viewBlocks { display: grid; gap: 1rem; margin-top: 1rem; }
+/* The important note blocks: prominent. */
+.sx__block--big { border-left-width: 4px; }
+.sx__block--big .sx__block-h { font-size: 0.95rem; color: var(--cbm-navy, #123); }
+.sx__block--big .sx__block-body { font-size: 1rem; line-height: 1.55; }

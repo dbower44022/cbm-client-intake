@@ -383,10 +383,13 @@ _SESSION_SELECT = ",".join(["id", *sorted(SESSION_EDIT_NAMES)])
 
 
 async def get_session(client: SessionClient, session_id: str) -> dict[str, Any]:
-    """An existing session's editable values + its attendee contact ids (read via
-    the sessionAttendees relationship — see :func:`_attendees`)."""
+    """An existing session's editable values + its attendees (read via the
+    sessionAttendees relationship — see :func:`_attendees`). ``attendees`` = contact
+    ids (for the editor's picker); ``attendeeNames`` = names (for the read view)."""
     rec = await client.get(SESSION, session_id, select=_SESSION_SELECT)
-    rec["attendees"] = [c["id"] for c in await _attendees(client, session_id)]
+    atts = await _attendees(client, session_id)
+    rec["attendees"] = [c["id"] for c in atts]
+    rec["attendeeNames"] = [c.get("name") for c in atts if c.get("name")]
     return rec
 
 

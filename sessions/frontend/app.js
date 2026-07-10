@@ -18,6 +18,8 @@
   var editorSnapshot = {};  // {field: JSON of value at render} — save diffs against this
   var currentDetails = null;// Details tab payload for the open record (lazy-loaded)
   var detailsSnapshot = {}; // "sectionIndex:field" -> JSON of value at edit-render
+  var currentViewSessions = []; // ordered session rows for the read-only view's prev/next
+  var currentViewIndex = -1;    // position within currentViewSessions
   var search = "";
 
   function $(id) { return document.getElementById(id); }
@@ -48,10 +50,11 @@
     if (e && e.status === 403) { showMessage(e.message); return; }
     showMessage("The server isn't responding right now. Please try again in a moment.");
   }
-  function hideAll() { hide($("msgView")); hide($("listView")); hide($("detailView")); hide($("editorView")); }
+  function hideAll() { hide($("msgView")); hide($("listView")); hide($("detailView")); hide($("editorView")); hide($("sessionView")); }
   function showList() { hideAll(); show($("listView")); }
   function showDetail() { hideAll(); show($("detailView")); }
   function showEditor() { hideAll(); show($("editorView")); }
+  function showSessionView() { hideAll(); show($("sessionView")); }
 
   function notice(elId, text, kind) {
     var n = $(elId); n.textContent = text;
@@ -70,6 +73,17 @@
   $("editorBackBtn").addEventListener("click", function () { if (currentDetail) openDetail(currentDetail.id); });
   $("saveSessionBtn").addEventListener("click", function () { saveSession(); });
   $("addCoMentorBtn").addEventListener("click", function () { addCoMentor(); });
+  // Read-only session view.
+  $("viewBackBtn").addEventListener("click", function () { showDetail(); });
+  $("viewPrevBtn").addEventListener("click", function () { stepSessionView(-1); });
+  $("viewNextBtn").addEventListener("click", function () { stepSessionView(1); });
+  $("viewEditBtn").addEventListener("click", function () {
+    var s = currentViewSessions[currentViewIndex]; if (s) openEditor(s.id);
+  });
+  document.addEventListener("keydown", function (e) {
+    if ($("sessionView").hidden) return;
+    if (e.key === "ArrowLeft") { stepSessionView(-1); } else if (e.key === "ArrowRight") { stepSessionView(1); }
+  });
 
   // Detail tabs are built from the domain config (see buildDetailTabs, called
   // once config loads).
@@ -437,10 +451,14 @@
       if (s.sessionType) { head.appendChild(tag(s.sessionType, "type")); }
       if (s.status) { head.appendChild(tag(s.status, "status")); }
       if (s.name) { var nm = document.createElement("span"); nm.className = "sx__note-name"; nm.textContent = s.name; head.appendChild(nm); }
+      var acts = document.createElement("span"); acts.className = "sx__note-acts";
+      var viewBtn = document.createElement("button");
+      viewBtn.type = "button"; viewBtn.className = "sx__note-edit"; viewBtn.textContent = "View";
+      viewBtn.addEventListener("click", function () { openSessionView(s.id); });
       var editBtn = document.createElement("button");
       editBtn.type = "button"; editBtn.className = "sx__note-edit"; editBtn.textContent = "Edit";
       editBtn.addEventListener("click", function () { openEditor(s.id); });
-      head.appendChild(editBtn);
+      acts.appendChild(viewBtn); acts.appendChild(editBtn); head.appendChild(acts);
       card.appendChild(head);
 
       // Body: attendees on the left, notes + next steps on the right.
@@ -725,7 +743,11 @@
     $("sessionsTable").hidden = list.length === 0;
     list.forEach(function (s) {
       var tr = document.createElement("tr");
-      tr.appendChild(td(s.name || "(untitled)"));
+      var nameCell = document.createElement("td");
+      var link = document.createElement("button"); link.type = "button"; link.className = "sx__link";
+      link.textContent = s.name || "(untitled)";
+      link.addEventListener("click", function () { openSessionView(s.id); });
+      nameCell.appendChild(link); tr.appendChild(nameCell);
       tr.appendChild(td(s.status || "—"));
       tr.appendChild(td(s.sessionType || "—"));
       tr.appendChild(td(fmtWhen(s.dateStart)));
@@ -737,6 +759,106 @@
     });
   }
   function td(text) { var c = document.createElement("td"); c.textContent = text; return c; }
+
+  // --- read-only session view (with prev/next through the record's sessions) ---
+  function openSessionView(sessionId) {
+    currentViewSessions = (currentDetail && currentDetail.sessions) || [];
+    currentViewIndex = -1;
+    for (var i = 0; i < currentViewSessions.length; i++) {
+      if (currentViewSessions[i].id === sessionId) { currentViewIndex = i; break; }
+    }
+    if (currentViewIndex < 0) {  // not in the list (shouldn't happen) — view it alone
+      currentViewSessions = [{ id: sessionId }]; currentViewIndex = 0;
+    }
+    showSessionView();
+    loadSessionView();
+  }
+
+  function stepSessionView(delta) {
+    var i = currentViewIndex + delta;
+    if (i < 0 || i >= currentViewSessions.length) return;
+    currentViewIndex = i; loadSessionView();
+  }
+
+  async function loadSessionView() {
+    var row = currentViewSessions[currentViewIndex];
+    hide($("viewNotice"));
+    $("viewPrevBtn").disabled = true; $("viewNextBtn").disabled = true;
+    try {
+      var s = await api("/sessions/" + encodeURIComponent(row.id));
+      renderSessionView(s);
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      notice("viewNotice", e.message, "error");
+    }
+  }
+
+  function renderSessionView(s) {
+    $("viewTitle").textContent = s.name || "(untitled session)";
+    // subline: date/time · type badge · status badge
+    var sub = $("viewSub"); sub.innerHTML = "";
+    if (s.dateStart) { var w = document.createElement("span"); w.className = "sx__vsub-when"; w.textContent = fmtWhen(s.dateStart); sub.appendChild(w); }
+    if (s.sessionType) sub.appendChild(tag(s.sessionType, "type"));
+    if (s.status) sub.appendChild(badge(s.status));
+    // position + nav button states
+    $("viewPos").textContent = currentViewSessions.length ? (currentViewIndex + 1) + " of " + currentViewSessions.length : "";
+    $("viewPrevBtn").disabled = currentViewIndex <= 0;
+    $("viewNextBtn").disabled = currentViewIndex < 0 || currentViewIndex >= currentViewSessions.length - 1;
+
+    var facts = $("viewFacts"); facts.innerHTML = "";
+    var blocks = $("viewBlocks"); blocks.innerHTML = "";
+    (fieldSpec || []).forEach(function (f) {
+      if (f.name === "name") return;  // shown in the header
+      var v = s[f.name];
+      if (f.type === "wysiwyg" || f.type === "text") {
+        if (v == null || String(v).trim() === "") return;  // skip empty long fields
+        blocks.appendChild(viewBlock(f.label, v, f.type, f.big));
+        return;
+      }
+      if (v == null || v === "" || (Array.isArray(v) && !v.length)) return;  // skip empty facts
+      facts.appendChild(f.name === "videoMeetingLink" ? viewLinkFact(f.label, v) : viewFact(f.label, v, f.type));
+    });
+    if (s.attendeeNames && s.attendeeNames.length) facts.appendChild(viewChipsFact("Attendees", s.attendeeNames));
+    $("viewFacts").hidden = facts.children.length === 0;
+  }
+
+  function viewFact(label, v, type) {
+    var row = document.createElement("div"); row.className = "sx__fact";
+    var l = document.createElement("span"); l.className = "sx__fact-l"; l.textContent = label;
+    var val = document.createElement("span"); val.className = "sx__fact-v";
+    if (type === "multiEnum" && Array.isArray(v)) { v.forEach(function (o) { var c = document.createElement("span"); c.className = "sx__chip"; c.textContent = o; val.appendChild(c); }); }
+    else if (type === "datetime") val.textContent = fmtWhen(v);
+    else if (type === "date") val.textContent = fmtDate(v);
+    else if (type === "bool") val.textContent = v ? "Yes" : "No";
+    else val.textContent = String(v);
+    row.appendChild(l); row.appendChild(val); return row;
+  }
+
+  function viewChipsFact(label, names) {
+    var row = document.createElement("div"); row.className = "sx__fact";
+    var l = document.createElement("span"); l.className = "sx__fact-l"; l.textContent = label;
+    var val = document.createElement("span"); val.className = "sx__fact-v";
+    names.forEach(function (n) { var c = document.createElement("span"); c.className = "sx__chip"; c.textContent = n; val.appendChild(c); });
+    row.appendChild(l); row.appendChild(val); return row;
+  }
+
+  function viewLinkFact(label, url) {
+    var row = document.createElement("div"); row.className = "sx__fact";
+    var l = document.createElement("span"); l.className = "sx__fact-l"; l.textContent = label;
+    var val = document.createElement("span"); val.className = "sx__fact-v";
+    var href = /^https?:\/\//i.test(url) ? url : "https://" + url;
+    var a = document.createElement("a"); a.href = href; a.target = "_blank"; a.rel = "noopener"; a.textContent = url;
+    val.appendChild(a); row.appendChild(l); row.appendChild(val); return row;
+  }
+
+  function viewBlock(label, value, type, big) {
+    var box = document.createElement("div"); box.className = "sx__block" + (big ? " sx__block--big" : "");
+    var h = document.createElement("h4"); h.className = "sx__block-h"; h.textContent = label;
+    var body = document.createElement("div"); body.className = "sx__block-body";
+    if (type === "wysiwyg") { body.innerHTML = sanitizeHtml(String(value)); }
+    else { body.className += " sx__pre"; body.textContent = String(value); }
+    box.appendChild(h); box.appendChild(body); return box;
+  }
 
   function renderCoMentors(d) {
     var sec = $("coMentorSection");
