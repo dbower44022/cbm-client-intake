@@ -537,7 +537,11 @@ async def create_session(
         created.get("id"), cfg.parent_entity, parent_id, payload.get("sessionType"),
         len(attendees or []),
     )
-    return await get_session(client, created["id"])
+    result = await get_session(client, created["id"])
+    if "videoMeetingLink" in payload:  # diagnose "video link doesn't save"
+        log.info("session %s videoMeetingLink sent=%r stored=%r",
+                 created.get("id"), payload.get("videoMeetingLink"), result.get("videoMeetingLink"))
+    return result
 
 
 async def update_session(
@@ -556,7 +560,11 @@ async def update_session(
         await client.update(SESSION, session_id, payload)
     if attendees is not None:
         await _sync_attendees(client, session_id, attendees)
-    return await get_session(client, session_id)
+    result = await get_session(client, session_id)
+    if "videoMeetingLink" in payload:  # diagnose "video link doesn't save"
+        log.info("session %s videoMeetingLink sent=%r stored=%r",
+                 session_id, payload.get("videoMeetingLink"), result.get("videoMeetingLink"))
+    return result
 
 
 async def add_comentor(
