@@ -505,62 +505,132 @@
     return (cur === "USD" || !cur ? "$" : cur + " ") + s;
   }
 
+  // Overview "Session notes" summary — the Session Summary Display Standard
+  // (v0.2). Two-zone cards (tinted header band by temporal state + white body),
+  // grouped Upcoming/Past, most-relevant-first, notes clamped to 4 lines.
   function renderNoteFeed(feed) {
     var box = $("noteFeed"); box.innerHTML = "";
-    $("notesCount").textContent = feed.length ? "(" + feed.length + ")" : "";
+    $("notesCount").textContent = feed.length ? "(" + feed.length + ")" : "";  // counts all
     $("noNotes").hidden = feed.length > 0;
-    feed.forEach(function (s) {
-      var card = document.createElement("div"); card.className = "sx__note";
-      var head = document.createElement("div"); head.className = "sx__note-head";
-      var when = document.createElement("span"); when.className = "sx__note-when"; when.textContent = fmtWhen(s.dateStart);
-      head.appendChild(when);
-      if (s.sessionType) { head.appendChild(tag(s.sessionType, "type")); }
-      if (s.status) { head.appendChild(tag(s.status, "status")); }
-      if (s.name) { var nm = document.createElement("span"); nm.className = "sx__note-name"; nm.textContent = s.name; head.appendChild(nm); }
-      var acts = document.createElement("span"); acts.className = "sx__note-acts";
-      var viewBtn = document.createElement("button");
-      viewBtn.type = "button"; viewBtn.className = "sx__note-edit"; viewBtn.textContent = "View";
-      viewBtn.addEventListener("click", function () { openSessionView(s.id); });
-      var editBtn = document.createElement("button");
-      editBtn.type = "button"; editBtn.className = "sx__note-edit"; editBtn.textContent = "Edit";
-      editBtn.addEventListener("click", function () { openEditor(s.id); });
-      acts.appendChild(viewBtn); acts.appendChild(editBtn); head.appendChild(acts);
-      card.appendChild(head);
+    var upcoming = [], past = [];
+    feed.forEach(function (s) { (isFutureSession(s) ? upcoming : past).push(s); });
+    upcoming.sort(function (a, b) { return cmpSessionDate(a, b); });    // soonest first
+    past.sort(function (a, b) { return cmpSessionDate(b, a); });        // most recent first
+    // Group + label only when the list actually mixes future and past, and one
+    // group has 3+ (the band tint already encodes the split at lower counts).
+    var labels = upcoming.length && past.length && (upcoming.length >= 3 || past.length >= 3);
+    if (upcoming.length) {
+      if (labels) box.appendChild(feedLabel("Upcoming"));
+      upcoming.forEach(function (s) { box.appendChild(sessionCard(s)); });
+    }
+    if (past.length) {
+      if (labels) box.appendChild(feedLabel("Past"));
+      past.forEach(function (s) { box.appendChild(sessionCard(s)); });
+    }
+  }
 
-      // Body: attendees on the left, notes + next steps on the right.
-      var main = document.createElement("div"); main.className = "sx__note-main";
-      var att = document.createElement("div"); att.className = "sx__note-att";
-      var atts = s.attendees || [];
-      var al = document.createElement("span"); al.className = "sx__note-att-l"; al.textContent = "Attendees";
-      att.appendChild(al);
-      if (atts.length) {
-        atts.forEach(function (n) { var a = document.createElement("span"); a.className = "sx__note-att-n"; a.textContent = n; att.appendChild(a); });
-      } else {
-        var none = document.createElement("span"); none.className = "sx__muted"; none.textContent = "—"; att.appendChild(none);
-      }
-      main.appendChild(att);
+  function feedLabel(text) {
+    var d = document.createElement("div"); d.className = "sx__feed-label"; d.textContent = text; return d;
+  }
 
-      var content = document.createElement("div"); content.className = "sx__note-content";
-      var hasNotes = s.notes && String(s.notes).trim() !== "";
-      var hasNext = s.nextSteps && String(s.nextSteps).trim() !== "";
-      if (hasNotes) {
-        var body = document.createElement("div"); body.className = "sx__note-body";
-        body.innerHTML = sanitizeHtml(String(s.notes)); content.appendChild(body);
-      }
-      if (hasNext) {
-        var ns = document.createElement("div"); ns.className = "sx__note-next";
-        var nl = document.createElement("span"); nl.className = "sx__note-next-l"; nl.textContent = "Next steps";
-        var nb = document.createElement("div"); nb.innerHTML = sanitizeHtml(String(s.nextSteps));
-        ns.appendChild(nl); ns.appendChild(nb); content.appendChild(ns);
-      }
-      if (!hasNotes && !hasNext) {
-        var em = document.createElement("p"); em.className = "sx__muted sx__note-empty"; em.textContent = "No notes recorded for this session.";
-        content.appendChild(em);
-      }
-      main.appendChild(content);
-      card.appendChild(main);
-      box.appendChild(card);
-    });
+  // One session-summary card per the standard.
+  function sessionCard(s) {
+    var scls = statusClass(s.status);
+    var future = isFutureSession(s);
+    var card = document.createElement("div"); card.className = "sx__scard";
+
+    var head = document.createElement("div"); head.className = "sx__scard-head " + (future ? "is-future" : "is-past");
+    var date = document.createElement("span"); date.className = "sx__scard-date";
+    date.textContent = fmtSessionDate(s.dateStart); date.title = s.dateStart || "";  // ISO in tooltip
+    head.appendChild(date);
+    if (s.sessionType) { var tc = document.createElement("span"); tc.className = "sx__chip-type"; tc.textContent = s.sessionType; head.appendChild(tc); }
+    if (s.status) { var sc = document.createElement("span"); sc.className = "sx__chip-status sx__chip-" + scls; sc.textContent = s.status; head.appendChild(sc); }
+    var custom = customSessionTitle(s.name);
+    if (custom) { var t = document.createElement("span"); t.className = "sx__scard-title"; t.textContent = custom; head.appendChild(t); }
+    var acts = document.createElement("span"); acts.className = "sx__scard-acts";
+    acts.appendChild(scardBtn("View", function () { openSessionView(s.id); }));
+    acts.appendChild(scardBtn("Edit", function () { openEditor(s.id); }));
+    head.appendChild(acts);
+    card.appendChild(head);
+
+    var body = document.createElement("div"); body.className = "sx__scard-body";
+    var att = document.createElement("div"); att.className = "sx__scard-att";
+    var al = document.createElement("div"); al.className = "sx__scard-att-l"; al.textContent = "Attendees"; att.appendChild(al);
+    var names = s.attendees || [];
+    if (names.length) { names.forEach(function (n) { var a = document.createElement("div"); a.className = "sx__scard-att-n"; a.textContent = n; att.appendChild(a); }); }
+    else { var none = document.createElement("div"); none.className = "sx__scard-att-n sx__muted"; none.textContent = "—"; att.appendChild(none); }
+    body.appendChild(att);
+
+    var notes = document.createElement("div"); notes.className = "sx__scard-notes";
+    var hasNotes = s.notes && String(s.notes).trim() !== "";
+    var hasNext = s.nextSteps && String(s.nextSteps).trim() !== "";
+    if (hasNotes) {
+      var nb = document.createElement("div"); nb.className = "sx__scard-notebody is-clamped";
+      nb.innerHTML = sanitizeHtml(String(s.notes)); notes.appendChild(nb);
+    } else {
+      var copy = emptyNoteCopy(scls);
+      if (copy) { var em = document.createElement("p"); em.className = "sx__scard-empty"; em.textContent = copy; notes.appendChild(em); }
+    }
+    if (hasNext) notes.appendChild(nextStepsCallout(s.nextSteps));
+    body.appendChild(notes);
+    card.appendChild(body);
+    return card;
+  }
+
+  function scardBtn(label, fn) {
+    var b = document.createElement("button"); b.type = "button"; b.className = "sx__scard-btn"; b.textContent = label;
+    b.addEventListener("click", fn); return b;
+  }
+  function nextStepsCallout(html) {
+    var box = document.createElement("div"); box.className = "sx__scallout";
+    var l = document.createElement("span"); l.className = "sx__scallout-l"; l.textContent = "Next steps";
+    var b = document.createElement("div"); b.className = "sx__scallout-b"; b.innerHTML = sanitizeHtml(String(html));
+    box.appendChild(l); box.appendChild(b); return box;
+  }
+  // Auto-generated titles look like "YYYY-MM-DD - <parent>" — not shown (they
+  // duplicate the date). A mentor's custom title is shown in the header.
+  function customSessionTitle(name) {
+    if (!name) return null;
+    return /^\d{4}-\d{2}-\d{2}\s*-\s*/.test(String(name)) ? null : name;
+  }
+  function emptyNoteCopy(cls) {
+    if (cls === "scheduled") return "Scheduled — notes are recorded when the session is held.";
+    if (cls === "cancelled" || cls === "noshow") return null;  // no empty-state copy
+    return "No notes recorded for this session.";              // completed / other
+  }
+
+  // --- session status + date helpers (Session Summary Display Standard) ---
+  function statusClass(status) {
+    var s = String(status || "").toLowerCase().replace(/[^a-z]/g, "");
+    if (s === "scheduled" || s === "planned") return "scheduled";
+    if (s === "completed" || s === "held" || s === "done") return "completed";
+    if (s === "cancelled" || s === "canceled") return "cancelled";
+    if (s === "noshow") return "noshow";
+    return "other";
+  }
+  // Parse the CRM's "YYYY-MM-DD HH:MM:SS" as wall-clock (no tz shift — the app
+  // shows/sends times as-is, matching the editor).
+  function parseNaive(v) {
+    if (!v) return null;
+    var m = String(v).replace("T", " ").match(/^(\d{4})-(\d{2})-(\d{2})(?:[ ](\d{2}):(\d{2}))?/);
+    return m ? new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0)) : null;
+  }
+  function isFutureSession(s) {
+    if (statusClass(s.status) !== "scheduled") return false;
+    var d = parseNaive(s.dateStart);
+    return d != null && d.getTime() >= Date.now();
+  }
+  function cmpSessionDate(a, b) {
+    var da = parseNaive(a.dateStart), db = parseNaive(b.dateStart);
+    return (da ? da.getTime() : 0) - (db ? db.getTime() : 0);
+  }
+  // "Weekday, Month D — h:mm AM/PM"; year appended only when not the current year.
+  function fmtSessionDate(v) {
+    var d = parseNaive(v); if (!d) return "—";
+    var opts = { weekday: "long", month: "long", day: "numeric" };
+    if (d.getFullYear() !== new Date().getFullYear()) opts.year = "numeric";
+    return d.toLocaleDateString(undefined, opts) + " — " +
+           d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
   }
 
   function tag(text, kind) {
@@ -999,7 +1069,7 @@
     } else {
       currentSession = {
         id: null, attendees: [],
-        status: "Planned",
+        status: "Scheduled",
         sessionType: (config && config.defaultSessionType) || "",
         name: defaultSessionName(),
       };

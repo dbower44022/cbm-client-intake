@@ -387,7 +387,7 @@ async def test_create_session_sets_parent_and_defaults_and_whitelists():
     assert entity == "CSession"
     assert payload["partnerSessionId"] == "P1"
     assert payload["sessionType"] == "Partner Session"  # domain default
-    assert payload["status"] == "Planned"               # default
+    assert payload["status"] == "Scheduled"             # default
     assert payload["name"] == "Check-in" and payload["sessionNotes"] == "<p>notes</p>"
     assert "id" not in payload and "bogus" not in payload
     # attendees are attached via the relationship endpoint, not the create payload

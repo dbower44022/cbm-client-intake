@@ -523,7 +523,7 @@ async def create_session(
     payload = _session_payload(changes)
     payload[cfg.session_parent_fk] = parent_id
     payload.setdefault("sessionType", cfg.default_session_type)
-    payload.setdefault("status", "Planned")
+    payload.setdefault("status", "Scheduled")  # CRM status vocabulary: Scheduled/Completed/Cancelled/No Show
     if owner_user_id:
         payload.setdefault("assignedUserId", owner_user_id)
         payload.setdefault("assignedUsersIds", [owner_user_id])

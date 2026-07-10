@@ -4,6 +4,23 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.32.7] — 2026-07-09
+
+### Changed
+- **Overview "Session notes" — Session Summary Display Standard (v0.2).** Each
+  session renders as a two-zone card: a tinted **header band** (pale blue for a
+  Scheduled *future* session, neutral gray for past/Completed/Cancelled/No Show)
+  carrying the date, type & status chips, and View/Edit; and a body with an
+  **attendees** column beside the notes (clamped to 4 lines) with the gold
+  **Next steps** callout. Status chips: Scheduled (blue) / Completed (green) /
+  Cancelled (gray) / No Show (red) — state is never color-only. Dates read
+  "Weekday, Month D — h:mm AM/PM" (year omitted in the current year; ISO in the
+  hover tooltip). The feed groups **Upcoming** (soonest first) then **Past** (most
+  recent first), with labels when a group has 3+. A Scheduled session shows
+  "Scheduled — notes are recorded when the session is held." instead of "no notes."
+- New sessions default to status **Scheduled** (the CRM's Scheduled/Completed/
+  Cancelled/No Show vocabulary).
+
 ## [0.32.6] — 2026-07-09
 
 ### Changed

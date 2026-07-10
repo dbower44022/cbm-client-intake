@@ -256,39 +256,67 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
 }
 .sx__peek:hover { text-decoration-style: solid; }
 
-/* Aggregated session-notes feed. */
 .sx__notes-head { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.5rem; }
 .sx__notes-head h3 { margin: 0; }
-.sx__feed { display: grid; gap: 0.7rem; }
-.sx__note {
-  border: 1px solid var(--cbm-border, #e3e7ec); border-radius: var(--cbm-radius, 8px);
-  background: var(--cbm-surface, #fff); padding: 0.7rem 0.9rem;
-}
-.sx__note-head { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.4rem; }
-.sx__note-when { font-weight: 700; color: var(--cbm-navy, #123); font-size: 0.9rem; }
-.sx__note-name { color: var(--cbm-slate-700, #667); font-size: var(--cbm-text-sm, 0.85rem); }
-.sx__note-acts { margin-left: auto; display: inline-flex; gap: 0.35rem; }
-.sx__note-edit {
-  background: none; border: 1px solid var(--cbm-border, #d7dce2);
-  border-radius: 5px; padding: 0.12rem 0.55rem; cursor: pointer; font: inherit; font-size: 0.8rem; color: var(--cbm-slate-700, #556);
-}
-.sx__note-edit:hover { background: #f2f5f9; }
+/* Type/status tags reused by the read-only session view header. */
 .sx__tag { display: inline-block; padding: 0.08rem 0.45rem; border-radius: 4px; font-size: 0.74rem; font-weight: 600; }
 .sx__tag--type { background: #eaf1fb; color: #1a4f93; }
 .sx__tag--status { background: #eef1f6; color: #4a5a6e; }
-/* Note body: attendees rail on the left, notes + next steps on the right. */
-.sx__note-main { display: grid; grid-template-columns: 9.5rem 1fr; gap: 1rem; }
-@media (max-width: 600px) { .sx__note-main { grid-template-columns: 1fr; gap: 0.5rem; } }
-.sx__note-att { display: flex; flex-direction: column; gap: 0.15rem; border-right: 1px solid var(--cbm-border, #eef1f4); padding-right: 0.8rem; }
-@media (max-width: 600px) { .sx__note-att { border-right: none; border-bottom: 1px solid var(--cbm-border, #eef1f4); padding: 0 0 0.4rem; flex-flow: row wrap; gap: 0.35rem; align-items: baseline; } }
-.sx__note-att-l { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--cbm-slate-700, #667); font-weight: 700; }
-.sx__note-att-n { font-size: var(--cbm-text-sm, 0.85rem); font-weight: 500; }
-.sx__note-content { min-width: 0; }
-.sx__note-body { font-size: var(--cbm-text-sm, 0.9rem); line-height: 1.45; overflow-wrap: anywhere; }
-.sx__note-body :first-child { margin-top: 0; } .sx__note-body :last-child { margin-bottom: 0; }
-.sx__note-next { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--cbm-border, #e3e7ec); font-size: var(--cbm-text-sm, 0.88rem); }
-.sx__note-next-l { display: block; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--cbm-slate-700, #667); margin-bottom: 0.15rem; }
-.sx__note-empty { margin: 0; font-style: italic; }
+
+/* === Session Summary Display Standard (v0.2) — Overview "Session notes" ===== */
+/* Semantic tokens bound to the existing palette. */
+:root {
+  --session-header-past-bg: #f4f6f9;         /* light neutral, one step below white */
+  --session-header-future-bg: #eef5fe;       /* pale blue (the "Next session" tint) */
+  --session-accent-text: var(--cbm-navy, #173B60);
+  --session-callout-bg: #fffdf7;             /* gold callout family (Engagement Notes) */
+  --session-callout-border: var(--cbm-gold, #CB963B);
+  --session-border: var(--cbm-border, #e3e7ec);
+}
+.sx__feed { display: grid; gap: 8px; }       /* stack gap per §8 */
+.sx__feed-label { font-size: 12px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; color: var(--cbm-slate-700, #556); margin: 0.35rem 0 -0.15rem; }
+
+.sx__scard { background: #fff; border: 1px solid var(--session-border); border-radius: 8px; overflow: hidden; }
+/* Header band — the card-boundary + temporal-state signal. */
+.sx__scard-head { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; padding: 8px 14px; }
+.sx__scard-head.is-future { background: var(--session-header-future-bg); }
+.sx__scard-head.is-past { background: var(--session-header-past-bg); border-bottom: 1px solid var(--session-border); }
+.sx__scard-date { font-size: 15px; font-weight: 500; }
+.sx__scard-head.is-future .sx__scard-date { color: var(--session-accent-text); }
+.sx__scard-head.is-past .sx__scard-date { color: var(--cbm-slate-900, #1E293B); }
+.sx__scard-title { font-size: 13px; color: var(--cbm-slate-700, #556); }
+.sx__scard-acts { margin-left: auto; display: inline-flex; gap: 0.35rem; }
+.sx__scard-btn { font: inherit; font-size: 12px; line-height: 1.3; padding: 3px 10px; border: 1px solid var(--session-border); background: #fff; border-radius: 5px; cursor: pointer; color: var(--cbm-slate-700, #556); }
+.sx__scard-btn:hover { background: #f2f5f9; }
+/* Chips (state never carried by color alone — the text names the status). */
+.sx__chip-type { font-size: 11px; padding: 0.05rem 0.4rem; border: 1px solid var(--session-border); border-radius: 4px; color: var(--cbm-slate-700, #556); background: transparent; }
+.sx__chip-status { font-size: 11px; font-weight: 500; padding: 0.08rem 0.5rem; border-radius: 999px; }
+.sx__chip-scheduled { background: #eaf1fb; color: #1a4f93; }
+.sx__chip-completed { background: #e9f7ef; color: #1e6b3f; }
+.sx__chip-cancelled { background: #eef1f6; color: #4a5a6e; }
+.sx__chip-noshow { background: #fdecea; color: #a12; }
+.sx__chip-other { background: #eef1f6; color: #4a5a6e; }
+/* Body: attendees (fixed) | notes (fluid). */
+.sx__scard-body { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 14px; padding: 10px 14px; }
+.sx__scard-att-l { font-size: 11px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; color: var(--cbm-slate-700, #667); margin-bottom: 2px; }
+.sx__scard-att-n { font-size: 13px; color: var(--cbm-slate-700, #556); padding: 1px 0; }
+.sx__scard-notes { border-left: 1px solid var(--session-border); padding-left: 14px; min-width: 0; }
+.sx__scard-notebody { font-size: 13px; line-height: 1.6; color: var(--cbm-slate-900, #1E293B); overflow-wrap: anywhere; }
+.sx__scard-notebody p { margin: 0 0 10px; } .sx__scard-notebody :last-child { margin-bottom: 0; } .sx__scard-notebody :first-child { margin-top: 0; }
+.sx__scard-notebody.is-clamped { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.sx__scard-empty { font-size: 13px; font-style: italic; color: var(--cbm-slate-700, #556); margin: 0; }
+/* Next-steps callout — same family as the Engagement Notes callout. */
+.sx__scallout { background: var(--session-callout-bg); border-left: 3px solid var(--session-callout-border); padding: 6px 10px; margin-top: 10px; }
+.sx__scallout-l { display: block; font-size: 11px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; color: #8a6d1f; margin-bottom: 2px; }
+.sx__scallout-b { font-size: 13px; line-height: 1.6; color: var(--cbm-slate-900, #1E293B); overflow-wrap: anywhere; }
+.sx__scallout-b p { margin: 0 0 6px; } .sx__scallout-b :last-child { margin-bottom: 0; } .sx__scallout-b :first-child { margin-top: 0; }
+/* Responsive: header wraps, body single column, attendees inline. */
+@media (max-width: 560px) {
+  .sx__scard-body { grid-template-columns: 1fr; gap: 6px; }
+  .sx__scard-att { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.35rem; }
+  .sx__scard-att-l::after { content: ":"; }
+  .sx__scard-notes { border-left: none; padding-left: 0; }
+}
 
 /* === Pop-up detail modal ================================================= */
 .sx__modal { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-start; justify-content: center; padding: 4vh 1rem; }
