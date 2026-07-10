@@ -348,24 +348,36 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
 }
 .sx__peek-empty { padding: 0.4rem 1rem; }
 
-/* === Read-only session view =============================================== */
+/* === Session detail View (Display Standard §12) =========================== */
+/* §12.1 navigation row (unchanged from the prior build). */
 .sx__viewnav { display: inline-flex; align-items: center; gap: 0.5rem; }
 .sx__navbtn { padding: 0.35rem 0.7rem; font-size: 1.1rem; line-height: 1; }
 .sx__navbtn:disabled { opacity: 0.4; cursor: default; }
 .sx__viewpos { font-size: var(--cbm-text-sm, 0.85rem); color: var(--cbm-slate-700, #556); min-width: 4.5rem; text-align: center; font-variant-numeric: tabular-nums; }
-.sx__vhead { margin: 0.25rem 0 1rem; }
-.sx__vhead .sx__detail-name { margin: 0 0 0.35rem; }
-.sx__vsub { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
-.sx__vsub-when { font-weight: 700; color: var(--cbm-navy, #123); font-variant-numeric: tabular-nums; }
-/* Compact multi-column facts card. */
-.sx__vfacts {
-  border: 1px solid var(--cbm-border, #e3e7ec); border-radius: var(--cbm-radius, 8px);
-  background: var(--cbm-surface, #fff); display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr)); gap: 0 1.5rem; padding: 0.5rem 1rem;
-}
-.sx__vfacts .sx__fact { grid-template-columns: 10rem 1fr; border-bottom: 1px solid #f0f3f7; }
-#viewBlocks { display: grid; gap: 1rem; margin-top: 1rem; }
-/* The important note blocks: prominent. */
-.sx__block--big { border-left-width: 4px; }
-.sx__block--big .sx__block-h { font-size: 0.95rem; color: var(--cbm-navy, #123); }
-.sx__block--big .sx__block-body { font-size: 1rem; line-height: 1.55; }
+
+#viewBody { display: grid; gap: 1rem; }
+/* §12.2 summary header card — card anatomy at page scale (reuses the band tints). */
+.sx__vcard { background: #fff; border: 1px solid var(--session-border); border-radius: 8px; overflow: hidden; }
+.sx__vband { padding: 12px 16px; }
+.sx__vband.is-future { background: var(--session-header-future-bg); }
+.sx__vband.is-past { background: var(--session-header-past-bg); border-bottom: 1px solid var(--session-border); }
+.sx__vband-1 { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.sx__vband-date { font-size: 18px; font-weight: 500; color: var(--session-accent-text); }
+.sx__vband.is-past .sx__vband-date { color: var(--cbm-slate-900, #1E293B); }
+.sx__vband-2 { font-size: 13px; color: var(--cbm-slate-700, #556); margin-top: 4px; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.sx__vband-title { font-weight: 600; color: var(--cbm-slate-900, #1E293B); }
+.sx__vgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px 20px; padding: 12px 16px; }
+.sx__vkv--span { grid-column: 1 / -1; }
+.sx__vkv-l { font-size: 11px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; color: var(--cbm-slate-700, #667); margin-bottom: 2px; }
+.sx__vkv-v { font-size: 13px; color: var(--cbm-slate-900, #1E293B); display: flex; flex-wrap: wrap; gap: 0.25rem; align-items: center; overflow-wrap: anywhere; }
+/* §12.3 content zones. */
+.sx__vzone { background: #fff; border: 1px solid var(--session-border); border-radius: 8px; padding: 12px 16px; }
+.sx__vzone-l { font-size: 12px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; color: var(--cbm-slate-700, #556); margin-bottom: 6px; }
+.sx__vzone-body { font-size: 14px; line-height: 1.7; color: var(--cbm-slate-900, #1E293B); overflow-wrap: anywhere; }
+.sx__vzone-body p { margin: 0 0 10px; } .sx__vzone-body :last-child { margin-bottom: 0; } .sx__vzone-body :first-child { margin-top: 0; }
+.sx__vzone-empty { font-size: 13px; font-style: italic; color: var(--cbm-slate-700, #556); margin: 0; }
+/* Action items — gold callout, same family as Engagement Notes (shared tokens). */
+.sx__vcallout { background: var(--session-callout-bg); border-left: 3px solid var(--session-callout-border); padding: 10px 14px; }
+.sx__vcallout-l { font-size: 12px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; color: #8a6d1f; margin-bottom: 4px; }
+.sx__vcallout-b { font-size: 14px; line-height: 1.7; color: var(--cbm-slate-900, #1E293B); overflow-wrap: anywhere; }
+.sx__vcallout-b p { margin: 0 0 8px; } .sx__vcallout-b :last-child { margin-bottom: 0; } .sx__vcallout-b :first-child { margin-top: 0; }

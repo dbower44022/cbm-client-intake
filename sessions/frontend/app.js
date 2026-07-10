@@ -944,71 +944,112 @@
     }
   }
 
+  // Session detail View (Display Standard §12): summary header card (tinted band
+  // per §4 + key-value grid) → Session notes → Action items callout. Transcript is
+  // omitted (§12.5 — the CSST long-text field does not exist yet). Reuses the
+  // summary card's status-chip and band-tint tokens; the nav row is untouched.
   function renderSessionView(s) {
-    $("viewTitle").textContent = s.name || "(untitled session)";
-    // subline: date/time · type badge · status badge
-    var sub = $("viewSub"); sub.innerHTML = "";
-    if (s.dateStart) { var w = document.createElement("span"); w.className = "sx__vsub-when"; w.textContent = fmtWhen(s.dateStart); sub.appendChild(w); }
-    if (s.sessionType) sub.appendChild(tag(s.sessionType, "type"));
-    if (s.status) sub.appendChild(badge(s.status));
-    // position + nav button states
+    var scls = statusClass(s.status);
+    var future = isFutureSession(s);
+    // §12.1 nav row (unchanged) — just position + button state.
     $("viewPos").textContent = currentViewSessions.length ? (currentViewIndex + 1) + " of " + currentViewSessions.length : "";
     $("viewPrevBtn").disabled = currentViewIndex <= 0;
     $("viewNextBtn").disabled = currentViewIndex < 0 || currentViewIndex >= currentViewSessions.length - 1;
 
-    var facts = $("viewFacts"); facts.innerHTML = "";
-    var blocks = $("viewBlocks"); blocks.innerHTML = "";
-    (fieldSpec || []).forEach(function (f) {
-      if (f.name === "name") return;  // shown in the header
-      var v = s[f.name];
-      if (f.type === "wysiwyg" || f.type === "text") {
-        if (v == null || String(v).trim() === "") return;  // skip empty long fields
-        blocks.appendChild(viewBlock(f.label, v, f.type, f.big));
-        return;
-      }
-      if (v == null || v === "" || (Array.isArray(v) && !v.length)) return;  // skip empty facts
-      facts.appendChild(f.name === "videoMeetingLink" ? viewLinkFact(f.label, v) : viewFact(f.label, v, f.type));
-    });
-    if (s.attendeeNames && s.attendeeNames.length) facts.appendChild(viewChipsFact("Attendees", s.attendeeNames));
-    $("viewFacts").hidden = facts.children.length === 0;
+    var body = $("viewBody"); body.innerHTML = "";
+
+    // === §12.2 Summary header card ===
+    var hcard = document.createElement("div"); hcard.className = "sx__vcard";
+    var band = document.createElement("div"); band.className = "sx__vband " + (future ? "is-future" : "is-past");
+    var l1 = document.createElement("div"); l1.className = "sx__vband-1";
+    var date = document.createElement("span"); date.className = "sx__vband-date";
+    date.textContent = fmtSessionDate(s.dateStart); date.title = s.dateStart || "";  // ISO in tooltip
+    l1.appendChild(date);
+    if (s.status) l1.appendChild(vChip("status", s.status, scls));
+    if (s.sessionType) l1.appendChild(vChip("type", s.sessionType));
+    band.appendChild(l1);
+    var l2 = document.createElement("div"); l2.className = "sx__vband-2";
+    var custom = customSessionTitle(s.name);  // auto-generated titles never shown
+    if (custom) { var ct = document.createElement("span"); ct.className = "sx__vband-title"; ct.textContent = custom; l2.appendChild(ct); }
+    var eng = document.createElement("span"); eng.textContent = engagementLine(); l2.appendChild(eng);
+    band.appendChild(l2);
+    hcard.appendChild(band);
+
+    var grid = document.createElement("div"); grid.className = "sx__vgrid";
+    addKV(grid, "Meeting type", s.meetingType, "multiEnum");
+    addKV(grid, "Location", locationValue(s), "text");
+    addKV(grid, "Video meeting link", s.videoMeetingLink, "link");
+    addKV(grid, "Next session", s.nextSessionDateTime, "datetime");
+    // §12.4: No Show uses "Expected attendees".
+    addKV(grid, scls === "noshow" ? "Expected attendees" : "Attendees", s.attendeeNames || [], "chips", true);
+    hcard.appendChild(grid);
+    body.appendChild(hcard);
+
+    // === §12.3.1 Session notes (full-width reading block; no clamp) ===
+    var notesZone = vZone("SESSION NOTES");
+    if (s.notes && String(s.notes).trim() !== "") {
+      var nb = document.createElement("div"); nb.className = "sx__vzone-body"; nb.innerHTML = sanitizeHtml(String(s.notes));
+      notesZone.appendChild(nb);
+    } else {
+      var copy = emptyNoteCopy(scls);  // scheduled/completed get copy; cancelled/noshow get none
+      if (copy) { var em = document.createElement("p"); em.className = "sx__vzone-empty"; em.textContent = copy; notesZone.appendChild(em); }
+    }
+    body.appendChild(notesZone);
+
+    // === §12.3.2 Action items / next steps (gold callout; only if present) ===
+    if (s.nextSteps && String(s.nextSteps).trim() !== "") {
+      var cal = document.createElement("div"); cal.className = "sx__vcallout";
+      var cl = document.createElement("div"); cl.className = "sx__vcallout-l"; cl.textContent = "ACTION ITEMS / NEXT STEPS";
+      var cb = document.createElement("div"); cb.className = "sx__vcallout-b"; cb.innerHTML = sanitizeHtml(String(s.nextSteps));
+      cal.appendChild(cl); cal.appendChild(cb); body.appendChild(cal);
+    }
+
+    // === §12.3.3 Transcript — OMITTED (§12.5: no transcript field on CSession) ===
   }
 
-  function viewFact(label, v, type) {
-    var row = document.createElement("div"); row.className = "sx__fact";
-    var l = document.createElement("span"); l.className = "sx__fact-l"; l.textContent = label;
-    var val = document.createElement("span"); val.className = "sx__fact-v";
-    if (type === "multiEnum" && Array.isArray(v)) { v.forEach(function (o) { var c = document.createElement("span"); c.className = "sx__chip"; c.textContent = o; val.appendChild(c); }); }
-    else if (type === "datetime") val.textContent = fmtWhen(v);
-    else if (type === "date") val.textContent = fmtDate(v);
-    else if (type === "bool") val.textContent = v ? "Yes" : "No";
-    else val.textContent = String(v);
-    row.appendChild(l); row.appendChild(val); return row;
+  // Reuse the summary card's chip classes/tokens (no new colors).
+  function vChip(kind, text, cls) {
+    var c = document.createElement("span");
+    c.className = kind === "status" ? "sx__chip-status sx__chip-" + (cls || statusClass(text)) : "sx__chip-type";
+    c.textContent = text; return c;
   }
-
-  function viewChipsFact(label, names) {
-    var row = document.createElement("div"); row.className = "sx__fact";
-    var l = document.createElement("span"); l.className = "sx__fact-l"; l.textContent = label;
-    var val = document.createElement("span"); val.className = "sx__fact-v";
-    names.forEach(function (n) { var c = document.createElement("span"); c.className = "sx__chip"; c.textContent = n; val.appendChild(c); });
-    row.appendChild(l); row.appendChild(val); return row;
+  function vZone(label) {
+    var z = document.createElement("div"); z.className = "sx__vzone";
+    var l = document.createElement("div"); l.className = "sx__vzone-l"; l.textContent = label; z.appendChild(l); return z;
   }
-
-  function viewLinkFact(label, url) {
-    var row = document.createElement("div"); row.className = "sx__fact";
-    var l = document.createElement("span"); l.className = "sx__fact-l"; l.textContent = label;
-    var val = document.createElement("span"); val.className = "sx__fact-v";
-    var href = /^https?:\/\//i.test(url) ? url : "https://" + url;
-    var a = document.createElement("a"); a.href = href; a.target = "_blank"; a.rel = "noopener"; a.textContent = url;
-    val.appendChild(a); row.appendChild(l); row.appendChild(val); return row;
+  // "{parent} — {primary contact} {parentLabel}" (e.g. "Agape W8 Loss — James Koran engagement").
+  function engagementLine() {
+    var d = currentDetail; if (!d) return "";
+    var pieces = [];
+    if (d.name) pieces.push(d.name);
+    var pc = viewPrimaryContactName(); if (pc) pieces.push(pc);
+    var line = pieces.join(" — ");
+    var label = (d.parentLabel || "").toLowerCase();
+    return label ? (line + " " + label).trim() : line;
   }
-
-  function viewBlock(label, value, type, big) {
-    var box = document.createElement("div"); box.className = "sx__block" + (big ? " sx__block--big" : "");
-    var h = document.createElement("h4"); h.className = "sx__block-h"; h.textContent = label;
-    var body = document.createElement("div"); body.className = "sx__block-body";
-    if (type === "wysiwyg") { body.innerHTML = sanitizeHtml(String(value)); }
-    else { body.className += " sx__pre"; body.textContent = String(value); }
-    box.appendChild(h); box.appendChild(body); return box;
+  function viewPrimaryContactName() {
+    var d = currentDetail; if (!d) return null;
+    var list = d.contacts || [];
+    for (var i = 0; i < list.length; i++) { if (list[i].id === d.primaryContactId) return list[i].name; }
+    return null;
+  }
+  function locationValue(s) {
+    return [s.meetingLocationType, s.locationDetails].filter(function (x) { return x && String(x).trim(); }).join(" — ");
+  }
+  // A key-value grid cell; empty values are omitted entirely (no empty boxes).
+  function addKV(grid, label, value, type, span) {
+    if (value == null || value === "" || (Array.isArray(value) && !value.length)) return;
+    var cell = document.createElement("div"); cell.className = "sx__vkv" + (span ? " sx__vkv--span" : "");
+    var l = document.createElement("div"); l.className = "sx__vkv-l"; l.textContent = label;
+    var v = document.createElement("div"); v.className = "sx__vkv-v";
+    if ((type === "multiEnum" || type === "chips") && Array.isArray(value)) {
+      value.forEach(function (o) { var c = document.createElement("span"); c.className = "sx__chip"; c.textContent = o; v.appendChild(c); });
+    } else if (type === "datetime") { v.textContent = fmtSessionDate(value); v.title = value || ""; }
+    else if (type === "link") {
+      var href = /^https?:\/\//i.test(value) ? value : "https://" + value;
+      var a = document.createElement("a"); a.href = href; a.target = "_blank"; a.rel = "noopener"; a.textContent = value; v.appendChild(a);
+    } else { v.textContent = String(value); }
+    cell.appendChild(l); cell.appendChild(v); grid.appendChild(cell);
   }
 
   function renderCoMentors(d) {

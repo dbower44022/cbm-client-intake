@@ -4,6 +4,22 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.32.10] — 2026-07-10
+
+### Changed
+- **Session detail View redesigned to Display Standard §12.** The page title +
+  metadata strip become a **summary header card** — tinted band (per-status, reusing
+  the summary card's band/chip tokens) with the humanized date, status & type chips,
+  and the engagement line, over an auto-fit **key-value grid** (meeting type,
+  location, video link, next session, attendees). **Session Notes** render as a
+  full-width reading block (no clamp); **Action items / next steps** as the gold
+  callout. Per-status variants per §12.4 (No Show → "Expected attendees", omitted
+  action-items/transcript boxes rather than empty ones). The Back / ‹ N of M › /
+  Edit navigation row is unchanged. Auto-generated session titles never appear.
+- **Transcript zone omitted (§12.5):** `CSession` has no transcript long-text field
+  yet (documented as unbuilt `sessionTranscription`), so the transcript section is
+  not rendered — no stub — until the CRM field lands.
+
 ## [0.32.9] — 2026-07-09
 
 ### Changed
