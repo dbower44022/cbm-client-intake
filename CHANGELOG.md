@@ -4,6 +4,31 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.32.12] — 2026-07-10
+
+### Changed
+- **Details tab redesigned: per-panel editing + summary view (no field grids).**
+  The single page-global Edit / Save / Cancel bar is gone; each panel — **Engagement**
+  (new, shown first), **Company**, **Client Business Profile**, and each **Contact** —
+  now carries its own **Edit** button that flips only that panel into a field-level
+  form with its own **Save changes** / **Cancel** (saves write through per entity;
+  on a 403/error the edit view stays open and the reason shows inline).
+- **View mode composes fields into readable, directory-style blocks** instead of
+  label/value grids: a **Contact** reads like a directory entry (salutation + name,
+  preferred name in parens, address, phone, `mailto:` email; a secondary line for
+  contact type / preferred method / notification, and the privacy/terms/code-of-conduct
+  flags surfaced **only when not accepted**); **Company** reads letterhead-style
+  (billing address block + phone + website, then a prose line composing
+  organization type / stage / industry, account facts, and a shipping line only when
+  it differs from billing); **Client Business Profile** as grouped structure/financial
+  summary lines, the client's description quoted, with certifications and funding as
+  badge rows; **Engagement** as a status-pill header + key dates / mentor / cadence /
+  session count. Empty and false fields are hidden in view mode (except the three
+  acceptance flags). Edit mode keeps the full field-level form.
+- A new **Engagement** panel (mentor domain) / profile-first ordering (partner/sponsor)
+  leads the Details tab; the engagement's mentor / assigned users / program are read
+  as display-only extras alongside the editable scalar fields.
+
 ## [0.32.11] — 2026-07-10
 
 ### Added

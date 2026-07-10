@@ -74,20 +74,35 @@ def _field_spec(meta_fields: dict[str, Any]) -> list[dict[str, Any]]:
     return spec
 
 
-def _select_for(spec: list[dict[str, Any]], raw: dict[str, Any]) -> str:
+# Extra display attributes (link names etc., not in the editable field spec) read
+# so the frontend can compose the view-mode summaries — e.g. the engagement's
+# mentor. Scalar fields (addresses, website, salutation) are already in the spec.
+_DISPLAY_EXTRA: dict[str, tuple[str, ...]] = {
+    "CEngagement": ("mentorProfileName", "assignedUsersNames", "programName"),
+}
+
+
+def _select_for(spec: list[dict[str, Any]], raw: dict[str, Any], extra: tuple[str, ...] = ()) -> str:
     """Field select for a record read — the shown fields plus the ownership fields
-    (only those that exist on the entity, to avoid a bad-select 400)."""
+    (only those that exist on the entity, to avoid a bad-select 400) plus any
+    display-only extras that exist on the entity."""
     fields = ["id", "name"]
     if "assignedUser" in raw:
         fields.append("assignedUserId")
     if "assignedUsers" in raw:
         fields.append("assignedUsersIds")
     fields += [f["name"] for f in spec]
+    # extras: keep only those whose base link/field exists on the entity.
+    for attr in extra:
+        base = attr[:-4] if attr.endswith("Name") else (attr[:-5] if attr.endswith("Names") else attr)
+        if attr in raw or base in raw:
+            fields.append(attr)
     return ",".join(dict.fromkeys(fields))
 
 
 def _section(
-    title: str, entity: str, rec: dict[str, Any], spec: list[dict[str, Any]], editable: bool
+    title: str, entity: str, rec: dict[str, Any], spec: list[dict[str, Any]],
+    editable: bool, extra: tuple[str, ...] = (),
 ) -> dict[str, Any]:
     fields = []
     for f in spec:
@@ -95,9 +110,13 @@ def _section(
         if value in (None, "", []) and not f["editable"]:
             continue  # hide empty read-only fields; keep empty editable ones
         fields.append({**f, "value": value})
+    # A flat value map (all spec fields + display extras) for the summary composer.
+    values = {f["name"]: rec.get(f["name"]) for f in spec}
+    for attr in extra:
+        values[attr] = rec.get(attr)
     return {
         "title": title, "entity": entity, "id": rec.get("id"),
-        "name": rec.get("name"), "editable": editable, "fields": fields,
+        "name": rec.get("name"), "editable": editable, "fields": fields, "values": values,
     }
 
 
@@ -167,19 +186,21 @@ async def build_details(
         if not rec_id:
             continue
         spec = await meta.spec(entity)
-        rec = await client.get(entity, rec_id, select=_select_for(spec, await meta.raw(entity)))
+        extra = _DISPLAY_EXTRA.get(entity, ())
+        rec = await client.get(entity, rec_id, select=_select_for(spec, await meta.raw(entity), extra))
         editable = _editable_for(levels.get(entity), rec, user_id)
-        sections.append(_section(title, entity, rec, spec, editable))
+        sections.append(_section(title, entity, rec, spec, editable, extra))
 
     # A section per related contact.
     contact_spec = await meta.spec(CONTACT)
+    contact_extra = _DISPLAY_EXTRA.get(CONTACT, ())
     contacts = await client.list_related(
         cfg.parent_entity, parent_id, cfg.parent_contacts_link,
-        select=_select_for(contact_spec, await meta.raw(CONTACT)), max_size=200,
+        select=_select_for(contact_spec, await meta.raw(CONTACT), contact_extra), max_size=200,
     )
     for c in contacts.get("list", []):
         editable = _editable_for(levels.get(CONTACT), c, user_id)
-        sections.append(_section(c.get("name") or "Contact", CONTACT, c, contact_spec, editable))
+        sections.append(_section(c.get("name") or "Contact", CONTACT, c, contact_spec, editable, contact_extra))
 
     return {"id": parent_id, "sections": sections}
 

@@ -332,7 +332,7 @@ async def test_build_details_has_company_profile_and_contact_sections():
     d = await details.build_details(PARTNER, fake, "P1")
     kinds = [(s["title"], s["entity"]) for s in d["sections"]]
     assert ("Company", "Account") in kinds
-    assert ("Partnership Profile", "CPartnerProfile") in kinds
+    assert ("Partnership", "CPartnerProfile") in kinds
     assert ("Pat", "Contact") in kinds
     # no ACL restrictions => every section editable
     assert all(s["editable"] for s in d["sections"])

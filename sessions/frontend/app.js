@@ -19,6 +19,7 @@
   var confirmOnSave = null, confirmOnDiscard = null;  // unsaved-changes dialog callbacks
   var currentDetails = null;// Details tab payload for the open record (lazy-loaded)
   var detailsSnapshot = {}; // "sectionIndex:field" -> JSON of value at edit-render
+  var detailsEditSet = {};  // sectionIndex -> true when that panel is in edit mode
   var currentViewSessions = []; // ordered session rows for the read-only view's prev/next
   var currentViewIndex = -1;    // position within currentViewSessions
   var search = "";
@@ -92,10 +93,7 @@
 
   // Detail tabs are built from the domain config (see buildDetailTabs, called
   // once config loads).
-  // Details tab (read view + Edit toggle).
-  $("detailsEditBtn").addEventListener("click", function () { renderDetails(true); });
-  $("detailsSaveBtn").addEventListener("click", function () { saveDetails(); });
-  $("detailsCancelBtn").addEventListener("click", function () { renderDetails(false); });
+  // Details tab uses per-panel Edit/Save/Cancel, wired per panel in renderDetails.
   // Pop-up detail modal.
   $("peekClose").addEventListener("click", closePeek);
   $("peekCopy").addEventListener("click", function () {
@@ -755,56 +753,98 @@
 
   async function loadDetails(id) {
     show($("detailsLoading")); $("detailsSections").innerHTML = ""; hide($("detailsNotice"));
-    $("detailsEditBtn").hidden = true; $("detailsEditActions").hidden = true;
+    detailsEditSet = {};
     try {
       var res = await api("/details/" + encodeURIComponent(id));
       res._for = id; currentDetails = res;
-      renderDetails(false);
+      renderDetails();
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }
       notice("detailsNotice", e.message, "error");
     } finally { hide($("detailsLoading")); }
   }
 
-  // editing=false => read-optimized view (no edit controls); true => whole page
-  // becomes the field editor with Save/Cancel.
-  function detailsAnyEditable() {
-    return ((currentDetails && currentDetails.sections) || []).some(function (s) { return s.editable; });
-  }
-
-  function renderDetails(editing) {
+  // Each section renders as a panel with its OWN Edit/Save/Cancel (no page-global
+  // bar). View mode composes fields into readable summary blocks per entity type;
+  // Edit mode keeps the full field-level form.
+  function renderDetails() {
     if (!currentDetails) return;
-    // Edit button only if the user can actually edit at least one section.
-    $("detailsEditBtn").hidden = editing || !detailsAnyEditable();
-    $("detailsEditActions").hidden = !editing;
     hide($("detailsNotice"));
     var host = $("detailsSections"); host.innerHTML = "";
     (currentDetails.sections || []).forEach(function (sec, si) {
-      var sectionEditing = editing && sec.editable;  // read-only sections never show inputs
-      var card = document.createElement("div"); card.className = "sx__dsection";
-      var h = document.createElement("div"); h.className = "sx__dsection-h";
-      var t = document.createElement("span"); t.className = "sx__dsection-t"; t.textContent = sec.title;
-      h.appendChild(t);
-      if (sec.entity === "Contact") { var k = document.createElement("span"); k.className = "sx__dsection-k"; k.textContent = "Contact"; h.appendChild(k); }
-      if (editing && !sec.editable) { var ro = document.createElement("span"); ro.className = "sx__dsection-ro"; ro.textContent = "Read-only"; h.appendChild(ro); }
-      card.appendChild(h);
-      var body = document.createElement("div"); body.className = sectionEditing ? "sx__dform" : "sx__dgrid";
-      body.dataset.sectionIndex = si;
-      var rendered = 0;
-      sec.fields.forEach(function (f) {
-        if (sectionEditing) { body.appendChild(f.editable ? detailsEditField(f) : detailsReadField(f)); rendered++; return; }
-        // read rendering (read mode, or a section the user can't edit): hide empties
-        if (f.value == null || f.value === "" || (Array.isArray(f.value) && !f.value.length)) return;
-        body.appendChild(detailsReadField(f)); rendered++;
-      });
-      if (!rendered) {
-        var none = document.createElement("p"); none.className = "sx__muted"; none.textContent = "No details on file.";
-        body.appendChild(none);
-      }
-      card.appendChild(body); host.appendChild(card);
+      host.appendChild(detailPanel(sec, si));
     });
-    if (editing) snapshotDetails();
-    window.scrollTo(0, 0);
+  }
+
+  function detailPanel(sec, si) {
+    var editing = !!detailsEditSet[si];
+    var card = document.createElement("div"); card.className = "sx__dsection";
+    var h = document.createElement("div"); h.className = "sx__dsection-h";
+    var t = document.createElement("span"); t.className = "sx__dsection-t"; t.textContent = sec.title;
+    h.appendChild(t);
+    if (sec.entity === "Contact") { var k = document.createElement("span"); k.className = "sx__dsection-k"; k.textContent = "Contact"; h.appendChild(k); }
+    if (!editing && sec.editable) {
+      var edit = document.createElement("button"); edit.type = "button"; edit.className = "sx__dpanel-edit"; edit.textContent = "Edit";
+      edit.addEventListener("click", function () { detailsEditSet[si] = true; replaceDetailPanel(si); });
+      h.appendChild(edit);
+    }
+    card.appendChild(h);
+    card.appendChild(editing ? detailPanelEdit(sec, si) : detailPanelView(sec));
+    return card;
+  }
+
+  // Re-render just one panel (toggle view/edit) without disturbing the others.
+  function replaceDetailPanel(si) {
+    var host = $("detailsSections");
+    var next = detailPanel(currentDetails.sections[si], si);
+    if (host.children[si]) host.replaceChild(next, host.children[si]); else host.appendChild(next);
+  }
+
+  // === Edit mode (per panel): the full field-level form + Save/Cancel ===
+  function detailPanelEdit(sec, si) {
+    var body = document.createElement("div"); body.className = "sx__dform"; body.dataset.sectionIndex = si;
+    var snap = {};
+    sec.fields.forEach(function (f) {
+      if (!f.editable) { body.appendChild(detailsReadField(f)); return; }
+      var field = detailsEditField(f);
+      body.appendChild(field);
+      var el = field.querySelector("[data-field]"); if (el) snap[el.dataset.field] = JSON.stringify(readField(el));
+    });
+    detailsSnapshot[si] = snap;
+    var actions = document.createElement("div"); actions.className = "sx__dpanel-actions";
+    var notice = document.createElement("p"); notice.className = "sx__dpanel-error"; notice.hidden = true;
+    var save = document.createElement("button"); save.type = "button"; save.className = "cbm-button"; save.textContent = "Save changes";
+    var cancel = document.createElement("button"); cancel.type = "button"; cancel.className = "cbm-button cbm-button--secondary"; cancel.textContent = "Cancel";
+    save.addEventListener("click", function () { savePanel(sec, si, body, save, notice); });
+    cancel.addEventListener("click", function () { detailsEditSet[si] = false; replaceDetailPanel(si); });
+    actions.appendChild(cancel); actions.appendChild(save);
+    var wrap = document.createElement("div"); wrap.appendChild(body); wrap.appendChild(notice); wrap.appendChild(actions);
+    return wrap;
+  }
+
+  // Save one panel; on failure keep the edit view open and show the error inline.
+  async function savePanel(sec, si, body, saveBtn, errEl) {
+    var snap = detailsSnapshot[si] || {}, changes = {};
+    Array.prototype.forEach.call(body.querySelectorAll("[data-field]"), function (el) {
+      var v = readField(el);
+      if (JSON.stringify(v) !== snap[el.dataset.field]) changes[el.dataset.field] = v;
+    });
+    if (!Object.keys(changes).length) { detailsEditSet[si] = false; replaceDetailPanel(si); return; }
+    saveBtn.disabled = true; errEl.hidden = true;
+    try {
+      await api("/details/" + encodeURIComponent(sec.entity) + "/" + encodeURIComponent(sec.id),
+        { method: "PUT", body: JSON.stringify({ changes: changes }) });
+      detailsEditSet[si] = false;
+      await loadDetails(currentDetail.id);  // refresh values, all panels back to view
+      notice("detailsNotice", sec.title + " saved.", "success");
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      saveBtn.disabled = false;
+      errEl.textContent = e.status === 403
+        ? "You don't have permission to edit " + sec.title + "."
+        : "Couldn't save: " + e.message;
+      errEl.hidden = false;
+    }
   }
 
   function detailsReadField(f) {
@@ -835,56 +875,159 @@
     wrap.appendChild(label); wrap.appendChild(input); return wrap;
   }
 
-  function snapshotDetails() {
-    detailsSnapshot = {};
-    Array.prototype.forEach.call($("detailsSections").querySelectorAll("[data-section-index]"), function (body) {
-      var si = body.dataset.sectionIndex;
-      Array.prototype.forEach.call(body.querySelectorAll("[data-field]"), function (el) {
-        detailsSnapshot[si + ":" + el.dataset.field] = JSON.stringify(readField(el));
-      });
-    });
+  // === View mode: composed summary blocks per entity type (no field grids) ===
+  function detailPanelView(sec) {
+    var e = sec.entity;
+    if (e === "Contact") return contactSummary(sec);
+    if (e === "Account") return companySummary(sec);
+    if (e === "CClientProfile") return clientProfileSummary(sec);
+    if (e === "CEngagement") return engagementSummary(sec);
+    return genericSummary(sec);  // CPartnerProfile / CSponsorProfile
   }
 
-  // Save = one PUT per entity that has changed fields (diffed vs. the edit-render
-  // snapshot, so a drifted untouched enum is never resent), then reload the read view.
-  async function saveDetails() {
-    var sections = currentDetails.sections || [];
-    var updates = [];
-    Array.prototype.forEach.call($("detailsSections").querySelectorAll("[data-section-index]"), function (body) {
-      var si = body.dataset.sectionIndex, sec = sections[si], changes = {};
-      Array.prototype.forEach.call(body.querySelectorAll("[data-field]"), function (el) {
-        var v = readField(el);
-        if (JSON.stringify(v) !== detailsSnapshot[si + ":" + el.dataset.field]) changes[el.dataset.field] = v;
-      });
-      if (Object.keys(changes).length) updates.push({ entity: sec.entity, id: sec.id, changes: changes });
+  // --- summary helpers ---
+  function dv(sec, name) { return (sec.values || {})[name]; }
+  function dvs(sec, name) { var v = dv(sec, name); return v == null ? "" : String(v); }
+  function dvArr(sec, name) { var v = dv(sec, name); return Array.isArray(v) ? v : []; }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function cityLine(city, state, zip) {
+    var region = [state, zip].filter(Boolean).join(" ");
+    return [city, region].filter(Boolean).join(", ");
+  }
+  function fmtLongDate(v) { var d = parseNaive(v); return d ? d.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) : String(v); }
+  function fmtMonthYear(v) { var d = parseNaive(v); return d ? d.toLocaleDateString(undefined, { year: "numeric", month: "long" }) : String(v); }
+  function txtLine(t) { var d = document.createElement("div"); d.textContent = t; return d; }
+  function factsLine(html) { var d = document.createElement("div"); d.className = "sx__dfacts"; d.innerHTML = html; return d; }
+  function ledeLine(html) { var d = document.createElement("div"); d.className = "sx__lede"; d.innerHTML = html; return d; }
+  function badgeRow(label, vals) {
+    var row = document.createElement("div"); row.className = "sx__chips";
+    var l = document.createElement("span"); l.className = "sx__chip-l"; l.textContent = label; row.appendChild(l);
+    vals.forEach(function (o) { var c = document.createElement("span"); c.className = "sx__chip"; c.textContent = o; row.appendChild(c); });
+    return row;
+  }
+  function noDetails() { var p = document.createElement("p"); p.className = "sx__muted sx__dbody"; p.textContent = "No details on file."; return p; }
+  // Acceptance flag — surfaces only when NOT accepted (operationally meaningful).
+  function acceptFlag(label, v) { return v === true ? null : label + ' <span class="sx__flag-no">not accepted</span>'; }
+
+  function contactSummary(sec) {
+    var wrap = document.createElement("div"); wrap.className = "sx__dbody sx__cols2";
+    var dir = document.createElement("div"); dir.className = "sx__dir";
+    var name = [dvs(sec, "salutationName"), dvs(sec, "firstName"), dvs(sec, "lastName")].filter(Boolean).join(" ");
+    var pref = dvs(sec, "cPreferredName");
+    if (pref && pref !== dvs(sec, "firstName")) name += " (" + pref + ")";
+    var nm = document.createElement("div"); nm.className = "sx__dir-name"; nm.textContent = name || sec.name || "(unnamed)"; dir.appendChild(nm);
+    if (dvs(sec, "addressStreet")) dir.appendChild(txtLine(dvs(sec, "addressStreet")));
+    var cl = cityLine(dvs(sec, "addressCity"), dvs(sec, "addressState"), dvs(sec, "addressPostalCode")); if (cl) dir.appendChild(txtLine(cl));
+    if (dvs(sec, "addressCountry")) dir.appendChild(txtLine(dvs(sec, "addressCountry")));
+    if (dvs(sec, "phoneNumber")) dir.appendChild(txtLine(dvs(sec, "phoneNumber")));
+    var email = dvs(sec, "emailAddress");
+    if (email) { var ed = document.createElement("div"); var a = document.createElement("a"); a.href = "mailto:" + email; a.textContent = email; ed.appendChild(a); dir.appendChild(ed); }
+    wrap.appendChild(dir);
+    var right = document.createElement("div");
+    var bits = [];
+    var ct = dvArr(sec, "cContactType"); if (ct.length) bits.push("<b>" + esc(ct.join(", ")) + "</b> contact");
+    if (dvs(sec, "cPreferredContactMethod")) bits.push("prefers <b>" + esc(dvs(sec, "cPreferredContactMethod").toLowerCase()) + "</b>");
+    if (dvs(sec, "cNotificationPreference")) bits.push("notifications by <b>" + esc(dvs(sec, "cNotificationPreference").toLowerCase()) + "</b>");
+    if (bits.length) right.appendChild(factsLine(bits.join(" &middot; ")));
+    var flags = [acceptFlag("Privacy policy", dv(sec, "cPrivacyPolicyAccepted")),
+                 acceptFlag("Terms of use", dv(sec, "cTermsOfUseAccepted")),
+                 acceptFlag("Code of conduct", dv(sec, "cCodeOfConductAccepted"))].filter(Boolean);
+    if (flags.length) right.appendChild(factsLine(flags.join(" &middot; ")));
+    if (right.children.length) wrap.appendChild(right);
+    return wrap;
+  }
+
+  function companySummary(sec) {
+    var wrap = document.createElement("div"); wrap.className = "sx__dbody sx__cols2";
+    var dir = document.createElement("div"); dir.className = "sx__dir";
+    var nm = document.createElement("div"); nm.className = "sx__dir-name"; nm.textContent = sec.name || "Company"; dir.appendChild(nm);
+    if (dvs(sec, "billingAddressStreet")) dir.appendChild(txtLine(dvs(sec, "billingAddressStreet")));
+    var bcl = cityLine(dvs(sec, "billingAddressCity"), dvs(sec, "billingAddressState"), dvs(sec, "billingAddressPostalCode")); if (bcl) dir.appendChild(txtLine(bcl));
+    if (dvs(sec, "phoneNumber")) dir.appendChild(txtLine(dvs(sec, "phoneNumber")));
+    var web = dvs(sec, "website");
+    if (web) { var wd = document.createElement("div"); var a = document.createElement("a"); a.href = /^https?:\/\//i.test(web) ? web : "https://" + web; a.target = "_blank"; a.rel = "noopener"; a.textContent = web; wd.appendChild(a); dir.appendChild(wd); }
+    wrap.appendChild(dir);
+    var right = document.createElement("div");
+    var lede = [];
+    if (dvs(sec, "cOrganizationType")) lede.push("<strong>" + esc(dvs(sec, "cOrganizationType")) + "</strong>");
+    if (dvs(sec, "cBusinessStage")) lede.push("<strong>" + esc(dvs(sec, "cBusinessStage")) + "</strong>");
+    var ledeStr = lede.join(", ");
+    if (dvs(sec, "cIndustrySector")) ledeStr += (ledeStr ? " &mdash; " : "") + esc(dvs(sec, "cIndustrySector"));
+    if (ledeStr) right.appendChild(ledeLine(ledeStr));
+    var bits = [];
+    var at = dvArr(sec, "cAccountType"); if (at.length) bits.push("Account type <b>" + esc(at.join(", ")) + "</b>");
+    if (dvs(sec, "cClientStatus")) bits.push("Client status <b>" + esc(dvs(sec, "cClientStatus")) + "</b>");
+    if (dvs(sec, "cPartnerContactCadence")) bits.push("Contact cadence <b>" + esc(dvs(sec, "cPartnerContactCadence")) + "</b>");
+    if (dv(sec, "cPublicAnnouncementAllowed") === false) bits.push('Public announcement <span class="sx__flag-no">not allowed</span>');
+    if (bits.length) right.appendChild(factsLine(bits.join(" &middot; ")));
+    var bill = [dvs(sec, "billingAddressStreet"), bcl].filter(Boolean).join(", ");
+    var ship = [dvs(sec, "shippingAddressStreet"), cityLine(dvs(sec, "shippingAddressCity"), dvs(sec, "shippingAddressState"), dvs(sec, "shippingAddressPostalCode"))].filter(Boolean).join(", ");
+    if (ship && ship !== bill) right.appendChild(factsLine("Shipping: " + esc(ship)));
+    if (right.children.length) wrap.appendChild(right);
+    return wrap;
+  }
+
+  function clientProfileSummary(sec) {
+    var wrap = document.createElement("div"); wrap.className = "sx__dbody";
+    var struct = [];
+    if (dvs(sec, "legalEntityType")) struct.push("<strong>" + esc(dvs(sec, "legalEntityType")) + "</strong>");
+    if (dv(sec, "formationDate")) struct.push("formed " + esc(fmtMonthYear(dv(sec, "formationDate"))));
+    if (dv(sec, "isHomeBased") === true) struct.push("home-based");
+    var fin = [];
+    if (dvs(sec, "annualRevenueRange")) fin.push("revenue <strong>" + esc(dvs(sec, "annualRevenueRange")) + "</strong>");
+    if (dvs(sec, "revenueTrend")) fin.push(esc(dvs(sec, "revenueTrend").toLowerCase()));
+    if (dvs(sec, "profitabilityStatus")) fin.push("currently <strong>" + esc(dvs(sec, "profitabilityStatus").toLowerCase()) + "</strong>");
+    var ledeStr = [struct.join(", "), fin.join(", ")].filter(Boolean).join(" &middot; ");
+    if (ledeStr) wrap.appendChild(ledeLine(ledeStr));
+    var sells = [];
+    var ct = dvArr(sec, "primaryCustomerType"); if (ct.length) sells.push("Sells <b>" + esc(ct.join(", ")) + "</b>");
+    var sc = dvArr(sec, "salesChannels"); if (sc.length) sells.push("through <b>" + esc(sc.join(", ")) + "</b>");
+    if (dvs(sec, "geographicMarketReach")) sells.push("reaching a <b>" + esc(dvs(sec, "geographicMarketReach")) + "</b> market");
+    if (sells.length) wrap.appendChild(factsLine(sells.join(" ")));
+    var desc = dvs(sec, "description");
+    if (desc) { var q = document.createElement("div"); q.className = "sx__dquote"; q.textContent = "“" + desc + "”"; wrap.appendChild(q); }
+    var certs = dvArr(sec, "certificationsHeld"); if (certs.length) wrap.appendChild(badgeRow("Certifications", certs));
+    var funds = dvArr(sec, "fundingSourcesUsedToDate"); if (funds.length) wrap.appendChild(badgeRow("Funding to date", funds));
+    return wrap.children.length ? wrap : noDetails();
+  }
+
+  function engagementSummary(sec) {
+    var wrap = document.createElement("div"); wrap.className = "sx__dbody";
+    var lede = document.createElement("div"); lede.className = "sx__lede";
+    var nm = document.createElement("strong"); nm.textContent = sec.name || "Engagement"; lede.appendChild(nm);
+    if (dvs(sec, "engagementStatus")) { var pill = document.createElement("span"); pill.className = "sx__status-pill"; pill.textContent = dvs(sec, "engagementStatus"); lede.appendChild(pill); }
+    wrap.appendChild(lede);
+    var facts = [];
+    if (dv(sec, "engagementStartDate")) facts.push("Started <b>" + esc(fmtLongDate(dv(sec, "engagementStartDate"))) + "</b>");
+    var mentor = dvs(sec, "mentorProfileName") || namesOf(dv(sec, "assignedUsersNames"));
+    if (mentor) facts.push("Mentor <b>" + esc(mentor) + "</b>");
+    if (dvs(sec, "meetingCadence")) facts.push("Cadence <b>" + esc(dvs(sec, "meetingCadence")) + "</b>");
+    if (facts.length) wrap.appendChild(factsLine(facts.join(" &middot; ")));
+    var f2 = [];
+    if (dv(sec, "lastSessionDate")) f2.push("Last session <b>" + esc(fmtLongDate(dv(sec, "lastSessionDate"))) + "</b>");
+    var tot = dv(sec, "totalSessions");
+    if (tot != null) f2.push("<b>" + tot + "</b> session" + (tot === 1 ? "" : "s") + " to date");
+    if (f2.length) wrap.appendChild(factsLine(f2.join(" &middot; ")));
+    return wrap;
+  }
+
+  function namesOf(v) { return v && typeof v === "object" ? Object.keys(v).map(function (k) { return v[k]; }).join(", ") : ""; }
+
+  // Fallback composed summary (partner/sponsor profile): facts + badges + quotes.
+  function genericSummary(sec) {
+    var wrap = document.createElement("div"); wrap.className = "sx__dbody";
+    var facts = [], quotes = [];
+    (sec.fields || []).forEach(function (f) {
+      var v = f.value;
+      if (v == null || v === "" || (Array.isArray(v) && !v.length)) return;
+      if (f.type === "multiEnum" && Array.isArray(v)) { wrap.appendChild(badgeRow(f.label, v)); return; }
+      if (f.type === "text" || f.type === "wysiwyg") { quotes.push(f); return; }
+      var out = f.type === "bool" ? (v ? "Yes" : "No") : (f.type === "date" ? fmtDate(v) : (f.type === "datetime" ? fmtWhen(v) : String(v)));
+      facts.push(esc(f.label) + " <b>" + esc(out) + "</b>");
     });
-    if (!updates.length) { renderDetails(false); return; }
-    $("detailsSaveBtn").disabled = true;
-    // Save each entity independently so one denied record doesn't lose the rest.
-    var okCount = 0, failures = [];
-    for (var i = 0; i < updates.length; i++) {
-      try {
-        await api("/details/" + encodeURIComponent(updates[i].entity) + "/" + encodeURIComponent(updates[i].id),
-          { method: "PUT", body: JSON.stringify({ changes: updates[i].changes }) });
-        okCount++;
-      } catch (e) {
-        if (e.status === 401) { showLogin(); return; }
-        failures.push({ entity: updates[i].entity, id: updates[i].id, status: e.status, msg: e.message });
-      }
-    }
-    $("detailsSaveBtn").disabled = false;
-    await loadDetails(currentDetail.id);  // reflect whatever saved, back to read view
-    if (!failures.length) { notice("detailsNotice", "Changes saved.", "success"); return; }
-    var names = failures.map(function (f) { return sectionTitleFor(f.entity, f.id); });
-    var msg;
-    if (failures.every(function (f) { return f.status === 403; })) {
-      msg = "You don't have permission to edit " + names.join(", ") +
-            (okCount ? ". Your other changes were saved." : ".");
-    } else {
-      msg = (okCount ? "Saved " + okCount + " section(s). " : "") +
-            "Couldn't save " + names.join(", ") + ": " + failures[0].msg;
-    }
-    notice("detailsNotice", msg, "error");
+    if (facts.length) wrap.insertBefore(factsLine(facts.join(" &middot; ")), wrap.firstChild);
+    quotes.forEach(function (f) { var q = document.createElement("div"); q.className = "sx__dquote"; if (f.type === "wysiwyg") q.innerHTML = sanitizeHtml(String(f.value)); else q.textContent = String(f.value); wrap.appendChild(q); });
+    return wrap.children.length ? wrap : noDetails();
   }
 
   function sectionTitleFor(entity, id) {

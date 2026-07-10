@@ -252,6 +252,7 @@ MENTOR = DomainConfig(
     overall_notes_label="Engagement Notes",
     overall_notes_type="html",
     details_entities=(
+        ("Engagement", "CEngagement", "id"),  # the engagement record itself, first
         ("Company", "Account", "clientOrganizationId"),
         ("Client Business Profile", "CClientProfile", "engagementClientId"),
     ),
@@ -323,8 +324,8 @@ PARTNER = DomainConfig(
     overall_notes_label="Partner Notes",
     overall_notes_type="html",
     details_entities=(
+        ("Partnership", "CPartnerProfile", "id"),  # the partnership record itself, first
         ("Company", "Account", "partnerCompanyId"),
-        ("Partnership Profile", "CPartnerProfile", "id"),
     ),
 )
 
@@ -376,8 +377,8 @@ SPONSOR = DomainConfig(
     overall_notes_label="Sponsor Notes",
     overall_notes_type="longtext",
     details_entities=(
+        ("Sponsorship", "CSponsorProfile", "id"),  # the sponsor record itself, first
         ("Company", "Account", "sponsorCompanyId"),
-        ("Sponsor Profile", "CSponsorProfile", "id"),
     ),
 )
 
