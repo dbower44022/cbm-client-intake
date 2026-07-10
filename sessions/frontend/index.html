@@ -12,8 +12,14 @@
 <body>
   <main class="cbm-container sx">
     <header class="sx__header">
-      <h1 id="title">Sessions</h1>
-      <p class="sx__sub" id="subtitle"></p>
+      <div class="sx__header-main">
+        <h1 id="title">Sessions</h1>
+        <p class="sx__sub" id="subtitle"></p>
+      </div>
+      <div class="sx__header-user">
+        <span class="sx__who">Signed in as <strong id="whoName"></strong></span>
+        <button type="button" class="cbm-button cbm-button--secondary sx__sm" id="logoutBtn">Sign out</button>
+      </div>
     </header>
 
     <!-- Sign-in happens at the portal (/); this shows access/server errors. -->
@@ -24,19 +30,13 @@
 
     <!-- List of the records the user owns -->
     <section id="listView" hidden>
-      <div class="sx__toolbar">
-        <span class="sx__who">Signed in as <strong id="whoName"></strong></span>
-        <span class="sx__actions">
-          <button type="button" class="cbm-button cbm-button--secondary" id="refreshBtn">Refresh</button>
-          <button type="button" class="cbm-button cbm-button--secondary" id="logoutBtn">Sign out</button>
-        </span>
-      </div>
       <div class="sx__filters">
         <input type="search" id="search" class="sx__search" placeholder="Search…" autocomplete="off" />
         <label class="sx__statusfilter" id="statusFilterWrap" hidden>
           <span>Status</span>
           <select id="statusFilter"><option value="">All</option></select>
         </label>
+        <button type="button" class="cbm-button cbm-button--secondary sx__sm" id="refreshBtn">Refresh</button>
       </div>
       <p class="sx__notice" id="listNotice" role="status" hidden></p>
       <p class="sx__count" id="count"></p>

@@ -4,6 +4,14 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.32.6] — 2026-07-09
+
+### Changed
+- **Mentor grid shows all engagement statuses** (was restricted to active/pending)
+  so the Status filter can offer every status; the user narrows as they like.
+- **Compact header:** "Signed in as …" + Sign out moved to the upper-right corner;
+  Refresh moved into the filter row — reclaiming a full toolbar row of height.
+
 ## [0.32.5] — 2026-07-09
 
 ### Added

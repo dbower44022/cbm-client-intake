@@ -86,7 +86,8 @@ def test_domain_links_match_crm():
     assert MENTOR.session_parent_link == "engagement" and MENTOR.session_parent_fk == "engagementId"
     assert MENTOR.manager_owned_link == "engagements1"
     assert MENTOR.parent_sessions_link == "engagementSessions"
-    assert MENTOR.supports_comentor is True and MENTOR.status_values
+    assert MENTOR.supports_comentor is True
+    assert MENTOR.status_values == ()  # no status pre-filter — the grid loads all
 
     assert PARTNER.session_parent_link == "partnerSession" and PARTNER.session_parent_fk == "partnerSessionId"
     assert PARTNER.manager_owned_link == "managedPartners"
@@ -150,7 +151,8 @@ async def test_list_records_maps_columns():
 
 
 @pytest.mark.asyncio
-async def test_mentor_list_filters_active_statuses():
+async def test_mentor_list_includes_all_statuses():
+    # The grid loads every engagement (any status); the UI's status filter narrows.
     fake = Fake(
         mentors=[{"id": "p9", "assignedUserId": "u1"}],
         related={"engagements1": [
@@ -161,7 +163,7 @@ async def test_mentor_list_filters_active_statuses():
     )
     res = await service.list_records(MENTOR, fake, _USER)
     ids = {r["id"] for r in res["records"]}
-    assert ids == {"E1", "E3"}  # Completed excluded
+    assert ids == {"E1", "E2", "E3"}  # nothing excluded
 
 
 # --- get_detail ------------------------------------------------------------

@@ -8,8 +8,10 @@
 .sx.cbm-container { max-width: 100%; padding: 0 1.5rem; }
 
 .sx { padding-bottom: 3rem; }
-.sx__header { margin-bottom: 1.25rem; }
+.sx__header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
 .sx__header h1 { margin: 0 0 0.15rem; }
+.sx__header-main { min-width: 0; }
+.sx__header-user { display: inline-flex; align-items: center; gap: 0.6rem; flex-shrink: 0; margin-left: auto; }
 .sx__sub { margin: 0; color: var(--cbm-slate-700, #556); }
 
 .sx__toolbar {
@@ -27,6 +29,7 @@
 }
 .sx__statusfilter { display: inline-flex; align-items: center; gap: 0.4rem; font-size: var(--cbm-text-sm, 0.9rem); color: var(--cbm-slate-700, #556); }
 .sx__statusfilter select { padding: 0.45rem 0.5rem; border: 1px solid var(--cbm-border, #d7dce2); border-radius: var(--cbm-radius, 6px); font: inherit; }
+.sx__filters #refreshBtn { margin-left: auto; }
 .sx__count { color: var(--cbm-slate-700, #556); font-size: var(--cbm-text-sm, 0.9rem); margin: 0.25rem 0 0.5rem; }
 
 .sx__notice { padding: 0.6rem 0.8rem; border-radius: var(--cbm-radius, 6px); margin: 0.5rem 0; }

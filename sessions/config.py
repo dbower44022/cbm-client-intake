@@ -26,9 +26,6 @@ ENGAGEMENT = "CEngagement"
 PARTNER_PROFILE = "CPartnerProfile"
 SPONSOR_PROFILE = "CSponsorProfile"
 
-# CEngagement statuses that count as a mentor's "active" list (Doug, 2026-07-08).
-MENTOR_ACTIVE_STATUSES = ("Active", "Assigned", "Pending Acceptance", "On-Hold")
-
 
 @dataclass(frozen=True)
 class Column:
@@ -259,8 +256,9 @@ MENTOR = DomainConfig(
         ("Client Business Profile", "CClientProfile", "engagementClientId"),
     ),
     supports_comentor=True,
+    # No status pre-filter: load ALL of the mentor's engagements so the grid's
+    # Status filter can offer every status (the user filters as they like).
     status_attr="engagementStatus",
-    status_values=MENTOR_ACTIVE_STATUSES,
 )
 
 PARTNER = DomainConfig(
