@@ -4,6 +4,13 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.32.9] — 2026-07-09
+
+### Changed
+- **Next session** panel date now matches the session-summary format —
+  "Mon, July 14 — 4:00 PM" (abbreviated weekday), with the year rule and an ISO
+  hover tooltip.
+
 ## [0.32.7] — 2026-07-09
 
 ### Changed

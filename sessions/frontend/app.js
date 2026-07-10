@@ -382,7 +382,8 @@
     if (!ns) return;
     var card = document.createElement("div"); card.className = "sx__next";
     var l = document.createElement("div"); l.className = "sx__next-l"; l.textContent = "Next session";
-    var when = document.createElement("div"); when.className = "sx__next-when"; when.textContent = fmtWhen(ns.dateStart);
+    var when = document.createElement("div"); when.className = "sx__next-when";
+    when.textContent = fmtSessionDate(ns.dateStart, "short"); when.title = ns.dateStart || "";
     card.appendChild(l); card.appendChild(when);
     // Start/Open: a quick way to open the session (and launch the video call if
     // one is scheduled) for editing.
@@ -625,9 +626,10 @@
     return (da ? da.getTime() : 0) - (db ? db.getTime() : 0);
   }
   // "Weekday, Month D — h:mm AM/PM"; year appended only when not the current year.
-  function fmtSessionDate(v) {
+  // weekdayStyle: "long" (default, e.g. Monday) or "short" (e.g. Mon).
+  function fmtSessionDate(v, weekdayStyle) {
     var d = parseNaive(v); if (!d) return "—";
-    var opts = { weekday: "long", month: "long", day: "numeric" };
+    var opts = { weekday: weekdayStyle || "long", month: "long", day: "numeric" };
     if (d.getFullYear() !== new Date().getFullYear()) opts.year = "numeric";
     return d.toLocaleDateString(undefined, opts) + " — " +
            d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
