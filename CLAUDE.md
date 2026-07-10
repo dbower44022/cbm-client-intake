@@ -627,20 +627,42 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   field) are Phases 2–3, not built. The **Communications** tab now has a built
   email-inbox UI scaffold (no CRM data yet — wiring contract in the Communications
   bullet above); the **Documents** (uploads) tab is still a placeholder.
-- **Status (2026-07-10): Details tab rebuilt to mockup v4 (summary strip + row-grid
-  cards + contact tables + add-contact flows); v0.33.0; 304 tests green.** The
-  redesign was verified against a **stubbed-API preview harness** in the browser
-  (strip/cards/tables render, per-row edit expansion, + Add menu, search-link flow,
-  create-new form, strip edit — all exercised; no console errors) — **NOT yet driven
-  against the live CRM** (the new pieces to check live: the contacts search
-  `where contains name` under a non-admin ACL, link/backfill/create writes, and the
-  CBM card's per-profile `contactRecord` reads under read-own). Earlier (v0.32.x,
-  live-diagnosed on crm-test as admin): tabbed detail; information-dense **Overview**
-  (aggregated Company peek, notes feed with attendees, splitter, Next-session
-  Start/Open button); friendlier empty states; bigger session-notes editors; the
-  **attendee relationship** read/write fix (`sessionAttendees` is a link, not a
-  field — [[espo-custom-linkmultiple-is-a-relationship]]) and **per-record
-  edit-permission** gating in Details. Branch `feat/session-view` (**NOT pushed**).
+- **Status (2026-07-10 end of session): v0.34.0; 315 tests green; branch
+  `feat/session-view` (**NOT pushed**), five commits today (a4aa147..bb32ed4).**
+  Shipped this session:
+  - **v0.33.0 — Details tab rebuilt to mockup v4** (summary strip + row-grid
+    cards + contact tables + add-contact flows; see the Details bullet above).
+    Verified against a **stubbed-API preview harness** in the browser
+    (strip/cards/tables render, per-row edit expansion, + Add menu, search-link
+    flow, create-new form, strip edit — all exercised; no console errors) —
+    **NOT yet driven against the live CRM** (still to check live: the contacts
+    search `where contains name` under a non-admin ACL, link/backfill/create
+    writes, and the CBM card's per-profile `contactRecord` reads under
+    read-own).
+  - **v0.33.2 — US phone display format `(216)-555-1234` product-wide**
+    (`frontend/shared/phone-format.js` + `core.phone.format_us`; display-only,
+    CRM keeps E.164, edit inputs/tel: keep raw).
+  - **v0.33.3 — website links normalized** (`externalHref()` — a stored bare
+    domain no longer resolves relative to the app path; all external links
+    new-tab + noopener).
+  - **v0.34.0 — portal reviews ALL current teams** (membership re-read from the
+    CRM on every session restore + `ASSIGN_ALLOWED_TEAMS` real default; see the
+    portal section). Verified live on crm-test.
+  - Live diagnosis (no code change): "partner app shows no partners for
+    doug.bower" was **data** — crm-test has a DUPLICATE unlinked mentor profile
+    ("Doug Bower" `6a4425f4c82d3f2ec`, no Assigned User) alongside the real
+    linked "Douglas Bower" (`6a1e5f2ab841b5c9c`), and the partner had been
+    assigned to the duplicate. Records assigned to an unlinked profile are
+    invisible in the session tools — **merge/delete the duplicate in the CRM**
+    (also spotted: two "Acme Inc" CPartnerProfiles). Possible follow-up guard:
+    flag manager profiles with no linked login user in the admin tools.
+  Earlier (v0.32.x, live-diagnosed on crm-test as admin): tabbed detail;
+  information-dense **Overview** (aggregated Company peek, notes feed with
+  attendees, splitter, Next-session Start/Open button); friendlier empty states
+  (+ v0.33.1 distinct no-linked-profile message); bigger session-notes editors;
+  the **attendee relationship** read/write fix (`sessionAttendees` is a link,
+  not a field — [[espo-custom-linkmultiple-is-a-relationship]]) and
+  **per-record edit-permission** gating in Details.
   **Still NOT driven live as a non-admin team member, nor for the partner/sponsor
   domains.** Communications has an email-inbox UI scaffold (no CRM data — wiring
   contract documented above); Documents is a placeholder. Open polish items:
@@ -662,15 +684,17 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   Note: crm-test seed sessions carry out-of-enum `sessionType` values (harmless; a
   data-hygiene cleanup). **UI polish is the next work item** (a follow-up session).
 
-## Current status (updated 2026-07-09)
+## Current status (updated 2026-07-10)
 
 **Prod is on v0.28.0** (prod + crm-test confirmed on `/healthz` 2026-07-07;
 redeployed on each push), and prod answers on the
 **custom domain `https://apps.clevelandbusinessmentors.org`** (added to the DO
 app as PRIMARY, Cloudflare CNAME grey-cloud → the app's default hostname; the
-`…ondigitalocean.app` URL still works). Shipped 2026-07-05..07 (see CHANGELOG):
+`…ondigitalocean.app` URL still works). The working branch is
+**`feat/session-view` at v0.34.0** (a4aa147..bb32ed4, NOT pushed) — 315 tests
+green. Shipped 2026-07-05..10 (see CHANGELOG):
 
-- **Session Management tools — v0.33.0** (built 2026-07-08..10, branch
+- **Session Management tools — v0.34.0** (built 2026-07-08..10, branch
   `feat/session-view`, **NOT yet pushed/deployed**; mentor domain CRUD **driven
   live end-to-end on crm-test** 2026-07-08..09) — `/mentorsessions`
   `/partnersessions` `/sponsorsessions`: one engine, three team-gated routes,
@@ -686,11 +710,22 @@ app as PRIMARY, Cloudflare CNAME grey-cloud → the app's default hostname; the
   per-row inline editing) + **+ Add contact** flows (select-existing via live
   search, create-and-link, CBM mentor-profile pick) — new endpoints
   `GET /{slug}/api/contacts` + `POST /{slug}/api/records/{id}/contacts`; verified
-  in a stubbed-API browser harness, NOT yet against the live CRM. Earlier
+  in a stubbed-API browser harness, NOT yet against the live CRM. **Follow-ups
+  2026-07-10 (same branch):** v0.33.1 distinct no-linked-profile empty state;
+  v0.33.2 US phone display format product-wide; v0.33.3 website links normalized
+  (no more relative bare-domain hrefs); **v0.34.0 portal membership refresh**
+  (teams re-read from the CRM on every session restore + `ASSIGN_ALLOWED_TEAMS`
+  real default — fixed "only shows mentor admin despite other teams"). Earlier
   live-diagnosed fixes: the **attendee relationship** read/write
   (`sessionAttendees` is a link, not a field —
   [[espo-custom-linkmultiple-is-a-relationship]]) and per-record edit-permission
   gating. Full detail in the **Session Management tools** section above.
+  **Data-hygiene gotcha found while driving live (2026-07-10):** crm-test has a
+  DUPLICATE mentor profile "Doug Bower" with no Assigned User next to the real
+  linked "Douglas Bower" — a partner assigned to the duplicate is invisible in
+  the session tools (the apps resolve ownership through the login-linked
+  profile). Merge/delete the duplicate (+ the two "Acme Inc" CPartnerProfiles)
+  in the CRM UI.
   **Remaining:** drive the Details redesign + contact-add writes live; drive live
   for partner/sponsor + as a non-admin; wire the Communications inbox (UI scaffold
   built; CRM email structure + endpoints still to do — wiring contract documented
