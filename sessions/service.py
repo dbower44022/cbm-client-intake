@@ -22,6 +22,7 @@ from typing import Any, Optional, Protocol
 
 from assignments.service import assigned_user_id
 from core.espo import EspoError
+from core.phone import format_us
 
 from .config import (
     CONTACT,
@@ -406,12 +407,13 @@ def _address_lines(rec: dict[str, Any]) -> list[str]:
 
 
 def _contact_card(rec: dict[str, Any], address_lines: list[str]) -> str:
-    """A paste-ready contact block: name, full address, email, phone."""
+    """A paste-ready contact block: name, full address, email, phone (phone in
+    the US display format — this text is for reading, not for the CRM)."""
     parts = [rec.get("name") or "", *address_lines]
     if rec.get("emailAddress"):
         parts.append(str(rec["emailAddress"]))
     if rec.get("phoneNumber"):
-        parts.append(str(rec["phoneNumber"]))
+        parts.append(format_us(str(rec["phoneNumber"])))
     return "\n".join(p for p in parts if p)
 
 

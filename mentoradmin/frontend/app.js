@@ -260,14 +260,11 @@
   }
   function roLink(href, text) { var a = document.createElement("a"); a.className = "ro-link"; a.href = href; a.textContent = text; return a; }
 
-  // US-style phone: (216) 555-1234, tolerating a leading +1 / 1. Non-10-digit
-  // (international, extensions, etc.) values are shown as-is.
+  // US-style display phone "(216)-555-1234" — the product-wide shared formatter
+  // (/shared/phone-format.js); non-10-digit values are shown as-is.
   function formatPhone(raw) {
     if (!raw) return raw;
-    var d = String(raw).replace(/\D/g, "");
-    if (d.length === 11 && d.charAt(0) === "1") d = d.slice(1);
-    if (d.length !== 10) return raw;
-    return "(" + d.slice(0, 3) + ") " + d.slice(3, 6) + "-" + d.slice(6);
+    return window.CBM && CBM.formatPhone ? CBM.formatPhone(raw) : raw;
   }
 
   // Two-line address: street on line 1, "City  ZIP" on line 2.

@@ -346,6 +346,12 @@
 
   function fmtDate(v) { return v ? String(v).slice(0, 10) : "—"; }
   function fmtWhen(v) { return v ? String(v).slice(0, 16).replace("T", " ") : "—"; }
+  // US display phone "(216)-555-1234" via the shared formatter
+  // (/shared/phone-format.js); edit inputs and tel: hrefs keep the raw value.
+  function fmtPhone(v) {
+    if (!v) return "";
+    return window.CBM && CBM.formatPhone ? CBM.formatPhone(v) : String(v);
+  }
 
   // --- detail ---
   async function openDetail(id) {
@@ -882,6 +888,7 @@
   function renderPeekValue(el, f) {
     var v = f.value;
     if (f.type === "email" && v) { var a = document.createElement("a"); a.href = "mailto:" + v; a.textContent = v; el.appendChild(a); return; }
+    if (f.type === "phone" && v) { var p = document.createElement("a"); p.href = "tel:" + v; p.textContent = fmtPhone(v); p.title = String(v); el.appendChild(p); return; }
     if (f.type === "url" && v) { var u = document.createElement("a"); u.href = v; u.target = "_blank"; u.rel = "noopener"; u.textContent = v; el.appendChild(u); return; }
     if (f.type === "multiEnum" && Array.isArray(v)) { v.forEach(function (o) { var c = document.createElement("span"); c.className = "sx__chip"; c.textContent = o; el.appendChild(c); }); return; }
     if (f.type === "date") { el.textContent = fmtDate(v); return; }
@@ -1215,7 +1222,7 @@
     var bcl = cityLine(dvs(sec, "billingAddressCity"), dvs(sec, "billingAddressState"), dvs(sec, "billingAddressPostalCode"));
     if (bcl) dir.appendChild(txtLine(bcl));
     var line3 = document.createElement("div");
-    if (dvs(sec, "phoneNumber")) line3.appendChild(document.createTextNode(dvs(sec, "phoneNumber")));
+    if (dvs(sec, "phoneNumber")) line3.appendChild(document.createTextNode(fmtPhone(dvs(sec, "phoneNumber"))));
     var web = dvs(sec, "website");
     if (web) {
       if (line3.childNodes.length) line3.appendChild(document.createTextNode(" · "));
@@ -1351,7 +1358,7 @@
       var tr = document.createElement("tr");
       tr.appendChild(nameCell(item, sec, isClient));
       tr.appendChild(roleCell(item, vals, isClient));
-      tr.appendChild(tdText(vals.phoneNumber || ""));
+      tr.appendChild(tdText(fmtPhone(vals.phoneNumber)));
       tr.appendChild(emailCell(vals.emailAddress));
       if (isClient) tr.appendChild(tdText(vals.addressCity || ""));
       tr.appendChild(tdText(vals.cPreferredContactMethod || ""));

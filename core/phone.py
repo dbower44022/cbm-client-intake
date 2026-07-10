@@ -1,8 +1,10 @@
-"""Phone-number normalization for EspoCRM writes.
+"""Phone-number normalization (for EspoCRM writes) and display formatting.
 
 crm-test stores phone numbers in E.164 (e.g. +12166447439) and rejects other
 formats with a phone "valid" validation failure. The intake forms collect
 phone as free text, so normalize at the CRM boundary before writing a Contact.
+For READING, phones render in the standard US format ``(216)-555-1234``
+(:func:`format_us`; JS twin ``frontend/shared/phone-format.js``).
 """
 
 from __future__ import annotations
@@ -39,6 +41,24 @@ def to_e164(raw: str) -> str:
     if len(digits) == 10:
         return "+1" + digits
     return "+" + digits
+
+
+def format_us(raw: Optional[str]) -> Optional[str]:
+    """Standard US display format ``(216)-555-1234``, for reading.
+
+    The stored value stays E.164 (see :func:`to_e164`); this is display-only.
+    A value that isn't a 10-digit US number (after dropping a leading +1/1) —
+    international, extension, legacy free text — is returned unchanged rather
+    than mangled. JS twin: ``frontend/shared/phone-format.js`` (keep in sync).
+    """
+    if not raw:
+        return raw
+    digits = re.sub(r"\D", "", str(raw))
+    if len(digits) == 11 and digits.startswith("1"):
+        digits = digits[1:]
+    if len(digits) != 10:
+        return raw
+    return f"({digits[:3]})-{digits[3:6]}-{digits[6:]}"
 
 
 def e164_or_none(raw: Optional[str]) -> Optional[str]:

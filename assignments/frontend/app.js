@@ -375,6 +375,13 @@
     });
   }
 
+  // US display phone "(216)-555-1234" — the product-wide shared formatter
+  // (/shared/phone-format.js); tel: hrefs keep the raw stored value.
+  function formatPhone(raw) {
+    if (!raw) return raw;
+    return window.CBM && CBM.formatPhone ? CBM.formatPhone(raw) : raw;
+  }
+
   function addContactField(dl, label, value, href) {
     if (!value) return;
     var dt = document.createElement("dt");
@@ -406,7 +413,7 @@
     addContactField(left, "Title", c.title);
     addContactField(left, "Company", c.company || d.clientName);
     addContactField(left, "Email", c.email, c.email ? "mailto:" + c.email : null);
-    addContactField(left, "Phone", c.phone, c.phone ? "tel:" + c.phone : null);
+    addContactField(left, "Phone", formatPhone(c.phone), c.phone ? "tel:" + c.phone : null);
 
     var right = document.createElement("dl");
     right.className = "contact-dl";

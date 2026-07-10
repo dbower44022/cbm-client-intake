@@ -4,6 +4,24 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.33.2] — 2026-07-10
+
+### Changed
+- **Phone numbers display in the standard US format `(216)-555-1234`
+  everywhere in the product.** One shared formatter serves every frontend
+  (`frontend/shared/phone-format.js`, loaded by the sessions / Mentor
+  Administration / Client Administration apps) with a Python twin
+  (`core.phone.format_us`) for server-composed text. Applied to: the sessions
+  Details tab (Client Contacts + CBM Contacts tables, the Company card's
+  directory block), the contact/company pop-up peek (now a `tel:` link showing
+  the formatted number), the peek's copy-to-clipboard contact card,
+  `/mentoradmin`'s detail summary (its local formatter — previously
+  `(216) 555-1234` — now delegates to the shared one), and `/assignments`'
+  engagement contact panel. Display-only: the CRM keeps storing E.164, edit
+  inputs and `tel:` hrefs keep the raw value, and anything that isn't a
+  10-digit US number (international, extensions) renders as-is rather than
+  being mangled.
+
 ## [0.33.1] — 2026-07-10
 
 ### Added

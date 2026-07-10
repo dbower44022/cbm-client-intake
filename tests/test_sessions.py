@@ -322,8 +322,8 @@ async def test_peek_contact_builds_copy_card_and_address():
         "addressStreet": "1 Main St", "addressCity": "Cleveland",
         "addressState": "OH", "addressPostalCode": "44113"}})
     res = await service.peek(fake, "Contact", "c1")
-    # paste-ready card: name, full address, email, phone
-    assert res["copyText"] == "Pat Lee\n1 Main St\nCleveland, OH 44113\npat@x.org\n+12165550142"
+    # paste-ready card: name, full address, email, phone (US display format)
+    assert res["copyText"] == "Pat Lee\n1 Main St\nCleveland, OH 44113\npat@x.org\n(216)-555-0142"
     # a combined Address field is shown in the pop-up
     assert {"label": "Address", "value": "1 Main St\nCleveland, OH 44113", "type": "longtext"} in res["fields"]
 
