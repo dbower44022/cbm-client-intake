@@ -1,6 +1,8 @@
 # Communications — Gmail Conversation Integration (Design & Plan)
 
-**Status: APPROVED PLAN — not yet built.** Decisions recorded 2026-07-10 with Doug.
+**Status: BUILT (app side, v0.35.0 — gated off by `GMAIL_SYNC`); CRM entities
+built + verified on crm-test 2026-07-11.** Activation runbook:
+`GMAIL-INTEGRATION-GUIDE.md`. Decisions recorded 2026-07-10 with Doug.
 This wires the session tools' **Communications tab** (today a UI-only scaffold,
 `sessions/frontend/`) to real email: the app ingests each manager's
 `@cbmentors.org` Gmail, strips the redundant quoted text, stores the result as
