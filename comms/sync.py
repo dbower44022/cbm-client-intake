@@ -102,9 +102,15 @@ async def ingest_message(
 
     excludes = await store.all_excludes()
 
+    # The CRM's varchar fields are 100 chars (as built) — clamp everything we
+    # write so an unusually long value can never 400 the whole message. The
+    # rfc id is clamped ONCE here and used for both the dedup lookup and the
+    # stored value, so the key stays consistent.
+    rfc_id = (parsed.rfc_message_id or "")[:100]
+
     # 1. Global dedup: this exact email may already be stored from another
     #    mailbox (CC'd co-mentor). Then only the record links can be new.
-    existing = await crm.find_communication_by_rfc_id(espo, parsed.rfc_message_id)
+    existing = await crm.find_communication_by_rfc_id(espo, rfc_id)
     if existing:
         conv_id = existing.get(crm.CONVERSATION_FK)
         if conv_id:
@@ -133,19 +139,19 @@ async def ingest_message(
     await espo.create(
         crm.COMMUNICATION,
         {
-            "name": (parsed.subject or "(no subject)")[:250],
+            "name": (parsed.subject or "(no subject)")[:249],
             "direction": direction,
             "sentAt": parsed.sent_at or None,
-            "fromAddress": parsed.from_address,
-            "fromName": parsed.from_name,
+            "fromAddress": parsed.from_address[:100],
+            "fromName": parsed.from_name[:100],
             "toAddresses": ", ".join(parsed.to_addresses)[:500],
             "ccAddresses": ", ".join(parsed.cc_addresses)[:500],
-            "snippet": cleaned.snippet,
+            "snippet": cleaned.snippet[:100],
             "bodyCleaned": cleaned.html,
-            "rfcMessageId": parsed.rfc_message_id,
-            "gmailThreadId": parsed.thread_id,
-            "gmailMessageId": parsed.gmail_id,
-            "sourceMailbox": scope.mailbox,
+            "rfcMessageId": rfc_id,
+            "gmailThreadId": parsed.thread_id[:100],
+            "gmailMessageId": parsed.gmail_id[:100],
+            "sourceMailbox": scope.mailbox[:100],
             crm.CONVERSATION_FK: conv_id,
         },
     )

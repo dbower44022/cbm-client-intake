@@ -29,7 +29,7 @@ Type: Base. Name field = subject of the first message.
 | `conversationStatus` | enum | `Open`, `Closed`, `Uncertain` — default `Open` |
 | `summary` | text | AI summary (empty when the AI layer is off) |
 | `actionItems` | text | newline-separated action items (AI) |
-| `keyTopics` | varchar (255) | comma-separated topic tags (AI) |
+| `keyTopics` | varchar (100) | comma-separated topic tags (AI) — as built on crm-test; the app clamps |
 | `participants` | varchar (500) | display names, denormalized for lists |
 | `firstMessageAt` | datetime | |
 | `lastMessageAt` | datetime | |
@@ -68,23 +68,25 @@ as `CSession`; see CLAUDE.md's session-tools ACL bullet).
 
 ## 2. Entity: `CCommunication`
 
-Type: Base. One per email message.
+Type: Base. One per email message. Lengths below are AS BUILT on
+crm-test (2026-07-11) — build prod identically; the app clamps its writes
+to these lengths.
 
 | Field | Type | Options / notes |
 |---|---|---|
 | `name` | varchar (255) | Subject |
 | `direction` | enum | `Inbound`, `Outbound` |
 | `sentAt` | datetime | |
-| `fromAddress` | varchar (255) | **plain varchar — NOT the email field type** (an email-type field silently stores nothing; the `submitterEmail` lesson) |
-| `fromName` | varchar (255) | |
+| `fromAddress` | varchar (100) | **plain varchar — NOT the email field type** (an email-type field silently stores nothing; the `submitterEmail` lesson) |
+| `fromName` | varchar (100) | |
 | `toAddresses` | varchar (500) | comma-joined |
 | `ccAddresses` | varchar (500) | comma-joined |
-| `snippet` | varchar (255) | first ~200 chars of the cleaned text |
+| `snippet` | varchar (100) | first ~200 chars of the cleaned text |
 | `bodyCleaned` | wysiwyg | cleaned HTML; quoted reply kept in `<blockquote class="quoted-reply">` |
-| `rfcMessageId` | varchar (255) | RFC822 Message-ID — the global dedup key; **index it** |
-| `gmailThreadId` | varchar (64) | |
-| `gmailMessageId` | varchar (64) | |
-| `sourceMailbox` | varchar (255) | which manager's mailbox this copy came from |
+| `rfcMessageId` | varchar (100) | RFC822 Message-ID — the global dedup key; **index it** |
+| `gmailThreadId` | varchar (100) | |
+| `gmailMessageId` | varchar (100) | |
+| `sourceMailbox` | varchar (100) | which manager's mailbox this copy came from |
 
 Links: `conversation` (belongsTo CConversation — reverse `communications`).
 

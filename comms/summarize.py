@@ -137,7 +137,7 @@ async def run_summary_pass(settings: Any, espo: Any) -> int:
                     "conversationStatus": result.status,
                     "summary": result.summary,
                     "actionItems": "\n".join(result.action_items),
-                    "keyTopics": ", ".join(result.key_topics)[:250],
+                    "keyTopics": ", ".join(result.key_topics)[:100],
                     "summarizedAt": _now_stamp(),
                 },
             )
