@@ -734,7 +734,9 @@ app as PRIMARY, Cloudflare CNAME grey-cloud → the app's default hostname; the
   activated). Full detail + activation prerequisites in the **Communications
   tab** bullet of the Session Management section above; plan in
   `prds/communications-gmail-integration.md`; CRM build handoff in
-  `cconversation-entity.md`. Remaining to activate: CRM entities (CRM team),
+  `cconversation-entity.md`; **step-by-step activation runbook in
+  `GMAIL-INTEGRATION-GUIDE.md`** (Google scopes → CRM build → app flags →
+  verification → optional AI summaries → prod rollout). Remaining to activate: CRM entities (CRM team),
   Google Admin scope authorization, `GMAIL_SYNC=true` + migrate, then the live
   verification; AI summaries additionally need the privacy sign-off +
   `ANTHROPIC_API_KEY` + `COMMS_AI_SUMMARY=true`.
