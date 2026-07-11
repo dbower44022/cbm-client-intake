@@ -61,61 +61,132 @@ two Gmail scopes to the SAME grant — no new service account, no new key.
 
 ## Part 2 — CRM: build the entities (crm-test first)
 
-Full field-by-field spec: **`cconversation-entity.md`**. Condensed steps
-(EspoCRM Administration, as admin):
+Full field-by-field spec: **`cconversation-entity.md`**. Every step below is
+one action in the EspoCRM admin UI.
 
-1. **Entity Manager → Create Entity** `CConversation` (type Base). Add fields:
-   `conversationStatus` (enum: Open/Closed/Uncertain, default Open),
-   `summary` (text), `actionItems` (text), `keyTopics` (varchar 255),
-   `participants` (varchar 500), `firstMessageAt` (datetime),
-   `lastMessageAt` (datetime), `messageCount` (int),
-   `summarizedAt` (datetime, **no default, nullable**).
-2. **Entity Manager → Create Entity** `CCommunication` (type Base). Add:
-   `direction` (enum: Inbound/Outbound), `sentAt` (datetime),
-   `fromAddress` (**varchar 255 — NOT the email field type**; an email-type
-   field silently stores nothing), `fromName` (varchar 255),
-   `toAddresses` (varchar 500), `ccAddresses` (varchar 500),
-   `snippet` (varchar 255), `bodyCleaned` (wysiwyg),
-   `rfcMessageId` (varchar 255), `gmailThreadId` (varchar 64),
-   `gmailMessageId` (varchar 64), `sourceMailbox` (varchar 255).
-3. **Relationships** — create all five from **Entity Manager → CConversation
-   → Relationships → Create Relationship**, so CConversation is always the
-   LEFT column of the dialog. Careful with EspoCRM's directional type names:
-   **"One-to-Many" means the LEFT entity is the One and the RIGHT entity is
-   the Many** (this direction trap inverted the first crm-test build; never
-   use One-to-One Right/Left here).
+### 2.1 Create the two entities and their fields
 
-   | # | Relationship Type | Left (CConversation) Name / Label | Right Entity | Right Name / Label |
-   |---|---|---|---|---|
-   | 1 | **Many-to-Many** | `engagements` / Engagements | CEngagement | **`conversations`** / Conversations |
-   | 2 | **Many-to-Many** | `partnerProfiles` / Partner Profiles | CPartnerProfile | **`conversations`** / Conversations |
-   | 3 | **Many-to-Many** | `sponsorProfiles` / Sponsor Profiles | CSponsorProfile | **`conversations`** / Conversations |
-   | 4 | **Many-to-Many** | `contacts` / Contacts | Contact | **`conversations`** / Conversations |
-   | 5 | **One-to-Many** | `communications` / Communications | CCommunication | `conversation` / Conversation |
+1. Go to **Administration → Entity Manager → Create Entity**. Name:
+   `CConversation`, type **Base**. Save.
+2. In **CConversation → Fields**, add each field with **Add Field**:
+   - `conversationStatus` — type **Enum**, options `Open`, `Closed`,
+     `Uncertain`, default `Open`
+   - `summary` — type **Text**
+   - `actionItems` — type **Text**
+   - `keyTopics` — type **Varchar**, max length 255
+   - `participants` — type **Varchar**, max length 500
+   - `firstMessageAt` — type **Date-Time**
+   - `lastMessageAt` — type **Date-Time**
+   - `messageCount` — type **Integer**
+   - `summarizedAt` — type **Date-Time**, **no default value** (must be able
+     to stay empty)
+3. Back in Entity Manager, **Create Entity** again. Name: `CCommunication`,
+   type **Base**. Save.
+4. In **CCommunication → Fields**, add:
+   - `direction` — type **Enum**, options `Inbound`, `Outbound`
+   - `sentAt` — type **Date-Time**
+   - `fromAddress` — type **Varchar**, max length 255 (**NOT the Email field
+     type** — an email-type field silently stores nothing)
+   - `fromName` — type **Varchar**, 255
+   - `toAddresses` — type **Varchar**, 500
+   - `ccAddresses` — type **Varchar**, 500
+   - `snippet` — type **Varchar**, 255
+   - `bodyCleaned` — type **Wysiwyg**
+   - `rfcMessageId` — type **Varchar**, 255
+   - `gmailThreadId` — type **Varchar**, 64
+   - `gmailMessageId` — type **Varchar**, 64
+   - `sourceMailbox` — type **Varchar**, 255
 
-   The right-side Name on rows 1–4 must be exactly **`conversations`**
-   (plural) — the app reads `GET /{parent}/{id}/conversations`.
+### 2.2 Create the five relationships
 
-   *Correcting an existing wrong build* (e.g. crm-test as first built): open
-   CConversation → Relationships and DELETE the old relationships first
-   (deleting removes both sides, including the stray `conversation` links on
-   the parents), then recreate per the table. Safe while no data exists.
-4. **Enable Collaborators**: Entity Manager → CConversation → Edit → check
-   **Collaborators** (the multi-user *Assigned Users* field — the same toggle
-   CEngagement and CSession have on). Required — the sync stamps owners there
-   so read-own roles see their conversations.
-5. **Grants** (Administration → Roles):
-   - `CustomAppAPIRole` (the intake API user): create + read + edit on BOTH
-     entities.
-   - The three session gate roles (Mentor Team / Partner Management Team /
-     Sponsor Management Team roles): read on both — `CCommunication` read
-     must be **team or all** (messages aren't owner-stamped; "own" hides
-     them). Simplest: read=all on both (see the spec §3 for the tighter
-     alternative).
-6. **Layouts**: add a "Conversations" relationship panel to the detail
-   layouts of CEngagement, CPartnerProfile, CSponsorProfile (columns: name,
-   conversationStatus, messageCount, lastMessageAt).
-7. **Administration → Rebuild.**
+All five are created from the SAME screen: **Entity Manager → CConversation →
+Relationships → Create Relationship**. In that dialog the **left column is
+always CConversation** (the entity you're standing in) and the **right column
+is the entity you pick**. EspoCRM's type names are directional:
+**"One-to-Many" means the LEFT entity is the One and the RIGHT entity is the
+Many.** Never use One-to-One Right/Left here.
+
+> **Correcting a wrong build** (e.g. crm-test as first built): before
+> creating anything, delete the existing relationships on this same screen —
+> removing a relationship removes both sides, including the stray
+> `conversation` links on the parent entities. Safe while no data exists.
+
+**Relationship 1 — Engagements:**
+1. Click **Create Relationship**.
+2. **Relationship Type**: **Many-to-Many**
+3. Left column **Name**: `engagements`   **Label**: `Engagements`
+4. Right column **Entity**: **CEngagement**
+5. Right column **Name**: `conversations` (lowercase, plural, exactly — the
+   app reads `GET /CEngagement/{id}/conversations`)   **Label**: `Conversations`
+6. **Save**.
+
+**Relationship 2 — Partners:**
+1. **Create Relationship**.
+2. **Relationship Type**: **Many-to-Many**
+3. Left **Name**: `partnerProfiles`   **Label**: `Partner Profiles`
+4. Right **Entity**: **CPartnerProfile**
+5. Right **Name**: `conversations`   **Label**: `Conversations`
+6. **Save**.
+
+**Relationship 3 — Sponsors:**
+1. **Create Relationship**.
+2. **Relationship Type**: **Many-to-Many**
+3. Left **Name**: `sponsorProfiles`   **Label**: `Sponsor Profiles`
+4. Right **Entity**: **CSponsorProfile**
+5. Right **Name**: `conversations`   **Label**: `Conversations`
+6. **Save**.
+
+**Relationship 4 — Contacts:**
+1. **Create Relationship**.
+2. **Relationship Type**: **Many-to-Many**
+3. Left **Name**: `contacts`   **Label**: `Contacts`
+4. Right **Entity**: **Contact**
+5. Right **Name**: `conversations`   **Label**: `Conversations`
+6. **Save**.
+
+**Relationship 5 — Messages (the only one that is NOT Many-to-Many):**
+1. **Create Relationship**.
+2. **Relationship Type**: **One-to-Many** (CConversation is the left = the
+   One; one conversation has many messages)
+3. Left **Name**: `communications`   **Label**: `Communications`
+4. Right **Entity**: **CCommunication**
+5. Right **Name**: `conversation` (singular — each message belongs to one
+   conversation)   **Label**: `Conversation`
+6. **Save**.
+
+### 2.3 Enable Collaborators on CConversation
+
+1. In **Entity Manager → CConversation**, click **Edit** (the entity's own
+   edit button — not Fields, not Layouts).
+2. Check the **Collaborators** checkbox (the multi-user *Assigned Users*
+   field — the same setting CEngagement and CSession have on). Required: the
+   sync stamps the owning managers there so read-own roles see their
+   conversations.
+3. **Save**.
+
+### 2.4 Grants
+
+1. **Administration → Roles → CustomAppAPIRole → Edit**.
+2. **CConversation**: Access enabled, **Create = yes, Read = all, Edit =
+   all**, Delete = no.
+3. **CCommunication**: same — **Create = yes, Read = all, Edit = all**. Save.
+4. Open the role that gates the **Mentor Team** members. Set
+   **CConversation: Read = own** (or team) and **CCommunication: Read = all**
+   (or team — anything except *own*, which would hide the messages).
+   Create/Edit = no. Save.
+5. Repeat the previous step for the **Partner Management Team** role and the
+   **Sponsor Management Team** role.
+
+### 2.5 Layouts (optional but recommended)
+
+1. On the detail layout of **CEngagement**, **CPartnerProfile**, and
+   **CSponsorProfile**, add a **Conversations** relationship panel (columns:
+   name, conversationStatus, messageCount, lastMessageAt) — this is what
+   makes correspondence visible to CRM users on the record.
+
+### 2.6 Rebuild
+
+1. **Administration → Rebuild.**
 
 ## Part 3 — App: enable the integration
 
