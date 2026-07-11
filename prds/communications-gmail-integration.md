@@ -68,60 +68,59 @@ we port its cleaning architecture and sync patterns rather than reinvent them.
 
 ### 3.1 Configure Gmail access — step-by-step
 
-The app reuses the Google service account that already does the Directory
-mailbox check/creation (v0.11.0). Configuration = adding two Gmail scopes to
-that account's EXISTING domain-wide delegation grant and enabling the Gmail
-API. No new service account, no new key, no per-mentor step.
+**A Google Cloud service account does NOT exist yet** (verified 2026-07-11:
+no `GOOGLE_*` credentials in either live app spec or overlay — the v0.11.0
+mailbox-check machinery shipped dormant and was never given credentials). A
+*service account* is a robot Google identity that authenticates with a JSON
+key file; Google assigns it a ~21-digit **OAuth2 Client ID**, which is how
+Google Workspace's Domain-wide Delegation screen identifies it. This is all
+Google-side — nothing here touches EspoCRM or the droplet.
 
-**Step 1 — Find the service account's Client ID.**
-1. Open the service-account JSON key. It is either pasted into the admin
-   **Email Setup** screen (`/mentoradmin` → Email Setup) or stored as the
-   `GOOGLE_SERVICE_ACCOUNT_JSON` value in the gitignored deploy overlay.
-2. Copy the value of the `"client_id"` property — a number of ~21 digits.
-   (Also note the `"project_id"` value; Step 2 needs it.)
-   Alternative: console.cloud.google.com → IAM & Admin → Service Accounts →
-   click the account → copy **Unique ID**.
+**Step 1 — Create a Google Cloud project.**
+1. Go to **console.cloud.google.com**, signed in as **admin@cbmentors.org**.
+2. Project picker (top bar) → **New Project** → name `CBM Integrations` →
+   **Create**, then select it in the picker.
 
-**Step 2 — Enable the Gmail API on the GCP project.**
-1. Go to **console.cloud.google.com** and sign in with the Google account
-   that owns the service account's project.
-2. In the project picker (top bar), select the project whose id matches the
-   key's `"project_id"`.
-3. Go to **APIs & Services → Library**.
-4. Search for **Gmail API** and open it.
-5. Click **Enable**. (If it says "Manage" instead, it is already enabled —
-   nothing to do.)
+**Step 2 — Create the service account.**
+1. **IAM & Admin → Service Accounts → + Create Service Account**.
+2. Name: `cbm-app` → **Create and Continue**.
+3. Skip the role-grant step (no roles needed) → **Continue** → **Done**.
 
-**Step 3 — Add the Gmail scopes to the delegation grant.**
-1. Go to **admin.google.com** and sign in as a Google Workspace
-   **super-admin** for the cbmentors.org domain.
-2. Go to **Security → Access and data control → API controls**.
-3. Click **Manage Domain Wide Delegation** (bottom of the page).
-4. Find the row whose **Client ID** matches the number from Step 1 (it
-   exists — it carries the Directory scopes today).
-5. Click that row, then click **Edit**.
-6. In the **OAuth scopes** box, KEEP everything already there and APPEND
-   these two, separated by commas:
+**Step 3 — Download its JSON key.**
+1. Click **cbm-app** in the list → **Keys** tab → **Add Key → Create new
+   key** → **JSON** → **Create**. A `.json` file downloads.
+2. That file IS the credential — treat it like a password. Inside it:
+   `"client_id"` (the ~21-digit number used in Step 5) and `"client_email"`.
+
+**Step 4 — Enable the Gmail API.**
+1. Same project: **APIs & Services → Library** → search **Gmail API** →
+   open → **Enable**.
+
+**Step 5 — Authorize domain-wide delegation.**
+1. **admin.google.com** (as a Workspace super-admin) → **Security → Access
+   and data control → API controls → Manage Domain Wide Delegation**.
+2. Click **Add new**.
+3. **Client ID**: the `"client_id"` number from the JSON key.
+4. **OAuth scopes** (paste exactly):
 
    ```
    https://www.googleapis.com/auth/gmail.readonly,https://www.googleapis.com/auth/gmail.send
    ```
 
-7. Click **Authorize**.
-8. Confirm the row now lists the Directory scope(s) AND both Gmail scopes.
+5. **Authorize**. Propagation: minutes, occasionally up to an hour.
 
-**Step 4 — Wait for propagation.**
-1. Google applies delegation changes within minutes, occasionally up to an
-   hour. Nothing else to click.
+**Step 6 — Give the key to the app.**
+1. In the target app's gitignored overlay (`.do/app.prod.yaml` = crm-test),
+   set the FULL contents of the JSON file as `GOOGLE_SERVICE_ACCOUNT_JSON`
+   (type `SECRET`) on BOTH the web service and the worker.
+2. Apply: `doctl apps update <app-id> --spec <overlay> --wait`.
+3. Delete the downloaded key file from the local machine.
 
-**Step 5 — Verify.**
-1. There is no test button in Google Admin; the proof is the app itself.
-   After `GMAIL_SYNC=true` is deployed (§Part 3 of
-   `GMAIL-INTEGRATION-GUIDE.md`), watch the worker logs:
-   - success: `gmail access as <mailbox> (scope=readonly)` lines and a
-     `gmail sync pass: {...}` summary;
-   - not authorized / not propagated yet: `Gmail auth failed for <mailbox>`
-     — re-check Step 3's scope list, then wait out Step 4.
+**Step 7 — Verify.**
+1. No test button exists in Google Admin; the proof is the worker log once
+   `GMAIL_SYNC=true` is deployed: `gmail access as <mailbox>` +
+   `gmail sync pass: {...}` = working; `Gmail auth failed for <mailbox>` =
+   the delegation row is wrong/missing or still propagating.
 
 ### 3.2 Token minting and the subject rule
 

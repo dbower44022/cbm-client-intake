@@ -19,45 +19,35 @@ test app first**; repeat Parts 2–4 for prod once the test verification passes.
 
 | Requirement | Where it came from | How to check |
 |---|---|---|
-| Google service account with domain-wide delegation | The mailbox check/creation feature (v0.11.0) | Its JSON key is in the Email Setup screen (`/mentoradmin` → Email Setup) or the `GOOGLE_SERVICE_ACCOUNT_JSON` env var in the gitignored overlay |
+| Google service account | **Does NOT exist yet** (verified 2026-07-11 — the v0.11.0 mailbox-check code shipped without credentials) | Created from scratch in Part 1 |
 | Managed Postgres + `delivery-worker` + pre-deploy migrate | V2 activation | `/healthz` shows `durableStore: true` |
 | App at **v0.35.0 or later** | The Communications build | `/healthz` version |
 | Managers have a CBM mailbox + login | Mentor provisioning | Each syncing manager's `CMentorProfile` has `cbmEmail` set AND an assigned login User — **both are required**; profiles missing either are silently skipped |
 
 ---
 
-## Part 1 — Google: authorize the Gmail scopes
+## Part 1 — Google: create the service account + authorize the Gmail scopes
 
-The service account already has Directory scopes authorized. You are ADDING
-two Gmail scopes to the SAME grant — no new service account, no new key.
+No service account exists yet, so this part creates one from scratch. A
+*service account* is a robot Google identity (JSON-key authentication, no
+inbox); Google assigns it a ~21-digit **OAuth2 Client ID**, which is what the
+Domain-wide Delegation screen lists. All of Part 1 is Google-side.
 
-1. **Find the service account's Client ID.** Open the service-account JSON
-   key (the one pasted into Email Setup / the overlay) and copy the value of
-   `"client_id"` — a ~21-digit number. (Alternatively: GCP Console → IAM &
-   Admin → Service Accounts → the account → "Unique ID".)
-2. Sign in to **admin.google.com** as a Workspace super-admin.
-3. Go to **Security → Access and data control → API controls →
-   Manage Domain Wide Delegation**.
-4. Find the row with that Client ID (it exists — it carries the Directory
-   scopes) and click **Edit**.
-5. In the OAuth scopes box, keep the existing scopes and ADD these two,
-   comma-separated:
+The full step-by-step (create project → create service account → download the
+JSON key → enable the Gmail API → Add new delegation row with the key's
+`"client_id"` + the two scopes → put the JSON in the overlay) is in
+**`prds/communications-gmail-integration.md` §3.1** — follow it verbatim.
+The two scopes, for copy-paste:
 
-   ```
-   https://www.googleapis.com/auth/gmail.readonly,
-   https://www.googleapis.com/auth/gmail.send
-   ```
-
-6. **Authorize** / Save. Propagation is usually minutes; allow up to an hour.
-7. Also confirm the **Gmail API is enabled** on the service account's GCP
-   project: GCP Console → APIs & Services → Library → "Gmail API" → Enable
-   (the Admin SDK is already enabled for the Directory checks).
+```
+https://www.googleapis.com/auth/gmail.readonly,https://www.googleapis.com/auth/gmail.send
+```
 
 > Security note (for the record): domain-wide delegation is domain-wide — the
 > app code restricts impersonation to (a) enumerated managers' mailboxes for
 > sync and (b) the signed-in user's own mailbox for search/send, and logs every
-> access. The scopes stay read+send only (no modify/delete). This was accepted
-> in the design; see the plan §3.4.
+> access. The scopes stay read+send only (no modify/delete). Accepted in the
+> design; see the plan §3.4.
 
 ## Part 2 — CRM: build the entities (crm-test first)
 
