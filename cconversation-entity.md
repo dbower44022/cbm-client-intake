@@ -55,8 +55,10 @@ Many*. That direction trap is what inverted the first crm-test build.)
 - Row 5 is **One-to-Many** *from CConversation* (one conversation, many
   messages). If created from CCommunication instead, the type flips to
   Many-to-One. Do not use One-to-One Right/Left anywhere.
-- The right-side Name on rows 1–4 **must be exactly `conversations`**
-  (plural) — the app reads `GET /{parent}/{id}/conversations`.
+- The right-side Name on rows 1–3 **must be exactly `conversations`**
+  (plural) — the app reads `GET /{parent}/{id}/conversations`. On row 4,
+  EspoCRM auto-prefixes custom links on the built-in Contact entity, so its
+  side saves as `cConversations` — expected; the app never reads that side.
 
 **Enable Collaborators on `CConversation`** (Entity Manager → CConversation →
 Edit → the **Collaborators** checkbox — the multi-user *Assigned Users* field,

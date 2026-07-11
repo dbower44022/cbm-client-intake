@@ -157,7 +157,10 @@ exists.
 3. Left **Name**: `contacts`  **Label**: `Contacts`
 4. Right **Entity**: **Contact**
 5. Right **Name**: `conversations`  **Label**: `Conversations`
-6. **Save**.
+6. **Save**. Note: EspoCRM auto-prefixes custom links on built-in entities,
+   so Contact's side will save as `cConversations` — expected and fine (the
+   app never reads that side; only the four record entities need the exact
+   `conversations` name, and Engagement/Partner/Sponsor take it as typed).
 
 **Link 5 — Communications (the only one that is NOT Many-to-Many)**
 1. **+ Create Link**.
