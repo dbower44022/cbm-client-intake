@@ -4,6 +4,26 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.36.0] — 2026-07-11
+
+### Changed
+- **Staff tools: minor CRM rejections no longer stop a save, and what does
+  fail speaks plain language — never a raw 502/504.** Two layers (extending
+  the non-required-enums-never-block policy to Mentor Administration):
+  1. **Mentor Administration saves sanitize enums server-side** (mirroring the
+     sessions engine): an enum/multi-enum value the live CRM no longer offers
+     is dropped before the write — the rest of the save proceeds, the drop is
+     logged, and the save response carries plain-language `warnings` that the
+     editor shows in a new amber "Saved, with a note:" notice. Fails open when
+     options can't be fetched.
+  2. **All three staff routers (mentoradmin / sessions / assignments) translate
+     EspoCRM `validationFailure` 400s** into a readable 400 naming the field
+     ("The CRM did not accept the save: 'How Did You Hear About CBM' has a
+     value the CRM does not accept…") via the new `core.espo.validation_message`
+     helper, instead of wrapping the raw CRM body in a 502 (which the edge
+     showed as a 504). Genuine server faults still 502; expired sessions
+     still 401.
+
 ## [0.35.1] — 2026-07-11
 
 ### Fixed

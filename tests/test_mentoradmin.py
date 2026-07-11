@@ -70,6 +70,64 @@ async def test_update_mentor_no_editable_changes_skips_update():
     assert client.gets  # still re-reads the record
 
 
+# --- enum sanitization on save (a drifted value never blocks the save) ---
+
+_HOW_HEARD_META = {"howDidYouHearAboutCBM": {"type": "enum", "options": ["Online Search", "Other"]}}
+
+
+@pytest.mark.asyncio
+async def test_update_mentor_drops_drifted_enum_and_warns():
+    """A value the live CRM enum no longer offers is dropped (logged + a
+    plain-language warning returned); the REST of the save still happens."""
+    client = FakeClient(metadata=_HOW_HEARD_META)
+    result = await service.update_mentor(
+        client, "m1", {"howDidYouHearAboutCBM": "Online search", "name": "New Name"}
+    )
+    assert len(client.updates) == 1
+    _, _, payload = client.updates[0]
+    assert payload == {"name": "New Name"}  # the drifted enum never reaches the CRM
+    assert len(result["warnings"]) == 1
+    assert "How they heard about CBM" in result["warnings"][0]
+    assert "Online search" in result["warnings"][0]
+
+
+@pytest.mark.asyncio
+async def test_update_mentor_multienum_keeps_valid_members():
+    meta = {"industryExperience": {"type": "multiEnum", "options": ["Education", "Retail"]}}
+    client = FakeClient(metadata=meta)
+    result = await service.update_mentor(
+        client, "m1", {"industryExperience": ["Education", "Gone Industry"]}
+    )
+    _, _, payload = client.updates[0]
+    assert payload == {"industryExperience": ["Education"]}
+    assert "Gone Industry" in result["warnings"][0]
+
+
+@pytest.mark.asyncio
+async def test_update_mentor_only_drifted_change_still_saves_cleanly():
+    """If the only change was the drifted value, nothing is written but the
+    save still succeeds with the warning (no 4xx/5xx to the user)."""
+    client = FakeClient(metadata=_HOW_HEARD_META)
+    result = await service.update_mentor(client, "m1", {"howDidYouHearAboutCBM": "SBA"})
+    assert client.updates == []
+    assert result["warnings"]
+
+
+@pytest.mark.asyncio
+async def test_update_mentor_enum_sanitize_fails_open():
+    """Options unavailable => keep the value (never drop what can't be verified)."""
+
+    class NoMeta(FakeClient):
+        async def metadata(self, key):
+            raise EspoError("metadata failed: HTTP 500")
+
+    client = NoMeta()
+    result = await service.update_mentor(client, "m1", {"howDidYouHearAboutCBM": "Other"})
+    _, _, payload = client.updates[0]
+    assert payload == {"howDidYouHearAboutCBM": "Other"}
+    assert "warnings" not in result
+
+
 def test_field_spec_layout():
     """Lock the requested detail-form layout."""
     by = {f["name"]: f for f in service.EDITABLE_FIELDS}
@@ -889,6 +947,29 @@ def test_expired_token_returns_401(monkeypatch):
         r = c.get("/mentoradmin/api/mentors")
     assert r.status_code == 401
     assert "expired" in r.json()["detail"].lower()
+
+
+def test_crm_validation_rejection_returns_readable_400(monkeypatch):
+    """An EspoCRM validationFailure (e.g. an enum value the CRM no longer
+    accepts, if one slips past sanitization) comes back as a readable 400
+    naming the field — never a raw 502/504 (the Allen Ingram prod failure)."""
+    _authed(monkeypatch)
+
+    async def fake_update(client, mentor_id, changes, **kwargs):
+        raise EspoError(
+            'update CMentorProfile/m1 failed: HTTP 400 {"messageTranslation":'
+            '{"label":"validationFailure","scope":null,"data":'
+            '{"field":"howDidYouHearAboutCBM","type":"valid"}}}'
+        )
+
+    monkeypatch.setattr("mentoradmin.router.service.update_mentor", fake_update)
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.put("/mentoradmin/api/mentors/m1", json={"changes": {"howDidYouHearAboutCBM": "SBA"}})
+    assert r.status_code == 400
+    detail = r.json()["detail"]
+    assert "How Did You Hear About CBM" in detail
+    assert "does not accept" in detail
+    assert "502" not in detail and "messageTranslation" not in detail
 
 
 def test_other_crm_error_returns_502(monkeypatch):

@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from core.config import get_settings
-from core.espo import EspoError
+from core.espo import EspoError, validation_message
 
 from . import auth, service
 from .espo_user import client_for
@@ -52,6 +52,11 @@ def _crm_failure(request: Request, exc: EspoError, message: str) -> HTTPExceptio
         return HTTPException(
             status_code=401, detail="Your session has expired — please sign in again."
         )
+    # A CRM validation rejection is the caller's data, not a server fault —
+    # answer with a readable 400 naming the field, never a raw 502/504.
+    friendly = validation_message(exc)
+    if friendly:
+        return HTTPException(status_code=400, detail=friendly)
     return HTTPException(status_code=502, detail=f"{message}: {exc}")
 
 

@@ -60,7 +60,7 @@
 
   function notice(elId, text, kind) {
     var n = $(elId); n.textContent = text;
-    n.className = "ma__notice " + (kind === "error" ? "is-error" : "is-success");
+    n.className = "ma__notice " + (kind === "error" ? "is-error" : kind === "warn" ? "is-warn" : "is-success");
     show(n); n.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 
@@ -747,9 +747,14 @@
       rebaseline();
       $("detailName").textContent = current.name || "(unnamed mentor)";
       renderReadonly(current);
+      // Non-fatal server-side notes (e.g. a drifted enum value dropped rather
+      // than failing the save) — the save succeeded, but the user should know.
+      var warn = (current.warnings && current.warnings.length) ? " " + current.warnings.join(" ") : "";
       if (needsProvisioning(current)) {
-        notice("detailNotice", "Saved. Setting up the mentor's login…", "success");
+        notice("detailNotice", "Saved. Setting up the mentor's login…" + warn, warn ? "warn" : "success");
         startProvision(current.id);
+      } else if (warn) {
+        notice("detailNotice", "Saved, with a note:" + warn, "warn");
       } else {
         notice("detailNotice", "Saved.", "success");
       }

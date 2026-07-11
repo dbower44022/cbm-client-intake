@@ -27,7 +27,7 @@ from assignments.auth import (
 from assignments.espo_user import client_for
 from core.app_config import make_app_config_store
 from core.config import Settings, get_settings
-from core.espo import EspoClient, EspoError
+from core.espo import EspoClient, EspoError, validation_message
 from core.google_directory import ResolvedGoogle, resolve_google_directory
 
 from . import service
@@ -86,6 +86,11 @@ def _crm_failure(request: Request, exc: EspoError, message: str) -> HTTPExceptio
     # Log the full CRM error (includes the response body) so failures like a
     # value rejected by EspoCRM are diagnosable from the run logs.
     log.warning("%s: %s", message, exc)
+    # A CRM validation rejection is the caller's data, not a server fault —
+    # answer with a readable 400 naming the field, never a raw 502/504.
+    friendly = validation_message(exc)
+    if friendly:
+        return HTTPException(status_code=400, detail=friendly)
     return HTTPException(status_code=502, detail=f"{message}: {exc}")
 
 

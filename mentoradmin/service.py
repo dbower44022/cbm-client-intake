@@ -144,6 +144,7 @@ CONTACT_NAMES = {f["name"] for f in EDITABLE_FIELDS if f.get("entity") == CONTAC
 EDITABLE_NAMES = PROFILE_EDIT_NAMES | CONTACT_NAMES
 _ENUM_FIELDS = [f["name"] for f in EDITABLE_FIELDS
                 if f["type"] in ("enum", "multiEnum") and not f.get("entity")]
+_FIELD_LABELS = {f["name"]: f["label"] for f in EDITABLE_FIELDS}
 
 # Read-only context shown above the form. Includes the contact-info "foreign"
 # fields CMentorProfile mirrors from the linked Contact (personalEmail/
@@ -257,6 +258,56 @@ async def sync_record_status(
     return current or status
 
 
+async def _sanitize_enum_changes(
+    client: MentorClient, payload: dict[str, Any]
+) -> list[str]:
+    """Drop enum/multi-enum values the live CRM no longer accepts, in place.
+
+    One drifted option must never 400 the whole save (Doug's policy — see the
+    sessions engine's ``_sanitize_enum_payload`` and the orchestrators'
+    ``EnumSanitizer``): the rest of the save proceeds, the drop is logged, and a
+    plain-language warning per dropped value is returned for the UI to show.
+    A single enum is omitted (preserving the stored value); a multi-enum keeps
+    its valid members. **Fails open**: if the live options can't be fetched,
+    the payload is left untouched — never drop what can't be verified.
+    """
+    keys = [k for k in payload if k in _ENUM_FIELDS]
+    if not keys:
+        return []
+    try:
+        options = await field_options(client)
+    except Exception as exc:  # noqa: BLE001 — fail open, never block the save
+        log.warning("could not fetch enum options (%s); keeping values as-is", exc)
+        return []
+    warnings: list[str] = []
+
+    def note(name: str, values: list[Any]) -> None:
+        log.warning(
+            "%s.%s: dropping unrecognized %s (not in the live enum)",
+            MENTOR_PROFILE, name, values,
+        )
+        vals = ", ".join(f"“{v}”" for v in values)
+        warnings.append(
+            f"{_FIELD_LABELS.get(name, name)}: {vals} is no longer a valid "
+            "option in the CRM, so that value was not saved."
+        )
+
+    for key in keys:
+        opts = options.get(key)
+        if opts is None:  # field not in the live options map — unverifiable, keep
+            continue
+        value = payload[key]
+        if isinstance(value, list):  # multiEnum
+            dropped = [v for v in value if v not in opts]
+            if dropped:
+                payload[key] = [v for v in value if v in opts]
+                note(key, dropped)
+        elif value not in (None, "") and value not in opts:
+            del payload[key]
+            note(key, [value])
+    return warnings
+
+
 async def update_mentor(
     client: MentorClient,
     mentor_id: str,
@@ -289,6 +340,7 @@ async def update_mentor(
     """
     payload = {k: v for k, v in changes.items() if k in PROFILE_EDIT_NAMES}
     contact_payload = {k: v for k, v in changes.items() if k in CONTACT_NAMES}
+    warnings = await _sanitize_enum_changes(client, payload)
 
     # Contact-tab fields save to the linked Contact record. Resolve the link
     # BEFORE any write, so a mentor with no Contact fails fast with a clear
@@ -357,6 +409,8 @@ async def update_mentor(
         pass
 
     result = await get_mentor(client, mentor_id)
+    if warnings:
+        result["warnings"] = warnings
     if provision is not None:
         result["provision"] = provision
     elif (

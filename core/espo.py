@@ -13,7 +13,9 @@ end-to-end locally without a live instance.
 from __future__ import annotations
 
 import base64
+import json
 import logging
+import re
 from typing import Any, Optional, Protocol
 
 import httpx
@@ -23,6 +25,57 @@ log = logging.getLogger("cbm_intake.espo")
 
 class EspoError(Exception):
     """A create/read against EspoCRM failed."""
+
+
+_HTTP_STATUS_RE = re.compile(r"HTTP (\d{3})")
+
+
+def _humanize_field(name: str) -> str:
+    """``howDidYouHearAboutCBM`` → ``How Did You Hear About CBM``."""
+    spaced = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", name)
+    return spaced[:1].upper() + spaced[1:]
+
+
+def validation_message(exc: Exception) -> Optional[str]:
+    """A plain-language message when ``exc`` is an EspoCRM 400 validation
+    rejection, else ``None``.
+
+    :class:`EspoError` messages embed ``HTTP <status> <body>``; a
+    ``validationFailure`` body names the field and the failed rule
+    (``{"messageTranslation": {"label": "validationFailure", "data":
+    {"field": ..., "type": ...}}}``). Routers use this to answer with a
+    readable 400 ("the CRM did not accept field X") instead of surfacing the
+    raw error as a 502/504 — a bad value is the caller's data, not a server
+    fault. Returns ``None`` (→ keep the generic handling) for anything that
+    isn't provably a validation failure.
+    """
+    text = str(exc)
+    m = _HTTP_STATUS_RE.search(text)
+    if not m or m.group(1) != "400":
+        return None
+    start = text.find("{", m.end())
+    if start < 0:
+        return None
+    try:
+        body = json.loads(text[start:])
+    except ValueError:  # body truncated or not JSON — can't classify it
+        return None
+    info = body.get("messageTranslation") or {}
+    if info.get("label") != "validationFailure":
+        return None
+    data = info.get("data") or {}
+    field = data.get("field")
+    rule = data.get("type")
+    label = f"“{_humanize_field(field)}”" if field else "one of the fields"
+    reasons = {
+        "valid": "has a value the CRM does not accept",
+        "required": "is required and is missing",
+        "maxLength": "is too long",
+    }
+    reason = reasons.get(rule) or (
+        f"failed the CRM's “{rule}” check" if rule else "failed the CRM's validation"
+    )
+    return f"The CRM did not accept the save: {label} {reason}. Correct that field and try again."
 
 
 class EspoApi(Protocol):

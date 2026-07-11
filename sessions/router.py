@@ -19,7 +19,7 @@ from assignments.auth import clear_session, current_user, is_member, session_exp
 from assignments.espo_user import client_for
 from comms import service as comms_service
 from core.config import get_settings
-from core.espo import EspoError
+from core.espo import EspoError, validation_message
 from core.gmail import GmailError
 
 from . import details as details_svc
@@ -123,6 +123,11 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             clear_session(request)
             return HTTPException(status_code=401, detail="Your session has expired — please sign in again.")
         log.warning("%s (%s): %s", message, cfg.slug, exc)
+        # A CRM validation rejection is the caller's data, not a server fault —
+        # answer with a readable 400 naming the field, never a raw 502/504.
+        friendly = validation_message(exc)
+        if friendly:
+            return HTTPException(status_code=400, detail=friendly)
         return HTTPException(status_code=502, detail=f"{message}: {exc}")
 
     @router.get("/session")

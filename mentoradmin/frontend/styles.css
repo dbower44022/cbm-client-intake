@@ -26,6 +26,7 @@
 .ma__notice { padding: 0.75rem 1rem; border-radius: var(--cbm-radius); margin: 0 0 1rem; }
 .ma__notice.is-success { background: #eafaef; color: #2f7a3f; border: 1px solid var(--cbm-success); }
 .ma__notice.is-error { background: #fdeaea; color: #a23b38; border: 1px solid var(--cbm-danger); }
+.ma__notice.is-warn { background: #fdf6e3; color: #8a6d1a; border: 1px solid #d9b23a; }
 .form-error { color: var(--cbm-danger); margin: 0.5rem 0; }
 
 /* list table */
