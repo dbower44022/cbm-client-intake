@@ -182,16 +182,48 @@ exists.
 
 ### 2.4 Grants
 
-1. **Administration → Roles → CustomAppAPIRole → Edit**.
-2. **CConversation**: Access enabled, **Create = yes, Read = all, Edit =
-   all**, Delete = no.
-3. **CCommunication**: same — **Create = yes, Read = all, Edit = all**. Save.
-4. Open the role that gates the **Mentor Team** members. Set
-   **CConversation: Read = own** (or team) and **CCommunication: Read = all**
-   (or team — anything except *own*, which would hide the messages).
-   Create/Edit = no. Save.
-5. Repeat the previous step for the **Partner Management Team** role and the
-   **Sponsor Management Team** role.
+Four roles get access. crm-test role names below; **on the prod CRM the API
+user's role is named `CustomAppAPIRole` instead of `ClientMentorIntakeRole`**
+(the other three names match). The entities appear in the role editor as
+**Conversation** and **Communication**.
+
+**Role 1 of 4 — ClientMentorIntakeRole** (the intake API user — the sync's
+writer):
+1. Go to **Administration → Roles**.
+2. Click **ClientMentorIntakeRole**, then **Edit**.
+3. Scroll to **Conversation**: set **Access = enabled**, **Create = yes**,
+   **Read = all**, **Edit = all**, **Delete = no**.
+4. Scroll to **Communication**: set **Access = enabled**, **Create = yes**,
+   **Read = all**, **Edit = all**, **Delete = no**.
+5. Click **Save**.
+
+**Role 2 of 4 — Mentor Role:**
+1. **Administration → Roles → Mentor Role → Edit**.
+2. **Conversation**: **Access = enabled**, **Create = no**, **Read = all**,
+   **Edit = no**, **Delete = no**.
+3. **Communication**: **Access = enabled**, **Create = no**, **Read = all**,
+   **Edit = no**, **Delete = no**.
+4. **Save**.
+
+**Role 3 of 4 — Partner Manager Role:**
+1. **Administration → Roles → Partner Manager Role → Edit**.
+2. **Conversation**: **Access = enabled**, **Create = no**, **Read = all**,
+   **Edit = no**, **Delete = no**.
+3. **Communication**: **Access = enabled**, **Create = no**, **Read = all**,
+   **Edit = no**, **Delete = no**.
+4. **Save**.
+
+**Role 4 of 4 — Sponsor Manager Role:**
+1. **Administration → Roles → Sponsor Manager Role → Edit**.
+2. **Conversation**: **Access = enabled**, **Create = no**, **Read = all**,
+   **Edit = no**, **Delete = no**.
+3. **Communication**: **Access = enabled**, **Create = no**, **Read = all**,
+   **Edit = no**, **Delete = no**.
+4. **Save**.
+
+(The manager roles get Read = all because the app only shows a manager the
+conversations linked to records they own; the broader CRM-side read is the
+simple, working setting.)
 
 ### 2.5 Layouts (optional but recommended)
 
