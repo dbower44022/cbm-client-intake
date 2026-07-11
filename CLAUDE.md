@@ -729,17 +729,36 @@ on `main` but NOT pushed**. Prod answers on the
 app as PRIMARY, Cloudflare CNAME grey-cloud → the app's default hostname; the
 `…ondigitalocean.app` URL still works). Shipped 2026-07-05..10 (see CHANGELOG):
 
-- **Communications: Gmail conversation integration BUILT — v0.35.0**
-  (2026-07-10, gated OFF by `GMAIL_SYNC`; safe to deploy — a no-op until
-  activated). Full detail + activation prerequisites in the **Communications
-  tab** bullet of the Session Management section above; plan in
-  `prds/communications-gmail-integration.md`; CRM build handoff in
-  `cconversation-entity.md`; **step-by-step activation runbook in
-  `GMAIL-INTEGRATION-GUIDE.md`** (Google scopes → CRM build → app flags →
-  verification → optional AI summaries → prod rollout). Remaining to activate: CRM entities (CRM team),
-  Google Admin scope authorization, `GMAIL_SYNC=true` + migrate, then the live
-  verification; AI summaries additionally need the privacy sign-off +
-  `ANTHROPIC_API_KEY` + `COMMS_AI_SUMMARY=true`.
+- **Communications: Gmail conversation integration — ACTIVATED LIVE on
+  crm-test 2026-07-11 (read path verified end-to-end).** Built v0.35.0; docs:
+  plan `prds/communications-gmail-integration.md`, CRM handoff
+  `cconversation-entity.md`, activation runbook `GMAIL-INTEGRATION-GUIDE.md`.
+  Activation record: CRM entities built by Doug in the Entity Manager UI +
+  probe-verified (fields/links/Collaborators/grants all green; note the CRM's
+  varchars are 100 chars — the app clamps, spec updated); Google service
+  account **created from scratch** (project `espcrm-498315`, SA
+  `espocrm@…iam.gserviceaccount.com`, client_id 109317126943210877831 —
+  delegation row + gmail.readonly/send authorized by Doug; the v0.11.0 "SA
+  exists" assumption was FALSE); key wired into the crm-test overlay
+  (`GOOGLE_SERVICE_ACCOUNT_JSON` SECRET on web+worker) + `GMAIL_SYNC=true`;
+  migration 0004 applied. Two live bugs fixed during activation:
+  `requests` was a missing dependency of google-auth's token transport
+  (c655bf2, latent since v0.11.0), and CCommunication creates 400'd on
+  snippet maxLength → all varchar writes clamped to the as-built 100-char
+  fields (d6d48cd). **`GMAIL_RESYNC=true`** (worker env, one shot) is the
+  re-drive lever: clears cursors at startup so the backfill re-runs
+  idempotently (2e00a9e) — used to recover the dropped messages; the 5 empty
+  conversation shells from the bugged first pass were deleted via the admin
+  account. Verified in the CRM: 3 conversations, 5 cleaned messages,
+  References-merged threads, linked to the real engagement "Agape W8 Loss
+  2026-05-15", owner-stamped. Steady state: sync every 300s; the two fake
+  test mailboxes (partner.manager@/matt.mentor@ have no real Workspace
+  mailbox) log an expected invalid_grant warning each pass. **Remaining:**
+  eyeball the Communications tab as a signed-in manager; exercise SEND
+  (first gmail.send use) + curation live; prod rollout per the runbook
+  (prod CRM entities + prod overlay; same SA/delegation covers prod); AI
+  summaries need privacy sign-off + `ANTHROPIC_API_KEY` +
+  `COMMS_AI_SUMMARY=true`.
 
 - **Session Management tools — v0.34.0** (built 2026-07-08..10, branch
   `feat/session-view`, **NOT yet pushed/deployed**; mentor domain CRUD **driven
