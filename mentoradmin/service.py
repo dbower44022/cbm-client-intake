@@ -79,14 +79,6 @@ class MentorClient(Protocol):
     async def metadata(self, key: str) -> Any: ...
 
 
-# "How did you hear about CBM" is a free-text CRM field, but the mentor intake
-# (volunteer) form offers a fixed list — mirror it here so admins pick the same
-# values. Kept in sync with forms/volunteer/frontend/options.js (howDidYouHear).
-HOW_HEARD_OPTIONS = [
-    "Friend or relative", "Newspaper", "Online search", "Radio", "SBA",
-    "CBM client or volunteer", "Social media", "TV", "Workshop/Event", "Other",
-]
-
 CONTACT_ENTITY = "Contact"
 
 # Editable fields, grouped for the form (one tab per group). ``type`` drives the
@@ -135,7 +127,10 @@ EDITABLE_FIELDS: list[dict[str, Any]] = [
     {"name": "departureReason", "label": "Departure reason", "type": "enum", "group": "Departure"},
     {"name": "cbmEmail", "label": "CBM email", "type": "varchar", "group": "Profile"},
     {"name": "boardPosition", "label": "Board position", "type": "varchar", "group": "Profile"},
-    {"name": "howDidYouHearAboutCBM", "label": "How they heard about CBM", "type": "enum", "group": "Profile", "options": HOW_HEARD_OPTIONS},
+    # No static options: howDidYouHearAboutCBM is a real CRM enum (converted
+    # from free-text 2026-07-11), so its options are pulled live like every
+    # other enum — a hard-coded list here drifted and 400'd a prod save.
+    {"name": "howDidYouHearAboutCBM", "label": "How they heard about CBM", "type": "enum", "group": "Profile"},
     {"name": "description", "label": "Description / notes", "type": "text", "group": "Profile"},
     {"name": "aboutMentor", "label": "About the mentor", "type": "wysiwyg", "group": "Bio"},
     {"name": "mentorProfessionalBio", "label": "Professional bio", "type": "wysiwyg", "group": "Bio"},

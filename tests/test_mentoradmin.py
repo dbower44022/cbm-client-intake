@@ -73,9 +73,11 @@ async def test_update_mentor_no_editable_changes_skips_update():
 def test_field_spec_layout():
     """Lock the requested detail-form layout."""
     by = {f["name"]: f for f in service.EDITABLE_FIELDS}
-    # how-did-you-hear is a dropdown mirroring the mentor intake form
+    # how-did-you-hear is a live-options enum (the CRM field is a real enum
+    # now — a static list here drifted and 400'd a prod save 2026-07-11)
     assert by["howDidYouHearAboutCBM"]["type"] == "enum"
-    assert by["howDidYouHearAboutCBM"]["options"] == service.HOW_HEARD_OPTIONS
+    assert "options" not in by["howDidYouHearAboutCBM"]
+    assert "howDidYouHearAboutCBM" in service._ENUM_FIELDS
     # start date moved to Status; Dates tab renamed Departure (no more "Dates")
     assert by["mentorStartDate"]["group"] == "Status"
     assert by["departureDate"]["group"] == "Departure"

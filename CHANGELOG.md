@@ -4,6 +4,20 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.35.1] — 2026-07-11
+
+### Fixed
+- **Mentor Administration: saving a mentor 400'd (surfaced as 502/504) after
+  picking a "How they heard about CBM" value.** The CRM converted
+  `CMentorProfile.howDidYouHearAboutCBM` from free-text to a real enum, but the
+  editor still offered a hard-coded list from the free-text era (only "Other"
+  was still valid), and the frontend prefers a field's static list over live
+  options — so a picked value failed EspoCRM validation and blocked the whole
+  save (hit live on prod saving Allen Ingram). The static `HOW_HEARD_OPTIONS`
+  list is gone; the field's options are now pulled live from CRM metadata like
+  every other enum (`service.field_options`), so the dropdown always offers
+  exactly what the CRM accepts.
+
 ## [0.35.0] — 2026-07-10
 
 ### Added
