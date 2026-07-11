@@ -97,62 +97,78 @@ one action in the EspoCRM admin UI.
    - `gmailMessageId` — type **Varchar**, 64
    - `sourceMailbox` — type **Varchar**, 255
 
-### 2.2 Create the five relationships
+### 2.2 The relationships
 
-All five are created from the SAME screen: **Entity Manager → CConversation →
-Relationships → Create Relationship**. In that dialog the **left column is
-always CConversation** (the entity you're standing in) and the **right column
-is the entity you pick**. EspoCRM's type names are directional:
-**"One-to-Many" means the LEFT entity is the One and the RIGHT entity is the
-Many.** Never use One-to-One Right/Left here.
+**UI orientation** (Entity Manager → an entity → Relationships): the button is
+**+ Create Link**; the list columns are **Foreign Link | Link Type | Link |
+Foreign Entity**. In the create/edit dialog there are TWO panels each with a
+"Name" field: the **left panel is the entity you're standing in** (its Name =
+the **Link** column) and the **right panel is the other entity** (its Name =
+the **Foreign Link** column). EspoCRM shows custom entities WITHOUT their
+internal `C` prefix — "Conversation" in the UI is `CConversation` to the API.
+EspoCRM's link types are directional: **One-to-Many means the LEFT entity is
+the One and the RIGHT entity is the Many.** Never use One-to-One Right/Left
+here.
 
-> **Correcting a wrong build** (e.g. crm-test as first built): before
-> creating anything, delete the existing relationships on this same screen —
-> removing a relationship removes both sides, including the stray
-> `conversation` links on the parent entities. Safe while no data exists.
+**Deleting a wrong build first** (e.g. crm-test as first built): custom
+relationship rows have a small **▾ arrow at the far right** → **Remove**; rows
+without the arrow are system links — leave them. Removing a relationship
+removes BOTH sides, so each one is deleted once, from either entity's screen.
+The first crm-test build required removing, on **Communication →
+Relationships**: the row with Link `conversation` (Foreign Entity
+Conversation) and the row with Link `contact` (Foreign Entity Contact — a
+per-message contact link that isn't in this design at all); and on
+**Conversation → Relationships**: the rows with Link `engagements`,
+`partnerProfiles`, `sponsorProfiles`, and `contacts`. Safe while no data
+exists.
 
-**Relationship 1 — Engagements:**
-1. Click **Create Relationship**.
-2. **Relationship Type**: **Many-to-Many**
-3. Left column **Name**: `engagements`   **Label**: `Engagements`
-4. Right column **Entity**: **CEngagement**
-5. Right column **Name**: `conversations` (lowercase, plural, exactly — the
-   app reads `GET /CEngagement/{id}/conversations`)   **Label**: `Conversations`
+**Create all five links from Entity Manager → Conversation → Relationships →
++ Create Link** (so Conversation is always the left panel):
+
+**Link 1 — Engagements**
+1. Click **+ Create Link**.
+2. **Link Type**: **Many-to-Many**
+3. Left panel (Conversation) **Name**: `engagements`  **Label**: `Engagements`
+4. Right panel **Entity**: **Engagement**
+5. Right panel **Name**: `conversations` (lowercase, plural, exactly — the app
+   reads `GET /CEngagement/{id}/conversations`)  **Label**: `Conversations`
+6. **Save**. The list now shows: Foreign Link `conversations` | Many-to-Many |
+   Link `engagements` | Engagement.
+
+**Link 2 — Partner Profiles**
+1. **+ Create Link**.
+2. **Link Type**: **Many-to-Many**
+3. Left **Name**: `partnerProfiles`  **Label**: `Partner Profiles`
+4. Right **Entity**: **Partner Profile**
+5. Right **Name**: `conversations`  **Label**: `Conversations`
 6. **Save**.
 
-**Relationship 2 — Partners:**
-1. **Create Relationship**.
-2. **Relationship Type**: **Many-to-Many**
-3. Left **Name**: `partnerProfiles`   **Label**: `Partner Profiles`
-4. Right **Entity**: **CPartnerProfile**
-5. Right **Name**: `conversations`   **Label**: `Conversations`
+**Link 3 — Sponsor Profiles**
+1. **+ Create Link**.
+2. **Link Type**: **Many-to-Many**
+3. Left **Name**: `sponsorProfiles`  **Label**: `Sponsor Profiles`
+4. Right **Entity**: **Sponsor Profile**
+5. Right **Name**: `conversations`  **Label**: `Conversations`
 6. **Save**.
 
-**Relationship 3 — Sponsors:**
-1. **Create Relationship**.
-2. **Relationship Type**: **Many-to-Many**
-3. Left **Name**: `sponsorProfiles`   **Label**: `Sponsor Profiles`
-4. Right **Entity**: **CSponsorProfile**
-5. Right **Name**: `conversations`   **Label**: `Conversations`
-6. **Save**.
-
-**Relationship 4 — Contacts:**
-1. **Create Relationship**.
-2. **Relationship Type**: **Many-to-Many**
-3. Left **Name**: `contacts`   **Label**: `Contacts`
+**Link 4 — Contacts**
+1. **+ Create Link**.
+2. **Link Type**: **Many-to-Many**
+3. Left **Name**: `contacts`  **Label**: `Contacts`
 4. Right **Entity**: **Contact**
-5. Right **Name**: `conversations`   **Label**: `Conversations`
+5. Right **Name**: `conversations`  **Label**: `Conversations`
 6. **Save**.
 
-**Relationship 5 — Messages (the only one that is NOT Many-to-Many):**
-1. **Create Relationship**.
-2. **Relationship Type**: **One-to-Many** (CConversation is the left = the
-   One; one conversation has many messages)
-3. Left **Name**: `communications`   **Label**: `Communications`
-4. Right **Entity**: **CCommunication**
+**Link 5 — Communications (the only one that is NOT Many-to-Many)**
+1. **+ Create Link**.
+2. **Link Type**: **One-to-Many** (Conversation is the left = the One; one
+   conversation has many messages)
+3. Left **Name**: `communications`  **Label**: `Communications`
+4. Right **Entity**: **Communication**
 5. Right **Name**: `conversation` (singular — each message belongs to one
-   conversation)   **Label**: `Conversation`
-6. **Save**.
+   conversation)  **Label**: `Conversation`
+6. **Save**. The list shows: Foreign Link `conversation` | One-to-Many |
+   Link `communications` | Communication.
 
 ### 2.3 Enable Collaborators on CConversation
 
