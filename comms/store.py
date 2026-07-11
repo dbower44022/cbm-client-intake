@@ -136,6 +136,18 @@ class CommsStore:
         async with self._engine.begin() as conn:
             await conn.execute(stmt)
 
+    async def reset_all_sync_state(self) -> None:
+        """One-shot re-drive (GMAIL_RESYNC): forget every cursor so the next
+        pass re-runs the initial backfill. Dedup makes the re-ingest idempotent."""
+        from sqlalchemy import update
+
+        async with self._engine.begin() as conn:
+            await conn.execute(
+                update(email_sync_state).values(
+                    history_id=None, initial_done=False, known_addresses="[]"
+                )
+            )
+
     # --- curation overrides --------------------------------------------------
 
     async def set_override(
@@ -227,6 +239,13 @@ class MemoryCommsStore:
             last_synced_at=_now(),
             known_addresses=set(known_addresses or []),
         )
+
+    async def reset_all_sync_state(self) -> None:
+        for mailbox, st in list(self._state.items()):
+            self._state[mailbox] = SyncState(
+                mailbox=mailbox, history_id=None, initial_done=False,
+                last_synced_at=st.last_synced_at, known_addresses=set(),
+            )
 
     async def set_override(
         self, parent_entity, parent_id, conversation_id, action, created_by=""

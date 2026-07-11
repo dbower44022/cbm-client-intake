@@ -313,3 +313,13 @@ def test_triage_patterns():
     assert triage.is_junk(msg(subject="Automatic reply: Out of Office"))
     assert triage.is_junk(msg(body="Click here to unsubscribe from this list"))
     assert not triage.is_junk(msg())
+
+
+async def test_reset_all_sync_state_forces_initial_resync():
+    store = MemoryCommsStore()
+    await store.save_sync_state("m@x", history_id="42", initial_done=True,
+                                known_addresses={"a@b"})
+    await store.reset_all_sync_state()
+    st = await store.get_sync_state("m@x")
+    assert st.initial_done is False and st.history_id is None
+    assert st.known_addresses == set()

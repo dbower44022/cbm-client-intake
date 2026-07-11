@@ -116,6 +116,11 @@ class Settings(BaseSettings):
     # Email Setup) with gmail.readonly + gmail.send authorized for delegation.
     gmail_sync: bool = False
     gmail_sync_seconds: int = 300           # worker sync cadence
+    # One-shot ops lever: on worker start, clear every mailbox's sync cursor so
+    # the next pass re-runs the initial backfill (Message-ID dedup makes that
+    # idempotent — already-stored mail is skipped). Set true, deploy, let one
+    # pass complete, then unset. Used to re-drive messages a bug dropped.
+    gmail_resync: bool = False
     gmail_backfill: str = "newer_than:365d"  # initial-sync history window
     # Statuses that make a record "active" (mail is only ingested for active
     # records). Comma-separated; engagement set matches the sessions tools.

@@ -153,6 +153,10 @@ async def main() -> None:
             log.warning("GMAIL_SYNC is on but DATABASE_URL is not set — sync disabled")
         else:
             await comms_store.create_all()
+            if settings.gmail_resync:
+                await comms_store.reset_all_sync_state()
+                log.warning("GMAIL_RESYNC: sync cursors cleared — the next pass "
+                            "re-runs the initial backfill; unset the flag after")
             log.info("gmail sync enabled (every %ss)", settings.gmail_sync_seconds)
 
     while True:
