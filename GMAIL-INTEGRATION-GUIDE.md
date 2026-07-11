@@ -78,19 +78,32 @@ Full field-by-field spec: **`cconversation-entity.md`**. Condensed steps
    `snippet` (varchar 255), `bodyCleaned` (wysiwyg),
    `rfcMessageId` (varchar 255), `gmailThreadId` (varchar 64),
    `gmailMessageId` (varchar 64), `sourceMailbox` (varchar 255).
-3. **Relationships** (Entity Manager → CConversation → Relationships):
-   - many-to-many to **CEngagement** — link `engagements`, foreign link
-     **`conversations`** (the foreign name must be exactly `conversations`);
-   - many-to-many to **CPartnerProfile** — link `partnerProfiles`, foreign
-     link `conversations`;
-   - many-to-many to **CSponsorProfile** — link `sponsorProfiles`, foreign
-     link `conversations`;
-   - many-to-many to **Contact** — link `contacts`, foreign `conversations`;
-   - one-to-many to **CCommunication** — link `communications`, foreign
-     link `conversation`.
-4. **Enable collaborators**: Entity Manager → CConversation → Edit → turn ON
-   **Assigned Users** (the multi-user collaborators field). Required — the
-   sync stamps owners there so read-own roles see their conversations.
+3. **Relationships** — create all five from **Entity Manager → CConversation
+   → Relationships → Create Relationship**, so CConversation is always the
+   LEFT column of the dialog. Careful with EspoCRM's directional type names:
+   **"One-to-Many" means the LEFT entity is the One and the RIGHT entity is
+   the Many** (this direction trap inverted the first crm-test build; never
+   use One-to-One Right/Left here).
+
+   | # | Relationship Type | Left (CConversation) Name / Label | Right Entity | Right Name / Label |
+   |---|---|---|---|---|
+   | 1 | **Many-to-Many** | `engagements` / Engagements | CEngagement | **`conversations`** / Conversations |
+   | 2 | **Many-to-Many** | `partnerProfiles` / Partner Profiles | CPartnerProfile | **`conversations`** / Conversations |
+   | 3 | **Many-to-Many** | `sponsorProfiles` / Sponsor Profiles | CSponsorProfile | **`conversations`** / Conversations |
+   | 4 | **Many-to-Many** | `contacts` / Contacts | Contact | **`conversations`** / Conversations |
+   | 5 | **One-to-Many** | `communications` / Communications | CCommunication | `conversation` / Conversation |
+
+   The right-side Name on rows 1–4 must be exactly **`conversations`**
+   (plural) — the app reads `GET /{parent}/{id}/conversations`.
+
+   *Correcting an existing wrong build* (e.g. crm-test as first built): open
+   CConversation → Relationships and DELETE the old relationships first
+   (deleting removes both sides, including the stray `conversation` links on
+   the parents), then recreate per the table. Safe while no data exists.
+4. **Enable Collaborators**: Entity Manager → CConversation → Edit → check
+   **Collaborators** (the multi-user *Assigned Users* field — the same toggle
+   CEngagement and CSession have on). Required — the sync stamps owners there
+   so read-own roles see their conversations.
 5. **Grants** (Administration → Roles):
    - `CustomAppAPIRole` (the intake API user): create + read + edit on BOTH
      entities.

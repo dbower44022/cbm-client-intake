@@ -36,22 +36,33 @@ Type: Base. Name field = subject of the first message.
 | `messageCount` | int | |
 | `summarizedAt` | datetime | null = (re-)summarization pending — **must be nullable, no default** |
 
-Links (define BOTH sides; all are many-to-many except `communications`):
+Relationships — **create every one of these while standing in Entity Manager →
+CConversation → Relationships → Create Relationship**, so CConversation is
+always the LEFT column of the dialog. (EspoCRM's type names are directional:
+"One-to-Many" means *the left entity is the One, the right entity is the
+Many*. That direction trap is what inverted the first crm-test build.)
 
-| Link on CConversation | Type | Foreign entity | Reverse link (foreign side) |
-|---|---|---|---|
-| `engagements` | manyMany | CEngagement | **`conversations`** |
-| `partnerProfiles` | manyMany | CPartnerProfile | **`conversations`** |
-| `sponsorProfiles` | manyMany | CSponsorProfile | **`conversations`** |
-| `contacts` | manyMany | Contact | `conversations` |
-| `communications` | hasMany | CCommunication | `conversation` (belongsTo) |
+| # | Relationship Type | Left (CConversation) Name / Label | Right Entity | Right Name / Label |
+|---|---|---|---|---|
+| 1 | **Many-to-Many** | `engagements` / Engagements | CEngagement | **`conversations`** / Conversations |
+| 2 | **Many-to-Many** | `partnerProfiles` / Partner Profiles | CPartnerProfile | **`conversations`** / Conversations |
+| 3 | **Many-to-Many** | `sponsorProfiles` / Sponsor Profiles | CSponsorProfile | **`conversations`** / Conversations |
+| 4 | **Many-to-Many** | `contacts` / Contacts | Contact | **`conversations`** / Conversations |
+| 5 | **One-to-Many** | `communications` / Communications | CCommunication | `conversation` / Conversation |
 
-The reverse link name on each parent **must be exactly `conversations`** — the
-app reads `GET /{parent}/{id}/conversations`.
+- Rows 1–4 are **Many-to-Many** (never One-to-Many): one conversation can
+  attach to several records and one record has many conversations.
+- Row 5 is **One-to-Many** *from CConversation* (one conversation, many
+  messages). If created from CCommunication instead, the type flips to
+  Many-to-One. Do not use One-to-One Right/Left anywhere.
+- The right-side Name on rows 1–4 **must be exactly `conversations`**
+  (plural) — the app reads `GET /{parent}/{id}/conversations`.
 
-**Enable `assignedUsers` (collaborators) on `CConversation`** — the sync stamps
-the owning manager(s) so read-own roles see their conversations (same
-requirement as `CSession`; see CLAUDE.md's session-tools ACL bullet).
+**Enable Collaborators on `CConversation`** (Entity Manager → CConversation →
+Edit → the **Collaborators** checkbox — the multi-user *Assigned Users* field,
+the same toggle CEngagement and CSession have on): the sync stamps the owning
+manager(s) there so read-own roles see their conversations (same requirement
+as `CSession`; see CLAUDE.md's session-tools ACL bullet).
 
 ## 2. Entity: `CCommunication`
 
