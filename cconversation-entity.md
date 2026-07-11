@@ -88,15 +88,26 @@ Links: `conversation` (belongsTo CConversation — reverse `communications`).
 
 ## 3. Grants
 
-| Role | CConversation | CCommunication |
-|---|---|---|
-| **`CustomAppAPIRole`** (intake API user — the sync's writer) | create + read + edit | create + read + edit |
-| Session-tool gate roles (Mentor Team / Partner Management Team / Sponsor Management Team members) | read (own is fine — the sync owner-stamps via assignedUsers) | **read: team or all** (messages aren't stamped; own-scope would hide them) |
+Prescribed values (one per dropdown — no alternatives). Role names: the intake
+API user's role is **`ClientMentorIntakeRole` on crm-test** and
+**`CustomAppAPIRole` on prod**; the three manager roles are named the same on
+both: **Mentor Role**, **Partner Manager Role**, **Sponsor Manager Role**.
 
-Simplest working set: gate roles get read=all on both (conversation content is
-only *reachable* in the app through records the user already owns). If CBM
-wants tighter CRM-side visibility, read=team on both + put the sync's records
-in a team — decide at build time.
+| Role | Entity | Access | Create | Read | Edit | Delete |
+|---|---|---|---|---|---|---|
+| ClientMentorIntakeRole (prod: CustomAppAPIRole) | Conversation | enabled | yes | all | all | no |
+| ClientMentorIntakeRole (prod: CustomAppAPIRole) | Communication | enabled | yes | all | all | no |
+| Mentor Role | Conversation | enabled | no | all | no | no |
+| Mentor Role | Communication | enabled | no | all | no | no |
+| Partner Manager Role | Conversation | enabled | no | all | no | no |
+| Partner Manager Role | Communication | enabled | no | all | no | no |
+| Sponsor Manager Role | Conversation | enabled | no | all | no | no |
+| Sponsor Manager Role | Communication | enabled | no | all | no | no |
+
+Rationale for Read = all on the manager roles: the app only shows a manager
+the conversations linked to records they own, so the broader CRM-side read is
+the simple, working setting. Step-by-step click path:
+`GMAIL-INTEGRATION-GUIDE.md` §2.4.
 
 ## 4. Layout
 
