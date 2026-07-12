@@ -66,6 +66,13 @@ PEEK_FIELDS: dict[str, tuple[tuple[str, str, str], ...]] = {
         ("billingAddressState", "State", "text"),
         ("description", "Notes", "longtext"),
     ),
+    "CMentorProfile": (
+        ("mentorType", "Mentor type", "text"),
+        ("mentorStatus", "Status", "text"),
+        ("cbmEmail", "CBM email", "email"),
+        ("areaOfExpertise", "Areas of expertise", "multiEnum"),
+        ("industryExperience", "Industry experience", "multiEnum"),
+    ),
     "CClientProfile": (
         ("industrySector", "Industry", "text"),
         ("legalEntityType", "Entity type", "text"),

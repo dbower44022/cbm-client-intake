@@ -674,6 +674,40 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   The **Communications** tab now has a built
   email-inbox UI scaffold (no CRM data yet — wiring contract in the Communications
   bullet above); the **Documents** (uploads) tab is still a placeholder.
+- **Status (2026-07-12, second session of the day: v0.38.2; 375 tests green;
+  main pushed and DEPLOYED — prod + crm-test `/healthz` verified at each
+  release).** This session (ran PARALLEL to the v0.37.x one below — version
+  numbers interleave; a v0.36.6 commit landed after the v0.37.2 commits with
+  pyproject already at 0.37.2, so the changelog holds both orderings):
+  - **v0.36.x — comms compose/curation fixes after Doug's live testing** (see
+    the Communications bullet + CHANGELOG): CBM members get the Add checkbox
+    (matched via mentor-profile `cbmEmail`, v0.36.3) and are added as
+    **co-mentors, never client contacts** (v0.36.4); `EspoClient.unrelate`
+    sends the id in the DELETE **body** — the path-suffix form 404s
+    (v0.36.5, [[espo-custom-linkmultiple-is-a-relationship]]).
+  - **v0.36.6 — grid: company column links to the standard aggregated
+    company/client pop-up** (ACL-restricted sections omitted) **+ records open
+    in a new browser tab**; column-header sorting confirmed already present.
+  - **v0.38.0 — records are a dedicated page `/{slug}/record/{id}`** (Doug's
+    ruling: a record in another tab must be a real page): the route serves the
+    shared frontend with `<base href="/{slug}/">` + no-store; the JS boots
+    straight into the record (no list fetch, tab titled with the record name);
+    "← Back to list" and the `?record=` deep-link mode removed. The revalidate
+    middleware now respects any route-set Cache-Control.
+  - **v0.38.1 — company shows for intake-created engagements** (prod report:
+    Agape — James Koran had a blank Company). Root cause: the tools read
+    `CEngagement.clientOrganization` but the client-intake orchestrator never
+    wrote it (intake links the Account to `CClientProfile.linkedCompany`
+    only). Fix: the orchestrator now sets `clientOrganizationId` on create,
+    AND the session tools fall back through the client profile's
+    `linkedCompany` (`DomainConfig.company_fallback`) for legacy records —
+    feeds the grid column/pop-up, Overview Company aggregate, Details company
+    card, and contact company stamping. Best-effort (unreadable profile ⇒
+    blank). No CRM backfill needed.
+  - **v0.38.2 — Assigned mentor on the Overview rail** (key facts, right above
+    Meeting cadence — it appeared nowhere on the page), linked to a
+    `CMentorProfile` pop-up (entity added to the peek allowlist: type/status/
+    CBM email/expertise/industry).
 - **Status (2026-07-12 end of session): v0.37.2; 370 tests green; main pushed
   and DEPLOYED to test (App Platform ACTIVE, `/healthz` = 0.37.2).** Session
   scope — Doug's session-details design rulings, three releases:
@@ -755,12 +789,16 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   Note: crm-test seed sessions carry out-of-enum `sessionType` values (harmless; a
   data-hygiene cleanup). **UI polish is the next work item** (a follow-up session).
 
-## Current status (updated 2026-07-10)
+## Current status (updated 2026-07-12)
 
-**Main is at v0.35.0** (342 tests green). v0.34.1 was merged to `main` and
-PUSHED 2026-07-10 (deploy-on-push ⇒ crm-test + prod redeployed to 0.34.1 —
-verify `/healthz`); **v0.35.0 (the Communications build, below) is committed
-on `main` but NOT pushed**. Prod answers on the
+**Main is at v0.38.2** (375 tests green), **pushed and DEPLOYED** (prod +
+crm-test; `/healthz` verified at 0.38.1 on both, 0.38.2 pending push at the
+time of this update — check `/healthz`). The 2026-07-11..12 work — comms
+activation + live fixes (v0.35.x–0.36.x), session-view design rulings
+(v0.37.x, a parallel session), the dedicated record page (v0.38.0), the
+intake-engagement company-link fix (v0.38.1), and the Overview Assigned-mentor
+fact (v0.38.2) — is summarized in the Session Management tools **Status**
+bullets above and in CHANGELOG. Prod answers on the
 **custom domain `https://apps.clevelandbusinessmentors.org`** (added to the DO
 app as PRIMARY, Cloudflare CNAME grey-cloud → the app's default hostname; the
 `…ondigitalocean.app` URL still works). Shipped 2026-07-05..10 (see CHANGELOG):

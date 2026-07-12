@@ -333,6 +333,25 @@ async def test_get_detail_company_falls_back_to_profile_linked_company():
 
 
 @pytest.mark.asyncio
+async def test_get_detail_overview_shows_assigned_mentor_above_cadence():
+    # The assigned mentor is a key fact on the Overview rail, right above the
+    # meeting cadence, linked to a CMentorProfile pop-up (Doug's ruling).
+    fake = Fake(records={("CEngagement", "E1"): {
+        "name": "Agape — Intake", "engagementStatus": "Active",
+        "mentorProfileId": "mp1", "mentorProfileName": "Douglas Bower",
+        "meetingCadence": "Weekly",
+    }})
+    d = await service.get_detail(MENTOR, fake, "E1")
+    labels = [i["label"] for i in d["overview"]]
+    assert labels.index("Assigned mentor") < labels.index("Meeting cadence")
+    mentor = next(i for i in d["overview"] if i["label"] == "Assigned mentor")
+    assert mentor["value"] == "Douglas Bower" and mentor["section"] == "key"
+    assert mentor["link"] == {"entity": "CMentorProfile", "id": "mp1"}
+    # its pop-up entity is allowlisted for the peek endpoint
+    assert "CMentorProfile" in service.PEEK_FIELDS
+
+
+@pytest.mark.asyncio
 async def test_peek_allowlists_entities_and_drops_empties():
     fake = Fake(records={("Contact", "c1"): {
         "name": "Pat Lee", "emailAddress": "pat@x.org", "title": "COO", "phoneNumber": ""}})

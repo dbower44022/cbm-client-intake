@@ -290,6 +290,8 @@ MENTOR = DomainConfig(
                                 ("CClientProfile", "engagementClientId"))),
         OverviewItem("Primary contact", "primaryEngagementContactName", "text", section="key",
                      link_entity="Contact", id_attr="primaryEngagementContactId"),
+        OverviewItem("Assigned mentor", "mentorProfileName", "text", section="key",
+                     link_entity="CMentorProfile", id_attr="mentorProfileId"),
         OverviewItem("Meeting cadence", "meetingCadence", section="key"),
         OverviewItem("Referring partner", "referringPartnerName", "text", section="key",
                      link_entity="CPartnerProfile", id_attr="referringPartnerId"),

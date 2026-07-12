@@ -4,6 +4,15 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.38.2] — 2026-07-12
+
+### Added
+- **Assigned mentor on the engagement Overview** (it wasn't displayed anywhere
+  on the page): a key fact on the upper-left rail, right above Meeting
+  cadence, linked to a pop-up of the mentor's profile (`CMentorProfile` added
+  to the peek allowlist — mentor type, status, CBM email, areas of expertise,
+  industry experience).
+
 ## [0.38.1] — 2026-07-12
 
 ### Fixed
