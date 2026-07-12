@@ -4,6 +4,21 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.37.1] — 2026-07-12
+
+### Changed
+- **CBM contacts are invited by default on new sessions** (Doug's ruling): the
+  attendee picker now lists the engagement's CBM contacts (co-mentors with a
+  linked Contact, tagged "(CBM)") alongside the client contacts, and a NEW
+  session starts with every CBM contact pre-checked — in the dirty-tracking
+  baseline, so unchecking is an explicit choice. Client contacts start
+  unchecked as before.
+- **Session view band, refined:** the "Client Session" type chip is gone — the
+  type renders only when it differs from the domain's default, so it appears
+  exactly when it says something. The **status badge (Scheduled/Held/…) moves
+  to the center of the band and renders larger** — it is the key value. Date
+  range stays left; Start Session / Open Meeting Link stays right.
+
 ## [0.37.0] — 2026-07-12
 
 ### Changed

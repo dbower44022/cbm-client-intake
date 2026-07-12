@@ -2151,21 +2151,35 @@
     // === §12.2 Summary header card ===
     var hcard = document.createElement("div"); hcard.className = "sx__vcard";
     var band = document.createElement("div"); band.className = "sx__vband " + (future ? "is-future" : "is-past");
+    // Band line 1, three zones: date range (left) · STATUS (center, large —
+    // it's the key value, Doug's 2026-07-12 ruling) · the join action (right).
+    // The type chip only appears when it differs from the domain default —
+    // "Client Session" on every mentor session says nothing.
     var l1 = document.createElement("div"); l1.className = "sx__vband-1";
+    var left = document.createElement("span"); left.className = "sx__vband-side";
     var date = document.createElement("span"); date.className = "sx__vband-date";
     date.textContent = fmtSessionRange(s);
     date.title = (s.dateStart || "") + (s.dateEnd ? " → " + s.dateEnd : "");  // ISO in tooltip
-    l1.appendChild(date);
-    if (s.status) l1.appendChild(vChip("status", s.status, scls));
-    if (s.sessionType) l1.appendChild(vChip("type", s.sessionType));
+    left.appendChild(date);
+    if (s.sessionType && s.sessionType !== (config && config.defaultSessionType)) {
+      left.appendChild(vChip("type", s.sessionType));
+    }
+    l1.appendChild(left);
+    if (s.status) {
+      var statusChip = vChip("status", s.status, scls);
+      statusChip.className += " sx__vband-status";
+      l1.appendChild(statusChip);
+    }
+    var right = document.createElement("span"); right.className = "sx__vband-side sx__vband-right";
     if (s.videoMeetingLink) {
       var join = document.createElement("a");
       join.className = "cbm-button sx__vjoin";
       join.href = externalHref(s.videoMeetingLink);
       join.target = "_blank"; join.rel = "noopener";
       join.textContent = future ? "Start Session" : "Open Meeting Link";
-      l1.appendChild(join);
+      right.appendChild(join);
     }
+    l1.appendChild(right);
     band.appendChild(l1);
     var l2 = document.createElement("div"); l2.className = "sx__vband-2";
     var custom = customSessionTitle(s.name);  // auto-generated titles never shown
@@ -2517,7 +2531,10 @@
       $("editorTitle").textContent = "Edit session";
     } else {
       currentSession = {
-        id: null, attendees: [],
+        // Every CBM contact on the engagement starts INVITED (Doug's 2026-07-12
+        // ruling) — pre-checked here so it lands in the dirty-tracking baseline
+        // and unchecking is an explicit choice, never a silent default.
+        id: null, attendees: cbmAttendeeOptions().map(function (c) { return c.id; }),
         status: "Scheduled",
         sessionType: (config && config.defaultSessionType) || "",
         name: defaultSessionName(),
@@ -2696,18 +2713,33 @@
   }
 
   // --- attendees ---
+  // The engagement's CBM contacts (co-mentors with a linked Contact record) —
+  // attendee-picker options alongside the client contacts, and the default
+  // invitee set on a NEW session (Doug's 2026-07-12 ruling: CBM contacts are
+  // always invited when a session is created from an engagement).
+  function cbmAttendeeOptions() {
+    return ((currentDetail && currentDetail.coMentors) || [])
+      .filter(function (m) { return m.contactId; })
+      .map(function (m) { return { id: m.contactId, name: m.name }; });
+  }
+
   function renderAttendees() {
     var box = $("attendees"); box.innerHTML = "";
     var contacts = (currentDetail && currentDetail.contacts) || [];
     var chosen = (currentSession && currentSession.attendees) || [];
-    $("noAttendeeOptions").hidden = contacts.length > 0;
-    contacts.forEach(function (c) {
+    var seen = {};
+    contacts.forEach(function (c) { seen[c.id] = true; });
+    var cbm = cbmAttendeeOptions().filter(function (c) { return !seen[c.id]; });
+    $("noAttendeeOptions").hidden = contacts.length + cbm.length > 0;
+    function option(c, tagText) {
       var lab = document.createElement("label"); lab.className = "checkgrid__opt";
       var cb = document.createElement("input"); cb.type = "checkbox"; cb.value = c.id; cb.checked = chosen.indexOf(c.id) >= 0;
       cb.className = "sx__attendee";
-      lab.appendChild(cb); lab.appendChild(document.createTextNode(" " + (c.name || c.id)));
+      lab.appendChild(cb); lab.appendChild(document.createTextNode(" " + (c.name || c.id) + (tagText ? " " + tagText : "")));
       box.appendChild(lab);
-    });
+    }
+    contacts.forEach(function (c) { option(c, ""); });
+    cbm.forEach(function (c) { option(c, "(CBM)"); });
   }
 
   function chosenAttendees() {

@@ -545,7 +545,14 @@ textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
 .sx__copycell:hover { color: var(--cbm-blue-700, #1d4e89); }
 .sx__copycell:disabled { color: var(--cbm-slate-700, #556); cursor: default; }
 .sx__attgrid td { white-space: nowrap; }
-.sx__vjoin { margin-left: auto; padding: 4px 14px; font-size: 13px; }
+.sx__vjoin { padding: 4px 14px; font-size: 13px; }
+
+/* Band line 1, three zones: date (left) / STATUS centered and LARGE (the key
+   value) / join action (right). The side zones flex equally so the status
+   chip sits at the true middle of the band. */
+.sx__vband-side { flex: 1; display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
+.sx__vband-right { justify-content: flex-end; }
+.sx__vband-status { font-size: 16px; font-weight: 700; padding: 4px 16px; border-radius: 999px; }
 
 /* Find-in-transcript lives in the zone label; the body scrolls in its own
    allotment (the longest text never stretches the page). */
