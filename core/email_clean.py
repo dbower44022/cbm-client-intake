@@ -15,10 +15,12 @@ and edge-case tuning). Two tracks:
   ``--``/``____`` signature separators (with the tuned false-positive
   guards), promotional blocks, and hard-wrap unwrapping.
 
-Two-zone output (:class:`CleanedEmail`): the author's new content, plus the
-*meaningful quoted reply chain* kept separately so the UI can render it
-de-emphasized inside ``<blockquote class="quoted-reply">`` — "strip" means
-signatures/boilerplate are deleted, quoted replies are kept but demoted.
+Output (:class:`CleanedEmail`): **the author's new content only** — quoted
+reply chains, signatures, and boilerplate are all removed (Doug, 2026-07-11:
+each stored message must be just the new text; the full original stays one
+click away in Gmail). The extracted quoted chain is still returned on the
+dataclass (``quoted``) for callers that want it, but it is NOT part of the
+stored/rendered HTML.
 
 Deliberate v1 simplification: the stored HTML is regenerated from the cleaned
 TEXT (paragraphs + line breaks), not the original markup — cleaning quality
@@ -50,7 +52,11 @@ _MOBILE_SIGNATURE = re.compile(
     re.MULTILINE | re.IGNORECASE,
 )
 
-_ON_WROTE = re.compile(r"^On\s+.{10,80}\s+wrote:\s*$", re.MULTILINE)
+# "On <date> <someone> wrote:" — tolerates the header wrapping onto a second
+# line (Gmail plain-text quoting wraps at ~78 chars; seen in live mail).
+_ON_WROTE = re.compile(
+    r"^On\s+[^\n]{10,150}(?:\n[^\n]{0,100})?wrote:\s*$", re.MULTILINE
+)
 
 _OUTLOOK_SEPARATOR = re.compile(
     r"^_{10,}\s*$|^-{10,}\s*$|^From:\s+.+\nSent:\s+.+\nTo:\s+.+", re.MULTILINE
@@ -309,9 +315,29 @@ def _strip_promotional_content(body: str) -> str:
     return _EMBEDDED_IMAGE.sub("", body).rstrip()
 
 
+_GT_QUOTED_BLOCK = re.compile(r"^\s*>", re.MULTILINE)
+
+
+def _strip_gt_quotes(text: str) -> str:
+    """Truncate at the first run of ``>``-prefixed lines (plain-text quoting).
+
+    Catches quoting that lives INSIDE an HTML body as literal text (drafts,
+    some clients), where the structural HTML selectors find nothing.
+    """
+    m = _GT_QUOTED_BLOCK.search(text)
+    if m:
+        text = text[: m.start()].rstrip()
+    return text
+
+
 def _text_level_cleanup(text: str) -> str:
-    """The shared tail of both tracks (mobile sigs → disclaimers → separators →
-    signature detection → promo → unsubscribe → unwrap → whitespace)."""
+    """The shared tail of both tracks (quote headers → mobile sigs →
+    disclaimers → separators → signature detection → promo → unsubscribe →
+    unwrap → whitespace)."""
+    m = _ON_WROTE.search(text)
+    if m:
+        text = text[: m.start()].rstrip()
+    text = _strip_gt_quotes(text)
     text = _MOBILE_SIGNATURE.sub("", text).rstrip()
     m = _CONFIDENTIAL_NOTICE.search(text)
     if m:
@@ -505,14 +531,13 @@ def clean_email(body_text: str, body_html: str | None = None) -> CleanedEmail:
                 body = body[: m.start()].rstrip()
         text = _text_level_cleanup(body)
 
-    if not text and body_text:
-        # Everything stripped (e.g. image-only mail) — keep a trimmed original
-        # rather than an empty record.
-        text = body_text.strip()[:2000]
+    if not text and (body_text or body_html):
+        # Everything stripped — a quote-only reply or image-only mail. Never
+        # dump the raw (quoted) body back in; a small placeholder keeps the
+        # message visible as an event, with the original a click away in Gmail.
+        text = "(no new text — view the original in Gmail)"
 
     quoted = re.sub(r"\n{3,}", "\n\n", (quoted or "").strip())[:_QUOTED_ZONE_MAX]
     html_out = _text_to_html(text)
-    if quoted:
-        html_out += '<blockquote class="quoted-reply">' + _text_to_html(quoted) + "</blockquote>"
     snippet = re.sub(r"\s+", " ", text)[:200]
     return CleanedEmail(text=text, quoted=quoted, html=html_out, snippet=snippet)

@@ -96,6 +96,12 @@ async def ingest_message(
     matched = scope.records_for(parsed.all_addresses)
     if not matched:
         return None
+    # Drafts are unsent (Gmail keeps each revision as its own message — the
+    # source of duplicate "messages" in the first live run); spam/trash can
+    # arrive via the history feed. None of them belong on the record.
+    if {"DRAFT", "SPAM", "TRASH"} & set(parsed.label_ids):
+        log.debug("skipping %s (labels=%s)", parsed.rfc_message_id, parsed.label_ids)
+        return None
     if triage.is_junk(parsed):
         log.debug("triage: dropping %s (%s)", parsed.rfc_message_id, parsed.subject)
         return None

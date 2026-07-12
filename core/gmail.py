@@ -208,6 +208,7 @@ class ParsedGmailMessage:
     from_name: str
     to_addresses: list[str] = field(default_factory=list)
     cc_addresses: list[str] = field(default_factory=list)
+    label_ids: list[str] = field(default_factory=list)  # e.g. SENT, DRAFT, INBOX
     sent_at: str = ""  # "YYYY-MM-DD HH:MM:SS" UTC (from internalDate)
     snippet: str = ""
     body_text: str = ""
@@ -274,6 +275,7 @@ def parse_message(raw: dict[str, Any]) -> ParsedGmailMessage:
         from_name=from_name,
         to_addresses=[a.lower() for _, a in getaddresses([headers.get("to", "")]) if a],
         cc_addresses=[a.lower() for _, a in getaddresses([headers.get("cc", "")]) if a],
+        label_ids=list(raw.get("labelIds") or []),
         sent_at=sent_at,
         snippet=raw.get("snippet", ""),
         body_text=text,

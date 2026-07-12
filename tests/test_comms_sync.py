@@ -323,3 +323,15 @@ async def test_reset_all_sync_state_forces_initial_resync():
     st = await store.get_sync_state("m@x")
     assert st.initial_done is False and st.history_id is None
     assert st.known_addresses == set()
+
+
+async def test_drafts_spam_trash_are_never_ingested():
+    espo, store = FakeEspo(), MemoryCommsStore()
+    for label in ("DRAFT", "SPAM", "TRASH"):
+        raw = raw_message(mid=f"m-{label}", rfc_id=f"r-{label}")
+        raw["labelIds"] = [label]
+        assert await ingest_message(espo, store, scope(), sync.parse_message(raw)) is None
+    assert not espo.records
+    sent = raw_message(mid="m-ok", rfc_id="r-ok")
+    sent["labelIds"] = ["SENT"]
+    assert await ingest_message(espo, store, scope(), sync.parse_message(sent))

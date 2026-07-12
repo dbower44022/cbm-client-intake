@@ -49,13 +49,13 @@ pat@acme.test | www.acme.test
 """
 
 
-def test_gmail_html_reply_keeps_author_and_demotes_quote():
+def test_gmail_html_reply_keeps_only_new_text():
     out = clean_email("", GMAIL_REPLY_HTML)
     assert "Tuesday at 2pm" in out.text
     assert "revised cash-flow sheet" in out.text
-    assert "wrote:" not in out.text                      # quoted chain not in author zone
-    assert "Can we move our session" in out.quoted       # …but preserved in the quoted zone
-    assert 'class="quoted-reply"' in out.html
+    assert "wrote:" not in out.text                       # quoted chain removed
+    assert "Can we move our session" not in out.html      # NOT in the stored HTML
+    assert "Can we move our session" in out.quoted        # …but still on the dataclass
     assert out.snippet.startswith("Thanks James")
 
 
@@ -90,10 +90,38 @@ def test_empty_input():
     assert out == CleanedEmail(text="", quoted="", html="", snippet="")
 
 
-def test_image_only_mail_keeps_trimmed_original():
-    # Nothing survives cleaning -> fall back to the trimmed original text.
+def test_image_only_mail_gets_placeholder_not_raw_dump():
     out = clean_email("[cid:image001.png@01DC]")
-    assert out.text  # not empty
+    assert "no new text" in out.text
+
+
+# The exact live failure (2026-07-11): Gmail plain-text quoting inside an HTML
+# body, with the "On ... wrote:" header WRAPPED onto a second line and the
+# history quoted with ">" prefixes. The old single-line pattern missed it and
+# the whole quoted chain leaked into the author zone.
+WRAPPED_QUOTE_PLAIN = (
+    "Sounds great, talk soon!\r\n\r\n"
+    "On Fri, Jun 26, 2026 at 1:06\u202fAM Douglas Bower <doug.bower@cbmentors.org> \r\n"
+    "wrote:\r\n\r\n"
+    "> James/Sheila,\r\n>\r\n> It is official.  I am now a member!\r\n"
+)
+
+
+def test_wrapped_on_wrote_header_stripped():
+    out = clean_email(WRAPPED_QUOTE_PLAIN)
+    assert out.text == "Sounds great, talk soon!"
+    assert "James/Sheila" not in out.html
+
+
+def test_quote_only_reply_gets_placeholder():
+    # A reply whose ONLY content is the quoted chain (e.g. an accidental send).
+    quote_only = (
+        "On Fri, Jun 26, 2026 at 1:06\u202fAM Douglas Bower <doug.bower@cbmentors.org> \r\n"
+        "wrote:\r\n\r\n> It is official.\r\n> I am now a member!\r\n"
+    )
+    out = clean_email(quote_only)
+    assert "no new text" in out.text
+    assert "official" not in out.html
 
 
 def test_html_escaped_in_output():
