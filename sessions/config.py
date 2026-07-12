@@ -125,6 +125,13 @@ class DomainConfig:
     # the record itself). Sections the user's ACL can't read are omitted.
     list_company_key: Optional[str] = None
     list_company_aggregate: tuple = ()
+    # Legacy-data fallback: when the parent's own company link is empty, resolve
+    # it through a 1:1 related record instead — intake-created engagements carry
+    # the Account on the CLIENT PROFILE (CClientProfile.linkedCompany), not on
+    # the engagement itself. (own company id attr, own company name attr,
+    # via-record id attr on the parent, via entity, company id attr on the via
+    # record, company name attr on the via record.)
+    company_fallback: tuple = ()
 
     # Details tab: the org records shown as editable sections — (title, entity,
     # id_attr on the parent). id_attr "id" means the parent record itself.
@@ -251,6 +258,9 @@ MENTOR = DomainConfig(
     list_company_key="company",
     list_company_aggregate=(("Account", "clientOrganizationId"),
                             ("CClientProfile", "engagementClientId")),
+    company_fallback=("clientOrganizationId", "clientOrganizationName",
+                      "engagementClientId", "CClientProfile",
+                      "linkedCompanyId", "linkedCompanyName"),
     detail_select=(
         "name,engagementStatus,meetingCadence,"
         "engagementClientName,engagementClientId,"

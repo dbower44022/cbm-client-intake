@@ -18,7 +18,10 @@ INSTANCE MAPPING — reconciled against crm-test.clevelandbusinessmentors.org
     Account.cCompanyType is still present (now optional) and kept in sync.
   * Link FKs: Contact.accountId (belongsTo Account); CClientProfile.clientcontactId
     (belongsTo Contact) + linkedCompanyId (hasOne Account); CEngagement
-    .engagementClientId (belongsTo CClientProfile) + primaryEngagementContactId.
+    .engagementClientId (belongsTo CClientProfile) + primaryEngagementContactId
+    + clientOrganizationId (belongsTo Account — the company link the session
+    tools display; engagements created before v0.38.1 lack it, the tools fall
+    back through the client profile's linkedCompany).
     The applicant is additionally added to CEngagement.engagementContacts, a
     hasMany Contact link, via a relationship POST after the engagement create.
   * Engagement status field is `engagementStatus` (value "Submitted").
@@ -201,9 +204,9 @@ async def _create_client_profile(
 
 async def _create_engagement(
     sub: IntakeSubmission, client: EspoApi, client_profile_id: str, contact_id: str,
-    san: EnumSanitizer,
+    account_id: str, san: EnumSanitizer,
 ) -> str:
-    """Create the Engagement linked to the CClientProfile and the Contact.
+    """Create the Engagement linked to the CClientProfile, Contact, and Account.
 
     Drops any drifted ``mentoringFocusAreas`` value and records everything dropped
     across the whole chain (Account + Engagement) on ``description`` for follow-up,
@@ -217,6 +220,8 @@ async def _create_engagement(
         "mentoringNeedsDescription": sub.mentoring_needs_description,
         "engagementClientId": client_profile_id,      # belongsTo CClientProfile
         "primaryEngagementContactId": contact_id,     # belongsTo Contact
+        "clientOrganizationId": account_id,           # belongsTo Account — the
+        # session tools' grid/Overview/Details read the company off this link
     }
     note = san.note()
     if note:
@@ -236,7 +241,9 @@ async def submit_intake(sub: IntakeSubmission, client: EspoApi) -> dict[str, str
     account_id = await _find_or_create_account(sub, client, san)
     contact_id = await _find_or_create_contact(sub, client, account_id, san)
     client_profile_id = await _create_client_profile(sub, client, account_id, contact_id)
-    engagement_id = await _create_engagement(sub, client, client_profile_id, contact_id, san)
+    engagement_id = await _create_engagement(
+        sub, client, client_profile_id, contact_id, account_id, san
+    )
     # Also add the applicant to the Engagement Contacts (hasMany) link, alongside
     # the primaryEngagementContact set on the engagement itself.
     await client.relate(ENGAGEMENT, engagement_id, ENGAGEMENT_CONTACTS, contact_id)

@@ -172,6 +172,39 @@ def _grid_row(cfg: DomainConfig, r: dict[str, Any]) -> dict[str, Any]:
     return row
 
 
+async def fill_company_fallback(
+    cfg: DomainConfig, client: SessionClient, records: list[dict[str, Any]]
+) -> None:
+    """Resolve the company link through the client profile when the parent's own
+    link is empty (``DomainConfig.company_fallback``).
+
+    Intake-created engagements carry the Account on ``CClientProfile.linkedCompany``
+    only — ``CEngagement.clientOrganization`` is null — so the grid / Overview /
+    Details would show no company at all. Injects the resolved id + name into the
+    raw record in place. Best-effort: a profile the user can't read just leaves
+    the company blank.
+    """
+    if not cfg.company_fallback:
+        return
+    own_id, own_name, via_id, via_entity, comp_id, comp_name = cfg.company_fallback
+    need = {r[via_id] for r in records if not r.get(own_id) and r.get(via_id)}
+    if not need:
+        return
+
+    async def _resolve(pid: str):
+        try:
+            return pid, await client.get(via_entity, pid, select=f"{comp_id},{comp_name}")
+        except EspoError:
+            return pid, None
+
+    resolved = dict(await asyncio.gather(*(_resolve(p) for p in need)))
+    for r in records:
+        via = resolved.get(r.get(via_id))
+        if via and not r.get(own_id) and via.get(comp_id):
+            r[own_id] = via[comp_id]
+            r[own_name] = via.get(comp_name)
+
+
 async def list_records(
     cfg: DomainConfig, client: SessionClient, user: dict[str, Any]
 ) -> dict[str, Any]:
@@ -193,6 +226,7 @@ async def list_records(
     rows = data.get("list", [])
     if cfg.status_attr and cfg.status_values:
         rows = [r for r in rows if r.get(cfg.status_attr) in cfg.status_values]
+    await fill_company_fallback(cfg, client, rows)
     records = [_grid_row(cfg, r) for r in rows]
     records.sort(key=lambda x: (x.get("createdAt") or ""), reverse=True)
     return {"records": records, "profileFound": True}
@@ -334,6 +368,7 @@ async def get_detail(
     every session's notes, plus related contacts and the sessions list (+
     co-mentors, mentor domain). All reads are as the user."""
     parent = await client.get(cfg.parent_entity, parent_id, select=cfg.detail_select)
+    await fill_company_fallback(cfg, client, [parent])
     overview = _overview_items(cfg, parent)
 
     contacts_data = await client.list_related(

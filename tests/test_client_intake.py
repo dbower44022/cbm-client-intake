@@ -103,6 +103,8 @@ async def test_drifted_enums_dropped_but_records_created():
     assert account_payload["cAccountType"] == ["Client"]  # discriminator untouched
 
     _, eng_payload = client.creates[3]
+    # The engagement carries the company link directly (the session tools read it).
+    assert eng_payload["clientOrganizationId"] == ids["accountId"]
     assert eng_payload["mentoringFocusAreas"] == ["Manufacturing"]  # Retail filtered
     # The aggregated note (Account + Engagement drops) lands on the engagement.
     assert "cIndustrySector" in eng_payload["description"]

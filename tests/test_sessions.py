@@ -195,6 +195,48 @@ async def test_mentor_list_includes_all_statuses():
     assert ids == {"E1", "E2", "E3"}  # nothing excluded
 
 
+@pytest.mark.asyncio
+async def test_mentor_list_company_falls_back_to_profile_linked_company():
+    # Intake-created engagements carry the Account on CClientProfile.linkedCompany
+    # only (CEngagement.clientOrganization is null — the prod Agape case), so the
+    # company is resolved through the client profile.
+    fake = Fake(
+        mentors=[{"id": "p9", "assignedUserId": "u1"}],
+        related={"engagements1": [
+            {"id": "E1", "name": "Agape — Intake", "engagementStatus": "Active",
+             "engagementClientId": "cp1", "engagementClientName": "Agape W8loss",
+             "createdAt": "2026-01-03"},
+        ]},
+        records={("CClientProfile", "cp1"):
+                 {"linkedCompanyId": "a1", "linkedCompanyName": "Agape W8loss"}},
+    )
+    res = await service.list_records(MENTOR, fake, _USER)
+    row = res["records"][0]
+    assert row["company"] == "Agape W8loss"
+    # the company pop-up aggregate carries the resolved Account too
+    peek = {p["entity"]: p["id"] for p in row["companyPeek"]}
+    assert peek == {"Account": "a1", "CClientProfile": "cp1"}
+
+
+@pytest.mark.asyncio
+async def test_company_fallback_degrades_when_profile_unreadable():
+    class Forbidden(Fake):
+        async def get(self, entity, record_id, select=None):
+            if entity == "CClientProfile":
+                raise EspoError("HTTP 403: forbidden")
+            return await super().get(entity, record_id, select)
+
+    fake = Forbidden(
+        mentors=[{"id": "p9", "assignedUserId": "u1"}],
+        related={"engagements1": [
+            {"id": "E1", "name": "Agape — Intake", "engagementStatus": "Active",
+             "engagementClientId": "cp1", "createdAt": "2026-01-03"},
+        ]},
+    )
+    res = await service.list_records(MENTOR, fake, _USER)  # must not raise
+    assert res["records"][0]["company"] is None
+
+
 # --- get_detail ------------------------------------------------------------
 
 @pytest.mark.asyncio
@@ -268,6 +310,26 @@ async def test_get_detail_note_feed_sorted_desc():
     )
     d = await service.get_detail(PARTNER, fake, "P1")
     assert [n["id"] for n in d["noteFeed"]] == ["new", "old"]  # most recent first
+
+
+@pytest.mark.asyncio
+async def test_get_detail_company_falls_back_to_profile_linked_company():
+    # Same fallback on the detail read: the Overview's aggregated Company link
+    # gains the Account resolved through the client profile.
+    fake = Fake(
+        records={
+            ("CEngagement", "E1"): {"name": "Agape — Intake", "engagementStatus": "Active",
+                                    "engagementClientId": "cp1",
+                                    "engagementClientName": "Agape W8loss"},
+            ("CClientProfile", "cp1"): {"linkedCompanyId": "a1",
+                                        "linkedCompanyName": "Agape W8loss"},
+        },
+    )
+    d = await service.get_detail(MENTOR, fake, "E1")
+    company = next(i for i in d["overview"] if i["label"] == "Company")
+    assert company["value"] == "Agape W8loss"
+    pairs = {p["entity"]: p["id"] for p in company["link"]["aggregate"]}
+    assert pairs == {"Account": "a1", "CClientProfile": "cp1"}
 
 
 @pytest.mark.asyncio

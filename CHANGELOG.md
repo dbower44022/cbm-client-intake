@@ -4,6 +4,23 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.38.1] — 2026-07-12
+
+### Fixed
+- **Company now shows for intake-created engagements** (prod report: the Agape
+  — James Koran engagement had a blank Company in the mentor sessions grid
+  despite the client and company existing in the CRM). Root cause: the grid —
+  and the Overview / Details / contact-company stamping — read
+  `CEngagement.clientOrganization`, but the client-intake orchestrator never
+  wrote that link; intake puts the Account on the CLIENT PROFILE
+  (`CClientProfile.linkedCompany`) only. Two-part fix: (1) the orchestrator now
+  links the Account to the engagement itself on create, and (2) for existing
+  records the session tools fall back through the client profile's
+  `linkedCompany` (`DomainConfig.company_fallback`) — the grid Company column +
+  pop-up, the Overview's aggregated Company link, the Details company card, and
+  the company stamped onto added/created contacts all resolve it. Best-effort:
+  a profile the user can't read just leaves the company blank.
+
 ## [0.38.0] — 2026-07-12
 
 ### Changed

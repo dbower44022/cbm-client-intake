@@ -17,7 +17,7 @@ from typing import Any, Optional
 from core.espo import EspoError
 
 from .config import CONTACT, MENTOR_PROFILE, DomainConfig
-from .service import SessionClient, SessionError
+from .service import SessionClient, SessionError, fill_company_fallback
 
 log = logging.getLogger("cbm_intake.sessions.details")
 
@@ -195,6 +195,7 @@ async def build_details(
     """
     meta = _MetaCache(client)
     parent = await client.get(cfg.parent_entity, parent_id, select=cfg.detail_select)
+    await fill_company_fallback(cfg, client, [parent])
     entities = {e for _, e, _ in cfg.details_entities} | {CONTACT}
     levels = await _acl_edit_levels(client, entities)
 
@@ -342,16 +343,26 @@ async def search_contacts(client: SessionClient, query: str) -> list[dict[str, A
     ]
 
 
+async def _resolve_company_id(cfg: DomainConfig, client: SessionClient, parent_id: str) -> Optional[str]:
+    """The record's company Account id: the parent's own link, or resolved
+    through the client profile for legacy engagements (``fill_company_fallback``)."""
+    attr = _company_id_attr(cfg)
+    if not attr:
+        return None
+    select = attr
+    if cfg.company_fallback:
+        select += "," + cfg.company_fallback[2]  # + the via-record id (profile)
+    parent = await client.get(cfg.parent_entity, parent_id, select=select)
+    await fill_company_fallback(cfg, client, [parent])
+    return parent.get(attr)
+
+
 async def _backfill_company(cfg: DomainConfig, client: SessionClient, parent_id: str, contact_id: str) -> None:
     """Affiliate the contact with this record's company (``Contact.account``) when
     it has none — backfill only, never overwrite an existing affiliation.
     Best-effort: the contacts-link relate is the operation that matters."""
-    attr = _company_id_attr(cfg)
-    if not attr:
-        return
     try:
-        parent = await client.get(cfg.parent_entity, parent_id, select=attr)
-        company_id = parent.get(attr)
+        company_id = await _resolve_company_id(cfg, client, parent_id)
         if not company_id:
             return
         contact = await client.get(CONTACT, contact_id, select="accountId")
@@ -383,14 +394,12 @@ async def create_contact(cfg: DomainConfig, client: SessionClient, parent_id: st
     payload = _clean_changes(spec, changes)
     if not (payload.get("lastName") or payload.get("firstName")):
         raise SessionError("A first or last name is required to create a contact.")
-    attr = _company_id_attr(cfg)
-    if attr:
-        try:
-            parent = await client.get(cfg.parent_entity, parent_id, select=attr)
-            if parent.get(attr):
-                payload.setdefault("accountId", parent[attr])
-        except EspoError as exc:
-            log.warning("could not read company for new contact on %s: %s", parent_id, exc)
+    try:
+        company_id = await _resolve_company_id(cfg, client, parent_id)
+        if company_id:
+            payload.setdefault("accountId", company_id)
+    except EspoError as exc:
+        log.warning("could not read company for new contact on %s: %s", parent_id, exc)
     created = await client.create(CONTACT, payload)
     try:
         await client.relate(cfg.parent_entity, parent_id, cfg.parent_contacts_link, created["id"])
