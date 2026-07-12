@@ -674,7 +674,31 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   The **Communications** tab now has a built
   email-inbox UI scaffold (no CRM data yet — wiring contract in the Communications
   bullet above); the **Documents** (uploads) tab is still a placeholder.
-- **Status (2026-07-10 end of session): v0.34.0; 315 tests green; branch
+- **Status (2026-07-12 end of session): v0.37.2; 370 tests green; main pushed
+  and DEPLOYED to test (App Platform ACTIVE, `/healthz` = 0.37.2).** Session
+  scope — Doug's session-details design rulings, three releases:
+  - **v0.37.0** — session view per the approved design: band carries the
+    start–end time range; ATTENDEES grid (name/role/company/email/phone/
+    status, contact + Account peeks, per-cell copy, Copy grid TSV, Copy
+    emails); §12.5 transcript zone + editor box FEATURE-GATED on the CRM
+    gaining `sessionTranscription` (find-in-transcript, educate copy when
+    empty; nothing renders until the field exists — Phase 3 needs only the
+    CRM field + feed, no frontend change). Fixed: the view read `s.notes`
+    but the payload speaks `sessionNotes` — notes never rendered.
+  - **v0.37.1** — CBM contacts invited by default on new sessions; "Client
+    Session" type chip only when non-default; status badge centered + large.
+  - **v0.37.2** — the default-invitee fix after Doug's live test came up
+    empty: the invitee set is server-resolved (`cbmContacts` on the detail
+    read) from the ASSIGNED MENTOR (`CEngagement.mentorProfile`) + any
+    co-mentors, via `contactRecordId` with a Contact-by-`cbmEmail` fallback
+    (comms precedent). Live data facts behind it: engagements almost never
+    carry `additionalMentors`, and 5 of 42 mentor profiles have no linked
+    contactRecord (ANITA KHAYAT / Milt Sierra / David Schwieterman also lack
+    `cbmEmail` — they stay uninvitable until linked in the CRM).
+  - Open: per-person invited-vs-attended modeling is deliberately a
+    session-status derivation pending a CRM ruling (planning prompt:
+    `cbm-mentoring-app/prompts/invitee-attendee-modeling-session.md`).
+- **Prior status (2026-07-10 end of session): v0.34.0; 315 tests green; branch
   `feat/session-view` (**NOT pushed**), five commits today (a4aa147..bb32ed4).**
   Shipped this session:
   - **v0.33.0 — Details tab rebuilt to mockup v4** (summary strip + row-grid
