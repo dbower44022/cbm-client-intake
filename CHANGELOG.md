@@ -4,6 +4,16 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.36.5] — 2026-07-12
+
+### Fixed
+- **`EspoClient.unrelate` used a URL form this EspoCRM rejects** (found live
+  while unlinking Mindy Bower from the Agape engagement: the path-suffix
+  DELETE 404'd; the documented body form succeeded). Now sends the id in the
+  request body. This method backs the sessions attendee sync and the
+  Communications "Not related — remove" unlink, both of which would have
+  silently warn-logged on failure.
+
 ## [0.36.4] — 2026-07-12
 
 ### Fixed

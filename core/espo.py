@@ -287,15 +287,22 @@ class EspoClient:
     async def unrelate(
         self, entity: str, record_id: str, link: str, related_id: str
     ) -> None:
-        """Remove a record from a hasMany/manyMany link (relationship DELETE)."""
+        """Remove a record from a hasMany/manyMany link (relationship DELETE).
+
+        The id goes in the request BODY — EspoCRM's documented form. The
+        path-suffix variant (…/{link}/{related_id}) 404s on crm-test
+        (found live 2026-07-12 unlinking an engagement contact).
+        """
         async with httpx.AsyncClient(timeout=self._timeout) as client:
-            resp = await client.delete(
-                f"{self._base}/{entity}/{record_id}/{link}/{related_id}",
+            resp = await client.request(
+                "DELETE",
+                f"{self._base}/{entity}/{record_id}/{link}",
+                json={"id": related_id},
                 headers=self._headers,
             )
         if resp.status_code >= 400:
             raise EspoError(
-                f"unrelate {entity}/{record_id}/{link}/{related_id} failed: "
+                f"unrelate {entity}/{record_id}/{link} ({related_id}) failed: "
                 f"HTTP {resp.status_code} {resp.text[:300]}"
             )
 
