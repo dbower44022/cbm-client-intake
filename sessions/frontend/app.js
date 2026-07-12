@@ -1070,11 +1070,12 @@
     body.appendChild(err);
 
     var allowUnknown = false;
-    var resolvedAddresses = {};  // addresses the user handled via the options below
+    var resolvedAddresses = {};   // addresses handled (linked/created) this compose
+    var commResolvers = null;     // one entry per non-record recipient, built once
     var optionsPanel = document.createElement("div");
     body.appendChild(optionsPanel);
 
-    // Recipients that are neither record contacts nor CBM-internal.
+    // Recipients that are neither record contacts nor CBM-internal addresses.
     function unknownRecipients(recipients) {
       var known = {};
       ((currentDetail && currentDetail.contacts) || []).forEach(function (c) {
@@ -1086,14 +1087,13 @@
       });
     }
 
-    // The scenario router: each non-contact recipient is looked up CRM-WIDE
-    // first, so the dialog offers the right fix:
-    //  * exists in the CRM (not CBM-side)  -> add the existing contact to this
-    //    record (no duplicate contact records);
-    //  * exists and is a CBM member       -> just send (not a client contact);
-    //  * unknown to the CRM               -> new address for a record contact,
-    //    or a small create form (first/last/phone/company), or one-off send.
-    async function showUnknownOptions(unknown, submit) {
+    // Checkbox-driven router: every non-record recipient gets an "Add to this
+    // record" checkbox (checked by default). Existing CRM contacts (any type)
+    // just show who they are; unknown addresses show a small create form
+    // (first/last/phone/company). ONE Send click then links/creates the
+    // checked ones and sends; unchecked recipients go as a one-off (the
+    // conversation still attaches here and replies follow the thread).
+    async function buildUnknownPanel(unknown) {
       optionsPanel.innerHTML = "<p class='sx__muted'>Checking the CRM for " +
         (unknown.length === 1 ? "this address…" : "these addresses…") + "</p>";
       var lookups = {};
@@ -1107,130 +1107,87 @@
       optionsPanel.innerHTML = "";
       var head = document.createElement("p"); head.className = "sx__notice";
       head.textContent = (unknown.length === 1 ? "This recipient isn't" : "These recipients aren't") +
-        " a contact on this record. Choose what to do:";
+        " a contact on this record. Leave \"Add to this record\" checked to link them" +
+        " (fill in the details for new people), or uncheck to send without adding.";
       optionsPanel.appendChild(head);
+      commResolvers = [];
       unknown.forEach(function (addr) {
-        optionsPanel.appendChild(unknownAddressRow(addr, lookups[addr] || { found: false }, submit));
+        optionsPanel.appendChild(addressRow(addr, lookups[addr] || { found: false }));
       });
-      // One-off escape hatch, always available: the conversation still attaches
-      // to this record (durably) and replies will follow the thread.
-      var anyway = document.createElement("button"); anyway.type = "button";
-      anyway.className = "cbm-button cbm-button--secondary";
-      anyway.textContent = "Send anyway — attach this conversation only";
-      anyway.addEventListener("click", function () { allowUnknown = true; submit(); });
-      optionsPanel.appendChild(anyway);
     }
 
-    function unknownAddressRow(addr, lookup, submit) {
-      var row = document.createElement("div"); row.className = "sx__msg-field";
-      var lab = document.createElement("span"); lab.className = "sx__msg-label"; lab.textContent = addr;
-      row.appendChild(lab);
+    function addressRow(addr, lookup) {
+      var row = document.createElement("div"); row.className = "sx__msg-field sx__addr-row";
+      var head = document.createElement("div"); head.className = "sx__opt-line";
+      var checkLab = document.createElement("label"); checkLab.className = "sx__addr-check";
+      var check = document.createElement("input"); check.type = "checkbox"; check.checked = true;
+      checkLab.appendChild(check);
+      checkLab.appendChild(document.createTextNode(" Add to this record"));
+      var who = document.createElement("span"); who.className = "sx__msg-label";
+      head.appendChild(who); head.appendChild(checkLab);
+      row.appendChild(head);
+      var err = document.createElement("p"); err.className = "form-error"; err.hidden = true;
 
-      // Branch 1: the address already belongs to a CRM contact.
+      var resolver;
       if (lookup.found && lookup.contact) {
+        // Existing CRM contact — CBM, client, or non-client alike.
         var c = lookup.contact;
-        if (c.isCbmMember) {
-          var note = document.createElement("p"); note.className = "sx__muted";
-          note.textContent = c.name + " is a CBM member — not a client contact. Use \"Send anyway\" below.";
-          row.appendChild(note);
-          return row;
-        }
-        var line = document.createElement("div"); line.className = "sx__opt-line";
-        var who = document.createElement("span");
-        who.textContent = c.name + (c.company ? " (" + c.company + ")" : "") + " already exists in the CRM.";
-        var addBtn = document.createElement("button"); addBtn.type = "button";
-        addBtn.className = "cbm-button sx__sm"; addBtn.textContent = "Add to this record & send";
-        addBtn.addEventListener("click", async function () {
-          addBtn.disabled = true; addBtn.textContent = "Adding…";
-          try {
-            await api("/records/" + encodeURIComponent(currentDetail.id) + "/contacts", {
-              method: "POST", body: JSON.stringify({ contactId: c.id }),
-            });
-            resolvedAddresses[addr.toLowerCase()] = 1;
-            addBtn.textContent = "Added ✓";
-            submit();
-          } catch (e) {
-            if (e.status === 401) { closeComm(); showLogin(); return; }
-            addBtn.disabled = false; addBtn.textContent = e.message;
-          }
-        });
-        line.appendChild(who); line.appendChild(addBtn);
-        row.appendChild(line);
-        return row;
-      }
-
-      // Branch 2: unknown to the CRM.
-      // 2a — it's a new address for a contact already on this record.
-      var line1 = document.createElement("div"); line1.className = "sx__opt-line";
-      var sel = document.createElement("select"); sel.className = "sx__msg-input";
-      sel.appendChild(new Option("This is a new address for…", ""));
-      ((currentDetail && currentDetail.contacts) || []).forEach(function (c) {
-        sel.appendChild(new Option(c.name || c.id, c.id));
-      });
-      var addAddrBtn = document.createElement("button"); addAddrBtn.type = "button";
-      addAddrBtn.className = "cbm-button cbm-button--secondary sx__sm"; addAddrBtn.textContent = "Add address";
-      addAddrBtn.addEventListener("click", async function () {
-        if (!sel.value) return;
-        addAddrBtn.disabled = true; addAddrBtn.textContent = "Adding…";
-        try {
-          await api("/contacts/" + encodeURIComponent(sel.value) + "/addresses", {
-            method: "POST", body: JSON.stringify({ address: addr }),
+        var kind = c.isCbmMember ? "a CBM member" : (c.company ? c.company : "an existing contact");
+        who.textContent = addr + " — " + (c.name || "?") + " (" + kind + ", already in the CRM)";
+        resolver = async function () {
+          if (!check.checked) return false;
+          await api("/records/" + encodeURIComponent(currentDetail.id) + "/contacts", {
+            method: "POST", body: JSON.stringify({ contactId: c.id }),
           });
           resolvedAddresses[addr.toLowerCase()] = 1;
-          addAddrBtn.textContent = "Added ✓";
-          submit();
-        } catch (e) {
-          if (e.status === 401) { closeComm(); showLogin(); return; }
-          addAddrBtn.disabled = false; addAddrBtn.textContent = e.message;
+          return true;
+        };
+      } else {
+        // Unknown to the CRM — create form (enabled while the box is checked).
+        who.textContent = addr + " — not in the CRM yet";
+        var line2 = document.createElement("div"); line2.className = "sx__opt-line";
+        var first = document.createElement("input"); first.type = "text"; first.placeholder = "First name"; first.className = "sx__msg-input";
+        var last = document.createElement("input"); last.type = "text"; last.placeholder = "Last name"; last.className = "sx__msg-input";
+        var phone = document.createElement("input"); phone.type = "tel"; phone.placeholder = "Phone (optional)"; phone.className = "sx__msg-input";
+        line2.appendChild(first); line2.appendChild(last); line2.appendChild(phone);
+        row.appendChild(line2);
+        var line3 = document.createElement("div"); line3.className = "sx__opt-line";
+        var companySel = document.createElement("select"); companySel.className = "sx__msg-input";
+        companySel.appendChild(new Option("Company… (none)", ""));
+        companySel.appendChild(new Option("+ New company…", "__new__"));
+        api("/companies").then(function (res) {
+          (res.companies || []).forEach(function (a) {
+            companySel.insertBefore(new Option(a.name || a.id, a.id), companySel.lastChild);
+          });
+        }).catch(function () { /* picker just stays short */ });
+        var newCompany = document.createElement("input"); newCompany.type = "text";
+        newCompany.placeholder = "New company name"; newCompany.className = "sx__msg-input"; newCompany.hidden = true;
+        companySel.addEventListener("change", function () { newCompany.hidden = companySel.value !== "__new__"; });
+        line3.appendChild(companySel); line3.appendChild(newCompany);
+        row.appendChild(line3);
+        function setEnabled() {
+          [first, last, phone, companySel, newCompany].forEach(function (el) { el.disabled = !check.checked; });
         }
-      });
-      line1.appendChild(sel); line1.appendChild(addAddrBtn);
-      row.appendChild(line1);
-
-      // 2b — create a new contact: first / last / phone / company.
-      var line2 = document.createElement("div"); line2.className = "sx__opt-line";
-      var first = document.createElement("input"); first.type = "text"; first.placeholder = "First name"; first.className = "sx__msg-input";
-      var last = document.createElement("input"); last.type = "text"; last.placeholder = "Last name"; last.className = "sx__msg-input";
-      var phone = document.createElement("input"); phone.type = "tel"; phone.placeholder = "Phone (optional)"; phone.className = "sx__msg-input";
-      line2.appendChild(first); line2.appendChild(last); line2.appendChild(phone);
-      row.appendChild(line2);
-
-      var line3 = document.createElement("div"); line3.className = "sx__opt-line";
-      var companySel = document.createElement("select"); companySel.className = "sx__msg-input";
-      companySel.appendChild(new Option("Company… (none)", ""));
-      companySel.appendChild(new Option("+ New company…", "__new__"));
-      api("/companies").then(function (res) {
-        (res.companies || []).forEach(function (a) {
-          companySel.insertBefore(new Option(a.name || a.id, a.id), companySel.lastChild);
-        });
-      }).catch(function () { /* picker just stays short */ });
-      var newCompany = document.createElement("input"); newCompany.type = "text";
-      newCompany.placeholder = "New company name"; newCompany.className = "sx__msg-input"; newCompany.hidden = true;
-      companySel.addEventListener("change", function () { newCompany.hidden = companySel.value !== "__new__"; });
-      var createBtn = document.createElement("button"); createBtn.type = "button";
-      createBtn.className = "cbm-button cbm-button--secondary sx__sm"; createBtn.textContent = "Create contact";
-      createBtn.addEventListener("click", async function () {
-        if (!first.value.trim() && !last.value.trim()) { createBtn.textContent = "Name needed"; return; }
-        createBtn.disabled = true; createBtn.textContent = "Creating…";
-        var changes = { firstName: first.value.trim(), lastName: last.value.trim(), emailAddress: addr };
-        if (phone.value.trim()) changes.phoneNumber = phone.value.trim();
-        var payload = { changes: changes };
-        if (companySel.value === "__new__" && newCompany.value.trim()) payload.newCompanyName = newCompany.value.trim();
-        else if (companySel.value && companySel.value !== "__new__") changes.accountId = companySel.value;
-        try {
+        check.addEventListener("change", setEnabled);
+        resolver = async function () {
+          if (!check.checked) return false;
+          if (!first.value.trim() && !last.value.trim()) {
+            throw new Error("Enter a name for " + addr + " (or uncheck \"Add to this record\").");
+          }
+          var changes = { firstName: first.value.trim(), lastName: last.value.trim(), emailAddress: addr };
+          if (phone.value.trim()) changes.phoneNumber = phone.value.trim();
+          var payload = { changes: changes };
+          if (companySel.value === "__new__" && newCompany.value.trim()) payload.newCompanyName = newCompany.value.trim();
+          else if (companySel.value && companySel.value !== "__new__") changes.accountId = companySel.value;
           await api("/records/" + encodeURIComponent(currentDetail.id) + "/contacts", {
             method: "POST", body: JSON.stringify(payload),
           });
           resolvedAddresses[addr.toLowerCase()] = 1;
-          createBtn.textContent = "Created ✓";
-          submit();
-        } catch (e) {
-          if (e.status === 401) { closeComm(); showLogin(); return; }
-          createBtn.disabled = false; createBtn.textContent = e.message;
-        }
-      });
-      line3.appendChild(companySel); line3.appendChild(newCompany); line3.appendChild(createBtn);
-      row.appendChild(line3);
+          return true;
+        };
+      }
+      row.appendChild(err);
+      commResolvers.push({ addr: addr, resolve: resolver, errEl: err });
       return row;
     }
 
@@ -1251,9 +1208,26 @@
       }
       var recipients = $("commTo").value.split(/[,;\s]+/).filter(Boolean);
       var unknown = unknownRecipients(recipients);
-      if (unknown.length && !allowUnknown) {
-        showUnknownOptions(unknown, doSend);
+      if (unknown.length && commResolvers === null) {
+        await buildUnknownPanel(unknown);   // first click: show the rows
         return;
+      }
+      // Process the checkbox rows: link/create the checked ones; anything
+      // unchecked goes as a one-off (server needs the explicit flag).
+      if (commResolvers) {
+        for (var ri = 0; ri < commResolvers.length; ri++) {
+          var r = commResolvers[ri];
+          if (resolvedAddresses[r.addr.toLowerCase()]) continue;
+          r.errEl.hidden = true;
+          try {
+            var did = await r.resolve();
+            if (!did) allowUnknown = true;
+          } catch (e) {
+            if (e.status === 401) { closeComm(); showLogin(); return; }
+            r.errEl.textContent = e.message; r.errEl.hidden = false;
+            return;  // fix or uncheck, then Send again
+          }
+        }
       }
       err.hidden = true; send.disabled = true; send.textContent = "Sending…";
       try {
@@ -1274,11 +1248,13 @@
         if (e.status === 401) { closeComm(); showLogin(); return; }
         err.textContent = e.message; err.hidden = false;
         send.disabled = false; send.textContent = "Send";
-        // The server is the authority: if it still refuses (e.g. contacts
-        // changed under us), surface its option flow too.
+        // The server is the authority: if it still refuses (contacts changed
+        // under us), rebuild the rows for whatever is still unknown.
         if (e.status === 400 && /aren't contacts/.test(e.message || "")) {
+          commResolvers = null;
           var recips = $("commTo").value.split(/[,;\s]+/).filter(Boolean);
-          showUnknownOptions(unknownRecipients(recips), doSend);
+          var still = unknownRecipients(recips);
+          if (still.length) await buildUnknownPanel(still);
         }
       }
     }

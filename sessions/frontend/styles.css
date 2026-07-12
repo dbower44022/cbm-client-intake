@@ -454,8 +454,10 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
   content: ""; position: absolute; left: 0.35rem; top: 50%; transform: translateY(-50%);
   width: 7px; height: 7px; border-radius: 50%; background: var(--cbm-blue, #1a5fb4);
 }
-/* Compose / view / reply modal (reuses .sx__modal; a touch wider than peek). */
-#commModal .sx__modal-card { max-width: 40rem; }
+/* Compose / view / reply modal — a workspace, not a pop-up: most of the
+   screen, so the message + add-contact rows are comfortable to fill in. */
+#commModal .sx__modal-card { max-width: min(90rem, 94vw); width: 94vw; }
+#commModal textarea.sx__msg-input { min-height: 16rem; }
 .sx__modal-foot { display: flex; gap: 0.5rem; justify-content: flex-end; flex-wrap: wrap; padding: 0.75rem 1rem 1rem; border-top: 1px solid var(--cbm-border, #eef1f4); }
 .sx__modal-foot .cbm-button { padding: 0.5rem 0.9rem; font-size: 0.9rem; }
 .sx__msg-body { padding: 0.6rem 1rem 0.2rem; white-space: pre-wrap; line-height: 1.55; color: var(--cbm-navy, #223); }
@@ -515,6 +517,10 @@ textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
 .sx__vcallout-l { font-size: 12px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; color: #8a6d1f; margin-bottom: 4px; }
 .sx__vcallout-b { font-size: 14px; line-height: 1.7; color: var(--cbm-slate-900, #1E293B); overflow-wrap: anywhere; }
 .sx__vcallout-b p { margin: 0 0 8px; } .sx__vcallout-b :last-child { margin-bottom: 0; } .sx__vcallout-b :first-child { margin-top: 0; }
-/* Compose: per-recipient resolution options (unknown-recipient router). */
+/* Compose: per-recipient resolution rows (unknown-recipient router). */
 .sx__opt-line { display: flex; gap: 0.4rem; align-items: center; margin: 0.3rem 0; }
 .sx__opt-line .sx__msg-input { flex: 1; min-width: 0; }
+.sx__addr-row { border: 1px solid var(--cbm-border, #e3e8ee); border-radius: 8px; padding: 0.5rem 0.75rem; margin: 0.5rem 1rem; }
+.sx__addr-row .sx__opt-line:first-child { justify-content: space-between; flex-wrap: wrap; }
+.sx__addr-check { display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 600; white-space: nowrap; }
+.sx__addr-row input:disabled, .sx__addr-row select:disabled { opacity: 0.45; }

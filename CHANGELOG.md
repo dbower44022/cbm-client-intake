@@ -4,6 +4,19 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.36.2] — 2026-07-12
+
+### Changed
+- **Compose dialog redesigned to checkbox rows + one Send** (Doug's design):
+  every non-record recipient gets an "Add to this record" checkbox (default
+  on) — an existing CRM contact of ANY type (client, non-client, CBM member)
+  shows who they are and links on Send; a new address shows the
+  first/last/phone/company form (existing-Account picker or new company);
+  unchecked rows send as a one-off (thread still followed, conversation
+  still attached). A single Send click links/creates all checked rows, then
+  sends. The compose/view modal is now a workspace-sized dialog
+  (min(90rem, 94vw), 16rem message area) instead of a 40rem pop-up.
+
 ## [0.36.1] — 2026-07-12
 
 ### Changed

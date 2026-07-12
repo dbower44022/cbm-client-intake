@@ -72,29 +72,25 @@ new email, pre-filled to the record's primary contact.
 Mail you send goes out **as you** — from your own `@cbmentors.org` address —
 lands in your real Gmail *Sent* folder, and appears in the tab immediately.
 
-**If a recipient isn't a contact on the record**, the compose window first
-looks the address up across the whole CRM, then offers the right fix:
+**If a recipient isn't a contact on the record**, the compose window looks
+each address up across the whole CRM and shows one row per recipient, each
+with an **"Add to this record" checkbox** (checked by default):
 
-- **The address already belongs to a CRM contact** (from another record):
-  you'll see who — "*Jane Chen (Chen Co) already exists in the CRM*" — with
-  one button: **"Add to this record & send"**. No duplicate contact gets
-  created. (If the match is a CBM member, the dialog says so and you just
-  use "Send anyway" — CBM people aren't client contacts.)
-- **The address is new to the CRM**, two choices:
-  - **"This is a new address for…"** — pick a contact already on this
-    record; the address is saved on their contact record (so their mail
-    auto-matches from now on, everywhere) and your email sends normally.
-    *Use this when a client writes from a personal address the CRM doesn't
-    know.*
-  - **A small create form** — first name, last name, phone, and company
-    (pick an existing company or type a new one; a new company is created
-    in the CRM). They're added as a contact on this record and your email
-    sends. *Use this for a new person who belongs on the record — a
-    bookkeeper, a co-founder.*
-- **"Send anyway — attach this conversation only"** — always available as a
-  one-off. The conversation stays attached to this record and their replies
-  keep arriving (the thread is followed), but no contact is created. *Use
-  this for third parties — a banker, an outside advisor.*
+- **Already a CRM contact** (client, non-client, or CBM member — from any
+  record): the row shows who they are — "*jane@chenco.test — Jane Chen
+  (Chen Co, already in the CRM)*". Leave the box checked and they're linked
+  to this record when you hit Send. No duplicate contact is ever created.
+- **New to the CRM**: the row shows a small form — first name, last name,
+  phone, and company (pick an existing company from the list, or choose
+  "+ New company…" and type a name; the company is created in the CRM).
+  Leave the box checked and fill it in; Send creates the contact on this
+  record and sends.
+- **Uncheck the box** on any row to send without adding that person — a
+  one-off. The conversation still attaches to this record and their replies
+  keep arriving (the thread is followed); they just don't become a contact.
+
+One **Send** click does it all: checked rows are linked/created first, then
+the email goes out.
 
 Emailing another CBM person (`@cbmentors.org`) never triggers this prompt.
 
