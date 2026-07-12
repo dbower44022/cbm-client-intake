@@ -299,7 +299,13 @@ async def send_message(
         raise CommsError("Add at least one recipient.")
 
     ref = await _record_ref(api_client, cfg, parent_id)
-    unknown = [a for a in to if a not in ref.addresses]
+    # CBM-internal recipients are never "unknown" — emailing a co-mentor or
+    # staff about the record shouldn't trip the guard (their copy dedups via
+    # Message-ID when their own mailbox syncs).
+    unknown = [
+        a for a in to
+        if a not in ref.addresses and not a.endswith("@cbmentors.org")
+    ]
     if unknown and not allow_unknown_recipients:
         raise CommsError(
             "These recipients aren't contacts on this record: "
@@ -353,6 +359,15 @@ async def send_message(
         conv_id = await ingest_message(api_client, store, scope, parse_message(raw))
     except Exception as exc:  # noqa: BLE001
         log.warning("write-through ingest of sent message failed: %s", exc)
+
+    # A confirmed send to non-contacts established this conversation manually —
+    # persist the attachment (same include override "Add emails…" writes) so a
+    # resync can never drop it, and thread-following keeps its replies coming.
+    if conv_id and unknown:
+        await store.set_override(
+            cfg.parent_entity, parent_id, conv_id, ACTION_INCLUDE,
+            user.get("userName", ""),
+        )
     return {"gmailMessageId": sent.get("id"), "conversationId": conv_id}
 
 

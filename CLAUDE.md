@@ -753,7 +753,12 @@ app as PRIMARY, Cloudflare CNAME grey-cloud → the app's default hostname; the
   References-merged threads, linked to the real engagement "Agape W8 Loss
   2026-05-15", owner-stamped. Steady state: sync every 300s; the two fake
   test mailboxes (partner.manager@/matt.mentor@ have no real Workspace
-  mailbox) log an expected invalid_grant warning each pass. **Remaining:**
+  mailbox) log an expected invalid_grant warning each pass. **Non-contact-recipient design (v0.35.2, from Doug's scenario
+  review):** thread-following ingest (replies to any stored conversation
+  ingest even from unknown addresses), confirmed sends write a durable
+  include override, the compose dialog routes unknown recipients to
+  add-address-to-contact / create-contact / explicit one-off, and
+  `@cbmentors.org` recipients never trip the guard. **Remaining:**
   eyeball the Communications tab as a signed-in manager; exercise SEND
   (first gmail.send use) + curation live; prod rollout per the runbook
   (prod CRM entities + prod overlay; same SA/delegation covers prod); AI

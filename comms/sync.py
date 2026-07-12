@@ -92,16 +92,39 @@ async def ingest_message(
     scope: MailboxScope,
     parsed: ParsedGmailMessage,
 ) -> Optional[str]:
-    """Store one matched message; returns the conversation id (None = skipped)."""
-    matched = scope.records_for(parsed.all_addresses)
-    if not matched:
-        return None
+    """Store one matched message; returns the conversation id (None = skipped).
+
+    A message qualifies when it involves a record contact's address OR belongs
+    to a Gmail thread that is already a stored conversation (thread-following):
+    once a conversation exists — auto-matched, added by search, or established
+    by a confirmed send to a non-contact — its replies keep arriving even when
+    the correspondent's address is on no contact record.
+    """
     # Drafts are unsent (Gmail keeps each revision as its own message — the
     # source of duplicate "messages" in the first live run); spam/trash can
     # arrive via the history feed. None of them belong on the record.
     if {"DRAFT", "SPAM", "TRASH"} & set(parsed.label_ids):
         log.debug("skipping %s (labels=%s)", parsed.rfc_message_id, parsed.label_ids)
         return None
+
+    # Conversation resolution inputs, shared by matching and storing.
+    refs = [r.strip().strip("<>") for r in parsed.references.split() if r.strip()]
+    if parsed.in_reply_to:
+        refs.insert(0, parsed.in_reply_to)
+
+    matched = scope.records_for(parsed.all_addresses)
+    known_conv: Optional[str] = None
+    if not matched:
+        # Thread-following: no address match, but is this a reply on a thread
+        # we already store? (same-mailbox thread id, else the References chain)
+        known_conv = await crm.find_conversation_for_thread(
+            espo, scope.mailbox, parsed.thread_id
+        )
+        if not known_conv and refs:
+            known_conv = await crm.find_conversation_by_refs(espo, refs)
+        if not known_conv:
+            return None
+
     if triage.is_junk(parsed):
         log.debug("triage: dropping %s (%s)", parsed.rfc_message_id, parsed.subject)
         return None
@@ -125,15 +148,13 @@ async def ingest_message(
                 await crm.stamp_owners(espo, conv_id, {scope.owner_user_id})
         return conv_id
 
-    # 2. Conversation: same-mailbox Gmail thread, else cross-mailbox merge via
-    #    References/In-Reply-To, else a new conversation.
-    conv_id = await crm.find_conversation_for_thread(espo, scope.mailbox, parsed.thread_id)
-    if not conv_id:
-        refs = [r.strip().strip("<>") for r in parsed.references.split() if r.strip()]
-        if parsed.in_reply_to:
-            refs.insert(0, parsed.in_reply_to)
-        if refs:
-            conv_id = await crm.find_conversation_by_refs(espo, refs)
+    # 2. Conversation: the thread-followed one, else same-mailbox Gmail thread,
+    #    else cross-mailbox merge via References/In-Reply-To, else new.
+    conv_id = known_conv or await crm.find_conversation_for_thread(
+        espo, scope.mailbox, parsed.thread_id
+    )
+    if not conv_id and refs:
+        conv_id = await crm.find_conversation_by_refs(espo, refs)
     if not conv_id:
         conv_id = await crm.create_conversation(
             espo, subject=parsed.subject, sent_at=parsed.sent_at

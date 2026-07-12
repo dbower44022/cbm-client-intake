@@ -24,6 +24,29 @@ deploy marker on App Platform.
      showed as a 504). Genuine server faults still 502; expired sessions
      still 401.
 
+## [0.35.2] — 2026-07-11
+
+### Added / Fixed
+- **Non-contact recipients: the full design** (from Doug's scenario review —
+  sending from a record to someone who isn't a record contact):
+  - **Thread-following ingest** (correctness fix): a message now qualifies for
+    ingest when it involves a record contact's address OR belongs to a Gmail
+    thread that is already a stored conversation. Replies to any
+    manually-established conversation (confirmed send, "Add emails…") keep
+    arriving even when the correspondent is on no contact record — previously
+    they were silently skipped.
+  - **Durable attachment on confirmed sends**: a send confirmed to non-contact
+    recipients now writes the same include override "Add emails…" writes, so
+    a resync can never drop the conversation (the Sam-Smith-test lesson).
+  - **Guided compose dialog**: instead of a bare "Send anyway", the compose
+    modal now routes each non-contact recipient to the right fix — add the
+    address to an existing contact (the durable fix; auto-resends as a normal
+    matched send), create-and-link a new contact on the record, or an explicit
+    one-off "Send anyway — attach this conversation only".
+  - **CBM-internal recipients (`@cbmentors.org`) are never "unknown"** —
+    emailing a co-mentor/staff about the record no longer trips the guard
+    (their copy dedups by Message-ID when their own mailbox syncs).
+
 ## [0.35.1] — 2026-07-11
 
 ### Fixed

@@ -515,3 +515,6 @@ textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
 .sx__vcallout-l { font-size: 12px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; color: #8a6d1f; margin-bottom: 4px; }
 .sx__vcallout-b { font-size: 14px; line-height: 1.7; color: var(--cbm-slate-900, #1E293B); overflow-wrap: anywhere; }
 .sx__vcallout-b p { margin: 0 0 8px; } .sx__vcallout-b :last-child { margin-bottom: 0; } .sx__vcallout-b :first-child { margin-top: 0; }
+/* Compose: per-recipient resolution options (unknown-recipient router). */
+.sx__opt-line { display: flex; gap: 0.4rem; align-items: center; margin: 0.3rem 0; }
+.sx__opt-line .sx__msg-input { flex: 1; min-width: 0; }

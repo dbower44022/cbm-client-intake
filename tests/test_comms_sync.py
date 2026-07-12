@@ -335,3 +335,19 @@ async def test_drafts_spam_trash_are_never_ingested():
     sent = raw_message(mid="m-ok", rfc_id="r-ok")
     sent["labelIds"] = ["SENT"]
     assert await ingest_message(espo, store, scope(), sync.parse_message(sent))
+
+
+async def test_thread_following_ingests_reply_from_unknown_address():
+    espo, store = FakeEspo(), MemoryCommsStore()
+    # Establish a conversation normally (known contact).
+    first = sync.parse_message(raw_message(rfc_id="root"))
+    conv_id = await ingest_message(espo, store, scope(), first)
+    # A reply on the SAME Gmail thread from an address on no contact record.
+    reply = raw_message(mid="m2", thread="t1", frm="stranger@else.test", rfc_id="r2")
+    got = await ingest_message(espo, store, scope(), sync.parse_message(reply))
+    assert got == conv_id                                  # followed the thread
+    comms = [r for (e, _), r in espo.records.items() if e == crm.COMMUNICATION]
+    assert len(comms) == 2
+    # …but an unrelated message from an unknown address is still skipped.
+    other = raw_message(mid="m3", thread="OTHER", frm="stranger@else.test", rfc_id="r3")
+    assert await ingest_message(espo, store, scope(), sync.parse_message(other)) is None

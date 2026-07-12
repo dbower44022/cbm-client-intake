@@ -1070,9 +1070,103 @@
     body.appendChild(err);
 
     var allowUnknown = false;
+    var resolvedAddresses = {};  // addresses the user handled via the options below
+    var optionsPanel = document.createElement("div");
+    body.appendChild(optionsPanel);
+
+    // Recipients that are neither record contacts nor CBM-internal.
+    function unknownRecipients(recipients) {
+      var known = {};
+      ((currentDetail && currentDetail.contacts) || []).forEach(function (c) {
+        if (c.email) known[String(c.email).toLowerCase()] = 1;
+      });
+      return recipients.filter(function (a) {
+        a = a.toLowerCase();
+        return !known[a] && !resolvedAddresses[a] && !/@cbmentors\.org$/.test(a);
+      });
+    }
+
+    // The scenario router: for each non-contact recipient, offer the durable
+    // fixes (add address to a contact / create a contact) or a one-off send.
+    function showUnknownOptions(unknown, submit) {
+      optionsPanel.innerHTML = "";
+      var head = document.createElement("p"); head.className = "sx__notice";
+      head.textContent = (unknown.length === 1 ? "This recipient isn't" : "These recipients aren't") +
+        " a contact on this record. Choose what to do:";
+      optionsPanel.appendChild(head);
+      unknown.forEach(function (addr) {
+        var row = document.createElement("div"); row.className = "sx__msg-field";
+        var lab = document.createElement("span"); lab.className = "sx__msg-label"; lab.textContent = addr;
+        row.appendChild(lab);
+
+        // Option 1: this is a new address for an existing contact.
+        var line1 = document.createElement("div"); line1.className = "sx__opt-line";
+        var sel = document.createElement("select"); sel.className = "sx__msg-input";
+        sel.appendChild(new Option("This is a new address for…", ""));
+        ((currentDetail && currentDetail.contacts) || []).forEach(function (c) {
+          sel.appendChild(new Option(c.name || c.id, c.id));
+        });
+        var addBtn = document.createElement("button"); addBtn.type = "button";
+        addBtn.className = "cbm-button cbm-button--secondary sx__sm"; addBtn.textContent = "Add address";
+        addBtn.addEventListener("click", async function () {
+          if (!sel.value) return;
+          addBtn.disabled = true; addBtn.textContent = "Adding…";
+          try {
+            await api("/contacts/" + encodeURIComponent(sel.value) + "/addresses", {
+              method: "POST", body: JSON.stringify({ address: addr }),
+            });
+            resolvedAddresses[addr.toLowerCase()] = 1;
+            addBtn.textContent = "Added ✓";
+            submit();  // re-check + send
+          } catch (e) {
+            if (e.status === 401) { closeComm(); showLogin(); return; }
+            addBtn.disabled = false; addBtn.textContent = e.message;
+          }
+        });
+        line1.appendChild(sel); line1.appendChild(addBtn);
+        row.appendChild(line1);
+
+        // Option 2: create them as a new contact on this record.
+        var line2 = document.createElement("div"); line2.className = "sx__opt-line";
+        var first = document.createElement("input"); first.type = "text"; first.placeholder = "First name"; first.className = "sx__msg-input";
+        var last = document.createElement("input"); last.type = "text"; last.placeholder = "Last name"; last.className = "sx__msg-input";
+        var createBtn = document.createElement("button"); createBtn.type = "button";
+        createBtn.className = "cbm-button cbm-button--secondary sx__sm"; createBtn.textContent = "Create contact";
+        createBtn.addEventListener("click", async function () {
+          if (!first.value.trim() && !last.value.trim()) { createBtn.textContent = "Name needed"; return; }
+          createBtn.disabled = true; createBtn.textContent = "Creating…";
+          try {
+            await api("/records/" + encodeURIComponent(currentDetail.id) + "/contacts", {
+              method: "POST",
+              body: JSON.stringify({ changes: {
+                firstName: first.value.trim(), lastName: last.value.trim(), emailAddress: addr,
+              } }),
+            });
+            resolvedAddresses[addr.toLowerCase()] = 1;
+            createBtn.textContent = "Created ✓";
+            submit();
+          } catch (e) {
+            if (e.status === 401) { closeComm(); showLogin(); return; }
+            createBtn.disabled = false; createBtn.textContent = e.message;
+          }
+        });
+        line2.appendChild(first); line2.appendChild(last); line2.appendChild(createBtn);
+        row.appendChild(line2);
+        optionsPanel.appendChild(row);
+      });
+
+      // Option 3: one-off — send anyway; the conversation still attaches to
+      // this record (durably) and replies will follow the thread.
+      var anyway = document.createElement("button"); anyway.type = "button";
+      anyway.className = "cbm-button cbm-button--secondary";
+      anyway.textContent = "Send anyway — attach this conversation only";
+      anyway.addEventListener("click", function () { allowUnknown = true; submit(); });
+      optionsPanel.appendChild(anyway);
+    }
+
     var send = document.createElement("button"); send.type = "button";
     send.className = "cbm-button"; send.textContent = "Send";
-    send.addEventListener("click", async function () {
+    async function doSend() {
       if (!commsOn()) {
         // No delivery in scaffold mode — communicate that plainly.
         $("commModalBody").innerHTML = "";
@@ -1086,6 +1180,11 @@
         return;
       }
       var recipients = $("commTo").value.split(/[,;\s]+/).filter(Boolean);
+      var unknown = unknownRecipients(recipients);
+      if (unknown.length && !allowUnknown) {
+        showUnknownOptions(unknown, doSend);
+        return;
+      }
       err.hidden = true; send.disabled = true; send.textContent = "Sending…";
       try {
         await api("/records/" + encodeURIComponent(currentDetail.id) + "/messages", {
@@ -1104,17 +1203,16 @@
       } catch (e) {
         if (e.status === 401) { closeComm(); showLogin(); return; }
         err.textContent = e.message; err.hidden = false;
-        send.disabled = false;
-        // A recipient outside the record's contacts: the server refused once —
-        // offer an explicit "send anyway" as the confirmation step.
+        send.disabled = false; send.textContent = "Send";
+        // The server is the authority: if it still refuses (e.g. contacts
+        // changed under us), surface its option flow too.
         if (e.status === 400 && /aren't contacts/.test(e.message || "")) {
-          allowUnknown = true;
-          send.textContent = "Send anyway";
-        } else {
-          send.textContent = "Send";
+          var recips = $("commTo").value.split(/[,;\s]+/).filter(Boolean);
+          showUnknownOptions(unknownRecipients(recips), doSend);
         }
       }
-    });
+    }
+    send.addEventListener("click", doSend);
     var cancel = document.createElement("button"); cancel.type = "button";
     cancel.className = "cbm-button cbm-button--secondary"; cancel.textContent = "Cancel";
     cancel.addEventListener("click", closeComm);
