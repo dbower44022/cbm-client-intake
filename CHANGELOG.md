@@ -27,6 +27,29 @@ deploy marker on App Platform.
 ## [0.35.2] — 2026-07-11
 
 ### Added / Fixed
+
+*(also folds in the same-day activation fixes originally logged as a duplicate 0.35.1):*
+
+- **Communications live-activation fixes** (found activating on crm-test —
+  the CRM entities were built + probe-verified the same day):
+  - `requests` was a missing dependency of google-auth's token transport
+    (latent since v0.11.0 — first live Gmail call exposed it).
+  - All varchar writes clamp to the as-built 100-char CRM fields (the first
+    backfill 400'd on `snippet` maxLength, storing conversations but no
+    messages); spec updated with as-built lengths.
+  - Gmail **drafts are never ingested** (each draft revision is its own
+    message — the source of a duplicated "Re:" pair and one never-sent
+    "conversation"); SPAM/TRASH skipped too.
+  - Quoted chains no longer leak into stored bodies: the "On … wrote:"
+    header is matched even when line-wrapped, and `>`-prefixed quoting
+    inside HTML bodies is truncated.
+  - **Per Doug: `bodyCleaned` is now the author's NEW TEXT ONLY** — the
+    demoted quoted-reply zone is no longer stored or rendered; a quote-only/
+    image-only message stores a small placeholder instead of raw quoted text.
+- **`GMAIL_RESYNC` one-shot ops lever**: set on the worker + deploy to clear
+  every mailbox's sync cursor so the backfill re-runs idempotently; unset
+  after one pass. Used twice during activation to re-drive dropped messages.
+
 - **Non-contact recipients: the full design** (from Doug's scenario review —
   sending from a record to someone who isn't a record contact):
   - **Thread-following ingest** (correctness fix): a message now qualifies for
@@ -60,29 +83,6 @@ deploy marker on App Platform.
   list is gone; the field's options are now pulled live from CRM metadata like
   every other enum (`service.field_options`), so the dropdown always offers
   exactly what the CRM accepts.
-
-## [0.35.1] — 2026-07-11
-
-### Fixed
-- **Communications live-activation fixes** (found activating on crm-test —
-  the CRM entities were built + probe-verified the same day):
-  - `requests` was a missing dependency of google-auth's token transport
-    (latent since v0.11.0 — first live Gmail call exposed it).
-  - All varchar writes clamp to the as-built 100-char CRM fields (the first
-    backfill 400'd on `snippet` maxLength, storing conversations but no
-    messages); spec updated with as-built lengths.
-  - Gmail **drafts are never ingested** (each draft revision is its own
-    message — the source of a duplicated "Re:" pair and one never-sent
-    "conversation"); SPAM/TRASH skipped too.
-  - Quoted chains no longer leak into stored bodies: the "On … wrote:"
-    header is matched even when line-wrapped, and `>`-prefixed quoting
-    inside HTML bodies is truncated.
-  - **Per Doug: `bodyCleaned` is now the author's NEW TEXT ONLY** — the
-    demoted quoted-reply zone is no longer stored or rendered; a quote-only/
-    image-only message stores a small placeholder instead of raw quoted text.
-- **`GMAIL_RESYNC` one-shot ops lever**: set on the worker + deploy to clear
-  every mailbox's sync cursor so the backfill re-runs idempotently; unset
-  after one pass. Used twice during activation to re-drive dropped messages.
 
 ## [0.35.0] — 2026-07-10
 
