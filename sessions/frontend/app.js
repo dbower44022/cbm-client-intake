@@ -75,7 +75,11 @@
   $("refreshBtn").addEventListener("click", function () { loadRecords(); });
   $("search").addEventListener("input", function () { search = this.value; renderTable(); });
   $("statusFilter").addEventListener("change", function () { statusFilter = this.value; renderTable(); });
-  $("backBtn").addEventListener("click", function () { showList(); });
+  $("backBtn").addEventListener("click", function () {
+    // leaving the record: clear the deep link so a refresh shows the list
+    history.replaceState({}, "", location.pathname);
+    showList();
+  });
   $("newSessionBtn").addEventListener("click", function () { openEditor(null); });
   $("editorBackBtn").addEventListener("click", function () { leaveEditor(); });
   $("saveSessionBtn").addEventListener("click", function () { saveSession(); });
@@ -208,6 +212,9 @@
       if (config.emptyMessage) $("emptyState").textContent = config.emptyMessage;
       buildDetailTabs();
       await bootList();
+      // ?record=<id> deep link (the grid opens records in new tabs with it).
+      var deepLink = new URLSearchParams(location.search).get("record");
+      if (deepLink) openDetail(deepLink);
     } catch (e) { bootFail(e); }
   })();
 
@@ -315,16 +322,29 @@
     if (!rows.length) { show($("emptyState")); hide($("recordsTable")); return; }
     hide($("emptyState"));
     var contactKey = config && config.contactKey;
+    var companyKey = config && config.companyKey;
     rows.forEach(function (r) {
       var tr = document.createElement("tr");
       cols.forEach(function (c, i) {
         var td = document.createElement("td");
         if (i === 0) {
-          var link = document.createElement("button");
-          link.type = "button"; link.className = "sx__link";
+          // A real link so the record opens in a SEPARATE TAB — several
+          // records can be worked on simultaneously (deep link ?record=<id>).
+          var link = document.createElement("a");
+          link.className = "sx__link";
+          link.href = location.pathname + "?record=" + encodeURIComponent(r.id);
+          link.target = "_blank"; link.rel = "noopener";
           link.textContent = r[c.key] || "(unnamed)";
-          link.addEventListener("click", function () { openDetail(r.id); });
           td.appendChild(link);
+        } else if (c.key === companyKey && r.companyPeek && r[c.key]) {
+          // Company link -> the standard company/client pop-up (sections the
+          // user's ACL can't read are omitted, so an unassigned user sees
+          // only the company information).
+          var comp = document.createElement("button");
+          comp.type = "button"; comp.className = "sx__link";
+          comp.textContent = r[c.key];
+          comp.addEventListener("click", function () { openAggregatePeek(r.companyPeek, r[c.key]); });
+          td.appendChild(comp);
         } else if (c.date || c.type === "date") {
           td.textContent = fmtDate(r[c.key]);
         } else if (c.type === "datetime") {
@@ -365,6 +385,9 @@
   async function openDetail(id) {
     try { currentDetail = await api("/records/" + encodeURIComponent(id)); }
     catch (e) { if (e.status === 401) { showLogin(); return; } notice("listNotice", e.message, "error"); return; }
+    // Deep link: the URL identifies the open record, so a refresh stays here
+    // and the grid's new-tab links land directly on the record.
+    history.replaceState({}, "", location.pathname + "?record=" + encodeURIComponent(id));
     $("detailName").textContent = currentDetail.name || "(unnamed)";
     $("detailKind").textContent = currentDetail.parentLabel || "";
     currentDetails = null;  // Details tab reloads for the new record on activation
@@ -1338,12 +1361,17 @@
     results.forEach(function (r) { if (!title && r.data && r.data.name) title = r.data.name; });
     $("peekName").textContent = title || "(details)";
     var body = $("peekBody"); body.innerHTML = "";
-    results.forEach(function (r) {
+    // Sections the user's ACL can't read are OMITTED (an unassigned user
+    // just sees the company information — no permission noise).
+    var visible = results.filter(function (r) { return !(r.data && r.data.restricted); });
+    if (!visible.length) {
+      body.innerHTML = "<p class='sx__muted'>No details available.</p>"; return;
+    }
+    visible.forEach(function (r) {
       var sec = document.createElement("div"); sec.className = "sx__peek-sec";
       var h = document.createElement("div"); h.className = "sx__peek-sec-h"; h.textContent = peekLabel(r.entity);
       sec.appendChild(h);
       if (r.error) { var p = document.createElement("p"); p.className = "form-error"; p.textContent = r.error; sec.appendChild(p); }
-      else if (r.data.restricted) { var rm = document.createElement("p"); rm.className = "sx__muted sx__peek-empty"; rm.textContent = "You don't have permission to view this record."; sec.appendChild(rm); }
       else if (!r.data.fields || !r.data.fields.length) { var m = document.createElement("p"); m.className = "sx__muted sx__peek-empty"; m.textContent = "No details available."; sec.appendChild(m); }
       else { peekFieldsInto(sec, r.data.fields); }
       body.appendChild(sec);

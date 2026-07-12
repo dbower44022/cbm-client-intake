@@ -119,6 +119,12 @@ class DomainConfig:
     list_contact_id_attr: Optional[str] = None
     # Grid column key that holds the record's status (enables the status filter).
     list_status_key: Optional[str] = None
+    # Grid column key that is the COMPANY — rendered as a link opening the
+    # standard aggregated company/client pop-up (same peek the Overview uses).
+    # ``list_company_aggregate`` = (entity, id attr on the raw record; "id" =
+    # the record itself). Sections the user's ACL can't read are omitted.
+    list_company_key: Optional[str] = None
+    list_company_aggregate: tuple = ()
 
     # Details tab: the org records shown as editable sections — (title, entity,
     # id_attr on the parent). id_attr "id" means the parent record itself.
@@ -222,6 +228,7 @@ MENTOR = DomainConfig(
     default_session_type="Client Session",
     list_select=(
         "name,engagementStatus,engagementClientName,clientOrganizationName,"
+        "clientOrganizationId,engagementClientId,"
         "primaryEngagementContactName,primaryEngagementContactId,"
         "nextSessionDateTime,engagementStartDate,createdAt"
     ),
@@ -241,6 +248,9 @@ MENTOR = DomainConfig(
     list_contact_key="contact",
     list_contact_id_attr="primaryEngagementContactId",
     list_status_key="status",
+    list_company_key="company",
+    list_company_aggregate=(("Account", "clientOrganizationId"),
+                            ("CClientProfile", "engagementClientId")),
     detail_select=(
         "name,engagementStatus,meetingCadence,"
         "engagementClientName,engagementClientId,"
@@ -313,8 +323,9 @@ PARTNER = DomainConfig(
     primary_contact_id_attr="primaryPartnercontactId",
     default_session_type="Partner Session",
     list_select=(
-        "name,partnershipStatus,partnerCompanyName,primaryPartnercontactName,"
-        "primaryPartnercontactId,partnershipStartDate,createdAt"
+        "name,partnershipStatus,partnerCompanyName,partnerCompanyId,"
+        "primaryPartnercontactName,primaryPartnercontactId,"
+        "partnershipStartDate,createdAt"
     ),
     list_columns=(
         Column("name", "Partner", "name"),
@@ -326,6 +337,9 @@ PARTNER = DomainConfig(
     list_contact_key="contact",
     list_contact_id_attr="primaryPartnercontactId",
     list_status_key="status",
+    list_company_key="company",
+    list_company_aggregate=(("Account", "partnerCompanyId"),
+                            ("CPartnerProfile", "id")),
     detail_select=(
         "name,partnershipStatus,partnershipType,"
         "partnerCompanyName,partnerCompanyId,"
@@ -379,7 +393,10 @@ SPONSOR = DomainConfig(
     parent_contacts_link="sponsorContacts",
     primary_contact_id_attr="sponsorContactId",
     default_session_type="Sponsor Session",
-    list_select="name,sponsorCompanyName,sponsorContactName,sponsorContactId,createdAt",
+    list_select=(
+        "name,sponsorCompanyName,sponsorCompanyId,sponsorContactName,"
+        "sponsorContactId,createdAt"
+    ),
     list_columns=(
         Column("name", "Sponsor", "name"),
         Column("company", "Company", "sponsorCompanyName"),
@@ -387,6 +404,9 @@ SPONSOR = DomainConfig(
     ),
     list_contact_key="contact",
     list_contact_id_attr="sponsorContactId",
+    list_company_key="company",
+    list_company_aggregate=(("Account", "sponsorCompanyId"),
+                            ("CSponsorProfile", "id")),
     detail_select=(
         "name,sponsorCompanyName,sponsorCompanyId,"
         "sponsorContactName,sponsorContactId,"

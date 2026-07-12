@@ -161,6 +161,14 @@ def _grid_row(cfg: DomainConfig, r: dict[str, Any]) -> dict[str, Any]:
         row[dkey] = r.get(dattr)
     if cfg.list_contact_id_attr:
         row["contactId"] = r.get(cfg.list_contact_id_attr)  # for the contact pop-up link
+    if cfg.list_company_aggregate:
+        pairs = [
+            {"entity": entity, "id": r["id"] if attr == "id" else r.get(attr)}
+            for entity, attr in cfg.list_company_aggregate
+        ]
+        pairs = [p for p in pairs if p["id"]]
+        if pairs:
+            row["companyPeek"] = pairs  # the standard company/client pop-up
     return row
 
 

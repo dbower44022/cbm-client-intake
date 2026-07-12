@@ -152,6 +152,7 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             ),
             "statusKey": cfg.list_status_key,
             "contactKey": cfg.list_contact_key,
+            "companyKey": cfg.list_company_key,
             "emptyMessage": cfg.empty_message,
             "noProfileMessage": NO_PROFILE_MESSAGE,
             "detailTabs": COMMON_DETAIL_TABS,

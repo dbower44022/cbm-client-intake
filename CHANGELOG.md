@@ -74,6 +74,23 @@ deploy marker on App Platform.
   Overview feed maps to `notes`) — so the zone always fell to the empty
   copy. Verified rendering on the stubbed-API preview harness.
 
+## [0.36.6] — 2026-07-12
+
+### Added
+- **Records grid (all three session tools):**
+  - **Company column is a link** opening the standard aggregated
+    company/client pop-up (the same peek the Overview uses: Account + the
+    client/partnership/sponsorship profile). Sections the user's ACL can't
+    read are now **omitted** — an unassigned user just sees the company
+    information, with no permission noise (this also applies to the
+    Overview's Company pop-up).
+  - **Records open in a separate browser tab**: the name column is a real
+    link (`?record=<id>` deep link, target=_blank), so several engagements
+    can be worked simultaneously. The URL tracks the open record (refresh
+    stays on it; Back to list clears it).
+  - Column-header sorting already existed (click to toggle ▲/▼) — verified
+    working; no change.
+
 ## [0.36.5] — 2026-07-12
 
 ### Fixed
