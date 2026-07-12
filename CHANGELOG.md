@@ -4,6 +4,19 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.36.3] — 2026-07-12
+
+### Fixed
+- **CBM members now get the "Add" checkbox in compose** (Doug's report: no
+  checkbox for a CBM recipient). Two causes: the frontend skipped
+  `@cbmentors.org` addresses entirely, and the CRM lookup only searched
+  Contact email addresses while a member's work address lives on their
+  MENTOR PROFILE (`cbmEmail`). The lookup now matches mentor profiles too,
+  and a CBM member's row shows **"Add as CBM contact"** — on the mentor
+  domain, checking it adds them as a co-mentor (the record's CBM-contact
+  relationship), not a client contact. The server-side send guard still
+  never blocks internal addresses.
+
 ## [0.36.2] — 2026-07-12
 
 ### Changed

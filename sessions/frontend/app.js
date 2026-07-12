@@ -1083,7 +1083,7 @@
       });
       return recipients.filter(function (a) {
         a = a.toLowerCase();
-        return !known[a] && !resolvedAddresses[a] && !/@cbmentors\.org$/.test(a);
+        return !known[a] && !resolvedAddresses[a];
       });
     }
 
@@ -1134,11 +1134,26 @@
         var c = lookup.contact;
         var kind = c.isCbmMember ? "a CBM member" : (c.company ? c.company : "an existing contact");
         who.textContent = addr + " — " + (c.name || "?") + " (" + kind + ", already in the CRM)";
+        var asComentor = c.isCbmMember && c.mentorProfileId &&
+          (config && config.supportsComentor);
+        if (asComentor) checkLab.childNodes[1].textContent = " Add as CBM contact";
+        if (c.isCbmMember && !asComentor && !c.id) {
+          // Nothing linkable (no contact record, no co-mentor slot here) —
+          // they simply receive the email.
+          check.checked = false; check.disabled = true;
+          checkLab.childNodes[1].textContent = " Will receive the email";
+        }
         resolver = async function () {
           if (!check.checked) return false;
-          await api("/records/" + encodeURIComponent(currentDetail.id) + "/contacts", {
-            method: "POST", body: JSON.stringify({ contactId: c.id }),
-          });
+          if (asComentor) {
+            await api("/records/" + encodeURIComponent(currentDetail.id) + "/comentors", {
+              method: "POST", body: JSON.stringify({ mentorProfileId: c.mentorProfileId }),
+            });
+          } else {
+            await api("/records/" + encodeURIComponent(currentDetail.id) + "/contacts", {
+              method: "POST", body: JSON.stringify({ contactId: c.id }),
+            });
+          }
           resolvedAddresses[addr.toLowerCase()] = 1;
           return true;
         };

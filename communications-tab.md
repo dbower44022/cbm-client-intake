@@ -80,6 +80,10 @@ with an **"Add to this record" checkbox** (checked by default):
   record): the row shows who they are — "*jane@chenco.test — Jane Chen
   (Chen Co, already in the CRM)*". Leave the box checked and they're linked
   to this record when you hit Send. No duplicate contact is ever created.
+  A **CBM member** (matched by their `@cbmentors.org` address or a
+  Mentor-typed contact) gets the same row with the checkbox labeled **"Add
+  as CBM contact"** — on an engagement that adds them as a co-mentor rather
+  than a client contact.
 - **New to the CRM**: the row shows a small form — first name, last name,
   phone, and company (pick an existing company from the list, or choose
   "+ New company…" and type a name; the company is created in the CRM).
@@ -91,8 +95,6 @@ with an **"Add to this record" checkbox** (checked by default):
 
 One **Send** click does it all: checked rows are linked/created first, then
 the email goes out.
-
-Emailing another CBM person (`@cbmentors.org`) never triggers this prompt.
 
 ## Fixing the list
 

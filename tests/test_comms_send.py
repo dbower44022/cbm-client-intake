@@ -101,3 +101,15 @@ async def test_resolve_company_reuses_or_creates():
     got2 = await comms_service.resolve_company(user_client, api_client, "Fresh LLC")
     assert ("Account", got2) in api_client.records
     assert (await comms_service.resolve_company(user_client, api_client, "")) is None
+
+
+async def test_lookup_matches_mentor_profile_by_cbm_email():
+    espo = FakeEspo()
+    espo.records[("CMentorProfile", "p1")] = {
+        "name": "Carol Mentor", "cbmEmail": "carol.mentor@cbmentors.org",
+        "contactRecordId": "c77",
+    }
+    res = await comms_service.lookup_contact_by_email(espo, "Carol.Mentor@cbmentors.org")
+    assert res["found"] is True
+    c = res["contact"]
+    assert c["isCbmMember"] is True and c["mentorProfileId"] == "p1" and c["id"] == "c77"

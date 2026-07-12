@@ -385,6 +385,21 @@ async def lookup_contact_by_email(user_client: Any, address: str) -> dict[str, A
     address = (address or "").strip().lower()
     if "@" not in address:
         return {"found": False}
+
+    # A CBM member's work address lives on their MENTOR PROFILE (cbmEmail),
+    # usually not on their Contact record — check there first so the dialog
+    # can offer "add as CBM contact" instead of a bogus create form. Scanned
+    # in Python (small set), never a where on restricted attributes.
+    profile_hit = None
+    if address.endswith("@cbmentors.org"):
+        profiles = await user_client.list(
+            crm.MENTOR_PROFILE, select="name,cbmEmail,contactRecordId", max_size=200
+        )
+        for pr in profiles.get("list", []):
+            if (pr.get("cbmEmail") or "").strip().lower() == address:
+                profile_hit = pr
+                break
+
     data = await user_client.list(
         "Contact",
         where=[{"type": "equals", "attribute": "emailAddress", "value": address}],
@@ -392,8 +407,23 @@ async def lookup_contact_by_email(user_client: Any, address: str) -> dict[str, A
         max_size=1,
     )
     rows = data.get("list", [])
-    if not rows:
+
+    if not rows and not profile_hit:
         return {"found": False}
+
+    if profile_hit:
+        return {
+            "found": True,
+            "contact": {
+                "id": profile_hit.get("contactRecordId"),
+                "name": profile_hit.get("name"),
+                "company": "Cleveland Business Mentors",
+                "types": ["Mentor"],
+                "isCbmMember": True,
+                "mentorProfileId": profile_hit["id"],
+            },
+        }
+
     c = rows[0]
     types = c.get("cContactType") or []
     if isinstance(types, str):
@@ -407,6 +437,7 @@ async def lookup_contact_by_email(user_client: Any, address: str) -> dict[str, A
             "company": c.get("accountName"),
             "types": types,
             "isCbmMember": is_cbm,
+            "mentorProfileId": None,
         },
     }
 
