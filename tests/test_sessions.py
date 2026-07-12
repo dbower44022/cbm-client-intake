@@ -753,6 +753,19 @@ def test_team_member_passes(monkeypatch):
     assert r.status_code == 200 and r.json()["records"][0]["name"] == "Acme"
 
 
+def test_record_page_serves_frontend_with_base_href(monkeypatch):
+    # /{slug}/record/{id} is the dedicated record page: the shared frontend,
+    # with a <base> so its relative assets resolve against /{slug}/.
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.get("/mentorsessions/record/abc123")
+        assert r.status_code == 200
+        assert '<base href="/mentorsessions/">' in r.text
+        assert r.headers["cache-control"] == "no-store"
+        r2 = c.get("/sponsorsessions/record/xyz")
+        assert r2.status_code == 200
+        assert '<base href="/sponsorsessions/">' in r2.text
+
+
 def test_session_endpoint_reports_domain(monkeypatch):
     _as(monkeypatch, _USER)
     with TestClient(_app(monkeypatch)) as c:

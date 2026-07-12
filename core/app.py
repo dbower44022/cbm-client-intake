@@ -286,7 +286,8 @@ def create_app(
         hard refresh. ``no-cache`` lets the asset stay cached but forces a
         conditional request; StaticFiles answers with a cheap ``304`` when the
         ETag is unchanged, and full fresh content when it is not. The JSON API
-        and ``/healthz`` are left untouched.
+        and ``/healthz`` are left untouched, as is any route that set its own
+        Cache-Control (the index and the record pages use a stronger no-store).
         """
         response = await call_next(request)
         path = request.url.path
@@ -294,7 +295,7 @@ def create_app(
             request.method in ("GET", "HEAD")
             and not path.startswith("/api/")
             and path != "/healthz"
-            and path != "/"  # the index sets its own stronger no-store (see index())
+            and "cache-control" not in response.headers
         ):
             response.headers["Cache-Control"] = "no-cache"
         return response
@@ -439,7 +440,23 @@ def create_app(
         # domain (and API base) from the first path segment of its own URL.
         from sessions import DOMAINS as _SESSION_DOMAINS
 
+        def _record_page(slug: str) -> HTMLResponse:
+            """The dedicated RECORD page (/{slug}/record/{id}) — the same built
+            frontend, booted straight into one record (the JS reads the id from
+            the path; no list, no back-to-list). A <base> tag makes the page's
+            relative assets resolve against /{slug}/ from the nested path."""
+            html = (SESSIONS_FRONTEND_DIR / "index.html").read_text(encoding="utf-8")
+            html = html.replace("<head>", f'<head><base href="/{slug}/">', 1)
+            return HTMLResponse(html, headers={"Cache-Control": "no-store"})
+
         for _slug in _SESSION_DOMAINS:
+            app.add_api_route(
+                f"/{_slug}/record/{{record_id}}",
+                (lambda _s: (lambda record_id: _record_page(_s)))(_slug),
+                methods=["GET"],
+                response_class=HTMLResponse,
+                include_in_schema=False,
+            )
             app.mount(
                 f"/{_slug}",
                 StaticFiles(directory=str(SESSIONS_FRONTEND_DIR), html=True),

@@ -4,6 +4,20 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.38.0] — 2026-07-12
+
+### Changed
+- **Records open as a dedicated page — `/{slug}/record/{id}` — not a mode of
+  the list** (Doug's ruling: a record in another tab must be a real page, and
+  "Back to list" goes away). Clicking a record on the grid opens
+  `/mentorsessions/record/<id>` (partner/sponsor likewise) in a new tab: the
+  server serves the shared frontend with a `<base href="/{slug}/">` so its
+  assets resolve, and the JS boots **straight into that record** — no records
+  list is fetched at all on a record page, and the browser tab is titled with
+  the record's name. The list page is now purely a launcher; the "← Back to
+  list" button and the old `?record=` deep-link mode are removed. Session
+  editor/view navigation within a record page is unchanged ("Back to record").
+
 ## [0.37.2] — 2026-07-12
 
 ### Fixed

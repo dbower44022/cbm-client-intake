@@ -4,9 +4,13 @@
 (function () {
   "use strict";
 
-  // "/mentorsessions/..." -> API base "/mentorsessions/api"
-  var SLUG = (location.pathname.split("/")[1] || "").toLowerCase();
+  // "/mentorsessions/..." -> API base "/mentorsessions/api".
+  // "/mentorsessions/record/<id>" = the dedicated RECORD PAGE: boots straight
+  // into that record — no list is loaded and there is no back-to-list.
+  var _segs = location.pathname.split("/");
+  var SLUG = (_segs[1] || "").toLowerCase();
   var API = "/" + SLUG + "/api";
+  var RECORD_ID = _segs[2] === "record" ? decodeURIComponent(_segs[3] || "") : null;
 
   var config = null;        // from /session (title, columns, parentLabel, …)
   var fieldSpec = [];       // CSession editable-field spec
@@ -75,11 +79,6 @@
   $("refreshBtn").addEventListener("click", function () { loadRecords(); });
   $("search").addEventListener("input", function () { search = this.value; renderTable(); });
   $("statusFilter").addEventListener("change", function () { statusFilter = this.value; renderTable(); });
-  $("backBtn").addEventListener("click", function () {
-    // leaving the record: clear the deep link so a refresh shows the list
-    history.replaceState({}, "", location.pathname);
-    showList();
-  });
   $("newSessionBtn").addEventListener("click", function () { openEditor(null); });
   $("editorBackBtn").addEventListener("click", function () { leaveEditor(); });
   $("saveSessionBtn").addEventListener("click", function () { saveSession(); });
@@ -211,10 +210,17 @@
       $("whoName").textContent = config.name || config.userName;
       if (config.emptyMessage) $("emptyState").textContent = config.emptyMessage;
       buildDetailTabs();
-      await bootList();
-      // ?record=<id> deep link (the grid opens records in new tabs with it).
-      var deepLink = new URLSearchParams(location.search).get("record");
-      if (deepLink) openDetail(deepLink);
+      if (RECORD_ID) {
+        // Record page: fields only (for the session editor) — the list is
+        // never fetched here.
+        try {
+          var rf = await api("/fields");
+          fieldSpec = rf.fields || []; fieldOptions = rf.options || {}; fieldRequired = rf.required || [];
+        } catch (e) { if (e.status === 401) { showLogin(); return; } }
+        await openDetail(RECORD_ID);
+      } else {
+        await bootList();
+      }
     } catch (e) { bootFail(e); }
   })();
 
@@ -328,11 +334,11 @@
       cols.forEach(function (c, i) {
         var td = document.createElement("td");
         if (i === 0) {
-          // A real link so the record opens in a SEPARATE TAB — several
-          // records can be worked on simultaneously (deep link ?record=<id>).
+          // A real link to the record's own PAGE, opened in a separate tab —
+          // several records can be worked on simultaneously.
           var link = document.createElement("a");
           link.className = "sx__link";
-          link.href = location.pathname + "?record=" + encodeURIComponent(r.id);
+          link.href = "/" + SLUG + "/record/" + encodeURIComponent(r.id);
           link.target = "_blank"; link.rel = "noopener";
           link.textContent = r[c.key] || "(unnamed)";
           td.appendChild(link);
@@ -384,10 +390,12 @@
   // --- detail ---
   async function openDetail(id) {
     try { currentDetail = await api("/records/" + encodeURIComponent(id)); }
-    catch (e) { if (e.status === 401) { showLogin(); return; } notice("listNotice", e.message, "error"); return; }
-    // Deep link: the URL identifies the open record, so a refresh stays here
-    // and the grid's new-tab links land directly on the record.
-    history.replaceState({}, "", location.pathname + "?record=" + encodeURIComponent(id));
+    catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      if (RECORD_ID) { showMessage(e.message); return; }
+      notice("listNotice", e.message, "error"); return;
+    }
+    if (RECORD_ID) document.title = (currentDetail.name || "Record") + " — CBM";
     $("detailName").textContent = currentDetail.name || "(unnamed)";
     $("detailKind").textContent = currentDetail.parentLabel || "";
     currentDetails = null;  // Details tab reloads for the new record on activation
