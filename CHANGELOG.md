@@ -4,6 +4,21 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.36.1] — 2026-07-12
+
+### Changed
+- **Compose dialog: CRM-wide lookup before offering to create a contact**
+  (Doug's refinement of the non-contact recipient flow). Each unknown
+  recipient's address is first searched across the whole CRM
+  (`GET /{slug}/api/contactlookup`): an existing contact gets one button —
+  "Add to this record & send" (links the existing contact; no duplicate) —
+  and a CBM-member match short-circuits to "Send anyway". Only a
+  genuinely-new address shows the create form, which now collects first/last
+  **+ phone + company** — company picked from existing Accounts
+  (`GET /{slug}/api/companies`) or typed as a new name (find-or-create via
+  the intake API user, mirroring the intake orchestrators' policy;
+  `ContactAddIn.newCompanyName`).
+
 ## [0.36.0] — 2026-07-11
 
 ### Changed

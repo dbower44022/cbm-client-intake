@@ -64,10 +64,13 @@ class AddressIn(BaseModel):
 
 class ContactAddIn(BaseModel):
     """Add a contact to the record: link an existing one (``contactId``) OR
-    create a new one from ``changes`` and link it — exactly one of the two."""
+    create a new one from ``changes`` and link it — exactly one of the two.
+    ``newCompanyName`` (create path only): find-or-create an Account by that
+    name and set it as the new contact's company."""
 
     contactId: Optional[str] = None
     changes: Optional[dict] = None
+    newCompanyName: Optional[str] = None
 
 
 # Phase-one detail tabs, common to all three domains. Overview + Sessions +
@@ -235,7 +238,14 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             if body.contactId:
                 await details_svc.link_contact(cfg, client, parent_id, body.contactId)
                 return {"status": "ok"}
-            created = await details_svc.create_contact(cfg, client, parent_id, body.changes or {})
+            changes = dict(body.changes or {})
+            if body.newCompanyName:
+                account_id = await comms_service.resolve_company(
+                    client, _api_client(get_settings()), body.newCompanyName
+                )
+                if account_id:
+                    changes["accountId"] = account_id
+            created = await details_svc.create_contact(cfg, client, parent_id, changes)
             return {"status": "ok", "id": created["id"]}
         except service.SessionError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
@@ -427,6 +437,28 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             raise HTTPException(status_code=502, detail="Couldn't send the message — try again.")
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not send the message")
+
+    @router.get("/contactlookup")
+    async def contact_lookup(email: str, request: Request) -> dict:
+        """CRM-wide: does any contact already carry this email address?
+        Drives the compose dialog's add-existing-vs-create branch."""
+        user = _require_user(request)
+        _comms_ready()
+        client = client_for(get_settings(), user)
+        try:
+            return await comms_service.lookup_contact_by_email(client, email)
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not look up the address")
+
+    @router.get("/companies")
+    async def companies(request: Request, q: str = "") -> dict:
+        user = _require_user(request)
+        _comms_ready()
+        client = client_for(get_settings(), user)
+        try:
+            return {"companies": await comms_service.search_companies(client, q)}
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not load companies")
 
     @router.post("/contacts/{contact_id}/addresses")
     async def add_contact_address(contact_id: str, body: AddressIn, request: Request) -> dict:

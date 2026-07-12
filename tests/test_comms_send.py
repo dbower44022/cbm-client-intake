@@ -69,3 +69,35 @@ async def test_confirmed_unknown_send_writes_durable_include():
     assert conv_id
     overrides = await store.overrides_for_parent("CEngagement", "E1")
     assert overrides.get(conv_id) == ACTION_INCLUDE
+
+
+async def test_lookup_contact_by_email_found_and_cbm_flag():
+    espo = FakeEspo()
+    espo.records[("Contact", "c9")] = {
+        "name": "Jane Chen", "emailAddress": "jane@chenco.test",
+        "accountName": "Chen Co", "cContactType": ["Prospect"],
+    }
+    espo.records[("Contact", "c10")] = {
+        "name": "Matt Mentor", "emailAddress": "matt.mentor@cbmentors.org",
+        "cContactType": ["Mentor"],
+    }
+    res = await comms_service.lookup_contact_by_email(espo, "Jane@ChenCo.test")
+    assert res["found"] and res["contact"]["name"] == "Jane Chen"
+    assert res["contact"]["company"] == "Chen Co"
+    assert res["contact"]["isCbmMember"] is False
+    res2 = await comms_service.lookup_contact_by_email(espo, "matt.mentor@cbmentors.org")
+    assert res2["contact"]["isCbmMember"] is True
+    assert (await comms_service.lookup_contact_by_email(espo, "nobody@x.test"))["found"] is False
+
+
+async def test_resolve_company_reuses_or_creates():
+    user_client = FakeEspo()
+    user_client.records[("Account", "a1")] = {"name": "Acme Inc"}
+    api_client = FakeEspo()
+    # existing (read as the user) => reused, nothing created via the API client
+    got = await comms_service.resolve_company(user_client, api_client, "Acme Inc")
+    assert got == "a1" and not api_client.records
+    # new => created via the API client
+    got2 = await comms_service.resolve_company(user_client, api_client, "Fresh LLC")
+    assert ("Account", got2) in api_client.records
+    assert (await comms_service.resolve_company(user_client, api_client, "")) is None

@@ -72,20 +72,29 @@ new email, pre-filled to the record's primary contact.
 Mail you send goes out **as you** — from your own `@cbmentors.org` address —
 lands in your real Gmail *Sent* folder, and appears in the tab immediately.
 
-**If a recipient isn't a contact on the record**, the compose window stops
-and asks what you want to do:
+**If a recipient isn't a contact on the record**, the compose window first
+looks the address up across the whole CRM, then offers the right fix:
 
-- **"This is a new address for…"** — pick the contact it belongs to. The
-  address is saved on their contact record (so their mail auto-matches from
-  now on, everywhere) and your email sends normally. *Use this when a client
-  writes from a personal address the CRM doesn't know.*
-- **"Create contact"** — enter their name; they're added as a contact on
-  this record and your email sends. *Use this for a new person who belongs
-  on the record — a bookkeeper, a co-founder.*
-- **"Send anyway — attach this conversation only"** — a one-off. The
-  conversation stays attached to this record and their replies will keep
-  arriving (the thread is followed), but the person isn't added as a
-  contact. *Use this for third parties — a banker, an outside advisor.*
+- **The address already belongs to a CRM contact** (from another record):
+  you'll see who — "*Jane Chen (Chen Co) already exists in the CRM*" — with
+  one button: **"Add to this record & send"**. No duplicate contact gets
+  created. (If the match is a CBM member, the dialog says so and you just
+  use "Send anyway" — CBM people aren't client contacts.)
+- **The address is new to the CRM**, two choices:
+  - **"This is a new address for…"** — pick a contact already on this
+    record; the address is saved on their contact record (so their mail
+    auto-matches from now on, everywhere) and your email sends normally.
+    *Use this when a client writes from a personal address the CRM doesn't
+    know.*
+  - **A small create form** — first name, last name, phone, and company
+    (pick an existing company or type a new one; a new company is created
+    in the CRM). They're added as a contact on this record and your email
+    sends. *Use this for a new person who belongs on the record — a
+    bookkeeper, a co-founder.*
+- **"Send anyway — attach this conversation only"** — always available as a
+  one-off. The conversation stays attached to this record and their replies
+  keep arriving (the thread is followed), but no contact is created. *Use
+  this for third parties — a banker, an outside advisor.*
 
 Emailing another CBM person (`@cbmentors.org`) never triggers this prompt.
 

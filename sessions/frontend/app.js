@@ -1086,82 +1086,152 @@
       });
     }
 
-    // The scenario router: for each non-contact recipient, offer the durable
-    // fixes (add address to a contact / create a contact) or a one-off send.
-    function showUnknownOptions(unknown, submit) {
+    // The scenario router: each non-contact recipient is looked up CRM-WIDE
+    // first, so the dialog offers the right fix:
+    //  * exists in the CRM (not CBM-side)  -> add the existing contact to this
+    //    record (no duplicate contact records);
+    //  * exists and is a CBM member       -> just send (not a client contact);
+    //  * unknown to the CRM               -> new address for a record contact,
+    //    or a small create form (first/last/phone/company), or one-off send.
+    async function showUnknownOptions(unknown, submit) {
+      optionsPanel.innerHTML = "<p class='sx__muted'>Checking the CRM for " +
+        (unknown.length === 1 ? "this address…" : "these addresses…") + "</p>";
+      var lookups = {};
+      for (var i = 0; i < unknown.length; i++) {
+        try { lookups[unknown[i]] = await api("/contactlookup?email=" + encodeURIComponent(unknown[i])); }
+        catch (e) {
+          if (e.status === 401) { closeComm(); showLogin(); return; }
+          lookups[unknown[i]] = { found: false };
+        }
+      }
       optionsPanel.innerHTML = "";
       var head = document.createElement("p"); head.className = "sx__notice";
       head.textContent = (unknown.length === 1 ? "This recipient isn't" : "These recipients aren't") +
         " a contact on this record. Choose what to do:";
       optionsPanel.appendChild(head);
       unknown.forEach(function (addr) {
-        var row = document.createElement("div"); row.className = "sx__msg-field";
-        var lab = document.createElement("span"); lab.className = "sx__msg-label"; lab.textContent = addr;
-        row.appendChild(lab);
-
-        // Option 1: this is a new address for an existing contact.
-        var line1 = document.createElement("div"); line1.className = "sx__opt-line";
-        var sel = document.createElement("select"); sel.className = "sx__msg-input";
-        sel.appendChild(new Option("This is a new address for…", ""));
-        ((currentDetail && currentDetail.contacts) || []).forEach(function (c) {
-          sel.appendChild(new Option(c.name || c.id, c.id));
-        });
-        var addBtn = document.createElement("button"); addBtn.type = "button";
-        addBtn.className = "cbm-button cbm-button--secondary sx__sm"; addBtn.textContent = "Add address";
-        addBtn.addEventListener("click", async function () {
-          if (!sel.value) return;
-          addBtn.disabled = true; addBtn.textContent = "Adding…";
-          try {
-            await api("/contacts/" + encodeURIComponent(sel.value) + "/addresses", {
-              method: "POST", body: JSON.stringify({ address: addr }),
-            });
-            resolvedAddresses[addr.toLowerCase()] = 1;
-            addBtn.textContent = "Added ✓";
-            submit();  // re-check + send
-          } catch (e) {
-            if (e.status === 401) { closeComm(); showLogin(); return; }
-            addBtn.disabled = false; addBtn.textContent = e.message;
-          }
-        });
-        line1.appendChild(sel); line1.appendChild(addBtn);
-        row.appendChild(line1);
-
-        // Option 2: create them as a new contact on this record.
-        var line2 = document.createElement("div"); line2.className = "sx__opt-line";
-        var first = document.createElement("input"); first.type = "text"; first.placeholder = "First name"; first.className = "sx__msg-input";
-        var last = document.createElement("input"); last.type = "text"; last.placeholder = "Last name"; last.className = "sx__msg-input";
-        var createBtn = document.createElement("button"); createBtn.type = "button";
-        createBtn.className = "cbm-button cbm-button--secondary sx__sm"; createBtn.textContent = "Create contact";
-        createBtn.addEventListener("click", async function () {
-          if (!first.value.trim() && !last.value.trim()) { createBtn.textContent = "Name needed"; return; }
-          createBtn.disabled = true; createBtn.textContent = "Creating…";
-          try {
-            await api("/records/" + encodeURIComponent(currentDetail.id) + "/contacts", {
-              method: "POST",
-              body: JSON.stringify({ changes: {
-                firstName: first.value.trim(), lastName: last.value.trim(), emailAddress: addr,
-              } }),
-            });
-            resolvedAddresses[addr.toLowerCase()] = 1;
-            createBtn.textContent = "Created ✓";
-            submit();
-          } catch (e) {
-            if (e.status === 401) { closeComm(); showLogin(); return; }
-            createBtn.disabled = false; createBtn.textContent = e.message;
-          }
-        });
-        line2.appendChild(first); line2.appendChild(last); line2.appendChild(createBtn);
-        row.appendChild(line2);
-        optionsPanel.appendChild(row);
+        optionsPanel.appendChild(unknownAddressRow(addr, lookups[addr] || { found: false }, submit));
       });
-
-      // Option 3: one-off — send anyway; the conversation still attaches to
-      // this record (durably) and replies will follow the thread.
+      // One-off escape hatch, always available: the conversation still attaches
+      // to this record (durably) and replies will follow the thread.
       var anyway = document.createElement("button"); anyway.type = "button";
       anyway.className = "cbm-button cbm-button--secondary";
       anyway.textContent = "Send anyway — attach this conversation only";
       anyway.addEventListener("click", function () { allowUnknown = true; submit(); });
       optionsPanel.appendChild(anyway);
+    }
+
+    function unknownAddressRow(addr, lookup, submit) {
+      var row = document.createElement("div"); row.className = "sx__msg-field";
+      var lab = document.createElement("span"); lab.className = "sx__msg-label"; lab.textContent = addr;
+      row.appendChild(lab);
+
+      // Branch 1: the address already belongs to a CRM contact.
+      if (lookup.found && lookup.contact) {
+        var c = lookup.contact;
+        if (c.isCbmMember) {
+          var note = document.createElement("p"); note.className = "sx__muted";
+          note.textContent = c.name + " is a CBM member — not a client contact. Use \"Send anyway\" below.";
+          row.appendChild(note);
+          return row;
+        }
+        var line = document.createElement("div"); line.className = "sx__opt-line";
+        var who = document.createElement("span");
+        who.textContent = c.name + (c.company ? " (" + c.company + ")" : "") + " already exists in the CRM.";
+        var addBtn = document.createElement("button"); addBtn.type = "button";
+        addBtn.className = "cbm-button sx__sm"; addBtn.textContent = "Add to this record & send";
+        addBtn.addEventListener("click", async function () {
+          addBtn.disabled = true; addBtn.textContent = "Adding…";
+          try {
+            await api("/records/" + encodeURIComponent(currentDetail.id) + "/contacts", {
+              method: "POST", body: JSON.stringify({ contactId: c.id }),
+            });
+            resolvedAddresses[addr.toLowerCase()] = 1;
+            addBtn.textContent = "Added ✓";
+            submit();
+          } catch (e) {
+            if (e.status === 401) { closeComm(); showLogin(); return; }
+            addBtn.disabled = false; addBtn.textContent = e.message;
+          }
+        });
+        line.appendChild(who); line.appendChild(addBtn);
+        row.appendChild(line);
+        return row;
+      }
+
+      // Branch 2: unknown to the CRM.
+      // 2a — it's a new address for a contact already on this record.
+      var line1 = document.createElement("div"); line1.className = "sx__opt-line";
+      var sel = document.createElement("select"); sel.className = "sx__msg-input";
+      sel.appendChild(new Option("This is a new address for…", ""));
+      ((currentDetail && currentDetail.contacts) || []).forEach(function (c) {
+        sel.appendChild(new Option(c.name || c.id, c.id));
+      });
+      var addAddrBtn = document.createElement("button"); addAddrBtn.type = "button";
+      addAddrBtn.className = "cbm-button cbm-button--secondary sx__sm"; addAddrBtn.textContent = "Add address";
+      addAddrBtn.addEventListener("click", async function () {
+        if (!sel.value) return;
+        addAddrBtn.disabled = true; addAddrBtn.textContent = "Adding…";
+        try {
+          await api("/contacts/" + encodeURIComponent(sel.value) + "/addresses", {
+            method: "POST", body: JSON.stringify({ address: addr }),
+          });
+          resolvedAddresses[addr.toLowerCase()] = 1;
+          addAddrBtn.textContent = "Added ✓";
+          submit();
+        } catch (e) {
+          if (e.status === 401) { closeComm(); showLogin(); return; }
+          addAddrBtn.disabled = false; addAddrBtn.textContent = e.message;
+        }
+      });
+      line1.appendChild(sel); line1.appendChild(addAddrBtn);
+      row.appendChild(line1);
+
+      // 2b — create a new contact: first / last / phone / company.
+      var line2 = document.createElement("div"); line2.className = "sx__opt-line";
+      var first = document.createElement("input"); first.type = "text"; first.placeholder = "First name"; first.className = "sx__msg-input";
+      var last = document.createElement("input"); last.type = "text"; last.placeholder = "Last name"; last.className = "sx__msg-input";
+      var phone = document.createElement("input"); phone.type = "tel"; phone.placeholder = "Phone (optional)"; phone.className = "sx__msg-input";
+      line2.appendChild(first); line2.appendChild(last); line2.appendChild(phone);
+      row.appendChild(line2);
+
+      var line3 = document.createElement("div"); line3.className = "sx__opt-line";
+      var companySel = document.createElement("select"); companySel.className = "sx__msg-input";
+      companySel.appendChild(new Option("Company… (none)", ""));
+      companySel.appendChild(new Option("+ New company…", "__new__"));
+      api("/companies").then(function (res) {
+        (res.companies || []).forEach(function (a) {
+          companySel.insertBefore(new Option(a.name || a.id, a.id), companySel.lastChild);
+        });
+      }).catch(function () { /* picker just stays short */ });
+      var newCompany = document.createElement("input"); newCompany.type = "text";
+      newCompany.placeholder = "New company name"; newCompany.className = "sx__msg-input"; newCompany.hidden = true;
+      companySel.addEventListener("change", function () { newCompany.hidden = companySel.value !== "__new__"; });
+      var createBtn = document.createElement("button"); createBtn.type = "button";
+      createBtn.className = "cbm-button cbm-button--secondary sx__sm"; createBtn.textContent = "Create contact";
+      createBtn.addEventListener("click", async function () {
+        if (!first.value.trim() && !last.value.trim()) { createBtn.textContent = "Name needed"; return; }
+        createBtn.disabled = true; createBtn.textContent = "Creating…";
+        var changes = { firstName: first.value.trim(), lastName: last.value.trim(), emailAddress: addr };
+        if (phone.value.trim()) changes.phoneNumber = phone.value.trim();
+        var payload = { changes: changes };
+        if (companySel.value === "__new__" && newCompany.value.trim()) payload.newCompanyName = newCompany.value.trim();
+        else if (companySel.value && companySel.value !== "__new__") changes.accountId = companySel.value;
+        try {
+          await api("/records/" + encodeURIComponent(currentDetail.id) + "/contacts", {
+            method: "POST", body: JSON.stringify(payload),
+          });
+          resolvedAddresses[addr.toLowerCase()] = 1;
+          createBtn.textContent = "Created ✓";
+          submit();
+        } catch (e) {
+          if (e.status === 401) { closeComm(); showLogin(); return; }
+          createBtn.disabled = false; createBtn.textContent = e.message;
+        }
+      });
+      line3.appendChild(companySel); line3.appendChild(newCompany); line3.appendChild(createBtn);
+      row.appendChild(line3);
+      return row;
     }
 
     var send = document.createElement("button"); send.type = "button";

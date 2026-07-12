@@ -371,6 +371,81 @@ async def send_message(
     return {"gmailMessageId": sent.get("id"), "conversationId": conv_id}
 
 
+# --- compose-dialog lookups -----------------------------------------------------
+
+
+async def lookup_contact_by_email(user_client: Any, address: str) -> dict[str, Any]:
+    """CRM-wide lookup of an email address, for the compose dialog's router.
+
+    Returns ``{"found": False}`` or ``{"found": True, "contact": {...}}`` with
+    ``isCbmMember`` set when the contact is CBM-side (a Mentor-typed contact or
+    a @cbmentors.org address) — those aren't client contacts, so the dialog
+    offers only a plain send for them.
+    """
+    address = (address or "").strip().lower()
+    if "@" not in address:
+        return {"found": False}
+    data = await user_client.list(
+        "Contact",
+        where=[{"type": "equals", "attribute": "emailAddress", "value": address}],
+        select="name,accountName,cContactType,emailAddress",
+        max_size=1,
+    )
+    rows = data.get("list", [])
+    if not rows:
+        return {"found": False}
+    c = rows[0]
+    types = c.get("cContactType") or []
+    if isinstance(types, str):
+        types = [types]
+    is_cbm = "Mentor" in types or address.endswith("@cbmentors.org")
+    return {
+        "found": True,
+        "contact": {
+            "id": c["id"],
+            "name": c.get("name"),
+            "company": c.get("accountName"),
+            "types": types,
+            "isCbmMember": is_cbm,
+        },
+    }
+
+
+async def search_companies(user_client: Any, query: str = "") -> list[dict[str, Any]]:
+    """Accounts for the compose dialog's company picker (empty query = first
+    page, alphabetical — CBM-scale)."""
+    where = None
+    q = (query or "").strip()
+    if q:
+        where = [{"type": "contains", "attribute": "name", "value": q}]
+    data = await user_client.list(
+        "Account", where=where, select="name", max_size=50, order_by="name"
+    )
+    return [{"id": a["id"], "name": a.get("name")} for a in data.get("list", [])]
+
+
+async def resolve_company(
+    user_client: Any, api_client: Any, name: str
+) -> Optional[str]:
+    """An Account id for ``name`` — reuse an existing same-named Account
+    (case-insensitive read as the user), else create it via the intake API
+    client (gate roles don't hold Account create; the API user does — its
+    original job). Mirrors the intake orchestrators' find-or-create policy."""
+    name = (name or "").strip()
+    if not name:
+        return None
+    data = await user_client.list(
+        "Account",
+        where=[{"type": "equals", "attribute": "name", "value": name}],
+        select="name", max_size=1,
+    )
+    rows = data.get("list", [])
+    if rows:
+        return rows[0]["id"]
+    created = await api_client.create("Account", {"name": name})
+    return created["id"]
+
+
 # --- contact address fix ---------------------------------------------------------
 
 
