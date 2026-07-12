@@ -113,3 +113,19 @@ async def test_lookup_matches_mentor_profile_by_cbm_email():
     assert res["found"] is True
     c = res["contact"]
     assert c["isCbmMember"] is True and c["mentorProfileId"] == "p1" and c["id"] == "c77"
+
+
+async def test_lookup_resolves_profile_via_contact_for_personal_address():
+    # The "added as Other Contacts" bug: a member reached via the personal
+    # address on their Mentor-typed Contact must still carry mentorProfileId.
+    espo = FakeEspo()
+    espo.records[("Contact", "c77")] = {
+        "name": "Douglas Bower", "emailAddress": "doug@dougbower.com",
+        "cContactType": ["Mentor"],
+    }
+    espo.records[("CMentorProfile", "p9")] = {
+        "name": "Douglas Bower", "contactRecordId": "c77",
+    }
+    res = await comms_service.lookup_contact_by_email(espo, "doug@dougbower.com")
+    assert res["contact"]["isCbmMember"] is True
+    assert res["contact"]["mentorProfileId"] == "p9"

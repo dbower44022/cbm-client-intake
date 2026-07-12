@@ -386,16 +386,23 @@ async def lookup_contact_by_email(user_client: Any, address: str) -> dict[str, A
     if "@" not in address:
         return {"found": False}
 
-    # A CBM member's work address lives on their MENTOR PROFILE (cbmEmail),
-    # usually not on their Contact record — check there first so the dialog
-    # can offer "add as CBM contact" instead of a bogus create form. Scanned
-    # in Python (small set), never a where on restricted attributes.
-    profile_hit = None
-    if address.endswith("@cbmentors.org"):
-        profiles = await user_client.list(
+    # A CBM member can be reached two ways: their work address lives on their
+    # MENTOR PROFILE (cbmEmail, usually not on their Contact record), or a
+    # personal address on their Mentor-typed Contact. Either way the dialog
+    # must get the mentorProfileId so "add" means co-mentor — never a client
+    # contact link. Profiles are scanned in Python (small set; never a where
+    # on restricted attributes).
+    async def _profiles() -> list[dict[str, Any]]:
+        data = await user_client.list(
             crm.MENTOR_PROFILE, select="name,cbmEmail,contactRecordId", max_size=200
         )
-        for pr in profiles.get("list", []):
+        return data.get("list", [])
+
+    profile_hit = None
+    profiles_cache: Optional[list[dict[str, Any]]] = None
+    if address.endswith("@cbmentors.org"):
+        profiles_cache = await _profiles()
+        for pr in profiles_cache:
             if (pr.get("cbmEmail") or "").strip().lower() == address:
                 profile_hit = pr
                 break
@@ -429,6 +436,17 @@ async def lookup_contact_by_email(user_client: Any, address: str) -> dict[str, A
     if isinstance(types, str):
         types = [types]
     is_cbm = "Mentor" in types or address.endswith("@cbmentors.org")
+    mentor_profile_id = None
+    if is_cbm:
+        # Personal-address path: find their profile through its Contact link
+        # (this was the "added as Other Contacts" bug — without the profile id
+        # the frontend fell back to a client-contact link).
+        if profiles_cache is None:
+            profiles_cache = await _profiles()
+        for pr in profiles_cache:
+            if pr.get("contactRecordId") == c["id"]:
+                mentor_profile_id = pr["id"]
+                break
     return {
         "found": True,
         "contact": {
@@ -437,7 +455,7 @@ async def lookup_contact_by_email(user_client: Any, address: str) -> dict[str, A
             "company": c.get("accountName"),
             "types": types,
             "isCbmMember": is_cbm,
-            "mentorProfileId": None,
+            "mentorProfileId": mentor_profile_id,
         },
     }
 

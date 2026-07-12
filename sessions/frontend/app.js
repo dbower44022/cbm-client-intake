@@ -1137,9 +1137,10 @@
         var asComentor = c.isCbmMember && c.mentorProfileId &&
           (config && config.supportsComentor);
         if (asComentor) checkLab.childNodes[1].textContent = " Add as CBM contact";
-        if (c.isCbmMember && !asComentor && !c.id) {
-          // Nothing linkable (no contact record, no co-mentor slot here) —
-          // they simply receive the email.
+        if (c.isCbmMember && !asComentor) {
+          // A CBM member must NEVER be linked as a client contact (that put
+          // mentors under "Other Contacts"). No co-mentor path here => they
+          // simply receive the email.
           check.checked = false; check.disabled = true;
           checkLab.childNodes[1].textContent = " Will receive the email";
         }

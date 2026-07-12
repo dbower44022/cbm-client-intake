@@ -4,6 +4,18 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.36.4] — 2026-07-12
+
+### Fixed
+- **A CBM member added from compose landed under "Other Contacts"** (Doug's
+  report). A member reached via the personal address on their Mentor-typed
+  Contact had no mentorProfileId in the lookup (the profile scan only ran
+  for @cbmentors.org addresses), so the dialog fell back to a client-contact
+  link. The lookup now also resolves the profile through its Contact link,
+  and a CBM member is NEVER linked as a client contact — with no co-mentor
+  path (partner/sponsor domains), their row shows a disabled "Will receive
+  the email" instead.
+
 ## [0.36.3] — 2026-07-12
 
 ### Fixed
