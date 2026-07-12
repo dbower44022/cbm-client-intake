@@ -71,7 +71,11 @@ This is a multi-form app: a shared core hosts any number of intake forms.
     `/sponsorsessions/`): one configurable engine, three team-gated routes. Each
     manager reviews the records they own (engagements / managed partners / managed
     sponsors) and records `CSession` **meetings** against them (notes, next steps,
-    attendees, status; mentors can add co-mentors). Opening a record shows a tabbed,
+    attendees, status; mentors can add co-mentors). The **Communications** tab
+    shows the email conversations with each record's contacts — synced from the
+    manager's `@cbmentors.org` Gmail, cleaned to just the new text per message,
+    with reply/compose from the tool (gated by `GMAIL_SYNC`); see
+    [`communications-tab.md`](communications-tab.md) for how it works. Opening a record shows a tabbed,
     information-dense detail — an **Overview** (aggregated company pop-up, a
     session-notes feed, a Next-session Start/Open button), an editable
     permission-aware **Details** tab (`sessions/details.py`), the Sessions list, and

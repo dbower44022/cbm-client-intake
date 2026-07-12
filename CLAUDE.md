@@ -732,7 +732,8 @@ app as PRIMARY, Cloudflare CNAME grey-cloud → the app's default hostname; the
 - **Communications: Gmail conversation integration — ACTIVATED LIVE on
   crm-test 2026-07-11 (read path verified end-to-end).** Built v0.35.0; docs:
   plan `prds/communications-gmail-integration.md`, CRM handoff
-  `cconversation-entity.md`, activation runbook `GMAIL-INTEGRATION-GUIDE.md`.
+  `cconversation-entity.md`, activation runbook `GMAIL-INTEGRATION-GUIDE.md`,
+  user-facing functional reference `communications-tab.md`.
   Activation record: CRM entities built by Doug in the Entity Manager UI +
   probe-verified (fields/links/Collaborators/grants all green; note the CRM's
   varchars are 100 chars — the app clamps, spec updated); Google service
@@ -1451,6 +1452,9 @@ the synced lists were verified identical on crm-test and prod.
 - `mentor-administration.md` — functional reference for the `/mentoradmin` tool:
   overall functionality + the **complete-record requirements** (the completeness
   rules, in plain language).
+- `communications-tab.md` — plain-language functional reference for the session
+  tools' Communications tab (where conversations come from, cleaning, curation,
+  compose rules, who-sees-what, "why don't I see…" answers).
 - `prds/v2/` — the V2 reliability platform specs (durable capture + async worker
   + ops + alerting).
 
