@@ -377,19 +377,94 @@ async def get_detail(
         "sessions": sessions,
         "supportsComentor": cfg.supports_comentor,
     }
+    co_mentors: list[dict[str, Any]] = []
     if cfg.supports_comentor:
         co_data = await client.list_related(
             cfg.parent_entity, parent_id, _COMENTOR_LINK,
-            select="name,contactRecordId", max_size=_PAGE,
+            select="name,cbmEmail,contactRecordId", max_size=_PAGE,
         )
+        co_mentors = co_data.get("list", [])
         # ``contactId`` = the co-mentor's linked Contact, so the Overview can link
         # each CBM contact to its contact-info pop-up (email/phone). None when the
         # mentor profile has no linked Contact — the frontend shows plain text then.
         detail["coMentors"] = [
             {"id": m["id"], "name": m.get("name"), "contactId": m.get("contactRecordId")}
-            for m in co_data.get("list", [])
+            for m in co_mentors
         ]
+    # The default-invitee set for a NEW session (Doug's ruling: every CBM
+    # person on the record starts invited): assigned manager + co-mentors,
+    # each resolved to a Contact — live data showed most engagements carry NO
+    # co-mentors and some profiles no contact link, which is exactly why this
+    # resolves through the manager link and the cbmEmail fallback.
+    detail["cbmContacts"] = await _cbm_contacts(client, cfg, parent, co_mentors)
     return detail
+
+
+async def _resolve_member_contact(
+    client: SessionClient, profile: dict[str, Any]
+) -> Optional[str]:
+    """A CBM member's Contact id, or ``None`` when nothing resolves.
+
+    The profile's linked ``contactRecord`` when set; otherwise a Contact
+    matched by the profile's ``cbmEmail`` (the comms precedent — many live
+    profiles carry the mailbox but no contact link). No resolution is not an
+    error: there is simply no Contact to relate as an attendee.
+    """
+    contact_id = profile.get("contactRecordId")
+    if contact_id:
+        return str(contact_id)
+    mailbox = (profile.get("cbmEmail") or "").strip()
+    if not mailbox:
+        return None
+    try:
+        data = await client.list(
+            CONTACT,
+            where=[{"type": "equals", "attribute": "emailAddress", "value": mailbox}],
+            select="name",
+            max_size=1,
+        )
+    except EspoError:
+        return None
+    rows = data.get("list", [])
+    return str(rows[0]["id"]) if rows else None
+
+
+async def _cbm_contacts(
+    client: SessionClient,
+    cfg: DomainConfig,
+    parent: dict[str, Any],
+    co_mentors: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Every CBM person on the record as an invitable contact, deduped.
+
+    The parent's assigned manager (``parent_manager_link``) leads, then the
+    co-mentors; each resolves via :func:`_resolve_member_contact`. Profiles
+    that resolve to no Contact are skipped — the fix for those is linking the
+    profile's contactRecord (or cbmEmail) in the CRM, not a broken invite.
+    """
+    profiles: list[dict[str, Any]] = []
+    manager_id = (
+        parent.get(f"{cfg.parent_manager_link}Id") if cfg.parent_manager_link else None
+    )
+    if manager_id:
+        try:
+            profiles.append(
+                await client.get(
+                    MENTOR_PROFILE, manager_id, select="name,cbmEmail,contactRecordId"
+                )
+            )
+        except EspoError:
+            log.warning("cbm-contacts: manager profile %s unreadable", manager_id)
+    profiles.extend(co_mentors)
+    resolved: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for profile in profiles:
+        contact_id = await _resolve_member_contact(client, profile)
+        if not contact_id or contact_id in seen:
+            continue
+        seen.add(contact_id)
+        resolved.append({"contactId": contact_id, "name": profile.get("name")})
+    return resolved
 
 
 # Address parts read for a Contact peek (shown as one combined "Address" field

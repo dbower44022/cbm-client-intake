@@ -911,3 +911,44 @@ async def test_field_spec_live_gates_the_transcript_field():
     fake = Fake(meta_fields={"sessionTranscription": {"type": "wysiwyg"}})
     names = [f["name"] for f in await service.field_spec_live(fake)]
     assert "sessionTranscription" in names
+
+
+@pytest.mark.asyncio
+async def test_cbm_contacts_resolve_manager_and_comentors():
+    # The default-invitee set: the engagement's assigned mentor leads
+    # (resolved via contactRecordId), a co-mentor without a contact link
+    # resolves through the cbmEmail fallback (the live-data shape that made
+    # invitees come up empty), an unresolvable profile is skipped, and a
+    # duplicate collapses to one row.
+    fake = Fake(
+        records={
+            ("CEngagement", "E1"): {"name": "Eng", "mentorProfileId": "m1"},
+            ("CMentorProfile", "m1"): {"name": "Doug Bower", "contactRecordId": "cDoug"},
+        },
+        related={
+            "engagementContacts": [],
+            "engagementSessions": [],
+            "additionalMentors": [
+                {"id": "m2", "name": "Jane Doe",
+                 "cbmEmail": "jane@cbmentors.org", "contactRecordId": None},
+                {"id": "m3", "name": "No Contact",
+                 "cbmEmail": None, "contactRecordId": None},
+                {"id": "m4", "name": "Doug Bower", "contactRecordId": "cDoug"},
+            ],
+        },
+        contacts=[{"id": "cJane", "name": "Jane Doe"}],
+    )
+    d = await service.get_detail(MENTOR, fake, "E1")
+    assert d["cbmContacts"] == [
+        {"contactId": "cDoug", "name": "Doug Bower"},
+        {"contactId": "cJane", "name": "Jane Doe"},
+    ]
+
+
+@pytest.mark.asyncio
+async def test_cbm_contacts_empty_without_manager_or_comentors():
+    # A domain with no manager link and no co-mentor support answers an empty
+    # set — the frontend then simply pre-checks nobody.
+    fake = Fake(records={("CPartnerProfile", "P1"): {"name": "Acme"}})
+    d = await service.get_detail(PARTNER, fake, "P1")
+    assert d["cbmContacts"] == []

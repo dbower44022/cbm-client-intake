@@ -137,6 +137,10 @@ class DomainConfig:
 
     # Mentor-only: attach co-mentors to the engagement (additionalMentors).
     supports_comentor: bool = False
+    # belongsTo link on the parent naming the assigned CBM manager's
+    # CMentorProfile (e.g. CEngagement.mentorProfile). Feeds the CBM-contacts
+    # invitee resolution; None when the domain has no such link.
+    parent_manager_link: Optional[str] = None
     # Mentor-only: restrict the owned list to these parent statuses (in Python;
     # empty => no status filter). ``status_attr`` is the record attribute.
     status_attr: Optional[str] = None
@@ -242,6 +246,7 @@ MENTOR = DomainConfig(
         "engagementClientName,engagementClientId,"
         "clientOrganizationName,clientOrganizationId,"
         "primaryEngagementContactName,primaryEngagementContactId,"
+        "mentorProfileId,mentorProfileName,"
         "engagementStartDate,lastSessionDate,nextSessionDateTime,"
         "totalSessions,totalSessionHours,totalSessionsLast30Days,"
         "referringPartnerName,referringPartnerId,"
@@ -287,6 +292,7 @@ MENTOR = DomainConfig(
         ("Client Business Profile", "CClientProfile", "engagementClientId"),
     ),
     supports_comentor=True,
+    parent_manager_link="mentorProfile",
     # No status pre-filter: load ALL of the mentor's engagements so the grid's
     # Status filter can offer every status (the user filters as they like).
     status_attr="engagementStatus",

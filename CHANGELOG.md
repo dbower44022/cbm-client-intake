@@ -4,6 +4,21 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.37.2] — 2026-07-12
+
+### Fixed
+- **CBM contacts really are invited by default now** (0.37.1's default came up
+  empty on live data, found by Doug on first use). Two live-data realities the
+  0.37.1 implementation missed: engagements almost never carry
+  `additionalMentors` (the CBM person on the record is the **assigned mentor**
+  on `CEngagement.mentorProfile`), and several mentor profiles have **no
+  linked contactRecord**. The invitee set is now resolved server-side
+  (`cbmContacts` on the detail read): the assigned manager's profile plus any
+  co-mentors, each resolved to a Contact via `contactRecordId` with a
+  fallback Contact lookup by the profile's `cbmEmail` (the comms precedent),
+  deduped. Profiles that resolve to no Contact are skipped — the durable fix
+  for those is linking the profile's contactRecord (or cbmEmail) in the CRM.
+
 ## [0.37.1] — 2026-07-12
 
 ### Changed

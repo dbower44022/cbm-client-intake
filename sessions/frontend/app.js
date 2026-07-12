@@ -2713,14 +2713,15 @@
   }
 
   // --- attendees ---
-  // The engagement's CBM contacts (co-mentors with a linked Contact record) —
-  // attendee-picker options alongside the client contacts, and the default
-  // invitee set on a NEW session (Doug's 2026-07-12 ruling: CBM contacts are
-  // always invited when a session is created from an engagement).
+  // The record's CBM contacts (the server-resolved set: assigned manager +
+  // co-mentors, each with a real Contact id) — attendee-picker options
+  // alongside the client contacts, and the default invitee set on a NEW
+  // session (Doug's 2026-07-12 ruling: CBM contacts are always invited when
+  // a session is created from an engagement).
   function cbmAttendeeOptions() {
-    return ((currentDetail && currentDetail.coMentors) || [])
-      .filter(function (m) { return m.contactId; })
-      .map(function (m) { return { id: m.contactId, name: m.name }; });
+    return ((currentDetail && currentDetail.cbmContacts) || [])
+      .filter(function (c) { return c.contactId; })
+      .map(function (c) { return { id: c.contactId, name: c.name }; });
   }
 
   function renderAttendees() {
