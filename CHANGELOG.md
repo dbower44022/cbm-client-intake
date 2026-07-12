@@ -4,6 +4,46 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.37.0] — 2026-07-12
+
+### Changed
+- **Session detail View — Doug's session-details design rulings applied
+  (Display Standard §12 extended).** Every fact appears exactly once:
+  - **The band carries the time RANGE** ("Thursday, July 9 — 2:00 PM–3:00 PM",
+    end computed from `dateEnd`); the Duration key-value row is gone.
+  - **The video link is the band's action** — "Start Session" on a future
+    session, "Open Meeting Link" on a past one — not a grid row.
+  - **New ATTENDEES grid** replaces the attendee name-chips: Name / Role /
+    Company / Email / Phone / Status. Names open the contact peek, companies
+    the Account peek; email and phone carry per-cell ⧉ copy; the zone header
+    offers **⧉ Copy grid** (TSV with headers — pastes into Excel/Sheets as
+    columns) and **⧉ Copy emails** (comma-separated recipient list). Role
+    derives from the open record (related contact → Client, co-mentor's
+    contact → CBM); Status derives from the session (Held → Attended,
+    No Show → Expected, else Invited) — per-person invited-vs-attended state
+    is a pending CRM modeling ruling. §12.4's "Expected attendees" wording
+    stays for No Shows. The table scrolls inside its card on narrow windows.
+  - **Transcript zone (§12.5 lifted, feature-gated).** When the CRM gains the
+    `sessionTranscription` field, the view renders it: attached → the text in
+    its own scrolling allotment with **Find in transcript** (honest match
+    count, first-match jump, text-node-safe highlighting); empty → "No
+    transcript is attached… paste the meeting transcript into the Transcript
+    box in Edit" (omitted for Cancelled/No Show per §12.4). The editor gains
+    the Transcript box the same way — `/fields` serves it only when the CRM
+    field exists, so a save can never send what the CRM must reject. Until
+    the field lands, nothing renders (§12.5's no-stub rule stands).
+  - Backend: `GET /sessions/{id}` now answers `attendeeDetails` (email/phone/
+    company via the richer `sessionAttendees` read) and
+    `transcriptFieldExists`; the transcript column is selected only when it
+    exists (it will be the record's longest text — it never rides reads that
+    don't render it).
+
+### Fixed
+- **The session view never showed Session Notes.** It read `s.notes`, but
+  `GET /sessions/{id}` serves the raw CRM name `sessionNotes` (only the
+  Overview feed maps to `notes`) — so the zone always fell to the empty
+  copy. Verified rendering on the stubbed-API preview harness.
+
 ## [0.36.5] — 2026-07-12
 
 ### Fixed

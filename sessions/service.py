@@ -34,6 +34,7 @@ from .config import (
     SESSION_ENUM_FIELDS,
     SESSION_OPTION_FIELDS,
     SESSION_FIELDS,
+    TRANSCRIPT_FIELD,
     DomainConfig,
 )
 
@@ -210,14 +211,19 @@ def _session_row(s: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+# What the session view's attendee grid shows about each contact; company via
+# the Contact→Account link fields so the cell can peek the Account record.
+_ATTENDEE_SELECT = "name,emailAddress,phoneNumber,accountName,accountId"
+
+
 async def _attendees(client: SessionClient, session_id: str) -> list[dict[str, Any]]:
-    """A session's attendee contacts (id + name). ``sessionAttendees`` is a
+    """A session's attendee contacts (id + grid detail). ``sessionAttendees`` is a
     RELATIONSHIP, not a select-field, so it must be read through the link
     (``list_related``) — reading ``sessionAttendeesIds`` off the record returns
     nothing (which is why attendees looked empty). Same pattern as co-mentors."""
     try:
         data = await client.list_related(
-            SESSION, session_id, _ATTENDEE_LINK, select="name", max_size=_PAGE
+            SESSION, session_id, _ATTENDEE_LINK, select=_ATTENDEE_SELECT, max_size=_PAGE
         )
     except EspoError:
         return []
@@ -458,17 +464,43 @@ async def peek(client: SessionClient, entity: str, record_id: str) -> dict[str, 
     return result
 
 
-_SESSION_SELECT = ",".join(["id", *sorted(SESSION_EDIT_NAMES)])
+# The transcript column stays out of the base select: it is feature-detected
+# per read (§12.5 — the CRM field is a planned build), and once present it is
+# the record's longest text, so it must never ride reads that don't render it.
+_SESSION_SELECT = ",".join(["id", *sorted(SESSION_EDIT_NAMES - {TRANSCRIPT_FIELD})])
+
+
+async def transcript_field_exists(client: SessionClient) -> bool:
+    """Whether the live CRM has the §12.5 transcript field (CRM = truth)."""
+    fields = await client.metadata(f"entityDefs.{SESSION}.fields")
+    return TRANSCRIPT_FIELD in fields
 
 
 async def get_session(client: SessionClient, session_id: str) -> dict[str, Any]:
     """An existing session's editable values + its attendees (read via the
     sessionAttendees relationship — see :func:`_attendees`). ``attendees`` = contact
-    ids (for the editor's picker); ``attendeeNames`` = names (for the read view)."""
-    rec = await client.get(SESSION, session_id, select=_SESSION_SELECT)
+    ids (for the editor's picker); ``attendeeNames`` = names (kept for the note
+    feed); ``attendeeDetails`` = the session view's grid rows (email/phone/
+    company). ``transcriptFieldExists`` gates the §12.5 transcript zone — the
+    transcript column itself is selected only when the CRM has it."""
+    has_transcript = await transcript_field_exists(client)
+    select = _SESSION_SELECT + ("," + TRANSCRIPT_FIELD if has_transcript else "")
+    rec = await client.get(SESSION, session_id, select=select)
     atts = await _attendees(client, session_id)
     rec["attendees"] = [c["id"] for c in atts]
     rec["attendeeNames"] = [c.get("name") for c in atts if c.get("name")]
+    rec["attendeeDetails"] = [
+        {
+            "id": c["id"],
+            "name": c.get("name"),
+            "email": c.get("emailAddress"),
+            "phone": c.get("phoneNumber"),
+            "companyName": c.get("accountName"),
+            "companyId": c.get("accountId"),
+        }
+        for c in atts
+    ]
+    rec["transcriptFieldExists"] = has_transcript
     return rec
 
 
@@ -636,3 +668,15 @@ async def field_required(client: SessionClient) -> list[str]:
 def field_spec() -> list[dict]:
     """The editor field spec served to the frontend."""
     return SESSION_FIELDS
+
+
+async def field_spec_live(client: SessionClient) -> list[dict]:
+    """The editor field spec as the live CRM can honor it.
+
+    The transcript entry is the one feature-gated field (§12.5): serving it
+    while the CRM lacks the column would render an editor box whose save the
+    CRM must reject, so it appears only once the field really exists.
+    """
+    if await transcript_field_exists(client):
+        return SESSION_FIELDS
+    return [f for f in SESSION_FIELDS if f["name"] != TRANSCRIPT_FIELD]

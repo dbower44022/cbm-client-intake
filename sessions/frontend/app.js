@@ -2130,10 +2130,14 @@
     }
   }
 
-  // Session detail View (Display Standard §12): summary header card (tinted band
-  // per §4 + key-value grid) → Session notes → Action items callout. Transcript is
-  // omitted (§12.5 — the CSST long-text field does not exist yet). Reuses the
-  // summary card's status-chip and band-tint tokens; the nav row is untouched.
+  // Session detail View (Display Standard §12, extended 2026-07-12 per Doug's
+  // session-details rulings): summary header card (tinted band per §4 — now
+  // carrying the TIME RANGE, so no Duration row; a video link renders as the
+  // band's Join button, not a grid row) → key-value grid (each fact exactly
+  // once) → ATTENDEE GRID (name/role/company/email/phone/status, contact &
+  // company peeks, copy tools) → Session notes → Action items callout →
+  // Transcript zone (§12.5 feature-gated: rendered only when the CRM field
+  // exists; scrolls in its own allotment with find-in-transcript).
   function renderSessionView(s) {
     var scls = statusClass(s.status);
     var future = isFutureSession(s);
@@ -2149,10 +2153,19 @@
     var band = document.createElement("div"); band.className = "sx__vband " + (future ? "is-future" : "is-past");
     var l1 = document.createElement("div"); l1.className = "sx__vband-1";
     var date = document.createElement("span"); date.className = "sx__vband-date";
-    date.textContent = fmtSessionDate(s.dateStart); date.title = s.dateStart || "";  // ISO in tooltip
+    date.textContent = fmtSessionRange(s);
+    date.title = (s.dateStart || "") + (s.dateEnd ? " → " + s.dateEnd : "");  // ISO in tooltip
     l1.appendChild(date);
     if (s.status) l1.appendChild(vChip("status", s.status, scls));
     if (s.sessionType) l1.appendChild(vChip("type", s.sessionType));
+    if (s.videoMeetingLink) {
+      var join = document.createElement("a");
+      join.className = "cbm-button sx__vjoin";
+      join.href = externalHref(s.videoMeetingLink);
+      join.target = "_blank"; join.rel = "noopener";
+      join.textContent = future ? "Start Session" : "Open Meeting Link";
+      l1.appendChild(join);
+    }
     band.appendChild(l1);
     var l2 = document.createElement("div"); l2.className = "sx__vband-2";
     var custom = customSessionTitle(s.name);  // auto-generated titles never shown
@@ -2162,20 +2175,24 @@
     hcard.appendChild(band);
 
     var grid = document.createElement("div"); grid.className = "sx__vgrid";
-    addKV(grid, "Duration", fmtDuration(sessionDurationSeconds(s)), "text");
     addKV(grid, "Meeting type", s.meetingType, "multiEnum");
     addKV(grid, "Location", locationValue(s), "text");
-    addKV(grid, "Video meeting link", s.videoMeetingLink, "link");
     addKV(grid, "Next session", s.nextSessionDateTime, "datetime");
-    // §12.4: No Show uses "Expected attendees".
-    addKV(grid, scls === "noshow" ? "Expected attendees" : "Attendees", s.attendeeNames || [], "chips", true);
     hcard.appendChild(grid);
     body.appendChild(hcard);
 
+    // === Attendee grid (Doug's 2026-07-12 ruling; §12.4 keeps the No Show
+    // vocabulary — who was EXPECTED). One grid, all invitees.
+    body.appendChild(renderViewAttendees(s, scls));
+
     // === §12.3.1 Session notes (full-width reading block; no clamp) ===
+    // The /sessions/{id} payload carries the raw CRM name ``sessionNotes``
+    // (only the Overview feed maps it to ``notes``) — reading ``s.notes`` here
+    // meant the view never showed notes. ``notes`` stays as a fallback.
+    var notesVal = s.sessionNotes != null ? s.sessionNotes : s.notes;
     var notesZone = vZone("SESSION NOTES");
-    if (s.notes && String(s.notes).trim() !== "") {
-      var nb = document.createElement("div"); nb.className = "sx__vzone-body"; nb.innerHTML = sanitizeHtml(String(s.notes));
+    if (notesVal && String(notesVal).trim() !== "") {
+      var nb = document.createElement("div"); nb.className = "sx__vzone-body"; nb.innerHTML = sanitizeHtml(String(notesVal));
       notesZone.appendChild(nb);
     } else {
       var copy = emptyNoteCopy(scls);  // scheduled/completed get copy; cancelled/noshow get none
@@ -2191,7 +2208,208 @@
       cal.appendChild(cl); cal.appendChild(cb); body.appendChild(cal);
     }
 
-    // === §12.3.3 Transcript — OMITTED (§12.5: no transcript field on CSession) ===
+    // === §12.3.3 Transcript (§12.5 feature-gated — nothing renders until the
+    // CRM field exists; the zone then explains an empty transcript instead of
+    // silently omitting the capability).
+    var tz = renderViewTranscript(s, scls);
+    if (tz) body.appendChild(tz);
+  }
+
+  // The band's one time statement (each fact exactly once — no Duration row):
+  // "Wednesday, July 9 — 2:00 PM–3:00 PM" when the end is known.
+  function fmtSessionRange(s) {
+    var base = fmtSessionDate(s.dateStart);
+    if (base === "—") return base;
+    var secs = sessionDurationSeconds(s);
+    var start = parseNaive(s.dateStart);
+    if (!secs || !start) return base;
+    var end = new Date(start.getTime() + secs * 1000);
+    return base + "–" + end.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  }
+
+  // Per-person invited/attended state is not modeled (a planned CRM ruling);
+  // the whole grid derives one honest status from the session itself.
+  function attendeeStatusLabel(scls) {
+    if (scls === "completed") return "Attended";
+    if (scls === "noshow") return "Expected";
+    return "Invited";
+  }
+
+  // Role from the open record's own lists: a related contact is a Client
+  // contact; a co-mentor's contact is CBM; anything else is just a Contact.
+  function attendeeRole(id) {
+    var d = currentDetail || {};
+    var list = d.contacts || [];
+    for (var i = 0; i < list.length; i++) { if (list[i].id === id) return "Client"; }
+    var cm = d.coMentors || [];
+    for (var j = 0; j < cm.length; j++) { if (cm[j].contactId === id) return "CBM"; }
+    return "Contact";
+  }
+
+  function renderViewAttendees(s, scls) {
+    var zone = vZone(scls === "noshow" ? "EXPECTED ATTENDEES" : "ATTENDEES");
+    var rows = s.attendeeDetails || [];
+    if (!rows.length && (s.attendeeNames || []).length) {
+      // Older payload shape (names only) — the grid still renders honestly.
+      rows = s.attendeeNames.map(function (n) { return { name: n }; });
+    }
+    if (!rows.length) {
+      var em = document.createElement("p"); em.className = "sx__vzone-empty";
+      em.textContent = "No attendees are on this session yet — add them in Edit.";
+      zone.appendChild(em); return zone;
+    }
+    var label = zone.querySelector(".sx__vzone-l");
+    var tools = document.createElement("span"); tools.className = "sx__att-tools";
+    tools.appendChild(copyTool("⧉ Copy grid", function () { return attendeeTsv(rows, scls); }));
+    tools.appendChild(copyTool("⧉ Copy emails", function () {
+      return rows.map(function (r) { return r.email; }).filter(Boolean).join(", ");
+    }));
+    label.appendChild(tools);
+
+    var table = document.createElement("table"); table.className = "sx__table sx__attgrid";
+    var thead = document.createElement("thead");
+    var hr = document.createElement("tr");
+    ["Name", "Role", "Company", "Email", "Phone", "Status"].forEach(function (h) {
+      var th = document.createElement("th"); th.scope = "col"; th.textContent = h; hr.appendChild(th);
+    });
+    thead.appendChild(hr); table.appendChild(thead);
+    var tbody = document.createElement("tbody");
+    var status = attendeeStatusLabel(scls);
+    rows.forEach(function (r) {
+      var tr = document.createElement("tr");
+      var nameCell = document.createElement("td");
+      if (r.id) {
+        var nb = document.createElement("button"); nb.type = "button"; nb.className = "sx__link";
+        nb.textContent = r.name || "(unnamed)";
+        nb.addEventListener("click", function () { openPeek("Contact", r.id, r.name || ""); });
+        nameCell.appendChild(nb);
+      } else { nameCell.textContent = r.name || "(unnamed)"; }
+      tr.appendChild(nameCell);
+      tr.appendChild(td(r.id ? attendeeRole(r.id) : "—"));
+      var compCell = document.createElement("td");
+      if (r.companyId) {
+        var cb = document.createElement("button"); cb.type = "button"; cb.className = "sx__link";
+        cb.textContent = r.companyName || "Company";
+        cb.addEventListener("click", function () { openPeek("Account", r.companyId, r.companyName || ""); });
+        compCell.appendChild(cb);
+      } else { compCell.textContent = r.companyName || "—"; }
+      tr.appendChild(compCell);
+      tr.appendChild(copyableCell(r.email, "email"));
+      tr.appendChild(copyableCell(r.phone, "phone"));
+      var st = document.createElement("td");
+      var chip = document.createElement("span"); chip.className = "sx__chip"; chip.textContent = status;
+      st.appendChild(chip); tr.appendChild(st);
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    // The grid's columns don't wrap (emails/phones must stay whole lines), so
+    // on a narrow window the TABLE scrolls inside the card — never the page.
+    var wrap = document.createElement("div"); wrap.className = "sx__attwrap";
+    wrap.appendChild(table);
+    zone.appendChild(wrap);
+    return zone;
+  }
+
+  function copyableCell(value, what) {
+    var cell = document.createElement("td");
+    if (!value) { cell.textContent = "—"; return cell; }
+    cell.appendChild(document.createTextNode(value + " "));
+    var b = document.createElement("button"); b.type = "button"; b.className = "sx__copycell";
+    b.title = "Copy " + what; b.setAttribute("aria-label", "Copy " + what); b.textContent = "⧉";
+    b.addEventListener("click", function () { copyToClipboard(value, b); });
+    cell.appendChild(b);
+    return cell;
+  }
+
+  function copyTool(labelText, getText) {
+    var b = document.createElement("button"); b.type = "button"; b.className = "sx__copybtn";
+    b.textContent = labelText;
+    b.addEventListener("click", function () { copyToClipboard(getText(), b); });
+    return b;
+  }
+
+  function copyToClipboard(text, btn) {
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(function () {
+      var old = btn.textContent;
+      btn.textContent = "✓ Copied"; btn.disabled = true;
+      setTimeout(function () { btn.textContent = old; btn.disabled = false; }, 1500);
+    }).catch(function () {
+      notice("viewNotice", "Copy failed — the browser blocked clipboard access.", "error");
+    });
+  }
+
+  // Tab-separated with headers so a paste lands in Excel/Sheets as columns.
+  function attendeeTsv(rows, scls) {
+    var status = attendeeStatusLabel(scls);
+    var lines = ["Name\tRole\tCompany\tEmail\tPhone\tStatus"];
+    rows.forEach(function (r) {
+      lines.push([
+        r.name || "", r.id ? attendeeRole(r.id) : "", r.companyName || "",
+        r.email || "", r.phone || "", status,
+      ].join("\t"));
+    });
+    return lines.join("\n");
+  }
+
+  function renderViewTranscript(s, scls) {
+    if (!s.transcriptFieldExists) return null;  // §12.5: no stub until the CRM field lands
+    var text = s.sessionTranscription;
+    if (!text || !String(text).trim()) {
+      if (scls === "cancelled" || scls === "noshow") return null;  // §12.4: omit, never empty boxes
+      var zone0 = vZone("TRANSCRIPT");
+      var em = document.createElement("p"); em.className = "sx__vzone-empty";
+      em.textContent = "No transcript is attached. Automatic transcription isn't connected yet — paste the meeting transcript into the Transcript box in Edit.";
+      zone0.appendChild(em); return zone0;
+    }
+    var zone = vZone("TRANSCRIPT");
+    // The transcript is the session's longest text: it scrolls within its own
+    // allotment, so the browser's Ctrl+F can't see the clipped part — the zone
+    // carries its own find with an honest match count.
+    var label = zone.querySelector(".sx__vzone-l");
+    var find = document.createElement("input");
+    find.type = "search"; find.className = "sx__tfind";
+    find.placeholder = "Find in transcript…"; find.setAttribute("aria-label", "Find in transcript");
+    var count = document.createElement("span"); count.className = "sx__tcount";
+    label.appendChild(find); label.appendChild(count);
+    var bodyEl = document.createElement("div"); bodyEl.className = "sx__vzone-body sx__transcript";
+    bodyEl.innerHTML = sanitizeHtml(String(text));
+    var base = bodyEl.innerHTML;
+    find.addEventListener("input", function () {
+      bodyEl.innerHTML = base;
+      var needle = find.value.trim();
+      if (!needle) { count.textContent = ""; return; }
+      var n = markMatches(bodyEl, needle);
+      count.textContent = n + (n === 1 ? " match" : " matches");
+      var first = bodyEl.querySelector("mark");
+      if (first && first.scrollIntoView) first.scrollIntoView({ block: "nearest" });
+    });
+    zone.appendChild(bodyEl);
+    return zone;
+  }
+
+  // Wrap every case-insensitive match in <mark>, walking TEXT nodes only —
+  // never a regex over serialized HTML (attribute text must not match).
+  function markMatches(root, needle) {
+    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    var nodes = []; var nd;
+    while ((nd = walker.nextNode())) nodes.push(nd);
+    var lower = needle.toLowerCase(); var total = 0;
+    nodes.forEach(function (node) {
+      var text = node.nodeValue; var hay = text.toLowerCase();
+      var idx = hay.indexOf(lower);
+      if (idx < 0) return;
+      var frag = document.createDocumentFragment(); var pos = 0;
+      while (idx >= 0) {
+        frag.appendChild(document.createTextNode(text.slice(pos, idx)));
+        var m = document.createElement("mark"); m.textContent = text.slice(idx, idx + needle.length);
+        frag.appendChild(m); total++;
+        pos = idx + needle.length; idx = hay.indexOf(lower, pos);
+      }
+      frag.appendChild(document.createTextNode(text.slice(pos)));
+      node.parentNode.replaceChild(frag, node);
+    });
+    return total;
   }
 
   // Reuse the summary card's chip classes/tokens (no new colors).

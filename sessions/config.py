@@ -171,7 +171,16 @@ SESSION_FIELDS: list[dict] = [
     {"name": "nextSessionDateTime", "label": "Next session", "type": "datetime", "group": "Notes", "row": "meta"},
     {"name": "topicsCovered", "label": "Topics covered", "type": "multiEnum", "group": "Notes", "row": "meta"},
     {"name": "description", "label": "Description", "type": "text", "group": "Notes"},
+    # The meeting transcript (Display Standard §12.5). The CRM field is a
+    # planned Phase-3 build (Meet transcription), so the editor/view show it
+    # ONLY when the live CRM actually has it — field_spec_live / get_session
+    # feature-detect via metadata; a save never sends what the form never
+    # rendered. Until the field lands, nothing renders (no stub).
+    {"name": "sessionTranscription", "label": "Transcript", "type": "wysiwyg", "group": "Notes", "row": "transcript", "big": True},
 ]
+
+# The §12.5 feature-detected field: present in the spec above, gated at runtime.
+TRANSCRIPT_FIELD = "sessionTranscription"
 
 # ``duration`` is EspoCRM's virtual duration type (notStorable — computed as
 # dateEnd − dateStart), so the writable/readable scalar is ``dateEnd``: the

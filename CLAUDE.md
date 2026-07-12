@@ -659,7 +659,19 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 - **Phase 1 (CRUD + review UI).** The **Start/Open Session** button uses
   `videoMeetingLink` when set. Google Calendar/Meet *scheduling* (auto-populating
   `videoMeetingLink`) and Meet *transcription* (a new `sessionTranscription` wysiwyg
-  field) are Phases 2–3, not built. The **Communications** tab now has a built
+  field) are Phases 2–3, not built. **The UI side of the transcript is now ready
+  and feature-gated (v0.37.0):** the session view's Transcript zone (own scroll
+  allotment + Find-in-transcript) and the editor's Transcript box both appear
+  automatically once the `sessionTranscription` field exists in the CRM —
+  `/fields` and `GET /sessions/{id}` detect it live from metadata, so shipping
+  Phase 3 needs only the CRM field + the transcription feed, no frontend change.
+  The v0.37.0 session view also applied Doug's session-details design rulings:
+  time range in the band, video link as the band's Start/Open action, and the
+  ATTENDEES grid (name/role/company/email/phone/status, contact & Account peeks,
+  per-cell copy + Copy grid TSV + Copy emails). Per-person invited-vs-attended
+  state is deliberately derived from session status pending a CRM modeling
+  ruling (planning prompt: `cbm-mentoring-app/prompts/invitee-attendee-modeling-session.md`).
+  The **Communications** tab now has a built
   email-inbox UI scaffold (no CRM data yet — wiring contract in the Communications
   bullet above); the **Documents** (uploads) tab is still a placeholder.
 - **Status (2026-07-10 end of session): v0.34.0; 315 tests green; branch

@@ -524,3 +524,37 @@ textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
 .sx__addr-row .sx__opt-line:first-child { justify-content: space-between; flex-wrap: wrap; }
 .sx__addr-check { display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 600; white-space: nowrap; }
 .sx__addr-row input:disabled, .sx__addr-row select:disabled { opacity: 0.45; }
+
+/* --- Session view: attendee grid + transcript zone (Display Standard §12,
+   extended per Doug's 2026-07-12 session-details rulings). The attendee grid
+   rides .sx__table (zebra striping for free); these rules add the zone-label
+   toolbar, copy affordances, and the transcript's own scroll allotment. */
+.sx__vzone { margin-top: 12px; }
+.sx__vzone-l { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.sx__att-tools { margin-left: auto; display: inline-flex; gap: 0.9rem; }
+.sx__copybtn {
+  border: none; background: none; cursor: pointer; padding: 0;
+  font-size: 12px; color: var(--cbm-blue-700, #1d4e89); text-transform: none;
+  letter-spacing: normal; font-weight: 500;
+}
+.sx__copybtn:disabled { color: var(--cbm-slate-700, #556); cursor: default; }
+.sx__copycell {
+  border: none; background: none; cursor: pointer; padding: 0 0 0 2px;
+  font-size: 11px; color: #9aa7b4;
+}
+.sx__copycell:hover { color: var(--cbm-blue-700, #1d4e89); }
+.sx__copycell:disabled { color: var(--cbm-slate-700, #556); cursor: default; }
+.sx__attgrid td { white-space: nowrap; }
+.sx__vjoin { margin-left: auto; padding: 4px 14px; font-size: 13px; }
+
+/* Find-in-transcript lives in the zone label; the body scrolls in its own
+   allotment (the longest text never stretches the page). */
+.sx__tfind {
+  margin-left: auto; min-width: 14rem; font-size: 13px;
+  border: 1px solid var(--cbm-border, #e3e8ee); border-radius: 6px; padding: 3px 8px;
+  font-weight: 400; letter-spacing: normal; text-transform: none;
+}
+.sx__tcount { font-size: 12px; color: var(--cbm-slate-700, #556); text-transform: none; letter-spacing: normal; }
+.sx__transcript { max-height: 46vh; overflow-y: auto; }
+.sx__transcript mark { background: #ffe9a8; padding: 0 1px; }
+.sx__attwrap { overflow-x: auto; }

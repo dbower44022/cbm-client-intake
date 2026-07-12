@@ -858,3 +858,56 @@ def test_other_crm_error_returns_502(monkeypatch):
     with TestClient(_app(monkeypatch)) as c:
         r = c.get("/mentorsessions/api/records")
     assert r.status_code == 502
+
+
+@pytest.mark.asyncio
+async def test_get_session_exposes_attendee_grid_details():
+    # The session view's attendee grid (name/role/company/email/phone/status)
+    # reads the richer related-contact rows; ids/names stay for the editor+feed.
+    fake = Fake(
+        records={("CSession", "s1"): {"name": "x"}},
+        related={"sessionAttendees": [
+            {"id": "c1", "name": "Pat", "emailAddress": "pat@acme.example",
+             "phoneNumber": "(216) 555-0100", "accountName": "Acme", "accountId": "a1"},
+            {"id": "c2", "name": "Dana"},
+        ]},
+    )
+    rec = await service.get_session(fake, "s1")
+    assert rec["attendeeDetails"][0] == {
+        "id": "c1", "name": "Pat", "email": "pat@acme.example",
+        "phone": "(216) 555-0100", "companyName": "Acme", "companyId": "a1",
+    }
+    assert rec["attendeeDetails"][1]["email"] is None
+    assert rec["attendees"] == ["c1", "c2"]
+    assert rec["attendeeNames"] == ["Pat", "Dana"]
+
+
+@pytest.mark.asyncio
+async def test_get_session_transcript_feature_detected():
+    # §12.5: the transcript column is feature-gated on live CRM metadata —
+    # absent field => flag False (the view renders no transcript zone at all).
+    fake = Fake(records={("CSession", "s1"): {"name": "x"}})
+    rec = await service.get_session(fake, "s1")
+    assert rec["transcriptFieldExists"] is False
+
+    fake = Fake(
+        records={("CSession", "s1"): {"name": "x", "sessionTranscription": "<p>hi</p>"}},
+        meta_fields={"sessionTranscription": {"type": "wysiwyg"}},
+    )
+    rec = await service.get_session(fake, "s1")
+    assert rec["transcriptFieldExists"] is True
+    assert rec["sessionTranscription"] == "<p>hi</p>"
+
+
+@pytest.mark.asyncio
+async def test_field_spec_live_gates_the_transcript_field():
+    # Serving the transcript editor box while the CRM lacks the column would
+    # make every save fail — the spec includes it only once the field exists.
+    fake = Fake()
+    names = [f["name"] for f in await service.field_spec_live(fake)]
+    assert "sessionTranscription" not in names
+    assert "sessionNotes" in names
+
+    fake = Fake(meta_fields={"sessionTranscription": {"type": "wysiwyg"}})
+    names = [f["name"] for f in await service.field_spec_live(fake)]
+    assert "sessionTranscription" in names
