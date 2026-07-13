@@ -4,6 +4,19 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.40.1] — 2026-07-13
+
+### Added
+- **The meeting link is now visible and copyable** (Doug's live report after
+  the first successful calendar event: the Meet URL existed only behind the
+  Start Session button, with no way to copy it). It now shows as a clickable,
+  truncating URL with a ⧉ copy-to-clipboard button in two places: the
+  Overview's **Next session** callout (under the date, above Start Session)
+  and the read-only **session view**'s facts grid (a "Meeting link" row,
+  next to Meeting type/Location). New `linkWithCopy` helper reusing the
+  attendees-grid copy machinery; `addKV` gains a `copylink` type. Verified in
+  the stub harness (render, href, copy-failure notice path).
+
 ## [0.40.0] — 2026-07-13
 
 ### Added

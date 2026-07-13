@@ -460,12 +460,19 @@
     var when = document.createElement("div"); when.className = "sx__next-when";
     when.textContent = fmtSessionDate(ns.dateStart, "short"); when.title = ns.dateStart || "";
     card.appendChild(l); card.appendChild(when);
+    // The meeting link itself, visible + copyable (not just behind the button),
+    // so it can be pasted into an email or agenda.
+    var vlink = ns.videoMeetingLink && String(ns.videoMeetingLink).trim();
+    if (vlink) {
+      var lrow = document.createElement("div"); lrow.className = "sx__next-link";
+      lrow.appendChild(linkWithCopy(vlink));
+      card.appendChild(lrow);
+    }
     // Start/Open: a quick way to open the session (and launch the video call if
     // one is scheduled) for editing.
-    var hasVideo = !!(ns.videoMeetingLink && String(ns.videoMeetingLink).trim());
     var btn = document.createElement("button");
     btn.type = "button"; btn.className = "cbm-button sx__next-btn";
-    btn.textContent = hasVideo ? "Start Session" : "Open Session";
+    btn.textContent = vlink ? "Start Session" : "Open Session";
     btn.addEventListener("click", function () { startSession(ns); });
     card.appendChild(btn);
     box.appendChild(card);
@@ -2288,6 +2295,7 @@
     var grid = document.createElement("div"); grid.className = "sx__vgrid";
     addKV(grid, "Meeting type", s.meetingType, "multiEnum");
     addKV(grid, "Location", locationValue(s), "text");
+    addKV(grid, "Meeting link", (s.videoMeetingLink || "").trim(), "copylink");
     addKV(grid, "Next session", s.nextSessionDateTime, "datetime");
     hcard.appendChild(grid);
     body.appendChild(hcard);
@@ -2419,6 +2427,21 @@
     wrap.appendChild(table);
     zone.appendChild(wrap);
     return zone;
+  }
+
+  // A clickable link followed by a copy-to-clipboard button — so a meeting URL
+  // can be opened OR copied (e.g. to paste into an email or agenda).
+  function linkWithCopy(url) {
+    var span = document.createElement("span"); span.className = "sx__linkcopy";
+    var a = document.createElement("a");
+    a.href = externalHref(url); a.target = "_blank"; a.rel = "noopener";
+    a.textContent = url.replace(/^https?:\/\//, ""); a.title = url;
+    span.appendChild(a);
+    var b = document.createElement("button"); b.type = "button"; b.className = "sx__copycell";
+    b.title = "Copy meeting link"; b.setAttribute("aria-label", "Copy meeting link"); b.textContent = "⧉";
+    b.addEventListener("click", function () { copyToClipboard(url, b); });
+    span.appendChild(b);
+    return span;
   }
 
   function copyableCell(value, what) {
@@ -2563,6 +2586,8 @@
     } else if (type === "datetime") { v.textContent = fmtSessionDate(value); v.title = value || ""; }
     else if (type === "link") {
       var a = document.createElement("a"); a.href = externalHref(value); a.target = "_blank"; a.rel = "noopener"; a.textContent = value; v.appendChild(a);
+    } else if (type === "copylink") {
+      v.appendChild(linkWithCopy(String(value)));
     } else { v.textContent = String(value); }
     cell.appendChild(l); cell.appendChild(v); grid.appendChild(cell);
   }

@@ -259,6 +259,16 @@ td.sxd__actions { text-align: right; white-space: nowrap; }
 .sx__next-l { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--cbm-blue, #1a5fb4); font-weight: 700; }
 .sx__next-when { font-size: 1.1rem; font-weight: 800; color: var(--cbm-navy, #123); line-height: 1.2; font-variant-numeric: tabular-nums; }
 .sx__next-btn { margin-top: 0.55rem; width: 100%; padding: 0.5rem 0.75rem; font-size: 0.95rem; }
+/* The visible/copyable meeting URL under the next-session time. */
+.sx__next-link { margin-top: 0.35rem; font-size: 0.82rem; }
+/* Link + copy button pair (next-session callout, session-view Meeting link KV).
+   The anchor truncates so a long URL never widens the rail/grid. */
+.sx__linkcopy { display: inline-flex; align-items: center; gap: 2px; max-width: 100%; min-width: 0; }
+.sx__linkcopy a {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+  color: var(--cbm-blue-700, #1d4e89);
+}
+.sx__linkcopy .sx__copycell { font-size: 12px; flex: none; }
 
 /* Overall (engagement/partner/sponsor) notes — above the session feed. Gold
    accent to set them apart from the blue-accented per-session notes. */
