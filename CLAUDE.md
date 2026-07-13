@@ -845,10 +845,12 @@ crm-test **web** component (overlay applied via doctl; verified in the
 live spec). **Remaining:** confirm/build `CSession.googleCalendarEventId`
 on crm-test (UNVERIFIED — the intake API key has no CSession grant, so it
 can't be checked from the app side; a plain "Session saved." with no event
-means the field is still missing); DISABLE EspoCRM's own Google Calendar
-sync on crm-test (the personal-account experiment — Doug's ruling: the app
-owns all email + calendar operations; prod never had it); then the live
-create→invite→edit→cancel verification. Prod has the 0.40.0 code but no
+means the field is still missing); then the live
+create→invite→edit→cancel verification. The EspoCRM-side calendar sync is
+RESOLVED (2026-07-13): there never was an org-level EspoCRM↔Google
+integration — only per-user personal-account connections, which Doug
+deleted — so the double-event risk is gone and nothing needed disabling
+(Doug's ruling stands: the app owns all email + calendar operations). Prod has the 0.40.0 code but no
 flag — inert until its own field build + `GCAL_EVENTS`. First live test
 attempt (before the push) failed simply because the code wasn't deployed
 — crm-test was still 0.39.1. Before that: **v0.39.2** — **session
