@@ -4,6 +4,18 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.40.2] — 2026-07-13
+
+### Changed
+- **New sessions pre-invite ALL related contacts, not just CBM contacts**
+  (Doug's ruling, widening the CBM-only default of v0.37.1): the attendee
+  picker on a NEW session starts with every client/partner/sponsor contact
+  AND every CBM contact checked (`defaultAttendees()` in the sessions
+  frontend). Unchecking stays an explicit choice, and — with the calendar
+  integration on — the Google Calendar invitations now reach the client
+  contacts by default too. Editing an existing session still shows its
+  actual attendee set.
+
 ## [0.40.1] — 2026-07-13
 
 ### Added

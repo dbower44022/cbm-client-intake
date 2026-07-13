@@ -2653,10 +2653,12 @@
       $("editorTitle").textContent = "Edit session";
     } else {
       currentSession = {
-        // Every CBM contact on the engagement starts INVITED (Doug's 2026-07-12
-        // ruling) — pre-checked here so it lands in the dirty-tracking baseline
-        // and unchecking is an explicit choice, never a silent default.
-        id: null, attendees: cbmAttendeeOptions().map(function (c) { return c.id; }),
+        // EVERY contact on the record — the client/engagement contacts AND the
+        // CBM contacts — starts INVITED on a new session (Doug's 2026-07-13
+        // ruling; widens the CBM-only default of 2026-07-12). Pre-checked here
+        // so it lands in the dirty-tracking baseline and unchecking is an
+        // explicit choice, never a silent default.
+        id: null, attendees: defaultAttendees(),
         status: "Scheduled",
         sessionType: (config && config.defaultSessionType) || "",
         name: defaultSessionName(),
@@ -2849,13 +2851,19 @@
   // --- attendees ---
   // The record's CBM contacts (the server-resolved set: assigned manager +
   // co-mentors, each with a real Contact id) — attendee-picker options
-  // alongside the client contacts, and the default invitee set on a NEW
-  // session (Doug's 2026-07-12 ruling: CBM contacts are always invited when
-  // a session is created from an engagement).
+  // alongside the client contacts.
   function cbmAttendeeOptions() {
     return ((currentDetail && currentDetail.cbmContacts) || [])
       .filter(function (c) { return c.contactId; })
       .map(function (c) { return { id: c.contactId, name: c.name }; });
+  }
+
+  // Default invitees on a NEW session: every related contact (client/partner/
+  // sponsor contacts) plus every CBM contact, deduped.
+  function defaultAttendees() {
+    var ids = ((currentDetail && currentDetail.contacts) || []).map(function (c) { return c.id; });
+    cbmAttendeeOptions().forEach(function (c) { if (ids.indexOf(c.id) < 0) ids.push(c.id); });
+    return ids;
   }
 
   function renderAttendees() {
