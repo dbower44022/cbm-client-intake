@@ -826,22 +826,32 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-13)
 
-**Main is at v0.40.0** (407 tests green, 28 new; NOT yet pushed) —
-**sessions create Google Calendar events + Meet links** (gated OFF by
+**Main is at v0.40.0** (407 tests green, 28 new), **pushed and DEPLOYED
+2026-07-13** (`/healthz` = 0.40.0 verified on crm-test AND prod) —
+**sessions create Google Calendar events + Meet links** (gated by
 `GCAL_EVENTS`; see the "Google Calendar events" bullet in the Session
-Management section + `csession-calendar-field.md` for the CRM field build +
-the activation runbook in DEPLOYMENT.md). Saving a **Scheduled** session
+Management section, `csession-calendar-field.md` for the CRM field build,
+`GCAL-GOOGLE-SETUP.md` for the Google side + troubleshooting, and the
+runbook note in DEPLOYMENT.md). Saving a **Scheduled** session
 creates an event on the manager's own calendar (delegated as their
 `cbmEmail`, reusing the comms service-account stack) with a Meet link
 written to `videoMeetingLink` and attendees invited; edits patch the event;
 Cancelled cancels it. Best-effort — Google failures never fail the save
-(`calendar:{ok,...}` on the save response → UI notice). **Activation
-prereqs (none done):** Calendar API enabled in GCP; `calendar.events` scope
-added to the DWD grant; `CSession.googleCalendarEventId` built (crm-test →
-prod); EspoCRM's own calendar sync DISABLED on crm-test (the
-personal-account experiment — Doug's ruling: the app owns all email +
-calendar operations; prod never had it); `GCAL_EVENTS=true` on the web
-component. Before that: **v0.39.2** — **session
+(`calendar:{ok,...}` on the save response → UI notice; a disabled hook
+shows a plain "Session saved.", by design). **Activation state
+(2026-07-13):** Google side DONE by Doug (Calendar API enabled +
+`calendar.events` added to the DWD row); `GCAL_EVENTS=true` set on the
+crm-test **web** component (overlay applied via doctl; verified in the
+live spec). **Remaining:** confirm/build `CSession.googleCalendarEventId`
+on crm-test (UNVERIFIED — the intake API key has no CSession grant, so it
+can't be checked from the app side; a plain "Session saved." with no event
+means the field is still missing); DISABLE EspoCRM's own Google Calendar
+sync on crm-test (the personal-account experiment — Doug's ruling: the app
+owns all email + calendar operations; prod never had it); then the live
+create→invite→edit→cancel verification. Prod has the 0.40.0 code but no
+flag — inert until its own field build + `GCAL_EVENTS`. First live test
+attempt (before the push) failed simply because the code wasn't deployed
+— crm-test was still 0.39.1. Before that: **v0.39.2** — **session
 timezone fix** (Doug's live report: Google Calendar meetings created for
 sessions didn't match the app's time). Root cause: the app created no
 calendar events pre-0.40.0 — crm-test's **EspoCRM server-side Google
