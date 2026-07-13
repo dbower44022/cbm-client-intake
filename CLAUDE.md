@@ -664,10 +664,37 @@ segment of its own URL). Mounted only when `assignments_active` (needs
        is plain text rendered pre-wrapped; `date` is formatted with `fmtSessionDate`
        (abbreviated weekday). Compose sends To/Subject/Message from `#commTo`/
        `#commSubject`/`#commBody`.
+- **Google Calendar events + Meet links (v0.40.0, 2026-07-13 — BUILT, gated
+  OFF by `GCAL_EVENTS`; NOT yet activated).** Saving a **Scheduled** session
+  (create or edit, any domain) reconciles a Google Calendar event on the
+  signed-in manager's OWN calendar: `core/gcalendar.py` (delegated Calendar
+  REST client — same service-account + DWD stack as Gmail, impersonating the
+  manager's `cbmEmail` via `sessions.service.resolve_user_mailbox`) +
+  `sessions/gcal.py` (`sync_session_calendar`, called from
+  `create_session`/`update_session` when the router passes `settings`).
+  Decision matrix: Scheduled + no stored event → **create** (with a Meet
+  conference when `videoMeetingLink` is blank — the URL is written back to
+  `videoMeetingLink` + the event id to the **feature-detected CRM field
+  `CSession.googleCalendarEventId`** (`csession-calendar-field.md`, NOT
+  BUILT — the hook is inert until it exists); a hand-typed link means no
+  Meet, link carried in the event location); Scheduled + event + a
+  time/title/status/attendee change → **patch** (notes-only edits never
+  touch the calendar); status → Cancelled → **cancel** (clears the event id
+  + a generated Meet link, never a hand-typed one); Completed/No Show →
+  skipped (Doug: only Scheduled sessions get events). Attendee contacts are
+  invited (`sendUpdates=all` — Google emails invitations; organizer
+  excluded, blanks skipped). **Best-effort** (mentoradmin-provision
+  precedent): never raises; the save response carries `calendar:{ok,…}`
+  and `saveSession` shows it as a notice. **Activation:** Calendar API on in
+  GCP "CBM Integrations"; `calendar.events` added to the SA's DWD grant;
+  the CRM field built (crm-test → prod); **disable EspoCRM's own Google
+  Calendar sync on crm-test first** (double events otherwise; prod never
+  had it — the app owns all email + calendar operations); `GCAL_EVENTS=true`
+  (web component only — the worker is not involved).
 - **Phase 1 (CRUD + review UI).** The **Start/Open Session** button uses
-  `videoMeetingLink` when set. Google Calendar/Meet *scheduling* (auto-populating
-  `videoMeetingLink`) and Meet *transcription* (a new `sessionTranscription` wysiwyg
-  field) are Phases 2–3, not built. **The UI side of the transcript is now ready
+  `videoMeetingLink` when set. Google Calendar/Meet *scheduling* shipped
+  v0.40.0 (the bullet above; gated). Meet *transcription* (a new
+  `sessionTranscription` wysiwyg field) is still a later phase, not built. **The UI side of the transcript is now ready
   and feature-gated (v0.37.0):** the session view's Transcript zone (own scroll
   allotment + Find-in-transcript) and the editor's Transcript box both appear
   automatically once the `sessionTranscription` field exists in the CRM —
@@ -799,10 +826,26 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-13)
 
-**Main is at v0.39.2** (379 tests green; NOT yet pushed) — **session
+**Main is at v0.40.0** (407 tests green, 28 new; NOT yet pushed) —
+**sessions create Google Calendar events + Meet links** (gated OFF by
+`GCAL_EVENTS`; see the "Google Calendar events" bullet in the Session
+Management section + `csession-calendar-field.md` for the CRM field build +
+the activation runbook in DEPLOYMENT.md). Saving a **Scheduled** session
+creates an event on the manager's own calendar (delegated as their
+`cbmEmail`, reusing the comms service-account stack) with a Meet link
+written to `videoMeetingLink` and attendees invited; edits patch the event;
+Cancelled cancels it. Best-effort — Google failures never fail the save
+(`calendar:{ok,...}` on the save response → UI notice). **Activation
+prereqs (none done):** Calendar API enabled in GCP; `calendar.events` scope
+added to the DWD grant; `CSession.googleCalendarEventId` built (crm-test →
+prod); EspoCRM's own calendar sync DISABLED on crm-test (the
+personal-account experiment — Doug's ruling: the app owns all email +
+calendar operations; prod never had it); `GCAL_EVENTS=true` on the web
+component. Before that: **v0.39.2** — **session
 timezone fix** (Doug's live report: Google Calendar meetings created for
-sessions didn't match the app's time). Root cause: the app creates no
-calendar events — **EspoCRM's server-side Google Calendar sync** does, from
+sessions didn't match the app's time). Root cause: the app created no
+calendar events pre-0.40.0 — crm-test's **EspoCRM server-side Google
+Calendar sync** did, from
 `CSession.dateStart`/`dateEnd`, and the EspoCRM API treats datetimes as
 **UTC** — but the sessions frontend sent/displayed local wall-clock digits
 verbatim (3:30 PM Cleveland stored as 3:30 UTC → calendar event 4–5h off).

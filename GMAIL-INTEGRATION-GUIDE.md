@@ -43,6 +43,17 @@ The two scopes, for copy-paste:
 https://www.googleapis.com/auth/gmail.readonly,https://www.googleapis.com/auth/gmail.send
 ```
 
+> **v0.40.0 addition:** the sessions Google Calendar integration
+> (`csession-calendar-field.md`) needs a THIRD scope on the **same**
+> delegation row (all scopes for one client id live in one row — edit the
+> row, don't add a second): `https://www.googleapis.com/auth/calendar.events`
+> — plus the **Google Calendar API** enabled in the same GCP project. Full
+> three-scope value:
+>
+> ```
+> https://www.googleapis.com/auth/gmail.readonly,https://www.googleapis.com/auth/gmail.send,https://www.googleapis.com/auth/calendar.events
+> ```
+
 > Security note (for the record): domain-wide delegation is domain-wide — the
 > app code restricts impersonation to (a) enumerated managers' mailboxes for
 > sync and (b) the signed-in user's own mailbox for search/send, and logs every

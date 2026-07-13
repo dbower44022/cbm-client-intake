@@ -2915,17 +2915,33 @@
     var attendees = chosenAttendees();
     $("saveSessionBtn").disabled = true;
     try {
+      var saved;
       if (currentSession && currentSession.id) {
-        await api("/sessions/" + encodeURIComponent(currentSession.id), {
+        saved = await api("/sessions/" + encodeURIComponent(currentSession.id), {
           method: "PUT", body: JSON.stringify({ changes: changes, attendees: attendees })
         });
       } else {
-        await api("/records/" + encodeURIComponent(currentDetail.id) + "/sessions", {
+        saved = await api("/records/" + encodeURIComponent(currentDetail.id) + "/sessions", {
           method: "POST", body: JSON.stringify({ changes: changes, attendees: attendees })
         });
       }
-      openDetail(currentDetail.id);
-      notice("detailNotice", "Session saved.", "success");
+      // Await the re-fetch: openDetail hides detailNotice while rendering, so
+      // showing the notice first would get it wiped a moment later.
+      await openDetail(currentDetail.id);
+      // The calendar hook is best-effort (the session saved either way) — the
+      // notice just tells the user what happened to the Google Calendar event.
+      var cal = saved && saved.calendar;
+      if (cal && cal.ok === false && !cal.disabled) {
+        notice("detailNotice", "Session saved, but the Google Calendar invitation failed: " + (cal.error || "unknown error"), "error");
+      } else if (cal && cal.ok && cal.meetLink) {
+        notice("detailNotice", "Session saved — calendar invitations sent.", "success");
+      } else if (cal && cal.ok && cal.cancelled) {
+        notice("detailNotice", "Session saved — the calendar event was cancelled.", "success");
+      } else if (cal && cal.ok && cal.updated) {
+        notice("detailNotice", "Session saved — the calendar event was updated.", "success");
+      } else {
+        notice("detailNotice", "Session saved.", "success");
+      }
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }
       notice("editorNotice", e.message, "error");

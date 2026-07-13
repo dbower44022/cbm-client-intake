@@ -4,6 +4,36 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.40.0] — 2026-07-13
+
+### Added
+- **Sessions create Google Calendar events with Meet links.** Saving a
+  **Scheduled** session in any session tool now creates a Google Calendar
+  event on the manager's OWN calendar (delegated as their
+  `CMentorProfile.cbmEmail` via the shared service account — the same
+  domain-wide-delegation stack the comms Gmail integration uses), with a
+  **Google Meet** conference whose URL is written back to
+  `CSession.videoMeetingLink`, and the session's attendee contacts invited
+  (Google emails the invitations, `sendUpdates=all`). Later edits to
+  time/title/attendees **patch the same event**; setting the status to
+  Cancelled **cancels it** (clearing the stored event id and the generated
+  Meet link — a hand-typed non-Meet link is never touched, and a session with
+  a hand-typed link gets an event without a Meet conference, the link carried
+  in the event's location). Logging a Completed past session never creates an
+  event, and a notes-only edit never touches the calendar. New:
+  `core/gcalendar.py` (delegated Calendar REST client), `sessions/gcal.py`
+  (the best-effort sync hook — a Google failure never fails the session save;
+  the outcome rides the save response as `calendar:{ok,...}` and shows as a
+  notice in the UI). **Gated OFF by `GCAL_EVENTS`** and additionally inert
+  until the CRM gains `CSession.googleCalendarEventId`
+  (feature-detected via metadata; CRM handoff: `csession-calendar-field.md`).
+  Activation also needs the Google Calendar API enabled in the GCP project
+  and the `calendar.events` scope added to the service account's
+  domain-wide-delegation grant. Replaces the crm-test-only EspoCRM
+  server-side calendar sync experiment (personal account) — **disable that
+  before enabling this**, or sessions get double events; production never had
+  it (the app owns all email + calendar operations). 28 new tests.
+
 ## [0.39.2] — 2026-07-13
 
 ### Fixed

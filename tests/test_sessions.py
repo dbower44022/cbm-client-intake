@@ -694,7 +694,7 @@ async def test_update_session_whitelists_fields_and_syncs_attendees():
     # c2 (not present, not submitted) untouched.
     fake = Fake(records={("CSession", "s1"): {"name": "old"}},
                 related={"sessionAttendees": [{"id": "c1"}]})
-    await service.update_session(fake, "s1", {"name": "new", "hack": 1}, ["c1", "c3"])
+    await service.update_session(MENTOR, fake, "s1", {"name": "new", "hack": 1}, ["c1", "c3"])
     entity, rid, payload = fake.updates[0]
     assert (entity, rid) == ("CSession", "s1")
     assert payload["name"] == "new" and "hack" not in payload
@@ -707,7 +707,7 @@ async def test_update_session_whitelists_fields_and_syncs_attendees():
 async def test_update_session_unrelates_removed_attendees():
     fake = Fake(records={("CSession", "s1"): {"name": "s"}},
                 related={"sessionAttendees": [{"id": "c1"}, {"id": "c2"}]})
-    await service.update_session(fake, "s1", {}, ["c1"])   # drop c2
+    await service.update_session(MENTOR, fake, "s1", {}, ["c1"])   # drop c2
     assert ("CSession", "s1", "sessionAttendees", "c2") in fake.unrelates
     assert not fake.relates                                # c1 already present
 
@@ -719,7 +719,7 @@ async def test_update_drops_drifted_enum_but_keeps_valid_fields():
     meta = {"sessionType": {"options": ["Client Session", "Follow-up"]}}
     fake = Fake(records={("CSession", "s1"): {}}, meta_fields=meta)
     await service.update_session(
-        fake, "s1", {"sessionType": "In-Person", "name": "Kickoff"}, None
+        MENTOR, fake, "s1", {"sessionType": "In-Person", "name": "Kickoff"}, None
     )
     _, _, payload = fake.updates[0]
     assert "sessionType" not in payload      # drifted value dropped, not sent
@@ -731,7 +731,7 @@ async def test_multienum_keeps_only_valid_values():
     meta = {"meetingType": {"options": ["Virtual", "Phone"]}}
     fake = Fake(records={("CSession", "s1"): {}}, meta_fields=meta)
     await service.update_session(
-        fake, "s1", {"meetingType": ["Virtual", "Carrier Pigeon"]}, None
+        MENTOR, fake, "s1", {"meetingType": ["Virtual", "Carrier Pigeon"]}, None
     )
     _, _, payload = fake.updates[0]
     assert payload["meetingType"] == ["Virtual"]
@@ -755,7 +755,7 @@ async def test_field_required_reads_crm_metadata():
 async def test_sanitizer_fails_open_when_options_unavailable():
     # No metadata options => can't verify => keep the value (never drop unverified).
     fake = Fake(records={("CSession", "s1"): {}})  # meta_fields={} => no options
-    await service.update_session(fake, "s1", {"sessionType": "Anything"}, None)
+    await service.update_session(MENTOR, fake, "s1", {"sessionType": "Anything"}, None)
     _, _, payload = fake.updates[0]
     assert payload["sessionType"] == "Anything"
 
@@ -906,7 +906,8 @@ def test_partner_has_no_comentor_endpoints(monkeypatch):
 def test_create_session_endpoint(monkeypatch):
     _as(monkeypatch, _USER)
 
-    async def fake_create(cfg, client, parent_id, changes, attendees, owner_user_id=None):
+    async def fake_create(cfg, client, parent_id, changes, attendees,
+                          owner_user_id=None, settings=None):
         return {"id": "s1", "parent": parent_id, "attendees": attendees,
                 "owner": owner_user_id, **changes}
 

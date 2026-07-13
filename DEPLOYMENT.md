@@ -176,6 +176,24 @@ the env vars are the fallback.
 | `GOOGLE_DELEGATED_ADMIN` | a Workspace admin to impersonate, **`type: SECRET`** |
 | `APP_ENCRYPTION_KEY` | Fernet key encrypting the Email-Setup creds in Postgres, **`type: SECRET`**, web **+ worker** |
 
+**Google Calendar events for sessions (optional, web component, v0.40.0)** —
+`GCAL_EVENTS=true` makes a saved **Scheduled** session create/patch/cancel a
+Google Calendar event (with a Meet link written to `videoMeetingLink`) on the
+manager's own calendar, inviting the attendees. Reuses
+`GOOGLE_SERVICE_ACCOUNT_JSON` (or the Email-Setup config) — no new secret.
+Activation order (the app is inert until ALL are done): enable the **Google
+Calendar API** in the GCP project; add
+`https://www.googleapis.com/auth/calendar.events` to the service account's
+existing domain-wide-delegation row (see `GMAIL-INTEGRATION-GUIDE.md`); build
+`CSession.googleCalendarEventId` in the CRM (`csession-calendar-field.md` —
+feature-detected, crm-test first); **disable EspoCRM's own Google Calendar
+sync on crm-test** (double events otherwise; prod never had it); then set the
+flag. Worker not involved.
+
+| Variable | Value |
+|---|---|
+| `GCAL_EVENTS` | `true` to enable session calendar events + Meet links (web) |
+
 `APP_ENCRYPTION_KEY` is required for the in-app Email Setup screen (with
 `DATABASE_URL`); generate one with
 `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`.

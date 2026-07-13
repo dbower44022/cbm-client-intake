@@ -159,6 +159,18 @@ async def resolve_manager_profile(client: SessionClient, user_id: str) -> Option
         offset += _PAGE
 
 
+async def resolve_user_mailbox(client: SessionClient, user_id: str) -> Optional[str]:
+    """The signed-in user's own CBM mailbox (``CMentorProfile.cbmEmail``),
+    lowercased — the delegation ``subject`` for Google operations performed on
+    their behalf (calendar events). None when no linked profile / no cbmEmail.
+    """
+    profile_id = await resolve_manager_profile(client, user_id)
+    if not profile_id:
+        return None
+    profile = await client.get(MENTOR_PROFILE, profile_id, select="cbmEmail")
+    return (profile.get("cbmEmail") or "").strip().lower() or None
+
+
 def _grid_row(cfg: DomainConfig, r: dict[str, Any]) -> dict[str, Any]:
     row = {"id": r["id"], "createdAt": r.get("createdAt")}
     for col in cfg.list_columns:
@@ -601,6 +613,12 @@ async def transcript_field_exists(client: SessionClient) -> bool:
     return TRANSCRIPT_FIELD in fields
 
 
+# The Google Calendar event id (csession-calendar-field.md): app-managed, never
+# user-editable (not in SESSION_FIELDS), feature-detected like the transcript so
+# the calendar hook stays inert until the CRM field is built.
+CAL_FIELD = "googleCalendarEventId"
+
+
 async def get_session(client: SessionClient, session_id: str) -> dict[str, Any]:
     """An existing session's editable values + its attendees (read via the
     sessionAttendees relationship — see :func:`_attendees`). ``attendees`` = contact
@@ -608,8 +626,14 @@ async def get_session(client: SessionClient, session_id: str) -> dict[str, Any]:
     feed); ``attendeeDetails`` = the session view's grid rows (email/phone/
     company). ``transcriptFieldExists`` gates the §12.5 transcript zone — the
     transcript column itself is selected only when the CRM has it."""
-    has_transcript = await transcript_field_exists(client)
-    select = _SESSION_SELECT + ("," + TRANSCRIPT_FIELD if has_transcript else "")
+    fields = await client.metadata(f"entityDefs.{SESSION}.fields")
+    has_transcript = TRANSCRIPT_FIELD in fields
+    has_cal = CAL_FIELD in fields
+    select = _SESSION_SELECT
+    if has_transcript:
+        select += "," + TRANSCRIPT_FIELD
+    if has_cal:
+        select += "," + CAL_FIELD
     rec = await client.get(SESSION, session_id, select=select)
     atts = await _attendees(client, session_id)
     rec["attendees"] = [c["id"] for c in atts]
@@ -626,6 +650,7 @@ async def get_session(client: SessionClient, session_id: str) -> dict[str, Any]:
         for c in atts
     ]
     rec["transcriptFieldExists"] = has_transcript
+    rec["googleCalendarEventIdFieldExists"] = has_cal
     return rec
 
 
@@ -702,6 +727,8 @@ async def create_session(
     changes: dict[str, Any],
     attendees: Optional[list[str]] = None,
     owner_user_id: Optional[str] = None,
+    *,
+    settings: Optional[Any] = None,
 ) -> dict[str, Any]:
     """Create a ``CSession`` linked to ``parent_id`` and return it (with id).
 
@@ -729,14 +756,26 @@ async def create_session(
         created.get("id"), cfg.parent_entity, parent_id, payload.get("sessionType"),
         len(attendees or []),
     )
-    return await get_session(client, created["id"])
+    session = await get_session(client, created["id"])
+    if settings is not None and owner_user_id:
+        from sessions import gcal  # lazy — gcal imports this module
+
+        session["calendar"] = await gcal.sync_session_calendar(
+            settings, cfg, client, owner_user_id, session, changes,
+            attendees_changed=bool(attendees), is_new=True, parent_id=parent_id,
+        )
+    return session
 
 
 async def update_session(
+    cfg: DomainConfig,
     client: SessionClient,
     session_id: str,
     changes: dict[str, Any],
     attendees: Optional[list[str]] = None,
+    *,
+    user_id: Optional[str] = None,
+    settings: Optional[Any] = None,
 ) -> dict[str, Any]:
     """Update whitelisted fields on a session; sync attendees separately.
 
@@ -748,7 +787,15 @@ async def update_session(
         await client.update(SESSION, session_id, payload)
     if attendees is not None:
         await _sync_attendees(client, session_id, attendees)
-    return await get_session(client, session_id)
+    session = await get_session(client, session_id)
+    if settings is not None and user_id:
+        from sessions import gcal  # lazy — gcal imports this module
+
+        session["calendar"] = await gcal.sync_session_calendar(
+            settings, cfg, client, user_id, session, changes,
+            attendees_changed=(attendees is not None), is_new=False,
+        )
+    return session
 
 
 async def add_comentor(

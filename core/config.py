@@ -133,6 +133,17 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     summary_model: str = "claude-opus-4-8"
 
+    # --- Google Calendar events for sessions (sessions/gcal.py). When on, saving
+    # a Scheduled session in the session tools creates/updates a Google Calendar
+    # event on the manager's OWN calendar (delegated as their cbmEmail), with a
+    # Google Meet link written back to CSession.videoMeetingLink and the
+    # attendees invited (Google emails the invitations). Also needs: the shared
+    # service account (above / Email Setup) with the calendar.events scope
+    # authorized for delegation, AND the CSession.googleCalendarEventId CRM field
+    # (csession-calendar-field.md) — the hook feature-detects the field and stays
+    # inert until it exists. Off => the hook is a silent no-op.
+    gcal_events: bool = False
+
     # --- Encrypted runtime config (core/app_config.py) ---
     # Fernet key (urlsafe base64, 32 bytes) used to encrypt secrets stored in the
     # app_config table — currently the Google service-account credentials set via
