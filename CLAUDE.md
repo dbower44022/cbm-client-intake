@@ -797,9 +797,26 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   Note: crm-test seed sessions carry out-of-enum `sessionType` values (harmless; a
   data-hygiene cleanup). **UI polish is the next work item** (a follow-up session).
 
-## Current status (updated 2026-07-12)
+## Current status (updated 2026-07-13)
 
-**Main is at v0.39.1** (379 tests green, 4 new), **pushed and DEPLOYED**
+**Main is at v0.39.2** (379 tests green; NOT yet pushed) — **session
+timezone fix** (Doug's live report: Google Calendar meetings created for
+sessions didn't match the app's time). Root cause: the app creates no
+calendar events — **EspoCRM's server-side Google Calendar sync** does, from
+`CSession.dateStart`/`dateEnd`, and the EspoCRM API treats datetimes as
+**UTC** — but the sessions frontend sent/displayed local wall-clock digits
+verbatim (3:30 PM Cleveland stored as 3:30 UTC → calendar event 4–5h off).
+Fix is frontend-only (`sessions/frontend/app.js`): `parseNaive` parses
+stamps as UTC (date-only values stay local calendar dates — no day shift),
+`toLocalInput`/`fromLocalInput` convert the datetime-local editor value
+local ↔ UTC, `stampPlusSeconds` emits UTC for the derived `dateEnd`,
+`fmtWhen` displays local. Backend untouched (it already assumed UTC —
+`_next_session` now actually correct). **Pre-fix sessions stored local
+digits as UTC and stay offset until manually re-saved** (Doug's ruling: no
+backfill — a script can't distinguish app-created sessions from ones
+entered correctly via the CRM UI). Ops note: set EspoCRM default/user
+timezone to America/New_York so the CRM UI display matches too. Before
+that: **v0.39.1** (379 tests green, 4 new), **pushed and DEPLOYED**
 (prod + crm-test; `/healthz` verified at 0.39.1 on both, 2026-07-13) —
 **Details-tab contact removal (v0.39.0)**: two-step-confirm Remove on every
 client-contact and co-mentor row (relation detach only; assigned Mentor row

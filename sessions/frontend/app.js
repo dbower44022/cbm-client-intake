@@ -372,7 +372,17 @@
   }
 
   function fmtDate(v) { return v ? String(v).slice(0, 10) : "—"; }
-  function fmtWhen(v) { return v ? String(v).slice(0, 16).replace("T", " ") : "—"; }
+  // Stored UTC stamp → "YYYY-MM-DD HH:MM" in the viewer's local time; a value
+  // without a time component (date-only) is shown as-is.
+  function fmtWhen(v) {
+    if (!v) return "—";
+    var s = String(v);
+    if (!/[T ]\d{2}:\d{2}/.test(s)) return s.slice(0, 16).replace("T", " ");
+    var d = parseNaive(s);
+    if (!d) return s.slice(0, 16).replace("T", " ");
+    return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()) +
+           " " + pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+  }
   // US display phone "(216)-555-1234" via the shared formatter
   // (/shared/phone-format.js); edit inputs and tel: hrefs keep the raw value.
   function fmtPhone(v) {
@@ -682,12 +692,17 @@
     if (s === "noshow") return "noshow";
     return "other";
   }
-  // Parse the CRM's "YYYY-MM-DD HH:MM:SS" as wall-clock (no tz shift — the app
-  // shows/sends times as-is, matching the editor).
+  // Parse the CRM's "YYYY-MM-DD HH:MM:SS" as UTC (EspoCRM's API speaks UTC),
+  // so the resulting Date renders in the viewer's local timezone — keeping the
+  // app, the EspoCRM UI, and calendar events synced from the CRM in agreement.
+  // A date-only "YYYY-MM-DD" stays a local calendar date (no day shift).
+  function pad2(n) { return (n < 10 ? "0" : "") + n; }
   function parseNaive(v) {
     if (!v) return null;
     var m = String(v).replace("T", " ").match(/^(\d{4})-(\d{2})-(\d{2})(?:[ ](\d{2}):(\d{2}))?/);
-    return m ? new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0)) : null;
+    if (!m) return null;
+    if (m[4] == null) return new Date(+m[1], +m[2] - 1, +m[3]);
+    return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]));
   }
   function isFutureSession(s) {
     if (statusClass(s.status) !== "scheduled") return false;
@@ -715,14 +730,14 @@
     if (h) return h + (h === 1 ? " hour" : " hours");
     return m + " min";
   }
-  // "YYYY-MM-DD HH:MM:SS" + seconds → same format (wall-clock, no tz shift).
+  // "YYYY-MM-DD HH:MM:SS" (UTC) + seconds → same format, still UTC (the result
+  // goes back to the CRM as dateEnd).
   function stampPlusSeconds(stamp, secs) {
     var d = parseNaive(stamp);
     if (!d) return null;
     d = new Date(d.getTime() + secs * 1000);
-    function p(n) { return (n < 10 ? "0" : "") + n; }
-    return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) +
-           " " + p(d.getHours()) + ":" + p(d.getMinutes()) + ":00";
+    return d.getUTCFullYear() + "-" + pad2(d.getUTCMonth() + 1) + "-" + pad2(d.getUTCDate()) +
+           " " + pad2(d.getUTCHours()) + ":" + pad2(d.getUTCMinutes()) + ":00";
   }
 
   // "Weekday, Month D — h:mm AM/PM"; year appended only when not the current year.
@@ -2690,10 +2705,22 @@
     wrap.appendChild(label); wrap.appendChild(input); return wrap;
   }
 
-  // datetime helpers: CRM stores "YYYY-MM-DD HH:MM:SS" (UTC); the datetime-local
-  // input wants "YYYY-MM-DDTHH:MM". Times are shown/sent as-is (no tz shift).
-  function toLocalInput(v) { return v ? String(v).replace(" ", "T").slice(0, 16) : ""; }
-  function fromLocalInput(v) { return v ? v.replace("T", " ") + ":00" : null; }
+  // datetime helpers: the CRM stores "YYYY-MM-DD HH:MM:SS" in UTC; the
+  // datetime-local input speaks the viewer's local wall clock. Convert both
+  // ways so the stored instant — not the raw digits — is what round-trips.
+  function toLocalInput(v) {
+    var d = parseNaive(v);
+    if (!d) return "";
+    return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()) +
+           "T" + pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+  }
+  function fromLocalInput(v) {
+    var m = v ? v.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/) : null;
+    if (!m) return null;
+    var d = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+    return d.getUTCFullYear() + "-" + pad2(d.getUTCMonth() + 1) + "-" + pad2(d.getUTCDate()) +
+           " " + pad2(d.getUTCHours()) + ":" + pad2(d.getUTCMinutes()) + ":00";
+  }
 
   function makeInput(f, value) {
     var el;

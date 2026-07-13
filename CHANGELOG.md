@@ -4,6 +4,30 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.39.2] — 2026-07-13
+
+### Fixed
+- **Session times now convert between the viewer's timezone and UTC** (live
+  report: Google Calendar meetings didn't match the time shown in the app).
+  The app itself creates no calendar events — EspoCRM's server-side Google
+  Calendar sync does, from the `CSession.dateStart`/`dateEnd` the app writes,
+  and the EspoCRM API treats those datetimes as **UTC**. The sessions frontend
+  was sending the user's local wall-clock digits verbatim (and displaying
+  stored digits verbatim), so a session entered as 3:30 PM Cleveland was
+  stored as 3:30 UTC and the synced calendar event landed hours off. The
+  frontend datetime boundary now converts both ways
+  (`sessions/frontend/app.js`: `parseNaive` parses stamps as UTC,
+  `fromLocalInput`/`toLocalInput` convert the datetime-local editor value
+  local ↔ UTC, `stampPlusSeconds` emits UTC for the derived `dateEnd`,
+  `fmtWhen` displays local) — the app, the EspoCRM UI, and Google Calendar
+  now agree, each rendering in the viewer's own timezone. Date-only values
+  (e.g. `formationDate`) still parse as local calendar dates, so they don't
+  shift a day. Backend unchanged (it already assumed CRM datetimes are UTC).
+  **Note:** sessions saved *before* this fix stored local digits as UTC and
+  remain offset until manually re-saved with the correct time (Doug's ruling —
+  no backfill, since a script can't distinguish app-created sessions from
+  ones entered correctly via the CRM UI).
+
 ## [0.39.1] — 2026-07-13
 
 ### Fixed
