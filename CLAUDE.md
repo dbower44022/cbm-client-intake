@@ -799,16 +799,22 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-12)
 
-**Main is at v0.39.0** (379 tests green, 4 new), **pushed and DEPLOYED**
-(prod + crm-test; `/healthz` verified at 0.39.0 on both, 2026-07-13) —
-**Details-tab contact removal**: two-step-confirm Remove on every
+**Main is at v0.39.1** (379 tests green, 4 new), **pushed and DEPLOYED**
+(prod + crm-test; `/healthz` verified at 0.39.1 on both, 2026-07-13) —
+**Details-tab contact removal (v0.39.0)**: two-step-confirm Remove on every
 client-contact and co-mentor row (relation detach only; assigned Mentor row
 excluded; gated on parent-record editability), completing the add/remove pair
 for both tables. New `DELETE /records/{id}/contacts/{contactId}` +
-`/comentors/{profileId}` endpoints; verified in the stub-harness browser loop
-(remove client contact + co-mentor end-to-end, Mentor row shows no Remove) —
-the remove flow is NOT yet exercised against the live CRM. Details in the
-Session Management **Details** bullet above + CHANGELOG. Before that: **v0.38.2** (375 tests green), pushed and
+`/comentors/{profileId}` endpoints. **v0.39.1 fixed Doug's live report "CBM
++ Add is broken"** — a `repaintDetails` key collision (any key starting with
+"c" was treated as a client-row key, and `cbmContacts` starts with "c", so
+the CBM card never repainted and its + Add menu never opened; latent since
+the v0.33.0 Details rebuild). **CBM add + remove VERIFIED LIVE on crm-test
+2026-07-13** (as the signed-in admin, in-browser): + Add → 42-mentor picker →
+Brad Swimmer added to the Agape engagement → two-step Remove → row gone —
+clean round-trip, no residue. Client-contact remove not separately driven
+live (same unrelate-on-parent machinery). Details in the Session Management
+**Details** bullet above + CHANGELOG. Before that: **v0.38.2** (375 tests green), pushed and
 DEPLOYED (prod + crm-test; `/healthz` verified at 0.38.1 on both, 0.38.2
 pending push at the time of that update — check `/healthz`). The 2026-07-11..12 work — comms
 activation + live fixes (v0.35.x–0.36.x), session-view design rulings
