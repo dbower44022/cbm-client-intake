@@ -585,7 +585,15 @@ segment of its own URL). Mounted only when `assignments_active` (needs
     *Create new* (full contact form; `POST /records/{id}/contacts` creates +
     links in one compound write, company stamped at create); CBM + Add = pick an
     existing mentor profile (via `additionalMentors`; new CBM people are
-    onboarded through `/mentoradmin`, so no create-new there). Fields are read
+    onboarded through `/mentoradmin`, so no create-new there). **Remove
+    (v0.39.0):** every client-contact row and every co-mentor row gets a
+    two-step-confirm Remove ("Remove" → "Really remove?") that detaches the
+    relation only — `DELETE /records/{id}/contacts/{contactId}` /
+    `DELETE /records/{id}/comentors/{profileId}` (mentor-only, like the add);
+    the contact/profile record stays in the CRM. The assigned Mentor row is
+    never removable (that link is Client Administration's); Remove shows only
+    when the user can edit the PARENT record (the unrelate is a parent write —
+    gated on the parent section's per-record `editable`). Fields are read
     **live from CRM metadata** (filtered to editable scalars; humanized labels —
     `cBMValueProvided` → "CBM Value Provided"); view hides empties/"No" (except
     meaningful negatives), edit exposes every editable field.
@@ -791,9 +799,17 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-12)
 
-**Main is at v0.38.2** (375 tests green), **pushed and DEPLOYED** (prod +
-crm-test; `/healthz` verified at 0.38.1 on both, 0.38.2 pending push at the
-time of this update — check `/healthz`). The 2026-07-11..12 work — comms
+**Main is at v0.39.0** (379 tests green, 4 new), **committed, NOT yet pushed**
+— **Details-tab contact removal**: two-step-confirm Remove on every
+client-contact and co-mentor row (relation detach only; assigned Mentor row
+excluded; gated on parent-record editability), completing the add/remove pair
+for both tables. New `DELETE /records/{id}/contacts/{contactId}` +
+`/comentors/{profileId}` endpoints; verified in the stub-harness browser loop
+(remove client contact + co-mentor end-to-end, Mentor row shows no Remove) —
+NOT yet driven live. Details in the Session Management **Details** bullet
+above + CHANGELOG. Before that: **v0.38.2** (375 tests green), pushed and
+DEPLOYED (prod + crm-test; `/healthz` verified at 0.38.1 on both, 0.38.2
+pending push at the time of that update — check `/healthz`). The 2026-07-11..12 work — comms
 activation + live fixes (v0.35.x–0.36.x), session-view design rulings
 (v0.37.x, a parallel session), the dedicated record page (v0.38.0), the
 intake-engagement company-link fix (v0.38.1), and the Overview Assigned-mentor

@@ -564,6 +564,22 @@ async def test_link_contact_never_overwrites_existing_company():
 
 
 @pytest.mark.asyncio
+async def test_unlink_contact_unrelates_only():
+    # remove = the relation only; the Contact record itself is never touched
+    fake = Fake()
+    await details.unlink_contact(MENTOR, fake, "E1", "c9")
+    assert fake.unrelates == [("CEngagement", "E1", "engagementContacts", "c9")]
+    assert fake.updates == []
+
+
+@pytest.mark.asyncio
+async def test_unlink_contact_uses_each_domains_link():
+    fake = Fake()
+    await details.unlink_contact(PARTNER, fake, "P1", "c9")
+    assert fake.unrelates == [("CPartnerProfile", "P1", "contacts", "c9")]
+
+
+@pytest.mark.asyncio
 async def test_create_contact_whitelists_stamps_company_and_links():
     fake = Fake(
         records={("CEngagement", "E1"): {"clientOrganizationId": "acct1"}},
@@ -761,6 +777,13 @@ async def test_add_comentor_relates():
 
 
 @pytest.mark.asyncio
+async def test_remove_comentor_unrelates():
+    fake = Fake()
+    await service.remove_comentor(fake, "E1", "m2")
+    assert fake.unrelates == [("CEngagement", "E1", "additionalMentors", "m2")]
+
+
+@pytest.mark.asyncio
 async def test_field_options_reads_live_enums_and_drops_blank():
     fake = Fake(meta_fields={
         "status": {"type": "enum", "options": ["Planned", "Held", "Not Held"]},
@@ -924,10 +947,35 @@ def test_contact_search_and_add_endpoints(monkeypatch):
         assert created == [("mentorsessions", "E1", {"lastName": "K"})]
 
 
+def test_remove_contact_and_comentor_endpoints(monkeypatch):
+    _as(monkeypatch, _USER)
+    unlinked, removed = [], []
+
+    async def fake_unlink(cfg, client, parent_id, contact_id):
+        unlinked.append((cfg.slug, parent_id, contact_id))
+
+    async def fake_remove(client, engagement_id, mentor_profile_id):
+        removed.append((engagement_id, mentor_profile_id))
+
+    monkeypatch.setattr("sessions.details.unlink_contact", fake_unlink)
+    monkeypatch.setattr("sessions.service.remove_comentor", fake_remove)
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.delete("/mentorsessions/api/records/E1/contacts/c9")
+        assert r.status_code == 200 and unlinked == [("mentorsessions", "E1", "c9")]
+        r = c.delete("/mentorsessions/api/records/E1/comentors/m2")
+        assert r.status_code == 200 and removed == [("E1", "m2")]
+        # co-mentor removal is mentor-only, like the add (no partner route; the
+        # unmatched DELETE falls through to the static mount, hence 405 not 404)
+        assert c.delete("/partnersessions/api/records/P1/comentors/m2").status_code in (404, 405)
+        assert removed == [("E1", "m2")]  # nothing extra was removed
+
+
 def test_contact_endpoints_require_auth(monkeypatch):
     with TestClient(_app(monkeypatch)) as c:
         assert c.get("/mentorsessions/api/contacts?q=x").status_code == 401
         assert c.post("/mentorsessions/api/records/E1/contacts", json={"contactId": "c1"}).status_code == 401
+        assert c.delete("/mentorsessions/api/records/E1/contacts/c1").status_code == 401
+        assert c.delete("/mentorsessions/api/records/E1/comentors/m1").status_code == 401
 
 
 def test_expired_token_returns_401(monkeypatch):

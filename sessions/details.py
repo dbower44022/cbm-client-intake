@@ -381,6 +381,13 @@ async def link_contact(cfg: DomainConfig, client: SessionClient, parent_id: str,
     await _backfill_company(cfg, client, parent_id, contact_id)
 
 
+async def unlink_contact(cfg: DomainConfig, client: SessionClient, parent_id: str, contact_id: str) -> None:
+    """Detach a contact from this record — the reverse of :func:`link_contact`.
+    Removes the relation only: the Contact record itself (and any company
+    affiliation the link flow backfilled) is never touched."""
+    await client.unrelate(cfg.parent_entity, parent_id, cfg.parent_contacts_link, contact_id)
+
+
 async def create_contact(cfg: DomainConfig, client: SessionClient, parent_id: str, changes: dict[str, Any]) -> dict[str, Any]:
     """Create a NEW contact and link it to this record in one operation.
 

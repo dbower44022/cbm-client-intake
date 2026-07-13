@@ -1870,6 +1870,12 @@
         e.addEventListener("click", function () { detailsEditSet[editKey] = true; repaintDetails(editKey); });
         act.appendChild(e);
       }
+      // Remove = an unrelate on the PARENT record, so it's gated on the parent's
+      // editability (not the contact's). The assigned Mentor row is never
+      // removable here — that link is managed in Client Administration.
+      var removable = parentEditable() && !detailsEditSet[editKey] &&
+        (isClient ? !!(sec && sec.id) : item.role !== "Mentor" && !!item.profileId);
+      if (removable) act.appendChild(removeContactBtn(item, sec, isClient));
       tr.appendChild(act);
       tb.appendChild(tr);
       if (detailsEditSet[editKey] && sec) {
@@ -1921,6 +1927,43 @@
     var pending = CONTACT_AGREEMENTS.filter(function (n) { return vals[n] !== true; }).length;
     td.appendChild(pending === 0 ? badgeEl("sxd__badge-ok", "Complete") : badgeEl("sxd__badge-warn", pending + " pending"));
     return td;
+  }
+
+  // Whether the signed-in user can edit the parent record itself (its details
+  // section carries the per-record ACL verdict) — gates row removal, which is a
+  // relation write on the parent.
+  function parentEditable() {
+    var secs = (currentDetails && currentDetails.sections) || [];
+    for (var i = 0; i < secs.length; i++) {
+      if (secs[i].kind === "parent") return !!secs[i].editable;
+    }
+    return false;
+  }
+
+  // Two-step "Remove" (no browser confirm dialogs — same pattern as the
+  // Communications "Not related" button). Unlinks the relation only: the
+  // contact / mentor profile record itself stays in the CRM.
+  function removeContactBtn(item, sec, isClient) {
+    var btn = document.createElement("button"); btn.type = "button";
+    btn.className = "sxd__rowedit sxd__rowremove"; btn.textContent = "Remove";
+    var armed = false;
+    btn.addEventListener("click", async function () {
+      if (!armed) { armed = true; btn.textContent = "Really remove?"; return; }
+      btn.disabled = true;
+      var path = isClient
+        ? "/records/" + encodeURIComponent(currentDetail.id) + "/contacts/" + encodeURIComponent(sec.id)
+        : "/records/" + encodeURIComponent(currentDetail.id) + "/comentors/" + encodeURIComponent(item.profileId);
+      try {
+        await api(path, { method: "DELETE" });
+        await loadDetails(currentDetail.id);
+        notice("detailsNotice", isClient ? "Contact removed from this record." : "CBM contact removed.", "success");
+      } catch (e) {
+        if (e.status === 401) { showLogin(); return; }
+        btn.disabled = false; armed = false; btn.textContent = "Remove";
+        notice("detailsNotice", e.message, "error");
+      }
+    });
+    return btn;
   }
 
   // === + Add flows ============================================================

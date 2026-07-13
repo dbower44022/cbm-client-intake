@@ -4,6 +4,23 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.39.0] — 2026-07-12
+
+### Added
+- **Session tools Details tab: contacts can now be removed.** Every Client
+  Contacts row and every co-mentor row in CBM Contacts gets a **Remove** action
+  (two-step inline confirm — "Remove" → "Really remove?" — no browser dialogs).
+  Removal detaches the relation only (`engagementContacts`/`contacts`/
+  `sponsorContacts`, or `additionalMentors` for co-mentors): the contact /
+  mentor profile record itself stays in the CRM. The **assigned Mentor row is
+  not removable** — that link is managed in Client Administration. Remove is
+  shown only when the signed-in user can edit the parent record (the unrelate
+  is a parent-relation write), and is hidden while the row's edit form is open.
+  New endpoints: `DELETE /{slug}/api/records/{id}/contacts/{contactId}` and
+  (mentor domain) `DELETE /{slug}/api/records/{id}/comentors/{profileId}`.
+  Add flows (select existing / create new / pick CBM contact) already existed
+  (v0.33.0); this completes the add/remove pair.
+
 ## [0.38.2] — 2026-07-12
 
 ### Added

@@ -758,6 +758,15 @@ async def add_comentor(
     await client.relate(ENGAGEMENT, engagement_id, _COMENTOR_LINK, mentor_profile_id)
 
 
+async def remove_comentor(
+    client: SessionClient, engagement_id: str, mentor_profile_id: str
+) -> None:
+    """Detach a co-mentor from an engagement — the reverse of :func:`add_comentor`.
+    Only the ``additionalMentors`` relation: the assigned mentor
+    (``CEngagement.mentorProfile``) is managed in Client Administration, not here."""
+    await client.unrelate(ENGAGEMENT, engagement_id, _COMENTOR_LINK, mentor_profile_id)
+
+
 async def mentor_options(client: SessionClient) -> list[dict[str, Any]]:
     """id/name of mentor profiles, for the co-mentor picker (mentor domain)."""
     data = await client.list(MENTOR_PROFILE, select="name", max_size=_PAGE, order_by="name")

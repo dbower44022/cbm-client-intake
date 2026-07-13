@@ -253,6 +253,18 @@ def make_router(cfg: DomainConfig) -> APIRouter:
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not add the contact")
 
+    @router.delete("/records/{parent_id}/contacts/{contact_id}")
+    async def remove_contact(parent_id: str, contact_id: str, request: Request) -> dict:
+        """Detach a contact from this record (removes the link only — the contact
+        record itself stays in the CRM)."""
+        user = _require_user(request)
+        client = client_for(get_settings(), user)
+        try:
+            await details_svc.unlink_contact(cfg, client, parent_id, contact_id)
+            return {"status": "ok"}
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not remove the contact")
+
     @router.get("/peek/{entity}/{record_id}")
     async def peek(entity: str, record_id: str, request: Request) -> dict:
         """Pop-up detail for a linked contact / company / client on the Overview."""
@@ -317,6 +329,20 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 return {"status": "ok"}
             except EspoError as exc:
                 raise _crm_failure(request, exc, "Could not add co-mentor")
+
+        @router.delete("/records/{parent_id}/comentors/{mentor_profile_id}")
+        async def remove_comentor(
+            parent_id: str, mentor_profile_id: str, request: Request
+        ) -> dict:
+            """Detach a co-mentor (the additionalMentors relation only — the
+            assigned mentor is managed in Client Administration)."""
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            try:
+                await service.remove_comentor(client, parent_id, mentor_profile_id)
+                return {"status": "ok"}
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not remove the co-mentor")
 
     # --- Communications tab (Gmail conversation integration) -----------------
     # Everything below 503s unless GMAIL_SYNC is enabled; the frontend keeps
