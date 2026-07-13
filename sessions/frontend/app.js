@@ -1460,8 +1460,11 @@
   // its table); an unknown/missing key falls back to a full re-render.
   function repaintDetails(key) {
     if (!currentDetails) return;
-    if (key.charAt(0) === "c" && key !== "clientContacts") key = "clientContacts";
-    if (key.charAt(0) === "b") key = "cbmContacts";
+    // Row edit keys are "c<idx>" / "b<idx>" — match exactly, since the card key
+    // "cbmContacts" also starts with "c" (mapping it to clientContacts left the
+    // CBM card unrepainted, so its + Add menu never opened).
+    if (/^c\d+$/.test(key)) key = "clientContacts";
+    if (/^b\d+$/.test(key)) key = "cbmContacts";
     var host = $("detailsSections");
     var el = host.querySelector('[data-dkey="' + key + '"]');
     var next = buildDetailsKey(key);

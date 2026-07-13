@@ -4,6 +4,17 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.39.1] — 2026-07-13
+
+### Fixed
+- **CBM Contacts "+ Add" never opened its menu** (Details tab, live report).
+  `repaintDetails` mapped any key starting with "c" to the Client Contacts
+  card — and the CBM card's own key `cbmContacts` starts with "c", so every
+  CBM-card repaint redrew the client card instead and the + Add menu (and the
+  pick-a-mentor panel) never appeared. Row-edit keys (`c0…`/`b0…`) are now
+  matched exactly. Verified in the stub harness: CBM + Add → menu → picker
+  loads; client/CBM row Edit still expand.
+
 ## [0.39.0] — 2026-07-12
 
 ### Added
