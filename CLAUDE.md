@@ -826,8 +826,21 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-13)
 
-**Main is at v0.40.0** (407 tests green, 28 new), **pushed and DEPLOYED
-2026-07-13** (`/healthz` = 0.40.0 verified on crm-test AND prod) —
+**Main is at v0.40.1** (407 tests green), **pushed and DEPLOYED 2026-07-13**
+(`/healthz` = 0.40.1 verified on crm-test AND prod) — **the calendar
+integration is ACTIVATED and VERIFIED LIVE on crm-test**: Doug created a
+Scheduled session and the Google Calendar event was created end-to-end
+(so the CRM field `googleCalendarEventId` IS built on crm-test), and after
+v0.40.1 he confirmed the Meet link renders + works in the UI. **v0.40.1**
+made the meeting link **visible + copyable** (his follow-up report: it only
+existed behind the Start Session button): a truncating clickable URL with a
+⧉ copy button in the Overview Next-session callout and a "Meeting link" row
+in the session view's facts grid (`linkWithCopy`, `addKV` type `copylink`).
+**Still to drive live:** the edit→patch and Cancel→cancel event paths, and
+attendee-invitation delivery. **Prod activation remains:** build
+`googleCalendarEventId` on the prod CRM + set `GCAL_EVENTS=true` in
+`.do/app.prod-crm.yaml` (prod has the 0.40.1 code, hook inert until then).
+Base feature (v0.40.0):
 **sessions create Google Calendar events + Meet links** (gated by
 `GCAL_EVENTS`; see the "Google Calendar events" bullet in the Session
 Management section, `csession-calendar-field.md` for the CRM field build,
