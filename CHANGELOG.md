@@ -4,6 +4,33 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.43.0] — 2026-07-14
+
+### Added
+- **Client Administration: click-to-edit Notes column** on the engagements grid
+  (new leftmost column). Clicking a cell opens an inline editor (Save / Cancel,
+  Escape cancels); notes are stored in **`CEngagement.description`** via the new
+  `PUT /assignments/api/engagements/{id}/notes` endpoint
+  (`service.update_engagement_notes`), written as the signed-in user. These are
+  staff-internal process notes about the assignment: `description` is surfaced
+  in no other user interface — the session tools' metadata-driven Details tab
+  now explicitly excludes it for CEngagement (`sessions/details.py`
+  `_ENTITY_EXCLUDED`), on both render and save. Note: the intake orchestrator's
+  enum-drift follow-up note also lands in `description`, so it shows in the
+  Notes column — by design (it is exactly triage material); editing the cell
+  replaces it.
+
+## [0.43.0] — 2026-07-14
+
+### Added
+- **My Mentor Profile release marker** — first deploy of the `/mentorprofile`
+  tool (v0.42.0 + v0.42.1 below). `CMentorProfile.mentorSummary` was built on
+  crm-test (Text, verified live 2026-07-14), so the feature-gated summary box
+  activates there on this deploy. Prod still lacks
+  `mentorTitle`/`profilePhoto`/`mentorSummary` — the tool deploys inert-ish
+  there (summary box hidden by the gate; headline/photo need the prod field
+  build per `cmentorprofile-summary-field.md` + CLAUDE.md).
+
 ## [0.42.1] — 2026-07-14
 
 ### Changed
