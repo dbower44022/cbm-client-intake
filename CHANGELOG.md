@@ -4,6 +4,22 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.41.1] — 2026-07-14
+
+### Changed
+- **Edit-form density pass** (Doug's review of 0.41.0): forms cap at 1080px
+  wide, so a span-8 street field is ~40 characters instead of 100+; tighter
+  group/row rhythm. **Billing and shipping addresses sit side by side** on one
+  panel (billing left, shipping right, each with its own heading) — half the
+  vertical space; the Contact address block is half-width too. **Country now
+  lives inside the address block** (it was orphaned in Additional details).
+  Company Identity groups all three industry fields on one row (Industry |
+  Industry sector | Industry subsector — subsector was stranded at the bottom)
+  and gains Email address. "Same as billing" now restores the original
+  shipping values when unchecked (checking still copies billing over them).
+- LinkedIn field labels render as "LinkedIn …" — the label generator no
+  longer splits the brand into "Linked In" (`sessions/details.py:_label`).
+
 ## [0.41.0] — 2026-07-13
 
 ### Added

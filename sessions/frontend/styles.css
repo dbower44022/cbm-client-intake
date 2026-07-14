@@ -640,3 +640,14 @@ textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
 .sx__tp-foot span { font-size: 12px; color: #77828f; }
 .sx__tp-foot input { width: 92px; padding: 5px 7px; font-size: 12.5px; }
 .sx__tp-foot input.sx__tp-bad { border-color: #a33c2f; outline: 1px solid #a33c2f; }
+
+/* Density pass (Doug's 2026-07-14 feedback): cap the form width so a span-8
+   street field is ~40 characters, not 100+; address blocks sit side by side
+   with their own headings; tighter group rhythm. */
+.sxf { max-width: 1080px; }
+.sxf__group { margin-bottom: 0.9rem; }
+.sxf__grid { gap: 10px 16px; }
+.sxf__sublabel {
+  font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #77828f;
+  font-weight: 700; border-bottom: 1px solid #dfe3e8; padding-bottom: 5px; margin-bottom: 12px;
+}

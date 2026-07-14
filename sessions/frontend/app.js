@@ -1525,11 +1525,15 @@
     Account: { groups: [
       { label: "Identity", rows: [
         [{ name: "name", span: 6, label: "Company name" }, { name: "website", span: 3 }, { name: "phoneNumber", span: 3 }],
-        [{ name: "cOrganizationType", span: 3 }, { name: "cBusinessStage", span: 3 },
-         { name: "industry", span: 3 }, { name: "cIndustrySector", span: 3 }],
+        [{ name: "cOrganizationType", span: 3 }, { name: "cBusinessStage", span: 3 }, { name: "emailAddress", span: 6 }],
+        [{ name: "industry", span: 4 }, { name: "cIndustrySector", span: 4 }, { name: "cIndustrySubsector", span: 4 }],
       ] },
-      { label: "Billing address", rows: [[{ addr: "billingAddress" }]] },
-      { label: "Shipping address", rows: [[{ addr: "shippingAddress", sameAs: "billingAddress" }]] },
+      // Billing left, shipping right — one panel, half the vertical space. The
+      // per-block titles act as the group headings.
+      { rows: [
+        [{ addr: "billingAddress", span: 6, title: "Billing address" },
+         { addr: "shippingAddress", span: 6, title: "Shipping address", sameAs: "billingAddress" }],
+      ] },
     ] },
     CClientProfile: { groups: [
       { label: "Business structure", rows: [
@@ -1563,7 +1567,7 @@
       { label: "Contact information", rows: [
         [{ name: "emailAddress", span: 6 }, { name: "phoneNumber", span: 3 }, { name: "cContactType", span: 3 }],
       ] },
-      { label: "Address", rows: [[{ addr: "address" }]] },
+      { label: "Address", rows: [[{ addr: "address", span: 6 }]] },
       { label: "Preferences & agreements", rows: [
         [{ name: "cPreferredContactMethod", span: 4 }, { name: "cNotificationPreference", span: 4 }, { name: "doNotCall", span: 4 }],
         [{ checks: [{ name: "cMarketingOptIn", label: "Marketing opt-in" },
@@ -1657,7 +1661,7 @@
             });
             el = box.childNodes.length ? box : null;
           } else if (cell.addr) {
-            el = addressBlock(byName, used, cell.addr, cell.sameAs);
+            el = addressBlock(byName, used, cell.addr, cell.sameAs, cell.span, cell.title);
           } else if (cell.ro) {
             var v = dv(sec, cell.ro);
             if (v) {
@@ -1718,10 +1722,14 @@
     "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT",
     "VA", "WA", "WV", "WI", "WY"];
 
-  function addressBlock(byName, used, prefix, sameAs) {
-    ["Street", "City", "State", "PostalCode"].forEach(function (s) { used[prefix + s] = 1; });
+  function addressBlock(byName, used, prefix, sameAs, span, title) {
+    ["Street", "City", "State", "PostalCode", "Country"].forEach(function (s) { used[prefix + s] = 1; });
     if (!byName[prefix + "Street"] && !byName[prefix + "City"]) return null;  // entity has no such address
-    var outer = document.createElement("div"); outer.className = "sxf__c12";
+    var outer = document.createElement("div"); outer.className = "sxf__c" + (span || 12);
+    if (title) {
+      var tl = document.createElement("div"); tl.className = "sxf__sublabel"; tl.textContent = title;
+      outer.appendChild(tl);
+    }
     var block = document.createElement("div"); block.className = "sxf__grid sxf__addr";
 
     function labeled(label, input, span) {
@@ -1760,25 +1768,29 @@
     });
     state.value = String((byName[prefix + "State"] || {}).value || "");
     var zip = plain("PostalCode", "ZIP", 4, function () { var i = document.createElement("input"); i.type = "text"; return i; });
+    // Country belongs with the rest of the address, not off in Additional details.
+    var country = byName[prefix + "Country"]
+      ? plain("Country", "Country", 6, function () { var i = document.createElement("input"); i.type = "text"; return i; })
+      : null;
 
     if (sameAs) {
       var same = document.createElement("label"); same.className = "sxf__same";
       var cb = document.createElement("input"); cb.type = "checkbox";
       same.appendChild(cb); same.appendChild(document.createTextNode(" Same as billing address"));
       outer.appendChild(same);
-      var mine = { a1: a1, a2: a2, city: city, state: state, zip: zip };
+      var mine = { City: city, State: state, PostalCode: zip, Country: country };
       function mirror() {
         if (!cb.checked) return;
         var form = outer.closest(".sxf"); if (!form) return;
         var bs = form.querySelector('[data-field="' + sameAs + 'Street"]');
         if (bs) {
-          mine.a1.value = bs.querySelector(".sxf__a1").value;
-          mine.a2.value = bs.parentNode.querySelector(".sxf__a2").value;
+          a1.value = bs.querySelector(".sxf__a1").value;
+          a2.value = bs.parentNode.querySelector(".sxf__a2").value;
         }
-        ["City", "State", "PostalCode"].forEach(function (s) {
+        ["City", "State", "PostalCode", "Country"].forEach(function (s) {
           var src = form.querySelector('[data-field="' + sameAs + s + '"]');
-          var dst = s === "City" ? mine.city : s === "State" ? mine.state : mine.zip;
-          if (!src) return;
+          var dst = mine[s];
+          if (!src || !dst) return;
           if (dst.tagName === "SELECT" && src.value &&
               !Array.prototype.some.call(dst.options, function (o) { return o.value === src.value; })) {
             dst.appendChild(new Option(src.value, src.value));
@@ -1788,9 +1800,25 @@
       }
       function setDim(on) {
         block.classList.toggle("sxf__dim", on);
-        [a1, a2, city, state, zip].forEach(function (i) { i.disabled = on; });
+        [a1, a2, city, state, zip, country].forEach(function (i) { if (i) i.disabled = on; });
       }
-      cb.addEventListener("change", function () { setDim(cb.checked); mirror(); });
+      // Checking copies billing over the shipping inputs (the save then writes
+      // billing values); unchecking restores what was there before.
+      var stash = null;
+      cb.addEventListener("change", function () {
+        if (cb.checked) {
+          stash = { a1: a1.value, a2: a2.value, city: city.value, state: state.value,
+                    zip: zip.value, country: country ? country.value : "" };
+          setDim(true); mirror();
+        } else {
+          setDim(false);
+          if (stash) {
+            a1.value = stash.a1; a2.value = stash.a2; city.value = stash.city;
+            state.value = stash.state; zip.value = stash.zip;
+            if (country) country.value = stash.country;
+          }
+        }
+      });
       // Keep mirroring while checked when the billing fields are edited.
       setTimeout(function () {
         var form = outer.closest(".sxf"); if (!form) return;
@@ -1810,10 +1838,12 @@
           city: (form.querySelector('[data-field="' + sameAs + 'City"]') || {}).value || "",
           state: (form.querySelector('[data-field="' + sameAs + 'State"]') || {}).value || "",
           zip: (form.querySelector('[data-field="' + sameAs + 'PostalCode"]') || {}).value || "",
+          country: (form.querySelector('[data-field="' + sameAs + 'Country"]') || {}).value || "",
         };
         var svals = {
           street: (a1.value + "\n" + a2.value).replace(/\n$/, ""),
           city: city.value, state: state.value, zip: zip.value,
+          country: country ? country.value : "",
         };
         Object.keys(bvals).forEach(function (k) {
           if (bvals[k] || svals[k]) any = true;

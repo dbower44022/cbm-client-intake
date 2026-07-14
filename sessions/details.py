@@ -58,6 +58,7 @@ def _label(name: str) -> str:
         name = _PREFIX_C.sub("", name)
     s = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", name)
     s = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1 \2", s).strip()
+    s = s.replace("Linked In", "LinkedIn")  # brand name, not two words
     return (s[0].upper() + s[1:]) if s else name
 
 
