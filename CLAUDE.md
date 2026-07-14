@@ -975,7 +975,16 @@ app as PRIMARY, Cloudflare CNAME grey-cloud → the app's default hostname; the
   conversation shells from the bugged first pass were deleted via the admin
   account. Verified in the CRM: 3 conversations, 5 cleaned messages,
   References-merged threads, linked to the real engagement "Agape W8 Loss
-  2026-05-15", owner-stamped. Steady state: sync every 300s; the two fake
+  2026-05-15". (CORRECTION 2026-07-14: the "owner-stamped" claim here was
+  WRONG — the stamp fails silently everywhere the API role can't read Users
+  (`cannotRelateForbidden`; EspoCRM relate requires read on the foreign
+  record), and crm-test conversations have empty assignedUsers. Invisible
+  because the manager roles read CConversation at "all". Fix = grant the API
+  role **User: Read = all** (guide §2.4 Role 1 step 5, added), then a
+  one-shot `GMAIL_RESYNC=true` re-stamps on the idempotent replay — the
+  dedup path re-runs link_records + stamp_owners. Surfaced during the
+  2026-07-14 prod rollout; the grant + resync are still TODO on BOTH CRMs.)
+  Steady state: sync every 300s; the two fake
   test mailboxes (partner.manager@/matt.mentor@ have no real Workspace
   mailbox) log an expected invalid_grant warning each pass. **Non-contact-recipient design (v0.35.2, from Doug's scenario
   review):** thread-following ingest (replies to any stored conversation

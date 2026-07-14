@@ -240,7 +240,17 @@ writer):
    **Read = all**, **Edit = all**, **Delete = no**.
 4. Scroll to **Communication**: set **Access = enabled**, **Create = yes**,
    **Read = all**, **Edit = all**, **Delete = no**.
-5. Click **Save**.
+5. Scroll to **User**: set **Access = enabled**, **Read = all** (leave
+   Create/Edit/Delete = no). Without this, the sync's owner stamp — relating
+   the owning manager's User into the conversation's Assigned Users — fails
+   with `cannotRelateForbidden (User, read)`: EspoCRM requires the relating
+   user to be able to READ the record being related. The stamp is
+   best-effort (a WARNING per message, conversations still store), and with
+   the manager roles reading Conversation at "all" (below) visibility does
+   not depend on it — but any future move to read-own does, so grant it.
+   (Discovered live on the 2026-07-14 prod rollout; the crm-test build had
+   the same gap and its conversations are unstamped.)
+6. Click **Save**.
 
 **Role 2 of 4 — Mentor Role:**
 1. **Administration → Roles → Mentor Role → Edit**.
