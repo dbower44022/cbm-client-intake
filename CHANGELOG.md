@@ -8,7 +8,7 @@ deploy marker on App Platform.
 
 ### Added
 - **Client Administration: click-to-edit Notes column** on the engagements grid
-  (new leftmost column). Clicking a cell opens an inline editor (Save / Cancel,
+  (new rightmost column). Clicking a cell opens an inline editor (Save / Cancel,
   Escape cancels); notes are stored in **`CEngagement.description`** via the new
   `PUT /assignments/api/engagements/{id}/notes` endpoint
   (`service.update_engagement_notes`), written as the signed-in user. These are

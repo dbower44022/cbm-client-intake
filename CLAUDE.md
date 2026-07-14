@@ -940,8 +940,9 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 ## Current status (updated 2026-07-14)
 
 **Main is at v0.44.0** (442 tests green, committed NOT pushed) —
-**Client Administration gains a click-to-edit Notes column** (new leftmost
-column on the engagements grid): clicking a cell opens an inline editor
+**Client Administration gains a click-to-edit Notes column** (new RIGHTMOST
+column on the engagements grid — Doug corrected the initial leftmost
+placement): clicking a cell opens an inline editor
 (Save/Cancel, Escape cancels); notes store in **`CEngagement.description`**
 via `PUT /assignments/api/engagements/{id}/notes`
 (`assignments/service.update_engagement_notes`), written as the signed-in

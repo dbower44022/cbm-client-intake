@@ -238,8 +238,6 @@
     var tr = document.createElement("tr");
     tr.dataset.engId = eng.id;
 
-    tr.appendChild(buildNotesCell(eng));
-
     var tdEng = document.createElement("td");
     var name = document.createElement("button");
     name.type = "button";
@@ -271,6 +269,7 @@
       assigned.textContent = eng.mentorName || "Assigned";
       tdAssign.appendChild(assigned);
       tr.appendChild(tdAssign);
+      tr.appendChild(buildNotesCell(eng));
       return tr;
     }
 
@@ -304,6 +303,7 @@
     cell.appendChild(btn);
     tdAssign.appendChild(cell);
     tr.appendChild(tdAssign);
+    tr.appendChild(buildNotesCell(eng));
     return tr;
   }
 
