@@ -826,13 +826,18 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-13, later session)
 
-**Main is at v0.41.1** (407 tests green) — **v0.41.1 density pass** after
-Doug's live review of 0.41.0: forms cap at 1080px (span-8 street ≈ 40 chars,
-not 100+), billing/shipping addresses side by side on one panel, Country
-inside the address block (was orphaned in Additional details), the three
-industry fields on one Identity row, "Same as billing" restores the original
-shipping values on uncheck, and LinkedIn labels no longer split into
-"Linked In" (`details.py:_label`). Base feature — **v0.41.0 section edit
+**Main is at v0.41.2** (407 tests green) — density passes after Doug's live
+review of 0.41.0. **Doug's layout ruling (2026-07-14): NEVER cap the page
+width — users are on 4K monitors; density = more data per row on the full
+width, not a narrower page.** v0.41.2 implements that: edit-form fields are
+content-sized flex items that PACK (each `sxf__cN` class is a sensible width
+for its data; a line holds as many fields as fit — the 0.41.1 1080px
+max-width was rejected and removed). v0.41.1 (kept): billing/shipping
+addresses side by side on one panel, Country inside the address block (was
+orphaned in Additional details), the three industry fields together on one
+Identity row, "Same as billing" restores the original shipping values on
+uncheck (checking copies billing over), and LinkedIn labels no longer split
+into "Linked In" (`details.py:_label`). Base feature — **v0.41.0 section edit
 screens** (`prompts/section-edit-screens-prompt-v0.1.md`, design target
 `prompts/section-edit-screens-mockup-v2.html`): the session tools'
 Details-tab edit forms are now curated grouped 12-column layouts (Edit

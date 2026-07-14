@@ -579,27 +579,39 @@ textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
 .sx__attwrap { overflow-x: auto; }
 
 /* === Section edit screens (prompt v0.1 / mockup v2) ======================= */
-/* Grouped 12-column form grid; small uppercase group headings over hairline
-   rules; field widths set per cell (sxf__cN). Collapses to one column narrow. */
+/* Grouped forms; small uppercase group headings over hairline rules. Fields
+   are CONTENT-SIZED and PACK (flex wrap): each sxf__cN class is a sensible
+   width for that field's data, and a row holds as many fields as the screen
+   fits — high data density on wide/4K monitors (no page-width cap, Doug's
+   2026-07-14 ruling), graceful wrap on laptops. */
 .sxf { padding: 1rem 1.15rem 0; }
-.sxf__group { margin-bottom: 1.15rem; }
+.sxf__group { margin-bottom: 0.9rem; }
 .sxf__glabel {
   font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #77828f;
   font-weight: 700; border-bottom: 1px solid #dfe3e8; padding-bottom: 5px; margin-bottom: 12px;
 }
-.sxf__grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px 16px; }
-.sxf__grid > * { grid-column: span 12; min-width: 0; }
-.sxf__c2 { grid-column: span 2; } .sxf__c3 { grid-column: span 3; }
-.sxf__c4 { grid-column: span 4; } .sxf__c6 { grid-column: span 6; }
-.sxf__c8 { grid-column: span 8; } .sxf__c12 { grid-column: span 12; }
-@media (max-width: 760px) { .sxf__grid > * { grid-column: span 12; } }
+.sxf__grid { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: flex-start; }
+.sxf__grid > * { flex: 1 1 100%; min-width: 0; }
+.sxf__grid > .sxf__c2 { flex: 1 1 8rem; max-width: 13rem; }
+.sxf__grid > .sxf__c3 { flex: 1 1 13rem; max-width: 21rem; }
+.sxf__grid > .sxf__c4 { flex: 1 1 17rem; max-width: 27rem; }
+.sxf__grid > .sxf__c6 { flex: 1 1 26rem; max-width: 44rem; }
+.sxf__grid > .sxf__c8 { flex: 2 1 30rem; max-width: 52rem; }
+.sxf__grid > .sxf__c12 { flex: 1 1 100%; max-width: none; }
 .sxf .cbm-field--check { align-self: end; padding-bottom: 0.35rem; }
 
-/* Two-column checkbox sets ("Home based / Federal EIN on file / …"). */
-.sxf__checks { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 24px; }
-@media (max-width: 760px) { .sxf__checks { grid-template-columns: 1fr; } }
+/* Checkbox sets flow into as many columns as fit the width. */
+.sxf__checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: 2px 24px; }
 
-/* Reusable address block; the shipping instance dims while "Same as billing". */
+/* Reusable address block; the shipping instance dims while "Same as billing".
+   Inside the block the POSTAL proportions are fixed (a real 12-col grid), so
+   the block reads like an envelope at any width; the block itself is one
+   packable cell. */
+.sxf__addr { display: grid; grid-template-columns: repeat(12, 1fr); gap: 10px 16px; }
+.sxf__addr > * { min-width: 0; max-width: none; flex: none; }
+.sxf__addr > .sxf__c2 { grid-column: span 2; } .sxf__addr > .sxf__c3 { grid-column: span 3; }
+.sxf__addr > .sxf__c4 { grid-column: span 4; } .sxf__addr > .sxf__c6 { grid-column: span 6; }
+.sxf__addr > .sxf__c8 { grid-column: span 8; } .sxf__addr > .sxf__c12 { grid-column: span 12; }
 .sxf__same { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 10px; }
 .sxf__addr.sxf__dim { opacity: 0.35; pointer-events: none; }
 
@@ -641,12 +653,6 @@ textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
 .sx__tp-foot input { width: 92px; padding: 5px 7px; font-size: 12.5px; }
 .sx__tp-foot input.sx__tp-bad { border-color: #a33c2f; outline: 1px solid #a33c2f; }
 
-/* Density pass (Doug's 2026-07-14 feedback): cap the form width so a span-8
-   street field is ~40 characters, not 100+; address blocks sit side by side
-   with their own headings; tighter group rhythm. */
-.sxf { max-width: 1080px; }
-.sxf__group { margin-bottom: 0.9rem; }
-.sxf__grid { gap: 10px 16px; }
 .sxf__sublabel {
   font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #77828f;
   font-weight: 700; border-bottom: 1px solid #dfe3e8; padding-bottom: 5px; margin-bottom: 12px;

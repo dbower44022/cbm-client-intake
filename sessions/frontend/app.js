@@ -1730,7 +1730,7 @@
       var tl = document.createElement("div"); tl.className = "sxf__sublabel"; tl.textContent = title;
       outer.appendChild(tl);
     }
-    var block = document.createElement("div"); block.className = "sxf__grid sxf__addr";
+    var block = document.createElement("div"); block.className = "sxf__addr";
 
     function labeled(label, input, span) {
       var w = document.createElement("div"); w.className = "cbm-field sxf__c" + span;

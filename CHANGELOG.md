@@ -4,6 +4,19 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.41.2] — 2026-07-14
+
+### Changed
+- **No page-width cap — fields pack instead** (Doug's ruling: users are on 4K
+  monitors; density comes from more data per row, not a narrower page). The
+  0.41.1 `max-width: 1080px` is gone. Edit-form fields are now CONTENT-SIZED
+  flex items that wrap: each width class is a sensible size for that field's
+  data, and a line holds as many fields as the screen fits (5+ Identity fields
+  per line at ~1700px, more at 4K; graceful wrap on laptops). Checkbox sets
+  flow into as many columns as fit. The postal address block keeps its fixed
+  internal proportions and packs as one cell (billing/shipping side by side
+  whenever they fit).
+
 ## [0.41.1] — 2026-07-14
 
 ### Changed
