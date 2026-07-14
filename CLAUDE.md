@@ -397,17 +397,28 @@ mapping (for the WP feed) is in `cmentorprofile-summary-field.md`. Portal tile
   left, website preview right, drag splitter; preview updates live on every
   input (wysiwyg sanitized before rendering); `publicProfile` off ⇒
   "not shown on the website" banner + dimmed preview.
-- **Status (2026-07-14): built; 439 tests green (32 new); verified in the
-  stubbed-browser harness** (form renders packed full-width; the verbatim-copy
-  preview's computed styles match the live page — navy #00205B hero, gold
-  #B58113 accents, 42px Arial-Rounded name, 1fr/2fr grid, #0077b5 LinkedIn
-  button; live preview updates while typing incl. summary/expertise/all four
-  name slots; script/onerror/javascript: stripped from the preview;
-  publish-toggle banner + dim; photo pick → instant local preview → upload →
-  src swap → remove (no photo = the site's gradient-circle fallback); diffed
-  save incl. drifted-enum warning notice; required blocks with "Please
-  complete: …"; splitter drag refits the scaled page). **NOT yet driven
-  against the live CRM.**
+- **Status (2026-07-14): DEPLOYED (v0.43.0) + driven LIVE on crm-test as a
+  real non-admin mentor (doug.bower); 443 tests green.** Live results: portal
+  tile shown; own-profile resolution picked the LINKED "Douglas Bower"
+  profile (not the unassigned duplicate); the **feature-gated `mentorSummary`
+  box appeared on its own** (field built in the CRM that day) and **stored**;
+  `mentorTitle` + `industryExperience` + summary GET-verified on the record
+  with `modifiedBy` = the mentor; Contact merge (email/LinkedIn) worked; the
+  **drifted-enum warning fired on real data** (stored `areaOfExpertise`
+  "Business Plan" is no longer a live option — dropped with the plain-language
+  note). Two **CRM role gaps found (still open, both on the mentor login's
+  role):** (1) field-level EDIT on `CMentorProfile.areaOfExpertise` is denied —
+  EspoCRM silently stripped it from the save (the field itself is writable —
+  an API-service-account write stuck); (2) **Attachment create is denied** —
+  the photo upload's `POST /Attachment` returned 403 (surfaced to the user as
+  a blank 504; fixed same day — a CRM 403 now returns a readable
+  "contact CBM staff" 403). **Retest photo upload + expertise save after the
+  role grants.** Earlier the same day: verified in the stubbed-browser harness
+  (computed styles match the live page — navy #00205B hero, gold #B58113,
+  42px Arial-Rounded name, 1fr/2fr grid, #0077b5 LinkedIn button; live
+  updates incl. all four name slots; XSS stripped from the preview;
+  publish-toggle banner + dim; photo local-preview→upload→remove; diffed
+  saves; required blocks; splitter refit).
 - **CRM prerequisites (activation checklist):**
   1. Fields: `mentorTitle` + `profilePhoto` verified on crm-test 2026-07-14;
      **build both on prod** (`Contact.cLinkedInProfile` exists on crm-test;
