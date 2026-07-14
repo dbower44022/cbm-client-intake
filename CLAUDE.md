@@ -824,9 +824,39 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   Note: crm-test seed sessions carry out-of-enum `sessionType` values (harmless; a
   data-hygiene cleanup). **UI polish is the next work item** (a follow-up session).
 
-## Current status (updated 2026-07-13)
+## Current status (updated 2026-07-13, later session)
 
-**Main is at v0.40.1** (407 tests green), **pushed and DEPLOYED 2026-07-13**
+**Main is at v0.41.0** (407 tests green; NOT yet pushed) — **section edit
+screens** (`prompts/section-edit-screens-prompt-v0.1.md`, design target
+`prompts/section-edit-screens-mockup-v2.html`): the session tools'
+Details-tab edit forms are now curated grouped 12-column layouts (Edit
+Engagement / Company / Client Business Profile / Contact + the
+create-new-contact flow — `DETAILS_LAYOUTS`/`layoutForm` in
+`sessions/frontend/app.js`), with a **reusable postal address block**
+("Same as billing" = copied values mirrored client-side; the CRM has no
+flag — investigated live 2026-07-13), a **time-picker standard** replacing
+every `datetime-local` (half-hour slot popover + free-entry escape; UTC
+round-trip + duration→dateEnd unchanged), and **chip selectors for all
+multiEnums** (a stored value drifted out of the options renders selected so
+a save can't drop it). Doug's scoping rulings (2026-07-13): the Company
+form's partnership/account-group removal is **mentor-domain only** —
+partner/sponsor domains keep a curated group of their own relationship
+fields; the system discriminators (`cAccountType`/`cClientStatus`/
+`cCompanyType`/`type`) are edited nowhere; the Engagement form's **Mentor
+field is read-only** (reassignment stays in Client Administration — a bare
+`mentorProfile` write would skip `/assignments`' side-effect chain). The
+mentor-domain Company VIEW card dropped its Account/Cadence/Announcements
+rows (right column now carries Business + Shipping; excluded fields never
+render as leftovers). Backend: `sessions/details.py` now exposes `name` in
+the field spec (Company name editable; Contact's personName still composed
+from first/last; views suppress the redundant Name row/cell). Client-vs-CBM
+contacts confirmed the SAME `Contact` entity (via `contactRecord`), so one
+contact form serves both. Verified in the stubbed-browser harness (mentor +
+partner domains: groups/exclusions, same-as-billing dim + live mirror,
+street line-1/2 split + rejoin in the save payload, chip toggles, slot
+select → correct UTC dateStart/dateEnd, required-Start message,
+create-new-contact grouped form posting only filled fields). **NOT yet
+driven against the live CRM.** Before that: **v0.40.1** — **pushed and DEPLOYED 2026-07-13**
 (`/healthz` = 0.40.1 verified on crm-test AND prod) — **the calendar
 integration is ACTIVATED and VERIFIED LIVE on crm-test**: Doug created a
 Scheduled session and the Google Calendar event was created end-to-end

@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup — Section Edit Screens v2</title>
+<style>
+  :root{
+    --navy:#1f3a5f;
+    --gold:#d29b2f;
+    --gold-dark:#b8861f;
+    --ink:#25313f;
+    --muted:#77828f;
+    --line:#dfe3e8;
+    --panel-head:#f4f6f8;
+    --chip-bg:#eef1f4;
+    --chip-line:#c9d0d8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:#eef1f4;padding:24px 36px 80px;max-width:1100px;margin:0 auto;font-size:13.5px}
+
+  h1{font-size:22px;color:var(--navy);margin-bottom:4px}
+  .pagenote{font-size:12.5px;color:var(--muted);margin-bottom:22px}
+
+  .form-card{background:#fff;border:1px solid var(--line);border-radius:8px;margin-bottom:28px;box-shadow:0 2px 10px rgba(31,58,95,.06);overflow:visible}
+  .form-head{display:flex;align-items:center;background:var(--panel-head);border-bottom:1px solid var(--line);padding:12px 20px;border-radius:8px 8px 0 0}
+  .form-title{font-size:16px;font-weight:700;color:var(--navy)}
+  .form-sub{font-size:12px;color:var(--muted);margin-left:10px}
+  .form-body{padding:18px 22px 6px}
+
+  .group{margin-bottom:20px}
+  .group-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;border-bottom:1px solid var(--line);padding-bottom:5px;margin-bottom:12px}
+
+  .fgrid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px 16px}
+  .fgrid > div{grid-column:span 12}
+  .c1{grid-column:span 1!important}.c2{grid-column:span 2!important}.c3{grid-column:span 3!important}
+  .c4{grid-column:span 4!important}.c5{grid-column:span 5!important}.c6{grid-column:span 6!important}
+  .c7{grid-column:span 7!important}.c8{grid-column:span 8!important}.c9{grid-column:span 9!important}
+  @media(max-width:760px){.fgrid > div{grid-column:span 12!important}}
+
+  label{display:block;font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:4px}
+  input[type=text],input[type=email],input[type=tel],input[type=date],select,textarea{
+    width:100%;padding:7px 9px;border:1px solid var(--chip-line);border-radius:4px;font-size:13.5px;font-family:inherit;background:#fff;color:var(--ink)
+  }
+  input:focus,select:focus,textarea:focus{outline:2px solid rgba(31,58,95,.25);border-color:var(--navy)}
+  textarea{min-height:70px;resize:vertical}
+
+  .checkrow{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13.5px}
+  .checkrow input{width:15px;height:15px;accent-color:var(--navy)}
+  .checks-2col{display:grid;grid-template-columns:1fr 1fr;gap:0 24px}
+  @media(max-width:760px){.checks-2col{grid-template-columns:1fr}}
+
+  /* chip multi-select */
+  .chipselect{display:flex;flex-wrap:wrap;gap:7px;padding:6px 0 2px}
+  .chipselect .opt{border:1px solid var(--chip-line);background:#fff;border-radius:14px;padding:3px 12px;font-size:12.5px;cursor:pointer;user-select:none}
+  .chipselect .opt.on{background:var(--navy);border-color:var(--navy);color:#fff}
+
+  .form-actions{display:flex;gap:10px;justify-content:flex-end;border-top:1px solid var(--line);padding:14px 22px;background:#fbfcfd;border-radius:0 0 8px 8px}
+  .btn{border:none;border-radius:4px;padding:8px 16px;font-size:13.5px;font-weight:600;cursor:pointer}
+  .btn-gold{background:var(--gold);color:#fff}
+  .btn-gold:hover{background:var(--gold-dark)}
+  .btn-ghost{background:#fff;color:var(--navy);border:1px solid var(--line)}
+
+  /* TIME PICKER */
+  .timewrap{position:relative}
+  .timeinput{cursor:pointer;background:#fff}
+  .timepop{display:none;position:absolute;left:0;top:60px;z-index:20;background:#fff;border:1px solid var(--line);border-radius:6px;box-shadow:0 6px 20px rgba(31,58,95,.16);padding:12px;width:308px}
+  .timepop.open{display:block}
+  .timepop .tp-label{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:2px 0 7px}
+  .timegrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .timegrid button{border:1px solid var(--chip-line);background:#fff;border-radius:4px;padding:6px 0;font-size:12.5px;cursor:pointer;font-family:inherit}
+  .timegrid button:hover{background:var(--panel-head)}
+  .timegrid button.sel{background:var(--navy);border-color:var(--navy);color:#fff;font-weight:600}
+  .tp-foot{display:flex;align-items:center;gap:8px;margin-top:11px;padding-top:10px;border-top:1px solid #f0f2f4}
+  .tp-foot span{font-size:12px;color:var(--muted)}
+  .tp-foot input{width:92px;padding:5px 7px;font-size:12.5px}
+
+  .same-billing{margin-bottom:10px}
+</style>
+</head>
+<body>
+
+<h1>Section Edit Screens — mockup v2</h1>
+<p class="pagenote">Each form below is what opens when a section's Edit (or + Add / New session) is pressed — rendered here stacked for review; in the app they follow the codebase's modal/inline pattern. The Start time picker in the Session form is live — click it.</p>
+
+<!-- ENGAGEMENT -->
+<div class="form-card">
+  <div class="form-head"><span class="form-title">Edit Engagement</span></div>
+  <div class="form-body">
+    <div class="group">
+      <div class="fgrid">
+        <div class="c3"><label>Status</label><select><option>Assigned</option><option>Active</option><option>Paused</option><option>Completed</option></select></div>
+        <div class="c3"><label>Start date</label><input type="date" value="2026-07-01"></div>
+        <div class="c3"><label>Mentor</label><select><option>Douglas Bower</option></select></div>
+        <div class="c3"><label>Session cadence</label><select><option>Weekly</option><option>Biweekly</option><option>Monthly</option></select></div>
+      </div>
+    </div>
+  </div>
+  <div class="form-actions"><button class="btn btn-ghost">Cancel</button><button class="btn btn-gold">Save changes</button></div>
+</div>
+
+<!-- COMPANY -->
+<div class="form-card">
+  <div class="form-head"><span class="form-title">Edit Company</span><span class="form-sub">Agape W8Loss</span></div>
+  <div class="form-body">
+    <div class="group">
+      <div class="group-label">Identity</div>
+      <div class="fgrid">
+        <div class="c6"><label>Company name</label><input type="text" value="Agape W8Loss"></div>
+        <div class="c3"><label>Website</label><input type="text" value="agapew8loss.com"></div>
+        <div class="c3"><label>Phone number</label><input type="tel" value="+1 404-815-1610"></div>
+        <div class="c3"><label>Organization type</label><select><option>For-Profit</option><option>Non-Profit</option></select></div>
+        <div class="c3"><label>Business stage</label><select><option>Early Stage</option><option>Growth</option><option>Mature</option></select></div>
+        <div class="c3"><label>Industry</label><select><option>Healthcare</option></select></div>
+        <div class="c3"><label>Industry sector</label><select><option>Health Care and Social Assistance</option></select></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-label">Billing address</div>
+      <div class="fgrid">
+        <div class="c8"><label>Address line 1</label><input type="text" value="7550 Lucerne Drive"></div>
+        <div class="c4"><label>Address line 2</label><input type="text" value="Suite 303"></div>
+        <div class="c6"><label>City</label><input type="text" value="Middleburg Heights"></div>
+        <div class="c2"><label>State</label><select><option>OH</option><option>PA</option><option>NY</option></select></div>
+        <div class="c4"><label>ZIP</label><input type="text" value="44130"></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-label">Shipping address</div>
+      <div class="checkrow same-billing"><input type="checkbox" id="same" onchange="toggleShip(this)"><label for="same" style="margin:0;font-size:13px;color:var(--ink);font-weight:400">Same as billing address</label></div>
+      <div class="fgrid" id="shipfields">
+        <div class="c8"><label>Address line 1</label><input type="text" value="345 N. Main St"></div>
+        <div class="c4"><label>Address line 2</label><input type="text"></div>
+        <div class="c6"><label>City</label><input type="text" value="Chagrin Falls"></div>
+        <div class="c2"><label>State</label><select><option>OH</option></select></div>
+        <div class="c4"><label>ZIP</label><input type="text" value="44022"></div>
+      </div>
+    </div>
+
+  </div>
+  <div class="form-actions"><button class="btn btn-ghost">Cancel</button><button class="btn btn-gold">Save changes</button></div>
+</div>
+
+<!-- CLIENT BUSINESS PROFILE -->
+<div class="form-card">
+  <div class="form-head"><span class="form-title">Edit Client Business Profile</span></div>
+  <div class="form-body">
+    <div class="group">
+      <div class="group-label">Business structure</div>
+      <div class="fgrid">
+        <div class="c4"><label>Legal entity type</label><select><option>Sole Proprietorship</option><option>LLC</option><option>S-Corp</option></select></div>
+        <div class="c3"><label>Formation date</label><input type="date" value="2026-06-04"></div>
+        <div class="c5">
+          <div class="checks-2col" style="margin-top:18px">
+            <div class="checkrow"><input type="checkbox" id="hb"><label for="hb" style="margin:0;font-weight:400;font-size:13px;color:var(--ink)">Home based</label></div>
+            <div class="checkrow"><input type="checkbox" id="ein" checked><label for="ein" style="margin:0;font-weight:400;font-size:13px;color:var(--ink)">Federal EIN on file</label></div>
+            <div class="checkrow"><input type="checkbox" id="ovl"><label for="ovl" style="margin:0;font-weight:400;font-size:13px;color:var(--ink)">Ohio vendors license on file</label></div>
+            <div class="checkrow"><input type="checkbox" id="sam"><label for="sam" style="margin:0;font-weight:400;font-size:13px;color:var(--ink)">Registered on SAM.gov</label></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-label">Financials</div>
+      <div class="fgrid">
+        <div class="c4"><label>Annual revenue range</label><select><option>$50,000 to $100,000</option></select></div>
+        <div class="c4"><label>Revenue trend</label><select><option>Growing Significantly</option><option>Stable</option><option>Declining</option></select></div>
+        <div class="c4"><label>Profitability status</label><select><option>Operating at a Loss</option><option>Break-even</option><option>Profitable</option></select></div>
+        <div class="c12"><label>Funding sources used to date</label>
+          <div class="chipselect">
+            <span class="opt on" onclick="tog(this)">Friends and Family</span>
+            <span class="opt on" onclick="tog(this)">SBA Loan</span>
+            <span class="opt on" onclick="tog(this)">Credit Cards</span>
+            <span class="opt" onclick="tog(this)">Bank Loan</span>
+            <span class="opt" onclick="tog(this)">Grants</span>
+            <span class="opt" onclick="tog(this)">Investors</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-label">Sales &amp; market</div>
+      <div class="fgrid">
+        <div class="c4"><label>Primary customer type</label><select><option>Business-to-Consumer (B2C)</option><option>Business-to-Business (B2B)</option></select></div>
+        <div class="c4"><label>Geographic market reach</label><select><option>Hyper-Local (within a few miles)</option><option>Regional</option><option>National</option></select></div>
+        <div class="c4"><label>Sales channels</label>
+          <div class="chipselect" style="padding-top:8px">
+            <span class="opt on" onclick="tog(this)">Direct Sales</span>
+            <span class="opt on" onclick="tog(this)">Retail Storefront</span>
+            <span class="opt" onclick="tog(this)">Online</span>
+            <span class="opt" onclick="tog(this)">Wholesale</span>
+          </div>
+        </div>
+        <div class="c12">
+          <div class="checks-2col">
+            <div class="checkrow"><input type="checkbox" id="cbo"><label for="cbo" style="margin:0;font-weight:400;font-size:13px;color:var(--ink)">Conducts business online</label></div>
+            <div class="checkrow"><input type="checkbox" id="gbp" checked><label for="gbp" style="margin:0;font-weight:400;font-size:13px;color:var(--ink)">Has Google Business Profile</label></div>
+            <div class="checkrow"><input type="checkbox" id="uem"><label for="uem" style="margin:0;font-weight:400;font-size:13px;color:var(--ink)">Uses email marketing</label></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-label">Certifications &amp; owner demographics</div>
+      <div class="fgrid">
+        <div class="c12"><label>Certifications held</label>
+          <div class="chipselect">
+            <span class="opt on" onclick="tog(this)">Cuyahoga County MBE</span>
+            <span class="opt on" onclick="tog(this)">Ohio Minority Business Enterprise (MBE)</span>
+            <span class="opt" onclick="tog(this)">EDGE</span>
+            <span class="opt" onclick="tog(this)">WBE</span>
+          </div>
+        </div>
+        <div class="c4"><label>Client ethnicity</label><select><option>Not Hispanic or Latino</option></select></div>
+        <div class="c4"><label>Client race</label><select><option>White</option></select></div>
+        <div class="c4"><label>Veteran status</label><select><option>No military service</option></select></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-label">Goals</div>
+      <div class="fgrid">
+        <div class="c12"><label>What does the client want help with?</label><textarea>We want help with Marketing</textarea></div>
+      </div>
+    </div>
+  </div>
+  <div class="form-actions"><button class="btn btn-ghost">Cancel</button><button class="btn btn-gold">Save changes</button></div>
+</div>
+
+<!-- CONTACT -->
+<div class="form-card">
+  <div class="form-head"><span class="form-title">Edit Contact</span><span class="form-sub">James Koran</span></div>
+  <div class="form-body">
+    <div class="group">
+      <div class="group-label">Name</div>
+      <div class="fgrid">
+        <div class="c2"><label>Salutation</label><select><option>Mr.</option><option>Ms.</option><option>Mx.</option><option>Dr.</option></select></div>
+        <div class="c4"><label>First name</label><input type="text" value="James"></div>
+        <div class="c4"><label>Last name</label><input type="text" value="Koran"></div>
+        <div class="c2"><label>Preferred name</label><input type="text" value="James"></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-label">Contact information</div>
+      <div class="fgrid">
+        <div class="c6"><label>Email address</label><input type="email" value="james@agapew8loss.com"></div>
+        <div class="c3"><label>Phone number</label><input type="tel" value="+1 216-903-2786"></div>
+        <div class="c3"><label>Contact type</label><select><option>Client</option><option>Bookkeeper</option><option>Attorney</option></select></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-label">Address</div>
+      <div class="fgrid">
+        <div class="c8"><label>Address line 1</label><input type="text"></div>
+        <div class="c4"><label>Address line 2</label><input type="text"></div>
+        <div class="c6"><label>City</label><input type="text" value="Middleburg Heights"></div>
+        <div class="c2"><label>State</label><select><option>OH</option></select></div>
+        <div class="c4"><label>ZIP</label><input type="text"></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-label">Preferences &amp; agreements</div>
+      <div class="fgrid">
+        <div class="c4"><label>Preferred contact method</label><select><option>Email</option><option>Phone</option><option>Text</option></select></div>
+        <div class="c4"><label>Notification preference</label><select><option>Email</option><option>Text</option><option>None</option></select></div>
+        <div class="c4" style="padding-top:18px">
+          <div class="checkrow"><input type="checkbox" id="dnc"><label for="dnc" style="margin:0;font-weight:400;font-size:13px;color:var(--ink)">Do not call</label></div>
+        </div>
+        <div class="c12">
+          <div class="checks-2col">
+            <div class="checkrow"><input type="checkbox" id="mo"><label for="mo" style="margin:0;font-weight:400;font-size:13px;color:var(--ink)">Marketing opt-in</label></div>
+            <div class="checkrow"><input type="checkbox" id="pp"><label for="pp" style="margin:0;font-weight:400;font-size:13px;color:var(--ink)">Privacy policy accepted</label></div>
+            <div class="checkrow"><input type="checkbox" id="tou"><label for="tou" style="margin:0;font-weight:400;font-size:13px;color:var(--ink)">Terms of use accepted</label></div>
+            <div class="checkrow"><input type="checkbox" id="coc"><label for="coc" style="margin:0;font-weight:400;font-size:13px;color:var(--ink)">Code of conduct accepted</label></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="form-actions"><button class="btn btn-ghost">Cancel</button><button class="btn btn-gold">Save changes</button></div>
+</div>
+
+<!-- SESSION — demonstrates the time picker standard -->
+<div class="form-card">
+  <div class="form-head"><span class="form-title">New Session</span><span class="form-sub">demonstrates the date &amp; time picker standard</span></div>
+  <div class="form-body">
+    <div class="group">
+      <div class="fgrid">
+        <div class="c3"><label>Date</label><input type="date" value="2026-07-15"></div>
+        <div class="c3 timewrap">
+          <label>Start time</label>
+          <input type="text" class="timeinput" id="timeval" value="10:00 AM" readonly onclick="tpop(true)">
+          <div class="timepop" id="timepop">
+            <div class="tp-label">Morning</div>
+            <div class="timegrid">
+              <button onclick="setT(this)">8:00 AM</button><button onclick="setT(this)">8:30 AM</button>
+              <button onclick="setT(this)">9:00 AM</button><button onclick="setT(this)">9:30 AM</button>
+              <button class="sel" onclick="setT(this)">10:00 AM</button><button onclick="setT(this)">10:30 AM</button>
+              <button onclick="setT(this)">11:00 AM</button><button onclick="setT(this)">11:30 AM</button>
+            </div>
+            <div class="tp-label" style="margin-top:10px">Afternoon &amp; evening</div>
+            <div class="timegrid">
+              <button onclick="setT(this)">12:00 PM</button><button onclick="setT(this)">12:30 PM</button>
+              <button onclick="setT(this)">1:00 PM</button><button onclick="setT(this)">1:30 PM</button>
+              <button onclick="setT(this)">2:00 PM</button><button onclick="setT(this)">2:30 PM</button>
+              <button onclick="setT(this)">3:00 PM</button><button onclick="setT(this)">3:30 PM</button>
+              <button onclick="setT(this)">4:00 PM</button><button onclick="setT(this)">4:30 PM</button>
+              <button onclick="setT(this)">5:00 PM</button><button onclick="setT(this)">5:30 PM</button>
+              <button onclick="setT(this)">6:00 PM</button><button onclick="setT(this)">6:30 PM</button>
+              <button onclick="setT(this)">7:00 PM</button><button onclick="setT(this)">7:30 PM</button>
+            </div>
+            <div class="tp-foot">
+              <span>Other time:</span>
+              <input type="text" placeholder="e.g. 2:45 PM" onkeydown="if(event.key==='Enter'){document.getElementById('timeval').value=this.value;tpop(false)}">
+            </div>
+          </div>
+        </div>
+        <div class="c3"><label>Duration</label><select><option>30 minutes</option><option selected>60 minutes</option><option>90 minutes</option></select></div>
+        <div class="c3"><label>Session type</label><select><option>Mentoring session</option><option>Check-in call</option></select></div>
+        <div class="c12"><label>Notes</label><textarea placeholder="Session agenda or notes&hellip;"></textarea></div>
+      </div>
+    </div>
+  </div>
+  <div class="form-actions"><button class="btn btn-ghost">Cancel</button><button class="btn btn-gold">Save session</button></div>
+</div>
+
+<script>
+function tog(el){el.classList.toggle('on')}
+function toggleShip(cb){document.getElementById('shipfields').style.opacity=cb.checked?'0.35':'1';
+  document.getElementById('shipfields').style.pointerEvents=cb.checked?'none':'auto'}
+function tpop(open){document.getElementById('timepop').classList.toggle('open',open)}
+function setT(btn){
+  document.querySelectorAll('.timegrid button').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  document.getElementById('timeval').value=btn.textContent;
+  tpop(false);
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.timewrap')) tpop(false);
+});
+</script>
+</body>
+</html>

@@ -32,14 +32,16 @@ _TYPE_MAP = {
 }
 # Types shown in the read view but NOT editable here (computed / composite).
 _READONLY_TYPES = {"currency", "currencyConverted", "foreign"}
-# Field names that are plumbing, never shown.
+# Field names that are plumbing, never shown. (`name` IS in the spec for
+# entities where it's a plain varchar — the Edit Company form edits it; Contact's
+# personName-typed `name` falls out via _TYPE_MAP and is shown via first/last.)
 _SYSTEM_FIELDS = {
     "id", "deleted", "createdAt", "modifiedAt", "streamUpdatedAt",
     "createdBy", "modifiedBy", "createdById", "modifiedById",
     "assignedUser", "assignedUsers", "assignedUserId", "assignedUsersIds",
     "teams", "teamsIds", "hasPortalUser", "portalUser", "originalLead",
     "emailAddressData", "phoneNumberData", "addressMap", "billingAddressMap",
-    "shippingAddressMap", "name",  # personName/formatted name shown via first/last
+    "shippingAddressMap",
 }
 _SKIP_SUFFIX = ("IsInvalid", "IsOptedOut", "IsInactive", "AnyId", "Map")
 _PREFIX_C = re.compile(r"^c(?=[A-Z])")

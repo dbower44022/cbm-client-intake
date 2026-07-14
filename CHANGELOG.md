@@ -4,6 +4,60 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.41.0] — 2026-07-13
+
+### Added
+- **Section edit screens (prompt v0.1 / mockup v2)** for the session tools'
+  Details tab: every section/contact edit form is now a curated, grouped
+  12-column layout instead of a flat auto-fill field dump
+  (`sessions/frontend/app.js` `DETAILS_LAYOUTS` + `layoutForm`).
+  - **Edit Engagement** — Status | Start date | Mentor (read-only — Doug's
+    ruling: reassignment stays in Client Administration) | Session cadence on
+    one row; every other editable engagement field in "Additional details".
+  - **Edit Company** — Identity (name/website/phone; org type/stage/industry/
+    sector) + Billing address + Shipping address. **On the mentor domain the
+    Partnership & account group is removed by design** (Account type, Client
+    status, Partner/Sponsor fields, Public announcement) and the Company VIEW
+    card's Account/Cadence/Announcements rows are gone — the right column now
+    carries Business + Shipping. Partner/sponsor domains keep a curated group
+    of their own relationship fields (Doug's scoping ruling); the system
+    discriminators (`cAccountType`/`cClientStatus`/`cCompanyType`/`type`) are
+    edited nowhere.
+  - **Edit Client Business Profile** — Business structure / Financials /
+    Sales & market / Certifications & owner demographics / Goals, with
+    checkbox sets and mockup wording.
+  - **Edit Contact** — Name / Contact information / Address / Preferences &
+    agreements; used by row edits AND the + Add → Create-new-contact flow
+    (same grouped form, empty).
+  - Uncurated editable fields always land in an "Additional details" group —
+    nothing the CRM exposes becomes uneditable; a missing field skips cleanly.
+- **Reusable postal address block** (billing/shipping/contact): Address line
+  1 (8) | line 2 (4); City (6) | State (2, US-state select) | ZIP (4). The two
+  street lines map to EspoCRM's single multi-line street field (split on
+  render, rejoined on save). The shipping instance gets a **"Same as billing
+  address"** checkbox — checked dims/disables shipping and mirrors billing
+  values live (the CRM models this as copied values; there is no flag).
+- **Time-picker standard for every time field app-wide**: datetime fields are
+  now a Date input + a time field opening a popover — half-hour slots
+  ("Morning" 8:00–11:30 AM, "Afternoon & evening" 12:00–7:30 PM, 4 columns,
+  navy selection) with an "Other time" free-entry escape (Enter commits;
+  invalid input flags red). Replaces the browser `datetime-local` control
+  (and its minute spinner) everywhere in the session tools, including the
+  session editor's Start (UTC round-trip and the duration→dateEnd derivation
+  unchanged; required-field check still fires when date or time is missing).
+- **Multi-value fields are tap-to-toggle chip selectors** (funding sources,
+  sales channels, certifications, contact type, meeting type, …) — never
+  multi-select list boxes or checkbox grids. Options come from the CRM field
+  definitions; a stored value that has drifted out of the options still
+  renders selected so a save can't silently drop it.
+
+### Changed
+- `sessions/details.py` no longer hides `name` from the field spec, so
+  Company name (and other varchar `name` fields) is editable on the forms;
+  Contact's `personName`-typed name is still composed from first/last. The
+  view suppresses the redundant "Name" row/cell (the card title/page header
+  already shows it).
+
 ## [0.40.2] — 2026-07-13
 
 ### Changed

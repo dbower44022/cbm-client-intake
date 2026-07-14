@@ -1508,15 +1508,330 @@
     return null;
   }
 
-  // === Edit mode (per section): the full field-level form + Save/Cancel ===
+  // === Section edit screens (prompt v0.1 / mockup v2) ========================
+  // Each entity's edit form is a curated 12-column grid: labeled groups of rows,
+  // field widths as mocked. Cell shapes: {name, span[, label]} = one field;
+  // {checks:[names]} = a two-column checkbox set; {addr: prefix[, sameAs]} = the
+  // shared postal address block; {ro, label} = a read-only value from the
+  // section (e.g. the assigned mentor — reassignment stays in Client
+  // Administration, Doug's 2026-07-13 ruling). Editable fields the layout
+  // doesn't place land in an "Additional details" group so nothing the CRM
+  // exposes becomes uneditable; names in the domain's exclude set never render.
+  var DETAILS_LAYOUTS = {
+    CEngagement: { groups: [
+      { rows: [[{ name: "engagementStatus", span: 3 }, { name: "engagementStartDate", span: 3 },
+                { ro: "mentorProfileName", label: "Mentor", span: 3 }, { name: "meetingCadence", span: 3 }]] },
+    ] },
+    Account: { groups: [
+      { label: "Identity", rows: [
+        [{ name: "name", span: 6, label: "Company name" }, { name: "website", span: 3 }, { name: "phoneNumber", span: 3 }],
+        [{ name: "cOrganizationType", span: 3 }, { name: "cBusinessStage", span: 3 },
+         { name: "industry", span: 3 }, { name: "cIndustrySector", span: 3 }],
+      ] },
+      { label: "Billing address", rows: [[{ addr: "billingAddress" }]] },
+      { label: "Shipping address", rows: [[{ addr: "shippingAddress", sameAs: "billingAddress" }]] },
+    ] },
+    CClientProfile: { groups: [
+      { label: "Business structure", rows: [
+        [{ name: "legalEntityType", span: 4 }, { name: "formationDate", span: 4 }],
+        [{ checks: [{ name: "isHomeBased", label: "Home based" },
+                    { name: "federalEinOnFile", label: "Federal EIN on file" },
+                    { name: "ohioVendorsLicenseOnFile", label: "Ohio vendors license on file" },
+                    { name: "registeredOnSamGov", label: "Registered on SAM.gov" }] }],
+      ] },
+      { label: "Financials", rows: [
+        [{ name: "annualRevenueRange", span: 4 }, { name: "revenueTrend", span: 4 }, { name: "profitabilityStatus", span: 4 }],
+        [{ name: "fundingSourcesUsedToDate", span: 12 }],
+      ] },
+      { label: "Sales & market", rows: [
+        [{ name: "primaryCustomerType", span: 4 }, { name: "geographicMarketReach", span: 4 }, { name: "salesChannels", span: 4 }],
+        [{ checks: [{ name: "conductsBusinessOnline", label: "Conducts business online" },
+                    { name: "hasGoogleBusinessProfile", label: "Has Google Business Profile" },
+                    { name: "usesEmailMarketing", label: "Uses email marketing" }] }],
+      ] },
+      { label: "Certifications & owner demographics", rows: [
+        [{ name: "certificationsHeld", span: 12 }],
+        [{ name: "clientEthnicity", span: 4 }, { name: "clientRace", span: 4 }, { name: "clientVeteranStatus", span: 4 }],
+      ] },
+      { label: "Goals", rows: [[{ name: "description", span: 12, label: "What does the client want help with?" }]] },
+    ] },
+    Contact: { groups: [
+      { label: "Name", rows: [
+        [{ name: "salutationName", span: 2, label: "Salutation" }, { name: "firstName", span: 4 },
+         { name: "lastName", span: 4 }, { name: "cPreferredName", span: 2 }],
+      ] },
+      { label: "Contact information", rows: [
+        [{ name: "emailAddress", span: 6 }, { name: "phoneNumber", span: 3 }, { name: "cContactType", span: 3 }],
+      ] },
+      { label: "Address", rows: [[{ addr: "address" }]] },
+      { label: "Preferences & agreements", rows: [
+        [{ name: "cPreferredContactMethod", span: 4 }, { name: "cNotificationPreference", span: 4 }, { name: "doNotCall", span: 4 }],
+        [{ checks: [{ name: "cMarketingOptIn", label: "Marketing opt-in" },
+                    { name: "cPrivacyPolicyAccepted", label: "Privacy policy accepted" },
+                    { name: "cTermsOfUseAccepted", label: "Terms of use accepted" },
+                    { name: "cCodeOfConductAccepted", label: "Code of conduct accepted" }] }],
+      ] },
+    ] },
+  };
+
+  // Account fields by business relationship. The system discriminators are
+  // edited nowhere (intake/orchestrators own them); each domain's Company form
+  // additionally excludes the OTHER domains' relationship fields (mentor-domain
+  // accounts are client accounts — Doug's 2026-07-13 scoping ruling).
+  var ACCOUNT_SYSTEM_FIELDS = ["cAccountType", "cClientStatus", "cCompanyType", "type"];
+  var ACCOUNT_PARTNER_FIELDS = ["cPartnerStatus", "cPartnerOrganizationType", "cPartnerContactCadence",
+    "cPartnerType", "cPartnershipStartDate", "cPartnershipAgreementDate", "cPartnerNotes"];
+  var ACCOUNT_SPONSOR_FIELDS = ["cSponsorshipLevel", "cSponsorshipStartDate", "cSponsorshipRenewalDate", "cSponsorNotes"];
+  // The other domains keep a curated group of their own relationship fields.
+  var ACCOUNT_DOMAIN_GROUPS = {
+    partnersessions: { label: "Partnership", rows: [
+      [{ name: "cPartnerStatus", span: 4 }, { name: "cPartnerOrganizationType", span: 4 }, { name: "cPartnerContactCadence", span: 4 }],
+      [{ name: "cPartnerType", span: 12 }],
+      [{ name: "cPartnershipStartDate", span: 4 }, { name: "cPartnershipAgreementDate", span: 4 }],
+      [{ checks: ["cPublicAnnouncementAllowed"] }],
+    ] },
+    sponsorsessions: { label: "Sponsorship", rows: [
+      [{ name: "cSponsorshipLevel", span: 4 }, { name: "cSponsorshipStartDate", span: 4 }, { name: "cSponsorshipRenewalDate", span: 4 }],
+      [{ checks: ["cPublicAnnouncementAllowed"] }],
+    ] },
+  };
+
+  // The exclude set for an entity's form AND view (the view must not display
+  // fields the edit form doesn't manage).
+  function detailsExcludes(entity) {
+    var ex = {};
+    if (entity !== "Account") return ex;
+    ACCOUNT_SYSTEM_FIELDS.forEach(function (n) { ex[n] = 1; });
+    if (SLUG === "mentorsessions") {
+      ACCOUNT_PARTNER_FIELDS.concat(ACCOUNT_SPONSOR_FIELDS).forEach(function (n) { ex[n] = 1; });
+      ex.cPublicAnnouncementAllowed = 1;
+    } else if (SLUG === "partnersessions") {
+      ACCOUNT_SPONSOR_FIELDS.forEach(function (n) { ex[n] = 1; });
+    } else if (SLUG === "sponsorsessions") {
+      ACCOUNT_PARTNER_FIELDS.forEach(function (n) { ex[n] = 1; });
+    }
+    return ex;
+  }
+
+  function detailsLayoutFor(entity) {
+    var base = DETAILS_LAYOUTS[entity];
+    if (entity === "Account" && ACCOUNT_DOMAIN_GROUPS[SLUG]) {
+      return { groups: base.groups.concat([ACCOUNT_DOMAIN_GROUPS[SLUG]]) };
+    }
+    return base || { groups: [] };
+  }
+
+  // Build one section's grouped form body. Returns the element; every editable
+  // input carries data-field, so the snapshot/diff save machinery is unchanged.
+  function layoutForm(sec, layout) {
+    var byName = {}; (sec.fields || []).forEach(function (f) { byName[f.name] = f; });
+    var exclude = detailsExcludes(sec.entity);
+    var used = {};
+    var body = document.createElement("div"); body.className = "sxf";
+
+    function fieldCell(cell) {
+      var f = byName[cell.name];
+      used[cell.name] = 1;
+      if (!f || exclude[cell.name]) return null;
+      if (cell.label) f = Object.assign({}, f, { label: cell.label });
+      var el = f.editable ? detailsEditField(f) : detailsReadField(f);
+      el.classList.add("sxf__c" + (cell.span || 12));
+      return el;
+    }
+
+    function grid(rows) {
+      var g = document.createElement("div"); g.className = "sxf__grid";
+      rows.forEach(function (row) {
+        row.forEach(function (cell) {
+          var el = null;
+          if (cell.name) el = fieldCell(cell);
+          else if (cell.checks) {
+            var box = document.createElement("div"); box.className = "sxf__checks sxf__c12";
+            cell.checks.forEach(function (n) {
+              var nm = n.name || n;
+              used[nm] = 1;
+              var f = byName[nm];
+              if (!f || !f.editable || exclude[nm]) return;
+              if (n.label) f = Object.assign({}, f, { label: n.label });
+              box.appendChild(detailsEditField(f));
+            });
+            el = box.childNodes.length ? box : null;
+          } else if (cell.addr) {
+            el = addressBlock(byName, used, cell.addr, cell.sameAs);
+          } else if (cell.ro) {
+            var v = dv(sec, cell.ro);
+            if (v) {
+              el = document.createElement("div"); el.className = "cbm-field sxf__c" + (cell.span || 3);
+              var lab = document.createElement("label"); lab.textContent = cell.label || cell.ro;
+              var inp = document.createElement("input"); inp.type = "text"; inp.value = String(v); inp.disabled = true;
+              el.appendChild(lab); el.appendChild(inp);
+            }
+          }
+          if (el) g.appendChild(el);
+        });
+      });
+      return g;
+    }
+
+    (layout.groups || []).forEach(function (g) {
+      var wrap = document.createElement("div"); wrap.className = "sxf__group";
+      if (g.label) {
+        var h = document.createElement("div"); h.className = "sxf__glabel"; h.textContent = g.label;
+        wrap.appendChild(h);
+      }
+      var gr = grid(g.rows || []);
+      if (!gr.childNodes.length) return;  // whole group missing on this CRM — skip
+      wrap.appendChild(gr);
+      body.appendChild(wrap);
+    });
+
+    // Everything editable the layout didn't place (and read-only computed values).
+    var leftovers = (sec.fields || []).filter(function (f) { return !used[f.name] && !exclude[f.name]; });
+    if (leftovers.length) {
+      var wrap2 = document.createElement("div"); wrap2.className = "sxf__group";
+      if ((layout.groups || []).length) {
+        var h2 = document.createElement("div"); h2.className = "sxf__glabel"; h2.textContent = "Additional details";
+        wrap2.appendChild(h2);
+      }
+      var g2 = document.createElement("div"); g2.className = "sxf__grid";
+      leftovers.forEach(function (f) {
+        var wide = f.type === "text" || f.type === "wysiwyg";
+        var el = f.editable ? detailsEditField(f) : detailsReadField(f);
+        el.classList.add(wide ? "sxf__c12" : "sxf__c4");
+        g2.appendChild(el);
+      });
+      wrap2.appendChild(g2);
+      body.appendChild(wrap2);
+    }
+    return body;
+  }
+
+  // --- Reusable address block (postal layout; built once, used everywhere) ---
+  // Row 1: Address line 1 (8) | Address line 2 (4); Row 2: City (6) | State
+  // (2, select) | ZIP (4). EspoCRM stores one multi-line street field — line 1
+  // is its first line, line 2 the rest (rejoined on save via readField's
+  // "addressStreet" handling). `sameAs` adds the "Same as billing address"
+  // checkbox: checked = shipping inputs dimmed/disabled and mirrored from
+  // billing (the CRM models this as copied values — there is no flag).
+  var US_STATES = ["AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "DC", "FL", "GA", "HI", "ID", "IL",
+    "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH",
+    "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT",
+    "VA", "WA", "WV", "WI", "WY"];
+
+  function addressBlock(byName, used, prefix, sameAs) {
+    ["Street", "City", "State", "PostalCode"].forEach(function (s) { used[prefix + s] = 1; });
+    if (!byName[prefix + "Street"] && !byName[prefix + "City"]) return null;  // entity has no such address
+    var outer = document.createElement("div"); outer.className = "sxf__c12";
+    var block = document.createElement("div"); block.className = "sxf__grid sxf__addr";
+
+    function labeled(label, input, span) {
+      var w = document.createElement("div"); w.className = "cbm-field sxf__c" + span;
+      var l = document.createElement("label"); l.textContent = label;
+      w.appendChild(l); w.appendChild(input); return w;
+    }
+    // Street: two visible line inputs, ONE data-field (the line-1 cell) so the
+    // save/diff machinery sees one street value; readField("addressStreet")
+    // finds line 2 through the shared grid and rejoins them.
+    var street = String((byName[prefix + "Street"] || {}).value || "");
+    var parts = street.split("\n");
+    var a1 = document.createElement("input"); a1.type = "text"; a1.className = "sxf__a1"; a1.value = parts[0] || "";
+    var a2 = document.createElement("input"); a2.type = "text"; a2.className = "sxf__a2"; a2.value = parts.slice(1).join(", ");
+    var sw = labeled("Address line 1", a1, 8);
+    sw.dataset.field = prefix + "Street"; sw.dataset.type = "addressStreet";
+    block.appendChild(sw); block.appendChild(labeled("Address line 2", a2, 4));
+
+    function plain(suffix, label, span, makeEl) {
+      var f = byName[prefix + suffix];
+      var input = makeEl();
+      input.dataset.field = prefix + suffix; input.dataset.type = "varchar";
+      input.value = f && f.value != null ? String(f.value) : "";
+      block.appendChild(labeled(label, input, span));
+      return input;
+    }
+    var city = plain("City", "City", 6, function () { var i = document.createElement("input"); i.type = "text"; return i; });
+    var state = plain("State", "State", 2, function () {
+      var sel = document.createElement("select");
+      var cur = String((byName[prefix + "State"] || {}).value || "");
+      var opts = US_STATES.slice();
+      if (cur && opts.indexOf(cur) < 0) opts.unshift(cur);
+      sel.appendChild(new Option("", ""));
+      opts.forEach(function (s) { sel.appendChild(new Option(s, s)); });
+      return sel;
+    });
+    state.value = String((byName[prefix + "State"] || {}).value || "");
+    var zip = plain("PostalCode", "ZIP", 4, function () { var i = document.createElement("input"); i.type = "text"; return i; });
+
+    if (sameAs) {
+      var same = document.createElement("label"); same.className = "sxf__same";
+      var cb = document.createElement("input"); cb.type = "checkbox";
+      same.appendChild(cb); same.appendChild(document.createTextNode(" Same as billing address"));
+      outer.appendChild(same);
+      var mine = { a1: a1, a2: a2, city: city, state: state, zip: zip };
+      function mirror() {
+        if (!cb.checked) return;
+        var form = outer.closest(".sxf"); if (!form) return;
+        var bs = form.querySelector('[data-field="' + sameAs + 'Street"]');
+        if (bs) {
+          mine.a1.value = bs.querySelector(".sxf__a1").value;
+          mine.a2.value = bs.parentNode.querySelector(".sxf__a2").value;
+        }
+        ["City", "State", "PostalCode"].forEach(function (s) {
+          var src = form.querySelector('[data-field="' + sameAs + s + '"]');
+          var dst = s === "City" ? mine.city : s === "State" ? mine.state : mine.zip;
+          if (!src) return;
+          if (dst.tagName === "SELECT" && src.value &&
+              !Array.prototype.some.call(dst.options, function (o) { return o.value === src.value; })) {
+            dst.appendChild(new Option(src.value, src.value));
+          }
+          dst.value = src.value;
+        });
+      }
+      function setDim(on) {
+        block.classList.toggle("sxf__dim", on);
+        [a1, a2, city, state, zip].forEach(function (i) { i.disabled = on; });
+      }
+      cb.addEventListener("change", function () { setDim(cb.checked); mirror(); });
+      // Keep mirroring while checked when the billing fields are edited.
+      setTimeout(function () {
+        var form = outer.closest(".sxf"); if (!form) return;
+        form.addEventListener("input", function (e) {
+          if (!cb.checked || !e.target.closest) return;
+          if (String((e.target.dataset || {}).field || "").indexOf(sameAs) === 0) { mirror(); return; }
+          // The street line inputs carry no data-field of their own — match by
+          // their address grid containing the billing street cell.
+          var grid3 = e.target.closest(".sxf__addr");
+          if (grid3 && grid3.querySelector('[data-field="' + sameAs + 'Street"]')) mirror();
+        });
+        // Pre-check when shipping already equals billing (and isn't empty).
+        var same0 = true, any = false;
+        var bs = form.querySelector('[data-field="' + sameAs + 'Street"]');
+        var bvals = {
+          street: bs ? (bs.querySelector(".sxf__a1").value + "\n" + bs.parentNode.querySelector(".sxf__a2").value).replace(/\n$/, "") : "",
+          city: (form.querySelector('[data-field="' + sameAs + 'City"]') || {}).value || "",
+          state: (form.querySelector('[data-field="' + sameAs + 'State"]') || {}).value || "",
+          zip: (form.querySelector('[data-field="' + sameAs + 'PostalCode"]') || {}).value || "",
+        };
+        var svals = {
+          street: (a1.value + "\n" + a2.value).replace(/\n$/, ""),
+          city: city.value, state: state.value, zip: zip.value,
+        };
+        Object.keys(bvals).forEach(function (k) {
+          if (bvals[k] || svals[k]) any = true;
+          if (bvals[k] !== svals[k]) same0 = false;
+        });
+        if (any && same0) { cb.checked = true; setDim(true); }
+      }, 0);
+    }
+    outer.appendChild(block);
+    return outer;
+  }
+
+  // === Edit mode (per section): the grouped form + Save/Cancel ===
   function panelEditForm(sec, key) {
-    var body = document.createElement("div"); body.className = "sx__dform";
+    var body = layoutForm(sec, detailsLayoutFor(sec.entity));
     var snap = {};
-    sec.fields.forEach(function (f) {
-      if (!f.editable) { body.appendChild(detailsReadField(f)); return; }
-      var field = detailsEditField(f);
-      body.appendChild(field);
-      var el = field.querySelector("[data-field]"); if (el) snap[el.dataset.field] = JSON.stringify(readField(el));
+    Array.prototype.forEach.call(body.querySelectorAll("[data-field]"), function (el) {
+      snap[el.dataset.field] = JSON.stringify(readField(el));
     });
     detailsSnapshot[key] = snap;
     var actions = document.createElement("div"); actions.className = "sx__dpanel-actions";
@@ -1676,7 +1991,7 @@
       cell.appendChild(k); cell.appendChild(v); cells.push(cell);
     }
     function addField(f) {
-      if (done[f.name]) return; done[f.name] = 1;
+      if (done[f.name] || f.name === "name") return; done[f.name] = 1;  // page header shows the name
       if (f.type === "text" || f.type === "wysiwyg") return;
       var v = f.value;
       if (v == null || v === "" || v === false || (Array.isArray(v) && !v.length)) return;
@@ -1735,11 +2050,15 @@
   function companyRows(sec, used) {
     ["billingAddressStreet", "billingAddressCity", "billingAddressState", "billingAddressPostalCode",
      "billingAddressCountry", "phoneNumber", "website", "emailAddress",
-     "cOrganizationType", "cBusinessStage", "cIndustrySector", "cIndustrySubsector",
+     "cOrganizationType", "cBusinessStage", "industry", "cIndustrySector", "cIndustrySubsector",
      "shippingAddressStreet", "shippingAddressCity", "shippingAddressState",
      "shippingAddressPostalCode", "shippingAddressCountry",
-     "cAccountType", "cClientStatus", "cPartnerContactCadence", "cPublicAnnouncementAllowed",
+     "cPartnerContactCadence", "cPublicAnnouncementAllowed",
     ].forEach(function (n) { used[n] = 1; });
+    // The view must not display fields the edit form doesn't manage — the
+    // domain's excluded Account fields (partnership/account group on the mentor
+    // domain, the other domains' relationship fields elsewhere) never render.
+    Object.keys(detailsExcludes(sec.entity)).forEach(function (n) { used[n] = 1; });
     var left = [], right = [];
     // Directory block: name, billing address, phone · website, email.
     var dir = document.createElement("div"); dir.className = "sxd__dir";
@@ -1761,23 +2080,29 @@
     if (email) { var ed = document.createElement("div"); var ml = document.createElement("a"); ml.href = "mailto:" + email; ml.textContent = email; ed.appendChild(ml); dir.appendChild(ed); }
     var dirRow = document.createElement("div"); dirRow.className = "sxd__row sxd__row--dir"; dirRow.appendChild(dir);
     left.push(dirRow);
-    // Business: org type | stage | industry (sector / subsector).
+    // Business: org type | stage | industry (general + sector / subsector).
     var biz = [];
     if (dvs(sec, "cOrganizationType")) biz.push(bold(dvs(sec, "cOrganizationType")));
     if (dvs(sec, "cBusinessStage")) biz.push(bold(dvs(sec, "cBusinessStage")));
-    var ind = [dvs(sec, "cIndustrySector"), dvs(sec, "cIndustrySubsector")].filter(Boolean).join(" / ");
+    var ind = [dvs(sec, "industry"), dvs(sec, "cIndustrySector"), dvs(sec, "cIndustrySubsector")]
+      .filter(Boolean).join(" / ");
     if (ind) biz.push(esc(ind));
-    if (biz.length) left.push(drow("Business", biz.join(SEP)));
+    var bizRow = biz.length ? drow("Business", biz.join(SEP)) : null;
     // Shipping — only when it differs from billing.
     var bill = [dvs(sec, "billingAddressStreet"), bcl].filter(Boolean).join(", ");
     var ship = [dvs(sec, "shippingAddressStreet"),
                 cityLine(dvs(sec, "shippingAddressCity"), dvs(sec, "shippingAddressState"), dvs(sec, "shippingAddressPostalCode"))].filter(Boolean).join(", ");
-    if (ship && ship !== bill) left.push(drow("Shipping", esc(ship)));
-    // Right: account type/status, cadence, announcements (meaningful negative).
-    var acct = [];
-    var at = dvArr(sec, "cAccountType"); if (at.length) acct.push(bold(at.join(", ")));
-    if (dvs(sec, "cClientStatus")) acct.push("status " + bold(dvs(sec, "cClientStatus")));
-    if (acct.length) right.push(drow("Account", acct.join(" &middot; ")));
+    var shipRow = (ship && ship !== bill) ? drow("Shipping", esc(ship)) : null;
+    if (SLUG === "mentorsessions") {
+      // Mentor domain (edit mockup v2): no Account / Cadence / Announcements
+      // rows — the right column carries the Business and Shipping rows.
+      if (bizRow) right.push(bizRow);
+      if (shipRow) right.push(shipRow);
+      return { left: left, right: right };
+    }
+    if (bizRow) left.push(bizRow);
+    if (shipRow) left.push(shipRow);
+    // Right (partner/sponsor domains): cadence, announcements (meaningful negative).
     if (dvs(sec, "cPartnerContactCadence")) right.push(drow("Cadence", bold(dvs(sec, "cPartnerContactCadence")) + " partner contact"));
     if (dv(sec, "cPublicAnnouncementAllowed") === false) right.push(drow("Announcements", badgeEl("sxd__badge-warn", "Not allowed")));
     return { left: left, right: right };
@@ -1822,7 +2147,7 @@
   // labeled row (balanced across the two columns) — nothing with a value hides.
   function appendLeftoverRows(sec, used, cols) {
     (sec.fields || []).forEach(function (f) {
-      if (used[f.name]) return;
+      if (used[f.name] || f.name === "name") return;  // the card title already shows the name
       if (f.type === "text" || f.type === "wysiwyg") return;  // long-form: edit/Overview only
       var v = f.value;
       if (v == null || v === "" || v === false || (Array.isArray(v) && !v.length)) return;
@@ -2101,11 +2426,13 @@
   // and linked in one operation.
   function addNewPanel() {
     var panel = addPanelShell("New contact");
-    var body = document.createElement("div"); body.className = "sx__dform";
-    (currentDetails.contactSpec || []).forEach(function (f) {
-      if (!f.editable) return;
-      body.appendChild(detailsEditField(Object.assign({}, f, { value: f.type === "multiEnum" ? [] : null })));
-    });
+    // The same grouped Contact form (Form 4) as row edits, empty.
+    var emptySec = {
+      entity: "Contact", values: {},
+      fields: (currentDetails.contactSpec || []).filter(function (f) { return f.editable; })
+        .map(function (f) { return Object.assign({}, f, { value: f.type === "multiEnum" ? [] : null }); }),
+    };
+    var body = layoutForm(emptySec, detailsLayoutFor("Contact"));
     panel.appendChild(body);
     var err = document.createElement("p"); err.className = "sx__dpanel-error"; err.hidden = true; panel.appendChild(err);
     var actions = document.createElement("div"); actions.className = "sx__dpanel-actions";
@@ -2749,6 +3076,96 @@
            " " + pad2(d.getUTCHours()) + ":" + pad2(d.getUTCMinutes()) + ":00";
   }
 
+  // --- Time picker standard (mockup v2): every time field is a Date input plus
+  // a Start-time popover — a half-hour slot grid ("Morning" 8:00–11:30 AM,
+  // "Afternoon & evening" 12:00–7:30 PM, 4 columns, one click to select) with a
+  // free-entry "Other time" escape hatch. No 60-minute minute-pickers anywhere.
+  function fmtTimeText(h, m) {
+    var mer = h < 12 ? "AM" : "PM";
+    var hh = h % 12; if (hh === 0) hh = 12;
+    return hh + ":" + pad2(m) + " " + mer;
+  }
+  // Accepts "2:45 PM", "2 pm", "14:45", "9:30am"; null when unparseable.
+  function parseTimeText(s) {
+    var m = String(s || "").trim().match(/^(\d{1,2})(?::(\d{2}))?\s*([AaPp])?\.?\s*[Mm]?\.?$/);
+    if (!m) return null;
+    var h = +m[1], mm = m[2] ? +m[2] : 0;
+    if (mm > 59) return null;
+    if (m[3]) {
+      if (h < 1 || h > 12) return null;
+      h = (h % 12) + (/p/i.test(m[3]) ? 12 : 0);
+    } else if (h > 23) return null;
+    return { h: h, m: mm };
+  }
+  function timeSlots(fromH, toH) {
+    var out = [];
+    for (var h = fromH; h < toH; h++) { out.push(fmtTimeText(h, 0)); out.push(fmtTimeText(h, 30)); }
+    return out;
+  }
+  function makeDateTimeInput(value) {
+    var wrap = document.createElement("div"); wrap.className = "sx__dtwrap";
+    var d = parseNaive(value);
+    var dateEl = document.createElement("input"); dateEl.type = "date"; dateEl.className = "sx__dtdate";
+    if (d) dateEl.value = d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+    var tw = document.createElement("div"); tw.className = "sx__twrap";
+    var timeEl = document.createElement("input"); timeEl.type = "text"; timeEl.className = "sx__dttime";
+    timeEl.readOnly = true; timeEl.placeholder = "Time";
+    if (d) timeEl.value = fmtTimeText(d.getHours(), d.getMinutes());
+    var pop = document.createElement("div"); pop.className = "sx__timepop";
+    function slotGrid(labelText, slots) {
+      var lab = document.createElement("div"); lab.className = "sx__tp-label"; lab.textContent = labelText;
+      pop.appendChild(lab);
+      var grid = document.createElement("div"); grid.className = "sx__timegrid";
+      slots.forEach(function (t) {
+        var b = document.createElement("button"); b.type = "button"; b.textContent = t;
+        b.addEventListener("click", function () {
+          timeEl.value = t; pop.classList.remove("open");
+          timeEl.dispatchEvent(new Event("input", { bubbles: true }));
+        });
+        grid.appendChild(b);
+      });
+      pop.appendChild(grid);
+    }
+    slotGrid("Morning", timeSlots(8, 12));
+    slotGrid("Afternoon & evening", timeSlots(12, 20));
+    var foot = document.createElement("div"); foot.className = "sx__tp-foot";
+    var span = document.createElement("span"); span.textContent = "Other time:";
+    var other = document.createElement("input"); other.type = "text"; other.placeholder = "e.g. 2:45 PM";
+    other.addEventListener("keydown", function (e) {
+      if (e.key !== "Enter") return;
+      e.preventDefault();
+      var t = parseTimeText(other.value);
+      if (!t) { other.classList.add("sx__tp-bad"); return; }
+      other.classList.remove("sx__tp-bad");
+      timeEl.value = fmtTimeText(t.h, t.m); pop.classList.remove("open");
+      timeEl.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    other.addEventListener("input", function () { other.classList.remove("sx__tp-bad"); });
+    foot.appendChild(span); foot.appendChild(other); pop.appendChild(foot);
+    timeEl.addEventListener("click", function (e) {
+      e.stopPropagation();
+      closeTimePops(pop);
+      var opening = !pop.classList.contains("open");
+      pop.classList.toggle("open", opening);
+      if (opening) {
+        Array.prototype.forEach.call(pop.querySelectorAll(".sx__timegrid button"), function (b) {
+          b.classList.toggle("sel", b.textContent === timeEl.value);
+        });
+        other.value = "";
+      }
+    });
+    pop.addEventListener("click", function (e) { e.stopPropagation(); });
+    tw.appendChild(timeEl); tw.appendChild(pop);
+    wrap.appendChild(dateEl); wrap.appendChild(tw);
+    return wrap;
+  }
+  function closeTimePops(except) {
+    Array.prototype.forEach.call(document.querySelectorAll(".sx__timepop.open"), function (p) {
+      if (p !== except) p.classList.remove("open");
+    });
+  }
+  document.addEventListener("click", function () { closeTimePops(null); });
+
   function makeInput(f, value) {
     var el;
     if (f.type === "enum") {
@@ -2759,14 +3176,24 @@
       opts.forEach(function (o) { el.appendChild(new Option(o === "" ? "(none)" : o, o)); });
       el.value = value == null ? "" : value;
     } else if (f.type === "multiEnum") {
-      el = document.createElement("div"); el.className = "checkgrid";
+      // Tap-to-toggle chip selector (never a multi-select list box). Options come
+      // from the CRM field definitions; a stored value that has drifted out of the
+      // options still renders (selected) so it isn't silently lost by a save.
+      el = document.createElement("div"); el.className = "sx__chipsel";
       var sel = value || [];
-      (f.options || fieldOptions[f.name] || []).forEach(function (o) {
-        var lab = document.createElement("label"); lab.className = "checkgrid__opt";
-        var cb = document.createElement("input"); cb.type = "checkbox"; cb.value = o; cb.checked = sel.indexOf(o) >= 0;
-        lab.appendChild(cb); lab.appendChild(document.createTextNode(" " + o));
-        el.appendChild(lab);
+      var copts = (f.options || fieldOptions[f.name] || []).filter(function (o) { return o !== ""; });
+      sel.forEach(function (v) { if (copts.indexOf(v) < 0) copts.push(v); });
+      copts.forEach(function (o) {
+        var chip = document.createElement("button"); chip.type = "button";
+        chip.className = "sx__chipopt" + (sel.indexOf(o) >= 0 ? " on" : "");
+        chip.textContent = o; chip.dataset.v = o;
+        chip.addEventListener("click", function () { chip.classList.toggle("on"); });
+        el.appendChild(chip);
       });
+      if (!copts.length) {
+        var none = document.createElement("span"); none.className = "sx__muted"; none.textContent = "No options available.";
+        el.appendChild(none);
+      }
     } else if (f.type === "bool") {
       el = document.createElement("input"); el.type = "checkbox"; el.checked = !!value;
     } else if (f.type === "int") {
@@ -2774,7 +3201,7 @@
     } else if (f.type === "date") {
       el = document.createElement("input"); el.type = "date"; el.value = value || "";
     } else if (f.type === "datetime") {
-      el = document.createElement("input"); el.type = "datetime-local"; el.value = toLocalInput(value);
+      el = makeDateTimeInput(value);
     } else if (f.type === "duration") {
       // Select of the CRM's preset choices (seconds); a stored duration outside
       // the presets is offered as-is so an existing value is never lost.
@@ -2796,11 +3223,27 @@
 
   function readField(el) {
     var t = el.dataset.type;
-    if (t === "multiEnum") return Array.prototype.map.call(el.querySelectorAll("input:checked"), function (c) { return c.value; });
+    if (t === "multiEnum") return Array.prototype.map.call(el.querySelectorAll(".sx__chipopt.on"), function (c) { return c.dataset.v; });
     if (t === "bool") return el.checked;
     if (t === "int") return el.value === "" ? null : Number(el.value);
     if (t === "date") return el.value || null;
-    if (t === "datetime") return fromLocalInput(el.value);
+    if (t === "datetime") {
+      // Composite Date + time-picker widget: both parts must be set to yield a
+      // value (a UTC "YYYY-MM-DD HH:MM:SS" stamp, same as before).
+      var dv2 = el.querySelector(".sx__dtdate"), tv2 = el.querySelector(".sx__dttime");
+      if (!dv2) return fromLocalInput(el.value);  // (legacy shape)
+      var tm = parseTimeText(tv2.value);
+      if (!dv2.value || !tm) return null;
+      return fromLocalInput(dv2.value + "T" + pad2(tm.h) + ":" + pad2(tm.m));
+    }
+    if (t === "addressStreet") {
+      // The postal address block's two street lines rejoin into EspoCRM's single
+      // multi-line street field (line 2 is stored as the second line).
+      var l1 = el.querySelector(".sxf__a1").value.trim();
+      var grid2 = el.parentNode, a22 = grid2 ? grid2.querySelector(".sxf__a2") : null;
+      var l2 = a22 ? a22.value.trim() : "";
+      return l2 ? l1 + "\n" + l2 : l1;
+    }
     if (t === "duration") return el.value === "" ? null : Number(el.value);
     if (t === "wysiwyg") {
       var a = el.querySelector(".wysiwyg__area");
