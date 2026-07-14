@@ -928,7 +928,31 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-14)
 
-**Main is at v0.42.1** (439 tests green) — **NEW: My Mentor Profile
+**Main is at v0.44.0** (442 tests green, committed NOT pushed) —
+**Client Administration gains a click-to-edit Notes column** (new leftmost
+column on the engagements grid): clicking a cell opens an inline editor
+(Save/Cancel, Escape cancels); notes store in **`CEngagement.description`**
+via `PUT /assignments/api/engagements/{id}/notes`
+(`assignments/service.update_engagement_notes`), written as the signed-in
+user. **Staff-internal by design:** `description` surfaces in NO other UI —
+the session tools' metadata-driven Details tab now excludes it for
+CEngagement on both render and save (`sessions/details.py:_ENTITY_EXCLUDED`).
+Two side facts: the intake orchestrator's enum-drift follow-up note also
+lands in `description`, so it shows in the Notes column (by design — triage
+material; an edit replaces it); and the v0.43.0 release commit (a PARALLEL
+session's `/mentorprofile` deploy marker, pushed mid-session) accidentally
+swept this feature's changelog entry into its release — fixed by renumbering
+the entry to 0.44.0, where the code actually ships. Verified in the stubbed-
+browser harness (column renders for assigned + unassigned rows, edit → PUT →
+re-render incl. multi-line, Escape/Cancel revert without a PUT, stubbed-502
+save shows the error notice and keeps the editor open with text preserved,
+empty save clears back to the "Add notes…" placeholder; no console errors);
+service+router covered by tests. NOT yet driven against the live CRM
+(standard grant note: the staff user's role needs `description` readable +
+writable on CEngagement). Before that: **v0.43.0** — the parallel session's
+release marker (first `/mentorprofile` deploy; `mentorSummary` built on
+crm-test so the gated summary box activates there; prod still lacks the
+three fields). Base: **v0.42.1 — My Mentor Profile
 (`/mentorprofile`)**, a Mentor-Team self-service screen: a mentor edits their
 own `CMentorProfile` + linked Contact with a live preview that is an **exact
 copy of the public website mentor page** (v0.42.1, Doug's ruling — the live
