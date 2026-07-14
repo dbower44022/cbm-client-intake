@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cleveland Business Mentors — My Mentor Profile</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/tokens.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="mp">
+    <header class="mp__header">
+      <div>
+        <h1>My Mentor Profile</h1>
+        <p class="mp__sub">Review and update your information. The preview shows how your profile will appear on the CBM website.</p>
+      </div>
+      <span class="mp__actions">
+        <span class="mp__who">Signed in as <strong id="whoName"></strong></span>
+        <button type="button" class="cbm-button" id="saveBtn">Save changes</button>
+        <button type="button" class="cbm-button cbm-button--secondary" id="logoutBtn">Sign out</button>
+      </span>
+    </header>
+
+    <!-- Sign-in happens at the portal (/); this shows access/server errors. -->
+    <section class="mp__msg" id="msgView" hidden>
+      <p class="form-error" id="msgText" role="alert"></p>
+      <p><a href="/">Return to the sign-in page</a></p>
+    </section>
+
+    <section id="mainView" hidden>
+      <p class="mp__notice" id="noticeBox" role="status" hidden></p>
+      <div class="mp__split" id="splitGrid">
+        <section class="mp__formcol">
+          <form id="editForm" class="mp__form"></form>
+        </section>
+        <div class="mp__splitter" id="splitter" role="separator" aria-orientation="vertical"
+             title="Drag to resize"></div>
+        <aside class="mp__previewcol" aria-label="Website preview">
+          <div class="mp__pv-head">
+            <h2>Website preview</h2>
+            <p class="mp__pv-note">This is how your profile will display on clevelandbusinessmentors.org.</p>
+          </div>
+          <div class="mp__unpub" id="pvUnpub" hidden>
+            Your profile is currently <strong>not shown</strong> on the website. Tick
+            “Show my profile on the website” to publish it.
+          </div>
+          <div class="mp__pv" id="pvCard">
+            <div class="mp__pv-top">
+              <img class="mp__pv-photo" id="pvPhoto" alt="Profile photo" hidden />
+              <div class="mp__pv-photo-ph" id="pvPhotoPh" aria-hidden="true">No photo</div>
+              <div class="mp__pv-id">
+                <h1 class="mp__pv-name" id="pvName"></h1>
+                <p class="mp__pv-headline" id="pvHeadline"></p>
+                <a class="cbm-button mp__pv-linkedin" id="pvLinkedin" target="_blank" rel="noopener" hidden>View LinkedIn Profile</a>
+              </div>
+            </div>
+            <section class="mp__pv-sec" id="pvExpertiseSec" hidden>
+              <h3>Areas of Expertise</h3>
+              <ul class="mp__pv-list" id="pvExpertise"></ul>
+            </section>
+            <section class="mp__pv-sec" id="pvIndustriesSec" hidden>
+              <h3>Industries Served</h3>
+              <p class="mp__pv-industries" id="pvIndustries"></p>
+            </section>
+            <section class="mp__pv-sec" id="pvAboutSec" hidden>
+              <h3 id="pvAboutHead">About</h3>
+              <div class="mp__pv-about" id="pvAbout"></div>
+            </section>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <footer class="cbm-footer">
+      <p>&copy; <span data-cbm-year>2026</span> Cleveland Business Mentors.<span class="cbm-footer__version" data-cbm-version></span></p>
+    </footer>
+  </main>
+
+  <script src="/shared/phone-format.js"></script>
+  <script src="app.js"></script>
+  <script src="/shared/footer.js"></script>
+</body>
+</html>

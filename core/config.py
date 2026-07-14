@@ -77,6 +77,9 @@ class Settings(BaseSettings):
     session_mentor_allowed_teams: str = "Mentor Team"
     session_partner_allowed_teams: str = "Partner Management Team"
     session_sponsor_allowed_teams: str = "Sponsor Management Team"
+    # My Mentor Profile (/mentorprofile) — a mentor edits their OWN profile +
+    # Contact, with a live website preview. Gated to the Mentor Team.
+    mentor_profile_allowed_teams: str = "Mentor Team"
     # Team that approved mentors' new login users are placed in.
     mentor_team_name: str = "Mentor Team"
     # Auto-provision a login User when a mentor is Approved. Off by default.
@@ -183,6 +186,10 @@ class Settings(BaseSettings):
     @property
     def session_sponsor_allowed_teams_list(self) -> list[str]:
         return [t.strip() for t in self.session_sponsor_allowed_teams.split(",") if t.strip()]
+
+    @property
+    def mentor_profile_allowed_teams_list(self) -> list[str]:
+        return [t.strip() for t in self.mentor_profile_allowed_teams.split(",") if t.strip()]
 
     @property
     def comms_engagement_statuses_list(self) -> list[str]:

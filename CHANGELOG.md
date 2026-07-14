@@ -4,6 +4,44 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.42.0] — 2026-07-14
+
+### Added
+- **My Mentor Profile (`/mentorprofile`)** — a self-service tool where a mentor
+  edits their OWN `CMentorProfile` + linked Contact from one screen, with a
+  **live preview styled like the public website mentor page** (the CRM feeds
+  the website, so the pane shows exactly what the site will render: photo =
+  `profilePhoto`, name = Contact first/last, headline = `mentorTitle`,
+  Areas of Expertise = `areaOfExpertise`, Industries Served =
+  `industryExperience`, About = `aboutMentor`, LinkedIn = Contact
+  `cLinkedInProfile`). Linked from the portal for **Mentor Team** members
+  (`MENTOR_PROFILE_ALLOWED_TEAMS`, default `Mentor Team`; friendly aliases
+  `/mentorprofile`, `/myprofile`).
+  - **Always "me":** no record id is ever taken from the request — every
+    endpoint resolves the caller's own profile server-side
+    (`sessions.service.resolve_manager_profile`), and all reads/writes run as
+    the logged-in user (EspoCRM enforces their ACL).
+  - **Non-administrative field set** (`mentorprofile/service.py:PROFILE_FIELDS`
+    — the single source for the form layout AND the server-side whitelist):
+    public-profile fields (photo, headline, publish toggle, expertise,
+    industries, about, LinkedIn), contact info (name/email/phone/address, on
+    the linked Contact), mentoring preferences (accepting, pause window,
+    business stages, languages, years), and the internal bios. Status,
+    compliance, dues, capacity, departure etc. are absent from the whitelist,
+    so a smuggled change is dropped. Same protections as Mentor Admin: diffed
+    saves, drifted-enum sanitization with plain-language warnings, E.164
+    phone, CRM-required fields enforced from metadata.
+  - **Photo upload/remove** — `CMentorProfile.profilePhoto` (image field):
+    JPEG/PNG/WebP/GIF ≤5 MB, uploaded immediately as an Attachment; the app
+    proxies the image bytes (`GET /mentorprofile/api/photo`, new
+    `EspoClient.download_attachment`) since the browser can't reach the CRM.
+  - Full-width layout with a drag splitter (form left, preview right); the
+    unpublished state shows a banner + dimmed preview.
+  - **CRM prerequisites** (crm-test has the fields; see CLAUDE.md): prod needs
+    `mentorTitle` + `profilePhoto` built; the Mentor Team role needs
+    CMentorProfile read/edit-own, Contact edit-own, and Attachment
+    create/read for the photo.
+
 ## [0.41.2] — 2026-07-14
 
 ### Changed

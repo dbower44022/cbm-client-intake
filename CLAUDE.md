@@ -325,6 +325,83 @@ detail screen that reviews all info (read-only computed totals on top) and
   `SESSION_SECRET`); set `MENTOR_ADMIN_ALLOWED_TEAMS` in the overlay only to
   override the default.
 
+## My Mentor Profile tool — `/mentorprofile` (added 2026-07-14)
+
+A **mentor self-service** tool (Mentor Team, not staff-only): a mentor edits
+their OWN `CMentorProfile` + linked Contact from one screen, with a **live
+side-by-side preview styled like the public website mentor page**
+(e.g. clevelandbusinessmentors.org/mentor/mike-lawson/). The CRM is the planned
+feed for the website mentor pages, so the preview renders from exactly the feed
+fields: photo=`profilePhoto` (image field), name=Contact firstName+lastName,
+headline=`mentorTitle` (varchar, built on crm-test 2026-07-14),
+Areas of Expertise=`areaOfExpertise`, Industries Served=`industryExperience`,
+About=`aboutMentor`, LinkedIn button=Contact `cLinkedInProfile`. Portal tile
+"My Mentor Profile" for Mentor Team members; aliases `/mentorprofile`,
+`/myprofile`.
+
+- **Always "me" — no record id from the client.** Every endpoint resolves the
+  caller's own profile server-side via `sessions.service.resolve_manager_profile`
+  (Python-side `assignedUser` match — never a `where` on `assignedUserId`;
+  handles both the single-`assignedUser` and collaborators shapes). All
+  reads/writes run as the logged-in user (`client_for`), so EspoCRM enforces
+  their ACL. Gate: `MENTOR_PROFILE_ALLOWED_TEAMS` (default `Mentor Team`),
+  per request; admins pass; 401 → `/?next=/mentorprofile/`. A Mentor Team
+  login with **no linked profile** gets a friendly "contact CBM staff" message
+  (`profileFound: false`).
+- **Editable-field set = `mentorprofile/service.py:PROFILE_FIELDS`** (form
+  layout + server-side whitelist, mentoradmin pattern) — deliberately
+  **non-administrative**: Public profile (photo/headline/`publicProfile`
+  toggle/expertise/industries/about/LinkedIn), Contact information
+  (first/last/email/phone/address → routed to the linked Contact; E.164 phone;
+  no linked Contact ⇒ 400 before any write), Mentoring preferences
+  (`acceptingNewClients`, pause dates, `mentorBusinessStagePref`,
+  `fluentLanguages`, `yearsOfExperience`), More about you
+  (`mentorProfessionalBio`, `mentoringWhyInterested`). mentorStatus/type,
+  compliance, dues, capacity, cbmEmail, departure etc. are NOT in the
+  whitelist — smuggled changes are dropped. Enum options + required flags read
+  live from CRM metadata (both entities); drifted enum values sanitized on
+  save with plain-language warnings (fails open); the frontend diffs against
+  render snapshots and sends only changed fields.
+- **Photo** (`CMentorProfile.profilePhoto`, EspoCRM image field): upload =
+  base64 JSON (volunteer-resume precedent, no multipart dep) → Attachment
+  bound to the field → `profilePhotoId` set; JPEG/PNG/WebP/GIF ≤5 MB; remove
+  clears the link. Display goes through the app (`GET /mentorprofile/api/photo`
+  streams the bytes via the NEW `EspoClient.download_attachment` under the
+  user's token) since the browser can't reach the CRM. Uploads happen
+  immediately, outside the Save diff.
+- **Endpoints** (`/mentorprofile/api`): `session`/`logout`; `GET /fields`
+  (spec + live options + required); `GET /profile`; `PUT /profile`
+  `{changes:{...}}`; `POST /photo` `{filename,contentType,dataBase64}`;
+  `GET /photo`; `DELETE /photo`. Frontend `mentorprofile/frontend/` (vanilla
+  JS): full-width (no page-width cap — Doug's ruling), stacked grouped form
+  left, website preview right, drag splitter; preview updates live on every
+  input (wysiwyg sanitized before rendering); `publicProfile` off ⇒
+  "not shown on the website" banner + dimmed preview.
+- **Status (2026-07-14): built; 437 tests green (30 new); verified in the
+  stubbed-browser harness** (form renders packed full-width; live preview
+  updates while typing; script/onerror/javascript: stripped from the preview;
+  publish-toggle banner; photo pick → instant local preview → upload → src
+  swap → remove; diffed save incl. drifted-enum warning notice; required
+  blocks with "Please complete: …"; splitter drag). **NOT yet driven against
+  the live CRM.**
+- **CRM prerequisites (activation checklist):**
+  1. Fields: `mentorTitle` + `profilePhoto` verified on crm-test 2026-07-14;
+     **build both on prod** (`Contact.cLinkedInProfile` exists on crm-test;
+     confirm prod).
+  2. **Mentor Team role**: `CMentorProfile` read-own + edit-own with
+     field-level write on the PROFILE_FIELDS set + `profilePhotoId`; Contact
+     edit-own (the mentor's Contact must have their User assigned —
+     mentoradmin's `reconcile_user_links` self-heals it on staff saves).
+  3. **Attachment**: a Mentor Team user must be able to create an Attachment
+     for `CMentorProfile.profilePhoto` and read it back
+     (`GET /Attachment/file/{id}`) — the key live ACL unknown.
+  4. Data: each mentor's profile linked to their login User (watch the
+     duplicate-profile gotcha) and to a Contact.
+  5. Live verification: sign in as a non-admin mentor → own profile resolves;
+     edit `mentorTitle` + a Contact field → GET-verify both records; photo
+     upload/fetch; a smuggled `mentorStatus` change is NOT saved; portal tile
+     only for Mentor Team.
+
 ## Mentor Assignment tool — `/assignments` (added 2026-06-19)
 
 **User-facing page title: "Client Administration"** (the package/route stay
@@ -824,9 +901,20 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   Note: crm-test seed sessions carry out-of-enum `sessionType` values (harmless; a
   data-hygiene cleanup). **UI polish is the next work item** (a follow-up session).
 
-## Current status (updated 2026-07-13, later session)
+## Current status (updated 2026-07-14)
 
-**Main is at v0.41.2** (407 tests green) — density passes after Doug's live
+**Main is at v0.42.0** (437 tests green) — **NEW: My Mentor Profile
+(`/mentorprofile`)**, a Mentor-Team self-service screen: a mentor edits their
+own `CMentorProfile` + linked Contact with a live preview styled like the
+public website mentor page (the CRM will feed those pages; preview fields =
+`profilePhoto`/`mentorTitle`/`areaOfExpertise`/`industryExperience`/
+`aboutMentor`/Contact name + `cLinkedInProfile`). Photo upload/remove included
+(new `EspoClient.download_attachment` proxies the image). Verified in the
+stubbed-browser harness; **NOT yet driven against the live CRM** — see the
+"My Mentor Profile tool" section for the CRM-prerequisite checklist (prod
+needs `mentorTitle` + `profilePhoto` built; Mentor Team role needs
+read/edit-own + Attachment grants). Portal shows the tile to Mentor Team
+members. Before that: **v0.41.2** (407 tests green) — density passes after Doug's live
 review of 0.41.0. **Doug's layout ruling (2026-07-14): NEVER cap the page
 width — users are on 4K monitors; density = more data per row on the full
 width, not a narrower page.** v0.41.2 implements that: edit-form fields are
@@ -1142,7 +1230,8 @@ The **root `/` is the authenticated PORTAL** on the two staff-stack apps
 `POST /api/portal/login`, ungated `authenticate(gate=False)`, shared session
 key `staff_user`), then exactly the links the user's teams entitle them to:
 every signed-in user → the five public form links; **Mentor Team** → a CRM
-link; **Client Administration Team** → `/assignments/`; **Mentor Administration
+link + `/mentorprofile/` (**My Mentor Profile**, v0.42.0) + `/mentorsessions/`;
+**Client Administration Team** → `/assignments/`; **Mentor Administration
 Team** → `/mentoradmin/`; **Marketing Admin Team** → `/ops/` (**Submission
 Admin**, retitled v0.30.0); admins → everything. Each staff app enforces its
 own team **per request** (`auth.is_member`; 401 → redirect to `/?next=<app>`,

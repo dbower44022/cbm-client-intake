@@ -9,7 +9,7 @@ never the security boundary.
 
 Entitlements (team names come from settings, so they match the app gates):
 - any signed-in user: the public intake-form links
-- Mentor Team: a link to the CRM itself
+- Mentor Team: a link to the CRM itself + ``/mentorprofile/`` (My Mentor Profile)
 - Client Administration Team: ``/assignments/``
 - Mentor Administration Team: ``/mentoradmin/``
 - Marketing Admin Team: ``/ops/`` (Submission Admin)
@@ -61,6 +61,9 @@ def _apps_for(user: dict[str, Any], settings: Settings) -> list[dict[str, str]]:
         apps.append({"title": "Mentor Administration", "url": "/mentoradmin/"})
     if is_member(user, settings.ops_allowed_teams_list):
         apps.append({"title": "Submission Admin", "url": "/ops/"})
+    # A mentor's self-service profile editor (own record + website preview).
+    if is_member(user, settings.mentor_profile_allowed_teams_list):
+        apps.append({"title": "My Mentor Profile", "url": "/mentorprofile/"})
     # Session Management tools — each gated to its own team.
     if is_member(user, settings.session_mentor_allowed_teams_list):
         apps.append({"title": "Mentor Sessions", "url": "/mentorsessions/"})

@@ -51,6 +51,9 @@ ASSIGNMENTS_FRONTEND_DIR = (
     Path(__file__).resolve().parent.parent / "assignments" / "frontend"
 )
 OPS_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "ops" / "frontend"
+MENTORPROFILE_FRONTEND_DIR = (
+    Path(__file__).resolve().parent.parent / "mentorprofile" / "frontend"
+)
 MENTORADMIN_FRONTEND_DIR = (
     Path(__file__).resolve().parent.parent / "mentoradmin" / "frontend"
 )
@@ -344,6 +347,7 @@ def create_app(
     if settings.assignments_active:
         from assignments import api_router as assignments_router
         from mentoradmin import api_router as mentoradmin_router
+        from mentorprofile import api_router as mentorprofile_router
         from ops import api_router as ops_router
         from portal import api_router as portal_router
         from sessions import DOMAINS as SESSION_DOMAINS
@@ -352,6 +356,7 @@ def create_app(
         app.include_router(assignments_router)
         app.include_router(ops_router)
         app.include_router(mentoradmin_router)
+        app.include_router(mentorprofile_router)
         app.include_router(portal_router)
         # Session Management: one router per domain, all from the same engine.
         for _cfg in SESSION_DOMAINS.values():
@@ -385,7 +390,13 @@ def create_app(
     }
     if settings.assignments_active:
         alias_targets.update(
-            {"assignments": "/assignments/", "ops": "/ops/", "mentoradmin": "/mentoradmin/"}
+            {
+                "assignments": "/assignments/",
+                "ops": "/ops/",
+                "mentoradmin": "/mentoradmin/",
+                "mentorprofile": "/mentorprofile/",
+                "myprofile": "/mentorprofile/",
+            }
         )
         from sessions import DOMAINS as _SESSION_DOMAINS
 
@@ -427,6 +438,12 @@ def create_app(
             "/mentoradmin",
             StaticFiles(directory=str(MENTORADMIN_FRONTEND_DIR), html=True),
             name="mentoradmin-frontend",
+        )
+    if settings.assignments_active and MENTORPROFILE_FRONTEND_DIR.is_dir():
+        app.mount(
+            "/mentorprofile",
+            StaticFiles(directory=str(MENTORPROFILE_FRONTEND_DIR), html=True),
+            name="mentorprofile-frontend",
         )
     if settings.assignments_active and PORTAL_FRONTEND_DIR.is_dir():
         # The portal's assets (its index.html is served at "/" above).

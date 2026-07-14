@@ -375,6 +375,21 @@ class EspoClient:
             )
         return resp.json()["id"]
 
+    async def download_attachment(self, attachment_id: str) -> tuple[bytes, str]:
+        """The attachment's raw bytes + content type. Runs under this client's
+        credentials, so EspoCRM ACL-checks access against the related record —
+        the browser can't reach the CRM directly, callers proxy through this."""
+        async with httpx.AsyncClient(timeout=self._timeout) as client:
+            resp = await client.get(
+                f"{self._base}/Attachment/file/{attachment_id}", headers=self._headers
+            )
+        if resp.status_code >= 400:
+            raise EspoError(
+                f"download attachment {attachment_id} failed: HTTP {resp.status_code} {resp.text[:200]}"
+            )
+        content_type = resp.headers.get("content-type", "application/octet-stream")
+        return resp.content, content_type
+
 
 class DryRunEspoClient:
     """No-op client for local development; never contacts EspoCRM."""
@@ -421,6 +436,15 @@ class DryRunEspoClient:
             filename, content_type, len(data_base64), fake_id, related_type, field,
         )
         return fake_id
+
+    async def download_attachment(self, attachment_id: str) -> tuple[bytes, str]:
+        # A 1x1 transparent PNG, so a dry-run photo fetch renders something.
+        log.info("DRY_RUN download_attachment %s -> 1x1 png", attachment_id)
+        png = base64.b64decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk"
+            "YPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+        )
+        return png, "image/png"
 
     async def metadata_enum_options(self, entity: str, field: str):
         # No live CRM to validate against; None => callers skip enum sanitization.

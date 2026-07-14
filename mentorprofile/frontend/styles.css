@@ -1,0 +1,137 @@
+/* My Mentor Profile — edit form (left) + live website preview (right).
+   Builds on /shared/tokens.css. FULL-WIDTH by design (no page max-width cap):
+   density comes from packing fields per row, not narrowing the page. */
+
+/* The hidden attribute must always win (e.g. over .cbm-button's display). */
+[hidden] { display: none !important; }
+
+.mp { padding: 2rem 2rem 3rem; }
+.mp__header { display: flex; justify-content: space-between; align-items: flex-end;
+  gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; padding-bottom: 1rem;
+  border-bottom: 1px solid var(--cbm-border); }
+.mp__header h1 { color: var(--cbm-navy); font-family: var(--cbm-font-serif);
+  font-size: var(--cbm-h3); margin-bottom: 0.2rem; }
+.mp__sub { color: var(--cbm-text); margin: 0; }
+.mp__actions { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; }
+.mp__who { color: var(--cbm-slate-700); margin-right: 0.4rem; }
+.mp__actions .cbm-button { padding: 10px 20px; }
+
+.mp__msg { max-width: 560px; margin: 2rem auto; background: var(--cbm-surface);
+  padding: 2rem; border-radius: var(--cbm-radius); border: 1px solid var(--cbm-border); }
+.form-error { color: var(--cbm-danger); margin: 0.5rem 0; }
+
+.mp__notice { padding: 0.75rem 1rem; border-radius: var(--cbm-radius); margin: 0 0 1rem; }
+.mp__notice.is-success { background: #eafaef; color: #2f7a3f; border: 1px solid var(--cbm-success); }
+.mp__notice.is-error { background: #fdeaea; color: #a23b38; border: 1px solid var(--cbm-danger); }
+.mp__notice.is-warn { background: #fdf6e3; color: #8a6d1a; border: 1px solid #d9b23a; }
+
+/* --- split layout: form | splitter | preview --- */
+.mp__split { display: grid; grid-template-columns: minmax(0, var(--mp-left, 54%)) 6px minmax(0, 1fr);
+  gap: 0 1.25rem; align-items: start; }
+.mp__splitter { align-self: stretch; min-height: 6rem; cursor: col-resize; border-radius: 3px;
+  background: var(--cbm-border, #e3e7ec); position: relative; }
+.mp__splitter:hover, .mp__splitter:focus-visible { background: var(--cbm-blue, #1a5fb4); outline: none; }
+.mp__splitter::after { content: ""; position: absolute; inset: 0 -5px; /* wider hit area */ }
+body.mp--resizing { cursor: col-resize; user-select: none; }
+@media (max-width: 1000px) {
+  .mp__split { grid-template-columns: 1fr; }
+  .mp__splitter { display: none; }
+  .mp__previewcol { margin-top: 1.5rem; }
+}
+
+/* --- edit form: stacked groups, packed rows --- */
+.mp__group { margin-bottom: 1.5rem; }
+.mp__group-h { color: var(--cbm-navy); font-family: var(--cbm-font-serif);
+  font-size: var(--cbm-h6); text-transform: uppercase; letter-spacing: 0.04em;
+  border-bottom: 2px solid var(--cbm-border); padding-bottom: 0.3rem; margin: 0 0 0.8rem; }
+/* Content-sized fields PACK the row: as many per line as fit the width. */
+.mp__row { display: flex; flex-wrap: wrap; gap: 0.7rem 1.25rem; margin-bottom: 0.8rem; align-items: flex-end; }
+.mp__row .cbm-field { flex: 1 1 200px; min-width: 160px; margin: 0; }
+.mp__row .field-text, .mp__row .field-wysiwyg, .mp__row .field-multiEnum,
+.mp__row .field-url, .mp__row .mp__photo-field { flex: 1 1 100%; }
+.mp__row .field-int, .mp__row .field-date { flex: 0 1 160px; }
+.mp__row .cbm-field--check { flex: 0 0 auto; align-self: center; }
+
+.cbm-field { display: flex; flex-direction: column; gap: 0.3rem; }
+.cbm-field label { font-size: var(--cbm-text-sm); font-weight: 600; color: var(--cbm-slate-700); margin: 0; }
+.cbm-field .cbm-required { color: var(--cbm-danger); }
+.cbm-field input[type="text"], .cbm-field input[type="number"], .cbm-field input[type="date"],
+.cbm-field input[type="url"], .cbm-field select, .cbm-field textarea {
+  padding: 0.5rem 0.6rem; border: 1px solid var(--cbm-border); border-radius: var(--cbm-radius);
+  font-family: var(--cbm-font-body); font-size: var(--cbm-text-sm); width: 100%; box-sizing: border-box; }
+.cbm-field textarea { resize: vertical; min-height: 60px; }
+.cbm-field--check { flex-direction: row; align-items: center; }
+.cbm-field--check label { display: flex; flex-direction: row; align-items: center; gap: 0.4rem;
+  font-weight: 600; color: var(--cbm-navy); }
+.cbm-field--check input { width: auto; }
+.cbm-field .cbm-help { font-size: 12px; color: var(--cbm-text); margin: 0; font-weight: 400; }
+
+/* multiEnum as a compact checkbox grid that flows across the full width */
+.checkgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 0.1rem 0.9rem; margin-top: 0.1rem; padding: 0.5rem 0.7rem;
+  border: 1px solid var(--cbm-border); border-radius: var(--cbm-radius); background: var(--cbm-white); }
+.checkgrid__opt { display: flex; align-items: center; gap: 0.4rem; font-weight: 400;
+  font-size: var(--cbm-text-sm); color: var(--cbm-text); cursor: pointer; padding: 0.15rem 0; }
+.checkgrid__opt input { width: auto; margin: 0; flex: none; }
+
+/* WYSIWYG editor (contenteditable + toolbar) */
+.wysiwyg { border: 1px solid var(--cbm-border); border-radius: var(--cbm-radius); background: var(--cbm-white); }
+.wysiwyg__toolbar { display: flex; flex-wrap: wrap; gap: 0.25rem; padding: 0.35rem 0.4rem;
+  border-bottom: 1px solid var(--cbm-border); background: var(--cbm-surface);
+  border-radius: var(--cbm-radius) var(--cbm-radius) 0 0; }
+.wysiwyg__btn { border: 1px solid var(--cbm-border); background: var(--cbm-white); border-radius: var(--cbm-radius);
+  padding: 0.1rem 0.5rem; min-width: 1.9rem; font-size: var(--cbm-text-sm); line-height: 1.5;
+  color: var(--cbm-navy); cursor: pointer; }
+.wysiwyg__btn:hover { background: var(--cbm-surface); border-color: var(--cbm-blue); }
+.wysiwyg__area { min-height: 8rem; max-height: 24rem; overflow: auto; padding: 0.6rem 0.7rem;
+  font-size: var(--cbm-text-sm); line-height: 1.5; color: var(--cbm-text); }
+.wysiwyg__area:focus { outline: 2px solid var(--cbm-blue); outline-offset: -2px; }
+.wysiwyg__area p:first-child { margin-top: 0; }
+.wysiwyg__area p:last-child { margin-bottom: 0; }
+
+/* photo control */
+.mp__photo-box { display: flex; align-items: center; gap: 1rem; }
+.mp__photo-box img { width: 120px; height: 120px; object-fit: cover;
+  border-radius: var(--cbm-radius); border: 1px solid var(--cbm-border); }
+.mp__photo-ph { width: 120px; height: 120px; display: flex; align-items: center; justify-content: center;
+  background: var(--cbm-surface); border: 1px dashed var(--cbm-border); border-radius: var(--cbm-radius);
+  color: var(--cbm-text); font-size: var(--cbm-text-sm); }
+.mp__photo-controls { display: flex; gap: 0.8rem; align-items: center; margin-top: 0.5rem; flex-wrap: wrap; }
+.mp__photo-remove { padding: 8px 14px; font-size: var(--cbm-text-sm); }
+
+/* --- website preview (styled after clevelandbusinessmentors.org/mentor/…) --- */
+.mp__previewcol { min-width: 0; }
+.mp__pv-head h2 { color: var(--cbm-navy); font-family: var(--cbm-font-serif);
+  font-size: var(--cbm-h6); text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 0.2rem; }
+.mp__pv-note { color: var(--cbm-text); font-size: var(--cbm-text-sm); margin: 0 0 0.8rem; }
+.mp__unpub { padding: 0.7rem 1rem; margin-bottom: 0.8rem; border-radius: var(--cbm-radius);
+  background: #fdf6e3; color: #8a6d1a; border: 1px solid #d9b23a; font-size: var(--cbm-text-sm); }
+
+.mp__pv { background: var(--cbm-white); border: 1px solid var(--cbm-border);
+  border-radius: var(--cbm-radius); padding: 2rem 2.25rem; box-shadow: 0 4px 18px rgba(23, 59, 96, 0.08);
+  transition: opacity .2s ease; }
+.mp__pv.is-unpublished { opacity: 0.55; }
+
+.mp__pv-top { display: flex; gap: 1.75rem; align-items: flex-start; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.mp__pv-photo { width: 220px; height: 220px; object-fit: cover; border-radius: var(--cbm-radius);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15); }
+.mp__pv-photo-ph { width: 220px; height: 220px; display: flex; align-items: center; justify-content: center;
+  background: var(--cbm-surface); border-radius: var(--cbm-radius); color: var(--cbm-text); }
+.mp__pv-id { flex: 1 1 240px; min-width: 0; }
+.mp__pv-name { color: var(--cbm-navy); font-family: var(--cbm-font-serif);
+  font-size: 34px; line-height: 1.15; margin: 0.4rem 0 0.35rem; }
+.mp__pv-headline { color: var(--cbm-gold); font-weight: 600; font-size: 19px; margin: 0 0 1rem; }
+.mp__pv-linkedin { padding: 10px 20px; font-size: var(--cbm-text-sm); }
+
+.mp__pv-sec { margin-top: 1.4rem; }
+.mp__pv-sec h3 { color: var(--cbm-navy); font-family: var(--cbm-font-serif);
+  font-size: 20px; margin: 0 0 0.5rem; }
+.mp__pv-list { margin: 0; padding-left: 1.3rem; color: var(--cbm-text); }
+.mp__pv-list li { margin: 0.2rem 0; }
+.mp__pv-industries { color: var(--cbm-text); margin: 0; }
+.mp__pv-about { color: var(--cbm-text); line-height: var(--cbm-line); overflow-wrap: anywhere; }
+.mp__pv-about p:first-child { margin-top: 0; }
+
+/* footer */
+.cbm-footer { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--cbm-border);
+  color: var(--cbm-text); font-size: var(--cbm-text-sm); }
