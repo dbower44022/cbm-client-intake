@@ -412,6 +412,7 @@ async def test_list_engagements_query_and_shape():
                         "engagementClientName": "Green Co",
                         "mentorProfileId": "mp9",
                         "mentorProfileName": "Pat Mentor",
+                        "description": "Prefers evening calls.",
                     },
                 ]
             }
@@ -428,14 +429,29 @@ async def test_list_engagements_query_and_shape():
         "clientName": "Rose LLC",
         "mentorId": None,
         "mentorName": None,
+        "notes": "",
     }
     # Assigned engagement -> mentor surfaced (the row shows the name, no picker).
     assert rows[1]["mentorId"] == "mp9" and rows[1]["mentorName"] == "Pat Mentor"
+    # Internal process notes come from CEngagement.description (Notes column).
+    assert rows[1]["notes"] == "Prefers evening calls."
     entity, where = client.list_calls[0]
     assert entity == service.ENGAGEMENT
     # Multi-status filter -> an `in` clause over the selected statuses.
     assert {"type": "in", "attribute": "engagementStatus",
             "value": ["Submitted", "Pending Acceptance"]} in where
+
+
+async def test_update_engagement_notes_writes_description():
+    client = FakeClient()
+    res = await service.update_engagement_notes(client, "e1", "Call back next week.")
+    assert client.updates == [
+        (service.ENGAGEMENT, "e1", {"description": "Call back next week."})
+    ]
+    assert res == {"engagementId": "e1", "notes": "Call back next week."}
+    # Empty string clears the notes (a legitimate save, not a no-op).
+    await service.update_engagement_notes(client, "e1", "")
+    assert client.updates[-1] == (service.ENGAGEMENT, "e1", {"description": ""})
 
 
 # --- engagement detail -------------------------------------------------------

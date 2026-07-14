@@ -18,6 +18,11 @@ class AssignIn(BaseModel):
     mentorProfileId: str = Field(min_length=1)
 
 
+class NotesIn(BaseModel):
+    # Empty string is a valid value — it clears the notes.
+    notes: str = Field(default="", max_length=65535)
+
+
 def _require_user(request: Request) -> dict:
     """The shared staff session + THIS app's team gate, per request.
 
@@ -117,6 +122,17 @@ async def engagement_detail(engagement_id: str, request: Request) -> dict:
         return await service.get_engagement_detail(client, engagement_id)
     except EspoError as exc:
         raise HTTPException(status_code=502, detail=f"Could not load engagement: {exc}")
+
+
+@router.put("/engagements/{engagement_id}/notes")
+async def update_notes(engagement_id: str, body: NotesIn, request: Request) -> dict:
+    """Save the grid's internal process notes (``CEngagement.description``)."""
+    user = _require_user(request)
+    client = client_for(get_settings(), user)
+    try:
+        return await service.update_engagement_notes(client, engagement_id, body.notes)
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not save notes")
 
 
 @router.post("/engagements/{engagement_id}/assign")

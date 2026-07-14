@@ -120,7 +120,7 @@ async def list_engagements(
         where=[{"type": "in", "attribute": "engagementStatus", "value": list(statuses)}],
         select=(
             "name,createdAt,engagementStatus,primaryEngagementContactName,"
-            "engagementClientName,mentorProfileId,mentorProfileName"
+            "engagementClientName,mentorProfileId,mentorProfileName,description"
         ),
         max_size=200,
         order_by="createdAt",
@@ -138,9 +138,28 @@ async def list_engagements(
             # shows the mentor name instead of the Select-a-Mentor picker + button.
             "mentorId": r.get("mentorProfileId"),
             "mentorName": r.get("mentorProfileName"),
+            # Internal process notes (the grid's click-to-edit Notes column) —
+            # see update_engagement_notes.
+            "notes": r.get("description") or "",
         }
         for r in data.get("list", [])
     ]
+
+
+async def update_engagement_notes(
+    client: AssignClient, engagement_id: str, notes: str
+) -> dict[str, Any]:
+    """Save the grid's internal process notes to ``CEngagement.description``.
+
+    ``description`` is deliberately surfaced ONLY here (the session tools'
+    Details tab excludes it — see ``sessions/details.py:_ENTITY_EXCLUDED``), so
+    these are staff-internal notes about the assignment, never shown to mentors.
+    The intake orchestrator also drops its enum-drift follow-up note into this
+    field on create — editing the cell replaces it, which is fine: that note is
+    exactly the kind of triage material this column exists for.
+    """
+    await client.update(ENGAGEMENT, engagement_id, {"description": notes})
+    return {"engagementId": engagement_id, "notes": notes}
 
 
 async def get_engagement_detail(

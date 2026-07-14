@@ -44,6 +44,11 @@ _SYSTEM_FIELDS = {
     "shippingAddressMap",
 }
 _SKIP_SUFFIX = ("IsInvalid", "IsOptedOut", "IsInactive", "AnyId", "Map")
+# Per-entity hidden fields, on top of the generic filters. CEngagement.description
+# holds Client Administration's internal process notes (the /assignments grid's
+# click-to-edit Notes column) — staff-only by design, so it must neither render
+# nor be writable in the session tools' Details view.
+_ENTITY_EXCLUDED: dict[str, frozenset[str]] = {"CEngagement": frozenset({"description"})}
 _PREFIX_C = re.compile(r"^c(?=[A-Z])")
 
 
@@ -62,11 +67,12 @@ def _label(name: str) -> str:
     return (s[0].upper() + s[1:]) if s else name
 
 
-def _field_spec(meta_fields: dict[str, Any]) -> list[dict[str, Any]]:
+def _field_spec(meta_fields: dict[str, Any], entity: str = "") -> list[dict[str, Any]]:
     """Editable/readonly field descriptors for an entity, from its metadata."""
+    excluded = _ENTITY_EXCLUDED.get(entity, frozenset())
     spec: list[dict[str, Any]] = []
     for name, fdef in meta_fields.items():
-        if name in _SYSTEM_FIELDS or name.endswith(_SKIP_SUFFIX):
+        if name in _SYSTEM_FIELDS or name in excluded or name.endswith(_SKIP_SUFFIX):
             continue
         if not isinstance(fdef, dict):
             continue
@@ -179,7 +185,7 @@ class _MetaCache:
         return self._cache[entity]
 
     async def spec(self, entity: str) -> list[dict[str, Any]]:
-        return _field_spec(await self.raw(entity))
+        return _field_spec(await self.raw(entity), entity)
 
 
 async def build_details(
@@ -400,7 +406,7 @@ async def create_contact(cfg: DomainConfig, client: SessionClient, parent_id: st
     halt-on-failure: a relate failure surfaces as an error (the created id is in
     the message so nothing is silently lost)."""
     meta_fields = await client.metadata(f"entityDefs.{CONTACT}.fields")
-    spec = {f["name"]: f for f in _field_spec(meta_fields)}
+    spec = {f["name"]: f for f in _field_spec(meta_fields, CONTACT)}
     payload = _clean_changes(spec, changes)
     if not (payload.get("lastName") or payload.get("firstName")):
         raise SessionError("A first or last name is required to create a contact.")
@@ -445,7 +451,7 @@ async def save_details(
 ) -> dict[str, Any]:
     """Save whitelisted changes to one entity (see :func:`_clean_changes`)."""
     meta_fields = await client.metadata(f"entityDefs.{entity}.fields")
-    spec = {f["name"]: f for f in _field_spec(meta_fields)}
+    spec = {f["name"]: f for f in _field_spec(meta_fields, entity)}
     payload = _clean_changes(spec, changes)
     if payload:
         await client.update(entity, record_id, payload)

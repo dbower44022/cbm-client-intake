@@ -130,7 +130,41 @@
   font-weight: var(--cbm-fw-heading);
   background: var(--cbm-surface);
 }
-.assign__table td:first-child { width: 55%; }
+.assign__table th.col-notes { width: 26%; }
+.assign__table th.col-eng { width: 42%; }
+
+/* Notes column — click-to-edit internal process notes */
+.notes-view {
+  display: block;
+  width: 100%;
+  background: none;
+  border: 0;
+  border-radius: var(--cbm-radius);
+  padding: 0.15rem 0.3rem;
+  margin: -0.15rem -0.3rem;
+  font: inherit;
+  font-size: var(--cbm-text-sm);
+  color: var(--cbm-slate-700);
+  text-align: left;
+  cursor: pointer;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.notes-view:hover,
+.notes-view:focus-visible { background: var(--cbm-surface); outline: 1px dashed var(--cbm-border); }
+.notes-view--empty { color: var(--cbm-text); font-style: italic; }
+.notes-input {
+  width: 100%;
+  min-height: 4.5em;
+  padding: 0.5rem;
+  border: 1px solid var(--cbm-border);
+  border-radius: var(--cbm-radius);
+  font-family: var(--cbm-font-body);
+  font-size: var(--cbm-text-sm);
+  resize: vertical;
+}
+.notes-actions { display: flex; gap: 0.4rem; margin-top: 0.4rem; }
+.notes-actions .cbm-button { padding: 0.35rem 0.9rem; font-size: var(--cbm-text-sm); }
 
 .eng-name { color: var(--cbm-ink); font-weight: 600; display: block; }
 .eng-name--link {

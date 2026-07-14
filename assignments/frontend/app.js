@@ -238,6 +238,8 @@
     var tr = document.createElement("tr");
     tr.dataset.engId = eng.id;
 
+    tr.appendChild(buildNotesCell(eng));
+
     var tdEng = document.createElement("td");
     var name = document.createElement("button");
     name.type = "button";
@@ -303,6 +305,79 @@
     tdAssign.appendChild(cell);
     tr.appendChild(tdAssign);
     return tr;
+  }
+
+  // --- notes column (internal process notes -> CEngagement.description) ---
+  // Click the cell to edit; Save PUTs /engagements/{id}/notes, Cancel/Escape
+  // reverts. These are staff-only triage notes — the description field is not
+  // shown in any other tool.
+  function buildNotesCell(eng) {
+    var td = document.createElement("td");
+    td.className = "notes-cell";
+    renderNotesView(td, eng);
+    return td;
+  }
+
+  function renderNotesView(td, eng) {
+    td.innerHTML = "";
+    var view = document.createElement("button");
+    view.type = "button";
+    view.className = "notes-view" + (eng.notes ? "" : " notes-view--empty");
+    view.textContent = eng.notes || "Add notes…";
+    view.title = "Click to edit internal notes";
+    view.addEventListener("click", function () { openNotesEditor(td, eng); });
+    td.appendChild(view);
+  }
+
+  function openNotesEditor(td, eng) {
+    td.innerHTML = "";
+    var ta = document.createElement("textarea");
+    ta.className = "notes-input";
+    ta.rows = 3;
+    ta.value = eng.notes || "";
+    ta.placeholder = "Internal notes about this client assignment…";
+
+    var actions = document.createElement("div");
+    actions.className = "notes-actions";
+    var save = document.createElement("button");
+    save.type = "button";
+    save.className = "cbm-button";
+    save.textContent = "Save";
+    var cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.className = "cbm-button cbm-button--secondary";
+    cancel.textContent = "Cancel";
+
+    function closeEditor() { renderNotesView(td, eng); }
+    cancel.addEventListener("click", closeEditor);
+    ta.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") { e.stopPropagation(); closeEditor(); }
+    });
+    save.addEventListener("click", async function () {
+      var value = ta.value.trim();
+      save.disabled = true;
+      cancel.disabled = true;
+      try {
+        var res = await api("/engagements/" + encodeURIComponent(eng.id) + "/notes", {
+          method: "PUT",
+          body: JSON.stringify({ notes: value }),
+        });
+        eng.notes = res.notes || "";
+        renderNotesView(td, eng);
+      } catch (e) {
+        save.disabled = false;
+        cancel.disabled = false;
+        if (e.status === 401) { showLogin(); return; }
+        notice("Couldn't save notes: " + e.message, "error");
+      }
+    });
+
+    actions.appendChild(save);
+    actions.appendChild(cancel);
+    td.appendChild(ta);
+    td.appendChild(actions);
+    ta.focus();
+    ta.setSelectionRange(ta.value.length, ta.value.length);
   }
 
   // --- engagement detail modal ---

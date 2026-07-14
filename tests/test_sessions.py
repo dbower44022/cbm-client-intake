@@ -453,6 +453,32 @@ def test_details_field_spec_filters_and_flags():
         assert gone not in spec
 
 
+def test_details_field_spec_hides_engagement_description():
+    """CEngagement.description carries Client Administration's internal process
+    notes (the /assignments Notes column) — never rendered or editable here."""
+    fields = {"description": {"type": "text"}, "meetingCadence": {"type": "varchar"}}
+    eng = [f["name"] for f in details._field_spec(fields, "CEngagement")]
+    assert eng == ["meetingCadence"]
+    # Only CEngagement hides it; other entities keep their description field.
+    acct = [f["name"] for f in details._field_spec(fields, "Account")]
+    assert "description" in acct
+
+
+@pytest.mark.asyncio
+async def test_save_details_drops_engagement_description():
+    """A smuggled description change on CEngagement is dropped by the whitelist."""
+    fake = Fake(meta_fields={
+        "description": {"type": "text"},
+        "meetingCadence": {"type": "varchar"},
+    })
+    res = await details.save_details(
+        fake, "CEngagement", "e1",
+        {"meetingCadence": "Weekly", "description": "smuggled"},
+    )
+    assert fake.updates == [("CEngagement", "e1", {"meetingCadence": "Weekly"})]
+    assert res["saved"] == ["meetingCadence"]
+
+
 @pytest.mark.asyncio
 async def test_save_details_whitelists_and_drops_drifted_enum():
     fake = Fake(meta_fields={

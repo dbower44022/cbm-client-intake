@@ -4,7 +4,7 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
-## [0.43.0] — 2026-07-14
+## [0.44.0] — 2026-07-14
 
 ### Added
 - **Client Administration: click-to-edit Notes column** on the engagements grid
