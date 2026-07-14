@@ -81,9 +81,11 @@ one action in the EspoCRM admin UI.
    - `messageCount` — type **Integer**
    - `summarizedAt` — type **Date-Time**, **no default value** (must be able
      to stay empty)
-3. Back in Entity Manager, **Create Entity** again. Name: `CCommunication`,
-   type **Base**. Save.
-4. In **CCommunication → Fields**, add:
+3. Go back to **Administration → Entity Manager** and click
+   **Create Entity** again. Name: `CCommunication`, type **Base**. Save.
+4. Go to **Administration → Entity Manager**, click the **Communication**
+   entity (custom entities show without their internal `C` prefix), then
+   click **Fields**. Add each field below with **Add Field**:
    - `direction` — type **Enum**, options `Inbound`, `Outbound`
    - `sentAt` — type **Date-Time**
    - `fromAddress` — type **Varchar**, max length 255 (**NOT the Email field
@@ -139,53 +141,72 @@ which entity each name lands on: `engagements`/`partnerProfiles`/
 entity's side.)
 
 **Link 1 — Engagements**
-1. Open **Entity Manager → Conversation → Relationships**, click
-   **+ Create Link**. Confirm the LEFT panel header says **Conversation**.
-2. **Link Type**: **Many-to-Many**
-3. Left panel (Conversation) **Name**: `engagements`  **Label**: `Engagements`
-4. Right panel **Entity**: **Engagement**
-5. Right panel **Name**: `conversations` (lowercase, plural, exactly — the app
+1. Go to **Administration → Entity Manager** and click the **Conversation**
+   entity.
+2. Click **Relationships**.
+3. Click **+ Create Link**. Confirm the dialog's LEFT panel header says
+   **Conversation** — if it says anything else, you opened the dialog from
+   the wrong entity: close it and restart at step 1.
+4. **Link Type**: **Many-to-Many**
+5. Left panel (Conversation) **Name**: `engagements`  **Label**: `Engagements`
+6. Right panel **Entity**: **Engagement**
+7. Right panel **Name**: `conversations` (lowercase, plural, exactly — the app
    reads `GET /CEngagement/{id}/conversations`)  **Label**: `Conversations`
-6. **Save**. Conversation's Relationships list now shows: Foreign Link
+8. **Save**. Conversation's Relationships list now shows: Foreign Link
    `conversations` | Many-to-Many | Link `engagements` | Engagement.
 
-**Link 2 — Partner Profiles** (still on Conversation → Relationships)
-1. **+ Create Link** (left panel = Conversation).
-2. **Link Type**: **Many-to-Many**
-3. Left **Name**: `partnerProfiles`  **Label**: `Partner Profiles`
-4. Right **Entity**: **Partner Profile**
-5. Right **Name**: `conversations`  **Label**: `Conversations`
-6. **Save**.
+**Link 2 — Partner Profiles**
+1. Go to **Administration → Entity Manager** and click the **Conversation**
+   entity.
+2. Click **Relationships**.
+3. Click **+ Create Link**. Confirm the LEFT panel header says
+   **Conversation**.
+4. **Link Type**: **Many-to-Many**
+5. Left panel (Conversation) **Name**: `partnerProfiles`  **Label**: `Partner Profiles`
+6. Right panel **Entity**: **Partner Profile**
+7. Right panel **Name**: `conversations`  **Label**: `Conversations`
+8. **Save**.
 
-**Link 3 — Sponsor Profiles** (still on Conversation → Relationships)
-1. **+ Create Link** (left panel = Conversation).
-2. **Link Type**: **Many-to-Many**
-3. Left **Name**: `sponsorProfiles`  **Label**: `Sponsor Profiles`
-4. Right **Entity**: **Sponsor Profile**
-5. Right **Name**: `conversations`  **Label**: `Conversations`
-6. **Save**.
+**Link 3 — Sponsor Profiles**
+1. Go to **Administration → Entity Manager** and click the **Conversation**
+   entity.
+2. Click **Relationships**.
+3. Click **+ Create Link**. Confirm the LEFT panel header says
+   **Conversation**.
+4. **Link Type**: **Many-to-Many**
+5. Left panel (Conversation) **Name**: `sponsorProfiles`  **Label**: `Sponsor Profiles`
+6. Right panel **Entity**: **Sponsor Profile**
+7. Right panel **Name**: `conversations`  **Label**: `Conversations`
+8. **Save**.
 
-**Link 4 — Contacts** (still on Conversation → Relationships)
-1. **+ Create Link** (left panel = Conversation).
-2. **Link Type**: **Many-to-Many**
-3. Left **Name**: `contacts`  **Label**: `Contacts`
-4. Right **Entity**: **Contact**
-5. Right **Name**: `conversations`  **Label**: `Conversations`
-6. **Save**. Note: EspoCRM auto-prefixes custom links on built-in entities,
+**Link 4 — Contacts**
+1. Go to **Administration → Entity Manager** and click the **Conversation**
+   entity.
+2. Click **Relationships**.
+3. Click **+ Create Link**. Confirm the LEFT panel header says
+   **Conversation**.
+4. **Link Type**: **Many-to-Many**
+5. Left panel (Conversation) **Name**: `contacts`  **Label**: `Contacts`
+6. Right panel **Entity**: **Contact**
+7. Right panel **Name**: `conversations`  **Label**: `Conversations`
+8. **Save**. Note: EspoCRM auto-prefixes custom links on built-in entities,
    so Contact's side will save as `cConversations` — expected and fine (the
    app never reads that side; only the four record entities need the exact
    `conversations` name, and Engagement/Partner/Sponsor take it as typed).
 
-**Link 5 — Communications (the only one that is NOT Many-to-Many)** (still on
-Conversation → Relationships)
-1. **+ Create Link** (left panel = Conversation).
-2. **Link Type**: **One-to-Many** (Conversation is the left = the One; one
+**Link 5 — Communications (the only one that is NOT Many-to-Many)**
+1. Go to **Administration → Entity Manager** and click the **Conversation**
+   entity.
+2. Click **Relationships**.
+3. Click **+ Create Link**. Confirm the LEFT panel header says
+   **Conversation**.
+4. **Link Type**: **One-to-Many** (Conversation is the left = the One; one
    conversation has many messages)
-3. Left **Name**: `communications`  **Label**: `Communications`
-4. Right **Entity**: **Communication**
-5. Right **Name**: `conversation` (singular — each message belongs to one
+5. Left panel (Conversation) **Name**: `communications`  **Label**: `Communications`
+6. Right panel **Entity**: **Communication**
+7. Right panel **Name**: `conversation` (singular — each message belongs to one
    conversation)  **Label**: `Conversation`
-6. **Save**. The list shows: Foreign Link `conversation` | One-to-Many |
+8. **Save**. The list shows: Foreign Link `conversation` | One-to-Many |
    Link `communications` | Communication.
 
 ### 2.3 Enable Collaborators on CConversation
