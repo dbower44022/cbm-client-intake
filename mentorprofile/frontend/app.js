@@ -329,13 +329,14 @@
   }
 
   function setPhotoSrc(src) {
+    // The hero photo circle keeps its gradient background when there is no
+    // image — exactly what the live page's onerror fallback shows.
     ["photoThumb", "pvPhoto"].forEach(function (id) {
       var img = $(id); if (!img) return;
       if (src) { img.src = src; show(img); } else { img.removeAttribute("src"); hide(img); }
     });
-    var thumbPh = $("photoPh"), pvPh = $("pvPhotoPh"), removeBtn = $("photoRemove");
+    var thumbPh = $("photoPh"), removeBtn = $("photoRemove");
     if (thumbPh) thumbPh.hidden = !!src;
-    if (pvPh) pvPh.hidden = !!src;
     if (removeBtn) removeBtn.hidden = !src;
   }
 
@@ -390,7 +391,8 @@
     }
   }
 
-  // --- live website preview ---
+  // --- live website preview (an exact copy of the live page's markup/CSS;
+  //     this fill logic mirrors the page's own rendering) ---
   // Absolute external URL for a stored link value — a bare "linkedin.com/…"
   // would otherwise resolve relative to this app's own path.
   function externalHref(v) {
@@ -398,38 +400,108 @@
     return /^https?:\/\//i.test(v) ? v : "https://" + v;
   }
 
+  // The website's expertise list: one row per value — gold dot + bold navy
+  // label (the site splits "Label: description" on the first colon; plain
+  // enum values have no description, which its script also handles).
+  function buildExpertiseList(values) {
+    var container = $("pvExpertise"); container.innerHTML = "";
+    if (!values.length) return;
+    var ul = document.createElement("ul");
+    ul.className = "cbm-expertise-list";
+    values.forEach(function (item) {
+      var li = document.createElement("li");
+      li.className = "cbm-expertise-item";
+      var dot = document.createElement("div");
+      dot.className = "cbm-expertise-dot"; dot.setAttribute("aria-hidden", "true");
+      var textWrap = document.createElement("div");
+      var colonIndex = item.indexOf(":");
+      var label = colonIndex > -1 ? item.substring(0, colonIndex).trim() : item;
+      var desc = colonIndex > -1 ? item.substring(colonIndex + 1).trim() : "";
+      var labelEl = document.createElement("span");
+      labelEl.className = "cbm-expertise-label";
+      labelEl.textContent = label + (desc ? ":" : "");
+      textWrap.appendChild(labelEl);
+      if (desc) {
+        var descEl = document.createElement("span");
+        descEl.className = "cbm-expertise-desc";
+        descEl.textContent = " " + desc;
+        textWrap.appendChild(descEl);
+      }
+      li.appendChild(dot); li.appendChild(textWrap);
+      ul.appendChild(li);
+    });
+    container.appendChild(ul);
+  }
+
+  // The About box: the wysiwyg's sanitized HTML; a plain-text value (no tags)
+  // is wrapped in <p> so it takes the site's paragraph styling.
+  function fillAbout(value) {
+    var html = sanitizeHtml(value == null ? "" : String(value)).trim();
+    if (html && html.indexOf("<") !== 0) html = "<p>" + html + "</p>";
+    $("pvAbout").innerHTML = html;
+  }
+
   function refreshPreview() {
     var v = currentFormValues();
-    // Unpublished banner + dimmed card (the preview still renders).
+    // Unpublished banner + dimmed page (the preview still renders).
     var published = !!v.publicProfile;
     $("pvUnpub").hidden = published;
-    $("pvCard").classList.toggle("is-unpublished", !published);
-    // Name + headline
-    var name = ((v.firstName || "") + " " + (v.lastName || "")).trim();
-    $("pvName").textContent = name || "Your name";
-    var headline = (v.mentorTitle || "").trim();
-    $("pvHeadline").textContent = headline;
-    $("pvHeadline").hidden = !headline;
-    // LinkedIn button
+    $("pvViewport").classList.toggle("is-unpublished", !published);
+    // Hero: name + title
+    var first = (v.firstName || "").trim();
+    var name = (first + " " + (v.lastName || "").trim()).trim();
+    $("pvName").textContent = name || "Your Name";
+    $("pvHeadline").textContent = (v.mentorTitle || "").trim();
+    // Left column: ABOUT {FIRST} label + short summary (feature-gated field —
+    // no editor input until the CRM has it; fall back to the loaded record)
+    var aboutWho = "About" + (first ? " " + first : "");
+    $("pvAboutLabel").textContent = aboutWho;
+    var summary = ("mentorSummary" in v ? v.mentorSummary : (record && record.mentorSummary)) || "";
+    $("pvSummary").textContent = summary;
+    $("pvSummary").hidden = !summary.trim();
+    // LinkedIn: the site renders the button even without a URL — mirror that,
+    // but only navigate when a real link is set.
     var li = (v.cLinkedInProfile || "").trim();
     var liBtn = $("pvLinkedin");
-    if (li) { liBtn.href = externalHref(li); show(liBtn); } else { hide(liBtn); }
-    // Areas of Expertise
-    var exp = v.areaOfExpertise || [];
-    var expList = $("pvExpertise"); expList.innerHTML = "";
-    exp.forEach(function (o) { var liEl = document.createElement("li"); liEl.textContent = o; expList.appendChild(liEl); });
-    $("pvExpertiseSec").hidden = !exp.length;
-    // Industries Served (the site shows a joined list)
+    if (li) liBtn.setAttribute("href", externalHref(li));
+    else liBtn.setAttribute("href", "");
+    // Industry Experience box (semicolon-joined, like the site's post meta)
     var ind = v.industryExperience || [];
     $("pvIndustries").textContent = ind.join("; ");
-    $("pvIndustriesSec").hidden = !ind.length;
-    // About — sanitized rich text, headed "About {firstName}"
-    var about = v.aboutMentor || "";
-    var hasAbout = about !== "" && about != null;
-    $("pvAboutHead").textContent = "About" + (v.firstName ? " " + v.firstName.trim() : "");
-    $("pvAbout").innerHTML = sanitizeHtml(hasAbout ? String(about) : "");
-    $("pvAboutSec").hidden = !hasAbout;
+    $("pvIndustryBox").hidden = !ind.length;
+    // Right column: expertise list + About box
+    buildExpertiseList(v.areaOfExpertise || []);
+    $("pvAboutHead").textContent = aboutWho;
+    fillAbout(v.aboutMentor);
+    // Bottom panel: "Ready to Connect with {first}?"
+    $("pvConnectHead").textContent = "Ready to Connect" + (first ? " with " + first : "") + "?";
+    fitPreview();
   }
+
+  // Render the page at the site's 1200px desktop width, scaled to the pane.
+  var PV_PAGE_WIDTH = 1200;
+  function fitPreview() {
+    var vp = $("pvViewport"), sc = $("pvScale");
+    if (!vp || !sc) return;
+    var w = vp.clientWidth;
+    if (!w) return;
+    var k = Math.min(1, w / PV_PAGE_WIDTH);
+    sc.style.transform = "scale(" + k + ")";
+    vp.style.height = Math.ceil(sc.offsetHeight * k) + "px";
+  }
+  window.addEventListener("resize", fitPreview);
+  if (window.ResizeObserver) {
+    new ResizeObserver(fitPreview).observe($("pvViewport"));
+  }
+
+  // The preview is a rendering, not a navigation surface: its links stay
+  // inert, except a real LinkedIn URL (useful to verify) which opens new-tab.
+  $("pvCard").addEventListener("click", function (ev) {
+    var a = ev.target.closest && ev.target.closest("a");
+    if (!a) return;
+    var isLinkedIn = a.id === "pvLinkedin" && (a.getAttribute("href") || "").trim();
+    if (!isLinkedIn) ev.preventDefault();
+  });
 
   // --- drag splitter (resize the form/preview split; full-width layout) ---
   (function setupSplitter() {
@@ -444,9 +516,14 @@
     function onMove(e) {
       if (!dragging) return;
       grid.style.setProperty("--mp-left", clampedWidth(e.clientX) + "px");
+      fitPreview();  // keep the scaled page fitted while the pane resizes
       e.preventDefault();
     }
-    function stop() { dragging = false; document.body.classList.remove("mp--resizing"); }
+    function stop() {
+      if (!dragging) return;
+      dragging = false; document.body.classList.remove("mp--resizing");
+      fitPreview();
+    }
     sp.addEventListener("pointerdown", function (e) {
       dragging = true; document.body.classList.add("mp--resizing"); e.preventDefault();
     });

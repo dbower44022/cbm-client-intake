@@ -328,16 +328,36 @@ detail screen that reviews all info (read-only computed totals on top) and
 ## My Mentor Profile tool — `/mentorprofile` (added 2026-07-14)
 
 A **mentor self-service** tool (Mentor Team, not staff-only): a mentor edits
-their OWN `CMentorProfile` + linked Contact from one screen, with a **live
-side-by-side preview styled like the public website mentor page**
-(e.g. clevelandbusinessmentors.org/mentor/mike-lawson/). The CRM is the planned
-feed for the website mentor pages, so the preview renders from exactly the feed
-fields: photo=`profilePhoto` (image field), name=Contact firstName+lastName,
-headline=`mentorTitle` (varchar, built on crm-test 2026-07-14),
-Areas of Expertise=`areaOfExpertise`, Industries Served=`industryExperience`,
-About=`aboutMentor`, LinkedIn button=Contact `cLinkedInProfile`. Portal tile
+their OWN `CMentorProfile` + linked Contact from one screen, with a live
+side-by-side preview that is an **EXACT reproduction of the public website
+mentor page** (Doug's ruling 2026-07-14 — the point is editing to look good on
+the site, so the page's own HTML + CSS were copied VERBATIM from the Elementor
+widget at clevelandbusinessmentors.org/mentor/mike-lawson/ into
+`mentorprofile/frontend/` — the marked block in styles.css + the `.cbm-wrap`
+markup in index.html; **keep that block in sync if the website template
+changes**). Rendered at the site's 1200px desktop width, scaled to fit the
+pane (`fitPreview`); the site's mobile @media block is deliberately omitted
+(the preview always shows the desktop rendering); static page links are inert,
+a real LinkedIn URL opens new-tab. The CRM is the planned feed for the website
+pages; the preview fills exactly the feed slots: photo=`profilePhoto` (image
+field), name=Contact firstName+lastName, headline (gold hero line) =
+`mentorTitle` (varchar, built on crm-test 2026-07-14), left summary paragraph
+= **`mentorSummary` (feature-gated — see below)**, Industry Experience box =
+`industryExperience` (semicolon-joined), Areas-of-Expertise gold-dot list =
+`areaOfExpertise`, About box=`aboutMentor`, LinkedIn button=Contact
+`cLinkedInProfile`; first name also flows into "ABOUT {FIRST}" / "About
+{first}" / "Ready to Connect with {first}?". The full page-slot ↔ CRM-field
+mapping (for the WP feed) is in `cmentorprofile-summary-field.md`. Portal tile
 "My Mentor Profile" for Mentor Team members; aliases `/mentorprofile`,
 `/myprofile`.
+
+- **`mentorSummary` is feature-gated (NOT built in the CRM yet).** Doug's
+  ruling: the website's short left-column summary gets its own CRM field
+  (spec + build handoff: `cmentorprofile-summary-field.md`; Text,
+  CMentorProfile). The app feature-detects it from metadata
+  (`service.gated_fields_present`/`field_spec_live`, the sessionTranscription
+  precedent): until it exists the editor omits the box and reads/saves drop
+  the field; once built it activates with no app deploy.
 
 - **Always "me" — no record id from the client.** Every endpoint resolves the
   caller's own profile server-side via `sessions.service.resolve_manager_profile`
@@ -377,17 +397,22 @@ About=`aboutMentor`, LinkedIn button=Contact `cLinkedInProfile`. Portal tile
   left, website preview right, drag splitter; preview updates live on every
   input (wysiwyg sanitized before rendering); `publicProfile` off ⇒
   "not shown on the website" banner + dimmed preview.
-- **Status (2026-07-14): built; 437 tests green (30 new); verified in the
-  stubbed-browser harness** (form renders packed full-width; live preview
-  updates while typing; script/onerror/javascript: stripped from the preview;
-  publish-toggle banner; photo pick → instant local preview → upload → src
-  swap → remove; diffed save incl. drifted-enum warning notice; required
-  blocks with "Please complete: …"; splitter drag). **NOT yet driven against
-  the live CRM.**
+- **Status (2026-07-14): built; 439 tests green (32 new); verified in the
+  stubbed-browser harness** (form renders packed full-width; the verbatim-copy
+  preview's computed styles match the live page — navy #00205B hero, gold
+  #B58113 accents, 42px Arial-Rounded name, 1fr/2fr grid, #0077b5 LinkedIn
+  button; live preview updates while typing incl. summary/expertise/all four
+  name slots; script/onerror/javascript: stripped from the preview;
+  publish-toggle banner + dim; photo pick → instant local preview → upload →
+  src swap → remove (no photo = the site's gradient-circle fallback); diffed
+  save incl. drifted-enum warning notice; required blocks with "Please
+  complete: …"; splitter drag refits the scaled page). **NOT yet driven
+  against the live CRM.**
 - **CRM prerequisites (activation checklist):**
   1. Fields: `mentorTitle` + `profilePhoto` verified on crm-test 2026-07-14;
      **build both on prod** (`Contact.cLinkedInProfile` exists on crm-test;
-     confirm prod).
+     confirm prod). **Build `mentorSummary` on crm-test + prod**
+     (`cmentorprofile-summary-field.md`) — the app activates it on its own.
   2. **Mentor Team role**: `CMentorProfile` read-own + edit-own with
      field-level write on the PROFILE_FIELDS set + `profilePhotoId`; Contact
      edit-own (the mentor's Contact must have their User assigned —
@@ -903,18 +928,21 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-14)
 
-**Main is at v0.42.0** (437 tests green) — **NEW: My Mentor Profile
+**Main is at v0.42.1** (439 tests green) — **NEW: My Mentor Profile
 (`/mentorprofile`)**, a Mentor-Team self-service screen: a mentor edits their
-own `CMentorProfile` + linked Contact with a live preview styled like the
-public website mentor page (the CRM will feed those pages; preview fields =
-`profilePhoto`/`mentorTitle`/`areaOfExpertise`/`industryExperience`/
-`aboutMentor`/Contact name + `cLinkedInProfile`). Photo upload/remove included
-(new `EspoClient.download_attachment` proxies the image). Verified in the
-stubbed-browser harness; **NOT yet driven against the live CRM** — see the
-"My Mentor Profile tool" section for the CRM-prerequisite checklist (prod
-needs `mentorTitle` + `profilePhoto` built; Mentor Team role needs
-read/edit-own + Attachment grants). Portal shows the tile to Mentor Team
-members. Before that: **v0.41.2** (407 tests green) — density passes after Doug's live
+own `CMentorProfile` + linked Contact with a live preview that is an **exact
+copy of the public website mentor page** (v0.42.1, Doug's ruling — the live
+page's Elementor HTML + CSS copied verbatim, rendered at 1200px desktop width
+scaled to fit; preview slots = `profilePhoto`/`mentorTitle`/**`mentorSummary`
+(feature-gated, CRM field NOT built — spec `cmentorprofile-summary-field.md`)**/
+`areaOfExpertise`/`industryExperience`/`aboutMentor`/Contact name +
+`cLinkedInProfile`). Photo upload/remove included (new
+`EspoClient.download_attachment` proxies the image). Verified in the
+stubbed-browser harness incl. computed-style match to the live page; **NOT
+yet driven against the live CRM** — see the "My Mentor Profile tool" section
+for the CRM-prerequisite checklist (prod needs `mentorTitle` + `profilePhoto`
+built, both CRMs need `mentorSummary`; Mentor Team role needs read/edit-own +
+Attachment grants). Portal shows the tile to Mentor Team members. Before that: **v0.41.2** (407 tests green) — density passes after Doug's live
 review of 0.41.0. **Doug's layout ruling (2026-07-14): NEVER cap the page
 width — users are on 4K monitors; density = more data per row on the full
 width, not a narrower page.** v0.41.2 implements that: edit-form fields are

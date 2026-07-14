@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cleveland Business Mentors — My Mentor Profile</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/shared/tokens.css" />
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -40,34 +40,110 @@
         <aside class="mp__previewcol" aria-label="Website preview">
           <div class="mp__pv-head">
             <h2>Website preview</h2>
-            <p class="mp__pv-note">This is how your profile will display on clevelandbusinessmentors.org.</p>
+            <p class="mp__pv-note">An exact rendering of your page on clevelandbusinessmentors.org (desktop layout, scaled to fit).</p>
           </div>
           <div class="mp__unpub" id="pvUnpub" hidden>
             Your profile is currently <strong>not shown</strong> on the website. Tick
             “Show my profile on the website” to publish it.
           </div>
-          <div class="mp__pv" id="pvCard">
-            <div class="mp__pv-top">
-              <img class="mp__pv-photo" id="pvPhoto" alt="Profile photo" hidden />
-              <div class="mp__pv-photo-ph" id="pvPhotoPh" aria-hidden="true">No photo</div>
-              <div class="mp__pv-id">
-                <h1 class="mp__pv-name" id="pvName"></h1>
-                <p class="mp__pv-headline" id="pvHeadline"></p>
-                <a class="cbm-button mp__pv-linkedin" id="pvLinkedin" target="_blank" rel="noopener" hidden>View LinkedIn Profile</a>
+
+          <!-- The markup + CSS below are copied from the live mentor page
+               (clevelandbusinessmentors.org/mentor/…, an Elementor HTML widget)
+               so the preview is a faithful reproduction. Dynamic slots carry
+               ids; static copy stays verbatim. Rendered at the site's 1200px
+               desktop width and scaled to fit the pane. -->
+          <div class="mp__pv-viewport" id="pvViewport">
+            <div class="mp__pv-scale" id="pvScale">
+              <div class="cbm-wrap" id="pvCard">
+
+                <!-- HERO -->
+                <section class="cbm-hero">
+                  <div class="cbm-hero-inner">
+                    <div class="cbm-hero-photo">
+                      <img id="pvPhoto" alt="" hidden />
+                    </div>
+                    <div class="cbm-hero-text">
+                      <a href="https://clevelandbusinessmentors.org/mentoring/" class="cbm-hero-back">← Back to Meet Our Mentors</a>
+                      <h1 class="cbm-hero-name" id="pvName"></h1>
+                      <p class="cbm-hero-title" id="pvHeadline"></p>
+                    </div>
+                  </div>
+                </section>
+
+                <!-- MAIN PROFILE -->
+                <section class="cbm-profile">
+                  <div class="cbm-profile-inner">
+                    <div class="cbm-profile-grid">
+
+                      <!-- LEFT: summary + CTAs + industry -->
+                      <div class="cbm-left">
+                        <span class="cbm-summary-label" id="pvAboutLabel">About</span>
+                        <p class="cbm-summary" id="pvSummary" hidden></p>
+
+                        <a href="https://clevelandbusinessmentors.org/request-mentor/" class="cbm-btn">
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                          </svg>
+                          Request a Mentor
+                        </a>
+
+                        <a href="" class="cbm-btn cbm-btn-linkedin" id="pvLinkedin" target="_blank" rel="noopener">
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6zM2 9h4v12H2z"/>
+                            <circle cx="4" cy="4" r="2"/>
+                          </svg>
+                          View LinkedIn Profile
+                        </a>
+
+                        <div class="cbm-industry" id="pvIndustryBox" hidden>
+                          <span class="cbm-industry-label">Industry Experience:</span>
+                          <span class="cbm-industry-value" id="pvIndustries"></span>
+                        </div>
+                      </div>
+
+                      <!-- RIGHT: expertise + about -->
+                      <div class="cbm-right">
+                        <h2>Areas of Expertise</h2>
+                        <span class="cbm-accent-rule" aria-hidden="true"></span>
+
+                        <div id="pvExpertise"></div>
+
+                        <div class="cbm-about-box">
+                          <h3 id="pvAboutHead">About</h3>
+                          <div id="pvAbout"></div>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+                </section>
+
+                <!-- BOTTOM PANEL -->
+                <section class="cbm-bottom">
+                  <div class="cbm-bottom-inner">
+                    <div class="cbm-bp-block">
+                      <h3 id="pvConnectHead">Ready to Connect?</h3>
+                      <p>Request a free, confidential mentoring session. No fees, no contracts.</p>
+                      <a href="https://clevelandbusinessmentors.org/request-mentor/" class="cbm-btn-sm">Request a Session</a>
+                    </div>
+                    <div class="cbm-bp-divider" aria-hidden="true"></div>
+                    <div class="cbm-bp-block">
+                      <h3>Meet All Our Mentors</h3>
+                      <p>Browse our full team of experienced volunteer mentors across every industry and business stage.</p>
+                      <a href="https://clevelandbusinessmentors.org/mentoring/" class="cbm-btn-sm">View All Mentors</a>
+                    </div>
+                    <div class="cbm-bp-divider" aria-hidden="true"></div>
+                    <div class="cbm-bp-block">
+                      <h3>Questions?</h3>
+                      <p style="margin-bottom:8px;"><a href="#">→ How Mentoring Works</a></p>
+                      <p style="margin-bottom:8px;"><a href="#">→ What to Expect</a></p>
+                      <p><a href="mailto:help@cbmentors.org">help@cbmentors.org</a></p>
+                    </div>
+                  </div>
+                </section>
+
               </div>
             </div>
-            <section class="mp__pv-sec" id="pvExpertiseSec" hidden>
-              <h3>Areas of Expertise</h3>
-              <ul class="mp__pv-list" id="pvExpertise"></ul>
-            </section>
-            <section class="mp__pv-sec" id="pvIndustriesSec" hidden>
-              <h3>Industries Served</h3>
-              <p class="mp__pv-industries" id="pvIndustries"></p>
-            </section>
-            <section class="mp__pv-sec" id="pvAboutSec" hidden>
-              <h3 id="pvAboutHead">About</h3>
-              <div class="mp__pv-about" id="pvAbout"></div>
-            </section>
           </div>
         </aside>
       </div>

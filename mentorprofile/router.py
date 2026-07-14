@@ -88,7 +88,7 @@ async def fields(request: Request) -> dict:
     client = client_for(get_settings(), user)
     try:
         return {
-            "fields": service.PROFILE_FIELDS,
+            "fields": await service.field_spec_live(client),
             "options": await service.field_options(client),
             "required": await service.field_required(client),
         }

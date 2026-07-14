@@ -99,7 +99,7 @@ body.mp--resizing { cursor: col-resize; user-select: none; }
 .mp__photo-controls { display: flex; gap: 0.8rem; align-items: center; margin-top: 0.5rem; flex-wrap: wrap; }
 .mp__photo-remove { padding: 8px 14px; font-size: var(--cbm-text-sm); }
 
-/* --- website preview (styled after clevelandbusinessmentors.org/mentor/…) --- */
+/* --- website preview chrome --- */
 .mp__previewcol { min-width: 0; }
 .mp__pv-head h2 { color: var(--cbm-navy); font-family: var(--cbm-font-serif);
   font-size: var(--cbm-h6); text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 0.2rem; }
@@ -107,30 +107,163 @@ body.mp--resizing { cursor: col-resize; user-select: none; }
 .mp__unpub { padding: 0.7rem 1rem; margin-bottom: 0.8rem; border-radius: var(--cbm-radius);
   background: #fdf6e3; color: #8a6d1a; border: 1px solid #d9b23a; font-size: var(--cbm-text-sm); }
 
-.mp__pv { background: var(--cbm-white); border: 1px solid var(--cbm-border);
-  border-radius: var(--cbm-radius); padding: 2rem 2.25rem; box-shadow: 0 4px 18px rgba(23, 59, 96, 0.08);
-  transition: opacity .2s ease; }
-.mp__pv.is-unpublished { opacity: 0.55; }
+/* The page is rendered at the site's 1200px desktop width and scaled to fit
+   the pane (app.js sets the transform + viewport height). */
+.mp__pv-viewport { overflow: hidden; border: 1px solid var(--cbm-border);
+  border-radius: var(--cbm-radius); box-shadow: 0 4px 18px rgba(23, 59, 96, 0.10);
+  background: var(--cbm-white); transition: opacity .2s ease; }
+.mp__pv-viewport.is-unpublished { opacity: 0.55; }
+.mp__pv-scale { width: 1200px; transform-origin: top left; }
+/* Neutralize the app font-size so the copied page renders at its own scale. */
+.mp__pv-scale .cbm-wrap { font-size: 16px; font-family: 'Montserrat', sans-serif;
+  color: #333; line-height: 1.6; }
 
-.mp__pv-top { display: flex; gap: 1.75rem; align-items: flex-start; flex-wrap: wrap; margin-bottom: 1.25rem; }
-.mp__pv-photo { width: 220px; height: 220px; object-fit: cover; border-radius: var(--cbm-radius);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15); }
-.mp__pv-photo-ph { width: 220px; height: 220px; display: flex; align-items: center; justify-content: center;
-  background: var(--cbm-surface); border-radius: var(--cbm-radius); color: var(--cbm-text); }
-.mp__pv-id { flex: 1 1 240px; min-width: 0; }
-.mp__pv-name { color: var(--cbm-navy); font-family: var(--cbm-font-serif);
-  font-size: 34px; line-height: 1.15; margin: 0.4rem 0 0.35rem; }
-.mp__pv-headline { color: var(--cbm-gold); font-weight: 600; font-size: 19px; margin: 0 0 1rem; }
-.mp__pv-linkedin { padding: 10px 20px; font-size: var(--cbm-text-sm); }
+/* --------------------------------------------------------------------------
+   Copied VERBATIM from the live mentor page's Elementor HTML widget
+   (clevelandbusinessmentors.org/mentor/mike-lawson/, fetched 2026-07-14) so
+   the preview is an exact reproduction. Scoped: the page's :root variables
+   are declared on .cbm-wrap; the page's mobile @media block is intentionally
+   omitted — the preview always shows the DESKTOP rendering, scaled.
+   Keep this block in sync if the website template changes.
+   -------------------------------------------------------------------------- */
+.cbm-wrap {
+  --navy: #00205B; --gold: #B58113;
+  --white: #FFFFFF; --light-bg: #F5F7FA; --border: #dde3ef;
+}
+.cbm-wrap * { box-sizing: border-box; margin: 0; padding: 0; }
+.cbm-wrap img { display: block; max-width: 100%; height: auto; }
+.cbm-wrap h2 {
+  font-family: 'Arial Rounded MT Bold', 'Montserrat', sans-serif;
+  font-size: 28px; font-weight: 700; color: var(--navy);
+  line-height: 1.25; margin-bottom: 14px;
+}
+.cbm-wrap h3 {
+  font-family: 'Montserrat', sans-serif; font-size: 20px;
+  font-weight: 700; color: var(--gold); line-height: 1.3; margin-bottom: 12px;
+}
+.cbm-wrap p { margin-bottom: 16px; }
+.cbm-wrap p:last-child { margin-bottom: 0; }
+.cbm-accent-rule {
+  display: block; width: 60px; height: 4px;
+  background-color: var(--gold); margin: 0 0 28px 0;
+}
 
-.mp__pv-sec { margin-top: 1.4rem; }
-.mp__pv-sec h3 { color: var(--cbm-navy); font-family: var(--cbm-font-serif);
-  font-size: 20px; margin: 0 0 0.5rem; }
-.mp__pv-list { margin: 0; padding-left: 1.3rem; color: var(--cbm-text); }
-.mp__pv-list li { margin: 0.2rem 0; }
-.mp__pv-industries { color: var(--cbm-text); margin: 0; }
-.mp__pv-about { color: var(--cbm-text); line-height: var(--cbm-line); overflow-wrap: anywhere; }
-.mp__pv-about p:first-child { margin-top: 0; }
+/* HERO */
+.cbm-hero { background-color: var(--navy); padding: 64px 24px 56px; }
+.cbm-hero-inner {
+  max-width: 1200px; margin: 0 auto;
+  display: flex; align-items: center; gap: 48px;
+}
+.cbm-hero-photo {
+  width: 160px; height: 160px; border-radius: 50%; flex-shrink: 0;
+  border: 4px solid var(--gold); overflow: hidden;
+  background: linear-gradient(135deg, #1a3a6e 0%, #2a5298 100%);
+}
+.cbm-hero-photo img {
+  width: 100%; height: 100%; object-fit: cover; border-radius: 50%;
+}
+.cbm-hero-text { flex: 1; }
+.cbm-hero-back {
+  display: inline-block; font-size: 13px; font-weight: 700; color: var(--gold);
+  text-decoration: none; margin-bottom: 14px; letter-spacing: 0.02em;
+  font-family: 'Montserrat', sans-serif;
+}
+.cbm-hero-back:hover { text-decoration: underline; }
+.cbm-hero-name {
+  font-family: 'Arial Rounded MT Bold', 'Montserrat', sans-serif;
+  font-size: 42px; font-weight: 700; color: var(--white);
+  line-height: 1.15; margin-bottom: 10px;
+}
+.cbm-hero-title {
+  font-family: 'Montserrat', sans-serif; font-size: 18px;
+  font-weight: 600; color: var(--gold); margin-bottom: 0;
+}
+
+/* MAIN CONTENT */
+.cbm-profile { padding: 72px 24px 80px; background: var(--white); }
+.cbm-profile-inner { max-width: 1200px; margin: 0 auto; }
+.cbm-profile-grid {
+  display: grid; grid-template-columns: 1fr 2fr; gap: 56px; align-items: start;
+}
+
+/* LEFT COLUMN */
+.cbm-summary-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--gold); margin-bottom: 12px;
+  font-family: 'Montserrat', sans-serif; display: block;
+}
+.cbm-summary {
+  font-size: 17px; line-height: 1.75; color: #333; margin-bottom: 28px;
+  font-family: 'Montserrat', sans-serif;
+}
+.cbm-btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  font-family: 'Montserrat', sans-serif; font-size: 15px; font-weight: 600;
+  color: var(--white) !important; background-color: var(--navy); border: none;
+  border-radius: 8px; padding: 13px 22px; text-decoration: none !important;
+  margin-bottom: 12px; width: 100%; transition: background-color 0.3s;
+}
+.cbm-btn:hover { background-color: #001030; }
+.cbm-btn svg { width: 18px; height: 18px; fill: var(--white); flex-shrink: 0; }
+.cbm-btn-linkedin { background-color: #0077b5 !important; }
+.cbm-btn-linkedin:hover { background-color: #005885 !important; }
+.cbm-industry {
+  background: var(--light-bg); border-radius: 8px; border-left: 4px solid var(--gold);
+  padding: 14px 16px; margin-top: 20px; font-size: 14px;
+  font-family: 'Montserrat', sans-serif;
+}
+.cbm-industry-label {
+  font-weight: 700; color: var(--navy); display: block; margin-bottom: 4px;
+}
+.cbm-industry-value { color: #555; line-height: 1.6; }
+
+/* RIGHT COLUMN */
+.cbm-expertise-list { list-style: none; padding: 0; margin: 0 0 36px; }
+.cbm-expertise-item {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 8px 0; border-bottom: 1px solid #eef0f5;
+  font-family: 'Montserrat', sans-serif;
+}
+.cbm-expertise-item:last-child { border-bottom: none; }
+.cbm-expertise-dot {
+  flex-shrink: 0; width: 10px; height: 10px; border-radius: 50%;
+  background-color: var(--gold); margin-top: 7px;
+}
+.cbm-expertise-label { font-weight: 700; color: var(--navy); font-size: 16px; }
+.cbm-expertise-desc { font-weight: 400; color: #444; font-size: 16px; }
+.cbm-about-box {
+  background: var(--light-bg); border-radius: 10px; padding: 36px 32px;
+  border-top: 4px solid var(--navy);
+}
+.cbm-about-box h3 { color: var(--navy); margin-bottom: 16px; }
+.cbm-about-box p {
+  font-size: 17px; color: #333; line-height: 1.8; margin-bottom: 16px;
+  font-family: 'Montserrat', sans-serif;
+}
+
+/* BOTTOM PANEL */
+.cbm-bottom { background-color: var(--navy); padding: 64px 24px; }
+.cbm-bottom-inner {
+  max-width: 1200px; margin: 0 auto;
+  display: grid; grid-template-columns: 1fr 1px 1fr 1px 1fr;
+  gap: 40px; align-items: start;
+}
+.cbm-bp-divider { background-color: rgba(255,255,255,0.12); align-self: stretch; }
+.cbm-bp-block h3 { color: var(--white); margin-bottom: 10px; }
+.cbm-bp-block p {
+  font-size: 15px; color: rgba(255,255,255,0.75); margin-bottom: 14px;
+  font-family: 'Montserrat', sans-serif;
+}
+.cbm-bp-block a { color: var(--gold); text-decoration: none; font-size: 15px; }
+.cbm-bp-block a:hover { text-decoration: underline; }
+.cbm-btn-sm {
+  display: inline-block; background: var(--gold); color: var(--white) !important;
+  font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 600;
+  padding: 10px 20px; border-radius: 8px; text-decoration: none !important;
+  transition: background-color 0.3s;
+}
+.cbm-btn-sm:hover { background: var(--white) !important; color: var(--navy) !important; }
+/* ----------------------------- end verbatim copy ------------------------- */
 
 /* footer */
 .cbm-footer { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--cbm-border);

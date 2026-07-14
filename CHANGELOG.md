@@ -4,6 +4,33 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.42.1] — 2026-07-14
+
+### Changed
+- **The `/mentorprofile` website preview is now an EXACT reproduction of the
+  live mentor page** (Doug's ruling: mentors edit to look good on the website,
+  so the preview must be what the site renders). The page's own HTML + CSS
+  (the Elementor widget on clevelandbusinessmentors.org/mentor/…, fetched
+  2026-07-14) are copied verbatim into the preview — navy hero with the
+  gold-ringed circular photo (gradient placeholder when no photo, same as the
+  site's fallback), name + gold title line, the 1fr/2fr profile grid (gold
+  "ABOUT {FIRST}" label + summary + Request-a-Mentor / LinkedIn buttons +
+  Industry Experience box left; Areas-of-Expertise gold-dot list + navy-ruled
+  About box right), and the navy bottom panel ("Ready to Connect with
+  {first}?" / Meet All Our Mentors / Questions). Rendered at the site's
+  1200px desktop width and scaled to fit the pane; expertise/industry fill
+  logic mirrors the page's own script; static links are inert (a real
+  LinkedIn URL opens new-tab); first name flows into all four name slots.
+
+### Added
+- **`mentorSummary` — the website's short summary paragraph, feature-gated.**
+  Doug's ruling: a new dedicated CRM field feeds the left-column summary
+  (distinct from `aboutMentor`). NOT built in the CRM yet — the app
+  feature-detects it from metadata (`sessionTranscription` precedent): the
+  editor box, reads, and saves activate on their own once the CRM team builds
+  it (spec: `cmentorprofile-summary-field.md`, incl. the full page-slot ↔ CRM
+  field mapping for the website feed).
+
 ## [0.42.0] — 2026-07-14
 
 ### Added

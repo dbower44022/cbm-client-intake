@@ -225,6 +225,39 @@ async def test_field_required_reads_both_entities():
     assert "mentorTitle" not in required
 
 
+# --- feature-gated website-summary field (mentorSummary) ---
+
+_SUMMARY_META = {"mentorSummary": {"type": "text"}}
+
+
+@pytest.mark.asyncio
+async def test_summary_field_gated_off_until_crm_has_it():
+    client = FakeClient()  # metadata without mentorSummary
+    spec = await service.field_spec_live(client)
+    assert all(f["name"] != "mentorSummary" for f in spec)
+    # not selected on reads…
+    await service.get_own_profile(client, "u1")
+    profile_gets = [g for g in client.gets if g[0] == "CMentorProfile" and g[2] and "mentorTitle" in g[2]]
+    assert profile_gets and "mentorSummary" not in profile_gets[0][2]
+    # …and a smuggled change is dropped, not written
+    await service.update_own_profile(client, "u1", {"mentorSummary": "hi", "mentorTitle": "X"})
+    _, _, payload = client.updates[0]
+    assert payload == {"mentorTitle": "X"}
+
+
+@pytest.mark.asyncio
+async def test_summary_field_activates_when_crm_has_it():
+    client = FakeClient(metadata=_SUMMARY_META)
+    spec = await service.field_spec_live(client)
+    assert any(f["name"] == "mentorSummary" for f in spec)
+    await service.get_own_profile(client, "u1")
+    profile_gets = [g for g in client.gets if g[0] == "CMentorProfile" and g[2] and "mentorTitle" in g[2]]
+    assert "mentorSummary" in profile_gets[0][2]
+    await service.update_own_profile(client, "u1", {"mentorSummary": "Short intro."})
+    _, _, payload = client.updates[0]
+    assert payload == {"mentorSummary": "Short intro."}
+
+
 # --- photo ---
 
 @pytest.mark.asyncio

@@ -33,6 +33,12 @@ CONTACT_ENTITY = "Contact"
 # whitelist below.
 PHOTO_FIELD = "profilePhoto"
 
+# The website's short summary paragraph. NOT built in the CRM yet — the app
+# feature-detects it from metadata (editor field + reads/writes activate on
+# their own once the CRM team builds it; spec: cmentorprofile-summary-field.md).
+SUMMARY_FIELD = "mentorSummary"
+FEATURE_GATED_FIELDS = {SUMMARY_FIELD}
+
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 # ~5 MB of raw image, as base64 (volunteer-resume cap style).
 MAX_PHOTO_B64_CHARS = 7_000_000
@@ -67,6 +73,10 @@ PROFILE_FIELDS: list[dict[str, Any]] = [
     # --- Public profile (what the website shows) ---
     {"name": PHOTO_FIELD, "label": "Profile photo", "type": "image", "group": "Public profile", "preview": True},
     {"name": "mentorTitle", "label": "Headline (shown under your name)", "type": "varchar", "group": "Public profile", "preview": True},
+    # Feature-gated: the website's short summary paragraph (left column, under
+    # the gold ABOUT label). Served/read/saved only once the CRM field exists
+    # (the sessionTranscription precedent) — see cmentorprofile-summary-field.md.
+    {"name": SUMMARY_FIELD, "label": "Short summary (shown on the website)", "type": "text", "group": "Public profile", "preview": True},
     {"name": "publicProfile", "label": "Show my profile on the website", "type": "bool", "group": "Public profile", "preview": True},
     {"name": "areaOfExpertise", "label": "Areas of expertise", "type": "multiEnum", "group": "Public profile", "preview": True},
     {"name": "industryExperience", "label": "Industries served", "type": "multiEnum", "group": "Public profile", "preview": True},
@@ -106,9 +116,34 @@ _FIELD_LABELS = {f["name"]: f["label"] for f in PROFILE_FIELDS}
 
 _DETAIL_SELECT = ",".join(
     ["id", "name", "contactRecordId", "contactRecordName", f"{PHOTO_FIELD}Id", f"{PHOTO_FIELD}Name"]
-    + sorted(PROFILE_EDIT_NAMES)
+    + sorted(PROFILE_EDIT_NAMES - FEATURE_GATED_FIELDS)
 )
 _CONTACT_SELECT = ",".join(sorted(CONTACT_NAMES))
+
+
+async def gated_fields_present(client: ProfileClient) -> set[str]:
+    """Which feature-gated fields the live CRM actually has (from metadata).
+    Absent-until-proven-present: an unreachable metadata read gates them OFF, so
+    the app never selects/saves a column the CRM may not have."""
+    if not FEATURE_GATED_FIELDS:
+        return set()
+    try:
+        fields = await client.metadata(f"entityDefs.{MENTOR_PROFILE}.fields")
+        return {n for n in FEATURE_GATED_FIELDS if isinstance(fields.get(n), dict)}
+    except Exception as exc:  # noqa: BLE001
+        log.warning("could not feature-detect gated fields: %s", exc)
+        return set()
+
+
+async def field_spec_live(client: ProfileClient) -> list[dict[str, Any]]:
+    """The editor field spec as the live CRM can honor it: feature-gated fields
+    (the website-summary field) appear only once they really exist — serving an
+    editor box the CRM must reject would strand the user's text."""
+    present = await gated_fields_present(client)
+    return [
+        f for f in PROFILE_FIELDS
+        if f["name"] not in FEATURE_GATED_FIELDS or f["name"] in present
+    ]
 
 
 async def get_own_profile(client: ProfileClient, user_id: str) -> dict[str, Any]:
@@ -119,7 +154,11 @@ async def get_own_profile(client: ProfileClient, user_id: str) -> dict[str, Any]
     profile_id = await resolve_manager_profile(client, user_id)
     if not profile_id:
         return {"profileFound": False}
-    rec = await client.get(MENTOR_PROFILE, profile_id, select=_DETAIL_SELECT)
+    select = _DETAIL_SELECT
+    gated = await gated_fields_present(client)
+    if gated:
+        select = ",".join([select] + sorted(gated))
+    rec = await client.get(MENTOR_PROFILE, profile_id, select=select)
     contact_id = rec.get("contactRecordId")
     if contact_id:
         try:
@@ -192,6 +231,12 @@ async def update_own_profile(
         )
     payload = {k: v for k, v in changes.items() if k in PROFILE_EDIT_NAMES}
     contact_payload = {k: v for k, v in changes.items() if k in CONTACT_NAMES}
+    # A feature-gated field the CRM doesn't have yet is dropped, not written
+    # (EspoCRM would silently ignore it — dropping keeps the response honest).
+    if any(k in FEATURE_GATED_FIELDS for k in payload):
+        present = await gated_fields_present(client)
+        payload = {k: v for k, v in payload.items()
+                   if k not in FEATURE_GATED_FIELDS or k in present}
     warnings = await _sanitize_enum_changes(client, payload)
 
     contact_id = None
