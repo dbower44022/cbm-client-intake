@@ -406,14 +406,27 @@ mapping (for the WP feed) is in `cmentorprofile-summary-field.md`. Portal tile
   with `modifiedBy` = the mentor; Contact merge (email/LinkedIn) worked; the
   **drifted-enum warning fired on real data** (stored `areaOfExpertise`
   "Business Plan" is no longer a live option — dropped with the plain-language
-  note). Two **CRM role gaps found (still open, both on the mentor login's
-  role):** (1) field-level EDIT on `CMentorProfile.areaOfExpertise` is denied —
-  EspoCRM silently stripped it from the save (the field itself is writable —
-  an API-service-account write stuck); (2) **Attachment create is denied** —
-  the photo upload's `POST /Attachment` returned 403 (surfaced to the user as
-  a blank 504; fixed same day — a CRM 403 now returns a readable
-  "contact CBM staff" 403). **Retest photo upload + expertise save after the
-  role grants.** Earlier the same day: verified in the stubbed-browser harness
+  note). **Both CRM role gaps found during the test are RESOLVED (same day):**
+  the crm-test **"Mentor Role" carried a 59-field field-level lockdown on
+  CMentorProfile (every field edit:no, six also read:no)** — EspoCRM
+  *silently strips* write-denied attributes from a save (200 OK, value
+  unchanged), which is why `areaOfExpertise` wouldn't store and why the photo
+  upload 403'd (`profilePhoto` edit:no gates the Attachment POST — never an
+  Attachment-scope problem). Diagnosis path: enumerate the login's roles via
+  the admin service account and read each Role's `fieldData` (the user had
+  SIX team roles; only Mentor Role defined field locks; newer fields —
+  mentorTitle/mentorSummary/industryExperience — weren't on the old list,
+  which is why they saved: that inconsistency is the signature of field-level
+  ACL). Doug's ruling: **delete the entire list** (matches prod, which he
+  reports has no field-level locks) — cleared via the admin API 2026-07-14
+  (old list backed up in the session scratchpad); note this re-exposes
+  dues/felony/rejection fields to mentor READS (Mentor Role has read:all on
+  CMentorProfile). After the clear, **expertise save + photo upload + photo
+  GET all VERIFIED LIVE as the non-admin mentor** (photo renders in the
+  preview hero; record GET-verified; the test photo on Douglas Bower's
+  profile is a generated placeholder — replace/Remove in the tool). Also
+  fixed: a CRM 403 surfaced as a blank 504 — now a readable "contact CBM
+  staff" 403. Earlier the same day: verified in the stubbed-browser harness
   (computed styles match the live page — navy #00205B hero, gold #B58113,
   42px Arial-Rounded name, 1fr/2fr grid, #0077b5 LinkedIn button; live
   updates incl. all four name slots; XSS stripped from the preview;
