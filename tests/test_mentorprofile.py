@@ -372,6 +372,23 @@ def test_update_reports_profile_error_as_400(monkeypatch):
     assert "no linked Contact" in r.json()["detail"]
 
 
+def test_crm_403_returns_readable_permission_message(monkeypatch):
+    """A CRM permission rejection (e.g. the mentor role lacking Attachment
+    create — found live 2026-07-14) surfaces as a plain-language 403, not a
+    raw 502/504."""
+    _authed(monkeypatch)
+
+    async def boom(client, user_id, **kwargs):
+        raise EspoError("upload attachment failed: HTTP 403 ")
+
+    monkeypatch.setattr("mentorprofile.router.service.set_own_photo", boom)
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.post("/mentorprofile/api/photo",
+                   json={"filename": "a.jpg", "contentType": "image/jpeg", "dataBase64": "aGk="})
+    assert r.status_code == 403
+    assert "contact CBM staff" in r.json()["detail"]
+
+
 def test_expired_token_returns_401(monkeypatch):
     _authed(monkeypatch)
 
