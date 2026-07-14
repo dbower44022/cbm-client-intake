@@ -123,37 +123,50 @@ per-message contact link that isn't in this design at all); and on
 `partnerProfiles`, `sponsorProfiles`, and `contacts`. Safe while no data
 exists.
 
-**Create all five links from Entity Manager → Conversation → Relationships →
-+ Create Link** (so Conversation is always the left panel):
+**Where you must be standing: Entity Manager → Conversation → Relationships.**
+The dialog's left panel is FIXED to whatever entity you opened — it cannot be
+changed inside the dialog. Every numbered step below assumes the left panel
+says **Conversation**; if your left panel says anything else (Engagement,
+Contact, …), close the dialog and reopen from Conversation's Relationships
+screen. (Creating from the OTHER entity's screen does produce the same
+relationship, but then the two Name values must be SWAPPED — e.g. from
+Engagement: left Name `conversations`, right Entity Conversation, right Name
+`engagements`. Unless you're deliberately doing that, always start from
+Conversation so the steps below apply verbatim. What actually matters is
+which entity each name lands on: `engagements`/`partnerProfiles`/
+`sponsorProfiles`/`contacts`/`communications` must end up on the
+**Conversation** side, and `conversations`/`conversation` on the other
+entity's side.)
 
 **Link 1 — Engagements**
-1. Click **+ Create Link**.
+1. Open **Entity Manager → Conversation → Relationships**, click
+   **+ Create Link**. Confirm the LEFT panel header says **Conversation**.
 2. **Link Type**: **Many-to-Many**
 3. Left panel (Conversation) **Name**: `engagements`  **Label**: `Engagements`
 4. Right panel **Entity**: **Engagement**
 5. Right panel **Name**: `conversations` (lowercase, plural, exactly — the app
    reads `GET /CEngagement/{id}/conversations`)  **Label**: `Conversations`
-6. **Save**. The list now shows: Foreign Link `conversations` | Many-to-Many |
-   Link `engagements` | Engagement.
+6. **Save**. Conversation's Relationships list now shows: Foreign Link
+   `conversations` | Many-to-Many | Link `engagements` | Engagement.
 
-**Link 2 — Partner Profiles**
-1. **+ Create Link**.
+**Link 2 — Partner Profiles** (still on Conversation → Relationships)
+1. **+ Create Link** (left panel = Conversation).
 2. **Link Type**: **Many-to-Many**
 3. Left **Name**: `partnerProfiles`  **Label**: `Partner Profiles`
 4. Right **Entity**: **Partner Profile**
 5. Right **Name**: `conversations`  **Label**: `Conversations`
 6. **Save**.
 
-**Link 3 — Sponsor Profiles**
-1. **+ Create Link**.
+**Link 3 — Sponsor Profiles** (still on Conversation → Relationships)
+1. **+ Create Link** (left panel = Conversation).
 2. **Link Type**: **Many-to-Many**
 3. Left **Name**: `sponsorProfiles`  **Label**: `Sponsor Profiles`
 4. Right **Entity**: **Sponsor Profile**
 5. Right **Name**: `conversations`  **Label**: `Conversations`
 6. **Save**.
 
-**Link 4 — Contacts**
-1. **+ Create Link**.
+**Link 4 — Contacts** (still on Conversation → Relationships)
+1. **+ Create Link** (left panel = Conversation).
 2. **Link Type**: **Many-to-Many**
 3. Left **Name**: `contacts`  **Label**: `Contacts`
 4. Right **Entity**: **Contact**
@@ -163,8 +176,9 @@ exists.
    app never reads that side; only the four record entities need the exact
    `conversations` name, and Engagement/Partner/Sponsor take it as typed).
 
-**Link 5 — Communications (the only one that is NOT Many-to-Many)**
-1. **+ Create Link**.
+**Link 5 — Communications (the only one that is NOT Many-to-Many)** (still on
+Conversation → Relationships)
+1. **+ Create Link** (left panel = Conversation).
 2. **Link Type**: **One-to-Many** (Conversation is the left = the One; one
    conversation has many messages)
 3. Left **Name**: `communications`  **Label**: `Communications`
