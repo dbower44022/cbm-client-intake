@@ -209,15 +209,21 @@ entity's side.)
 8. **Save**. The list shows: Foreign Link `conversation` | One-to-Many |
    Link `communications` | Communication.
 
-### 2.3 Enable Collaborators on CConversation
+### 2.3 Enable Multiple Assigned Users + Collaborators on Conversation
 
-1. In **Entity Manager → CConversation**, click **Edit** (the entity's own
-   edit button — not Fields, not Layouts).
-2. Check the **Collaborators** checkbox (the multi-user *Assigned Users*
-   field — the same setting CEngagement and CSession have on). Required: the
-   sync stamps the owning managers there so read-own roles see their
-   conversations.
-3. **Save**.
+These are TWO SEPARATE checkboxes creating two separate fields (verified live
+2026-07-14 — checking only Collaborators leaves the entity without the
+`assignedUsers` field the integration writes):
+
+1. Go to **Administration → Entity Manager** and click the **Conversation**
+   entity.
+2. Click **Edit** (the entity's own edit button — not Fields, not Layouts).
+3. Check **Multiple Assigned Users**. **This one is REQUIRED** — it creates
+   the multi-user `assignedUsers` field; the sync stamps the owning managers
+   there so read-own roles see their conversations (the same setting
+   CEngagement and CSession have on).
+4. Check **Collaborators** as well (matches the verified crm-test build).
+5. **Save**.
 
 ### 2.4 Grants
 

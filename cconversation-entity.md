@@ -60,11 +60,15 @@ Many*. That direction trap is what inverted the first crm-test build.)
   EspoCRM auto-prefixes custom links on the built-in Contact entity, so its
   side saves as `cConversations` — expected; the app never reads that side.
 
-**Enable Collaborators on `CConversation`** (Entity Manager → CConversation →
-Edit → the **Collaborators** checkbox — the multi-user *Assigned Users* field,
-the same toggle CEngagement and CSession have on): the sync stamps the owning
-manager(s) there so read-own roles see their conversations (same requirement
-as `CSession`; see CLAUDE.md's session-tools ACL bullet).
+**Enable Multiple Assigned Users + Collaborators on `CConversation`**
+(Entity Manager → Conversation → Edit): these are TWO SEPARATE checkboxes
+creating two separate fields (verified live 2026-07-14 — Collaborators alone
+leaves the entity without `assignedUsers`). Check **Multiple Assigned Users**
+(REQUIRED — creates the multi-user `assignedUsers` field; the sync stamps the
+owning manager(s) there so read-own roles see their conversations, the same
+toggle CEngagement and CSession have on) AND **Collaborators** (matches the
+verified crm-test build). Same requirement as `CSession`; see CLAUDE.md's
+session-tools ACL bullet.
 
 ## 2. Entity: `CCommunication`
 
