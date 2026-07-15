@@ -967,6 +967,14 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-14)
 
+**Gmail Communications went LIVE IN PRODUCTION 2026-07-14** — first backfill
+pass clean (7 mailboxes, 1177 fetched, 1061 stored, 0 errors → 521
+conversations / 1063 messages in the prod CRM). Full activation record in the
+Communications bullet below; still open: first live SEND from the tab, the
+API-role **User Read=all** grant + one-shot `GMAIL_RESYNC` on BOTH CRMs
+(owner-stamp fix), and deleting the 4 `ZZTEST-GMAILPROD*` probe records in
+the prod CRM UI.
+
 **Main is at v0.44.0** (442 tests green, committed NOT pushed) —
 **Client Administration gains a click-to-edit Notes column** (new RIGHTMOST
 column on the engagements grid — Doug corrected the initial leftmost
@@ -1132,11 +1140,33 @@ bullets above and in CHANGELOG. Prod answers on the
 app as PRIMARY, Cloudflare CNAME grey-cloud → the app's default hostname; the
 `…ondigitalocean.app` URL still works). Shipped 2026-07-05..10 (see CHANGELOG):
 
-- **Communications: Gmail conversation integration — ACTIVATED LIVE on
-  crm-test 2026-07-11 (read path verified end-to-end).** Built v0.35.0; docs:
+- **Communications: Gmail conversation integration — LIVE IN PRODUCTION
+  2026-07-14** (crm-test since 2026-07-11). Built v0.35.0; docs:
   plan `prds/communications-gmail-integration.md`, CRM handoff
   `cconversation-entity.md`, activation runbook `GMAIL-INTEGRATION-GUIDE.md`,
   user-facing functional reference `communications-tab.md`.
+  **Prod activation record (2026-07-14):** prod CRM entities built by Doug
+  (three schema gaps caught by read-only probes and fixed iteratively —
+  missing API-role grants, then all five CConversation relationships +
+  Multiple-Assigned-Users, then the 13 CCommunication fields; each guide
+  ambiguity that caused one was rewritten: every step block now
+  self-contained incl. navigation, and §2.3 names BOTH checkboxes — Multiple
+  Assigned Users REQUIRED, Collaborators separate). Final schema diff vs
+  crm-test CLEAN (fields/links/types/enum options) + a full-field ZZTEST
+  write probe stored every value, rfc-id dedup lookup verified. Prod overlay
+  `.do/app.prod-crm.yaml` REGENERATED from the live spec (the old local copy
+  had drifted: stale ESPO_PROVISION_PASSWORD placeholder, missing the custom
+  domain — regenerating from `doctl apps spec get` preserved the live EV[…]
+  secrets) + `GMAIL_SYNC=true` and the SA key on web+worker; applied via
+  doctl, migration ran, **first backfill pass: 7 mailboxes, 1177 fetched,
+  1061 stored, 0 errors → 521 conversations / 1063 messages in the prod CRM**
+  (same SA/delegation as crm-test — no Google-side work). Remaining prod
+  items: eyeball the tab as a manager + first live SEND (gmail.send unused
+  on prod); the User Read=all grant + one-shot resync (owner-stamp
+  correction below); delete 4 `ZZTEST-GMAILPROD*` probe records in the prod
+  CRM UI (CConversation `6a568a35c1d0b305f`/`6a5694a35a5ea4721`,
+  CCommunication `6a568a35e8e563564`/`6a5694a374815fd70`).
+  **crm-test activation record (2026-07-11):**
   Activation record: CRM entities built by Doug in the Entity Manager UI +
   probe-verified (fields/links/Collaborators/grants all green; note the CRM's
   varchars are 100 chars — the app clamps, spec updated); Google service
@@ -1173,10 +1203,9 @@ app as PRIMARY, Cloudflare CNAME grey-cloud → the app's default hostname; the
   add-address-to-contact / create-contact / explicit one-off, and
   `@cbmentors.org` recipients never trip the guard. **Remaining:**
   eyeball the Communications tab as a signed-in manager; exercise SEND
-  (first gmail.send use) + curation live; prod rollout per the runbook
-  (prod CRM entities + prod overlay; same SA/delegation covers prod); AI
-  summaries need privacy sign-off + `ANTHROPIC_API_KEY` +
-  `COMMS_AI_SUMMARY=true`.
+  (first gmail.send use) + curation live (both CRMs); ~~prod rollout~~ DONE
+  2026-07-14 (record above); AI summaries need privacy sign-off +
+  `ANTHROPIC_API_KEY` + `COMMS_AI_SUMMARY=true`.
 
 - **Session Management tools — v0.34.0** (built 2026-07-08..10, branch
   `feat/session-view`, **NOT yet pushed/deployed**; mentor domain CRUD **driven

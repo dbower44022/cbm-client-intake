@@ -400,7 +400,14 @@ Set `GMAIL_SYNC=false` (web + worker) and re-apply the spec — the endpoints
 conversations remain in the CRM (harmless); Postgres cursors are kept, so
 re-enabling resumes incrementally rather than re-backfilling.
 
-## Prod rollout (after crm-test passes)
+## Prod rollout (after crm-test passes) — ✅ DONE 2026-07-14
+
+Completed 2026-07-14: prod CRM entities/grants built (three gaps caught by
+read-only schema probes against crm-test's as-built metadata — worth
+re-running that diff on any future instance), overlay applied, first
+backfill pass clean (7 mailboxes, 1061 stored, 0 errors). Open: first live
+SEND on prod, and the §2.4 Role-1 **User Read=all** grant + one-shot
+`GMAIL_RESYNC=true` on both CRMs (owner-stamp backfill).
 
 1. Part 2 on the prod CRM (same entities/grants/layouts).
 2. Part 1 covers prod already if prod uses the same Workspace domain + service
