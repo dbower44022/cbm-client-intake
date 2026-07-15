@@ -39,6 +39,35 @@ body.mp--resizing { cursor: col-resize; user-select: none; }
   .mp__previewcol { margin-top: 1.5rem; }
 }
 
+/* "Mentoring since mm/dd/yyyy" header badge */
+.mp__since { display: inline-block; margin: 0.45rem 0 0; padding: 0.25rem 0.75rem;
+  border-radius: 999px; background: var(--cbm-surface); border: 1px solid var(--cbm-gold);
+  color: var(--cbm-navy); font-weight: 600; font-size: var(--cbm-text-sm); }
+
+/* --- top bar: photo (left) + the PROMINENT status toggles (right) --- */
+.mp__topbar { display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.mp__toggles { display: flex; flex-direction: column; gap: 0.7rem; margin-left: auto; }
+.mp__toggle { border: 2px solid var(--cbm-border); border-radius: var(--cbm-radius);
+  background: var(--cbm-white); padding: 0.85rem 1.2rem; transition: background .15s, border-color .15s; }
+.mp__toggle label { display: flex; align-items: center; gap: 0.7rem;
+  font-size: 18px; font-weight: 700; color: var(--cbm-navy); cursor: pointer; margin: 0; }
+.mp__toggle input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--cbm-navy);
+  cursor: pointer; flex: none; }
+/* ON = unmistakably green; OFF = amber, so "not visible / not accepting" is
+   never mistaken for a neutral state. */
+.mp__toggle:has(input:checked) { background: #eafaef; border-color: var(--cbm-success); }
+.mp__toggle:has(input:not(:checked)) { background: #fdf6e3; border-color: var(--cbm-warning); }
+.mp__toggle:has(input:checked) input { accent-color: #2f7a3f; }
+
+/* --- paired panels: Contact information (left) + Personal details (right) --- */
+.mp__cols { display: flex; gap: 2rem; align-items: flex-start; flex-wrap: wrap; }
+.mp__cols-main { flex: 2 1 420px; min-width: 0; }
+.mp__cols-side { flex: 1 1 240px; min-width: 0; padding: 0 1.25rem 0.75rem;
+  background: var(--cbm-surface); border: 1px solid var(--cbm-border);
+  border-radius: var(--cbm-radius); }
+.mp__cols-side .mp__group-h { margin-top: 0.9rem; }
+
 /* --- edit form: stacked groups, packed rows --- */
 .mp__group { margin-bottom: 1.5rem; }
 .mp__group-h { color: var(--cbm-navy); font-family: var(--cbm-font-serif);

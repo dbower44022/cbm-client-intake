@@ -68,21 +68,58 @@
       }
       record = result.record || {};
       show($("mainView")); hide($("msgView"));
+      renderSince(record.mentorStartDate);
       renderForm(record);
       refreshPreview();
       loadPhoto(record.profilePhotoId);
     } catch (e) { bootFail(e); }
   }
 
-  // --- form (stacked groups; `row` packs fields on one line, full width) ---
+  // "Mentoring since mm/dd/yyyy" in the page header (staff-set, read-only).
+  function renderSince(dateStr) {
+    var el = $("sinceBadge");
+    var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateStr || "");
+    if (!m) { hide(el); return; }
+    el.textContent = "Mentoring since " + m[2] + "/" + m[3] + "/" + m[1];
+    show(el);
+  }
+
+  // Groups rendered side by side as one two-panel row (left, right).
+  var GROUP_PAIRS = { "Contact information": "Personal details" };
+
+  // --- form (stacked groups; `row` packs fields on one line, full width;
+  //     the photo + `toggle` fields form the prominent TOP BAR) ---
   function renderForm(m) {
     var form = $("editForm"); form.innerHTML = "";
-    var groups = {}, order = [];
+    // Top bar: photo control (left) + the prominent status toggles (right).
+    var photoField = null, toggles = [];
+    var rest = [];
     fieldSpec.forEach(function (f) {
+      if (f.type === "image") photoField = f;
+      else if (f.toggle) toggles.push(f);
+      else rest.push(f);
+    });
+    if (photoField || toggles.length) {
+      var top = document.createElement("div"); top.className = "mp__topbar";
+      if (photoField) top.appendChild(buildPhotoControl());
+      if (toggles.length) {
+        var panel = document.createElement("div"); panel.className = "mp__toggles";
+        toggles.forEach(function (f) {
+          var t = buildField(f, m[f.name]);
+          t.classList.add("mp__toggle");
+          panel.appendChild(t);
+        });
+        top.appendChild(panel);
+      }
+      form.appendChild(top);
+    }
+    // Grouped sections (in spec order), with paired groups side by side.
+    var groups = {}, order = [];
+    rest.forEach(function (f) {
       if (!groups[f.group]) { groups[f.group] = []; order.push(f.group); }
       groups[f.group].push(f);
     });
-    order.forEach(function (group) {
+    function buildGroup(group) {
       var sec = document.createElement("section"); sec.className = "mp__group";
       var h = document.createElement("h2"); h.className = "mp__group-h"; h.textContent = group;
       sec.appendChild(h);
@@ -94,12 +131,25 @@
       });
       rowOrder.forEach(function (r) {
         var rowEl = document.createElement("div"); rowEl.className = "mp__row";
-        rows[r].forEach(function (f) {
-          rowEl.appendChild(f.type === "image" ? buildPhotoControl() : buildField(f, m[f.name]));
-        });
+        rows[r].forEach(function (f) { rowEl.appendChild(buildField(f, m[f.name])); });
         sec.appendChild(rowEl);
       });
-      form.appendChild(sec);
+      return sec;
+    }
+    var consumed = {};
+    order.forEach(function (group) {
+      if (consumed[group]) return;
+      var partner = GROUP_PAIRS[group];
+      if (partner && groups[partner]) {
+        var cols = document.createElement("div"); cols.className = "mp__cols";
+        var left = buildGroup(group); left.classList.add("mp__cols-main");
+        var right = buildGroup(partner); right.classList.add("mp__cols-side");
+        cols.appendChild(left); cols.appendChild(right);
+        form.appendChild(cols);
+        consumed[partner] = true;
+      } else {
+        form.appendChild(buildGroup(group));
+      }
     });
     // One delegated listener drives the live preview (checkboxes fire change,
     // text/wysiwyg fire input).
@@ -215,7 +265,7 @@
     } else if (f.type === "wysiwyg") {
       el = makeWysiwyg(value);
     } else if (f.type === "text") {
-      el = document.createElement("textarea"); el.rows = 2; el.value = value == null ? "" : value;
+      el = document.createElement("textarea"); el.rows = f.rows || 2; el.value = value == null ? "" : value;
     } else if (f.type === "url") {
       el = document.createElement("input"); el.type = "url"; el.value = value == null ? "" : value;
       el.placeholder = "https://www.linkedin.com/in/…";

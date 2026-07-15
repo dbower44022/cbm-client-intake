@@ -370,15 +370,23 @@ mapping (for the WP feed) is in `cmentorprofile-summary-field.md`. Portal tile
   (`profileFound: false`).
 - **Editable-field set = `mentorprofile/service.py:PROFILE_FIELDS`** (form
   layout + server-side whitelist, mentoradmin pattern) — deliberately
-  **non-administrative**: Public profile (photo/headline/`publicProfile`
-  toggle/expertise/industries/about/LinkedIn), Contact information
-  (first/last/email/phone/address → routed to the linked Contact; E.164 phone;
-  no linked Contact ⇒ 400 before any write), Mentoring preferences
-  (`acceptingNewClients`, pause dates, `mentorBusinessStagePref`,
-  `fluentLanguages`, `yearsOfExperience`), More about you
-  (`mentorProfessionalBio`, `mentoringWhyInterested`). mentorStatus/type,
-  compliance, dues, capacity, cbmEmail, departure etc. are NOT in the
-  whitelist — smuggled changes are dropped. Enum options + required flags read
+  **non-administrative** (v0.45.0 layout, Doug's review): a **top bar** with
+  the photo and the two PROMINENT status toggles opposite it
+  (`publicProfile` + `acceptingNewClients`, `toggle: True` — 18px bold cards,
+  green when on / amber when off); Public profile
+  (headline/summary/expertise/industries/about/LinkedIn); **Contact
+  information side by side with a Personal details panel**
+  (`Contact.cBirthday` + `Contact.cSpouseName` — exist on both CRMs — plus
+  `yearsOfExperience`); Mentoring preferences (`maximumClientCapacity` left
+  of the pause dates — capacity is mentor-editable since v0.45.0,
+  `mentorBusinessStagePref`, `fluentLanguages`); More about you
+  (`mentorProfessionalBio`, `mentoringWhyInterested`); and **Internal CRM
+  description** (`description`, large plain-text box) at the very bottom. A
+  read-only **"Mentoring since mm/dd/yyyy"** badge (`mentorStartDate`,
+  `READ_ONLY_FIELDS`) sits in the page header. mentorStatus/type, compliance,
+  dues, cbmEmail, departure etc. are NOT in the whitelist — smuggled changes
+  are dropped. Contact fields route to the linked Contact (E.164 phone; no
+  linked Contact ⇒ 400 before any write). Enum options + required flags read
   live from CRM metadata (both entities); drifted enum values sanitized on
   save with plain-language warnings (fails open); the frontend diffs against
   render snapshots and sends only changed fields.

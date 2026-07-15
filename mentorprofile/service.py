@@ -70,19 +70,23 @@ class ProfileClient(Protocol):
 # ``preview: True`` marks the fields the public-website preview renders from —
 # the CRM feed to the website uses exactly these, so the pane is faithful.
 PROFILE_FIELDS: list[dict[str, Any]] = [
-    # --- Public profile (what the website shows) ---
+    # --- Top bar: the photo with the two PROMINENT status toggles opposite it
+    #     (``toggle: True`` fields render in the top-right status panel).
     {"name": PHOTO_FIELD, "label": "Profile photo", "type": "image", "group": "Public profile", "preview": True},
+    {"name": "publicProfile", "label": "Show my profile on the website", "type": "bool", "group": "Public profile", "preview": True, "toggle": True},
+    {"name": "acceptingNewClients", "label": "Accepting new clients", "type": "bool", "group": "Public profile", "toggle": True},
+    # --- Public profile (what the website shows) ---
     {"name": "mentorTitle", "label": "Headline (shown under your name)", "type": "varchar", "group": "Public profile", "preview": True},
     # Feature-gated: the website's short summary paragraph (left column, under
     # the gold ABOUT label). Served/read/saved only once the CRM field exists
     # (the sessionTranscription precedent) — see cmentorprofile-summary-field.md.
     {"name": SUMMARY_FIELD, "label": "Short summary (shown on the website)", "type": "text", "group": "Public profile", "preview": True},
-    {"name": "publicProfile", "label": "Show my profile on the website", "type": "bool", "group": "Public profile", "preview": True},
     {"name": "areaOfExpertise", "label": "Areas of expertise", "type": "multiEnum", "group": "Public profile", "preview": True},
     {"name": "industryExperience", "label": "Industries served", "type": "multiEnum", "group": "Public profile", "preview": True},
     {"name": "aboutMentor", "label": "About you (shown on the website)", "type": "wysiwyg", "group": "Public profile", "preview": True},
     {"name": "cLinkedInProfile", "label": "LinkedIn profile URL", "type": "url", "group": "Public profile", "preview": True, "entity": CONTACT_ENTITY},
-    # --- Contact information (lives on the linked Contact record) ---
+    # --- Contact information (lives on the linked Contact record; renders
+    #     side by side with the Personal details panel) ---
     {"name": "firstName", "label": "First name", "type": "varchar", "group": "Contact information", "row": "personname", "entity": CONTACT_ENTITY, "preview": True},
     {"name": "lastName", "label": "Last name", "type": "varchar", "group": "Contact information", "row": "personname", "entity": CONTACT_ENTITY, "preview": True},
     {"name": "emailAddress", "label": "Email", "type": "varchar", "group": "Contact information", "row": "reach", "entity": CONTACT_ENTITY},
@@ -91,17 +95,28 @@ PROFILE_FIELDS: list[dict[str, Any]] = [
     {"name": "addressCity", "label": "City", "type": "varchar", "group": "Contact information", "row": "citystate", "entity": CONTACT_ENTITY},
     {"name": "addressState", "label": "State", "type": "varchar", "group": "Contact information", "row": "citystate", "entity": CONTACT_ENTITY},
     {"name": "addressPostalCode", "label": "ZIP code", "type": "varchar", "group": "Contact information", "row": "citystate", "entity": CONTACT_ENTITY},
+    # --- Personal details (the panel to the right of Contact information) ---
+    {"name": "cBirthday", "label": "Birthday", "type": "date", "group": "Personal details", "entity": CONTACT_ENTITY},
+    {"name": "cSpouseName", "label": "Spouse name", "type": "varchar", "group": "Personal details", "entity": CONTACT_ENTITY},
+    {"name": "yearsOfExperience", "label": "Years of experience", "type": "int", "group": "Personal details"},
     # --- Mentoring preferences ---
-    {"name": "acceptingNewClients", "label": "Accepting new clients", "type": "bool", "group": "Mentoring preferences"},
+    {"name": "maximumClientCapacity", "label": "Max client capacity", "type": "int", "group": "Mentoring preferences", "row": "pause"},
     {"name": "mentorPauseStartDate", "label": "Pause start", "type": "date", "group": "Mentoring preferences", "row": "pause"},
     {"name": "mentorPauseEndDate", "label": "Pause end", "type": "date", "group": "Mentoring preferences", "row": "pause"},
     {"name": "mentorBusinessStagePref", "label": "Preferred business stages", "type": "multiEnum", "group": "Mentoring preferences"},
     {"name": "fluentLanguages", "label": "Fluent languages", "type": "multiEnum", "group": "Mentoring preferences"},
-    {"name": "yearsOfExperience", "label": "Years of experience", "type": "int", "group": "Mentoring preferences"},
     # --- More about you (internal, not on the website) ---
     {"name": "mentorProfessionalBio", "label": "Professional bio", "type": "wysiwyg", "group": "More about you"},
     {"name": "mentoringWhyInterested", "label": "Why you mentor", "type": "wysiwyg", "group": "More about you"},
+    # --- Internal CRM description (the very bottom; plain text in the CRM,
+    #     so it renders as a large text box — rich-text markup saved into a
+    #     text field would show as raw HTML tags in the CRM UI) ---
+    {"name": "description", "label": "Internal CRM description", "type": "text", "group": "Internal CRM description", "rows": 6},
 ]
+
+# Read-only context served with the record (never in the update whitelist):
+# the "Mentoring since" date shown in the page header.
+READ_ONLY_FIELDS = ["mentorStartDate"]
 
 # The update whitelist, split by target entity. The image field is read-only in
 # a PUT — its writes go through set_own_photo/clear_own_photo.
@@ -116,6 +131,7 @@ _FIELD_LABELS = {f["name"]: f["label"] for f in PROFILE_FIELDS}
 
 _DETAIL_SELECT = ",".join(
     ["id", "name", "contactRecordId", "contactRecordName", f"{PHOTO_FIELD}Id", f"{PHOTO_FIELD}Name"]
+    + READ_ONLY_FIELDS
     + sorted(PROFILE_EDIT_NAMES - FEATURE_GATED_FIELDS)
 )
 _CONTACT_SELECT = ",".join(sorted(CONTACT_NAMES))

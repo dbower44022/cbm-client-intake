@@ -125,7 +125,7 @@ async def test_update_whitelists_and_never_trusts_client_ids():
     await service.update_own_profile(
         client, "u1",
         {"mentorTitle": "Strategy", "mentorStatus": "Inactive", "id": "hacked",
-         "cbmEmail": "x@cbmentors.org", "maximumClientCapacity": 99},
+         "cbmEmail": "x@cbmentors.org", "duesStatus": "Waived", "mentorStartDate": "2020-01-01"},
     )
     assert len(client.updates) == 1
     entity, rid, payload = client.updates[0]
@@ -198,13 +198,21 @@ async def test_update_enum_sanitize_fails_open():
 def test_field_spec_is_non_administrative():
     names = {f["name"] for f in service.PROFILE_FIELDS}
     for staff_only in ("mentorStatus", "mentorType", "recordStatus", "duesStatus",
-                       "maximumClientCapacity", "cbmEmail", "backgroundCheckCompleted",
+                       "cbmEmail", "backgroundCheckCompleted",
                        "departureDate", "felonyConfiction", "mentorStatusNotes"):
         assert staff_only not in names
     # the photo is rendered but never part of a field save
     assert "profilePhoto" not in service.EDIT_NAMES
     assert "mentorTitle" in service.PROFILE_EDIT_NAMES
-    assert "cLinkedInProfile" in service.CONTACT_NAMES
+    # mentor-editable per Doug (2026-07-14): capacity + internal description
+    assert "maximumClientCapacity" in service.PROFILE_EDIT_NAMES
+    assert "description" in service.PROFILE_EDIT_NAMES
+    # Contact-side personal details route to the Contact record
+    for contact_field in ("cLinkedInProfile", "cBirthday", "cSpouseName"):
+        assert contact_field in service.CONTACT_NAMES
+    # "Mentoring since" is read-only context, never in the whitelist
+    assert "mentorStartDate" not in service.EDIT_NAMES
+    assert "mentorStartDate" in service._DETAIL_SELECT
 
 
 @pytest.mark.asyncio

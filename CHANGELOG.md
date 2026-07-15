@@ -4,6 +4,27 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.45.0] — 2026-07-14
+
+### Changed
+- **`/mentorprofile` layout + field pass (Doug's review):**
+  - **"Show my profile on the website" and "Accepting new clients" moved to a
+    prominent top-right status panel** opposite the profile photo — large
+    (18px bold) toggle cards with big checkboxes that read GREEN when on and
+    AMBER when off, so a mentor can't miss their visibility/availability
+    state.
+  - **"Mentoring since mm/dd/yyyy"** badge in the page header (read-only
+    `mentorStartDate`; hidden when unset).
+  - New **Personal details panel** to the right of Contact information:
+    Birthday (`Contact.cBirthday`) + Spouse name (`Contact.cSpouseName`) —
+    both fields verified existing on crm-test AND prod — plus Years of
+    experience (moved from Mentoring preferences).
+  - **Max client capacity** (`maximumClientCapacity`) is now mentor-editable,
+    placed left of Pause start / Pause end in Mentoring preferences.
+  - **Internal CRM description** (`description`) as a large text box at the
+    very bottom. (Rendered as plain text, not rich-text: the CRM field is
+    type text, so HTML markup would show as raw tags in the CRM UI.)
+
 ## [0.44.0] — 2026-07-14
 
 ### Added
