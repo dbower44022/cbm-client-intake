@@ -96,6 +96,33 @@ def test_send_requires_recipients(monkeypatch):
     assert "recipient" in r.json()["detail"]
 
 
+def test_mailbox_returns_own_send_address(monkeypatch):
+    _as(monkeypatch)
+
+    async def fake_resolve(client, user_id):
+        assert user_id == "u1"
+        return "bob.mentor@cbmentors.org"
+
+    monkeypatch.setattr("sessions.service.resolve_user_mailbox", fake_resolve)
+    with TestClient(_app(monkeypatch, gmail_sync=True)) as c:
+        r = c.get("/mentorsessions/api/mailbox")
+    assert r.status_code == 200
+    assert r.json()["mailbox"] == "bob.mentor@cbmentors.org"
+
+
+def test_mailbox_null_when_no_cbm_email(monkeypatch):
+    _as(monkeypatch)
+
+    async def fake_resolve(client, user_id):
+        return None
+
+    monkeypatch.setattr("sessions.service.resolve_user_mailbox", fake_resolve)
+    with TestClient(_app(monkeypatch, gmail_sync=True)) as c:
+        r = c.get("/mentorsessions/api/mailbox")
+    assert r.status_code == 200
+    assert r.json()["mailbox"] is None
+
+
 def test_unauthenticated_401_before_comms_checks(monkeypatch):
     monkeypatch.setattr("sessions.router.current_user", lambda request, key=None: None)
     with TestClient(_app(monkeypatch, gmail_sync=True)) as c:

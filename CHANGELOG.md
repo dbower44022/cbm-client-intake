@@ -4,6 +4,17 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.46.1] — 2026-07-15
+
+### Added
+- **Communications compose shows the From address** (session tools, all three
+  domains): the compose/reply dialog's first row is now "From: <the signed-in
+  user's own CBM mailbox>" so the user knows which account the message goes
+  out as. New `GET /{slug}/api/mailbox` resolves it via the same
+  `cbmEmail` lookup the send path uses (fetched once per page, cached); a
+  profile with no CBM email shows "no CBM email on your profile — sending
+  won't work" instead of an address.
+
 ## [0.46.0] — 2026-07-15
 
 ### Changed

@@ -406,6 +406,19 @@ def make_router(cfg: DomainConfig) -> APIRouter:
         )
         return {"status": "ok"}
 
+    @router.get("/mailbox")
+    async def mailbox(request: Request) -> dict:
+        """The signed-in user's own CBM send-from address (their profile's
+        ``cbmEmail`` — the same resolution the send path uses), shown as the
+        compose dialog's From line. ``null`` when no linked profile / no CBM
+        email; the send itself reports why."""
+        user = _require_user(request)
+        client = client_for(get_settings(), user)
+        try:
+            return {"mailbox": await service.resolve_user_mailbox(client, user["userId"])}
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not look up your mailbox")
+
     @router.get("/mailsearch")
     async def mailsearch(q: str, request: Request) -> dict:
         user = _require_user(request)

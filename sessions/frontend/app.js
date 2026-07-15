@@ -27,6 +27,7 @@
   var detailsAdd = null;    // open add-contact flow: "client-menu"|"client-existing"|"client-new"|"cbm-menu"|"cbm-pick"
   var currentViewSessions = []; // ordered session rows for the read-only view's prev/next
   var currentViewIndex = -1;    // position within currentViewSessions
+  var senderMailbox;        // the user's own From address (/api/mailbox); undefined = not fetched yet
   var search = "";
   var statusFilter = "";        // selected status value ("" = all)
   var sortKey = null;           // grid column key to sort by (null = default order)
@@ -1111,6 +1112,20 @@
     pre = pre || {};
     openComm("New email", pre.replyToId ? "Reply" : "Compose");
     var body = $("commModalBody");
+
+    // From: the signed-in user's own CBM mailbox — the address the message
+    // actually goes out as. Fetched once and cached for the page's lifetime.
+    var fromRow = commHeaderRow("From", senderMailbox || "…");
+    body.appendChild(fromRow);
+    function setFrom(text) { fromRow.querySelector(".sx__fact-v").textContent = text; }
+    if (senderMailbox === undefined) {
+      api("/mailbox").then(function (r) {
+        senderMailbox = (r && r.mailbox) || null;
+        setFrom(senderMailbox || "no CBM email on your profile — sending won't work");
+      }).catch(function () { setFrom("your CBM email address"); });
+    } else if (senderMailbox === null) {
+      setFrom("no CBM email on your profile — sending won't work");
+    }
 
     // To: every record contact with an email address as a checkbox — ALL
     // checked by default on a fresh compose (uncheck to leave someone off);
