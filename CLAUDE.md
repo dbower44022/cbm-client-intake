@@ -975,8 +975,17 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-15)
 
-**Main is at v0.47.0** (445 tests green, **pushed and DEPLOYED 2026-07-15** —
-prod + crm-test `/healthz` both verified at 0.47.0) — two items:
+**Main is at v0.48.0** (445 tests green, **pushed and DEPLOYED 2026-07-15** —
+prod + crm-test `/healthz` both verified at 0.48.0) — **Client
+Administration: Assigned Date column on the engagements grid**, between
+"Assign to mentor" and Notes: when the mentor was assigned
+(`CEngagement.engagementAssignedDate`, the stamp the Assign action writes
+since v0.27.0; UTC stamp shown as the local calendar date). Unassigned rows
+and pre-0.27.0 assignments (no stamp) show "—". `list_engagements` selects +
+returns `assignedDate`; no new grant (the metrics sweep already reads the
+field as the signed-in user). NOT yet eyeballed live.
+
+Before that: **v0.47.0** — two items:
 1. **Mentor Administration: LinkedIn on the Profile tab.** The detail
    editor's Profile tab gains a "LinkedIn profile" input; the value lives on
    the linked Contact's `cLinkedInProfile` (same field `/mentorprofile` + the
