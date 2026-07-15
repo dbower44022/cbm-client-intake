@@ -4,6 +4,14 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.45.5] — 2026-07-14
+
+### Changed
+- **`/mentorprofile`: photo, "Mentoring since" badge, and status toggles share
+  ONE horizontal top row** (badge centered between them, top-aligned) — the
+  0.45.4 badge-on-its-own-line layout pushed the photo/toggles down, wasting
+  vertical space.
+
 ## [0.45.4] — 2026-07-14
 
 ### Changed
