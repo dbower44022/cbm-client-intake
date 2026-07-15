@@ -4,6 +4,31 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.50.0] — 2026-07-15
+
+### Added
+- **Standard rich-text editor (CBMRichText / Jodit) — proof of concept on the
+  session tools.** The hand-rolled contenteditable wysiwyg is replaced by a
+  proper editor: **Jodit 4.13.3** (MIT) vendored at
+  `frontend/shared/vendor/jodit/` and wrapped by the new shared component
+  `frontend/shared/richtext.js` (`CBMRichText.create`) — full toolbar (bold/
+  italic/underline/strikethrough, color, paragraph format, lists, link, table,
+  hr, clear-format, undo/redo), spellcheck, silent formatted paste. CRM HTML
+  is stripped on load AND on read (the app's sanitize pass, independent of
+  Jodit's own filtering); an untouched editor reads back the exact
+  render-time value (gesture-gated), so Jodit's async HTML normalization
+  (`<b>`→`<strong>` etc.) can't fake an unsaved change or widen a save diff.
+  Wired into the sessions frontend only for now (`makeInput`/`readField`
+  wysiwyg path — session editor + Details tab), with the legacy
+  contenteditable kept solely as a script-load fallback. Verified in the
+  stubbed-browser harness (loads formatted CRM HTML, clean-back shows no
+  unsaved-changes prompt, edit → PUT carries only the changed field with
+  event-handler attributes stripped, new-session create sends `""` for an
+  empty editor + the typed HTML, no console errors).
+  **Convention (Doug's ruling): every future wysiwyg field product-wide uses
+  CBMRichText** — mentoradmin/mentorprofile migration is the planned rollout
+  after this POC is approved.
+
 ## [0.49.0] — 2026-07-15
 
 ### Added

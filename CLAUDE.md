@@ -975,7 +975,23 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-15)
 
-**Main is at v0.49.0** (445 tests green, **pushed and DEPLOYED 2026-07-15** —
+**Main is at v0.50.0** (committed, NOT pushed) — **standard rich-text editor
+POC on the session tools**: wysiwyg fields (session editor + Details tab)
+now render through the new shared **CBMRichText** component
+(`frontend/shared/richtext.js`) wrapping **vendored Jodit 4.13.3** (MIT,
+`frontend/shared/vendor/jodit/` — chosen over CKEditor 5/TinyMCE 7, both
+GPL-or-commercial; Jodit edits HTML in place so CRM/Summernote content
+survives round-trips). Sanitizes on load AND read; getValue() is
+snapshot-stable for untouched editors (gesture-gated against Jodit's async
+`<b>`→`<strong>` normalization — without this every clean open read as
+dirty). Verified in the stubbed-browser harness (formatted CRM HTML loads,
+clean back = no unsaved prompt, PUT carries only the changed field with
+on* attrs stripped, empty editor saves as `""`); **NOT yet driven live**.
+**New convention (see Conventions): ALL wysiwyg fields product-wide use
+CBMRichText**; migrating mentoradmin + mentorprofile (and the EspoCRM-side
+save round-trip check) is the follow-up once Doug approves the feel.
+
+Before that: **v0.49.0** (445 tests green, **pushed and DEPLOYED 2026-07-15** —
 prod + crm-test `/healthz` both verified at 0.49.0) — **Client
 Administration: column sorting on the engagements grid**: all four headers
 (Engagement / Assign to mentor / Assigned Date / Notes) clickable, first
@@ -1996,6 +2012,18 @@ the synced lists were verified identical on crm-test and prod.
 
 - **Push convention:** Claude commits in this local clone; **Doug reviews and
   pushes**. Do not push without being asked.
+- **Rich-text (wysiwyg) fields use the shared CBMRichText editor** (Doug's
+  ruling 2026-07-15): every wysiwyg field — existing or future, any app —
+  renders through `frontend/shared/richtext.js` (`CBMRichText.create`), which
+  wraps the **vendored Jodit** build at `frontend/shared/vendor/jodit/`
+  (MIT; upgrade notes in that dir's README). Never hand-roll a new
+  contenteditable editor. Pages load `jodit.min.css` + `jodit.min.js` +
+  `richtext.js` (in that order) before their app.js; the component sanitizes
+  CRM HTML on load AND on read, and getValue() is snapshot-stable for
+  untouched editors (gesture-gated against Jodit's async normalization) so
+  save-diff machinery keeps working. v0.50.0 wired the sessions frontend
+  (POC); mentoradmin + mentorprofile still run the legacy contenteditable —
+  migrate them to CBMRichText when next touched.
 - Never commit `.env` or any secret. Secrets are injected as environment
   variables at deploy time (App Platform encrypted env vars).
 - Commit messages follow Conventional Commits (`feat:`, `build:`, `docs:`, …).

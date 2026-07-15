@@ -3260,7 +3260,10 @@
       dopts.forEach(function (secs) { el.appendChild(new Option(fmtDuration(secs), String(secs))); });
       el.value = value == null ? "" : String(value);
     } else if (f.type === "wysiwyg") {
-      el = makeWysiwyg(value);
+      // Standard editor (shared CBMRichText/Jodit); legacy contenteditable
+      // only if the vendored script failed to load. minHeight is inline in
+      // Jodit, so the big-editor height rides the option, not CSS.
+      el = (window.CBMRichText && window.CBMRichText.create(value, { minHeight: f.big ? 360 : 160 })) || makeWysiwyg(value);
     } else if (f.type === "text") {
       el = document.createElement("textarea"); el.rows = 3; el.value = value == null ? "" : value;
     } else {
@@ -3294,6 +3297,7 @@
     }
     if (t === "duration") return el.value === "" ? null : Number(el.value);
     if (t === "wysiwyg") {
+      if (el._cbmRichText) return el._cbmRichText.getValue();
       var a = el.querySelector(".wysiwyg__area");
       if (!a) return "";
       return a.textContent.trim() === "" ? "" : a.innerHTML;
