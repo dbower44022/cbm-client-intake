@@ -434,7 +434,13 @@ mapping (for the WP feed) is in `cmentorprofile-summary-field.md`. Portal tile
   preview hero; record GET-verified; the test photo on Douglas Bower's
   profile is a generated placeholder — replace/Remove in the tool). Also
   fixed: a CRM 403 surfaced as a blank 504 — now a readable "contact CBM
-  staff" 403. Earlier the same day: verified in the stubbed-browser harness
+  staff" 403. **Post-verification polish (same day, all deployed):** v0.45.0
+  layout/field pass per Doug's review (see the Editable-field-set bullet),
+  v0.45.2/.45.4 "Mentoring since" placement (final: a centered line at the
+  top of the form section, above the photo/toggles bar), footer parity with
+  the other apps ("All rights reserved." + " · vX.Y.Z (Test/Production)" —
+  the separator rule lives in this app's own styles.css since it doesn't
+  load wizard.css). Earlier the same day: verified in the stubbed-browser harness
   (computed styles match the live page — navy #00205B hero, gold #B58113,
   42px Arial-Rounded name, 1fr/2fr grid, #0077b5 LinkedIn button; live
   updates incl. all four name slots; XSS stripped from the preview;
@@ -966,6 +972,22 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   data-hygiene cleanup). **UI polish is the next work item** (a follow-up session).
 
 ## Current status (updated 2026-07-14)
+
+**Main is at v0.45.4** (443 tests green, pushed + deployed to crm-test AND
+prod). The 2026-07-14 **My Mentor Profile** arc is COMPLETE and live on both
+environments: v0.42.0 built the tool, v0.42.1 made the preview a verbatim
+copy of the live website page + the feature-gated `mentorSummary`, v0.43.0
+first deploy + full live verification on crm-test (incl. finding/deleting the
+crm-test Mentor Role's 59-field lockdown — see the tool section), v0.45.0
+Doug's layout/field pass (prominent green/amber status toggles top-right,
+Personal details panel with Contact `cBirthday`/`cSpouseName`, mentor-editable
+`maximumClientCapacity`, Internal CRM description at the bottom, "Mentoring
+since" badge), v0.45.2/.45.4 badge placement (now a centered line at the top
+of the form section) + footer parity ("All rights reserved. · vX (Test)").
+Prod smoke test passed (Doug's prod profile carries tool-written data). Full
+detail: the "My Mentor Profile tool" section + CHANGELOG. (0.45.1 =
+assignments Internal Notes; 0.45.3 skipped — version race between parallel
+sessions.)
 
 **Gmail Communications went LIVE IN PRODUCTION 2026-07-14** — first backfill
 pass clean (7 mailboxes, 1177 fetched, 1061 stored, 0 errors → 521
