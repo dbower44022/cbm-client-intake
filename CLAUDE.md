@@ -992,10 +992,15 @@ sessions.)
 **Gmail Communications went LIVE IN PRODUCTION 2026-07-14** — first backfill
 pass clean (7 mailboxes, 1177 fetched, 1061 stored, 0 errors → 521
 conversations / 1063 messages in the prod CRM). Full activation record in the
-Communications bullet below; still open: first live SEND from the tab, the
-API-role **User Read=all** grant + one-shot `GMAIL_RESYNC` on BOTH CRMs
-(owner-stamp fix), and deleting the 4 `ZZTEST-GMAILPROD*` probe records in
-the prod CRM UI.
+Communications bullet below. **Owner-stamp fix COMPLETE on both CRMs
+2026-07-15** (User Read=all + Assignment Permission=all on the API role —
+guide §2.4 steps 5–6; prod 516/542 stamped via one-shot resync, crm-test 6/6;
+both CRMs' API user now carries the identically-named **CustomAppAPIRole**).
+Doug's 2026-07-15 role review also flagged (his call, not yet changed):
+Mentor Role reads ALL conversations in the raw CRM UI (tightening to
+read-own is now viable since stamps work) + CMentorProfile edit=all; Standard
+User has Email read/edit=all + export. Still open: first live SEND from the
+tab, and deleting the 4 `ZZTEST-GMAILPROD*` probe records in the prod CRM UI.
 
 **Main is at v0.44.0** (442 tests green, committed NOT pushed) —
 **Client Administration gains a click-to-edit Notes column** (new RIGHTMOST
@@ -1215,7 +1220,16 @@ app as PRIMARY, Cloudflare CNAME grey-cloud → the app's default hostname; the
   role **User: Read = all** (guide §2.4 Role 1 step 5, added), then a
   one-shot `GMAIL_RESYNC=true` re-stamps on the idempotent replay — the
   dedup path re-runs link_records + stamp_owners. Surfaced during the
-  2026-07-14 prod rollout; the grant + resync are still TODO on BOTH CRMs.)
+  2026-07-14 prod rollout. **RESOLVED on BOTH CRMs 2026-07-15**: the API
+  role needs User Read=all AND the top-level **Assignment Permission = all**
+  (guide §2.4 Role 1 steps 5–6 — the crm-test role rebuild proved Assignment
+  Permission is a separate silent prerequisite; without it stamps 403 with
+  "Assignment failure: assigned user or team not allowed"). Prod: 516/542
+  conversations stamped via one-shot resync; crm-test: all 6 stamped; both
+  one-shot flags removed from the overlays. crm-test's API user now carries
+  the single role **CustomAppAPIRole** (matching prod's name;
+  ClientMentorIntakeRole detached 2026-07-15 — one role name on both CRMs
+  kills that drift class).)
   Steady state: sync every 300s; the two fake
   test mailboxes (partner.manager@/matt.mentor@ have no real Workspace
   mailbox) log an expected invalid_grant warning each pass. **Non-contact-recipient design (v0.35.2, from Doug's scenario
