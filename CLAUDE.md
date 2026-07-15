@@ -1000,8 +1000,9 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-15)
 
-**Main is at v0.54.0** (464 tests green, committed NOT pushed) — **"Forgot
-your password?" on the portal sign-in** (the single login for all staff
+**Main is at v0.54.0** (464 tests green, **pushed and DEPLOYED 2026-07-15** —
+prod + crm-test `/healthz` both verified at 0.54.0, and both deployed portal
+pages serve the new link) — **"Forgot your password?" on the portal sign-in** (the single login for all staff
 apps): a link under the login form opens a reset form (username + email);
 `POST /api/portal/forgot-password` (`assignments/auth.py:
 request_password_reset`) proxies EspoCRM's own unauthenticated
