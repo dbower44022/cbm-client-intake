@@ -94,23 +94,13 @@
         <div id="detailsSections"></div>
       </div>
 
-      <!-- Sessions list (+ CBM contacts on the mentor domain) -->
+      <!-- Sessions list -->
       <div class="sx__dpanel" data-dpanel="sessions" hidden>
         <table class="sx__table" id="sessionsTable" hidden>
           <thead><tr><th>Session</th><th>Status</th><th>Type</th><th>When</th><th>Duration</th><th></th></tr></thead>
           <tbody id="sessionsBody"></tbody>
         </table>
         <p class="sx__muted" id="noSessions" hidden>No sessions recorded yet.</p>
-
-        <div class="sx__panel" id="coMentorSection" hidden>
-          <h3>CBM Contacts</h3>
-          <ul class="sx__contacts" id="coMentors"></ul>
-          <p class="sx__muted" id="noCoMentors" hidden>No CBM contacts on this engagement.</p>
-          <div class="sx__inline">
-            <select id="coMentorSelect" aria-label="Choose a CBM contact"></select>
-            <button type="button" class="cbm-button cbm-button--secondary" id="addCoMentorBtn">Add CBM contact</button>
-          </div>
-        </div>
       </div>
 
       <!-- Communications: email inbox for this record. UI only for now — no CRM

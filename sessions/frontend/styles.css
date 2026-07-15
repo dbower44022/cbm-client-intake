@@ -71,10 +71,6 @@
 .sx__srow { display: flex; gap: 0.5rem; }
 .sx__slabel { flex: 0 0 9rem; color: var(--cbm-slate-700, #667); font-size: var(--cbm-text-sm, 0.9rem); }
 .sx__svalue { font-weight: 500; }
-.sx__contacts { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; }
-.sx__contacts li { line-height: 1.35; }
-.sx__cname { font-weight: 600; }
-.sx__cmail { color: var(--cbm-blue, #1a5fb4); font-size: var(--cbm-text-sm, 0.9rem); }
 .sx__inline { display: flex; gap: 0.5rem; align-items: center; margin-top: 0.75rem; flex-wrap: wrap; }
 .sx__inline select { padding: 0.45rem 0.5rem; border: 1px solid var(--cbm-border, #d7dce2); border-radius: var(--cbm-radius, 6px); }
 

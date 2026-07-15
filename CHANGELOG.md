@@ -4,6 +4,15 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.46.2] — 2026-07-15
+
+### Removed
+- **Sessions tab no longer shows the "CBM Contacts" panel** (mentor sessions
+  app): the co-mentor list + add picker under the sessions table was the old
+  pre-Details duplicate. CBM contacts are viewed and managed on the Details
+  tab's CBM Contacts table (add/remove there is unchanged), and co-mentors
+  still show on the Overview rail.
+
 ## [0.46.1] — 2026-07-15
 
 ### Added

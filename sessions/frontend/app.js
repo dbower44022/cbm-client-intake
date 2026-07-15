@@ -83,7 +83,6 @@
   $("newSessionBtn").addEventListener("click", function () { openEditor(null); });
   $("editorBackBtn").addEventListener("click", function () { leaveEditor(); });
   $("saveSessionBtn").addEventListener("click", function () { saveSession(); });
-  $("addCoMentorBtn").addEventListener("click", function () { addCoMentor(); });
   // Read-only session view.
   $("viewBackBtn").addEventListener("click", function () { showDetail(); });
   $("viewPrevBtn").addEventListener("click", function () { stepSessionView(-1); });
@@ -413,7 +412,6 @@
     hide($("detailNotice"));
     renderOverview(currentDetail);
     renderSessions(currentDetail);
-    renderCoMentors(currentDetail);
     activateDetailTab("overview");
     showDetail();
     window.scrollTo(0, 0);
@@ -2555,7 +2553,7 @@
   }
 
   // Add a CBM contact: pick an existing mentor profile (attached via the
-  // engagement's additionalMentors relation — same as the Sessions-tab picker).
+  // engagement's additionalMentors relation).
   function cbmPickPanel() {
     var panel = addPanelShell("Add a CBM contact");
     var row = document.createElement("div"); row.className = "sx__inline";
@@ -3006,45 +3004,6 @@
       v.appendChild(linkWithCopy(String(value)));
     } else { v.textContent = String(value); }
     cell.appendChild(l); cell.appendChild(v); grid.appendChild(cell);
-  }
-
-  function renderCoMentors(d) {
-    var sec = $("coMentorSection");
-    if (!d.supportsComentor) { sec.hidden = true; return; }
-    sec.hidden = false;
-    var ul = $("coMentors"); ul.innerHTML = "";
-    var list = d.coMentors || [];
-    $("noCoMentors").hidden = list.length > 0;
-    list.forEach(function (m) { var li = document.createElement("li"); li.textContent = m.name || m.id; ul.appendChild(li); });
-    loadCoMentorOptions();
-  }
-
-  async function loadCoMentorOptions() {
-    var sel = $("coMentorSelect");
-    if (sel.dataset.loaded) { return; }
-    try {
-      var res = await api("/mentors");
-      sel.innerHTML = "";
-      sel.appendChild(new Option("Choose a CBM contact…", ""));
-      (res.mentors || []).forEach(function (m) { sel.appendChild(new Option(m.name || m.id, m.id)); });
-      sel.dataset.loaded = "1";
-    } catch (e) { /* leave the picker empty; the section still shows current co-mentors */ }
-  }
-
-  async function addCoMentor() {
-    var sel = $("coMentorSelect"); var id = sel.value;
-    if (!id || !currentDetail) return;
-    $("addCoMentorBtn").disabled = true;
-    try {
-      await api("/records/" + encodeURIComponent(currentDetail.id) + "/comentors", {
-        method: "POST", body: JSON.stringify({ mentorProfileId: id })
-      });
-      notice("detailNotice", "CBM contact added.", "success");
-      openDetail(currentDetail.id);
-    } catch (e) {
-      if (e.status === 401) { showLogin(); return; }
-      notice("detailNotice", e.message, "error");
-    } finally { $("addCoMentorBtn").disabled = false; }
   }
 
   // Default title shown pre-filled for a NEW session so the user sees what will
