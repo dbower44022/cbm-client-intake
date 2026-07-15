@@ -973,8 +973,8 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-14)
 
-**Main is at v0.45.4** (443 tests green, pushed + deployed to crm-test AND
-prod). The 2026-07-14 **My Mentor Profile** arc is COMPLETE and live on both
+**Main is at v0.45.5** (443 tests green, pushed + deployed to crm-test AND
+prod; **Doug verified v0.45.5 on prod 2026-07-14** — arc closed). The 2026-07-14 **My Mentor Profile** arc is COMPLETE and live on both
 environments: v0.42.0 built the tool, v0.42.1 made the preview a verbatim
 copy of the live website page + the feature-gated `mentorSummary`, v0.43.0
 first deploy + full live verification on crm-test (incl. finding/deleting the
@@ -982,8 +982,8 @@ crm-test Mentor Role's 59-field lockdown — see the tool section), v0.45.0
 Doug's layout/field pass (prominent green/amber status toggles top-right,
 Personal details panel with Contact `cBirthday`/`cSpouseName`, mentor-editable
 `maximumClientCapacity`, Internal CRM description at the bottom, "Mentoring
-since" badge), v0.45.2/.45.4 badge placement (now a centered line at the top
-of the form section) + footer parity ("All rights reserved. · vX (Test)").
+since" badge), v0.45.2–.45.5 badge placement (final: photo, badge, and
+toggles share ONE top row, badge top-centered between them) + footer parity ("All rights reserved. · vX (Test)").
 Prod smoke test passed (Doug's prod profile carries tool-written data). Full
 detail: the "My Mentor Profile tool" section + CHANGELOG. (0.45.1 =
 assignments Internal Notes; 0.45.3 skipped — version race between parallel
