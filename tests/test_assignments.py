@@ -466,6 +466,7 @@ async def test_get_engagement_detail_shape():
             "mentoringFocusAreas": ["Accounting & Tax Services", "Marketing"],
             "mentoringNeedsDescription": "<p>I need help with my books.</p>",
             "engagementNotes": "<p>Client asked for Bob.</p>",
+            "description": "Called 7/14 — left voicemail.",
             "primaryEngagementContactId": "c1",
             "engagementClientName": "Rose LLC",
         },
@@ -483,6 +484,8 @@ async def test_get_engagement_detail_shape():
     assert d["focusAreas"] == ["Accounting & Tax Services", "Marketing"]
     assert d["needs"] == "<p>I need help with my books.</p>"
     assert d["notes"] == "<p>Client asked for Bob.</p>"
+    # The grid's internal process notes (description) surface in the popup too.
+    assert d["internalNotes"] == "Called 7/14 — left voicemail."
 
 
 async def test_get_engagement_detail_no_contact():
@@ -492,6 +495,7 @@ async def test_get_engagement_detail_no_contact():
     assert d["focusAreas"] == []
     assert d["needs"] == ""
     assert d["notes"] == ""
+    assert d["internalNotes"] == ""
 
 
 async def test_get_engagement_detail_single_focus_string_coerced():

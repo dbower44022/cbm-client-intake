@@ -4,6 +4,16 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.45.1] — 2026-07-14
+
+### Added
+- **Client Administration: Internal Notes in the engagement popup.** The
+  engagement detail modal gains a full-width "Internal Notes" section showing
+  the grid's internal process notes (`CEngagement.description`), rendered as
+  plain text with line breaks preserved (via `textContent` — markup shows
+  literally). "—" when empty. The detail read selects `description` and
+  returns it as `internalNotes` (distinct from `notes` = `engagementNotes`).
+
 ## [0.45.0] — 2026-07-14
 
 ### Changed

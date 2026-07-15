@@ -520,6 +520,8 @@
 
     renderRichText($("modalNeeds"), d.needs);
     renderRichText($("modalNotes"), d.notes);
+    // The grid's internal process notes (CEngagement.description) — plain text.
+    $("modalInternalNotes").textContent = d.internalNotes || "—";
   }
 
   async function openDetail(id) {
@@ -529,6 +531,7 @@
     $("modalFocus").innerHTML = "";
     $("modalNeeds").textContent = "";
     $("modalNotes").textContent = "";
+    $("modalInternalNotes").textContent = "";
     show($("engModal"));
     try {
       fillDetail(await api("/engagements/" + encodeURIComponent(id)));

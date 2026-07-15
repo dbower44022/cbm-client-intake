@@ -297,6 +297,13 @@
   color: var(--cbm-navy);
 }
 .modal__section { margin-top: 1.25rem; }
+/* Plain-text block (internal notes) — textarea content, line breaks preserved */
+.modal__plain {
+  line-height: var(--cbm-line);
+  color: var(--cbm-slate-700);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
 .modal__rich { line-height: var(--cbm-line); color: var(--cbm-slate-700); word-break: break-word; }
 .modal__rich p { margin: 0 0 0.6rem; }
 .modal__rich p:last-child { margin-bottom: 0; }

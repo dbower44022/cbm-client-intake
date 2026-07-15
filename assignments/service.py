@@ -177,7 +177,7 @@ async def get_engagement_detail(
         select=(
             "name,engagementStatus,createdAt,meetingCadence,mentoringFocusAreas,"
             "mentoringNeedsDescription,engagementNotes,primaryEngagementContactId,"
-            "engagementClientName,requestedMentorId,requestedMentorName"
+            "engagementClientName,requestedMentorId,requestedMentorName,description"
         ),
     )
 
@@ -227,6 +227,9 @@ async def get_engagement_detail(
         # Rich-text (wysiwyg) HTML — sanitized + rendered by the frontend.
         "needs": eng.get("mentoringNeedsDescription") or "",
         "notes": eng.get("engagementNotes") or "",
+        # The grid's internal process notes (CEngagement.description) — plain
+        # text, staff-only (this tool is the field's only UI).
+        "internalNotes": eng.get("description") or "",
     }
 
 
