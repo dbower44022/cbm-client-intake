@@ -4,6 +4,14 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.45.4] — 2026-07-14
+
+### Changed
+- **`/mentorprofile`: the "Mentoring since" badge is now a centered line at
+  the TOP of the form section** (its own row above the photo/toggles bar) —
+  it previously floated vertically centered in the bar, looking unanchored.
+  (0.45.3 left unused — a version-number race with a parallel session.)
+
 ## [0.45.2] — 2026-07-14
 
 ### Changed

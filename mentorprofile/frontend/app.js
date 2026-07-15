@@ -102,13 +102,15 @@
       else rest.push(f);
     });
     if (photoField || toggles.length) {
-      var top = document.createElement("div"); top.className = "mp__topbar";
-      if (photoField) top.appendChild(buildPhotoControl());
-      // The "Mentoring since" badge sits between the photo and the toggles
-      // (renderSince fills it after load; stays hidden with no start date).
+      // The "Mentoring since" badge: its own centered line at the top of the
+      // section (renderSince fills it after load; hidden with no start date).
+      var sinceRow = document.createElement("div"); sinceRow.className = "mp__since-row";
       var since = document.createElement("p");
       since.className = "mp__since"; since.id = "sinceBadge"; since.hidden = true;
-      top.appendChild(since);
+      sinceRow.appendChild(since);
+      form.appendChild(sinceRow);
+      var top = document.createElement("div"); top.className = "mp__topbar";
+      if (photoField) top.appendChild(buildPhotoControl());
       if (toggles.length) {
         var panel = document.createElement("div"); panel.className = "mp__toggles";
         toggles.forEach(function (f) {
