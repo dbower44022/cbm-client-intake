@@ -811,8 +811,9 @@ segment of its own URL). Mounted only when `assignments_active` (needs
        is plain text rendered pre-wrapped; `date` is formatted with `fmtSessionDate`
        (abbreviated weekday). Compose sends To/Subject/Message from `#commTo`/
        `#commSubject`/`#commBody`.
-- **Google Calendar events + Meet links (v0.40.0, 2026-07-13 — BUILT, gated
-  OFF by `GCAL_EVENTS`; NOT yet activated).** Saving a **Scheduled** session
+- **Google Calendar events + Meet links (v0.40.0, 2026-07-13 — LIVE on BOTH
+  envs: crm-test activated + verified 2026-07-13, prod 2026-07-15; create
+  path verified live by Doug on each).** Saving a **Scheduled** session
   (create or edit, any domain) reconciles a Google Calendar event on the
   signed-in manager's OWN calendar: `core/gcalendar.py` (delegated Calendar
   REST client — same service-account + DWD stack as Gmail, impersonating the
@@ -822,8 +823,8 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   Decision matrix: Scheduled + no stored event → **create** (with a Meet
   conference when `videoMeetingLink` is blank — the URL is written back to
   `videoMeetingLink` + the event id to the **feature-detected CRM field
-  `CSession.googleCalendarEventId`** (`csession-calendar-field.md`, NOT
-  BUILT — the hook is inert until it exists); a hand-typed link means no
+  `CSession.googleCalendarEventId`** (`csession-calendar-field.md`; built on
+  crm-test 2026-07-13 and prod 2026-07-15); a hand-typed link means no
   Meet, link carried in the event location); Scheduled + event + a
   time/title/status/attendee change → **patch** (notes-only edits never
   touch the calendar); status → Cancelled → **cancel** (clears the event id
@@ -832,12 +833,13 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   invited (`sendUpdates=all` — Google emails invitations; organizer
   excluded, blanks skipped). **Best-effort** (mentoradmin-provision
   precedent): never raises; the save response carries `calendar:{ok,…}`
-  and `saveSession` shows it as a notice. **Activation:** Calendar API on in
-  GCP "CBM Integrations"; `calendar.events` added to the SA's DWD grant;
-  the CRM field built (crm-test → prod); **disable EspoCRM's own Google
-  Calendar sync on crm-test first** (double events otherwise; prod never
-  had it — the app owns all email + calendar operations); `GCAL_EVENTS=true`
-  (web component only — the worker is not involved).
+  and `saveSession` shows it as a notice. **Activation (ALL DONE):** Calendar
+  API on in GCP; `calendar.events` on the SA's DWD grant; the CRM field built
+  on both CRMs; `GCAL_EVENTS=true` on the **web** component of both overlays
+  (worker not involved); EspoCRM-side calendar sync confirmed a non-issue
+  (only per-user personal connections ever existed — deleted). **Still to
+  drive live:** edit→patch, Cancel→cancel-event, attendee-invitation
+  delivery.
 - **Phase 1 (CRUD + review UI).** The **Start/Open Session** button uses
   `videoMeetingLink` when set. Google Calendar/Meet *scheduling* shipped
   v0.40.0 (the bullet above; gated). Meet *transcription* (a new
@@ -973,8 +975,29 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-15)
 
-**Main is at v0.46.0** (443 tests green, **pushed and DEPLOYED 2026-07-15** —
-prod + crm-test `/healthz` both verified at 0.46.0) —
+**Main is at v0.47.0** (445 tests green, **pushed and DEPLOYED 2026-07-15** —
+prod + crm-test `/healthz` both verified at 0.47.0) — two items:
+1. **Mentor Administration: LinkedIn on the Profile tab.** The detail
+   editor's Profile tab gains a "LinkedIn profile" input; the value lives on
+   the linked Contact's `cLinkedInProfile` (same field `/mentorprofile` + the
+   public website use), declared in `EDITABLE_FIELDS` with `group: "Profile"`
+   + `entity: "Contact"` so it displays on the Profile tab but routes through
+   the existing Contact-save path (no-linked-Contact 400 before any write).
+   Standard live-ACL watch: a 200 save that doesn't stick = field-level ACL
+   strip on Contact ([[espo-field-acl-silently-strips-writes]]).
+2. **Google Calendar events ACTIVATED + VERIFIED LIVE ON PROD.** Doug
+   reported "no event created" for a Scheduled mentor session — diagnosis:
+   he was testing on prod, where the hook was deliberately inert. Doug built
+   `CSession.googleCalendarEventId` on the prod CRM; `GCAL_EVENTS=true` was
+   added to the prod overlay's **web** component (`.do/app.prod-crm.yaml`,
+   applied via doctl 2026-07-15). Doug then created a Scheduled session on
+   prod and **it worked perfectly** (event + Meet link end-to-end). Still to
+   drive live (both envs): the edit→patch and Cancel→cancel-event paths, and
+   attendee-invitation delivery.
+
+Before that: **v0.46.0–.46.2** (443 tests green, pushed and deployed
+2026-07-15; 0.46.1 = compose shows the From address, 0.46.2 = Sessions tab's
+CBM Contacts panel removed) — the 0.46.0 headline:
 **Communications compose defaults to ALL record contacts as To recipients**:
 the session tools' compose dialog now renders every record contact with an
 email address as a checked checkbox (uncheck to leave someone off), plus an
@@ -1110,9 +1133,9 @@ existed behind the Start Session button): a truncating clickable URL with a
 ⧉ copy button in the Overview Next-session callout and a "Meeting link" row
 in the session view's facts grid (`linkWithCopy`, `addKV` type `copylink`).
 **Still to drive live:** the edit→patch and Cancel→cancel event paths, and
-attendee-invitation delivery. **Prod activation remains:** build
-`googleCalendarEventId` on the prod CRM + set `GCAL_EVENTS=true` in
-`.do/app.prod-crm.yaml` (prod has the 0.40.1 code, hook inert until then).
+attendee-invitation delivery. **Prod activation: DONE 2026-07-15** (see
+Current status — field built by Doug + `GCAL_EVENTS=true` in
+`.do/app.prod-crm.yaml`; create path verified live on prod by Doug).
 Base feature (v0.40.0):
 **sessions create Google Calendar events + Meet links** (gated by
 `GCAL_EVENTS`; see the "Google Calendar events" bullet in the Session
