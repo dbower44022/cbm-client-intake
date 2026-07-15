@@ -4,6 +4,16 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.47.0] — 2026-07-15
+
+### Added
+- **Mentor Administration: LinkedIn field on the Profile tab.** The mentor
+  detail editor's Profile tab gains a "LinkedIn profile" input. The value is
+  stored on the linked Contact's `cLinkedInProfile` (the same field the My
+  Mentor Profile tool and the public-website mentor page use), so saves route
+  to the Contact record; a mentor with no linked Contact gets the existing
+  clear 400 before any write.
+
 ## [0.46.2] — 2026-07-15
 
 ### Removed

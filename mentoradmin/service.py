@@ -127,6 +127,9 @@ EDITABLE_FIELDS: list[dict[str, Any]] = [
     {"name": "departureReason", "label": "Departure reason", "type": "enum", "group": "Departure"},
     {"name": "cbmEmail", "label": "CBM email", "type": "varchar", "group": "Profile"},
     {"name": "boardPosition", "label": "Board position", "type": "varchar", "group": "Profile"},
+    # LinkedIn lives on the linked Contact (same field the My Mentor Profile
+    # tool + the website preview use), but is shown on the Profile tab.
+    {"name": "cLinkedInProfile", "label": "LinkedIn profile", "type": "varchar", "group": "Profile", "entity": CONTACT_ENTITY},
     # No static options: howDidYouHearAboutCBM is a real CRM enum (converted
     # from free-text 2026-07-11), so its options are pulled live like every
     # other enum — a hard-coded list here drifted and 400'd a prod save.

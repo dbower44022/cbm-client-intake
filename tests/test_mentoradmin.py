@@ -175,8 +175,12 @@ def test_contact_tab_field_spec():
     assert {f["name"] for f in contact} == {
         "firstName", "lastName", "emailAddress", "phoneNumber",
         "addressStreet", "addressCity", "addressState", "addressPostalCode",
+        "cLinkedInProfile",
     }
-    assert all(f["group"] == "Contact" for f in contact)
+    # LinkedIn is Contact-backed but deliberately shown on the Profile tab.
+    assert all(f["group"] == "Contact" for f in contact if f["name"] != "cLinkedInProfile")
+    by = {f["name"]: f for f in contact}
+    assert by["cLinkedInProfile"]["group"] == "Profile"
     # Contact fields never leak into the CMentorProfile select/update whitelist,
     # but they ARE editable (accepted by the update endpoint).
     assert not (service.PROFILE_EDIT_NAMES & service.CONTACT_NAMES)
