@@ -39,14 +39,13 @@ body.mp--resizing { cursor: col-resize; user-select: none; }
   .mp__previewcol { margin-top: 1.5rem; }
 }
 
-/* "Mentoring since mm/dd/yyyy" header badge */
-.mp__since { display: inline-block; margin: 0.45rem 0 0; padding: 0.25rem 0.75rem;
-  border-radius: 999px; background: var(--cbm-surface); border: 1px solid var(--cbm-gold);
-  color: var(--cbm-navy); font-weight: 600; font-size: var(--cbm-text-sm); }
-
-/* --- top bar: photo (left) + the PROMINENT status toggles (right) --- */
+/* --- top bar: photo (left) · "Mentoring since" badge (center) · the
+       PROMINENT status toggles (right) --- */
 .mp__topbar { display: flex; align-items: flex-start; justify-content: space-between;
   gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.mp__since { align-self: center; margin: 0; padding: 0.35rem 0.9rem;
+  border-radius: 999px; background: var(--cbm-surface); border: 1px solid var(--cbm-gold);
+  color: var(--cbm-navy); font-weight: 600; font-size: var(--cbm-text-base); white-space: nowrap; }
 .mp__toggles { display: flex; flex-direction: column; gap: 0.7rem; margin-left: auto; }
 .mp__toggle { border: 2px solid var(--cbm-border); border-radius: var(--cbm-radius);
   background: var(--cbm-white); padding: 0.85rem 1.2rem; transition: background .15s, border-color .15s; }

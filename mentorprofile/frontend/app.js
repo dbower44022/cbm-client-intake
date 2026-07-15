@@ -68,16 +68,18 @@
       }
       record = result.record || {};
       show($("mainView")); hide($("msgView"));
-      renderSince(record.mentorStartDate);
       renderForm(record);
+      renderSince(record.mentorStartDate);  // fills the top-bar badge renderForm created
       refreshPreview();
       loadPhoto(record.profilePhotoId);
     } catch (e) { bootFail(e); }
   }
 
-  // "Mentoring since mm/dd/yyyy" in the page header (staff-set, read-only).
+  // "Mentoring since mm/dd/yyyy" — the read-only badge between the photo and
+  // the status toggles in the top bar (staff-set date; hidden when unset).
   function renderSince(dateStr) {
     var el = $("sinceBadge");
+    if (!el) return;
     var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateStr || "");
     if (!m) { hide(el); return; }
     el.textContent = "Mentoring since " + m[2] + "/" + m[3] + "/" + m[1];
@@ -102,6 +104,11 @@
     if (photoField || toggles.length) {
       var top = document.createElement("div"); top.className = "mp__topbar";
       if (photoField) top.appendChild(buildPhotoControl());
+      // The "Mentoring since" badge sits between the photo and the toggles
+      // (renderSince fills it after load; stays hidden with no start date).
+      var since = document.createElement("p");
+      since.className = "mp__since"; since.id = "sinceBadge"; since.hidden = true;
+      top.appendChild(since);
       if (toggles.length) {
         var panel = document.createElement("div"); panel.className = "mp__toggles";
         toggles.forEach(function (f) {

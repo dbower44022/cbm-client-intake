@@ -4,6 +4,15 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.45.2] — 2026-07-14
+
+### Changed
+- **`/mentorprofile`: "Mentoring since mm/dd/yyyy" moved out of the page
+  header** into the top bar, centered between the profile photo and the
+  status toggles — reclaims header height on smaller screens. Also (unversioned
+  in 0.45.x): the footer now matches the other apps ("All rights reserved." +
+  the " · " separator before "vX.Y.Z (Test/Production)").
+
 ## [0.45.1] — 2026-07-14
 
 ### Added
