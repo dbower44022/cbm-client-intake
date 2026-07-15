@@ -120,7 +120,8 @@ async def list_engagements(
         where=[{"type": "in", "attribute": "engagementStatus", "value": list(statuses)}],
         select=(
             "name,createdAt,engagementStatus,primaryEngagementContactName,"
-            "engagementClientName,mentorProfileId,mentorProfileName,description"
+            "engagementClientName,mentorProfileId,mentorProfileName,"
+            "engagementAssignedDate,description"
         ),
         max_size=200,
         order_by="createdAt",
@@ -138,6 +139,9 @@ async def list_engagements(
             # shows the mentor name instead of the Select-a-Mentor picker + button.
             "mentorId": r.get("mentorProfileId"),
             "mentorName": r.get("mentorProfileName"),
+            # When the mentor was assigned (stamped by assign_engagement; null on
+            # pre-0.27.0 assignments and unassigned rows).
+            "assignedDate": r.get("engagementAssignedDate"),
             # Internal process notes (the grid's click-to-edit Notes column) —
             # see update_engagement_notes.
             "notes": r.get("description") or "",

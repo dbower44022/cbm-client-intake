@@ -132,6 +132,8 @@
 }
 .assign__table th.col-notes { width: 26%; }
 .assign__table th.col-eng { width: 42%; }
+.assign__table th.col-assigned { width: 8.5rem; }
+.assigned-date-cell { white-space: nowrap; color: var(--cbm-slate-700); }
 
 /* Notes column — click-to-edit internal process notes */
 .notes-view {

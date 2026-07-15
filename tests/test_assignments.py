@@ -412,6 +412,7 @@ async def test_list_engagements_query_and_shape():
                         "engagementClientName": "Green Co",
                         "mentorProfileId": "mp9",
                         "mentorProfileName": "Pat Mentor",
+                        "engagementAssignedDate": "2026-06-17 12:30:00",
                         "description": "Prefers evening calls.",
                     },
                 ]
@@ -429,10 +430,13 @@ async def test_list_engagements_query_and_shape():
         "clientName": "Rose LLC",
         "mentorId": None,
         "mentorName": None,
+        "assignedDate": None,
         "notes": "",
     }
     # Assigned engagement -> mentor surfaced (the row shows the name, no picker).
     assert rows[1]["mentorId"] == "mp9" and rows[1]["mentorName"] == "Pat Mentor"
+    # When the assignment happened (the grid's Assigned Date column).
+    assert rows[1]["assignedDate"] == "2026-06-17 12:30:00"
     # Internal process notes come from CEngagement.description (Notes column).
     assert rows[1]["notes"] == "Prefers evening calls."
     entity, where = client.list_calls[0]

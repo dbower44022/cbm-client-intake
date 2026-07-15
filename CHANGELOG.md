@@ -4,6 +4,15 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.48.0] — 2026-07-15
+
+### Added
+- **Client Administration: Assigned Date column on the engagements grid**,
+  between "Assign to mentor" and Notes — when the mentor was assigned
+  (`CEngagement.engagementAssignedDate`, the stamp the Assign action writes;
+  shown as the local calendar date). Unassigned rows and pre-0.27.0
+  assignments (which have no stamp) show "—".
+
 ## [0.47.0] — 2026-07-15
 
 ### Added

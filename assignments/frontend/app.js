@@ -269,6 +269,7 @@
       assigned.textContent = eng.mentorName || "Assigned";
       tdAssign.appendChild(assigned);
       tr.appendChild(tdAssign);
+      tr.appendChild(buildAssignedDateCell(eng));
       tr.appendChild(buildNotesCell(eng));
       return tr;
     }
@@ -303,8 +304,18 @@
     cell.appendChild(btn);
     tdAssign.appendChild(cell);
     tr.appendChild(tdAssign);
+    tr.appendChild(buildAssignedDateCell(eng));
     tr.appendChild(buildNotesCell(eng));
     return tr;
+  }
+
+  // When the mentor was assigned (engagementAssignedDate — stamped by the
+  // Assign action; pre-0.27.0 assignments have none, unassigned rows show —).
+  function buildAssignedDateCell(eng) {
+    var td = document.createElement("td");
+    td.className = "assigned-date-cell";
+    td.textContent = formatDate(eng.assignedDate) || "—";
+    return td;
   }
 
   // --- notes column (internal process notes -> CEngagement.description) ---
@@ -448,6 +459,21 @@
       year: "numeric", month: "short", day: "numeric",
       hour: "numeric", minute: "2-digit",
     });
+  }
+
+  // Date-only display. A UTC datetime stamp shows as the LOCAL calendar date;
+  // a date-only value ("YYYY-MM-DD") is a plain calendar date — no shift.
+  function formatDate(s) {
+    if (!s) return null;
+    var opts = { year: "numeric", month: "short", day: "numeric" };
+    if (s.length <= 10) {
+      var p = s.split("-");
+      var cal = new Date(+p[0], +p[1] - 1, +p[2]);
+      return isNaN(cal.getTime()) ? s : cal.toLocaleDateString(undefined, opts);
+    }
+    var d = new Date(s.replace(" ", "T") + "Z");
+    if (isNaN(d.getTime())) return s.slice(0, 10);
+    return d.toLocaleDateString(undefined, opts);
   }
 
   // US display phone "(216)-555-1234" — the product-wide shared formatter
