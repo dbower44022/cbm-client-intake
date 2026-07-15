@@ -271,7 +271,11 @@
     } else if (f.type === "date") {
       el = document.createElement("input"); el.type = "date"; el.value = value || "";
     } else if (f.type === "wysiwyg") {
-      el = makeWysiwyg(value);
+      // Standard editor (shared CBMRichText/Jodit); legacy contenteditable
+      // only if the vendored script failed to load. onInput drives the live
+      // website preview — Jodit toolbar actions don't fire a native bubbling
+      // "input", so the form's delegated listener alone would miss them.
+      el = (window.CBMRichText && window.CBMRichText.create(value, { onInput: refreshPreview })) || makeWysiwyg(value);
     } else if (f.type === "text") {
       el = document.createElement("textarea"); el.rows = f.rows || 2; el.value = value == null ? "" : value;
     } else if (f.type === "url") {
@@ -290,6 +294,7 @@
     if (t === "int") return el.value === "" ? null : Number(el.value);
     if (t === "date") return el.value || null;
     if (t === "wysiwyg") {
+      if (el._cbmRichText) return el._cbmRichText.getValue();
       var a = el.querySelector(".wysiwyg__area");
       if (!a) return "";
       return a.textContent.trim() === "" ? "" : a.innerHTML;  // empty -> "" not "<br>"

@@ -4,6 +4,24 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.53.0] — 2026-07-15
+
+### Changed
+- **CBMRichText (Jodit) rolled out to ALL wysiwyg fields** — completes the
+  v0.50.0 POC per Doug's approval. `/mentoradmin` (Bio tab: About the mentor /
+  Professional bio / Why interested) and `/mentorprofile` (About you /
+  Professional bio / Why you mentor) now render every wysiwyg field through
+  the shared `CBMRichText` component; the hand-rolled contenteditable editors
+  remain only as a script-load fallback. mentorprofile's live website preview
+  is driven by the component's `onInput` hook (Jodit toolbar actions don't
+  fire a native bubbling `input`, so the form's delegated listener alone
+  would miss them); mentoradmin's jump-to-issue focus handles the new editor.
+  Both apps' diffed-save machinery verified intact in the stubbed-browser
+  harness (snapshots stable against Jodit's async HTML normalization,
+  untouched save sends no/empty changes, an edit sends only the changed
+  field, live preview updates on Jodit edits; no console errors). Every
+  wysiwyg surface product-wide now uses the standard editor.
+
 ## [0.52.0] — 2026-07-15
 
 ### Fixed

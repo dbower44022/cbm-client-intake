@@ -1000,7 +1000,16 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-15)
 
-**Main is at v0.52.0** (458 tests green, committed NOT pushed) — **co-mentors
+**Main is at v0.53.0** — **CBMRichText (Jodit) rolled out to ALL wysiwyg
+fields** (Doug approved the v0.50.0 POC): `/mentoradmin` Bio tab +
+`/mentorprofile` (About/bio/why-mentor, live website preview via the
+component's `onInput` hook — Jodit toolbar actions fire no native bubbling
+`input`) now use the shared editor; sessions had it since 0.50.0. Legacy
+contenteditable kept only as a script-load fallback in each app. Verified in
+stubbed-browser harnesses for BOTH apps (editors render with CRM HTML,
+snapshots stable, untouched save = no/empty changes, edit sends only the
+changed field, preview live-updates; no console errors). Live CRM round-trip
+(save → view in EspoCRM UI) still worth an eyeball. Before that: **v0.52.0** (458 tests green) — **co-mentors
 see ALL sessions on the engagement** (Doug's follow-up ruling to 0.51.0):
 `CSession` read=own means a session is visible only to the users stamped on
 it, so (mentor domain only) `create_session` now stamps the engagement's
@@ -2086,9 +2095,10 @@ the synced lists were verified identical on crm-test and prod.
   `richtext.js` (in that order) before their app.js; the component sanitizes
   CRM HTML on load AND on read, and getValue() is snapshot-stable for
   untouched editors (gesture-gated against Jodit's async normalization) so
-  save-diff machinery keeps working. v0.50.0 wired the sessions frontend
-  (POC); mentoradmin + mentorprofile still run the legacy contenteditable —
-  migrate them to CBMRichText when next touched.
+  save-diff machinery keeps working. Wired everywhere as of v0.53.0
+  (sessions v0.50.0 POC; mentoradmin + mentorprofile v0.53.0 — the
+  mentorprofile live preview rides the component's `onInput` hook). The old
+  contenteditable `makeWysiwyg` in each app is only a script-load fallback.
 - Never commit `.env` or any secret. Secrets are injected as environment
   variables at deploy time (App Platform encrypted env vars).
 - Commit messages follow Conventional Commits (`feat:`, `build:`, `docs:`, …).

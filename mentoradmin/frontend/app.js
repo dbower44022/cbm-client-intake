@@ -593,7 +593,9 @@
     } else if (f.type === "date") {
       el = document.createElement("input"); el.type = "date"; el.value = value || "";
     } else if (f.type === "wysiwyg") {
-      el = makeWysiwyg(value);
+      // Standard editor (shared CBMRichText/Jodit); legacy contenteditable
+      // only if the vendored script failed to load.
+      el = (window.CBMRichText && window.CBMRichText.create(value)) || makeWysiwyg(value);
     } else if (f.type === "text") {
       el = document.createElement("textarea"); el.rows = 2; el.value = value == null ? "" : value;
     } else {
@@ -609,6 +611,7 @@
     if (t === "int") return el.value === "" ? null : Number(el.value);
     if (t === "date") return el.value || null;
     if (t === "wysiwyg") {
+      if (el._cbmRichText) return el._cbmRichText.getValue();
       var a = el.querySelector(".wysiwyg__area");
       if (!a) return "";
       return a.textContent.trim() === "" ? "" : a.innerHTML;  // empty -> "" not "<br>"
@@ -649,7 +652,8 @@
       var panel = el.closest && el.closest(".tab-panel");
       if (panel) activateTab(panel.dataset.panel);
       var focusEl = el;
-      if (el.classList && el.classList.contains("wysiwyg")) focusEl = el.querySelector(".wysiwyg__area") || el;
+      if (el._cbmRichText) { el._cbmRichText.focus(); focusEl = null; }
+      else if (el.classList && el.classList.contains("wysiwyg")) focusEl = el.querySelector(".wysiwyg__area") || el;
       else if (el.classList && el.classList.contains("checkgrid")) focusEl = el.querySelector("input") || el;
       if (focusEl && focusEl.focus) focusEl.focus();
       el.scrollIntoView({ behavior: "smooth", block: "center" });
