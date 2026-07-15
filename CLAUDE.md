@@ -996,11 +996,15 @@ Communications bullet below. **Owner-stamp fix COMPLETE on both CRMs
 2026-07-15** (User Read=all + Assignment Permission=all on the API role —
 guide §2.4 steps 5–6; prod 516/542 stamped via one-shot resync, crm-test 6/6;
 both CRMs' API user now carries the identically-named **CustomAppAPIRole**).
-Doug's 2026-07-15 role review also flagged (his call, not yet changed):
-Mentor Role reads ALL conversations in the raw CRM UI (tightening to
-read-own is now viable since stamps work) + CMentorProfile edit=all; Standard
-User has Email read/edit=all + export. Still open: first live SEND from the
-tab, and deleting the 4 `ZZTEST-GMAILPROD*` probe records in the prod CRM UI.
+Security review CLOSED with Doug's rulings (2026-07-15): **Mentor Role keeps
+CMentorProfile edit=all — REQUIRED for co-mentor linking (additionalMentors
+relate); never re-flag it**; Mentor Role's CConversation/CCommunication
+read=all accepted (full tightening would first need app-side message
+owner-stamping — offered, not requested); Standard User Email read=all +
+export accepted (its Email EDIT was tightened to own). Still open: first
+live SEND from the tab, and deleting the 4 `ZZTEST-GMAILPROD*` probe records
+in the prod CRM UI (steps given 2026-07-15: `#CCommunication` then
+`#CConversation`, search ZZTEST, Actions → Remove).
 
 **Main is at v0.44.0** (442 tests green, committed NOT pushed) —
 **Client Administration gains a click-to-edit Notes column** (new RIGHTMOST
