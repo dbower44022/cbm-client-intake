@@ -433,10 +433,14 @@ mapping (for the WP feed) is in `cmentorprofile-summary-field.md`. Portal tile
   publish-toggle banner + dim; photo local-preview→upload→remove; diffed
   saves; required blocks; splitter refit).
 - **CRM prerequisites (activation checklist):**
-  1. Fields: `mentorTitle` + `profilePhoto` verified on crm-test 2026-07-14;
-     **build both on prod** (`Contact.cLinkedInProfile` exists on crm-test;
-     confirm prod). **Build `mentorSummary` on crm-test + prod**
-     (`cmentorprofile-summary-field.md`) — the app activates it on its own.
+  1. ✅ **DONE — fields exist on BOTH CRMs** (verified live 2026-07-14):
+     `mentorTitle` (varchar) + `profilePhoto` (image) + `mentorSummary` (text)
+     + `Contact.cLinkedInProfile` (url) confirmed identical on crm-test AND
+     prod, so the tool is effectively LIVE on prod for Mentor Team members
+     (prod's Mentor Role has no field-level locks per Doug's UI check —
+     unverified by API; the crm-test lockdown story is in the Status bullet).
+     Remaining prod step: a smoke test as a real prod mentor login
+     (writes real data — Doug's call).
   2. **Mentor Team role**: `CMentorProfile` read-own + edit-own with
      field-level write on the PROFILE_FIELDS set + `profilePhotoId`; Contact
      edit-own (the mentor's Contact must have their User assigned —
