@@ -1010,6 +1010,11 @@
     var m = /^\s*"?([^"<]+?)"?\s*</.exec(addr || "");
     return (m ? m[1] : (addr || "")).trim() || "(unknown)";
   }
+  function extractEmail(addr) {
+    // "Name <email>" -> "email"; a bare address passes through.
+    var m = /<([^>]+)>/.exec(addr || "");
+    return (m ? m[1] : String(addr || "")).trim();
+  }
   function snippet(body, n) {
     var t = String(body || "").replace(/\s+/g, " ").trim();
     n = n || 90;
@@ -1102,21 +1107,56 @@
     wrap.appendChild(l); wrap.appendChild(input); return wrap;
   }
 
-  function primaryContactEmail() {
-    var d = currentDetail; if (!d) return "";
-    var list = d.contacts || [];
-    for (var i = 0; i < list.length; i++) {
-      if (list[i].id === d.primaryContactId && list[i].email) return list[i].email;
-    }
-    return list.length && list[0].email ? list[0].email : "";
-  }
-
   function composeMessage(pre) {
     pre = pre || {};
     openComm("New email", pre.replyToId ? "Reply" : "Compose");
     var body = $("commModalBody");
-    var to = pre.to || (commsOn() ? primaryContactEmail() : "");
-    body.appendChild(commField("To", "commTo", to, false));
+
+    // To: every record contact with an email address as a checkbox — ALL
+    // checked by default on a fresh compose (uncheck to leave someone off);
+    // a reply pre-checks only the addresses it's replying to.
+    var contactRecips = ((currentDetail && currentDetail.contacts) || [])
+      .filter(function (c) { return c.email; });
+    var preAddrs = String(pre.to || "").split(/[,;\s]+/).filter(Boolean)
+      .map(function (a) { return extractEmail(a); });
+    var preKeys = preAddrs.map(function (a) { return a.toLowerCase(); });
+    var recipChecks = [];   // {email, box} per listed contact
+    if (contactRecips.length) {
+      var toWrap = document.createElement("div"); toWrap.className = "sx__msg-field";
+      var toLab = document.createElement("span"); toLab.className = "sx__msg-label"; toLab.textContent = "To";
+      toWrap.appendChild(toLab);
+      var listEl = document.createElement("div"); listEl.className = "sx__to-list";
+      contactRecips.forEach(function (c) {
+        var lab = document.createElement("label"); lab.className = "sx__addr-check";
+        var box = document.createElement("input"); box.type = "checkbox";
+        box.checked = pre.to ? preKeys.indexOf(c.email.toLowerCase()) !== -1 : true;
+        lab.appendChild(box);
+        lab.appendChild(document.createTextNode(" " + (c.name || c.email) + " — " + c.email));
+        listEl.appendChild(lab);
+        recipChecks.push({ email: c.email, box: box });
+      });
+      toWrap.appendChild(listEl);
+      body.appendChild(toWrap);
+    }
+    // Free-entry field for anyone not on the record; reply addresses that
+    // aren't record contacts land here so they stay on the thread.
+    var knownEmails = {};
+    recipChecks.forEach(function (r) { knownEmails[r.email.toLowerCase()] = 1; });
+    var extra = preAddrs.filter(function (a) { return !knownEmails[a.toLowerCase()]; }).join(", ");
+    body.appendChild(commField(contactRecips.length ? "Other recipients" : "To", "commTo", extra, false));
+
+    // Checked contacts + whatever was typed, deduped case-insensitively.
+    function recipientList() {
+      var seen = {}, out = [];
+      function add(a) {
+        a = extractEmail(a); var k = a.toLowerCase();
+        if (a && !seen[k]) { seen[k] = 1; out.push(a); }
+      }
+      recipChecks.forEach(function (r) { if (r.box.checked) add(r.email); });
+      $("commTo").value.split(/[,;\s]+/).filter(Boolean).forEach(add);
+      return out;
+    }
+
     body.appendChild(commField("Subject", "commSubject", pre.subject, false));
     body.appendChild(commField("Message", "commBody", "", true));
     var err = document.createElement("p"); err.className = "form-error"; err.hidden = true;
@@ -1275,7 +1315,12 @@
         $("commModalFoot").appendChild(ok);
         return;
       }
-      var recipients = $("commTo").value.split(/[,;\s]+/).filter(Boolean);
+      var recipients = recipientList();
+      if (!recipients.length) {
+        err.textContent = "Choose at least one recipient."; err.hidden = false;
+        return;
+      }
+      err.hidden = true;
       var unknown = unknownRecipients(recipients);
       if (unknown.length && commResolvers === null) {
         await buildUnknownPanel(unknown);   // first click: show the rows
@@ -1321,8 +1366,7 @@
         // under us), rebuild the rows for whatever is still unknown.
         if (e.status === 400 && /aren't contacts/.test(e.message || "")) {
           commResolvers = null;
-          var recips = $("commTo").value.split(/[,;\s]+/).filter(Boolean);
-          var still = unknownRecipients(recips);
+          var still = unknownRecipients(recipientList());
           if (still.length) await buildUnknownPanel(still);
         }
       }

@@ -971,9 +971,21 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   Note: crm-test seed sessions carry out-of-enum `sessionType` values (harmless; a
   data-hygiene cleanup). **UI polish is the next work item** (a follow-up session).
 
-## Current status (updated 2026-07-14)
+## Current status (updated 2026-07-15)
 
-**Main is at v0.45.5** (443 tests green, pushed + deployed to crm-test AND
+**Main is at v0.46.0** (443 tests green, committed NOT pushed) —
+**Communications compose defaults to ALL record contacts as To recipients**:
+the session tools' compose dialog now renders every record contact with an
+email address as a checked checkbox (uncheck to leave someone off), plus an
+"Other recipients" free-entry field that still routes through the existing
+unknown-recipient add/create router; Reply pre-checks only the address(es)
+being replied to; contacts without an email are omitted; Send requires ≥1
+recipient (frontend-only — `sessions/frontend/app.js` `composeMessage` +
+`recipientList()`, new `.sx__to-list` CSS). Verified in the stubbed-browser
+harness (defaults all-checked, deselect drops from the send payload,
+zero-recipient guard, mixed known+unknown send through the create-contact
+row, reply pre-check; no console errors). NOT yet driven against live Gmail
+send. Before that: **v0.45.5** (pushed + deployed to crm-test AND
 prod; **Doug verified v0.45.5 on prod 2026-07-14** — arc closed). The 2026-07-14 **My Mentor Profile** arc is COMPLETE and live on both
 environments: v0.42.0 built the tool, v0.42.1 made the preview a verbatim
 copy of the live website page + the feature-gated `mentorSummary`, v0.43.0

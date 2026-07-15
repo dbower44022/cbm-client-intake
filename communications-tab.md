@@ -65,9 +65,12 @@ those fields are simply blank.
 
 ## Replying and composing
 
-**↩ Reply** (inside a conversation) pre-fills the sender and subject and
-threads your reply onto the real Gmail conversation. **✉ Compose** starts a
-new email, pre-filled to the record's primary contact.
+**↩ Reply** (inside a conversation) pre-fills the subject and pre-checks the
+sender in the recipient list, threading your reply onto the real Gmail
+conversation. **✉ Compose** starts a new email with **every contact on the
+record (that has an email address) listed as a checked To recipient** —
+uncheck anyone you don't want to include. An **"Other recipients"** field
+takes addresses that aren't contacts on the record.
 
 Mail you send goes out **as you** — from your own `@cbmentors.org` address —
 lands in your real Gmail *Sent* folder, and appears in the tab immediately.

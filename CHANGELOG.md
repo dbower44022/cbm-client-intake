@@ -4,6 +4,19 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.46.0] — 2026-07-15
+
+### Changed
+- **Communications compose defaults to ALL record contacts as To recipients**
+  (session tools, all three domains): the compose dialog now lists every
+  contact on the record that has an email address as a checkbox — all checked
+  by default — so the user deselects anyone to leave off rather than typing
+  addresses. An "Other recipients" field takes addresses not on the record
+  (they still route through the existing add-to-record / create-contact
+  flow). Reply pre-checks only the address(es) being replied to; contacts
+  without an email address are omitted. Send now requires at least one
+  recipient (readable message instead of a server 400).
+
 ## [0.45.5] — 2026-07-14
 
 ### Changed
