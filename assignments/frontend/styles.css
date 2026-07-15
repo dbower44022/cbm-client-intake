@@ -134,6 +134,10 @@
 .assign__table th.col-eng { width: 42%; }
 .assign__table th.col-assigned { width: 8.5rem; }
 .assigned-date-cell { white-space: nowrap; color: var(--cbm-slate-700); }
+.assign__table th.is-sortable { cursor: pointer; user-select: none; }
+.assign__table th.is-sortable:hover { color: var(--cbm-blue); }
+.assign__table th[data-dir="asc"]::after { content: " ▲"; font-size: 0.7em; }
+.assign__table th[data-dir="desc"]::after { content: " ▼"; font-size: 0.7em; }
 
 /* Notes column — click-to-edit internal process notes */
 .notes-view {

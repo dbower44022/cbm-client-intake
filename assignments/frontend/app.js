@@ -223,16 +223,68 @@
     }
   }
 
+  // --- engagement grid sorting (client-side, like the mentors grid) ---
+  var engRows = [];                     // last-loaded rows, in server order (newest first)
+  var engSort = { key: null, dir: 1 }; // key null = keep the server order
+
   function renderTable(engagements) {
+    engRows = engagements;
+    repaintEngagements();
+  }
+
+  function engSortVal(e, k) {
+    // UTC "YYYY-MM-DD HH:MM:SS" stamps compare correctly as strings; a row
+    // without one ("") sorts before any date ascending, after it descending.
+    if (k === "assignedDate") return e.assignedDate || "";
+    return (e[k] || "").toString().toLowerCase();
+  }
+
+  function repaintEngagements() {
     var body = $("engBody");
     body.innerHTML = "";
-    if (!engagements.length) {
+    updateEngSortIndicators();
+    if (!engRows.length) {
+      hide($("engTable"));
       show($("emptyState"));
       return;
     }
-    engagements.forEach(function (eng) { body.appendChild(buildRow(eng)); });
+    hide($("emptyState"));
+    var rows = engRows.slice();
+    if (engSort.key) {
+      var k = engSort.key, dir = engSort.dir;
+      rows.sort(function (a, b) {
+        var va = engSortVal(a, k), vb = engSortVal(b, k);
+        return (va < vb ? -1 : va > vb ? 1 : 0) * dir;
+      });
+    }
+    rows.forEach(function (eng) { body.appendChild(buildRow(eng)); });
     show($("engTable"));
   }
+
+  function updateEngSortIndicators() {
+    Array.prototype.forEach.call($("engTable").querySelectorAll("th[data-sort]"), function (th) {
+      var active = th.getAttribute("data-sort") === engSort.key;
+      th.setAttribute("aria-sort", active ? (engSort.dir === 1 ? "ascending" : "descending") : "none");
+      th.dataset.dir = active ? (engSort.dir === 1 ? "asc" : "desc") : "";
+    });
+  }
+
+  Array.prototype.forEach.call(
+    document.querySelectorAll("#engTable th[data-sort]"),
+    function (th) {
+      th.addEventListener("click", function () {
+        var key = th.getAttribute("data-sort");
+        if (engSort.key === key) {
+          engSort.dir = -engSort.dir;
+        } else {
+          engSort.key = key;
+          // Dates most-recent-first on the first click; text columns A→Z.
+          engSort.dir = key === "assignedDate" ? -1 : 1;
+        }
+        repaintEngagements();
+      });
+    }
+  );
 
   function buildRow(eng) {
     var tr = document.createElement("tr");

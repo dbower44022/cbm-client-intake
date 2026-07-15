@@ -4,6 +4,17 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.49.0] — 2026-07-15
+
+### Added
+- **Client Administration: column sorting on the engagements grid.** All four
+  headers (Engagement / Assign to mentor / Assigned Date / Notes) are
+  clickable — first click sorts (text A→Z, Assigned Date newest-first),
+  second click reverses; ▲/▼ + `aria-sort` mark the active column (the same
+  interaction as the Review Mentors grid). Client-side over the loaded rows;
+  the sort persists across Refresh and post-assign reloads. Unsorted default
+  stays the server order (newest created first).
+
 ## [0.48.0] — 2026-07-15
 
 ### Added
