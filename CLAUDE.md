@@ -975,9 +975,16 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-15)
 
-**Main is at v0.48.0** (445 tests green, **pushed and DEPLOYED 2026-07-15** —
-prod + crm-test `/healthz` both verified at 0.48.0) — **Client
-Administration: Assigned Date column on the engagements grid**, between
+**Main is at v0.49.0** (445 tests green, **pushed and DEPLOYED 2026-07-15** —
+prod + crm-test `/healthz` both verified at 0.49.0) — **Client
+Administration: column sorting on the engagements grid**: all four headers
+(Engagement / Assign to mentor / Assigned Date / Notes) clickable, first
+click sorts (text A→Z, Assigned Date newest-first), second reverses, ▲/▼ +
+`aria-sort` on the active column (same interaction as Review Mentors).
+Client-side over the loaded rows, persists across Refresh/post-assign
+reloads; verified in the stubbed-browser harness. Doug eyeballed the
+v0.48.0 Assigned Date column live and approved. Before that: **v0.48.0** —
+**Assigned Date column on the engagements grid**, between
 "Assign to mentor" and Notes: when the mentor was assigned
 (`CEngagement.engagementAssignedDate`, the stamp the Assign action writes
 since v0.27.0; UTC stamp shown as the local calendar date). Unassigned rows
