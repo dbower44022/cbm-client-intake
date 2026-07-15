@@ -760,6 +760,35 @@ async def test_create_session_stamps_owner_for_read_own():
 
 
 @pytest.mark.asyncio
+async def test_create_session_stamps_whole_mentor_team():
+    # Mentor domain: every mentor on the engagement (assigned + co-mentors) is
+    # stamped into assignedUsers so they ALL see the session under read=own.
+    fake = Fake(
+        records={
+            ("CEngagement", "E1"): {"mentorProfileId": "mA"},
+            ("CMentorProfile", "mA"): {"assignedUserId": "uA"},
+        },
+        related={"additionalMentors": [
+            {"id": "m2", "assignedUserId": "u9"},
+            {"id": "m3", "assignedUsersIds": ["u1"]},  # the creator — deduped
+        ]},
+    )
+    await service.create_session(MENTOR, fake, "E1", {"name": "S"}, None, owner_user_id="u1")
+    _, payload = fake.created[0]
+    assert payload["assignedUserId"] == "u1"
+    assert payload["assignedUsersIds"] == ["u1", "uA", "u9"]
+
+
+@pytest.mark.asyncio
+async def test_create_session_partner_domain_stamps_creator_only():
+    # No co-mentor concept outside the mentor domain.
+    fake = Fake(related={"additionalMentors": [{"id": "m2", "assignedUserId": "u9"}]})
+    await service.create_session(PARTNER, fake, "P1", {"name": "S"}, None, owner_user_id="u1")
+    _, payload = fake.created[0]
+    assert payload["assignedUsersIds"] == ["u1"]
+
+
+@pytest.mark.asyncio
 async def test_update_session_whitelists_fields_and_syncs_attendees():
     # existing attendee c1; user submits {c1, c3} -> relate c3, unrelate nothing;
     # c2 (not present, not submitted) untouched.
@@ -890,6 +919,76 @@ async def test_add_comentor_warns_when_stamp_rejected():
     res = await service.add_comentor(fake, "E1", "m2")
     assert fake.relates == [("CEngagement", "E1", "additionalMentors", "m2")]
     assert "could not be given access" in res["warning"]
+
+
+@pytest.mark.asyncio
+async def test_add_comentor_backfills_existing_sessions():
+    # The co-mentor must see the engagement's session HISTORY, not just new
+    # sessions — their User is stamped onto every existing session.
+    fake = Fake(
+        records={
+            ("CMentorProfile", "m2"): {"assignedUserId": "u9"},
+            ("CEngagement", "E1"): {"assignedUsersIds": ["u1"]},
+        },
+        related={"engagementSessions": [
+            {"id": "s1", "assignedUsersIds": ["u1"]},
+            {"id": "s2", "assignedUsersIds": ["u1", "u9"]},  # already stamped
+        ]},
+    )
+    res = await service.add_comentor(fake, "E1", "m2")
+    assert ("CSession", "s1", {"assignedUsersIds": ["u1", "u9"]}) in fake.updates
+    assert [u for u in fake.updates if u[0] == "CSession"] == [
+        ("CSession", "s1", {"assignedUsersIds": ["u1", "u9"]})
+    ]  # s2 untouched
+    assert "warning" not in res
+
+
+@pytest.mark.asyncio
+async def test_add_comentor_session_stamp_failure_skips_and_continues():
+    # Under edit=own the acting mentor may not be able to stamp a session
+    # someone else owns — that session is skipped, the rest still get stamped.
+    class Flaky(Fake):
+        async def update(self, entity, record_id, payload):
+            if (entity, record_id) == ("CSession", "s1"):
+                raise EspoError("HTTP 403: forbidden")
+            return await super().update(entity, record_id, payload)
+
+    fake = Flaky(
+        records={
+            ("CMentorProfile", "m2"): {"assignedUserId": "u9"},
+            ("CEngagement", "E1"): {"assignedUsersIds": ["u1"]},
+        },
+        related={"engagementSessions": [
+            {"id": "s1", "assignedUsersIds": []},
+            {"id": "s2", "assignedUsersIds": []},
+        ]},
+    )
+    res = await service.add_comentor(fake, "E1", "m2")
+    assert ("CSession", "s2", {"assignedUsersIds": ["u9"]}) in fake.updates
+    assert "warning" not in res
+
+
+@pytest.mark.asyncio
+async def test_remove_comentor_unstamps_sessions_except_their_own():
+    fake = Fake(
+        records={
+            ("CMentorProfile", "m2"): {"assignedUserId": "u9"},
+            ("CMentorProfile", "mA"): {"assignedUserId": "uA"},
+            ("CEngagement", "E1"): {"mentorProfileId": "mA",
+                                    "assignedUsersIds": ["uA", "u9"]},
+        },
+        related={
+            "additionalMentors": [],
+            "engagementSessions": [
+                {"id": "s1", "assignedUserId": "uA", "assignedUsersIds": ["uA", "u9"]},
+                # s2 is the removed co-mentor's OWN session — stays theirs
+                {"id": "s2", "assignedUserId": "u9", "assignedUsersIds": ["uA", "u9"]},
+            ],
+        },
+    )
+    await service.remove_comentor(fake, "E1", "m2")
+    assert ("CSession", "s1", {"assignedUsersIds": ["uA"]}) in fake.updates
+    assert not any(u[0] == "CSession" and u[1] == "s2" for u in fake.updates)
 
 
 @pytest.mark.asyncio

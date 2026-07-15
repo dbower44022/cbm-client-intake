@@ -4,6 +4,23 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.52.0] — 2026-07-15
+
+### Fixed
+- **Co-mentors see ALL sessions on the engagement** (follow-up to 0.51.0,
+  which made the engagement itself visible). `CSession` is read at "own" by
+  the Mentor Role, so a session was visible only to the user stamped on it —
+  a co-mentor couldn't see the history, and the assigned mentor couldn't see
+  a co-mentor's sessions. Three stamps (mentor domain only):
+  - **New sessions** stamp the engagement's whole mentor team into
+    `assignedUsers` — the creator + the assigned mentor + every co-mentor —
+    so everyone on the engagement sees every new session, whoever writes it.
+  - **Adding a co-mentor backfills** their User onto the engagement's
+    existing sessions (per-session best-effort: under edit=own the acting
+    mentor can only stamp sessions they own; others are logged and skipped).
+  - **Removing a co-mentor un-stamps** them from those sessions — except
+    sessions they personally own (their `assignedUser`), which stay theirs.
+
 ## [0.51.0] — 2026-07-15
 
 ### Fixed

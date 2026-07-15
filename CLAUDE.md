@@ -647,9 +647,14 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   `remove_comentor` removes the User again unless the assigned mentor or a
   remaining co-mentor shares it. `assignments.assign_engagement` merges current
   co-mentors' Users into its assignedUsers write so a reassignment doesn't
-  revoke them. Sessions on the engagement are a separate question: CSession
-  read=own means a co-mentor still only sees sessions they own/are stamped on
-  (the documented pre-existing-sessions ACL decision).
+  revoke them. **Sessions (v0.52.0, Doug's ruling: a co-mentor sees ALL
+  sessions):** `create_session` stamps the engagement's whole mentor team
+  (creator + assigned mentor + co-mentors, `_engagement_mentor_user_ids`)
+  into the new session's `assignedUsers`; `add_comentor` backfills the new
+  co-mentor onto existing sessions (per-session best-effort — edit=own means
+  the acting mentor can only stamp sessions they own, others logged +
+  skipped); `remove_comentor` un-stamps except sessions the removed
+  co-mentor personally owns (their `assignedUser`).
 - **Owner-stamping so a read-own role can see its own new session (the fix
   2026-07-08).** These tools run under roles whose `CSession` read/edit scope is
   `own`, so an **unassigned** new session would be invisible to its own author
@@ -995,7 +1000,21 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-15)
 
-**Main is at v0.51.0** (453 tests green, committed NOT pushed) — **co-mentor
+**Main is at v0.52.0** (458 tests green, committed NOT pushed) — **co-mentors
+see ALL sessions on the engagement** (Doug's follow-up ruling to 0.51.0):
+`CSession` read=own means a session is visible only to the users stamped on
+it, so (mentor domain only) `create_session` now stamps the engagement's
+WHOLE mentor team (creator + assigned mentor + co-mentors) into the session's
+`assignedUsers`; `add_comentor` backfills the new co-mentor's User onto the
+engagement's existing sessions (per-session best-effort — under edit=own the
+acting mentor can only stamp sessions they own, others logged + skipped);
+`remove_comentor` un-stamps them except from sessions they personally own.
+This supersedes the old "pre-existing sessions stay invisible" caveat for
+engagements managed through this tool; sessions created before 0.52.0 by
+OTHER mentors get stamped when a co-mentor is next added (to the extent the
+acting mentor owns them). NOT yet driven live.
+
+Before that: **v0.51.0** (453 tests green, committed NOT pushed) — **co-mentor
 engagement visibility**: a CBM contact added to an engagement (Details tab →
 CBM Contacts + Add) now actually sees that engagement in `/mentorsessions`.
 Doug's report; root causes verified live against the crm-test CRM (roles read

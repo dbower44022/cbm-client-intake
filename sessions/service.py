@@ -747,6 +747,10 @@ async def create_session(
     own author right after creation. Written to BOTH ``assignedUser`` and
     ``assignedUsers`` (CSession has both, like CEngagement) so it sticks whichever
     the instance uses.
+
+    Mentor domain: the engagement's WHOLE mentor team (assigned mentor +
+    co-mentors) is stamped into ``assignedUsers``, not just the creator —
+    every mentor on the engagement must see every session on it (read=own).
     """
     payload = _session_payload(changes)
     payload[cfg.session_parent_fk] = parent_id
@@ -754,7 +758,11 @@ async def create_session(
     payload.setdefault("status", "Scheduled")  # CRM status vocabulary: Scheduled/Completed/Cancelled/No Show
     if owner_user_id:
         payload.setdefault("assignedUserId", owner_user_id)
-        payload.setdefault("assignedUsersIds", [owner_user_id])
+        team = await _engagement_mentor_user_ids(cfg, client, parent_id)
+        payload.setdefault(
+            "assignedUsersIds",
+            [owner_user_id] + [u for u in team if u != owner_user_id],
+        )
     await _sanitize_enum_payload(client, payload)
     created = await client.create(SESSION, payload)
     if attendees:  # new record => relate all chosen attendees
@@ -815,6 +823,42 @@ async def _profile_user_id(client: SessionClient, mentor_profile_id: str) -> Opt
     return assigned_user_id(profile)
 
 
+# CEngagement's hasMany link to its sessions (the mentor domain's
+# parent_sessions_link) — used by the co-mentor add/remove session stamping.
+_ENGAGEMENT_SESSIONS_LINK = "engagementSessions"
+
+
+async def _engagement_mentor_user_ids(
+    cfg: DomainConfig, client: SessionClient, parent_id: str
+) -> list[str]:
+    """Login Users of the engagement's whole mentor team — the assigned mentor
+    (``mentorProfile``) plus every co-mentor (``additionalMentors``). Mentor
+    domain only (other domains have no co-mentors); best-effort — an unreadable
+    link just yields fewer users, never an error.
+    """
+    if not cfg.supports_comentor:
+        return []
+    ids: list[str] = []
+    try:
+        eng = await client.get(ENGAGEMENT, parent_id, select="mentorProfileId")
+        if eng.get("mentorProfileId"):
+            uid = await _profile_user_id(client, eng["mentorProfileId"])
+            if uid:
+                ids.append(uid)
+        co = await client.list_related(
+            ENGAGEMENT, parent_id, _COMENTOR_LINK,
+            select="assignedUserId,assignedUsersIds", max_size=_PAGE,
+        )
+        for r in co.get("list", []):
+            uid = assigned_user_id(r)
+            if uid and uid not in ids:
+                ids.append(uid)
+    except EspoError as exc:
+        log.warning("could not resolve mentor-team users for engagement %s: %s",
+                    parent_id, exc)
+    return ids
+
+
 async def add_comentor(
     client: SessionClient, engagement_id: str, mentor_profile_id: str
 ) -> dict[str, Any]:
@@ -845,6 +889,25 @@ async def add_comentor(
             await client.update(
                 ENGAGEMENT, engagement_id, {"assignedUsersIds": current + [user_id]}
             )
+        # Backfill the engagement's EXISTING sessions so the co-mentor sees the
+        # whole session history, not just sessions created from now on (CSession
+        # read=own). Per-session best-effort: under edit=own the acting mentor
+        # can only stamp sessions they own — anything else is logged and skipped.
+        sessions_data = await client.list_related(
+            ENGAGEMENT, engagement_id, _ENGAGEMENT_SESSIONS_LINK,
+            select="assignedUsersIds", max_size=_PAGE,
+        )
+        for s in sessions_data.get("list", []):
+            cur = list(s.get("assignedUsersIds") or [])
+            if user_id in cur:
+                continue
+            try:
+                await client.update(
+                    SESSION, s["id"], {"assignedUsersIds": cur + [user_id]}
+                )
+            except EspoError as exc:
+                log.warning("co-mentor session stamp skipped (session %s): %s",
+                            s["id"], exc)
     except EspoError as exc:
         log.warning(
             "co-mentor visibility stamp failed (engagement %s, profile %s): %s",
@@ -902,6 +965,25 @@ async def remove_comentor(
                 ENGAGEMENT, engagement_id,
                 {"assignedUsersIds": [u for u in current if u != user_id]},
             )
+            # Un-stamp the engagement's sessions too (the reverse of the
+            # add-time backfill) — except sessions the removed co-mentor
+            # personally owns (their assignedUser), which stay theirs.
+            sessions_data = await client.list_related(
+                ENGAGEMENT, engagement_id, _ENGAGEMENT_SESSIONS_LINK,
+                select="assignedUserId,assignedUsersIds", max_size=_PAGE,
+            )
+            for s in sessions_data.get("list", []):
+                cur = list(s.get("assignedUsersIds") or [])
+                if user_id not in cur or s.get("assignedUserId") == user_id:
+                    continue
+                try:
+                    await client.update(
+                        SESSION, s["id"],
+                        {"assignedUsersIds": [u for u in cur if u != user_id]},
+                    )
+                except EspoError as exc:
+                    log.warning("co-mentor session un-stamp skipped (session %s): %s",
+                                s["id"], exc)
     except EspoError as exc:
         log.warning(
             "co-mentor visibility un-stamp failed (engagement %s, profile %s): %s",
