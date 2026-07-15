@@ -439,8 +439,11 @@ mapping (for the WP feed) is in `cmentorprofile-summary-field.md`. Portal tile
      prod, so the tool is effectively LIVE on prod for Mentor Team members
      (prod's Mentor Role has no field-level locks per Doug's UI check —
      unverified by API; the crm-test lockdown story is in the Status bullet).
-     Remaining prod step: a smoke test as a real prod mentor login
-     (writes real data — Doug's call).
+     ✅ **Prod smoke test implicitly PASSED (2026-07-14):** Doug's prod
+     profile carries mentorTitle + mentorSummary + a profile photo — fields
+     only this tool writes — and opening `/mentorprofile` on prod loaded the
+     full record + Contact into the form. Read, save, and photo upload all
+     confirmed working on production.
   2. **Mentor Team role**: `CMentorProfile` read-own + edit-own with
      field-level write on the PROFILE_FIELDS set + `profilePhotoId`; Contact
      edit-own (the mentor's Contact must have their User assigned —
