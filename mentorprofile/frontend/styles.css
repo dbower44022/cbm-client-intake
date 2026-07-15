@@ -294,6 +294,10 @@ body.mp--resizing { cursor: col-resize; user-select: none; }
 .cbm-btn-sm:hover { background: var(--white) !important; color: var(--navy) !important; }
 /* ----------------------------- end verbatim copy ------------------------- */
 
-/* footer */
+/* footer — matches the other apps: "© 2026 Cleveland Business Mentors.
+   All rights reserved. · v0.45.0 (Test)" (the " · " separator rule mirrors
+   /shared/wizard.css, which this app doesn't load) */
 .cbm-footer { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--cbm-border);
   color: var(--cbm-text); font-size: var(--cbm-text-sm); }
+.cbm-footer p { margin: 0; }
+.cbm-footer__version:not(:empty)::before { content: " · "; }
