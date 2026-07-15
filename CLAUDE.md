@@ -975,8 +975,9 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-15)
 
-**Main is at v0.50.0** (committed, NOT pushed) — **standard rich-text editor
-POC on the session tools**: wysiwyg fields (session editor + Details tab)
+**Main is at v0.50.0** (445 tests green, **pushed and DEPLOYED 2026-07-15** —
+prod + crm-test `/healthz` both verified at 0.50.0) — **standard rich-text
+editor POC on the session tools**: wysiwyg fields (session editor + Details tab)
 now render through the new shared **CBMRichText** component
 (`frontend/shared/richtext.js`) wrapping **vendored Jodit 4.13.3** (MIT,
 `frontend/shared/vendor/jodit/` — chosen over CKEditor 5/TinyMCE 7, both
@@ -986,7 +987,8 @@ snapshot-stable for untouched editors (gesture-gated against Jodit's async
 `<b>`→`<strong>` normalization — without this every clean open read as
 dirty). Verified in the stubbed-browser harness (formatted CRM HTML loads,
 clean back = no unsaved prompt, PUT carries only the changed field with
-on* attrs stripped, empty editor saves as `""`); **NOT yet driven live**.
+on* attrs stripped, empty editor saves as `""`); not yet driven against the
+live CRM (Doug to eyeball the feel on crm-test/prod).
 **New convention (see Conventions): ALL wysiwyg fields product-wide use
 CBMRichText**; migrating mentoradmin + mentorprofile (and the EspoCRM-side
 save round-trip check) is the follow-up once Doug approves the feel.
