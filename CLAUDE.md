@@ -973,7 +973,8 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-15)
 
-**Main is at v0.46.0** (443 tests green, committed NOT pushed) —
+**Main is at v0.46.0** (443 tests green, **pushed and DEPLOYED 2026-07-15** —
+prod + crm-test `/healthz` both verified at 0.46.0) —
 **Communications compose defaults to ALL record contacts as To recipients**:
 the session tools' compose dialog now renders every record contact with an
 email address as a checked checkbox (uncheck to leave someone off), plus an
