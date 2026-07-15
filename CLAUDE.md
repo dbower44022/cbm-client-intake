@@ -630,6 +630,26 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   fix; both the editor and the note feed now use the link read. The editor picker is
   over the parent's related contacts; `attendees=None` on edit = leave untouched,
   `[]` = clear. `EspoClient.unrelate` (relationship DELETE) was added for this.
+- **Co-mentor visibility (v0.51.0, 2026-07-15).** A co-mentor added via the
+  Details tab (CBM Contacts + Add → `CEngagement.additionalMentors`) must see
+  the engagement in their OWN `/mentorsessions` list. Two mechanisms, both in
+  the app: (1) `list_records` reads the co-mentor reverse link **`engagements`**
+  (reverse of `additionalMentors`; `DomainConfig.manager_comentor_link`, mentor
+  domain only) in addition to `engagements1`, merged + deduped by id;
+  (2) `service.add_comentor` appends the co-mentor's linked login User to the
+  engagement's **`assignedUsers`** — required because the Mentor Role reads
+  `CEngagement` at "own", which (assignedUser disabled) means assignedUsers
+  membership; without the stamp the reverse-link read is ACL-filtered to
+  nothing. Mentor Role `assignmentPermission=team` (read live 2026-07-15)
+  permits assigning fellow Mentor Team members; `assignedUsers` maxCount is 10.
+  Best-effort: profile without a linked User, or a rejected write, keeps the
+  relate and returns `{"warning": ...}` which the Details tab shows.
+  `remove_comentor` removes the User again unless the assigned mentor or a
+  remaining co-mentor shares it. `assignments.assign_engagement` merges current
+  co-mentors' Users into its assignedUsers write so a reassignment doesn't
+  revoke them. Sessions on the engagement are a separate question: CSession
+  read=own means a co-mentor still only sees sessions they own/are stamped on
+  (the documented pre-existing-sessions ACL decision).
 - **Owner-stamping so a read-own role can see its own new session (the fix
   2026-07-08).** These tools run under roles whose `CSession` read/edit scope is
   `own`, so an **unassigned** new session would be invisible to its own author
@@ -975,7 +995,31 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-15)
 
-**Main is at v0.50.0** (445 tests green, **pushed and DEPLOYED 2026-07-15** —
+**Main is at v0.51.0** (453 tests green, committed NOT pushed) — **co-mentor
+engagement visibility**: a CBM contact added to an engagement (Details tab →
+CBM Contacts + Add) now actually sees that engagement in `/mentorsessions`.
+Doug's report; root causes verified live against the crm-test CRM (roles read
+via the admin service account; prod metadata identical, prod role scope
+unverifiable locally — its admin creds are encrypted in the overlay). Three
+fixes (mechanics in the "Co-mentor visibility" bullet of the Session
+Management section): (1) the mentor list reads BOTH `CMentorProfile` reverse
+links — `engagements1` (assigned) + **`engagements`** (reverse of
+`additionalMentors`) — merged/deduped (`DomainConfig.manager_comentor_link`);
+(2) `add_comentor` also stamps the co-mentor's login User into
+`CEngagement.assignedUsers` — Mentor Role reads CEngagement at **own** =
+assignedUsers membership (assignedUser is disabled), and its
+`assignmentPermission=team` lets a mentor assign a fellow Mentor Team member;
+best-effort with a readable warning (no linked User / write rejected), and
+`remove_comentor` un-stamps unless the assigned mentor or a remaining
+co-mentor shares the User; (3) Client Administration's `assign_engagement`
+now MERGES current co-mentors' Users into its `assignedUsersIds` write
+(it used to overwrite with just the new mentor, silently revoking co-mentor
+access on reassignment). **NOT yet driven live** — verify: as mentor A add
+mentor B as CBM contact → the engagement appears in B's list; a session
+created by A on that engagement is still invisible to B (CSession read=own,
+the documented pre-existing-sessions ACL question — CRM-side decision).
+
+Before that: **v0.50.0** (445 tests green, **pushed and DEPLOYED 2026-07-15** —
 prod + crm-test `/healthz` both verified at 0.50.0) — **standard rich-text
 editor POC on the session tools**: wysiwyg fields (session editor + Details tab)
 now render through the new shared **CBMRichText** component

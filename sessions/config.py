@@ -150,6 +150,11 @@ class DomainConfig:
 
     # Mentor-only: attach co-mentors to the engagement (additionalMentors).
     supports_comentor: bool = False
+    # Optional second reverse link on the manager's CMentorProfile: parents where
+    # they are a CO-mentor (reverse of CEngagement.additionalMentors — the CRM
+    # link is named ``engagements``, verified live on crm-test AND prod
+    # 2026-07-15). Rows are merged into the owned list, deduped by id.
+    manager_comentor_link: Optional[str] = None
     # belongsTo link on the parent naming the assigned CBM manager's
     # CMentorProfile (e.g. CEngagement.mentorProfile). Feeds the CBM-contacts
     # invitee resolution; None when the domain has no such link.
@@ -314,6 +319,7 @@ MENTOR = DomainConfig(
         ("Client Business Profile", "CClientProfile", "engagementClientId"),
     ),
     supports_comentor=True,
+    manager_comentor_link="engagements",  # reverse of CEngagement.additionalMentors
     parent_manager_link="mentorProfile",
     # No status pre-filter: load ALL of the mentor's engagements so the grid's
     # Status filter can offer every status (the user filters as they like).

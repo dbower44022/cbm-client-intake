@@ -90,12 +90,14 @@ def test_domain_links_match_crm():
     """Lock the live-verified CSession parent links / reverse links per domain."""
     assert MENTOR.session_parent_link == "engagement" and MENTOR.session_parent_fk == "engagementId"
     assert MENTOR.manager_owned_link == "engagements1"
+    assert MENTOR.manager_comentor_link == "engagements"  # reverse of additionalMentors
     assert MENTOR.parent_sessions_link == "engagementSessions"
     assert MENTOR.supports_comentor is True
     assert MENTOR.status_values == ()  # no status pre-filter — the grid loads all
 
     assert PARTNER.session_parent_link == "partnerSession" and PARTNER.session_parent_fk == "partnerSessionId"
     assert PARTNER.manager_owned_link == "managedPartners"
+    assert PARTNER.manager_comentor_link is None
     assert PARTNER.parent_sessions_link == "sessions"
     assert PARTNER.supports_comentor is False
 
@@ -177,6 +179,49 @@ async def test_mentor_list_maps_next_session_and_start_inline():
     assert row["contact"] == "Pat" and row["contactId"] == "c1"
     assert "created" not in row  # no trailing Created date column for mentor
     assert MENTOR.list_date_column is None
+
+
+@pytest.mark.asyncio
+async def test_mentor_list_includes_comentored_engagements():
+    # Engagements where the mentor is a CO-mentor (additionalMentors reverse
+    # link "engagements") are merged into the list, deduped against the ones
+    # they're the assigned mentor of.
+    fake = Fake(
+        mentors=[{"id": "p9", "assignedUserId": "u1"}],
+        related={
+            "engagements1": [
+                {"id": "E1", "name": "Mine", "engagementStatus": "Active",
+                 "createdAt": "2026-01-03"},
+            ],
+            "engagements": [
+                {"id": "E2", "name": "Co-mentored", "engagementStatus": "Active",
+                 "createdAt": "2026-01-04"},
+                {"id": "E1", "name": "Mine", "engagementStatus": "Active",
+                 "createdAt": "2026-01-03"},  # also assigned — must not duplicate
+            ],
+        },
+    )
+    res = await service.list_records(MENTOR, fake, _USER)
+    ids = [r["id"] for r in res["records"]]
+    assert sorted(ids) == ["E1", "E2"]
+    assert len(ids) == 2  # deduped
+
+
+@pytest.mark.asyncio
+async def test_partner_list_reads_only_owned_link():
+    # No co-mentor concept outside the mentor domain: only managedPartners is read.
+    class Recording(Fake):
+        def __init__(self, **kw):
+            super().__init__(**kw)
+            self.related_calls = []
+
+        async def list_related(self, entity, record_id, link, **kw):
+            self.related_calls.append(link)
+            return await super().list_related(entity, record_id, link, **kw)
+
+    fake = Recording(mentors=[{"id": "p9", "assignedUserId": "u1"}])
+    await service.list_records(PARTNER, fake, _USER)
+    assert fake.related_calls == ["managedPartners"]
 
 
 @pytest.mark.asyncio
@@ -796,17 +841,98 @@ async def test_get_session_exposes_attendees():
 
 
 @pytest.mark.asyncio
-async def test_add_comentor_relates():
-    fake = Fake()
-    await service.add_comentor(fake, "E1", "m2")
+async def test_add_comentor_relates_and_stamps_assigned_users():
+    # The co-mentor's login User is added to CEngagement.assignedUsers — the
+    # Mentor Role reads engagements at "own" (= membership in assignedUsers), so
+    # without the stamp the engagement never shows in the co-mentor's list.
+    fake = Fake(records={
+        ("CMentorProfile", "m2"): {"assignedUserId": "u9"},
+        ("CEngagement", "E1"): {"assignedUsersIds": ["u1"]},
+    })
+    res = await service.add_comentor(fake, "E1", "m2")
     assert fake.relates == [("CEngagement", "E1", "additionalMentors", "m2")]
+    assert ("CEngagement", "E1", {"assignedUsersIds": ["u1", "u9"]}) in fake.updates
+    assert "warning" not in res
 
 
 @pytest.mark.asyncio
-async def test_remove_comentor_unrelates():
-    fake = Fake()
+async def test_add_comentor_skips_stamp_when_already_assigned():
+    fake = Fake(records={
+        ("CMentorProfile", "m2"): {"assignedUsersIds": ["u9"]},  # collaborators shape
+        ("CEngagement", "E1"): {"assignedUsersIds": ["u1", "u9"]},
+    })
+    res = await service.add_comentor(fake, "E1", "m2")
+    assert fake.updates == []
+    assert "warning" not in res
+
+
+@pytest.mark.asyncio
+async def test_add_comentor_warns_when_profile_has_no_user():
+    fake = Fake(records={("CMentorProfile", "m2"): {}})
+    res = await service.add_comentor(fake, "E1", "m2")
+    assert fake.relates == [("CEngagement", "E1", "additionalMentors", "m2")]
+    assert fake.updates == []
+    assert "no linked login user" in res["warning"]
+
+
+@pytest.mark.asyncio
+async def test_add_comentor_warns_when_stamp_rejected():
+    # The relate stands; a 403 on the assignedUsers write (assignment permission)
+    # comes back as a readable warning instead of failing the add.
+    class NoAssign(Fake):
+        async def update(self, entity, record_id, payload):
+            raise EspoError("HTTP 403: Assignment failure")
+
+    fake = NoAssign(records={
+        ("CMentorProfile", "m2"): {"assignedUserId": "u9"},
+        ("CEngagement", "E1"): {"assignedUsersIds": ["u1"]},
+    })
+    res = await service.add_comentor(fake, "E1", "m2")
+    assert fake.relates == [("CEngagement", "E1", "additionalMentors", "m2")]
+    assert "could not be given access" in res["warning"]
+
+
+@pytest.mark.asyncio
+async def test_remove_comentor_unrelates_and_unstamps_user():
+    fake = Fake(
+        records={
+            ("CMentorProfile", "m2"): {"assignedUserId": "u9"},
+            ("CMentorProfile", "mA"): {"assignedUserId": "uA"},
+            ("CEngagement", "E1"): {"mentorProfileId": "mA",
+                                    "assignedUsersIds": ["uA", "u9"]},
+        },
+        related={"additionalMentors": []},  # no co-mentors remain after unrelate
+    )
     await service.remove_comentor(fake, "E1", "m2")
     assert fake.unrelates == [("CEngagement", "E1", "additionalMentors", "m2")]
+    assert ("CEngagement", "E1", {"assignedUsersIds": ["uA"]}) in fake.updates
+
+
+@pytest.mark.asyncio
+async def test_remove_comentor_keeps_assigned_mentors_user():
+    # Removing a co-mentor whose User is ALSO the assigned mentor's must not
+    # strip the assigned mentor's visibility.
+    fake = Fake(records={
+        ("CMentorProfile", "m2"): {"assignedUserId": "uA"},
+        ("CMentorProfile", "mA"): {"assignedUserId": "uA"},
+        ("CEngagement", "E1"): {"mentorProfileId": "mA", "assignedUsersIds": ["uA"]},
+    })
+    await service.remove_comentor(fake, "E1", "m2")
+    assert fake.unrelates == [("CEngagement", "E1", "additionalMentors", "m2")]
+    assert fake.updates == []
+
+
+@pytest.mark.asyncio
+async def test_remove_comentor_keeps_user_shared_with_remaining_comentor():
+    fake = Fake(
+        records={
+            ("CMentorProfile", "m2"): {"assignedUserId": "u9"},
+            ("CEngagement", "E1"): {"assignedUsersIds": ["u9"]},
+        },
+        related={"additionalMentors": [{"id": "m3", "assignedUserId": "u9"}]},
+    )
+    await service.remove_comentor(fake, "E1", "m2")
+    assert fake.updates == []
 
 
 @pytest.mark.asyncio
@@ -983,6 +1109,7 @@ def test_remove_contact_and_comentor_endpoints(monkeypatch):
 
     async def fake_remove(client, engagement_id, mentor_profile_id):
         removed.append((engagement_id, mentor_profile_id))
+        return {"status": "ok"}
 
     monkeypatch.setattr("sessions.details.unlink_contact", fake_unlink)
     monkeypatch.setattr("sessions.service.remove_comentor", fake_remove)

@@ -105,6 +105,27 @@ async def test_assign_sets_engagement_and_reassigns_related():
     assert res["engagementStatus"] == "Pending Acceptance"
 
 
+async def test_assign_preserves_comentor_users():
+    """Reassigning a mentor must not strip co-mentors out of assignedUsers —
+    their engagement-list visibility (Mentor Role read=own) rides on it."""
+
+    class Client(FakeClient):
+        async def list_related(self, entity, record_id, link, **kwargs):
+            if link == "additionalMentors":
+                return {"list": [
+                    {"id": "mentor-co", "assignedUsersIds": ["user-co"]},
+                    {"id": "mentor-unlinked", "assignedUsersIds": []},
+                ]}
+            return await super().list_related(entity, record_id, link, **kwargs)
+
+    client = Client(mentor=_mentor(), engagement={})
+    await service.assign_engagement(client, "eng-1", "mentor-1")
+
+    payload = [u for u in client.updates if u[0] == service.ENGAGEMENT][0][2]
+    assert payload["assignedUsersIds"] == ["user-99", "user-co"]
+    assert payload["assignedUserId"] == "user-99"
+
+
 async def test_assign_reports_partial_reassignment_failures():
     """A CRM failure re-homing a related record is captured + reported, not
     raised — the core assignment (engagement → Pending Acceptance) still stands."""

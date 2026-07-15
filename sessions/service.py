@@ -235,14 +235,23 @@ async def list_records(
     profile_id = await resolve_manager_profile(client, user["userId"])
     if not profile_id:
         return {"records": [], "profileFound": False}
-    data = await client.list_related(
-        MENTOR_PROFILE,
-        profile_id,
-        cfg.manager_owned_link,
-        select=cfg.list_select,
-        max_size=_PAGE,
-    )
-    rows = data.get("list", [])
+    links = [cfg.manager_owned_link]
+    if cfg.manager_comentor_link:  # engagements where the user is a CO-mentor
+        links.append(cfg.manager_comentor_link)
+    rows: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for link in links:
+        data = await client.list_related(
+            MENTOR_PROFILE,
+            profile_id,
+            link,
+            select=cfg.list_select,
+            max_size=_PAGE,
+        )
+        for r in data.get("list", []):
+            if r["id"] not in seen:
+                seen.add(r["id"])
+                rows.append(r)
     if cfg.status_attr and cfg.status_values:
         rows = [r for r in rows if r.get(cfg.status_attr) in cfg.status_values]
     await fill_company_fallback(cfg, client, rows)
@@ -798,20 +807,107 @@ async def update_session(
     return session
 
 
+async def _profile_user_id(client: SessionClient, mentor_profile_id: str) -> Optional[str]:
+    """The login User linked to a CMentorProfile (either assignment shape)."""
+    profile = await client.get(
+        MENTOR_PROFILE, mentor_profile_id, select="assignedUserId,assignedUsersIds"
+    )
+    return assigned_user_id(profile)
+
+
 async def add_comentor(
     client: SessionClient, engagement_id: str, mentor_profile_id: str
-) -> None:
-    """Attach a co-mentor (CMentorProfile) to an engagement (additionalMentors)."""
+) -> dict[str, Any]:
+    """Attach a co-mentor (CMentorProfile) to an engagement (additionalMentors).
+
+    Also adds the co-mentor's login User to the engagement's ``assignedUsers``:
+    the Mentor Role reads CEngagement at "own", and with ``assignedUser``
+    disabled "own" means membership in ``assignedUsers`` — without this the
+    engagement never appears in the co-mentor's own engagement list. Best-effort
+    (the relate is the source of truth); a failure returns a ``warning`` the UI
+    shows instead of silently leaving the co-mentor blind.
+    """
     await client.relate(ENGAGEMENT, engagement_id, _COMENTOR_LINK, mentor_profile_id)
+    try:
+        user_id = await _profile_user_id(client, mentor_profile_id)
+        if not user_id:
+            return {
+                "status": "ok",
+                "warning": (
+                    "Added — but this CBM contact has no linked login user, so the "
+                    "engagement will not appear in their engagement list until one "
+                    "is assigned in Mentor Administration."
+                ),
+            }
+        eng = await client.get(ENGAGEMENT, engagement_id, select="assignedUsersIds")
+        current = list(eng.get("assignedUsersIds") or [])
+        if user_id not in current:
+            await client.update(
+                ENGAGEMENT, engagement_id, {"assignedUsersIds": current + [user_id]}
+            )
+    except EspoError as exc:
+        log.warning(
+            "co-mentor visibility stamp failed (engagement %s, profile %s): %s",
+            engagement_id, mentor_profile_id, exc,
+        )
+        return {
+            "status": "ok",
+            "warning": (
+                "Added — but they could not be given access to the engagement, so "
+                "it may not appear in their engagement list. (Their user may be on "
+                "a different team, or your role may not allow assigning users.)"
+            ),
+        }
+    return {"status": "ok"}
 
 
 async def remove_comentor(
     client: SessionClient, engagement_id: str, mentor_profile_id: str
-) -> None:
+) -> dict[str, Any]:
     """Detach a co-mentor from an engagement — the reverse of :func:`add_comentor`.
     Only the ``additionalMentors`` relation: the assigned mentor
-    (``CEngagement.mentorProfile``) is managed in Client Administration, not here."""
+    (``CEngagement.mentorProfile``) is managed in Client Administration, not here.
+
+    Also removes their login User from ``assignedUsers`` (undoing the add-time
+    visibility stamp) — unless that User also belongs to the assigned mentor or
+    to a co-mentor still on the engagement. Best-effort: a failure here leaves
+    harmless extra visibility, never a broken remove.
+    """
     await client.unrelate(ENGAGEMENT, engagement_id, _COMENTOR_LINK, mentor_profile_id)
+    try:
+        user_id = await _profile_user_id(client, mentor_profile_id)
+        if not user_id:
+            return {"status": "ok"}
+        eng = await client.get(
+            ENGAGEMENT, engagement_id, select="mentorProfileId,assignedUsersIds"
+        )
+        current = list(eng.get("assignedUsersIds") or [])
+        if user_id not in current:
+            return {"status": "ok"}
+        protected: set[str] = set()
+        if eng.get("mentorProfileId"):
+            assigned = await _profile_user_id(client, eng["mentorProfileId"])
+            if assigned:
+                protected.add(assigned)
+        remaining = await client.list_related(
+            ENGAGEMENT, engagement_id, _COMENTOR_LINK,
+            select="assignedUserId,assignedUsersIds", max_size=_PAGE,
+        )
+        for r in remaining.get("list", []):
+            uid = assigned_user_id(r)
+            if uid:
+                protected.add(uid)
+        if user_id not in protected:
+            await client.update(
+                ENGAGEMENT, engagement_id,
+                {"assignedUsersIds": [u for u in current if u != user_id]},
+            )
+    except EspoError as exc:
+        log.warning(
+            "co-mentor visibility un-stamp failed (engagement %s, profile %s): %s",
+            engagement_id, mentor_profile_id, exc,
+        )
+    return {"status": "ok"}
 
 
 async def mentor_options(client: SessionClient) -> list[dict[str, Any]]:

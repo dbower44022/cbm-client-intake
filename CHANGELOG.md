@@ -4,6 +4,32 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.51.0] — 2026-07-15
+
+### Fixed
+- **Co-mentors now see the engagement in their own engagement list.** Adding
+  a CBM contact on the Details tab related the mentor profile
+  (`CEngagement.additionalMentors`) but the engagement never appeared for
+  them, for two independent reasons — both fixed:
+  1. **List scope:** `/mentorsessions` read only `engagements1` (reverse of
+     `CEngagement.mentorProfile` — engagements they're the ASSIGNED mentor
+     of). It now also reads the co-mentor reverse link **`engagements`**
+     (reverse of `additionalMentors`; link name verified live on crm-test AND
+     prod) and merges the rows, deduped
+     (`DomainConfig.manager_comentor_link`, mentor domain only).
+  2. **CRM visibility:** the Mentor Role reads `CEngagement` at "own", which
+     (with `assignedUser` disabled) means membership in the **`assignedUsers`**
+     collaborators field. Adding a co-mentor now also appends their linked
+     login User to the engagement's `assignedUsers` (their role's
+     `assignmentPermission=team` allows assigning fellow Mentor Team members).
+     Best-effort: no linked User / a rejected write keeps the relate and
+     returns a readable warning the Details tab shows. Removing a co-mentor
+     removes their User again — unless the assigned mentor or a remaining
+     co-mentor shares it.
+- **Client Administration reassignment no longer strips co-mentor access.**
+  `assign_engagement` overwrote `assignedUsersIds` with just the new mentor;
+  it now merges the current co-mentors' Users into the write (best-effort).
+
 ## [0.50.0] — 2026-07-15
 
 ### Added

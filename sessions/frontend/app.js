@@ -2574,11 +2574,12 @@
       if (!sel.value) return;
       add.disabled = true; err.hidden = true;
       try {
-        await api("/records/" + encodeURIComponent(currentDetail.id) + "/comentors",
+        var res = await api("/records/" + encodeURIComponent(currentDetail.id) + "/comentors",
           { method: "POST", body: JSON.stringify({ mentorProfileId: sel.value }) });
         detailsAdd = null;
         await loadDetails(currentDetail.id);
-        notice("detailsNotice", "CBM contact added.", "success");
+        notice("detailsNotice", (res && res.warning) || "CBM contact added.",
+          res && res.warning ? "error" : "success");
       } catch (e) {
         if (e.status === 401) { showLogin(); return; }
         add.disabled = false;

@@ -461,11 +461,29 @@ async def assign_engagement(
     # 2. The engagement itself (assignedUsers, not assignedUser — see above).
     # engagementAssignedDate is stamped here — nothing CRM-side fills it, and the
     # Assigned-last-30-days metric depends on it.
+    # Co-mentors (additionalMentors) see the engagement only through their
+    # membership in assignedUsers (Mentor Role reads CEngagement at "own"), so a
+    # reassignment must MERGE their users into the write, not overwrite the list
+    # with just the new mentor. Best-effort: an unreadable link just assigns the
+    # new mentor alone.
+    assigned_ids = [user_id]
+    try:
+        co = await client.list_related(
+            ENGAGEMENT, engagement_id, "additionalMentors",
+            select="assignedUserId,assignedUsersIds", max_size=50,
+        )
+        for r in co.get("list", []):
+            uid = assigned_user_id(r)
+            if uid and uid not in assigned_ids:
+                assigned_ids.append(uid)
+    except EspoError:
+        pass
     await client.update(
         ENGAGEMENT,
         engagement_id,
         {
             **_assigned_user_payload(ENGAGEMENT, user_id),
+            "assignedUsersIds": assigned_ids,
             "mentorProfileId": mentor_profile_id,
             "engagementStatus": STATUS_PENDING,
             "engagementAssignedDate": espo_now(),

@@ -326,8 +326,7 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             user = _require_user(request)
             client = client_for(get_settings(), user)
             try:
-                await service.add_comentor(client, parent_id, body.mentorProfileId)
-                return {"status": "ok"}
+                return await service.add_comentor(client, parent_id, body.mentorProfileId)
             except EspoError as exc:
                 raise _crm_failure(request, exc, "Could not add co-mentor")
 
@@ -340,8 +339,7 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             user = _require_user(request)
             client = client_for(get_settings(), user)
             try:
-                await service.remove_comentor(client, parent_id, mentor_profile_id)
-                return {"status": "ok"}
+                return await service.remove_comentor(client, parent_id, mentor_profile_id)
             except EspoError as exc:
                 raise _crm_failure(request, exc, "Could not remove the co-mentor")
 
