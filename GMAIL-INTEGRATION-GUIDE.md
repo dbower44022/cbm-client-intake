@@ -250,7 +250,14 @@ writer):
    not depend on it — but any future move to read-own does, so grant it.
    (Discovered live on the 2026-07-14 prod rollout; the crm-test build had
    the same gap and its conversations are unstamped.)
-6. Click **Save**.
+6. Scroll back to the TOP of the role editor and set **Assignment
+   Permission = all** (the dropdown in the role's general-permissions block,
+   NOT the per-entity table). Without it the same owner stamp fails with
+   `Assignment failure: assigned user or team not allowed` — assigning a
+   record to another user is governed by this separate permission, and a
+   role that leaves it "not-set" denies it. (Discovered live 2026-07-15
+   when the rebuilt crm-test role matched everything EXCEPT this.)
+7. Click **Save**.
 
 **Role 2 of 4 — Mentor Role:**
 1. **Administration → Roles → Mentor Role → Edit**.
