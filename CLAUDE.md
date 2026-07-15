@@ -1000,7 +1000,10 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-15)
 
-**Main is at v0.53.0** — **CBMRichText (Jodit) rolled out to ALL wysiwyg
+**Main is at v0.53.0** (458 tests green, **pushed and DEPLOYED 2026-07-15** —
+prod + crm-test `/healthz` both verified at 0.53.0; this push also carried
+the parallel session's unpushed v0.51.0/v0.52.0 co-mentor-visibility work
+live) — **CBMRichText (Jodit) rolled out to ALL wysiwyg
 fields** (Doug approved the v0.50.0 POC): `/mentoradmin` Bio tab +
 `/mentorprofile` (About/bio/why-mentor, live website preview via the
 component's `onInput` hook — Jodit toolbar actions fire no native bubbling
