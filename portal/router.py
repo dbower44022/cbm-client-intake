@@ -30,6 +30,7 @@ from assignments.auth import (
     current_user,
     is_member,
     refresh_membership,
+    request_password_reset,
     set_session,
 )
 from core.config import Settings, get_settings
@@ -40,6 +41,11 @@ router = APIRouter(prefix="/api/portal", tags=["portal"])
 class LoginIn(BaseModel):
     username: str = Field(min_length=1)
     password: str = Field(min_length=1)
+
+
+class ForgotPasswordIn(BaseModel):
+    username: str = Field(min_length=1)
+    emailAddress: str = Field(min_length=3)
 
 
 def _forms(request: Request) -> list[dict[str, str]]:
@@ -101,6 +107,31 @@ async def login(body: LoginIn, request: Request) -> dict:
         raise HTTPException(status_code=401, detail=str(exc))
     set_session(request, user)
     return _home_payload(user, request, settings)
+
+
+@router.post("/forgot-password")
+async def forgot_password(body: ForgotPasswordIn) -> dict:
+    """Email the user a CRM password-reset link (EspoCRM's own recovery flow).
+
+    Unauthenticated by nature; the CRM does the matching, throttling, and the
+    email itself. Failures come back as a readable ``detail`` string (exact
+    messages per the project error policy — the CRM's own login page reports
+    not-found the same way).
+    """
+    settings = get_settings()
+    try:
+        await request_password_reset(
+            settings, body.username.strip(), body.emailAddress.strip()
+        )
+    except AuthError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {
+        "status": "ok",
+        "message": (
+            "A password reset email is on its way. Follow the link in it to "
+            "choose a new password, then come back here to sign in."
+        ),
+    }
 
 
 @router.get("/session")

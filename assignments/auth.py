@@ -171,6 +171,64 @@ async def authenticate(
     }
 
 
+async def _password_change_request(
+    base_url: str, payload: dict[str, str], timeout: int
+) -> httpx.Response:
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        return await client.post(
+            f"{base_url.rstrip('/')}/api/v1/User/passwordChangeRequest", json=payload
+        )
+
+
+async def request_password_reset(settings: Settings, username: str, email: str) -> None:
+    """Ask EspoCRM to email the user a password-recovery link.
+
+    Proxies the CRM's own unauthenticated ``User/passwordChangeRequest``
+    endpoint (the one behind EspoCRM's login-page "Forgot Password?"), so the
+    reset email, the recovery link, and the new-password screen are all the
+    CRM's — the app never sees or sets a password. Requires password recovery
+    to be enabled in the CRM (Administration → Authentication) and working
+    outbound email.
+
+    :raises AuthError: with a user-readable message — no matching user/email,
+        recovery disabled (or the CRM throttled a repeat request), the email
+        couldn't be sent, or the CRM couldn't be reached.
+    """
+    try:
+        resp = await _password_change_request(
+            settings.espo_base_url,
+            {"userName": username, "emailAddress": email},
+            settings.request_timeout_seconds,
+        )
+    except httpx.HTTPError as exc:
+        log.warning("password reset: CRM unreachable: %s", exc)
+        raise AuthError("The CRM could not be reached — please try again in a moment.")
+    if resp.status_code < 400:
+        log.info("password reset email requested for userName=%s", username)
+        return
+    reason = resp.headers.get("X-Status-Reason", "")
+    log.warning(
+        "password reset refused for userName=%s: HTTP %s %s",
+        username, resp.status_code, reason,
+    )
+    if resp.status_code == 404:
+        raise AuthError(
+            "No user with that username and email address was found — "
+            "check both and try again."
+        )
+    if resp.status_code == 403:
+        # EspoCRM uses 403 both for "recovery disabled" and for a repeat
+        # request made while an earlier reset link is still valid.
+        raise AuthError(
+            "The CRM refused the request — password recovery may be disabled, "
+            "or a reset link was already sent recently. Check your email, or "
+            "contact a CBM administrator."
+        )
+    raise AuthError(
+        "The password reset email could not be sent — please contact a CBM administrator."
+    )
+
+
 async def refresh_membership(settings: Settings, user: dict[str, Any]) -> dict[str, Any]:
     """Re-read the session user's team/role membership (and admin flag) from the
     CRM, as the user, and return the updated session dict.

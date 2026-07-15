@@ -1000,7 +1000,24 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-15)
 
-**Main is at v0.53.0** (458 tests green, **pushed and DEPLOYED 2026-07-15** —
+**Main is at v0.54.0** (464 tests green, committed NOT pushed) — **"Forgot
+your password?" on the portal sign-in** (the single login for all staff
+apps): a link under the login form opens a reset form (username + email);
+`POST /api/portal/forgot-password` (`assignments/auth.py:
+request_password_reset`) proxies EspoCRM's own unauthenticated
+`User/passwordChangeRequest` endpoint — the CRM matches the account,
+throttles repeats, and emails its standard recovery link (the CRM's
+change-password screen; the app never sees or sets a password). Exact
+readable errors (not-found / disabled-or-throttled 403 / CRM unreachable).
+Recovery is probe-verified ENABLED on both crm-test and prod (bogus-user
+request → 404, not the disabled 403); the 404 path was driven end-to-end
+through a local app boot against crm-test. Success-path email delivery not
+yet verified live (needs a real user's reset — trivial for Doug to try
+post-deploy). Also: portal login error/success styles now local to
+`portal/styles.css` (`.form-error` only existed in wizard.css, which the
+portal doesn't load — the login error was unstyled).
+
+Before that: **v0.53.0** (458 tests green, **pushed and DEPLOYED 2026-07-15** —
 prod + crm-test `/healthz` both verified at 0.53.0; this push also carried
 the parallel session's unpushed v0.51.0/v0.52.0 co-mentor-visibility work
 live) — **CBMRichText (Jodit) rolled out to ALL wysiwyg

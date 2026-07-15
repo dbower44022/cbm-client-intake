@@ -190,6 +190,84 @@ def test_session_expired_token_clears_session(monkeypatch):
         assert c.get("/api/portal/session").status_code == 401
 
 
+# --- forgot password ----------------------------------------------------------
+
+def _fake_reset_response(monkeypatch, status=200, reason=""):
+    """Stub the CRM's User/passwordChangeRequest endpoint; returns the calls."""
+    calls = []
+
+    class FakeResp:
+        status_code = status
+        headers = {"X-Status-Reason": reason} if reason else {}
+        text = ""
+
+    async def fake_post(base_url, payload, timeout):
+        calls.append((base_url, payload))
+        return FakeResp()
+
+    monkeypatch.setattr("assignments.auth._password_change_request", fake_post)
+    return calls
+
+
+def test_forgot_password_success_proxies_to_crm(monkeypatch):
+    calls = _fake_reset_response(monkeypatch, status=200)
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.post("/api/portal/forgot-password",
+                   json={"username": " jdoe ", "emailAddress": " j@x.org "})
+    assert r.status_code == 200
+    assert "reset email" in r.json()["message"]
+    # exactly one CRM call, whitespace-trimmed values
+    assert calls == [(get_settings().espo_base_url,
+                      {"userName": "jdoe", "emailAddress": "j@x.org"})]
+
+
+def test_forgot_password_not_found_is_a_readable_400(monkeypatch):
+    _fake_reset_response(monkeypatch, status=404)
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.post("/api/portal/forgot-password",
+                   json={"username": "nobody", "emailAddress": "n@x.org"})
+    assert r.status_code == 400
+    assert "No user with that username and email address" in r.json()["detail"]
+
+
+def test_forgot_password_disabled_or_throttled(monkeypatch):
+    _fake_reset_response(monkeypatch, status=403, reason="Disabled")
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.post("/api/portal/forgot-password",
+                   json={"username": "jdoe", "emailAddress": "j@x.org"})
+    assert r.status_code == 400
+    assert "already sent recently" in r.json()["detail"]
+
+
+def test_forgot_password_crm_unreachable(monkeypatch):
+    import httpx
+
+    async def boom(base_url, payload, timeout):
+        raise httpx.ConnectError("no route")
+
+    monkeypatch.setattr("assignments.auth._password_change_request", boom)
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.post("/api/portal/forgot-password",
+                   json={"username": "jdoe", "emailAddress": "j@x.org"})
+    assert r.status_code == 400
+    assert "could not be reached" in r.json()["detail"]
+
+
+def test_forgot_password_needs_no_session(monkeypatch):
+    """The endpoint is reachable logged-out (that's the point) but still
+    validates its input."""
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.post("/api/portal/forgot-password", json={"username": "", "emailAddress": ""})
+    assert r.status_code == 422
+
+
+def test_login_page_has_forgot_password_link(monkeypatch):
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.get("/")
+    assert "Forgot your password?" in r.text
+    assert "forgotForm" in r.text
+
+
 # --- SSO: one portal login works in the staff apps ---------------------------
 
 def test_portal_login_carries_into_staff_apps(monkeypatch):

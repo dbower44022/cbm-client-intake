@@ -4,7 +4,22 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
-## [0.53.0] — 2026-07-15
+## [0.54.0] — 2026-07-15
+
+### Added
+- **"Forgot your password?" on the portal sign-in** (the single login screen
+  for all the staff apps). The link opens a small reset form (username +
+  email); `POST /api/portal/forgot-password` proxies EspoCRM's own
+  unauthenticated `User/passwordChangeRequest` endpoint, so the CRM does the
+  matching/throttling and sends its standard recovery email — the app never
+  sees or sets a password. The user follows the emailed link (the CRM's
+  change-password screen), then signs back in at the portal. Errors are
+  exact and readable (no matching user/email; recovery disabled or a link
+  already sent recently; CRM unreachable). Requires password recovery
+  enabled in the CRM — probe-verified ENABLED on both crm-test and prod
+  (a bogus-user request returns 404, not the disabled 403). Also styled the
+  portal's login error/success messages locally (`.form-error` was only
+  defined in wizard.css, which the portal doesn't load).
 
 ### Changed
 - **CBMRichText (Jodit) rolled out to ALL wysiwyg fields** — completes the

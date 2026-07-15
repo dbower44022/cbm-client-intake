@@ -32,6 +32,28 @@
         </div>
         <p class="form-error" id="loginError" role="alert" hidden></p>
         <button type="submit" class="cbm-button" id="loginBtn">Sign in</button>
+        <p class="portal__forgot"><a href="#" id="forgotLink">Forgot your password?</a></p>
+      </form>
+    </section>
+
+    <!-- Forgot password -->
+    <section class="portal__login" id="forgotView" hidden>
+      <h2>Reset your password</h2>
+      <p class="cbm-help">Enter your CRM username and the email address on your
+        account, and we&rsquo;ll email you a link to choose a new password.</p>
+      <form id="forgotForm" autocomplete="on">
+        <div class="cbm-field">
+          <label for="forgotUsername">Username</label>
+          <input type="text" id="forgotUsername" name="username" autocomplete="username" required />
+        </div>
+        <div class="cbm-field">
+          <label for="forgotEmail">Email address</label>
+          <input type="email" id="forgotEmail" name="email" autocomplete="email" required />
+        </div>
+        <p class="form-error" id="forgotError" role="alert" hidden></p>
+        <p class="form-success" id="forgotSuccess" role="status" hidden></p>
+        <button type="submit" class="cbm-button" id="forgotBtn">Email me a reset link</button>
+        <p class="portal__forgot"><a href="#" id="backToLogin">&larr; Back to sign in</a></p>
       </form>
     </section>
 

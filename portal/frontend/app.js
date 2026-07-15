@@ -27,7 +27,16 @@
     return data;
   }
 
-  function showLogin() { hide($("homeView")); show($("loginView")); $("username").focus(); }
+  function showLogin() { hide($("homeView")); hide($("forgotView")); show($("loginView")); $("username").focus(); }
+
+  function showForgot() {
+    hide($("loginView")); hide($("homeView"));
+    hide($("forgotError")); hide($("forgotSuccess"));
+    // Carry a username already typed on the login form over to the reset form.
+    if (!$("forgotUsername").value) $("forgotUsername").value = $("username").value;
+    show($("forgotView"));
+    ($("forgotUsername").value ? $("forgotEmail") : $("forgotUsername")).focus();
+  }
 
   // A shortcut chip like the old index page: /mentoradmin, /clientintake, …
   function shortcut(url) {
@@ -95,6 +104,26 @@
     } catch (e) {
       var le = $("loginError"); le.textContent = e.message; show(le);
     } finally { $("loginBtn").disabled = false; }
+  });
+
+  $("forgotLink").addEventListener("click", function (ev) { ev.preventDefault(); showForgot(); });
+  $("backToLogin").addEventListener("click", function (ev) { ev.preventDefault(); showLogin(); });
+
+  $("forgotForm").addEventListener("submit", async function (ev) {
+    ev.preventDefault();
+    hide($("forgotError")); hide($("forgotSuccess")); $("forgotBtn").disabled = true;
+    try {
+      var data = await api("/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({
+          username: $("forgotUsername").value,
+          emailAddress: $("forgotEmail").value,
+        }),
+      });
+      var fs = $("forgotSuccess"); fs.textContent = data.message; show(fs);
+    } catch (e) {
+      var fe = $("forgotError"); fe.textContent = e.message; show(fe);
+    } finally { $("forgotBtn").disabled = false; }
   });
 
   $("logoutBtn").addEventListener("click", async function () {

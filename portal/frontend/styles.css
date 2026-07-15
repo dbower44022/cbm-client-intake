@@ -24,6 +24,15 @@
 }
 .portal__login h2 { color: var(--cbm-navy); margin-top: 0; }
 
+/* The portal doesn't load wizard.css, so the login/reset message styles live
+   here. */
+.portal__login .form-error { color: var(--cbm-danger); font-weight: 600; margin-top: 1rem; }
+.portal__login .form-success { color: var(--cbm-success); font-weight: 600; margin-top: 1rem; }
+
+.portal__forgot { margin: 0.9rem 0 0; font-size: var(--cbm-text-sm); }
+.portal__forgot a { color: var(--cbm-blue); }
+.portal__forgot a:hover { color: var(--cbm-blue-dark); text-decoration: underline; }
+
 /* Home */
 .portal__toolbar {
   display: flex;
