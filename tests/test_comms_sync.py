@@ -257,6 +257,24 @@ async def test_ingest_records_sender_and_recipients_as_participants():
     )
 
 
+async def test_replaying_a_stored_message_backfills_participants():
+    """The dedup path merges participants, so a GMAIL_RESYNC pass upgrades
+    conversations stored before the recipients change (senders-only)."""
+    espo, store = FakeEspo(), MemoryCommsStore()
+    conv_id = await ingest_message(espo, store, scope(), sync.parse_message(raw_message()))
+    # Simulate the pre-v0.55.0 state: senders-only, name without address.
+    espo.records[(crm.CONVERSATION, conv_id)]["participants"] = "James Koran"
+    # Same message replayed (same rfc id) — dedup path, no new CCommunication.
+    await ingest_message(espo, store, scope(), sync.parse_message(raw_message()))
+    conv = espo.records[(crm.CONVERSATION, conv_id)]
+    assert conv["participants"] == (
+        "James Koran <james@acme.test>, bob.mentor@cbmentors.org"
+    )
+    assert conv["messageCount"] == 1  # replay never bumps the counters
+    comms = [r for (e, _), r in espo.records.items() if e == crm.COMMUNICATION]
+    assert len(comms) == 1
+
+
 # --- mailbox sync ------------------------------------------------------------
 
 

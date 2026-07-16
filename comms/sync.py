@@ -137,12 +137,23 @@ async def ingest_message(
     # stored value, so the key stays consistent.
     rfc_id = (parsed.rfc_message_id or "")[:100]
 
+    # Everyone on the email counts as a participant — sender AND recipients
+    # (Doug's ruling 2026-07-15: it matters who was included, not just who wrote).
+    participants = [
+        (parsed.from_name, parsed.from_address),
+        *parsed.to_named,
+        *parsed.cc_named,
+    ]
+
     # 1. Global dedup: this exact email may already be stored from another
-    #    mailbox (CC'd co-mentor). Then only the record links can be new.
+    #    mailbox (CC'd co-mentor). Then only the record links can be new —
+    #    plus the participants merge, so a GMAIL_RESYNC replay backfills
+    #    recipients onto conversations stored before v0.55.0.
     existing = await crm.find_communication_by_rfc_id(espo, rfc_id)
     if existing:
         conv_id = existing.get(crm.CONVERSATION_FK)
         if conv_id:
+            await crm.refresh_participants(espo, conv_id, participants)
             await crm.link_records(espo, conv_id, matched, excludes)
             if scope.owner_user_id:
                 await crm.stamp_owners(espo, conv_id, {scope.owner_user_id})
@@ -183,13 +194,6 @@ async def ingest_message(
         },
     )
 
-    # Everyone on the email counts as a participant — sender AND recipients
-    # (Doug's ruling 2026-07-15: it matters who was included, not just who wrote).
-    participants = [
-        (parsed.from_name, parsed.from_address),
-        *parsed.to_named,
-        *parsed.cc_named,
-    ]
     await crm.refresh_conversation_aggregates(
         espo, conv_id, sent_at=parsed.sent_at, participants=participants
     )

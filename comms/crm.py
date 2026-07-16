@@ -272,6 +272,23 @@ def merge_participants(existing: str, additions: Iterable[tuple[str, str]]) -> s
     return ", ".join(out)
 
 
+async def refresh_participants(
+    client: Any, conversation_id: str, participants: Iterable[tuple[str, str]]
+) -> None:
+    """Fold participants into an EXISTING conversation without touching the
+    counters/stamps — the dedup/replay path (an already-stored message seen
+    again, e.g. a GMAIL_RESYNC pass), which is how pre-v0.55.0 senders-only
+    conversations backfill their recipients. Best-effort."""
+    try:
+        conv = await client.get(CONVERSATION, conversation_id, select="participants")
+        current = (conv.get("participants") or "").strip()
+        merged = merge_participants(current, participants)
+        if merged and merged != current:
+            await client.update(CONVERSATION, conversation_id, {"participants": merged})
+    except EspoError as exc:
+        log.warning("conversation %s participants update failed: %s", conversation_id, exc)
+
+
 async def refresh_conversation_aggregates(
     client: Any, conversation_id: str, *, sent_at: str,
     participants: Iterable[tuple[str, str]],
