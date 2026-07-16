@@ -242,11 +242,15 @@ MENTOR = DomainConfig(
         "name,engagementStatus,engagementClientName,clientOrganizationName,"
         "clientOrganizationId,engagementClientId,"
         "primaryEngagementContactName,primaryEngagementContactId,"
-        "nextSessionDateTime,engagementStartDate,createdAt"
+        "nextSessionDateTime,engagementStartDate,mentorProfileName,createdAt"
     ),
     # Order: Engagement, Status, Primary contact, Next session, Start date,
-    # Company, Client. Both date columns are laid out inline (so no trailing
-    # date column — list_date_column=None below).
+    # Company, Client, Assigned Mentor (far right — so a co-mentor can see
+    # who the primary mentor is, 2026-07-16). Both date columns are laid out
+    # inline (so no trailing date column — list_date_column=None below).
+    # Next Session's stored attr (nextSessionDateTime) is never populated by
+    # the CRM — the frontend fills the cell from the row's upcomingSessions
+    # (see service._attach_sessions_near_now).
     list_columns=(
         Column("name", "Engagement", "name"),
         Column("status", "Status", "engagementStatus"),
@@ -255,6 +259,7 @@ MENTOR = DomainConfig(
         Column("startDate", "Start Date", "engagementStartDate", type="date"),
         Column("company", "Company", "clientOrganizationName"),
         Column("client", "Client", "engagementClientName"),
+        Column("mentor", "Assigned Mentor", "mentorProfileName"),
     ),
     list_date_column=None,
     list_contact_key="contact",

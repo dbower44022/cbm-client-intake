@@ -252,6 +252,18 @@
     try {
       var res = await api("/records");
       records = res.records || [];
+      // The Next Session column derives from the row's real sessions (the
+      // stored CEngagement.nextSessionDateTime is never populated): soonest
+      // SCHEDULED session that is today (viewer-local) or later. Falls back
+      // to whatever the stored attr held. Done here so column sorting works
+      // on the derived value.
+      records.forEach(function (r) {
+        var next = (r.upcomingSessions || []).filter(function (s) {
+          return statusClass(s.status) === "scheduled" &&
+            (isTodayLocal(s.dateStart) || (parseNaive(s.dateStart) || 0) >= Date.now());
+        })[0];
+        if (next) r.nextSession = next.dateStart;
+      });
       // Both empty states are normal, not errors, but they read differently:
       // profileFound=false means no CMentorProfile is linked to this login (an
       // administrator has to link it — say so), while an empty list on a linked
@@ -348,8 +360,8 @@
           link.target = "_blank"; link.rel = "noopener";
           link.textContent = r[c.key] || "(unnamed)";
           // A record with a session scheduled TODAY (viewer-local, from the
-          // server's sessionsNearNow window) reads red + bold in the grid.
-          if ((r.sessionsNearNow || []).some(isTodaySession)) {
+          // server's upcomingSessions window) reads red + bold in the grid.
+          if ((r.upcomingSessions || []).some(isTodaySession)) {
             link.classList.add("sx__link--today");
             link.title = "Session scheduled today";
           }

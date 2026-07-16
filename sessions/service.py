@@ -264,30 +264,33 @@ async def list_records(
 async def _attach_sessions_near_now(
     cfg: DomainConfig, client: SessionClient, records: list[dict[str, Any]]
 ) -> None:
-    """Stamp each grid row with its sessions in a ±36-hour window
-    (``sessionsNearNow``: ``[{dateStart, status}, ...]``, UTC stamps).
+    """Stamp each grid row with its sessions from now−36h onward
+    (``upcomingSessions``: ``[{dateStart, status}, ...]``, UTC stamps, soonest
+    first).
 
-    The frontend decides which of those fall on "today" in the VIEWER's local
-    timezone (the server can't know it) and flags the row — the ±36h window
-    covers every real-world UTC offset. One CSession query for the whole
-    grid, ACL-scoped to the user like every other read; best-effort — on any
-    failure the grid simply shows no today-flags."""
+    Two grid features read this: the "session scheduled TODAY" flag and the
+    Next Session column (the stored ``CEngagement.nextSessionDateTime`` is
+    never populated, so the column derives from real sessions). The frontend
+    resolves "today"/"upcoming" in the VIEWER's local timezone (the server
+    can't know it) — the 36-hour lower margin covers every real-world UTC
+    offset. One CSession query for the whole grid, ACL-scoped to the user
+    like every other read; best-effort — on any failure the grid simply
+    shows no flags and falls back to the stored column value."""
     if not records:
         return
     now = datetime.now(timezone.utc)
-    window = [
-        (now - timedelta(hours=36)).strftime("%Y-%m-%d %H:%M:%S"),
-        (now + timedelta(hours=36)).strftime("%Y-%m-%d %H:%M:%S"),
-    ]
+    horizon = (now - timedelta(hours=36)).strftime("%Y-%m-%d %H:%M:%S")
     try:
         data = await client.list(
             SESSION,
             select=f"dateStart,status,{cfg.session_parent_fk}",
-            where=[{"type": "between", "attribute": "dateStart", "value": window}],
+            where=[{"type": "after", "attribute": "dateStart", "value": horizon}],
+            order_by="dateStart",
+            order="asc",
             max_size=_PAGE,
         )
     except Exception as exc:  # noqa: BLE001 — decoration, never breaks the grid
-        log.warning("could not read near-now sessions for the %s grid: %s", cfg.slug, exc)
+        log.warning("could not read upcoming sessions for the %s grid: %s", cfg.slug, exc)
         return
     by_parent: dict[str, list[dict[str, Any]]] = {}
     for s in data.get("list", []):
@@ -299,7 +302,7 @@ async def _attach_sessions_near_now(
     for r in records:
         near = by_parent.get(r["id"])
         if near:
-            r["sessionsNearNow"] = near
+            r["upcomingSessions"] = near
 
 
 def _contact_row(c: dict[str, Any]) -> dict[str, Any]:

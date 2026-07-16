@@ -4,6 +4,25 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.63.0] — 2026-07-16
+
+### Fixed
+- **Mentor Sessions grid: the Next Session column actually shows values.**
+  It read the stored `CEngagement.nextSessionDateTime`, which nothing in the
+  CRM populates — every row showed "—" despite scheduled future sessions.
+  The 0.62.0 upcoming-sessions sweep now has no upper bound (all sessions
+  from now−36h onward, soonest first, one ACL-scoped query) and the cell
+  derives from it: the soonest SCHEDULED session that is today
+  (viewer-local) or later. Falls back to the stored value; column sorting
+  works on the derived date.
+
+### Added
+- **Assigned Mentor column** at the far right of the Mentor Sessions
+  engagements grid (`CEngagement.mentorProfileName`) — a co-mentor can see
+  who the primary mentor on each engagement is. Verified in the
+  stubbed-browser harness (next-session derivation for today/future/none,
+  mentor names render, today flag intact; no console errors).
+
 ## [0.62.0] — 2026-07-16
 
 ### Fixed
