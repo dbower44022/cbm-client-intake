@@ -925,12 +925,15 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   matching a record contact → Contact History panel; quick-compose looks the
   address up); failure → the dialog swaps to a Retry screen (ET-142), never
   silent. Quickmail's body is now CBMRichText (assignments pages load Jodit;
-  textarea = script-load fallback). Feature-gated `EmailTemplate.cAppliesTo`
-  multi-enum filters the session pickers by domain once the CRM builds it
-  (inert until then). **CRM prereqs + optional-field spec:
+  textarea = script-load fallback). **Context filter rides the NATIVE
+  template category** (a category named Engagement/Partner/Sponsor scopes a
+  template to that domain's picker; no/other category = shows everywhere) —
+  `EmailTemplate` is `customizable:false`, NOT in Entity Manager, so a custom
+  field is impossible through the UI (the original cAppliesTo plan; corrected
+  same day on Doug's report). **CRM prereqs:
   `emailtemplate-et-crm-prereqs.md`** — Partner/Sponsor Manager roles need
   EmailTemplate read + Email create (Mentor Role/Standard User already
-  carry them, read live 2026-07-16). Verified in the stub harness (both
+  carry them, read live 2026-07-16); category filtering needs no build. Verified in the stub harness (both
   dialogs, full flows incl. both failure paths); 23 new tests; **NOT yet
   driven against the live CRM/Gmail.**
 - **Documents tab — Google Drive document management (BUILT v0.65.0,
@@ -1173,8 +1176,9 @@ templates in every compose dialog (ET)**: template picker + EspoCRM
 server-side rendering + template/local attachments + native Email-record
 write-back with retry, in the record compose AND the shared quick-compose.
 Mechanics, verified EspoCRM 9.x parse contract, and the CRM handoff
-(Partner/Sponsor Manager role grants + the optional `cAppliesTo` filter
-field) are in the Session Management section's **"Email templates in every
+(Partner/Sponsor Manager role grants; the domain filter rides the NATIVE
+template categories — EmailTemplate is not Entity-Manager-customizable) are
+in the Session Management section's **"Email templates in every
 compose"** bullet + `emailtemplate-et-crm-prereqs.md`. Verified in the stub
 harness end-to-end; NOT yet driven live (mentor domain is live-testable
 immediately — Mentor Role already has the grants). PRD AC walkthrough in the

@@ -92,32 +92,28 @@ def test_leftover_tokens_found_and_deduped():
 # --- unit: list_templates ----------------------------------------------------
 
 
-async def test_list_templates_without_filter_field_returns_all():
-    espo = TemplateEspo(meta_fields={"name": {}, "body": {}})  # no cAppliesTo
-    espo.records[("EmailTemplate", "t1")] = {"name": "Welcome"}
+async def test_list_templates_without_context_returns_all():
+    espo = TemplateEspo()
+    espo.records[("EmailTemplate", "t1")] = {"name": "Welcome", "categoryName": "Partner"}
     espo.records[("EmailTemplate", "t2")] = {"name": "Follow-up"}
-    out = await tpl.list_templates(espo, context="Engagement")
+    out = await tpl.list_templates(espo)  # quick-compose: no context
     assert out["contextFiltered"] is False
     assert {t["name"] for t in out["templates"]} == {"Welcome", "Follow-up"}
 
 
-async def test_list_templates_context_filter_when_field_exists():
-    espo = TemplateEspo(meta_fields={tpl.APPLIES_TO_FIELD: {"type": "multiEnum"}})
-    espo.records[("EmailTemplate", "t1")] = {"name": "Anywhere", tpl.APPLIES_TO_FIELD: []}
-    espo.records[("EmailTemplate", "t2")] = {"name": "Partners only", tpl.APPLIES_TO_FIELD: ["Partner"]}
-    espo.records[("EmailTemplate", "t3")] = {"name": "Engagements", tpl.APPLIES_TO_FIELD: ["Engagement"]}
+async def test_list_templates_filters_by_native_category_name():
+    # The context filter rides EmailTemplate's NATIVE category (the entity is
+    # customizable:false — no custom field is possible through the UI).
+    espo = TemplateEspo()
+    espo.records[("EmailTemplate", "t1")] = {"name": "Anywhere", "categoryName": None}
+    espo.records[("EmailTemplate", "t2")] = {"name": "Partners only", "categoryName": "Partner"}
+    espo.records[("EmailTemplate", "t3")] = {"name": "Engagements", "categoryName": "engagement"}
+    espo.records[("EmailTemplate", "t4")] = {"name": "Newsletter", "categoryName": "Newsletters"}
     out = await tpl.list_templates(espo, context="Engagement")
     assert out["contextFiltered"] is True
     names = {t["name"] for t in out["templates"]}
-    assert names == {"Anywhere", "Engagements"}  # untagged shows everywhere
-
-
-async def test_list_templates_metadata_failure_fails_open():
-    espo = TemplateEspo(meta_fields=None)  # metadata() raises
-    espo.records[("EmailTemplate", "t1")] = {"name": "Welcome"}
-    out = await tpl.list_templates(espo, context="Engagement")
-    assert out["contextFiltered"] is False
-    assert len(out["templates"]) == 1
+    # no category / unrecognized category => shows everywhere; other-domain hides
+    assert names == {"Anywhere", "Engagements", "Newsletter"}
 
 
 # --- unit: parse_template ----------------------------------------------------

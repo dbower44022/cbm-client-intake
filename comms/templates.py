@@ -28,10 +28,15 @@ closing PRD open issues ET-OI-1 and ET-OI-4):
   copies owned by the acting user. Bytes are NOT downloaded here — chips only
   (ET-B3); the send path downloads at send time and a failure blocks the send
   (ET-131). Unsent clones are EspoCRM-garbage-collected.
-- **Context filter (optional, feature-gated)**: when the CRM adds a
-  ``cAppliesTo`` multi-enum to EmailTemplate, the picker filters templates to
-  the compose context (an untagged template shows everywhere). Until the
-  field exists the filter is inert — same pattern as ``mentorSummary``.
+- **Context filter rides the NATIVE category** (``EmailTemplate.category`` →
+  ``EmailTemplateCategory``, a CategoryTree — EmailTemplate itself has
+  ``customizable: false``, so it never appears in Entity Manager and can't
+  take a custom field through the UI; found 2026-07-16 when the original
+  cAppliesTo plan hit that wall). A template whose category is named
+  ``Engagement``/``Partner``/``Sponsor`` (case-insensitive) shows only in
+  that domain's compose; any other category — or none — shows everywhere.
+  Zero CRM build: admins just create/assign those categories when they want
+  the filtering.
 """
 
 from __future__ import annotations
@@ -42,17 +47,15 @@ from typing import Any, Optional
 
 log = logging.getLogger("cbm_intake.comms.templates")
 
-# Feature-gated context filter field on EmailTemplate (not built in the CRM
-# yet). Values are compose contexts; an empty value = show everywhere.
-APPLIES_TO_FIELD = "cAppliesTo"
-
-# Compose context per session-tool parent entity (the cAppliesTo vocabulary).
-# Quick-compose has no record context and passes context=None (no filtering).
+# Compose context per session-tool parent entity — also the recognized
+# EmailTemplateCategory names (case-insensitive) that scope a template to one
+# domain. Quick-compose has no record context and passes context=None.
 CONTEXT_BY_PARENT = {
     "CEngagement": "Engagement",
     "CPartnerProfile": "Partner",
     "CSponsorProfile": "Sponsor",
 }
+_CONTEXT_CATEGORIES = {v.lower() for v in CONTEXT_BY_PARENT.values()}
 
 # {Person.firstName}-style tokens that survived the render — entity-qualified
 # only, so ordinary braces in prose don't false-positive.
@@ -83,24 +86,18 @@ def leftover_tokens(subject: str, body: str) -> list[str]:
     return list(seen)
 
 
-async def _applies_to_present(user_client: Any) -> bool:
-    """Does the CRM have the optional context-filter field? Fails closed to
-    'no filter' — a metadata hiccup must never empty the picker."""
-    try:
-        fields = await user_client.metadata("entityDefs.EmailTemplate.fields")
-    except Exception as exc:  # noqa: BLE001 — any failure = feature absent
-        log.debug("EmailTemplate metadata unavailable: %s", exc)
-        return False
-    return isinstance(fields, dict) and APPLIES_TO_FIELD in fields
-
-
 async def list_templates(
     user_client: Any, q: str = "", context: Optional[str] = None
 ) -> dict[str, Any]:
     """Templates visible to the acting user, name-ordered, optionally
-    type-ahead-filtered (``q``) and context-filtered (feature-gated)."""
-    filtered = context is not None and await _applies_to_present(user_client)
-    select = "id,name" + (f",{APPLIES_TO_FIELD}" if filtered else "")
+    type-ahead-filtered (``q``) and context-filtered by the native category.
+
+    A template only leaves the list when BOTH sides are explicit: a context
+    was given AND the template's category name is one of the recognized
+    domain names but not this one. Everything else — no category, an
+    organizational category ("Newsletters"), an unreadable name — shows
+    everywhere, so the filter can never hide a template by accident."""
+    select = "id,name" + (",categoryId,categoryName" if context else "")
     where = None
     if q:
         where = [{"type": "contains", "attribute": "name", "value": q}]
@@ -111,12 +108,12 @@ async def list_templates(
     rows = data.get("list", []) or []
     templates = []
     for row in rows:
-        if filtered:
-            tags = row.get(APPLIES_TO_FIELD) or []
-            if tags and context not in tags:
+        if context:
+            cat = str(row.get("categoryName") or "").strip().lower()
+            if cat in _CONTEXT_CATEGORIES and cat != context.lower():
                 continue
         templates.append({"id": row.get("id"), "name": row.get("name")})
-    return {"templates": templates, "contextFiltered": filtered}
+    return {"templates": templates, "contextFiltered": bool(context)}
 
 
 async def parse_template(

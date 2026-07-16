@@ -49,11 +49,13 @@ deploy marker on App Platform.
     CBMRichText editor (assignments pages load the Jodit assets; plain
     textarea remains the script-load fallback), so template HTML renders
     and sends as HTML.
-  - **Optional context filter, feature-gated**: when the CRM adds a
-    `cAppliesTo` multi-enum to EmailTemplate, the session tools' pickers
-    filter to their domain (Engagement/Partner/Sponsor; untagged templates
-    show everywhere). Inert until the field exists — the `mentorSummary`
-    pattern.
+  - **Optional context filter via native template categories**: a template
+    whose Category is named `Engagement`/`Partner`/`Sponsor` shows only in
+    that domain's session-tool picker; no category or any other category
+    name shows everywhere. No CRM build — admins just create/assign the
+    categories. (EmailTemplate is `customizable:false` — not in Entity
+    Manager, so the originally-planned custom field was impossible;
+    corrected same day.)
   - Verified in the stubbed-browser harness (both dialogs: picker +
     type-ahead, apply, replace-confirm keep/replace, chip removal, local
     upload, send payload, token warning, parse-failure draft preservation,

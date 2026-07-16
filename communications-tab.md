@@ -127,7 +127,10 @@ the email goes out.
 The compose window has a **Template** picker listing the email templates CBM
 administrators maintain **in EspoCRM** (that's also where templates are
 created and edited — not in this app). You only see the templates your CRM
-role allows; type in the filter box to narrow the list.
+role allows; type in the filter box to narrow the list. Templates filed
+under a CRM category named *Engagement*, *Partner*, or *Sponsor* appear
+only in that tool's compose window; templates with no category (or any
+other category) appear everywhere.
 
 Selecting a template loads a **fully personalized draft**: EspoCRM itself
 fills in every placeholder (the client's name, your name, the record's
