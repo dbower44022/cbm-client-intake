@@ -86,7 +86,11 @@ another email or document. Your message goes out as a normal formatted
 get a plain-text version of the same message.
 
 Mail you send goes out **as you** — from your own `@cbmentors.org` address —
-lands in your real Gmail *Sent* folder, and appears in the tab immediately.
+and appears in the tab immediately. A copy also lands in Gmail's *Sent*
+folder, but note **which** mailbox: the `@cbmentors.org` one. If you
+normally read mail signed into a different Google account (personal,
+admin@, …), its Sent folder will never show these — switch to your
+`@cbmentors.org` account in Gmail to see them.
 
 **If a recipient isn't a contact on the record**, the compose window looks
 each address up across the whole CRM and shows one row per recipient, each
@@ -145,6 +149,7 @@ the email goes out.
 | A specific email is missing | Sender's address isn't on any contact of this record (use "+ Add emails…" or add the address to the contact); or the record wasn't in an active status; or it's a draft/automated mail (excluded on purpose) |
 | A message shows "(no new text…)" | That email contained only quoted text or only images — open it in Gmail |
 | An email you sent moments ago isn't in Gmail's thread view yet | It is — the tab shows it instantly; Gmail's own UI can lag a few seconds |
+| An email you sent from the tab isn't in your Gmail **Sent** folder | You're looking at the wrong account's Sent folder — the tab sends as your `@cbmentors.org` mailbox, so the Sent copy is there, not in a personal/other account you may be signed into |
 | Two mentors see different conversation lists on the same record | They shouldn't — conversations are shared. If it happens, one mentor's profile is probably missing its CBM email / login link |
 
 New mail appears within one sync cycle (~5 minutes); anything sent from the

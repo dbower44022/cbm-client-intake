@@ -1284,10 +1284,15 @@ CMentorProfile edit=all — REQUIRED for co-mentor linking (additionalMentors
 relate); never re-flag it**; Mentor Role's CConversation/CCommunication
 read=all accepted (full tightening would first need app-side message
 owner-stamping — offered, not requested); Standard User Email read=all +
-export accepted (its Email EDIT was tightened to own). Still open: first
-live SEND from the tab, and deleting the 4 `ZZTEST-GMAILPROD*` probe records
-in the prod CRM UI (steps given 2026-07-15: `#CCommunication` then
-`#CConversation`, search ZZTEST, Actions → Remove).
+export accepted (its Email EDIT was tightened to own). ✅ **First live SEND
+from the tab CONFIRMED 2026-07-16** — Doug sent a real message and found the
+copy in Gmail's Sent folder. Gotcha that cost the confirmation a detour:
+the tab sends as the manager's `@cbmentors.org` mailbox, so the Sent copy
+is in THAT account — checking a personal/other account's Sent folder shows
+nothing (now a FAQ row in `communications-tab.md`). Still open: deleting
+the 4 `ZZTEST-GMAILPROD*` probe records in the prod CRM UI (steps given
+2026-07-15: `#CCommunication` then `#CConversation`, search ZZTEST,
+Actions → Remove).
 
 **Main is at v0.44.0** (442 tests green, committed NOT pushed) —
 **Client Administration gains a click-to-edit Notes column** (new RIGHTMOST
@@ -1475,11 +1480,13 @@ app as PRIMARY, Cloudflare CNAME grey-cloud → the app's default hostname; the
   doctl, migration ran, **first backfill pass: 7 mailboxes, 1177 fetched,
   1061 stored, 0 errors → 521 conversations / 1063 messages in the prod CRM**
   (same SA/delegation as crm-test — no Google-side work). Remaining prod
-  items: eyeball the tab as a manager + first live SEND (gmail.send unused
-  on prod); the User Read=all grant + one-shot resync (owner-stamp
-  correction below); delete 4 `ZZTEST-GMAILPROD*` probe records in the prod
-  CRM UI (CConversation `6a568a35c1d0b305f`/`6a5694a35a5ea4721`,
-  CCommunication `6a568a35e8e563564`/`6a5694a374815fd70`).
+  items: ~~eyeball the tab as a manager + first live SEND~~ ✅ DONE
+  2026-07-16 (Doug sent live from the tab; Sent copy confirmed in the
+  `@cbmentors.org` mailbox); ~~the User Read=all grant + one-shot resync~~
+  DONE 2026-07-15 (owner-stamp correction below); delete 4
+  `ZZTEST-GMAILPROD*` probe records in the prod CRM UI (CConversation
+  `6a568a35c1d0b305f`/`6a5694a35a5ea4721`, CCommunication
+  `6a568a35e8e563564`/`6a5694a374815fd70`).
   **crm-test activation record (2026-07-11):**
   Activation record: CRM entities built by Doug in the Entity Manager UI +
   probe-verified (fields/links/Collaborators/grants all green; note the CRM's
@@ -1525,8 +1532,10 @@ app as PRIMARY, Cloudflare CNAME grey-cloud → the app's default hostname; the
   include override, the compose dialog routes unknown recipients to
   add-address-to-contact / create-contact / explicit one-off, and
   `@cbmentors.org` recipients never trip the guard. **Remaining:**
-  eyeball the Communications tab as a signed-in manager; exercise SEND
-  (first gmail.send use) + curation live (both CRMs); ~~prod rollout~~ DONE
+  ~~exercise SEND (first gmail.send use)~~ ✅ DONE 2026-07-16 (Doug sent
+  live from the tab; the Sent copy is in the sender's `@cbmentors.org`
+  mailbox — that's where to look, see communications-tab.md FAQ); curation
+  live; ~~prod rollout~~ DONE
   2026-07-14 (record above); AI summaries need privacy sign-off +
   `ANTHROPIC_API_KEY` + `COMMS_AI_SUMMARY=true`.
 
