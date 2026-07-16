@@ -371,6 +371,37 @@ async def send_message(
     return {"gmailMessageId": sent.get("id"), "conversationId": conv_id}
 
 
+async def send_quick_message(
+    *, gmail: GmailClient, to: list[str], subject: str, body_html: str
+) -> dict[str, Any]:
+    """A record-less "quick email" — behind the email-address links shown in
+    the staff tools outside a record context (Client/Mentor Administration).
+
+    Sends as the signed-in user's own mailbox, nothing else: no record link,
+    no unknown-recipient guard (the user clicked a specific address). No CRM
+    write here — the regular sync ingests the sent copy from the mailbox when
+    it matches a record the sender manages, exactly like mail sent from Gmail
+    itself.
+    """
+    to = [a.strip().lower() for a in to if a and a.strip()]
+    if not to:
+        raise CommsError("Add at least one recipient.")
+
+    from core.email_clean import _text_to_html  # body may arrive as plain text
+
+    if "<" not in body_html:
+        body_html = _text_to_html(body_html)
+    mime = build_mime(
+        sender=gmail.mailbox,
+        to=to,
+        subject=subject or "(no subject)",
+        body_text="",
+        body_html=body_html,
+    )
+    sent = await gmail.send(mime)
+    return {"gmailMessageId": sent.get("id")}
+
+
 # --- compose-dialog lookups -----------------------------------------------------
 
 

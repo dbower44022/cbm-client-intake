@@ -204,9 +204,12 @@
     updateSortIndicators();
   }
   function cell(content, cls) { var td = document.createElement("td"); if (cls) td.className = cls; if (content instanceof Node) td.appendChild(content); else td.textContent = content; return td; }
-  // Clickable mailto: link so staff can email the mentor in one click.
+  // Clickable email: opens the app's quick-compose dialog (sends as the
+  // signed-in user's CBM mailbox); falls back to mailto: when sending isn't
+  // available. Shared widget: /shared/quickmail.js.
   function emailLink(email) {
     if (!email) return document.createTextNode("—");
+    if (window.CBMQuickMail) return CBMQuickMail.emailLink(email);
     var a = document.createElement("a"); a.className = "email-link";
     a.href = "mailto:" + email; a.textContent = email;
     return a;
@@ -445,7 +448,7 @@
     roItem(box, "Mentoring status", badge(m.mentorStatus));
     roItem(box, "Accepting new clients", m.acceptingNewClients ? "Yes" : "No");
     // contact
-    if (m.personalEmail) roItem(box, "Email", roLink("mailto:" + m.personalEmail, m.personalEmail));
+    if (m.personalEmail) roItem(box, "Email", emailLink(m.personalEmail));
     if (m.contactPhone) roItem(box, "Phone", roLink("tel:" + m.contactPhone, formatPhone(m.contactPhone)));
     roItem(box, "Address", addressNode(m), true);
     // activity / capacity

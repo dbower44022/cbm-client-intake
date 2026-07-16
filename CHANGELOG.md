@@ -4,6 +4,33 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.64.0] — 2026-07-16
+
+### Added
+- **Every email address shown in the staff UIs is now a compose link** —
+  clicking it opens the app's own email dialog instead of the browser's
+  mailto: handler (Doug's ruling: a quick email from wherever you see an
+  address). Three surfaces:
+  - **Session tools**: the Details cards/contact tables, the company
+    directory block, the session view's attendee grid (address is clickable,
+    the ⧉ copy button stays), and the peek pop-ups all open the existing
+    record-scoped compose dialog pre-filled with that address (contact
+    add/create routing, reply threading, record linking all apply).
+  - **Client Administration + Mentor Administration**: a new lightweight
+    quick-compose modal (`frontend/shared/quickmail.js`) backed by new
+    `GET /mailbox` + `POST /sendmail` endpoints on both apps
+    (`comms/quicksend.py`) — sends To/Subject/Message as the signed-in
+    user's own `@cbmentors.org` mailbox via the same delegated-Gmail stack
+    (`comms/service.send_quick_message`). No record linking; the regular
+    Gmail sync ingests the sent copy when it matches a record the sender
+    manages, exactly like mail sent from Gmail itself.
+  - **Fallback**: links keep a real `mailto:` href (middle-click/copy-link
+    unchanged), and a plain click falls back to the browser mail handler
+    whenever app-sending isn't available — Gmail integration off (the dev
+    app), no CBM mailbox on the user's profile, or (session tools) no open
+    record to send from. The static help@cbmentors.org support link on My
+    Mentor Profile deliberately stays a plain mailto:.
+
 ## [0.63.0] — 2026-07-16
 
 ### Fixed

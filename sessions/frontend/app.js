@@ -1169,6 +1169,23 @@
     return el._cbmRichText ? el._cbmRichText.getValue() : el.value;
   }
 
+  // Product-wide rule (Doug, 2026-07-16): an email address shown anywhere in
+  // the UI opens the compose dialog pre-filled with that address. The link
+  // keeps a real mailto: href (middle-click/copy still work), and a plain
+  // click falls back to mailto: only when comms is off or there's no open
+  // record to send from (e.g. a company peek on the grid page).
+  function emailComposeLink(email) {
+    if (!email) return document.createTextNode("—");
+    var a = document.createElement("a");
+    a.href = "mailto:" + email; a.textContent = email; a.title = "Send email";
+    a.addEventListener("click", function (e) {
+      if (!commsOn() || !currentDetail) return;
+      e.preventDefault();
+      composeMessage({ to: email });
+    });
+    return a;
+  }
+
   function composeMessage(pre) {
     pre = pre || {};
     openComm("New email", pre.replyToId ? "Reply" : "Compose");
@@ -1530,7 +1547,7 @@
 
   function renderPeekValue(el, f) {
     var v = f.value;
-    if (f.type === "email" && v) { var a = document.createElement("a"); a.href = "mailto:" + v; a.textContent = v; el.appendChild(a); return; }
+    if (f.type === "email" && v) { el.appendChild(emailComposeLink(String(v))); return; }
     if (f.type === "phone" && v) { var p = document.createElement("a"); p.href = "tel:" + v; p.textContent = fmtPhone(v); p.title = String(v); el.appendChild(p); return; }
     if (f.type === "url" && v) { var u = document.createElement("a"); u.href = externalHref(v); u.target = "_blank"; u.rel = "noopener"; u.textContent = v; el.appendChild(u); return; }
     if (f.type === "multiEnum" && Array.isArray(v)) { v.forEach(function (o) { var c = document.createElement("span"); c.className = "sx__chip"; c.textContent = o; el.appendChild(c); }); return; }
@@ -2337,7 +2354,7 @@
     }
     if (line3.childNodes.length) dir.appendChild(line3);
     var email = dvs(sec, "emailAddress");
-    if (email) { var ed = document.createElement("div"); var ml = document.createElement("a"); ml.href = "mailto:" + email; ml.textContent = email; ed.appendChild(ml); dir.appendChild(ed); }
+    if (email) { var ed = document.createElement("div"); ed.appendChild(emailComposeLink(email)); dir.appendChild(ed); }
     var dirRow = document.createElement("div"); dirRow.className = "sxd__row sxd__row--dir"; dirRow.appendChild(dir);
     left.push(dirRow);
     // Business: org type | stage | industry (general + sector / subsector).
@@ -2529,7 +2546,7 @@
   function tdText(t) { var td = document.createElement("td"); td.textContent = t; return td; }
   function emailCell(email) {
     var td = document.createElement("td");
-    if (email) { var a = document.createElement("a"); a.href = "mailto:" + email; a.textContent = email; td.appendChild(a); }
+    if (email) td.appendChild(emailComposeLink(email));
     return td;
   }
   // One status badge for privacy policy + terms + code of conduct — never three
@@ -3004,7 +3021,7 @@
         compCell.appendChild(cb);
       } else { compCell.textContent = r.companyName || "—"; }
       tr.appendChild(compCell);
-      tr.appendChild(copyableCell(r.email, "email"));
+      tr.appendChild(emailCopyCell(r.email));
       tr.appendChild(copyableCell(r.phone, "phone"));
       var st = document.createElement("td");
       var chip = document.createElement("span"); chip.className = "sx__chip"; chip.textContent = status;
@@ -3033,6 +3050,19 @@
     b.addEventListener("click", function () { copyToClipboard(url, b); });
     span.appendChild(b);
     return span;
+  }
+
+  // Attendee-grid email: compose-on-click address + the copy button.
+  function emailCopyCell(email) {
+    var cell = document.createElement("td");
+    if (!email) { cell.textContent = "—"; return cell; }
+    cell.appendChild(emailComposeLink(email));
+    cell.appendChild(document.createTextNode(" "));
+    var b = document.createElement("button"); b.type = "button"; b.className = "sx__copycell";
+    b.title = "Copy email"; b.setAttribute("aria-label", "Copy email"); b.textContent = "⧉";
+    b.addEventListener("click", function () { copyToClipboard(email, b); });
+    cell.appendChild(b);
+    return cell;
   }
 
   function copyableCell(value, what) {

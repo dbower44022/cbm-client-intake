@@ -427,3 +427,10 @@ async def google_setup_test(body: GoogleSetupIn, request: Request) -> dict:
     if status is MailboxStatus.MISSING:
         return {"ok": True, "message": f"Authenticated, but {admin} was not found — double-check the delegated admin address."}
     return {"ok": False, "message": "Could not authenticate. Check the service-account key, that the Admin SDK API is enabled, and that domain-wide delegation is authorized for the Directory scopes."}
+
+
+# Quick-send email (the email-address links product-wide): GET /mailbox +
+# POST /sendmail, behind this app's own gate. See comms/quicksend.py.
+from comms.quicksend import register_quicksend  # noqa: E402  (needs router + helpers above)
+
+register_quicksend(router, _require_user, client_for, _crm_failure)

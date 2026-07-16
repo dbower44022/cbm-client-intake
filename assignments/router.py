@@ -145,3 +145,10 @@ async def assign(engagement_id: str, body: AssignIn, request: Request) -> dict:
         raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:
         raise _crm_failure(request, exc, "Assignment failed")
+
+
+# Quick-send email (the email-address links product-wide): GET /mailbox +
+# POST /sendmail, behind this app's own gate. See comms/quicksend.py.
+from comms.quicksend import register_quicksend  # noqa: E402  (needs router + helpers above)
+
+register_quicksend(router, _require_user, client_for, _crm_failure)

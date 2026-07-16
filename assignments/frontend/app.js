@@ -565,7 +565,14 @@
     addContactField(left, "Name", c.name);
     addContactField(left, "Title", c.title);
     addContactField(left, "Company", c.company || d.clientName);
-    addContactField(left, "Email", c.email, c.email ? "mailto:" + c.email : null);
+    // Email opens the quick-compose dialog (mailto: fallback) — /shared/quickmail.js.
+    if (c.email && window.CBMQuickMail) {
+      var edt = document.createElement("dt"); edt.textContent = "Email";
+      var edd = document.createElement("dd"); edd.appendChild(CBMQuickMail.emailLink(c.email));
+      left.appendChild(edt); left.appendChild(edd);
+    } else {
+      addContactField(left, "Email", c.email, c.email ? "mailto:" + c.email : null);
+    }
     addContactField(left, "Phone", formatPhone(c.phone), c.phone ? "tel:" + c.phone : null);
 
     var right = document.createElement("dl");
