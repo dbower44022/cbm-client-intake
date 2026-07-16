@@ -10,6 +10,7 @@
   var current = null;      // the mentor being edited
   var listDirty = false;   // reload list after an edit
   var isAdmin = false;     // gates the Email Setup screen
+  var docsEnabled = false; // GDRIVE_DOCS server-side: shows the Documents tab
   var filter = { q: "", status: "", record: "", type: "", sortKey: "name", sortDir: 1 };
 
   function $(id) { return document.getElementById(id); }
@@ -55,6 +56,7 @@
   function setUser(user) {
     $("whoName").textContent = user.name || user.userName;
     isAdmin = !!user.isAdmin;
+    docsEnabled = !!user.docsEnabled;
     $("setupBtn").hidden = !isAdmin;
   }
 
@@ -491,7 +493,168 @@
       });
       form.appendChild(panel);
     });
+    // Documents (Google Drive, DOC-MGMT) — a non-field tab anchored to the
+    // mentor's linked Contact; only when the integration is on server-side.
+    if (docsEnabled) {
+      var dbtn = document.createElement("button");
+      dbtn.type = "button"; dbtn.className = "ma__tab"; dbtn.textContent = "Documents";
+      dbtn.dataset.tab = "__documents"; dbtn.setAttribute("role", "tab");
+      dbtn.addEventListener("click", function () { activateTab("__documents"); loadMentorDocs(); });
+      tabs.appendChild(dbtn);
+      form.appendChild(buildDocsPanel());
+    }
     if (order.length) activateTab(order[0]);
+  }
+
+  // --- Documents tab (mentor documents on the linked Contact) ---------------
+
+  var mdocTypes = [];
+  var mdocPendingFile = null;
+
+  function buildDocsPanel() {
+    var panel = document.createElement("div");
+    panel.className = "tab-panel"; panel.dataset.panel = "__documents";
+
+    var head = document.createElement("div"); head.className = "ma__doc-head";
+    var pick = document.createElement("button");
+    pick.type = "button"; pick.className = "cbm-button"; pick.id = "mdocPickBtn";
+    pick.textContent = "⬆ Upload document…";
+    head.appendChild(pick); panel.appendChild(head);
+
+    var file = document.createElement("input");
+    file.type = "file"; file.id = "mdocFile"; file.hidden = true;
+    panel.appendChild(file);
+
+    var pending = document.createElement("div");
+    pending.className = "ma__doc-pending"; pending.id = "mdocPending"; pending.hidden = true;
+    var pname = document.createElement("span"); pname.className = "ma__doc-pending-name"; pname.id = "mdocPendingName";
+    var tlabel = document.createElement("label"); tlabel.className = "ma__doc-type"; tlabel.textContent = "Type ";
+    var tsel = document.createElement("select"); tsel.id = "mdocTypeSelect"; tlabel.appendChild(tsel);
+    var up = document.createElement("button");
+    up.type = "button"; up.className = "cbm-button ma__sm"; up.id = "mdocUploadBtn"; up.textContent = "Upload";
+    var cancel = document.createElement("button");
+    cancel.type = "button"; cancel.className = "cbm-button cbm-button--secondary ma__sm"; cancel.id = "mdocCancelBtn"; cancel.textContent = "Cancel";
+    pending.appendChild(pname); pending.appendChild(tlabel); pending.appendChild(up); pending.appendChild(cancel);
+    panel.appendChild(pending);
+
+    var err = document.createElement("p"); err.className = "form-error"; err.id = "mdocError"; err.hidden = true;
+    panel.appendChild(err);
+
+    var table = document.createElement("table"); table.className = "ma__table"; table.id = "mdocTable"; table.hidden = true;
+    table.innerHTML = "<thead><tr><th scope='col'>File</th><th scope='col'>Type</th>" +
+      "<th scope='col'>Uploaded by</th><th scope='col'>Uploaded</th><th scope='col'></th></tr></thead>";
+    var tbody = document.createElement("tbody"); tbody.id = "mdocBody"; table.appendChild(tbody);
+    panel.appendChild(table);
+
+    var empty = document.createElement("p"); empty.className = "ma__muted"; empty.id = "mdocEmpty"; empty.hidden = true;
+    panel.appendChild(empty);
+
+    pick.addEventListener("click", function () { file.click(); });
+    cancel.addEventListener("click", resetMdocPending);
+    file.addEventListener("change", function () {
+      var f = this.files && this.files[0];
+      if (!f) return;
+      mdocPendingFile = f;
+      hide(err);
+      pname.textContent = f.name;
+      tsel.innerHTML = "";
+      mdocTypes.forEach(function (t) { tsel.appendChild(new Option(t, t)); });
+      show(pending);
+    });
+    up.addEventListener("click", function () { uploadMentorDoc(); });
+    return panel;
+  }
+
+  function resetMdocPending() {
+    mdocPendingFile = null;
+    var f = $("mdocFile"); if (f) f.value = "";
+    var p = $("mdocPending"); if (p) hide(p);
+    var b = $("mdocUploadBtn"); if (b) { b.disabled = false; b.textContent = "Upload"; }
+  }
+
+  function fmtDocDate(iso) {
+    if (!iso) return "—";
+    var d = new Date(iso);
+    if (isNaN(d)) return iso;
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) +
+      " — " + d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  }
+
+  async function loadMentorDocs() {
+    if (!current) return;
+    var body = $("mdocBody"); body.innerHTML = "";
+    hide($("mdocError")); hide($("mdocTable"));
+    var empty = $("mdocEmpty"); empty.textContent = "Loading documents…"; show(empty);
+    try {
+      var res = await api("/mentors/" + encodeURIComponent(current.id) + "/documents");
+      mdocTypes = res.docTypes || [];
+      renderMentorDocRows(res.documents || []);
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      hide(empty);
+      $("mdocError").textContent = e.message; show($("mdocError"));
+    }
+  }
+
+  function renderMentorDocRows(rows) {
+    var body = $("mdocBody"); body.innerHTML = "";
+    var empty = $("mdocEmpty");
+    if (!rows.length) {
+      empty.textContent = "No documents yet — use Upload document to add the first one.";
+      show(empty); hide($("mdocTable")); return;
+    }
+    hide(empty); show($("mdocTable"));
+    rows.forEach(function (d) {
+      var tr = document.createElement("tr");
+      var c0 = document.createElement("td"); c0.textContent = d.filename || "—";
+      var c1 = document.createElement("td"); c1.textContent = d.docType || "";
+      var c2 = document.createElement("td"); c2.textContent = d.uploadedBy || "—";
+      var c3 = document.createElement("td"); c3.textContent = fmtDocDate(d.uploadedAt);
+      var c4 = document.createElement("td"); c4.className = "ma__doc-acts";
+      ["View", "Open in Drive", "Archive"].forEach(function (label) {
+        var b = document.createElement("button");
+        b.type = "button"; b.className = "cbm-button cbm-button--secondary ma__sm";
+        b.textContent = label; b.disabled = true; b.title = "Coming soon";
+        c4.appendChild(b);
+      });
+      tr.appendChild(c0); tr.appendChild(c1); tr.appendChild(c2); tr.appendChild(c3); tr.appendChild(c4);
+      body.appendChild(tr);
+    });
+  }
+
+  async function uploadMentorDoc() {
+    if (!mdocPendingFile || !current) return;
+    var f = mdocPendingFile;
+    var btn = $("mdocUploadBtn");
+    btn.disabled = true; btn.textContent = "Uploading…";
+    hide($("mdocError"));
+    try {
+      var resp = await fetch(
+        API + "/mentors/" + encodeURIComponent(current.id) + "/documents" +
+        "?filename=" + encodeURIComponent(f.name) +
+        "&docType=" + encodeURIComponent($("mdocTypeSelect").value || ""),
+        {
+          method: "POST", credentials: "same-origin",
+          headers: { "Content-Type": f.type || "application/octet-stream" },
+          body: f,
+        }
+      );
+      var data = null;
+      try { data = await resp.json(); } catch (e2) {}
+      if (!resp.ok) {
+        var msg = (data && data.detail) || ("Upload failed (" + resp.status + ")");
+        var err = new Error(typeof msg === "string" ? msg : JSON.stringify(msg));
+        err.status = resp.status;
+        throw err;
+      }
+      resetMdocPending();
+      notice("detailNotice", "Document uploaded.", "success");
+      loadMentorDocs();
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      btn.disabled = false; btn.textContent = "Upload";
+      $("mdocError").textContent = e.message; show($("mdocError"));
+    }
   }
 
   function activateTab(group) {

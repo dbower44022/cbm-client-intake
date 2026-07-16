@@ -6,7 +6,7 @@ Operating mode: DETAIL
 
 1. Confirm with me which repository this session targets and which CLAUDE.md to read. My assumption is `dbower44022/crmbuilder` hosts the custom mentor application, but wait for my confirmation before reading anything or writing any code.
 2. If parallel processes may be active, perform a fresh `rm -rf` + re-clone of the repo before starting.
-3. Read the governing spec: `CBM-DocMgmt-Implementation-PRD.docx` v1.0 (I will tell you its location in the repo). Sections 3 (Architecture), 4 (Data Model), 5 (DOC-01, DOC-02, DOC-09), and 9 (Phase 1) govern this session. Do not implement anything from Phase 2 or Phase 3.
+3. Read the governing spec: `CBM-DocMgmt-Implementation-PRD.docx` v1.2 (I will tell you its location in the repo). Sections 3 (Architecture), 4 (Data Model), 5 (DOC-01, DOC-02, DOC-09), and 9 (Phase 1) govern this session. Do not implement anything from Phase 2 or Phase 3.
 
 ## Objective
 
@@ -14,8 +14,8 @@ Implement Phase 1 — Foundation of the Google Drive document management feature
 
 1. **OAuth flow (DOC-09):** Per-user OAuth 2.0 loopback flow using the system browser. Refresh token stored via the OS keyring (`keyring` library) — never plaintext config. Include a "disconnect Google account" action that revokes and clears credentials. Expired/revoked tokens must produce a clear re-authorization prompt.
 2. **Schema migration:** Create the `app_document` table exactly as specified in PRD Section 4, including the composite index on `(entity_type, record_id, status)`.
-3. **Upload (DOC-01):** Upload a local file to the shared drive under `/{Entity Type}/{Record Name} ({recordId})/`, creating folders as needed and caching folder IDs. Native MIME type preserved — never request conversion to Google editor formats. Resumable upload for files over 5 MB. Capture `fileId`, `webViewLink`, `modifiedTime`, `md5Checksum`; write the metadata row atomically with the upload. Rollback rule: a Drive file with no metadata row gets deleted; a metadata row is never written without a confirmed Drive file.
-4. **Per-record list (DOC-02, partial):** Render the document list for the open record from the metadata table only (no Drive calls). Columns: original filename, doc_type, uploader, upload date. Actions View / Open in Drive / Archive appear as disabled placeholders — they are Phase 2/3.
+3. **Upload (DOC-01):** Upload a local file to the correct shared-drive folder per PRD Section 3.2, creating all folder levels as needed and caching folder IDs. Two anchor entities in Phase 1: Contact (mentor documents) → `Mentors/{Name} (recordId)/`; CEngagement (client-work documents) → `Clients/{Client Name} (clientId)/{CEngagement Name field} (engagementId)/`, resolving the parent client from the CEngagement record via the CRM API at upload time. Native MIME type preserved — never request conversion to Google editor formats. Resumable upload for files over 5 MB. Capture `fileId`, `webViewLink`, `modifiedTime`, `md5Checksum`; write the metadata row atomically with the upload (including `client_record_id` for CEngagement-anchored documents). Rollback rule: a Drive file with no metadata row gets deleted; a metadata row is never written without a confirmed Drive file.
+4. **Per-record list (DOC-02, partial):** Render the document list for the currently open record — a CEngagement or a Contact — from the metadata table only (no Drive calls). Columns: original filename, doc_type, uploader, upload date. Actions View / Open in Drive / Archive appear as disabled placeholders — they are Phase 2/3.
 
 ## Out of scope this session
 

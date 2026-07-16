@@ -194,11 +194,16 @@ flag. Worker not involved.
 |---|---|
 | `GCAL_EVENTS` | `true` to enable session calendar events + Meet links (web) |
 
-**Google Drive documents (optional, web component, v0.65.0 — DOC-MGMT Phase 1)**
-— `GDRIVE_DOCS=true` turns the session tools' Documents tab live: managers
-upload files to the **"CBM Documents" shared drive** (folder scheme
-`/{Entity Type}/{Record Name} ({recordId})/`, created on first upload) and each
-record's documents are listed from the `app_document` Postgres table. Drive
+**Google Drive documents (optional, web component, v0.65.0/v0.67.0 — DOC-MGMT
+Phase 1, PRD v1.2)** — `GDRIVE_DOCS=true` turns the session tools' Documents
+tab AND the Mentor Administration Documents tab live: staff upload files to
+the **"CBM Documents" shared drive** and each record's documents are listed
+from the `app_document` Postgres table. Folder tree (created on first upload;
+top levels are display labels): mentor documents (Contact anchor) →
+`Mentors/{Name} (contactId)/`; client-work documents (CEngagement anchor) →
+`Clients/{Client Name} (clientId)/{Engagement Name} (engagementId)/` (the
+parent client is resolved from the engagement at upload time);
+partner/sponsor → `Partners/…`, `Sponsors/…`. Drive
 access impersonates the signed-in manager's own `cbmEmail` — reuses
 `GOOGLE_SERVICE_ACCOUNT_JSON` (or the Email-Setup config), no new secret.
 Activation order (full step-by-step: **`GDRIVE-DOCS-SETUP.md`**): enable the
@@ -214,6 +219,7 @@ Requires `DATABASE_URL` (the tab 503s without the store). Worker not involved.
 | `GDRIVE_SHARED_DRIVE_ID` | the "CBM Documents" shared drive id (from its Drive URL) |
 | `GDRIVE_DOC_TYPES` | optional override of the doc-type choices (comma-separated; default `Resume,Agreement,Intake Document,Pitch Deck,Other`) |
 | `GDRIVE_MAX_FILE_MB` | optional upload size cap (default 100) |
+| `GDRIVE_ENTITY_LABELS` | optional override of the top-level folder labels (default `Contact=Mentors,CEngagement=Clients,CPartnerProfile=Partners,CSponsorProfile=Sponsors`) |
 
 `APP_ENCRYPTION_KEY` is required for the in-app Email Setup screen (with
 `DATABASE_URL`); generate one with

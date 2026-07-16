@@ -45,6 +45,9 @@ app_document = Table(
     Column("drive_folder_id", String(128)),  # parent record folder (cached)
     Column("entity_type", String(64), nullable=False, index=True),
     Column("record_id", String(64), nullable=False, index=True),
+    # For engagement-anchored documents: the parent client record id (D-07),
+    # denormalized for cross-engagement client reporting. Null otherwise.
+    Column("client_record_id", String(64), index=True),
     Column("record_name", String(255)),  # human-readable, at upload time
     Column("original_filename", String(255), nullable=False),
     Column("mime_type", String(128)),  # native MIME type as stored in Drive
@@ -75,6 +78,7 @@ def _row_dict(row: Any) -> dict[str, Any]:
         "driveFolderId": row.drive_folder_id,
         "entityType": row.entity_type,
         "recordId": row.record_id,
+        "clientRecordId": row.client_record_id,
         "recordName": row.record_name,
         "filename": row.original_filename,
         "mimeType": row.mime_type,

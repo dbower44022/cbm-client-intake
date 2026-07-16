@@ -158,6 +158,13 @@ class Settings(BaseSettings):
     gdrive_docs: bool = False
     # The shared drive ("CBM Documents") all managed documents live in.
     gdrive_shared_drive_id: str = ""
+    # Top-level Drive folders are DISPLAY LABELS mapped from anchor entity
+    # types (PRD v1.2 §3.2 rule 3), not raw entity names: Mentors/, Clients/…
+    # An unmapped entity type falls back to the raw name.
+    gdrive_entity_labels: str = (
+        "Contact=Mentors,CEngagement=Clients,"
+        "CPartnerProfile=Partners,CSponsorProfile=Sponsors"
+    )
     # The doc_type choices offered at upload time (comma-separated).
     gdrive_doc_types: str = "Resume,Agreement,Intake Document,Pitch Deck,Other"
     gdrive_max_file_mb: int = 100
@@ -213,6 +220,16 @@ class Settings(BaseSettings):
     @property
     def gdrive_doc_types_list(self) -> list[str]:
         return [t.strip() for t in self.gdrive_doc_types.split(",") if t.strip()]
+
+    @property
+    def gdrive_entity_labels_map(self) -> dict[str, str]:
+        out: dict[str, str] = {}
+        for pair in self.gdrive_entity_labels.split(","):
+            if "=" in pair:
+                entity, label = pair.split("=", 1)
+                if entity.strip() and label.strip():
+                    out[entity.strip()] = label.strip()
+        return out
 
     @property
     def comms_partner_excluded_statuses_list(self) -> list[str]:

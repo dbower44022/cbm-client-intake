@@ -141,6 +141,50 @@ def test_upload_document(monkeypatch):
     assert seen["data"] == b"%PDF-1.4"
     assert seen["mime_type"] == "application/pdf"
     assert seen["doc_type"] == "Resume"
+    # no company on the record => no client nesting, upload still proceeds
+    assert seen["client_id"] is None
+
+
+def test_upload_resolves_engagement_client(monkeypatch):
+    """PRD v1.2 D-07: the parent client is resolved from the CEngagement at
+    upload time (own link first, client-profile fallback) and passed through."""
+
+    class Crm:
+        async def get(self, entity, record_id, select=None):
+            if entity == "CEngagement":
+                assert "clientOrganizationId" in select and "engagementClientId" in select
+                return {"id": record_id, "name": "Agape W8 Loss",
+                        "engagementClientId": "prof1"}
+            assert entity == "CClientProfile" and record_id == "prof1"
+            return {"linkedCompanyId": "acct9", "linkedCompanyName": "Acme Robotics"}
+
+    monkeypatch.setattr("sessions.router.current_user", lambda request, key=None: _USER)
+    monkeypatch.setattr("sessions.router.client_for", lambda settings, user: Crm())
+    store = MemoryDocumentStore()
+    monkeypatch.setattr(docs_service, "get_store", lambda settings: store)
+    seen = {}
+
+    async def fake_drive_for_user(settings, client, user):
+        class D:
+            mailbox = "bob.mentor@cbmentors.org"
+        return D()
+
+    async def fake_upload(settings, st, drive, **kwargs):
+        seen.update(kwargs)
+        return {"driveFileId": "file1"}
+
+    monkeypatch.setattr(docs_service, "drive_for_user", fake_drive_for_user)
+    monkeypatch.setattr(docs_service, "upload_document", fake_upload)
+    with TestClient(_app(monkeypatch, gdrive_docs=True)) as c:
+        r = c.post(
+            "/mentorsessions/api/records/E1/documents",
+            params={"filename": "deck.pptx", "docType": "Pitch Deck"},
+            content=b"x",
+            headers={"Content-Type": "application/vnd.ms-powerpoint"},
+        )
+    assert r.status_code == 200
+    assert seen["client_id"] == "acct9"
+    assert seen["client_name"] == "Acme Robotics"
 
 
 def test_upload_validation_maps_to_400(monkeypatch):
@@ -160,6 +204,108 @@ def test_upload_validation_maps_to_400(monkeypatch):
         )
     assert r.status_code == 400
     assert "CBM email" in r.json()["detail"]
+
+
+# --- Mentor Administration: mentor documents on the linked Contact -------------
+
+_STAFF = dict(_USER, teams=["Mentor Administration Team"])
+
+
+def _as_staff(monkeypatch, crm=None):
+    monkeypatch.setattr("mentoradmin.router.current_user", lambda request, key=None: _STAFF)
+    monkeypatch.setattr(
+        "mentoradmin.router.client_for", lambda settings, user: crm or _FakeMentorCrm()
+    )
+
+
+class _FakeMentorCrm:
+    async def get(self, entity, record_id, select=None):
+        assert entity == "CMentorProfile"
+        return {"id": record_id, "name": "Jane Smith",
+                "contactRecordId": "C77", "contactRecordName": "Jane Smith"}
+
+
+def test_mentoradmin_documents_disabled_503(monkeypatch):
+    _as_staff(monkeypatch)
+    with TestClient(_app(monkeypatch, gdrive_docs=False)) as c:
+        r = c.get("/mentoradmin/api/mentors/M1/documents")
+    assert r.status_code == 503
+
+
+def test_mentoradmin_session_reports_docs_flag(monkeypatch):
+    _as_staff(monkeypatch)
+    with TestClient(_app(monkeypatch, gdrive_docs=True)) as c:
+        r = c.get("/mentoradmin/api/session")
+    assert r.status_code == 200
+    assert r.json()["docsEnabled"] is True
+
+
+def test_mentoradmin_lists_contact_anchored_documents(monkeypatch):
+    _as_staff(monkeypatch)
+    store = MemoryDocumentStore()
+    monkeypatch.setattr(docs_service, "get_store", lambda settings: store)
+
+    async def seed():
+        await store.insert_document(
+            {"drive_file_id": "a", "entity_type": "Contact", "record_id": "C77",
+             "original_filename": "jane-resume.pdf", "doc_type": "Resume"}
+        )
+
+    import asyncio
+
+    asyncio.run(seed())
+    with TestClient(_app(monkeypatch, gdrive_docs=True)) as c:
+        r = c.get("/mentoradmin/api/mentors/M1/documents")
+    assert r.status_code == 200
+    assert r.json()["documents"][0]["filename"] == "jane-resume.pdf"
+
+
+def test_mentoradmin_upload_anchors_to_contact(monkeypatch):
+    _as_staff(monkeypatch)
+    monkeypatch.setattr(docs_service, "get_store", lambda settings: MemoryDocumentStore())
+    seen = {}
+
+    async def fake_drive_for_user(settings, client, user):
+        class D:
+            mailbox = "staff@cbmentors.org"
+        return D()
+
+    async def fake_upload(settings, st, drive, **kwargs):
+        seen.update(kwargs)
+        return {"driveFileId": "file1"}
+
+    monkeypatch.setattr(docs_service, "drive_for_user", fake_drive_for_user)
+    monkeypatch.setattr(docs_service, "upload_document", fake_upload)
+    with TestClient(_app(monkeypatch, gdrive_docs=True)) as c:
+        r = c.post(
+            "/mentoradmin/api/mentors/M1/documents",
+            params={"filename": "resume.pdf", "docType": "Resume"},
+            content=b"%PDF",
+            headers={"Content-Type": "application/pdf"},
+        )
+    assert r.status_code == 200
+    assert seen["entity_type"] == "Contact"
+    assert seen["record_id"] == "C77"
+    assert seen["record_name"] == "Jane Smith"
+    assert "client_id" not in seen or seen.get("client_id") is None
+
+
+def test_mentoradmin_upload_requires_linked_contact(monkeypatch):
+    class NoContactCrm:
+        async def get(self, entity, record_id, select=None):
+            return {"id": record_id, "name": "Jane Smith", "contactRecordId": None}
+
+    _as_staff(monkeypatch, crm=NoContactCrm())
+    monkeypatch.setattr(docs_service, "get_store", lambda settings: MemoryDocumentStore())
+    with TestClient(_app(monkeypatch, gdrive_docs=True)) as c:
+        r = c.post(
+            "/mentoradmin/api/mentors/M1/documents",
+            params={"filename": "resume.pdf", "docType": "Resume"},
+            content=b"%PDF",
+            headers={"Content-Type": "application/pdf"},
+        )
+    assert r.status_code == 400
+    assert "linked Contact" in r.json()["detail"]
 
 
 def test_upload_drive_failure_maps_to_502(monkeypatch):

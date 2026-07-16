@@ -28,7 +28,9 @@ from assignments.espo_user import client_for
 from core.app_config import make_app_config_store
 from core.config import Settings, get_settings
 from core.espo import EspoClient, EspoError, validation_message
+from core.gdrive import DriveError
 from core.google_directory import ResolvedGoogle, resolve_google_directory
+from docs import service as docs_service
 
 from . import service
 
@@ -103,7 +105,14 @@ async def logout(request: Request) -> dict:
 @router.get("/session")
 async def session(request: Request) -> dict:
     user = _require_user(request)
-    return {"userName": user["userName"], "name": user["name"], "isAdmin": user["isAdmin"]}
+    return {
+        "userName": user["userName"],
+        "name": user["name"],
+        "isAdmin": user["isAdmin"],
+        # True => the detail screen shows the Documents tab (DOC-MGMT: mentor
+        # documents anchored to the mentor's linked Contact record).
+        "docsEnabled": get_settings().gdrive_docs,
+    }
 
 
 @router.get("/mentors")
@@ -181,6 +190,95 @@ async def mentor_detail(mentor_id: str, request: Request) -> dict:
         return rec
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not load mentor")
+
+
+# --- Documents (Google Drive, DOC-MGMT — mentor documents) --------------------
+# Mentor documents (resumes, signed agreements, …) anchor to the mentor's
+# linked CONTACT record (PRD v1.2: Contact is the Phase 1 mentor anchor) and
+# live under Mentors/{Name} (contactId)/ on the shared drive. Everything 503s
+# unless GDRIVE_DOCS is enabled (the frontend hides the tab then).
+
+
+def _docs_ready():
+    """(settings, document_store) — or a 503 when the integration is off."""
+    settings = get_settings()
+    if not settings.gdrive_docs:
+        raise HTTPException(
+            status_code=503, detail="The document integration isn't enabled."
+        )
+    store = docs_service.get_store(settings)
+    if store is None:
+        raise HTTPException(
+            status_code=503, detail="The document integration needs the database."
+        )
+    return settings, store
+
+
+async def _mentor_contact_anchor(client, mentor_id: str) -> tuple[str, str]:
+    """(contact_id, display_name) for a mentor's document anchor — the linked
+    Contact record. A profile with no linked Contact can't own documents yet."""
+    profile = await client.get(
+        service.MENTOR_PROFILE, mentor_id, select="name,contactRecordId,contactRecordName"
+    )
+    contact_id = profile.get("contactRecordId")
+    if not contact_id:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "This mentor has no linked Contact record, so documents can't "
+                "be stored for them yet — link a Contact first."
+            ),
+        )
+    return contact_id, profile.get("contactRecordName") or profile.get("name") or ""
+
+
+@router.get("/mentors/{mentor_id}/documents")
+async def mentor_documents(mentor_id: str, request: Request) -> dict:
+    user = _require_user(request)
+    settings, store = _docs_ready()
+    client = client_for(settings, user)
+    try:
+        contact_id, _ = await _mentor_contact_anchor(client, mentor_id)
+        rows = await docs_service.list_documents(store, "Contact", contact_id)
+        return {"documents": rows, "docTypes": settings.gdrive_doc_types_list}
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not load documents")
+
+
+@router.post("/mentors/{mentor_id}/documents")
+async def mentor_upload_document(
+    mentor_id: str, request: Request, filename: str = "", docType: str = ""
+) -> dict:
+    """Upload one file (raw request body; filename/docType as query params,
+    MIME from the Content-Type header) to the mentor's Contact folder, then
+    record it in the metadata table (rollback on failure — DOC-01)."""
+    user = _require_user(request)
+    settings, store = _docs_ready()
+    client = client_for(settings, user)
+    data = await request.body()
+    try:
+        contact_id, contact_name = await _mentor_contact_anchor(client, mentor_id)
+        drive = await docs_service.drive_for_user(settings, client, user)
+        row = await docs_service.upload_document(
+            settings, store, drive,
+            entity_type="Contact",
+            record_id=contact_id,
+            record_name=contact_name,
+            filename=filename,
+            mime_type=request.headers.get("content-type", ""),
+            doc_type=docType,
+            data=data,
+        )
+        return {"status": "ok", "document": row}
+    except docs_service.DocsError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except DriveError as exc:
+        log.warning("mentor document upload failed: %s", exc)
+        raise HTTPException(
+            status_code=502, detail="Couldn't reach Google Drive — try again."
+        )
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not upload the document")
 
 
 def _provision_factory(settings: Settings):

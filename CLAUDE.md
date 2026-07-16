@@ -936,6 +936,34 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   carry them, read live 2026-07-16); category filtering needs no build. Verified in the stub harness (both
   dialogs, full flows incl. both failure paths); 23 new tests; **NOT yet
   driven against the live CRM/Gmail.**
+- **Documents — PRD v1.2 alignment (v0.68.0, 2026-07-16).** Doug's updated
+  PRD (v1.1/1.2: D-07 + the §3.2 folder-tree rewrite) + his rulings this
+  session (mentor documents live in **Mentor Administration**; partner/
+  sponsor tabs stay, under their own labels) reshaped the v0.65.0 build:
+  (1) **top-level Drive folders are configurable display labels**
+  (`GDRIVE_ENTITY_LABELS`: Contact=Mentors, CEngagement=Clients,
+  CPartnerProfile=Partners, CSponsorProfile=Sponsors; unmapped → raw name;
+  `docs/service.folder_label`); (2) **engagement folders nest under their
+  client** — `Clients/{Client Name} (clientId)/{Engagement Name} (engId)/` —
+  the parent client resolved AT UPLOAD TIME from the engagement's
+  `clientOrganization` link with the client-profile `linkedCompany` fallback
+  (`sessions.service.fill_company_fallback`, the same path the grid/Overview
+  use); an unresolvable client nests directly under `Clients/` (browsing
+  nicety, never a blocked upload); (3) **`client_record_id`** on
+  `app_document` (Alembic **`0006_app_document_client`**, nullable+indexed,
+  D-07 cross-engagement reporting; API `clientRecordId`); (4) **`/mentoradmin`
+  detail gains a Documents tab** (shown when `GDRIVE_DOCS` on — `/session`
+  reports `docsEnabled`): list + upload anchored to the mentor's **linked
+  Contact** (`Mentors/{Name} (contactId)/`; no linked Contact ⇒ readable 400
+  before any write; endpoints `GET/POST /mentoradmin/api/mentors/{id}/
+  documents`, same raw-bytes contract/gates/rollback as the session tools;
+  frontend: a non-field "Documents" tab appended in `renderForm`, panel key
+  `__documents`, no `data-field` inputs so Save-diffing is untouched).
+  Verified: 75 documents tests; migration + `client_record_id` round-trip on
+  live local Postgres; both UIs in the stub harness. Uploader-identity note:
+  mentoradmin staff need their own linked profile `cbmEmail` (the DWD
+  impersonation subject) — a staffer without one gets the readable "no CBM
+  email" 400.
 - **Documents tab — Google Drive document management (BUILT v0.65.0,
   2026-07-16; gated OFF by `GDRIVE_DOCS` until activated).** DOC-MGMT
   **Phase 1** of Doug's PRD (`prompts/Google Drive Documents/
@@ -1171,7 +1199,19 @@ bullets ("Details EDIT forms — mockup-v4" and "Grid + Overview session
 flags"). Still worth a live eyeball on crm-test: a past-only record's
 Overview split, a real today-session red flag, and Next Session values.
 
-**Main is at v0.67.0** (549 tests green, committed NOT pushed) — **Email
+**Main is at v0.68.0** (this session; committed, push per convention) —
+**Documents: PRD v1.2 alignment**: engagement Drive folders nest under
+their client (D-07, client resolved at upload time), top-level folders are
+configurable display labels (Mentors/Clients/Partners/Sponsors),
+`client_record_id` added to `app_document` (Alembic 0006), and **Mentor
+Administration gains a Documents tab** anchored to the mentor's linked
+Contact (Doug's ruling; partner/sponsor tabs kept under their own labels).
+Full mechanics in the Session Management section's **"Documents — PRD v1.2
+alignment"** bullet; activation checklist unchanged (`GDRIVE-DOCS-SETUP.md`,
+folder tree updated there). Still gated OFF by `GDRIVE_DOCS`; not yet driven
+against real Google Drive.
+
+Before that: **v0.67.0** (549 tests green, committed NOT pushed) — **Email
 templates in every compose dialog (ET)**: template picker + EspoCRM
 server-side rendering + template/local attachments + native Email-record
 write-back with retry, in the record compose AND the shared quick-compose.

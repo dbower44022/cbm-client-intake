@@ -125,9 +125,23 @@ to the organization and survive staff turnover (PRD decision D-03).
    gets a clear Drive 403 on their first upload — membership here is the
    fix, nothing app-side.
 
-Nothing else to configure on the drive: the app creates the
-`/{Entity Type}/{Record Name} ({recordId})/` folder structure itself on
-first upload.
+Nothing else to configure on the drive: the app creates the whole folder
+tree itself on first upload (PRD v1.2 §3.2) —
+
+```
+CBM Documents
+├── Mentors
+│   └── Jane Smith (contactId)/           ← mentor documents (Contact anchor)
+├── Clients
+│   └── Acme Robotics (clientId)/
+│       └── Jane Smith – 2026 (engId)/    ← client-work documents (CEngagement)
+├── Partners
+└── Sponsors
+```
+
+Humans may rename any folder's words freely — the app locates folders and
+files by ID only; the `(recordId)` suffix is for the app, the words are for
+you.
 
 ---
 
@@ -160,11 +174,13 @@ default `Resume,Agreement,Intake Document,Pitch Deck,Other`) and
    appear (not the "coming soon" placeholder).
 2. Upload a small PDF, picking a document type. Expected: "Document
    uploaded." and the file listed with your CBM address as uploader.
-3. In Drive, open **CBM Documents** → a `CEngagement` folder →
-   `<Record Name> (<id>)` → the file should be there, uploaded by **you**
+3. In Drive, open **CBM Documents** → **Clients** → the client's folder →
+   the engagement's folder → the file should be there, uploaded by **you**
    (not the service account) — that's the audit trail working.
 4. Upload a second file to the same record — it must reuse the same folder
    (no duplicate folders).
+5. Also check the mentor side: `/mentoradmin` → open a mentor → **Documents**
+   tab → upload → the file lands in **Mentors** → `<Mentor Name> (…)`.
 5. Troubleshooting quick map:
    - 403 `accessNotConfigured` → Task 1 not done / wrong project.
    - `unauthorized_client` / "delegation denied" → Task 2 scope line wrong

@@ -631,8 +631,22 @@ def make_router(cfg: DomainConfig) -> APIRouter:
         data = await request.body()
         try:
             # Read the parent as the user: their ACL must allow the record, and
-            # its name feeds the human-readable folder.
-            parent = await client.get(cfg.parent_entity, parent_id, select="name")
+            # its name feeds the human-readable folder. Engagement anchors also
+            # resolve their parent CLIENT at upload time (PRD v1.2 D-07 — the
+            # engagement folder nests inside the client's folder), reusing the
+            # same company link + client-profile fallback the rest of the tools
+            # use (fill_company_fallback). Unresolvable client => no nesting,
+            # never a blocked upload (folders are for human browsing only).
+            select, client_id, client_name = "name", None, None
+            nested = cfg.parent_entity == "CEngagement" and cfg.company_fallback
+            if nested:
+                own_id, own_name, via_id = cfg.company_fallback[:3]
+                select = f"name,{own_id},{own_name},{via_id}"
+            parent = await client.get(cfg.parent_entity, parent_id, select=select)
+            if nested:
+                await service.fill_company_fallback(cfg, client, [parent])
+                client_id = parent.get(own_id) or None
+                client_name = parent.get(own_name) or ""
             drive = await docs_service.drive_for_user(settings, client, user)
             row = await docs_service.upload_document(
                 settings, store, drive,
@@ -643,6 +657,8 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 mime_type=request.headers.get("content-type", ""),
                 doc_type=docType,
                 data=data,
+                client_id=client_id,
+                client_name=client_name,
             )
             return {"status": "ok", "document": row}
         except docs_service.DocsError as exc:

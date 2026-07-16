@@ -118,21 +118,57 @@ def test_folder_name_sanitized():
     )
 
 
-async def test_ensure_record_folder_creates_both_levels():
+def test_folder_labels_map_entity_types():
+    s = _settings()
+    assert docs_service.folder_label(s, "Contact") == "Mentors"
+    assert docs_service.folder_label(s, "CEngagement") == "Clients"
+    assert docs_service.folder_label(s, "CPartnerProfile") == "Partners"
+    assert docs_service.folder_label(s, "CSponsorProfile") == "Sponsors"
+    # unmapped types fall back to the raw entity name
+    assert docs_service.folder_label(s, "CWidget") == "CWidget"
+
+
+async def test_ensure_record_folder_creates_label_and_record_levels():
     drive, store = FakeDrive(), MemoryDocumentStore()
     folder = await docs_service.ensure_record_folder(
-        drive, store, "CEngagement", "E1", "Agape"
+        _settings(), drive, store, "Contact", "C1", "Jane Smith"
     )
-    assert drive.created == [("drv1", "CEngagement"), ("f1", "Agape (E1)")]
+    assert drive.created == [("drv1", "Mentors"), ("f1", "Jane Smith (C1)")]
+    assert folder == "f2"
+
+
+async def test_ensure_record_folder_nests_engagement_under_client():
+    """PRD v1.2 D-07: Clients/{Client Name} (clientId)/{Engagement} (engId)/."""
+    drive, store = FakeDrive(), MemoryDocumentStore()
+    folder = await docs_service.ensure_record_folder(
+        _settings(), drive, store, "CEngagement", "eng4455", "Jane Smith – 2026",
+        client_id="77aa88", client_name="Acme Robotics",
+    )
+    assert drive.created == [
+        ("drv1", "Clients"),
+        ("f1", "Acme Robotics (77aa88)"),
+        ("f2", "Jane Smith – 2026 (eng4455)"),
+    ]
+    assert folder == "f3"
+
+
+async def test_ensure_record_folder_no_client_sits_under_label():
+    drive, store = FakeDrive(), MemoryDocumentStore()
+    folder = await docs_service.ensure_record_folder(
+        _settings(), drive, store, "CEngagement", "E1", "Agape"
+    )
+    assert drive.created == [("drv1", "Clients"), ("f1", "Agape (E1)")]
     assert folder == "f2"
 
 
 async def test_ensure_record_folder_reuses_existing_drive_folders():
     drive, store = FakeDrive(), MemoryDocumentStore()
-    drive.folders[("drv1", "CEngagement")] = "typeF"
-    drive.folders[("typeF", "Agape (E1)")] = "recF"
+    drive.folders[("drv1", "Clients")] = "labelF"
+    drive.folders[("labelF", "Acme (A1)")] = "clientF"
+    drive.folders[("clientF", "Agape (E1)")] = "recF"
     folder = await docs_service.ensure_record_folder(
-        drive, store, "CEngagement", "E1", "Agape"
+        _settings(), drive, store, "CEngagement", "E1", "Agape",
+        client_id="A1", client_name="Acme",
     )
     assert folder == "recF"
     assert drive.created == []
@@ -145,7 +181,7 @@ async def test_ensure_record_folder_prefers_cached_id():
          "original_filename": "x.pdf", "drive_folder_id": "cachedF"}
     )
     folder = await docs_service.ensure_record_folder(
-        drive, store, "CEngagement", "E1", "Agape"
+        _settings(), drive, store, "CEngagement", "E1", "Agape"
     )
     assert folder == "cachedF"
     assert drive.created == []  # no Drive lookups at all
@@ -172,6 +208,21 @@ async def test_upload_document_writes_metadata_row():
     stored = await store.list_documents("CEngagement", "E1")
     assert len(stored) == 1 and stored[0]["driveFileId"] == "file1"
     assert drive.uploads == [("f2", "resume.pdf", "application/pdf", 8)]
+
+
+async def test_upload_document_stores_client_record_id():
+    drive, store = FakeDrive(), MemoryDocumentStore()
+    row = await docs_service.upload_document(
+        _settings(), store, drive,
+        entity_type="CEngagement", record_id="eng1", record_name="Jane – 2026",
+        filename="deck.pptx", mime_type="application/vnd.ms-powerpoint",
+        doc_type="Pitch Deck", data=b"pptx",
+        client_id="acct9", client_name="Acme Robotics",
+    )
+    assert row["clientRecordId"] == "acct9"
+    # the upload landed in the third-level (engagement) folder
+    assert drive.created[-1] == ("f2", "Jane – 2026 (eng1)")
+    assert drive.uploads[0][0] == "f3"
 
 
 async def test_upload_rolls_back_drive_file_when_row_write_fails():

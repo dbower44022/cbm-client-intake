@@ -89,32 +89,56 @@ def sanitize_folder_name(name: str) -> str:
 
 
 def record_folder_name(record_name: str, record_id: str) -> str:
-    """``{Record Name} ({recordId})`` — human-readable-first identifier."""
+    """``{words} ({recordId})`` — human-readable-first identifier (§3.2 rule 3).
+    Humans may rename the words freely; the app locates folders by id only."""
     return f"{sanitize_folder_name(record_name)} ({record_id})"
 
 
+def folder_label(settings: Settings, entity_type: str) -> str:
+    """The top-level display label for an anchor entity type (§3.2 rule 3):
+    Contact -> Mentors, CEngagement -> Clients, … Unmapped types fall back to
+    the raw entity name."""
+    return settings.gdrive_entity_labels_map.get(entity_type, entity_type)
+
+
+async def _ensure_path(drive: DriveClient, segments: list[str]) -> str:
+    """Walk ``segments`` from the shared-drive root, find-or-creating each
+    folder level; returns the last segment's folder id."""
+    parent = drive.drive_id  # a shared drive's root folder id IS the drive id
+    for name in segments:
+        folder = await drive.find_child_folder(parent, name)
+        if not folder:
+            folder = await drive.create_folder(parent, name)
+        parent = folder
+    return parent
+
+
 async def ensure_record_folder(
+    settings: Settings,
     drive: DriveClient,
     store: DocumentStore,
     entity_type: str,
     record_id: str,
     record_name: str,
+    client_id: Optional[str] = None,
+    client_name: Optional[str] = None,
 ) -> str:
-    """The record's folder id under ``/{Entity Type}/{Record Name} ({recordId})/``,
-    creating both levels on first upload. The folder id cached on prior metadata
-    rows is used when available (no Drive lookups)."""
+    """The anchor record's own folder id, creating all levels on first upload
+    (PRD v1.2 §3.2): ``{Label}/{Record Name} ({recordId})/`` — and for
+    engagement anchors with a resolved client,
+    ``Clients/{Client Name} (clientId)/{Engagement Name} (engagementId)/``
+    (D-07: engagement folders nest inside their client's folder). The folder id
+    cached on prior metadata rows is used when available (no Drive lookups).
+    An engagement whose client can't be resolved sits directly under the label
+    (browsing nicety only — the app never resolves by path)."""
     cached = await store.cached_folder_id(entity_type, record_id)
     if cached:
         return cached
-    root = drive.drive_id  # a shared drive's root folder id IS the drive id
-    type_folder = await drive.find_child_folder(root, entity_type)
-    if not type_folder:
-        type_folder = await drive.create_folder(root, entity_type)
-    name = record_folder_name(record_name, record_id)
-    folder = await drive.find_child_folder(type_folder, name)
-    if not folder:
-        folder = await drive.create_folder(type_folder, name)
-    return folder
+    segments = [folder_label(settings, entity_type)]
+    if client_id:
+        segments.append(record_folder_name(client_name or "", client_id))
+    segments.append(record_folder_name(record_name, record_id))
+    return await _ensure_path(drive, segments)
 
 
 # --- upload + list ---------------------------------------------------------------
@@ -161,16 +185,20 @@ async def upload_document(
     mime_type: str,
     doc_type: str,
     data: bytes,
+    client_id: Optional[str] = None,
+    client_name: Optional[str] = None,
 ) -> dict[str, Any]:
-    """DOC-01: upload to the record folder (created as needed), then write the
-    metadata row. Rollback: a row-write failure deletes the Drive file; a Drive
-    failure writes no row."""
+    """DOC-01: upload to the anchor record's folder (all levels created as
+    needed), then write the metadata row — including ``client_record_id`` for
+    engagement-anchored documents (D-07). Rollback: a row-write failure deletes
+    the Drive file; a Drive failure writes no row."""
     filename = _validate_upload(
         settings, filename=filename, doc_type=doc_type, data=data
     )
     mime_type = (mime_type or "").strip() or "application/octet-stream"
     folder_id = await ensure_record_folder(
-        drive, store, entity_type, record_id, record_name
+        settings, drive, store, entity_type, record_id, record_name,
+        client_id=client_id, client_name=client_name,
     )
     file = await drive.upload_file(folder_id, filename, mime_type, data)
     row = {
@@ -178,6 +206,7 @@ async def upload_document(
         "drive_folder_id": folder_id,
         "entity_type": entity_type,
         "record_id": record_id,
+        "client_record_id": client_id,
         "record_name": record_name,
         "original_filename": filename,
         "mime_type": mime_type,

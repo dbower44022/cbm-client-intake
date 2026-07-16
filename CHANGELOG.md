@@ -4,6 +4,43 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.68.0] — 2026-07-16
+
+### Added
+- **Documents: PRD v1.2 alignment — engagement folders nest under their
+  client, mentor documents anchor to the Contact, top-level display labels**
+  (Doug's updated `CBM-DocMgmt-Implementation-PRD.docx` v1.1/1.2 + the revised
+  Phase 1 prompt; his rulings this session: mentor documents live in **Mentor
+  Administration**, and the partner/sponsor tabs stay functional under their
+  own labels).
+  - **Folder tree (PRD §3.2, D-07):** top-level Drive folders are now
+    configurable **display labels** (`GDRIVE_ENTITY_LABELS`, default
+    `Contact=Mentors,CEngagement=Clients,CPartnerProfile=Partners,
+    CSponsorProfile=Sponsors`). A client-work upload resolves the
+    engagement's parent client at upload time (own `clientOrganization` link
+    with the client-profile `linkedCompany` fallback — the same
+    `fill_company_fallback` the rest of the tools use) and lands in
+    `Clients/{Client Name} (clientId)/{Engagement Name} (engagementId)/`; an
+    unresolvable client nests directly under `Clients/` rather than blocking
+    the upload. Mentor/partner/sponsor anchors stay single-level under their
+    label.
+  - **`client_record_id`** added to `app_document` (Alembic
+    `0006_app_document_client`, nullable + indexed) — the parent client id,
+    denormalized on engagement-anchored rows for cross-engagement client
+    reporting; returned as `clientRecordId`.
+  - **Mentor Administration gains a Documents tab** (`/mentoradmin` detail,
+    shown when `GDRIVE_DOCS` is on): list + upload anchored to the mentor's
+    **linked Contact** record (`Mentors/{Name} (contactId)/`); a mentor with
+    no linked Contact gets a readable 400 before any write. New endpoints
+    `GET/POST /mentoradmin/api/mentors/{id}/documents` (same raw-bytes
+    contract, gates, and rollback as the session tools); View / Open in
+    Drive / Archive rendered disabled (Phase 2/3).
+  - 18 new/updated tests (75 documents tests total, suite green); migration +
+    `client_record_id` round-trip verified against a live local Postgres;
+    both UIs verified in the stubbed-browser harness. Still NOT driven
+    against real Google Drive — activation checklist unchanged
+    (GDRIVE-DOCS-SETUP.md; the folder tree there is updated).
+
 ## [0.67.0] — 2026-07-16
 
 ### Added
