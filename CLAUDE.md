@@ -1208,15 +1208,19 @@ Administration gains a Documents tab** anchored to the mentor's linked
 Contact (Doug's ruling; partner/sponsor tabs kept under their own labels).
 Full mechanics in the Session Management section's **"Documents — PRD v1.2
 alignment"** bullet; activation runbook `GDRIVE-DOCS-SETUP.md` (folder tree
-updated there). **crm-test ACTIVATION STARTED 2026-07-16:** Doug created the
-"CBM Documents" shared drive (`GDRIVE_SHARED_DRIVE_ID=0AE50yNppMh_hUk9PVA`)
-and `GDRIVE_DOCS=true` + the drive id are LIVE on the crm-test web component
-(overlay `.do/app.prod.yaml` regenerated from the live spec + applied via
-doctl; deploy ACTIVE, but at origin/main v0.67.0 = the OLD flat folder
-scheme — **push main before uploading anything** so 0.68.x's nested scheme +
-migration 0006 deploy). Still to confirm: Drive API enabled + the
-`auth/drive` DWD scope (guide Tasks 1–2), then the Task 5 smoke test. Prod:
-not yet flagged (same two vars once crm-test passes).
+updated there). **ACTIVATION 2026-07-16 — BOTH ENVS FLAGGED:** Doug created
+the "CBM Documents" shared drive (`GDRIVE_SHARED_DRIVE_ID=0AE50yNppMh_hUk9PVA`);
+`GDRIVE_DOCS=true` + the drive id are on the **web** component of BOTH
+overlays (`.do/app.prod.yaml` crm-test, `.do/app.prod-crm.yaml` prod — each
+regenerated from its live spec + applied via doctl), and main is pushed at
+9009c5b (v0.68.1 — the nested folder scheme + migration 0006 deploy with
+it). First live attempt was a diagnosed non-failure: Doug uploaded on PROD
+before it was flagged → the app's 503 "integration isn't enabled" surfaced
+as an edge 504 (known masking). Still to confirm: Drive API enabled + the
+`auth/drive` DWD scope (guide Tasks 1–2), then the Task 5 smoke test on
+either env (his @cbmentors.org account needs Content Manager on the shared
+drive). Open UI question: how his flag-off prod page showed an Upload
+button at all (served app.js gates correctly; suspect a stale tab).
 
 Before that: **v0.67.0** (549 tests green, committed NOT pushed) — **Email
 templates in every compose dialog (ET)**: template picker + EspoCRM
