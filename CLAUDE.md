@@ -1222,9 +1222,12 @@ membership + delegated upload as the signed-in manager + metadata row.
 known masking.) Light smoke items still unchecked: the file's Drive
 location eyeballed (`Clients/{client}/{engagement}/`), folder REUSE on a
 second upload, and a mentor-side upload via `/mentoradmin` → `Mentors/`.
-The disabled View/Open-in-Drive/Archive buttons are BY DESIGN (Phase 2/3 —
-Doug hit "coming soon" post-upload; Phase 2 = viewing is the next build,
-kickoff draft `prompts/Google Drive Documents/prompt-docmgmt-phase2.md`).
+The disabled View/Archive buttons are BY DESIGN (Phase 2/3 — Doug hit
+"coming soon" post-upload; Phase 2 = viewing is the next build, kickoff
+draft `prompts/Google Drive Documents/prompt-docmgmt-phase2.md`).
+**"Open in Drive" went LIVE v0.69.0** (DOC-05 pulled forward, Doug's call —
+frontend-only, opens the stored `webViewLink` new-tab/noopener in both the
+session tools and `/mentoradmin`; linkless rows stay disabled).
 Open UI question: how his flag-off prod page showed an Upload button at
 all (served app.js gates correctly; suspect a stale tab).
 

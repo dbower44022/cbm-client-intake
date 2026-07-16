@@ -868,7 +868,16 @@
       ["View", "Open in Drive", "Archive"].forEach(function (label) {
         var b = document.createElement("button");
         b.type = "button"; b.className = "cbm-button cbm-button--secondary sx__sm";
-        b.textContent = label; b.disabled = true; b.title = "Coming soon";
+        b.textContent = label;
+        // Open in Drive is live (DOC-05 pulled forward — the webViewLink is
+        // already stored); View/Archive stay Phase 2/3 placeholders.
+        if (label === "Open in Drive" && d.webViewLink) {
+          b.addEventListener("click", function () {
+            window.open(d.webViewLink, "_blank", "noopener");
+          });
+        } else {
+          b.disabled = true; b.title = "Coming soon";
+        }
         c4.appendChild(b);
       });
       tr.appendChild(c0); tr.appendChild(c1); tr.appendChild(c2); tr.appendChild(c3); tr.appendChild(c4);

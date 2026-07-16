@@ -4,6 +4,19 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.69.0] — 2026-07-16
+
+### Added
+- **Documents: "Open in Drive" is live** (DOC-05 pulled forward from Phase 2
+  — Doug's call after the first successful live upload; the `webViewLink`
+  was already stored on every row, so this is frontend-only). The button on
+  each document row (session tools + Mentor Administration) now opens the
+  file's Drive page in a new tab (noopener; authorization happens at click
+  time via the user's Workspace session); a row without a stored link keeps
+  the disabled state. View and Archive remain Phase 2/3 placeholders.
+  Verified in the stubbed-browser harness (enabled state, window.open
+  target/features, View/Archive still disabled).
+
 ## [0.68.1] — 2026-07-16
 
 ### Fixed
