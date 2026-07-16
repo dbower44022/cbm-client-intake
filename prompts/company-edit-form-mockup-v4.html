@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup v4 — Edit Company (full-width, packed groups) — PROPOSAL</title>
+<style>
+  :root{
+    --navy:#1f3a5f;
+    --gold:#d29b2f;
+    --gold-dark:#b8861f;
+    --ink:#25313f;
+    --muted:#77828f;
+    --line:#dfe3e8;
+    --panel-head:#f4f6f8;
+    --chip-line:#c9d0d8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:#e9edf1;padding:24px 20px 90px;font-size:13.5px}
+
+  .pagenote{margin:0 0 14px;font-size:12.5px;color:var(--muted);max-width:70rem}
+  .pagenote b{color:var(--ink)}
+
+  /* Full-width card — the form uses the whole screen (no max-width, Doug's
+     standing ruling). Density comes from GROUPS packing side by side, with
+     content-sized fields inside; nothing balloons. */
+  .form-card{background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 18px rgba(31,58,95,.10);overflow:hidden}
+  .form-head{display:flex;align-items:center;background:var(--panel-head);border-bottom:1px solid var(--line);padding:10px 22px}
+  .form-title{font-size:15px;font-weight:700;color:var(--navy)}
+  .form-sub{font-size:12px;color:var(--muted);margin-left:10px}
+  .form-body{padding:16px 22px 8px}
+
+  /* ============ THE CHANGE: groups are packable panels =====================
+     .fgroups is a flex-wrap row of group panels. Each group has a natural
+     width (flex-basis) sized to its widest field row and grows to share
+     leftover space. Wide screen => Identity | Addresses on one band, Web
+     presence | Notes on the next; 4K => all four on one band; laptop =>
+     they stack exactly like today. Reading order stays left-to-right,
+     top-to-bottom. */
+  .fgroups{display:flex;flex-wrap:wrap;gap:16px 20px;align-items:stretch}
+  .group{min-width:0;background:#fbfcfd;border:1px solid #e7ebef;border-radius:6px;padding:12px 14px 6px}
+  .g-identity{flex:3 1 52rem}
+  .g-web{flex:1 1 28rem}
+  .g-addr{flex:3 1 52rem}
+  .g-notes{flex:2 1 44rem}
+  /* Panels always fill the full band width (Doug's ruling on v4: aligned
+     right edges, no ragged panels). Long-text INPUTS still cap at a readable
+     width inside their panel. */
+  .w-fill{max-width:72rem}
+
+  .group-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;border-bottom:1px solid var(--line);padding-bottom:5px;margin-bottom:12px}
+
+  /* Rows keep their integrity: each mockup row is ONE flex line that wraps
+     only when it truly can't fit — no more orphan fields drifting to random
+     lines. Fields are content-sized (basis per data kind) and grow a little. */
+  .frow{display:flex;flex-wrap:wrap;gap:10px 16px;margin-bottom:10px}
+  .frow > div{min-width:0}
+  .w-lg{flex:3 1 20rem}       /* company name, sector — long values        */
+  .w-md{flex:2 1 13rem}       /* email, url, city, selects                 */
+  .w-sm{flex:1 1 10rem}       /* phone, ZIP, country                       */
+  .w-xs{flex:0 1 6.5rem}      /* state, SIC — short codes don't grow       */
+  .w-fill{flex:1 1 100%}      /* textareas                                 */
+
+  label{display:block;font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:4px;white-space:nowrap}
+  input[type=text],input[type=email],input[type=tel],select,textarea{
+    width:100%;padding:6px 9px;border:1px solid var(--chip-line);border-radius:4px;font-size:13.5px;font-family:inherit;background:#fff;color:var(--ink)
+  }
+  input:focus,select:focus,textarea:focus{outline:2px solid rgba(31,58,95,.25);border-color:var(--navy)}
+  textarea{min-height:60px;resize:vertical}
+
+  /* Changed-field marker: a gold dot appears on the label the moment a field
+     differs from its loaded value — you can see what a Save will write. */
+  label .dot{display:none;width:7px;height:7px;border-radius:50%;background:var(--gold);margin-left:6px;vertical-align:1px}
+  .dirty > label .dot{display:inline-block}
+
+  .checkrow{display:flex;align-items:center;gap:8px;font-size:13px}
+  .checkrow input{width:15px;height:15px;accent-color:var(--navy)}
+  .checkrow label{margin:0;font-weight:400;font-size:13px;color:var(--ink);text-transform:none;letter-spacing:0}
+
+  /* side-by-side address columns inside the Addresses group */
+  .addr2{display:grid;grid-template-columns:1fr 1fr;gap:0 32px}
+  @media(max-width:900px){.addr2{grid-template-columns:1fr}}
+  .sub{display:flex;align-items:center;gap:14px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px}
+  .addr-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:10px 12px}
+  .addr-grid > div{grid-column:span 12}
+  .c2{grid-column:span 2!important}.c4{grid-column:span 4!important}
+  .c6{grid-column:span 6!important}.c8{grid-column:span 8!important}
+
+  /* rich text mini toolbar (stands in for CBMRichText/Jodit) */
+  .rtwrap{border:1px solid var(--chip-line);border-radius:4px;overflow:hidden}
+  .rtbar{display:flex;gap:2px;background:#fbfcfd;border-bottom:1px solid #f0f2f4;padding:3px 6px}
+  .rtbar button{border:none;background:none;font-size:12.5px;padding:3px 8px;cursor:pointer;border-radius:3px;color:var(--ink);font-family:inherit}
+  .rtbar button:hover{background:var(--panel-head)}
+  .rtwrap textarea{border:none;border-radius:0}
+  .rtwrap textarea:focus{outline:none}
+
+  /* ============ Sticky save bar ============================================
+     Save/Cancel ride the bottom of the viewport while the form is in edit —
+     never scroll to find them. The bar narrates the pending diff. */
+  .savebar{position:sticky;bottom:0;display:flex;align-items:center;gap:14px;
+    border-top:1px solid var(--line);padding:10px 22px;background:rgba(251,252,253,.96);backdrop-filter:blur(3px)}
+  .savebar .status{font-size:12.5px;color:var(--muted);margin-right:auto}
+  .savebar .status b{color:var(--gold-dark)}
+  .btn{border:none;border-radius:4px;padding:8px 16px;font-size:13.5px;font-weight:600;cursor:pointer}
+  .btn-gold{background:var(--gold);color:#fff}
+  .btn-gold:hover{background:var(--gold-dark)}
+  .btn-gold[disabled]{background:#e4d8bd;cursor:default}
+  .btn-ghost{background:#fff;color:var(--navy);border:1px solid var(--line)}
+</style>
+</head>
+<body>
+
+<p class="pagenote"><b>Mockup v4 — proposal (not yet approved).</b> Full width, no cap. Space efficiency comes from
+<b>groups packing side by side</b>: Identity + Addresses share the first band, Web presence + Notes the second
+(all four share one band on 4K; everything stacks on a laptop). Field rows keep their integrity — no orphan
+fields wrapping alone. Panels always stretch to the full window width (aligned right edges); long-text boxes inside stay a readable width. New:
+<b>gold dot = changed field</b>, and a <b>sticky Save bar</b> that counts pending changes. Resize the window to see the reflow.</p>
+
+<div class="form-card">
+  <div class="form-head"><span class="form-title">Edit Company</span><span class="form-sub">Agape W8Loss</span></div>
+  <div class="form-body">
+    <div class="fgroups" id="form">
+
+      <div class="group g-identity">
+        <div class="group-label">Identity</div>
+        <div class="frow">
+          <div class="w-lg"><label>Company name<span class="dot"></span></label><input type="text" value="Agape W8Loss"></div>
+          <div class="w-sm"><label>Phone number<span class="dot"></span></label><input type="tel" value="(216)-555-1234"></div>
+          <div class="w-md"><label>Email address<span class="dot"></span></label><input type="email" value="info@agapew8loss.com"></div>
+        </div>
+        <div class="frow">
+          <div class="w-md"><label>Organization type<span class="dot"></span></label><select><option>For-Profit</option><option>Non-Profit</option></select></div>
+          <div class="w-md"><label>Business stage<span class="dot"></span></label><select><option selected>Startup</option><option>Early Stage</option><option>Growth</option><option>Mature</option></select></div>
+          <div class="w-md"><label>Industry<span class="dot"></span></label><select><option>Healthcare</option></select></div>
+          <div class="w-xs"><label>SIC code<span class="dot"></span></label><input type="text" value="8011"></div>
+        </div>
+        <div class="frow">
+          <div class="w-lg"><label>Industry sector<span class="dot"></span></label><select><option>Health Care and Social Assistance</option></select></div>
+          <div class="w-lg"><label>Industry subsector<span class="dot"></span></label><select><option>(none)</option></select></div>
+        </div>
+      </div>
+
+      <div class="group g-web">
+        <div class="group-label">Web presence</div>
+        <div class="frow">
+          <div class="w-md"><label>Website<span class="dot"></span></label><input type="text" value="https://agapew8loss.com"></div>
+          <div class="w-md"><label>LinkedIn page<span class="dot"></span></label><input type="text"></div>
+        </div>
+      </div>
+
+      <div class="group g-addr">
+        <div class="group-label">Addresses</div>
+        <div class="addr2">
+          <div>
+            <div class="sub">Billing</div>
+            <div class="addr-grid">
+              <div class="c8"><label>Address line 1<span class="dot"></span></label><input type="text" value="7550 Lucerne Drive"></div>
+              <div class="c4"><label>Line 2<span class="dot"></span></label><input type="text" value="Suite 303"></div>
+              <div class="c6"><label>City<span class="dot"></span></label><input type="text" value="Middleburg Heights"></div>
+              <div class="c2"><label>State<span class="dot"></span></label><select><option>OH</option></select></div>
+              <div class="c4"><label>ZIP<span class="dot"></span></label><input type="text" value="44130"></div>
+              <div class="c6"><label>Country<span class="dot"></span></label><input type="text" value="USA"></div>
+            </div>
+          </div>
+          <div>
+            <div class="sub">Shipping
+              <span class="checkrow"><input type="checkbox" id="same" onchange="toggleShip(this)"><label for="same">Same as billing</label></span>
+            </div>
+            <div class="addr-grid" id="shipfields">
+              <div class="c8"><label>Address line 1<span class="dot"></span></label><input type="text" value="345 N. Main St"></div>
+              <div class="c4"><label>Line 2<span class="dot"></span></label><input type="text"></div>
+              <div class="c6"><label>City<span class="dot"></span></label><input type="text" value="Chagrin Falls"></div>
+              <div class="c2"><label>State<span class="dot"></span></label><select><option>OH</option></select></div>
+              <div class="c4"><label>ZIP<span class="dot"></span></label><input type="text" value="44022"></div>
+              <div class="c6"><label>Country<span class="dot"></span></label><input type="text" value="USA"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="group g-notes">
+        <div class="group-label">Notes</div>
+        <div class="frow">
+          <div class="w-fill"><label>Description<span class="dot"></span></label><textarea placeholder="What the company does&hellip;"></textarea></div>
+        </div>
+        <div class="frow">
+          <div class="w-fill"><label>Client notes<span class="dot"></span></label>
+            <div class="rtwrap">
+              <div class="rtbar"><button type="button"><b>B</b></button><button type="button"><i>I</i></button><button type="button">&bull;</button><button type="button">1.</button><button type="button">Clear</button></div>
+              <textarea placeholder="Internal notes about this client&hellip;"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <div class="savebar">
+    <span class="status" id="status">No changes yet</span>
+    <button class="btn btn-ghost" onclick="resetForm()">Cancel</button>
+    <button class="btn btn-gold" id="saveBtn" disabled>Save changes</button>
+  </div>
+</div>
+
+<script>
+function toggleShip(cb){
+  const f=document.getElementById('shipfields');
+  f.style.opacity=cb.checked?'0.35':'1';
+  f.style.pointerEvents=cb.checked?'none':'auto';
+}
+/* dirty tracking demo: gold dot on changed fields + live count in the bar */
+const snap=new Map();
+document.querySelectorAll('#form input:not(#same), #form select, #form textarea').forEach(el=>{
+  snap.set(el, el.type==='checkbox'?el.checked:el.value);
+  el.addEventListener('input',()=>mark(el));
+  el.addEventListener('change',()=>mark(el));
+});
+function mark(el){
+  const cur=el.type==='checkbox'?el.checked:el.value;
+  el.closest('.frow > div, .addr-grid > div')?.classList.toggle('dirty', cur!==snap.get(el));
+  const n=document.querySelectorAll('#form .dirty').length;
+  document.getElementById('status').innerHTML=n?('<b>'+n+' field'+(n>1?'s':'')+'</b> changed'):'No changes yet';
+  document.getElementById('saveBtn').disabled=!n;
+}
+function resetForm(){
+  snap.forEach((v,el)=>{ if(el.type==='checkbox'){el.checked=v}else{el.value=v} });
+  document.querySelectorAll('#form .dirty').forEach(d=>d.classList.remove('dirty'));
+  document.getElementById('status').textContent='No changes yet';
+  document.getElementById('saveBtn').disabled=true;
+}
+</script>
+</body>
+</html>

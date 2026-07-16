@@ -577,29 +577,44 @@ textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
 .sx__transcript mark { background: #ffe9a8; padding: 0 1px; }
 .sx__attwrap { overflow-x: auto; }
 
-/* === Section edit screens (prompt v0.2 / Company mockup v3) =============== */
-/* Grouped forms; small uppercase group headings over hairline rules. Fields
-   are CONTENT-SIZED and PACK (flex wrap): each sxf__cN class is a sensible
-   width for that field's data, and a row holds as many fields as the screen
-   fits — high data density on wide/4K monitors (no page/form width cap,
-   Doug's standing ruling, re-confirmed 2026-07-16 over prompt v0.2's 960px
-   rule), graceful wrap on laptops. The mockups' 12-col spans map to the
-   width classes, not to a proportional grid. */
-.sxf { padding: 1rem 1.15rem 0; }
-.sxf__group { margin-bottom: 0.9rem; }
+/* === Section edit screens (mockup v4: full-width packed group panels) ===== */
+/* Edit forms use the whole window (no width cap, Doug's standing ruling).
+   Density comes from GROUPS packing side by side: each group is a light
+   panel with a natural width (flex-basis set from its layout, sized to its
+   widest row) and a grow weight — every band of panels always fills the
+   full window width (aligned right edges, Doug's ruling on mockup v4).
+   Wide screens put several groups on one band; laptops stack them. Inside
+   a group each layout row is ONE flex line, so fields never orphan onto
+   random lines; fields share their row proportionally. */
+.sxf { display: flex; flex-wrap: wrap; gap: 14px 18px; align-items: stretch; padding: 1rem 1.15rem 0.25rem; }
+.sxf__group { background: #fbfcfd; border: 1px solid #e7ebef; border-radius: 6px; padding: 12px 14px 4px; min-width: 0; flex: 2 1 44rem; }
 .sxf__glabel {
   font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #77828f;
   font-weight: 700; border-bottom: 1px solid #dfe3e8; padding-bottom: 5px; margin-bottom: 12px;
 }
-.sxf__grid { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: flex-start; }
-.sxf__grid > * { flex: 1 1 100%; min-width: 0; }
-.sxf__grid > .sxf__c2 { flex: 1 1 8rem; max-width: 13rem; }
-.sxf__grid > .sxf__c3 { flex: 1 1 13rem; max-width: 21rem; }
-.sxf__grid > .sxf__c4 { flex: 1 1 17rem; max-width: 27rem; }
-.sxf__grid > .sxf__c6 { flex: 1 1 26rem; max-width: 44rem; }
-.sxf__grid > .sxf__c8 { flex: 2 1 30rem; max-width: 52rem; }
-.sxf__grid > .sxf__c12 { flex: 1 1 100%; max-width: none; }
+.sxf__row { display: flex; flex-wrap: wrap; gap: 10px 16px; margin-bottom: 10px; align-items: flex-start; }
+.sxf__row > * { min-width: 0; }
+.sxf__row > .sxf__c2 { flex: 1 1 6.5rem; }
+.sxf__row > .sxf__c3 { flex: 2 1 10rem; }
+.sxf__row > .sxf__c4 { flex: 2 1 13rem; }
+.sxf__row > .sxf__c6 { flex: 3 1 20rem; }
+.sxf__row > .sxf__c8 { flex: 4 1 26rem; }
+/* Long-text cells stay a readable width even when their panel is very wide. */
+.sxf__row > .sxf__c12 { flex: 1 1 100%; max-width: 72rem; }
 .sxf .cbm-field--check { align-self: end; padding-bottom: 0.35rem; }
+/* Changed-field marker: gold dot on the label while the value differs from
+   what was loaded (the sticky bar below counts them). */
+.sxf .cbm-field.sxf__dirty > label::after {
+  content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--cbm-gold, #CB963B); margin-left: 6px; vertical-align: 1px;
+}
+.sxf__savestatus { font-size: 0.86rem; color: #77828f; margin-right: auto; align-self: center; }
+/* Save/Cancel ride the bottom of the viewport while editing a long form. */
+.sx__dpanel-actions--sticky {
+  position: sticky; bottom: 0; z-index: 5; align-items: center;
+  background: rgba(251, 252, 253, 0.96); border-top: 1px solid #dfe3e8;
+  backdrop-filter: blur(3px); margin-top: 0.35rem;
+}
 
 /* Checkbox sets flow into as many columns as fit the width. */
 .sxf__checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: 2px 24px; }

@@ -4,6 +4,35 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.58.0] — 2026-07-16
+
+### Changed
+- **Details edit forms: full-width packed group panels** (design review with
+  Doug; approved mockup `prompts/company-edit-form-mockup-v4.html`). The
+  measured problem at ~2580px: single-column groups left ~40% of the form
+  area empty (Web presence used 55% of its band), long-text fields spanned
+  the whole monitor, packing orphaned fields onto random lines, and the form
+  was 1,232px tall. Now each group renders as a light PANEL with a natural
+  width (`grow`/`basis` on the layout group) and panels pack left-to-right —
+  **every band always fills the full window width** (Doug's ruling: aligned
+  right edges, no ragged panels). Wide screens put several groups on one
+  band (Identity | Web presence | Addresses, Notes below; everything on one
+  band on 4K); laptops stack as before. Each layout row is one flex line
+  (no orphan fields); long-text cells cap at a readable 72rem inside their
+  panel. Applies to all Details edit forms (Company/profile/engagement
+  strip/contact rows/create-contact).
+
+### Added
+- **Changed-field dots + sticky save bar** on the Details edit forms: a gold
+  dot marks each field whose value differs from what was loaded (reusing the
+  save's own snapshot diff, so it exactly predicts the write); Save/Cancel
+  ride the bottom of the viewport with a live "N fields changed" narration;
+  Save is disabled until something actually changed. Verified in the
+  stubbed-browser harness (bands fill width at 2580px and stack narrow, dot
+  count rises/falls with edits and reverts, save PUT carries only the
+  changed field, same-as-billing mirror + Contact Country intact, no console
+  errors). NOT yet eyeballed against the live CRM.
+
 ## [0.57.1] — 2026-07-16
 
 ### Fixed

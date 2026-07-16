@@ -1594,21 +1594,21 @@
     // never auto-render in an "Additional details" dump; placing one is an
     // explicit layout decision.
     Account: { noExtras: true, groups: [
-      { label: "Identity", rows: [
+      { label: "Identity", grow: 3, basis: 52, rows: [
         [{ name: "name", span: 6, label: "Company name" }, { name: "phoneNumber", span: 3 }, { name: "emailAddress", span: 3 }],
         [{ name: "cOrganizationType", span: 3 }, { name: "cBusinessStage", span: 3 },
          { name: "industry", span: 3 }, { name: "sicCode", span: 3, label: "SIC code" }],
         [{ name: "cIndustrySector", span: 6 }, { name: "cIndustrySubsector", span: 6 }],
       ] },
-      { label: "Web presence", rows: [
+      { label: "Web presence", grow: 1, basis: 28, rows: [
         [{ name: "website", span: 6 }, { name: "cLinkedInPage", span: 6, label: "LinkedIn page" }],
       ] },
       // Billing left, shipping right (the shared address block includes Country).
-      { label: "Addresses", rows: [
+      { label: "Addresses", grow: 3, basis: 52, rows: [
         [{ addr: "billingAddress", span: 6, title: "Billing" },
          { addr: "shippingAddress", span: 6, title: "Shipping", sameAs: "billingAddress" }],
       ] },
-      { label: "Notes", rows: [
+      { label: "Notes", grow: 2, basis: 44, rows: [
         [{ name: "description", span: 12 }],
         [{ name: "cClientNotes", span: 12, label: "Client notes" }],
       ] },
@@ -1729,9 +1729,12 @@
       return el;
     }
 
+    // Each layout row is ONE flex line (fields never orphan onto random
+    // lines); the group's rows live in a .sxf__rows stack.
     function grid(rows) {
-      var g = document.createElement("div"); g.className = "sxf__grid";
+      var g = document.createElement("div"); g.className = "sxf__rows";
       rows.forEach(function (row) {
+        var line = document.createElement("div"); line.className = "sxf__row";
         row.forEach(function (cell) {
           var el = null;
           if (cell.name) el = fieldCell(cell);
@@ -1757,14 +1760,19 @@
               el.appendChild(lab); el.appendChild(inp);
             }
           }
-          if (el) g.appendChild(el);
+          if (el) line.appendChild(el);
         });
+        if (line.childNodes.length) g.appendChild(line);
       });
       return g;
     }
 
+    // Groups are PACKABLE PANELS (mockup v4): each has a natural width
+    // (`basis` rem, sized to its widest row) and a `grow` weight; panels
+    // flow left-to-right and every band always fills the window width.
     (layout.groups || []).forEach(function (g) {
       var wrap = document.createElement("div"); wrap.className = "sxf__group";
+      wrap.style.flex = (g.grow || 2) + " 1 " + (g.basis || 44) + "rem";
       if (g.label) {
         var h = document.createElement("div"); h.className = "sxf__glabel"; h.textContent = g.label;
         wrap.appendChild(h);
@@ -1782,17 +1790,20 @@
       : (sec.fields || []).filter(function (f) { return !used[f.name] && !exclude[f.name]; });
     if (leftovers.length) {
       var wrap2 = document.createElement("div"); wrap2.className = "sxf__group";
+      wrap2.style.flex = "2 1 44rem";
       if ((layout.groups || []).length) {
         var h2 = document.createElement("div"); h2.className = "sxf__glabel"; h2.textContent = "Additional details";
         wrap2.appendChild(h2);
       }
-      var g2 = document.createElement("div"); g2.className = "sxf__grid";
+      var g2 = document.createElement("div"); g2.className = "sxf__rows";
+      var line2 = document.createElement("div"); line2.className = "sxf__row";
       leftovers.forEach(function (f) {
         var wide = f.type === "text" || f.type === "wysiwyg";
         var el = f.editable ? detailsEditField(f) : detailsReadField(f);
         el.classList.add(wide ? "sxf__c12" : "sxf__c4");
-        g2.appendChild(el);
+        line2.appendChild(el);
       });
+      g2.appendChild(line2);
       wrap2.appendChild(g2);
       body.appendChild(wrap2);
     }
@@ -1955,13 +1966,33 @@
       snap[el.dataset.field] = JSON.stringify(readField(el));
     });
     detailsSnapshot[key] = snap;
-    var actions = document.createElement("div"); actions.className = "sx__dpanel-actions";
+    var actions = document.createElement("div"); actions.className = "sx__dpanel-actions sx__dpanel-actions--sticky";
     var notice = document.createElement("p"); notice.className = "sx__dpanel-error"; notice.hidden = true;
+    var status = document.createElement("span"); status.className = "sxf__savestatus"; status.textContent = "No changes yet";
     var save = document.createElement("button"); save.type = "button"; save.className = "cbm-button"; save.textContent = "Save changes";
+    save.disabled = true;
     var cancel = document.createElement("button"); cancel.type = "button"; cancel.className = "cbm-button cbm-button--secondary"; cancel.textContent = "Cancel";
     save.addEventListener("click", function () { savePanel(sec, key, body, save, notice); });
     cancel.addEventListener("click", function () { delete detailsEditSet[key]; repaintDetails(key); });
-    actions.appendChild(cancel); actions.appendChild(save);
+    actions.appendChild(status); actions.appendChild(cancel); actions.appendChild(save);
+    // Live diff feedback: a gold dot marks each field that differs from its
+    // loaded value, and the sticky bar narrates what a Save will write. The
+    // scan reuses the snapshot/readField diff the save itself runs; "click"
+    // covers rich-text toolbar actions, which fire no native input event.
+    var scanTimer = null;
+    function scanDirty() {
+      var n = 0;
+      Array.prototype.forEach.call(body.querySelectorAll("[data-field]"), function (el) {
+        var dirty = JSON.stringify(readField(el)) !== snap[el.dataset.field];
+        (el.closest(".cbm-field") || el).classList.toggle("sxf__dirty", dirty);
+        if (dirty) n++;
+      });
+      save.disabled = !n;
+      status.textContent = n ? n + (n === 1 ? " field" : " fields") + " changed" : "No changes yet";
+    }
+    ["input", "change", "click", "keyup"].forEach(function (ev) {
+      body.addEventListener(ev, function () { clearTimeout(scanTimer); scanTimer = setTimeout(scanDirty, 150); });
+    });
     var wrap = document.createElement("div"); wrap.appendChild(body); wrap.appendChild(notice); wrap.appendChild(actions);
     return wrap;
   }
