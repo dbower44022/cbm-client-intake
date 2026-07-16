@@ -18,6 +18,7 @@ from pydantic import BaseModel
 from assignments.auth import clear_session, current_user, is_member, session_expired
 from assignments.espo_user import client_for
 from comms import service as comms_service
+from comms import templates as comms_templates
 from core.config import get_settings
 from core.espo import EspoError, validation_message
 from core.gdrive import DriveError
@@ -61,6 +62,18 @@ class SendIn(BaseModel):
     # True after the user confirms sending to an address that isn't one of the
     # record's contacts (the server refuses otherwise).
     allowUnknownRecipients: bool = False
+    # Each: {"espoId": …} (a template-attachment chip, bytes fetched from the
+    # CRM at send time) or {"filename","contentType","dataBase64"} (a local
+    # upload). See comms.service.resolve_attachments.
+    attachments: list[dict] = []
+
+
+class TemplateParseIn(BaseModel):
+    # {Person.*} resolution hint — normally the compose dialog's first
+    # recipient; the record itself is the {Parent.*} context (from the URL).
+    emailAddress: str = ""
+
+
 
 
 class AddressIn(BaseModel):
@@ -495,6 +508,7 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 to=body.to, subject=body.subject, body_html=body.body,
                 reply_to_communication_id=body.replyToCommunicationId,
                 allow_unknown_recipients=body.allowUnknownRecipients,
+                user_client=client, attachments=body.attachments,
             )
             return {"status": "ok", **result}
         except comms_service.CommsError as exc:
@@ -504,6 +518,43 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             raise HTTPException(status_code=502, detail="Couldn't send the message — try again.")
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not send the message")
+
+    # --- Email templates (ET) — EspoCRM renders, the app sends -------------
+    # The picker lists what the ACTING USER may see (ET-100/101); parse
+    # returns the rendered, editable draft (ET-110..112). Both need the Gmail
+    # integration on — templates are only useful where sending works.
+
+    @router.get("/emailtemplates")
+    async def email_templates(request: Request, q: str = "") -> dict:
+        user = _require_user(request)
+        _comms_ready()
+        client = client_for(get_settings(), user)
+        try:
+            return await comms_templates.list_templates(
+                client, q=q, context=comms_templates.CONTEXT_BY_PARENT.get(cfg.parent_entity),
+            )
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not load email templates")
+
+    @router.post("/records/{parent_id}/emailtemplates/{template_id}/parse")
+    async def email_template_parse(
+        parent_id: str, template_id: str, body: TemplateParseIn, request: Request
+    ) -> dict:
+        user = _require_user(request)
+        _comms_ready()
+        client = client_for(get_settings(), user)
+        try:
+            return await comms_templates.parse_template(
+                client, template_id,
+                parent_type=cfg.parent_entity, parent_id=parent_id,
+                email_address=body.emailAddress or None,
+            )
+        except EspoError as exc:
+            # ET-114: non-destructive — the frontend leaves the draft untouched.
+            raise _crm_failure(request, exc, "Could not apply the template")
+
+    # (POST /emailwriteback — the ET-142 retry — registers via
+    # register_quicksend below, shared with the record-less compose surface.)
 
     @router.get("/contactlookup")
     async def contact_lookup(email: str, request: Request) -> dict:

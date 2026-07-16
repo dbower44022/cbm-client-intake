@@ -4,6 +4,65 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.67.0] — 2026-07-16
+
+### Added
+- **Email templates in every compose dialog (ET)** — per the Email Template
+  Integration PRD (`prompts/email templates/…`), adapted into this app per
+  Doug's rulings (target = the Communications tab + everywhere the compose
+  UI shows; write-back BOTH ways; user attachments in v1; templates on the
+  quick-compose too). EspoCRM renders, the app sends (Decision ET-D1 — the
+  app never substitutes placeholders):
+  - **Picker** in the record compose (session tools) and the shared
+    quick-compose widget (assignments/mentoradmin/grid peeks): the EspoCRM
+    email templates the ACTING USER may see (role/team visibility, ET-101),
+    name-ordered with type-ahead filtering. New endpoints
+    `GET /{slug}/api/emailtemplates` (+ the quicksend surface) backed by
+    `comms/templates.py`; `EspoClient.email_template_prepare` wraps the
+    EspoCRM 9.x `POST EmailTemplate/{id}/prepare` action (signature verified
+    live on crm-test 9.3.6 — closes PRD open issue ET-OI-4).
+  - **Rendering**: selection calls parse with the record as `{Parent.*}`
+    context and the first recipient's address for `{Person.*}` (an address
+    alone resolves the person — closes ET-OI-1, and is how the record-less
+    quick-compose personalizes). The rendered subject/HTML body load into
+    the editor as a plain editable draft; unresolved placeholders (which
+    EspoCRM leaves as literal `{X.y}` tokens) trigger a review-before-send
+    notice (the ET-OI-2 warning). Selecting over a non-empty draft asks
+    "Replace current content?" first (ET-113); a parse failure shows a
+    readable error and leaves the draft untouched (ET-114).
+  - **Attachments**: template standing attachments appear as removable
+    chips (ids only — bytes stay in the CRM until send, ET-B3), and users
+    can attach their own local files (both dialogs; 20 MB total cap, both
+    sides). At send time the server downloads retained template attachments
+    as the acting user and builds a multipart/mixed message
+    (`core/gmail.build_mime` attachments support,
+    `comms/service.resolve_attachments`); ANY attachment failure BLOCKS the
+    send (ET-131).
+  - **Write-back**: on top of the existing CConversation/CCommunication
+    write-through ingest, every app send now also creates a native EspoCRM
+    **Email** record (status Sent, parented to the recipient's Contact when
+    one matches, created as the acting user so History shows them —
+    ET-140..143). A write-back failure after a confirmed send switches the
+    dialog to a retry screen (`POST …/emailwriteback`) — never silent
+    (ET-142).
+  - **Quick-compose upgraded**: the widget's body is now the standard
+    CBMRichText editor (assignments pages load the Jodit assets; plain
+    textarea remains the script-load fallback), so template HTML renders
+    and sends as HTML.
+  - **Optional context filter, feature-gated**: when the CRM adds a
+    `cAppliesTo` multi-enum to EmailTemplate, the session tools' pickers
+    filter to their domain (Engagement/Partner/Sponsor; untagged templates
+    show everywhere). Inert until the field exists — the `mentorSummary`
+    pattern.
+  - Verified in the stubbed-browser harness (both dialogs: picker +
+    type-ahead, apply, replace-confirm keep/replace, chip removal, local
+    upload, send payload, token warning, parse-failure draft preservation,
+    write-back retry loop; no console errors) + 23 new tests (549 green).
+    **NOT yet driven against the live CRM/Gmail.** CRM prerequisite: the
+    Partner Manager + Sponsor Manager roles need EmailTemplate read (+
+    Email create) grants — Mentor Role and Standard User already have them
+    (read live 2026-07-16).
+
 ## [0.66.0] — 2026-07-16
 
 ### Changed

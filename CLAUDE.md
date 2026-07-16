@@ -899,6 +899,40 @@ segment of its own URL). Mounted only when `assignments_active` (needs
        is plain text rendered pre-wrapped; `date` is formatted with `fmtSessionDate`
        (abbreviated weekday). Compose sends To/Subject/Message from `#commTo`/
        `#commSubject`/`#commBody`.
+- **Email templates in every compose (ET, v0.67.0, 2026-07-16 — gated by the
+  same `GMAIL_SYNC` as compose itself).** PRD:
+  `prompts/email templates/email templates prompt/` (crmbuilder-framed;
+  adapted into THIS app per Doug's rulings — target = Communications tab +
+  every compose surface, write-back BOTH ways, user attachments in v1,
+  templates on quick-compose too). **EspoCRM renders, the app sends**
+  (ET-D1): `comms/templates.py` (module docstring = the verified integration
+  contract) wraps `POST EmailTemplate/{id}/prepare` (EspoCRM 9.x —
+  **verified live on crm-test 9.3.6**; `parentType/parentId` feeds
+  `{Parent.*}`, `emailAddress` alone resolves `{Person.*}`, attachments come
+  back as fresh per-parse clones; unresolved placeholders stay LITERAL
+  `{X.y}` tokens → the UI warns, never blocks). Endpoints: sessions routers
+  `GET /emailtemplates` (context-aware) +
+  `POST /records/{id}/emailtemplates/{tid}/parse`; the quicksend surface
+  (assignments/mentoradmin + sessions grid pages) gets record-less
+  list/parse + the shared `POST /emailwriteback` retry. Both dialogs:
+  type-ahead picker, "Replace current content?" over a non-empty draft
+  (ET-113), parse failure leaves the draft untouched (ET-114), removable
+  template-attachment chips + local file uploads (20 MB cap), send blocks if
+  a template attachment can't be downloaded at send time (ET-131,
+  `comms/service.resolve_attachments`; `build_mime` now takes attachments).
+  **Write-back:** every app send ALSO creates a native EspoCRM **Email**
+  record as the acting user (status Sent, parented to the first recipient
+  matching a record contact → Contact History panel; quick-compose looks the
+  address up); failure → the dialog swaps to a Retry screen (ET-142), never
+  silent. Quickmail's body is now CBMRichText (assignments pages load Jodit;
+  textarea = script-load fallback). Feature-gated `EmailTemplate.cAppliesTo`
+  multi-enum filters the session pickers by domain once the CRM builds it
+  (inert until then). **CRM prereqs + optional-field spec:
+  `emailtemplate-et-crm-prereqs.md`** — Partner/Sponsor Manager roles need
+  EmailTemplate read + Email create (Mentor Role/Standard User already
+  carry them, read live 2026-07-16). Verified in the stub harness (both
+  dialogs, full flows incl. both failure paths); 23 new tests; **NOT yet
+  driven against the live CRM/Gmail.**
 - **Documents tab — Google Drive document management (BUILT v0.65.0,
   2026-07-16; gated OFF by `GDRIVE_DOCS` until activated).** DOC-MGMT
   **Phase 1** of Doug's PRD (`prompts/Google Drive Documents/
@@ -1134,7 +1168,19 @@ bullets ("Details EDIT forms — mockup-v4" and "Grid + Overview session
 flags"). Still worth a live eyeball on crm-test: a past-only record's
 Overview split, a real today-session red flag, and Next Session values.
 
-**Main is at v0.66.0** (526 tests green, committed NOT pushed) —
+**Main is at v0.67.0** (549 tests green, committed NOT pushed) — **Email
+templates in every compose dialog (ET)**: template picker + EspoCRM
+server-side rendering + template/local attachments + native Email-record
+write-back with retry, in the record compose AND the shared quick-compose.
+Mechanics, verified EspoCRM 9.x parse contract, and the CRM handoff
+(Partner/Sponsor Manager role grants + the optional `cAppliesTo` filter
+field) are in the Session Management section's **"Email templates in every
+compose"** bullet + `emailtemplate-et-crm-prereqs.md`. Verified in the stub
+harness end-to-end; NOT yet driven live (mentor domain is live-testable
+immediately — Mentor Role already has the grants). PRD AC walkthrough in the
+session close-out (AC-1..8: all pass in-harness/tests except the live paths).
+
+Before that: **v0.66.0** (526 tests green) —
 **Communications: conversation messages show WHO WROTE THEM** (Doug's
 report: outbound messages displayed "To: <address>", so a mentor +
 co-mentor sending on the same engagement were indistinguishable). Two

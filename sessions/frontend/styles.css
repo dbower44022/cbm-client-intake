@@ -550,6 +550,12 @@ textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
 /* Compose: the To checklist of record contacts (all checked by default). */
 .sx__to-list { display: flex; flex-direction: column; gap: 0.3rem; padding: 0.4rem 0.6rem; border: 1px solid var(--cbm-border, #e3e8ee); border-radius: 8px; background: #f7f9fb; }
 .sx__to-list .sx__addr-check { font-weight: 500; white-space: normal; }
+/* Compose attachments — template chips + local uploads (ET) */
+.sx__attach-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.2rem 0 0.4rem; }
+.sx__attach-chips:empty { display: none; }
+.sx__attach-chip { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.55rem; border: 1px solid var(--cbm-border, #e3e8ee); border-radius: 999px; background: #f7f9fb; font-size: 0.85rem; }
+.sx__chip-x { border: 0; background: none; cursor: pointer; color: var(--cbm-muted, #4a5568); font-size: 0.85rem; padding: 0 0.1rem; line-height: 1; }
+.sx__chip-x:hover { color: var(--cbm-danger, #c53030); }
 
 /* --- Session view: attendee grid + transcript zone (Display Standard §12,
    extended per Doug's 2026-07-12 session-details rulings). The attendee grid

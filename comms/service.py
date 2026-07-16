@@ -233,7 +233,9 @@ async def _record_ref(
     )
     for c in contacts.get("list", []) or []:
         ref.contact_ids.add(c["id"])
-        ref.addresses |= crm._contact_addresses(c)
+        for addr in crm._contact_addresses(c):
+            ref.addresses.add(addr)
+            ref.contact_by_address.setdefault(addr, c["id"])
     return ref
 
 
@@ -276,6 +278,105 @@ async def include_thread(
 # --- send ---------------------------------------------------------------------
 
 
+# One Gmail message tops out at 25 MB encoded; stay under it with headroom.
+MAX_ATTACHMENT_TOTAL_BYTES = 20 * 1024 * 1024
+
+
+async def resolve_attachments(
+    user_client: Any, items: Optional[list[dict[str, Any]]]
+) -> list[tuple[str, str, bytes]]:
+    """Materialize compose attachments as ``(filename, content_type, bytes)``.
+
+    Two shapes per item: ``{"espoId": …}`` — a template-attachment chip whose
+    bytes live in EspoCRM and are downloaded NOW, at send time, as the acting
+    user (ET-B3/ET-131); or ``{"filename", "contentType", "dataBase64"}`` — a
+    file the user attached locally. ANY failure raises :class:`CommsError` so
+    the send is blocked rather than going out without the attachment (ET-131).
+    """
+    import base64 as b64
+
+    out: list[tuple[str, str, bytes]] = []
+    total = 0
+    for item in items or []:
+        espo_id = (item.get("espoId") or "").strip()
+        if espo_id:
+            name = item.get("filename") or "attachment"
+            try:
+                meta = await user_client.get("Attachment", espo_id, select="name,type")
+                name = meta.get("name") or name
+                data, content_type = await user_client.download_attachment(espo_id)
+                content_type = meta.get("type") or content_type
+            except EspoError as exc:
+                log.warning("template attachment %s download failed: %s", espo_id, exc)
+                raise CommsError(
+                    f"Couldn't fetch the template attachment \"{name}\" from the "
+                    "CRM — the message was NOT sent. Remove the attachment or try again."
+                )
+        else:
+            name = (item.get("filename") or "").strip() or "attachment"
+            try:
+                data = b64.b64decode(item.get("dataBase64") or "", validate=True)
+            except Exception:
+                raise CommsError(f"The attachment \"{name}\" didn't upload cleanly — re-attach it.")
+            if not data:
+                raise CommsError(f"The attachment \"{name}\" is empty — re-attach it.")
+            content_type = item.get("contentType") or "application/octet-stream"
+        total += len(data)
+        if total > MAX_ATTACHMENT_TOTAL_BYTES:
+            raise CommsError(
+                "Attachments are too large — keep the total under "
+                f"{MAX_ATTACHMENT_TOTAL_BYTES // (1024 * 1024)} MB per message."
+            )
+        out.append((name, content_type, data))
+    return out
+
+
+async def write_back_email(
+    user_client: Any,
+    *,
+    subject: str,
+    body_html: str,
+    sender: str,
+    to: list[str],
+    parent_type: Optional[str] = None,
+    parent_id: Optional[str] = None,
+    message_id: str = "",
+) -> str:
+    """Record the sent message as a native EspoCRM **Email** (status Sent) so
+    it shows in the parent's History/Activities panel — created AS the acting
+    user (ET-140/143). Raises on failure; callers surface a retry (ET-142)."""
+    from datetime import datetime, timezone
+
+    payload: dict[str, Any] = {
+        "name": subject or "(no subject)",
+        "status": "Sent",
+        "from": sender,
+        "to": ";".join(to),
+        "body": body_html,
+        "isHtml": True,
+        "dateSent": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+        # sender attribution = createdBy — the record is created as the acting user
+    }
+    if message_id:
+        payload["messageId"] = f"<{message_id}>" if not message_id.startswith("<") else message_id
+    if parent_type and parent_id:
+        payload["parentType"] = parent_type
+        payload["parentId"] = parent_id
+    created = await user_client.create("Email", payload)
+    return created.get("id") or ""
+
+
+def _write_back_result(
+    ok: bool, *, email_id: str = "", error: str = "",
+    retry_payload: Optional[dict[str, Any]] = None,
+) -> dict[str, Any]:
+    """The ``writeBack`` block on a send response. On failure it carries the
+    exact payload the retry endpoint replays — never silent (ET-142)."""
+    if ok:
+        return {"ok": True, "emailId": email_id}
+    return {"ok": False, "error": error, "retryPayload": retry_payload or {}}
+
+
 async def send_message(
     *,
     settings: Settings,
@@ -290,6 +391,8 @@ async def send_message(
     body_html: str,
     reply_to_communication_id: Optional[str] = None,
     allow_unknown_recipients: bool = False,
+    user_client: Optional[Any] = None,
+    attachments: Optional[list[dict[str, Any]]] = None,
 ) -> dict[str, Any]:
     """Send as the signed-in manager's own mailbox; the sent message is
     ingested immediately (write-through) so the tab shows it without waiting
@@ -333,6 +436,9 @@ async def send_message(
 
     if "<" not in body_html:
         body_html = _text_to_html(body_html)
+    # Attachment bytes materialize now, at send time — a failure here BLOCKS
+    # the send (ET-131); nothing has gone out yet.
+    mime_attachments = await resolve_attachments(user_client or api_client, attachments)
     mime = build_mime(
         sender=gmail.mailbox,
         sender_name=user.get("name") or "",
@@ -342,14 +448,18 @@ async def send_message(
         body_html=body_html,
         in_reply_to=in_reply_to,
         references=references,
+        attachments=mime_attachments,
     )
     sent = await gmail.send(mime, thread_id=thread_id)
 
     # Write-through: ingest the sent message now (best-effort — the next sync
     # cycle picks it up regardless).
     conv_id = None
+    sent_rfc_id = ""
     try:
         raw = await gmail.get_message(sent["id"])
+        parsed = parse_message(raw)
+        sent_rfc_id = parsed.rfc_message_id
         scope = crm.MailboxScope(
             mailbox=gmail.mailbox,
             manager_name=user.get("name") or "",
@@ -357,7 +467,7 @@ async def send_message(
             records=[ref],
         )
         ref.addresses |= set(to)
-        conv_id = await ingest_message(api_client, store, scope, parse_message(raw))
+        conv_id = await ingest_message(api_client, store, scope, parsed)
     except Exception as exc:  # noqa: BLE001
         log.warning("write-through ingest of sent message failed: %s", exc)
 
@@ -369,21 +479,65 @@ async def send_message(
             cfg.parent_entity, parent_id, conv_id, ACTION_INCLUDE,
             user.get("userName", ""),
         )
-    return {"gmailMessageId": sent.get("id"), "conversationId": conv_id}
+
+    # Native Email write-back (ET-140..143): parent it to the first recipient
+    # who is a record contact so it shows in that Contact's History panel.
+    # The message is already sent — a failure here is surfaced with a retry
+    # payload (ET-142), never silently swallowed.
+    write_back: dict[str, Any] = {"ok": True, "emailId": ""}
+    if user_client is not None:
+        parent_contact_id = next(
+            (ref.contact_by_address[a] for a in to if a in ref.contact_by_address), None
+        )
+        wb_payload = {
+            "subject": subject or "(no subject)",
+            "bodyHtml": body_html,
+            "to": to,
+            "parentType": "Contact" if parent_contact_id else None,
+            "parentId": parent_contact_id,
+            "messageId": sent_rfc_id,
+        }
+        try:
+            email_id = await write_back_email(
+                user_client,
+                subject=wb_payload["subject"],
+                body_html=body_html,
+                sender=gmail.mailbox,
+                to=to,
+                parent_type=wb_payload["parentType"],
+                parent_id=wb_payload["parentId"],
+                message_id=sent_rfc_id,
+            )
+            write_back = _write_back_result(True, email_id=email_id)
+        except Exception as exc:  # noqa: BLE001 — the message is already out;
+            # nothing here may fail the response (ET-142: surface + retry).
+            log.warning("Email write-back failed: %s", exc)
+            write_back = _write_back_result(
+                False,
+                error="The message WAS sent, but recording it in the CRM failed.",
+                retry_payload=wb_payload,
+            )
+    return {
+        "gmailMessageId": sent.get("id"),
+        "conversationId": conv_id,
+        "writeBack": write_back,
+    }
 
 
 async def send_quick_message(
     *, gmail: GmailClient, to: list[str], subject: str, body_html: str,
     sender_name: str = "",
+    user_client: Optional[Any] = None,
+    attachments: Optional[list[dict[str, Any]]] = None,
 ) -> dict[str, Any]:
     """A record-less "quick email" — behind the email-address links shown in
     the staff tools outside a record context (Client/Mentor Administration).
 
-    Sends as the signed-in user's own mailbox, nothing else: no record link,
-    no unknown-recipient guard (the user clicked a specific address). No CRM
-    write here — the regular sync ingests the sent copy from the mailbox when
-    it matches a record the sender manages, exactly like mail sent from Gmail
-    itself.
+    Sends as the signed-in user's own mailbox: no record link, no
+    unknown-recipient guard (the user clicked a specific address). The regular
+    sync ingests the sent copy when it matches a record the sender manages;
+    with ``user_client`` the send is ALSO written back as a native EspoCRM
+    Email, parented to the recipient's Contact when one matches (ET-140..143).
     """
     to = [a.strip().lower() for a in to if a and a.strip()]
     if not to:
@@ -393,6 +547,8 @@ async def send_quick_message(
 
     if "<" not in body_html:
         body_html = _text_to_html(body_html)
+    mime_attachments = await resolve_attachments(user_client, attachments) \
+        if user_client is not None else []
     mime = build_mime(
         sender=gmail.mailbox,
         sender_name=sender_name,
@@ -400,9 +556,49 @@ async def send_quick_message(
         subject=subject or "(no subject)",
         body_text="",
         body_html=body_html,
+        attachments=mime_attachments,
     )
     sent = await gmail.send(mime)
-    return {"gmailMessageId": sent.get("id")}
+
+    write_back: dict[str, Any] = {"ok": True, "emailId": ""}
+    if user_client is not None:
+        parent_contact_id = None
+        for addr in to:
+            try:
+                hit = await lookup_contact_by_email(user_client, addr)
+            except Exception:  # noqa: BLE001 — parenting is best-effort
+                hit = {"found": False}
+            if hit.get("found") and hit.get("contact"):
+                parent_contact_id = hit["contact"].get("id")
+                break
+        wb_payload = {
+            "subject": subject or "(no subject)",
+            "bodyHtml": body_html,
+            "to": to,
+            "parentType": "Contact" if parent_contact_id else None,
+            "parentId": parent_contact_id,
+            "messageId": "",
+        }
+        try:
+            email_id = await write_back_email(
+                user_client,
+                subject=wb_payload["subject"],
+                body_html=body_html,
+                sender=gmail.mailbox,
+                to=to,
+                parent_type=wb_payload["parentType"],
+                parent_id=wb_payload["parentId"],
+            )
+            write_back = _write_back_result(True, email_id=email_id)
+        except Exception as exc:  # noqa: BLE001 — the message is already out;
+            # nothing here may fail the response (ET-142: surface + retry).
+            log.warning("quick-send Email write-back failed: %s", exc)
+            write_back = _write_back_result(
+                False,
+                error="The message WAS sent, but recording it in the CRM failed.",
+                retry_payload=wb_payload,
+            )
+    return {"gmailMessageId": sent.get("id"), "writeBack": write_back}
 
 
 # --- compose-dialog lookups -----------------------------------------------------

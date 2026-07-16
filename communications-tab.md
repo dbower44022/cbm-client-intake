@@ -122,6 +122,45 @@ with an **"Add to this record" checkbox** (checked by default):
 One **Send** click does it all: checked rows are linked/created first, then
 the email goes out.
 
+## Email templates
+
+The compose window has a **Template** picker listing the email templates CBM
+administrators maintain **in EspoCRM** (that's also where templates are
+created and edited — not in this app). You only see the templates your CRM
+role allows; type in the filter box to narrow the list.
+
+Selecting a template loads a **fully personalized draft**: EspoCRM itself
+fills in every placeholder (the client's name, your name, the record's
+details) before the text reaches your screen. What you get is a plain
+editable draft — rewrite anything, change the subject, delete paragraphs.
+If you already had text in the window, the app asks **"Replace current
+content?"** first, and choosing a template never silently destroys a draft.
+
+If a placeholder can't be filled (say the template mentions a field this
+record doesn't have), the draft keeps the literal `{Something.field}` token
+and the window shows a **review-before-send notice** listing them — read the
+draft over and fix or remove them before sending.
+
+**Attachments:** a template's standing attachments appear as **chips** under
+the message — click ✕ to drop any of them. You can also **attach your own
+files** with the "Attach files…" button (up to 20 MB per message). Template
+attachments aren't downloaded until you actually hit Send; if one can't be
+fetched at that moment, **the message is not sent** (you'll never send an
+email that silently lost its attachment).
+
+**Where the sent message is recorded:** every send from the app is stored
+twice — as a message in the record's conversation here in the tab, **and**
+as a native EspoCRM Email record (visible in the contact's History panel in
+the CRM, attributed to you). If that CRM record can't be written after the
+message already went out, the window tells you and offers a **Retry** —
+it's never silently skipped.
+
+The same template picker and attachments are in the **quick-compose**
+dialog that opens when you click an email address in the staff grids
+(Client/Mentor Administration and the session-tool grid pages). There the
+personalization comes from the recipient's address — if it matches a CRM
+contact, person placeholders fill in with their details.
+
 ## Fixing the list
 
 - **A conversation doesn't belong here:** open it → **"Not related —

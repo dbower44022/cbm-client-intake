@@ -326,13 +326,17 @@ def build_mime(
     in_reply_to: str = "",
     references: str = "",
     sender_name: str = "",
+    attachments: Optional[list[tuple[str, str, bytes]]] = None,
 ) -> EmailMessage:
     """A sendable MIME message. Reply threading = In-Reply-To + References.
 
     ``sender_name`` puts a display name on the From header ("Doug Bower
     <doug.bower@…>") — without it the write-through ingest of a tab-sent
     message stores a bare address as the sender, and the conversation view
-    can't say WHO on the mentor team wrote it."""
+    can't say WHO on the mentor team wrote it.
+
+    ``attachments`` = ``(filename, content_type, data)`` triples; adding any
+    turns the message multipart/mixed around the text/html alternative."""
     msg = EmailMessage()
     msg["From"] = formataddr((sender_name, sender)) if sender_name else sender
     msg["To"] = ", ".join(to)
@@ -347,6 +351,14 @@ def build_mime(
     msg.set_content(body_text or _html_to_text(body_html or ""))
     if body_html:
         msg.add_alternative(body_html, subtype="html")
+    for filename, content_type, data in attachments or []:
+        maintype, _, subtype = (content_type or "application/octet-stream").partition("/")
+        msg.add_attachment(
+            data,
+            maintype=maintype or "application",
+            subtype=subtype or "octet-stream",
+            filename=filename or "attachment",
+        )
     return msg
 
 

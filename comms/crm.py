@@ -51,6 +51,9 @@ class RecordRef:
     name: str
     contact_ids: set[str] = field(default_factory=set)
     addresses: set[str] = field(default_factory=set)  # lowercased contact emails
+    # address -> Contact id, for parenting the Email write-back to a recipient
+    # (only populated by the targeted single-record build, not the sync sweep).
+    contact_by_address: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass

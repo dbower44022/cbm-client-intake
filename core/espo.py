@@ -390,6 +390,44 @@ class EspoClient:
         content_type = resp.headers.get("content-type", "application/octet-stream")
         return resp.content, content_type
 
+    async def email_template_prepare(
+        self,
+        template_id: str,
+        *,
+        parent_type: Optional[str] = None,
+        parent_id: Optional[str] = None,
+        email_address: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """EspoCRM's server-side template render (``POST EmailTemplate/{id}/prepare``).
+
+        The CRM resolves every placeholder itself — this app never substitutes
+        (Decision ET-D1). ``parent_type``/``parent_id`` feed ``{Parent.*}``;
+        ``email_address`` independently resolves ``{Person.*}`` from a
+        Contact/Lead/Account/User carrying that address. ACL is enforced
+        server-side against this client's user (403 = no template read access).
+        Returns ``{subject, body, isHtml, attachmentsIds, attachmentsNames}``;
+        the attachment ids are fresh CLONES owned by the acting user.
+        (Signature verified against crm-test EspoCRM 9.3.6, 2026-07-16.)
+        """
+        payload: dict[str, Any] = {}
+        if parent_type and parent_id:
+            payload["parentType"] = parent_type
+            payload["parentId"] = parent_id
+        if email_address:
+            payload["emailAddress"] = email_address
+        async with httpx.AsyncClient(timeout=self._timeout) as client:
+            resp = await client.post(
+                f"{self._base}/EmailTemplate/{template_id}/prepare",
+                json=payload,
+                headers=self._headers,
+            )
+        if resp.status_code >= 400:
+            raise EspoError(
+                f"prepare EmailTemplate/{template_id} failed: "
+                f"HTTP {resp.status_code} {resp.text[:300]}"
+            )
+        return resp.json()
+
 
 class DryRunEspoClient:
     """No-op client for local development; never contacts EspoCRM."""
@@ -450,3 +488,23 @@ class DryRunEspoClient:
         # No live CRM to validate against; None => callers skip enum sanitization.
         log.info("DRY_RUN metadata_enum_options %s.%s -> None", entity, field)
         return None
+
+    async def email_template_prepare(
+        self,
+        template_id: str,
+        *,
+        parent_type: Optional[str] = None,
+        parent_id: Optional[str] = None,
+        email_address: Optional[str] = None,
+    ) -> dict[str, Any]:
+        log.info(
+            "DRY_RUN email_template_prepare %s parent=%s/%s email=%s",
+            template_id, parent_type, parent_id, email_address,
+        )
+        return {
+            "subject": "Dry-run template subject",
+            "body": "<p>Dry-run rendered template body.</p>",
+            "isHtml": True,
+            "attachmentsIds": [],
+            "attachmentsNames": {},
+        }

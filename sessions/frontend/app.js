@@ -1393,8 +1393,170 @@
       return out;
     }
 
+    // --- Email template picker (ET). EspoCRM renders the template server-side
+    // (placeholders resolved against this record + the first recipient); the
+    // result loads here as a plain editable draft. Selecting over a non-empty
+    // draft asks before replacing (ET-113); a parse failure leaves the draft
+    // untouched (ET-114).
+    var templateAttachments = [];   // {id, name} chips from the selected template
+    var localAttachments = [];      // {filename, contentType, dataBase64, size} uploads
+    var tplAll = [], tplConfirmEl = null;
+    var tplWrap = document.createElement("div"); tplWrap.className = "sx__msg-field";
+    tplWrap.hidden = true;
+    var tplLab = document.createElement("span"); tplLab.className = "sx__msg-label"; tplLab.textContent = "Template";
+    var tplLine = document.createElement("div"); tplLine.className = "sx__opt-line";
+    var tplSel = document.createElement("select"); tplSel.className = "sx__msg-input";
+    var tplFilter = document.createElement("input"); tplFilter.type = "text";
+    tplFilter.className = "sx__msg-input"; tplFilter.placeholder = "Type to filter templates…";
+    tplLine.appendChild(tplSel); tplLine.appendChild(tplFilter);
+    var tplNotice = document.createElement("p"); tplNotice.className = "sx__notice"; tplNotice.hidden = true;
+    tplWrap.appendChild(tplLab); tplWrap.appendChild(tplLine); tplWrap.appendChild(tplNotice);
+    body.appendChild(tplWrap);
+    function renderTplOptions(filter) {
+      tplSel.innerHTML = "";
+      tplSel.appendChild(new Option("No template", ""));
+      tplAll.forEach(function (t) {
+        if (filter && String(t.name || "").toLowerCase().indexOf(filter.toLowerCase()) === -1) return;
+        tplSel.appendChild(new Option(t.name, t.id));
+      });
+    }
+    if (commsOn()) {
+      api("/emailtemplates").then(function (r) {
+        tplAll = (r && r.templates) || [];
+        if (tplAll.length) { renderTplOptions(""); tplWrap.hidden = false; }
+      }).catch(function () { /* no picker — compose works without it */ });
+    }
+    tplFilter.addEventListener("input", function () { renderTplOptions(this.value); });
+    function draftHasContent() {
+      var stripped = String(commBodyValue() || "").replace(/<[^>]*>/g, "").trim();
+      return !!($("commSubject").value.trim() || stripped);
+    }
+    function setCommBody(html) {
+      var el = $("commBody");
+      if (!el) return;
+      if (el._cbmRichText) el._cbmRichText.setValue(html);
+      else el.value = html.replace(/<br\s*\/?>/gi, "\n").replace(/<\/p\s*>/gi, "\n\n").replace(/<[^>]+>/g, "");
+    }
+    tplSel.addEventListener("change", function () {
+      var id = tplSel.value;
+      if (tplConfirmEl) { tplConfirmEl.remove(); tplConfirmEl = null; }
+      if (!id) return;
+      if (!draftHasContent()) { applyTemplate(id); return; }
+      // ET-113/ET-B1: never silently overwrite an edited draft.
+      tplConfirmEl = document.createElement("div"); tplConfirmEl.className = "sx__notice";
+      tplConfirmEl.appendChild(document.createTextNode("Replace current content? "));
+      var yes = document.createElement("button"); yes.type = "button";
+      yes.className = "cbm-button"; yes.textContent = "Replace";
+      var no = document.createElement("button"); no.type = "button";
+      no.className = "cbm-button cbm-button--secondary"; no.textContent = "Keep my draft";
+      yes.addEventListener("click", function () {
+        tplConfirmEl.remove(); tplConfirmEl = null; applyTemplate(id);
+      });
+      no.addEventListener("click", function () {
+        tplConfirmEl.remove(); tplConfirmEl = null; tplSel.value = "";
+      });
+      tplConfirmEl.appendChild(yes); tplConfirmEl.appendChild(document.createTextNode(" "));
+      tplConfirmEl.appendChild(no);
+      tplWrap.appendChild(tplConfirmEl);
+    });
+    async function applyTemplate(id) {
+      tplNotice.hidden = true; tplSel.disabled = true;
+      try {
+        var r = await api("/records/" + encodeURIComponent(currentDetail.id) +
+          "/emailtemplates/" + encodeURIComponent(id) + "/parse", {
+          method: "POST",
+          body: JSON.stringify({ emailAddress: recipientList()[0] || "" }),
+        });
+        $("commSubject").value = r.subject || "";
+        setCommBody(r.bodyHtml || "");
+        templateAttachments = (r.attachments || []).slice();
+        renderAttachChips();
+        if ((r.leftoverTokens || []).length) {
+          tplNotice.textContent = "Some placeholders couldn't be filled: " +
+            r.leftoverTokens.join(", ") + " — review the draft before sending.";
+          tplNotice.className = "sx__notice"; tplNotice.hidden = false;
+        }
+      } catch (e) {
+        if (e.status === 401) { closeComm(); showLogin(); return; }
+        // ET-114: non-destructive — the existing draft stays untouched.
+        tplNotice.textContent = e.message || "Couldn't apply the template.";
+        tplNotice.className = "sx__notice is-error"; tplNotice.hidden = false;
+        tplSel.value = "";
+      } finally { tplSel.disabled = false; }
+    }
+
     body.appendChild(commField("Subject", "commSubject", pre.subject, false));
     body.appendChild(commField("Message", "commBody", "", true));
+
+    // --- Attachments: template chips (bytes stay in the CRM until send) plus
+    // the user's own files. Removing a chip = it just isn't sent.
+    var attachWrap = document.createElement("div"); attachWrap.className = "sx__msg-field";
+    var attachLab = document.createElement("span"); attachLab.className = "sx__msg-label"; attachLab.textContent = "Attachments";
+    var chipsEl = document.createElement("div"); chipsEl.className = "sx__attach-chips";
+    var attachLine = document.createElement("div"); attachLine.className = "sx__opt-line";
+    var fileBtn = document.createElement("button"); fileBtn.type = "button";
+    fileBtn.className = "cbm-button cbm-button--secondary"; fileBtn.textContent = "Attach files…";
+    var fileInput = document.createElement("input"); fileInput.type = "file";
+    fileInput.multiple = true; fileInput.hidden = true;
+    fileBtn.addEventListener("click", function () { fileInput.click(); });
+    attachLine.appendChild(fileBtn); attachLine.appendChild(fileInput);
+    attachWrap.appendChild(attachLab); attachWrap.appendChild(chipsEl); attachWrap.appendChild(attachLine);
+    body.appendChild(attachWrap);
+    var MAX_ATTACH_TOTAL = 20 * 1024 * 1024;  // matches the server cap
+    function attachTotal() {
+      return localAttachments.reduce(function (n, f) { return n + (f.size || 0); }, 0);
+    }
+    function renderAttachChips() {
+      chipsEl.innerHTML = "";
+      function chip(name, onRemove) {
+        var c = document.createElement("span"); c.className = "sx__attach-chip";
+        c.appendChild(document.createTextNode(name + " "));
+        var x = document.createElement("button"); x.type = "button";
+        x.className = "sx__chip-x"; x.textContent = "✕"; x.title = "Remove attachment";
+        x.addEventListener("click", onRemove);
+        c.appendChild(x); chipsEl.appendChild(c);
+      }
+      templateAttachments.forEach(function (a, i) {
+        chip(a.name || "attachment", function () {
+          templateAttachments.splice(i, 1); renderAttachChips();
+        });
+      });
+      localAttachments.forEach(function (f, i) {
+        chip(f.filename, function () {
+          localAttachments.splice(i, 1); renderAttachChips();
+        });
+      });
+    }
+    fileInput.addEventListener("change", function () {
+      Array.prototype.forEach.call(fileInput.files || [], function (file) {
+        if (attachTotal() + file.size > MAX_ATTACH_TOTAL) {
+          err.textContent = "Attachments are too large — keep the total under 20 MB per message.";
+          err.hidden = false;
+          return;
+        }
+        var reader = new FileReader();
+        reader.onload = function () {
+          var b64 = String(reader.result || "").split(",")[1] || "";
+          localAttachments.push({
+            filename: file.name,
+            contentType: file.type || "application/octet-stream",
+            dataBase64: b64,
+            size: file.size,
+          });
+          renderAttachChips();
+        };
+        reader.readAsDataURL(file);
+      });
+      fileInput.value = "";
+    });
+    function attachmentPayload() {
+      return templateAttachments.map(function (a) {
+        return { espoId: a.id, filename: a.name };
+      }).concat(localAttachments.map(function (f) {
+        return { filename: f.filename, contentType: f.contentType, dataBase64: f.dataBase64 };
+      }));
+    }
+
     var err = document.createElement("p"); err.className = "form-error"; err.hidden = true;
     body.appendChild(err);
 
@@ -1581,7 +1743,7 @@
       }
       err.hidden = true; send.disabled = true; send.textContent = "Sending…";
       try {
-        await api("/records/" + encodeURIComponent(currentDetail.id) + "/messages", {
+        var sendResult = await api("/records/" + encodeURIComponent(currentDetail.id) + "/messages", {
           method: "POST",
           body: JSON.stringify({
             to: recipients,
@@ -1589,8 +1751,16 @@
             body: commBodyValue(),
             replyToCommunicationId: pre.replyToId || null,
             allowUnknownRecipients: allowUnknown,
+            attachments: attachmentPayload(),
           }),
         });
+        // The message went out. If recording it in the CRM failed, say so and
+        // offer a retry — a silent gap in CRM history is not acceptable (ET-142).
+        if (sendResult && sendResult.writeBack && sendResult.writeBack.ok === false) {
+          showWriteBackRetry(sendResult.writeBack);
+          loadConversations();
+          return;
+        }
         closeComm();
         notice("detailNotice", "Email sent.", "success");
         loadConversations();
@@ -1608,6 +1778,35 @@
       }
     }
     send.addEventListener("click", doSend);
+    // Sent-but-not-recorded: swap the dialog to a retry screen (ET-142).
+    function showWriteBackRetry(writeBack) {
+      $("commModalBody").innerHTML = "";
+      var note = document.createElement("p"); note.className = "sx__notice is-error";
+      note.textContent = writeBack.error ||
+        "The message WAS sent, but recording it in the CRM failed.";
+      $("commModalBody").appendChild(note);
+      $("commModalFoot").innerHTML = "";
+      var retry = document.createElement("button"); retry.type = "button";
+      retry.className = "cbm-button"; retry.textContent = "Retry recording";
+      var close = document.createElement("button"); close.type = "button";
+      close.className = "cbm-button cbm-button--secondary"; close.textContent = "Close";
+      retry.addEventListener("click", async function () {
+        retry.disabled = true; retry.textContent = "Recording…";
+        try {
+          await api("/emailwriteback", {
+            method: "POST", body: JSON.stringify(writeBack.retryPayload || {}),
+          });
+          closeComm();
+          notice("detailNotice", "Email sent and recorded in the CRM.", "success");
+        } catch (e) {
+          if (e.status === 401) { closeComm(); showLogin(); return; }
+          note.textContent = (e.message || "Still couldn't record it.") + " Try again?";
+          retry.disabled = false; retry.textContent = "Retry recording";
+        }
+      });
+      close.addEventListener("click", closeComm);
+      $("commModalFoot").appendChild(retry); $("commModalFoot").appendChild(close);
+    }
     var cancel = document.createElement("button"); cancel.type = "button";
     cancel.className = "cbm-button cbm-button--secondary"; cancel.textContent = "Cancel";
     cancel.addEventListener("click", closeComm);
