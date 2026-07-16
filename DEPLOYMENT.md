@@ -201,9 +201,10 @@ upload files to the **"CBM Documents" shared drive** (folder scheme
 record's documents are listed from the `app_document` Postgres table. Drive
 access impersonates the signed-in manager's own `cbmEmail` — reuses
 `GOOGLE_SERVICE_ACCOUNT_JSON` (or the Email-Setup config), no new secret.
-Activation order: create the shared drive + grant memberships (staff need
-Content Manager); add `https://www.googleapis.com/auth/drive` to the service
-account's domain-wide-delegation row (`GMAIL-INTEGRATION-GUIDE.md` pattern);
+Activation order (full step-by-step: **`GDRIVE-DOCS-SETUP.md`**): enable the
+Drive API on the GCP project; create the shared drive + grant memberships
+(staff need Content Manager); add `https://www.googleapis.com/auth/drive` to
+the service account's domain-wide-delegation row;
 run the pre-deploy migrate (Alembic `0005_app_document`); then set the flags.
 Requires `DATABASE_URL` (the tab 503s without the store). Worker not involved.
 

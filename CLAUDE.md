@@ -888,12 +888,16 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   ("Coming soon")** — Phases 2/3 (viewing/cache/archive/CRM write-back/lazy
   refresh) deliberately NOT built. 40 tests; store verified against a real
   local Postgres (migration + insert/list/unique/folder-cache); full UI loop
-  verified in the stub harness. **Activation prerequisites (NOT done):**
-  (1) Doug creates the "CBM Documents" **shared drive** + memberships
-  (Content Manager for staff); (2) add `https://www.googleapis.com/auth/drive`
-  to the service account's DWD row in Google Admin; (3) set `GDRIVE_DOCS=true`
-  + `GDRIVE_SHARED_DRIVE_ID=<drive id>` on the **web** component (worker not
-  involved) and run the pre-deploy migrate; (4) live smoke test — one upload
+  verified in the stub harness. **Activation prerequisites (NOT done —
+  step-by-step guide: `GDRIVE-DOCS-SETUP.md`):** (1) enable the Drive API on
+  GCP project `espcrm-498315`; (2) Doug creates the "CBM Documents" **shared
+  drive** + memberships (Content Manager for every manager — uploads act AS
+  the manager, so it's THEIR access, the SA needs no membership); (3) add
+  `https://www.googleapis.com/auth/drive` to the SA's DWD row (edit the
+  existing four-scope line — the field REPLACES, don't drop the Gmail/
+  Calendar scopes); (4) set `GDRIVE_DOCS=true` +
+  `GDRIVE_SHARED_DRIVE_ID=<drive id>` on the **web** component (worker not
+  involved) and run the pre-deploy migrate; (5) live smoke test — one upload
   as a real mentor → folder auto-creation + metadata row + rollback path.
   Runbook block in DEPLOYMENT.md.
 - **Google Calendar events + Meet links (v0.40.0, 2026-07-13 — LIVE on BOTH
