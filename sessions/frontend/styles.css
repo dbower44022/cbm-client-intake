@@ -587,7 +587,7 @@ textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
    a group each layout row is ONE flex line, so fields never orphan onto
    random lines; fields share their row proportionally. */
 .sxf { display: flex; flex-wrap: wrap; gap: 14px 18px; align-items: stretch; padding: 1rem 1.15rem 0.25rem; }
-.sxf__group { background: #fbfcfd; border: 1px solid #e7ebef; border-radius: 6px; padding: 12px 14px 4px; min-width: 0; flex: 2 1 44rem; }
+.sxf__group { background: #f2f5f8; border: 1px solid #dfe3e8; border-radius: 6px; padding: 12px 14px 4px; min-width: 0; flex: 2 1 44rem; }
 .sxf__glabel {
   font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #77828f;
   font-weight: 700; border-bottom: 1px solid #dfe3e8; padding-bottom: 5px; margin-bottom: 12px;

@@ -4,6 +4,14 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.58.1] — 2026-07-16
+
+### Changed
+- **Edit-form group panels darkened** (Doug's follow-up to 0.58.0): panel
+  background `#fbfcfd` → `#f2f5f8` (border `#e7ebef` → `#dfe3e8`) so the
+  groups delineate more clearly against the white card; the approved mockup
+  (`prompts/company-edit-form-mockup-v4.html`) updated to match.
+
 ## [0.58.0] — 2026-07-16
 
 ### Changed
