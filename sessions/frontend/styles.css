@@ -592,7 +592,7 @@ textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
   font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #77828f;
   font-weight: 700; border-bottom: 1px solid #dfe3e8; padding-bottom: 5px; margin-bottom: 12px;
 }
-.sxf__row { display: flex; flex-wrap: wrap; gap: 10px 16px; margin-bottom: 10px; align-items: flex-start; }
+.sxf__row { display: flex; flex-wrap: wrap; gap: 12px 16px; margin-bottom: 12px; align-items: flex-start; }
 .sxf__row > * { min-width: 0; }
 .sxf__row > .sxf__c2 { flex: 1 1 6.5rem; }
 .sxf__row > .sxf__c3 { flex: 2 1 10rem; }
@@ -602,6 +602,17 @@ textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
 /* Long-text cells stay a readable width even when their panel is very wide. */
 .sxf__row > .sxf__c12 { flex: 1 1 100%; max-width: 72rem; }
 .sxf .cbm-field--check { align-self: end; padding-bottom: 0.35rem; }
+/* Uniform control metrics inside the edit panels: every single-line control
+   (text / number / email-tel / date / datetime / select / the time-picker
+   input) is EXACTLY the same height — selects and date inputs otherwise
+   render different intrinsic heights than text inputs. */
+.sxf .cbm-field input[type="text"], .sxf .cbm-field input[type="number"],
+.sxf .cbm-field input[type="email"], .sxf .cbm-field input[type="tel"],
+.sxf .cbm-field input[type="date"], .sxf .cbm-field input[type="datetime-local"],
+.sxf .cbm-field select {
+  box-sizing: border-box; height: 2.4rem; padding-top: 0; padding-bottom: 0; line-height: normal;
+}
+.sxf .cbm-field textarea { box-sizing: border-box; }
 /* Changed-field marker: gold dot on the label while the value differs from
    what was loaded (the sticky bar below counts them). */
 .sxf .cbm-field.sxf__dirty > label::after {
@@ -616,14 +627,15 @@ textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
   backdrop-filter: blur(3px); margin-top: 0.35rem;
 }
 
-/* Checkbox sets flow into as many columns as fit the width. */
-.sxf__checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: 2px 24px; }
+/* Checkbox sets flow into as many columns as fit the width; the row gap
+   matches the field-row rhythm so options never touch. */
+.sxf__checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: 8px 24px; }
 
 /* Reusable address block; the shipping instance dims while "Same as billing".
    Inside the block the POSTAL proportions are fixed (a real 12-col grid), so
    the block reads like an envelope at any width. The "Same as billing"
    checkbox sits inline in the column's sub-header (mockup v3). */
-.sxf__addr { display: grid; grid-template-columns: repeat(12, 1fr); gap: 10px 12px; }
+.sxf__addr { display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px 16px; }
 .sxf__addr > * { min-width: 0; }
 .sxf__addr > .sxf__c2 { grid-column: span 2; } .sxf__addr > .sxf__c3 { grid-column: span 3; }
 .sxf__addr > .sxf__c4 { grid-column: span 4; } .sxf__addr > .sxf__c6 { grid-column: span 6; }

@@ -4,6 +4,21 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.59.2] — 2026-07-16
+
+### Fixed
+- **Uniform control heights + spacing in the Details edit panels** (Doug's
+  report: dropdowns rendered a different height than adjacent date/text
+  inputs, and some controls touched). Every single-line control (text /
+  number / email / tel / date / datetime / select, incl. the time-picker
+  input) inside `.sxf` is now pinned to exactly 2.4rem with border-box
+  sizing; row/address/checkbox gaps unified to one rhythm (12px vertical ×
+  16px horizontal; checkbox grids 8px) so no two controls touch. Applies to
+  the Engagement, Company, and Client Business Profile forms alike (shared
+  CSS). Verified in the stubbed-browser harness: all 45 single-line
+  controls across the three open forms measure 38.4px, minimum gap between
+  adjacent controls ≈16px.
+
 ## [0.59.1] — 2026-07-16
 
 ### Changed
