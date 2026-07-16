@@ -4,6 +4,29 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.59.0] — 2026-07-16
+
+### Changed
+- **Client Business Profile edit form gets the mockup-v4 treatment** (same
+  process as the Company form): full schema triage against live CRM metadata
+  — every field explicitly placed or excluded, `noExtras` (no more
+  "Additional details" dump) — with the groups as packable panels
+  (Business structure | Financials, Sales & market | Certifications &
+  demographics, Goals; bands always fill the window). Six previously
+  dumped fields got homes: State of Formation + Industry Sector + Number of
+  Employees + Fiscal Year End Month → Business structure, Social Media
+  Presence → Sales & market, Local Licenses and Permits → Business
+  structure. The read-only Most Recent Full Year Revenue figure shows
+  inside Financials. Excluded from the form (CRM untouched): the record
+  `name` (intake-derived; the card title identifies the record) and the
+  revenue Currency/Converted companions. `DETAILS_REMOVED_FIELDS` is now a
+  per-entity map, and the profile VIEW card consumes the exclude list like
+  the Company card does. Verified in the stubbed-browser harness (panels
+  band + fill width, excluded fields absent even with values, all six new
+  placements render, dirty dots + sticky bar narrate, save PUT carries
+  exactly the edited fields incl. int + multiEnum chips; no console
+  errors). NOT yet eyeballed against the live CRM.
+
 ## [0.58.1] — 2026-07-16
 
 ### Changed

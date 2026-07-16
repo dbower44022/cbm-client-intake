@@ -1613,29 +1613,40 @@
         [{ name: "cClientNotes", span: 12, label: "Client notes" }],
       ] },
     ] },
-    CClientProfile: { groups: [
-      { label: "Business structure", rows: [
-        [{ name: "legalEntityType", span: 4 }, { name: "formationDate", span: 4 }],
+    // Client Business Profile per the mockup-v4 process (2026-07-16): every
+    // schema field explicitly placed or excluded (`noExtras`), groups sized
+    // as packable panels. The previously-unplaced fields (state of formation,
+    // industry sector, employees, fiscal year end, social media, local
+    // licenses) now have homes; the read-only revenue figure shows inside
+    // Financials; the record name + revenue Currency/Converted companions
+    // are excluded (DETAILS_REMOVED_FIELDS).
+    CClientProfile: { noExtras: true, groups: [
+      { label: "Business structure", grow: 2, basis: 46, rows: [
+        [{ name: "legalEntityType", span: 4 }, { name: "stateOfFormation", span: 4 }, { name: "formationDate", span: 4 }],
+        [{ name: "industrySector", span: 6 }, { name: "numberOfEmployees", span: 3 }, { name: "fiscalYearEndMonth", span: 3 }],
         [{ checks: [{ name: "isHomeBased", label: "Home based" },
                     { name: "federalEinOnFile", label: "Federal EIN on file" },
                     { name: "ohioVendorsLicenseOnFile", label: "Ohio vendors license on file" },
                     { name: "registeredOnSamGov", label: "Registered on SAM.gov" }] }],
+        [{ name: "localLicensesAndPermits", span: 12 }],
       ] },
-      { label: "Financials", rows: [
+      { label: "Financials", grow: 2, basis: 40, rows: [
         [{ name: "annualRevenueRange", span: 4 }, { name: "revenueTrend", span: 4 }, { name: "profitabilityStatus", span: 4 }],
+        [{ name: "mostRecentFullYearRevenue", span: 6, label: "Most recent full-year revenue" }],
         [{ name: "fundingSourcesUsedToDate", span: 12 }],
       ] },
-      { label: "Sales & market", rows: [
-        [{ name: "primaryCustomerType", span: 4 }, { name: "geographicMarketReach", span: 4 }, { name: "salesChannels", span: 4 }],
+      { label: "Sales & market", grow: 2, basis: 44, rows: [
+        [{ name: "primaryCustomerType", span: 8 }, { name: "geographicMarketReach", span: 4 }],
+        [{ name: "salesChannels", span: 6 }, { name: "socialMediaPresence", span: 6 }],
         [{ checks: [{ name: "conductsBusinessOnline", label: "Conducts business online" },
                     { name: "hasGoogleBusinessProfile", label: "Has Google Business Profile" },
                     { name: "usesEmailMarketing", label: "Uses email marketing" }] }],
       ] },
-      { label: "Certifications & owner demographics", rows: [
+      { label: "Certifications & owner demographics", grow: 2, basis: 40, rows: [
         [{ name: "certificationsHeld", span: 12 }],
         [{ name: "clientEthnicity", span: 4 }, { name: "clientRace", span: 4 }, { name: "clientVeteranStatus", span: 4 }],
       ] },
-      { label: "Goals", rows: [[{ name: "description", span: 12, label: "What does the client want help with?" }]] },
+      { label: "Goals", grow: 2, basis: 44, rows: [[{ name: "description", span: 12, label: "What does the client want help with?" }]] },
     ] },
     Contact: { groups: [
       { label: "Name", rows: [
@@ -1661,12 +1672,19 @@
   // additionally excludes the OTHER domains' relationship fields (mentor-domain
   // accounts are client accounts — Doug's 2026-07-13 scoping ruling).
   var ACCOUNT_SYSTEM_FIELDS = ["cAccountType", "cClientStatus", "cCompanyType", "type"];
-  // Removed from this app's Company form entirely (prompt v0.2 field triage —
-  // the CRM fields stay untouched for other workflows): the sponsor pledge
-  // currency + partner-org target population (per the v0.1 decision), the
-  // system-managed applicant timestamp, and the contact-level role attribute.
-  var ACCOUNT_REMOVED_FIELDS = ["cAnnualPledgeAmountCurrency", "cTargetPopulation",
-    "cApplicantSinceTimestamp", "contactRole"];
+  // Removed from this app's forms entirely (mockup-v4 field triage — the CRM
+  // fields stay untouched for other workflows). Account (prompt v0.2): the
+  // sponsor pledge currency + partner-org target population, the system-
+  // managed applicant timestamp, and the contact-level role attribute.
+  // CClientProfile: the record name (intake-derived; the card title already
+  // identifies the record) and the revenue Currency/Converted companions of
+  // the read-only revenue figure.
+  var DETAILS_REMOVED_FIELDS = {
+    Account: ["cAnnualPledgeAmountCurrency", "cTargetPopulation",
+      "cApplicantSinceTimestamp", "contactRole"],
+    CClientProfile: ["name", "mostRecentFullYearRevenueCurrency",
+      "mostRecentFullYearRevenueConverted"],
+  };
   var ACCOUNT_PARTNER_FIELDS = ["cPartnerStatus", "cPartnerOrganizationType", "cPartnerContactCadence",
     "cPartnerType", "cPartnershipStartDate", "cPartnershipAgreementDate", "cPartnerNotes"];
   var ACCOUNT_SPONSOR_FIELDS = ["cSponsorshipLevel", "cSponsorshipStartDate", "cSponsorshipRenewalDate", "cSponsorNotes"];
@@ -1690,8 +1708,9 @@
   // fields the edit form doesn't manage).
   function detailsExcludes(entity) {
     var ex = {};
+    (DETAILS_REMOVED_FIELDS[entity] || []).forEach(function (n) { ex[n] = 1; });
     if (entity !== "Account") return ex;
-    ACCOUNT_SYSTEM_FIELDS.concat(ACCOUNT_REMOVED_FIELDS).forEach(function (n) { ex[n] = 1; });
+    ACCOUNT_SYSTEM_FIELDS.forEach(function (n) { ex[n] = 1; });
     if (SLUG === "mentorsessions") {
       ACCOUNT_PARTNER_FIELDS.concat(ACCOUNT_SPONSOR_FIELDS).forEach(function (n) { ex[n] = 1; });
       ex.cPublicAnnouncementAllowed = 1;
@@ -2266,6 +2285,8 @@
      "federalEinOnFile", "hasGoogleBusinessProfile", "ohioVendorsLicenseOnFile", "registeredOnSamGov",
      "certificationsHeld", "fundingSourcesUsedToDate", "description",
     ].forEach(function (n) { used[n] = 1; });
+    // The view must not display fields the edit form doesn't manage.
+    Object.keys(detailsExcludes(sec.entity)).forEach(function (n) { used[n] = 1; });
     var left = [], right = [];
     var ent = [];
     if (dvs(sec, "legalEntityType")) ent.push(bold(dvs(sec, "legalEntityType")));
