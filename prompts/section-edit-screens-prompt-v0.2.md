@@ -2,10 +2,10 @@
 
 | Revision Control | |
 |---|---|
-| Version | 0.2 |
-| Last Updated | 07-16-26 00:57 |
+| Version | 0.3 |
+| Last Updated | 07-16-26 |
 | Author | Doug Bower (via Claude) |
-| Status | Approved (Company form mockup v3) |
+| Status | Approved (Company form mockup v3; rule 1 amended) |
 
 **Change Log**
 
@@ -13,6 +13,7 @@
 |---|---|---|
 | 0.1 | 07-14-26 00:48 | Initial draft from edit screens mockup v2 |
 | 0.2 | 07-16-26 00:57 | Remediation of delivered Company form: width constraint, Country in address block, schema field triage, form design rules added |
+| 0.3 | 07-16-26 | Rule 1 REVERSED per Doug: no width cap — edit forms are full-width with content-sized packed fields; mockup spans are relative widths, not a fixed grid |
 
 ---
 
@@ -26,7 +27,7 @@ The delivered Company edit form rendered every Account-entity field at full page
 
 ### Standing form design rules (apply to ALL edit forms, now and future)
 
-1. **Width constraint.** Edit forms render in a container with `max-width: 960px`, centered. Never full-bleed. Field column widths are meaningful only inside a constrained container.
+1. **No width cap** *(v0.3 — reverses the v0.2 960px rule, per Doug 07-16-26: "the app is supposed to utilize as much of the screen as possible"; CBM users are on 4K monitors)*. Edit forms are full-width like every other screen. Density comes from CONTENT-SIZED fields that PACK (flex wrap — each width class is a sensible width for its data; a row holds as many fields as fit), never from proportional 12-column spans stretched across the viewport. The mockups' span numbers indicate relative field widths and grouping, not a fixed grid.
 2. **Schema fields are candidates, not requirements.** When the entity schema exposes fields not present in the approved mockup, do NOT add them to the form. List them in your report as "unplaced schema fields" and stop for a placement/exclusion decision. Every field on a form must be either assigned to a mockup group or explicitly excluded in the spec.
 3. **No system-managed fields on forms.** Timestamps, computed fields, and workflow metadata (e.g., Applicant Since Timestamp) are never hand-editable.
 4. **Time fields use the half-hour picker standard** (prompt v0.1). Never a raw time/minute input.
@@ -71,8 +72,8 @@ If the schema contains additional Account fields beyond everything named above, 
 
 ### Acceptance criteria
 
-1. Company edit form renders at max-width 960px, centered, with the four groups in mockup order.
-2. No row contains more than four input fields; widths match the mockup spans.
+1. Company edit form renders full-width with the four groups in mockup order; fields are content-sized and pack (v0.3 — the 960px criterion is reversed).
+2. Field widths are sensible for their content (per the shared width classes); no field balloons across the viewport.
 3. Country appears inside both billing and shipping address blocks; nothing address-related renders outside the blocks.
 4. "Same as billing" disables and dims the shipping fields.
 5. None of the four excluded fields appear anywhere on the form.

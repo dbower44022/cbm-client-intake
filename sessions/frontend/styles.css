@@ -578,27 +578,27 @@ textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
 .sx__attwrap { overflow-x: auto; }
 
 /* === Section edit screens (prompt v0.2 / Company mockup v3) =============== */
-/* Grouped forms; small uppercase group headings over hairline rules. EDIT
-   FORMS are constrained to a centered 960px container (prompt v0.2 standing
-   rule 1 — never full-bleed; field column widths only mean something inside a
-   constrained container) with a true 12-column grid whose spans match the
-   mockups; max ~4 inputs per row. (Doug's 2026-07-14 no-page-width-cap ruling
-   still governs PAGES and grids — this cap is specifically for edit forms.) */
-.sxf { box-sizing: border-box; max-width: 960px; margin: 0 auto; padding: 1rem 1.15rem 0; }
+/* Grouped forms; small uppercase group headings over hairline rules. Fields
+   are CONTENT-SIZED and PACK (flex wrap): each sxf__cN class is a sensible
+   width for that field's data, and a row holds as many fields as the screen
+   fits — high data density on wide/4K monitors (no page/form width cap,
+   Doug's standing ruling, re-confirmed 2026-07-16 over prompt v0.2's 960px
+   rule), graceful wrap on laptops. The mockups' 12-col spans map to the
+   width classes, not to a proportional grid. */
+.sxf { padding: 1rem 1.15rem 0; }
 .sxf__group { margin-bottom: 0.9rem; }
 .sxf__glabel {
   font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #77828f;
   font-weight: 700; border-bottom: 1px solid #dfe3e8; padding-bottom: 5px; margin-bottom: 12px;
 }
-.sxf__grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 10px 16px; align-items: start; }
-.sxf__grid > * { grid-column: span 12; min-width: 0; }
-.sxf__grid > .sxf__c2 { grid-column: span 2; }
-.sxf__grid > .sxf__c3 { grid-column: span 3; }
-.sxf__grid > .sxf__c4 { grid-column: span 4; }
-.sxf__grid > .sxf__c6 { grid-column: span 6; }
-.sxf__grid > .sxf__c8 { grid-column: span 8; }
-.sxf__grid > .sxf__c12 { grid-column: span 12; }
-@media (max-width: 720px) { .sxf__grid > * { grid-column: span 12; } }
+.sxf__grid { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: flex-start; }
+.sxf__grid > * { flex: 1 1 100%; min-width: 0; }
+.sxf__grid > .sxf__c2 { flex: 1 1 8rem; max-width: 13rem; }
+.sxf__grid > .sxf__c3 { flex: 1 1 13rem; max-width: 21rem; }
+.sxf__grid > .sxf__c4 { flex: 1 1 17rem; max-width: 27rem; }
+.sxf__grid > .sxf__c6 { flex: 1 1 26rem; max-width: 44rem; }
+.sxf__grid > .sxf__c8 { flex: 2 1 30rem; max-width: 52rem; }
+.sxf__grid > .sxf__c12 { flex: 1 1 100%; max-width: none; }
 .sxf .cbm-field--check { align-self: end; padding-bottom: 0.35rem; }
 
 /* Checkbox sets flow into as many columns as fit the width. */

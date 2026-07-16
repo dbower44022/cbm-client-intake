@@ -4,6 +4,19 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.57.1] — 2026-07-16
+
+### Fixed
+- **Edit-form width cap removed** (Doug's ruling on seeing 0.57.0: "the app
+  is supposed to utilize as much of the screen as possible" — the 960px
+  constraint came from prompt v0.2's standing rule 1, now reversed in the
+  prompt doc's v0.3 revision). `.sxf` is full-width again with the v0.41.2
+  content-sized PACKING field widths (flex wrap; a row holds as many fields
+  as the screen fits). Everything else from 0.57.0 stands: the four Company
+  groups in mockup order, the field triage/exclusions, Country inside both
+  address blocks, the inline "Same as billing" checkbox, and `noExtras`
+  (no "Additional details" dump). Verified in the stubbed-browser harness.
+
 ## [0.57.0] — 2026-07-15
 
 ### Changed
