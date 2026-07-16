@@ -1186,17 +1186,22 @@ def test_create_session_endpoint(monkeypatch):
     _as(monkeypatch, _USER)
 
     async def fake_create(cfg, client, parent_id, changes, attendees,
-                          owner_user_id=None, settings=None):
+                          owner_user_id=None, settings=None, skip_calendar=False):
         return {"id": "s1", "parent": parent_id, "attendees": attendees,
-                "owner": owner_user_id, **changes}
+                "owner": owner_user_id, "skipCal": skip_calendar, **changes}
 
     monkeypatch.setattr("sessions.service.create_session", fake_create)
     with TestClient(_app(monkeypatch)) as c:
         r = c.post("/sponsorsessions/api/records/SP1/sessions",
                    json={"changes": {"name": "Visit"}, "attendees": ["c1"]})
+        r2 = c.post("/sponsorsessions/api/records/SP1/sessions",
+                    json={"changes": {"name": "Visit"}, "skipCalendar": True})
     assert r.status_code == 200
     body = r.json()
     assert body["parent"] == "SP1" and body["attendees"] == ["c1"] and body["name"] == "Visit"
+    assert body["skipCal"] is False  # default: the calendar hook runs as usual
+    # skipCalendar=true (user declined the invite prompt) reaches the service
+    assert r2.json()["skipCal"] is True
 
 
 def test_contact_search_and_add_endpoints(monkeypatch):

@@ -124,6 +124,20 @@ async def test_create_flag_off_is_inert(monkeypatch):
     assert cal.created == []
 
 
+async def test_create_skip_calendar_user_declined(monkeypatch):
+    """skip_calendar=True (the user chose 'Save without invite' in the pre-save
+    prompt): the session saves, the hook is never called, and the response says
+    the invite was declined."""
+    crm, cal = _fake_crm(), FakeCalendar()
+    _wire(monkeypatch, cal)
+    session = await service.create_session(
+        MENTOR, crm, "E1", dict(NEW_CHANGES), ["c1"],
+        owner_user_id="u1", settings=SETTINGS_ON, skip_calendar=True)
+    assert session["calendar"] == {"ok": True, "skipped": True, "declined": True}
+    assert cal.created == []
+    assert session["id"]  # the session itself still saved
+
+
 async def test_create_no_settings_no_calendar_key(monkeypatch):
     """Direct service calls without settings (existing tests, non-router callers)
     skip the hook entirely — no 'calendar' key at all."""

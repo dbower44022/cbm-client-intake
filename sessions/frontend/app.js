@@ -119,9 +119,15 @@
   $("confirmDiscard").addEventListener("click", function () { hide($("confirmModal")); if (confirmOnDiscard) confirmOnDiscard(); });
   $("confirmCancel").addEventListener("click", function () { hide($("confirmModal")); });
   $("confirmBackdrop").addEventListener("click", function () { hide($("confirmModal")); });
+  // Calendar-invite prompt before saving a new Scheduled session.
+  $("gcalCreate").addEventListener("click", function () { hide($("gcalModal")); saveSession("create"); });
+  $("gcalSkip").addEventListener("click", function () { hide($("gcalModal")); saveSession("skip"); });
+  $("gcalCancel").addEventListener("click", function () { hide($("gcalModal")); });
+  $("gcalBackdrop").addEventListener("click", function () { hide($("gcalModal")); });
   document.addEventListener("keydown", function (e) {
     if (e.key !== "Escape") return;
     if (!$("confirmModal").hidden) { hide($("confirmModal")); }  // Escape = keep editing
+    else if (!$("gcalModal").hidden) { hide($("gcalModal")); }
     else if (!$("commModal").hidden) closeComm();
     else if (!$("peekModal").hidden) closePeek();
   });
@@ -1565,7 +1571,7 @@
     return null;
   }
 
-  // === Section edit screens (prompt v0.1 / mockup v2) ========================
+  // === Section edit screens (prompt v0.2 / Company mockup v3) ================
   // Each entity's edit form is a curated 12-column grid: labeled groups of rows,
   // field widths as mocked. Cell shapes: {name, span[, label]} = one field;
   // {checks:[names]} = a two-column checkbox set; {addr: prefix[, sameAs]} = the
@@ -1573,23 +1579,38 @@
   // section (e.g. the assigned mentor — reassignment stays in Client
   // Administration, Doug's 2026-07-13 ruling). Editable fields the layout
   // doesn't place land in an "Additional details" group so nothing the CRM
-  // exposes becomes uneditable; names in the domain's exclude set never render.
+  // exposes becomes uneditable — EXCEPT layouts flagged `noExtras: true`
+  // (prompt v0.2 standing rule 2: unplaced schema fields are candidates that
+  // need an explicit placement/exclusion decision, never auto-rendered);
+  // names in the domain's exclude set never render anywhere.
   var DETAILS_LAYOUTS = {
     CEngagement: { groups: [
       { rows: [[{ name: "engagementStatus", span: 3 }, { name: "engagementStartDate", span: 3 },
                 { ro: "mentorProfileName", label: "Mentor", span: 3 }, { name: "meetingCadence", span: 3 }]] },
     ] },
-    Account: { groups: [
+    // Company form per mockup v3 (prompt v0.2): Identity / Web presence /
+    // Addresses / Notes, in that order. `noExtras` — schema fields the mockup
+    // doesn't place are candidates, not requirements (standing rule 2): they
+    // never auto-render in an "Additional details" dump; placing one is an
+    // explicit layout decision.
+    Account: { noExtras: true, groups: [
       { label: "Identity", rows: [
-        [{ name: "name", span: 6, label: "Company name" }, { name: "website", span: 3 }, { name: "phoneNumber", span: 3 }],
-        [{ name: "cOrganizationType", span: 3 }, { name: "cBusinessStage", span: 3 }, { name: "emailAddress", span: 6 }],
-        [{ name: "industry", span: 4 }, { name: "cIndustrySector", span: 4 }, { name: "cIndustrySubsector", span: 4 }],
+        [{ name: "name", span: 6, label: "Company name" }, { name: "phoneNumber", span: 3 }, { name: "emailAddress", span: 3 }],
+        [{ name: "cOrganizationType", span: 3 }, { name: "cBusinessStage", span: 3 },
+         { name: "industry", span: 3 }, { name: "sicCode", span: 3, label: "SIC code" }],
+        [{ name: "cIndustrySector", span: 6 }, { name: "cIndustrySubsector", span: 6 }],
       ] },
-      // Billing left, shipping right — one panel, half the vertical space. The
-      // per-block titles act as the group headings.
-      { rows: [
-        [{ addr: "billingAddress", span: 6, title: "Billing address" },
-         { addr: "shippingAddress", span: 6, title: "Shipping address", sameAs: "billingAddress" }],
+      { label: "Web presence", rows: [
+        [{ name: "website", span: 6 }, { name: "cLinkedInPage", span: 6, label: "LinkedIn page" }],
+      ] },
+      // Billing left, shipping right (the shared address block includes Country).
+      { label: "Addresses", rows: [
+        [{ addr: "billingAddress", span: 6, title: "Billing" },
+         { addr: "shippingAddress", span: 6, title: "Shipping", sameAs: "billingAddress" }],
+      ] },
+      { label: "Notes", rows: [
+        [{ name: "description", span: 12 }],
+        [{ name: "cClientNotes", span: 12, label: "Client notes" }],
       ] },
     ] },
     CClientProfile: { groups: [
@@ -1640,6 +1661,12 @@
   // additionally excludes the OTHER domains' relationship fields (mentor-domain
   // accounts are client accounts — Doug's 2026-07-13 scoping ruling).
   var ACCOUNT_SYSTEM_FIELDS = ["cAccountType", "cClientStatus", "cCompanyType", "type"];
+  // Removed from this app's Company form entirely (prompt v0.2 field triage —
+  // the CRM fields stay untouched for other workflows): the sponsor pledge
+  // currency + partner-org target population (per the v0.1 decision), the
+  // system-managed applicant timestamp, and the contact-level role attribute.
+  var ACCOUNT_REMOVED_FIELDS = ["cAnnualPledgeAmountCurrency", "cTargetPopulation",
+    "cApplicantSinceTimestamp", "contactRole"];
   var ACCOUNT_PARTNER_FIELDS = ["cPartnerStatus", "cPartnerOrganizationType", "cPartnerContactCadence",
     "cPartnerType", "cPartnershipStartDate", "cPartnershipAgreementDate", "cPartnerNotes"];
   var ACCOUNT_SPONSOR_FIELDS = ["cSponsorshipLevel", "cSponsorshipStartDate", "cSponsorshipRenewalDate", "cSponsorNotes"];
@@ -1650,10 +1677,12 @@
       [{ name: "cPartnerType", span: 12 }],
       [{ name: "cPartnershipStartDate", span: 4 }, { name: "cPartnershipAgreementDate", span: 4 }],
       [{ checks: ["cPublicAnnouncementAllowed"] }],
+      [{ name: "cPartnerNotes", span: 12 }],
     ] },
     sponsorsessions: { label: "Sponsorship", rows: [
       [{ name: "cSponsorshipLevel", span: 4 }, { name: "cSponsorshipStartDate", span: 4 }, { name: "cSponsorshipRenewalDate", span: 4 }],
       [{ checks: ["cPublicAnnouncementAllowed"] }],
+      [{ name: "cSponsorNotes", span: 12 }],
     ] },
   };
 
@@ -1662,7 +1691,7 @@
   function detailsExcludes(entity) {
     var ex = {};
     if (entity !== "Account") return ex;
-    ACCOUNT_SYSTEM_FIELDS.forEach(function (n) { ex[n] = 1; });
+    ACCOUNT_SYSTEM_FIELDS.concat(ACCOUNT_REMOVED_FIELDS).forEach(function (n) { ex[n] = 1; });
     if (SLUG === "mentorsessions") {
       ACCOUNT_PARTNER_FIELDS.concat(ACCOUNT_SPONSOR_FIELDS).forEach(function (n) { ex[n] = 1; });
       ex.cPublicAnnouncementAllowed = 1;
@@ -1677,7 +1706,7 @@
   function detailsLayoutFor(entity) {
     var base = DETAILS_LAYOUTS[entity];
     if (entity === "Account" && ACCOUNT_DOMAIN_GROUPS[SLUG]) {
-      return { groups: base.groups.concat([ACCOUNT_DOMAIN_GROUPS[SLUG]]) };
+      return { noExtras: base.noExtras, groups: base.groups.concat([ACCOUNT_DOMAIN_GROUPS[SLUG]]) };
     }
     return base || { groups: [] };
   }
@@ -1746,8 +1775,11 @@
       body.appendChild(wrap);
     });
 
-    // Everything editable the layout didn't place (and read-only computed values).
-    var leftovers = (sec.fields || []).filter(function (f) { return !used[f.name] && !exclude[f.name]; });
+    // Everything editable the layout didn't place (and read-only computed
+    // values). Suppressed for layouts flagged `noExtras` (prompt v0.2 standing
+    // rule 2): unplaced schema fields need an explicit placement decision.
+    var leftovers = layout.noExtras ? []
+      : (sec.fields || []).filter(function (f) { return !used[f.name] && !exclude[f.name]; });
     if (leftovers.length) {
       var wrap2 = document.createElement("div"); wrap2.className = "sxf__group";
       if ((layout.groups || []).length) {
@@ -1783,8 +1815,9 @@
     ["Street", "City", "State", "PostalCode", "Country"].forEach(function (s) { used[prefix + s] = 1; });
     if (!byName[prefix + "Street"] && !byName[prefix + "City"]) return null;  // entity has no such address
     var outer = document.createElement("div"); outer.className = "sxf__c" + (span || 12);
+    var tl = null;
     if (title) {
-      var tl = document.createElement("div"); tl.className = "sxf__sublabel"; tl.textContent = title;
+      tl = document.createElement("div"); tl.className = "sxf__sublabel"; tl.textContent = title;
       outer.appendChild(tl);
     }
     var block = document.createElement("div"); block.className = "sxf__addr";
@@ -1833,8 +1866,9 @@
     if (sameAs) {
       var same = document.createElement("label"); same.className = "sxf__same";
       var cb = document.createElement("input"); cb.type = "checkbox";
-      same.appendChild(cb); same.appendChild(document.createTextNode(" Same as billing address"));
-      outer.appendChild(same);
+      same.appendChild(cb); same.appendChild(document.createTextNode(" Same as billing"));
+      // Inline in the column's sub-header (mockup v3), else on its own line.
+      (tl || outer).appendChild(same);
       var mine = { City: city, State: state, PostalCode: zip, Country: country };
       function mirror() {
         if (!cb.checked) return;
@@ -3414,7 +3448,10 @@
     $("confirmSave").focus();
   }
 
-  async function saveSession() {
+  // calendarDecision: undefined = not asked yet; "create" = auto-create the
+  // Google Calendar event as usual; "skip" = the user chose to schedule the
+  // meeting manually (the session still saves, no event/invitations).
+  async function saveSession(calendarDecision) {
     if (!currentDetail) return;
     // Enforce the CRM's required fields (e.g. dateStart) client-side so the user
     // gets a clear message instead of a raw CRM 400 (validationFailure).
@@ -3425,6 +3462,17 @@
     });
     if (missing.length) { notice("editorNotice", "Please complete: " + missing.join(", "), "error"); return; }
     var isNew = !(currentSession && currentSession.id);
+    // A NEW Scheduled session with a start time would auto-create a Google
+    // Calendar event and email invitations — ask first, so the user can save
+    // without an invite and schedule the meeting manually. The chosen button
+    // re-enters saveSession with the decision; Keep editing just closes.
+    if (isNew && calendarDecision === undefined && config && config.gcalEnabled
+        && (editorFieldValue("status") || "Scheduled") === "Scheduled"
+        && editorFieldValue("dateStart")) {
+      show($("gcalModal"));
+      $("gcalCreate").focus();
+      return;
+    }
     var changes = {};
     Array.prototype.forEach.call($("sessionForm").querySelectorAll("[data-field]"), function (el) {
       var v = readField(el);
@@ -3451,7 +3499,8 @@
         });
       } else {
         saved = await api("/records/" + encodeURIComponent(currentDetail.id) + "/sessions", {
-          method: "POST", body: JSON.stringify({ changes: changes, attendees: attendees })
+          method: "POST",
+          body: JSON.stringify({ changes: changes, attendees: attendees, skipCalendar: calendarDecision === "skip" })
         });
       }
       // Await the re-fetch: openDetail hides detailNotice while rendering, so
@@ -3468,6 +3517,8 @@
         notice("detailNotice", "Session saved — the calendar event was cancelled.", "success");
       } else if (cal && cal.ok && cal.updated) {
         notice("detailNotice", "Session saved — the calendar event was updated.", "success");
+      } else if (cal && cal.ok && cal.declined) {
+        notice("detailNotice", "Session saved — no calendar invite was created (schedule the meeting manually).", "success");
       } else {
         notice("detailNotice", "Session saved.", "success");
       }

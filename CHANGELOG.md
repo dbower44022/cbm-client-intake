@@ -4,6 +4,27 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.56.0] — 2026-07-15
+
+### Added
+- **Session tools: pre-save prompt before auto-creating a calendar invite.**
+  Saving a NEW Scheduled session (with a start time, calendar integration
+  active) now pops a styled confirm — "Create a calendar invite?" — before
+  anything is written: **Create & send invite** proceeds as before (Google
+  Calendar event + Meet link + emailed invitations), **Save without invite**
+  saves the session but skips the event entirely (for meetings the user wants
+  to schedule manually; the save notice says so), **Keep editing** (or
+  Escape/backdrop) returns to the editor without saving. Edits to existing
+  sessions are unchanged (never prompted — the patch/cancel matrix still
+  applies). Plumbing: `/session` config exposes `gcalEnabled`; the create
+  POST carries `skipCalendar`; `service.create_session(skip_calendar=True)`
+  bypasses the gcal hook and reports `calendar:{ok,skipped,declined}`.
+  Verified in the stubbed-browser harness (prompt appears before any POST;
+  all three buttons + Escape; declined save sends `skipCalendar:true` and
+  shows the manual-scheduling notice; Completed sessions and gcal-disabled
+  deploys save directly with no prompt; no console errors). Not yet driven
+  against live Google.
+
 ## [0.55.1] — 2026-07-15
 
 ### Fixed

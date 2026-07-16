@@ -858,7 +858,14 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   invited (`sendUpdates=all` — Google emails invitations; organizer
   excluded, blanks skipped). **Best-effort** (mentoradmin-provision
   precedent): never raises; the save response carries `calendar:{ok,…}`
-  and `saveSession` shows it as a notice. **Activation (ALL DONE):** Calendar
+  and `saveSession` shows it as a notice. **Pre-save prompt (v0.56.0):**
+  saving a NEW Scheduled session (start time set, `gcalEnabled` from
+  `/session` config) first pops a confirm — Create & send invite / Save
+  without invite / Keep editing — so the user can opt out and schedule the
+  meeting manually; the decline reaches the server as `skipCalendar:true`
+  on the create POST (`create_session(skip_calendar=True)` skips the hook,
+  `calendar:{ok,skipped,declined}`). Edits never prompt. Verified in the
+  stub harness, not yet live. **Activation (ALL DONE):** Calendar
   API on in GCP; `calendar.events` on the SA's DWD grant; the CRM field built
   on both CRMs; `GCAL_EVENTS=true` on the **web** component of both overlays
   (worker not involved); EspoCRM-side calendar sync confirmed a non-issue
@@ -1015,7 +1022,8 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 2. **v0.55.1 fix:** those CRM 403s surfaced as blank "Request failed (504)"
    — `sessions/router._crm_failure` now maps CRM 403 → readable HTTP 403
    ("your account doesn't have permission… ask CBM staff"); CRM 5xx still
-   → 502. Not yet deployed at the time of writing.
+   → 502. **Pushed and DEPLOYED 2026-07-15** — prod + crm-test `/healthz`
+   both verified at 0.55.1.
 
 Before that: **Main was at v0.54.0** (464 tests green, **pushed and DEPLOYED 2026-07-15** —
 prod + crm-test `/healthz` both verified at 0.54.0, and both deployed portal

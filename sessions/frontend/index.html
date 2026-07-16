@@ -216,6 +216,23 @@
     </div>
   </div>
 
+  <!-- Pre-save prompt: a new Scheduled session would auto-create a Google
+       Calendar event + email invitations — ask before doing it. -->
+  <div class="sx__modal" id="gcalModal" hidden role="dialog" aria-modal="true" aria-labelledby="gcalTitle">
+    <div class="sx__modal-backdrop" id="gcalBackdrop"></div>
+    <div class="sx__modal-card sx__confirm" role="document">
+      <h3 class="sx__confirm-title" id="gcalTitle">Create a calendar invite?</h3>
+      <p class="sx__confirm-msg" id="gcalMsg">Saving this session will automatically create a Google Calendar
+        event and email a meeting invitation to the attendees. Create it now, or save the session without an
+        invite and schedule the meeting manually?</p>
+      <div class="sx__confirm-actions">
+        <button type="button" class="cbm-button" id="gcalCreate">Create &amp; send invite</button>
+        <button type="button" class="cbm-button cbm-button--secondary" id="gcalSkip">Save without invite</button>
+        <button type="button" class="cbm-button cbm-button--secondary" id="gcalCancel">Keep editing</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/shared/phone-format.js"></script>
   <script src="/shared/vendor/jodit/jodit.min.js"></script>
   <script src="/shared/richtext.js"></script>
