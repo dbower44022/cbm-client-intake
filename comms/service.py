@@ -335,6 +335,7 @@ async def send_message(
         body_html = _text_to_html(body_html)
     mime = build_mime(
         sender=gmail.mailbox,
+        sender_name=user.get("name") or "",
         to=to,
         subject=subject or "(no subject)",
         body_text="",
@@ -372,7 +373,8 @@ async def send_message(
 
 
 async def send_quick_message(
-    *, gmail: GmailClient, to: list[str], subject: str, body_html: str
+    *, gmail: GmailClient, to: list[str], subject: str, body_html: str,
+    sender_name: str = "",
 ) -> dict[str, Any]:
     """A record-less "quick email" — behind the email-address links shown in
     the staff tools outside a record context (Client/Mentor Administration).
@@ -393,6 +395,7 @@ async def send_quick_message(
         body_html = _text_to_html(body_html)
     mime = build_mime(
         sender=gmail.mailbox,
+        sender_name=sender_name,
         to=to,
         subject=subject or "(no subject)",
         body_text="",

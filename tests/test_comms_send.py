@@ -57,6 +57,39 @@ async def test_internal_recipient_is_never_unknown():
     assert result["gmailMessageId"] == "gsent1"
 
 
+async def test_send_stamps_display_name_on_from_header():
+    # The From header must carry the signed-in manager's display name — that's
+    # what the conversation view shows as the sender, so a mentor vs co-mentor
+    # send on the same engagement stays attributable.
+    gmail = FakeGmailSend()
+    await comms_service.send_message(
+        settings=None, api_client=espo_with_contacts(), store=MemoryCommsStore(),
+        gmail=gmail, cfg=CFG, parent_id="E1", user=USER,
+        to=["james@acme.test"], subject="x", body_html="hello",
+    )
+    mime, _ = gmail.sent[0]
+    assert mime["From"] == "Bob Mentor <bob.mentor@cbmentors.org>"
+
+
+async def test_quick_send_stamps_display_name_when_given():
+    gmail = FakeGmailSend()
+    await comms_service.send_quick_message(
+        gmail=gmail, to=["james@acme.test"], subject="x", body_html="hello",
+        sender_name="Bob Mentor",
+    )
+    mime, _ = gmail.sent[0]
+    assert mime["From"] == "Bob Mentor <bob.mentor@cbmentors.org>"
+
+
+async def test_quick_send_without_name_keeps_bare_address():
+    gmail = FakeGmailSend()
+    await comms_service.send_quick_message(
+        gmail=gmail, to=["james@acme.test"], subject="x", body_html="hello",
+    )
+    mime, _ = gmail.sent[0]
+    assert mime["From"] == "bob.mentor@cbmentors.org"
+
+
 async def test_confirmed_unknown_send_writes_durable_include():
     store = MemoryCommsStore()
     result = await comms_service.send_message(

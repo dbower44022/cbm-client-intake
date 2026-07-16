@@ -116,7 +116,9 @@ def test_sendmail_sends_as_the_user(monkeypatch):
     assert r.json()["status"] == "ok" and r.json()["gmailMessageId"] == "gm-1"
     assert len(gmail.sent) == 1
     msg = gmail.sent[0]  # EmailMessage from build_mime
-    assert msg["From"] == "staff.admin@cbmentors.org"
+    # The From header carries the signed-in user's display name so ingested
+    # copies (and recipients) can see WHO sent it, not just the mailbox.
+    assert msg["From"] == "Staff Admin <staff.admin@cbmentors.org>"
     assert msg["To"] == "james@acme.test"  # normalized lowercase
     assert msg["Subject"] == "Hello"
     assert "Quick note" in msg.as_string()

@@ -26,7 +26,7 @@ import re
 import time
 from dataclasses import dataclass, field
 from email.message import EmailMessage
-from email.utils import getaddresses, parseaddr
+from email.utils import formataddr, getaddresses, parseaddr
 from typing import Any, Optional
 
 import httpx
@@ -325,10 +325,16 @@ def build_mime(
     cc: Optional[list[str]] = None,
     in_reply_to: str = "",
     references: str = "",
+    sender_name: str = "",
 ) -> EmailMessage:
-    """A sendable MIME message. Reply threading = In-Reply-To + References."""
+    """A sendable MIME message. Reply threading = In-Reply-To + References.
+
+    ``sender_name`` puts a display name on the From header ("Doug Bower
+    <doug.bower@…>") — without it the write-through ingest of a tab-sent
+    message stores a bare address as the sender, and the conversation view
+    can't say WHO on the mentor team wrote it."""
     msg = EmailMessage()
-    msg["From"] = sender
+    msg["From"] = formataddr((sender_name, sender)) if sender_name else sender
     msg["To"] = ", ".join(to)
     if cc:
         msg["Cc"] = ", ".join(cc)

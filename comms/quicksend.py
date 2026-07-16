@@ -66,7 +66,8 @@ def register_quicksend(
         try:
             gmail = await comms_service.gmail_for_user(settings, client, user)
             result = await comms_service.send_quick_message(
-                gmail=gmail, to=body.to, subject=body.subject, body_html=body.body
+                gmail=gmail, to=body.to, subject=body.subject, body_html=body.body,
+                sender_name=user.get("name") or "",
             )
             return {"status": "ok", **result}
         except comms_service.CommsError as exc:

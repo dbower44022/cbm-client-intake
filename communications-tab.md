@@ -52,6 +52,12 @@ record; Gmail remains the source of truth.
 The same email in two mentors' mailboxes (e.g. a CC'd co-mentor) is stored
 **once** — both of you see the same conversation.
 
+Every message in the thread is headed by **who wrote it** — the sender's
+name (or address) for received *and* sent mail alike; a sent message shows
+the recipients after an arrow ("Doug Bower → james@acme.test"). With a
+mentor and a co-mentor both working the same engagement, the thread shows
+which of you said what.
+
 ## The conversation list
 
 One row per conversation: status chip, participants, subject with message

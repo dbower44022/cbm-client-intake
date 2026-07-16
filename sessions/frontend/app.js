@@ -1040,7 +1040,11 @@
       var card = document.createElement("div"); card.className = "sx__msg-card";
       var head = document.createElement("div"); head.className = "sx__msg-head";
       var who = document.createElement("span"); who.className = "sx__msg-who";
-      who.textContent = (m.direction === "Outbound" ? "To: " + (m.to || "") : (m.from || m.fromAddress || ""));
+      // Always lead with WHO WROTE IT (a mentor and co-mentor can both send on
+      // the same engagement — "To: client" hid which of them was talking);
+      // outbound keeps the recipient after an arrow.
+      who.textContent = (m.from || m.fromAddress || "") +
+        (m.direction === "Outbound" && m.to ? " → " + m.to : "");
       var when = document.createElement("span"); when.className = "sx__msg-when";
       when.textContent = fmtSessionDate(m.sentAt, "short");
       head.appendChild(who); head.appendChild(when);
@@ -1215,7 +1219,8 @@
         m.direction === "sent" ? "type" : "status"));
 
       var c1 = document.createElement("td"); c1.className = "sx__inbox-party";
-      c1.textContent = (m.direction === "sent" ? "To: " : "") + partyName(m.direction === "sent" ? m.to : m.from);
+      c1.textContent = partyName(m.from) +
+        (m.direction === "sent" ? " → " + partyName(m.to) : "");
 
       var c2 = document.createElement("td"); c2.className = "sx__inbox-subj";
       var subj = document.createElement("span"); subj.className = "sx__inbox-subject";

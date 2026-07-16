@@ -4,6 +4,31 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.66.0] — 2026-07-16
+
+### Changed
+- **Communications: conversation messages are headed by WHO WROTE THEM**
+  (Doug's report: outbound showed "To: <address>", inbound the sender — so
+  with a mentor and co-mentor both sending on the same engagement, the
+  thread never said which of them was talking). The conversation view now
+  leads every message with the sender's name (or address) for both
+  directions; outbound keeps the recipients after an arrow ("Doug Bower →
+  james@acme.test"). The sample-data scaffold (comms off) matches. Backend
+  data was already there (`from`/`fromAddress` on every message) —
+  frontend-only display change (`sessions/frontend/app.js`
+  `viewConversation`).
+- **Sends stamp the manager's display name on the From header** ("Doug
+  Bower <doug.bower@cbmentors.org>"): `core/gmail.build_mime` gains
+  `sender_name`, passed by both the record compose (`send_message`, the
+  signed-in user's name) and the grid quick-compose (`send_quick_message`
+  via `comms/quicksend.py`). Without it a tab-sent message's write-through
+  ingest stored a bare address as the sender, so the new sender-first
+  display would have shown addresses instead of names for app-sent mail
+  (synced Gmail mail already carried display names). Recipients see the
+  name too. Messages stored before this change keep whatever the header
+  carried. NOT yet driven against live Gmail; verified by tests
+  (526 green).
+
 ## [0.65.0] — 2026-07-16
 
 ### Added
