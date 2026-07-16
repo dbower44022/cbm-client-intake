@@ -466,6 +466,9 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
    screen, so the message + add-contact rows are comfortable to fill in. */
 #commModal .sx__modal-card { max-width: min(90rem, 94vw); width: 94vw; }
 #commModal textarea.sx__msg-input { min-height: 16rem; }
+/* Compose: wide enough for the rich-text toolbar + comfortable email writing. */
+#commModal .sx__modal-card { max-width: 46rem; }
+.sx__msg-rich { width: 100%; }
 .sx__modal-foot { display: flex; gap: 0.5rem; justify-content: flex-end; flex-wrap: wrap; padding: 0.75rem 1rem 1rem; border-top: 1px solid var(--cbm-border, #eef1f4); }
 .sx__modal-foot .cbm-button { padding: 0.5rem 0.9rem; font-size: 0.9rem; }
 .sx__msg-body { padding: 0.6rem 1rem 0.2rem; white-space: pre-wrap; line-height: 1.55; color: var(--cbm-navy, #223); }

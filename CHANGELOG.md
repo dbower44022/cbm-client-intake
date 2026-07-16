@@ -4,6 +4,23 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.60.0] — 2026-07-16
+
+### Changed
+- **Communications: the compose email body is the standard rich-text editor
+  (CBMRichText/Jodit).** The plain textarea in the session tools' compose
+  dialog is replaced by the shared editor — bold/italic/lists/links/color/
+  tables, formatted paste — and Send now transmits the message as HTML
+  (`sessions/frontend` `commField`/`commBodyValue`; no backend change —
+  `comms.service.send_message` was already HTML-native and derives the
+  plain-text MIME alternative server-side). The compose modal widens to
+  46rem to fit the toolbar and give email-writing room; the plain textarea
+  remains only as a script-load fallback (plain text is upconverted
+  server-side). Verified in the stubbed-browser harness (editor renders in
+  the modal, formatted body arrives at the send endpoint as sanitized HTML,
+  reply flow unchanged; no console errors). First live Gmail SEND from the
+  tab is still an open item — unchanged by this.
+
 ## [0.59.2] — 2026-07-16
 
 ### Fixed

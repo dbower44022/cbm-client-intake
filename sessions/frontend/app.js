@@ -1103,6 +1103,19 @@
   }
 
   function commField(label, id, value, isTextarea) {
+    // The message body is the standard rich-text editor (CBMRichText/Jodit) —
+    // the send path is HTML-native (comms.service.send_message body_html, with
+    // a plain-text alternative derived server-side). A div wrapper, not label:
+    // wrapping a whole editor in a <label> re-routes clicks to its first input.
+    if (isTextarea && window.CBMRichText) {
+      var rich = window.CBMRichText.create(value || "", { minHeight: 220 });
+      if (rich) {
+        var rwrap = document.createElement("div"); rwrap.className = "sx__msg-field";
+        var rl = document.createElement("span"); rl.className = "sx__msg-label"; rl.textContent = label;
+        rich.id = id; rich.classList.add("sx__msg-rich");
+        rwrap.appendChild(rl); rwrap.appendChild(rich); return rwrap;
+      }
+    }
     var wrap = document.createElement("label"); wrap.className = "sx__msg-field";
     var l = document.createElement("span"); l.className = "sx__msg-label"; l.textContent = label;
     var input = isTextarea ? document.createElement("textarea") : document.createElement("input");
@@ -1110,6 +1123,15 @@
     if (isTextarea) { input.rows = 10; } else { input.type = "text"; }
     input.value = value || "";
     wrap.appendChild(l); wrap.appendChild(input); return wrap;
+  }
+
+  // The compose body's current value: HTML from the rich editor, or the plain
+  // textarea's text when the editor script didn't load (the send path accepts
+  // both — plain text is upconverted server-side).
+  function commBodyValue() {
+    var el = $("commBody");
+    if (!el) return "";
+    return el._cbmRichText ? el._cbmRichText.getValue() : el.value;
   }
 
   function composeMessage(pre) {
@@ -1369,7 +1391,7 @@
           body: JSON.stringify({
             to: recipients,
             subject: $("commSubject").value,
-            body: $("commBody").value,
+            body: commBodyValue(),
             replyToCommunicationId: pre.replyToId || null,
             allowUnknownRecipients: allowUnknown,
           }),
