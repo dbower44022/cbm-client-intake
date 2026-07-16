@@ -4,6 +4,20 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.54.1] — 2026-07-15
+
+### Fixed
+- **Details tab: saving a company/contact with a human-formatted phone number
+  no longer fails.** Doug's live report on crm-test: a company update was
+  rejected with "'Phone Number' has a value the CRM does not accept." EspoCRM
+  only accepts E.164 (`+12165551234`), but the session tools' Details-tab
+  save sent the typed value verbatim (the field spec mapped the CRM `phone`
+  type to a plain varchar, losing the phone-ness). Phone-type fields are now
+  normalized via `core.phone.to_e164` on save — same policy as the Mentor
+  Administration Contact tab — covering the company/profile/contact edit
+  forms and the create-new-contact flow. Blank still clears the field; an
+  already-E.164 value passes through unchanged.
+
 ## [0.54.0] — 2026-07-15
 
 ### Added

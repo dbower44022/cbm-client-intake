@@ -15,6 +15,7 @@ import re
 from typing import Any, Optional
 
 from core.espo import EspoError
+from core.phone import to_e164
 
 from .config import CONTACT, MENTOR_PROFILE, DomainConfig
 from .service import SessionClient, SessionError, fill_company_fallback
@@ -79,6 +80,8 @@ def _field_spec(meta_fields: dict[str, Any], entity: str = "") -> list[dict[str,
         ctype = fdef.get("type")
         if ctype in _TYPE_MAP:
             item = {"name": name, "label": _label(name), "type": _TYPE_MAP[ctype], "editable": True}
+            if ctype == "phone":
+                item["phone"] = True  # EspoCRM only accepts E.164 — normalized on save
             opts = fdef.get("options")
             if isinstance(opts, list):
                 item["options"] = [o for o in opts if o != ""]
@@ -430,7 +433,8 @@ async def create_contact(cfg: DomainConfig, client: SessionClient, parent_id: st
 def _clean_changes(spec: dict[str, dict[str, Any]], changes: dict[str, Any]) -> dict[str, Any]:
     """Whitelist a change set against an entity's editable field spec, dropping
     enum/multiEnum values outside the live options so one drifted value can't 400
-    the whole write (non-required-enum policy)."""
+    the whole write (non-required-enum policy). Phone-type fields are normalized
+    to E.164 — the only format EspoCRM accepts."""
     payload: dict[str, Any] = {}
     for name, value in changes.items():
         f = spec.get(name)
@@ -442,6 +446,8 @@ def _clean_changes(spec: dict[str, dict[str, Any]], changes: dict[str, Any]) -> 
                 continue  # drifted single enum — omit (keeps stored value)
         elif opts is not None and f["type"] == "multiEnum" and isinstance(value, list):
             value = [v for v in value if v in opts]
+        if f.get("phone") and isinstance(value, str) and value.strip():
+            value = to_e164(value)
         payload[name] = value
     return payload
 

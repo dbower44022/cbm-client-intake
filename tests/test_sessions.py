@@ -540,6 +540,34 @@ async def test_save_details_whitelists_and_drops_drifted_enum():
 
 
 @pytest.mark.asyncio
+async def test_save_details_normalizes_phone_to_e164():
+    """EspoCRM only accepts E.164 phones — a human-formatted entry on the
+    Company/Contact edit forms must not 400 the whole save (Doug's live report:
+    'Phone Number has a value the CRM does not accept' on a company update)."""
+    fake = Fake(meta_fields={
+        "phoneNumber": {"type": "phone"},
+        "name": {"type": "varchar"},
+    })
+    res = await details.save_details(
+        fake, "Account", "acct1",
+        {"phoneNumber": "(216) 555-1234", "name": "Acme"},
+    )
+    assert fake.updates == [("Account", "acct1", {"phoneNumber": "+12165551234", "name": "Acme"})]
+    assert sorted(res["saved"]) == ["name", "phoneNumber"]
+
+
+@pytest.mark.asyncio
+async def test_save_details_phone_blank_clears_and_e164_passes_through():
+    fake = Fake(meta_fields={"phoneNumber": {"type": "phone"}})
+    await details.save_details(fake, "Account", "a1", {"phoneNumber": ""})
+    await details.save_details(fake, "Account", "a2", {"phoneNumber": "+12165551234"})
+    assert fake.updates == [
+        ("Account", "a1", {"phoneNumber": ""}),        # clearing stays a clear
+        ("Account", "a2", {"phoneNumber": "+12165551234"}),  # already E.164 untouched
+    ]
+
+
+@pytest.mark.asyncio
 async def test_build_details_splits_sections_and_contacts():
     fake = Fake(
         records={
