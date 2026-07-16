@@ -13,6 +13,7 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import Response
 from pydantic import BaseModel
 
 from assignments.auth import clear_session, current_user, is_member, session_expired
@@ -595,11 +596,14 @@ def make_router(cfg: DomainConfig) -> APIRouter:
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not update the contact")
 
-    # --- Documents tab (Google Drive document management — DOC-MGMT Phase 1) --
+    # --- Documents tab (Google Drive document management — DOC-MGMT) ----------
     # Everything below 503s unless GDRIVE_DOCS is enabled; the frontend shows a
     # "coming soon" placeholder in that case (config.docsEnabled). The list
     # renders from the app_document metadata table only (no Drive call, DOC-02);
-    # uploads go to the shared drive as the signed-in user (DOC-01).
+    # uploads go to the shared drive as the signed-in user (DOC-01). Phase 2:
+    # in-app viewing streams through /content (DOC-03/04, browser-cached via
+    # modifiedTime-versioned URLs — DOC-06) and /refresh lazily re-syncs
+    # modifiedTimes on tab open (DOC-02 completion).
 
     def _docs_ready():
         """(settings, document_store) — or a 503 when the integration is off."""
@@ -674,6 +678,72 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             )
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not upload the document")
+
+    @router.get("/records/{parent_id}/documents/{doc_id}/content")
+    async def document_content(
+        parent_id: str, doc_id: str, request: Request
+    ) -> Response:
+        """DOC-03: stream the document's bytes through the app. The parent
+        record is read first AS THE USER (their CRM ACL gates viewing, exactly
+        like the upload); the Drive fetch then runs as their own CBM identity.
+        Google-native files arrive as exported PDF (DOC-04). Served immutable —
+        the frontend versions the URL by modifiedTime, so the browser is the
+        cache (DOC-06)."""
+        user = _require_user(request)
+        settings, store = _docs_ready()
+        client = client_for(settings, user)
+        try:
+            await client.get(cfg.parent_entity, parent_id, select="name")
+            drive = await docs_service.drive_for_user(settings, client, user)
+            doc = await docs_service.fetch_document(
+                store, drive, cfg.parent_entity, parent_id, doc_id
+            )
+        except docs_service.DocsNotFound as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+        except docs_service.DocsError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        except DriveError as exc:
+            log.warning("document fetch failed (%s): %s", cfg.slug, exc)
+            raise HTTPException(
+                status_code=502,
+                detail=(
+                    "Couldn't fetch the document from Google Drive — "
+                    "try again, or use Open in Drive."
+                ),
+            )
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not load the document")
+        return Response(
+            content=doc["data"],
+            media_type=doc["mime_type"],
+            headers=docs_service.content_headers(doc["filename"]),
+        )
+
+    @router.post("/records/{parent_id}/documents/refresh")
+    async def refresh_documents(parent_id: str, request: Request) -> dict:
+        """DOC-02 completion — lazy modifiedTime refresh: one files.list scoped
+        to the record folder re-syncs each row's modifiedTime; changed rows come
+        back flagged ``changedInDrive``. The frontend fires this AFTER rendering
+        the list from metadata, so it never blocks the initial render."""
+        user = _require_user(request)
+        settings, store = _docs_ready()
+        client = client_for(settings, user)
+        try:
+            await client.get(cfg.parent_entity, parent_id, select="name")
+            drive = await docs_service.drive_for_user(settings, client, user)
+            rows = await docs_service.refresh_documents(
+                store, drive, cfg.parent_entity, parent_id
+            )
+            return {"documents": rows, "docTypes": settings.gdrive_doc_types_list}
+        except docs_service.DocsError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        except DriveError as exc:
+            log.warning("document refresh failed (%s): %s", cfg.slug, exc)
+            raise HTTPException(
+                status_code=502, detail="Couldn't reach Google Drive — try again."
+            )
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not refresh the documents")
 
     # POST /sendmail — the record-less quick send behind email links shown
     # OUTSIDE an open record (grid-page peeks). This router already serves its

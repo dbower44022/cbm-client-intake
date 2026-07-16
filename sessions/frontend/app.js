@@ -811,11 +811,15 @@
     var s = document.createElement("span"); s.className = "sx__tag sx__tag--" + kind; s.textContent = text; return s;
   }
 
-  // --- Documents tab (Google Drive, DOC-MGMT Phase 1) --------------------------
+  // --- Documents tab (Google Drive, DOC-MGMT Phases 1+2) -----------------------
   // ENABLED (config.docsEnabled, GDRIVE_DOCS server-side): list this record's
   // documents from the app's metadata table + upload new files to the shared
-  // drive. DISABLED: a "coming soon" placeholder. View / Open in Drive /
-  // Archive are Phase 2/3 — rendered disabled.
+  // drive. DISABLED: a "coming soon" placeholder. Phase 2: View streams the
+  // bytes through the app proxy into an in-app overlay (PDFs/images/text;
+  // Google-native files arrive as exported PDF); the proxy URL is versioned by
+  // modifiedTime and served immutable, so the BROWSER is the cache (DOC-06);
+  // a lazy refresh re-syncs modifiedTimes after the metadata render (DOC-02).
+  // Archive is Phase 3 — rendered disabled.
 
   var docTypes = [];        // upload doc-type choices (from the list endpoint)
   var pendingDocFile = null;  // the picked File awaiting its doc type + confirm
@@ -844,11 +848,29 @@
       var res = await api("/records/" + encodeURIComponent(currentDetail.id) + "/documents");
       docTypes = res.docTypes || [];
       renderDocumentRows(res.documents || []);
+      // DOC-02 completion: re-sync modifiedTimes from Drive AFTER the metadata
+      // render (never blocks it). Best-effort — a failure leaves the list as is.
+      if ((res.documents || []).length) refreshDocumentTimes();
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }
       hide($("noDocs"));
       $("docsError").textContent = e.message; show($("docsError"));
     }
+  }
+
+  async function refreshDocumentTimes() {
+    if (!currentDetail) return;
+    var forId = currentDetail.id;
+    try {
+      var res = await api(
+        "/records/" + encodeURIComponent(forId) + "/documents/refresh",
+        { method: "POST" }
+      );
+      // The user may have moved to another record while Drive was queried.
+      if (!currentDetail || currentDetail.id !== forId) return;
+      docTypes = res.docTypes || docTypes;
+      renderDocumentRows(res.documents || []);
+    } catch (e) { /* lazy refresh is best-effort; the metadata render stands */ }
   }
 
   function renderDocumentRows(rows) {
@@ -861,6 +883,7 @@
     rows.forEach(function (d) {
       var tr = document.createElement("tr");
       var c0 = document.createElement("td"); c0.className = "sx__doc-file"; c0.textContent = d.filename || "—";
+      if (d.changedInDrive) c0.appendChild(tag("Updated in Drive", "flag"));
       var c1 = document.createElement("td"); if (d.docType) c1.appendChild(tag(d.docType, "type"));
       var c2 = document.createElement("td"); c2.textContent = d.uploadedBy || "—";
       var c3 = document.createElement("td"); c3.textContent = fmtSessionDate(d.uploadedAt, "short");
@@ -869,9 +892,10 @@
         var b = document.createElement("button");
         b.type = "button"; b.className = "cbm-button cbm-button--secondary sx__sm";
         b.textContent = label;
-        // Open in Drive is live (DOC-05 pulled forward — the webViewLink is
-        // already stored); View/Archive stay Phase 2/3 placeholders.
-        if (label === "Open in Drive" && d.webViewLink) {
+        // View (DOC-03) + Open in Drive (DOC-05) are live; Archive is Phase 3.
+        if (label === "View") {
+          b.addEventListener("click", function () { openDocViewer(d); });
+        } else if (label === "Open in Drive" && d.webViewLink) {
           b.addEventListener("click", function () {
             window.open(d.webViewLink, "_blank", "noopener");
           });
@@ -884,6 +908,89 @@
       body.appendChild(tr);
     });
   }
+
+  // --- in-app document viewer (DOC-03/04/06) ---------------------------------
+
+  // Google-native editor formats have no native bytes; the proxy serves them
+  // as exported PDF (DOC-04), so they render in the PDF frame.
+  var GOOGLE_NATIVE_MIMES = {
+    "application/vnd.google-apps.document": true,
+    "application/vnd.google-apps.spreadsheet": true,
+    "application/vnd.google-apps.presentation": true,
+  };
+
+  function docContentUrl(d) {
+    // Versioned by modifiedTime: the response is immutable per URL, so the
+    // browser caches the bytes and a Drive edit (new modifiedTime after the
+    // lazy refresh) busts the cache automatically (DOC-06).
+    return API + "/records/" + encodeURIComponent(currentDetail.id) +
+      "/documents/" + encodeURIComponent(d.id) + "/content?v=" +
+      encodeURIComponent(d.modifiedTime || "");
+  }
+
+  function docViewMode(d) {
+    var mime = (d.mimeType || "").toLowerCase();
+    if (mime === "application/pdf" || GOOGLE_NATIVE_MIMES[mime] || mime === "text/plain") return "frame";
+    if (mime.indexOf("image/") === 0) return "image";
+    return "none";  // e.g. docx/xlsx — the browser can't render them inline
+  }
+
+  function docViewerFallback(d, failed) {
+    var wrap = document.createElement("div"); wrap.className = "sx__docview-fallback";
+    var p = document.createElement("p");
+    p.textContent = failed
+      ? "The document couldn't be loaded — try again, or use Open in Drive."
+      : ("This file type can't be previewed in the app" +
+         (d.webViewLink ? " — use Open in Drive to view it." : "."));
+    wrap.appendChild(p);
+    if (d.webViewLink) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "cbm-button";
+      b.textContent = "Open in Drive";
+      b.addEventListener("click", function () {
+        window.open(d.webViewLink, "_blank", "noopener");
+      });
+      wrap.appendChild(b);
+    }
+    return wrap;
+  }
+
+  function openDocViewer(d) {
+    var body = $("docModalBody"); body.innerHTML = "";
+    $("docModalKind").textContent = d.docType || "Document";
+    $("docModalTitle").textContent = d.filename || "Document";
+    var driveBtn = $("docModalDrive");
+    driveBtn.hidden = !d.webViewLink;
+    driveBtn.onclick = d.webViewLink ? function () {
+      window.open(d.webViewLink, "_blank", "noopener");
+    } : null;
+    var mode = docViewMode(d);
+    if (mode === "image") {
+      var img = document.createElement("img");
+      img.className = "sx__docview-img"; img.alt = d.filename || "Document";
+      img.addEventListener("error", function () {
+        body.innerHTML = ""; body.appendChild(docViewerFallback(d, true));
+      });
+      img.src = docContentUrl(d);
+      body.appendChild(img);
+    } else if (mode === "frame") {
+      var frame = document.createElement("iframe");
+      frame.className = "sx__docview-frame"; frame.title = d.filename || "Document";
+      frame.src = docContentUrl(d);
+      body.appendChild(frame);
+    } else {
+      body.appendChild(docViewerFallback(d, false));
+    }
+    show($("docModal"));
+  }
+
+  function closeDocViewer() {
+    hide($("docModal"));
+    $("docModalBody").innerHTML = "";  // stop the PDF plugin / drop the bytes
+  }
+
+  $("docModalClose").addEventListener("click", closeDocViewer);
+  $("docModalBackdrop").addEventListener("click", closeDocViewer);
 
   function resetDocPending() {
     pendingDocFile = null;

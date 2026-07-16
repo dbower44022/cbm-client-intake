@@ -990,11 +990,33 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   bigger), and the parent record is first read AS THE USER (ACL check + the
   folder's record name). Frontend: static Documents panel — upload picker +
   doc-type select, list newest-first (filename/type chip/uploader/date) from
-  metadata only (DOC-02), **View / Open in Drive / Archive rendered disabled
-  ("Coming soon")** — Phases 2/3 (viewing/cache/archive/CRM write-back/lazy
-  refresh) deliberately NOT built. 40 tests; store verified against a real
-  local Postgres (migration + insert/list/unique/folder-cache); full UI loop
-  verified in the stub harness. **Activation prerequisites (NOT done —
+  metadata only (DOC-02). **Phase 2 — viewing — is BUILT (v0.70.0,
+  2026-07-16; Doug's two web-adaptation rulings: in-app overlay viewer +
+  the BROWSER as the cache):** View streams the file through
+  `GET …/documents/{id}/content` (parent read AS THE USER = the ACL gate;
+  Drive fetch under the signed-in user's delegated identity) into a
+  workspace-sized overlay — PDF/text in an iframe (browser-native PDF
+  viewer), images inline, Google Docs/Sheets/Slides via `files.export` to
+  PDF (DOC-04, `DriveClient.export_pdf`; over-cap exports surface a
+  readable 502 + Open in Drive), unrenderable formats (docx/xlsx) get a
+  clear message + Open in Drive button. **Cache (DOC-06): NO server
+  cache** — the response is `private, max-age=31536000, immutable` and the
+  URL carries `?v=<modifiedTime>`, so each browser holds the bytes and a
+  Drive edit invalidates by changing the URL. **Lazy refresh (DOC-02
+  completion):** the tab renders from metadata, then
+  `POST …/documents/refresh` (ONE `files.list` scoped to the record folder,
+  `DriveClient.list_folder_files`) re-syncs modifiedTime/checksum/view-link
+  (`DocumentStore.update_file_state`) and flags changed rows with an amber
+  "Updated in Drive" tag; best-effort, never blocks the render. Same
+  endpoints on `/mentoradmin` (`/mentors/{id}/documents/{docId}/content` +
+  `…/refresh`, Contact anchor). `DocumentStore.get_document` is
+  record-scoped — a doc id never resolves through another record's route.
+  **Archive + CRM write-back stay disabled Phase 3 placeholders** (do not
+  build ahead). 57 documents tests; store verified against a real
+  local Postgres (Phase 1: migration + insert/list/unique/folder-cache);
+  both UIs' full loops verified in the stub harness (Phase 2 viewing NOT
+  yet driven against the real shared drive — checklist in
+  `GDRIVE-DOCS-SETUP.md` Task 5 item 6). **Activation prerequisites (NOT done —
   step-by-step guide: `GDRIVE-DOCS-SETUP.md`):** (1) enable the Drive API on
   GCP project `espcrm-498315`; (2) Doug creates the "CBM Documents" **shared
   drive** + memberships (Content Manager for every manager — uploads act AS
@@ -1199,7 +1221,25 @@ bullets ("Details EDIT forms — mockup-v4" and "Grid + Overview session
 flags"). Still worth a live eyeball on crm-test: a past-only record's
 Overview split, a real today-session red flag, and Next Session values.
 
-**Main is at v0.68.0** (this session; committed, push per convention) —
+**Main is at v0.70.0** (2026-07-16, committed NOT pushed) — **Documents:
+in-app viewing (DOC-MGMT Phase 2) is BUILT**: View on every document row
+(session tools + `/mentoradmin`) opens an in-app overlay streaming the file
+through a new ACL-gated proxy endpoint (PDF/image/text render natively;
+Google Docs/Sheets/Slides arrive as exported PDF; docx/xlsx fall back to
+Open in Drive with a clear message); caching is **browser-side**
+(immutable responses on modifiedTime-versioned URLs — Doug's ruling, no
+server cache) and the tab lazily re-syncs modifiedTimes from Drive on open,
+flagging rows edited in Drive ("Updated in Drive" tag). Mechanics in the
+Session Management section's Documents-tab bullet; 580 tests green (17
+new); both UIs verified in the stub harness. **NOT yet driven against the
+real shared drive** — after deploy, run `GDRIVE-DOCS-SETUP.md` Task 5
+item 6 (view a PDF + an image + a Google-native doc, confirm the
+Updated-in-Drive flag after editing a file in Drive, and instant re-views
+via the browser cache). No new env vars/migration — Phase 2 rides the
+Phase 1 flags. Archive + CRM write-back remain Phase 3 (kickoff prompt
+drafted: `prompts/Google Drive Documents/prompt-docmgmt-phase3.md`).
+
+Before that: **v0.68.0** (this session; committed, push per convention) —
 **Documents: PRD v1.2 alignment**: engagement Drive folders nest under
 their client (D-07, client resolved at upload time), top-level folders are
 configurable display labels (Mentors/Clients/Partners/Sponsors),

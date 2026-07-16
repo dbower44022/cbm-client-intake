@@ -194,11 +194,17 @@ flag. Worker not involved.
 |---|---|
 | `GCAL_EVENTS` | `true` to enable session calendar events + Meet links (web) |
 
-**Google Drive documents (optional, web component, v0.65.0/v0.67.0 — DOC-MGMT
-Phase 1, PRD v1.2)** — `GDRIVE_DOCS=true` turns the session tools' Documents
+**Google Drive documents (optional, web component, v0.65.0–v0.70.0 — DOC-MGMT
+Phases 1+2, PRD v1.2)** — `GDRIVE_DOCS=true` turns the session tools' Documents
 tab AND the Mentor Administration Documents tab live: staff upload files to
 the **"CBM Documents" shared drive** and each record's documents are listed
-from the `app_document` Postgres table. Folder tree (created on first upload;
+from the `app_document` Postgres table. Since v0.70.0 (Phase 2) the tab also
+**views documents in-app** (View streams the file through the app as the
+signed-in user; Google Docs/Sheets/Slides arrive as exported PDF) with the
+browser as the cache (immutable responses on modifiedTime-versioned URLs — no
+server cache to size or clear), and re-syncs each row's modifiedTime from
+Drive when the tab opens. Phase 2 adds **no new env vars and no new
+migration**. Folder tree (created on first upload;
 top levels are display labels): mentor documents (Contact anchor) →
 `Mentors/{Name} (contactId)/`; client-work documents (CEngagement anchor) →
 `Clients/{Client Name} (clientId)/{Engagement Name} (engagementId)/` (the

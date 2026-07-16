@@ -725,3 +725,22 @@ textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
 .sx__doc-acts { display: inline-flex; gap: 0.35rem; white-space: nowrap; }
 .sx__doc-acts .cbm-button[disabled] { opacity: 0.55; cursor: not-allowed; }
 .sx__doc-file { word-break: break-all; }
+/* A file edited in Drive since the app last synced it (lazy refresh flag). */
+.sx__tag--flag { background: #fdf3e0; color: #8a5a12; margin-left: 0.45rem; }
+
+/* --- In-app document viewer (DOC-MGMT Phase 2, DOC-03) --- */
+/* A workspace-sized overlay: the document gets nearly the whole screen. */
+.sx__modal-card--doc {
+  max-width: min(90rem, 96vw); width: 96vw; height: 92vh; max-height: 92vh;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.sx__modal-card--doc .sx__modal-head { flex: 0 0 auto; }
+.sx__docview { flex: 1 1 auto; min-height: 0; padding: 0; display: flex; }
+.sx__docview-frame { flex: 1 1 auto; width: 100%; border: 0; background: #525659; }
+.sx__docview-img {
+  margin: auto; max-width: 100%; max-height: 100%; object-fit: contain; display: block;
+}
+.sx__docview-fallback {
+  margin: auto; text-align: center; padding: 2rem; color: var(--cbm-slate-700, #556);
+}
+.sx__docview-fallback p { margin: 0 0 1rem; }

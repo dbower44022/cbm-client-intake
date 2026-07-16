@@ -181,6 +181,13 @@ default `Resume,Agreement,Intake Document,Pitch Deck,Other`) and
    (no duplicate folders).
 5. Also check the mentor side: `/mentoradmin` → open a mentor → **Documents**
    tab → upload → the file lands in **Mentors** → `<Mentor Name> (…)`.
+6. **Phase 2 (v0.70.0) — viewing:** View on a PDF row opens it inside the
+   app; View on an image shows it inline; a Google Doc/Sheet/Slide opens as
+   an exported PDF; a docx/xlsx says it can't be previewed and offers Open
+   in Drive. Edit a file in Drive, reopen the tab → the row shows an
+   **"Updated in Drive"** tag and View fetches the new version (the old one
+   was browser-cached under the previous modifiedTime). No extra
+   configuration — Phase 2 rides the same flags.
 5. Troubleshooting quick map:
    - 403 `accessNotConfigured` → Task 1 not done / wrong project.
    - `unauthorized_client` / "delegation denied" → Task 2 scope line wrong

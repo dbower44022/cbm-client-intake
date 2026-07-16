@@ -230,6 +230,24 @@
     </div>
   </div>
 
+  <!-- In-app document viewer (Documents tab — DOC-MGMT Phase 2, DOC-03) -->
+  <div class="sx__modal" id="docModal" hidden role="dialog" aria-modal="true" aria-labelledby="docModalTitle">
+    <div class="sx__modal-backdrop" id="docModalBackdrop"></div>
+    <div class="sx__modal-card sx__modal-card--doc" role="document">
+      <div class="sx__modal-head">
+        <div>
+          <p class="sx__modal-kind" id="docModalKind"></p>
+          <h3 class="sx__modal-name" id="docModalTitle"></h3>
+        </div>
+        <span class="sx__modal-actions">
+          <button type="button" class="cbm-button cbm-button--secondary sx__sm" id="docModalDrive" hidden>Open in Drive</button>
+          <button type="button" class="sx__modal-close" id="docModalClose" aria-label="Close">×</button>
+        </span>
+      </div>
+      <div class="sx__modal-body sx__docview" id="docModalBody"></div>
+    </div>
+  </div>
+
   <!-- Unsaved-changes prompt when leaving the session editor -->
   <div class="sx__modal" id="confirmModal" hidden role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
     <div class="sx__modal-backdrop" id="confirmBackdrop"></div>

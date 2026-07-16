@@ -41,6 +41,17 @@ FOLDER_MIME = "application/vnd.google-apps.folder"
 # The metadata captured for every uploaded file (PRD DOC-01).
 FILE_FIELDS = "id,name,webViewLink,modifiedTime,md5Checksum"
 
+# Google-native editor formats have no native bytes — in-app viewing exports
+# them to PDF (PRD DOC-04).
+PDF_MIME = "application/pdf"
+GOOGLE_NATIVE_MIMES = frozenset(
+    {
+        "application/vnd.google-apps.document",
+        "application/vnd.google-apps.spreadsheet",
+        "application/vnd.google-apps.presentation",
+    }
+)
+
 # Uploads at or under this size go up in one multipart request; anything larger
 # uses a resumable session (PRD DOC-01: "resumable upload for files over 5 MB").
 RESUMABLE_THRESHOLD = 5 * 1024 * 1024
@@ -273,6 +284,61 @@ class DriveClient:
                 continue
             return resp.json()
         raise DriveError("Drive resumable upload ended without a completed file.")
+
+    async def download_file(self, file_id: str) -> bytes:
+        """The file's native bytes (``files.get?alt=media`` — DOC-03)."""
+        resp = await self._send(
+            "GET",
+            f"{_BASE}/files/{file_id}",
+            params={"alt": "media", "supportsAllDrives": "true"},
+        )
+        log.info(
+            "drive download as %s -> %s (%d bytes)",
+            self.mailbox, file_id, len(resp.content),
+        )
+        return resp.content
+
+    async def export_pdf(self, file_id: str) -> bytes:
+        """A Google-native file (Docs/Sheets/Slides) exported to PDF (DOC-04).
+        Note the Drive export cap (~10 MB of exported content) — an oversized
+        document raises a DriveError; the caller falls back to Open in Drive."""
+        resp = await self._send(
+            "GET",
+            f"{_BASE}/files/{file_id}/export",
+            params={"mimeType": PDF_MIME},
+        )
+        log.info(
+            "drive pdf export as %s -> %s (%d bytes)",
+            self.mailbox, file_id, len(resp.content),
+        )
+        return resp.content
+
+    async def list_folder_files(self, folder_id: str) -> list[dict[str, Any]]:
+        """Every non-trashed file directly inside ``folder_id`` (one
+        ``files.list`` scoped to the record folder — the DOC-02 lazy
+        modifiedTime refresh)."""
+        files: list[dict[str, Any]] = []
+        page_token: Optional[str] = None
+        while True:
+            params: dict[str, Any] = {
+                "q": (
+                    f"'{folder_id}' in parents and trashed = false "
+                    f"and mimeType != '{FOLDER_MIME}'"
+                ),
+                "driveId": self.drive_id,
+                "corpora": "drive",
+                "includeItemsFromAllDrives": "true",
+                "supportsAllDrives": "true",
+                "fields": f"nextPageToken,files({FILE_FIELDS})",
+                "pageSize": 1000,
+            }
+            if page_token:
+                params["pageToken"] = page_token
+            data = await self._request("GET", "/files", params=params)
+            files.extend(data.get("files") or [])
+            page_token = data.get("nextPageToken")
+            if not page_token:
+                return files
 
     async def delete_file(self, file_id: str) -> None:
         """Rollback only (DOC-01): remove a Drive file that has no metadata row.

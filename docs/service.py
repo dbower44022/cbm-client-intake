@@ -13,11 +13,12 @@ from __future__ import annotations
 
 import logging
 import re
+import urllib.parse
 from datetime import datetime, timezone
 from typing import Any, Optional
 
 from core.config import Settings
-from core.gdrive import DriveClient, DriveError
+from core.gdrive import GOOGLE_NATIVE_MIMES, PDF_MIME, DriveClient, DriveError
 
 from .store import DocumentStore, make_document_store
 
@@ -26,6 +27,10 @@ log = logging.getLogger("cbm_intake.docs.service")
 
 class DocsError(Exception):
     """A user-visible failure (message is safe to show)."""
+
+
+class DocsNotFound(DocsError):
+    """The requested document isn't on this record (routes map it to a 404)."""
 
 
 # --- lazy singleton (comms pattern) -------------------------------------------
@@ -247,3 +252,106 @@ async def list_documents(
 ) -> list[dict[str, Any]]:
     """DOC-02 (partial): active documents, newest first, from metadata only."""
     return await store.list_documents(entity_type, record_id)
+
+
+# --- viewing (Phase 2) -------------------------------------------------------------
+
+
+def content_headers(filename: str) -> dict[str, str]:
+    """Response headers for the view proxy (DOC-06 — the browser IS the cache):
+    the frontend versions the URL by the row's modifiedTime, so the bytes at
+    any one URL are immutable — each browser holds them privately, cache hits
+    are instant with zero network, and a Drive edit (new modifiedTime → new
+    URL after the lazy refresh) invalidates automatically. No server-side
+    cache state exists (App Platform's disk is ephemeral anyway)."""
+    ascii_name = (
+        filename.encode("ascii", "replace").decode().replace('"', "'") or "document"
+    )
+    quoted = urllib.parse.quote(filename)
+    return {
+        "Cache-Control": "private, max-age=31536000, immutable",
+        "Content-Disposition": (
+            f'inline; filename="{ascii_name}"; filename*=UTF-8\'\'{quoted}'
+        ),
+    }
+
+
+def is_google_native(mime_type: Optional[str]) -> bool:
+    """Google-native editor formats (Docs/Sheets/Slides) have no native bytes —
+    in-app viewing goes through ``files.export`` to PDF (DOC-04)."""
+    return (mime_type or "") in GOOGLE_NATIVE_MIMES
+
+
+def _pdf_filename(filename: str) -> str:
+    stem = filename.rsplit(".", 1)[0] if "." in filename else filename
+    return f"{stem or 'document'}.pdf"
+
+
+async def fetch_document(
+    store: DocumentStore,
+    drive: DriveClient,
+    entity_type: str,
+    record_id: str,
+    doc_id: str,
+) -> dict[str, Any]:
+    """The document's viewable bytes, fetched from Drive as the signed-in user
+    (DOC-03). Binary files come back with their native MIME type; Google-native
+    formats are exported to PDF (DOC-04). Returns
+    ``{data, mime_type, filename, modified_time}`` — the caller serves it with
+    cache headers keyed on the row's modifiedTime (DOC-06, browser HTTP cache)."""
+    row = await store.get_document(entity_type, record_id, doc_id)
+    if row is None:
+        raise DocsNotFound("That document isn't on this record.")
+    file_id = row["driveFileId"]
+    if is_google_native(row.get("mimeType")):
+        data = await drive.export_pdf(file_id)
+        mime, filename = PDF_MIME, _pdf_filename(row.get("filename") or "")
+    else:
+        data = await drive.download_file(file_id)
+        mime = row.get("mimeType") or "application/octet-stream"
+        filename = row.get("filename") or "document"
+    return {
+        "data": data,
+        "mime_type": mime,
+        "filename": filename,
+        "modified_time": row.get("modifiedTime"),
+    }
+
+
+async def refresh_documents(
+    store: DocumentStore, drive: DriveClient, entity_type: str, record_id: str
+) -> list[dict[str, Any]]:
+    """DOC-02 completion — the lazy modifiedTime refresh on record open: ONE
+    ``files.list`` scoped to the record folder updates each row's
+    ``modified_time`` (+ checksum/view link), and rows whose file changed in
+    Drive since last sync are flagged ``changedInDrive`` (which also busts the
+    browser's cached copy — the view URL is versioned by modifiedTime). Files
+    the listing doesn't cover (moved out of the folder by a human) are left
+    untouched. Returns the refreshed rows, list-shaped."""
+    rows = await store.list_documents(entity_type, record_id)
+    if not rows:
+        return []
+    folder_id = await store.cached_folder_id(entity_type, record_id)
+    if not folder_id:
+        return rows
+    listed = {f["id"]: f for f in await drive.list_folder_files(folder_id)}
+    changed_ids: set[str] = set()
+    for row in rows:
+        file = listed.get(row["driveFileId"])
+        if not file:
+            continue
+        drive_time = _parse_drive_time(file.get("modifiedTime"))
+        stored_time = _parse_drive_time(row.get("modifiedTime"))
+        if drive_time and drive_time != stored_time:
+            await store.update_file_state(
+                row["id"],
+                modified_time=drive_time,
+                checksum_md5=file.get("md5Checksum"),
+                web_view_link=file.get("webViewLink"),
+            )
+            changed_ids.add(row["id"])
+    if changed_ids:
+        rows = await store.list_documents(entity_type, record_id)
+    for row in rows:
+        row["changedInDrive"] = row["id"] in changed_ids
+    return rows

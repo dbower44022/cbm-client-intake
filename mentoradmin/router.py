@@ -13,7 +13,7 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 
 from assignments import service as assign_service
@@ -293,6 +293,69 @@ async def mentor_upload_document(
         )
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not upload the document")
+
+
+@router.get("/mentors/{mentor_id}/documents/{doc_id}/content")
+async def mentor_document_content(
+    mentor_id: str, doc_id: str, request: Request
+) -> Response:
+    """DOC-03: stream a mentor document's bytes through the app. The mentor
+    profile is read AS THE USER (their ACL gates viewing) to resolve the
+    Contact anchor; the Drive fetch runs as their own CBM identity.
+    Google-native files arrive as exported PDF (DOC-04); served immutable —
+    the frontend versions the URL by modifiedTime (DOC-06)."""
+    user = _require_user(request)
+    settings, store = _docs_ready()
+    client = client_for(settings, user)
+    try:
+        contact_id, _ = await _mentor_contact_anchor(client, mentor_id)
+        drive = await docs_service.drive_for_user(settings, client, user)
+        doc = await docs_service.fetch_document(
+            store, drive, "Contact", contact_id, doc_id
+        )
+    except docs_service.DocsNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except docs_service.DocsError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except DriveError as exc:
+        log.warning("mentor document fetch failed: %s", exc)
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                "Couldn't fetch the document from Google Drive — "
+                "try again, or use Open in Drive."
+            ),
+        )
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not load the document")
+    return Response(
+        content=doc["data"],
+        media_type=doc["mime_type"],
+        headers=docs_service.content_headers(doc["filename"]),
+    )
+
+
+@router.post("/mentors/{mentor_id}/documents/refresh")
+async def mentor_refresh_documents(mentor_id: str, request: Request) -> dict:
+    """DOC-02 completion — lazy modifiedTime refresh for the mentor's Contact
+    folder; fired by the frontend after the metadata render, never blocking."""
+    user = _require_user(request)
+    settings, store = _docs_ready()
+    client = client_for(settings, user)
+    try:
+        contact_id, _ = await _mentor_contact_anchor(client, mentor_id)
+        drive = await docs_service.drive_for_user(settings, client, user)
+        rows = await docs_service.refresh_documents(store, drive, "Contact", contact_id)
+        return {"documents": rows, "docTypes": settings.gdrive_doc_types_list}
+    except docs_service.DocsError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except DriveError as exc:
+        log.warning("mentor document refresh failed: %s", exc)
+        raise HTTPException(
+            status_code=502, detail="Couldn't reach Google Drive — try again."
+        )
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not refresh the documents")
 
 
 def _provision_factory(settings: Settings):

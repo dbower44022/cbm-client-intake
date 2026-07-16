@@ -26,6 +26,7 @@ from sqlalchemy import (
     Table,
     insert,
     select,
+    update,
 )
 
 from core.config import Settings
@@ -132,6 +133,47 @@ class DocumentStore:
             ).all()
         return [_row_dict(r) for r in rows]
 
+    async def get_document(
+        self, entity_type: str, record_id: str, doc_id: str
+    ) -> Optional[dict[str, Any]]:
+        """One document row, scoped to its anchor record — a doc id from
+        another record's route never resolves (the route's ACL check covers
+        exactly the record it read)."""
+        async with self._engine.begin() as conn:
+            row = (
+                await conn.execute(
+                    select(app_document).where(
+                        app_document.c.id == doc_id,
+                        app_document.c.entity_type == entity_type,
+                        app_document.c.record_id == record_id,
+                    )
+                )
+            ).first()
+        return _row_dict(row) if row else None
+
+    async def update_file_state(
+        self,
+        doc_id: str,
+        *,
+        modified_time: Optional[datetime],
+        checksum_md5: Optional[str] = None,
+        web_view_link: Optional[str] = None,
+    ) -> None:
+        """Refresh the Drive-derived columns after a lazy sync (DOC-02):
+        ``modified_time`` is the cache-invalidation key; checksum + view link
+        ride along when Drive reported them."""
+        values: dict[str, Any] = {"modified_time": modified_time}
+        if checksum_md5 is not None:
+            values["checksum_md5"] = checksum_md5
+        if web_view_link is not None:
+            values["web_view_link"] = web_view_link
+        async with self._engine.begin() as conn:
+            await conn.execute(
+                update(app_document)
+                .where(app_document.c.id == doc_id)
+                .values(**values)
+            )
+
     async def cached_folder_id(self, entity_type: str, record_id: str) -> Optional[str]:
         """The record's Drive folder id, from any prior upload (folder-ID cache,
         PRD §4 — denormalized on the rows; any status counts)."""
@@ -188,6 +230,42 @@ class MemoryDocumentStore:
         ]
         matches.sort(key=lambda r: r["uploaded_at"], reverse=True)
 
+        class _Row:
+            def __init__(self, d: dict[str, Any]) -> None:
+                for col in app_document.c:
+                    setattr(self, col.name, d.get(col.name))
+
+        return [_row_dict(_Row(r)) for r in matches]
+
+    async def get_document(
+        self, entity_type: str, record_id: str, doc_id: str
+    ) -> Optional[dict[str, Any]]:
+        for r in self.rows:
+            if (
+                r["id"] == doc_id
+                and r["entity_type"] == entity_type
+                and r["record_id"] == record_id
+            ):
+                return (await self._as_rows([r]))[0]
+        return None
+
+    async def update_file_state(
+        self,
+        doc_id: str,
+        *,
+        modified_time: Optional[datetime],
+        checksum_md5: Optional[str] = None,
+        web_view_link: Optional[str] = None,
+    ) -> None:
+        for r in self.rows:
+            if r["id"] == doc_id:
+                r["modified_time"] = modified_time
+                if checksum_md5 is not None:
+                    r["checksum_md5"] = checksum_md5
+                if web_view_link is not None:
+                    r["web_view_link"] = web_view_link
+
+    async def _as_rows(self, matches: list[dict[str, Any]]) -> list[dict[str, Any]]:
         class _Row:
             def __init__(self, d: dict[str, Any]) -> None:
                 for col in app_document.c:

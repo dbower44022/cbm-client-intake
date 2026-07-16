@@ -356,6 +356,151 @@ async def test_drive_for_user_requires_shared_drive(monkeypatch):
     assert "drive" in str(exc.value).lower()
 
 
+# --- viewing (Phase 2: DOC-03/04/06 + the DOC-02 lazy refresh) ---------------------
+
+
+class ViewDrive(FakeDrive):
+    """FakeDrive + the Phase 2 read surface."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.downloads: list[str] = []
+        self.exports: list[str] = []
+        self.folder_files: dict[str, list[dict]] = {}
+
+    async def download_file(self, file_id):
+        self.downloads.append(file_id)
+        return b"native-bytes"
+
+    async def export_pdf(self, file_id):
+        self.exports.append(file_id)
+        return b"%PDF-exported"
+
+    async def list_folder_files(self, folder_id):
+        return self.folder_files.get(folder_id, [])
+
+
+async def _seed(store, **overrides):
+    values = {
+        "drive_file_id": "gfile1", "entity_type": "CEngagement", "record_id": "E1",
+        "original_filename": "resume.pdf", "mime_type": "application/pdf",
+        "doc_type": "Resume", "drive_folder_id": "foldE1",
+        "modified_time": _dt("2026-07-16"),
+    }
+    values.update(overrides)
+    await store.insert_document(values)
+    rows = await store.list_documents(values["entity_type"], values["record_id"])
+    return next(r for r in rows if r["driveFileId"] == values["drive_file_id"])
+
+
+async def test_fetch_document_native_bytes():
+    drive, store = ViewDrive(), MemoryDocumentStore()
+    row = await _seed(store)
+    doc = await docs_service.fetch_document(store, drive, "CEngagement", "E1", row["id"])
+    assert doc["data"] == b"native-bytes"
+    assert doc["mime_type"] == "application/pdf"
+    assert doc["filename"] == "resume.pdf"
+    assert drive.downloads == ["gfile1"] and drive.exports == []
+
+
+async def test_fetch_document_google_native_exports_pdf():
+    drive, store = ViewDrive(), MemoryDocumentStore()
+    row = await _seed(
+        store, drive_file_id="gdoc1", original_filename="Business Plan.gdoc",
+        mime_type="application/vnd.google-apps.document",
+    )
+    doc = await docs_service.fetch_document(store, drive, "CEngagement", "E1", row["id"])
+    assert doc["data"] == b"%PDF-exported"
+    assert doc["mime_type"] == "application/pdf"
+    assert doc["filename"] == "Business Plan.pdf"
+    assert drive.exports == ["gdoc1"] and drive.downloads == []
+
+
+async def test_fetch_document_unknown_id_raises_not_found():
+    drive, store = ViewDrive(), MemoryDocumentStore()
+    with pytest.raises(docs_service.DocsNotFound):
+        await docs_service.fetch_document(store, drive, "CEngagement", "E1", "nope")
+
+
+async def test_fetch_document_scoped_to_its_record():
+    """A doc id from record E1 must not resolve through record E2's route —
+    the route's CRM ACL check covers exactly the record it read."""
+    drive, store = ViewDrive(), MemoryDocumentStore()
+    row = await _seed(store)
+    with pytest.raises(docs_service.DocsNotFound):
+        await docs_service.fetch_document(store, drive, "CEngagement", "E2", row["id"])
+
+
+def test_is_google_native():
+    assert docs_service.is_google_native("application/vnd.google-apps.spreadsheet")
+    assert not docs_service.is_google_native("application/pdf")
+    assert not docs_service.is_google_native(None)
+
+
+def test_content_headers_immutable_and_named():
+    h = docs_service.content_headers("Résumé v2.pdf")
+    assert h["Cache-Control"] == "private, max-age=31536000, immutable"
+    assert 'filename="R?sum? v2.pdf"' in h["Content-Disposition"]
+    assert "filename*=UTF-8''R%C3%A9sum%C3%A9%20v2.pdf" in h["Content-Disposition"]
+
+
+async def test_refresh_updates_changed_rows_and_flags_them():
+    drive, store = ViewDrive(), MemoryDocumentStore()
+    changed = await _seed(store)  # gfile1, stored 2026-07-16
+    same = await _seed(
+        store, drive_file_id="gfile2", original_filename="notes.docx",
+        mime_type="application/msword",
+    )
+    drive.folder_files["foldE1"] = [
+        {"id": "gfile1", "modifiedTime": "2026-07-17T09:00:00.000Z",
+         "md5Checksum": "new-sum", "webViewLink": "https://drive.google.com/new"},
+        {"id": "gfile2", "modifiedTime": "2026-07-16T00:00:00.000Z"},
+    ]
+    rows = await docs_service.refresh_documents(store, drive, "CEngagement", "E1")
+    by_file = {r["driveFileId"]: r for r in rows}
+    assert by_file["gfile1"]["changedInDrive"] is True
+    assert by_file["gfile1"]["modifiedTime"].startswith("2026-07-17")
+    assert by_file["gfile1"]["checksumMd5"] == "new-sum"
+    assert by_file["gfile1"]["webViewLink"] == "https://drive.google.com/new"
+    assert by_file["gfile2"]["changedInDrive"] is False
+    assert by_file["gfile2"]["modifiedTime"] == same["modifiedTime"]
+    # a second refresh is a no-op: the stored time now matches Drive
+    rows = await docs_service.refresh_documents(store, drive, "CEngagement", "E1")
+    assert all(not r["changedInDrive"] for r in rows)
+    assert changed["id"] in {r["id"] for r in rows}
+
+
+async def test_refresh_leaves_unlisted_files_untouched():
+    """A file a human moved out of the record folder isn't in the scoped
+    files.list — its row keeps its stored state (never nulled)."""
+    drive, store = ViewDrive(), MemoryDocumentStore()
+    row = await _seed(store)
+    drive.folder_files["foldE1"] = []  # listing doesn't cover the file
+    rows = await docs_service.refresh_documents(store, drive, "CEngagement", "E1")
+    assert rows[0]["modifiedTime"] == row["modifiedTime"]
+    assert rows[0]["changedInDrive"] is False
+
+
+async def test_refresh_without_rows_or_folder():
+    drive, store = ViewDrive(), MemoryDocumentStore()
+    assert await docs_service.refresh_documents(store, drive, "CEngagement", "E1") == []
+    row = await _seed(store, drive_folder_id=None)
+    rows = await docs_service.refresh_documents(store, drive, "CEngagement", "E1")
+    assert rows[0]["id"] == row["id"]  # no cached folder -> metadata returned as is
+
+
+async def test_store_update_file_state_roundtrip():
+    store = MemoryDocumentStore()
+    row = await _seed(store)
+    new_time = docs_service._parse_drive_time("2026-07-18T12:00:00.000Z")
+    await store.update_file_state(row["id"], modified_time=new_time, checksum_md5="s2")
+    got = await store.get_document("CEngagement", "E1", row["id"])
+    assert got["modifiedTime"].startswith("2026-07-18")
+    assert got["checksumMd5"] == "s2"
+    # web_view_link untouched when not supplied
+    assert got["webViewLink"] == row["webViewLink"]
+
+
 # --- DriveClient upload-mode selection (no HTTP) -----------------------------------
 
 

@@ -589,11 +589,28 @@
       var res = await api("/mentors/" + encodeURIComponent(current.id) + "/documents");
       mdocTypes = res.docTypes || [];
       renderMentorDocRows(res.documents || []);
+      // DOC-02 completion: re-sync modifiedTimes from Drive AFTER the metadata
+      // render (never blocks it). Best-effort.
+      if ((res.documents || []).length) refreshMentorDocTimes();
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }
       hide(empty);
       $("mdocError").textContent = e.message; show($("mdocError"));
     }
+  }
+
+  async function refreshMentorDocTimes() {
+    if (!current) return;
+    var forId = current.id;
+    try {
+      var res = await api(
+        "/mentors/" + encodeURIComponent(forId) + "/documents/refresh",
+        { method: "POST" }
+      );
+      if (!current || current.id !== forId) return;  // user moved on
+      mdocTypes = res.docTypes || mdocTypes;
+      renderMentorDocRows(res.documents || []);
+    } catch (e) { /* lazy refresh is best-effort; the metadata render stands */ }
   }
 
   function renderMentorDocRows(rows) {
@@ -607,6 +624,11 @@
     rows.forEach(function (d) {
       var tr = document.createElement("tr");
       var c0 = document.createElement("td"); c0.textContent = d.filename || "—";
+      if (d.changedInDrive) {
+        var flag = document.createElement("span");
+        flag.className = "ma__doc-flag"; flag.textContent = "Updated in Drive";
+        c0.appendChild(flag);
+      }
       var c1 = document.createElement("td"); c1.textContent = d.docType || "";
       var c2 = document.createElement("td"); c2.textContent = d.uploadedBy || "—";
       var c3 = document.createElement("td"); c3.textContent = fmtDocDate(d.uploadedAt);
@@ -615,9 +637,10 @@
         var b = document.createElement("button");
         b.type = "button"; b.className = "cbm-button cbm-button--secondary ma__sm";
         b.textContent = label;
-        // Open in Drive is live (DOC-05 pulled forward — the webViewLink is
-        // already stored); View/Archive stay Phase 2/3 placeholders.
-        if (label === "Open in Drive" && d.webViewLink) {
+        // View (DOC-03) + Open in Drive (DOC-05) are live; Archive is Phase 3.
+        if (label === "View") {
+          b.addEventListener("click", function () { openMdocViewer(d); });
+        } else if (label === "Open in Drive" && d.webViewLink) {
           b.addEventListener("click", function () {
             window.open(d.webViewLink, "_blank", "noopener");
           });
@@ -629,6 +652,92 @@
       tr.appendChild(c0); tr.appendChild(c1); tr.appendChild(c2); tr.appendChild(c3); tr.appendChild(c4);
       body.appendChild(tr);
     });
+  }
+
+  // --- in-app document viewer (DOC-03/04/06) ---------------------------------
+  // Same behavior as the session tools' viewer: PDFs/text (and Google-native
+  // files, which the proxy serves as exported PDF) in an iframe, images inline,
+  // anything else falls back to Open in Drive. The proxy URL is versioned by
+  // modifiedTime and served immutable — the browser is the cache (DOC-06).
+
+  var MDOC_GOOGLE_NATIVE = {
+    "application/vnd.google-apps.document": true,
+    "application/vnd.google-apps.spreadsheet": true,
+    "application/vnd.google-apps.presentation": true,
+  };
+
+  function mdocContentUrl(d) {
+    return API + "/mentors/" + encodeURIComponent(current.id) + "/documents/" +
+      encodeURIComponent(d.id) + "/content?v=" + encodeURIComponent(d.modifiedTime || "");
+  }
+
+  function mdocViewMode(d) {
+    var mime = (d.mimeType || "").toLowerCase();
+    if (mime === "application/pdf" || MDOC_GOOGLE_NATIVE[mime] || mime === "text/plain") return "frame";
+    if (mime.indexOf("image/") === 0) return "image";
+    return "none";
+  }
+
+  function mdocFallback(d, failed) {
+    var wrap = document.createElement("div"); wrap.className = "ma__docview-fallback";
+    var p = document.createElement("p");
+    p.textContent = failed
+      ? "The document couldn't be loaded — try again, or use Open in Drive."
+      : ("This file type can't be previewed in the app" +
+         (d.webViewLink ? " — use Open in Drive to view it." : "."));
+    wrap.appendChild(p);
+    if (d.webViewLink) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "cbm-button"; b.textContent = "Open in Drive";
+      b.addEventListener("click", function () { window.open(d.webViewLink, "_blank", "noopener"); });
+      wrap.appendChild(b);
+    }
+    return wrap;
+  }
+
+  function openMdocViewer(d) {
+    var overlay = document.createElement("div");
+    overlay.className = "modal-overlay"; overlay.id = "mdocViewer";
+    var card = document.createElement("div"); card.className = "modal-card modal-card--doc";
+    var head = document.createElement("div"); head.className = "ma__docview-head";
+    var title = document.createElement("h3"); title.textContent = d.filename || "Document";
+    var acts = document.createElement("span"); acts.className = "ma__docview-acts";
+    if (d.webViewLink) {
+      var db = document.createElement("button");
+      db.type = "button"; db.className = "cbm-button cbm-button--secondary ma__sm";
+      db.textContent = "Open in Drive";
+      db.addEventListener("click", function () { window.open(d.webViewLink, "_blank", "noopener"); });
+      acts.appendChild(db);
+    }
+    var close = document.createElement("button");
+    close.type = "button"; close.className = "cbm-button cbm-button--secondary ma__sm";
+    close.textContent = "Close";
+    close.addEventListener("click", function () { overlay.remove(); });
+    acts.appendChild(close);
+    head.appendChild(title); head.appendChild(acts);
+    card.appendChild(head);
+    var view = document.createElement("div"); view.className = "ma__docview";
+    var mode = mdocViewMode(d);
+    if (mode === "image") {
+      var img = document.createElement("img");
+      img.className = "ma__docview-img"; img.alt = d.filename || "Document";
+      img.addEventListener("error", function () {
+        view.innerHTML = ""; view.appendChild(mdocFallback(d, true));
+      });
+      img.src = mdocContentUrl(d);
+      view.appendChild(img);
+    } else if (mode === "frame") {
+      var frame = document.createElement("iframe");
+      frame.className = "ma__docview-frame"; frame.title = d.filename || "Document";
+      frame.src = mdocContentUrl(d);
+      view.appendChild(frame);
+    } else {
+      view.appendChild(mdocFallback(d, false));
+    }
+    card.appendChild(view);
+    overlay.appendChild(card);
+    overlay.addEventListener("click", function (e) { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
   }
 
   async function uploadMentorDoc() {

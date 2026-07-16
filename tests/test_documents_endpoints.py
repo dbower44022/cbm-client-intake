@@ -308,6 +308,131 @@ def test_mentoradmin_upload_requires_linked_contact(monkeypatch):
     assert "linked Contact" in r.json()["detail"]
 
 
+# --- Phase 2: view proxy + lazy refresh ----------------------------------------
+
+
+class _ViewDrive:
+    mailbox = "bob.mentor@cbmentors.org"
+    drive_id = "drv1"
+
+
+async def _fake_drive_for_user(settings, client, user):
+    return _ViewDrive()
+
+
+def test_document_content_streams_with_immutable_cache_headers(monkeypatch):
+    _as(monkeypatch)
+    monkeypatch.setattr(docs_service, "get_store", lambda settings: MemoryDocumentStore())
+    monkeypatch.setattr(docs_service, "drive_for_user", _fake_drive_for_user)
+    seen = {}
+
+    async def fake_fetch(store, drive, entity_type, record_id, doc_id):
+        seen.update(entity=entity_type, record=record_id, doc=doc_id)
+        return {"data": b"%PDF-1.4", "mime_type": "application/pdf",
+                "filename": "resume.pdf", "modified_time": "2026-07-16T10:00:00+00:00"}
+
+    monkeypatch.setattr(docs_service, "fetch_document", fake_fetch)
+    with TestClient(_app(monkeypatch, gdrive_docs=True)) as c:
+        r = c.get("/mentorsessions/api/records/E1/documents/D1/content?v=2026-07-16")
+    assert r.status_code == 200
+    assert r.content == b"%PDF-1.4"
+    assert r.headers["content-type"].startswith("application/pdf")
+    assert r.headers["cache-control"] == "private, max-age=31536000, immutable"
+    assert 'filename="resume.pdf"' in r.headers["content-disposition"]
+    assert seen == {"entity": "CEngagement", "record": "E1", "doc": "D1"}
+
+
+def test_document_content_unknown_doc_404(monkeypatch):
+    _as(monkeypatch)
+    monkeypatch.setattr(docs_service, "get_store", lambda settings: MemoryDocumentStore())
+    monkeypatch.setattr(docs_service, "drive_for_user", _fake_drive_for_user)
+    with TestClient(_app(monkeypatch, gdrive_docs=True)) as c:
+        r = c.get("/mentorsessions/api/records/E1/documents/nope/content")
+    assert r.status_code == 404
+    assert "isn't on this record" in r.json()["detail"]
+
+
+def test_document_content_drive_failure_502(monkeypatch):
+    from core.gdrive import DriveError
+
+    _as(monkeypatch)
+    monkeypatch.setattr(docs_service, "get_store", lambda settings: MemoryDocumentStore())
+    monkeypatch.setattr(docs_service, "drive_for_user", _fake_drive_for_user)
+
+    async def failing_fetch(*a, **k):
+        raise DriveError("HTTP 500")
+
+    monkeypatch.setattr(docs_service, "fetch_document", failing_fetch)
+    with TestClient(_app(monkeypatch, gdrive_docs=True)) as c:
+        r = c.get("/mentorsessions/api/records/E1/documents/D1/content")
+    assert r.status_code == 502
+    assert "Open in Drive" in r.json()["detail"]
+
+
+def test_documents_refresh_returns_flagged_rows(monkeypatch):
+    _as(monkeypatch)
+    monkeypatch.setattr(docs_service, "get_store", lambda settings: MemoryDocumentStore())
+    monkeypatch.setattr(docs_service, "drive_for_user", _fake_drive_for_user)
+    seen = {}
+
+    async def fake_refresh(store, drive, entity_type, record_id):
+        seen.update(entity=entity_type, record=record_id)
+        return [{"id": "D1", "filename": "resume.pdf", "changedInDrive": True}]
+
+    monkeypatch.setattr(docs_service, "refresh_documents", fake_refresh)
+    with TestClient(_app(monkeypatch, gdrive_docs=True)) as c:
+        r = c.post("/mentorsessions/api/records/E1/documents/refresh")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["documents"][0]["changedInDrive"] is True
+    assert "Resume" in body["docTypes"]
+    assert seen == {"entity": "CEngagement", "record": "E1"}
+
+
+def test_documents_refresh_disabled_503(monkeypatch):
+    _as(monkeypatch)
+    with TestClient(_app(monkeypatch, gdrive_docs=False)) as c:
+        r = c.post("/mentorsessions/api/records/E1/documents/refresh")
+    assert r.status_code == 503
+
+
+def test_mentoradmin_content_anchors_to_contact(monkeypatch):
+    _as_staff(monkeypatch)
+    monkeypatch.setattr(docs_service, "get_store", lambda settings: MemoryDocumentStore())
+    monkeypatch.setattr(docs_service, "drive_for_user", _fake_drive_for_user)
+    seen = {}
+
+    async def fake_fetch(store, drive, entity_type, record_id, doc_id):
+        seen.update(entity=entity_type, record=record_id, doc=doc_id)
+        return {"data": b"img", "mime_type": "image/png",
+                "filename": "photo.png", "modified_time": None}
+
+    monkeypatch.setattr(docs_service, "fetch_document", fake_fetch)
+    with TestClient(_app(monkeypatch, gdrive_docs=True)) as c:
+        r = c.get("/mentoradmin/api/mentors/M1/documents/D9/content")
+    assert r.status_code == 200
+    assert r.content == b"img"
+    assert r.headers["cache-control"] == "private, max-age=31536000, immutable"
+    assert seen == {"entity": "Contact", "record": "C77", "doc": "D9"}
+
+
+def test_mentoradmin_refresh_anchors_to_contact(monkeypatch):
+    _as_staff(monkeypatch)
+    monkeypatch.setattr(docs_service, "get_store", lambda settings: MemoryDocumentStore())
+    monkeypatch.setattr(docs_service, "drive_for_user", _fake_drive_for_user)
+    seen = {}
+
+    async def fake_refresh(store, drive, entity_type, record_id):
+        seen.update(entity=entity_type, record=record_id)
+        return []
+
+    monkeypatch.setattr(docs_service, "refresh_documents", fake_refresh)
+    with TestClient(_app(monkeypatch, gdrive_docs=True)) as c:
+        r = c.post("/mentoradmin/api/mentors/M1/documents/refresh")
+    assert r.status_code == 200
+    assert seen == {"entity": "Contact", "record": "C77"}
+
+
 def test_upload_drive_failure_maps_to_502(monkeypatch):
     from core.gdrive import DriveError
 

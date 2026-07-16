@@ -4,6 +4,53 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.70.0] — 2026-07-16
+
+### Added
+- **Documents: in-app viewing goes live — DOC-MGMT Phase 2** (DOC-03/04/06 +
+  the DOC-02 lazy refresh, per the PRD's Phase 2, adapted to the web
+  architecture with Doug's rulings: in-app overlay viewer + the browser as
+  the cache). In the session tools AND Mentor Administration:
+  - **View (DOC-03):** each document row's View button opens a
+    workspace-sized overlay rendering the file inside the app, streamed
+    through a new proxy endpoint
+    (`GET …/documents/{id}/content` — the parent record is read AS THE USER
+    first, so their CRM ACL gates viewing; the Drive fetch then runs under
+    their own delegated CBM identity, keeping the D-01 audit trail). PDFs
+    render in the browser's native PDF viewer (iframe), images inline,
+    plain text inline; formats the browser can't render (docx/xlsx/…)
+    show a clear message with an Open in Drive button.
+  - **Google-native formats (DOC-04):** Docs/Sheets/Slides have no native
+    bytes — the proxy serves them via `files.export` to PDF
+    (`DriveClient.export_pdf`; an export over Drive's cap surfaces the
+    readable 502 + Open in Drive fallback). `checksum_md5` stays null;
+    `modified_time` is the sole invalidation key.
+  - **Cache (DOC-06, web adaptation — Doug's ruling):** no server-side
+    cache (App Platform's disk is ephemeral); the proxy response is
+    `Cache-Control: private, max-age=31536000, immutable` and the frontend
+    versions the URL with the row's `modifiedTime`, so each browser holds
+    the bytes, cache hits are instant with zero network, and a Drive edit
+    (new modifiedTime → new URL) invalidates automatically.
+  - **Lazy modifiedTime refresh (DOC-02 completion):** opening the
+    Documents tab renders from metadata immediately, then fires
+    `POST …/documents/refresh` — ONE `files.list` scoped to the record
+    folder (`DriveClient.list_folder_files`) re-syncs each row's
+    modifiedTime/checksum/view-link (`DocumentStore.update_file_state`);
+    rows edited in Drive since last sync come back flagged and show an
+    amber **"Updated in Drive"** tag. Best-effort: a refresh failure leaves
+    the metadata render standing.
+  - New service surface: `docs/service.fetch_document` /
+    `refresh_documents` / `content_headers` / `is_google_native`;
+    `DocumentStore.get_document` is scoped to the anchor record, so a doc
+    id can never be fetched through another record's route.
+  Verified: 17 new tests (57 documents tests, 580 total green) + both UIs
+  driven end-to-end in the stubbed-browser harness (metadata render → auto
+  refresh → flag; PDF/image/Google-native/fallback viewer modes; versioned
+  URLs pick up the refreshed modifiedTime; overlay close; no console
+  errors). **NOT yet driven against the real shared drive** — needs a
+  deploy (see the live checklist in the session close-out). No new env
+  vars, no new migration; Archive stays a disabled Phase 3 placeholder.
+
 ## [0.69.0] — 2026-07-16
 
 ### Added
