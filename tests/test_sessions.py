@@ -1467,3 +1467,72 @@ async def test_cbm_contacts_empty_without_manager_or_comentors():
     fake = Fake(records={("CPartnerProfile", "P1"): {"name": "Acme"}})
     d = await service.get_detail(PARTNER, fake, "P1")
     assert d["cbmContacts"] == []
+
+
+@pytest.mark.asyncio
+async def test_build_details_restricted_org_card_does_not_fail_the_tab():
+    """A card entity the user's role can't read (live 2026-07-16: whole
+    Details tab died with a permission error) renders as a restricted
+    section; everything else still loads."""
+    from core.espo import EspoError
+
+    class Forbidding(Fake):
+        async def get(self, entity, record_id, select=None):
+            if entity == "Account":
+                raise EspoError(f"get {entity}/{record_id} failed: HTTP 403 Forbidden")
+            return await super().get(entity, record_id, select)
+
+    fake = Forbidding(
+        records={
+            ("CPartnerProfile", "P1"): {"name": "Acme", "partnerCompanyId": "acct1"},
+        },
+        related={"contacts": [{"id": "c1", "name": "Pat"}]},
+        meta_fields={"title": {"type": "varchar"}},
+    )
+    d = await details.build_details(PARTNER, fake, "P1")
+    by_entity = {s["entity"]: s for s in d["sections"]}
+    assert by_entity["CPartnerProfile"].get("restricted") is None  # parent loaded
+    assert by_entity["Account"]["restricted"] is True
+    assert by_entity["Account"]["editable"] is False
+    assert [c["name"] for c in d["contacts"]] == ["Pat"]  # rest of the tab intact
+
+
+@pytest.mark.asyncio
+async def test_build_details_restricted_contacts_list_does_not_fail_the_tab():
+    from core.espo import EspoError
+
+    class Forbidding(Fake):
+        async def list_related(self, entity, record_id, link, **kw):
+            if link == "contacts":
+                raise EspoError(
+                    f"list_related {entity}/{record_id}/{link} failed: HTTP 403 "
+                )
+            return await super().list_related(entity, record_id, link, **kw)
+
+    fake = Forbidding(
+        records={
+            ("CPartnerProfile", "P1"): {"name": "Acme"},
+        },
+        meta_fields={"title": {"type": "varchar"}},
+    )
+    d = await details.build_details(PARTNER, fake, "P1")
+    assert d["contacts"] == []
+    assert d["contactsRestricted"] is True
+
+
+@pytest.mark.asyncio
+async def test_build_details_non_403_errors_still_raise():
+    from core.espo import EspoError
+
+    class Broken(Fake):
+        async def get(self, entity, record_id, select=None):
+            if entity == "Account":
+                raise EspoError(f"get {entity}/{record_id} failed: HTTP 500 boom")
+            return await super().get(entity, record_id, select)
+
+    fake = Broken(
+        records={("CPartnerProfile", "P1"): {"name": "Acme", "partnerCompanyId": "acct1"}},
+        meta_fields={"title": {"type": "varchar"}},
+    )
+    with pytest.raises(EspoError):
+        await details.build_details(PARTNER, fake, "P1")

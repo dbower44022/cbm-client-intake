@@ -44,7 +44,9 @@ def test_crm_403_on_contact_create_returns_readable_403(monkeypatch):
         r = c.post("/mentorsessions/api/records/E1/contacts",
                    json={"changes": {"firstName": "Zed", "lastName": "Test"}})
     assert r.status_code == 403
-    assert "permission" in r.json()["detail"]
+    # The message names the exact missing grant (Doug's ask 2026-07-16),
+    # so the CRM admin knows what to add without reading server logs.
+    assert "create access to Contact records" in r.json()["detail"]
 
 
 def test_crm_403_on_contact_link_returns_readable_403(monkeypatch):
@@ -63,7 +65,7 @@ def test_crm_403_on_contact_link_returns_readable_403(monkeypatch):
     with TestClient(_app(monkeypatch)) as c:
         r = c.post("/mentorsessions/api/records/E1/contacts", json={"contactId": "C9"})
     assert r.status_code == 403
-    assert "permission" in r.json()["detail"]
+    assert "edit access to CEngagement records" in r.json()["detail"]
 
 
 def test_crm_5xx_still_maps_to_502(monkeypatch):

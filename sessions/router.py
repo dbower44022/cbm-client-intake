@@ -20,7 +20,7 @@ from assignments.espo_user import client_for
 from comms import service as comms_service
 from comms import templates as comms_templates
 from core.config import get_settings
-from core.espo import EspoError, validation_message
+from core.espo import EspoError, forbidden_hint, validation_message
 from core.gdrive import DriveError
 from core.gmail import GmailError
 from docs import service as docs_service
@@ -154,9 +154,13 @@ def make_router(cfg: DomainConfig) -> APIRouter:
         # — surface it as a readable 403 (found live 2026-07-15: a mentor without
         # the Contact create grant got a blank 502→edge 504 from + Add).
         if service._is_forbidden(exc):
+            hint = forbidden_hint(exc)
             return HTTPException(
                 status_code=403,
                 detail=(
+                    f"{message}: your CRM role is missing {hint} — "
+                    "ask CBM staff to grant it."
+                    if hint else
                     f"{message}: your account doesn't have permission to do this "
                     "in the CRM — ask CBM staff if you need it."
                 ),

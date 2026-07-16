@@ -78,6 +78,43 @@ def validation_message(exc: Exception) -> Optional[str]:
     return f"The CRM did not accept the save: {label} {reason}. Correct that field and try again."
 
 
+# The operation prefix every EspoError message starts with ("get Entity/id
+# failed: …", "relate Entity/id/link failed: …") — parsed by forbidden_hint.
+_FORBIDDEN_OP_RE = re.compile(
+    r"^(get|list_related|list|find|create|update|relate|unrelate)\s+([A-Za-z0-9_]+)"
+)
+
+# The EspoCRM permission each operation needs: link changes (relate/unrelate)
+# require EDIT on the records being linked, not a separate grant.
+_OP_PERMISSION = {
+    "get": "read", "list": "read", "list_related": "read", "find": "read",
+    "create": "create", "update": "edit", "relate": "edit", "unrelate": "edit",
+}
+
+
+def is_forbidden(exc: Exception) -> bool:
+    """True when a CRM call failed with 403 — a missing ACL grant, not a
+    server fault. Matches the FIRST ``HTTP <code>`` in the message (the real
+    status precedes the echoed body, so a 403 quoted inside a body can't
+    fool it)."""
+    m = _HTTP_STATUS_RE.search(str(exc))
+    return bool(m) and m.group(1) == "403"
+
+
+def forbidden_hint(exc: Exception) -> Optional[str]:
+    """When a CRM call was denied, name the missing permission — e.g.
+    ``"read access to CClientProfile records"`` — parsed from the
+    :class:`EspoError` operation prefix. Routers append this to their
+    permission-denied 403s so the user (and the CRM admin they ask) can see
+    exactly which grant is missing instead of a generic "no permission".
+    Returns ``None`` when the operation can't be determined.
+    """
+    m = _FORBIDDEN_OP_RE.match(str(exc))
+    if not m:
+        return None
+    return f"{_OP_PERMISSION[m.group(1)]} access to {m.group(2)} records"
+
+
 class EspoApi(Protocol):
     async def create(self, entity: str, payload: dict[str, Any]) -> dict[str, Any]: ...
     async def update(

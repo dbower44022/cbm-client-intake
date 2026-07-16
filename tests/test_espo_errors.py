@@ -1,7 +1,7 @@
 """core.espo.validation_message — plain-language classification of EspoCRM
 validation rejections (routers use it to answer 400 instead of 502/504)."""
 
-from core.espo import EspoError, validation_message
+from core.espo import EspoError, forbidden_hint, validation_message
 
 # The exact error shape from the 2026-07-11 prod failure (Allen Ingram save).
 _PROD_BODY = (
@@ -53,3 +53,31 @@ def test_truncated_body_is_none():
     assert validation_message(EspoError(
         'update X failed: HTTP 400 {"messageTranslation":{"label":"validationFail'
     )) is None
+
+
+# --- forbidden_hint -----------------------------------------------------------
+
+
+def test_forbidden_hint_names_operation_and_entity():
+    assert forbidden_hint(EspoError(
+        "get CClientProfile/x1 failed: HTTP 403 Forbidden"
+    )) == "read access to CClientProfile records"
+    assert forbidden_hint(EspoError(
+        "list_related CEngagement/E1/engagementContacts failed: HTTP 403 "
+    )) == "read access to CEngagement records"
+    assert forbidden_hint(EspoError(
+        "create Contact failed: HTTP 403 "
+    )) == "create access to Contact records"
+    assert forbidden_hint(EspoError(
+        "update Account/a1 failed: HTTP 403 "
+    )) == "edit access to Account records"
+    # relate/unrelate need EDIT on the records being linked
+    assert forbidden_hint(EspoError(
+        'relate CEngagement/E1/engagementContacts failed: HTTP 403 '
+        '{"messageTranslation":{"label":"noAccessToForeignRecord"}}'
+    )) == "edit access to CEngagement records"
+
+
+def test_forbidden_hint_none_for_unrecognized_message():
+    assert forbidden_hint(EspoError("something exploded")) is None
+    assert forbidden_hint(Exception("HTTP 403")) is None

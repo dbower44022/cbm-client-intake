@@ -4,6 +4,31 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.68.1] — 2026-07-16
+
+### Fixed
+- **The session tools' Details tab no longer dies with "Could not load
+  details: your account doesn't have permission…" when ONE card's entity is
+  unreadable** (Doug's report — a run of these errors from staff). The
+  Company (Account) / Client Business Profile card reads weren't
+  403-tolerant, so a role missing a single read grant lost the whole tab.
+  A card the user can't read now renders as a titled "restricted" card
+  naming the entity ("no read access to Account records — ask CBM staff"),
+  and a forbidden contacts read shows the same note on the Client Contacts
+  card; everything else loads (`sessions/details.py`, matching the peek
+  pop-ups' existing tolerance).
+
+### Changed
+- **Permission-denied errors now name the exact missing grant, product-wide.**
+  New `core.espo.forbidden_hint` parses the denied CRM operation and the
+  messages read "…: your CRM role is missing read access to CClientProfile
+  records — ask CBM staff to grant it" instead of the generic "doesn't have
+  permission to do this in the CRM". Applied to the session tools, My Mentor
+  Profile, Client Administration, and Mentor Administration (the latter two
+  previously surfaced CRM 403s as raw 502s; Client Administration's
+  engagement-detail endpoint now also gets the 401-on-expired-session
+  handling).
+
 ## [0.68.0] — 2026-07-16
 
 ### Added

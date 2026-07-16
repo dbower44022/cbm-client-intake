@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from core.config import get_settings
-from core.espo import EspoError, validation_message
+from core.espo import EspoError, forbidden_hint, is_forbidden, validation_message
 
 from . import auth, service
 from .espo_user import client_for
@@ -62,6 +62,20 @@ def _crm_failure(request: Request, exc: EspoError, message: str) -> HTTPExceptio
     friendly = validation_message(exc)
     if friendly:
         return HTTPException(status_code=400, detail=friendly)
+    # A CRM 403 is a permission gap — name the exact missing grant (Doug's
+    # ask 2026-07-16) so the CRM admin knows what to add.
+    if is_forbidden(exc):
+        hint = forbidden_hint(exc)
+        return HTTPException(
+            status_code=403,
+            detail=(
+                f"{message}: your CRM role is missing {hint} — "
+                "ask CBM staff to grant it."
+                if hint else
+                f"{message}: your account doesn't have permission to do this "
+                "in the CRM — ask CBM staff if you need it."
+            ),
+        )
     return HTTPException(status_code=502, detail=f"{message}: {exc}")
 
 
@@ -121,7 +135,7 @@ async def engagement_detail(engagement_id: str, request: Request) -> dict:
     try:
         return await service.get_engagement_detail(client, engagement_id)
     except EspoError as exc:
-        raise HTTPException(status_code=502, detail=f"Could not load engagement: {exc}")
+        raise _crm_failure(request, exc, "Could not load engagement")
 
 
 @router.put("/engagements/{engagement_id}/notes")

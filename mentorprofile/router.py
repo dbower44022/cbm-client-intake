@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 from assignments.auth import clear_session, current_user, is_member, session_expired
 from assignments.espo_user import client_for
 from core.config import get_settings
-from core.espo import EspoError, validation_message
+from core.espo import EspoError, forbidden_hint, validation_message
 
 from . import service
 
@@ -70,9 +70,13 @@ def _crm_failure(request: Request, exc: EspoError, message: str) -> HTTPExceptio
     # create for the photo — found live 2026-07-14): tell the mentor plainly
     # instead of a raw 502 (which the DO edge even turns into a blank 504).
     if "HTTP 403" in str(exc):
+        hint = forbidden_hint(exc)
         return HTTPException(
             status_code=403,
             detail=(
+                f"{message}: your CRM role is missing {hint} — "
+                "please contact CBM staff to grant it."
+                if hint else
                 f"{message}: your account doesn't have permission for this "
                 "in the CRM yet. Please contact CBM staff."
             ),

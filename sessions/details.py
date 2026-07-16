@@ -18,7 +18,7 @@ from core.espo import EspoError
 from core.phone import to_e164
 
 from .config import CONTACT, MENTOR_PROFILE, DomainConfig
-from .service import SessionClient, SessionError, fill_company_fallback
+from .service import SessionClient, SessionError, _is_forbidden, fill_company_fallback
 
 log = logging.getLogger("cbm_intake.sessions.details")
 
@@ -219,7 +219,23 @@ async def build_details(
             continue
         spec = await meta.spec(entity)
         extra = _DISPLAY_EXTRA.get(entity, ())
-        rec = await client.get(entity, rec_id, select=_select_for(spec, await meta.raw(entity), extra))
+        try:
+            rec = await client.get(entity, rec_id, select=_select_for(spec, await meta.raw(entity), extra))
+        except EspoError as exc:
+            # A card the user's role can't read must not take down the whole
+            # tab (the peek pop-ups already tolerate this) — render it as a
+            # "restricted" card instead. Found live 2026-07-16: staff whose
+            # role lacked a read grant got "Could not load details" for the
+            # entire Details tab.
+            if not _is_forbidden(exc):
+                raise
+            sections.append({
+                "title": title, "entity": entity, "id": rec_id, "name": None,
+                "editable": False, "fields": [], "values": {},
+                "kind": "parent" if id_attr == "id" else "org",
+                "restricted": True,
+            })
+            continue
         editable = _editable_for(levels.get(entity), rec, user_id)
         sec = _section(title, entity, rec, spec, editable, extra)
         sec["kind"] = "parent" if id_attr == "id" else "org"
@@ -231,10 +247,17 @@ async def build_details(
     # AND each row's expandable edit form).
     contact_spec = await meta.spec(CONTACT)
     contact_raw = await meta.raw(CONTACT)
-    contacts_data = await client.list_related(
-        cfg.parent_entity, parent_id, cfg.parent_contacts_link,
-        select=_select_for(contact_spec, contact_raw), max_size=200,
-    )
+    contacts_restricted = False
+    try:
+        contacts_data = await client.list_related(
+            cfg.parent_entity, parent_id, cfg.parent_contacts_link,
+            select=_select_for(contact_spec, contact_raw), max_size=200,
+        )
+    except EspoError as exc:
+        if not _is_forbidden(exc):
+            raise
+        contacts_data = {"list": []}
+        contacts_restricted = True
     contacts = [
         _section(c.get("name") or "Contact", CONTACT, c, contact_spec,
                  _editable_for(levels.get(CONTACT), c, user_id))
@@ -245,6 +268,8 @@ async def build_details(
         "id": parent_id, "sections": sections, "contacts": contacts,
         "contactSpec": contact_spec,
     }
+    if contacts_restricted:
+        result["contactsRestricted"] = True
     if cfg.supports_comentor:
         result["cbmContacts"] = await _cbm_contacts(
             cfg, client, parent_id, parent_values, contact_spec, contact_raw, levels, user_id,

@@ -27,7 +27,7 @@ from assignments.auth import (
 from assignments.espo_user import client_for
 from core.app_config import make_app_config_store
 from core.config import Settings, get_settings
-from core.espo import EspoClient, EspoError, validation_message
+from core.espo import EspoClient, EspoError, forbidden_hint, is_forbidden, validation_message
 from core.gdrive import DriveError
 from core.google_directory import ResolvedGoogle, resolve_google_directory
 from docs import service as docs_service
@@ -93,6 +93,20 @@ def _crm_failure(request: Request, exc: EspoError, message: str) -> HTTPExceptio
     friendly = validation_message(exc)
     if friendly:
         return HTTPException(status_code=400, detail=friendly)
+    # A CRM 403 is a permission gap — name the exact missing grant (Doug's
+    # ask 2026-07-16) so the CRM admin knows what to add.
+    if is_forbidden(exc):
+        hint = forbidden_hint(exc)
+        return HTTPException(
+            status_code=403,
+            detail=(
+                f"{message}: your CRM role is missing {hint} — "
+                "ask CBM staff to grant it."
+                if hint else
+                f"{message}: your account doesn't have permission to do this "
+                "in the CRM — ask CBM staff if you need it."
+            ),
+        )
     return HTTPException(status_code=502, detail=f"{message}: {exc}")
 
 

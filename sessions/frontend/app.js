@@ -2582,7 +2582,21 @@
     "partnershipStatus", "partnershipType", "partnershipStartDate",
   ];
 
+  // A section the user's CRM role can't read renders as a titled card with a
+  // plain explanation instead of failing the whole tab (server marks it
+  // restricted — sessions/details.py).
+  function restrictedCard(sec, key) {
+    var card = document.createElement("div"); card.className = "sxd__card"; card.dataset.dkey = key;
+    card.appendChild(cardHeadEl(sec.title, null));
+    var p = document.createElement("p"); p.className = "sx__muted sxd__none";
+    p.textContent = "Your CRM role can't view this (no read access to " +
+      sec.entity + " records) — ask CBM staff if you need it.";
+    card.appendChild(p);
+    return card;
+  }
+
   function parentStrip(sec, key) {
+    if (sec.restricted) return restrictedCard(sec, key);
     if (detailsEditSet[key]) {  // editing: the strip becomes a full-form card
       var card = document.createElement("div"); card.className = "sxd__card"; card.dataset.dkey = key;
       card.appendChild(cardHeadEl(sec.title, null));
@@ -2639,6 +2653,7 @@
 
   // === 2/3. Org cards (Company / profile): two-column labeled row grid =======
   function orgCard(sec, key) {
+    if (sec.restricted) return restrictedCard(sec, key);
     var card = document.createElement("div"); card.className = "sxd__card"; card.dataset.dkey = key;
     var editing = !!detailsEditSet[key];
     var head = cardHeadEl(sec.title, null);
@@ -2787,6 +2802,14 @@
     var contacts = currentDetails.contacts || [];
     var card = document.createElement("div"); card.className = "sxd__card"; card.dataset.dkey = "clientContacts";
     var head = cardHeadEl("Client Contacts", "(" + contacts.length + ")");
+    if (currentDetails.contactsRestricted) {
+      card.appendChild(head);
+      var p = document.createElement("p"); p.className = "sx__muted sxd__none";
+      p.textContent = "Your CRM role can't view this record's contacts " +
+        "(no read access to Contact records) — ask CBM staff if you need it.";
+      card.appendChild(p);
+      return card;
+    }
     head.appendChild(addMenuEl("client"));
     card.appendChild(head);
     if (detailsAdd === "client-existing") card.appendChild(addExistingPanel());
