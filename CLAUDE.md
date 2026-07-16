@@ -865,7 +865,9 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   meeting manually; the decline reaches the server as `skipCalendar:true`
   on the create POST (`create_session(skip_calendar=True)` skips the hook,
   `calendar:{ok,skipped,declined}`). Edits never prompt. Verified in the
-  stub harness, not yet live. **Activation (ALL DONE):** Calendar
+  stub harness; **DEPLOYED 2026-07-15** (prod + crm-test serve the modal +
+  skipCalendar code, checked via curl at 0.57.0) — the live Google paths
+  (invite actually created vs. actually skipped) still worth one eyeball. **Activation (ALL DONE):** Calendar
   API on in GCP; `calendar.events` on the SA's DWD grant; the CRM field built
   on both CRMs; `GCAL_EVENTS=true` on the **web** component of both overlays
   (worker not involved); EspoCRM-side calendar sync confirmed a non-issue
