@@ -1214,13 +1214,19 @@ the "CBM Documents" shared drive (`GDRIVE_SHARED_DRIVE_ID=0AE50yNppMh_hUk9PVA`);
 overlays (`.do/app.prod.yaml` crm-test, `.do/app.prod-crm.yaml` prod — each
 regenerated from its live spec + applied via doctl), and main is pushed at
 9009c5b (v0.68.1 — the nested folder scheme + migration 0006 deploy with
-it). First live attempt was a diagnosed non-failure: Doug uploaded on PROD
-before it was flagged → the app's 503 "integration isn't enabled" surfaced
-as an edge 504 (known masking). Still to confirm: Drive API enabled + the
-`auth/drive` DWD scope (guide Tasks 1–2), then the Task 5 smoke test on
-either env (his @cbmentors.org account needs Content Manager on the shared
-drive). Open UI question: how his flag-off prod page showed an Upload
-button at all (served app.js gates correctly; suspect a stale tab).
+it). **FIRST LIVE UPLOAD SUCCEEDED (Doug, prod, 2026-07-16)** — so the
+whole chain is proven: Drive API + `auth/drive` DWD scope + shared-drive
+membership + delegated upload as the signed-in manager + metadata row.
+(Earlier same-day non-failure: he'd uploaded on prod BEFORE it was flagged
+→ the app's 503 "integration isn't enabled" surfaced as an edge 504 —
+known masking.) Light smoke items still unchecked: the file's Drive
+location eyeballed (`Clients/{client}/{engagement}/`), folder REUSE on a
+second upload, and a mentor-side upload via `/mentoradmin` → `Mentors/`.
+The disabled View/Open-in-Drive/Archive buttons are BY DESIGN (Phase 2/3 —
+Doug hit "coming soon" post-upload; Phase 2 = viewing is the next build,
+kickoff draft `prompts/Google Drive Documents/prompt-docmgmt-phase2.md`).
+Open UI question: how his flag-off prod page showed an Upload button at
+all (served app.js gates correctly; suspect a stale tab).
 
 Before that: **v0.67.0** (549 tests green, committed NOT pushed) — **Email
 templates in every compose dialog (ET)**: template picker + EspoCRM
