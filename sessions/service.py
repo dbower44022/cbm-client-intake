@@ -17,7 +17,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional, Protocol
 
 from assignments.service import assigned_user_id
@@ -257,7 +257,49 @@ async def list_records(
     await fill_company_fallback(cfg, client, rows)
     records = [_grid_row(cfg, r) for r in rows]
     records.sort(key=lambda x: (x.get("createdAt") or ""), reverse=True)
+    await _attach_sessions_near_now(cfg, client, records)
     return {"records": records, "profileFound": True}
+
+
+async def _attach_sessions_near_now(
+    cfg: DomainConfig, client: SessionClient, records: list[dict[str, Any]]
+) -> None:
+    """Stamp each grid row with its sessions in a ±36-hour window
+    (``sessionsNearNow``: ``[{dateStart, status}, ...]``, UTC stamps).
+
+    The frontend decides which of those fall on "today" in the VIEWER's local
+    timezone (the server can't know it) and flags the row — the ±36h window
+    covers every real-world UTC offset. One CSession query for the whole
+    grid, ACL-scoped to the user like every other read; best-effort — on any
+    failure the grid simply shows no today-flags."""
+    if not records:
+        return
+    now = datetime.now(timezone.utc)
+    window = [
+        (now - timedelta(hours=36)).strftime("%Y-%m-%d %H:%M:%S"),
+        (now + timedelta(hours=36)).strftime("%Y-%m-%d %H:%M:%S"),
+    ]
+    try:
+        data = await client.list(
+            SESSION,
+            select=f"dateStart,status,{cfg.session_parent_fk}",
+            where=[{"type": "between", "attribute": "dateStart", "value": window}],
+            max_size=_PAGE,
+        )
+    except Exception as exc:  # noqa: BLE001 — decoration, never breaks the grid
+        log.warning("could not read near-now sessions for the %s grid: %s", cfg.slug, exc)
+        return
+    by_parent: dict[str, list[dict[str, Any]]] = {}
+    for s in data.get("list", []):
+        pid = s.get(cfg.session_parent_fk)
+        if pid:
+            by_parent.setdefault(pid, []).append(
+                {"dateStart": s.get("dateStart"), "status": s.get("status")}
+            )
+    for r in records:
+        near = by_parent.get(r["id"])
+        if near:
+            r["sessionsNearNow"] = near
 
 
 def _contact_row(c: dict[str, Any]) -> dict[str, Any]:

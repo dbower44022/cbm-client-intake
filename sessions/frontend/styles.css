@@ -56,6 +56,8 @@
   color: var(--cbm-blue, #1a5fb4); font: inherit; font-weight: 600; text-align: left;
 }
 .sx__link:hover { text-decoration: underline; }
+/* Record with a session scheduled today (viewer-local): red + bold in the grid. */
+.sx__link--today { color: #b3251d; font-weight: 800; }
 .sx__sm { padding: 0.25rem 0.6rem; font-size: 0.85rem; }
 
 /* Detail */
@@ -353,7 +355,8 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
 /* Semantic tokens bound to the existing palette. */
 :root {
   --session-header-past-bg: #f4f6f9;         /* light neutral, one step below white */
-  --session-header-future-bg: #eef5fe;       /* pale blue (the "Next session" tint) */
+  --session-header-future-bg: #d8e8fc;       /* clearly-blue (Doug 2026-07-16: future must read distinct from past at a glance) */
+  --session-header-today-bg: #b3251d;        /* session TODAY: red band, bold white text */
   --session-accent-text: var(--cbm-navy, #173B60);
   --session-callout-bg: #fffdf7;             /* gold callout family (Engagement Notes) */
   --session-callout-border: var(--cbm-gold, #CB963B);
@@ -361,14 +364,20 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
 }
 .sx__feed { display: grid; gap: 8px; }       /* stack gap per §8 */
 .sx__feed-label { font-size: 12px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; color: var(--cbm-slate-700, #556); margin: 0.35rem 0 -0.15rem; }
+.sx__feed-none { font-size: 13px; padding: 2px 2px 6px; }
 
 .sx__scard { background: #fff; border: 1px solid var(--session-border); border-radius: 8px; overflow: hidden; }
 /* Header band — the card-boundary + temporal-state signal. */
 .sx__scard-head { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; padding: 8px 14px; }
-.sx__scard-head.is-future { background: var(--session-header-future-bg); }
+.sx__scard-head.is-future { background: var(--session-header-future-bg); border-left: 4px solid var(--cbm-navy, #173B60); }
 .sx__scard-head.is-past { background: var(--session-header-past-bg); border-bottom: 1px solid var(--session-border); }
+/* Session scheduled TODAY: red header band, bold white text. */
+.sx__scard-head.is-today { background: var(--session-header-today-bg); }
+.sx__scard-head.is-today .sx__scard-date, .sx__scard-head.is-today .sx__scard-dur,
+.sx__scard-head.is-today .sx__scard-title { color: #fff; font-weight: 700; }
+.sx__scard-head.is-today .sx__chip-type { color: #fff; border-color: rgba(255, 255, 255, 0.65); }
 .sx__scard-date { font-size: 15px; font-weight: 500; }
-.sx__scard-head.is-future .sx__scard-date { color: var(--session-accent-text); }
+.sx__scard-head.is-future .sx__scard-date { color: var(--session-accent-text); font-weight: 600; }
 .sx__scard-head.is-past .sx__scard-date { color: var(--cbm-slate-900, #1E293B); }
 .sx__scard-dur { font-size: 13px; color: var(--cbm-slate-700, #556); }
 .sx__scard-title { font-size: 13px; color: var(--cbm-slate-700, #556); }
@@ -506,8 +515,11 @@ textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
 /* §12.2 summary header card — card anatomy at page scale (reuses the band tints). */
 .sx__vcard { background: #fff; border: 1px solid var(--session-border); border-radius: 8px; overflow: hidden; }
 .sx__vband { padding: 12px 16px; }
-.sx__vband.is-future { background: var(--session-header-future-bg); }
+.sx__vband.is-future { background: var(--session-header-future-bg); border-left: 4px solid var(--cbm-navy, #173B60); }
 .sx__vband.is-past { background: var(--session-header-past-bg); border-bottom: 1px solid var(--session-border); }
+.sx__vband.is-today { background: var(--session-header-today-bg); }
+.sx__vband.is-today .sx__vband-date, .sx__vband.is-today .sx__vband-2,
+.sx__vband.is-today .sx__vband-title { color: #fff; font-weight: 700; }
 .sx__vband-1 { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
 .sx__vband-date { font-size: 18px; font-weight: 500; color: var(--session-accent-text); }
 .sx__vband.is-past .sx__vband-date { color: var(--cbm-slate-900, #1E293B); }

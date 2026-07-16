@@ -347,6 +347,12 @@
           link.href = "/" + SLUG + "/record/" + encodeURIComponent(r.id);
           link.target = "_blank"; link.rel = "noopener";
           link.textContent = r[c.key] || "(unnamed)";
+          // A record with a session scheduled TODAY (viewer-local, from the
+          // server's sessionsNearNow window) reads red + bold in the grid.
+          if ((r.sessionsNearNow || []).some(isTodaySession)) {
+            link.classList.add("sx__link--today");
+            link.title = "Session scheduled today";
+          }
           td.appendChild(link);
         } else if (c.key === companyKey && r.companyPeek && r[c.key]) {
           // Company link -> the standard company/client pop-up (sections the
@@ -607,24 +613,28 @@
     $("notesCount").textContent = feed.length ? "(" + feed.length + ")" : "";  // counts all
     $("noNotes").hidden = feed.length > 0;
     var upcoming = [], past = [];
-    feed.forEach(function (s) { (isFutureSession(s) ? upcoming : past).push(s); });
+    // A scheduled session TODAY belongs under Upcoming even if its start time
+    // has already passed — it's the day's business, not history.
+    feed.forEach(function (s) { (isTodaySession(s) || isFutureSession(s) ? upcoming : past).push(s); });
     upcoming.sort(function (a, b) { return cmpSessionDate(a, b); });    // soonest first
     past.sort(function (a, b) { return cmpSessionDate(b, a); });        // most recent first
-    // Group + label only when the list actually mixes future and past, and one
-    // group has 3+ (the band tint already encodes the split at lower counts).
-    var labels = upcoming.length && past.length && (upcoming.length >= 3 || past.length >= 3);
-    if (upcoming.length) {
-      if (labels) box.appendChild(feedLabel("Upcoming"));
-      upcoming.forEach(function (s) { box.appendChild(sessionCard(s)); });
-    }
-    if (past.length) {
-      if (labels) box.appendChild(feedLabel("Past"));
-      past.forEach(function (s) { box.appendChild(sessionCard(s)); });
-    }
+    // The Upcoming / Past sections ALWAYS render when there are any sessions
+    // (Doug's 2026-07-16 ruling — the old "only when both groups are big
+    // enough" heuristic made the split appear on some records and not others).
+    if (!feed.length) return;
+    box.appendChild(feedLabel("Upcoming"));
+    if (upcoming.length) upcoming.forEach(function (s) { box.appendChild(sessionCard(s)); });
+    else box.appendChild(feedEmpty("No upcoming sessions scheduled."));
+    box.appendChild(feedLabel("Past"));
+    if (past.length) past.forEach(function (s) { box.appendChild(sessionCard(s)); });
+    else box.appendChild(feedEmpty("No past sessions yet."));
   }
 
   function feedLabel(text) {
     var d = document.createElement("div"); d.className = "sx__feed-label"; d.textContent = text; return d;
+  }
+  function feedEmpty(text) {
+    var d = document.createElement("div"); d.className = "sx__feed-none sx__muted"; d.textContent = text; return d;
   }
 
   // One session-summary card per the standard.
@@ -633,7 +643,8 @@
     var future = isFutureSession(s);
     var card = document.createElement("div"); card.className = "sx__scard";
 
-    var head = document.createElement("div"); head.className = "sx__scard-head " + (future ? "is-future" : "is-past");
+    var head = document.createElement("div");
+    head.className = "sx__scard-head " + (isTodaySession(s) ? "is-today" : future ? "is-future" : "is-past");
     var date = document.createElement("span"); date.className = "sx__scard-date";
     date.textContent = fmtSessionDate(s.dateStart); date.title = s.dateStart || "";  // ISO in tooltip
     head.appendChild(date);
@@ -720,6 +731,18 @@
     if (statusClass(s.status) !== "scheduled") return false;
     var d = parseNaive(s.dateStart);
     return d != null && d.getTime() >= Date.now();
+  }
+  // "Scheduled for today" — the viewer's LOCAL today (parseNaive already
+  // converts the CRM's UTC stamp). A 9 AM session still counts at 5 PM: it
+  // needs attention (notes, status) until its status moves off Scheduled.
+  function isTodayLocal(stamp) {
+    var d = parseNaive(stamp);
+    if (!d) return false;
+    var n = new Date();
+    return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
+  }
+  function isTodaySession(s) {
+    return statusClass(s.status) === "scheduled" && isTodayLocal(s.dateStart);
   }
   function cmpSessionDate(a, b) {
     var da = parseNaive(a.dateStart), db = parseNaive(b.dateStart);
@@ -2809,7 +2832,8 @@
 
     // === §12.2 Summary header card ===
     var hcard = document.createElement("div"); hcard.className = "sx__vcard";
-    var band = document.createElement("div"); band.className = "sx__vband " + (future ? "is-future" : "is-past");
+    var band = document.createElement("div");
+    band.className = "sx__vband " + (isTodaySession(s) ? "is-today" : future ? "is-future" : "is-past");
     // Band line 1, three zones: date range (left) · STATUS (center, large —
     // it's the key value, Doug's 2026-07-12 ruling) · the join action (right).
     // The type chip only appears when it differs from the domain default —

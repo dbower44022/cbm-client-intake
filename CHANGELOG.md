@@ -4,6 +4,33 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.62.0] — 2026-07-16
+
+### Fixed
+- **Overview session feed: the Upcoming / Past sections now ALWAYS render**
+  when the record has any sessions (Doug's report: they showed on James
+  Koran but not Randa Jackson — the old heuristic only labelled the split
+  when both groups existed and one had 3+, so a record with only past
+  sessions got no sections). An empty group shows a muted note ("No
+  upcoming sessions scheduled." / "No past sessions yet."). A Scheduled
+  session dated today files under Upcoming even after its start time
+  passes.
+
+### Added
+- **Clearer temporal color coding + TODAY flagging in the session tools.**
+  Upcoming session cards (and the session-view band) are now clearly blue
+  (`#d8e8fc` + a navy left accent) against the neutral-gray past cards.
+  A session **scheduled for today** (the viewer's local today) gets a **red
+  header band with bold white text** on its Overview card and session view.
+  The **engagements grid on the landing page** flags records the same way:
+  a record with a session scheduled today renders its name **red + bold**
+  (tooltip "Session scheduled today"). Server side, `list_records` attaches
+  `sessionsNearNow` (one ACL-scoped CSession query over a ±36h window,
+  best-effort) so the frontend can resolve "today" in the viewer's own
+  timezone. Verified in the stubbed-browser harness (today/future/past
+  cards, past-only feed shows both sections + the empty note, grid row red
+  + bold only for the today record; no console errors).
+
 ## [0.61.0] — 2026-07-16
 
 ### Added
