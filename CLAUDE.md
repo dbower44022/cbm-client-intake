@@ -1207,9 +1207,16 @@ configurable display labels (Mentors/Clients/Partners/Sponsors),
 Administration gains a Documents tab** anchored to the mentor's linked
 Contact (Doug's ruling; partner/sponsor tabs kept under their own labels).
 Full mechanics in the Session Management section's **"Documents — PRD v1.2
-alignment"** bullet; activation checklist unchanged (`GDRIVE-DOCS-SETUP.md`,
-folder tree updated there). Still gated OFF by `GDRIVE_DOCS`; not yet driven
-against real Google Drive.
+alignment"** bullet; activation runbook `GDRIVE-DOCS-SETUP.md` (folder tree
+updated there). **crm-test ACTIVATION STARTED 2026-07-16:** Doug created the
+"CBM Documents" shared drive (`GDRIVE_SHARED_DRIVE_ID=0AE50yNppMh_hUk9PVA`)
+and `GDRIVE_DOCS=true` + the drive id are LIVE on the crm-test web component
+(overlay `.do/app.prod.yaml` regenerated from the live spec + applied via
+doctl; deploy ACTIVE, but at origin/main v0.67.0 = the OLD flat folder
+scheme — **push main before uploading anything** so 0.68.x's nested scheme +
+migration 0006 deploy). Still to confirm: Drive API enabled + the
+`auth/drive` DWD scope (guide Tasks 1–2), then the Task 5 smoke test. Prod:
+not yet flagged (same two vars once crm-test passes).
 
 Before that: **v0.67.0** (549 tests green, committed NOT pushed) — **Email
 templates in every compose dialog (ET)**: template picker + EspoCRM
