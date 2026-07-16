@@ -729,10 +729,11 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   `router.COMMON_DETAIL_TABS`): **Overview · Details · Sessions · Communications ·
   Documents**. Overview + Details + Sessions are built; **Communications** has a
   built email-inbox UI (scaffold only — no CRM email data yet; see the
-  Communications bullet below for the wiring contract); **Documents** is still a
-  "coming soon" placeholder. The tab bar is built by the frontend from config
-  (placeholder tabs get a generic panel); the standalone Contacts tab folded into
-  Overview / Details.
+  Communications bullet below for the wiring contract); **Documents** is built
+  (v0.65.0, DOC-MGMT Phase 1 — see the Documents bullet below; a "coming soon"
+  panel until `GDRIVE_DOCS` is on). The tab bar is built by the frontend from
+  config (placeholder tabs get a generic panel); the standalone Contacts tab
+  folded into Overview / Details.
   - **Overview** (`get_detail` → `_overview_items`, `sessions/config.py:OverviewItem`):
     a full-width **facts-rail-left / note-feed-right** layout with a drag **splitter**.
     Rail: key facts (status badge, a single aggregated **Company** link, primary
@@ -857,6 +858,44 @@ segment of its own URL). Mounted only when `assignments_active` (needs
        is plain text rendered pre-wrapped; `date` is formatted with `fmtSessionDate`
        (abbreviated weekday). Compose sends To/Subject/Message from `#commTo`/
        `#commSubject`/`#commBody`.
+- **Documents tab — Google Drive document management (BUILT v0.65.0,
+  2026-07-16; gated OFF by `GDRIVE_DOCS` until activated).** DOC-MGMT
+  **Phase 1** of Doug's PRD (`prompts/Google Drive Documents/
+  CBM-DocMgmt-Implementation-PRD.docx` v1.0 + `prompt-docmgmt-phase1.md`),
+  **adapted from the PRD's desktop framing per Doug's rulings this session**:
+  built in THIS web app (not crmbuilder), and Drive auth = the existing
+  **service-account + DWD stack impersonating the signed-in manager's own
+  `cbmEmail`** (`docs/service.drive_for_user`, subject NEVER from request
+  input — preserves D-01's audit-trail rationale) instead of desktop
+  keyring/loopback OAuth. Pieces: `core/gdrive.py` (`DriveClient`, gcalendar
+  pattern — find/create folders, multipart upload ≤5 MB / **resumable
+  session >5 MB** (DOC-01), delete-for-rollback, backoff retries on
+  rate-limit/5xx per NFR-02, all `supportsAllDrives`); `docs/store.py` (the
+  **`app_document`** metadata table, PRD §4, Alembic **`0005_app_document`**,
+  + `MemoryDocumentStore` for tests); `docs/service.py` (folder scheme
+  `/{Entity Type}/{Record Name} ({recordId})/` under the shared drive with
+  folder-id caching off the rows; upload validation — size cap
+  `GDRIVE_MAX_FILE_MB`, doc types `GDRIVE_DOC_TYPES`; the **rollback rule**:
+  row-write failure ⇒ Drive file deleted, Drive failure ⇒ no row ever
+  written). Endpoints on all three session routers (comms `_docs_ready`
+  pattern, 503 when off/no DB): `GET/POST /{slug}/api/records/{id}/documents`
+  — the POST is **raw bytes** (filename/docType as query params, MIME from
+  Content-Type; NOT the base64-JSON photo pattern — documents are much
+  bigger), and the parent record is first read AS THE USER (ACL check + the
+  folder's record name). Frontend: static Documents panel — upload picker +
+  doc-type select, list newest-first (filename/type chip/uploader/date) from
+  metadata only (DOC-02), **View / Open in Drive / Archive rendered disabled
+  ("Coming soon")** — Phases 2/3 (viewing/cache/archive/CRM write-back/lazy
+  refresh) deliberately NOT built. 40 tests; store verified against a real
+  local Postgres (migration + insert/list/unique/folder-cache); full UI loop
+  verified in the stub harness. **Activation prerequisites (NOT done):**
+  (1) Doug creates the "CBM Documents" **shared drive** + memberships
+  (Content Manager for staff); (2) add `https://www.googleapis.com/auth/drive`
+  to the service account's DWD row in Google Admin; (3) set `GDRIVE_DOCS=true`
+  + `GDRIVE_SHARED_DRIVE_ID=<drive id>` on the **web** component (worker not
+  involved) and run the pre-deploy migrate; (4) live smoke test — one upload
+  as a real mentor → folder auto-creation + metadata row + rollback path.
+  Runbook block in DEPLOYMENT.md.
 - **Google Calendar events + Meet links (v0.40.0, 2026-07-13 — LIVE on BOTH
   envs: crm-test activated + verified 2026-07-13, prod 2026-07-15; create
   path verified live by Doug on each).** Saving a **Scheduled** session
@@ -1030,10 +1069,22 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-16)
 
-**Main is at v0.64.x** (parallel sessions active 2026-07-16 — see CHANGELOG
+**Main is at v0.65.0** (parallel sessions active 2026-07-16 — see CHANGELOG
 for 0.62.0–0.64.x: Upcoming/Past session sections + today-flags, Next
 Session column from real sessions + Assigned Mentor grid column,
-email-address click-to-compose). This session shipped **v0.61.0 — Mentor
+email-address click-to-compose). **v0.65.0 — Documents tab: Google Drive
+document management, DOC-MGMT Phase 1** (this session; committed, push per
+convention): the session tools' Documents placeholder is now a real tab —
+upload to the "CBM Documents" shared drive + per-record list from the new
+`app_document` Postgres table (Alembic 0005). Gated OFF by `GDRIVE_DOCS`;
+mechanics, adaptations from the PRD's desktop framing (Doug's rulings:
+this repo, SA+DWD auth), and the activation checklist are in the Session
+Management section's **Documents tab** bullet + DEPLOYMENT.md. 523 tests
+green. NOT yet driven against real Google Drive (shared drive + `drive`
+DWD scope are manual prerequisites). Phase 2 (viewing) not built — kickoff
+prompt drafted at `prompts/Google Drive Documents/prompt-docmgmt-phase2.md`.
+
+Before that (a parallel session the same day): **v0.61.0 — Mentor
 Sessions: the first completed session activates the engagement** (committed;
 push per convention): saving a session as **Completed** (create, or an edit
 that changes status to Completed) on an engagement whose `engagementStatus`

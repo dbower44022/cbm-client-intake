@@ -126,6 +126,34 @@
         <p class="sx__muted" id="noMessages" hidden>No messages yet.</p>
         <p class="form-error" id="commError" hidden></p>
       </div>
+
+      <!-- Documents: Google Drive files for this record (DOC-MGMT Phase 1).
+           List renders from the app's metadata table; upload goes to the
+           shared drive. A "coming soon" placeholder until GDRIVE_DOCS is on. -->
+      <div class="sx__dpanel" data-dpanel="documents" hidden>
+        <div class="sx__comm-head">
+          <h3>Documents</h3>
+          <span class="sx__comm-acts">
+            <button type="button" class="cbm-button" id="docPickBtn" hidden>⬆ Upload document…</button>
+          </span>
+        </div>
+        <input type="file" id="docFile" hidden />
+        <div class="sx__doc-pending" id="docPending" hidden>
+          <span class="sx__doc-pending-name" id="docPendingName"></span>
+          <label class="sx__doc-type">Type
+            <select id="docTypeSelect"></select>
+          </label>
+          <button type="button" class="cbm-button sx__sm" id="docUploadBtn">Upload</button>
+          <button type="button" class="cbm-button cbm-button--secondary sx__sm" id="docCancelBtn">Cancel</button>
+        </div>
+        <p class="sx__notice" id="docsNotice" role="status" hidden></p>
+        <table class="sx__table" id="docsTable" hidden>
+          <thead><tr><th scope="col">File</th><th scope="col">Type</th><th scope="col">Uploaded by</th><th scope="col">Uploaded</th><th scope="col"></th></tr></thead>
+          <tbody id="docsBody"></tbody>
+        </table>
+        <p class="sx__muted" id="noDocs" hidden>No documents yet.</p>
+        <p class="form-error" id="docsError" hidden></p>
+      </div>
     </section>
 
     <!-- Create / edit a session -->

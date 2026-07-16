@@ -1251,10 +1251,9 @@ def test_session_endpoint_reports_domain(monkeypatch):
     assert [t["key"] for t in tabs] == [
         "overview", "details", "sessions", "communications", "documents",
     ]
-    # Overview/Details/Sessions/Communications are built; only Documents is a placeholder
-    assert next(t for t in tabs if t["key"] == "documents")["placeholder"] is True
-    assert "placeholder" not in next(t for t in tabs if t["key"] == "communications")
-    assert "placeholder" not in next(t for t in tabs if t["key"] == "details")
+    # All five tabs are built (Documents since DOC-MGMT Phase 1 — it gates on
+    # docsEnabled client-side, not on a placeholder flag).
+    assert not any("placeholder" in t for t in tabs)
 
 
 def test_partner_has_no_comentor_endpoints(monkeypatch):

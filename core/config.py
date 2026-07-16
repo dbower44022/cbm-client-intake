@@ -147,6 +147,21 @@ class Settings(BaseSettings):
     # inert until it exists. Off => the hook is a silent no-op.
     gcal_events: bool = False
 
+    # --- Documents: Google Drive document management (DOC-MGMT Phase 1). When
+    # on (and a database is attached), the session tools' Documents tab lets a
+    # manager upload files to the "CBM Documents" shared drive and lists each
+    # record's documents from the app_document metadata table. Drive access
+    # impersonates the signed-in user's own cbmEmail via the shared service
+    # account (above / Email Setup) — the https://www.googleapis.com/auth/drive
+    # scope must be authorized for its domain-wide delegation. Off => the tab
+    # stays a "coming soon" placeholder and the endpoints 503.
+    gdrive_docs: bool = False
+    # The shared drive ("CBM Documents") all managed documents live in.
+    gdrive_shared_drive_id: str = ""
+    # The doc_type choices offered at upload time (comma-separated).
+    gdrive_doc_types: str = "Resume,Agreement,Intake Document,Pitch Deck,Other"
+    gdrive_max_file_mb: int = 100
+
     # --- Encrypted runtime config (core/app_config.py) ---
     # Fernet key (urlsafe base64, 32 bytes) used to encrypt secrets stored in the
     # app_config table — currently the Google service-account credentials set via
@@ -194,6 +209,10 @@ class Settings(BaseSettings):
     @property
     def comms_engagement_statuses_list(self) -> list[str]:
         return [s.strip() for s in self.comms_engagement_statuses.split(",") if s.strip()]
+
+    @property
+    def gdrive_doc_types_list(self) -> list[str]:
+        return [t.strip() for t in self.gdrive_doc_types.split(",") if t.strip()]
 
     @property
     def comms_partner_excluded_statuses_list(self) -> list[str]:

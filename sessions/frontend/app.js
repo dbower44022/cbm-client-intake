@@ -174,6 +174,7 @@
     });
     if (tab === "details") ensureDetails();
     if (tab === "communications") renderComms();
+    if (tab === "documents") renderDocuments();
   }
 
   // Draggable splitter: resize the facts rail (wider = more room for the
@@ -809,6 +810,129 @@
   function tag(text, kind) {
     var s = document.createElement("span"); s.className = "sx__tag sx__tag--" + kind; s.textContent = text; return s;
   }
+
+  // --- Documents tab (Google Drive, DOC-MGMT Phase 1) --------------------------
+  // ENABLED (config.docsEnabled, GDRIVE_DOCS server-side): list this record's
+  // documents from the app's metadata table + upload new files to the shared
+  // drive. DISABLED: a "coming soon" placeholder. View / Open in Drive /
+  // Archive are Phase 2/3 — rendered disabled.
+
+  var docTypes = [];        // upload doc-type choices (from the list endpoint)
+  var pendingDocFile = null;  // the picked File awaiting its doc type + confirm
+
+  function docsOn() { return !!(config && config.docsEnabled); }
+
+  function renderDocuments() {
+    hide($("docsError")); hide($("docsNotice"));
+    resetDocPending();
+    if (!docsOn()) {
+      $("docPickBtn").hidden = true;
+      hide($("docsTable"));
+      $("noDocs").textContent = "Document management is coming soon.";
+      show($("noDocs"));
+      return;
+    }
+    $("docPickBtn").hidden = false;
+    loadDocuments();
+  }
+
+  async function loadDocuments() {
+    if (!currentDetail) return;
+    $("docsBody").innerHTML = "";
+    $("noDocs").textContent = "Loading documents…"; show($("noDocs")); hide($("docsTable"));
+    try {
+      var res = await api("/records/" + encodeURIComponent(currentDetail.id) + "/documents");
+      docTypes = res.docTypes || [];
+      renderDocumentRows(res.documents || []);
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      hide($("noDocs"));
+      $("docsError").textContent = e.message; show($("docsError"));
+    }
+  }
+
+  function renderDocumentRows(rows) {
+    var body = $("docsBody"); body.innerHTML = "";
+    if (!rows.length) {
+      $("noDocs").textContent = "No documents yet — use Upload document to add the first one.";
+      show($("noDocs")); hide($("docsTable")); return;
+    }
+    hide($("noDocs")); show($("docsTable"));
+    rows.forEach(function (d) {
+      var tr = document.createElement("tr");
+      var c0 = document.createElement("td"); c0.className = "sx__doc-file"; c0.textContent = d.filename || "—";
+      var c1 = document.createElement("td"); if (d.docType) c1.appendChild(tag(d.docType, "type"));
+      var c2 = document.createElement("td"); c2.textContent = d.uploadedBy || "—";
+      var c3 = document.createElement("td"); c3.textContent = fmtSessionDate(d.uploadedAt, "short");
+      var c4 = document.createElement("td"); c4.className = "sx__doc-acts";
+      ["View", "Open in Drive", "Archive"].forEach(function (label) {
+        var b = document.createElement("button");
+        b.type = "button"; b.className = "cbm-button cbm-button--secondary sx__sm";
+        b.textContent = label; b.disabled = true; b.title = "Coming soon";
+        c4.appendChild(b);
+      });
+      tr.appendChild(c0); tr.appendChild(c1); tr.appendChild(c2); tr.appendChild(c3); tr.appendChild(c4);
+      body.appendChild(tr);
+    });
+  }
+
+  function resetDocPending() {
+    pendingDocFile = null;
+    $("docFile").value = "";
+    hide($("docPending"));
+    $("docUploadBtn").disabled = false; $("docUploadBtn").textContent = "Upload";
+  }
+
+  $("docPickBtn").addEventListener("click", function () { $("docFile").click(); });
+  $("docCancelBtn").addEventListener("click", resetDocPending);
+  $("docFile").addEventListener("change", function () {
+    var f = this.files && this.files[0];
+    if (!f) return;
+    pendingDocFile = f;
+    hide($("docsError")); hide($("docsNotice"));
+    $("docPendingName").textContent = f.name;
+    var sel = $("docTypeSelect"); sel.innerHTML = "";
+    docTypes.forEach(function (t) {
+      var o = document.createElement("option"); o.value = t; o.textContent = t; sel.appendChild(o);
+    });
+    show($("docPending"));
+  });
+  $("docUploadBtn").addEventListener("click", async function () {
+    if (!pendingDocFile || !currentDetail) return;
+    var f = pendingDocFile;
+    var btn = $("docUploadBtn");
+    btn.disabled = true; btn.textContent = "Uploading…";
+    hide($("docsError"));
+    try {
+      // Raw bytes (not JSON) — filename/docType ride as query params, the MIME
+      // type as the Content-Type header.
+      var resp = await fetch(
+        API + "/records/" + encodeURIComponent(currentDetail.id) + "/documents" +
+        "?filename=" + encodeURIComponent(f.name) +
+        "&docType=" + encodeURIComponent($("docTypeSelect").value || ""),
+        {
+          method: "POST", credentials: "same-origin",
+          headers: { "Content-Type": f.type || "application/octet-stream" },
+          body: f,
+        }
+      );
+      var data = null;
+      try { data = await resp.json(); } catch (e2) {}
+      if (!resp.ok) {
+        var msg = (data && data.detail) || ("Upload failed (" + resp.status + ")");
+        var err = new Error(typeof msg === "string" ? msg : JSON.stringify(msg));
+        err.status = resp.status;
+        throw err;
+      }
+      resetDocPending();
+      notice("docsNotice", "Document uploaded.", "success");
+      loadDocuments();
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      btn.disabled = false; btn.textContent = "Upload";
+      $("docsError").textContent = e.message; show($("docsError"));
+    }
+  });
 
   // --- Communications tab -----------------------------------------------------
   // Two modes, switched by config.commsEnabled (GMAIL_SYNC server-side):

@@ -194,6 +194,26 @@ flag. Worker not involved.
 |---|---|
 | `GCAL_EVENTS` | `true` to enable session calendar events + Meet links (web) |
 
+**Google Drive documents (optional, web component, v0.65.0 — DOC-MGMT Phase 1)**
+— `GDRIVE_DOCS=true` turns the session tools' Documents tab live: managers
+upload files to the **"CBM Documents" shared drive** (folder scheme
+`/{Entity Type}/{Record Name} ({recordId})/`, created on first upload) and each
+record's documents are listed from the `app_document` Postgres table. Drive
+access impersonates the signed-in manager's own `cbmEmail` — reuses
+`GOOGLE_SERVICE_ACCOUNT_JSON` (or the Email-Setup config), no new secret.
+Activation order: create the shared drive + grant memberships (staff need
+Content Manager); add `https://www.googleapis.com/auth/drive` to the service
+account's domain-wide-delegation row (`GMAIL-INTEGRATION-GUIDE.md` pattern);
+run the pre-deploy migrate (Alembic `0005_app_document`); then set the flags.
+Requires `DATABASE_URL` (the tab 503s without the store). Worker not involved.
+
+| Variable | Value |
+|---|---|
+| `GDRIVE_DOCS` | `true` to enable the Documents tab (web) |
+| `GDRIVE_SHARED_DRIVE_ID` | the "CBM Documents" shared drive id (from its Drive URL) |
+| `GDRIVE_DOC_TYPES` | optional override of the doc-type choices (comma-separated; default `Resume,Agreement,Intake Document,Pitch Deck,Other`) |
+| `GDRIVE_MAX_FILE_MB` | optional upload size cap (default 100) |
+
 `APP_ENCRYPTION_KEY` is required for the in-app Email Setup screen (with
 `DATABASE_URL`); generate one with
 `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`.

@@ -4,6 +4,48 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.65.0] — 2026-07-16
+
+### Added
+- **Documents tab goes live — Google Drive document management, DOC-MGMT
+  Phase 1** (PRD: `prompts/Google Drive Documents/
+  CBM-DocMgmt-Implementation-PRD.docx` v1.0, adapted from its desktop-app
+  framing to this web app per Doug's rulings: built into the session tools'
+  existing Documents placeholder tab; Drive auth via the existing
+  service-account + domain-wide-delegation stack impersonating the signed-in
+  manager's own `cbmEmail` — Drive audit logs still attribute every upload to
+  the real person — instead of the PRD's desktop keyring/loopback OAuth).
+  Gated by **`GDRIVE_DOCS`** (+ `GDRIVE_SHARED_DRIVE_ID`; needs
+  `DATABASE_URL`) — off, the tab shows a "coming soon" placeholder and the
+  endpoints 503. What shipped:
+  - **Upload (DOC-01):** file picker + doc-type select in the tab; raw-bytes
+    POST to `/{slug}/api/records/{id}/documents`; the file lands on the
+    "CBM Documents" shared drive under
+    `/{Entity Type}/{Record Name} ({recordId})/` (both folder levels created
+    on first upload, folder id cached via the metadata rows); native MIME
+    preserved (never converted, D-04); resumable Drive upload for files over
+    5 MB; Drive rate-limit/5xx retried with backoff (NFR-02). Rollback rule
+    enforced: a metadata-write failure deletes the Drive file, a Drive
+    failure writes no row. Uploader identity + Drive impersonation subject
+    both come from the manager's CRM-resolved CBM mailbox, never request
+    input. Size cap `GDRIVE_MAX_FILE_MB` (100); doc types `GDRIVE_DOC_TYPES`.
+  - **Per-record list (DOC-02, partial):** filename / type chip / uploader /
+    upload date, newest first, rendered from the new **`app_document`**
+    Postgres table only (no Drive call; Alembic `0005_app_document`, PRD §4
+    schema incl. the `(entity_type, record_id, status)` composite index).
+    View / Open in Drive / Archive render disabled ("Coming soon") — they are
+    Phase 2/3, deliberately not built.
+  - New: `core/gdrive.py` (`DriveClient`, gcalendar pattern), `docs/`
+    (`store.py` + `service.py`), 40 new tests (metadata layer incl. a live
+    local-Postgres pass, folder scheme, rollback both directions,
+    impersonation-subject rule, endpoint gates/validation, upload-mode
+    selection). Verified in the stubbed-browser harness (list, upload
+    round-trip with correct params/bytes/MIME, error + cancel paths,
+    flag-off placeholder). NOT yet driven against real Google Drive — needs
+    the manual prerequisites (shared drive + memberships, `drive` scope on
+    the DWD grant) and a live smoke test; activation runbook in
+    DEPLOYMENT.md.
+
 ## [0.64.2] — 2026-07-16
 
 ### Fixed

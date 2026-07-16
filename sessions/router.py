@@ -20,7 +20,9 @@ from assignments.espo_user import client_for
 from comms import service as comms_service
 from core.config import get_settings
 from core.espo import EspoError, validation_message
+from core.gdrive import DriveError
 from core.gmail import GmailError
+from docs import service as docs_service
 
 from . import details as details_svc
 from . import service
@@ -79,14 +81,15 @@ class ContactAddIn(BaseModel):
 # Phase-one detail tabs, common to all three domains. Overview + Sessions +
 # Details (full company/contact/profile fields, editable) are built. The
 # Communications tab renders an email-inbox grid (UI only — no CRM email data is
-# read yet; the CRM email structure is still being designed). Documents (uploads)
-# is a placeholder for now.
+# read yet; the CRM email structure is still being designed). Documents lists +
+# uploads Google Drive files (DOC-MGMT Phase 1; a "coming soon" panel until
+# GDRIVE_DOCS is enabled — config.docsEnabled).
 COMMON_DETAIL_TABS = [
     {"key": "overview", "label": "Overview"},
     {"key": "details", "label": "Details"},
     {"key": "sessions", "label": "Sessions"},
     {"key": "communications", "label": "Communications"},
-    {"key": "documents", "label": "Documents", "placeholder": True},
+    {"key": "documents", "label": "Documents"},
 ]
 
 # Shown instead of the domain's empty message when /records returns
@@ -178,6 +181,9 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             # True => saving a NEW Scheduled session would create a Google
             # Calendar event, so the frontend asks first (create vs. manual).
             "gcalEnabled": get_settings().gcal_events,
+            # True => the Documents tab talks to the real endpoints below;
+            # false => it shows a "coming soon" placeholder.
+            "docsEnabled": get_settings().gdrive_docs,
         }
 
     @router.post("/logout")
@@ -533,6 +539,70 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             raise _comms_error(exc)
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not update the contact")
+
+    # --- Documents tab (Google Drive document management — DOC-MGMT Phase 1) --
+    # Everything below 503s unless GDRIVE_DOCS is enabled; the frontend shows a
+    # "coming soon" placeholder in that case (config.docsEnabled). The list
+    # renders from the app_document metadata table only (no Drive call, DOC-02);
+    # uploads go to the shared drive as the signed-in user (DOC-01).
+
+    def _docs_ready():
+        """(settings, document_store) — or a 503 when the integration is off."""
+        settings = get_settings()
+        if not settings.gdrive_docs:
+            raise HTTPException(
+                status_code=503, detail="The document integration isn't enabled."
+            )
+        store = docs_service.get_store(settings)
+        if store is None:
+            raise HTTPException(
+                status_code=503, detail="The document integration needs the database."
+            )
+        return settings, store
+
+    @router.get("/records/{parent_id}/documents")
+    async def documents(parent_id: str, request: Request) -> dict:
+        _require_user(request)
+        settings, store = _docs_ready()
+        rows = await docs_service.list_documents(store, cfg.parent_entity, parent_id)
+        return {"documents": rows, "docTypes": settings.gdrive_doc_types_list}
+
+    @router.post("/records/{parent_id}/documents")
+    async def upload_document(
+        parent_id: str, request: Request, filename: str = "", docType: str = ""
+    ) -> dict:
+        """Upload one file (raw request body; filename/docType as query params,
+        MIME from the Content-Type header) to the record's Drive folder, then
+        record it in the metadata table (rollback on failure — DOC-01)."""
+        user = _require_user(request)
+        settings, store = _docs_ready()
+        client = client_for(settings, user)
+        data = await request.body()
+        try:
+            # Read the parent as the user: their ACL must allow the record, and
+            # its name feeds the human-readable folder.
+            parent = await client.get(cfg.parent_entity, parent_id, select="name")
+            drive = await docs_service.drive_for_user(settings, client, user)
+            row = await docs_service.upload_document(
+                settings, store, drive,
+                entity_type=cfg.parent_entity,
+                record_id=parent_id,
+                record_name=parent.get("name") or "",
+                filename=filename,
+                mime_type=request.headers.get("content-type", ""),
+                doc_type=docType,
+                data=data,
+            )
+            return {"status": "ok", "document": row}
+        except docs_service.DocsError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        except DriveError as exc:
+            log.warning("document upload failed (%s): %s", cfg.slug, exc)
+            raise HTTPException(
+                status_code=502, detail="Couldn't reach Google Drive — try again."
+            )
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not upload the document")
 
     # POST /sendmail — the record-less quick send behind email links shown
     # OUTSIDE an open record (grid-page peeks). This router already serves its
