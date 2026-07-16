@@ -1000,7 +1000,24 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-15)
 
-**Main is at v0.54.0** (464 tests green, **pushed and DEPLOYED 2026-07-15** —
+**Main is at v0.55.1** — two items on top of the parallel session's v0.55.0
+(comms participants, committed):
+1. **Details-tab live write-through VERIFIED on crm-test as a non-admin
+   mentor (matt.mentor)** — closes section-edit-screens acceptance
+   criterion 6 / the v0.41.x "drive the Details writes live" open item.
+   Engagement strip enum, profile bool, and contact-row edit all saved
+   through the UI, GET-verified fresh from the CRM, and reverted. ACL
+   gating confirmed live (Account `editable:false` ⇒ no Edit button; Mentor
+   field read-only). **CRM gaps found, Doug to decide:** Mentor Role has no
+   Contact CREATE grant, and relate-existing needs edit on the foreign
+   contact ([[espo-field-acl-silently-strips-writes]] family) — so both
+   "+ Add contact" flows 403 for mentors today.
+2. **v0.55.1 fix:** those CRM 403s surfaced as blank "Request failed (504)"
+   — `sessions/router._crm_failure` now maps CRM 403 → readable HTTP 403
+   ("your account doesn't have permission… ask CBM staff"); CRM 5xx still
+   → 502. Not yet deployed at the time of writing.
+
+Before that: **Main was at v0.54.0** (464 tests green, **pushed and DEPLOYED 2026-07-15** —
 prod + crm-test `/healthz` both verified at 0.54.0, and both deployed portal
 pages serve the new link) — **"Forgot your password?" on the portal sign-in** (the single login for all staff
 apps): a link under the login form opens a reset form (username + email);

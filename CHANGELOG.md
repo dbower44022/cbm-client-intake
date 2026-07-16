@@ -4,6 +4,36 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.55.1] — 2026-07-15
+
+### Fixed
+- **Session tools: a CRM permission rejection now surfaces as a readable
+  403, never a blank 502/504.** Found during the Details-tab live
+  write-through verification (crm-test, as the non-admin mentor
+  matt.mentor): "+ Add → Create new contact" hit EspoCRM's `POST /Contact`
+  403 (the Mentor Role has no Contact create grant) and "Select existing"
+  hit `noAccessToForeignRecord` on the relate (EspoCRM requires edit on the
+  contact being linked) — both came back to the browser as "Request failed
+  (504)". `sessions/router._crm_failure` now maps a CRM 403 to HTTP 403
+  with a plain-language "your account doesn't have permission… ask CBM
+  staff" message (covers every session-tools route); real CRM 5xx still
+  maps to 502. 3 new tests.
+
+### Verified (no code change)
+- **Details-tab section saves VERIFIED LIVE on crm-test as a non-admin
+  mentor** — closes the section-edit-screens acceptance criterion 6 (the
+  v0.41.x open item): engagement strip (`meetingCadence` enum), Client
+  Business Profile (bool), and contact-row edit (`title`) each saved
+  through the UI, GET-verified on a fresh CRM read, and reverted; failed
+  saves keep the form open with an inline error. ACL gating confirmed on
+  real permissions: the Account section came back `editable:false` (no Edit
+  button on the Company card) and the engagement form's Mentor field is
+  absent (read-only by design). **CRM-side gaps found (Doug to decide):**
+  the Mentor Role lacks the Contact *create* grant, and linking an existing
+  contact needs edit access on that contact — so both "+ Add" flows are
+  unavailable to mentors until granted (staff can use them via roles with
+  broader Contact access).
+
 ## [0.55.0] — 2026-07-15
 
 ### Changed

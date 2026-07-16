@@ -134,6 +134,17 @@ def make_router(cfg: DomainConfig) -> APIRouter:
         friendly = validation_message(exc)
         if friendly:
             return HTTPException(status_code=400, detail=friendly)
+        # A CRM permission rejection is the user's ACL, not a server fault either
+        # — surface it as a readable 403 (found live 2026-07-15: a mentor without
+        # the Contact create grant got a blank 502→edge 504 from + Add).
+        if service._is_forbidden(exc):
+            return HTTPException(
+                status_code=403,
+                detail=(
+                    f"{message}: your account doesn't have permission to do this "
+                    "in the CRM — ask CBM staff if you need it."
+                ),
+            )
         return HTTPException(status_code=502, detail=f"{message}: {exc}")
 
     @router.get("/session")
