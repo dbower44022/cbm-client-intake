@@ -792,9 +792,50 @@ segment of its own URL). Mounted only when `assignments_active` (needs
     `acl.table`) and, for `edit:own`, checks **per-record ownership**
     (assignedUser/assignedUsers) — read-only records show no Edit, saves are
     per-entity with a plain-language 403 message (enum drift dropped).
+  - **Details EDIT forms — mockup-v4 packed group panels (v0.57.0–0.59.2,
+    2026-07-15/16; design target `prompts/company-edit-form-mockup-v4.html`,
+    prompt doc `prompts/section-edit-screens-prompt-v0.2.md` at rev 0.3).**
+    Every edit form (`.sxf`, shared by Company / Client Business Profile /
+    Engagement strip / contact rows / create-contact) renders its groups as
+    **packable panels**: each group has `grow`/`basis` in `DETAILS_LAYOUTS`,
+    panels flow left-to-right and **every band always fills the window
+    width** (no width cap — prompt v0.2's 960px rule was REVERSED by Doug,
+    see [[no-page-width-caps-density-by-packing]]; the prompt doc's v0.3
+    records it). Each layout row is one flex line (no orphan fields);
+    long-text cells cap at 72rem; every single-line control is pinned to
+    2.4rem with a 12×16px gap rhythm (v0.59.2). **Field triage complete for
+    all three entities** (live-metadata sweep, `noExtras` — the "Additional
+    details" dump is gone; unplaced schema fields need an explicit placement
+    decision): Account per prompt v0.2 (SIC/LinkedIn/notes placed; pledge
+    currency, target population, applicant timestamp, contactRole removed);
+    CClientProfile (state of formation, industry sector, employees, fiscal
+    year end, social media, local licenses placed; record name + revenue
+    Currency/Converted removed); CEngagement (hold/close + outcomes +
+    focus/notes placed; record name, engagementAssignedDate, and the
+    CRM-maintained session stats excluded from EDIT — the summary strip
+    still displays them). Removed lists: `DETAILS_REMOVED_FIELDS` (per
+    entity, consumed by the view cards too). Save UX: a **gold dot** marks
+    each changed field (driven by the save's own snapshot diff) and a
+    **sticky Save bar** narrates "N fields changed" (Save disabled when
+    clean). All harness-verified; live save exercised earlier (v0.55.1).
+  - **Grid + Overview session flags (v0.62.0–0.64.1, 2026-07-16).** The
+    Overview feed's **Upcoming/Past sections always render** when sessions
+    exist (empty group ⇒ muted note; the old both-groups-and-3+ heuristic
+    hid them — the Randa Jackson report); upcoming cards are clearly blue
+    (navy left accent) vs neutral past; a session **scheduled TODAY**
+    (viewer-local) gets a red bold-white header band (card + session view)
+    and files under Upcoming. The engagements grid: `list_records` attaches
+    `upcomingSessions` (ONE ACL-scoped CSession query, dateStart ≥ now−36h,
+    soonest first, best-effort) — the **Next Session column derives from it**
+    (the stored `CEngagement.nextSessionDateTime` is NEVER populated by the
+    CRM — do not read it), a today-session record's name renders red+bold,
+    and the far-right **Assigned Mentor column** links to the CMentorProfile
+    peek (CBM email → compose/mailto) so co-mentors can reach the primary
+    mentor in two clicks.
   - **Peek** (`service.peek`, `PEEK_FIELDS` allowlist: Contact/Account/CClientProfile/
-    CPartnerProfile/CSponsorProfile): a read-only pop-up; the aggregated Company link
-    fetches each member and renders titled sections.
+    CPartnerProfile/CSponsorProfile/CMentorProfile): a read-only pop-up; the
+    aggregated Company link fetches each member and renders titled sections;
+    email-typed fields render as compose/mailto links.
   - **Friendlier empty grid** (`DomainConfig.empty_message`): "No client engagements
     / partners / sponsors found" — no "ask an administrator" alarm (past the team
     gate = you have permission); a Refresh picks up newly-assigned records (the
@@ -1072,6 +1113,26 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   data-hygiene cleanup). **UI polish is the next work item** (a follow-up session).
 
 ## Current status (updated 2026-07-16)
+
+**The edit-form/UX session (2026-07-15/16, v0.57.0–0.59.2 + 0.62.0–0.64.1,
+all pushed/deployed along the way):** the Details EDIT forms were rebuilt to
+the mockup-v4 standard — full-width **packed group panels** (Doug REVERSED
+prompt v0.2's 960px cap live: "utilize as much of the screen as possible";
+the prompt doc is at rev 0.3, and the memory
+[[no-page-width-caps-density-by-packing]] now says spec'd width caps must be
+flagged before implementing), complete **field triage** for Account /
+CClientProfile / CEngagement (`noExtras` — no more "Additional details"
+dump; excluded fields in `DETAILS_REMOVED_FIELDS`), gold changed-field dots
++ a sticky Save bar, and uniform 2.4rem control heights (v0.59.2). Then the
+session grid/Overview got temporal flags (v0.62.0–0.64.1): Upcoming/Past
+sections always render (the Randa Jackson report), red bold TODAY treatment
+(cards, session view, grid row), the Next Session column derived from real
+sessions (the stored `CEngagement.nextSessionDateTime` is NEVER populated —
+don't read it), and the Assigned Mentor column → mentor peek with a
+clickable CBM email. Mechanics in the Session Management section's two new
+bullets ("Details EDIT forms — mockup-v4" and "Grid + Overview session
+flags"). Still worth a live eyeball on crm-test: a past-only record's
+Overview split, a real today-session red flag, and Next Session values.
 
 **Main is at v0.66.0** (526 tests green, committed NOT pushed) —
 **Communications: conversation messages show WHO WROTE THEM** (Doug's
