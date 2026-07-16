@@ -183,9 +183,15 @@ async def ingest_message(
         },
     )
 
-    participant = parsed.from_name or parsed.from_address
+    # Everyone on the email counts as a participant — sender AND recipients
+    # (Doug's ruling 2026-07-15: it matters who was included, not just who wrote).
+    participants = [
+        (parsed.from_name, parsed.from_address),
+        *parsed.to_named,
+        *parsed.cc_named,
+    ]
     await crm.refresh_conversation_aggregates(
-        espo, conv_id, sent_at=parsed.sent_at, participant=participant
+        espo, conv_id, sent_at=parsed.sent_at, participants=participants
     )
     await crm.link_records(espo, conv_id, matched, excludes)
     if scope.owner_user_id:

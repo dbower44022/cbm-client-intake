@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup v3 — Edit Company (cleanup)</title>
+<style>
+  :root{
+    --navy:#1f3a5f;
+    --gold:#d29b2f;
+    --gold-dark:#b8861f;
+    --ink:#25313f;
+    --muted:#77828f;
+    --line:#dfe3e8;
+    --panel-head:#f4f6f8;
+    --chip-line:#c9d0d8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:#e9edf1;padding:28px 20px 60px;font-size:13.5px}
+
+  .pagenote{max-width:960px;margin:0 auto 16px;font-size:12.5px;color:var(--muted)}
+
+  /* THE FIX: the form is a constrained modal, not a full-bleed page */
+  .form-card{max-width:960px;margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 18px rgba(31,58,95,.10);overflow:hidden}
+  .form-head{display:flex;align-items:center;background:var(--panel-head);border-bottom:1px solid var(--line);padding:12px 22px}
+  .form-title{font-size:16px;font-weight:700;color:var(--navy)}
+  .form-sub{font-size:12px;color:var(--muted);margin-left:10px}
+  .form-body{padding:18px 22px 6px}
+
+  .group{margin-bottom:20px}
+  .group-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;border-bottom:1px solid var(--line);padding-bottom:5px;margin-bottom:12px}
+
+  .fgrid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px 16px}
+  .fgrid > div{grid-column:span 12}
+  .c2{grid-column:span 2!important}.c3{grid-column:span 3!important}.c4{grid-column:span 4!important}
+  .c5{grid-column:span 5!important}.c6{grid-column:span 6!important}.c8{grid-column:span 8!important}
+  @media(max-width:720px){.fgrid > div{grid-column:span 12!important}}
+
+  label{display:block;font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:4px}
+  input[type=text],input[type=email],input[type=tel],select,textarea{
+    width:100%;padding:7px 9px;border:1px solid var(--chip-line);border-radius:4px;font-size:13.5px;font-family:inherit;background:#fff;color:var(--ink)
+  }
+  input:focus,select:focus,textarea:focus{outline:2px solid rgba(31,58,95,.25);border-color:var(--navy)}
+  textarea{min-height:64px;resize:vertical}
+
+  .checkrow{display:flex;align-items:center;gap:8px;font-size:13px}
+  .checkrow input{width:15px;height:15px;accent-color:var(--navy)}
+  .checkrow label{margin:0;font-weight:400;font-size:13px;color:var(--ink)}
+
+  /* side-by-side address columns */
+  .addr2{display:grid;grid-template-columns:1fr 1fr;gap:0 36px}
+  @media(max-width:720px){.addr2{grid-template-columns:1fr}}
+  .addr-col .sub{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px}
+  .addr-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:10px 12px}
+  .addr-grid > div{grid-column:span 12}
+
+  /* rich text mini toolbar */
+  .rtwrap{border:1px solid var(--chip-line);border-radius:4px;overflow:hidden}
+  .rtbar{display:flex;gap:2px;background:#fbfcfd;border-bottom:1px solid #f0f2f4;padding:4px 6px}
+  .rtbar button{border:none;background:none;font-size:12.5px;padding:3px 8px;cursor:pointer;border-radius:3px;color:var(--ink);font-family:inherit}
+  .rtbar button:hover{background:var(--panel-head)}
+  .rtwrap textarea{border:none;border-radius:0}
+  .rtwrap textarea:focus{outline:none}
+
+  .form-actions{display:flex;gap:10px;justify-content:flex-end;border-top:1px solid var(--line);padding:14px 22px;background:#fbfcfd}
+  .btn{border:none;border-radius:4px;padding:8px 16px;font-size:13.5px;font-weight:600;cursor:pointer}
+  .btn-gold{background:var(--gold);color:#fff}
+  .btn-gold:hover{background:var(--gold-dark)}
+  .btn-ghost{background:#fff;color:var(--navy);border:1px solid var(--line)}
+</style>
+</head>
+<body>
+
+<p class="pagenote">Mockup v3 — Edit Company, cleaned. Constrained to a 960px modal; Country integrated into the address block; schema extras triaged into Web presence and Notes; partner/sponsor and system fields excluded. "Same as billing" is live.</p>
+
+<div class="form-card">
+  <div class="form-head"><span class="form-title">Edit Company</span><span class="form-sub">Agape W8Loss</span></div>
+  <div class="form-body">
+
+    <div class="group">
+      <div class="group-label">Identity</div>
+      <div class="fgrid">
+        <div class="c6"><label>Company name</label><input type="text" value="Agape W8Loss"></div>
+        <div class="c3"><label>Phone number</label><input type="tel"></div>
+        <div class="c3"><label>Email address</label><input type="email"></div>
+        <div class="c3"><label>Organization type</label><select><option>(none)</option><option>For-Profit</option><option>Non-Profit</option></select></div>
+        <div class="c3"><label>Business stage</label><select><option selected>Startup</option><option>Early Stage</option><option>Growth</option><option>Mature</option></select></div>
+        <div class="c3"><label>Industry</label><select><option>(none)</option><option>Healthcare</option></select></div>
+        <div class="c3"><label>SIC code</label><input type="text"></div>
+        <div class="c6"><label>Industry sector</label><select><option>Health Care and Social Assistance</option></select></div>
+        <div class="c6"><label>Industry subsector</label><select><option>(none)</option></select></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-label">Web presence</div>
+      <div class="fgrid">
+        <div class="c6"><label>Website</label><input type="text" value="https://agapew8loss.com"></div>
+        <div class="c6"><label>LinkedIn page</label><input type="text"></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-label">Addresses</div>
+      <div class="addr2">
+        <div class="addr-col">
+          <div class="sub">Billing</div>
+          <div class="addr-grid">
+            <div class="c8"><label>Address line 1</label><input type="text" value="7550 Lucerne Drive"></div>
+            <div class="c4"><label>Line 2</label><input type="text" value="Suite 303"></div>
+            <div class="c6"><label>City</label><input type="text" value="Middleburg Heights"></div>
+            <div class="c2"><label>State</label><select><option>OH</option></select></div>
+            <div class="c4"><label>ZIP</label><input type="text" value="44130"></div>
+            <div class="c6"><label>Country</label><input type="text" value="USA"></div>
+          </div>
+        </div>
+        <div class="addr-col">
+          <div class="sub" style="display:flex;align-items:center;gap:14px">Shipping
+            <span class="checkrow" style="text-transform:none;letter-spacing:0"><input type="checkbox" id="same" onchange="toggleShip(this)"><label for="same">Same as billing</label></span>
+          </div>
+          <div class="addr-grid" id="shipfields">
+            <div class="c8"><label>Address line 1</label><input type="text" value="345 N. Main St"></div>
+            <div class="c4"><label>Line 2</label><input type="text"></div>
+            <div class="c6"><label>City</label><input type="text" value="Chagrin Falls"></div>
+            <div class="c2"><label>State</label><select><option>OH</option></select></div>
+            <div class="c4"><label>ZIP</label><input type="text" value="44022"></div>
+            <div class="c6"><label>Country</label><input type="text" value="USA"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-label">Notes</div>
+      <div class="fgrid">
+        <div class="c12"><label>Description</label><textarea placeholder="What the company does&hellip;"></textarea></div>
+        <div class="c12"><label>Client notes</label>
+          <div class="rtwrap">
+            <div class="rtbar"><button><b>B</b></button><button><i>I</i></button><button>&bull;</button><button>1.</button><button>Clear</button></div>
+            <textarea placeholder="Internal notes about this client&hellip;"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="form-actions"><button class="btn btn-ghost">Cancel</button><button class="btn btn-gold">Save changes</button></div>
+</div>
+
+<script>
+function toggleShip(cb){
+  const f=document.getElementById('shipfields');
+  f.style.opacity=cb.checked?'0.35':'1';
+  f.style.pointerEvents=cb.checked?'none':'auto';
+}
+</script>
+</body>
+</html>

@@ -34,6 +34,9 @@ class SessionIn(BaseModel):
     # Contact ids for the session's attendees. None => leave attendees unchanged
     # (on edit); [] => clear them. Sent by the frontend attendee picker.
     attendees: Optional[list[str]] = None
+    # True = the user declined the automatic calendar invite in the pre-save
+    # prompt (new Scheduled sessions only) — save the session, skip the event.
+    skipCalendar: bool = False
 
 
 class CoMentorIn(BaseModel):
@@ -161,6 +164,9 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             # True => the Communications tab talks to the real endpoints below;
             # false => the frontend keeps its sample-data scaffold.
             "commsEnabled": get_settings().gmail_sync,
+            # True => saving a NEW Scheduled session would create a Google
+            # Calendar event, so the frontend asks first (create vs. manual).
+            "gcalEnabled": get_settings().gcal_events,
         }
 
     @router.post("/logout")
@@ -294,6 +300,7 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             return await service.create_session(
                 cfg, client, parent_id, body.changes, body.attendees,
                 owner_user_id=user["userId"], settings=get_settings(),
+                skip_calendar=body.skipCalendar,
             )
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not create session")

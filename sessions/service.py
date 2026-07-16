@@ -738,8 +738,14 @@ async def create_session(
     owner_user_id: Optional[str] = None,
     *,
     settings: Optional[Any] = None,
+    skip_calendar: bool = False,
 ) -> dict[str, Any]:
     """Create a ``CSession`` linked to ``parent_id`` and return it (with id).
+
+    ``skip_calendar=True`` = the user declined the automatic Google Calendar
+    invite in the pre-save prompt (they'll schedule it manually), so the
+    calendar hook is not called; the response says so via
+    ``calendar={ok, skipped, declined}``.
 
     Stamps the creating user as the session's assigned user so it is theirs to
     read/edit — required because these tools run under a role whose ``CSession``
@@ -774,7 +780,9 @@ async def create_session(
         len(attendees or []),
     )
     session = await get_session(client, created["id"])
-    if settings is not None and owner_user_id:
+    if skip_calendar:
+        session["calendar"] = {"ok": True, "skipped": True, "declined": True}
+    elif settings is not None and owner_user_id:
         from sessions import gcal  # lazy — gcal imports this module
 
         session["calendar"] = await gcal.sync_session_calendar(

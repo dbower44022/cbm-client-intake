@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Iterable, Optional
 
 from assignments.service import assigned_user_id
 from core.espo import EspoError
@@ -200,11 +200,85 @@ async def create_conversation(client: Any, *, subject: str, sent_at: str) -> str
     return created["id"]
 
 
+PARTICIPANTS_MAX = 500  # the CRM field's varchar length
+
+
+def _clean_name(name: str) -> str:
+    """A display name safe for the flat comma-separated participants field."""
+    return " ".join((name or "").replace(",", " ").replace("<", " ").replace(">", " ").split())
+
+
+def _participant_key(entry: str) -> str:
+    """Dedup key for a stored entry: the email address when one is present,
+    else the (legacy, name-only) text itself."""
+    if "<" in entry and entry.endswith(">"):
+        addr = entry[entry.rindex("<") + 1 : -1].strip().lower()
+        if addr:
+            return addr
+    if "@" in entry and " " not in entry:
+        return entry.lower()
+    return "name:" + entry.lower()
+
+
+def merge_participants(existing: str, additions: Iterable[tuple[str, str]]) -> str:
+    """Fold ``(display name, address)`` pairs into the participants display
+    string, deduping by email address so the same person never appears twice.
+
+    Entries are stored as ``Name <address>`` (bare address when no name is
+    known). A bare-address entry is upgraded in place once a later message
+    supplies the display name; a legacy name-only entry (the pre-v0.55.0
+    senders-only format) is upgraded once its address is learned. Existing
+    entry order is preserved; the result is clamped to whole entries within
+    the CRM field length.
+    """
+    order: list[str] = []
+    by_key: dict[str, str] = {}
+    for token in (existing or "").split(","):
+        token = token.strip()
+        if not token:
+            continue
+        key = _participant_key(token)
+        if key not in by_key:
+            order.append(key)
+            by_key[key] = token
+    for name, address in additions:
+        addr = (address or "").strip().lower()
+        clean = _clean_name(name)
+        entry = f"{clean} <{addr}>" if clean and addr else (addr or clean)
+        if not entry:
+            continue
+        key = addr or ("name:" + clean.lower())
+        if key in by_key:
+            if addr and clean and "<" not in by_key[key]:
+                by_key[key] = entry  # bare address → named form
+            continue
+        legacy = "name:" + clean.lower() if clean else ""
+        if addr and legacy and legacy in by_key:
+            order[order.index(legacy)] = key
+            del by_key[legacy]
+            by_key[key] = entry
+            continue
+        order.append(key)
+        by_key[key] = entry
+    out: list[str] = []
+    used = 0
+    for key in order:
+        token = by_key[key]
+        extra = len(token) + (2 if out else 0)
+        if used + extra > PARTICIPANTS_MAX:
+            break
+        out.append(token)
+        used += extra
+    return ", ".join(out)
+
+
 async def refresh_conversation_aggregates(
-    client: Any, conversation_id: str, *, sent_at: str, participant: str
+    client: Any, conversation_id: str, *, sent_at: str,
+    participants: Iterable[tuple[str, str]],
 ) -> None:
-    """Bump counters/stamps after a new message; null summarizedAt so the
-    optional AI layer re-summarizes. Best-effort."""
+    """Bump counters/stamps after a new message and fold everyone on it
+    (From/To/Cc, as (name, address) pairs) into the participants list; null
+    summarizedAt so the optional AI layer re-summarizes. Best-effort."""
     try:
         conv = await client.get(
             CONVERSATION, conversation_id,
@@ -219,9 +293,9 @@ async def refresh_conversation_aggregates(
                 payload["firstMessageAt"] = sent_at
             if not conv.get("lastMessageAt") or sent_at > conv["lastMessageAt"]:
                 payload["lastMessageAt"] = sent_at
-        names = [p.strip() for p in (conv.get("participants") or "").split(",") if p.strip()]
-        if participant and participant not in names:
-            payload["participants"] = ", ".join([*names, participant])[:500]
+        merged = merge_participants(conv.get("participants") or "", participants)
+        if merged and merged != (conv.get("participants") or "").strip():
+            payload["participants"] = merged
         await client.update(CONVERSATION, conversation_id, payload)
     except EspoError as exc:
         log.warning("conversation %s aggregate update failed: %s", conversation_id, exc)

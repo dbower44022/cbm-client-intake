@@ -58,6 +58,13 @@ One row per conversation: status chip, participants, subject with message
 count, a one-line summary, and last activity. Click a row to open the
 thread; **Refresh** happens automatically when the tab loads.
 
+**Participants** lists everyone who was on the emails — senders *and* To/Cc
+recipients — so a person who was included but never replied still shows.
+Each person appears once (matched by email address), as their name with
+address when a message carried a display name, otherwise the bare address.
+Conversations synced before this change listed only senders; they fill in
+automatically as new messages arrive on the thread.
+
 If the optional **AI summary** feature is enabled, each conversation also
 carries a short summary, an Open / Closed status, action items, and topic
 tags — refreshed automatically when new mail arrives. With the feature off

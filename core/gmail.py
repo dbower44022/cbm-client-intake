@@ -208,6 +208,10 @@ class ParsedGmailMessage:
     from_name: str
     to_addresses: list[str] = field(default_factory=list)
     cc_addresses: list[str] = field(default_factory=list)
+    # (display name, address) pairs — names as the headers carried them, so the
+    # conversation participants list can show people, not just addresses.
+    to_named: list[tuple[str, str]] = field(default_factory=list)
+    cc_named: list[tuple[str, str]] = field(default_factory=list)
     label_ids: list[str] = field(default_factory=list)  # e.g. SENT, DRAFT, INBOX
     sent_at: str = ""  # "YYYY-MM-DD HH:MM:SS" UTC (from internalDate)
     snippet: str = ""
@@ -248,6 +252,8 @@ def parse_message(raw: dict[str, Any]) -> ParsedGmailMessage:
         for h in payload.get("headers") or []
     }
     from_name, from_addr = parseaddr(headers.get("from", ""))
+    to_named = [(n, a.lower()) for n, a in getaddresses([headers.get("to", "")]) if a]
+    cc_named = [(n, a.lower()) for n, a in getaddresses([headers.get("cc", "")]) if a]
     text, html = "", ""
     for part in _walk_parts(payload):
         mime = (part.get("mimeType") or "").lower()
@@ -273,8 +279,10 @@ def parse_message(raw: dict[str, Any]) -> ParsedGmailMessage:
         subject=headers.get("subject", ""),
         from_address=from_addr.lower(),
         from_name=from_name,
-        to_addresses=[a.lower() for _, a in getaddresses([headers.get("to", "")]) if a],
-        cc_addresses=[a.lower() for _, a in getaddresses([headers.get("cc", "")]) if a],
+        to_addresses=[a for _, a in to_named],
+        cc_addresses=[a for _, a in cc_named],
+        to_named=to_named,
+        cc_named=cc_named,
         label_ids=list(raw.get("labelIds") or []),
         sent_at=sent_at,
         snippet=raw.get("snippet", ""),

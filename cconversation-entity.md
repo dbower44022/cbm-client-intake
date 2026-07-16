@@ -30,7 +30,7 @@ Type: Base. Name field = subject of the first message.
 | `summary` | text | AI summary (empty when the AI layer is off) |
 | `actionItems` | text | newline-separated action items (AI) |
 | `keyTopics` | varchar (100) | comma-separated topic tags (AI) — as built on crm-test; the app clamps |
-| `participants` | varchar (500) | display names, denormalized for lists |
+| `participants` | varchar (500) | everyone on the thread's emails (From + To + Cc), deduped by address, as `Name <address>` / bare address entries — denormalized for lists (senders-only names before v0.55.0) |
 | `firstMessageAt` | datetime | |
 | `lastMessageAt` | datetime | |
 | `messageCount` | int | |

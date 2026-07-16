@@ -4,6 +4,24 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.55.0] — 2026-07-15
+
+### Changed
+- **Communications: conversation Participants now list everyone on the
+  emails, deduped by address.** Doug's ruling: knowing who was *included* on
+  an email matters, not just who wrote — so the sync now folds the sender
+  AND all To/Cc recipients of each ingested message into the conversation's
+  participants list (previously senders only, so a client CC'd on every
+  message but never replying was invisible in the column). Entries are
+  stored as `Name <address>` (bare address until a message supplies the
+  display name) and deduped by email address, which also fixes the same
+  person appearing twice as "Jane Smith" and "jane@acme.com"; a bare-address
+  or legacy name-only entry upgrades in place once the name/address is
+  learned. The list clamps to whole entries within the CRM's 500-char field.
+  Existing conversations backfill naturally as new mail arrives on the
+  thread (`comms/sync.py`, `comms/crm.py:merge_participants`,
+  `core/gmail.py` now keeps To/Cc display names).
+
 ## [0.54.1] — 2026-07-15
 
 ### Fixed

@@ -205,6 +205,58 @@ async def test_unmatched_and_junk_are_skipped():
     assert not espo.records
 
 
+# --- participants ---------------------------------------------------------
+
+
+def test_merge_participants_dedups_by_address_and_upgrades_entries():
+    merged = crm.merge_participants(
+        "", [("James Koran", "james@acme.test"), ("", "bob@cbmentors.org")]
+    )
+    assert merged == "James Koran <james@acme.test>, bob@cbmentors.org"
+    # Same address again — any casing, with or without a name — never duplicates;
+    # a bare-address entry is upgraded once the display name is learned.
+    again = crm.merge_participants(
+        merged, [("James Koran", "JAMES@acme.test"), ("Bob Mentor", "bob@cbmentors.org")]
+    )
+    assert again == "James Koran <james@acme.test>, Bob Mentor <bob@cbmentors.org>"
+    # Legacy name-only entry (pre-v0.55.0 format) upgraded once its address arrives.
+    legacy = crm.merge_participants("James Koran", [("James Koran", "james@acme.test")])
+    assert legacy == "James Koran <james@acme.test>"
+    # Commas in display names are sanitized so the flat list stays parseable.
+    comma = crm.merge_participants("", [("Koran, James", "james@acme.test")])
+    assert comma == "Koran James <james@acme.test>"
+
+
+def test_merge_participants_clamps_to_whole_entries():
+    adds = [(f"Person {i}", f"person{i}@example.test") for i in range(40)]
+    merged = crm.merge_participants("", adds)
+    assert len(merged) <= crm.PARTICIPANTS_MAX
+    assert merged.endswith(">")  # never cut mid-entry
+
+
+async def test_ingest_records_sender_and_recipients_as_participants():
+    espo, store = FakeEspo(), MemoryCommsStore()
+    raw = raw_message()
+    raw["payload"]["headers"].append(
+        {"name": "Cc", "value": "Carol Mentor <carol.mentor@cbmentors.org>"}
+    )
+    conv_id = await ingest_message(espo, store, scope(), sync.parse_message(raw))
+    assert espo.records[(crm.CONVERSATION, conv_id)]["participants"] == (
+        "James Koran <james@acme.test>, bob.mentor@cbmentors.org, "
+        "Carol Mentor <carol.mentor@cbmentors.org>"
+    )
+    # A reply the other way adds nothing new — everyone is already listed.
+    reply = raw_message(
+        mid="m2", rfc_id="r2", frm="bob.mentor@cbmentors.org", to="james@acme.test"
+    )
+    reply["payload"]["headers"][0]["value"] = "Bob Mentor <bob.mentor@cbmentors.org>"
+    await ingest_message(espo, store, scope(), sync.parse_message(reply))
+    assert espo.records[(crm.CONVERSATION, conv_id)]["participants"] == (
+        "James Koran <james@acme.test>, Bob Mentor <bob.mentor@cbmentors.org>, "
+        "Carol Mentor <carol.mentor@cbmentors.org>"
+    )
+
+
 # --- mailbox sync ------------------------------------------------------------
 
 
