@@ -4,6 +4,27 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.61.0] — 2026-07-16
+
+### Added
+- **Mentor Sessions: the first completed session activates the engagement.**
+  Saving a session with status **Completed** (create, or an edit that changes
+  the status to Completed) on an engagement whose `engagementStatus` is
+  **Assigned** or **Assignment Dormant** moves the engagement to **Active**
+  (`sessions/service._activate_engagement_on_completed`). The engagement-status
+  guard makes it a first-completed-session rule: once Active (or any other
+  status a staffer set — On-Hold, Dormant, Completed, …) later saves are
+  no-ops, and a notes-only edit to an already-completed session never
+  re-activates a parked engagement (the frontend diffs, so an unchanged status
+  isn't in the payload; the server additionally only reacts to a payload
+  status of Completed). Mentor domain only — partner/sponsor parents have no
+  engagement lifecycle. Best-effort like the calendar hook: a CRM failure
+  (e.g. a role that can't edit CEngagement) never fails the session save; the
+  save response carries `engagement:{activated,from,to|error}` and the save
+  notice tells the user ("The engagement status is now Active." / could-not-
+  update note). The detail view re-fetches after save, so the status badge and
+  grid refresh on their own.
+
 ## [0.60.0] — 2026-07-16
 
 ### Changed

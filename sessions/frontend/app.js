@@ -3614,19 +3614,25 @@
       await openDetail(currentDetail.id);
       // The calendar hook is best-effort (the session saved either way) — the
       // notice just tells the user what happened to the Google Calendar event.
+      // A completed session on a still-Assigned engagement also moves the
+      // engagement to Active server-side; tell the user when that happened.
+      var eng = saved && saved.engagement;
+      var engExtra = "";
+      if (eng && eng.activated) engExtra = " The engagement status is now Active.";
+      else if (eng) engExtra = " (The engagement status could not be updated to Active: " + (eng.error || "unknown error") + ")";
       var cal = saved && saved.calendar;
       if (cal && cal.ok === false && !cal.disabled) {
-        notice("detailNotice", "Session saved, but the Google Calendar invitation failed: " + (cal.error || "unknown error"), "error");
+        notice("detailNotice", "Session saved, but the Google Calendar invitation failed: " + (cal.error || "unknown error") + engExtra, "error");
       } else if (cal && cal.ok && cal.meetLink) {
-        notice("detailNotice", "Session saved — calendar invitations sent.", "success");
+        notice("detailNotice", "Session saved — calendar invitations sent." + engExtra, "success");
       } else if (cal && cal.ok && cal.cancelled) {
-        notice("detailNotice", "Session saved — the calendar event was cancelled.", "success");
+        notice("detailNotice", "Session saved — the calendar event was cancelled." + engExtra, "success");
       } else if (cal && cal.ok && cal.updated) {
-        notice("detailNotice", "Session saved — the calendar event was updated.", "success");
+        notice("detailNotice", "Session saved — the calendar event was updated." + engExtra, "success");
       } else if (cal && cal.ok && cal.declined) {
-        notice("detailNotice", "Session saved — no calendar invite was created (schedule the meeting manually).", "success");
+        notice("detailNotice", "Session saved — no calendar invite was created (schedule the meeting manually)." + engExtra, "success");
       } else {
-        notice("detailNotice", "Session saved.", "success");
+        notice("detailNotice", "Session saved." + engExtra, "success");
       }
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }

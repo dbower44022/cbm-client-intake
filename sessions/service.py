@@ -729,6 +729,44 @@ async def _sanitize_enum_payload(client: SessionClient, payload: dict[str, Any])
             del payload[key]
 
 
+# Engagement statuses a completed session upgrades to Active: the engagement was
+# assigned (or went dormant before any activity happened) and a completed session
+# IS the activity that makes it live. Once Active the guard no longer matches, so
+# only the first completed session flips it — later ones are no-ops, and a status
+# a staffer set deliberately (On-Hold, Dormant, Completed, …) is never touched.
+_ACTIVATE_ON_COMPLETED = ("Assigned", "Assignment Dormant")
+_ENGAGEMENT_ACTIVE = "Active"
+_SESSION_COMPLETED = "Completed"
+
+
+async def _activate_engagement_on_completed(
+    cfg: DomainConfig,
+    client: SessionClient,
+    parent_id: Optional[str],
+    session_status: Optional[str],
+) -> Optional[dict[str, Any]]:
+    """Move an Assigned / Assignment Dormant engagement to Active when a session
+    on it is saved as Completed. Mentor domain only (the other domains' parents
+    have no engagement lifecycle). Best-effort — a CRM failure (e.g. the user's
+    role can't edit the engagement) never fails the session save; the result dict
+    tells the UI what happened (``None`` = the rule didn't apply)."""
+    if cfg.parent_entity != ENGAGEMENT or not parent_id or session_status != _SESSION_COMPLETED:
+        return None
+    try:
+        eng = await client.get(ENGAGEMENT, parent_id, select="engagementStatus")
+        current = eng.get("engagementStatus")
+        if current not in _ACTIVATE_ON_COMPLETED:
+            return None
+        await client.update(ENGAGEMENT, parent_id, {"engagementStatus": _ENGAGEMENT_ACTIVE})
+        log.info("engagement %s: %s -> %s (completed session saved)",
+                 parent_id, current, _ENGAGEMENT_ACTIVE)
+        return {"activated": True, "from": current, "to": _ENGAGEMENT_ACTIVE}
+    except EspoError as exc:
+        log.warning("could not activate engagement %s after a completed session: %s",
+                    parent_id, exc)
+        return {"activated": False, "error": str(exc)}
+
+
 async def create_session(
     cfg: DomainConfig,
     client: SessionClient,
@@ -780,6 +818,11 @@ async def create_session(
         len(attendees or []),
     )
     session = await get_session(client, created["id"])
+    engagement = await _activate_engagement_on_completed(
+        cfg, client, parent_id, payload.get("status")
+    )
+    if engagement is not None:
+        session["engagement"] = engagement
     if skip_calendar:
         session["calendar"] = {"ok": True, "skipped": True, "declined": True}
     elif settings is not None and owner_user_id:
@@ -813,6 +856,17 @@ async def update_session(
     if attendees is not None:
         await _sync_attendees(client, session_id, attendees)
     session = await get_session(client, session_id)
+    # Only a save that CHANGES the status to Completed triggers the engagement
+    # activation (the frontend diffs, so an untouched status never rides the
+    # payload) — a notes-only edit to an already-completed session can't
+    # re-activate an engagement a staffer deliberately parked.
+    if cfg.parent_entity == ENGAGEMENT and payload.get("status") == _SESSION_COMPLETED:
+        parent = await client.get(SESSION, session_id, select=cfg.session_parent_fk)
+        engagement = await _activate_engagement_on_completed(
+            cfg, client, parent.get(cfg.session_parent_fk), payload.get("status")
+        )
+        if engagement is not None:
+            session["engagement"] = engagement
     if settings is not None and user_id:
         from sessions import gcal  # lazy — gcal imports this module
 

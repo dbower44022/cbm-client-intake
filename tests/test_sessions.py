@@ -816,6 +816,94 @@ async def test_create_session_partner_domain_stamps_creator_only():
     assert payload["assignedUsersIds"] == ["u1"]
 
 
+# --- first completed session activates the engagement -----------------------
+
+def _eng_updates(fake):
+    return [(rid, p) for e, rid, p in fake.updates if e == "CEngagement"]
+
+
+@pytest.mark.asyncio
+async def test_create_completed_session_activates_assigned_engagement():
+    fake = Fake(records={("CEngagement", "E1"): {"engagementStatus": "Assigned"}})
+    res = await service.create_session(MENTOR, fake, "E1", {"status": "Completed"}, None)
+    assert _eng_updates(fake) == [("E1", {"engagementStatus": "Active"})]
+    assert res["engagement"] == {"activated": True, "from": "Assigned", "to": "Active"}
+
+
+@pytest.mark.asyncio
+async def test_create_completed_session_activates_dormant_assignment():
+    fake = Fake(records={("CEngagement", "E1"): {"engagementStatus": "Assignment Dormant"}})
+    res = await service.create_session(MENTOR, fake, "E1", {"status": "Completed"}, None)
+    assert _eng_updates(fake) == [("E1", {"engagementStatus": "Active"})]
+    assert res["engagement"]["from"] == "Assignment Dormant"
+
+
+@pytest.mark.asyncio
+async def test_create_completed_session_leaves_other_engagement_statuses():
+    # Already Active, or a status a staffer set deliberately => untouched.
+    for status in ("Active", "On-Hold", "Completed", "Dormant"):
+        fake = Fake(records={("CEngagement", "E1"): {"engagementStatus": status}})
+        res = await service.create_session(MENTOR, fake, "E1", {"status": "Completed"}, None)
+        assert _eng_updates(fake) == []
+        assert "engagement" not in res
+
+
+@pytest.mark.asyncio
+async def test_create_scheduled_session_never_touches_engagement_status():
+    fake = Fake(records={("CEngagement", "E1"): {"engagementStatus": "Assigned"}})
+    res = await service.create_session(MENTOR, fake, "E1", {"status": "Scheduled"}, None)
+    assert _eng_updates(fake) == []
+    assert "engagement" not in res
+
+
+@pytest.mark.asyncio
+async def test_create_completed_session_partner_domain_no_engagement_rule():
+    # The rule is mentor-domain only — a partner parent has no engagement lifecycle.
+    fake = Fake(records={("CPartnerProfile", "P1"): {}})
+    res = await service.create_session(PARTNER, fake, "P1", {"status": "Completed"}, None)
+    assert _eng_updates(fake) == []
+    assert "engagement" not in res
+
+
+@pytest.mark.asyncio
+async def test_update_to_completed_activates_assigned_engagement():
+    fake = Fake(records={
+        ("CSession", "s1"): {"engagementId": "E1"},
+        ("CEngagement", "E1"): {"engagementStatus": "Assigned"},
+    })
+    res = await service.update_session(MENTOR, fake, "s1", {"status": "Completed"}, None)
+    assert _eng_updates(fake) == [("E1", {"engagementStatus": "Active"})]
+    assert res["engagement"]["activated"] is True
+
+
+@pytest.mark.asyncio
+async def test_update_without_status_change_never_touches_engagement():
+    # A notes-only edit to an already-Completed session (status not in the diffed
+    # payload) must not re-activate a deliberately parked engagement.
+    fake = Fake(records={
+        ("CSession", "s1"): {"engagementId": "E1", "status": "Completed"},
+        ("CEngagement", "E1"): {"engagementStatus": "Assignment Dormant"},
+    })
+    res = await service.update_session(MENTOR, fake, "s1", {"sessionNotes": "<p>x</p>"}, None)
+    assert _eng_updates(fake) == []
+    assert "engagement" not in res
+
+
+@pytest.mark.asyncio
+async def test_activation_failure_never_fails_the_session_save():
+    class Failing(Fake):
+        async def update(self, entity, record_id, payload):
+            if entity == "CEngagement":
+                raise EspoError("forbidden")
+            return await super().update(entity, record_id, payload)
+
+    fake = Failing(records={("CEngagement", "E1"): {"engagementStatus": "Assigned"}})
+    res = await service.create_session(MENTOR, fake, "E1", {"status": "Completed"}, None)
+    assert res["id"]  # the session itself saved
+    assert res["engagement"]["activated"] is False
+    assert "forbidden" in res["engagement"]["error"]
+
+
 @pytest.mark.asyncio
 async def test_update_session_whitelists_fields_and_syncs_attendees():
     # existing attendee c1; user submits {c1, c3} -> relate c3, unrelate nothing;
