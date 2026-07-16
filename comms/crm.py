@@ -248,12 +248,17 @@ def merge_participants(existing: str, additions: Iterable[tuple[str, str]]) -> s
         if not entry:
             continue
         key = addr or ("name:" + clean.lower())
+        legacy = "name:" + clean.lower() if (addr and clean) else ""
         if key in by_key:
             if addr and clean and "<" not in by_key[key]:
                 by_key[key] = entry  # bare address → named form
+            # The same person may also sit in the list as a legacy name-only
+            # entry (address learned bare-first, name later) — drop it.
+            if legacy and legacy in by_key:
+                order.remove(legacy)
+                del by_key[legacy]
             continue
-        legacy = "name:" + clean.lower() if clean else ""
-        if addr and legacy and legacy in by_key:
+        if legacy and legacy in by_key:
             order[order.index(legacy)] = key
             del by_key[legacy]
             by_key[key] = entry

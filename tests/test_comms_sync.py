@@ -227,6 +227,20 @@ def test_merge_participants_dedups_by_address_and_upgrades_entries():
     assert comma == "Koran James <james@acme.test>"
 
 
+def test_merge_participants_drops_legacy_name_when_address_learned_bare_first():
+    # Address arrives bare (a To recipient), the legacy senders-only entry
+    # holds just the name — learning the name later must not leave both.
+    state = crm.merge_participants("Mindy Bower", [("", "mindy@mindybower.com")])
+    assert state == "Mindy Bower, mindy@mindybower.com"
+    healed = crm.merge_participants(state, [("Mindy Bower", "mindy@mindybower.com")])
+    assert healed == "Mindy Bower <mindy@mindybower.com>"
+    # An already-duplicated stored list self-heals on the next merge too.
+    dup = "doug@cbmentors.org, Mindy Bower, Mindy Bower <mindy@mindybower.com>"
+    assert crm.merge_participants(dup, [("Mindy Bower", "mindy@mindybower.com")]) == (
+        "doug@cbmentors.org, Mindy Bower <mindy@mindybower.com>"
+    )
+
+
 def test_merge_participants_clamps_to_whole_entries():
     adds = [(f"Person {i}", f"person{i}@example.test") for i in range(40)]
     merged = crm.merge_participants("", adds)
