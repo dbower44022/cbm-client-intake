@@ -242,7 +242,7 @@ MENTOR = DomainConfig(
         "name,engagementStatus,engagementClientName,clientOrganizationName,"
         "clientOrganizationId,engagementClientId,"
         "primaryEngagementContactName,primaryEngagementContactId,"
-        "nextSessionDateTime,engagementStartDate,mentorProfileName,createdAt"
+        "nextSessionDateTime,engagementStartDate,mentorProfileName,mentorProfileId,createdAt"
     ),
     # Order: Engagement, Status, Primary contact, Next session, Start date,
     # Company, Client, Assigned Mentor (far right — so a co-mentor can see

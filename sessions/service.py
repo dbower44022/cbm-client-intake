@@ -180,6 +180,8 @@ def _grid_row(cfg: DomainConfig, r: dict[str, Any]) -> dict[str, Any]:
         row[dkey] = r.get(dattr)
     if cfg.list_contact_id_attr:
         row["contactId"] = r.get(cfg.list_contact_id_attr)  # for the contact pop-up link
+    if r.get("mentorProfileId"):  # mentor domain: the Assigned Mentor pop-up link
+        row["mentorId"] = r.get("mentorProfileId")
     if cfg.list_company_aggregate:
         pairs = [
             {"entity": entity, "id": r["id"] if attr == "id" else r.get(attr)}

@@ -31,6 +31,17 @@ deploy marker on App Platform.
     record to send from. The static help@cbmentors.org support link on My
     Mentor Profile deliberately stays a plain mailto:.
 
+## [0.64.1] — 2026-07-16
+
+### Changed
+- **Assigned Mentor grid column is a pop-up link**: clicking the mentor's
+  name opens the standard mentor-profile pop-up (type, status, CBM email,
+  expertise, industry), where the CBM email is a compose/mailto link — a
+  co-mentor can email the primary mentor in two clicks. `list_records` rows
+  carry `mentorId` (`mentorProfileId` added to the mentor-domain select).
+  Verified in the stubbed-browser harness (name click → pop-up → mailto
+  href present).
+
 ## [0.63.0] — 2026-07-16
 
 ### Fixed

@@ -385,6 +385,15 @@
           cl.textContent = r[c.key];
           cl.addEventListener("click", function () { openPeek("Contact", r.contactId, r[c.key]); });
           td.appendChild(cl);
+        } else if (c.key === "mentor" && r.mentorId && r[c.key]) {
+          // Assigned Mentor -> the mentor-profile pop-up (CBM email renders
+          // as a compose/mailto link there, so a co-mentor can email the
+          // primary mentor in two clicks).
+          var ml = document.createElement("button");
+          ml.type = "button"; ml.className = "sx__link";
+          ml.textContent = r[c.key];
+          ml.addEventListener("click", function () { openPeek("CMentorProfile", r.mentorId, r[c.key]); });
+          td.appendChild(ml);
         } else {
           td.textContent = r[c.key] || "—";
         }
