@@ -79,6 +79,12 @@ record (that has an email address) listed as a checked To recipient** —
 uncheck anyone you don't want to include. An **"Other recipients"** field
 takes addresses that aren't contacts on the record.
 
+The **message box is a full rich-text editor**: bold, italics, lists, links,
+text color, and tables, and you can paste formatted content straight in from
+another email or document. Your message goes out as a normal formatted
+(HTML) email; recipients whose mail client prefers plain text automatically
+get a plain-text version of the same message.
+
 Mail you send goes out **as you** — from your own `@cbmentors.org` address —
 lands in your real Gmail *Sent* folder, and appears in the tab immediately.
 

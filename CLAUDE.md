@@ -800,7 +800,10 @@ segment of its own URL). Mounted only when `assignments_active` (needs
     @cbmentors.org**, In-Reply-To threading, write-through ingest, unknown
     recipients need an explicit confirm), and the frontend (real conversation
     list + thread view + curation + compose when `commsEnabled`; the
-    sample-data scaffold remains when off). 25 new tests; full UI loop
+    sample-data scaffold remains when off). **Compose body = the standard
+    CBMRichText editor since v0.60.0** (message sent as HTML; `send_message`
+    is HTML-native and `build_mime` adds the plain-text alternative — a
+    fallback textarea's plain text upconverts server-side). 25 new tests; full UI loop
     verified in the stub harness. **Activation prerequisites (NOT done):**
     (1) build the CRM entities/links/grants per `cconversation-entity.md`
     (crm-test first); (2) authorize `gmail.readonly` + `gmail.send` for the
@@ -2164,7 +2167,9 @@ the synced lists were verified identical on crm-test and prod.
   untouched editors (gesture-gated against Jodit's async normalization) so
   save-diff machinery keeps working. Wired everywhere as of v0.53.0
   (sessions v0.50.0 POC; mentoradmin + mentorprofile v0.53.0 — the
-  mentorprofile live preview rides the component's `onInput` hook). The old
+  mentorprofile live preview rides the component's `onInput` hook; the
+  Communications compose email body v0.60.0 — sends HTML, the send path
+  derives the plain-text MIME alternative server-side). The old
   contenteditable `makeWysiwyg` in each app is only a script-load fallback.
 - Never commit `.env` or any secret. Secrets are injected as environment
   variables at deploy time (App Platform encrypted env vars).

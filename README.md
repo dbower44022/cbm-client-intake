@@ -87,8 +87,11 @@ This is a multi-form app: a shared core hosts any number of intake forms.
   (`core/store.py`) + an async delivery `worker.py`, gated by `DATABASE_URL` /
   `ASYNC_DELIVERY` so behavior is unchanged until a Postgres DB is attached.
 - `frontend/shared/` — shared assets served at `/shared/`: the CBM design tokens
-  (`tokens.css`), the wizard styles (`wizard.css`), and the shared wizard
-  controller (`wizard.js`) that the forms' page scripts build on.
+  (`tokens.css`), the wizard styles (`wizard.css`), the shared wizard
+  controller (`wizard.js`) that the forms' page scripts build on, and the
+  standard rich-text editor (`richtext.js`, wrapping the vendored MIT
+  [Jodit](https://xdsoft.net/jodit/) build in `vendor/jodit/`) used by every
+  wysiwyg field and the compose-email dialog across the staff tools.
 - `main.py` — composition root; registers the forms.
 
 Each registered form is reachable at `POST /api/<slug>/intake`, and (if it ships
