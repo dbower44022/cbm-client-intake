@@ -4,6 +4,25 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.59.1] — 2026-07-16
+
+### Changed
+- **Engagement panel edit form gets the mockup-v4 treatment** (completing
+  the set: Company 0.57–0.58, profile 0.59.0). Full schema triage against
+  live CRM metadata, `noExtras`, packable panels: **Engagement** (status /
+  start date / read-only Mentor / cadence; hold-end + close date + close
+  reason) | **Outcomes** (the four outcome checkboxes + revenue/employment
+  increase %) on the first band, **Mentoring need & focus** (focus-area
+  chips + needs description) | **Engagement notes** on the second. Fields
+  that used to fall into "Additional details" now have homes. Excluded from
+  EDIT (still shown on the summary strip, which composes independently):
+  the record name (the page header shows it), the Assign-action date stamp,
+  and the CRM/app-maintained session statistics (total sessions/hours,
+  last-30-days, last/next session). Verified in the stubbed-browser harness
+  (strip keeps the stats, no excluded field renders in the form, Mentor
+  read-only, bands fill the window, save PUT carries exactly the edited
+  fields; no console errors). NOT yet eyeballed against the live CRM.
+
 ## [0.59.0] — 2026-07-16
 
 ### Changed

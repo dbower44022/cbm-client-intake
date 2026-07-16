@@ -1584,9 +1584,35 @@
   // need an explicit placement/exclusion decision, never auto-rendered);
   // names in the domain's exclude set never render anywhere.
   var DETAILS_LAYOUTS = {
-    CEngagement: { groups: [
-      { rows: [[{ name: "engagementStatus", span: 3 }, { name: "engagementStartDate", span: 3 },
-                { ro: "mentorProfileName", label: "Mentor", span: 3 }, { name: "meetingCadence", span: 3 }]] },
+    // Engagement panel per the mockup-v4 process (2026-07-16): every schema
+    // field placed or excluded (`noExtras`). Session statistics (totals,
+    // last/next session) and the Assign-action date stamp are CRM/app-
+    // maintained — excluded from EDIT (DETAILS_REMOVED_FIELDS) but still
+    // shown on the summary strip; `description` is Client Administration's
+    // staff-only notes (server-side exclude). Mentor stays read-only —
+    // reassignment belongs to Client Administration (Doug's 2026-07-13
+    // ruling).
+    CEngagement: { noExtras: true, groups: [
+      { label: "Engagement", grow: 2, basis: 46, rows: [
+        [{ name: "engagementStatus", span: 3 }, { name: "engagementStartDate", span: 3 },
+         { ro: "mentorProfileName", label: "Mentor", span: 3 }, { name: "meetingCadence", span: 3 }],
+        [{ name: "holdEndDate", span: 4 }, { name: "closeDate", span: 4 }, { name: "closeReason", span: 4 }],
+      ] },
+      { label: "Outcomes", grow: 2, basis: 40, rows: [
+        [{ checks: [{ name: "newBusinessStarted", label: "New business started" },
+                    { name: "newLocationOpened", label: "New location opened" },
+                    { name: "significantRevenueIncrease", label: "Significant revenue increase" },
+                    { name: "significantEmploymentIncrease", label: "Significant employment increase" }] }],
+        [{ name: "revenueIncreasePercentage", span: 4, label: "Revenue increase %" },
+         { name: "employmentIncreasePercentage", span: 4, label: "Employment increase %" }],
+      ] },
+      { label: "Mentoring need & focus", grow: 3, basis: 52, rows: [
+        [{ name: "mentoringFocusAreas", span: 12 }],
+        [{ name: "mentoringNeedsDescription", span: 12 }],
+      ] },
+      { label: "Engagement notes", grow: 2, basis: 44, rows: [
+        [{ name: "engagementNotes", span: 12 }],
+      ] },
     ] },
     // Company form per mockup v3 (prompt v0.2): Identity / Web presence /
     // Addresses / Notes, in that order. `noExtras` — schema fields the mockup
@@ -1684,6 +1710,12 @@
       "cApplicantSinceTimestamp", "contactRole"],
     CClientProfile: ["name", "mostRecentFullYearRevenueCurrency",
       "mostRecentFullYearRevenueConverted"],
+    // CEngagement: the record name (the page header shows it), the Assign-
+    // action date stamp, and the session statistics the CRM/app maintain —
+    // all still visible on the summary strip, just never hand-editable.
+    CEngagement: ["name", "engagementAssignedDate", "lastSessionDate",
+      "nextSessionDateTime", "totalSessions", "totalSessionsLast30Days",
+      "totalSessionHours"],
   };
   var ACCOUNT_PARTNER_FIELDS = ["cPartnerStatus", "cPartnerOrganizationType", "cPartnerContactCadence",
     "cPartnerType", "cPartnershipStartDate", "cPartnershipAgreementDate", "cPartnerNotes"];
