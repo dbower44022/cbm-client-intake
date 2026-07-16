@@ -669,6 +669,24 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   **not** automatically see every session on their engagement. If that's the desired
   UX, the gate role's `CSession` read needs to be broader than plain `own`
   (parent-based ACL) — a CRM-side decision, not an app change.
+- **First completed session activates the engagement (v0.61.0, 2026-07-16 —
+  Doug's rule).** Saving a session with status **Completed** (create, or an
+  edit that CHANGES status to Completed) on an engagement whose
+  `engagementStatus` is **Assigned** or **Assignment Dormant** moves the
+  engagement to **Active**
+  (`sessions/service._activate_engagement_on_completed`, called from
+  `create_session`/`update_session`; mentor domain only — partner/sponsor
+  parents have no engagement lifecycle). The status guard IS the
+  "first-session" rule: once Active — or any staffer-set status (On-Hold,
+  Dormant, Completed, …) — later saves are no-ops. On update it triggers only
+  when `status` is in the diffed payload, so a notes-only edit to an
+  already-completed session can't re-activate a parked engagement.
+  Best-effort (calendar-hook precedent): a CRM failure never fails the
+  session save; the response carries `engagement:{activated,from,to|error}`
+  and the save notice tells the user ("The engagement status is now
+  Active."). The post-save detail re-fetch refreshes the badge/grid. NOT yet
+  driven live (the mentor's engagement edit should pass — mentors are in the
+  engagement's `assignedUsers`).
 - **Enum-drift resilience on save (2026-07-08, two layers; [[non-required-enums-never-block]]).**
   A session's stored enum value can fall outside the field's live options (seed data
   put meeting-modality strings like `In-Person`/`Video Call` into `sessionType`,
@@ -1012,24 +1030,22 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-16)
 
-**Main is at v0.61.0** (483 tests green, committed NOT pushed) — **Mentor
-Sessions: the first completed session activates the engagement.** Saving a
-session as **Completed** (create, or an edit that changes status to
-Completed) on an engagement whose `engagementStatus` is **Assigned** or
-**Assignment Dormant** moves the engagement to **Active**
-(`sessions/service._activate_engagement_on_completed`; mentor domain only).
-The status guard makes it a first-completed-session rule (once Active, or
-any staffer-set status like On-Hold/Dormant, later saves are no-ops), and
-only a payload status of Completed triggers — the frontend diffs, so a
-notes-only edit to an already-completed session can't re-activate a parked
-engagement. Best-effort (calendar-hook precedent): a CRM failure never
-fails the session save; the response carries
-`engagement:{activated,from,to|error}` and the save notice tells the user.
-NOT yet driven live (verify as a mentor: complete a session on an Assigned
+**Main is at v0.64.x** (parallel sessions active 2026-07-16 — see CHANGELOG
+for 0.62.0–0.64.x: Upcoming/Past session sections + today-flags, Next
+Session column from real sessions + Assigned Mentor grid column,
+email-address click-to-compose). This session shipped **v0.61.0 — Mentor
+Sessions: the first completed session activates the engagement** (committed;
+push per convention): saving a session as **Completed** (create, or an edit
+that changes status to Completed) on an engagement whose `engagementStatus`
+is **Assigned** or **Assignment Dormant** moves the engagement to
+**Active**. Mechanics, guards, and the best-effort contract are documented
+in the Session Management tools section (the "First completed session
+activates the engagement" bullet). 483 tests green at commit (8 new). NOT
+yet driven live (verify as a mentor: complete a session on an Assigned
 engagement → status flips to Active in the grid/badge; the mentor's role
 edits CEngagement at own via assignedUsers membership, so the write should
 pass). Versions v0.56.0–v0.60.0 (gcal pre-save prompt, edit-panel polish,
-comms rich-text compose) shipped in parallel sessions — see CHANGELOG.
+comms rich-text compose) also shipped in parallel sessions — see CHANGELOG.
 
 Before that: **Main was at v0.55.1** — two items on top of the parallel session's v0.55.0
 (comms participants, committed):
