@@ -1073,11 +1073,29 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-16)
 
-**Main is at v0.65.0** (parallel sessions active 2026-07-16 — see CHANGELOG
-for 0.62.0–0.64.x: Upcoming/Past session sections + today-flags, Next
-Session column from real sessions + Assigned Mentor grid column,
-email-address click-to-compose). **v0.65.0 — Documents tab: Google Drive
-document management, DOC-MGMT Phase 1** (this session; committed, push per
+**Main is at v0.66.0** (526 tests green, committed NOT pushed) —
+**Communications: conversation messages show WHO WROTE THEM** (Doug's
+report: outbound messages displayed "To: <address>", so a mentor +
+co-mentor sending on the same engagement were indistinguishable). Two
+parts: (1) frontend — the conversation view leads every message with the
+sender's name/address for BOTH directions, outbound keeping recipients
+after an arrow ("Doug Bower → james@acme.test"); the data was already in
+the payload. (2) `core/gmail.build_mime` gains `sender_name`, passed by
+both send paths (record compose = the signed-in user's name; quick-compose
+via `comms/quicksend.py`) so app-sent mail's write-through ingest stores a
+human-readable `fromName` — previously a bare address, which would have
+made app-sent messages show as addresses forever. Pre-existing stored
+messages keep their bare address (still identifies the person). NOT yet
+eyeballed live. Same session earlier: closed the "first live SEND" open
+item (Doug confirmed the Sent copy in the @cbmentors.org mailbox — FAQ row
+added to communications-tab.md, since every mentor will ask where their
+sent mail went).
+
+Before that, parallel sessions the same day (see CHANGELOG for
+0.62.0–0.64.x: Upcoming/Past session sections + today-flags, Next Session
+column from real sessions + Assigned Mentor grid column, email-address
+click-to-compose): **v0.65.0 — Documents tab: Google Drive
+document management, DOC-MGMT Phase 1** (committed, push per
 convention): the session tools' Documents placeholder is now a real tab —
 upload to the "CBM Documents" shared drive + per-record list from the new
 `app_document` Postgres table (Alembic 0005). Gated OFF by `GDRIVE_DOCS`;
