@@ -103,6 +103,8 @@ def test_list_documents(monkeypatch):
     body = r.json()
     assert body["documents"][0]["filename"] == "resume.pdf"
     assert "Resume" in body["docTypes"]
+    # the frontend size gate reads the server's cap from the list response
+    assert body["maxFileMb"] == 100
 
 
 def test_upload_document(monkeypatch):

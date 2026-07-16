@@ -822,6 +822,7 @@
   // Archive is Phase 3 — rendered disabled.
 
   var docTypes = [];        // upload doc-type choices (from the list endpoint)
+  var docMaxMb = 0;         // server upload size cap (from the list endpoint)
   var pendingDocFile = null;  // the picked File awaiting its doc type + confirm
 
   function docsOn() { return !!(config && config.docsEnabled); }
@@ -847,6 +848,7 @@
     try {
       var res = await api("/records/" + encodeURIComponent(currentDetail.id) + "/documents");
       docTypes = res.docTypes || [];
+      docMaxMb = res.maxFileMb || docMaxMb;
       renderDocumentRows(res.documents || []);
       // DOC-02 completion: re-sync modifiedTimes from Drive AFTER the metadata
       // render (never blocks it). Best-effort — a failure leaves the list as is.
@@ -999,13 +1001,54 @@
     $("docUploadBtn").disabled = false; $("docUploadBtn").textContent = "Upload";
   }
 
+  // XHR (not fetch) so the upload reports progress — a large file on a slow
+  // uplink shows "Uploading… N%" instead of an inscrutable frozen button. A
+  // connection that dies mid-upload gets a plain-language message, never a
+  // silent reset.
+  function docXhrUpload(url, file, onProgress) {
+    return new Promise(function (resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", url);
+      xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+      xhr.upload.onprogress = function (e) {
+        if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+      };
+      xhr.onload = function () {
+        var data = null;
+        try { data = JSON.parse(xhr.responseText); } catch (e2) {}
+        if (xhr.status >= 200 && xhr.status < 300) { resolve(data); return; }
+        var msg = (data && data.detail) || ("Upload failed (" + xhr.status + ")");
+        var err = new Error(typeof msg === "string" ? msg : JSON.stringify(msg));
+        err.status = xhr.status;
+        reject(err);
+      };
+      xhr.onerror = xhr.onabort = xhr.ontimeout = function () {
+        reject(new Error(
+          "The upload was interrupted before it finished — check your " +
+          "connection and try again. If it keeps happening, tell CBM staff " +
+          "the file name and size."
+        ));
+      };
+      xhr.send(file);
+    });
+  }
+
   $("docPickBtn").addEventListener("click", function () { $("docFile").click(); });
   $("docCancelBtn").addEventListener("click", resetDocPending);
   $("docFile").addEventListener("change", function () {
     var f = this.files && this.files[0];
     if (!f) return;
-    pendingDocFile = f;
     hide($("docsError")); hide($("docsNotice"));
+    // Size gate BEFORE any upload starts: the server enforces the same cap,
+    // but a clear immediate message beats a long doomed upload.
+    if (docMaxMb && f.size > docMaxMb * 1024 * 1024) {
+      this.value = "";
+      notice("docsNotice", "“" + f.name + "” is " +
+        (f.size / (1024 * 1024)).toFixed(1) + " MB — the upload limit is " +
+        docMaxMb + " MB.", "error");
+      return;
+    }
+    pendingDocFile = f;
     $("docPendingName").textContent = f.name;
     var sel = $("docTypeSelect"); sel.innerHTML = "";
     docTypes.forEach(function (t) {
@@ -1018,35 +1061,26 @@
     var f = pendingDocFile;
     var btn = $("docUploadBtn");
     btn.disabled = true; btn.textContent = "Uploading…";
-    hide($("docsError"));
+    hide($("docsError")); hide($("docsNotice"));
     try {
       // Raw bytes (not JSON) — filename/docType ride as query params, the MIME
       // type as the Content-Type header.
-      var resp = await fetch(
+      await docXhrUpload(
         API + "/records/" + encodeURIComponent(currentDetail.id) + "/documents" +
         "?filename=" + encodeURIComponent(f.name) +
         "&docType=" + encodeURIComponent($("docTypeSelect").value || ""),
-        {
-          method: "POST", credentials: "same-origin",
-          headers: { "Content-Type": f.type || "application/octet-stream" },
-          body: f,
-        }
+        f,
+        function (pct) { btn.textContent = "Uploading… " + pct + "%"; }
       );
-      var data = null;
-      try { data = await resp.json(); } catch (e2) {}
-      if (!resp.ok) {
-        var msg = (data && data.detail) || ("Upload failed (" + resp.status + ")");
-        var err = new Error(typeof msg === "string" ? msg : JSON.stringify(msg));
-        err.status = resp.status;
-        throw err;
-      }
       resetDocPending();
       notice("docsNotice", "Document uploaded.", "success");
       loadDocuments();
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }
       btn.disabled = false; btn.textContent = "Upload";
-      $("docsError").textContent = e.message; show($("docsError"));
+      // The notice bar sits ABOVE the table and scrolls itself into view —
+      // failures must never be silent (or hidden below the fold).
+      notice("docsNotice", e.message, "error");
     }
   });
 

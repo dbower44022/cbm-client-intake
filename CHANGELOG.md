@@ -4,6 +4,38 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.70.1] — 2026-07-16
+
+### Fixed
+- **Document uploads can no longer fail silently** (Doug's report: a
+  PowerPoint upload "just stopped" and reset to the Upload button with no
+  message — the exact failure couldn't be diagnosed afterward because the
+  deploy had rotated the app instance and its logs; probable cause was the
+  in-flight upload dying during that instance swap). Hardened on both
+  surfaces (session tools + Mentor Administration):
+  - Upload failures now display in the **notice bar above the table**
+    (styled, scrolled into view) instead of a small line below it that
+    could sit out of view; the staged file + type are kept so retry is one
+    click.
+  - A connection that dies mid-upload shows a plain-language "upload was
+    interrupted — check your connection and try again" message (previously
+    the browser's cryptic "Failed to fetch", or nothing visible).
+  - Uploads switched from fetch to XHR so the button shows **live progress
+    ("Uploading… 62%")** — a large file on a slow uplink no longer looks
+    frozen.
+  - **Client-side size gate:** picking a file over the server cap
+    (`GDRIVE_MAX_FILE_MB`, now reported as `maxFileMb` on the documents
+    list/refresh responses) is rejected immediately with the size and the
+    limit, instead of starting a doomed upload.
+  - **Server receipt log:** every upload logs who/filename/bytes at INFO
+    the moment the body arrives, so the next report is diagnosable from
+    `doctl apps logs` even if later steps fail.
+  Verified in the stubbed-browser harness (oversize gate, success, server
+  400 with the exact detail shown, dropped-connection message; button and
+  staged file recover in every failure). Probe note: the DO edge accepted
+  test bodies up to 60 MB, so no platform size wall sits in front of the
+  100 MB app cap.
+
 ## [0.70.0] — 2026-07-16
 
 ### Added

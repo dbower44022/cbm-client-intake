@@ -254,7 +254,11 @@ async def mentor_documents(mentor_id: str, request: Request) -> dict:
     try:
         contact_id, _ = await _mentor_contact_anchor(client, mentor_id)
         rows = await docs_service.list_documents(store, "Contact", contact_id)
-        return {"documents": rows, "docTypes": settings.gdrive_doc_types_list}
+        return {
+            "documents": rows,
+            "docTypes": settings.gdrive_doc_types_list,
+            "maxFileMb": settings.gdrive_max_file_mb,
+        }
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not load documents")
 
@@ -270,6 +274,12 @@ async def mentor_upload_document(
     settings, store = _docs_ready()
     client = client_for(settings, user)
     data = await request.body()
+    # Receipt log BEFORE any processing: an upload that dies later is
+    # diagnosable from the run logs (who, what, how big).
+    log.info(
+        "mentor document upload received (%s): %r %d bytes as %s",
+        mentor_id, filename, len(data), user.get("userName"),
+    )
     try:
         contact_id, contact_name = await _mentor_contact_anchor(client, mentor_id)
         drive = await docs_service.drive_for_user(settings, client, user)
@@ -346,7 +356,11 @@ async def mentor_refresh_documents(mentor_id: str, request: Request) -> dict:
         contact_id, _ = await _mentor_contact_anchor(client, mentor_id)
         drive = await docs_service.drive_for_user(settings, client, user)
         rows = await docs_service.refresh_documents(store, drive, "Contact", contact_id)
-        return {"documents": rows, "docTypes": settings.gdrive_doc_types_list}
+        return {
+            "documents": rows,
+            "docTypes": settings.gdrive_doc_types_list,
+            "maxFileMb": settings.gdrive_max_file_mb,
+        }
     except docs_service.DocsError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except DriveError as exc:

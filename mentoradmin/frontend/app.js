@@ -509,6 +509,7 @@
   // --- Documents tab (mentor documents on the linked Contact) ---------------
 
   var mdocTypes = [];
+  var mdocMaxMb = 0;       // server upload size cap (from the list endpoint)
   var mdocPendingFile = null;
 
   function buildDocsPanel() {
@@ -554,8 +555,17 @@
     file.addEventListener("change", function () {
       var f = this.files && this.files[0];
       if (!f) return;
-      mdocPendingFile = f;
       hide(err);
+      // Size gate BEFORE any upload starts (the server enforces the same cap).
+      if (mdocMaxMb && f.size > mdocMaxMb * 1024 * 1024) {
+        this.value = "";
+        err.textContent = "“" + f.name + "” is " +
+          (f.size / (1024 * 1024)).toFixed(1) + " MB — the upload limit is " +
+          mdocMaxMb + " MB.";
+        show(err);
+        return;
+      }
+      mdocPendingFile = f;
       pname.textContent = f.name;
       tsel.innerHTML = "";
       mdocTypes.forEach(function (t) { tsel.appendChild(new Option(t, t)); });
@@ -588,6 +598,7 @@
     try {
       var res = await api("/mentors/" + encodeURIComponent(current.id) + "/documents");
       mdocTypes = res.docTypes || [];
+      mdocMaxMb = res.maxFileMb || mdocMaxMb;
       renderMentorDocRows(res.documents || []);
       // DOC-02 completion: re-sync modifiedTimes from Drive AFTER the metadata
       // render (never blocks it). Best-effort.
@@ -740,6 +751,36 @@
     document.body.appendChild(overlay);
   }
 
+  // XHR (not fetch) so the upload reports progress; a connection that dies
+  // mid-upload gets a plain-language message, never a silent reset.
+  function mdocXhrUpload(url, file, onProgress) {
+    return new Promise(function (resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", url);
+      xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+      xhr.upload.onprogress = function (e) {
+        if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+      };
+      xhr.onload = function () {
+        var data = null;
+        try { data = JSON.parse(xhr.responseText); } catch (e2) {}
+        if (xhr.status >= 200 && xhr.status < 300) { resolve(data); return; }
+        var msg = (data && data.detail) || ("Upload failed (" + xhr.status + ")");
+        var err = new Error(typeof msg === "string" ? msg : JSON.stringify(msg));
+        err.status = xhr.status;
+        reject(err);
+      };
+      xhr.onerror = xhr.onabort = xhr.ontimeout = function () {
+        reject(new Error(
+          "The upload was interrupted before it finished — check your " +
+          "connection and try again. If it keeps happening, tell CBM staff " +
+          "the file name and size."
+        ));
+      };
+      xhr.send(file);
+    });
+  }
+
   async function uploadMentorDoc() {
     if (!mdocPendingFile || !current) return;
     var f = mdocPendingFile;
@@ -747,24 +788,13 @@
     btn.disabled = true; btn.textContent = "Uploading…";
     hide($("mdocError"));
     try {
-      var resp = await fetch(
+      await mdocXhrUpload(
         API + "/mentors/" + encodeURIComponent(current.id) + "/documents" +
         "?filename=" + encodeURIComponent(f.name) +
         "&docType=" + encodeURIComponent($("mdocTypeSelect").value || ""),
-        {
-          method: "POST", credentials: "same-origin",
-          headers: { "Content-Type": f.type || "application/octet-stream" },
-          body: f,
-        }
+        f,
+        function (pct) { btn.textContent = "Uploading… " + pct + "%"; }
       );
-      var data = null;
-      try { data = await resp.json(); } catch (e2) {}
-      if (!resp.ok) {
-        var msg = (data && data.detail) || ("Upload failed (" + resp.status + ")");
-        var err = new Error(typeof msg === "string" ? msg : JSON.stringify(msg));
-        err.status = resp.status;
-        throw err;
-      }
       resetMdocPending();
       notice("detailNotice", "Document uploaded.", "success");
       loadMentorDocs();

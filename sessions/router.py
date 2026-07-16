@@ -624,7 +624,11 @@ def make_router(cfg: DomainConfig) -> APIRouter:
         _require_user(request)
         settings, store = _docs_ready()
         rows = await docs_service.list_documents(store, cfg.parent_entity, parent_id)
-        return {"documents": rows, "docTypes": settings.gdrive_doc_types_list}
+        return {
+            "documents": rows,
+            "docTypes": settings.gdrive_doc_types_list,
+            "maxFileMb": settings.gdrive_max_file_mb,
+        }
 
     @router.post("/records/{parent_id}/documents")
     async def upload_document(
@@ -637,6 +641,12 @@ def make_router(cfg: DomainConfig) -> APIRouter:
         settings, store = _docs_ready()
         client = client_for(settings, user)
         data = await request.body()
+        # Receipt log BEFORE any processing: an upload that dies later is
+        # diagnosable from the run logs (who, what, how big).
+        log.info(
+            "document upload received (%s %s): %r %d bytes as %s",
+            cfg.slug, parent_id, filename, len(data), user.get("userName"),
+        )
         try:
             # Read the parent as the user: their ACL must allow the record, and
             # its name feeds the human-readable folder. Engagement anchors also
@@ -734,7 +744,11 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             rows = await docs_service.refresh_documents(
                 store, drive, cfg.parent_entity, parent_id
             )
-            return {"documents": rows, "docTypes": settings.gdrive_doc_types_list}
+            return {
+                "documents": rows,
+                "docTypes": settings.gdrive_doc_types_list,
+                "maxFileMb": settings.gdrive_max_file_mb,
+            }
         except docs_service.DocsError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
         except DriveError as exc:
