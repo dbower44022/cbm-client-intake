@@ -1007,9 +1007,28 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   Note: crm-test seed sessions carry out-of-enum `sessionType` values (harmless; a
   data-hygiene cleanup). **UI polish is the next work item** (a follow-up session).
 
-## Current status (updated 2026-07-15)
+## Current status (updated 2026-07-16)
 
-**Main is at v0.55.1** — two items on top of the parallel session's v0.55.0
+**Main is at v0.61.0** (483 tests green, committed NOT pushed) — **Mentor
+Sessions: the first completed session activates the engagement.** Saving a
+session as **Completed** (create, or an edit that changes status to
+Completed) on an engagement whose `engagementStatus` is **Assigned** or
+**Assignment Dormant** moves the engagement to **Active**
+(`sessions/service._activate_engagement_on_completed`; mentor domain only).
+The status guard makes it a first-completed-session rule (once Active, or
+any staffer-set status like On-Hold/Dormant, later saves are no-ops), and
+only a payload status of Completed triggers — the frontend diffs, so a
+notes-only edit to an already-completed session can't re-activate a parked
+engagement. Best-effort (calendar-hook precedent): a CRM failure never
+fails the session save; the response carries
+`engagement:{activated,from,to|error}` and the save notice tells the user.
+NOT yet driven live (verify as a mentor: complete a session on an Assigned
+engagement → status flips to Active in the grid/badge; the mentor's role
+edits CEngagement at own via assignedUsers membership, so the write should
+pass). Versions v0.56.0–v0.60.0 (gcal pre-save prompt, edit-panel polish,
+comms rich-text compose) shipped in parallel sessions — see CHANGELOG.
+
+Before that: **Main was at v0.55.1** — two items on top of the parallel session's v0.55.0
 (comms participants, committed):
 1. **Details-tab live write-through VERIFIED on crm-test as a non-admin
    mentor (matt.mentor)** — closes section-edit-screens acceptance
