@@ -429,11 +429,15 @@ def make_router(cfg: DomainConfig) -> APIRouter:
         compose dialog's From line. ``null`` when no linked profile / no CBM
         email; the send itself reports why."""
         user = _require_user(request)
-        client = client_for(get_settings(), user)
+        settings = get_settings()
+        client = client_for(settings, user)
         try:
-            return {"mailbox": await service.resolve_user_mailbox(client, user["userId"])}
+            box = await service.resolve_user_mailbox(client, user["userId"])
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not look up your mailbox")
+        # sendEnabled feeds the shared quickmail widget (grid-page peeks —
+        # no open record, so the record-scoped compose can't be used).
+        return {"mailbox": box, "sendEnabled": bool(settings.gmail_sync and box)}
 
     @router.get("/mailsearch")
     async def mailsearch(q: str, request: Request) -> dict:
@@ -529,5 +533,14 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             raise _comms_error(exc)
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not update the contact")
+
+    # POST /sendmail — the record-less quick send behind email links shown
+    # OUTSIDE an open record (grid-page peeks). This router already serves its
+    # own /mailbox above. See comms/quicksend.py.
+    from comms.quicksend import register_quicksend
+
+    register_quicksend(
+        router, _require_user, client_for, _crm_failure, include_mailbox=False
+    )
 
     return router

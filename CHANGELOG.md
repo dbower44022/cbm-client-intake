@@ -4,6 +4,23 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.64.2] — 2026-07-16
+
+### Fixed
+- **Clicking an email inside a contact/company pop-up on the GRID page now
+  opens a compose dialog** (Doug's live report: contact-name pop-up → email →
+  nothing happened). The v0.64.0 session-tools wiring fell back to `mailto:`
+  whenever no record was open — which is every peek launched from the list
+  page (contact, company, assigned-mentor columns), and a machine without a
+  mail handler shows nothing at all. Grid-page peeks now use the shared
+  quick-compose dialog: the session routers gained `POST /sendmail`
+  (`comms/quicksend.py`, reused) and their `GET /mailbox` reports
+  `sendEnabled`; the frontend delegates to the quickmail widget when no
+  record is open (in-record peeks keep the full record-scoped compose).
+  Verified in the stubbed-browser harness: grid peek → quick dialog →
+  send payload posted; record peek → full compose over the pop-up with the
+  clicked contact pre-checked.
+
 ## [0.64.0] — 2026-07-16
 
 ### Added

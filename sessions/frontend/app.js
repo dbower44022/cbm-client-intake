@@ -1185,6 +1185,11 @@
   // record to send from (e.g. a company peek on the grid page).
   function emailComposeLink(email) {
     if (!email) return document.createTextNode("—");
+    // No open record (grid-page peeks): the record-scoped compose can't be
+    // used, so delegate to the shared quick-compose widget (which itself
+    // falls back to mailto: when sending isn't available). Render-time
+    // check is safe — the grid and record views are separate pages.
+    if (!currentDetail && window.CBMQuickMail) return CBMQuickMail.emailLink(email);
     var a = document.createElement("a");
     a.href = "mailto:" + email; a.textContent = email; a.title = "Send email";
     a.addEventListener("click", function (e) {

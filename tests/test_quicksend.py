@@ -137,6 +137,60 @@ def test_sendmail_requires_a_recipient(monkeypatch):
     assert not gmail.sent
 
 
+def test_sessions_router_has_sendmail_and_mailbox_reports_send_enabled(monkeypatch):
+    """Grid-page peeks (no open record) use the quickmail widget on the
+    session tools too: their own /mailbox gains sendEnabled and they get
+    POST /sendmail (include_mailbox=False keeps their existing /mailbox)."""
+    _as(monkeypatch)
+    monkeypatch.setattr(
+        "sessions.router.current_user", lambda request, key=None: _USER
+    )
+    monkeypatch.setattr("sessions.router.client_for", lambda settings, user: object())
+
+    async def fake_resolve(client, user_id):
+        return "staff.admin@cbmentors.org"
+
+    monkeypatch.setattr("sessions.service.resolve_user_mailbox", fake_resolve)
+    gmail = FakeGmail()
+
+    async def fake_gmail_for_user(settings, client, user):
+        return gmail
+
+    monkeypatch.setattr(comms_service, "gmail_for_user", fake_gmail_for_user)
+    with TestClient(_app(monkeypatch, gmail_sync=True)) as c:
+        r = c.get("/mentorsessions/api/mailbox")
+        assert r.status_code == 200
+        assert r.json() == {
+            "mailbox": "staff.admin@cbmentors.org",
+            "sendEnabled": True,
+        }
+        r2 = c.post(
+            "/mentorsessions/api/sendmail",
+            json={"to": ["james@acme.test"], "subject": "Hi", "body": "note"},
+        )
+    assert r2.status_code == 200 and r2.json()["status"] == "ok"
+    assert len(gmail.sent) == 1
+
+
+def test_sessions_mailbox_send_disabled_when_gmail_sync_off(monkeypatch):
+    _as(monkeypatch)
+    monkeypatch.setattr(
+        "sessions.router.current_user", lambda request, key=None: _USER
+    )
+    monkeypatch.setattr("sessions.router.client_for", lambda settings, user: object())
+
+    async def fake_resolve(client, user_id):
+        return "staff.admin@cbmentors.org"
+
+    monkeypatch.setattr("sessions.service.resolve_user_mailbox", fake_resolve)
+    with TestClient(_app(monkeypatch, gmail_sync=False)) as c:
+        r = c.get("/mentorsessions/api/mailbox")
+        assert r.json()["sendEnabled"] is False
+        assert c.post(
+            "/mentorsessions/api/sendmail", json={"to": ["a@b.c"], "body": "x"}
+        ).status_code == 503
+
+
 def test_sendmail_no_mailbox_is_a_readable_400(monkeypatch):
     _as(monkeypatch)
 

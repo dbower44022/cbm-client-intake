@@ -46,26 +46,13 @@ def register_quicksend(
     require_user: Callable[[Request], dict],
     client_for: Callable[..., Any],
     crm_failure: Callable[..., HTTPException],
+    include_mailbox: bool = True,
 ) -> None:
-    """Attach the two quick-send endpoints to a staff app's router."""
+    """Attach the quick-send endpoints to a staff app's router.
 
-    @router.get("/mailbox")
-    async def quick_mailbox(request: Request) -> dict:
-        """The signed-in user's send-from address. ``sendEnabled`` is the one
-        flag the frontend needs: Gmail integration on AND a CBM mailbox on
-        the user's linked profile."""
-        user = require_user(request)
-        settings = get_settings()
-        if not settings.gmail_sync:
-            return {"mailbox": None, "sendEnabled": False}
-        from sessions.service import resolve_user_mailbox  # avoid import cycle
-
-        client = client_for(settings, user)
-        try:
-            mailbox = await resolve_user_mailbox(client, user["userId"])
-        except EspoError as exc:
-            raise crm_failure(request, exc, "Could not look up your mailbox")
-        return {"mailbox": mailbox, "sendEnabled": bool(mailbox)}
+    ``include_mailbox=False`` for routers that already serve their own
+    ``GET /mailbox`` (the session tools) — they get only ``POST /sendmail``.
+    """
 
     @router.post("/sendmail")
     async def quick_send(body: QuickSendIn, request: Request) -> dict:
@@ -91,3 +78,24 @@ def register_quicksend(
             )
         except EspoError as exc:
             raise crm_failure(request, exc, "Could not send the message")
+
+    if not include_mailbox:
+        return
+
+    @router.get("/mailbox")
+    async def quick_mailbox(request: Request) -> dict:
+        """The signed-in user's send-from address. ``sendEnabled`` is the one
+        flag the frontend needs: Gmail integration on AND a CBM mailbox on
+        the user's linked profile."""
+        user = require_user(request)
+        settings = get_settings()
+        if not settings.gmail_sync:
+            return {"mailbox": None, "sendEnabled": False}
+        from sessions.service import resolve_user_mailbox  # avoid import cycle
+
+        client = client_for(settings, user)
+        try:
+            mailbox = await resolve_user_mailbox(client, user["userId"])
+        except EspoError as exc:
+            raise crm_failure(request, exc, "Could not look up your mailbox")
+        return {"mailbox": mailbox, "sendEnabled": bool(mailbox)}
