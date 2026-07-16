@@ -4,6 +4,40 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.57.0] — 2026-07-15
+
+### Changed
+- **Company edit form rebuilt to mockup v3** (`prompts/
+  section-edit-screens-prompt-v0.2.md`, approved; design target
+  `prompts/company-edit-form-mockup-v3.html`). The session tools' Edit
+  Company form is now the four approved groups in order — **Identity**
+  (Company name 6 / Phone 3 / Email 3; Organization type / Business stage /
+  Industry / SIC code ×3; Industry sector 6 / subsector 6), **Web presence**
+  (Website 6 / LinkedIn page 6), **Addresses** (billing + shipping side by
+  side, Country inside each block, "Same as billing" inline in the Shipping
+  sub-header), **Notes** (Description + Client notes full width). Four
+  fields are removed from the app's form entirely (CRM untouched): Annual
+  Pledge Amount Currency, Target Population, Applicant Since Timestamp
+  (system-managed), Contact Role. Standing rules (all edit forms, per the
+  prompt): **`.sxf` is a centered `max-width: 960px` container** — Doug's
+  approved exception to the no-width-cap ruling, which still governs pages
+  and grids — with a **true 12-column grid** whose spans match the mockups
+  (replaces the v0.41.2 flex packing), max ~4 inputs per row; and **unplaced
+  schema fields never auto-render** (the Account layout's `noExtras` flag
+  kills the "Additional details" dumping ground — placing a new CRM field is
+  an explicit layout decision). Partner/sponsor domains keep their curated
+  relationship groups, which now place `cPartnerNotes`/`cSponsorNotes`
+  explicitly (previously reached the form via the leftovers group).
+  Verified in the stubbed-browser harness: 960px centered, groups/spans per
+  mockup, Country in both blocks + inherited by the Contact form, same-as-
+  billing dims/mirrors/restores and the save payload carries only genuinely
+  changed fields, none of the four excluded fields render even with values,
+  no Additional-details group, no raw time inputs, no console errors. NOT
+  yet eyeballed against the live CRM. (Race note: the `app.js` side of this
+  work was swept into commit 3dc9509 (v0.56.0) by the parallel session; this
+  release carries the CSS, so 0.57.0 is the version where the form actually
+  renders to spec.)
+
 ## [0.56.0] — 2026-07-15
 
 ### Added
