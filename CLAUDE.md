@@ -1306,11 +1306,16 @@ first two also deployed + verified along the way):
    from both overlays afterward. **Ops gotcha:** while GMAIL_RESYNC is set,
    EVERY push/deploy re-clears cursors and re-reads all mailboxes — remove it
    immediately; superseded deployments' logs are unretrievable.
-   **OPEN (CRM-side):** 8 prod messages from the robert.cohen mailbox are
-   permanently skipped — prod's `CCommunication.toAddresses`/`ccAddresses`
-   were built SHORTER than crm-test's varchar(500) (maxLength 400s), + one
-   `CConversation.name` `$noBadCharacters` pattern reject. Widen the prod
-   fields to 500, then one more one-shot resync recovers them (memory:
+   **RESOLVED 2026-07-17:** the 8 skipped robert.cohen prod messages —
+   prod's `CCommunication.toAddresses`/`ccAddresses` had been built at 255
+   vs crm-test's varchar(500); Doug widened them to 500 and the one-shot
+   recovery resync ran clean (8 mailboxes, 1,214 fetched / 1,101 stored /
+   0 sync errors — all 7 maxLength failures gone; flag removed after).
+   **Remaining, deliberately unfixed:** ONE message (gmail id
+   `19f298a147e3ba38`) still rejects — its subject trips
+   `CConversation.name`'s `$noBadCharacters` pattern (the pattern exists on
+   BOTH CRMs). Fix would be app-side subject sanitizing on conversation
+   create, if ever worth it (memory:
    [[prod-ccommunication-field-length-drift]]).
 2. **Every email address shown in the staff UIs is a compose link
    (v0.64.0 + v0.64.2 grid-peek fix).** Product rule (Doug's ruling
