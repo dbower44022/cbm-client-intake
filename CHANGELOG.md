@@ -4,6 +4,28 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.76.2] — 2026-07-17
+
+### Fixed
+- **`{CMentorProfile.name}` in email templates now resolves** (Doug's live
+  report: selecting a template referencing the mentor name warned
+  "Some placeholders couldn't be filled: {CMentorProfile.name}"). EspoCRM's
+  parse only substitutes entities present in its render context —
+  `{User.*}` = the sender, `{Person.*}`/`{Contact.*}` = the recipient,
+  `{Parent.*}` + the parent's own type = the record — and CMentorProfile is
+  none of those. The parse API accepts ONE extra record
+  (`relatedType`/`relatedId`, added to the context under its own type), so
+  the app now passes the **record's manager profile** automatically: the
+  engagement's assigned mentor / the partner or sponsor manager
+  (`parent_manager_link`, now set on all three domains), falling back to
+  the **sender's own linked profile** (also what the record-less
+  quick-compose uses). `comms/templates.related_manager_profile`;
+  best-effort — an unresolvable profile just leaves the token + warning.
+  Template-author guidance added to communications-tab.md (placeholder
+  cheat sheet: {CMentorProfile.*} = the record's mentor/manager,
+  {User.name} = whoever is sending, {Person.*} = the recipient,
+  {Parent.*} = the record). 6 new/updated tests (612 green).
+
 ## [0.76.0] — 2026-07-17
 
 ### Added
