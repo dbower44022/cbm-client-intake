@@ -526,6 +526,12 @@ mentor, not a redundant control); `list_engagements` returns `mentorId`/`mentorN
   user on every related Contact (`primaryEngagementContact` + `engagementContacts`),
   the `engagementClient` (CClientProfile), and `clientOrganization` (Account, when
   present). Source-of-truth mapping is the service module.
+  **Stale-write guard (v0.72.1, 2026-07-16):** before any write the engagement is
+  re-read and the call is rejected (AssignError → 400, nothing written) if it
+  already has a mentor OR its status is no longer `Submitted` — a second
+  browser/tab with an out-of-date grid had silently re-assigned an engagement
+  (seen as a double assignment in prod Espo history, eng `6a4955b75f19ff03a`).
+  The frontend reloads the grid on any Assign 400 so the stale row corrects.
 - **CRM schema** (read live from crm-test 2026-06-19): `engagementStatus` enum has
   `Submitted`/`Pending Acceptance`; `CEngagement.mentorProfile` belongsTo
   CMentorProfile; `CMentorProfile.acceptingNewClients` (bool) +
