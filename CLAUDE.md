@@ -532,6 +532,12 @@ mentor, not a redundant control); `list_engagements` returns `mentorId`/`mentorN
   browser/tab with an out-of-date grid had silently re-assigned an engagement
   (seen as a double assignment in prod Espo history, eng `6a4955b75f19ff03a`).
   The frontend reloads the grid on any Assign 400 so the stale row corrects.
+  **Stream note (v0.74.0):** every app Assign also posts a best-effort Note
+  onto the engagement's stream ("Assigned to X via the Client Administration
+  app — … re-homed: N/N contact(s), client profile, company") via
+  `core/stream.post_stream_note` — app writes are otherwise indistinguishable
+  in Espo history from hand edits by the same user. The co-mentor add/remove
+  paths post notes too.
 - **CRM schema** (read live from crm-test 2026-06-19): `engagementStatus` enum has
   `Submitted`/`Pending Acceptance`; `CEngagement.mentorProfile` belongsTo
   CMentorProfile; `CMentorProfile.acceptingNewClients` (bool) +
@@ -650,6 +656,17 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   permits assigning fellow Mentor Team members; `assignedUsers` maxCount is 10.
   Best-effort: profile without a linked User, or a rejected write, keeps the
   relate and returns `{"warning": ...}` which the Details tab shows.
+  **Client-record stamping (v0.74.0, Doug's defect report):** `add_comentor`
+  also merges the co-mentor's User into `assignedUsersIds` on the engagement's
+  client records — every related contact, the CClientProfile, and the Account
+  (`clientOrganization`, falling back to the profile's `linkedCompany`) — via
+  `_stamp_client_records`; `remove_comentor` un-stamps symmetrically (unless
+  the User is shared with the assigned mentor / a remaining co-mentor). Only
+  the multi-user collaborators field is written; the single `assignedUser` is
+  never touched. CRM prerequisite: "Multiple Assigned Users" enabled on the
+  entity — Contact lacked it on prod until Doug enabled it 2026-07-16 (check
+  crm-test parity). Both paths post a stream note on the engagement
+  (`core/stream.post_stream_note`) recording what was granted/revoked.
   `remove_comentor` removes the User again unless the assigned mentor or a
   remaining co-mentor shares it. `assignments.assign_engagement` merges current
   co-mentors' Users into its assignedUsers write so a reassignment doesn't

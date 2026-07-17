@@ -1140,6 +1140,100 @@ async def test_remove_comentor_keeps_assigned_mentors_user():
 
 
 @pytest.mark.asyncio
+async def test_add_comentor_stamps_client_records_and_posts_note():
+    # Doug's defect report 2026-07-16: the co-mentor became an assigned user on
+    # the ENGAGEMENT only — the client's contact/profile/company stayed
+    # invisible/read-only to them under read-own roles. The add now stamps those
+    # too (company resolved through the client profile's linkedCompany when the
+    # engagement's own link is empty — intake-created engagements), and a stream
+    # note on the engagement records the whole action durably.
+    fake = Fake(
+        records={
+            ("CMentorProfile", "m2"): {"assignedUserId": "u9", "name": "Robert Cohen"},
+            ("CEngagement", "E1"): {
+                "assignedUsersIds": ["u1"],
+                "primaryEngagementContactId": "c1",
+                "engagementClientId": "cp1",
+                "clientOrganizationId": None,
+            },
+            ("Contact", "c1"): {"assignedUsersIds": ["u1"]},
+            ("CClientProfile", "cp1"): {"linkedCompanyId": "a1", "assignedUsersIds": ["u1"]},
+        },
+        related={"engagementContacts": [{"id": "c1"}, {"id": "c2"}]},
+    )
+    res = await service.add_comentor(fake, "E1", "m2")
+    assert "warning" not in res
+    assert ("Contact", "c1", {"assignedUsersIds": ["u1", "u9"]}) in fake.updates
+    assert ("Contact", "c2", {"assignedUsersIds": ["u9"]}) in fake.updates
+    assert ("CClientProfile", "cp1", {"assignedUsersIds": ["u1", "u9"]}) in fake.updates
+    assert ("Account", "a1", {"assignedUsersIds": ["u9"]}) in fake.updates  # linkedCompany fallback
+    notes = [p for e, p in fake.created if e == "Note"]
+    assert len(notes) == 1
+    n = notes[0]
+    assert n["type"] == "Post" and n["parentType"] == "CEngagement" and n["parentId"] == "E1"
+    assert "Robert Cohen" in n["post"] and "session tools" in n["post"]
+    assert "4/4" in n["post"]
+
+
+@pytest.mark.asyncio
+async def test_add_comentor_client_record_stamp_failure_continues():
+    # Per-record best-effort: one client record rejecting the stamp (e.g. no
+    # edit grant on Contact) never fails the add — the rest still stamp, and
+    # the note reports the real count.
+    class Flaky(Fake):
+        async def update(self, entity, record_id, payload):
+            if entity == "Contact":
+                raise EspoError("HTTP 403: forbidden")
+            return await super().update(entity, record_id, payload)
+
+    fake = Flaky(
+        records={
+            ("CMentorProfile", "m2"): {"assignedUserId": "u9"},
+            ("CEngagement", "E1"): {
+                "assignedUsersIds": ["u1"],
+                "primaryEngagementContactId": "c1",
+                "engagementClientId": "cp1",
+            },
+        },
+    )
+    res = await service.add_comentor(fake, "E1", "m2")
+    assert "warning" not in res
+    notes = [p for e, p in fake.created if e == "Note"]
+    assert len(notes) == 1 and "1/2" in notes[0]["post"]
+
+
+@pytest.mark.asyncio
+async def test_remove_comentor_unstamps_client_records():
+    # Reverse of the add-time stamp: the removed co-mentor's user comes off the
+    # client records' assignedUsers too (only where present; the single
+    # assignedUser is never touched).
+    fake = Fake(
+        records={
+            ("CMentorProfile", "m2"): {"assignedUserId": "u9"},
+            ("CMentorProfile", "mA"): {"assignedUserId": "uA"},
+            ("CEngagement", "E1"): {
+                "mentorProfileId": "mA",
+                "assignedUsersIds": ["uA", "u9"],
+                "primaryEngagementContactId": "c1",
+                "engagementClientId": "cp1",
+                "clientOrganizationId": "a1",
+            },
+            ("Contact", "c1"): {"assignedUserId": "uA", "assignedUsersIds": ["uA", "u9"]},
+            ("CClientProfile", "cp1"): {"assignedUsersIds": ["u9"]},
+            ("Account", "a1"): {"assignedUsersIds": ["uA"]},  # u9 absent — untouched
+        },
+        related={"additionalMentors": []},
+    )
+    await service.remove_comentor(fake, "E1", "m2")
+    assert ("CEngagement", "E1", {"assignedUsersIds": ["uA"]}) in fake.updates
+    assert ("Contact", "c1", {"assignedUsersIds": ["uA"]}) in fake.updates
+    assert ("CClientProfile", "cp1", {"assignedUsersIds": []}) in fake.updates
+    assert not [u for u in fake.updates if u[0] == "Account"]
+    notes = [p for e, p in fake.created if e == "Note"]
+    assert len(notes) == 1 and "2/3" in notes[0]["post"]
+
+
+@pytest.mark.asyncio
 async def test_remove_comentor_keeps_user_shared_with_remaining_comentor():
     fake = Fake(
         records={

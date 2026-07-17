@@ -20,9 +20,15 @@ import re
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional, Protocol
 
-from assignments.service import assigned_user_id
+from assignments.service import (
+    ACCOUNT,
+    CLIENT_PROFILE,
+    ENGAGEMENT_CONTACTS,
+    assigned_user_id,
+)
 from core.espo import EspoError
 from core.phone import format_us
+from core.stream import post_stream_note
 
 from .config import (
     CONTACT,
@@ -971,6 +977,102 @@ async def _engagement_mentor_user_ids(
     return ids
 
 
+async def _profile_display_name(client: SessionClient, mentor_profile_id: str) -> str:
+    """The mentor profile's name, for stream notes — 'CBM contact' when unreadable."""
+    try:
+        rec = await client.get(MENTOR_PROFILE, mentor_profile_id, select="name")
+        return rec.get("name") or "CBM contact"
+    except EspoError:
+        return "CBM contact"
+
+
+async def _engagement_client_records(
+    client: SessionClient, engagement_id: str
+) -> list[tuple[str, str]]:
+    """(entity, id) pairs for the engagement's client-side records — the same set
+    Client Administration re-homes on an assignment: every related contact, the
+    client profile, and the company (``clientOrganization``, falling back to the
+    client profile's ``linkedCompany`` — intake-created engagements carry the
+    Account only there).
+    """
+    eng = await client.get(
+        ENGAGEMENT,
+        engagement_id,
+        select="primaryEngagementContactId,engagementClientId,clientOrganizationId",
+    )
+    contact_ids: list[str] = []
+    if eng.get("primaryEngagementContactId"):
+        contact_ids.append(eng["primaryEngagementContactId"])
+    related = await client.list_related(
+        ENGAGEMENT, engagement_id, ENGAGEMENT_CONTACTS, select="id", max_size=_PAGE
+    )
+    for r in related.get("list", []):
+        if r["id"] not in contact_ids:
+            contact_ids.append(r["id"])
+    client_id = eng.get("engagementClientId")
+    account_id = eng.get("clientOrganizationId")
+    if client_id and not account_id:
+        try:
+            prof = await client.get(CLIENT_PROFILE, client_id, select="linkedCompanyId")
+            account_id = prof.get("linkedCompanyId")
+        except EspoError:
+            pass
+    pairs: list[tuple[str, str]] = [(CONTACT, cid) for cid in contact_ids]
+    if client_id:
+        pairs.append((CLIENT_PROFILE, client_id))
+    if account_id:
+        pairs.append((ACCOUNT, account_id))
+    return pairs
+
+
+async def _stamp_client_records(
+    client: SessionClient, engagement_id: str, user_id: str, *, remove: bool = False
+) -> tuple[int, int]:
+    """Add (or remove) ``user_id`` in ``assignedUsers`` of the engagement's client
+    records (contacts / client profile / company) so a co-mentor gets the same
+    access to them as the assigned mentor — Doug's defect report 2026-07-16: the
+    co-mentor add stamped only the engagement itself.
+
+    Touches ONLY the multi-user ``assignedUsersIds``; the single ``assignedUser``
+    (the primary owner, e.g. the assigned mentor on a Contact) is never changed.
+    An entity without "Multiple Assigned Users" enabled silently ignores the
+    write (Contact needed that checkbox — enabled on the prod CRM 2026-07-16).
+    Per-record best-effort; returns ``(updated, total)``.
+    """
+    try:
+        pairs = await _engagement_client_records(client, engagement_id)
+    except EspoError as exc:
+        log.warning(
+            "co-mentor client-record stamp: engagement %s unreadable: %s",
+            engagement_id, exc,
+        )
+        return 0, 0
+    updated = 0
+    for entity, rid in pairs:
+        try:
+            rec = await client.get(entity, rid, select="assignedUsersIds")
+            current = list(rec.get("assignedUsersIds") or [])
+            if remove:
+                if user_id not in current:
+                    continue
+                await client.update(
+                    entity, rid,
+                    {"assignedUsersIds": [u for u in current if u != user_id]},
+                )
+            else:
+                if user_id in current:
+                    continue
+                await client.update(
+                    entity, rid, {"assignedUsersIds": current + [user_id]}
+                )
+            updated += 1
+        except EspoError as exc:
+            log.warning(
+                "co-mentor client-record stamp skipped (%s %s): %s", entity, rid, exc
+            )
+    return updated, len(pairs)
+
+
 async def add_comentor(
     client: SessionClient, engagement_id: str, mentor_profile_id: str
 ) -> dict[str, Any]:
@@ -979,14 +1081,25 @@ async def add_comentor(
     Also adds the co-mentor's login User to the engagement's ``assignedUsers``:
     the Mentor Role reads CEngagement at "own", and with ``assignedUser``
     disabled "own" means membership in ``assignedUsers`` — without this the
-    engagement never appears in the co-mentor's own engagement list. Best-effort
-    (the relate is the source of truth); a failure returns a ``warning`` the UI
-    shows instead of silently leaving the co-mentor blind.
+    engagement never appears in the co-mentor's own engagement list. The same
+    User is also stamped onto the engagement's client records (contacts / client
+    profile / company — :func:`_stamp_client_records`) so the co-mentor can work
+    them like the assigned mentor. Best-effort (the relate is the source of
+    truth); a failure returns a ``warning`` the UI shows instead of silently
+    leaving the co-mentor blind. A stream note on the engagement records what
+    was done (and via which app).
     """
     await client.relate(ENGAGEMENT, engagement_id, _COMENTOR_LINK, mentor_profile_id)
+    name = await _profile_display_name(client, mentor_profile_id)
     try:
         user_id = await _profile_user_id(client, mentor_profile_id)
         if not user_id:
+            await post_stream_note(
+                client, ENGAGEMENT, engagement_id,
+                f"Added co-mentor {name} via the session tools — they have no "
+                "linked login user, so no record access was granted (assign one "
+                "in Mentor Administration).",
+            )
             return {
                 "status": "ok",
                 "warning": (
@@ -1020,10 +1133,21 @@ async def add_comentor(
             except EspoError as exc:
                 log.warning("co-mentor session stamp skipped (session %s): %s",
                             s["id"], exc)
+        # The defect fix (2026-07-16): the co-mentor must also become an
+        # assigned user on the engagement's client records, not just the
+        # engagement — otherwise the client's contact/profile/company stay
+        # invisible/read-only to them under read-own roles.
+        stamped, total = await _stamp_client_records(client, engagement_id, user_id)
     except EspoError as exc:
         log.warning(
             "co-mentor visibility stamp failed (engagement %s, profile %s): %s",
             engagement_id, mentor_profile_id, exc,
+        )
+        await post_stream_note(
+            client, ENGAGEMENT, engagement_id,
+            f"Added co-mentor {name} via the session tools — but granting their "
+            "user access to the engagement failed; they may not see it in their "
+            "list.",
         )
         return {
             "status": "ok",
@@ -1033,6 +1157,12 @@ async def add_comentor(
                 "a different team, or your role may not allow assigning users.)"
             ),
         }
+    await post_stream_note(
+        client, ENGAGEMENT, engagement_id,
+        f"Added co-mentor {name} via the session tools — their user was added to "
+        f"the assigned users on the engagement, its sessions, and {stamped}/{total} "
+        "related client record(s) (contacts / client profile / company).",
+    )
     return {"status": "ok"}
 
 
@@ -1044,20 +1174,26 @@ async def remove_comentor(
     (``CEngagement.mentorProfile``) is managed in Client Administration, not here.
 
     Also removes their login User from ``assignedUsers`` (undoing the add-time
-    visibility stamp) — unless that User also belongs to the assigned mentor or
-    to a co-mentor still on the engagement. Best-effort: a failure here leaves
-    harmless extra visibility, never a broken remove.
+    visibility stamp) and from the engagement's client records
+    (:func:`_stamp_client_records` in reverse) — unless that User also belongs
+    to the assigned mentor or to a co-mentor still on the engagement. Best-effort:
+    a failure here leaves harmless extra visibility, never a broken remove. A
+    stream note on the engagement records what was done.
     """
     await client.unrelate(ENGAGEMENT, engagement_id, _COMENTOR_LINK, mentor_profile_id)
+    name = await _profile_display_name(client, mentor_profile_id)
+    note = f"Removed co-mentor {name} via the session tools."
     try:
         user_id = await _profile_user_id(client, mentor_profile_id)
         if not user_id:
+            await post_stream_note(client, ENGAGEMENT, engagement_id, note)
             return {"status": "ok"}
         eng = await client.get(
             ENGAGEMENT, engagement_id, select="mentorProfileId,assignedUsersIds"
         )
         current = list(eng.get("assignedUsersIds") or [])
         if user_id not in current:
+            await post_stream_note(client, ENGAGEMENT, engagement_id, note)
             return {"status": "ok"}
         protected: set[str] = set()
         if eng.get("mentorProfileId"):
@@ -1096,11 +1232,29 @@ async def remove_comentor(
                 except EspoError as exc:
                     log.warning("co-mentor session un-stamp skipped (session %s): %s",
                                 s["id"], exc)
+            # Reverse of the add-time client-record stamp (contacts / client
+            # profile / company).
+            stamped, total = await _stamp_client_records(
+                client, engagement_id, user_id, remove=True
+            )
+            note = (
+                f"Removed co-mentor {name} via the session tools — their user's "
+                f"access was removed from the engagement, its sessions, and "
+                f"{stamped}/{total} related client record(s)."
+            )
+        else:
+            note = (
+                f"Removed co-mentor {name} via the session tools — assigned-user "
+                "access kept (their user is shared with the assigned mentor or "
+                "another co-mentor)."
+            )
     except EspoError as exc:
         log.warning(
             "co-mentor visibility un-stamp failed (engagement %s, profile %s): %s",
             engagement_id, mentor_profile_id, exc,
         )
+        note += " (Access cleanup failed — their user may retain visibility.)"
+    await post_stream_note(client, ENGAGEMENT, engagement_id, note)
     return {"status": "ok"}
 
 

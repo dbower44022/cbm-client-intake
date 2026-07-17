@@ -19,6 +19,7 @@ class FakeClient:
         self._related = related or {"list": []}
         self._lists = lists or {}
         self.updates: list[tuple[str, str, dict]] = []
+        self.creates: list[tuple[str, dict]] = []
         self.list_calls: list[tuple[str, list]] = []
 
     async def get(self, entity, record_id, select=None):
@@ -40,6 +41,10 @@ class FakeClient:
     async def update(self, entity, record_id, payload):
         self.updates.append((entity, record_id, payload))
         return {"id": record_id, **payload}
+
+    async def create(self, entity, payload):
+        self.creates.append((entity, payload))
+        return {"id": f"{entity.lower()}-new", **payload}
 
 
 def _mentor(**overrides):
@@ -201,6 +206,60 @@ async def test_assign_rejects_ineligible_mentor():
     with pytest.raises(service.AssignError):
         await service.assign_engagement(client, "eng-4", "mentor-4")
     assert client.updates == []
+
+
+async def test_assign_posts_stream_note():
+    """The assignment stamps a durable, human-readable note into the
+    engagement's Espo stream — an app write is otherwise indistinguishable in
+    history from a hand edit by the same user (the 2026-07-16 forensics
+    lesson). The note names the mentor, the app, and the re-homing outcome."""
+    client = FakeClient(
+        mentor=_mentor(),
+        engagement={
+            "engagementStatus": "Submitted",
+            "primaryEngagementContactId": "contact-primary",
+            "engagementClientId": "clientprofile-1",
+            "clientOrganizationId": None,  # e.g. a pre-v0.38.1 intake engagement
+        },
+        related={"list": [{"id": "contact-primary"}, {"id": "contact-extra"}]},
+    )
+    await service.assign_engagement(client, "eng-1", "mentor-1")
+
+    notes = [p for e, p in client.creates if e == "Note"]
+    assert len(notes) == 1
+    n = notes[0]
+    assert n["type"] == "Post"
+    assert n["parentType"] == service.ENGAGEMENT and n["parentId"] == "eng-1"
+    assert "Matt Mentor" in n["post"] and "Client Administration" in n["post"]
+    assert "2/2 contact(s)" in n["post"]
+    assert "client profile" in n["post"]
+    assert "company: no link" in n["post"]
+
+
+async def test_assign_note_reports_rehoming_failures():
+    from core.espo import EspoError
+
+    class FlakyClient(FakeClient):
+        async def update(self, entity, record_id, payload):
+            if entity == service.CONTACT:
+                raise EspoError("HTTP 403 denied")
+            return await super().update(entity, record_id, payload)
+
+    client = FlakyClient(
+        mentor=_mentor(),
+        engagement={
+            "engagementStatus": "Submitted",
+            "primaryEngagementContactId": "contact-primary",
+            "engagementClientId": "clientprofile-1",
+            "clientOrganizationId": "account-1",
+        },
+        related={"list": [{"id": "contact-primary"}]},
+    )
+    await service.assign_engagement(client, "eng-1", "mentor-1")
+    notes = [p for e, p in client.creates if e == "Note"]
+    assert len(notes) == 1
+    assert "0/1 contact(s)" in notes[0]["post"]
+    assert "could not be re-homed" in notes[0]["post"]
 
 
 async def test_assign_rejects_already_assigned_engagement():

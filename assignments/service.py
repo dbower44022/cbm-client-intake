@@ -22,6 +22,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Optional, Protocol
 
 from core.espo import EspoError
+from core.stream import post_stream_note
 
 log = logging.getLogger("cbm_intake.assignments.service")
 
@@ -105,6 +106,7 @@ class AssignClient(Protocol):
     async def list(self, entity: str, **kwargs: Any) -> dict[str, Any]: ...
     async def list_related(self, entity: str, record_id: str, link: str, **kwargs: Any) -> dict[str, Any]: ...
     async def update(self, entity: str, record_id: str, payload: dict[str, Any]) -> dict[str, Any]: ...
+    async def create(self, entity: str, payload: dict[str, Any]) -> dict[str, Any]: ...
 
 
 class AssignError(Exception):
@@ -569,6 +571,29 @@ async def assign_engagement(
             account_updated = True
         except EspoError as exc:
             reassignment_errors.append({"entity": ACCOUNT, "id": account_id, "error": str(exc)})
+
+    # Durable audit trail: a stream note on the engagement marks this as an
+    # app-side assignment (a plain field update by the same user is otherwise
+    # indistinguishable in Espo history from a hand edit in the CRM UI) and
+    # records the re-homing outcome. Best-effort — never fails the assignment.
+    def _rehomed(label: str, present: Any, updated: bool) -> str:
+        if not present:
+            return f"{label}: no link"
+        return label if updated else f"{label}: FAILED"
+
+    note = (
+        f"Assigned to {mentor.get('name') or 'the selected mentor'} via the Client "
+        f"Administration app — status set to {STATUS_PENDING}; re-homed to the "
+        f"mentor's user: {contacts_updated}/{len(contact_ids)} contact(s), "
+        f"{_rehomed('client profile', client_id, client_profile_updated)}, "
+        f"{_rehomed('company', account_id, account_updated)}."
+    )
+    if reassignment_errors:
+        note += (
+            f" {len(reassignment_errors)} related record(s) could not be re-homed —"
+            " reassign them in the CRM."
+        )
+    await post_stream_note(client, ENGAGEMENT, engagement_id, note)
 
     log.info(
         "assigned engagement=%s -> mentor=%s user=%s contacts=%d/%d client=%s account=%s errors=%d",

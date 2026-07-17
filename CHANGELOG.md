@@ -4,6 +4,39 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.74.0] — 2026-07-16
+
+### Added
+- **Stream notes: app-side assignment and co-mentor changes now leave a durable
+  audit line in the engagement's Espo history.** The staff tools act as the
+  signed-in user, so their writes were indistinguishable in the stream from
+  hand edits in the CRM UI by the same person — the root of the 2026-07-16
+  double-assignment forensics. New `core/stream.post_stream_note` posts a Note
+  (`type=Post`) parented to the engagement, best-effort (a rejected note never
+  fails the operation). Client Administration's Assign posts "Assigned to X via
+  the Client Administration app — status set to Pending Acceptance; re-homed …
+  N/N contact(s), client profile, company" (with per-target no-link/FAILED
+  detail and an error count); the session tools' co-mentor add/remove post what
+  was granted/revoked and to how many records.
+
+### Fixed
+- **Adding a co-mentor now grants them access to the client's records, not just
+  the engagement** (Doug's defect report): the Details tab's CBM Contacts + Add
+  stamped the co-mentor's user into `CEngagement.assignedUsers` only — the
+  related contact(s), client profile, and company kept only the original
+  mentor, so under read-own roles the co-mentor couldn't see/work them.
+  `sessions/service.add_comentor` now also merges the user into
+  `assignedUsersIds` on every related contact, the CClientProfile, and the
+  Account (resolved via `clientOrganization` with the client profile's
+  `linkedCompany` fallback for intake-created engagements); `remove_comentor`
+  un-stamps them symmetrically (unless shared with the assigned mentor or a
+  remaining co-mentor). Only the multi-user collaborators field is touched —
+  the single `assignedUser` (primary owner) is never changed. Per-record
+  best-effort; the stream note reports the actual stamped count. CRM
+  prerequisite: the entity must have "Multiple Assigned Users" enabled —
+  Contact was missing it on prod (Doug enabled it 2026-07-16); crm-test should
+  be checked for parity.
+
 ## [0.72.1] — 2026-07-16
 
 ### Fixed
