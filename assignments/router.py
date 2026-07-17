@@ -171,6 +171,31 @@ async def assign(engagement_id: str, body: AssignIn, request: Request) -> dict:
     return result
 
 
+@router.post("/engagements/{engagement_id}/reassign")
+async def reassign(engagement_id: str, body: AssignIn, request: Request) -> dict:
+    """Replace the engagement's primary mentor (Reassign Mentor). The stream
+    note names the acting user — 'Mentor X was replaced with Mentor Y … by
+    user NAME'."""
+    user = _require_user(request)
+    client = client_for(get_settings(), user)
+    try:
+        result = await service.reassign_engagement(
+            client, engagement_id, body.mentorProfileId, actor=user.get("name")
+        )
+    except service.AssignError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Reassignment failed")
+    # DOC-09: re-derive the engagement folder's Drive grants (new mentor gains,
+    # the replaced mentor loses). Best-effort, like the assign path.
+    from docs import grants as doc_grants
+
+    await doc_grants.sync_record_grants_safe(
+        get_settings(), service.ENGAGEMENT, engagement_id
+    )
+    return result
+
+
 # Quick-send email (the email-address links product-wide): GET /mailbox +
 # POST /sendmail, behind this app's own gate. See comms/quicksend.py.
 from comms.quicksend import register_quicksend  # noqa: E402  (needs router + helpers above)

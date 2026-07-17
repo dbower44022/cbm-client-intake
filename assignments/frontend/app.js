@@ -310,9 +310,37 @@
     }
   );
 
+  // --- row selection (click) + context menu (right-click) ---
+  var selectedEngId = null;
+
+  function selectRow(engId) {
+    selectedEngId = engId;
+    Array.prototype.forEach.call(document.querySelectorAll("#engBody tr"), function (tr) {
+      tr.classList.toggle("is-selected", tr.dataset.engId === engId);
+    });
+  }
+
+  function selectedEngagement() {
+    if (!selectedEngId) return null;
+    return engRows.filter(function (e) { return e.id === selectedEngId; })[0] || null;
+  }
+
   function buildRow(eng) {
     var tr = document.createElement("tr");
     tr.dataset.engId = eng.id;
+    if (eng.id === selectedEngId) tr.classList.add("is-selected");
+
+    // Click anywhere non-interactive selects the row (toggle); right-click
+    // selects it AND opens the row's context menu.
+    tr.addEventListener("click", function (ev) {
+      if (ev.target.closest("button, select, a, input, textarea, label")) return;
+      selectRow(eng.id === selectedEngId ? null : eng.id);
+    });
+    tr.addEventListener("contextmenu", function (ev) {
+      ev.preventDefault();
+      selectRow(eng.id);
+      showContextMenu(ev.clientX, ev.clientY, rowMenuItems(tr, eng));
+    });
 
     var tdEng = document.createElement("td");
     var name = document.createElement("button");
@@ -982,6 +1010,197 @@
       notice(e.message, "error");
     }
   }
+
+  // --- Reassign Mentor -------------------------------------------------------
+
+  function rowFor(engId) {
+    return document.querySelector('#engBody tr[data-eng-id="' + engId + '"]');
+  }
+
+  // The toolbar button acts on the selected row; never disabled — a click
+  // without the needed state explains itself (Doug's ruling).
+  $("reassignBtn").addEventListener("click", function () {
+    var eng = selectedEngagement();
+    if (!eng) {
+      notice("Click an engagement row to select it, then press Reassign Mentor "
+        + "(or right-click the row).", "error");
+      return;
+    }
+    if (!eng.mentorId) {
+      notice("“" + (eng.name || "This engagement") + "” has no mentor yet — "
+        + "use its Assign dropdown (or right-click → Assign mentor) instead.", "error");
+      return;
+    }
+    openMentorPicker(rowFor(eng.id), eng, "reassign");
+  });
+
+  // Mentor picker dialog (assign for unassigned rows, reassign for assigned).
+  function openMentorPicker(tr, eng, mode) {
+    var overlay = document.createElement("div");
+    overlay.className = "modal-overlay"; overlay.id = "mentorPickModal";
+    var card = document.createElement("div"); card.className = "modal-card";
+
+    var h = document.createElement("h3");
+    h.textContent = (mode === "reassign" ? "Reassign" : "Assign") + " “" +
+      (eng.name || "this engagement") + "”";
+    card.appendChild(h);
+    var p = document.createElement("p");
+    p.textContent = mode === "reassign"
+      ? "Current mentor: " + (eng.mentorName || "unknown") + ". Choose the new " +
+        "primary mentor — the engagement, its contacts, client records, and " +
+        "sessions all move to them, and the change is recorded in the " +
+        "engagement's history."
+      : "Choose the mentor for this engagement.";
+    card.appendChild(p);
+
+    var select = document.createElement("select");
+    select.className = "mentor-pick-select";
+    select.appendChild(new Option("Select a mentor…", ""));
+    mentors.forEach(function (m) {
+      if (mode === "reassign" && m.id === eng.mentorId) return;
+      var label = m.name;
+      if (typeof m.availableCapacity === "number" && m.availableCapacity >= 0) {
+        label += " (capacity " + m.availableCapacity + ")";
+      }
+      select.appendChild(new Option(label, m.id));
+    });
+    card.appendChild(select);
+
+    var err = document.createElement("p");
+    err.className = "form-error"; err.hidden = true;
+    card.appendChild(err);
+
+    var actions = document.createElement("div"); actions.className = "modal-actions";
+    var cancel = document.createElement("button"); cancel.type = "button";
+    cancel.className = "cbm-button cbm-button--secondary"; cancel.textContent = "Cancel";
+    var ok = document.createElement("button"); ok.type = "button";
+    ok.className = "cbm-button";
+    ok.textContent = mode === "reassign" ? "Reassign" : "Assign";
+    function close() { overlay.remove(); document.removeEventListener("keydown", onKey); }
+    function onKey(e) { if (e.key === "Escape") close(); }
+    cancel.addEventListener("click", close);
+    overlay.addEventListener("click", function (e) { if (e.target === overlay) close(); });
+    document.addEventListener("keydown", onKey);
+    ok.addEventListener("click", function () {
+      if (!select.value) {
+        err.textContent = "Select a mentor first.";
+        err.hidden = false;
+        select.focus();
+        return;
+      }
+      var mentorId = select.value;
+      close();
+      if (mode === "reassign") performReassign(tr, eng, mentorId);
+      else performAssign(tr, eng, mentorId);
+    });
+    actions.appendChild(cancel); actions.appendChild(ok); card.appendChild(actions);
+    overlay.appendChild(card); document.body.appendChild(overlay);
+    select.focus();
+  }
+
+  async function performReassign(tr, eng, mentorProfileId) {
+    clearNotice();
+    if (tr) tr.classList.add("row-busy");
+    try {
+      var res = await api("/engagements/" + encodeURIComponent(eng.id) + "/reassign", {
+        method: "POST",
+        body: JSON.stringify({ mentorProfileId: mentorProfileId }),
+      });
+      await reloadEngagements();
+      var summary =
+        "Reassigned “" + (eng.name || "engagement") + "” from " +
+        (res.oldMentorName || "the previous mentor") + " to " + res.mentorName +
+        " (" + res.contactsUpdated + " contact(s)" +
+        (res.clientProfileUpdated ? ", client profile" : "") +
+        (res.accountUpdated ? ", company" : "") +
+        ", " + res.sessionsUpdated + " of " + res.sessionsTotal + " session(s) moved).";
+      var errs = res.reassignmentErrors || [];
+      if (errs.length) {
+        notice(
+          summary + " ⚠ " + errs.length + " related record(s) could not be re-homed: " +
+          errs.map(function (e) { return e.entity; }).join(", ") +
+          ". The mentor change itself succeeded; fix those records in the CRM.",
+          "error"
+        );
+      } else {
+        notice(summary, "success");
+      }
+      // Same follow-up as an initial assignment: offer the assignment-notice
+      // email to the NEW mentor (silent fallbacks — see performAssign).
+      if (window.CBMQuickMail) {
+        var mentor = mentors.filter(function (m) { return m.id === mentorProfileId; })[0];
+        CBMQuickMail.composeIfEnabled(
+          (mentor && mentor.cbmEmail) || "",
+          { template: "MentorAssignmentNotice" }
+        );
+      }
+    } catch (e) {
+      if (tr) tr.classList.remove("row-busy");
+      if (e.status === 401) { showLogin(); return; }
+      if (e.status === 400) {
+        try { await reloadEngagements(); } catch (_) { /* keep the error notice */ }
+      }
+      notice(e.message, "error");
+    }
+  }
+
+  // --- row context menu ------------------------------------------------------
+  // Right-click covers everything the buttons can do for a row.
+  function rowMenuItems(tr, eng) {
+    var items = [
+      { label: "View details", action: function () { openDetail(eng.id); } },
+    ];
+    if (eng.mentorId) {
+      items.push({
+        label: "Reassign mentor…",
+        action: function () { openMentorPicker(tr, eng, "reassign"); },
+      });
+    } else {
+      items.push({
+        label: "Assign mentor…",
+        action: function () { openMentorPicker(tr, eng, "assign"); },
+      });
+    }
+    items.push({
+      label: "Edit notes",
+      action: function () {
+        var view = tr.querySelector(".notes-view");
+        if (view) view.click();
+      },
+    });
+    items.push({ label: "Refresh list", action: loadData });
+    return items;
+  }
+
+  function closeContextMenu() {
+    var m = document.getElementById("ctxMenu");
+    if (m) m.remove();
+  }
+
+  function showContextMenu(x, y, items) {
+    closeContextMenu();
+    var menu = document.createElement("div");
+    menu.id = "ctxMenu"; menu.className = "ctx-menu";
+    menu.setAttribute("role", "menu");
+    items.forEach(function (it) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "ctx-menu__item";
+      b.setAttribute("role", "menuitem");
+      b.textContent = it.label;
+      b.addEventListener("click", function () { closeContextMenu(); it.action(); });
+      menu.appendChild(b);
+    });
+    document.body.appendChild(menu);
+    // Keep the menu inside the viewport.
+    var mw = menu.offsetWidth, mh = menu.offsetHeight;
+    menu.style.left = Math.min(x, window.innerWidth - mw - 8) + "px";
+    menu.style.top = Math.min(y, window.innerHeight - mh - 8) + "px";
+  }
+
+  document.addEventListener("click", closeContextMenu);
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key === "Escape") closeContextMenu();
+  });
 
   // Styled confirm dialog — matches the modal-card popups used elsewhere in the
   // app (e.g. Mentor Administration) instead of the browser's native confirm().

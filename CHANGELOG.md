@@ -4,6 +4,42 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.81.0] — 2026-07-17
+
+Client Administration: **Reassign Mentor** — replace an engagement's primary
+mentor from the grid, with full access re-homing and a history stamp.
+
+### Added
+- **Row selection + Reassign Mentor button.** Clicking a grid row selects it
+  (click again to deselect); the new toolbar button acts on the selected row.
+  Never disabled: no row selected, or a row with no mentor yet, gets a notice
+  explaining what to do instead.
+- **Right-click context menu on every row**, covering all row functions:
+  View details, Reassign mentor… (assigned rows) / Assign mentor… (unassigned
+  rows, same picker driving the existing assign endpoint), Edit notes, and
+  Refresh list. Right-click also selects the row; Escape/click-away closes.
+- **Mentor picker dialog** (assign + reassign modes): eligible mentors with
+  capacity labels, the current mentor excluded in reassign mode; confirming
+  with nothing selected shows an inline "Select a mentor first."
+- **`POST /assignments/api/engagements/{id}/reassign`** →
+  `service.reassign_engagement`: validates the new mentor to the same bar as
+  an initial assignment (Active + accepting + linked User) and requires an
+  existing, different mentor; swaps `mentorProfile`; re-stamps
+  `engagementAssignedDate`; and re-homes access so the new mentor can edit
+  everything — engagement + every related Contact + CClientProfile + Account
+  (swap-merge on `assignedUsers`: old mentor's User out unless a co-mentor
+  shares it, co-mentors always preserved — the v0.76.1 merge rule) + every
+  CSession on the engagement (old User removed except from sessions they
+  personally own, the remove_comentor convention). `engagementStatus` is
+  deliberately untouched (no re-acceptance round). Downstream failures are
+  per-record best-effort (`reassignmentErrors`), reported in the UI and the
+  note. DOC-09 Drive grants re-derived after, like assign.
+- **History**: a stream note on the engagement with Doug's required wording —
+  "Mentor X was replaced with Mentor Y on MM/DD/YYYY by user NAME." (date in
+  Cleveland time) — plus the re-homing outcome.
+- After a successful reassign, the MentorAssignmentNotice compose opens for
+  the NEW mentor (same silent-fallback behavior as assign). 6 new tests.
+
 ## [0.80.0] — 2026-07-17
 
 Client Administration layout pass (Doug's review of 0.79.0). Frontend-only.

@@ -1328,7 +1328,34 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-17)
 
-**Main is at v0.80.0** (2026-07-17, 662 tests green, committed NOT pushed) —
+**Main is at v0.81.0** (2026-07-17, 668 tests green, committed NOT pushed) —
+**Client Administration: Reassign Mentor** (Doug's request): select a grid row
+(click; right-click also selects) and invoke via the new toolbar button OR the
+new **right-click context menu** (View details / Reassign mentor… / Assign
+mentor… on unassigned rows / Edit notes / Refresh — covers every row
+function). A mentor-picker dialog (current mentor excluded; inline
+"Select a mentor first." on empty confirm, per the no-disabled-buttons ruling)
+drives **`POST /engagements/{id}/reassign`** → `service.reassign_engagement`:
+same eligibility bar as assign; swaps `mentorProfile`; re-stamps
+`engagementAssignedDate`; **re-homes access on engagement + contacts +
+client profile + company + every CSession** (swap-merge: old mentor's User
+removed unless a co-mentor shares it / they personally own the session;
+co-mentors always preserved); `engagementStatus` deliberately untouched;
+downstream failures per-record best-effort (`reassignmentErrors`); DOC-09
+grant re-sync after. **History stamp** (stream note, Doug's exact wording):
+"Mentor X was replaced with Mentor Y on MM/DD/YYYY by user NAME." (Cleveland
+date) + re-homing outcome. Successful reassign opens the
+MentorAssignmentNotice compose for the new mentor (v0.79.0 behavior). 6 new
+service tests; full flow verified in the stub harness (guard messages, picker,
+reassign → row re-renders + notice + compose, right-click menu on both row
+states, Escape/click-away close, details/notes actions; no console errors).
+**NOT yet driven live.** Live-check notes: the staff user's role needs
+CSession read+edit for the session re-stamp (per-session failures surface in
+the notice and stream note, never fatal — watch `reassignmentErrors` on the
+first live reassign); Note create needed for the history stamp (best-effort,
+logged if rejected).
+
+Before that: **v0.80.0** (2026-07-17, 662 tests green, committed NOT pushed) —
 **Client Administration layout pass** (Doug's review of 0.79.0; frontend-only):
 "Signed in as" + Sign out moved to a top-right user-profile corner; Review
 Mentors/Refresh share ONE control line with the Status filter and a new

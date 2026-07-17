@@ -330,6 +330,191 @@ async def test_assign_rejects_non_submitted_engagement():
     assert client.updates == []
 
 
+# --- reassign_engagement -----------------------------------------------------
+
+class ReassignClient(FakeClient):
+    """FakeClient with per-id mentor profiles, per-(entity,id) records, and the
+    co-mentor + sessions links — the surface reassign_engagement touches."""
+
+    def __init__(self, *, mentors=None, records=None, comentors=None,
+                 sessions=None, **kw):
+        super().__init__(**kw)
+        self._mentors = mentors or {}
+        self._records = records or {}
+        self._comentors = comentors or []
+        self._sessions = sessions or []
+
+    async def get(self, entity, record_id, select=None):
+        if entity == service.MENTOR_PROFILE and record_id in self._mentors:
+            return {"id": record_id, **self._mentors[record_id]}
+        if (entity, record_id) in self._records:
+            return {"id": record_id, **self._records[(entity, record_id)]}
+        return await super().get(entity, record_id, select)
+
+    async def list_related(self, entity, record_id, link, **kwargs):
+        if link == "additionalMentors":
+            return {"list": self._comentors}
+        if link == service.ENGAGEMENT_SESSIONS_LINK:
+            return {"list": self._sessions}
+        return await super().list_related(entity, record_id, link, **kwargs)
+
+
+def _reassign_client(**overrides):
+    base = dict(
+        mentors={
+            "mentor-old": {"name": "Sharon Rose", "assignedUserId": "user-old"},
+            "mentor-new": _mentor(name="Robert Cohen", assignedUserId="user-new",
+                                  assignedUserName="Robert Cohen"),
+        },
+        engagement={
+            "name": "Acme Growth",
+            "engagementStatus": "Active",
+            "mentorProfileId": "mentor-old",
+            "mentorProfileName": "Sharon Rose",
+            "assignedUsersIds": ["user-old", "user-co"],
+            "primaryEngagementContactId": "contact-primary",
+            "engagementClientId": "clientprofile-1",
+            "clientOrganizationId": "account-1",
+        },
+        related={"list": [{"id": "contact-primary"}, {"id": "contact-extra"}]},
+        comentors=[{"id": "mentor-co", "assignedUsersIds": ["user-co"]}],
+        records={
+            ("CClientProfile", "clientprofile-1"): {"assignedUsersIds": ["user-old", "user-co"]},
+            ("Account", "account-1"): {"assignedUsersIds": ["user-old"]},
+        },
+        sessions=[
+            # Owned by the old mentor — they keep it (remove_comentor convention).
+            {"id": "sess-owned", "assignedUserId": "user-old",
+             "assignedUsersIds": ["user-old", "user-co"]},
+            # Not owned by them — old User swapped out, new User in.
+            {"id": "sess-other", "assignedUserId": "user-co",
+             "assignedUsersIds": ["user-old", "user-co"]},
+        ],
+    )
+    base.update(overrides)
+    return ReassignClient(**base)
+
+
+async def test_reassign_swaps_mentor_across_all_records():
+    client = _reassign_client()
+    res = await service.reassign_engagement(
+        client, "eng-1", "mentor-new", actor="Jane Staff"
+    )
+
+    # Engagement: mentor swapped, old User out / new User in, co-mentor kept,
+    # assigned date re-stamped, status NOT touched.
+    eng_updates = [u for u in client.updates if u[0] == service.ENGAGEMENT]
+    assert len(eng_updates) == 1
+    payload = eng_updates[0][2]
+    assert payload["mentorProfileId"] == "mentor-new"
+    assert payload["assignedUsersIds"] == ["user-co", "user-new"]
+    assert payload["assignedUserId"] == "user-new"
+    assert "engagementStatus" not in payload
+    import re
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}",
+                        payload["engagementAssignedDate"])
+
+    # Contacts move to the new mentor's user (single assignedUser field).
+    contact_updates = {u[1]: u[2] for u in client.updates if u[0] == service.CONTACT}
+    assert set(contact_updates) == {"contact-primary", "contact-extra"}
+    assert all(p["assignedUserId"] == "user-new" for p in contact_updates.values())
+
+    # Client profile + company: swap-merge (old out unless shared, new + co in).
+    cp = [u[2] for u in client.updates if u[0] == "CClientProfile"][0]
+    assert cp["assignedUsersIds"] == ["user-co", "user-new"]
+    acc = [u[2] for u in client.updates if u[0] == "Account"][0]
+    assert acc["assignedUsersIds"] == ["user-new", "user-co"]
+
+    # Sessions: the old mentor keeps the session they personally own.
+    sess = {u[1]: u[2] for u in client.updates if u[0] == service.SESSION}
+    assert sess["sess-owned"]["assignedUsersIds"] == ["user-old", "user-co", "user-new"]
+    assert sess["sess-other"]["assignedUsersIds"] == ["user-co", "user-new"]
+
+    assert res["mentorName"] == "Robert Cohen"
+    assert res["oldMentorName"] == "Sharon Rose"
+    assert res["engagementStatus"] == "Active"  # unchanged
+    assert res["contactsUpdated"] == 2
+    assert res["clientProfileUpdated"] and res["accountUpdated"]
+    assert res["sessionsUpdated"] == 2 and res["sessionsTotal"] == 2
+    assert res["reassignmentErrors"] == []
+
+
+async def test_reassign_posts_required_history_wording():
+    """The engagement's stream gets Doug's exact history line:
+    'Mentor X was replaced with Mentor Y on MM/DD/YYYY by user NAME.'"""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    client = _reassign_client()
+    await service.reassign_engagement(client, "eng-1", "mentor-new", actor="Jane Staff")
+
+    notes = [p for e, p in client.creates if e == "Note"]
+    assert len(notes) == 1
+    n = notes[0]
+    assert n["type"] == "Post"
+    assert n["parentType"] == service.ENGAGEMENT and n["parentId"] == "eng-1"
+    today = datetime.now(ZoneInfo("America/New_York")).strftime("%m/%d/%Y")
+    assert (
+        f"Mentor Sharon Rose was replaced with Mentor Robert Cohen on {today} "
+        "by user Jane Staff." in n["post"]
+    )
+    assert "2/2 contact(s)" in n["post"]
+    assert "2/2 session(s)" in n["post"]
+
+
+async def test_reassign_requires_an_existing_mentor():
+    client = _reassign_client(
+        engagement={"engagementStatus": "Submitted", "assignedUsersIds": []},
+    )
+    with pytest.raises(service.AssignError, match="no mentor yet"):
+        await service.reassign_engagement(client, "eng-1", "mentor-new")
+    assert client.updates == []
+
+
+async def test_reassign_rejects_same_mentor():
+    client = _reassign_client()
+    with pytest.raises(service.AssignError, match="already"):
+        await service.reassign_engagement(client, "eng-1", "mentor-old")
+    assert client.updates == []
+
+
+async def test_reassign_rejects_ineligible_new_mentor():
+    client = _reassign_client(
+        mentors={
+            "mentor-old": {"name": "Sharon Rose", "assignedUserId": "user-old"},
+            "mentor-new": _mentor(acceptingNewClients=False),
+        },
+    )
+    with pytest.raises(service.AssignError, match="no longer eligible"):
+        await service.reassign_engagement(client, "eng-1", "mentor-new")
+    assert client.updates == []
+
+
+async def test_reassign_reports_session_stamp_failures():
+    """A session the staff user can't edit is reported, never fatal — the
+    mentor change itself stands."""
+    from core.espo import EspoError
+
+    class Flaky(ReassignClient):
+        async def update(self, entity, record_id, payload):
+            if entity == service.SESSION and record_id == "sess-other":
+                raise EspoError("HTTP 403 denied")
+            return await super().update(entity, record_id, payload)
+
+    client = _reassign_client()
+    flaky = Flaky(
+        mentors=client._mentors, records=client._records,
+        comentors=client._comentors, sessions=client._sessions,
+        engagement=client._engagement, related=client._related,
+    )
+    res = await service.reassign_engagement(flaky, "eng-1", "mentor-new")
+    assert res["sessionsUpdated"] == 1 and res["sessionsTotal"] == 2
+    errs = res["reassignmentErrors"]
+    assert [e["entity"] for e in errs] == [service.SESSION]
+    notes = [p for e, p in flaky.creates if e == "Note"]
+    assert "could not be re-homed" in notes[0]["post"]
+
+
 # --- queries -----------------------------------------------------------------
 
 async def test_eligible_mentors_query_and_shape():

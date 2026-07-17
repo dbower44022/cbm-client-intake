@@ -20,6 +20,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional, Protocol
+from zoneinfo import ZoneInfo
 
 from core.espo import EspoError
 from core.stream import post_stream_note
@@ -52,6 +53,12 @@ ENGAGEMENT_STATUSES = [
 
 # Link of CEngagement -> the hasMany of additional/secondary contacts.
 ENGAGEMENT_CONTACTS = "engagementContacts"
+
+# Link of CEngagement -> its CSession records (same link the session tools use:
+# sessions/service._ENGAGEMENT_SESSIONS_LINK — duplicated here because sessions
+# imports FROM this module, so importing back would be circular).
+SESSION = "CSession"
+ENGAGEMENT_SESSIONS_LINK = "engagementSessions"
 
 # Assignment field differs by entity AND by instance. Some entities use the single
 # `assignedUser`; others have it DISABLED and use the multi-user `assignedUsers`
@@ -645,5 +652,256 @@ async def assign_engagement(
         "contactsTotal": len(contact_ids),
         "clientProfileUpdated": client_profile_updated,
         "accountUpdated": account_updated,
+        "reassignmentErrors": reassignment_errors,
+    }
+
+
+async def reassign_engagement(
+    client: AssignClient,
+    engagement_id: str,
+    mentor_profile_id: str,
+    actor: Optional[str] = None,
+) -> dict[str, Any]:
+    """Replace the engagement's PRIMARY mentor with ``mentor_profile_id``.
+
+    The counterpart to :func:`assign_engagement` for an engagement that already
+    has a mentor. Steps (core write first, everything downstream best-effort
+    and per-target, the assign contract):
+
+      0. Re-read: the engagement must currently HAVE a mentor (else use Assign)
+         and the new mentor must differ.
+      1. The new mentor clears the same bar as an initial assignment
+         (Active + accepting new clients + linked User).
+      2. Resolve the OLD mentor's User for un-stamping. Co-mentors' Users are
+         PROTECTED — never removed, and merged into every multi-user write
+         (the v0.76.1 merge rule).
+      3. Engagement: ``mentorProfile`` -> new mentor; ``assignedUsers`` swaps
+         old User for new (old kept when a co-mentor shares it);
+         ``engagementAssignedDate`` re-stamped (Days Assigned counts the
+         CURRENT mentor's tenure). ``engagementStatus`` is deliberately NOT
+         changed — a replacement doesn't restart the acceptance flow.
+      4. Client records re-homed so the new mentor can edit everything:
+         every related Contact (single ``assignedUser`` -> new User), the
+         CClientProfile and the Account (swap-merge on ``assignedUsers``).
+      5. The engagement's CSession records: new User stamped onto every
+         session; old User removed except from sessions they personally own
+         (their ``assignedUser``) — the remove_comentor convention.
+      6. History: a stream note on the engagement —
+         "Mentor X was replaced with Mentor Y on MM/DD/YYYY by user NAME."
+         (Doug's required wording), plus the re-homing outcome.
+    """
+    current = await client.get(
+        ENGAGEMENT,
+        engagement_id,
+        select="name,engagementStatus,mentorProfileId,mentorProfileName,assignedUsersIds",
+    )
+    old_profile_id = current.get("mentorProfileId")
+    if not old_profile_id:
+        raise AssignError(
+            "This engagement has no mentor yet — use Assign (the row's dropdown "
+            "or right-click → Assign mentor) instead of Reassign."
+        )
+    if old_profile_id == mentor_profile_id:
+        raise AssignError(
+            "That mentor is already this engagement's assigned mentor — pick a "
+            "different mentor to reassign."
+        )
+
+    mentor = await client.get(
+        MENTOR_PROFILE,
+        mentor_profile_id,
+        select="name,acceptingNewClients,mentorStatus,"
+        "assignedUserId,assignedUserName,assignedUsersIds,assignedUsersNames",
+    )
+    new_user_id = assigned_user_id(mentor)
+    if not new_user_id:
+        raise AssignError("The selected mentor has no linked user account.")
+    if not mentor.get("acceptingNewClients") or mentor.get("mentorStatus") != MENTOR_STATUS_ACTIVE:
+        raise AssignError(
+            "The selected mentor is no longer eligible (not Active / not accepting "
+            "new clients). Refresh and try again."
+        )
+
+    # The outgoing mentor's User (to un-stamp). A deleted/unreadable old profile
+    # just means nothing to remove — the swap still proceeds.
+    old_name = current.get("mentorProfileName")
+    old_user_id = None
+    try:
+        old = await client.get(
+            MENTOR_PROFILE, old_profile_id, select="name,assignedUserId,assignedUsersIds"
+        )
+        old_user_id = assigned_user_id(old)
+        old_name = old.get("name") or old_name
+    except EspoError:
+        pass
+    old_name = old_name or "the previous mentor"
+
+    # Users that must survive every write: the engagement's co-mentors.
+    protected: set[str] = set()
+    try:
+        co = await client.list_related(
+            ENGAGEMENT, engagement_id, "additionalMentors",
+            select="assignedUserId,assignedUsersIds", max_size=50,
+        )
+        for r in co.get("list", []):
+            uid = assigned_user_id(r)
+            if uid:
+                protected.add(uid)
+    except EspoError:
+        pass
+
+    def _swap(ids: list[str]) -> list[str]:
+        """Current assigned users with old -> new swapped: the old mentor's User
+        removed (unless a co-mentor shares it), the new mentor's + all
+        co-mentors' Users present."""
+        out = [u for u in ids if u != old_user_id or u in protected]
+        for uid in [new_user_id, *sorted(protected)]:
+            if uid not in out:
+                out.append(uid)
+        return out
+
+    # 3. The core write — everything after this is best-effort.
+    await client.update(
+        ENGAGEMENT,
+        engagement_id,
+        {
+            "mentorProfileId": mentor_profile_id,
+            "assignedUserId": new_user_id,
+            "assignedUsersIds": _swap(list(current.get("assignedUsersIds") or [])),
+            "engagementAssignedDate": espo_now(),
+        },
+    )
+
+    reassignment_errors: list[dict[str, str]] = []
+
+    # 4. Related client records.
+    contact_ids: set[str] = set()
+    client_id = None
+    account_id = None
+    try:
+        eng = await client.get(
+            ENGAGEMENT,
+            engagement_id,
+            select="primaryEngagementContactId,engagementClientId,clientOrganizationId",
+        )
+        if eng.get("primaryEngagementContactId"):
+            contact_ids.add(eng["primaryEngagementContactId"])
+        related = await client.list_related(
+            ENGAGEMENT, engagement_id, ENGAGEMENT_CONTACTS, select="id", max_size=200
+        )
+        for r in related.get("list", []):
+            contact_ids.add(r["id"])
+        client_id = eng.get("engagementClientId")
+        account_id = eng.get("clientOrganizationId")
+    except EspoError as exc:
+        reassignment_errors.append({"entity": ENGAGEMENT, "id": engagement_id, "error": str(exc)})
+
+    contacts_updated = 0
+    for cid in sorted(contact_ids):
+        try:
+            await client.update(CONTACT, cid, _assigned_user_payload(CONTACT, new_user_id))
+            contacts_updated += 1
+        except EspoError as exc:
+            reassignment_errors.append({"entity": CONTACT, "id": cid, "error": str(exc)})
+
+    async def _swap_update(entity: str, rid: str) -> bool:
+        payload: dict[str, Any] = {"assignedUserId": new_user_id}
+        if entity in USES_ASSIGNED_USERS:
+            rec = await client.get(entity, rid, select="assignedUsersIds")
+            payload["assignedUsersIds"] = _swap(list(rec.get("assignedUsersIds") or []))
+        await client.update(entity, rid, payload)
+        return True
+
+    client_profile_updated = False
+    if client_id:
+        try:
+            client_profile_updated = await _swap_update(CLIENT_PROFILE, client_id)
+        except EspoError as exc:
+            reassignment_errors.append({"entity": CLIENT_PROFILE, "id": client_id, "error": str(exc)})
+
+    account_updated = False
+    if account_id:
+        try:
+            account_updated = await _swap_update(ACCOUNT, account_id)
+        except EspoError as exc:
+            reassignment_errors.append({"entity": ACCOUNT, "id": account_id, "error": str(exc)})
+
+    # 5. The engagement's sessions (CSession read/edit=own rides assignedUsers,
+    # so without the stamp the new mentor can't see or edit the history).
+    # Per-session best-effort; the old mentor keeps sessions they personally own.
+    sessions_updated = 0
+    sessions_total = 0
+    try:
+        sess = await client.list_related(
+            ENGAGEMENT, engagement_id, ENGAGEMENT_SESSIONS_LINK,
+            select="assignedUserId,assignedUsersIds", max_size=200,
+        )
+        for s in sess.get("list", []):
+            sessions_total += 1
+            cur = list(s.get("assignedUsersIds") or [])
+            new_ids = list(cur)
+            if new_user_id not in new_ids:
+                new_ids.append(new_user_id)
+            if (
+                old_user_id
+                and old_user_id in new_ids
+                and old_user_id not in protected
+                and s.get("assignedUserId") != old_user_id
+            ):
+                new_ids = [u for u in new_ids if u != old_user_id]
+            if new_ids == cur:
+                sessions_updated += 1  # already correct
+                continue
+            try:
+                await client.update(SESSION, s["id"], {"assignedUsersIds": new_ids})
+                sessions_updated += 1
+            except EspoError as exc:
+                reassignment_errors.append({"entity": SESSION, "id": s["id"], "error": str(exc)})
+    except EspoError as exc:
+        reassignment_errors.append(
+            {"entity": SESSION, "id": engagement_id, "error": str(exc)}
+        )
+
+    # 6. History — Doug's exact wording first, audit detail after. Date in
+    # CBM's timezone (Cleveland), not UTC, so the stamp matches the office day.
+    when = datetime.now(ZoneInfo("America/New_York")).strftime("%m/%d/%Y")
+    note = (
+        f"Mentor {old_name} was replaced with Mentor {mentor.get('name')} on "
+        f"{when} by user {actor or 'unknown'}. "
+        f"(Client Administration app — re-homed to the new mentor's user: "
+        f"{contacts_updated}/{len(contact_ids)} contact(s), "
+        f"{'client profile' if client_profile_updated else ('client profile: FAILED' if client_id else 'client profile: no link')}, "
+        f"{'company' if account_updated else ('company: FAILED' if account_id else 'company: no link')}, "
+        f"{sessions_updated}/{sessions_total} session(s).)"
+    )
+    if reassignment_errors:
+        note += (
+            f" {len(reassignment_errors)} related record(s) could not be re-homed —"
+            " reassign them in the CRM."
+        )
+    await post_stream_note(client, ENGAGEMENT, engagement_id, note)
+
+    log.info(
+        "reassigned engagement=%s mentor %s -> %s user %s -> %s contacts=%d/%d "
+        "client=%s account=%s sessions=%d/%d errors=%d",
+        engagement_id, old_profile_id, mentor_profile_id, old_user_id, new_user_id,
+        contacts_updated, len(contact_ids), client_profile_updated, account_updated,
+        sessions_updated, sessions_total, len(reassignment_errors),
+    )
+    if reassignment_errors:
+        log.warning("reassign engagement=%s partial re-homing: %s", engagement_id, reassignment_errors)
+    return {
+        "engagementId": engagement_id,
+        "engagementStatus": current.get("engagementStatus"),
+        "mentorProfileId": mentor_profile_id,
+        "mentorName": mentor.get("name"),
+        "oldMentorName": old_name,
+        "assignedUserId": new_user_id,
+        "contactsUpdated": contacts_updated,
+        "contactsTotal": len(contact_ids),
+        "clientProfileUpdated": client_profile_updated,
+        "accountUpdated": account_updated,
+        "sessionsUpdated": sessions_updated,
+        "sessionsTotal": sessions_total,
         "reassignmentErrors": reassignment_errors,
     }
