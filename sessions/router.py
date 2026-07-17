@@ -187,6 +187,13 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 else None
             ),
             "statusKey": cfg.list_status_key,
+            # Grid one-click status transition (mentor: accept an assigned
+            # engagement — Pending Acceptance → Assigned). None = no action.
+            "statusAccept": (
+                {"from": cfg.list_status_accept[0], "to": cfg.list_status_accept[1]}
+                if cfg.list_status_accept
+                else None
+            ),
             "contactKey": cfg.list_contact_key,
             "companyKey": cfg.list_company_key,
             "emptyMessage": cfg.empty_message,
@@ -329,6 +336,25 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             raise HTTPException(status_code=400, detail=str(exc))
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not load details")
+
+    if cfg.list_status_accept:
+
+        @router.post("/records/{parent_id}/accept")
+        async def accept_record(parent_id: str, request: Request) -> dict:
+            """The grid's accept action: Pending Acceptance → Assigned, written
+            as the signed-in user. 400 (nothing written) when the engagement has
+            already moved on — the frontend reloads the grid."""
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            try:
+                return await service.accept_engagement(
+                    cfg, client, parent_id,
+                    actor=user.get("name") or user.get("userName"),
+                )
+            except service.SessionError as exc:
+                raise HTTPException(status_code=400, detail=str(exc))
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not accept the engagement")
 
     @router.get("/sessions/{session_id}")
     async def session_detail(session_id: str, request: Request) -> dict:

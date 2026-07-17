@@ -4,6 +4,37 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.78.0] — 2026-07-17
+
+Mentor Sessions grid: accept an engagement in place, and reach the mentor
+personally from the pop-up. 9 new tests (662 green); both flows verified in
+the stubbed-browser harness (arm → accept → row re-renders Assigned + success
+notice; stale 400 → readable error + grid reload; peek shows Personal email
+as a compose link right after CBM email). Not yet driven against the live CRM.
+
+### Added
+- **Personal (home) email in the mentor pop-up.** The Assigned Mentor peek
+  (grid column, Overview rail — every `CMentorProfile` pop-up) now shows the
+  mentor's linked Contact's email address as a **"Personal email"** row right
+  after the CBM address, rendered as the standard compose/mailto link, so a
+  colleague can email them personally in two clicks. Best-effort: no linked
+  Contact, or a forbidden Contact read, just omits the row
+  (`sessions/service.peek` + `_mentor_personal_email`).
+- **Accept an engagement from the grid's Status column.** A mentor-domain
+  engagement in **Pending Acceptance** renders its status cell as an amber
+  pill button: first click arms it ("Accept — set to Assigned?"), second
+  click moves the engagement to **Assigned** via the new
+  `POST /{slug}/api/records/{id}/accept` (registered only where the domain
+  declares the transition — `DomainConfig.list_status_accept`, mentor only).
+  The server re-reads the status first and rejects with a readable 400 when
+  the row went stale (nothing written — the v0.72.1 stale-guard shape); the
+  frontend then reloads the grid. A best-effort stream note stamps the
+  acceptance into the engagement's history naming the acting user (the
+  v0.74.0 audit-trail convention). Written as the signed-in user, so the
+  mentor's own ACL applies (mentors are in the engagement's assignedUsers).
+- The mentor pop-up's kind label now reads "Mentor profile" (was the raw
+  entity name `CMENTORPROFILE`).
+
 ## [0.77.0] — 2026-07-17
 
 Reliability hardening **Phase 1** — the four P0 findings of the 2026-07-17

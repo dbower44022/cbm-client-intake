@@ -388,14 +388,20 @@
           cl.addEventListener("click", function () { openPeek("Contact", r.contactId, r[c.key]); });
           td.appendChild(cl);
         } else if (c.key === "mentor" && r.mentorId && r[c.key]) {
-          // Assigned Mentor -> the mentor-profile pop-up (CBM email renders
-          // as a compose/mailto link there, so a co-mentor can email the
+          // Assigned Mentor -> the mentor-profile pop-up (CBM + personal email
+          // render as compose/mailto links there, so a co-mentor can email the
           // primary mentor in two clicks).
           var ml = document.createElement("button");
           ml.type = "button"; ml.className = "sx__link";
           ml.textContent = r[c.key];
           ml.addEventListener("click", function () { openPeek("CMentorProfile", r.mentorId, r[c.key]); });
           td.appendChild(ml);
+        } else if (config.statusAccept && c.key === config.statusKey &&
+                   r[c.key] === config.statusAccept.from) {
+          // Status cell of a Pending Acceptance engagement -> a two-step accept
+          // button (product convention: no browser confirm dialogs). Second
+          // click sets the status to Assigned via the server (stale-guarded).
+          td.appendChild(statusAcceptButton(r));
         } else {
           td.textContent = r[c.key] || "—";
         }
@@ -404,6 +410,33 @@
       tb.appendChild(tr);
     });
     show($("recordsTable"));
+  }
+
+  // The grid's accept action: first click arms ("Accept — set to Assigned?"),
+  // second click posts. A 400 means the row went stale (someone else changed
+  // the status) — the message shows and the grid reloads to correct itself.
+  function statusAcceptButton(r) {
+    var btn = document.createElement("button");
+    btn.type = "button"; btn.className = "sx__link sx__accept";
+    btn.textContent = r[config.statusKey];
+    btn.title = "Click to accept this engagement (sets the status to " + config.statusAccept.to + ")";
+    var armed = false;
+    btn.addEventListener("click", async function () {
+      if (!armed) { armed = true; btn.textContent = "Accept — set to " + config.statusAccept.to + "?"; return; }
+      btn.disabled = true; btn.textContent = "Saving…";
+      try {
+        var res = await api("/records/" + encodeURIComponent(r.id) + "/accept", { method: "POST" });
+        r[config.statusKey] = (res && res.to) || config.statusAccept.to;
+        notice("listNotice", "Engagement accepted — the status is now " + r[config.statusKey] + ".", "success");
+        refreshStatusFilter();
+        renderTable();
+      } catch (e) {
+        if (e.status === 401) { showLogin(); return; }
+        notice("listNotice", e.message, "error");
+        loadRecords();  // stale guard / failure — re-sync the grid with the CRM
+      }
+    });
+    return btn;
   }
 
   function fmtDate(v) { return v ? String(v).slice(0, 10) : "—"; }
@@ -2235,6 +2268,7 @@
     if (entity === "CClientProfile") return "Client business profile";
     if (entity === "CPartnerProfile") return "Partnership profile";
     if (entity === "CSponsorProfile") return "Sponsor profile";
+    if (entity === "CMentorProfile") return "Mentor profile";
     return entity;
   }
 

@@ -1328,7 +1328,23 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-17)
 
-**Main is at v0.77.0** (2026-07-17, 653 tests green, committed NOT pushed) —
+**Main is at v0.78.0** (2026-07-17, 662 tests green, committed NOT pushed) —
+**Mentor Sessions grid: accept-in-place + personal email on the mentor
+pop-up** (Doug's request). (1) Every `CMentorProfile` peek (grid Assigned
+Mentor column, Overview rail) now shows the linked Contact's email as a
+**"Personal email"** compose link right after CBM email — best-effort
+(`service.peek` + `_mentor_personal_email`; no Contact / forbidden read ⇒
+row omitted). (2) A **Pending Acceptance** engagement's Status cell is an
+amber two-step accept pill → `POST /records/{id}/accept` moves it to
+**Assigned** (declared via `DomainConfig.list_status_accept`, mentor domain
+only; server re-reads status first — stale row ⇒ readable 400, nothing
+written, frontend reloads the grid; best-effort stream note names the
+acting user, v0.74.0 convention; written as the signed-in user). Both flows
+verified in the stub harness; **NOT yet driven live** (mentor edits
+CEngagement at own via assignedUsers membership, so the write should pass —
+same path as the v0.61.0 activation write).
+
+Before that: **v0.77.0** (2026-07-17, 653 tests green, committed NOT pushed) —
 **Reliability hardening Phase 1** (the four P0 findings + worker tracebacks
 from the 2026-07-17 reliability review; review = `reliability-review-2026-07-17.md`,
 phased kickoff prompt = `prompts/reliability-hardening-prompt-v0.1.md`, both

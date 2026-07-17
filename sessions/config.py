@@ -119,6 +119,11 @@ class DomainConfig:
     list_contact_id_attr: Optional[str] = None
     # Grid column key that holds the record's status (enables the status filter).
     list_status_key: Optional[str] = None
+    # Optional one-click status transition on the grid's status cell:
+    # (from, to) — a row whose status equals ``from`` renders as a two-step
+    # accept button that moves it to ``to`` (the mentor accepting an assigned
+    # engagement). The server re-checks ``from`` before writing (stale guard).
+    list_status_accept: Optional[tuple[str, str]] = None
     # Grid column key that is the COMPANY — rendered as a link opening the
     # standard aggregated company/client pop-up (same peek the Overview uses).
     # ``list_company_aggregate`` = (entity, id attr on the raw record; "id" =
@@ -265,6 +270,8 @@ MENTOR = DomainConfig(
     list_contact_key="contact",
     list_contact_id_attr="primaryEngagementContactId",
     list_status_key="status",
+    # A mentor accepts a newly-assigned engagement straight from the grid.
+    list_status_accept=("Pending Acceptance", "Assigned"),
     list_company_key="company",
     list_company_aggregate=(("Account", "clientOrganizationId"),
                             ("CClientProfile", "engagementClientId")),

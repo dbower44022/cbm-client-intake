@@ -457,6 +457,59 @@ async def test_peek_contact_builds_copy_card_and_address():
 
 
 @pytest.mark.asyncio
+async def test_peek_mentor_profile_adds_personal_email_from_contact():
+    """The mentor pop-up shows the linked Contact's personal (home) email right
+    after the CBM address, so a colleague can also reach them personally."""
+    fake = Fake(records={
+        ("CMentorProfile", "mp1"): {
+            "name": "Douglas Bower", "mentorType": "Mentor", "mentorStatus": "Active",
+            "cbmEmail": "doug.bower@cbmentors.org", "contactRecordId": "c9"},
+        ("Contact", "c9"): {"emailAddress": "doug@home.example"},
+    })
+    res = await service.peek(fake, "CMentorProfile", "mp1")
+    labels = [f["label"] for f in res["fields"]]
+    personal = next(f for f in res["fields"] if f["label"] == "Personal email")
+    assert personal["value"] == "doug@home.example" and personal["type"] == "email"
+    assert labels.index("Personal email") == labels.index("CBM email") + 1
+
+
+@pytest.mark.asyncio
+async def test_peek_mentor_profile_personal_email_without_cbm_email():
+    # No CBM email stored: the personal email still shows, after the identity rows.
+    fake = Fake(records={
+        ("CMentorProfile", "mp1"): {
+            "name": "Douglas Bower", "mentorType": "Mentor", "mentorStatus": "Active",
+            "contactRecordId": "c9"},
+        ("Contact", "c9"): {"emailAddress": "doug@home.example"},
+    })
+    res = await service.peek(fake, "CMentorProfile", "mp1")
+    labels = [f["label"] for f in res["fields"]]
+    assert labels == ["Mentor type", "Status", "Personal email"]
+
+
+@pytest.mark.asyncio
+async def test_peek_mentor_profile_personal_email_best_effort():
+    """No linked Contact, or a forbidden/failed Contact read, just omits the row
+    — it never breaks the pop-up."""
+    fake = Fake(records={
+        ("CMentorProfile", "mp1"): {"name": "D", "mentorStatus": "Active"}})
+    res = await service.peek(fake, "CMentorProfile", "mp1")
+    assert "Personal email" not in {f["label"] for f in res["fields"]}
+
+    class ContactForbidden(Fake):
+        async def get(self, entity, record_id, select=None):
+            if entity == "Contact":
+                raise EspoError("get Contact failed: HTTP 403 Forbidden")
+            return await super().get(entity, record_id, select)
+
+    fake2 = ContactForbidden(records={
+        ("CMentorProfile", "mp1"): {"name": "D", "mentorStatus": "Active",
+                                    "contactRecordId": "c9"}})
+    res2 = await service.peek(fake2, "CMentorProfile", "mp1")
+    assert "Personal email" not in {f["label"] for f in res2["fields"]}
+
+
+@pytest.mark.asyncio
 async def test_get_detail_includes_comentors_for_mentor():
     fake = Fake(
         records={("CEngagement", "E1"): {"name": "Eng", "engagementStatus": "Active"}},
@@ -816,6 +869,38 @@ async def test_create_session_partner_domain_stamps_creator_only():
     await service.create_session(PARTNER, fake, "P1", {"name": "S"}, None, owner_user_id="u1")
     _, payload = fake.created[0]
     assert payload["assignedUsersIds"] == ["u1"]
+
+
+# --- accept an assigned engagement from the grid ----------------------------
+
+@pytest.mark.asyncio
+async def test_accept_engagement_moves_pending_to_assigned():
+    fake = Fake(records={("CEngagement", "E1"): {"engagementStatus": "Pending Acceptance"}})
+    res = await service.accept_engagement(MENTOR, fake, "E1", actor="The Boss")
+    assert res == {"status": "ok", "from": "Pending Acceptance", "to": "Assigned"}
+    assert ("CEngagement", "E1", {"engagementStatus": "Assigned"}) in fake.updates
+    # the v0.74.0 audit trail: a stream note naming the acting user
+    notes = [p for e, p in fake.created if e == "Note"]
+    assert len(notes) == 1 and notes[0]["parentId"] == "E1"
+    assert "by The Boss" in notes[0]["post"]
+    assert "Pending Acceptance" in notes[0]["post"] and "Assigned" in notes[0]["post"]
+
+
+@pytest.mark.asyncio
+async def test_accept_engagement_rejects_stale_status():
+    # The stale-grid guard: the engagement already moved on => 400, nothing written.
+    fake = Fake(records={("CEngagement", "E1"): {"engagementStatus": "Assigned"}})
+    with pytest.raises(service.SessionError, match="no longer"):
+        await service.accept_engagement(MENTOR, fake, "E1")
+    assert fake.updates == [] and fake.created == []
+
+
+@pytest.mark.asyncio
+async def test_accept_engagement_only_on_domains_that_declare_it():
+    fake = Fake(records={("CPartnerProfile", "P1"): {"partnershipStatus": "Active"}})
+    with pytest.raises(service.SessionError):
+        await service.accept_engagement(PARTNER, fake, "P1")
+    assert fake.updates == []
 
 
 # --- first completed session activates the engagement -----------------------
@@ -1352,6 +1437,46 @@ def test_session_endpoint_reports_domain(monkeypatch):
     # All five tabs are built (Documents since DOC-MGMT Phase 1 — it gates on
     # docsEnabled client-side, not on a placeholder flag).
     assert not any("placeholder" in t for t in tabs)
+
+
+def test_session_config_reports_status_accept(monkeypatch):
+    # The mentor grid's accept action rides the /session config; the other
+    # domains have no engagement lifecycle so they report None.
+    _as(monkeypatch, _USER)
+    with TestClient(_app(monkeypatch)) as c:
+        mentor = c.get("/mentorsessions/api/session").json()
+        partner = c.get("/partnersessions/api/session").json()
+    assert mentor["statusAccept"] == {"from": "Pending Acceptance", "to": "Assigned"}
+    assert partner["statusAccept"] is None
+
+
+def test_accept_endpoint_mentor_only(monkeypatch):
+    _as(monkeypatch, _USER)
+
+    async def fake_accept(cfg, client, parent_id, actor=None):
+        return {"status": "ok", "from": "Pending Acceptance", "to": "Assigned",
+                "actor": actor, "id": parent_id}
+
+    monkeypatch.setattr("sessions.service.accept_engagement", fake_accept)
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.post("/mentorsessions/api/records/E1/accept")
+        assert r.status_code == 200
+        assert r.json()["to"] == "Assigned" and r.json()["actor"] == "The Boss"
+        # registered only where the domain declares the transition — on partner
+        # the path falls through to the static frontend mount (405 for POST)
+        assert c.post("/partnersessions/api/records/P1/accept").status_code in (404, 405)
+
+
+def test_accept_endpoint_maps_stale_guard_to_400(monkeypatch):
+    _as(monkeypatch, _USER)
+
+    async def stale(cfg, client, parent_id, actor=None):
+        raise service.SessionError('This engagement is no longer "Pending Acceptance" — refresh the list.')
+
+    monkeypatch.setattr("sessions.service.accept_engagement", stale)
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.post("/mentorsessions/api/records/E1/accept")
+    assert r.status_code == 400 and "no longer" in r.json()["detail"]
 
 
 def test_partner_has_no_comentor_endpoints(monkeypatch):

@@ -79,6 +79,14 @@ body.sx__col-resizing, body.sx__col-resizing * { cursor: col-resize !important; 
 .sx__link:hover { text-decoration: underline; }
 /* Record with a session scheduled today (viewer-local): red + bold in the grid. */
 .sx__link--today { color: #b3251d; font-weight: 800; }
+/* Grid status accept action (Pending Acceptance -> Assigned): an amber pill so
+   the awaiting-acceptance state stands out as clickable; disabled while saving. */
+.sx__accept {
+  display: inline-block; padding: 0.15rem 0.55rem; border-radius: 999px;
+  background: #fdf3e0; border: 1px solid #e9c983; color: #7a5410;
+}
+.sx__accept:hover { text-decoration: none; background: #fbe8c4; }
+.sx__accept:disabled { cursor: default; opacity: 0.6; }
 .sx__sm { padding: 0.25rem 0.6rem; font-size: 0.85rem; }
 
 /* Detail */

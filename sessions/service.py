@@ -639,7 +639,11 @@ async def peek(client: SessionClient, entity: str, record_id: str) -> dict[str, 
     spec = PEEK_FIELDS.get(entity)
     if spec is None:
         raise SessionError(f"Cannot look up {entity} records.")
-    extra = _CONTACT_ADDRESS_ATTRS if entity == CONTACT else ()
+    extra: tuple[str, ...] = ()
+    if entity == CONTACT:
+        extra = _CONTACT_ADDRESS_ATTRS
+    elif entity == MENTOR_PROFILE:
+        extra = ("contactRecordId",)  # → the linked Contact's personal email
     select = ",".join(dict.fromkeys(["name", *(attr for attr, _, _ in spec), *extra]))
     try:
         rec = await client.get(entity, record_id, select=select)
@@ -663,7 +667,30 @@ async def peek(client: SessionClient, entity: str, record_id: str) -> dict[str, 
         if address:
             fields.append({"label": "Address", "value": "\n".join(address), "type": "longtext"})
         result["copyText"] = _contact_card(rec, address)
+    elif entity == MENTOR_PROFILE:
+        # The mentor's personal (home) email lives on the linked Contact — shown
+        # next to the CBM address so a colleague can also reach them personally.
+        email = await _mentor_personal_email(client, rec.get("contactRecordId"))
+        if email:
+            pos = next(
+                (i + 1 for i, f in enumerate(fields) if f["label"] == "CBM email"),
+                sum(1 for f in fields if f["label"] in ("Mentor type", "Status")),
+            )
+            fields.insert(pos, {"label": "Personal email", "value": email, "type": "email"})
     return result
+
+
+async def _mentor_personal_email(client: SessionClient, contact_id: Any) -> Optional[str]:
+    """The mentor's linked Contact's email address — best-effort (a missing
+    link, a forbidden read, or any CRM failure just means no row is shown)."""
+    if not contact_id:
+        return None
+    try:
+        contact = await client.get(CONTACT, str(contact_id), select="emailAddress")
+    except EspoError as exc:
+        log.debug("mentor personal email unavailable (contact %s): %s", contact_id, exc)
+        return None
+    return contact.get("emailAddress") or None
 
 
 # The transcript column stays out of the base select: it is feature-detected
@@ -821,6 +848,41 @@ async def _activate_engagement_on_completed(
         log.warning("could not activate engagement %s after a completed session: %s",
                     parent_id, exc)
         return {"activated": False, "error": str(exc)}
+
+
+async def accept_engagement(
+    cfg: DomainConfig,
+    client: SessionClient,
+    parent_id: str,
+    actor: Optional[str] = None,
+) -> dict[str, Any]:
+    """The mentor accepts a newly-assigned engagement from the grid: the domain's
+    ``list_status_accept`` transition (Pending Acceptance → Assigned), written as
+    the signed-in user so EspoCRM enforces their ACL.
+
+    The status is re-read first and the call rejected (:class:`SessionError` →
+    a 400, nothing written) when the record has moved on — the stale-grid guard,
+    same shape as Client Administration's assign (v0.72.1). A best-effort stream
+    note stamps the acceptance into the engagement's history naming the actor
+    (the v0.74.0 audit-trail convention)."""
+    if not cfg.list_status_accept or cfg.parent_entity != ENGAGEMENT:
+        raise SessionError("This record's status cannot be changed here.")
+    from_status, to_status = cfg.list_status_accept
+    eng = await client.get(ENGAGEMENT, parent_id, select="engagementStatus")
+    current = eng.get("engagementStatus")
+    if current != from_status:
+        raise SessionError(
+            f'This engagement is no longer "{from_status}"'
+            f'{f" (it is now {current!r})" if current else ""} — refresh the list.'
+        )
+    await client.update(ENGAGEMENT, parent_id, {"engagementStatus": to_status})
+    log.info("engagement %s accepted: %s -> %s", parent_id, from_status, to_status)
+    await post_stream_note(
+        client, ENGAGEMENT, parent_id,
+        f"Engagement accepted via the session tools{_by(actor)} — "
+        f"status {from_status} → {to_status}.",
+    )
+    return {"status": "ok", "from": from_status, "to": to_status}
 
 
 async def create_session(
