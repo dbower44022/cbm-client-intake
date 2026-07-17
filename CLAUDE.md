@@ -1222,7 +1222,38 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   Note: crm-test seed sessions carry out-of-enum `sessionType` values (harmless; a
   data-hygiene cleanup). **UI polish is the next work item** (a follow-up session).
 
-## Current status (updated 2026-07-16)
+## Current status (updated 2026-07-17)
+
+**Main is at v0.74.0** (this session, 2026-07-16/17; 595 tests green;
+committed, push per convention) — **the double-assignment forensics session**,
+three deliverables:
+1. **v0.72.1 — stale-assign guard.** Client Administration's Assign re-reads
+   the engagement before any write and 400s (nothing written) if it already
+   has a mentor or is no longer `Submitted`; the frontend reloads the grid on
+   any Assign 400. (Mechanics in the Assign-action bullet.)
+2. **Forensics conclusion (prod eng `6a4955b75f19ff03a`, Laura Wiegand):**
+   the Sharon→Robert mentor swap was NOT a second app assignment — Sharon
+   Rose edited the record directly in the CRM UI 2026-07-10 (added Robert to
+   Assigned Users, no status change/date stamp/re-homing; `additionalMentors`
+   empty; `engagementAssignedDate` null). Key lesson: app writes run as the
+   signed-in user, so they are INDISTINGUISHABLE in Espo history from hand
+   edits by that user, and `mentorProfile` is not audited (no stream entry
+   when it changes). Doug manually re-homed the contact as Admin; Sharon may
+   still be in the engagement/client-profile assignedUsers if not cleaned up.
+3. **v0.74.0 — stream-note audit trail + co-mentor client-record access
+   (Doug's defect report).** `core/stream.post_stream_note` (best-effort
+   Note type=Post) now stamps every app Assign and co-mentor add/remove into
+   the engagement's history, naming the app and the outcome; and
+   `add_comentor`/`remove_comentor` stamp/un-stamp the co-mentor's User on
+   the engagement's client records (contacts / client profile / company with
+   linkedCompany fallback) — previously engagement-only, so the co-mentor
+   couldn't see the client's records. Mechanics in the Assign-action and
+   Co-mentor-visibility bullets. **Open (live checks):** (a) first live
+   assign / co-mentor add should confirm the stream note actually posts
+   under a non-admin staff role (Note create + stream access; failure is
+   logged, never blocking); (b) crm-test parity: Contact needs "Multiple
+   Assigned Users" enabled (Doug enabled it on PROD 2026-07-16 — without it
+   the contact stamp is silently ignored).
 
 **The comms/permissions session (2026-07-15/16, ran parallel to the ones
 below; its version numbers interleave):** three arcs, all committed (the
