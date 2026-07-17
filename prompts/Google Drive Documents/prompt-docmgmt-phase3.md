@@ -23,8 +23,27 @@ Operating mode: DETAIL
 
 ## Objective
 
-Implement Phase 3 — CRM integration and lifecycle, per the PRD:
+Implement Phase 3 — CRM integration and lifecycle, per the PRD (v1.3 —
+note the finalized access model in §3.4 / D-08 / D-09; Doug's rulings
+2026-07-16 are binding: no person is a drive member, all Drive ops run as
+the service account, and Drive-side access is folder-level **Commenter**
+grants mirroring CRM assignments, with mentor personnel folders granted to
+NO ONE):
 
+0. **Drive access grants (DOC-09 revised — the access model's build):**
+   folder-level Commenter grants issued/revoked by the same app actions
+   that change entitlements — engagement assignment (`assign_engagement`),
+   co-mentor add/remove, partner/sponsor manager changes, mentor
+   offboarding — plus grants on folder creation for already-entitled
+   people; suppress Google's sharing-notification emails
+   (`sendNotificationEmail=false`); NEVER grant on `Mentors/` (Contact)
+   folders. A **nightly reconciliation job** (worker, monitoring-check
+   pattern) re-derives the full grant set from the CRM and corrects both
+   directions of drift (log corrections, alert on unexpected grants).
+   Grant/revoke failures never fail the business action (best-effort +
+   reconciliation backstop). Open in Drive stays: it now works for
+   grant-holders (already correct — the button opens webViewLink; Google
+   enforces the grant).
 1. **Archive / restore (DOC-07):** enable the existing disabled Archive
    action. Archive sets `status = archived` in metadata AND moves the Drive
    file to an `/_Archived` subfolder of the record folder; an "include
@@ -49,12 +68,14 @@ Implement Phase 3 — CRM integration and lifecycle, per the PRD:
    folder-creation time (Phase 1/2 code doesn't store it — a small
    `app_document` or folder-cache addition, or a Drive `files.get` on the
    folder id).
-3. **Open-issue scoping (PRD §8, resolve with Doug, build only what he
-   rules in):** OI-02 link-existing-Drive-files (Drive picker, metadata row
-   without upload — "a likely fast follow"); OI-05 the orphan/duplicate
-   report ("decide whether the report is in scope for Phase 3"); OI-04
-   scope narrowing (evaluate only — the shared-drive listing likely keeps
-   full `drive` scope).
+3. **Open-issue scoping (PRD §8 as of v1.3, resolve with Doug, build only
+   what he rules in):** OI-02 link-existing-Drive-files (Drive picker,
+   metadata row without upload — "a likely fast follow"); OI-05 the
+   orphan/duplicate report (largely closed by the access model — only
+   admin-console actions can create drive-side surprises now); OI-07
+   whether to set `copyRequiresWriterPermission` on granted folders
+   (hides download/print/copy from commenters in Drive's UI). OI-04 is
+   superseded (no per-user OAuth exists).
 
 ## Out of scope this session
 
@@ -71,8 +92,12 @@ Retention/purge policies. Anything Phase 4+ or not in the PRD.
 
 ## Definition of done
 
-- DOC-07 + DOC-08 implemented (plus whatever OI-02/OI-05 scope Doug rules
-  in); tests passing; ruff clean.
+- DOC-09 (grants + reconciliation) + DOC-07 + DOC-08 implemented (plus
+  whatever OI-02/OI-05/OI-07 scope Doug rules in); tests passing; ruff
+  clean.
+- Grants verified live: assign a mentor → their folder appears in Shared
+  with me at Commenter (can comment, cannot upload/edit); unassign →
+  access gone; the nightly reconciliation corrects a hand-made drift.
 - The `documentsFolderUrl` CRM field spec handed off (and, if built in
   time, the write-back verified live on crm-test).
 - Live verification against the real shared drive: archive a document

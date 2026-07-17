@@ -1310,6 +1310,27 @@ Slides→.pptx; `GOOGLE_NATIVE_DOWNLOADS` + `DriveClient.export_file`).
 sessions: sessions-grid sorting/resizing + the assignments stale-assign
 guard.)
 
+**ACCESS MODEL RULED + DOCUMENTED (Doug, 2026-07-16/17 — the former "Open
+in Drive fate" ruling is RESOLVED as option 4):** no person is EVER a
+member of the CBM Documents shared drive (service account = sole member;
+Workspace admins have console-only emergency access); all Drive ops run
+as the SA (`GDRIVE_IDENTITY=service`); Drive-side access = per-person
+**folder-level COMMENTER grants** mirroring CRM assignments (engagement
+folders → assigned mentor + co-mentors; partner/sponsor folders → their
+manager; **`Mentors/` personnel folders → NO ONE, app-only**), revoked by
+the same app actions that end the entitlement + a **nightly
+reconciliation** re-deriving grants from the CRM; Commenter = read/
+download/comment only, so uploads can never bypass the app's index. Open
+in Drive STAYS (works for grant-holders). **Both governing docs revised
+to v1.3** (`prompts/Google Drive Documents/` PRD — §3.4 rewritten, D-01
+superseded, new D-08/D-09, DOC-09 = Drive Access Grants, OI-04
+superseded/OI-05 largely closed/OI-07 new copy-hardening question; Exec
+Summary — §1.2 "The Access Model, Precisely" + §1.3 Anticipated Questions
+for the confidentiality audience). NOTE: `prds/CBM-DocMgmt-Executive-
+Summary.docx` is a STALE v1.0 copy Doug had open in LibreOffice — sync it
+from the prompts/ v1.3 once he closes it. The grants build is Phase 3
+scope (`prompt-docmgmt-phase3.md`, objective 0 + live-verification DoD).
+
 Before that: **v0.71.0** — **Documents:
 service-account identity + in-app Office viewing** (Doug's rulings: users
 must NOT have Drive access — drive membership was never granted broadly,

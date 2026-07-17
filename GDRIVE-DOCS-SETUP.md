@@ -197,9 +197,16 @@ default `Resume,Agreement,Intake Document,Pitch Deck,Other`) and
    only gate. Word/Excel/PowerPoint/CSV files now view in-app too (the
    server converts to PDF on view — a temp Google-format copy appears in
    the record folder for a few seconds during conversion; that's normal).
-   Note: the "Open in Drive" button only works for people who ARE drive
-   members — under this model that's typically nobody; its fate (remove
-   vs. per-user grants) is an open ruling.
+   Note: the "Open in Drive" button works for people holding a folder
+   grant. Per Doug's access-model ruling (PRD v1.3 §3.4, D-08/D-09), the
+   app will issue per-person, folder-level **Commenter** grants mirroring
+   CRM assignments (engagements → assigned mentor + co-mentors; partner/
+   sponsor → their manager; `Mentors/` folders → no one, app-only), with
+   a nightly reconciliation. That grants module is Phase 3 — until it
+   ships, Open in Drive resolves for no one, which is expected. Remove
+   any human members from the shared drive when switching to
+   `GDRIVE_IDENTITY=service` — the ruling is that no person is ever a
+   drive member.
 5. Troubleshooting quick map:
    - 403 `accessNotConfigured` → Task 1 not done / wrong project.
    - `unauthorized_client` / "delegation denied" → Task 2 scope line wrong
