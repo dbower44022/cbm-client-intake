@@ -52,6 +52,23 @@ GOOGLE_NATIVE_MIMES = frozenset(
     }
 )
 
+# Downloading a Google-native file yields its Office equivalent (what the
+# Drive UI's own Download does): target export MIME + the file extension.
+GOOGLE_NATIVE_DOWNLOADS: dict[str, tuple[str, str]] = {
+    "application/vnd.google-apps.document": (
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ".docx",
+    ),
+    "application/vnd.google-apps.spreadsheet": (
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ".xlsx",
+    ),
+    "application/vnd.google-apps.presentation": (
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        ".pptx",
+    ),
+}
+
 # Office formats the in-app viewer renders via convert-on-view (DOC-03/04
 # extension): copied WITH conversion to the matching Google editor format
 # (a temp file), exported to PDF, temp deleted. The stored original is never
@@ -334,20 +351,25 @@ class DriveClient:
         )
         return resp.content
 
-    async def export_pdf(self, file_id: str) -> bytes:
-        """A Google-native file (Docs/Sheets/Slides) exported to PDF (DOC-04).
-        Note the Drive export cap (~10 MB of exported content) — an oversized
-        document raises a DriveError; the caller falls back to Open in Drive."""
+    async def export_file(self, file_id: str, mime_type: str) -> bytes:
+        """A Google-native file exported to ``mime_type`` (PDF for viewing,
+        the Office equivalent for downloads). Note the Drive export cap
+        (~10 MB of exported content) — an oversized document raises a
+        DriveError; the caller falls back to Open in Drive."""
         resp = await self._send(
             "GET",
             f"{_BASE}/files/{file_id}/export",
-            params={"mimeType": PDF_MIME},
+            params={"mimeType": mime_type},
         )
         log.info(
-            "drive pdf export as %s -> %s (%d bytes)",
-            self.mailbox, file_id, len(resp.content),
+            "drive export as %s -> %s (%s, %d bytes)",
+            self.mailbox, file_id, mime_type, len(resp.content),
         )
         return resp.content
+
+    async def export_pdf(self, file_id: str) -> bytes:
+        """A Google-native file (Docs/Sheets/Slides) exported to PDF (DOC-04)."""
+        return await self.export_file(file_id, PDF_MIME)
 
     async def export_office_pdf(self, file_id: str, google_mime: str) -> bytes:
         """Convert-on-view for Office formats: copy the file WITH conversion

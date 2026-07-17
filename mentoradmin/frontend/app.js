@@ -644,13 +644,17 @@
       var c2 = document.createElement("td"); c2.textContent = d.uploadedBy || "—";
       var c3 = document.createElement("td"); c3.textContent = fmtDocDate(d.uploadedAt);
       var c4 = document.createElement("td"); c4.className = "ma__doc-acts";
-      ["View", "Open in Drive", "Archive"].forEach(function (label) {
+      ["View", "Download", "Open in Drive", "Archive"].forEach(function (label) {
         var b = document.createElement("button");
         b.type = "button"; b.className = "cbm-button cbm-button--secondary ma__sm";
         b.textContent = label;
-        // View (DOC-03) + Open in Drive (DOC-05) are live; Archive is Phase 3.
+        // View (DOC-03), Download (original bytes — opens in the locally
+        // installed app), Open in Drive (DOC-05) are live; Archive is Phase 3.
         if (label === "View") {
           b.addEventListener("click", function () { openMdocViewer(d); });
+        } else if (label === "Download") {
+          b.title = "Download the original file — open it with the application installed for its type";
+          b.addEventListener("click", function () { downloadMdoc(d); });
         } else if (label === "Open in Drive" && d.webViewLink) {
           b.addEventListener("click", function () {
             window.open(d.webViewLink, "_blank", "noopener");
@@ -704,6 +708,14 @@
     return "none";
   }
 
+  // The Download action: the stored file's EXACT bytes (no PDF conversion);
+  // Google-native files export to their Office equivalent.
+  function downloadMdoc(d) {
+    var a = document.createElement("a");
+    a.href = mdocContentUrl(d) + "&original=true";
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+
   function mdocFallback(d, failed) {
     var wrap = document.createElement("div"); wrap.className = "ma__docview-fallback";
     var p = document.createElement("p");
@@ -728,6 +740,13 @@
     var head = document.createElement("div"); head.className = "ma__docview-head";
     var title = document.createElement("h3"); title.textContent = d.filename || "Document";
     var acts = document.createElement("span"); acts.className = "ma__docview-acts";
+    // The viewer may show a PDF rendering (Office/Google-native) — this
+    // button always yields the stored file's exact bytes.
+    var dl = document.createElement("button");
+    dl.type = "button"; dl.className = "cbm-button cbm-button--secondary ma__sm";
+    dl.textContent = "Download original";
+    dl.addEventListener("click", function () { downloadMdoc(d); });
+    acts.appendChild(dl);
     if (d.webViewLink) {
       var db = document.createElement("button");
       db.type = "button"; db.className = "cbm-button cbm-button--secondary ma__sm";

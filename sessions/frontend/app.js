@@ -890,13 +890,18 @@
       var c2 = document.createElement("td"); c2.textContent = d.uploadedBy || "—";
       var c3 = document.createElement("td"); c3.textContent = fmtSessionDate(d.uploadedAt, "short");
       var c4 = document.createElement("td"); c4.className = "sx__doc-acts";
-      ["View", "Open in Drive", "Archive"].forEach(function (label) {
+      ["View", "Download", "Open in Drive", "Archive"].forEach(function (label) {
         var b = document.createElement("button");
         b.type = "button"; b.className = "cbm-button cbm-button--secondary sx__sm";
         b.textContent = label;
-        // View (DOC-03) + Open in Drive (DOC-05) are live; Archive is Phase 3.
+        // View (DOC-03), Download (the original bytes — opens in the locally
+        // installed app), and Open in Drive (DOC-05) are live; Archive is
+        // Phase 3.
         if (label === "View") {
           b.addEventListener("click", function () { openDocViewer(d); });
+        } else if (label === "Download") {
+          b.title = "Download the original file — open it with the application installed for its type";
+          b.addEventListener("click", function () { downloadDoc(d); });
         } else if (label === "Open in Drive" && d.webViewLink) {
           b.addEventListener("click", function () {
             window.open(d.webViewLink, "_blank", "noopener");
@@ -953,6 +958,15 @@
     return "none";  // anything else (zip, video, …) — Open in Drive fallback
   }
 
+  // The Download action: the stored file's EXACT bytes (formulas and all —
+  // no PDF conversion), as an attachment. Google-native files export to
+  // their Office equivalent (Sheets → .xlsx), like Drive's own Download.
+  function downloadDoc(d) {
+    var a = document.createElement("a");
+    a.href = docContentUrl(d) + "&original=true";
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+
   function docViewerFallback(d, failed) {
     var wrap = document.createElement("div"); wrap.className = "sx__docview-fallback";
     var p = document.createElement("p");
@@ -978,6 +992,19 @@
     $("docModalKind").textContent = d.docType || "Document";
     $("docModalTitle").textContent = d.filename || "Document";
     var driveBtn = $("docModalDrive");
+    // "Download original" in the viewer header (created here, not in the
+    // HTML): what the viewer SHOWS may be a PDF rendering (Office /
+    // Google-native), so the browser PDF viewer's own download button saves
+    // the rendering — this one always yields the stored file's exact bytes.
+    var dlBtn = $("docModalDownload");
+    if (!dlBtn) {
+      dlBtn = document.createElement("button");
+      dlBtn.type = "button"; dlBtn.id = "docModalDownload";
+      dlBtn.className = "cbm-button cbm-button--secondary sx__sm";
+      dlBtn.textContent = "Download original";
+      driveBtn.parentNode.insertBefore(dlBtn, driveBtn);
+    }
+    dlBtn.onclick = function () { downloadDoc(d); };
     driveBtn.hidden = !d.webViewLink;
     driveBtn.onclick = d.webViewLink ? function () {
       window.open(d.webViewLink, "_blank", "noopener");

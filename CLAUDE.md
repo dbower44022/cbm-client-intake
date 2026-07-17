@@ -1227,7 +1227,23 @@ bullets ("Details EDIT forms — mockup-v4" and "Grid + Overview session
 flags"). Still worth a live eyeball on crm-test: a past-only record's
 Overview split, a real today-session red flag, and Next Session values.
 
-**Main is at v0.71.0** (2026-07-16, committed NOT pushed) — **Documents:
+**Main is at v0.73.0** (2026-07-16, committed NOT pushed) — **Documents:
+Download action** (Doug's report: the viewer's PDF rendering is what the
+browser's PDF-viewer download saves — he expected the xlsx with formulas;
+and convert-on-view is slow when the goal is the file itself). Every
+document row + the viewer header now offer **Download** / **"Download
+original"**: the stored file's exact bytes via `?original=true` on the
+content proxy (attachment disposition, no conversion, no delay); the user
+opens it in the locally installed app — the closest a browser gets to
+"open in Excel" (it cannot launch local apps; `ms-excel:` URI schemes
+can't authenticate to our session-cookie proxy). Google-native files
+download as their Office equivalent (Sheets→.xlsx, Docs→.docx,
+Slides→.pptx; `GOOGLE_NATIVE_DOWNLOADS` + `DriveClient.export_file`).
+590 tests green; harness-verified. (v0.72.0/0.72.1 were parallel
+sessions: sessions-grid sorting/resizing + the assignments stale-assign
+guard.)
+
+Before that: **v0.71.0** — **Documents:
 service-account identity + in-app Office viewing** (Doug's rulings: users
 must NOT have Drive access — drive membership was never granted broadly,
 so the PRD's impersonate-the-manager model only ever worked for actual

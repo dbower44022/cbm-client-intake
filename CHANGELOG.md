@@ -42,6 +42,29 @@ deploy marker on App Platform.
   (e01d4cd) — this release carries the matching headers/CSS/backend, which
   HEAD needs for the grid to render correctly.
 
+## [0.73.0] — 2026-07-16
+
+### Added
+- **Documents: Download action — the original file, for the locally
+  installed application** (Doug's report: downloading from the xlsx viewer
+  yielded the PDF *rendering*, not the spreadsheet — the browser PDF
+  viewer's own download button saves what's displayed; and the
+  convert-on-view round-trip is slow when the goal is working with the
+  file, not reading it). A browser can't launch Excel/Word directly
+  against a remote file, so the equivalent: every document row (session
+  tools + Mentor Administration) gains a **Download** action, and the
+  in-app viewer header gains **"Download original"** — both stream the
+  stored file's EXACT bytes (`?original=true` on the content proxy,
+  `Content-Disposition: attachment`), formulas and all, no conversion, no
+  conversion delay; the user opens the download in whatever their machine
+  has installed for the type. Google-native files (no native bytes)
+  download as their Office equivalent — Sheets → `.xlsx`, Docs → `.docx`,
+  Slides → `.pptx` — matching Drive's own Download behavior
+  (`GOOGLE_NATIVE_DOWNLOADS`; `DriveClient.export_file` generalizes the
+  PDF export). Same immutable browser-cache headers, versioned URL.
+  6 new tests (590 green); verified in the stub harness (row + viewer
+  buttons, attachment download without page navigation).
+
 ## [0.71.0] — 2026-07-16
 
 ### Added

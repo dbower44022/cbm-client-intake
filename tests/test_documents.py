@@ -423,6 +423,10 @@ class ViewDrive(FakeDrive):
         self.exports.append((file_id, google_mime))
         return b"%PDF-office"
 
+    async def export_file(self, file_id, mime_type):
+        self.exports.append((file_id, mime_type))
+        return b"office-bytes"
+
     async def list_folder_files(self, folder_id):
         return self.folder_files.get(folder_id, [])
 
@@ -518,6 +522,49 @@ async def test_export_office_pdf_deletes_temp_even_on_failure():
         with pytest.raises(DriveError):
             await client.export_office_pdf("gdoc1", "application/vnd.google-apps.document")
     assert ("delete", "temp9") in calls  # cleanup ran despite the failure
+
+
+async def test_fetch_document_original_skips_conversion():
+    """The Download action: exact stored bytes, native MIME, no conversion —
+    an xlsx downloads as the xlsx that was uploaded (formulas intact)."""
+    drive, store = ViewDrive(), MemoryDocumentStore()
+    row = await _seed(
+        store, drive_file_id="gxlsx1", original_filename="Financials.xlsx",
+        mime_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    doc = await docs_service.fetch_document(
+        store, drive, "CEngagement", "E1", row["id"], original=True
+    )
+    assert doc["data"] == b"native-bytes"
+    assert doc["filename"] == "Financials.xlsx"
+    assert doc["mime_type"].endswith("spreadsheetml.sheet")
+    assert drive.downloads == ["gxlsx1"] and drive.exports == []
+
+
+async def test_fetch_document_original_google_native_exports_office():
+    """Google-native files have no native bytes — Download yields the Office
+    equivalent (Sheets → .xlsx), like Drive's own Download."""
+    drive, store = ViewDrive(), MemoryDocumentStore()
+    row = await _seed(
+        store, drive_file_id="gsheet1", original_filename="Budget",
+        mime_type="application/vnd.google-apps.spreadsheet",
+    )
+    doc = await docs_service.fetch_document(
+        store, drive, "CEngagement", "E1", row["id"], original=True
+    )
+    assert doc["data"] == b"office-bytes"
+    assert doc["filename"] == "Budget.xlsx"
+    assert doc["mime_type"].endswith("spreadsheetml.sheet")
+    assert drive.exports == [(
+        "gsheet1",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )]
+
+
+def test_content_headers_attachment_mode():
+    h = docs_service.content_headers("Financials.xlsx", attachment=True)
+    assert h["Content-Disposition"].startswith("attachment;")
+    assert 'filename="Financials.xlsx"' in h["Content-Disposition"]
 
 
 async def test_fetch_document_unknown_id_raises_not_found():

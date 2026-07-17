@@ -19,6 +19,7 @@ from typing import Any, Optional
 
 from core.config import Settings
 from core.gdrive import (
+    GOOGLE_NATIVE_DOWNLOADS,
     GOOGLE_NATIVE_MIMES,
     OFFICE_CONVERT_MIMES,
     PDF_MIME,
@@ -275,21 +276,24 @@ async def list_documents(
 # --- viewing (Phase 2) -------------------------------------------------------------
 
 
-def content_headers(filename: str) -> dict[str, str]:
-    """Response headers for the view proxy (DOC-06 — the browser IS the cache):
-    the frontend versions the URL by the row's modifiedTime, so the bytes at
-    any one URL are immutable — each browser holds them privately, cache hits
-    are instant with zero network, and a Drive edit (new modifiedTime → new
-    URL after the lazy refresh) invalidates automatically. No server-side
-    cache state exists (App Platform's disk is ephemeral anyway)."""
+def content_headers(filename: str, attachment: bool = False) -> dict[str, str]:
+    """Response headers for the view/download proxy (DOC-06 — the browser IS
+    the cache): the frontend versions the URL by the row's modifiedTime, so
+    the bytes at any one URL are immutable — each browser holds them
+    privately, cache hits are instant with zero network, and a Drive edit
+    (new modifiedTime → new URL after the lazy refresh) invalidates
+    automatically. ``attachment=True`` = the Download-original action: the
+    browser saves the file instead of rendering it, so the user can open it
+    in the locally installed application (Excel, Word, …)."""
     ascii_name = (
         filename.encode("ascii", "replace").decode().replace('"', "'") or "document"
     )
     quoted = urllib.parse.quote(filename)
+    kind = "attachment" if attachment else "inline"
     return {
         "Cache-Control": "private, max-age=31536000, immutable",
         "Content-Disposition": (
-            f'inline; filename="{ascii_name}"; filename*=UTF-8\'\'{quoted}'
+            f'{kind}; filename="{ascii_name}"; filename*=UTF-8\'\'{quoted}'
         ),
     }
 
@@ -300,9 +304,13 @@ def is_google_native(mime_type: Optional[str]) -> bool:
     return (mime_type or "") in GOOGLE_NATIVE_MIMES
 
 
-def _pdf_filename(filename: str) -> str:
+def _swap_extension(filename: str, ext: str) -> str:
     stem = filename.rsplit(".", 1)[0] if "." in filename else filename
-    return f"{stem or 'document'}.pdf"
+    return f"{stem or 'document'}{ext}"
+
+
+def _pdf_filename(filename: str) -> str:
+    return _swap_extension(filename, ".pdf")
 
 
 async def fetch_document(
@@ -311,31 +319,41 @@ async def fetch_document(
     entity_type: str,
     record_id: str,
     doc_id: str,
+    original: bool = False,
 ) -> dict[str, Any]:
-    """The document's viewable bytes, fetched from Drive as the signed-in user
-    (DOC-03). Binary files come back with their native MIME type; Google-native
-    formats are exported to PDF (DOC-04). Returns
-    ``{data, mime_type, filename, modified_time}`` — the caller serves it with
-    cache headers keyed on the row's modifiedTime (DOC-06, browser HTTP cache)."""
+    """The document's bytes for the view proxy (DOC-03). Default = VIEWING:
+    binary files come back native, Google-native AND Office formats arrive as
+    PDF (DOC-04 / convert-on-view). ``original=True`` = the Download action:
+    the stored file's exact bytes, no conversion (formulas and all) — except
+    Google-native files, which have no native bytes and export to their
+    Office equivalent (Sheets → .xlsx, like Drive's own Download). Returns
+    ``{data, mime_type, filename, modified_time}`` — the caller serves it
+    with cache headers keyed on the row's modifiedTime (DOC-06)."""
     row = await store.get_document(entity_type, record_id, doc_id)
     if row is None:
         raise DocsNotFound("That document isn't on this record.")
     file_id = row["driveFileId"]
     stored_mime = row.get("mimeType") or ""
+    stored_name = row.get("filename") or "document"
     if is_google_native(stored_mime):
-        data = await drive.export_pdf(file_id)
-        mime, filename = PDF_MIME, _pdf_filename(row.get("filename") or "")
-    elif stored_mime in OFFICE_CONVERT_MIMES:
+        if original:
+            mime, ext = GOOGLE_NATIVE_DOWNLOADS[stored_mime]
+            data = await drive.export_file(file_id, mime)
+            filename = _swap_extension(stored_name, ext)
+        else:
+            data = await drive.export_pdf(file_id)
+            mime, filename = PDF_MIME, _pdf_filename(stored_name)
+    elif not original and stored_mime in OFFICE_CONVERT_MIMES:
         # Office formats view via read-time conversion (copy-as-Google-format
         # → export PDF → delete the temp); the stored file is untouched.
         data = await drive.export_office_pdf(
             file_id, OFFICE_CONVERT_MIMES[stored_mime]
         )
-        mime, filename = PDF_MIME, _pdf_filename(row.get("filename") or "")
+        mime, filename = PDF_MIME, _pdf_filename(stored_name)
     else:
         data = await drive.download_file(file_id)
         mime = stored_mime or "application/octet-stream"
-        filename = row.get("filename") or "document"
+        filename = stored_name
     return {
         "data": data,
         "mime_type": mime,

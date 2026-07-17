@@ -307,13 +307,14 @@ async def mentor_upload_document(
 
 @router.get("/mentors/{mentor_id}/documents/{doc_id}/content")
 async def mentor_document_content(
-    mentor_id: str, doc_id: str, request: Request
+    mentor_id: str, doc_id: str, request: Request, original: bool = False
 ) -> Response:
     """DOC-03: stream a mentor document's bytes through the app. The mentor
     profile is read AS THE USER (their ACL gates viewing) to resolve the
-    Contact anchor; the Drive fetch runs as their own CBM identity.
-    Google-native files arrive as exported PDF (DOC-04); served immutable —
-    the frontend versions the URL by modifiedTime (DOC-06)."""
+    Contact anchor. Default = viewing (Google-native + Office formats arrive
+    as PDF); ``?original=true`` = the Download action (exact stored bytes,
+    attachment). Served immutable — the frontend versions the URL by
+    modifiedTime (DOC-06)."""
     user = _require_user(request)
     settings, store = _docs_ready()
     client = client_for(settings, user)
@@ -321,7 +322,7 @@ async def mentor_document_content(
         contact_id, _ = await _mentor_contact_anchor(client, mentor_id)
         drive = await docs_service.drive_for_user(settings, client, user)
         doc = await docs_service.fetch_document(
-            store, drive, "Contact", contact_id, doc_id
+            store, drive, "Contact", contact_id, doc_id, original=original
         )
     except docs_service.DocsNotFound as exc:
         raise HTTPException(status_code=404, detail=str(exc))
@@ -341,7 +342,7 @@ async def mentor_document_content(
     return Response(
         content=doc["data"],
         media_type=doc["mime_type"],
-        headers=docs_service.content_headers(doc["filename"]),
+        headers=docs_service.content_headers(doc["filename"], attachment=original),
     )
 
 

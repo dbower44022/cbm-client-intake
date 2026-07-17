@@ -691,14 +691,16 @@ def make_router(cfg: DomainConfig) -> APIRouter:
 
     @router.get("/records/{parent_id}/documents/{doc_id}/content")
     async def document_content(
-        parent_id: str, doc_id: str, request: Request
+        parent_id: str, doc_id: str, request: Request, original: bool = False
     ) -> Response:
         """DOC-03: stream the document's bytes through the app. The parent
         record is read first AS THE USER (their CRM ACL gates viewing, exactly
-        like the upload); the Drive fetch then runs as their own CBM identity.
-        Google-native files arrive as exported PDF (DOC-04). Served immutable —
-        the frontend versions the URL by modifiedTime, so the browser is the
-        cache (DOC-06)."""
+        like the upload). Default = viewing: Google-native AND Office formats
+        arrive as PDF (DOC-04 / convert-on-view). ``?original=true`` = the
+        Download action: the stored file's exact bytes as an attachment, so
+        the user opens it in their locally installed application. Served
+        immutable — the frontend versions the URL by modifiedTime, so the
+        browser is the cache (DOC-06)."""
         user = _require_user(request)
         settings, store = _docs_ready()
         client = client_for(settings, user)
@@ -706,7 +708,8 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             await client.get(cfg.parent_entity, parent_id, select="name")
             drive = await docs_service.drive_for_user(settings, client, user)
             doc = await docs_service.fetch_document(
-                store, drive, cfg.parent_entity, parent_id, doc_id
+                store, drive, cfg.parent_entity, parent_id, doc_id,
+                original=original,
             )
         except docs_service.DocsNotFound as exc:
             raise HTTPException(status_code=404, detail=str(exc))
@@ -726,7 +729,7 @@ def make_router(cfg: DomainConfig) -> APIRouter:
         return Response(
             content=doc["data"],
             media_type=doc["mime_type"],
-            headers=docs_service.content_headers(doc["filename"]),
+            headers=docs_service.content_headers(doc["filename"], attachment=original),
         )
 
     @router.post("/records/{parent_id}/documents/refresh")

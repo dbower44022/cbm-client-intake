@@ -328,7 +328,7 @@ def test_document_content_streams_with_immutable_cache_headers(monkeypatch):
     monkeypatch.setattr(docs_service, "drive_for_user", _fake_drive_for_user)
     seen = {}
 
-    async def fake_fetch(store, drive, entity_type, record_id, doc_id):
+    async def fake_fetch(store, drive, entity_type, record_id, doc_id, original=False):
         seen.update(entity=entity_type, record=record_id, doc=doc_id)
         return {"data": b"%PDF-1.4", "mime_type": "application/pdf",
                 "filename": "resume.pdf", "modified_time": "2026-07-16T10:00:00+00:00"}
@@ -342,6 +342,26 @@ def test_document_content_streams_with_immutable_cache_headers(monkeypatch):
     assert r.headers["cache-control"] == "private, max-age=31536000, immutable"
     assert 'filename="resume.pdf"' in r.headers["content-disposition"]
     assert seen == {"entity": "CEngagement", "record": "E1", "doc": "D1"}
+
+
+def test_document_content_original_downloads_as_attachment(monkeypatch):
+    _as(monkeypatch)
+    monkeypatch.setattr(docs_service, "get_store", lambda settings: MemoryDocumentStore())
+    monkeypatch.setattr(docs_service, "drive_for_user", _fake_drive_for_user)
+    seen = {}
+
+    async def fake_fetch(store, drive, entity_type, record_id, doc_id, original=False):
+        seen["original"] = original
+        return {"data": b"xlsx-bytes", "mime_type": "application/vnd.ms-excel",
+                "filename": "Financials.xlsx", "modified_time": None}
+
+    monkeypatch.setattr(docs_service, "fetch_document", fake_fetch)
+    with TestClient(_app(monkeypatch, gdrive_docs=True)) as c:
+        r = c.get("/mentorsessions/api/records/E1/documents/D1/content?original=true")
+    assert r.status_code == 200
+    assert seen["original"] is True
+    assert r.headers["content-disposition"].startswith("attachment;")
+    assert r.content == b"xlsx-bytes"
 
 
 def test_document_content_unknown_doc_404(monkeypatch):
@@ -404,7 +424,7 @@ def test_mentoradmin_content_anchors_to_contact(monkeypatch):
     monkeypatch.setattr(docs_service, "drive_for_user", _fake_drive_for_user)
     seen = {}
 
-    async def fake_fetch(store, drive, entity_type, record_id, doc_id):
+    async def fake_fetch(store, drive, entity_type, record_id, doc_id, original=False):
         seen.update(entity=entity_type, record=record_id, doc=doc_id)
         return {"data": b"img", "mime_type": "image/png",
                 "filename": "photo.png", "modified_time": None}
