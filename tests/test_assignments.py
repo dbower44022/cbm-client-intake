@@ -92,10 +92,12 @@ async def test_assign_sets_engagement_and_reassigns_related():
     import re
     assert re.fullmatch(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}", payload["engagementAssignedDate"])
 
-    # Contacts (primary + extra, deduped) each reassigned via single assignedUser.
+    # Contacts (primary + extra, deduped) each reassigned. Contact uses
+    # assignedUsers (collaborators) since 2026-07-16 — both attributes written.
     contact_updates = {u[1]: u[2] for u in client.updates if u[0] == service.CONTACT}
     assert set(contact_updates) == {"contact-primary", "contact-extra"}
     assert all(p["assignedUserId"] == "user-99" for p in contact_updates.values())
+    assert all(p["assignedUsersIds"] == ["user-99"] for p in contact_updates.values())
 
     # Client profile AND account get both assignment attributes — both have
     # assignedUser disabled on prod (collaborators field), so writing only the
@@ -168,6 +170,27 @@ async def test_assign_merges_assigned_users_on_client_records():
     acct = [u for u in client.updates if u[0] == service.ACCOUNT][0][2]
     assert acct["assignedUsersIds"] == ["user-co", "user-99"]
     assert acct["assignedUserId"] == "user-99"
+
+
+async def test_assign_merges_contact_assigned_users():
+    """Contacts use the collaborators field too (switched 2026-07-16) — the
+    re-home must merge into the contact's existing assignedUsers, preserving
+    co-mentor stamps, never overwrite."""
+
+    client = FakeClient(
+        mentor=_mentor(),
+        engagement={
+            "engagementStatus": "Submitted",
+            "primaryEngagementContactId": "contact-primary",
+        },
+        contact={"assignedUsersIds": ["user-co"]},
+        related={"list": [{"id": "contact-primary"}]},
+    )
+    await service.assign_engagement(client, "eng-1", "mentor-1")
+
+    payload = [u for u in client.updates if u[0] == service.CONTACT][0][2]
+    assert payload["assignedUsersIds"] == ["user-co", "user-99"]
+    assert payload["assignedUserId"] == "user-99"
 
 
 async def test_assign_reports_partial_reassignment_failures():
@@ -381,6 +404,7 @@ def _reassign_client(**overrides):
         records={
             ("CClientProfile", "clientprofile-1"): {"assignedUsersIds": ["user-old", "user-co"]},
             ("Account", "account-1"): {"assignedUsersIds": ["user-old"]},
+            ("Contact", "contact-primary"): {"assignedUsersIds": ["user-old", "user-co"]},
         },
         sessions=[
             # Owned by the old mentor — they keep it (remove_comentor convention).
@@ -414,10 +438,13 @@ async def test_reassign_swaps_mentor_across_all_records():
     assert re.fullmatch(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}",
                         payload["engagementAssignedDate"])
 
-    # Contacts move to the new mentor's user (single assignedUser field).
+    # Contacts move to the new mentor's user — swap-merge on the collaborators
+    # field (old mentor out, co-mentor kept), both attributes written.
     contact_updates = {u[1]: u[2] for u in client.updates if u[0] == service.CONTACT}
     assert set(contact_updates) == {"contact-primary", "contact-extra"}
     assert all(p["assignedUserId"] == "user-new" for p in contact_updates.values())
+    assert contact_updates["contact-primary"]["assignedUsersIds"] == ["user-co", "user-new"]
+    assert contact_updates["contact-extra"]["assignedUsersIds"] == ["user-new", "user-co"]
 
     # Client profile + company: swap-merge (old out unless shared, new + co in).
     cp = [u[2] for u in client.updates if u[0] == "CClientProfile"][0]

@@ -68,11 +68,14 @@ ENGAGEMENT_SESSIONS_LINK = "engagementSessions"
 # sticks on either config without per-instance branching.
 # Prod field audit (2026-06-26, verified live): `assignedUser` is DISABLED on
 # CEngagement, CClientProfile, CMentorProfile **and Account** (all use
-# `assignedUsers`); only **Contact** keeps the single `assignedUser`. A plain
-# `assignedUserId` PUT to a disabled-field entity returns 200 but stores nothing
-# (the bug that left provisioned mentors userless / Accounts un-rehomed). See
-# [[crm-test-assignment-acl-fields]].
-USES_ASSIGNED_USERS = {ENGAGEMENT, CLIENT_PROFILE, MENTOR_PROFILE, ACCOUNT}
+# `assignedUsers`). A plain `assignedUserId` PUT to a disabled-field entity
+# returns 200 but stores nothing (the bug that left provisioned mentors
+# userless / Accounts un-rehomed). See [[crm-test-assignment-acl-fields]].
+# 2026-07-16/17: **Contact** was deliberately switched to Multiple Assigned
+# Users on BOTH CRMs (co-mentors need to be assigned to client contacts), so
+# its single `assignedUser` is now disabled too — every entity we assign gets
+# the dual write.
+USES_ASSIGNED_USERS = {ENGAGEMENT, CLIENT_PROFILE, MENTOR_PROFILE, ACCOUNT, CONTACT}
 
 
 def _assigned_user_payload(entity: str, user_id: str) -> dict[str, Any]:
@@ -580,7 +583,10 @@ async def assign_engagement(
     contacts_updated = 0
     for cid in sorted(contact_ids):
         try:
-            await client.update(CONTACT, cid, _assigned_user_payload(CONTACT, user_id))
+            await client.update(
+                CONTACT, cid,
+                await _merged_assignment_payload(client, CONTACT, cid, user_id, assigned_ids),
+            )
             contacts_updated += 1
         except EspoError as exc:
             reassignment_errors.append({"entity": CONTACT, "id": cid, "error": str(exc)})
@@ -796,14 +802,6 @@ async def reassign_engagement(
     except EspoError as exc:
         reassignment_errors.append({"entity": ENGAGEMENT, "id": engagement_id, "error": str(exc)})
 
-    contacts_updated = 0
-    for cid in sorted(contact_ids):
-        try:
-            await client.update(CONTACT, cid, _assigned_user_payload(CONTACT, new_user_id))
-            contacts_updated += 1
-        except EspoError as exc:
-            reassignment_errors.append({"entity": CONTACT, "id": cid, "error": str(exc)})
-
     async def _swap_update(entity: str, rid: str) -> bool:
         payload: dict[str, Any] = {"assignedUserId": new_user_id}
         if entity in USES_ASSIGNED_USERS:
@@ -811,6 +809,14 @@ async def reassign_engagement(
             payload["assignedUsersIds"] = _swap(list(rec.get("assignedUsersIds") or []))
         await client.update(entity, rid, payload)
         return True
+
+    contacts_updated = 0
+    for cid in sorted(contact_ids):
+        try:
+            await _swap_update(CONTACT, cid)
+            contacts_updated += 1
+        except EspoError as exc:
+            reassignment_errors.append({"entity": CONTACT, "id": cid, "error": str(exc)})
 
     client_profile_updated = False
     if client_id:

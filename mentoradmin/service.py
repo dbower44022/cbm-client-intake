@@ -226,16 +226,26 @@ async def check_completeness(client: MentorClient, rec: dict[str, Any]) -> dict[
         user_id = assigned_user_id(rec)
         if not user_id:
             issues.append("no User assigned to the mentor")
-        contact_user = None
+        # Contact was switched to Multiple Assigned Users on both CRMs
+        # (2026-07-16/17, so co-mentors can be assigned too) — the single
+        # `assignedUser` is disabled and always reads null. Check membership in
+        # either shape, never just `assignedUserId`.
+        contact_users: set[str] = set()
+        contact_read_ok = False
         if contact_id:
             try:
-                contact = await client.get("Contact", contact_id, select="assignedUserId")
-                contact_user = contact.get("assignedUserId")
+                contact = await client.get(
+                    "Contact", contact_id, select="assignedUserId,assignedUsersIds"
+                )
+                contact_read_ok = True
+                if contact.get("assignedUserId"):
+                    contact_users.add(contact["assignedUserId"])
+                contact_users.update(contact.get("assignedUsersIds") or [])
             except Exception:
                 issues.append("could not read the Contact record")
-        if contact_id and not contact_user:
+        if contact_id and contact_read_ok and not contact_users:
             issues.append("no User assigned to the Contact")
-        elif user_id and contact_user and contact_user != user_id:
+        elif user_id and contact_users and user_id not in contact_users:
             issues.append("Contact is assigned to a different User than the mentor")
 
     return {"status": "Complete" if not issues else "Incomplete", "issues": issues}
@@ -447,9 +457,13 @@ async def reconcile_user_links(client: MentorClient, mentor_id: str) -> None:
     member_user = assigned_user_id(prof)
     contact_id = prof.get("contactRecordId")
     contact_user = None
+    contact_users: list[str] = []
     if contact_id:
-        contact = await client.get("Contact", contact_id, select="assignedUserId")
-        contact_user = contact.get("assignedUserId")
+        contact = await client.get(
+            "Contact", contact_id, select="assignedUserId,assignedUsersIds"
+        )
+        contact_users = list(contact.get("assignedUsersIds") or [])
+        contact_user = contact.get("assignedUserId") or next(iter(contact_users), None)
 
     user = member_user or contact_user
     if not user:
@@ -457,9 +471,14 @@ async def reconcile_user_links(client: MentorClient, mentor_id: str) -> None:
     if member_user != user:
         # CMentorProfile uses assignedUsers (collaborators) on prod — write both.
         await client.update(MENTOR_PROFILE, mentor_id, assigned_user_payload(MENTOR_PROFILE, user))
-    if contact_id and contact_user != user:
-        # Contact uses the single assignedUser on both instances.
-        await client.update("Contact", contact_id, {"assignedUserId": user})
+    if contact_id and user != contact_user and user not in contact_users:
+        # Contact uses assignedUsers (collaborators) since 2026-07-16 — write both
+        # shapes, MERGING into the multi list (co-mentors stamped by the session
+        # tools must keep their access; the disabled single field is ignored).
+        await client.update(
+            "Contact", contact_id,
+            {"assignedUserId": user, "assignedUsersIds": contact_users + [user]},
+        )
 
 
 def cbm_email_for(first: str, last: str) -> str:
@@ -738,6 +757,16 @@ async def verify_mentor_status(
     account is configured. Falls back to ``client``; an ACL rejection reports
     the check as unverifiable rather than failing the sweep.
     """
+    # Self-heal the member<->Contact User links first (same reconcile a save
+    # runs) so the sweep FIXES a roster whose Contacts lost their effective
+    # assignment — e.g. the 2026-07-16 CRM switch of Contact to Multiple
+    # Assigned Users, which hid every previously-stored single assignedUser.
+    # Best-effort: a rejected write still leaves the status computed honestly.
+    try:
+        await reconcile_user_links(client, mentor_id)
+    except Exception as exc:
+        log.warning("status sweep: reconcile_user_links failed for %s: %s", mentor_id, exc)
+
     rec = await get_mentor(client, mentor_id)
     completeness = await check_completeness(client, rec)
     record_status = await sync_record_status(

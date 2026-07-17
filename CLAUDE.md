@@ -562,13 +562,18 @@ mentor, not a redundant control); `list_engagements` returns `mentorId`/`mentorN
   `SESSION_COOKIE_SECURE=true` in prod. See `.env.example`. (NOTE: crm-test DOES
   have Teams — the create-only API user just can't see them, so an earlier
   `Team` API list returned 0.)
-- **Assignment field differs by entity** (verified live, the source of a fixed
-  bug): Contact/Account use the single `assignedUser`; **CEngagement and
-  CClientProfile have `assignedUser` DISABLED and use the multi-user
-  `assignedUsers` (collaborators) field** — so the service writes
-  `assignedUsersIds=[userId]` to those two and `assignedUserId` to Contact/Account
-  (`assignments/service.py:_assigned_user_payload`). Writing `assignedUserId` to a
-  disabled-field entity is silently ignored.
+- **Assignment field: ALL five entities now use `assignedUsers` (collaborators)**
+  — CEngagement/CClientProfile/CMentorProfile/Account since the original builds,
+  and **Contact + Account were deliberately switched to Multiple Assigned Users
+  on BOTH CRMs 2026-07-16/17** (Doug: co-mentors must be assignable to client
+  contacts). A switched entity's single `assignedUser` is `disabled: true`:
+  reads return null (hiding previously-stored values) and writes are silently
+  ignored. The service dual-writes both attributes everywhere
+  (`assignments/service.py:_assigned_user_payload`, `USES_ASSIGNED_USERS` = all
+  five), merging into (never overwriting) the multi list on client records +
+  contacts so co-mentor stamps survive. The Contact switch was the cause of the
+  v0.82.0 "every mentor Incomplete: no User assigned to the Contact" regression
+  in `/mentoradmin` (completeness read only `assignedUserId`).
 
 ## Session Management tools — `/mentorsessions`, `/partnersessions`, `/sponsorsessions` (added 2026-07-08)
 
@@ -1328,7 +1333,28 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-17)
 
-**Main is at v0.81.0** (2026-07-17, 668 tests green, committed NOT pushed) —
+**Main is at v0.82.0** (2026-07-17, 674 tests green, committed NOT pushed) —
+**fix: mentors all read "Incomplete — no User assigned to the Contact"**
+(Doug's report). Root cause found by live probe: the CRM team's deliberate
+switch of **Contact (and Account) to Multiple Assigned Users on BOTH CRMs**
+(2026-07-16/17, so co-mentors can be assigned to client contacts) disabled the
+single `assignedUser` — reads return null (hiding every stored assignment),
+writes silently ignored — while the apps still used only that field on
+Contact. Fixes: `check_completeness` + `reconcile_user_links` accept/write
+both shapes (contact write MERGES into `assignedUsers`); `Contact` joined
+`USES_ASSIGNED_USERS` so Assign re-homes contacts via the merge payload and
+Reassign via the swap-merge (previously silent no-ops under the new schema);
+and **"Update Mentor Status" now heals the roster** — the sweep runs
+`reconcile_user_links` per mentor before recomputing, so one click re-stamps
+every Contact from its member's User and flips the drifted Incomplete records
+back. 6 new tests. **NOT yet driven live** — after deploy, run Update Mentor
+Status in `/mentoradmin` on each env and confirm the Active mentors return to
+Complete (the sweep runs as the signed-in user, whose role needs Contact
+edit). Side finds from the probe: one crm-test contact (Tommy Tranell)
+carries a value in a custom `cAssignedUser` field (manual workaround?), and
+old single-assignment values are hidden, not migrated, CRM-side.
+
+Before that: **v0.81.0** (2026-07-17, 668 tests green, committed NOT pushed) —
 **Client Administration: Reassign Mentor** (Doug's request): select a grid row
 (click; right-click also selects) and invoke via the new toolbar button OR the
 new **right-click context menu** (View details / Reassign mentor… / Assign

@@ -306,12 +306,16 @@ async def test_field_options_reads_live_enums():
 # --- data-structure completeness ---
 
 class CompletenessClient:
-    """Returns a Contact with a given assignedUserId (for the Active checks)."""
-    def __init__(self, contact_user=None):
+    """Returns a Contact with a given assignedUserId / assignedUsersIds
+    (for the Active checks). Contact uses the collaborators field since
+    2026-07-16, so the check must accept either shape."""
+    def __init__(self, contact_user=None, contact_multi=None):
         self.contact_user = contact_user
+        self.contact_multi = contact_multi or []
 
     async def get(self, entity, record_id, select=None):
-        return {"id": record_id, "assignedUserId": self.contact_user}
+        return {"id": record_id, "assignedUserId": self.contact_user,
+                "assignedUsersIds": self.contact_multi}
 
 
 def _complete_rec(**over):
@@ -356,6 +360,36 @@ async def test_completeness_active_requires_user_on_member_and_contact():
     # contact has no user
     r3 = await service.check_completeness(CompletenessClient(None), _complete_rec())
     assert r3["status"] == "Incomplete" and any("no User assigned to the Contact" in i for i in r3["issues"])
+
+
+@pytest.mark.asyncio
+async def test_completeness_accepts_contact_collaborators_shape():
+    """Contact was switched to Multiple Assigned Users (2026-07-16): the single
+    assignedUserId reads null even when the contact is assigned. Membership in
+    assignedUsersIds must count — this was the 'every mentor reads Incomplete:
+    no User assigned to the Contact' regression."""
+    # mentor's user only in the multi list (possibly alongside a co-mentor)
+    r = await service.check_completeness(
+        CompletenessClient(None, contact_multi=["u-co", "u1"]), _complete_rec())
+    assert r == {"status": "Complete", "issues": []}
+    # multi list populated but the mentor's user is not in it
+    r2 = await service.check_completeness(
+        CompletenessClient(None, contact_multi=["u-other"]), _complete_rec())
+    assert r2["status"] == "Incomplete" and any("different User" in i for i in r2["issues"])
+
+
+@pytest.mark.asyncio
+async def test_completeness_contact_read_failure_reports_once():
+    """An unreadable Contact reports the read failure — not a bogus
+    'no User assigned to the Contact' on top of it."""
+    class Failing:
+        async def get(self, entity, record_id, select=None):
+            raise RuntimeError("403 denied")
+
+    r = await service.check_completeness(Failing(), _complete_rec())
+    assert r["status"] == "Incomplete"
+    assert any("could not read the Contact" in i for i in r["issues"])
+    assert not any("no User assigned to the Contact" in i for i in r["issues"])
 
 
 @pytest.mark.asyncio
@@ -851,6 +885,38 @@ async def test_save_reconcile_noop_when_already_aligned():
 
 
 @pytest.mark.asyncio
+async def test_save_reconcile_merges_into_contact_collaborators():
+    """The Contact write must carry BOTH shapes (its single assignedUser is
+    disabled since the 2026-07-16 Multiple-Assigned-Users switch) and MERGE
+    into the existing list — a co-mentor stamped on the contact keeps access."""
+    c = ProvisionClient(
+        profile={"id": "m1", "name": "Jane", "mentorStatus": "Active",
+                 "assignedUserId": "u1", "cbmEmail": "", "contactRecordId": "c1"},
+        contact={"id": "c1", "firstName": "Jane", "lastName": "Doe",
+                 "assignedUserId": None, "assignedUsersIds": ["u-co"]},
+    )
+    await service.update_mentor(c, "m1", {"mentorStatusNotes": "x"})
+    contact_updates = [u for u in c.updates if u[0] == "Contact"]
+    assert contact_updates
+    payload = contact_updates[-1][2]
+    assert payload["assignedUserId"] == "u1"
+    assert payload["assignedUsersIds"] == ["u-co", "u1"]
+
+
+@pytest.mark.asyncio
+async def test_save_reconcile_noop_when_user_in_contact_collaborators():
+    # The mentor's user already in the contact's assignedUsers -> nothing to do.
+    c = ProvisionClient(
+        profile={"id": "m1", "name": "Jane", "mentorStatus": "Active",
+                 "assignedUserId": "u1", "cbmEmail": "", "contactRecordId": "c1"},
+        contact={"id": "c1", "firstName": "Jane", "lastName": "Doe",
+                 "assignedUserId": None, "assignedUsersIds": ["u-co", "u1"]},
+    )
+    await service.update_mentor(c, "m1", {"mentorStatusNotes": "x"})
+    assert not [u for u in c.updates if u[0] == "Contact"]
+
+
+@pytest.mark.asyncio
 async def test_save_reconcile_noop_when_no_user_anywhere():
     c = ProvisionClient(profile={"id": "m1", "name": "Jane", "mentorStatus": "Active",
                                  "assignedUserId": None, "cbmEmail": "", "contactRecordId": "c1"})
@@ -1157,6 +1223,25 @@ async def test_verify_sweep_resyncs_record_status():
     rows = await service.verify_all_mentor_statuses(client)
     assert rows[0]["recordStatus"] == "Incomplete"
     assert ("CMentorProfile", "m1", {"recordStatus": "Incomplete"}) in client.updates
+
+
+@pytest.mark.asyncio
+async def test_verify_sweep_heals_contact_user_link():
+    """The sweep reconciles the member<->Contact User links (best-effort) so
+    'Update Mentor Status' FIXES a roster whose Contacts lost their effective
+    assignment (the 2026-07-16 Multiple-Assigned-Users switch) — writing both
+    shapes, since Contact's single assignedUser is now disabled."""
+    m = _mentor("m1", "Jane", user="u9", cbm="jane.d@cbmentors.org")
+    m["contactRecordId"] = "c1"
+    client = VerifyClient(
+        mentors=[m],
+        users={"u9": {"id": "u9", "userName": "jane.d@cbmentors.org", "isActive": True}},
+    )
+    await service.verify_all_mentor_statuses(client)
+    contact_updates = [u for u in client.updates if u[0] == "Contact"]
+    assert contact_updates == [
+        ("Contact", "c1", {"assignedUserId": "u9", "assignedUsersIds": ["u9"]})
+    ]
 
 
 def test_status_check_endpoint_requires_auth(monkeypatch):

@@ -4,6 +4,37 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.82.0] — 2026-07-17
+
+Fix: **every mentor read "Incomplete — no User assigned to the Contact"** after
+the CRM's Contact entity was switched to Multiple Assigned Users (intentional,
+2026-07-16, so co-mentors can be assigned to client contacts; Account was
+switched too). The switch disables the single `assignedUser` field — reads
+return null (hiding every previously-stored assignment) and writes to it are
+silently ignored — but the apps still read/wrote only that field on Contact.
+
+### Fixed
+- **Mentor Administration completeness** (`check_completeness`): the Contact
+  check now accepts either assignment shape — the single `assignedUserId` OR
+  membership in the multi-user `assignedUsersIds` — so an assigned Contact no
+  longer reads as unassigned (and the "different User" rule is a membership
+  test). An unreadable Contact now reports only the read failure, not a bogus
+  "no User assigned" on top.
+- **Save-time reconciliation** (`reconcile_user_links`): the Contact write
+  carries both shapes and MERGES into the contact's existing `assignedUsers`
+  (co-mentor stamps survive; the disabled single field is ignored harmlessly).
+- **Client Administration re-homing**: `Contact` joined `USES_ASSIGNED_USERS`
+  (dual-write everywhere); Assign re-homes contacts via the merge payload and
+  Reassign via the swap-merge (old mentor's User out unless a co-mentor shares
+  it, co-mentors preserved) — previously the contact write was a silent no-op
+  under the new schema, and before that an overwrite.
+
+### Added
+- **"Update Mentor Status" heals the roster**: the sweep runs
+  `reconcile_user_links` per mentor (best-effort) before recomputing
+  completeness, so one click re-stamps every Contact from its member's User
+  and flips the drifted Incomplete records back to Complete.
+
 ## [0.81.0] — 2026-07-17
 
 Client Administration: **Reassign Mentor** — replace an engagement's primary
