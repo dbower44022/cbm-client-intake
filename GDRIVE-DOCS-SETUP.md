@@ -1,18 +1,28 @@
-# Google-side setup for the Documents tab (v0.65.0) — step by step
+# Google-side setup for the Documents tabs (DOC-MGMT Phases 1–3) — step by step
 
-Everything Google-side needed to activate the session tools' Google Drive
-document management (`GDRIVE_DOCS`, DOC-MGMT Phase 1). Three tasks, reusing
-the service account the Gmail + Calendar integrations already run on — **no
-new service account, no new JSON key, no change to any app secret**.
+Everything Google-side needed to activate the Google Drive document
+management (`GDRIVE_DOCS`), reusing the service account the Gmail + Calendar
+integrations already run on — **no new service account, no new JSON key, no
+change to any app secret**.
 
-The facts you'll need (from the Gmail/Calendar activation records):
+**Status (2026-07-17): Tasks 1–4 are DONE** (completed 2026-07-16 — Drive
+API enabled, the `auth/drive` scope authorized, the "CBM Documents" shared
+drive created, `GDRIVE_DOCS` live on both environments; first live upload
+verified on prod). **The one remaining Google-admin action is the
+membership swap in Task 6 step 1** (make the service account the drive's
+only member and remove all human members); everything else in Task 6 is
+deploy-side or CRM-side. The verification checklists (Tasks 5–6) run after
+that.
+
+The facts you'll need (from the activation records):
 
 | Item | Value |
 |---|---|
 | GCP project | `espcrm-498315` |
 | Service account | `espocrm@espcrm-498315.iam.gserviceaccount.com` |
 | Its OAuth2 **Client ID** (the DWD row key) | `109317126943210877831` |
-| Scopes currently on the DWD row | `gmail.readonly`, `gmail.send`, `calendar.events` |
+| Scopes on the DWD row (since 2026-07-16) | `gmail.readonly`, `gmail.send`, `calendar.events`, `drive` |
+| The "CBM Documents" shared drive ID | `0AE50yNppMh_hUk9PVA` |
 | Accounts to use | GCP console: the Google account that owns the project (created under `admin@cbmentors.org`). Admin console / Drive: a **super-admin** of `cbmentors.org` |
 
 How the app uses this (the final access model, PRD v1.3 / Doug's ruling
@@ -26,7 +36,7 @@ mode, `GDRIVE_IDENTITY=user`, remains in the code for compatibility only.)
 
 ---
 
-## Task 1 — Enable the Google Drive API on the GCP project
+## Task 1 — Enable the Google Drive API on the GCP project ✅ DONE 2026-07-16
 
 Without this, every Drive call fails with HTTP 403 `accessNotConfigured` /
 "Google Drive API has not been used in project espcrm-498315 before or it is
@@ -53,7 +63,7 @@ create a new key.
 
 ---
 
-## Task 2 — Add the Drive scope to the existing delegation row
+## Task 2 — Add the Drive scope to the existing delegation row ✅ DONE 2026-07-16
 
 This authorizes the service account to act on users' Drive access. It's an
 **edit of the existing row**, not a new row: Google keys delegation rows by
@@ -96,7 +106,7 @@ anything.
 
 ---
 
-## Task 3 — Create the "CBM Documents" shared drive and grant access
+## Task 3 — Create the "CBM Documents" shared drive ✅ DONE 2026-07-16 (except the step-5 membership swap — see Task 6)
 
 A **shared drive** (not a folder in anyone's My Drive) so the files belong
 to the organization and survive staff turnover (PRD decision D-03).
@@ -148,7 +158,7 @@ you.
 
 ---
 
-## Task 4 — App-side activation (Claude/deploy side, listed for completeness)
+## Task 4 — App-side activation (Claude/deploy side) ✅ DONE 2026-07-16 (Phase 1 flags on both envs; the Phase 3 additions are Task 6 step 2)
 
 Not Workspace work — this is the overlay + deploy step once Tasks 1–3 are
 done. On the target app's gitignored overlay (`.do/app.prod.yaml` for
@@ -178,8 +188,10 @@ default `Resume,Agreement,Intake Document,Pitch Deck,Other`) and
 2. Upload a small PDF, picking a document type. Expected: "Document
    uploaded." and the file listed with your CBM address as uploader.
 3. In Drive, open **CBM Documents** → **Clients** → the client's folder →
-   the engagement's folder → the file should be there, uploaded by **you**
-   (not the service account) — that's the audit trail working.
+   the engagement's folder → the file should be there. (Drive shows the
+   uploader as the person under the original `user` identity mode, and as
+   the service account under `GDRIVE_IDENTITY=service` — in service mode
+   the app's own document list and run logs carry the person's name.)
 4. Upload a second file to the same record — it must reuse the same folder
    (no duplicate folders).
 5. Also check the mentor side: `/mentoradmin` → open a mentor → **Documents**
@@ -209,10 +221,14 @@ default `Resume,Agreement,Intake Document,Pitch Deck,Other`) and
    - 403 `accessNotConfigured` → Task 1 not done / wrong project.
    - `unauthorized_client` / "delegation denied" → Task 2 scope line wrong
      or not yet propagated.
-   - Drive 403 on upload for one person, others fine → that manager isn't a
-     member of the shared drive (Task 3 step 5).
-   - "Your profile has no CBM email address" → the manager's
-     `CMentorProfile.cbmEmail` is blank in the CRM (fix in `/mentoradmin`).
+   - Drive 403 on upload for one person, others fine (only possible under
+     the legacy `GDRIVE_IDENTITY=user` mode) → that manager isn't a drive
+     member. Under `service` mode everyone goes through the service
+     account — a 403 there means the SA isn't a Content Manager member
+     (Task 6 step 1).
+   - "Your profile has no CBM email address" (legacy `user` mode only) →
+     the manager's `CMentorProfile.cbmEmail` is blank in the CRM (fix in
+     `/mentoradmin`); `service` mode never blocks on this.
    - "The document integration needs the database" (503) → `DATABASE_URL`
      missing on that app (dev/lobster has no DB — expected there).
 
@@ -226,11 +242,30 @@ Documents tab (DOC-07), and the **`documentsFolderUrl` CRM write-back**
 (DOC-08). Archive/Restore needs nothing beyond the Phase 1 flags. The other
 two activate as follows — **order matters**:
 
-1. **Drive-side membership swap (Doug, one time; Task 3 step 5 as revised):**
-   add the service account's `client_email` to the "CBM Documents" shared
-   drive as **Content Manager**, and **remove every human member**. Do this
-   BEFORE step 2 — flipping the identity first would leave the app unable to
-   reach the drive.
+1. **Drive-side membership swap (the Google admin, one time — the ONLY
+   remaining Workspace action).** Do this BEFORE step 2 — flipping the
+   identity first would leave the app unable to reach the drive.
+
+   1. Go to **https://drive.google.com** as a `cbmentors.org` super-admin →
+      **Shared drives** → open **CBM Documents**.
+   2. Click the drive name (top) → **Manage members**.
+   3. **Add** `espocrm@espcrm-498315.iam.gserviceaccount.com` with the role
+      **Content Manager** (uncheck "Notify people" if offered — it's a
+      machine account). It will show with a robot/service-account marker;
+      that's expected.
+   4. **Remove every human member**, whatever their role. Heads-up: the
+      Drive UI may refuse to remove the **last Manager** ("a shared drive
+      needs at least one manager"). If it does, either — (a) change the
+      service account's role to **Manager** first, then remove the humans
+      (fine: the sole member is still the machine identity, which is the
+      ruling's point), or (b) do the removal from the Admin console
+      (**admin.google.com → Apps → Google Workspace → Drive and Docs →
+      Manage shared drives** → CBM Documents → Manage members), where a
+      super-admin can edit membership regardless.
+   5. Verify: Manage members lists **exactly one member — the service
+      account**. Existing files/folders are unaffected, and super-admins
+      keep emergency access through that same Admin-console page (that is
+      the intended break-glass path; no personal membership needed).
 2. **Set the env on BOTH components** of each app's gitignored overlay
    (crm-test first, then prod) and apply via
    `doctl apps update <app-id> --spec <overlay> --wait`:
