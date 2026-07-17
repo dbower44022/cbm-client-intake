@@ -900,6 +900,11 @@
     } catch (e) {
       tr.classList.remove("row-busy");
       if (e.status === 401) { showLogin(); return; }
+      if (e.status === 400) {
+        // Rejected as stale (already assigned / no longer Submitted) or an
+        // ineligible mentor — re-fetch so this grid stops showing the old state.
+        try { await reloadEngagements(); } catch (_) { /* keep the error notice */ }
+      }
       notice(e.message, "error");
     }
   }

@@ -438,11 +438,33 @@ async def assign_engagement(
     Steps (each awaited in order; a later failure leaves earlier writes in place,
     matching the intake orchestrators' partial-progress contract):
 
+      0. Re-read the engagement and verify it is still assignable (Submitted,
+         no mentor) — a stale grid in another browser/tab must not overwrite an
+         assignment already saved by someone else.
       1. Resolve + re-validate the mentor -> their User.
       2. Engagement: set assignedUser + mentorProfile, status -> Pending Acceptance.
       3. Read the engagement's related contact/client/account ids.
       4. Set assignedUser on every contact, the CClientProfile, and the Account.
     """
+    current = await client.get(
+        ENGAGEMENT,
+        engagement_id,
+        select="name,engagementStatus,mentorProfileId,mentorProfileName",
+    )
+    if current.get("mentorProfileId"):
+        raise AssignError(
+            "This engagement has already been assigned to "
+            + (current.get("mentorProfileName") or "another mentor")
+            + " — likely from another window or an out-of-date list. Nothing was "
+            "changed; refresh the list to see its current state."
+        )
+    if current.get("engagementStatus") != STATUS_SUBMITTED:
+        raise AssignError(
+            "This engagement is no longer awaiting assignment (its status is now "
+            f"“{current.get('engagementStatus') or 'unknown'}”). Nothing was "
+            "changed; refresh the list to see its current state."
+        )
+
     mentor = await client.get(
         MENTOR_PROFILE,
         mentor_profile_id,

@@ -4,6 +4,22 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.72.1] — 2026-07-16
+
+### Fixed
+- **Client Administration: a stale browser can no longer overwrite a saved
+  assignment.** The Assign action (`assignments/service.assign_engagement`)
+  now re-reads the engagement before writing anything and rejects the call
+  with a readable message when it already has a mentor (names the current
+  mentor) or its status is no longer `Submitted` (names the current status) —
+  previously a second browser/tab whose grid predated another user's
+  assignment would silently re-assign the engagement, reset it to Pending
+  Acceptance, re-stamp `engagementAssignedDate`, and re-home its
+  contacts/client/account to the second mentor (observed live as a
+  double-assignment in an engagement's Espo history). Nothing is written on
+  rejection; the frontend re-fetches the grid on any 400 from Assign so the
+  stale row immediately shows the real state.
+
 ## [0.72.0] — 2026-07-16
 
 ### Added

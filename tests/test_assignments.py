@@ -60,6 +60,7 @@ async def test_assign_sets_engagement_and_reassigns_related():
     client = FakeClient(
         mentor=_mentor(),
         engagement={
+            "engagementStatus": "Submitted",
             "primaryEngagementContactId": "contact-primary",
             "engagementClientId": "clientprofile-1",
             "clientOrganizationId": "account-1",
@@ -118,7 +119,7 @@ async def test_assign_preserves_comentor_users():
                 ]}
             return await super().list_related(entity, record_id, link, **kwargs)
 
-    client = Client(mentor=_mentor(), engagement={})
+    client = Client(mentor=_mentor(), engagement={"engagementStatus": "Submitted"})
     await service.assign_engagement(client, "eng-1", "mentor-1")
 
     payload = [u for u in client.updates if u[0] == service.ENGAGEMENT][0][2]
@@ -140,6 +141,7 @@ async def test_assign_reports_partial_reassignment_failures():
     client = FlakyClient(
         mentor=_mentor(),
         engagement={
+            "engagementStatus": "Submitted",
             "primaryEngagementContactId": "contact-primary",
             "engagementClientId": "clientprofile-1",
             "clientOrganizationId": "account-1",
@@ -165,6 +167,7 @@ async def test_assign_skips_account_when_absent():
     client = FakeClient(
         mentor=_mentor(),
         engagement={
+            "engagementStatus": "Submitted",
             "primaryEngagementContactId": "contact-primary",
             "engagementClientId": "clientprofile-1",
             "clientOrganizationId": None,
@@ -181,16 +184,52 @@ async def test_assign_skips_account_when_absent():
 
 
 async def test_assign_rejects_mentor_without_user():
-    client = FakeClient(mentor=_mentor(assignedUserId=None))
+    client = FakeClient(
+        mentor=_mentor(assignedUserId=None),
+        engagement={"engagementStatus": "Submitted"},
+    )
     with pytest.raises(service.AssignError):
         await service.assign_engagement(client, "eng-3", "mentor-3")
     assert client.updates == []  # nothing written
 
 
 async def test_assign_rejects_ineligible_mentor():
-    client = FakeClient(mentor=_mentor(acceptingNewClients=False))
+    client = FakeClient(
+        mentor=_mentor(acceptingNewClients=False),
+        engagement={"engagementStatus": "Submitted"},
+    )
     with pytest.raises(service.AssignError):
         await service.assign_engagement(client, "eng-4", "mentor-4")
+    assert client.updates == []
+
+
+async def test_assign_rejects_already_assigned_engagement():
+    """A stale grid (second browser/tab) must not overwrite a saved assignment:
+    the engagement is re-read before any write, and an existing mentorProfile
+    rejects the whole call naming the current mentor."""
+    client = FakeClient(
+        mentor=_mentor(),
+        engagement={
+            "engagementStatus": "Pending Acceptance",
+            "mentorProfileId": "mentor-first",
+            "mentorProfileName": "First Mentor",
+        },
+    )
+    with pytest.raises(service.AssignError, match="First Mentor"):
+        await service.assign_engagement(client, "eng-5", "mentor-second")
+    assert client.updates == []  # nothing written, first assignment intact
+
+
+async def test_assign_rejects_non_submitted_engagement():
+    """Unassigned but no longer Submitted (e.g. a staffer parked it On-Hold
+    between the grid load and the Assign click) — also rejected, message names
+    the current status."""
+    client = FakeClient(
+        mentor=_mentor(),
+        engagement={"engagementStatus": "On-Hold"},
+    )
+    with pytest.raises(service.AssignError, match="On-Hold"):
+        await service.assign_engagement(client, "eng-6", "mentor-1")
     assert client.updates == []
 
 
