@@ -1355,7 +1355,8 @@ uploads).
 
 Also this day (its own session): **v0.72.0 + v0.75.1 — sortable +
 resizable grids on the record detail** (both committed; stub-harness
-verified, not yet eyeballed live). The **Sessions tab grid** (v0.72.0) and
+verified, and **Doug tested both grids live 2026-07-17 — working well**;
+arc closed). The **Sessions tab grid** (v0.72.0) and
 the **Communications conversation list** (v0.75.1) share one treatment:
 every header sorts (Client-Administration interaction — first click sorts,
 dates newest-first, second reverses, ▲/▼ + `aria-sort`), columns resize by
