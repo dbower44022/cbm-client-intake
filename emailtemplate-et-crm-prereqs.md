@@ -14,7 +14,7 @@ the places it DOES appear: the **Roles** scope table (listed as "Email
 Templates") and the **Email Templates** admin page itself
 (Administration → Email Templates, or the `#EmailTemplate` URL).
 
-## 1. Role grants (required)
+## 1. Role grants (required) — ✅ DONE (Doug, 2026-07-17, crm-test)
 
 The picker lists templates **as the signed-in user**, and the send-recording
 write-back creates an **Email** record as them — so their role needs both
@@ -27,8 +27,12 @@ are **"Email Templates"** and **"Emails"**. Read live from crm-test
 | Mentor Role | read=team | create=yes, read=own | none — already works |
 | Standard User | read=all | create=yes, read=all | none |
 | Marketing Admin Role | full | full | none |
-| **Partner Manager Role** | **none** | **none** | **grant** EmailTemplate Read (team or all) + Email Create=yes, Read=own |
-| **Sponsor Manager Role** | **none** | **none** | same |
+| **Partner Manager Role** | **none** | **none** | **grant** EmailTemplate Read (team or all) + Email Create=yes, Read=own — ✅ done 2026-07-17 |
+| **Sponsor Manager Role** | **none** | **none** | same — ✅ done 2026-07-17 |
+
+**Prod:** replicate the two grants on the production CRM's roles when the
+feature goes to prod verification (the app is already deployed everywhere —
+the picker just stays empty for those roles until granted).
 
 Notes:
 - With no grant the picker is simply **empty** (and the write-back reports a

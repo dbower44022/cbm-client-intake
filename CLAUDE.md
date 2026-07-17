@@ -1243,8 +1243,14 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-17)
 
-**Main is at v0.75.0** (2026-07-17, 600 tests green, committed NOT pushed) —
-**email signatures in every compose dialog**: new messages open with the
+**Main is at v0.75.1** (2026-07-17; 0.75.1 = a parallel session's
+conversation-grid sortable/resizable columns — see CHANGELOG; that session
+owns its own status entry). **This session's arc (v0.67.0 + v0.75.0) is
+COMPLETE — the full Email Template integration (ET) + email signatures,
+committed NOT pushed:**
+
+**v0.75.0 — email signatures in every compose dialog** (600 tests green at
+commit): new messages open with the
 user's **EspoCRM `Preferences.signature`** seeded at the bottom of the body
 (rides `GET /mailbox`; `comms/service.user_signature`, sanitized,
 best-effort); applying a template re-appends it below the rendered draft;
@@ -1255,10 +1261,21 @@ description; `GET/PUT /mentorprofile/api/signature` — users write their own
 Preferences, no grant work; non-mentor staff author theirs in EspoCRM →
 Preferences → Email Signature). Doug's rulings 2026-07-16 (source /
 auto-insert / re-append / edit-in-profile — all the recommended options).
-Verified in the stub harness (all three surfaces); 12 new tests. NOT yet
-driven live. Also: Doug added the Partner/Sponsor Manager EmailTemplate +
-Email grants on crm-test, so all three domains are live-testable for the
-v0.67.0 template feature.
+Verified in the stub harness (all three surfaces); 12 new tests. Doug added
+the Partner/Sponsor Manager EmailTemplate + Email grants on crm-test
+2026-07-17 (`emailtemplate-et-crm-prereqs.md` §1 ✅; replicate on prod at
+prod verification), so the whole ET+signature arc is live-testable now.
+**Remaining = one live pass on crm-test** (all harness/test-verified, none
+driven against the real CRM/Gmail yet): (1) author a real template in
+EspoCRM (crm-test has only "Case-to-Email auto-reply"; ideally one with a
+standing attachment) + optionally categories named
+Engagement/Partner/Sponsor for the picker filter; (2) set a signature in
+/mentorprofile → compose on an engagement → signature seeded → apply the
+template → placeholders resolved, signature re-appended below, chips
+present; (3) send with an attachment → arrives via Gmail AND a native
+EspoCRM Email record lands in the recipient Contact's History panel
+attributed to the sender; (4) same quick spot-check from the quick-compose
+(assignments grid) and as a partner/sponsor manager.
 
 Before that: **v0.74.0** (2026-07-16/17; 595 tests green;
 committed, push per convention) — **the double-assignment forensics session**,
