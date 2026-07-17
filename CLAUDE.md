@@ -1328,7 +1328,32 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-17)
 
-**Main is at v0.76.0** (2026-07-17, committed NOT pushed) — **Documents:
+**Main is at v0.76.2** (2026-07-17, 640 tests green, committed NOT pushed —
+three parallel sessions this day: v0.76.0 Phase 3 below, v0.76.1, and the
+v0.76.2 template-placeholder fix in the Email-templates bullet).
+
+**v0.76.1 — co-mentor access-review fixes** (this session; a full review of
+the CBM-contact add/remove paths across Engagement / Contact / Client
+profile / Company): (1) **Client Administration's Assign no longer strips
+co-mentor access from the client profile / company** — the re-home wrote
+`assignedUsersIds: [<new mentor>]` (overwrite) to CClientProfile + Account;
+it now MERGES the record's existing assigned users with the new mentor +
+the engagement's co-mentors (`assignments/service._merged_assignment_payload`;
+Contacts were never affected — single `assignedUserId` only). (2) **The
+co-mentor add/remove stream notes name the acting user in the text**
+("… via the session tools by Jane Staff") on every variant — the Note's
+author already shows in the stream UI, but not in API reads/exports.
+Mechanics in the Assign-action + Co-mentor-visibility bullets. The review
+left two edge cases OPEN by design (best-effort domain, same shape as the
+DOC-09 nightly reconciliation if ever needed): removing a co-mentor
+un-stamps a Contact/Account/profile SHARED with another engagement where
+that user is still entitled (protection only spans the one engagement),
+and remove skips session/client-record cleanup when the user was already
+off the engagement's assigned users (e.g. hand-cleaned in the CRM). Live
+checks open: an assign onto records carrying co-mentor stamps (merge
+holds), and one add/remove note posting under a non-admin staff role.
+
+Before that: **v0.76.0** (2026-07-17, committed NOT pushed) — **Documents:
 CRM integration and lifecycle (DOC-MGMT Phase 3, PRD v1.3) is BUILT**,
 closing the PRD's phased plan: Drive access grants + the nightly
 reconciliation (DOC-09), Archive/Restore with the "Include archived" toggle
