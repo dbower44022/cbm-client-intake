@@ -51,14 +51,17 @@
 .sx__th-sort { cursor: pointer; user-select: none; white-space: nowrap; }
 .sx__th-sort:hover { color: var(--cbm-navy, #123); }
 .sx__sortind { color: var(--cbm-blue, #1a5fb4); }
-/* Sessions grid: static thead, so the sort arrow rides data-dir (set by JS)
-   instead of an injected span; columns resize via a grip on each header's
-   right edge. Participants gets the most room by default (a list of names). */
-#sessionsTable th[data-sort] { position: relative; }
-#sessionsTable th[data-dir="asc"]::after { content: " ▲"; font-size: 0.7em; color: var(--cbm-blue, #1a5fb4); }
-#sessionsTable th[data-dir="desc"]::after { content: " ▼"; font-size: 0.7em; color: var(--cbm-blue, #1a5fb4); }
+/* Sessions + Communications grids: stable theads, so the sort arrow rides
+   data-dir (set by JS) instead of an injected span; columns resize via a grip
+   on each header's right edge. Participants gets generous room by default. */
+.sx__table th[data-sort] { position: relative; }
+.sx__table th[data-dir="asc"]::after { content: " ▲"; font-size: 0.7em; color: var(--cbm-blue, #1a5fb4); }
+.sx__table th[data-dir="desc"]::after { content: " ▼"; font-size: 0.7em; color: var(--cbm-blue, #1a5fb4); }
 #sessionsTable th[data-sort="name"] { width: 22%; }
 #sessionsTable th[data-sort="participants"] { width: 28%; }
+#inboxTable th[data-sort="status"] { width: 8%; }
+#inboxTable th[data-sort="participants"] { width: 26%; }
+#inboxTable th[data-sort="lastMessageAt"] { width: 11%; }
 .sx__col-grip {
   position: absolute; top: 0; right: -4px; width: 8px; height: 100%;
   cursor: col-resize; user-select: none; z-index: 1;

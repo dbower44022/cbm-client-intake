@@ -4,6 +4,27 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.75.1] — 2026-07-17
+
+### Added
+- **Communications grid: sortable + resizable columns** — the same
+  capabilities the Sessions grid gained in v0.72.0, applied to the record
+  detail's conversation list. All four headers (Status / Participants /
+  Conversation / Last activity) sort (first click sorts — text A→Z, Last
+  activity newest-first — second reverses, ▲/▼ + `aria-sort`); columns resize
+  via the drag grip on each header's right edge (reuses
+  `makeColumnsResizable`; first drag freezes widths via `table-layout:
+  fixed`). Default widths give Participants generous room (26%); the head is
+  built once and kept across tab revisits, so resized widths and the sort
+  choice survive leaving and returning to the tab. Sample-data scaffold
+  (comms off) unchanged. Verified in the stubbed-browser harness (sort
+  orders + indicator movement, drag widens only the dragged column, grip
+  clicks never sort, widths/sort persist across a Sessions↔Communications
+  round trip, row click still opens the thread; no console errors). Note:
+  the `app.js` half was swept into the parallel session's v0.75.0 release
+  commit (068f44d) — this release carries the matching CSS, which HEAD
+  needs for the grips/arrows to position correctly.
+
 ## [0.75.0] — 2026-07-17
 
 ### Added
