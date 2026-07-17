@@ -116,6 +116,40 @@ async def list_templates(
     return {"templates": templates, "contextFiltered": bool(context)}
 
 
+async def related_manager_profile(
+    user_client: Any,
+    *,
+    user_id: str,
+    parent_entity: Optional[str] = None,
+    parent_id: Optional[str] = None,
+    manager_link: Optional[str] = None,
+) -> Optional[str]:
+    """The ``CMentorProfile`` id to pass as prepare()'s related record so
+    ``{CMentorProfile.*}`` resolves: the record's own manager (assigned
+    mentor / partner manager / sponsor manager) when it has one, else the
+    SENDER's linked profile (quick-compose always lands here). Best-effort —
+    ``None`` just means the token stays literal and the leftover warning
+    fires."""
+    if parent_entity and parent_id and manager_link:
+        try:
+            rec = await user_client.get(
+                parent_entity, parent_id, select=f"{manager_link}Id"
+            )
+            manager_id = rec.get(f"{manager_link}Id")
+            if manager_id:
+                return str(manager_id)
+        except Exception as exc:  # noqa: BLE001
+            log.debug("related-manager read failed for %s/%s: %s",
+                      parent_entity, parent_id, exc)
+    try:
+        from sessions.service import resolve_manager_profile  # avoid import cycle
+
+        return await resolve_manager_profile(user_client, user_id)
+    except Exception as exc:  # noqa: BLE001
+        log.debug("sender-profile resolution failed for %s: %s", user_id, exc)
+        return None
+
+
 async def parse_template(
     user_client: Any,
     template_id: str,
@@ -123,8 +157,19 @@ async def parse_template(
     parent_type: Optional[str] = None,
     parent_id: Optional[str] = None,
     email_address: Optional[str] = None,
+    related_type: Optional[str] = None,
+    related_id: Optional[str] = None,
 ) -> dict[str, Any]:
     """Render a template server-side into an editable draft payload.
+
+    The render context is exactly: ``{User.*}`` = the acting user (sender),
+    ``{Person.*}``/``{Contact.*}`` = whoever carries ``email_address``,
+    ``{Parent.*}`` + the parent's own type = the record, and — via
+    ``related_type``/``related_id`` — ONE extra record under its own type.
+    The routers pass the record's manager profile there so
+    ``{CMentorProfile.*}`` (the most common template link) resolves; any
+    type outside the context stays a literal token and lands in
+    ``leftoverTokens``.
 
     Returns ``subject``, sanitized ``bodyHtml``, ``attachments`` as
     ``[{id, name}]`` chips (ids only — bytes stay in the CRM until send,
@@ -136,6 +181,8 @@ async def parse_template(
         parent_type=parent_type,
         parent_id=parent_id,
         email_address=email_address,
+        related_type=related_type,
+        related_id=related_id,
     )
     subject = out.get("subject") or ""
     body = out.get("body") or ""

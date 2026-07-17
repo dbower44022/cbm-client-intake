@@ -434,17 +434,23 @@ class EspoClient:
         parent_type: Optional[str] = None,
         parent_id: Optional[str] = None,
         email_address: Optional[str] = None,
+        related_type: Optional[str] = None,
+        related_id: Optional[str] = None,
     ) -> dict[str, Any]:
         """EspoCRM's server-side template render (``POST EmailTemplate/{id}/prepare``).
 
         The CRM resolves every placeholder itself — this app never substitutes
-        (Decision ET-D1). ``parent_type``/``parent_id`` feed ``{Parent.*}``;
-        ``email_address`` independently resolves ``{Person.*}`` from a
-        Contact/Lead/Account/User carrying that address. ACL is enforced
-        server-side against this client's user (403 = no template read access).
-        Returns ``{subject, body, isHtml, attachmentsIds, attachmentsNames}``;
-        the attachment ids are fresh CLONES owned by the acting user.
-        (Signature verified against crm-test EspoCRM 9.3.6, 2026-07-16.)
+        (Decision ET-D1). ``parent_type``/``parent_id`` feed ``{Parent.*}`` and
+        ``{<ParentType>.*}``; ``email_address`` independently resolves
+        ``{Person.*}`` from a Contact/Lead/Account/User carrying that address;
+        ``related_type``/``related_id`` add ONE more record to the render
+        context under its own type — how ``{CMentorProfile.*}`` resolves (the
+        processor only substitutes entities present in its context hash). ACL
+        is enforced server-side against this client's user (403 = no template
+        read access; an unreadable parent/related is silently dropped from the
+        context). Returns ``{subject, body, isHtml, attachmentsIds,
+        attachmentsNames}``; the attachment ids are fresh CLONES owned by the
+        acting user. (Verified against crm-test EspoCRM 9.3.6, 2026-07-16/17.)
         """
         payload: dict[str, Any] = {}
         if parent_type and parent_id:
@@ -452,6 +458,9 @@ class EspoClient:
             payload["parentId"] = parent_id
         if email_address:
             payload["emailAddress"] = email_address
+        if related_type and related_id:
+            payload["relatedType"] = related_type
+            payload["relatedId"] = related_id
         async with httpx.AsyncClient(timeout=self._timeout) as client:
             resp = await client.post(
                 f"{self._base}/EmailTemplate/{template_id}/prepare",
@@ -533,10 +542,12 @@ class DryRunEspoClient:
         parent_type: Optional[str] = None,
         parent_id: Optional[str] = None,
         email_address: Optional[str] = None,
+        related_type: Optional[str] = None,
+        related_id: Optional[str] = None,
     ) -> dict[str, Any]:
         log.info(
-            "DRY_RUN email_template_prepare %s parent=%s/%s email=%s",
-            template_id, parent_type, parent_id, email_address,
+            "DRY_RUN email_template_prepare %s parent=%s/%s email=%s related=%s/%s",
+            template_id, parent_type, parent_id, email_address, related_type, related_id,
         )
         return {
             "subject": "Dry-run template subject",

@@ -26,6 +26,28 @@ deploy marker on App Platform.
   {User.name} = whoever is sending, {Person.*} = the recipient,
   {Parent.*} = the record). 6 new/updated tests (612 green).
 
+## [0.76.1] — 2026-07-17
+
+### Fixed
+- **Client Administration: assigning a mentor no longer strips co-mentor
+  access from the client profile / company.** The re-home step wrote
+  `assignedUsersIds: [<new mentor>]` to CClientProfile and Account — a hard
+  overwrite that silently revoked the co-mentor `assignedUsers` stamps the
+  session tools maintain on those records (the engagement write already
+  merged co-mentors since v0.51.0; the client records didn't). The re-home
+  now MERGES: each record's existing assigned users are kept and the new
+  mentor + the engagement's co-mentors' users are folded in
+  (`assignments/service._merged_assignment_payload`). Contacts were never
+  affected (they take only the single `assignedUserId`).
+
+### Added
+- **Co-mentor stream notes name the acting user.** The engagement-stream
+  notes posted on co-mentor add/remove (v0.74.0) now say who did it
+  ("… via the session tools by Jane Staff") on every variant — success,
+  no-linked-user, and stamp-failure. The Note's author already identifies
+  the actor in the stream UI; naming them in the text keeps the history
+  self-contained in API reads, exports, and quotes.
+
 ## [0.76.0] — 2026-07-17
 
 ### Added

@@ -526,6 +526,12 @@ mentor, not a redundant control); `list_engagements` returns `mentorId`/`mentorN
   user on every related Contact (`primaryEngagementContact` + `engagementContacts`),
   the `engagementClient` (CClientProfile), and `clientOrganization` (Account, when
   present). Source-of-truth mapping is the service module.
+  **Merge, never overwrite, on the client records (v0.76.1):** the
+  CClientProfile/Account re-home writes `assignedUsersIds` as the record's
+  EXISTING list + the new mentor + the engagement's co-mentors' users
+  (`_merged_assignment_payload`) — the old `[user_id]` overwrite silently
+  revoked co-mentor access stamped by the session tools. Contacts take only
+  the single `assignedUserId`, so they were never affected.
   **Stale-write guard (v0.72.1, 2026-07-16):** before any write the engagement is
   re-read and the call is rejected (AssignError → 400, nothing written) if it
   already has a mentor OR its status is no longer `Submitted` — a second
@@ -666,11 +672,16 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   never touched. CRM prerequisite: "Multiple Assigned Users" enabled on the
   entity — Contact lacked it on prod until Doug enabled it 2026-07-16 (check
   crm-test parity). Both paths post a stream note on the engagement
-  (`core/stream.post_stream_note`) recording what was granted/revoked.
+  (`core/stream.post_stream_note`) recording what was granted/revoked — and,
+  since v0.76.1, **naming the acting user in the note text** ("… via the
+  session tools by Jane Staff"; the routers pass `actor=user["name"]`) so
+  the history reads "who did this" even outside the stream UI, where the
+  Note's author isn't shown.
   `remove_comentor` removes the User again unless the assigned mentor or a
   remaining co-mentor shares it. `assignments.assign_engagement` merges current
   co-mentors' Users into its assignedUsers write so a reassignment doesn't
-  revoke them. **Sessions (v0.52.0, Doug's ruling: a co-mentor sees ALL
+  revoke them — since v0.76.1 on the client profile/Account writes too (they
+  previously overwrote, see the Assign-action bullet). **Sessions (v0.52.0, Doug's ruling: a co-mentor sees ALL
   sessions):** `create_session` stamps the engagement's whole mentor team
   (creator + assigned mentor + co-mentors, `_engagement_mentor_user_ids`)
   into the new session's `assignedUsers`; `add_comentor` backfills the new
@@ -756,7 +767,11 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   (v0.65.0, DOC-MGMT Phase 1 — see the Documents bullet below; a "coming soon"
   panel until `GDRIVE_DOCS` is on). The tab bar is built by the frontend from
   config (placeholder tabs get a generic panel); the standalone Contacts tab
-  folded into Overview / Details.
+  folded into Overview / Details. **The Sessions grid and the Communications
+  conversation list are sortable + column-resizable (v0.72.0 / v0.75.1)** —
+  header click sorts, drag grips resize (`makeColumnsResizable`); the
+  Sessions grid carries a Participants (attendee-names) column, widest by
+  default.
   - **Overview** (`get_detail` → `_overview_items`, `sessions/config.py:OverviewItem`):
     a full-width **facts-rail-left / note-feed-right** layout with a drag **splitter**.
     Rail: key facts (status badge, a single aggregated **Company** link, primary
@@ -960,6 +975,29 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   dialogs, full flows incl. both failure paths); 23 new tests; **NOT yet
   driven against the live CRM/Gmail.** (Grants DONE on crm-test 2026-07-17
   per Doug.)
+- **`{CMentorProfile.*}` template placeholders resolve (v0.76.2,
+  2026-07-17 — Doug's first live template hit this).** EspoCRM's parse only
+  substitutes entities in its render context (User=sender,
+  Person/Contact=recipient, Parent + its own type=the record) — any other
+  type stays a literal token. The prepare API takes ONE extra record
+  (`relatedType`/`relatedId` → added under its own type), so the parse
+  endpoints now pass the **record's manager profile** automatically
+  (`comms/templates.related_manager_profile`: the parent's
+  `parent_manager_link` FK — now set on all three domains
+  (mentorProfile/partnerManager/cBMSponsorManager) — falling back to the
+  sender's own linked profile; quick-compose always uses the sender's).
+  Best-effort: no resolvable profile = token stays + the leftover warning.
+  Placeholder cheat sheet for template authors in communications-tab.md.
+  (Side effect of setting partner/sponsor `parent_manager_link`: those
+  domains' CBM-contacts list can now also surface the record's manager —
+  correct UX, inert unless the detail select carries the FK.) Mechanism
+  read from EspoCRM 9.3.6 source (`Processor.prepare`:
+  `entityHash[related->getEntityType()] = related`); NOT yet re-verified
+  live (admin creds became EV[…]-encrypted when the crm-test overlay was
+  regenerated 2026-07-16 — Doug's next template pick in the UI is the
+  live check). Note: EspoCRM 9.2+ also supports a metadata
+  `app.emailTemplate.entityLinkMapping` for auto-loading linked entities —
+  not needed with the app-side fix.
 - **Email signatures in every compose (v0.75.0, 2026-07-17).** The user's
   **EspoCRM `Preferences.signature`** (readable/writable with their own
   token — no grant work) seeds into the bottom of every new compose body,
@@ -1315,9 +1353,26 @@ first); (3) the `documentsFolderUrl` field build (crm-test then prod);
 edited (applying identity=service before the membership swap would break
 uploads).
 
+Also this day (its own session): **v0.72.0 + v0.75.1 — sortable +
+resizable grids on the record detail** (both committed; stub-harness
+verified, not yet eyeballed live). The **Sessions tab grid** (v0.72.0) and
+the **Communications conversation list** (v0.75.1) share one treatment:
+every header sorts (Client-Administration interaction — first click sorts,
+dates newest-first, second reverses, ▲/▼ + `aria-sort`), columns resize by
+dragging a grip on each header's right edge (`makeColumnsResizable` in
+`sessions/frontend/app.js` — first drag freezes widths via
+`table-layout: fixed`; widths live on the `th`s so they survive re-renders,
+and the comms head is now built once per record page so widths + sort
+survive tab revisits). The Sessions grid gained a **Participants** column
+(widest by default, 28%) — `get_detail` mirrors the note feed's attendee
+names onto the session rows (`participants`), zero extra CRM calls; comms
+Participants defaults to 26%. Version-race note (both times): the `app.js`
+half was swept into the parallel session's release commits (e01d4cd →
+completed by d8bb389; 068f44d → completed by 0f0d758) — HEAD is coherent
+at/after each completing commit.
+
 Before that: **v0.75.1** (2026-07-17; 0.75.1 = a parallel session's
-conversation-grid sortable/resizable columns — see CHANGELOG; that session
-owns its own status entry). **This session's arc (v0.67.0 + v0.75.0) is
+conversation-grid sortable/resizable columns — the entry above). **This session's arc (v0.67.0 + v0.75.0) is
 COMPLETE — the full Email Template integration (ET) + email signatures,
 committed NOT pushed:**
 

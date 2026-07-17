@@ -176,6 +176,16 @@ editable draft — rewrite anything, change the subject, delete paragraphs.
 If you already had text in the window, the app asks **"Replace current
 content?"** first, and choosing a template never silently destroys a draft.
 
+**Placeholders template authors can rely on** (anything else stays as a
+literal `{…}` token):
+
+| Placeholder | Fills in with |
+|---|---|
+| `{CMentorProfile.name}` (or any profile field) | the record's **assigned mentor** (partner/sponsor manager on those records); when the record has none, the profile of whoever is composing. In the quick-compose it's always the sender's profile. |
+| `{User.name}` | the person **sending** the email |
+| `{Person.firstName}`, `{Person.name}`, … | the **recipient** (the first To address, when it matches a CRM contact) |
+| `{Parent.name}` (or any record field) | the engagement / partner / sponsor record itself |
+
 If a placeholder can't be filled (say the template mentions a field this
 record doesn't have), the draft keeps the literal `{Something.field}` token
 and the window shows a **review-before-send notice** listing them — read the

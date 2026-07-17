@@ -42,10 +42,12 @@ class TemplateEspo(FakeEspo):
         self.fail_email_create = False
 
     async def email_template_prepare(self, template_id, *, parent_type=None,
-                                     parent_id=None, email_address=None):
+                                     parent_id=None, email_address=None,
+                                     related_type=None, related_id=None):
         self.prepare_calls.append({
             "id": template_id, "parentType": parent_type,
             "parentId": parent_id, "emailAddress": email_address,
+            "relatedType": related_type, "relatedId": related_id,
         })
         if isinstance(self.prepare_response, Exception):
             raise self.prepare_response
@@ -133,7 +135,7 @@ async def test_parse_returns_sanitized_draft_with_chips_and_tokens():
     )
     assert espo.prepare_calls[0] == {
         "id": "t1", "parentType": "CEngagement", "parentId": "E1",
-        "emailAddress": "jane@acme.test",
+        "emailAddress": "jane@acme.test", "relatedType": None, "relatedId": None,
     }
     assert "<script" not in out["bodyHtml"] and "onmouseover" not in out["bodyHtml"]
     assert out["attachments"] == [
@@ -149,6 +151,37 @@ async def test_parse_upconverts_plain_text_template():
     })
     out = await tpl.parse_template(espo, "t1")
     assert "<" in out["bodyHtml"] and "line one" in out["bodyHtml"]
+
+
+# --- unit: related_manager_profile ({CMentorProfile.*} resolution) -----------
+
+
+async def test_related_manager_prefers_the_records_manager():
+    espo = TemplateEspo()
+    espo.records[("CEngagement", "E1")] = {"mentorProfileId": "mp7"}
+    got = await tpl.related_manager_profile(
+        espo, user_id="u1",
+        parent_entity="CEngagement", parent_id="E1", manager_link="mentorProfile",
+    )
+    assert got == "mp7"
+
+
+async def test_related_manager_falls_back_to_the_senders_profile():
+    espo = TemplateEspo()
+    espo.records[("CEngagement", "E1")] = {}  # record has no assigned mentor
+    espo.records[("CMentorProfile", "mp9")] = {
+        "name": "Bob Mentor", "assignedUserId": "u1",
+    }
+    got = await tpl.related_manager_profile(
+        espo, user_id="u1",
+        parent_entity="CEngagement", parent_id="E1", manager_link="mentorProfile",
+    )
+    assert got == "mp9"
+
+
+async def test_related_manager_none_when_nothing_resolves():
+    got = await tpl.related_manager_profile(TemplateEspo(), user_id="u1")
+    assert got is None
 
 
 # --- unit: resolve_attachments (ET-131 blocks the send) ----------------------
@@ -329,6 +362,7 @@ def _as(monkeypatch, client):
 def test_sessions_template_list_and_parse_endpoints(monkeypatch):
     espo = TemplateEspo(meta_fields={})
     espo.records[("EmailTemplate", "t1")] = {"name": "Welcome"}
+    espo.records[("CEngagement", "E1")] = {"mentorProfileId": "mp1"}
     _as(monkeypatch, espo)
     monkeypatch.setattr(comms_service, "get_store", lambda settings: object())
     with TestClient(_app(monkeypatch)) as c:
@@ -346,6 +380,9 @@ def test_sessions_template_list_and_parse_endpoints(monkeypatch):
         assert espo.prepare_calls[0]["parentType"] == "CEngagement"
         assert espo.prepare_calls[0]["parentId"] == "E1"
         assert espo.prepare_calls[0]["emailAddress"] == "jane@acme.test"
+        # the record's assigned mentor rides along so {CMentorProfile.*} resolves
+        assert espo.prepare_calls[0]["relatedType"] == "CMentorProfile"
+        assert espo.prepare_calls[0]["relatedId"] == "mp1"
 
 
 def test_parse_failure_is_a_readable_error_and_no_500(monkeypatch):

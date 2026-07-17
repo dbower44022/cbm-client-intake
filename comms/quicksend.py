@@ -129,8 +129,15 @@ def register_quicksend(
         settings = _sending_on()
         client = client_for(settings, user)
         try:
+            # Record-less: {CMentorProfile.*} resolves to the SENDER's own
+            # linked profile.
+            profile_id = await comms_templates.related_manager_profile(
+                client, user_id=user["userId"],
+            )
             return await comms_templates.parse_template(
                 client, template_id, email_address=body.emailAddress or None,
+                related_type="CMentorProfile" if profile_id else None,
+                related_id=profile_id,
             )
         except EspoError as exc:
             raise crm_failure(request, exc, "Could not apply the template")

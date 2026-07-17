@@ -369,7 +369,10 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             user = _require_user(request)
             client = client_for(get_settings(), user)
             try:
-                result = await service.add_comentor(client, parent_id, body.mentorProfileId)
+                result = await service.add_comentor(
+                    client, parent_id, body.mentorProfileId,
+                    actor=user.get("name") or user.get("userName"),
+                )
             except EspoError as exc:
                 raise _crm_failure(request, exc, "Could not add co-mentor")
             # DOC-09: the co-mentor gains the engagement folder's Commenter
@@ -389,7 +392,10 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             user = _require_user(request)
             client = client_for(get_settings(), user)
             try:
-                result = await service.remove_comentor(client, parent_id, mentor_profile_id)
+                result = await service.remove_comentor(
+                    client, parent_id, mentor_profile_id,
+                    actor=user.get("name") or user.get("userName"),
+                )
             except EspoError as exc:
                 raise _crm_failure(request, exc, "Could not remove the co-mentor")
             # DOC-09: revocation rides the same action that ends the
