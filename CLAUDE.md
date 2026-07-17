@@ -1328,7 +1328,39 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-17)
 
-**Main is at v0.76.2** (2026-07-17, 640 tests green, committed NOT pushed —
+**Main is at v0.77.0** (2026-07-17, 653 tests green, committed NOT pushed) —
+**Reliability hardening Phase 1** (the four P0 findings + worker tracebacks
+from the 2026-07-17 reliability review; review = `reliability-review-2026-07-17.md`,
+phased kickoff prompt = `prompts/reliability-hardening-prompt-v0.1.md`, both
+now committed to the repo — **phases 2–6 remain, one per session, per the
+prompt**):
+- **P0-1** poison payload: worker validation moved inside the classify net
+  (ValidationError → permanent → `needs_attention`); new `worker.run_cycle`
+  top-level guard — NO exception (store/claim errors included) can kill the
+  delivery loop.
+- **P0-2** rollback double-delivery: the worker's claim loop is gated on
+  `ASYNC_DELIVERY` (flag off = web delivers synchronously, worker doesn't
+  claim; monitoring/comms timers keep running; mode banner logged).
+- **P0-3** transport errors: all `EspoClient` calls funnel through
+  `_request`, which wraps httpx transport failures as
+  `EspoTransportError(EspoError)` (op + host in the message, never creds) —
+  every `except EspoError` net (router `_crm_failure`, portal
+  `refresh_membership` fail-open, assignments per-target accumulation, the
+  intake sync path) now covers CRM outages; `worker._is_transient` treats it
+  as retryable.
+- **P0-4** sessions Details PUT entity allowlist (`cfg.details_entities` +
+  Contact, else 404) — closes the Mentor-Team `CMentorProfile edit=all`
+  write-proxy bypass.
+- Worker permanent failures store a traceback tail in `last_error` +
+  `log.exception` — `needs_attention` rows are diagnosable from `/ops`.
+- Verified: 653 tests green (13 new: worker poison/transport/gate/guard,
+  espo transport wrap, details-PUT allowlist incl. per-domain); DoD drill
+  run live against local docker-compose Postgres — poisoned row →
+  `needs_attention` with traceback stored, batch-mates delivered, and a
+  sync-mode (`ASYNC_DELIVERY=false`) worker left a `pending` row unclaimed.
+  Not deployed yet (push per convention).
+
+Before that: **v0.76.2** (2026-07-17, 640 tests green, committed NOT pushed —
 three parallel sessions this day: v0.76.0 Phase 3 below, v0.76.1, and the
 v0.76.2 template-placeholder fix in the Email-templates bullet).
 

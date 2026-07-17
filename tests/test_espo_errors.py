@@ -1,7 +1,11 @@
 """core.espo.validation_message — plain-language classification of EspoCRM
-validation rejections (routers use it to answer 400 instead of 502/504)."""
+validation rejections (routers use it to answer 400 instead of 502/504) — and
+the P0-3 transport-error wrap (every httpx failure becomes an EspoError)."""
 
-from core.espo import EspoError, forbidden_hint, validation_message
+import httpx
+import pytest
+
+from core.espo import EspoClient, EspoError, EspoTransportError, forbidden_hint, validation_message
 
 # The exact error shape from the 2026-07-11 prod failure (Allen Ingram save).
 _PROD_BODY = (
@@ -81,3 +85,52 @@ def test_forbidden_hint_names_operation_and_entity():
 def test_forbidden_hint_none_for_unrecognized_message():
     assert forbidden_hint(EspoError("something exploded")) is None
     assert forbidden_hint(Exception("HTTP 403")) is None
+
+
+# --- EspoTransportError (P0-3, reliability review 2026-07-17) ------------------
+# Transport-level failures (DNS, connect, timeout) must surface as EspoError so
+# every ``except EspoError`` net — _crm_failure mapping, refresh_membership
+# fail-open, per-target error accumulation — covers a CRM outage too.
+
+
+def _unreachable_client(monkeypatch, exc: httpx.HTTPError) -> EspoClient:
+    async def _raise(self, method, url, **kwargs):
+        raise exc
+
+    monkeypatch.setattr(httpx.AsyncClient, "request", _raise)
+    return EspoClient("https://crm-test.example.org", "super-secret-api-key")
+
+
+async def test_transport_error_wrapped_as_espo_error(monkeypatch):
+    client = _unreachable_client(monkeypatch, httpx.ConnectError("connection refused"))
+    with pytest.raises(EspoError) as exc_info:
+        await client.get("Contact", "c1")
+    exc = exc_info.value
+    assert isinstance(exc, EspoTransportError)
+    # Names the operation and the host…
+    assert "get Contact/c1 failed" in str(exc)
+    assert "crm-test.example.org" in str(exc)
+    assert "ConnectError" in str(exc)
+    # …and never the credentials.
+    assert "super-secret-api-key" not in str(exc)
+
+
+async def test_transport_error_wrapped_on_writes(monkeypatch):
+    client = _unreachable_client(monkeypatch, httpx.ReadTimeout("timed out"))
+    with pytest.raises(EspoTransportError) as exc_info:
+        await client.create("Contact", {"firstName": "Ada"})
+    assert "create Contact failed" in str(exc_info.value)
+    with pytest.raises(EspoTransportError):
+        await client.update("Contact", "c1", {"firstName": "Ada"})
+    with pytest.raises(EspoTransportError):
+        await client.relate("CEngagement", "e1", "engagementContacts", "c1")
+    with pytest.raises(EspoTransportError):
+        await client.find_one("Contact", "emailAddress", "a@b.c")
+
+
+def test_transport_error_not_a_validation_or_forbidden_match():
+    exc = EspoTransportError(
+        "get Contact/c1 failed: could not reach the CRM (host): ConnectError: boom"
+    )
+    assert validation_message(exc) is None
+    assert not str(exc).startswith("HTTP")

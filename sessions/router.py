@@ -252,9 +252,20 @@ def make_router(cfg: DomainConfig) -> APIRouter:
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not load details")
 
+    # The Details tab only ever edits this domain's configured entities plus
+    # the related-contact rows. Without this allowlist the PUT below is a
+    # generic write proxy bounded only by the caller's CRM ACL — e.g. a Mentor
+    # Team member (whose role carries CMentorProfile edit=all for co-mentor
+    # relates) could set mentorStatus on anyone's profile (P0-4, reliability
+    # review 2026-07-17).
+    _details_put_entities = {e for _, e, _ in cfg.details_entities} | {"Contact"}
+
     @router.put("/details/{entity}/{record_id}")
     async def save_details(entity: str, record_id: str, body: DetailsSaveIn, request: Request) -> dict:
         user = _require_user(request)
+        if entity not in _details_put_entities:
+            # 404 (not 403) so probing can't confirm which entity names exist.
+            raise HTTPException(status_code=404, detail="Not found")
         client = client_for(get_settings(), user)
         try:
             return await details_svc.save_details(client, entity, record_id, body.changes)

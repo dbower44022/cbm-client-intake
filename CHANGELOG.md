@@ -4,6 +4,59 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.77.0] — 2026-07-17
+
+Reliability hardening **Phase 1** — the four P0 findings of the 2026-07-17
+reliability review (`reliability-review-2026-07-17.md`; kickoff prompt
+`prompts/reliability-hardening-prompt-v0.1.md`) plus the worker-traceback
+logging fix. 13 new tests (653 green); poisoned-row drill run live against
+local Postgres (worker survives, marks `needs_attention` with a traceback,
+delivers the rest; sync-mode worker verified not claiming).
+
+### Fixed
+- **P0-1 — a poison payload can no longer crash-loop the worker.** Payload
+  validation now runs inside the classify-and-route net: a submission the
+  current schema rejects (e.g. a form schema tightened after capture) is a
+  permanent failure routed to `needs_attention` instead of an escaping
+  `ValidationError` that killed the process (and, via the lease, re-killed it
+  every ~15 minutes forever, invisibly). A new top-level guard
+  (`worker.run_cycle`) additionally ensures NO exception — store failure,
+  claim error, anything — can kill the delivery loop: it logs the traceback
+  and continues after the poll interval.
+- **P0-2 — the documented rollback no longer double-delivers.** The worker's
+  claim loop is gated on `ASYNC_DELIVERY`: with the flag off (sync mode, the
+  documented instant rollback) the web tier delivers synchronously and the
+  worker no longer also claims the same `pending` rows — previously both
+  delivered every submission concurrently, duplicating CRM records. The
+  worker stays up (monitoring/comms timers keep running) and logs a mode
+  banner naming the disabled claim loop.
+- **P0-3 — CRM transport failures now surface as `EspoError`.** Every
+  `EspoClient` HTTP call funnels through one `_request` helper that wraps
+  httpx transport exceptions (DNS, connect, TLS, timeout) as
+  **`EspoTransportError(EspoError)`** — message names the operation + CRM
+  host, never credentials. Previously raw `ConnectError`/`ReadTimeout`
+  bypassed every `except EspoError` net: the intake sync path 500'd without
+  `mark_failed`, staff routers' `_crm_failure` mapping was skipped (blank
+  500/edge-504 exactly when the CRM was slow), `refresh_membership`'s
+  fail-open didn't fire (the portal went down with the CRM), and assignments'
+  per-target error accumulation aborted mid re-homing. All of those nets now
+  catch outages too; the worker keeps classifying transport errors as
+  transient (retryable).
+- **P0-4 — sessions Details PUT gained the missing entity allowlist.**
+  `PUT /{slug}/api/details/{entity}/{id}` now rejects any entity outside the
+  domain's configured `details_entities` + `Contact` with a 404 (mirroring
+  the peek allowlist; 404 so probing can't confirm entity names). It was a
+  generic write proxy bounded only by the caller's CRM ACL — and the Mentor
+  Role deliberately carries `CMentorProfile edit=all`, so any Mentor Team
+  member could set `mentorStatus`/dues/compliance on anyone's profile,
+  bypassing the mentorprofile whitelist and the Mentor Administration gate.
+
+### Added
+- **Worker `needs_attention` rows are now diagnosable from /ops.** Permanent
+  failures log with the full traceback (`log.exception`) and store a
+  traceback tail alongside the message in `last_error` — a code bug (e.g.
+  `KeyError`) no longer lands as an unusable four-character string.
+
 ## [0.76.2] — 2026-07-17
 
 ### Fixed

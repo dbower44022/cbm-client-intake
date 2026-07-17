@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+import traceback
 from datetime import datetime, timedelta, timezone
 
 import httpx
@@ -20,7 +21,7 @@ import httpx
 from core import monitoring
 from core import store as store_mod
 from core.config import Settings, get_settings
-from core.espo import DryRunEspoClient, EspoApi, EspoClient, EspoError
+from core.espo import DryRunEspoClient, EspoApi, EspoClient, EspoError, EspoTransportError
 from core.resumable import ResumableClient
 from core.store import Claimed, SubmissionStore
 from core.submission_log import (
@@ -50,6 +51,9 @@ def _is_transient(exc: Exception) -> bool:
     """Retry network blips and CRM 5xx/408/429; treat 4xx (bad data) as permanent."""
     if isinstance(exc, (httpx.TransportError, httpx.TimeoutException)):
         return True
+    if isinstance(exc, EspoTransportError):
+        # EspoClient wraps transport failures (P0-3); always retryable.
+        return True
     if isinstance(exc, EspoError):
         match = re.search(r"HTTP (\d{3})", str(exc))
         if match:
@@ -72,7 +76,6 @@ async def process_one(store: SubmissionStore, settings: Settings, claimed: Claim
         )
         return
 
-    submission = spec.submission_model.model_validate(claimed.payload)
     base = _client(settings)
 
     async def _save(progress: dict) -> None:
@@ -80,7 +83,13 @@ async def process_one(store: SubmissionStore, settings: Settings, claimed: Claim
 
     client = ResumableClient(base, claimed.progress, _save)
 
+    submission = None
     try:
+        # Validation runs INSIDE the classify-and-route net (P0-1): a payload
+        # the current schema rejects (e.g. a form schema tightened after
+        # capture) is a permanent failure routed to needs_attention — it must
+        # never escape and kill the worker process.
+        submission = spec.submission_model.model_validate(claimed.payload)
         ids = await spec.orchestrator(submission, client)
     except Exception as exc:  # noqa: BLE001 — classify + route, never crash the loop
         attempt = (claimed.attempt_count or 0) + 1
@@ -91,14 +100,20 @@ async def process_one(store: SubmissionStore, settings: Settings, claimed: Claim
             )
             log.warning("retry %s (attempt %s): %s", claimed.id, attempt, exc)
         else:
+            # Store the traceback tail alongside the message so a code bug
+            # (e.g. KeyError) landing in needs_attention is diagnosable from
+            # /ops, not just a four-character string.
+            tail = traceback.format_exc()[-1000:]
             await store.mark_failed(
-                claimed.id, status=store_mod.STATUS_NEEDS_ATTENTION, error=str(exc)
+                claimed.id, status=store_mod.STATUS_NEEDS_ATTENTION,
+                error=f"{str(exc)[:800]}\n--- traceback (tail) ---\n{tail}",
             )
-            await log_submission(
-                base, spec.slug, submission,
-                reason=REASON_ORCHESTRATOR_ERROR, status=STATUS_NEW,
-            )
-            log.error("needs_attention %s (attempt %s): %s", claimed.id, attempt, exc)
+            if submission is not None:
+                await log_submission(
+                    base, spec.slug, submission,
+                    reason=REASON_ORCHESTRATOR_ERROR, status=STATUS_NEW,
+                )
+            log.exception("needs_attention %s (attempt %s): %s", claimed.id, attempt, exc)
         return
 
     await log_submission(
@@ -119,6 +134,29 @@ async def run_once(store: SubmissionStore, settings: Settings) -> int:
     return len(claimed)
 
 
+async def run_cycle(store: SubmissionStore, settings: Settings) -> int:
+    """One guarded delivery cycle — what the main loop actually runs.
+
+    Two hardenings from the 2026-07-17 reliability review:
+
+    - **P0-2**: with ``ASYNC_DELIVERY`` off (the documented rollback), the web
+      tier delivers synchronously — the worker must NOT also claim the same
+      ``pending`` rows or every submission is delivered twice. Flag off ⇒ no
+      claiming (the monitoring/comms timers in ``main`` keep running).
+    - **P0-1 (loop guard)**: no exception — store failure, claim error,
+      anything ``process_one``'s own net misses — may kill the loop. Log it
+      with the traceback and report an empty batch so the loop sleeps and
+      tries again.
+    """
+    if not settings.async_delivery:
+        return 0
+    try:
+        return await run_once(store, settings)
+    except Exception:  # noqa: BLE001 — nothing may crash the delivery loop
+        log.exception("delivery cycle failed — continuing after the poll interval")
+        return 0
+
+
 async def main() -> None:
     logging.basicConfig(level=logging.INFO)
     settings = get_settings()
@@ -135,6 +173,12 @@ async def main() -> None:
         "worker started (async_delivery=%s, dry_run=%s, batch=%s)",
         settings.async_delivery, settings.espo_dry_run, settings.worker_batch_size,
     )
+    if not settings.async_delivery:
+        log.warning(
+            "ASYNC_DELIVERY is off — claim loop disabled; the web tier delivers "
+            "synchronously (P0-2 double-delivery guard). Monitoring/comms timers "
+            "keep running."
+        )
 
     # Phase 3: alert + schema-drift checks run here on their own cadence.
     alert_state: dict = {}
@@ -165,7 +209,7 @@ async def main() -> None:
             log.info("gmail sync enabled (every %ss)", settings.gmail_sync_seconds)
 
     while True:
-        claimed = await run_once(store, settings)
+        claimed = await run_cycle(store, settings)
 
         now = datetime.now(timezone.utc)
         if now >= next_alert:

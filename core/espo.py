@@ -27,6 +27,17 @@ class EspoError(Exception):
     """A create/read against EspoCRM failed."""
 
 
+class EspoTransportError(EspoError):
+    """The CRM could not be reached at all (DNS, connect, TLS, timeout).
+
+    A subclass of :class:`EspoError` so every ``except EspoError`` net —
+    router ``_crm_failure`` mapping, best-effort fail-opens, per-target error
+    accumulation — also covers transport failures instead of letting raw
+    httpx exceptions surface as blank 500s. Always transient: retry
+    classification (``worker._is_transient``) treats it as retryable.
+    """
+
+
 _HTTP_STATUS_RE = re.compile(r"HTTP (\d{3})")
 
 
@@ -177,14 +188,41 @@ class EspoClient:
             },
         )
 
+    async def _request(
+        self,
+        method: str,
+        url: str,
+        *,
+        op: str,
+        params: Any = None,
+        json_body: Any = None,
+    ) -> httpx.Response:
+        """Every HTTP call funnels through here so transport-level failures
+        (DNS, connect, TLS, timeout) raise :class:`EspoTransportError` instead
+        of raw httpx exceptions that would bypass every ``except EspoError``
+        net (P0-3, reliability review 2026-07-17). The message names the
+        operation and the CRM host — never credentials (those live only in
+        headers, which httpx error text does not include)."""
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                return await client.request(
+                    method, url, params=params, json=json_body, headers=self._headers
+                )
+        except httpx.HTTPError as exc:
+            host = httpx.URL(url).host
+            raise EspoTransportError(
+                f"{op} failed: could not reach the CRM ({host}): "
+                f"{type(exc).__name__}: {exc}"
+            ) from exc
+
     async def get(
         self, entity: str, record_id: str, select: Optional[str] = None
     ) -> dict[str, Any]:
         params = {"select": select} if select else None
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            resp = await client.get(
-                f"{self._base}/{entity}/{record_id}", params=params, headers=self._headers
-            )
+        resp = await self._request(
+            "GET", f"{self._base}/{entity}/{record_id}",
+            op=f"get {entity}/{record_id}", params=params,
+        )
         if resp.status_code >= 400:
             raise EspoError(
                 f"get {entity}/{record_id} failed: HTTP {resp.status_code} {resp.text[:300]}"
@@ -223,10 +261,9 @@ class EspoClient:
                         params.append((f"where[{i}][value][{j}]", str(item)))
                 else:
                     params.append((f"where[{i}][value]", str(value)))
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            resp = await client.get(
-                f"{self._base}/{entity}", params=params, headers=self._headers
-            )
+        resp = await self._request(
+            "GET", f"{self._base}/{entity}", op=f"list {entity}", params=params
+        )
         if resp.status_code >= 400:
             raise EspoError(
                 f"list {entity} failed: HTTP {resp.status_code} {resp.text[:300]}"
@@ -246,12 +283,10 @@ class EspoClient:
         params: list[tuple[str, str]] = [("maxSize", str(max_size))]
         if select:
             params.append(("select", select))
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            resp = await client.get(
-                f"{self._base}/{entity}/{record_id}/{link}",
-                params=params,
-                headers=self._headers,
-            )
+        resp = await self._request(
+            "GET", f"{self._base}/{entity}/{record_id}/{link}",
+            op=f"list_related {entity}/{record_id}/{link}", params=params,
+        )
         if resp.status_code >= 400:
             raise EspoError(
                 f"list_related {entity}/{record_id}/{link} failed: "
@@ -260,10 +295,9 @@ class EspoClient:
         return resp.json()
 
     async def create(self, entity: str, payload: dict[str, Any]) -> dict[str, Any]:
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            resp = await client.post(
-                f"{self._base}/{entity}", json=payload, headers=self._headers
-            )
+        resp = await self._request(
+            "POST", f"{self._base}/{entity}", op=f"create {entity}", json_body=payload
+        )
         if resp.status_code >= 400:
             raise EspoError(
                 f"create {entity} failed: HTTP {resp.status_code} {resp.text[:300]}"
@@ -273,10 +307,10 @@ class EspoClient:
     async def update(
         self, entity: str, record_id: str, payload: dict[str, Any]
     ) -> dict[str, Any]:
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            resp = await client.put(
-                f"{self._base}/{entity}/{record_id}", json=payload, headers=self._headers
-            )
+        resp = await self._request(
+            "PUT", f"{self._base}/{entity}/{record_id}",
+            op=f"update {entity}/{record_id}", json_body=payload,
+        )
         if resp.status_code >= 400:
             raise EspoError(
                 f"update {entity}/{record_id} failed: "
@@ -294,10 +328,9 @@ class EspoClient:
             ("where[0][attribute]", attribute),
             ("where[0][value]", value),
         ]
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            resp = await client.get(
-                f"{self._base}/{entity}", params=params, headers=self._headers
-            )
+        resp = await self._request(
+            "GET", f"{self._base}/{entity}", op=f"find {entity}", params=params
+        )
         if resp.status_code >= 400:
             raise EspoError(
                 f"find {entity} failed: HTTP {resp.status_code} {resp.text[:300]}"
@@ -309,12 +342,10 @@ class EspoClient:
         self, entity: str, record_id: str, link: str, related_id: str
     ) -> None:
         """Add a record to a hasMany/manyMany link (EspoCRM relationship POST)."""
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            resp = await client.post(
-                f"{self._base}/{entity}/{record_id}/{link}",
-                json={"id": related_id},
-                headers=self._headers,
-            )
+        resp = await self._request(
+            "POST", f"{self._base}/{entity}/{record_id}/{link}",
+            op=f"relate {entity}/{record_id}/{link}", json_body={"id": related_id},
+        )
         if resp.status_code >= 400:
             raise EspoError(
                 f"relate {entity}/{record_id}/{link} failed: "
@@ -330,13 +361,11 @@ class EspoClient:
         path-suffix variant (…/{link}/{related_id}) 404s on crm-test
         (found live 2026-07-12 unlinking an engagement contact).
         """
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            resp = await client.request(
-                "DELETE",
-                f"{self._base}/{entity}/{record_id}/{link}",
-                json={"id": related_id},
-                headers=self._headers,
-            )
+        resp = await self._request(
+            "DELETE", f"{self._base}/{entity}/{record_id}/{link}",
+            op=f"unrelate {entity}/{record_id}/{link} ({related_id})",
+            json_body={"id": related_id},
+        )
         if resp.status_code >= 400:
             raise EspoError(
                 f"unrelate {entity}/{record_id}/{link} ({related_id}) failed: "
@@ -345,10 +374,9 @@ class EspoClient:
 
     async def metadata(self, key: str) -> Any:
         """Fetch an arbitrary EspoCRM metadata key (e.g. an entity's field defs)."""
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            resp = await client.get(
-                f"{self._base}/Metadata", params={"key": key}, headers=self._headers
-            )
+        resp = await self._request(
+            "GET", f"{self._base}/Metadata", op=f"metadata {key}", params={"key": key}
+        )
         if resp.status_code >= 400:
             raise EspoError(
                 f"metadata {key} failed: HTTP {resp.status_code} {resp.text[:200]}"
@@ -358,8 +386,7 @@ class EspoClient:
     async def app_user(self) -> dict[str, Any]:
         """The ``App/user`` payload for the current auth — includes the user's
         ACL table (per-entity create/read/edit/delete levels)."""
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            resp = await client.get(f"{self._base}/App/user", headers=self._headers)
+        resp = await self._request("GET", f"{self._base}/App/user", op="get App/user")
         if resp.status_code >= 400:
             raise EspoError(f"App/user failed: HTTP {resp.status_code} {resp.text[:200]}")
         return resp.json()
@@ -372,10 +399,10 @@ class EspoClient:
         Returns None if the field/options aren't found (so callers can skip it).
         """
         params = {"key": f"entityDefs.{entity}.fields.{field}.options"}
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            resp = await client.get(
-                f"{self._base}/Metadata", params=params, headers=self._headers
-            )
+        resp = await self._request(
+            "GET", f"{self._base}/Metadata",
+            op=f"metadata {entity}.{field}", params=params,
+        )
         if resp.status_code >= 400:
             raise EspoError(
                 f"metadata {entity}.{field} failed: HTTP {resp.status_code} {resp.text[:200]}"
@@ -402,10 +429,9 @@ class EspoClient:
             "field": field,
             "file": f"data:{content_type};base64,{data_base64}",
         }
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            resp = await client.post(
-                f"{self._base}/Attachment", json=body, headers=self._headers
-            )
+        resp = await self._request(
+            "POST", f"{self._base}/Attachment", op="create Attachment", json_body=body
+        )
         if resp.status_code >= 400:
             raise EspoError(
                 f"upload attachment failed: HTTP {resp.status_code} {resp.text[:300]}"
@@ -416,10 +442,10 @@ class EspoClient:
         """The attachment's raw bytes + content type. Runs under this client's
         credentials, so EspoCRM ACL-checks access against the related record —
         the browser can't reach the CRM directly, callers proxy through this."""
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            resp = await client.get(
-                f"{self._base}/Attachment/file/{attachment_id}", headers=self._headers
-            )
+        resp = await self._request(
+            "GET", f"{self._base}/Attachment/file/{attachment_id}",
+            op=f"get Attachment/file/{attachment_id}",
+        )
         if resp.status_code >= 400:
             raise EspoError(
                 f"download attachment {attachment_id} failed: HTTP {resp.status_code} {resp.text[:200]}"
@@ -461,12 +487,10 @@ class EspoClient:
         if related_type and related_id:
             payload["relatedType"] = related_type
             payload["relatedId"] = related_id
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            resp = await client.post(
-                f"{self._base}/EmailTemplate/{template_id}/prepare",
-                json=payload,
-                headers=self._headers,
-            )
+        resp = await self._request(
+            "POST", f"{self._base}/EmailTemplate/{template_id}/prepare",
+            op=f"prepare EmailTemplate/{template_id}", json_body=payload,
+        )
         if resp.status_code >= 400:
             raise EspoError(
                 f"prepare EmailTemplate/{template_id} failed: "
