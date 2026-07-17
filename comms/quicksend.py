@@ -166,7 +166,7 @@ def register_quicksend(
         user = require_user(request)
         settings = get_settings()
         if not settings.gmail_sync:
-            return {"mailbox": None, "sendEnabled": False}
+            return {"mailbox": None, "sendEnabled": False, "signature": ""}
         from sessions.service import resolve_user_mailbox  # avoid import cycle
 
         client = client_for(settings, user)
@@ -174,4 +174,8 @@ def register_quicksend(
             mailbox = await resolve_user_mailbox(client, user["userId"])
         except EspoError as exc:
             raise crm_failure(request, exc, "Could not look up your mailbox")
-        return {"mailbox": mailbox, "sendEnabled": bool(mailbox)}
+        return {
+            "mailbox": mailbox,
+            "sendEnabled": bool(mailbox),
+            "signature": await comms_service.user_signature(client, user["userId"]),
+        }

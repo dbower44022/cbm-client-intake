@@ -91,6 +91,17 @@ another email or document. Your message goes out as a normal formatted
 (HTML) email; recipients whose mail client prefers plain text automatically
 get a plain-text version of the same message.
 
+**Your email signature is added automatically.** Every new message (and
+reply) opens with your signature already at the bottom of the body — from
+there it's ordinary text you can edit or delete for that one message. The
+signature is your **EspoCRM signature**: set it up either in **My Mentor
+Profile** (the "Email signature" panel) or in EspoCRM under your avatar
+menu → Preferences → Email Signature — both edit the same signature. No
+signature set = messages open with an empty body, exactly as before.
+Choosing a template keeps the signature: the template text loads and your
+signature is re-added below it (so templates themselves shouldn't include a
+sign-off).
+
 Mail you send goes out **as you** — from your own `@cbmentors.org` address —
 and appears in the tab immediately. A copy also lands in Gmail's *Sent*
 folder, but note **which** mailbox: the `@cbmentors.org` one. If you

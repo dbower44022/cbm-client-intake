@@ -72,7 +72,63 @@
       renderSince(record.mentorStartDate);  // fills the top-bar badge renderForm created
       refreshPreview();
       loadPhoto(record.profilePhotoId);
+      buildSignaturePanel();
     } catch (e) { bootFail(e); }
+  }
+
+  // --- Email signature (EspoCRM Preferences.signature — its own panel with
+  // its own Save: it isn't a profile/Contact field, so it stays outside the
+  // main form's whitelist diff). Every compose dialog product-wide seeds this
+  // signature into new emails.
+  function buildSignaturePanel() {
+    var form = $("editForm");
+    var sec = document.createElement("section"); sec.className = "mp__group";
+    var h = document.createElement("h2"); h.className = "mp__group-h"; h.textContent = "Email signature";
+    sec.appendChild(h);
+    var help = document.createElement("p"); help.className = "mp__hint";
+    help.textContent = "Added to the bottom of every email you compose in the CBM tools. " +
+      "You can still edit or remove it on any individual message.";
+    sec.appendChild(help);
+    var wrap = document.createElement("div"); wrap.className = "cbm-field";
+    var editor = (window.CBMRichText && window.CBMRichText.create("", {})) || makeWysiwyg("");
+    wrap.appendChild(editor); sec.appendChild(wrap);
+    var line = document.createElement("div"); line.className = "mp__row";
+    var save = document.createElement("button"); save.type = "button";
+    save.className = "cbm-button"; save.textContent = "Save signature";
+    var status = document.createElement("span"); status.className = "mp__hint"; status.textContent = "";
+    line.appendChild(save); line.appendChild(status);
+    sec.appendChild(line);
+    // Sits above the Internal-CRM-description section (Doug's ruling keeps
+    // that one at the very bottom).
+    var last = form.lastElementChild;
+    if (last) form.insertBefore(sec, last); else form.appendChild(sec);
+
+    function editorValue() {
+      return editor._cbmRichText ? editor._cbmRichText.getValue()
+        : (editor.querySelector("[contenteditable]") || {}).innerHTML || "";
+    }
+    function setEditor(html) {
+      if (editor._cbmRichText) editor._cbmRichText.setValue(html);
+      else {
+        var ce = editor.querySelector("[contenteditable]");
+        if (ce) ce.innerHTML = html;
+      }
+    }
+    api("/signature").then(function (r) {
+      setEditor((r && r.signature) || "");
+    }).catch(function () { status.textContent = "Couldn't load your saved signature."; });
+    save.addEventListener("click", async function () {
+      save.disabled = true; status.textContent = "Saving…";
+      try {
+        await api("/signature", {
+          method: "PUT", body: JSON.stringify({ signature: editorValue() }),
+        });
+        status.textContent = "Signature saved.";
+      } catch (e) {
+        if (e.status === 401) { showLogin(); return; }
+        status.textContent = e.message || "Couldn't save the signature.";
+      } finally { save.disabled = false; }
+    });
   }
 
   // "Mentoring since mm/dd/yyyy" — the read-only badge between the photo and

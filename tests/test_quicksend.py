@@ -30,10 +30,16 @@ def _app(monkeypatch, gmail_sync: bool):
     return create_app([info_request.SPEC])
 
 
-def _as(monkeypatch, user=_USER):
+def _as(monkeypatch, user=_USER, signature=""):
     # assignments calls auth.current_user; mentoradmin imported the name.
     monkeypatch.setattr("assignments.auth.current_user", lambda request, key=None: user)
     monkeypatch.setattr("mentoradmin.router.current_user", lambda request, key=None: user)
+
+    # /mailbox reads the user's Preferences signature — keep it off the network.
+    async def fake_signature(client, user_id):
+        return signature
+
+    monkeypatch.setattr(comms_service, "user_signature", fake_signature)
 
 
 class FakeGmail:
@@ -59,7 +65,7 @@ def test_mailbox_reports_disabled_when_gmail_sync_off(monkeypatch):
         for base in ("/assignments/api", "/mentoradmin/api"):
             r = c.get(base + "/mailbox")
             assert r.status_code == 200
-            assert r.json() == {"mailbox": None, "sendEnabled": False}
+            assert r.json() == {"mailbox": None, "sendEnabled": False, "signature": ""}
 
 
 def test_sendmail_503_when_gmail_sync_off(monkeypatch):
@@ -84,6 +90,7 @@ def test_mailbox_resolves_users_cbm_address(monkeypatch):
     assert r.json() == {
         "mailbox": "staff.admin@cbmentors.org",
         "sendEnabled": True,
+        "signature": "",
     }
 
 
@@ -96,7 +103,7 @@ def test_mailbox_null_when_no_linked_profile(monkeypatch):
     monkeypatch.setattr("sessions.service.resolve_user_mailbox", fake_resolve)
     with TestClient(_app(monkeypatch, gmail_sync=True)) as c:
         r = c.get("/assignments/api/mailbox")
-    assert r.json() == {"mailbox": None, "sendEnabled": False}
+    assert r.json() == {"mailbox": None, "sendEnabled": False, "signature": ""}
 
 
 def test_sendmail_sends_as_the_user(monkeypatch):
@@ -165,6 +172,7 @@ def test_sessions_router_has_sendmail_and_mailbox_reports_send_enabled(monkeypat
         assert r.json() == {
             "mailbox": "staff.admin@cbmentors.org",
             "sendEnabled": True,
+            "signature": "",
         }
         r2 = c.post(
             "/mentorsessions/api/sendmail",

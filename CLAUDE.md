@@ -958,7 +958,26 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   EmailTemplate read + Email create (Mentor Role/Standard User already
   carry them, read live 2026-07-16); category filtering needs no build. Verified in the stub harness (both
   dialogs, full flows incl. both failure paths); 23 new tests; **NOT yet
-  driven against the live CRM/Gmail.**
+  driven against the live CRM/Gmail.** (Grants DONE on crm-test 2026-07-17
+  per Doug.)
+- **Email signatures in every compose (v0.75.0, 2026-07-17).** The user's
+  **EspoCRM `Preferences.signature`** (readable/writable with their own
+  token — no grant work) seeds into the bottom of every new compose body,
+  record compose AND quick-compose; it arrives on the existing
+  `GET /mailbox` response (`signature`, sanitized via the template pass;
+  `comms/service.user_signature`, best-effort ""). Template application
+  re-appends the signature below the rendered draft (so templates must not
+  carry sign-offs — noted in communications-tab.md); a body still equal to
+  the untouched seed counts as EMPTY (no ET-113 replace-prompt right after
+  open; the quick-compose "write a message" guard still fires; tracked as
+  `sigSeed` in both frontends). **Editing: /mentorprofile "Email signature"
+  panel** (CBMRichText, own Save button, inserted above the
+  Internal-CRM-description group — outside the PROFILE_FIELDS whitelist
+  diff) → `GET/PUT /mentorprofile/api/signature` (PUT sanitizes, writes
+  `Preferences/{ownUserId}`); non-mentor staff use EspoCRM → Preferences →
+  Email Signature (same field). Gmail never appends its own signature to
+  API-sent raw MIME — that's the gap this closes. Harness-verified on all
+  three surfaces; NOT yet driven live.
 - **Documents — PRD v1.2 alignment (v0.68.0, 2026-07-16).** Doug's updated
   PRD (v1.1/1.2: D-07 + the §3.2 folder-tree rewrite) + his rulings this
   session (mentor documents live in **Mentor Administration**; partner/
@@ -1224,7 +1243,24 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-17)
 
-**Main is at v0.74.0** (this session, 2026-07-16/17; 595 tests green;
+**Main is at v0.75.0** (2026-07-17, 600 tests green, committed NOT pushed) —
+**email signatures in every compose dialog**: new messages open with the
+user's **EspoCRM `Preferences.signature`** seeded at the bottom of the body
+(rides `GET /mailbox`; `comms/service.user_signature`, sanitized,
+best-effort); applying a template re-appends it below the rendered draft;
+an untouched seeded signature counts as an EMPTY draft (no replace-prompt,
+quick-compose's "write a message" guard still fires); **My Mentor Profile
+gains an "Email signature" panel** (own Save, above Internal CRM
+description; `GET/PUT /mentorprofile/api/signature` — users write their own
+Preferences, no grant work; non-mentor staff author theirs in EspoCRM →
+Preferences → Email Signature). Doug's rulings 2026-07-16 (source /
+auto-insert / re-append / edit-in-profile — all the recommended options).
+Verified in the stub harness (all three surfaces); 12 new tests. NOT yet
+driven live. Also: Doug added the Partner/Sponsor Manager EmailTemplate +
+Email grants on crm-test, so all three domains are live-testable for the
+v0.67.0 template feature.
+
+Before that: **v0.74.0** (2026-07-16/17; 595 tests green;
 committed, push per convention) — **the double-assignment forensics session**,
 three deliverables:
 1. **v0.72.1 — stale-assign guard.** Client Administration's Assign re-reads

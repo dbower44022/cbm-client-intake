@@ -4,6 +4,38 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.75.0] — 2026-07-17
+
+### Added
+- **Email signatures in every compose dialog.** The signature is the user's
+  **EspoCRM `Preferences.signature`** (Doug's rulings 2026-07-16: EspoCRM
+  Preferences as the source; auto-insert on open; re-append after a
+  template; editable in My Mentor Profile). Gmail never appends its own
+  signature to API-sent raw MIME, so the compose seeds it instead:
+  - Both dialogs (record compose + the shared quick-compose) open a new
+    message with the signature at the bottom of the rich-text body — plain
+    editable text from there. It rides the existing `GET /mailbox` response
+    (`signature`, sanitized; `comms/service.user_signature`, best-effort).
+  - Applying an **email template** replaces the body with the rendered
+    draft and **re-appends the signature below it** (EspoCRM's own compose
+    behavior) — templates shouldn't carry their own sign-off.
+  - A body still equal to the untouched seeded signature counts as
+    **empty**: picking a template right after opening doesn't ask
+    "Replace current content?", and the quick-compose's "Write a message
+    first" guard still fires.
+  - **My Mentor Profile gains an "Email signature" panel** (CBMRichText,
+    own Save, placed above Internal CRM description): reads/writes the
+    caller's own EspoCRM Preferences via new
+    `GET/PUT /mentorprofile/api/signature` (sanitized server-side; users
+    can already write their own Preferences — no grant work). Non-mentor
+    staff can author theirs in EspoCRM → Preferences → Email Signature;
+    the compose reads it wherever it was written.
+  - Verified in the stubbed-browser harness (seed on open, no-prompt over
+    the seed, re-append after template, prompt over real content, sent
+    body carries the signature, quick-compose empty-guard, profile panel
+    load/edit/save; no console errors) + 12 new tests (600 green). NOT yet
+    driven live.
+
 ## [0.74.0] — 2026-07-16
 
 ### Added

@@ -461,7 +461,13 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             raise _crm_failure(request, exc, "Could not look up your mailbox")
         # sendEnabled feeds the shared quickmail widget (grid-page peeks —
         # no open record, so the record-scoped compose can't be used).
-        return {"mailbox": box, "sendEnabled": bool(settings.gmail_sync and box)}
+        # signature: the user's EspoCRM Preferences signature, seeded into the
+        # compose body (best-effort — "" when unset/unreadable).
+        return {
+            "mailbox": box,
+            "sendEnabled": bool(settings.gmail_sync and box),
+            "signature": await comms_service.user_signature(client, user["userId"]),
+        }
 
     @router.get("/mailsearch")
     async def mailsearch(q: str, request: Request) -> dict:

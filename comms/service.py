@@ -278,6 +278,26 @@ async def include_thread(
 # --- send ---------------------------------------------------------------------
 
 
+async def user_signature(user_client: Any, user_id: str) -> str:
+    """The signed-in user's email signature — ``Preferences.signature`` in
+    EspoCRM (authored under Preferences → Email Signature, or via the
+    /mentorprofile editor), sanitized for the compose editor. Gmail never
+    appends its own signature to API-sent raw MIME, so the compose dialogs
+    seed this into the body instead. Best-effort: any failure = "" — a
+    signature must never break composing."""
+    try:
+        prefs = await user_client.get("Preferences", user_id)
+    except Exception as exc:  # noqa: BLE001
+        log.debug("signature read failed for %s: %s", user_id, exc)
+        return ""
+    sig = str(prefs.get("signature") or "")
+    if not sig.strip():
+        return ""
+    from .templates import sanitize_template_html
+
+    return sanitize_template_html(sig)
+
+
 # One Gmail message tops out at 25 MB encoded; stay under it with headroom.
 MAX_ATTACHMENT_TOTAL_BYTES = 20 * 1024 * 1024
 

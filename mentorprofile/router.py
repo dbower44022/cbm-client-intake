@@ -35,6 +35,11 @@ class PhotoIn(BaseModel):
     dataBase64: str = Field(min_length=1, max_length=service.MAX_PHOTO_B64_CHARS)
 
 
+class SignatureIn(BaseModel):
+    # 64 KB is far beyond any reasonable signature; guards against abuse.
+    signature: str = Field(default="", max_length=65536)
+
+
 def _require_user(request: Request) -> dict:
     """The shared staff session + THIS app's team gate, per request (401 = not
     signed in — the frontend sends the user to the portal; 403 = signed in but
@@ -131,6 +136,34 @@ async def profile_update(body: UpdateIn, request: Request) -> dict:
         raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not save your profile")
+
+
+@router.get("/signature")
+async def signature(request: Request) -> dict:
+    """The caller's own email signature (EspoCRM ``Preferences.signature`` —
+    what every compose dialog seeds into the body). Own record only: the id
+    always comes from the session, never the request."""
+    user = _require_user(request)
+    client = client_for(get_settings(), user)
+    from comms.service import user_signature
+
+    return {"signature": await user_signature(client, user["userId"])}
+
+
+@router.put("/signature")
+async def signature_update(body: SignatureIn, request: Request) -> dict:
+    """Save the caller's signature back to their own EspoCRM Preferences —
+    users can write their own Preferences record, so no extra grant."""
+    user = _require_user(request)
+    client = client_for(get_settings(), user)
+    from comms.templates import sanitize_template_html
+
+    clean = sanitize_template_html(body.signature or "")
+    try:
+        await client.update("Preferences", user["userId"], {"signature": clean})
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not save your signature")
+    return {"status": "ok", "signature": clean}
 
 
 @router.post("/photo")

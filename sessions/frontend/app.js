@@ -28,6 +28,7 @@
   var currentViewSessions = []; // ordered session rows for the read-only view's prev/next
   var currentViewIndex = -1;    // position within currentViewSessions
   var senderMailbox;        // the user's own From address (/api/mailbox); undefined = not fetched yet
+  var senderSignature;      // their EspoCRM Preferences signature (rides /api/mailbox)
   var search = "";
   var statusFilter = "";        // selected status value ("" = all)
   var sortKey = null;           // grid column key to sort by (null = default order)
@@ -1138,14 +1139,48 @@
 
   function commsOn() { return !!(config && config.commsEnabled); }
 
+  // Conversation-list sorting + resizing — same capabilities as the Sessions
+  // grid (v0.72.0): sortable headers (first click sorts, dates newest-first;
+  // second reverses) and drag-to-resize column grips. The head is built once
+  // and kept across tab revisits so resized widths survive.
+  var convSort = { key: null, dir: 1 };
+  var convRows = [];
+  var CONV_COLUMNS = [
+    { key: "status", label: "Status" },
+    { key: "participants", label: "Participants" },
+    { key: "subject", label: "Conversation" },
+    { key: "lastMessageAt", label: "Last activity" }
+  ];
+
+  function buildConvHead() {
+    var head = $("inboxHead");
+    if (head.dataset.built === "conv") return;
+    head.dataset.built = "conv";
+    head.innerHTML = "";
+    CONV_COLUMNS.forEach(function (c) {
+      var th = document.createElement("th");
+      th.scope = "col"; th.textContent = c.label;
+      th.className = "sx__th-sort"; th.setAttribute("data-sort", c.key);
+      th.addEventListener("click", function () {
+        if (convSort.key === c.key) {
+          convSort.dir = -convSort.dir;
+        } else {
+          convSort.key = c.key;
+          convSort.dir = c.key === "lastMessageAt" ? -1 : 1;
+        }
+        renderConversationRows(convRows);
+      });
+      head.appendChild(th);
+    });
+    makeColumnsResizable($("inboxTable"));
+  }
+
   function renderComms() {
     if (!commsOn()) { renderSampleComms(); return; }
     hide($("commBanner"));
     $("addEmailsBtn").hidden = false;
     hide($("commError"));
-    $("inboxHead").innerHTML =
-      "<th scope='col'>Status</th><th scope='col'>Participants</th>" +
-      "<th scope='col'>Conversation</th><th scope='col'>Last activity</th>";
+    buildConvHead();
     loadConversations();
   }
 
@@ -1155,7 +1190,8 @@
     $("noMessages").textContent = "Loading conversations…"; show($("noMessages")); hide($("inboxTable"));
     try {
       var res = await api("/records/" + encodeURIComponent(currentDetail.id) + "/conversations");
-      renderConversationRows(res.conversations || []);
+      convRows = res.conversations || [];
+      renderConversationRows(convRows);
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }
       hide($("noMessages"));
@@ -1163,13 +1199,35 @@
     }
   }
 
+  function convSortVal(c, k) {
+    if (k === "lastMessageAt") return c.lastMessageAt || "";  // UTC stamps compare as strings
+    return (c[k] || "").toString().toLowerCase();
+  }
+
+  function updateConvSortIndicators() {
+    Array.prototype.forEach.call(document.querySelectorAll("#inboxTable th[data-sort]"), function (th) {
+      var active = th.getAttribute("data-sort") === convSort.key;
+      th.setAttribute("aria-sort", active ? (convSort.dir === 1 ? "ascending" : "descending") : "none");
+      th.dataset.dir = active ? (convSort.dir === 1 ? "asc" : "desc") : "";
+    });
+  }
+
   function renderConversationRows(rows) {
     var body = $("inboxBody"); body.innerHTML = "";
+    updateConvSortIndicators();
     if (!rows.length) {
       $("noMessages").textContent = "No email conversations found for this record yet.";
       show($("noMessages")); hide($("inboxTable")); return;
     }
     hide($("noMessages")); show($("inboxTable"));
+    rows = rows.slice();
+    if (convSort.key) {
+      var k = convSort.key, dir = convSort.dir;
+      rows.sort(function (a, b) {
+        var va = convSortVal(a, k), vb = convSortVal(b, k);
+        return (va < vb ? -1 : va > vb ? 1 : 0) * dir;
+      });
+    }
     rows.forEach(function (c) {
       var tr = document.createElement("tr");
       tr.className = "sx__inbox-row";
@@ -1535,7 +1593,9 @@
     if (senderMailbox === undefined) {
       api("/mailbox").then(function (r) {
         senderMailbox = (r && r.mailbox) || null;
+        senderSignature = (r && r.signature) || "";
         setFrom(senderMailbox || "no CBM email on your profile — sending won't work");
+        seedSignature();
       }).catch(function () { setFrom("your CBM email address"); });
     } else if (senderMailbox === null) {
       setFrom("no CBM email on your profile — sending won't work");
@@ -1620,8 +1680,22 @@
       }).catch(function () { /* no picker — compose works without it */ });
     }
     tplFilter.addEventListener("input", function () { renderTplOptions(this.value); });
+    // Signature (the user's EspoCRM Preferences signature, riding /mailbox):
+    // seeded into an EMPTY body when the dialog opens — from there it's plain
+    // editable text. A body still equal to the seed counts as empty, so
+    // picking a template right after opening doesn't ask to "replace".
+    var sigSeed = "";
+    function seedSignature() {
+      if (!senderSignature) return;
+      var v = String(commBodyValue() || "").replace(/<[^>]*>/g, "").trim();
+      if (v) return;  // the user already typed — never overwrite
+      setCommBody("<p><br></p><p><br></p>" + senderSignature);
+      sigSeed = String(commBodyValue() || "");
+    }
     function draftHasContent() {
-      var stripped = String(commBodyValue() || "").replace(/<[^>]*>/g, "").trim();
+      var raw = String(commBodyValue() || "");
+      var stripped = raw.replace(/<[^>]*>/g, "").trim();
+      if (sigSeed && raw === sigSeed) stripped = "";  // untouched seeded signature
       return !!($("commSubject").value.trim() || stripped);
     }
     function setCommBody(html) {
@@ -1661,7 +1735,11 @@
           body: JSON.stringify({ emailAddress: recipientList()[0] || "" }),
         });
         $("commSubject").value = r.subject || "";
-        setCommBody(r.bodyHtml || "");
+        // The rendered draft replaces the body; the signature re-appends
+        // below it (EspoCRM's own compose behavior) — templates shouldn't
+        // carry their own sign-off.
+        setCommBody((r.bodyHtml || "") +
+          (senderSignature ? "<p><br></p>" + senderSignature : ""));
         templateAttachments = (r.attachments || []).slice();
         renderAttachChips();
         if ((r.leftoverTokens || []).length) {
@@ -1680,6 +1758,9 @@
 
     body.appendChild(commField("Subject", "commSubject", pre.subject, false));
     body.appendChild(commField("Message", "commBody", "", true));
+    // Cached signature seeds now; a first-ever compose seeds when the
+    // /mailbox fetch above resolves.
+    if (senderSignature) seedSignature();
 
     // --- Attachments: template chips (bytes stay in the CRM until send) plus
     // the user's own files. Removing a chip = it just isn't sent.

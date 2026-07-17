@@ -295,6 +295,10 @@ body.mp--resizing { cursor: col-resize; user-select: none; }
 .cbm-btn-sm:hover { background: var(--white) !important; color: var(--navy) !important; }
 /* ----------------------------- end verbatim copy ------------------------- */
 
+/* Email-signature panel (its own Save, outside the main form diff) */
+.mp__hint { font-size: 12px; color: var(--cbm-text); margin: 0.2rem 0 0.6rem; font-weight: 400; }
+span.mp__hint { align-self: center; margin: 0 0 0 0.75rem; }
+
 /* footer — matches the other apps: "© 2026 Cleveland Business Mentors.
    All rights reserved. · v0.45.0 (Test)" (the " · " separator rule mirrors
    /shared/wizard.css, which this app doesn't load) */

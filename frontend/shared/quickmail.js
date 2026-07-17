@@ -33,6 +33,7 @@
     apiBase: "/" + seg + "/api",
     mailbox: undefined,      // undefined = not asked yet; null = can't send
     enabled: undefined,
+    signature: "",           // the user's EspoCRM Preferences signature (HTML)
     probe: null,             // in-flight mailbox fetch
   };
 
@@ -45,6 +46,7 @@
       .then(function (d) {
         state.mailbox = d.mailbox || null;
         state.enabled = !!d.sendEnabled;
+        state.signature = d.signature || "";
         return state;
       })
       .catch(function () {
@@ -174,9 +176,28 @@
       else bodyInput.value = html.replace(/<br\s*\/?>/gi, "\n")
         .replace(/<\/p\s*>/gi, "\n\n").replace(/<[^>]+>/g, "");
     }
+    // Signature: seeded into the empty body on open; a body still equal to
+    // the seed counts as empty (template picks don't nag, Send still insists
+    // on a real message).
+    var sigSeed = "";
+    function seedSignature() {
+      if (!state.signature) return;
+      if (String(bodyValue() || "").replace(/<[^>]*>/g, "").trim()) return;
+      setBody("<p><br></p><p><br></p>" + state.signature);
+      sigSeed = String(bodyValue() || "");
+    }
+    seedSignature();
+    probeMailbox().then(function () {
+      from.querySelector("strong").textContent = state.mailbox || "…";
+      seedSignature();
+    });
+    function bodyIsEmpty() {
+      var raw = String(bodyValue() || "");
+      var stripped = raw.replace(/<[^>]*>/g, "").trim();
+      return !stripped || (sigSeed && raw === sigSeed);
+    }
     function draftHasContent() {
-      var stripped = String(bodyValue() || "").replace(/<[^>]*>/g, "").trim();
-      return !!(subjInput.value.trim() || stripped);
+      return !!(subjInput.value.trim() || !bodyIsEmpty());
     }
 
     var tplAll = [];
@@ -224,7 +245,10 @@
       post("/emailtemplates/" + encodeURIComponent(id) + "/parse", { emailAddress: firstTo })
         .then(function (r) {
           subjInput.value = r.subject || "";
-          setBody(r.bodyHtml || "");
+          // Rendered draft + the signature re-appended below it (EspoCRM's
+          // own behavior) — templates shouldn't carry their own sign-off.
+          setBody((r.bodyHtml || "") +
+            (state.signature ? "<p><br></p>" + state.signature : ""));
           templateAttachments = (r.attachments || []).slice();
           renderChips();
           if ((r.leftoverTokens || []).length) {
@@ -341,7 +365,7 @@
       var to = toInput.value.split(/[,;\s]+/).filter(Boolean);
       if (!to.length) { err.textContent = "Add at least one recipient."; err.hidden = false; return; }
       var body = bodyValue();
-      if (!String(body).replace(/<[^>]*>/g, "").trim()) {
+      if (bodyIsEmpty()) {  // an untouched seeded signature isn't a message
         err.textContent = "Write a message first."; err.hidden = false; return;
       }
       send.disabled = true; send.textContent = "Sending…";
