@@ -122,6 +122,27 @@ with an **"Add to this record" checkbox** (checked by default):
 One **Send** click does it all: checked rows are linked/created first, then
 the email goes out.
 
+## Email addresses anywhere in the apps are compose links
+
+Wherever an email address appears in the staff tools — a contact table, a
+pop-up card, the mentor roster, the attendee grid — **clicking it opens a
+compose window** instead of your computer's mail program:
+
+- **Inside an open engagement/partner/sponsor record**, it opens the full
+  compose described above (recipient pre-filled, contact add/create routing,
+  record linking).
+- **Everywhere else** (the record lists' pop-ups, Client Administration,
+  Mentor Administration), it opens a lighter quick-email window — To /
+  Subject / Message, sent as your own `@cbmentors.org` address. The message
+  isn't attached to a record directly; the regular sync files it onto the
+  matching record from your Sent mail, exactly as if you'd sent it from
+  Gmail.
+
+If sending from the app isn't possible for you (no CBM mailbox on your
+profile, or the Gmail integration is off on that deployment), the click
+falls back to your computer's normal email handler. Middle-click /
+copy-link-address still behave like a regular email link.
+
 ## Email templates
 
 The compose window has a **Template** picker listing the email templates CBM

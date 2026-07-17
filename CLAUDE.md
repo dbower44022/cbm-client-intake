@@ -1207,6 +1207,56 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-16)
 
+**The comms/permissions session (2026-07-15/16, ran parallel to the ones
+below; its version numbers interleave):** three arcs, all committed (the
+first two also deployed + verified along the way):
+1. **Conversation participants = everyone on the email (v0.55.0/e46756e),
+   BACKFILLED on BOTH CRMs 2026-07-16.** The Gmail sync folds From + To + Cc
+   into `CConversation.participants` as `Name <address>` entries **deduped
+   by email address** (fixes the name-vs-address duplicate; bare/legacy
+   entries self-upgrade); the dedup/replay path also merges, so the one-shot
+   `GMAIL_RESYNC=true` re-drive doubles as the backfill — run + GET-verified
+   on crm-test (7 conversations, incl. the bare-address-first edge that
+   e46756e fixed) and run on prod (1,202 fetched / 0 errors; verified by the
+   idempotent second pass needing ZERO participant writes). Flags removed
+   from both overlays afterward. **Ops gotcha:** while GMAIL_RESYNC is set,
+   EVERY push/deploy re-clears cursors and re-reads all mailboxes — remove it
+   immediately; superseded deployments' logs are unretrievable.
+   **OPEN (CRM-side):** 8 prod messages from the robert.cohen mailbox are
+   permanently skipped — prod's `CCommunication.toAddresses`/`ccAddresses`
+   were built SHORTER than crm-test's varchar(500) (maxLength 400s), + one
+   `CConversation.name` `$noBadCharacters` pattern reject. Widen the prod
+   fields to 500, then one more one-shot resync recovers them (memory:
+   [[prod-ccommunication-field-length-drift]]).
+2. **Every email address shown in the staff UIs is a compose link
+   (v0.64.0 + v0.64.2 grid-peek fix).** Product rule (Doug's ruling
+   2026-07-16): no bare `mailto:` — clicking a shown address opens a compose
+   dialog. Session-tool RECORD pages reuse the record-scoped compose
+   (pre-filled To; contact add/create routing applies); everywhere else —
+   Client/Mentor Administration and the session GRID-page peeks — uses the
+   shared **quickmail widget** (`frontend/shared/quickmail.js`) backed by
+   `GET /mailbox` + `POST /sendmail` per app (`comms/quicksend.py`,
+   registered on assignments/mentoradmin/all three session routers; sends as
+   the signed-in user's own `cbmEmail`, no record link — the sync ingests the
+   sent copy). Links keep real `mailto:` hrefs and fall back to the browser
+   handler when sending isn't available (GMAIL_SYNC off, no CBM mailbox).
+   v0.64.2 lesson: a peek from the LIST page has no `currentDetail` — the
+   original wiring silently fell back to mailto (= "nothing happens" with no
+   desktop mail handler); both paths are stub-harness-verified. The
+   email-templates work (v0.67.0, parallel session) builds on this widget.
+3. **Permission failures name the exact missing grant (v0.68.1).**
+   `core.espo.forbidden_hint` parses the denied operation from the EspoError
+   prefix → 403s read "your CRM role is missing read access to
+   CClientProfile records — ask CBM staff to grant it" (relate/unrelate
+   correctly report as EDIT on the linked records). Wired into sessions,
+   mentorprofile, assignments, mentoradmin `_crm_failure` (the staff tools
+   previously surfaced CRM 403s as raw 502s). Root cause of Doug's "Could
+   not load details: …no permission" reports ALSO fixed: the Details tab's
+   Company/profile card reads weren't 403-tolerant, so ONE missing read
+   grant killed the whole tab — restricted cards now render with a note
+   naming the entity (`sessions/details.py`, matching the peeks' tolerance),
+   and a forbidden contacts read degrades the same way.
+
 **The edit-form/UX session (2026-07-15/16, v0.57.0–0.59.2 + 0.62.0–0.64.1,
 all pushed/deployed along the way):** the Details EDIT forms were rebuilt to
 the mockup-v4 standard — full-width **packed group panels** (Doug REVERSED
