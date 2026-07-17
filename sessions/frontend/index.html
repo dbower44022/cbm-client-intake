@@ -95,10 +95,19 @@
         <div id="detailsSections"></div>
       </div>
 
-      <!-- Sessions list -->
+      <!-- Sessions list: headers sort (click toggles direction) and columns
+           resize (drag the grip on a header's right edge). -->
       <div class="sx__dpanel" data-dpanel="sessions" hidden>
         <table class="sx__table" id="sessionsTable" hidden>
-          <thead><tr><th>Session</th><th>Status</th><th>Type</th><th>When</th><th>Duration</th><th></th></tr></thead>
+          <thead><tr>
+            <th data-sort="name">Session</th>
+            <th data-sort="status">Status</th>
+            <th data-sort="sessionType">Type</th>
+            <th data-sort="dateStart">When</th>
+            <th data-sort="duration">Duration</th>
+            <th data-sort="participants">Participants</th>
+            <th></th>
+          </tr></thead>
           <tbody id="sessionsBody"></tbody>
         </table>
         <p class="sx__muted" id="noSessions" hidden>No sessions recorded yet.</p>

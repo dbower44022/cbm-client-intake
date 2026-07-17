@@ -468,8 +468,11 @@ async def get_detail(
     attendee_lists = await asyncio.gather(
         *(_note_attendees(client, s) for s in raw_sessions)
     )
-    for entry, names in zip(note_feed, attendee_lists):
+    # Same names feed the note feed's attendee stamps AND the Sessions grid's
+    # Participants column (sessions/note_feed are parallel over raw_sessions).
+    for entry, row, names in zip(note_feed, sessions, attendee_lists):
         entry["attendees"] = names
+        row["participants"] = names
 
     # Overall notes about the whole engagement/partner/sponsor (not a session).
     overall_notes = None

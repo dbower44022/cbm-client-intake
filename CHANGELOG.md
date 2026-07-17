@@ -4,6 +4,28 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.72.0] — 2026-07-16
+
+### Added
+- **Sessions grid (record detail → Sessions tab): sortable, resizable, with a
+  Participants column.** Every column header sorts (same interaction as the
+  Client Administration grids: first click sorts — text A→Z, When
+  newest-first, Duration numeric — second click reverses; ▲/▼ + `aria-sort`);
+  columns resize by dragging a grip on each header's right edge (first drag
+  freezes current widths via `table-layout: fixed` so one column's change
+  doesn't reflow the rest; widths live on the `th`s, surviving re-renders and
+  sorts; grip clicks never trigger a sort). New **Participants** column lists
+  each session's attendees, widest by default (28% vs Session's 22%) — the
+  names were already fetched for the Overview note feed, so `get_detail` just
+  mirrors them onto the session rows (`participants`), zero extra CRM calls.
+  All three domains (shared frontend). Verified in the stubbed-browser
+  harness (sort orders incl. numeric duration + blank-participants rows,
+  indicator movement, controlled drag → only that column widens, no stuck
+  drag state, no console errors). Note: the `app.js` half of this feature was
+  accidentally swept into the parallel session's v0.71.0 release commit
+  (e01d4cd) — this release carries the matching headers/CSS/backend, which
+  HEAD needs for the grid to render correctly.
+
 ## [0.71.0] — 2026-07-16
 
 ### Added

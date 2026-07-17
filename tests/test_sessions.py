@@ -320,6 +320,8 @@ async def test_get_detail_assembles_partner():
     assert d["contacts"][0]["email"] == "pat@x.org"
     assert d["primaryContactId"] == "cprimary"
     assert d["sessions"][0]["status"] == "Held"
+    # the same attendee names feed the Sessions grid's Participants column
+    assert d["sessions"][0]["participants"] == ["Pat", "Dana"]
     # overall (partner-level) notes surface above the per-session feed
     assert d["overallNotes"] == {"label": "Partner Notes", "value": "<p>key relationship</p>", "type": "html"}
     # the only session is in the past => nothing scheduled ahead

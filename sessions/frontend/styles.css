@@ -51,6 +51,24 @@
 .sx__th-sort { cursor: pointer; user-select: none; white-space: nowrap; }
 .sx__th-sort:hover { color: var(--cbm-navy, #123); }
 .sx__sortind { color: var(--cbm-blue, #1a5fb4); }
+/* Sessions grid: static thead, so the sort arrow rides data-dir (set by JS)
+   instead of an injected span; columns resize via a grip on each header's
+   right edge. Participants gets the most room by default (a list of names). */
+#sessionsTable th[data-sort] { position: relative; }
+#sessionsTable th[data-dir="asc"]::after { content: " ▲"; font-size: 0.7em; color: var(--cbm-blue, #1a5fb4); }
+#sessionsTable th[data-dir="desc"]::after { content: " ▼"; font-size: 0.7em; color: var(--cbm-blue, #1a5fb4); }
+#sessionsTable th[data-sort="name"] { width: 22%; }
+#sessionsTable th[data-sort="participants"] { width: 28%; }
+.sx__col-grip {
+  position: absolute; top: 0; right: -4px; width: 8px; height: 100%;
+  cursor: col-resize; user-select: none; z-index: 1;
+}
+.sx__col-grip:hover { background: rgba(26, 95, 180, 0.25); }
+body.sx__col-resizing, body.sx__col-resizing * { cursor: col-resize !important; user-select: none; }
+/* Once any column is resized, widths are frozen (fixed layout) so one column's
+   change doesn't reflow the others; long values wrap instead of overflowing. */
+.sx__table--resized { table-layout: fixed; }
+.sx__table--resized th, .sx__table--resized td { overflow-wrap: anywhere; }
 .sx__link {
   background: none; border: none; padding: 0; cursor: pointer;
   color: var(--cbm-blue, #1a5fb4); font: inherit; font-weight: 600; text-align: left;
