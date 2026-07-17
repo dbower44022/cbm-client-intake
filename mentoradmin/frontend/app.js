@@ -517,6 +517,16 @@
     panel.className = "tab-panel"; panel.dataset.panel = "__documents";
 
     var head = document.createElement("div"); head.className = "ma__doc-head";
+    // DOC-07: reveal archived rows (soft-deleted — the file sits in the
+    // record folder's _Archived subfolder; nothing is ever hard-deleted).
+    var archToggle = document.createElement("label");
+    archToggle.className = "ma__doc-archtoggle";
+    var archBox = document.createElement("input");
+    archBox.type = "checkbox"; archBox.id = "mdocIncludeArchived";
+    archToggle.appendChild(archBox);
+    archToggle.appendChild(document.createTextNode(" Include archived"));
+    archBox.addEventListener("change", function () { loadMentorDocs(); });
+    head.appendChild(archToggle);
     var pick = document.createElement("button");
     pick.type = "button"; pick.className = "cbm-button"; pick.id = "mdocPickBtn";
     pick.textContent = "⬆ Upload document…";
@@ -590,13 +600,18 @@
       " — " + d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
   }
 
+  function mdocListQuery() {
+    var box = $("mdocIncludeArchived");
+    return box && box.checked ? "?includeArchived=true" : "";
+  }
+
   async function loadMentorDocs() {
     if (!current) return;
     var body = $("mdocBody"); body.innerHTML = "";
     hide($("mdocError")); hide($("mdocTable"));
     var empty = $("mdocEmpty"); empty.textContent = "Loading documents…"; show(empty);
     try {
-      var res = await api("/mentors/" + encodeURIComponent(current.id) + "/documents");
+      var res = await api("/mentors/" + encodeURIComponent(current.id) + "/documents" + mdocListQuery());
       mdocTypes = res.docTypes || [];
       mdocMaxMb = res.maxFileMb || mdocMaxMb;
       renderMentorDocRows(res.documents || []);
@@ -615,7 +630,7 @@
     var forId = current.id;
     try {
       var res = await api(
-        "/mentors/" + encodeURIComponent(forId) + "/documents/refresh",
+        "/mentors/" + encodeURIComponent(forId) + "/documents/refresh" + mdocListQuery(),
         { method: "POST" }
       );
       if (!current || current.id !== forId) return;  // user moved on
@@ -633,8 +648,15 @@
     }
     hide(empty); show($("mdocTable"));
     rows.forEach(function (d) {
+      var archived = d.status === "archived";
       var tr = document.createElement("tr");
+      if (archived) tr.className = "ma__doc-archived-row";
       var c0 = document.createElement("td"); c0.textContent = d.filename || "—";
+      if (archived) {
+        var aflag = document.createElement("span");
+        aflag.className = "ma__doc-flag"; aflag.textContent = "Archived";
+        c0.appendChild(aflag);
+      }
       if (d.changedInDrive) {
         var flag = document.createElement("span");
         flag.className = "ma__doc-flag"; flag.textContent = "Updated in Drive";
@@ -644,28 +666,67 @@
       var c2 = document.createElement("td"); c2.textContent = d.uploadedBy || "—";
       var c3 = document.createElement("td"); c3.textContent = fmtDocDate(d.uploadedAt);
       var c4 = document.createElement("td"); c4.className = "ma__doc-acts";
-      ["View", "Download", "Open in Drive", "Archive"].forEach(function (label) {
+      ["View", "Download", "Open in Drive", archived ? "Restore" : "Archive"].forEach(function (label) {
         var b = document.createElement("button");
         b.type = "button"; b.className = "cbm-button cbm-button--secondary ma__sm";
         b.textContent = label;
         // View (DOC-03), Download (original bytes — opens in the locally
-        // installed app), Open in Drive (DOC-05) are live; Archive is Phase 3.
+        // installed app), Open in Drive (DOC-05), and Archive/Restore
+        // (DOC-07) are all live.
         if (label === "View") {
           b.addEventListener("click", function () { openMdocViewer(d); });
         } else if (label === "Download") {
           b.title = "Download the original file — open it with the application installed for its type";
           b.addEventListener("click", function () { downloadMdoc(d); });
-        } else if (label === "Open in Drive" && d.webViewLink) {
-          b.addEventListener("click", function () {
-            window.open(d.webViewLink, "_blank", "noopener");
-          });
-        } else {
-          b.disabled = true; b.title = "Coming soon";
+        } else if (label === "Open in Drive") {
+          if (d.webViewLink) {
+            b.addEventListener("click", function () {
+              window.open(d.webViewLink, "_blank", "noopener");
+            });
+          } else {
+            b.disabled = true;
+          }
+        } else if (label === "Archive" || label === "Restore") {
+          var action = archived ? "restore" : "archive";
+          b.title = archived
+            ? "Move the file back to the record folder and the row back to the list"
+            : "Move the file to the record's _Archived folder — it leaves this list but is never deleted";
+          b.addEventListener("click", function () { lifecycleMdoc(d, action, b); });
         }
         c4.appendChild(b);
       });
       tr.appendChild(c0); tr.appendChild(c1); tr.appendChild(c2); tr.appendChild(c3); tr.appendChild(c4);
       body.appendChild(tr);
+    });
+  }
+
+  // Archive/Restore with the product's two-step confirm (the Details-tab
+  // Remove precedent): first click arms, second acts; disarms after 4s.
+  function lifecycleMdoc(d, action, btn) {
+    var idle = action === "archive" ? "Archive" : "Restore";
+    if (btn.dataset.armed !== "1") {
+      btn.dataset.armed = "1";
+      btn.textContent = "Really " + action + "?";
+      setTimeout(function () {
+        if (btn.isConnected && btn.dataset.armed === "1") {
+          btn.dataset.armed = ""; btn.textContent = idle;
+        }
+      }, 4000);
+      return;
+    }
+    btn.disabled = true; btn.textContent = idle === "Archive" ? "Archiving…" : "Restoring…";
+    hide($("mdocError"));
+    api(
+      "/mentors/" + encodeURIComponent(current.id) + "/documents/" +
+      encodeURIComponent(d.id) + "/" + action,
+      { method: "POST" }
+    ).then(function () {
+      notice("detailNotice", action === "archive" ? "Document archived." : "Document restored.", "success");
+      loadMentorDocs();
+    }).catch(function (e) {
+      if (e.status === 401) { showLogin(); return; }
+      $("mdocError").textContent = e.message; show($("mdocError"));
+      loadMentorDocs();  // re-render — the row's true state may have changed
     });
   }
 

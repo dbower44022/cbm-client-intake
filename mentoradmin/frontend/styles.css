@@ -208,7 +208,17 @@
 .verify-na { color: var(--cbm-text); font-style: italic; }
 
 /* --- Documents tab (Google Drive, DOC-MGMT — mentor documents) --- */
-.ma__doc-head { display: flex; justify-content: flex-end; margin: 0 0 0.6rem; }
+.ma__doc-head {
+  display: flex; justify-content: flex-end; align-items: center;
+  gap: 0.75rem; margin: 0 0 0.6rem;
+}
+/* DOC-07: the "Include archived" toggle + archived rows (dimmed, never gone). */
+.ma__doc-archtoggle {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  font-size: 0.9rem; white-space: nowrap;
+}
+.ma__doc-archived-row td { opacity: 0.62; }
+.ma__doc-archived-row .ma__doc-acts { opacity: 1; }
 .ma__doc-pending {
   display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
   padding: 0.6rem 0.75rem; margin: 0 0 0.6rem;

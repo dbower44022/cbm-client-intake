@@ -141,6 +141,11 @@ async def main() -> None:
     next_alert = datetime.now(timezone.utc)
     next_schema = datetime.now(timezone.utc)
 
+    # Documents (DOC-MGMT): the nightly Drive-grant reconciliation (DOC-09) +
+    # documentsFolderUrl re-check (DOC-08). Inert unless GDRIVE_DOCS is on and
+    # the service-identity access model is active (docs.grants.grants_enabled).
+    next_docs = datetime.now(timezone.utc)
+
     # Communications: Gmail conversation sync (+ optional AI summaries), on its
     # own timer. Inert unless GMAIL_SYNC is on and the pieces are configured.
     comms_store = None
@@ -181,6 +186,18 @@ async def main() -> None:
             except Exception as exc:  # noqa: BLE001 — comms never crashes delivery
                 log.warning("gmail sync cycle failed: %s", exc)
             next_gmail = now + timedelta(seconds=settings.gmail_sync_seconds)
+        if (
+            settings.gdrive_docs
+            and settings.gdrive_reconcile_seconds > 0
+            and now >= next_docs
+        ):
+            try:
+                from docs.reconcile import run_docs_reconciliation
+
+                await run_docs_reconciliation(settings)
+            except Exception as exc:  # noqa: BLE001 — never crashes delivery
+                log.warning("docs grant reconciliation failed: %s", exc)
+            next_docs = now + timedelta(seconds=settings.gdrive_reconcile_seconds)
 
         if claimed == 0:
             await asyncio.sleep(settings.worker_poll_seconds)

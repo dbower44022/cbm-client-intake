@@ -247,13 +247,17 @@ async def _mentor_contact_anchor(client, mentor_id: str) -> tuple[str, str]:
 
 
 @router.get("/mentors/{mentor_id}/documents")
-async def mentor_documents(mentor_id: str, request: Request) -> dict:
+async def mentor_documents(
+    mentor_id: str, request: Request, includeArchived: bool = False
+) -> dict:
     user = _require_user(request)
     settings, store = _docs_ready()
     client = client_for(settings, user)
     try:
         contact_id, _ = await _mentor_contact_anchor(client, mentor_id)
-        rows = await docs_service.list_documents(store, "Contact", contact_id)
+        rows = await docs_service.list_documents(
+            store, "Contact", contact_id, include_archived=includeArchived
+        )
         return {
             "documents": rows,
             "docTypes": settings.gdrive_doc_types_list,
@@ -293,6 +297,10 @@ async def mentor_upload_document(
             doc_type=docType,
             data=data,
         )
+        # DOC-08 write-back (Contact is a participating entity) + DOC-09 grant
+        # sync — which for Mentors/ (Contact) folders enforces the rule that
+        # they are granted to NO ONE (application-only). Best-effort.
+        await docs_service.post_upload_hooks(settings, drive, "Contact", contact_id, row)
         return {"status": "ok", "document": row}
     except docs_service.DocsError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
@@ -347,7 +355,9 @@ async def mentor_document_content(
 
 
 @router.post("/mentors/{mentor_id}/documents/refresh")
-async def mentor_refresh_documents(mentor_id: str, request: Request) -> dict:
+async def mentor_refresh_documents(
+    mentor_id: str, request: Request, includeArchived: bool = False
+) -> dict:
     """DOC-02 completion — lazy modifiedTime refresh for the mentor's Contact
     folder; fired by the frontend after the metadata render, never blocking."""
     user = _require_user(request)
@@ -356,7 +366,9 @@ async def mentor_refresh_documents(mentor_id: str, request: Request) -> dict:
     try:
         contact_id, _ = await _mentor_contact_anchor(client, mentor_id)
         drive = await docs_service.drive_for_user(settings, client, user)
-        rows = await docs_service.refresh_documents(store, drive, "Contact", contact_id)
+        rows = await docs_service.refresh_documents(
+            store, drive, "Contact", contact_id, include_archived=includeArchived
+        )
         return {
             "documents": rows,
             "docTypes": settings.gdrive_doc_types_list,
@@ -371,6 +383,52 @@ async def mentor_refresh_documents(mentor_id: str, request: Request) -> dict:
         )
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not refresh the documents")
+
+
+async def _mentor_document_lifecycle(
+    mentor_id: str, doc_id: str, request: Request, *, archive: bool
+) -> dict:
+    """DOC-07 shared handler (mentor documents on the linked Contact): the
+    profile is read AS THE USER (ACL gate), then the Drive move + status flip
+    run in docs.service (move first, flip after, rollback on a mid-failure)."""
+    user = _require_user(request)
+    settings, store = _docs_ready()
+    client = client_for(settings, user)
+    try:
+        contact_id, _ = await _mentor_contact_anchor(client, mentor_id)
+        drive = await docs_service.drive_for_user(settings, client, user)
+        fn = (
+            docs_service.archive_document if archive
+            else docs_service.restore_document
+        )
+        row = await fn(store, drive, "Contact", contact_id, doc_id)
+        return {"status": "ok", "document": row}
+    except docs_service.DocsNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except docs_service.DocsError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except DriveError as exc:
+        log.warning(
+            "mentor document %s failed: %s", "archive" if archive else "restore", exc
+        )
+        raise HTTPException(
+            status_code=502, detail="Couldn't reach Google Drive — try again."
+        )
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not update the document")
+
+
+@router.post("/mentors/{mentor_id}/documents/{doc_id}/archive")
+async def mentor_archive_document(mentor_id: str, doc_id: str, request: Request) -> dict:
+    """DOC-07: soft-delete — the file moves to the Contact folder's /_Archived
+    subfolder and the row leaves the default list."""
+    return await _mentor_document_lifecycle(mentor_id, doc_id, request, archive=True)
+
+
+@router.post("/mentors/{mentor_id}/documents/{doc_id}/restore")
+async def mentor_restore_document(mentor_id: str, doc_id: str, request: Request) -> dict:
+    """DOC-07: reverse of archive."""
+    return await _mentor_document_lifecycle(mentor_id, doc_id, request, archive=False)
 
 
 def _provision_factory(settings: Settings):

@@ -27,7 +27,12 @@ from core.gdrive import (
     DriveError,
 )
 
-from .store import DocumentStore, make_document_store
+from .store import (
+    STATUS_ACTIVE,
+    STATUS_ARCHIVED,
+    DocumentStore,
+    make_document_store,
+)
 
 log = logging.getLogger("cbm_intake.docs.service")
 
@@ -267,10 +272,124 @@ async def upload_document(
 
 
 async def list_documents(
-    store: DocumentStore, entity_type: str, record_id: str
+    store: DocumentStore,
+    entity_type: str,
+    record_id: str,
+    include_archived: bool = False,
 ) -> list[dict[str, Any]]:
-    """DOC-02 (partial): active documents, newest first, from metadata only."""
-    return await store.list_documents(entity_type, record_id)
+    """DOC-02 (partial): documents newest first, from metadata only. Archived
+    rows are hidden unless the "include archived" toggle asks for them."""
+    return await store.list_documents(
+        entity_type, record_id, include_archived=include_archived
+    )
+
+
+# --- archive / restore (DOC-07) ---------------------------------------------------
+
+# The per-record subfolder archived files move into. Underscore-prefixed so it
+# sorts apart from documents when a human browses the record folder.
+ARCHIVED_FOLDER_NAME = "_Archived"
+
+
+async def _move_into(
+    drive: DriveClient, file_id: str, dest_folder_id: str
+) -> Optional[list[str]]:
+    """Move the file into ``dest_folder_id`` from wherever it currently sits
+    (a human may have re-filed it — the actual parents are read first).
+    Returns the original parents for a rollback move-back, or None when the
+    file was already there (no move happened, so no rollback either)."""
+    file = await drive.get_file(file_id, fields="id,parents")
+    parents = [p for p in (file.get("parents") or []) if p != dest_folder_id]
+    if dest_folder_id in (file.get("parents") or []) and not parents:
+        return None
+    await drive.move_file(file_id, dest_folder_id, parents)
+    return parents
+
+
+async def _lifecycle_move(
+    store: DocumentStore,
+    drive: DriveClient,
+    entity_type: str,
+    record_id: str,
+    doc_id: str,
+    *,
+    to_status: str,
+) -> dict[str, Any]:
+    """The shared DOC-07 mechanic, per Doug's ruling (2026-07-17): the Drive
+    move happens FIRST, and the metadata status flips only after a confirmed
+    move; if the flip fails the file is moved back — the two are never left
+    inconsistent (Phase 1's DOC-01 rollback precedent). Archive moves the file
+    into the record folder's ``/_Archived`` subfolder; restore moves it back."""
+    row = await store.get_document(entity_type, record_id, doc_id)
+    if row is None:
+        raise DocsNotFound("That document isn't on this record.")
+    verb = "archived" if to_status == STATUS_ARCHIVED else "restored"
+    if row["status"] == to_status:
+        raise DocsError(f"That document is already {verb}.")
+    record_folder = row.get("driveFolderId") or await store.cached_folder_id(
+        entity_type, record_id
+    )
+    if not record_folder:
+        raise DocsError(
+            "This document's Drive folder isn't recorded, so it can't be "
+            f"{verb} — contact CBM staff."
+        )
+    if to_status == STATUS_ARCHIVED:
+        dest = await drive.find_child_folder(record_folder, ARCHIVED_FOLDER_NAME)
+        if not dest:
+            dest = await drive.create_folder(record_folder, ARCHIVED_FOLDER_NAME)
+    else:
+        dest = record_folder
+    original_parents = await _move_into(drive, row["driveFileId"], dest)
+    try:
+        await store.set_status(doc_id, to_status)
+    except Exception as exc:
+        if original_parents:
+            try:
+                await drive.move_file(row["driveFileId"], original_parents[0], [dest])
+            except DriveError as move_exc:  # inconsistent — log loudly
+                log.error(
+                    "ROLLBACK FAILED: document %s (file %s) was moved for %s "
+                    "but the status flip failed and the move-back also failed: "
+                    "%s", doc_id, row["driveFileId"], verb, move_exc,
+                )
+        raise DocsError(
+            f"The document could not be {verb} — please try again."
+        ) from exc
+    log.info(
+        "document %s (%s %s): %s -> %s",
+        verb, entity_type, record_id, doc_id, dest,
+    )
+    refreshed = await store.get_document(entity_type, record_id, doc_id)
+    return refreshed or row
+
+
+async def archive_document(
+    store: DocumentStore,
+    drive: DriveClient,
+    entity_type: str,
+    record_id: str,
+    doc_id: str,
+) -> dict[str, Any]:
+    """DOC-07: soft-delete — the file moves to ``/_Archived`` and the row
+    leaves the default list. Hard deletion stays out of the app."""
+    return await _lifecycle_move(
+        store, drive, entity_type, record_id, doc_id, to_status=STATUS_ARCHIVED
+    )
+
+
+async def restore_document(
+    store: DocumentStore,
+    drive: DriveClient,
+    entity_type: str,
+    record_id: str,
+    doc_id: str,
+) -> dict[str, Any]:
+    """DOC-07: the reverse of archive — file back to the record folder,
+    status back to active."""
+    return await _lifecycle_move(
+        store, drive, entity_type, record_id, doc_id, to_status=STATUS_ACTIVE
+    )
 
 
 # --- viewing (Phase 2) -------------------------------------------------------------
@@ -363,16 +482,23 @@ async def fetch_document(
 
 
 async def refresh_documents(
-    store: DocumentStore, drive: DriveClient, entity_type: str, record_id: str
+    store: DocumentStore,
+    drive: DriveClient,
+    entity_type: str,
+    record_id: str,
+    include_archived: bool = False,
 ) -> list[dict[str, Any]]:
     """DOC-02 completion — the lazy modifiedTime refresh on record open: ONE
     ``files.list`` scoped to the record folder updates each row's
     ``modified_time`` (+ checksum/view link), and rows whose file changed in
     Drive since last sync are flagged ``changedInDrive`` (which also busts the
     browser's cached copy — the view URL is versioned by modifiedTime). Files
-    the listing doesn't cover (moved out of the folder by a human) are left
-    untouched. Returns the refreshed rows, list-shaped."""
-    rows = await store.list_documents(entity_type, record_id)
+    the listing doesn't cover (moved out of the folder by a human, or archived
+    into ``/_Archived``) are left untouched. Returns the refreshed rows,
+    list-shaped."""
+    rows = await store.list_documents(
+        entity_type, record_id, include_archived=include_archived
+    )
     if not rows:
         return []
     folder_id = await store.cached_folder_id(entity_type, record_id)
@@ -395,7 +521,107 @@ async def refresh_documents(
             )
             changed_ids.add(row["id"])
     if changed_ids:
-        rows = await store.list_documents(entity_type, record_id)
+        rows = await store.list_documents(
+            entity_type, record_id, include_archived=include_archived
+        )
     for row in rows:
         row["changedInDrive"] = row["id"] in changed_ids
     return rows
+
+
+# --- CRM link write-back (DOC-08) + post-upload hooks -----------------------------
+
+# The read-only URL field the CRM team builds on the participating entities
+# (spec: documentsfolderurl-crm-field.md). Only these two anchors carry it —
+# PRD §3.5: CEngagement (client work) + Contact (mentor documents).
+FOLDER_LINK_FIELD = "documentsFolderUrl"
+WRITE_BACK_ENTITIES = ("CEngagement", "Contact")
+
+# Feature-detection cache: entity -> (field exists, monotonic deadline). The
+# field activates with no app deploy once the CRM team builds it (the
+# googleCalendarEventId precedent); re-checked every 10 minutes.
+_FIELD_CACHE: dict[str, tuple[bool, float]] = {}
+_FIELD_CACHE_TTL = 600.0
+
+
+async def _folder_link_field_exists(espo: Any, entity_type: str) -> bool:
+    import time
+
+    cached = _FIELD_CACHE.get(entity_type)
+    if cached and cached[1] > time.monotonic():
+        return cached[0]
+    fields = await espo.metadata(f"entityDefs.{entity_type}.fields") or {}
+    present = FOLDER_LINK_FIELD in fields
+    _FIELD_CACHE[entity_type] = (present, time.monotonic() + _FIELD_CACHE_TTL)
+    return present
+
+
+async def write_back_folder_link(
+    settings: Settings,
+    drive: DriveClient,
+    entity_type: str,
+    record_id: str,
+    folder_id: str,
+    espo: Any = None,
+) -> Optional[str]:
+    """DOC-08: put the record FOLDER's ``webViewLink`` in the CRM record's
+    ``documentsFolderUrl`` (one stable link per record, D-05). Self-healing
+    best-effort (Doug's ruling 2026-07-17, no retry queue): checked on EVERY
+    upload — idempotent (no write when the stored value already matches) —
+    and re-checked by the nightly reconciliation. The write runs as the app's
+    API user (a system bookkeeping write, not a user edit). Returns the link
+    written, or None when nothing was (not a participating entity, field not
+    built yet, already correct)."""
+    if entity_type not in WRITE_BACK_ENTITIES:
+        return None
+    if settings.espo_dry_run or not settings.espo_api_key:
+        return None
+    from . import grants
+
+    espo = espo or grants.system_espo(settings)
+    if not await _folder_link_field_exists(espo, entity_type):
+        return None
+    folder = await drive.get_file(folder_id, fields="id,webViewLink")
+    link = folder.get("webViewLink")
+    if not link:
+        return None
+    record = await espo.get(entity_type, record_id, select=FOLDER_LINK_FIELD)
+    if record.get(FOLDER_LINK_FIELD) == link:
+        return None
+    await espo.update(entity_type, record_id, {FOLDER_LINK_FIELD: link})
+    log.info(
+        "documentsFolderUrl written (%s %s): %s", entity_type, record_id, link
+    )
+    return link
+
+
+async def post_upload_hooks(
+    settings: Settings,
+    drive: DriveClient,
+    entity_type: str,
+    record_id: str,
+    row: Optional[dict[str, Any]],
+) -> None:
+    """Best-effort follow-ups after a successful upload — neither may ever
+    fail the upload (the PRD's contract for both): the DOC-08 CRM folder-link
+    write-back, and the DOC-09 grant sync on the record folder (covers the
+    folder-creation grant for already-entitled people, and self-heals any
+    earlier hook failure)."""
+    folder_id = (row or {}).get("driveFolderId")
+    if not folder_id:
+        return
+    try:
+        await write_back_folder_link(
+            settings, drive, entity_type, record_id, folder_id
+        )
+    except Exception as exc:  # noqa: BLE001 — best-effort by contract
+        log.warning(
+            "documentsFolderUrl write-back failed (%s %s): %s — it will "
+            "self-heal on the next upload or the nightly reconciliation",
+            entity_type, record_id, exc,
+        )
+    from . import grants
+
+    await grants.sync_record_grants_safe(
+        settings, entity_type, record_id, folder_id=folder_id
+    )

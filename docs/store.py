@@ -115,23 +115,60 @@ class DocumentStore:
             await conn.execute(insert(app_document).values(**values))
 
     async def list_documents(
-        self, entity_type: str, record_id: str, status: str = STATUS_ACTIVE
+        self, entity_type: str, record_id: str, include_archived: bool = False
     ) -> list[dict[str, Any]]:
-        """Active documents for one record, newest first (DOC-02: renders from
-        this table only — no Drive call)."""
+        """Documents for one record, newest first (DOC-02: renders from this
+        table only — no Drive call). Archived rows are hidden by default; the
+        "include archived" toggle (DOC-07) lists every status."""
+        conds = [
+            app_document.c.entity_type == entity_type,
+            app_document.c.record_id == record_id,
+        ]
+        if not include_archived:
+            conds.append(app_document.c.status == STATUS_ACTIVE)
         async with self._engine.begin() as conn:
             rows = (
                 await conn.execute(
                     select(app_document)
-                    .where(
-                        app_document.c.entity_type == entity_type,
-                        app_document.c.record_id == record_id,
-                        app_document.c.status == status,
-                    )
+                    .where(*conds)
                     .order_by(app_document.c.uploaded_at.desc())
                 )
             ).all()
         return [_row_dict(r) for r in rows]
+
+    async def set_status(self, doc_id: str, status: str) -> None:
+        """Flip one document's lifecycle status (DOC-07 archive/restore)."""
+        async with self._engine.begin() as conn:
+            await conn.execute(
+                update(app_document)
+                .where(app_document.c.id == doc_id)
+                .values(status=status)
+            )
+
+    async def list_folder_records(self) -> list[dict[str, Any]]:
+        """Every record that owns a Drive folder — (entity_type, record_id,
+        drive_folder_id), deduped — for the nightly grant reconciliation
+        (DOC-09): the grant set is re-derived per record folder."""
+        async with self._engine.begin() as conn:
+            rows = (
+                await conn.execute(
+                    select(
+                        app_document.c.entity_type,
+                        app_document.c.record_id,
+                        app_document.c.drive_folder_id,
+                    )
+                    .where(app_document.c.drive_folder_id.is_not(None))
+                    .distinct()
+                )
+            ).all()
+        return [
+            {
+                "entityType": r.entity_type,
+                "recordId": r.record_id,
+                "driveFolderId": r.drive_folder_id,
+            }
+            for r in rows
+        ]
 
     async def get_document(
         self, entity_type: str, record_id: str, doc_id: str
@@ -219,14 +256,14 @@ class MemoryDocumentStore:
         self.rows.append(values)
 
     async def list_documents(
-        self, entity_type: str, record_id: str, status: str = STATUS_ACTIVE
+        self, entity_type: str, record_id: str, include_archived: bool = False
     ) -> list[dict[str, Any]]:
         matches = [
             r
             for r in self.rows
             if r["entity_type"] == entity_type
             and r["record_id"] == record_id
-            and r["status"] == status
+            and (include_archived or r["status"] == STATUS_ACTIVE)
         ]
         matches.sort(key=lambda r: r["uploaded_at"], reverse=True)
 
@@ -272,6 +309,24 @@ class MemoryDocumentStore:
                     setattr(self, col.name, d.get(col.name))
 
         return [_row_dict(_Row(r)) for r in matches]
+
+    async def set_status(self, doc_id: str, status: str) -> None:
+        for r in self.rows:
+            if r["id"] == doc_id:
+                r["status"] = status
+
+    async def list_folder_records(self) -> list[dict[str, Any]]:
+        seen: dict[tuple[str, str, str], dict[str, Any]] = {}
+        for r in self.rows:
+            if not r.get("drive_folder_id"):
+                continue
+            key = (r["entity_type"], r["record_id"], r["drive_folder_id"])
+            seen[key] = {
+                "entityType": r["entity_type"],
+                "recordId": r["record_id"],
+                "driveFolderId": r["drive_folder_id"],
+            }
+        return list(seen.values())
 
     async def cached_folder_id(self, entity_type: str, record_id: str) -> Optional[str]:
         matches = [

@@ -820,7 +820,9 @@
   // Google-native files arrive as exported PDF); the proxy URL is versioned by
   // modifiedTime and served immutable, so the BROWSER is the cache (DOC-06);
   // a lazy refresh re-syncs modifiedTimes after the metadata render (DOC-02).
-  // Archive is Phase 3 — rendered disabled.
+  // Archive/Restore (DOC-07, Phase 3): soft delete — the file moves to the
+  // record folder's /_Archived subfolder and the row leaves the default
+  // list; the "Include archived" toggle reveals archived rows.
 
   var docTypes = [];        // upload doc-type choices (from the list endpoint)
   var docMaxMb = 0;         // server upload size cap (from the list endpoint)
@@ -831,15 +833,24 @@
   function renderDocuments() {
     hide($("docsError")); hide($("docsNotice"));
     resetDocPending();
+    $("docIncludeArchived").checked = false;
     if (!docsOn()) {
       $("docPickBtn").hidden = true;
+      $("docArchivedToggle").hidden = true;
       hide($("docsTable"));
       $("noDocs").textContent = "Document management is coming soon.";
       show($("noDocs"));
       return;
     }
     $("docPickBtn").hidden = false;
+    $("docArchivedToggle").hidden = false;
     loadDocuments();
+  }
+
+  // The "Include archived" state rides every list/refresh call as a query
+  // param, so the server returns exactly the rows the toggle asks for.
+  function docListQuery() {
+    return $("docIncludeArchived").checked ? "?includeArchived=true" : "";
   }
 
   async function loadDocuments() {
@@ -847,7 +858,7 @@
     $("docsBody").innerHTML = "";
     $("noDocs").textContent = "Loading documents…"; show($("noDocs")); hide($("docsTable"));
     try {
-      var res = await api("/records/" + encodeURIComponent(currentDetail.id) + "/documents");
+      var res = await api("/records/" + encodeURIComponent(currentDetail.id) + "/documents" + docListQuery());
       docTypes = res.docTypes || [];
       docMaxMb = res.maxFileMb || docMaxMb;
       renderDocumentRows(res.documents || []);
@@ -866,7 +877,7 @@
     var forId = currentDetail.id;
     try {
       var res = await api(
-        "/records/" + encodeURIComponent(forId) + "/documents/refresh",
+        "/records/" + encodeURIComponent(forId) + "/documents/refresh" + docListQuery(),
         { method: "POST" }
       );
       // The user may have moved to another record while Drive was queried.
@@ -884,36 +895,78 @@
     }
     hide($("noDocs")); show($("docsTable"));
     rows.forEach(function (d) {
+      var archived = d.status === "archived";
       var tr = document.createElement("tr");
+      if (archived) tr.className = "sx__doc-archived-row";
       var c0 = document.createElement("td"); c0.className = "sx__doc-file"; c0.textContent = d.filename || "—";
+      if (archived) c0.appendChild(tag("Archived", "flag"));
       if (d.changedInDrive) c0.appendChild(tag("Updated in Drive", "flag"));
       var c1 = document.createElement("td"); if (d.docType) c1.appendChild(tag(d.docType, "type"));
       var c2 = document.createElement("td"); c2.textContent = d.uploadedBy || "—";
       var c3 = document.createElement("td"); c3.textContent = fmtSessionDate(d.uploadedAt, "short");
       var c4 = document.createElement("td"); c4.className = "sx__doc-acts";
-      ["View", "Download", "Open in Drive", "Archive"].forEach(function (label) {
+      ["View", "Download", "Open in Drive", archived ? "Restore" : "Archive"].forEach(function (label) {
         var b = document.createElement("button");
         b.type = "button"; b.className = "cbm-button cbm-button--secondary sx__sm";
         b.textContent = label;
         // View (DOC-03), Download (the original bytes — opens in the locally
-        // installed app), and Open in Drive (DOC-05) are live; Archive is
-        // Phase 3.
+        // installed app), Open in Drive (DOC-05), and Archive/Restore
+        // (DOC-07) are all live.
         if (label === "View") {
           b.addEventListener("click", function () { openDocViewer(d); });
         } else if (label === "Download") {
           b.title = "Download the original file — open it with the application installed for its type";
           b.addEventListener("click", function () { downloadDoc(d); });
-        } else if (label === "Open in Drive" && d.webViewLink) {
-          b.addEventListener("click", function () {
-            window.open(d.webViewLink, "_blank", "noopener");
-          });
-        } else {
-          b.disabled = true; b.title = "Coming soon";
+        } else if (label === "Open in Drive") {
+          if (d.webViewLink) {
+            b.addEventListener("click", function () {
+              window.open(d.webViewLink, "_blank", "noopener");
+            });
+          } else {
+            b.disabled = true;
+          }
+        } else if (label === "Archive" || label === "Restore") {
+          var action = archived ? "restore" : "archive";
+          b.title = archived
+            ? "Move the file back to the record folder and the row back to the list"
+            : "Move the file to the record's _Archived folder — it leaves this list but is never deleted";
+          b.addEventListener("click", function () { lifecycleDoc(d, action, b); });
         }
         c4.appendChild(b);
       });
       tr.appendChild(c0); tr.appendChild(c1); tr.appendChild(c2); tr.appendChild(c3); tr.appendChild(c4);
       body.appendChild(tr);
+    });
+  }
+
+  // Archive/Restore with the product's two-step confirm (the Details-tab
+  // Remove precedent): first click arms the button, second click acts;
+  // the armed state disarms itself after a few seconds.
+  function lifecycleDoc(d, action, btn) {
+    var idle = action === "archive" ? "Archive" : "Restore";
+    if (btn.dataset.armed !== "1") {
+      btn.dataset.armed = "1";
+      btn.textContent = "Really " + action + "?";
+      setTimeout(function () {
+        if (btn.isConnected && btn.dataset.armed === "1") {
+          btn.dataset.armed = ""; btn.textContent = idle;
+        }
+      }, 4000);
+      return;
+    }
+    btn.disabled = true; btn.textContent = idle === "Archive" ? "Archiving…" : "Restoring…";
+    hide($("docsError")); hide($("docsNotice"));
+    api(
+      "/records/" + encodeURIComponent(currentDetail.id) + "/documents/" +
+      encodeURIComponent(d.id) + "/" + action,
+      { method: "POST" }
+    ).then(function () {
+      notice("docsNotice", action === "archive" ? "Document archived." : "Document restored.", "success");
+      loadDocuments();
+    }).catch(function (e) {
+      if (e.status === 401) { showLogin(); return; }
+      notice("docsNotice", e.message, "error");
+      loadDocuments();  // re-render — the row's true state may have changed
     });
   }
 
@@ -1078,6 +1131,9 @@
   }
 
   $("docPickBtn").addEventListener("click", function () { $("docFile").click(); });
+  $("docIncludeArchived").addEventListener("change", function () {
+    if (docsOn() && currentDetail) loadDocuments();
+  });
   $("docCancelBtn").addEventListener("click", resetDocPending);
   $("docFile").addEventListener("change", function () {
     var f = this.files && this.files[0];

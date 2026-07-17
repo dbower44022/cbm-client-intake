@@ -154,11 +154,21 @@ async def assign(engagement_id: str, body: AssignIn, request: Request) -> dict:
     user = _require_user(request)
     client = client_for(get_settings(), user)
     try:
-        return await service.assign_engagement(client, engagement_id, body.mentorProfileId)
+        result = await service.assign_engagement(client, engagement_id, body.mentorProfileId)
     except service.AssignError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:
         raise _crm_failure(request, exc, "Assignment failed")
+    # DOC-09: the assigned mentor gains the engagement folder's Drive Commenter
+    # grant in the same action that grants the entitlement (no-op until the
+    # record has a folder). Best-effort — never fails the assignment; the
+    # nightly reconciliation is the backstop.
+    from docs import grants as doc_grants
+
+    await doc_grants.sync_record_grants_safe(
+        get_settings(), service.ENGAGEMENT, engagement_id
+    )
+    return result
 
 
 # Quick-send email (the email-address links product-wide): GET /mailbox +

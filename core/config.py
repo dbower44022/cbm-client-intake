@@ -179,6 +179,12 @@ class Settings(BaseSettings):
     # The doc_type choices offered at upload time (comma-separated).
     gdrive_doc_types: str = "Resume,Agreement,Intake Document,Pitch Deck,Other"
     gdrive_max_file_mb: int = 100
+    # How often the worker re-derives the complete Drive grant set from the
+    # CRM and corrects drift in both directions (DOC-09's nightly
+    # reconciliation; it also re-checks the DOC-08 documentsFolderUrl
+    # write-back). Runs only under the service-identity access model
+    # (GDRIVE_IDENTITY=service). 0 disables the job.
+    gdrive_reconcile_seconds: int = 86400
 
     # --- Encrypted runtime config (core/app_config.py) ---
     # Fernet key (urlsafe base64, 32 bytes) used to encrypt secrets stored in the

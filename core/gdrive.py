@@ -431,3 +431,98 @@ class DriveClient:
             ok_statuses=(404,),
         )
         log.info("drive file deleted (rollback) as %s -> %s", self.mailbox, file_id)
+
+    async def get_file(
+        self, file_id: str, fields: str = FILE_FIELDS
+    ) -> dict[str, Any]:
+        """One file/folder's metadata (``files.get``) — e.g. a record folder's
+        ``webViewLink`` for the DOC-08 CRM write-back, or ``parents`` before a
+        move."""
+        return await self._request(
+            "GET",
+            f"/files/{file_id}",
+            params={"supportsAllDrives": "true", "fields": fields},
+        )
+
+    async def move_file(
+        self, file_id: str, add_parent: str, remove_parents: list[str]
+    ) -> None:
+        """Re-parent a file (``files.update`` with add/removeParents) — the
+        DOC-07 archive/restore move between a record folder and its
+        ``/_Archived`` subfolder. ``remove_parents`` should be the file's
+        actual current parents (from :meth:`get_file`), so the move works even
+        if a human already re-filed it."""
+        params: dict[str, Any] = {
+            "supportsAllDrives": "true",
+            "addParents": add_parent,
+            "fields": "id,parents",
+        }
+        if remove_parents:
+            params["removeParents"] = ",".join(remove_parents)
+        await self._request("PATCH", f"/files/{file_id}", params=params)
+        log.info(
+            "drive file moved as %s -> %s (into %s)", self.mailbox, file_id, add_parent
+        )
+
+    # --- permissions (DOC-09 — Drive access grants) ----------------------------
+
+    async def list_permissions(self, file_id: str) -> list[dict[str, Any]]:
+        """Every permission on ``file_id``, each flagged ``inherited`` (true =
+        it comes from a parent/drive membership, e.g. the service account's own
+        drive access — never something the grant engine manages)."""
+        perms: list[dict[str, Any]] = []
+        page_token: Optional[str] = None
+        while True:
+            params: dict[str, Any] = {
+                "supportsAllDrives": "true",
+                "fields": (
+                    "nextPageToken,permissions(id,type,role,emailAddress,"
+                    "permissionDetails)"
+                ),
+                "pageSize": 100,
+            }
+            if page_token:
+                params["pageToken"] = page_token
+            data = await self._request(
+                "GET", f"/files/{file_id}/permissions", params=params
+            )
+            for p in data.get("permissions") or []:
+                details = p.get("permissionDetails") or []
+                # Direct = at least one non-inherited detail; a permission with
+                # no details at all (My Drive shape) counts as direct too.
+                p["inherited"] = bool(details) and all(
+                    d.get("inherited") for d in details
+                )
+                perms.append(p)
+            page_token = data.get("nextPageToken")
+            if not page_token:
+                return perms
+
+    async def create_permission(
+        self, file_id: str, email: str, role: str = "commenter"
+    ) -> dict[str, Any]:
+        """Grant ``email`` the ``role`` on ``file_id`` — folder-level Commenter
+        grants mirroring CRM entitlements (DOC-09). Google's sharing
+        notification email is suppressed (the PRD rule)."""
+        data = await self._request(
+            "POST",
+            f"/files/{file_id}/permissions",
+            params={
+                "supportsAllDrives": "true",
+                "sendNotificationEmail": "false",
+                "fields": "id,role,emailAddress",
+            },
+            json_body={"type": "user", "role": role, "emailAddress": email},
+        )
+        log.info("drive grant created: %s = %s on %s", email, role, file_id)
+        return data
+
+    async def delete_permission(self, file_id: str, permission_id: str) -> None:
+        """Revoke one grant. Already-gone (404) counts as done."""
+        await self._send(
+            "DELETE",
+            f"{_BASE}/files/{file_id}/permissions/{permission_id}",
+            params={"supportsAllDrives": "true"},
+            ok_statuses=(404,),
+        )
+        log.info("drive grant removed: %s on %s", permission_id, file_id)

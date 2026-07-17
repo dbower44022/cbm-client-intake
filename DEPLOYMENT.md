@@ -217,13 +217,31 @@ Drive API on the GCP project; create the shared drive + grant memberships
 (staff need Content Manager); add `https://www.googleapis.com/auth/drive` to
 the service account's domain-wide-delegation row;
 run the pre-deploy migrate (Alembic `0005_app_document`); then set the flags.
-Requires `DATABASE_URL` (the tab 503s without the store). Worker not involved.
+Requires `DATABASE_URL` (the tab 503s without the store).
+
+**Phase 3 (v0.76.0 — CRM integration and lifecycle, PRD v1.3):**
+Archive/Restore is live on every Documents tab (soft delete — the file moves
+to the record folder's `/_Archived` subfolder, an "Include archived" toggle
+reveals archived rows; needs no new config). Under the **service-identity
+access model** (`GDRIVE_IDENTITY=service`, Doug's ruling — no person is ever
+a drive member) the app also maintains **per-person folder-level Commenter
+grants** mirroring CRM assignments (engagement folders → assigned mentor +
+co-mentors; partner/sponsor → their manager; `Mentors/` folders → no one),
+issued/revoked by the Assign and co-mentor actions + first upload, and
+re-derived by a **nightly reconciliation job in the worker** — so the
+**worker now needs the `GDRIVE_*` vars too** (it already carries the SA
+JSON + `DATABASE_URL`). On first upload the app writes the record folder's
+Drive link to the CRM's `documentsFolderUrl` field (CEngagement + Contact;
+feature-detected — inert until the CRM team builds it, spec:
+`documentsfolderurl-crm-field.md`). Activation order matters (SA drive
+membership BEFORE flipping the identity): `GDRIVE-DOCS-SETUP.md` Task 6.
 
 | Variable | Value |
 |---|---|
-| `GDRIVE_DOCS` | `true` to enable the Documents tab (web) |
-| `GDRIVE_SHARED_DRIVE_ID` | the "CBM Documents" shared drive id (from its Drive URL) |
-| `GDRIVE_IDENTITY` | `service` (recommended — Doug's ruling: users have NO Drive access): the service account acts as itself; **add the SA's `client_email` as a Content Manager member of the shared drive**. Default `user` = the original impersonation mode, which requires every manager to be a drive member. |
+| `GDRIVE_DOCS` | `true` to enable the Documents tab (web + worker) |
+| `GDRIVE_SHARED_DRIVE_ID` | the "CBM Documents" shared drive id (from its Drive URL; web + worker) |
+| `GDRIVE_IDENTITY` | `service` (the ruled access model — users have NO Drive access): the service account acts as itself; **add the SA's `client_email` as the shared drive's ONLY member (Content Manager) and remove all humans**. Default `user` = the original impersonation mode, kept for compatibility. Web + worker. |
+| `GDRIVE_RECONCILE_SECONDS` | worker: how often the grant reconciliation re-derives all folder grants from the CRM (default `86400` = daily; `0` disables) |
 | `GDRIVE_DOC_TYPES` | optional override of the doc-type choices (comma-separated; default `Resume,Agreement,Intake Document,Pitch Deck,Other`) |
 | `GDRIVE_MAX_FILE_MB` | optional upload size cap (default 100) |
 | `GDRIVE_ENTITY_LABELS` | optional override of the top-level folder labels (default `Contact=Mentors,CEngagement=Clients,CPartnerProfile=Partners,CSponsorProfile=Sponsors`) |

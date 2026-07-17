@@ -397,7 +397,8 @@ def test_documents_refresh_returns_flagged_rows(monkeypatch):
     monkeypatch.setattr(docs_service, "drive_for_user", _fake_drive_for_user)
     seen = {}
 
-    async def fake_refresh(store, drive, entity_type, record_id):
+    async def fake_refresh(store, drive, entity_type, record_id,
+                           include_archived=False):
         seen.update(entity=entity_type, record=record_id)
         return [{"id": "D1", "filename": "resume.pdf", "changedInDrive": True}]
 
@@ -444,7 +445,8 @@ def test_mentoradmin_refresh_anchors_to_contact(monkeypatch):
     monkeypatch.setattr(docs_service, "drive_for_user", _fake_drive_for_user)
     seen = {}
 
-    async def fake_refresh(store, drive, entity_type, record_id):
+    async def fake_refresh(store, drive, entity_type, record_id,
+                           include_archived=False):
         seen.update(entity=entity_type, record=record_id)
         return []
 
@@ -474,3 +476,153 @@ def test_upload_drive_failure_maps_to_502(monkeypatch):
         )
     assert r.status_code == 502
     assert "Google Drive" in r.json()["detail"]
+
+
+# --- DOC-07: archive/restore endpoints + the include-archived toggle -----------
+
+
+def _seed_store(status="active"):
+    import asyncio
+
+    store = MemoryDocumentStore()
+
+    async def seed():
+        await store.insert_document(
+            {"drive_file_id": "a", "entity_type": "CEngagement", "record_id": "E1",
+             "original_filename": "resume.pdf", "doc_type": "Resume",
+             "drive_folder_id": "fE1", "status": status}
+        )
+
+    asyncio.run(seed())
+    return store
+
+
+class _LifecycleDrive:
+    mailbox = "bob.mentor@cbmentors.org"
+    drive_id = "drv1"
+
+    def __init__(self):
+        self.moves = []
+        self.folders = {}
+
+    async def find_child_folder(self, parent_id, name):
+        return self.folders.get((parent_id, name))
+
+    async def create_folder(self, parent_id, name):
+        self.folders[(parent_id, name)] = "archF"
+        return "archF"
+
+    async def get_file(self, file_id, fields="id"):
+        return {"id": file_id, "parents": ["fE1"]}
+
+    async def move_file(self, file_id, add_parent, remove_parents):
+        self.moves.append((file_id, add_parent, list(remove_parents)))
+
+
+def _with_lifecycle_drive(monkeypatch):
+    drive = _LifecycleDrive()
+
+    async def fake_drive_for_user(settings, client, user):
+        return drive
+
+    monkeypatch.setattr(docs_service, "drive_for_user", fake_drive_for_user)
+    return drive
+
+
+def test_archive_endpoint_flips_row(monkeypatch):
+    _as(monkeypatch)
+    store = _seed_store()
+    monkeypatch.setattr(docs_service, "get_store", lambda settings: store)
+    drive = _with_lifecycle_drive(monkeypatch)
+    import asyncio
+
+    doc_id = asyncio.run(store.list_documents("CEngagement", "E1"))[0]["id"]
+    with TestClient(_app(monkeypatch, gdrive_docs=True)) as c:
+        r = c.post(f"/mentorsessions/api/records/E1/documents/{doc_id}/archive")
+        assert r.status_code == 200
+        assert r.json()["document"]["status"] == "archived"
+        # the row leaves the default list; the toggle reveals it
+        assert c.get("/mentorsessions/api/records/E1/documents").json()["documents"] == []
+        both = c.get(
+            "/mentorsessions/api/records/E1/documents",
+            params={"includeArchived": "true"},
+        ).json()["documents"]
+        assert [d["status"] for d in both] == ["archived"]
+    assert drive.moves == [("a", "archF", ["fE1"])]
+
+
+def test_restore_endpoint_flips_back(monkeypatch):
+    _as(monkeypatch)
+    store = _seed_store(status="archived")
+    monkeypatch.setattr(docs_service, "get_store", lambda settings: store)
+    _with_lifecycle_drive(monkeypatch)
+    import asyncio
+
+    doc_id = asyncio.run(
+        store.list_documents("CEngagement", "E1", include_archived=True)
+    )[0]["id"]
+    with TestClient(_app(monkeypatch, gdrive_docs=True)) as c:
+        r = c.post(f"/mentorsessions/api/records/E1/documents/{doc_id}/restore")
+        assert r.status_code == 200
+        assert r.json()["document"]["status"] == "active"
+
+
+def test_archive_unknown_doc_404s(monkeypatch):
+    _as(monkeypatch)
+    monkeypatch.setattr(
+        docs_service, "get_store", lambda settings: MemoryDocumentStore()
+    )
+    _with_lifecycle_drive(monkeypatch)
+    with TestClient(_app(monkeypatch, gdrive_docs=True)) as c:
+        r = c.post("/mentorsessions/api/records/E1/documents/nope/archive")
+    assert r.status_code == 404
+
+
+def test_archive_twice_400s_readably(monkeypatch):
+    _as(monkeypatch)
+    store = _seed_store(status="archived")
+    monkeypatch.setattr(docs_service, "get_store", lambda settings: store)
+    _with_lifecycle_drive(monkeypatch)
+    import asyncio
+
+    doc_id = asyncio.run(
+        store.list_documents("CEngagement", "E1", include_archived=True)
+    )[0]["id"]
+    with TestClient(_app(monkeypatch, gdrive_docs=True)) as c:
+        r = c.post(f"/mentorsessions/api/records/E1/documents/{doc_id}/archive")
+    assert r.status_code == 400
+    assert "already archived" in r.json()["detail"]
+
+
+def test_upload_fires_post_upload_hooks(monkeypatch):
+    """DOC-08/DOC-09 ride every successful upload (best-effort)."""
+    _as(monkeypatch)
+    store = MemoryDocumentStore()
+    monkeypatch.setattr(docs_service, "get_store", lambda settings: store)
+    called = {}
+
+    class FakeDrive:
+        mailbox = "bob.mentor@cbmentors.org"
+        drive_id = "drv1"
+
+    async def fake_drive_for_user(settings, client, user):
+        return FakeDrive()
+
+    async def fake_upload(settings, st, drive, **kwargs):
+        return {"driveFileId": "file1", "driveFolderId": "fE1"}
+
+    async def fake_hooks(settings, drive, entity_type, record_id, row):
+        called["args"] = (entity_type, record_id, row["driveFolderId"])
+
+    monkeypatch.setattr(docs_service, "drive_for_user", fake_drive_for_user)
+    monkeypatch.setattr(docs_service, "upload_document", fake_upload)
+    monkeypatch.setattr(docs_service, "post_upload_hooks", fake_hooks)
+    with TestClient(_app(monkeypatch, gdrive_docs=True)) as c:
+        r = c.post(
+            "/mentorsessions/api/records/E1/documents",
+            params={"filename": "resume.pdf", "docType": "Resume"},
+            content=b"%PDF-1.4",
+            headers={"Content-Type": "application/pdf"},
+        )
+    assert r.status_code == 200
+    assert called["args"] == ("CEngagement", "E1", "fE1")

@@ -746,6 +746,14 @@ textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
 .sx__doc-acts { display: inline-flex; gap: 0.35rem; white-space: nowrap; }
 .sx__doc-acts .cbm-button[disabled] { opacity: 0.55; cursor: not-allowed; }
 .sx__doc-file { word-break: break-all; }
+/* DOC-07: the "Include archived" toggle + archived rows (dimmed, never gone). */
+.sx__doc-archtoggle {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  font-size: 0.9rem; margin-right: 0.75rem; white-space: nowrap;
+}
+.sx__doc-archtoggle[hidden] { display: none; }
+.sx__doc-archived-row td { opacity: 0.62; }
+.sx__doc-archived-row .sx__doc-acts { opacity: 1; }
 /* A file edited in Drive since the app last synced it (lazy refresh flag). */
 .sx__tag--flag { background: #fdf3e0; color: #8a5a12; margin-left: 0.45rem; }
 

@@ -15,12 +15,14 @@ The facts you'll need (from the Gmail/Calendar activation records):
 | Scopes currently on the DWD row | `gmail.readonly`, `gmail.send`, `calendar.events` |
 | Accounts to use | GCP console: the Google account that owns the project (created under `admin@cbmentors.org`). Admin console / Drive: a **super-admin** of `cbmentors.org` |
 
-How the app uses this: when a manager uploads a document, the app
-impersonates **that manager's own `@cbmentors.org` account** (their profile's
-`cbmEmail`) and writes to the shared drive as them — so Drive's audit log
-names the real person, and each manager needs their own access to the drive
-(Task 3). The service account itself never appears as the uploader and does
-**not** need drive membership.
+How the app uses this (the final access model, PRD v1.3 / Doug's ruling
+2026-07-16): the app performs **all Drive operations as the service account
+itself** (`GDRIVE_IDENTITY=service`), and the service account is the shared
+drive's **only member** — no person ever holds drive membership. The app's
+own records (`uploaded_by`, run logs) attribute every operation to the real
+person; Drive-side human access exists only as per-folder Commenter grants
+the app issues automatically (Task 6). (The original per-user impersonation
+mode, `GDRIVE_IDENTITY=user`, remains in the code for compatibility only.)
 
 ---
 
@@ -113,17 +115,18 @@ to the organization and survive staff turnover (PRD decision D-03).
    The last path segment (starting `0A…`) is the **shared drive ID** — this
    is the `GDRIVE_SHARED_DRIVE_ID` value the app needs. Paste it somewhere
    safe (it's not a secret, just fiddly to re-find).
-5. Click the drive name (top) → **Manage members**. Add **every staff member
-   who will use the Documents tab** — each manager's `@cbmentors.org`
-   account — with the role **Content Manager** (they need to create folders
-   and upload; "Contributor" also works but Content Manager matches the PRD
-   and lets them tidy files in Drive). Tip: if a suitable Google Group
-   exists (or you make one, e.g. `mentors@cbmentors.org`), add the group
-   once instead of person-by-person — future mentors then get access by
-   joining the group.
-6. Uploads act **as the signed-in manager**, so a manager who isn't a member
-   gets a clear Drive 403 on their first upload — membership here is the
-   fix, nothing app-side.
+5. Click the drive name (top) → **Manage members**. Under the final access
+   model (PRD v1.3, Doug's ruling — supersedes the earlier "add every staff
+   member" guidance): the drive has **exactly one member — the service
+   account** (`espocrm@espcrm-498315.iam.gserviceaccount.com`, from the JSON
+   key's `client_email`), role **Content Manager**. **No person is ever a
+   member**; remove any human members that were added earlier. Workspace
+   super-admins keep emergency access through the admin console.
+6. Human Drive access exists only as per-folder **Commenter** grants the app
+   issues automatically (Phase 3, DOC-09) — mirroring CRM assignments. A
+   manager who can see the record in the app can always view/upload through
+   the app regardless; the folder grant only affects Drive-side access
+   (Open in Drive).
 
 Nothing else to configure on the drive: the app creates the whole folder
 tree itself on first upload (PRD v1.2 §3.2) —
@@ -198,16 +201,11 @@ default `Resume,Agreement,Intake Document,Pitch Deck,Other`) and
    server converts to PDF on view — a temp Google-format copy appears in
    the record folder for a few seconds during conversion; that's normal).
    Note: the "Open in Drive" button works for people holding a folder
-   grant. Per Doug's access-model ruling (PRD v1.3 §3.4, D-08/D-09), the
-   app will issue per-person, folder-level **Commenter** grants mirroring
-   CRM assignments (engagements → assigned mentor + co-mentors; partner/
-   sponsor → their manager; `Mentors/` folders → no one, app-only), with
-   a nightly reconciliation. That grants module is Phase 3 — until it
-   ships, Open in Drive resolves for no one, which is expected. Remove
-   any human members from the shared drive when switching to
+   grant — issued automatically by the Phase 3 grants module (Task 6).
+   Remove any human members from the shared drive when switching to
    `GDRIVE_IDENTITY=service` — the ruling is that no person is ever a
    drive member.
-5. Troubleshooting quick map:
+8. Troubleshooting quick map:
    - 403 `accessNotConfigured` → Task 1 not done / wrong project.
    - `unauthorized_client` / "delegation denied" → Task 2 scope line wrong
      or not yet propagated.
@@ -217,3 +215,68 @@ default `Resume,Agreement,Intake Document,Pitch Deck,Other`) and
      `CMentorProfile.cbmEmail` is blank in the CRM (fix in `/mentoradmin`).
    - "The document integration needs the database" (503) → `DATABASE_URL`
      missing on that app (dev/lobster has no DB — expected there).
+
+---
+
+## Task 6 — Phase 3 activation: the access model, grants, archive, CRM links (v0.76.0)
+
+Phase 3 (DOC-MGMT, PRD v1.3) ships three things — folder-level **Drive access
+grants** mirroring CRM assignments (DOC-09), **Archive/Restore** on every
+Documents tab (DOC-07), and the **`documentsFolderUrl` CRM write-back**
+(DOC-08). Archive/Restore needs nothing beyond the Phase 1 flags. The other
+two activate as follows — **order matters**:
+
+1. **Drive-side membership swap (Doug, one time; Task 3 step 5 as revised):**
+   add the service account's `client_email` to the "CBM Documents" shared
+   drive as **Content Manager**, and **remove every human member**. Do this
+   BEFORE step 2 — flipping the identity first would leave the app unable to
+   reach the drive.
+2. **Set the env on BOTH components** of each app's gitignored overlay
+   (crm-test first, then prod) and apply via
+   `doctl apps update <app-id> --spec <overlay> --wait`:
+
+   ```yaml
+   # web component — switches all Drive operations to the service account
+   - key: GDRIVE_IDENTITY
+     value: "service"
+   # worker component — the nightly reconciliation needs the same three
+   # (plus the SA JSON + DATABASE_URL it already carries):
+   - key: GDRIVE_DOCS
+     value: "true"
+   - key: GDRIVE_SHARED_DRIVE_ID
+     value: "<same id as the web component>"
+   - key: GDRIVE_IDENTITY
+     value: "service"
+   ```
+
+   Optional: `GDRIVE_RECONCILE_SECONDS` (worker; default `86400` = daily;
+   `0` disables the reconciliation job). Alerts go to `ALERT_WEBHOOK_URL`
+   when set (else WARNING logs), like the V2 monitoring.
+3. **CRM field build (CRM team / crmbuilder):** `documentsFolderUrl` (Url,
+   read-only in layouts) on **CEngagement** and **Contact** — full spec:
+   `documentsfolderurl-crm-field.md`. The app feature-detects it; build
+   before or after the deploy in any order.
+
+### Verify (the Phase 3 live checklist)
+
+1. **Grants:** in Client Administration, assign a mentor to an engagement
+   that already has documents → within a few seconds the mentor finds the
+   engagement folder in Drive's **Shared with me**, role Commenter (they can
+   open/download/comment, cannot upload or edit). Add a co-mentor on the
+   engagement's Details tab → same for them; remove the co-mentor → their
+   access is gone.
+2. **First upload grants:** upload the first document to an engagement that
+   already has an assigned mentor → the folder is created AND shared with
+   that mentor in the same action.
+3. **Mentors/ folders:** upload a mentor document in `/mentoradmin` → the
+   `Mentors/{Name}` folder has NO human grants (check Manage access in
+   Drive) — application-only, by design.
+4. **Reconciliation:** hand-grant someone on a record folder in Drive (as a
+   super-admin), wait for the nightly pass (or restart the worker — the job
+   runs at startup) → the grant is removed and an alert is logged/posted.
+5. **Archive:** on a Documents tab, Archive a row (two clicks) → the file
+   moves to the record folder's `_Archived` subfolder in Drive and the row
+   leaves the list; "Include archived" reveals it; Restore puts both back.
+6. **CRM link:** after the field build, upload the first document for a
+   record → the CEngagement (or mentor's Contact) record shows the Drive
+   folder link in `documentsFolderUrl`; a second upload does not change it.
