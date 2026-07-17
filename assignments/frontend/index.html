@@ -14,8 +14,15 @@
 <body>
   <main class="cbm-container assign">
     <header class="assign__header">
-      <h1>Client Administration</h1>
-      <p class="assign__sub">Assign submitted engagements to a mentor who is accepting new clients.</p>
+      <div>
+        <h1>Client Administration</h1>
+        <p class="assign__sub">Assign submitted engagements to a mentor who is accepting new clients.</p>
+      </div>
+      <!-- User profile corner (shown once the session check passes) -->
+      <div class="assign__user" id="userChip" hidden>
+        <span class="assign__who">Signed in as <strong id="whoName"></strong></span>
+        <button type="button" class="cbm-button cbm-button--secondary" id="logoutBtn">Sign out</button>
+      </div>
     </header>
 
     <!-- Sign-in happens at the portal (/); this shows access/server errors. -->
@@ -26,20 +33,19 @@
 
     <!-- Dashboard -->
     <section class="assign__dash" id="dashView" hidden>
-      <div class="assign__toolbar">
-        <span class="assign__who">Signed in as <strong id="whoName"></strong></span>
-        <span class="assign__actions">
-          <button type="button" class="cbm-button" id="reviewMentorsBtn">Review Mentors</button>
-          <button type="button" class="cbm-button cbm-button--secondary" id="refreshBtn">Refresh</button>
-          <button type="button" class="cbm-button cbm-button--secondary" id="logoutBtn">Sign out</button>
-        </span>
-      </div>
-
-      <div class="assign__filterbar">
+      <!-- One control line: status filter · full-text search · action buttons -->
+      <div class="assign__controls">
         <details class="statusfilter" id="statusFilter">
           <summary id="statusSummary">Status: Submitted</summary>
           <div class="statusfilter__panel" id="statusPanel" role="group" aria-label="Filter by engagement status"></div>
         </details>
+        <input type="search" id="engSearch" class="eng-search"
+               placeholder="Search engagements — name, client, contact, mentor, notes…"
+               autocomplete="off" aria-label="Search engagements" />
+        <span class="assign__actions">
+          <button type="button" class="cbm-button" id="reviewMentorsBtn">Review Mentors</button>
+          <button type="button" class="cbm-button cbm-button--secondary" id="refreshBtn">Refresh</button>
+        </span>
       </div>
 
       <p class="assign__notice" id="notice" role="status" hidden></p>

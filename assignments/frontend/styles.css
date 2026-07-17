@@ -34,12 +34,28 @@ body { display: flex; flex-direction: column; }
   overflow-y: auto;
 }
 
+.assign__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
 .assign__header h1 {
   color: var(--cbm-navy);
   font-family: var(--cbm-font-serif);
   margin-bottom: 0.25rem;
 }
 .assign__sub { color: var(--cbm-text); margin-top: 0; }
+
+/* User profile corner — upper right, like a typical account chip. */
+.assign__user:not([hidden]) {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  white-space: nowrap;
+  padding-top: 0.35rem;
+}
 
 /* Login */
 .assign__login {
@@ -52,22 +68,29 @@ body { display: flex; flex-direction: column; }
 }
 .assign__login h2 { color: var(--cbm-navy); margin-top: 0; }
 
-/* Toolbar */
-.assign__toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  flex-wrap: wrap;
-  margin: 1rem 0 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--cbm-border);
-}
 .assign__who { color: var(--cbm-slate-700); }
 .assign__actions { display: flex; gap: 0.5rem; }
 
+/* Control line: status filter (left) · search (middle) · buttons (right). */
+.assign__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin: 1rem 0;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--cbm-border);
+}
+.eng-search {
+  flex: 1 1 280px;
+  min-width: 220px;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--cbm-border);
+  border-radius: var(--cbm-radius);
+  font-family: var(--cbm-font-body);
+}
+
 /* Status filter */
-.assign__filterbar { margin: 0 0 1rem; }
 .statusfilter { position: relative; display: inline-block; }
 .statusfilter > summary {
   list-style: none;

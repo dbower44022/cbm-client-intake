@@ -1328,7 +1328,25 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-17)
 
-**Main is at v0.79.0** (2026-07-17, 662 tests green, committed NOT pushed) —
+**Main is at v0.80.0** (2026-07-17, 662 tests green, committed NOT pushed) —
+**Client Administration layout pass** (Doug's review of 0.79.0; frontend-only):
+"Signed in as" + Sign out moved to a top-right user-profile corner; Review
+Mentors/Refresh share ONE control line with the Status filter and a new
+live **full-text search** (name/status/client/contact/mentor/notes/dates;
+no-match ⇒ "No engagements match your search."); and the Assign button is
+**never disabled** — clicking with no mentor chosen shows a notice naming
+the missing input and focuses the dropdown. NEW PRODUCT-WIDE RULING recorded
+in memory ([[buttons-never-disabled-validate-on-click]]): action buttons stay
+active, validate on click; transient in-flight disables remain OK. Verified
+in the stub harness (positions, search hit/miss/clear, no-mentor message,
+full assign→compose regression; no console errors). Also this session:
+**verified `MentorAssignmentNotice` exists on BOTH CRMs** (read-only DB query
+via SSH to the droplets — crm-test id `6a5a3d9b938cebbfb` no category, prod
+id `6a5a3d7db88566f66` has a category, irrelevant to the record-less
+quicksend list; intake API key can't read EmailTemplate → 403, and prod CRM
+droplet is `cbm-espocrm-prod` 147.182.135.50, same docker layout as CBM-TEST).
+
+Before that: **v0.79.0** (2026-07-17, 662 tests green, committed NOT pushed) —
 **Client Administration engagement grid: full-window layout + Days Assigned +
 post-Assign notice email** (Doug's request; frontend-only). (1) The page is a
 full-height flex column — the grid fills all remaining vertical space and

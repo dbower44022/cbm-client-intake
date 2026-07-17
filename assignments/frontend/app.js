@@ -61,6 +61,7 @@
   function showDashboard(user) {
     hide($("msgView"));
     $("whoName").textContent = user.name || user.userName;
+    show($("userChip"));
     show($("dashView"));
     loadData();
   }
@@ -223,14 +224,27 @@
     }
   }
 
-  // --- engagement grid sorting (client-side, like the mentors grid) ---
+  // --- engagement grid sorting + search (client-side, like the mentors grid) ---
   var engRows = [];                     // last-loaded rows, in server order (newest first)
   var engSort = { key: null, dir: 1 }; // key null = keep the server order
+  var engQuery = "";                    // full-text search over the loaded rows
 
   function renderTable(engagements) {
     engRows = engagements;
     repaintEngagements();
   }
+
+  function engHaystack(e) {
+    return [
+      e.name, e.status, e.clientName, e.contactName, e.mentorName, e.notes,
+      (e.createdAt || "").slice(0, 10), (e.assignedDate || "").slice(0, 10),
+    ].join(" ").toLowerCase();
+  }
+
+  $("engSearch").addEventListener("input", function () {
+    engQuery = this.value;
+    repaintEngagements();
+  });
 
   function engSortVal(e, k) {
     // UTC "YYYY-MM-DD HH:MM:SS" stamps compare correctly as strings; a row
@@ -245,13 +259,20 @@
     var body = $("engBody");
     body.innerHTML = "";
     updateEngSortIndicators();
-    if (!engRows.length) {
+    var rows = engRows.slice();
+    var q = engQuery.trim().toLowerCase();
+    if (q) {
+      rows = rows.filter(function (e) { return engHaystack(e).indexOf(q) >= 0; });
+    }
+    if (!rows.length) {
+      $("emptyState").textContent = engRows.length
+        ? "No engagements match your search."
+        : "No submitted engagements awaiting assignment. 🎉";
       hide($("engTable"));
       show($("emptyState"));
       return;
     }
     hide($("emptyState"));
-    var rows = engRows.slice();
     if (engSort.key) {
       var k = engSort.key, dir = engSort.dir;
       rows.sort(function (a, b) {
@@ -349,10 +370,19 @@
     btn.type = "button";
     btn.className = "cbm-button";
     btn.textContent = "Assign";
-    btn.disabled = true;
 
-    select.addEventListener("change", function () { btn.disabled = !select.value; });
+    // Never disabled (Doug's ruling: buttons stay active) — clicking without a
+    // mentor chosen explains what's needed instead of being grayed out.
     btn.addEventListener("click", function () {
+      if (!select.value) {
+        notice(
+          "Select a mentor for “" + (eng.name || "this engagement") +
+          "” from its dropdown before clicking Assign.",
+          "error"
+        );
+        select.focus();
+        return;
+      }
       doAssign(tr, eng, select.value, select.options[select.selectedIndex].text);
     });
 

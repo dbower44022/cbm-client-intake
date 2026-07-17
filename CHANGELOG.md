@@ -4,6 +4,24 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.80.0] — 2026-07-17
+
+Client Administration layout pass (Doug's review of 0.79.0). Frontend-only.
+
+### Changed
+- **User profile corner.** "Signed in as …" + Sign out moved to the upper
+  right of the page header, where a typical account chip lives; the old
+  toolbar row is gone.
+- **One control line.** Review Mentors + Refresh moved down onto the same
+  horizontal line as the Status filter, with a new **full-text search** box
+  between them: filters the loaded rows live across engagement name, status,
+  client, contact, mentor name, notes, and the created/assigned dates. A
+  search with no matches shows "No engagements match your search."
+- **Buttons are never grayed out** (Doug's ruling, product-wide going
+  forward): the Assign button is always active; clicking it without choosing
+  a mentor shows a notice naming what's needed and focuses the dropdown
+  (replaces the disabled-until-selected gating).
+
 ## [0.79.0] — 2026-07-17
 
 Client Administration engagement grid: fill the window, show how long ago each
