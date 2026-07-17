@@ -24,6 +24,7 @@ from core.config import get_settings
 from core.espo import EspoError, forbidden_hint, validation_message
 from core.gdrive import DriveError
 from core.gmail import GmailError
+from docs import grants as doc_grants
 from docs import service as docs_service
 
 from . import details as details_svc
@@ -368,9 +369,16 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             user = _require_user(request)
             client = client_for(get_settings(), user)
             try:
-                return await service.add_comentor(client, parent_id, body.mentorProfileId)
+                result = await service.add_comentor(client, parent_id, body.mentorProfileId)
             except EspoError as exc:
                 raise _crm_failure(request, exc, "Could not add co-mentor")
+            # DOC-09: the co-mentor gains the engagement folder's Commenter
+            # grant in the same action that grants the entitlement. Best-effort
+            # — a failure never fails the add (nightly reconciliation backstop).
+            await doc_grants.sync_record_grants_safe(
+                get_settings(), cfg.parent_entity, parent_id
+            )
+            return result
 
         @router.delete("/records/{parent_id}/comentors/{mentor_profile_id}")
         async def remove_comentor(
@@ -381,9 +389,15 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             user = _require_user(request)
             client = client_for(get_settings(), user)
             try:
-                return await service.remove_comentor(client, parent_id, mentor_profile_id)
+                result = await service.remove_comentor(client, parent_id, mentor_profile_id)
             except EspoError as exc:
                 raise _crm_failure(request, exc, "Could not remove the co-mentor")
+            # DOC-09: revocation rides the same action that ends the
+            # entitlement (best-effort, reconciliation backstop).
+            await doc_grants.sync_record_grants_safe(
+                get_settings(), cfg.parent_entity, parent_id
+            )
+            return result
 
     # --- Communications tab (Gmail conversation integration) -----------------
     # Everything below 503s unless GMAIL_SYNC is enabled; the frontend keeps
@@ -555,10 +569,20 @@ def make_router(cfg: DomainConfig) -> APIRouter:
         _comms_ready()
         client = client_for(get_settings(), user)
         try:
+            # {CMentorProfile.*} — the most common template link — resolves
+            # via prepare()'s related record: the record's own manager, else
+            # the sender's linked profile.
+            profile_id = await comms_templates.related_manager_profile(
+                client, user_id=user["userId"],
+                parent_entity=cfg.parent_entity, parent_id=parent_id,
+                manager_link=cfg.parent_manager_link,
+            )
             return await comms_templates.parse_template(
                 client, template_id,
                 parent_type=cfg.parent_entity, parent_id=parent_id,
                 email_address=body.emailAddress or None,
+                related_type="CMentorProfile" if profile_id else None,
+                related_id=profile_id,
             )
         except EspoError as exc:
             # ET-114: non-destructive — the frontend leaves the draft untouched.
@@ -626,10 +650,14 @@ def make_router(cfg: DomainConfig) -> APIRouter:
         return settings, store
 
     @router.get("/records/{parent_id}/documents")
-    async def documents(parent_id: str, request: Request) -> dict:
+    async def documents(
+        parent_id: str, request: Request, includeArchived: bool = False
+    ) -> dict:
         _require_user(request)
         settings, store = _docs_ready()
-        rows = await docs_service.list_documents(store, cfg.parent_entity, parent_id)
+        rows = await docs_service.list_documents(
+            store, cfg.parent_entity, parent_id, include_archived=includeArchived
+        )
         return {
             "documents": rows,
             "docTypes": settings.gdrive_doc_types_list,
@@ -683,6 +711,12 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 data=data,
                 client_id=client_id,
                 client_name=client_name,
+            )
+            # DOC-08 (CRM folder-link write-back, self-healing on every upload)
+            # + DOC-09 (folder-creation grants). Best-effort by contract —
+            # never fails the upload.
+            await docs_service.post_upload_hooks(
+                settings, drive, cfg.parent_entity, parent_id, row
             )
             return {"status": "ok", "document": row}
         except docs_service.DocsError as exc:
@@ -739,7 +773,9 @@ def make_router(cfg: DomainConfig) -> APIRouter:
         )
 
     @router.post("/records/{parent_id}/documents/refresh")
-    async def refresh_documents(parent_id: str, request: Request) -> dict:
+    async def refresh_documents(
+        parent_id: str, request: Request, includeArchived: bool = False
+    ) -> dict:
         """DOC-02 completion — lazy modifiedTime refresh: one files.list scoped
         to the record folder re-syncs each row's modifiedTime; changed rows come
         back flagged ``changedInDrive``. The frontend fires this AFTER rendering
@@ -751,7 +787,8 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             await client.get(cfg.parent_entity, parent_id, select="name")
             drive = await docs_service.drive_for_user(settings, client, user)
             rows = await docs_service.refresh_documents(
-                store, drive, cfg.parent_entity, parent_id
+                store, drive, cfg.parent_entity, parent_id,
+                include_archived=includeArchived,
             )
             return {
                 "documents": rows,
@@ -767,6 +804,52 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             )
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not refresh the documents")
+
+    async def _document_lifecycle(
+        parent_id: str, doc_id: str, request: Request, *, archive: bool
+    ) -> dict:
+        """DOC-07 shared handler: the parent record is read AS THE USER (their
+        CRM ACL gates the action, like the upload); the Drive move + status
+        flip run in docs.service (move first, flip after, rollback on a
+        mid-failure — Doug's ruling 2026-07-17)."""
+        user = _require_user(request)
+        settings, store = _docs_ready()
+        client = client_for(settings, user)
+        try:
+            await client.get(cfg.parent_entity, parent_id, select="name")
+            drive = await docs_service.drive_for_user(settings, client, user)
+            fn = (
+                docs_service.archive_document if archive
+                else docs_service.restore_document
+            )
+            row = await fn(store, drive, cfg.parent_entity, parent_id, doc_id)
+            return {"status": "ok", "document": row}
+        except docs_service.DocsNotFound as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+        except docs_service.DocsError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        except DriveError as exc:
+            log.warning(
+                "document %s failed (%s): %s",
+                "archive" if archive else "restore", cfg.slug, exc,
+            )
+            raise HTTPException(
+                status_code=502, detail="Couldn't reach Google Drive — try again."
+            )
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not update the document")
+
+    @router.post("/records/{parent_id}/documents/{doc_id}/archive")
+    async def archive_document(parent_id: str, doc_id: str, request: Request) -> dict:
+        """DOC-07: soft-delete — the file moves to the record folder's
+        /_Archived subfolder and the row leaves the default list."""
+        return await _document_lifecycle(parent_id, doc_id, request, archive=True)
+
+    @router.post("/records/{parent_id}/documents/{doc_id}/restore")
+    async def restore_document(parent_id: str, doc_id: str, request: Request) -> dict:
+        """DOC-07: reverse of archive — file back to the record folder,
+        status back to active."""
+        return await _document_lifecycle(parent_id, doc_id, request, archive=False)
 
     # POST /sendmail — the record-less quick send behind email links shown
     # OUTSIDE an open record (grid-page peeks). This router already serves its

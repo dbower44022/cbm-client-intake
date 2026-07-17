@@ -64,6 +64,11 @@ One row per conversation: status chip, participants, subject with message
 count, a one-line summary, and last activity. Click a row to open the
 thread; **Refresh** happens automatically when the tab loads.
 
+The list works like the other grids: **click a column header to sort**
+(click again to reverse — Last activity sorts newest-first), and **drag the
+grip on a header's right edge to resize columns**. Your column widths and
+sort choice are kept while you move between tabs on the record.
+
 **Participants** lists everyone who was on the emails — senders *and* To/Cc
 recipients — so a person who was included but never replied still shows.
 Each person appears once (matched by email address), as their name with
