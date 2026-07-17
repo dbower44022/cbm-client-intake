@@ -1221,23 +1221,44 @@ bullets ("Details EDIT forms — mockup-v4" and "Grid + Overview session
 flags"). Still worth a live eyeball on crm-test: a past-only record's
 Overview split, a real today-session red flag, and Next Session values.
 
-**Main is at v0.70.1** (2026-07-16, committed NOT pushed) — **document
+**Main is at v0.71.0** (2026-07-16, committed NOT pushed) — **Documents:
+service-account identity + in-app Office viewing** (Doug's rulings: users
+must NOT have Drive access — drive membership was never granted broadly,
+so the PRD's impersonate-the-manager model only ever worked for actual
+members like Doug; and Office files must view in-app). New
+**`GDRIVE_IDENTITY=service`** (default `user` = old behavior): the SA
+performs all Drive ops as ITSELF — **activation: add the SA's
+`client_email` as a Content Manager member of the shared drive, set the
+env on web** — managers need zero Drive access, the app's CRM ACL is the
+sole gate, `uploaded_by` still records the person, and a missing
+`cbmEmail` no longer blocks (it was only the impersonation subject).
+Office formats (docx/xlsx/pptx/ODF/CSV) now view in-app via
+**convert-on-view** (`DriveClient.export_office_pdf`: copy-as-Google-
+format temp → export PDF → temp deleted even on failure; stored file
+untouched, D-04 holds; temp briefly visible in the record folder — users
+aren't members so nobody sees it). 584 tests green; harness-verified.
+**OPEN RULING: Open in Drive's fate** — under service mode the button
+only works for drive members (nobody): remove it (option 2, app-only)
+vs. per-user ADDITIVE grants on record folders (option 4 — non-members
+CAN be granted per-file/folder access, the one direction shared drives
+support; costs a permission-sync liability wired to assignment changes).
+Note: this pivot reverses PRD D-01/DOC-05/§3.1 — PRD revision needed
+once ruled. Doug also wants the viewer proven "fast and reliable" live
+before accepting Phase 2.
+
+Before that: **v0.70.1** — **document
 upload failure UX hardened** after Doug's live report (a pptx upload
 failed with no visible error; unreproducible post-hoc — the v0.70.0 deploy
 had rotated the instance/logs, and an in-flight upload dying in that swap
-is the probable cause): errors now show in the notice bar above the table,
+is the probable cause; ALSO plausible: he was uploading as a non-member
+identity under the impersonation model, which 403s — see v0.71.0): errors
+now show in the notice bar above the table,
 XHR upload with live progress %, client-side size gate against the
 server's `maxFileMb` (new on the documents list/refresh responses), a
 plain-language dropped-connection message, and an INFO receipt log
 (who/filename/bytes) on every upload so the next report is diagnosable
 from run logs. Probed: the DO edge accepts ≥60 MB bodies (no platform
-size wall before the 100 MB app cap). All harness-verified. **OPEN
-(Doug's question this session): lock users out of Drive entirely** —
-would flip Drive ops to the service account's own identity (managers
-removed from shared-drive membership; app-only access; Open in Drive
-removed or admin-only; Office formats need convert-on-view export to
-stay viewable in-app; reverses PRD D-01/DOC-05/§3.1 — PRD revision
-needed). Awaiting his ruling: everyone app-only vs. staff keep Drive.
+size wall before the 100 MB app cap). All harness-verified.
 v0.70.0 (pushed + deployed, both envs verified at 0.70.0): **Documents:
 in-app viewing (DOC-MGMT Phase 2) is BUILT**: View on every document row
 (session tools + `/mentoradmin`) opens an in-app overlay streaming the file

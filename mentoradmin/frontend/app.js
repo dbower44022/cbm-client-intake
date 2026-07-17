@@ -676,6 +676,20 @@
     "application/vnd.google-apps.spreadsheet": true,
     "application/vnd.google-apps.presentation": true,
   };
+  // Office formats also arrive as PDF (server convert-on-view). Keep in sync
+  // with core/gdrive.OFFICE_CONVERT_MIMES.
+  var MDOC_OFFICE_VIEW = {
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": true,
+    "application/msword": true,
+    "application/vnd.oasis.opendocument.text": true,
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": true,
+    "application/vnd.ms-excel": true,
+    "application/vnd.oasis.opendocument.spreadsheet": true,
+    "text/csv": true,
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation": true,
+    "application/vnd.ms-powerpoint": true,
+    "application/vnd.oasis.opendocument.presentation": true,
+  };
 
   function mdocContentUrl(d) {
     return API + "/mentors/" + encodeURIComponent(current.id) + "/documents/" +
@@ -684,7 +698,8 @@
 
   function mdocViewMode(d) {
     var mime = (d.mimeType || "").toLowerCase();
-    if (mime === "application/pdf" || MDOC_GOOGLE_NATIVE[mime] || mime === "text/plain") return "frame";
+    if (mime === "application/pdf" || MDOC_GOOGLE_NATIVE[mime] ||
+        MDOC_OFFICE_VIEW[mime] || mime === "text/plain") return "frame";
     if (mime.indexOf("image/") === 0) return "image";
     return "none";
   }

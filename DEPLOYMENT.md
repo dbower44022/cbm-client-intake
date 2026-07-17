@@ -223,6 +223,7 @@ Requires `DATABASE_URL` (the tab 503s without the store). Worker not involved.
 |---|---|
 | `GDRIVE_DOCS` | `true` to enable the Documents tab (web) |
 | `GDRIVE_SHARED_DRIVE_ID` | the "CBM Documents" shared drive id (from its Drive URL) |
+| `GDRIVE_IDENTITY` | `service` (recommended — Doug's ruling: users have NO Drive access): the service account acts as itself; **add the SA's `client_email` as a Content Manager member of the shared drive**. Default `user` = the original impersonation mode, which requires every manager to be a drive member. |
 | `GDRIVE_DOC_TYPES` | optional override of the doc-type choices (comma-separated; default `Resume,Agreement,Intake Document,Pitch Deck,Other`) |
 | `GDRIVE_MAX_FILE_MB` | optional upload size cap (default 100) |
 | `GDRIVE_ENTITY_LABELS` | optional override of the top-level folder labels (default `Contact=Mentors,CEngagement=Clients,CPartnerProfile=Partners,CSponsorProfile=Sponsors`) |

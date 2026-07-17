@@ -52,6 +52,28 @@ GOOGLE_NATIVE_MIMES = frozenset(
     }
 )
 
+# Office formats the in-app viewer renders via convert-on-view (DOC-03/04
+# extension): copied WITH conversion to the matching Google editor format
+# (a temp file), exported to PDF, temp deleted. The stored original is never
+# touched (D-04 still holds — this is a read-time conversion).
+OFFICE_CONVERT_MIMES: dict[str, str] = {
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        "application/vnd.google-apps.document",
+    "application/msword": "application/vnd.google-apps.document",
+    "application/vnd.oasis.opendocument.text": "application/vnd.google-apps.document",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+        "application/vnd.google-apps.spreadsheet",
+    "application/vnd.ms-excel": "application/vnd.google-apps.spreadsheet",
+    "application/vnd.oasis.opendocument.spreadsheet":
+        "application/vnd.google-apps.spreadsheet",
+    "text/csv": "application/vnd.google-apps.spreadsheet",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation":
+        "application/vnd.google-apps.presentation",
+    "application/vnd.ms-powerpoint": "application/vnd.google-apps.presentation",
+    "application/vnd.oasis.opendocument.presentation":
+        "application/vnd.google-apps.presentation",
+}
+
 # Uploads at or under this size go up in one multipart request; anything larger
 # uses a resumable session (PRD DOC-01: "resumable upload for files over 5 MB").
 RESUMABLE_THRESHOLD = 5 * 1024 * 1024
@@ -84,9 +106,17 @@ class DriveClient:
         mailbox: str,
         drive_id: str,
         timeout: int = 60,
+        impersonate: bool = True,
     ) -> None:
+        """``impersonate=True`` (the "user" identity mode) mints tokens AS
+        ``mailbox`` via domain-wide delegation — that person must be a
+        shared-drive member. ``impersonate=False`` (the "service" mode) acts
+        as the service account ITSELF (the SA must be a drive member instead);
+        ``mailbox`` is then attribution only (logs + the app-level
+        ``uploaded_by``), never an auth subject."""
         self.mailbox = mailbox
         self.drive_id = drive_id
+        self.impersonate = impersonate
         self._info = service_account_info
         self._timeout = timeout
         self._tokens: dict[str, tuple[str, float]] = {}  # scope -> (token, expiry)
@@ -97,13 +127,14 @@ class DriveClient:
         cached = self._tokens.get(scope)
         if cached and cached[1] > time.time() + 60:
             return cached[0]
+        subject = self.mailbox if self.impersonate else None
         try:
             from google.auth.transport.requests import Request
             from google.oauth2 import service_account
 
             def mint() -> tuple[str, float]:
                 creds = service_account.Credentials.from_service_account_info(
-                    self._info, scopes=[scope], subject=self.mailbox
+                    self._info, scopes=[scope], subject=subject
                 )
                 creds.refresh(Request())
                 expiry = creds.expiry.timestamp() if creds.expiry else time.time() + 1800
@@ -111,9 +142,14 @@ class DriveClient:
 
             token, expiry = await asyncio.to_thread(mint)
         except Exception as exc:  # bad key, delegation not authorized, network, …
-            raise DriveError(f"Drive auth failed for {self.mailbox}: {exc}") from exc
+            raise DriveError(
+                f"Drive auth failed for {subject or 'the service account'}: {exc}"
+            ) from exc
         self._tokens[scope] = (token, expiry)
-        log.info("drive access as %s", self.mailbox)
+        log.info(
+            "drive access as %s",
+            subject or f"the service account (for {self.mailbox})",
+        )
         return token
 
     async def _send(
@@ -312,6 +348,29 @@ class DriveClient:
             self.mailbox, file_id, len(resp.content),
         )
         return resp.content
+
+    async def export_office_pdf(self, file_id: str, google_mime: str) -> bytes:
+        """Convert-on-view for Office formats: copy the file WITH conversion
+        to ``google_mime`` (a temporary Google-editor file; parents are left
+        unset so it inherits the source's shared-drive folder — shared-drive
+        storage always accepts it, unlike a service account's own My Drive,
+        which has no usable quota), export that copy to PDF, and delete the
+        copy even on export failure. The stored original is untouched
+        (read-time conversion; D-04 holds)."""
+        data = await self._request(
+            "POST",
+            f"/files/{file_id}/copy",
+            params={"supportsAllDrives": "true", "fields": "id"},
+            json_body={"mimeType": google_mime, "name": "cbm-view-temp"},
+        )
+        temp_id = data["id"]
+        try:
+            return await self.export_pdf(temp_id)
+        finally:
+            try:
+                await self.delete_file(temp_id)
+            except DriveError as exc:  # never fail the view over temp cleanup
+                log.warning("view-temp cleanup failed (%s): %s", temp_id, exc)
 
     async def list_folder_files(self, folder_id: str) -> list[dict[str, Any]]:
         """Every non-trashed file directly inside ``folder_id`` (one

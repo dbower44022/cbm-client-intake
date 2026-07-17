@@ -158,6 +158,17 @@ class Settings(BaseSettings):
     gdrive_docs: bool = False
     # The shared drive ("CBM Documents") all managed documents live in.
     gdrive_shared_drive_id: str = ""
+    # Whose Drive identity performs document operations:
+    #   "user"    — impersonate the signed-in manager's own cbmEmail (PRD
+    #               D-01; requires EVERY manager to be a shared-drive member).
+    #   "service" — the service account acts as ITSELF (add the SA's
+    #               client_email as a shared-drive member, Content Manager).
+    #               Managers need NO Drive access at all — the app's CRM ACL
+    #               check is the sole gate, and the app-level uploaded_by
+    #               still records the real person.
+    # Doug's ruling 2026-07-16: users are NOT drive members, so "service" is
+    # the operational mode; "user" remains for compatibility.
+    gdrive_identity: str = "user"
     # Top-level Drive folders are DISPLAY LABELS mapped from anchor entity
     # types (PRD v1.2 §3.2 rule 3), not raw entity names: Mentors/, Clients/…
     # An unmapped entity type falls back to the raw name.

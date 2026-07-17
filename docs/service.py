@@ -18,7 +18,13 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 from core.config import Settings
-from core.gdrive import GOOGLE_NATIVE_MIMES, PDF_MIME, DriveClient, DriveError
+from core.gdrive import (
+    GOOGLE_NATIVE_MIMES,
+    OFFICE_CONVERT_MIMES,
+    PDF_MIME,
+    DriveClient,
+    DriveError,
+)
 
 from .store import DocumentStore, make_document_store
 
@@ -51,21 +57,32 @@ def get_store(settings: Settings) -> Optional[DocumentStore]:
 async def drive_for_user(
     settings: Settings, user_client: Any, user: dict[str, Any]
 ) -> DriveClient:
-    """A Drive client impersonating the SIGNED-IN user's own CBM account.
+    """A Drive client acting for the signed-in user, per ``GDRIVE_IDENTITY``.
 
-    The subject comes from their linked ``CMentorProfile.cbmEmail`` (resolved
-    through their own token, so it's their profile by ACL + assignment) —
-    Drive audit logs attribute the upload to the real person (D-01).
+    ``"user"`` (the PRD D-01 original): impersonate their own CBM account —
+    the subject comes from their linked ``CMentorProfile.cbmEmail`` (resolved
+    through their own token, so it's their profile by ACL + assignment), and
+    that person must be a shared-drive member.
+
+    ``"service"`` (Doug's ruling 2026-07-16 — users are NOT drive members):
+    the service account acts as ITSELF (the SA is the drive member); the
+    user's cbmEmail (or username) rides along as attribution only, feeding
+    logs + the app-level ``uploaded_by``. No CBM mailbox is required to
+    operate in this mode.
     """
     from comms.service import get_service_account
     from sessions.service import resolve_user_mailbox
 
+    service_mode = settings.gdrive_identity == "service"
     mailbox = await resolve_user_mailbox(user_client, user["userId"])
     if not mailbox:
-        raise DocsError(
-            "Your profile has no CBM email address, so documents can't be "
-            "uploaded as you — ask CBM staff to set it."
-        )
+        if not service_mode:
+            raise DocsError(
+                "Your profile has no CBM email address, so documents can't be "
+                "uploaded as you — ask CBM staff to set it."
+            )
+        # attribution-only in service mode — never blocks
+        mailbox = user.get("userName") or "unknown"
     if not settings.gdrive_shared_drive_id:
         raise DocsError("The document storage drive isn't configured.")
     sa_info = await get_service_account(settings)
@@ -76,6 +93,7 @@ async def drive_for_user(
         mailbox,
         settings.gdrive_shared_drive_id,
         timeout=max(settings.request_timeout_seconds, 60),
+        impersonate=not service_mode,
     )
 
 
@@ -303,12 +321,20 @@ async def fetch_document(
     if row is None:
         raise DocsNotFound("That document isn't on this record.")
     file_id = row["driveFileId"]
-    if is_google_native(row.get("mimeType")):
+    stored_mime = row.get("mimeType") or ""
+    if is_google_native(stored_mime):
         data = await drive.export_pdf(file_id)
+        mime, filename = PDF_MIME, _pdf_filename(row.get("filename") or "")
+    elif stored_mime in OFFICE_CONVERT_MIMES:
+        # Office formats view via read-time conversion (copy-as-Google-format
+        # → export PDF → delete the temp); the stored file is untouched.
+        data = await drive.export_office_pdf(
+            file_id, OFFICE_CONVERT_MIMES[stored_mime]
+        )
         mime, filename = PDF_MIME, _pdf_filename(row.get("filename") or "")
     else:
         data = await drive.download_file(file_id)
-        mime = row.get("mimeType") or "application/octet-stream"
+        mime = stored_mime or "application/octet-stream"
         filename = row.get("filename") or "document"
     return {
         "data": data,

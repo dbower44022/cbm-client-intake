@@ -344,6 +344,49 @@ async def test_drive_for_user_requires_cbm_email(monkeypatch):
     assert "CBM email" in str(exc.value)
 
 
+async def test_drive_for_user_user_mode_impersonates(monkeypatch):
+    async def fake_resolve(client, user_id):
+        return "bob.mentor@cbmentors.org"
+
+    async def fake_sa(settings):
+        return {"client_email": "sa@example.iam.gserviceaccount.com"}
+
+    monkeypatch.setattr("sessions.service.resolve_user_mailbox", fake_resolve)
+    monkeypatch.setattr("comms.service.get_service_account", fake_sa)
+    drive = await docs_service.drive_for_user(_settings(), object(), {"userId": "u1"})
+    assert drive.impersonate is True  # default GDRIVE_IDENTITY=user
+
+
+async def test_drive_for_user_service_mode_acts_as_sa(monkeypatch):
+    """GDRIVE_IDENTITY=service: the SA acts as itself; the user's mailbox is
+    attribution only, and a MISSING cbmEmail never blocks."""
+    async def fake_resolve(client, user_id):
+        return None  # no cbmEmail on the profile
+
+    async def fake_sa(settings):
+        return {"client_email": "sa@example.iam.gserviceaccount.com"}
+
+    monkeypatch.setattr("sessions.service.resolve_user_mailbox", fake_resolve)
+    monkeypatch.setattr("comms.service.get_service_account", fake_sa)
+    drive = await docs_service.drive_for_user(
+        _settings(gdrive_identity="service"), object(),
+        {"userId": "u1", "userName": "bob.mentor"},
+    )
+    assert drive.impersonate is False
+    assert drive.mailbox == "bob.mentor"  # attribution fallback
+
+    async def fake_resolve2(client, user_id):
+        return "bob.mentor@cbmentors.org"
+
+    monkeypatch.setattr("sessions.service.resolve_user_mailbox", fake_resolve2)
+    drive = await docs_service.drive_for_user(
+        _settings(gdrive_identity="service"), object(),
+        {"userId": "u1", "userName": "bob.mentor"},
+    )
+    assert drive.impersonate is False
+    assert drive.mailbox == "bob.mentor@cbmentors.org"  # uploaded_by stays the person
+
+
 async def test_drive_for_user_requires_shared_drive(monkeypatch):
     async def fake_resolve(client, user_id):
         return "bob.mentor@cbmentors.org"
@@ -375,6 +418,10 @@ class ViewDrive(FakeDrive):
     async def export_pdf(self, file_id):
         self.exports.append(file_id)
         return b"%PDF-exported"
+
+    async def export_office_pdf(self, file_id, google_mime):
+        self.exports.append((file_id, google_mime))
+        return b"%PDF-office"
 
     async def list_folder_files(self, folder_id):
         return self.folder_files.get(folder_id, [])
@@ -414,6 +461,63 @@ async def test_fetch_document_google_native_exports_pdf():
     assert doc["mime_type"] == "application/pdf"
     assert doc["filename"] == "Business Plan.pdf"
     assert drive.exports == ["gdoc1"] and drive.downloads == []
+
+
+async def test_fetch_document_office_converts_to_pdf():
+    """Office formats view via read-time conversion (copy→export→delete)."""
+    drive, store = ViewDrive(), MemoryDocumentStore()
+    row = await _seed(
+        store, drive_file_id="gxlsx1", original_filename="Financials.xlsx",
+        mime_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    doc = await docs_service.fetch_document(store, drive, "CEngagement", "E1", row["id"])
+    assert doc["data"] == b"%PDF-office"
+    assert doc["mime_type"] == "application/pdf"
+    assert doc["filename"] == "Financials.pdf"
+    assert drive.exports == [("gxlsx1", "application/vnd.google-apps.spreadsheet")]
+    assert drive.downloads == []
+
+
+async def test_export_office_pdf_deletes_temp_even_on_failure():
+    """The temp Google-format copy never outlives the view — even when the
+    export fails (Drive's export size cap, rate limit, …)."""
+    from core.gdrive import DriveError
+
+    client = DriveClient({}, "sa-mode", "drv1", impersonate=False)
+    calls = []
+
+    async def fake_request(method, path, **kwargs):
+        calls.append((method, path))
+        assert kwargs["json_body"]["mimeType"] == "application/vnd.google-apps.document"
+        return {"id": "temp9"}
+
+    async def ok_export(file_id):
+        calls.append(("export", file_id))
+        return b"%PDF"
+
+    async def failing_export(file_id):
+        calls.append(("export", file_id))
+        raise DriveError("exportSizeLimitExceeded")
+
+    async def fake_delete(file_id):
+        calls.append(("delete", file_id))
+
+    import unittest.mock as mock
+
+    with mock.patch.object(client, "_request", fake_request), \
+         mock.patch.object(client, "export_pdf", ok_export), \
+         mock.patch.object(client, "delete_file", fake_delete):
+        data = await client.export_office_pdf("gdoc1", "application/vnd.google-apps.document")
+    assert data == b"%PDF"
+    assert ("delete", "temp9") in calls
+
+    calls.clear()
+    with mock.patch.object(client, "_request", fake_request), \
+         mock.patch.object(client, "export_pdf", failing_export), \
+         mock.patch.object(client, "delete_file", fake_delete):
+        with pytest.raises(DriveError):
+            await client.export_office_pdf("gdoc1", "application/vnd.google-apps.document")
+    assert ("delete", "temp9") in calls  # cleanup ran despite the failure
 
 
 async def test_fetch_document_unknown_id_raises_not_found():

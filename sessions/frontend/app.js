@@ -920,6 +920,21 @@
     "application/vnd.google-apps.spreadsheet": true,
     "application/vnd.google-apps.presentation": true,
   };
+  // Office formats also arrive as PDF — the server converts on view
+  // (copy-as-Google-format → export → delete temp; the stored file is
+  // untouched). Keep in sync with core/gdrive.OFFICE_CONVERT_MIMES.
+  var OFFICE_VIEW_MIMES = {
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": true,
+    "application/msword": true,
+    "application/vnd.oasis.opendocument.text": true,
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": true,
+    "application/vnd.ms-excel": true,
+    "application/vnd.oasis.opendocument.spreadsheet": true,
+    "text/csv": true,
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation": true,
+    "application/vnd.ms-powerpoint": true,
+    "application/vnd.oasis.opendocument.presentation": true,
+  };
 
   function docContentUrl(d) {
     // Versioned by modifiedTime: the response is immutable per URL, so the
@@ -932,9 +947,10 @@
 
   function docViewMode(d) {
     var mime = (d.mimeType || "").toLowerCase();
-    if (mime === "application/pdf" || GOOGLE_NATIVE_MIMES[mime] || mime === "text/plain") return "frame";
+    if (mime === "application/pdf" || GOOGLE_NATIVE_MIMES[mime] ||
+        OFFICE_VIEW_MIMES[mime] || mime === "text/plain") return "frame";
     if (mime.indexOf("image/") === 0) return "image";
-    return "none";  // e.g. docx/xlsx — the browser can't render them inline
+    return "none";  // anything else (zip, video, …) — Open in Drive fallback
   }
 
   function docViewerFallback(d, failed) {
@@ -3298,11 +3314,39 @@
     return panel;
   }
 
+  // Sessions-grid column sorting (same interaction as the Client Administration
+  // grids): first click sorts (text A→Z, dates newest-first), second reverses.
+  // Server default order (most recent first) until a header is clicked.
+  var sessionsSort = { key: null, dir: 1 };
+
+  function sessionSortVal(s, k) {
+    if (k === "duration") return sessionDurationSeconds(s) || 0;
+    if (k === "participants") return (s.participants || []).join(", ").toLowerCase();
+    if (k === "dateStart") return s.dateStart || "";  // UTC stamps compare as strings
+    return (s[k] || "").toString().toLowerCase();
+  }
+
+  function updateSessionsSortIndicators() {
+    Array.prototype.forEach.call(document.querySelectorAll("#sessionsTable th[data-sort]"), function (th) {
+      var active = th.getAttribute("data-sort") === sessionsSort.key;
+      th.setAttribute("aria-sort", active ? (sessionsSort.dir === 1 ? "ascending" : "descending") : "none");
+      th.dataset.dir = active ? (sessionsSort.dir === 1 ? "asc" : "desc") : "";
+    });
+  }
+
   function renderSessions(d) {
-    var list = d.sessions || [];
+    var list = (d.sessions || []).slice();
     var tb = $("sessionsBody"); tb.innerHTML = "";
     $("noSessions").hidden = list.length > 0;
     $("sessionsTable").hidden = list.length === 0;
+    updateSessionsSortIndicators();
+    if (sessionsSort.key) {
+      var k = sessionsSort.key, dir = sessionsSort.dir;
+      list.sort(function (a, b) {
+        var va = sessionSortVal(a, k), vb = sessionSortVal(b, k);
+        return (va < vb ? -1 : va > vb ? 1 : 0) * dir;
+      });
+    }
     list.forEach(function (s) {
       var tr = document.createElement("tr");
       var nameCell = document.createElement("td");
@@ -3314,6 +3358,7 @@
       tr.appendChild(td(s.sessionType || "—"));
       tr.appendChild(td(fmtWhen(s.dateStart)));
       tr.appendChild(td(fmtDuration(sessionDurationSeconds(s)) || "—"));
+      tr.appendChild(td((s.participants || []).join(", ") || "—"));
       var actions = document.createElement("td");
       var edit = document.createElement("button"); edit.type = "button"; edit.className = "cbm-button cbm-button--secondary sx__sm";
       edit.textContent = "Edit"; edit.addEventListener("click", function () { openEditor(s.id); });
@@ -3322,6 +3367,59 @@
     });
   }
   function td(text) { var c = document.createElement("td"); c.textContent = text; return c; }
+
+  Array.prototype.forEach.call(
+    document.querySelectorAll("#sessionsTable th[data-sort]"),
+    function (th) {
+      th.classList.add("sx__th-sort");
+      th.addEventListener("click", function () {
+        var key = th.getAttribute("data-sort");
+        if (sessionsSort.key === key) {
+          sessionsSort.dir = -sessionsSort.dir;
+        } else {
+          sessionsSort.key = key;
+          sessionsSort.dir = key === "dateStart" ? -1 : 1;
+        }
+        if (currentDetail) renderSessions(currentDetail);
+      });
+    }
+  );
+
+  // Draggable column resizing: a slim grip on each sortable header's right
+  // edge. The first drag freezes the current widths (table-layout: fixed) so
+  // resizing one column doesn't reflow the rest; widths live on the th
+  // elements, so they survive re-renders (only the tbody is rebuilt).
+  function makeColumnsResizable(table) {
+    var ths = table.querySelectorAll("thead th[data-sort]");
+    var all = table.querySelectorAll("thead th");
+    Array.prototype.forEach.call(ths, function (th) {
+      var grip = document.createElement("span");
+      grip.className = "sx__col-grip";
+      grip.setAttribute("aria-hidden", "true");
+      grip.addEventListener("click", function (e) { e.stopPropagation(); });  // never sort
+      grip.addEventListener("mousedown", function (e) {
+        e.preventDefault(); e.stopPropagation();
+        if (!table.classList.contains("sx__table--resized")) {
+          Array.prototype.forEach.call(all, function (t) {
+            t.style.width = t.getBoundingClientRect().width + "px";
+          });
+          table.classList.add("sx__table--resized");
+        }
+        var startX = e.clientX, startW = th.getBoundingClientRect().width;
+        function move(ev) { th.style.width = Math.max(60, startW + ev.clientX - startX) + "px"; }
+        function up() {
+          document.removeEventListener("mousemove", move);
+          document.removeEventListener("mouseup", up);
+          document.body.classList.remove("sx__col-resizing");
+        }
+        document.addEventListener("mousemove", move);
+        document.addEventListener("mouseup", up);
+        document.body.classList.add("sx__col-resizing");
+      });
+      th.appendChild(grip);
+    });
+  }
+  makeColumnsResizable($("sessionsTable"));
 
   // --- read-only session view (with prev/next through the record's sessions) ---
   function openSessionView(sessionId) {

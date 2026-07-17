@@ -183,11 +183,23 @@ default `Resume,Agreement,Intake Document,Pitch Deck,Other`) and
    tab → upload → the file lands in **Mentors** → `<Mentor Name> (…)`.
 6. **Phase 2 (v0.70.0) — viewing:** View on a PDF row opens it inside the
    app; View on an image shows it inline; a Google Doc/Sheet/Slide opens as
-   an exported PDF; a docx/xlsx says it can't be previewed and offers Open
-   in Drive. Edit a file in Drive, reopen the tab → the row shows an
+   an exported PDF. Edit a file in Drive, reopen the tab → the row shows an
    **"Updated in Drive"** tag and View fetches the new version (the old one
    was browser-cached under the previous modifiedTime). No extra
    configuration — Phase 2 rides the same flags.
+7. **v0.71.0 — service-account identity + Office viewing.** Users are NOT
+   shared-drive members (Doug's ruling), so run with **`GDRIVE_IDENTITY=
+   service`** on the web component: the service account performs all Drive
+   operations as itself. **One-time step: add the service account's
+   `client_email` (from the JSON key) as a member of the "CBM Documents"
+   shared drive with Content Manager access** — with this set, managers
+   need no Drive access at all and the app's CRM permission check is the
+   only gate. Word/Excel/PowerPoint/CSV files now view in-app too (the
+   server converts to PDF on view — a temp Google-format copy appears in
+   the record folder for a few seconds during conversion; that's normal).
+   Note: the "Open in Drive" button only works for people who ARE drive
+   members — under this model that's typically nobody; its fate (remove
+   vs. per-user grants) is an open ruling.
 5. Troubleshooting quick map:
    - 403 `accessNotConfigured` → Task 1 not done / wrong project.
    - `unauthorized_client` / "delegation denied" → Task 2 scope line wrong

@@ -4,6 +4,40 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.71.0] — 2026-07-16
+
+### Added
+- **Documents: service-account identity mode + in-app Office viewing**
+  (Doug's rulings: users must NOT have Google Drive access — membership was
+  never granted broadly, so the PRD's impersonate-the-manager model only
+  ever worked for actual drive members; and Office files must be viewable
+  in-app).
+  - **`GDRIVE_IDENTITY=service`** (new env, default `user` = the old
+    behavior): the service account performs ALL Drive operations as ITSELF
+    — managers need no shared-drive membership and no Drive access of any
+    kind; the app's CRM ACL check is the sole viewing/upload gate, and the
+    app-level `uploaded_by` still records the real person (a missing
+    `cbmEmail` no longer blocks anything in this mode — it was only ever
+    needed as the impersonation subject). **Activation: add the service
+    account's `client_email` as a member (Content Manager) of the "CBM
+    Documents" shared drive, then set the env on the web component.**
+  - **Office formats (Word/Excel/PowerPoint + OpenDocument + CSV) now view
+    in-app**: the server converts on view — `files.copy` with conversion to
+    the matching Google editor format (a temp file), `files.export` to PDF,
+    temp deleted even on failure — and streams the PDF into the same
+    viewer. The stored original is never modified (D-04 holds; this is
+    read-time conversion). First view of an Office file costs the
+    conversion round-trip (a few seconds for typical files); the browser
+    cache makes repeat views instant. Files whose export exceeds Drive's
+    cap surface the readable failure message.
+  - Frontend: Office MIME types moved from the "can't preview" fallback to
+    the viewer frame in both UIs.
+  4 new tests (584 green); ruff clean; xlsx-view path verified in the stub
+  harness. Open ruling (recorded in CLAUDE.md): whether Open in Drive is
+  removed entirely (option 2) or backed by per-user additive grants
+  (option 4) — the button currently still opens the webViewLink, which
+  only works for actual drive members.
+
 ## [0.70.1] — 2026-07-16
 
 ### Fixed
