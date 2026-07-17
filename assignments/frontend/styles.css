@@ -1,9 +1,37 @@
 /* Mentor assignment dashboard — builds on /shared/tokens.css. */
 
+/* The page fills the window: the engagement grid takes all remaining vertical
+   space and scrolls internally (sticky header), so a large monitor shows more
+   rows instead of a page that scrolls past the footer. Width is uncapped —
+   never max-width a page (Doug's density ruling). */
+html, body { height: 100%; }
+body { display: flex; flex-direction: column; }
+
 .assign {
   padding-top: 2rem;
-  padding-bottom: 3rem;
-  max-width: var(--cbm-container);
+  padding-bottom: 1rem;
+  max-width: none;
+  width: 100%;
+  box-sizing: border-box;  /* width includes the container's side padding */
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.assign__dash:not([hidden]) {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+#tableWrap {
+  flex: 1 1 auto;
+  /* Shrinkable on large screens (internal scroll), but never collapses on a
+     short window — below this the page itself scrolls as before. */
+  min-height: 12rem;
+  overflow-y: auto;
 }
 
 .assign__header h1 {
@@ -129,11 +157,18 @@
   color: var(--cbm-navy);
   font-weight: var(--cbm-fw-heading);
   background: var(--cbm-surface);
+  /* Header stays visible while the grid scrolls inside #tableWrap. */
+  position: sticky;
+  top: 0;
+  z-index: 5;
 }
 .assign__table th.col-notes { width: 26%; }
 .assign__table th.col-eng { width: 42%; }
 .assign__table th.col-assigned { width: 8.5rem; }
+.assign__table th.col-days { width: 7rem; }
 .assigned-date-cell { white-space: nowrap; color: var(--cbm-slate-700); }
+.days-cell { white-space: nowrap; color: var(--cbm-slate-700); text-align: center; }
+.assign__table th.col-days { text-align: center; }
 .assign__table th.is-sortable { cursor: pointer; user-select: none; }
 .assign__table th.is-sortable:hover { color: var(--cbm-blue); }
 .assign__table th[data-dir="asc"]::after { content: " ▲"; font-size: 0.7em; }

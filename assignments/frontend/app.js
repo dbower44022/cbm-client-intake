@@ -236,6 +236,8 @@
     // UTC "YYYY-MM-DD HH:MM:SS" stamps compare correctly as strings; a row
     // without one ("") sorts before any date ascending, after it descending.
     if (k === "assignedDate") return e.assignedDate || "";
+    // Numeric: unassigned rows (-1) sort below any real day count.
+    if (k === "daysAssigned") { var d = daysSinceAssigned(e.assignedDate); return d == null ? -1 : d; }
     return (e[k] || "").toString().toLowerCase();
   }
 
@@ -278,8 +280,9 @@
           engSort.dir = -engSort.dir;
         } else {
           engSort.key = key;
-          // Dates most-recent-first on the first click; text columns A→Z.
-          engSort.dir = key === "assignedDate" ? -1 : 1;
+          // Dates most-recent-first and day counts longest-waiting-first on
+          // the first click; text columns A→Z.
+          engSort.dir = (key === "assignedDate" || key === "daysAssigned") ? -1 : 1;
         }
         repaintEngagements();
       });
@@ -322,6 +325,7 @@
       tdAssign.appendChild(assigned);
       tr.appendChild(tdAssign);
       tr.appendChild(buildAssignedDateCell(eng));
+      tr.appendChild(buildDaysCell(eng));
       tr.appendChild(buildNotesCell(eng));
       return tr;
     }
@@ -357,6 +361,7 @@
     tdAssign.appendChild(cell);
     tr.appendChild(tdAssign);
     tr.appendChild(buildAssignedDateCell(eng));
+    tr.appendChild(buildDaysCell(eng));
     tr.appendChild(buildNotesCell(eng));
     return tr;
   }
@@ -367,6 +372,33 @@
     var td = document.createElement("td");
     td.className = "assigned-date-cell";
     td.textContent = formatDate(eng.assignedDate) || "—";
+    return td;
+  }
+
+  // Whole calendar days between the assigned date and today (local calendar,
+  // matching the date shown in the Assigned Date column); null when unassigned.
+  function daysSinceAssigned(stamp) {
+    if (!stamp) return null;
+    var d;
+    if (stamp.length <= 10) {          // date-only "YYYY-MM-DD" — no TZ shift
+      var p = stamp.split("-");
+      d = new Date(+p[0], +p[1] - 1, +p[2]);
+    } else {                           // UTC datetime -> local calendar date
+      var utc = new Date(stamp.replace(" ", "T") + "Z");
+      if (isNaN(utc.getTime())) return null;
+      d = new Date(utc.getFullYear(), utc.getMonth(), utc.getDate());
+    }
+    if (isNaN(d.getTime())) return null;
+    var now = new Date();
+    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return Math.round((today - d) / 86400000);
+  }
+
+  function buildDaysCell(eng) {
+    var td = document.createElement("td");
+    td.className = "days-cell";
+    var days = daysSinceAssigned(eng.assignedDate);
+    td.textContent = days == null ? "—" : String(days);
     return td;
   }
 
@@ -896,6 +928,18 @@
         );
       } else {
         notice(summary, "success");
+      }
+      // Offer the assignment-notice email to the mentor: the standard compose
+      // dialog, To = the mentor's CBM address, with the MentorAssignmentNotice
+      // template pre-applied. Best-effort — a missing/erroring template just
+      // leaves the blank compose, and when app-sending is unavailable
+      // (Gmail integration off / no mailbox) nothing opens.
+      if (window.CBMQuickMail) {
+        var mentor = mentors.filter(function (m) { return m.id === mentorProfileId; })[0];
+        CBMQuickMail.composeIfEnabled(
+          (mentor && mentor.cbmEmail) || "",
+          { template: "MentorAssignmentNotice" }
+        );
       }
     } catch (e) {
       tr.classList.remove("row-busy");

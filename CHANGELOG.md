@@ -4,6 +4,37 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.79.0] — 2026-07-17
+
+Client Administration engagement grid: fill the window, show how long ago each
+assignment happened, and offer the assignment-notice email right after an
+Assign. Frontend-only (no API/schema change).
+
+### Added
+- **Days Assigned column** between Assigned Date and Notes: the number of whole
+  calendar days between the engagement's assigned date and today (local
+  calendar, matching the Assigned Date display). Unassigned / unstamped rows
+  show "—". Sortable like the other columns; the first click puts the
+  longest-assigned rows on top.
+- **Assignment-notice compose after Assign.** When an assignment succeeds, the
+  standard quick-compose dialog opens with the mentor's CBM email address as
+  the To: recipient and the EspoCRM **MentorAssignmentNotice** template
+  pre-applied (subject/body rendered server-side, `{Person.*}` resolved from
+  the To address, signature re-appended, template attachments chipped). Silent
+  best-effort: if the template doesn't exist or its parse fails, the blank
+  compose opens instead (no error note); if app-sending is unavailable
+  (Gmail integration off / no CBM mailbox) nothing opens. The shared
+  `quickmail.js` widget gained `composeIfEnabled(email, {template})` +
+  template pre-selection for this — available to every quickmail surface.
+
+### Changed
+- **The engagement grid fills the window.** The page is a full-height flex
+  column: the grid takes all vertical space left under the toolbar/filters and
+  scrolls internally with a sticky header, so a large monitor shows more rows;
+  the footer stays put. The page's width cap was removed (density ruling: never
+  max-width a page). On a short window the grid keeps a 12rem minimum and the
+  page scrolls as before.
+
 ## [0.78.0] — 2026-07-17
 
 Mentor Sessions grid: accept an engagement in place, and reach the mentor

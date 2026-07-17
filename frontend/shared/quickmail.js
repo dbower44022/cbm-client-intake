@@ -119,7 +119,11 @@
   }
   function onEsc(e) { if (e.key === "Escape") closeDialog(); }
 
-  function openDialog(toAddress) {
+  // opts (optional): { template: "Name" } pre-selects + applies that EspoCRM
+  // template once the list loads. Silent best-effort: an unknown name or a
+  // failed parse just leaves the blank compose (no error note).
+  function openDialog(toAddress, opts) {
+    opts = opts || {};
     injectStyles();
     closeDialog();
     var ov = document.createElement("div"); ov.className = "qm-overlay"; ov.id = "qmOverlay";
@@ -214,6 +218,15 @@
       .then(function (d) {
         tplAll = d.templates || [];
         if (tplAll.length) { renderTplOptions(""); tplRow.hidden = false; }
+        if (opts.template) {
+          var want = String(opts.template).trim().toLowerCase();
+          var match = tplAll.filter(function (t) {
+            return String(t.name || "").trim().toLowerCase() === want;
+          })[0];
+          // The draft is untouched at this point (signature seed counts as
+          // empty), so apply directly — no replace-prompt needed.
+          if (match) { tplSel.value = match.id; applyTemplate(match.id, true); }
+        }
       })
       .catch(function () { /* no picker — compose works without it */ });
     tplFilter.addEventListener("input", function () { renderTplOptions(this.value); });
@@ -239,7 +252,7 @@
       tplRow.appendChild(tplConfirmEl);
     });
 
-    function applyTemplate(id) {
+    function applyTemplate(id, silent) {
       tplNote.hidden = true; tplSel.disabled = true;
       var firstTo = toInput.value.split(/[,;\s]+/).filter(Boolean)[0] || "";
       post("/emailtemplates/" + encodeURIComponent(id) + "/parse", { emailAddress: firstTo })
@@ -259,8 +272,12 @@
         })
         .catch(function (e) {
           // ET-114: non-destructive — the existing draft stays untouched.
-          tplNote.textContent = e.message || "Couldn't apply the template.";
-          tplNote.hidden = false;
+          // A silent (auto-applied) template failure just leaves the blank
+          // compose; a user-picked one explains itself.
+          if (!silent) {
+            tplNote.textContent = e.message || "Couldn't apply the template.";
+            tplNote.hidden = false;
+          }
           tplSel.value = "";
         })
         .then(function () { tplSel.disabled = false; });
@@ -408,6 +425,14 @@
   window.CBMQuickMail = {
     get apiBase() { return state.apiBase; },
     set apiBase(v) { state.apiBase = v; },
+    // Programmatic open (e.g. after an action, not an address click): compose
+    // only when app-sending actually works — silently a no-op otherwise (no
+    // surprise mailto: launch the user didn't click for).
+    composeIfEnabled: function (email, opts) {
+      probeMailbox().then(function () {
+        if (state.enabled) openDialog(email, opts);
+      });
+    },
     // <a> for an email address: compose-on-click, mailto: fallback.
     emailLink: function (email) {
       if (!email) return document.createTextNode("—");

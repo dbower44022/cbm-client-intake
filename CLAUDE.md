@@ -1328,7 +1328,28 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-17)
 
-**Main is at v0.78.0** (2026-07-17, 662 tests green, committed NOT pushed) —
+**Main is at v0.79.0** (2026-07-17, 662 tests green, committed NOT pushed) —
+**Client Administration engagement grid: full-window layout + Days Assigned +
+post-Assign notice email** (Doug's request; frontend-only). (1) The page is a
+full-height flex column — the grid fills all remaining vertical space and
+scrolls internally with a sticky header (width cap removed per the
+no-page-width-caps ruling; `min-height: 12rem` floor, short windows page-scroll
+as before). (2) New sortable **Days Assigned** column (Assigned Date ↔ today,
+local whole calendar days; unassigned rows "—"; first click = longest-assigned
+first). (3) A successful Assign opens the standard quick-compose with To = the
+mentor's `cbmEmail` and the EspoCRM **`MentorAssignmentNotice`** template
+pre-applied — the shared `frontend/shared/quickmail.js` gained
+`composeIfEnabled(email, {template})` + silent template pre-selection (missing
+template or failed parse ⇒ blank compose, no error note; app-sending
+unavailable ⇒ nothing opens). All three verified in the stubbed-browser
+harness (grid fill + sticky header + h-overflow fix (`box-sizing` on
+`.assign`), day values/sort, assign → compose with template/signature/
+attachment chip, both silent fallbacks; no console errors). **NOT yet driven
+live** — needs an EspoCRM template named exactly `MentorAssignmentNotice`
+(any/no category — the record-less quicksend list is unfiltered) on
+crm-test/prod; without it staff just get the blank compose.
+
+Before that: **v0.78.0** (2026-07-17, 662 tests green, committed NOT pushed) —
 **Mentor Sessions grid: accept-in-place + personal email on the mentor
 pop-up** (Doug's request). (1) Every `CMentorProfile` peek (grid Assigned
 Mentor column, Overview rail) now shows the linked Contact's email as a
