@@ -78,8 +78,11 @@ This is a multi-form app: a shared core hosts any number of intake forms.
     [`communications-tab.md`](communications-tab.md) for how it works. Opening a record shows a tabbed,
     information-dense detail — an **Overview** (aggregated company pop-up, a
     session-notes feed, a Next-session Start/Open button), an editable
-    permission-aware **Details** tab (`sessions/details.py`), the Sessions list, and
-    Communications/Documents placeholders. Gated by
+    permission-aware **Details** tab (`sessions/details.py`), the Sessions list,
+    the Communications tab above, and a **Documents** tab — Google Drive
+    document management (upload/list/in-app viewing/archive on the "CBM
+    Documents" shared drive, with Drive access grants mirroring CRM
+    assignments; `docs/`, gated by `GDRIVE_DOCS`). Gated by
     `SESSION_{MENTOR,PARTNER,SPONSOR}_ALLOWED_TEAMS`. Phase 1 (CRUD + review UI); see
     CLAUDE.md for the CRM prerequisites (CSession `assignedUsers` + name formula) and
     the later Calendar/Meet phases.

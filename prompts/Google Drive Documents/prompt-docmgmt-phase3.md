@@ -2,6 +2,15 @@
 
 Operating mode: DETAIL
 
+> **EXECUTED 2026-07-17 — the build shipped in v0.76.0** (commits 523e6a3 +
+> bce2622; the sessions/router.py half rode 6a6eefd). Doug's rulings that
+> session: DOC-07 = move-first-then-flip with rollback; DOC-08 =
+> self-healing best-effort, no retry queue; OI scope = core only; build
+> now, activate later (the §Session-setup prerequisites were NOT yet done —
+> GDRIVE_IDENTITY unset on both envs). PRD + Exec Summary bumped to v1.4.
+> REMAINING: the Doug-side activation + the live-verification DoD items —
+> see `GDRIVE-DOCS-SETUP.md` Task 6.
+
 > Drafted at the end of the Phase 2 session and REVISED 2026-07-17 after
 > Doug's access-model rulings (PRD v1.3, D-08/D-09) — those rulings are
 > final; do not re-litigate them. The ⚠ items below (archive failure

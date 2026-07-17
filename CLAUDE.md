@@ -1568,10 +1568,13 @@ to v1.3** (`prompts/Google Drive Documents/` PRD — §3.4 rewritten, D-01
 superseded, new D-08/D-09, DOC-09 = Drive Access Grants, OI-04
 superseded/OI-05 largely closed/OI-07 new copy-hardening question; Exec
 Summary — §1.2 "The Access Model, Precisely" + §1.3 Anticipated Questions
-for the confidentiality audience). NOTE: `prds/CBM-DocMgmt-Executive-
-Summary.docx` is a STALE v1.0 copy Doug had open in LibreOffice — sync it
-from the prompts/ v1.3 once he closes it. The grants build is Phase 3
-scope (`prompt-docmgmt-phase3.md`, objective 0 + live-verification DoD).
+for the confidentiality audience). **Both docs bumped to v1.4 2026-07-17**
+(Phase 3 implemented; the PRD records the session's decided contracts —
+DOC-07 move-first-with-rollback, DOC-08 self-healing/no queue, Phase 3
+marked implemented; the Exec Summary notes no contract change), and the
+formerly-stale `prds/CBM-DocMgmt-Executive-Summary.docx` copy is now
+SYNCED to the prompts/ v1.4. The grants build SHIPPED in v0.76.0 (see
+the v0.76.0 Current-status block; activation pending).
 
 Before that: **v0.71.0** — **Documents:
 service-account identity + in-app Office viewing** (Doug's rulings: users
