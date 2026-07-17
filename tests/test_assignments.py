@@ -132,6 +132,44 @@ async def test_assign_preserves_comentor_users():
     assert payload["assignedUserId"] == "user-99"
 
 
+async def test_assign_merges_assigned_users_on_client_records():
+    """The client profile / account re-home must MERGE into each record's
+    existing assignedUsers, never overwrite — an overwrite silently revoked the
+    co-mentor access the session tools stamp onto those records (add_comentor).
+    The engagement's co-mentor users are folded in too, matching the engagement
+    write."""
+
+    class Client(FakeClient):
+        async def get(self, entity, record_id, select=None):
+            if entity == service.CLIENT_PROFILE:
+                return {"id": record_id, "assignedUsersIds": ["user-co", "user-other"]}
+            if entity == service.ACCOUNT:
+                return {"id": record_id, "assignedUsersIds": ["user-co"]}
+            return await super().get(entity, record_id, select)
+
+        async def list_related(self, entity, record_id, link, **kwargs):
+            if link == "additionalMentors":
+                return {"list": [{"id": "mentor-co", "assignedUsersIds": ["user-co"]}]}
+            return await super().list_related(entity, record_id, link, **kwargs)
+
+    client = Client(
+        mentor=_mentor(),
+        engagement={
+            "engagementStatus": "Submitted",
+            "engagementClientId": "clientprofile-1",
+            "clientOrganizationId": "account-1",
+        },
+    )
+    await service.assign_engagement(client, "eng-1", "mentor-1")
+
+    prof = [u for u in client.updates if u[0] == service.CLIENT_PROFILE][0][2]
+    assert prof["assignedUsersIds"] == ["user-co", "user-other", "user-99"]
+    assert prof["assignedUserId"] == "user-99"
+    acct = [u for u in client.updates if u[0] == service.ACCOUNT][0][2]
+    assert acct["assignedUsersIds"] == ["user-co", "user-99"]
+    assert acct["assignedUserId"] == "user-99"
+
+
 async def test_assign_reports_partial_reassignment_failures():
     """A CRM failure re-homing a related record is captured + reported, not
     raised — the core assignment (engagement → Pending Acceptance) still stands."""

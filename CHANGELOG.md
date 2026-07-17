@@ -4,6 +4,50 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.76.0] — 2026-07-17
+
+### Added
+- **Documents: CRM integration and lifecycle (DOC-MGMT Phase 3, PRD v1.3).**
+  Three pieces, closing the PRD's phased plan:
+  - **Drive access grants (DOC-09, the v1.3 access model):** the app now
+    maintains per-person, folder-level **Commenter** grants on record
+    folders, mirroring CRM entitlements — engagement folders → the assigned
+    mentor + co-mentors, partner/sponsor folders → their manager, and
+    `Mentors/` (Contact) folders → **no one** (application-only). Grants are
+    issued/revoked best-effort by the same app actions that change the
+    entitlement (Client Administration's Assign, the session tools'
+    co-mentor add/remove, first upload for a record) with Google's sharing
+    emails suppressed, and a **nightly reconciliation job** in the worker
+    (`GDRIVE_RECONCILE_SECONDS`, default daily) re-derives the complete
+    grant set from the CRM, corrects both directions of drift, logs
+    corrections, and alerts on removals. Active only under
+    `GDRIVE_IDENTITY=service` (the ruled access model). New:
+    `docs/grants.py`, `docs/reconcile.py`, DriveClient permission methods.
+  - **Archive / restore (DOC-07):** the Documents tabs' Archive button is
+    live (two-step confirm) — the Drive file moves to the record folder's
+    `/_Archived` subfolder FIRST, then the row's status flips (a mid-failure
+    moves the file back — Doug's ruling: the two are never left
+    inconsistent); the row leaves the default list, an **"Include archived"**
+    toggle reveals archived rows (dimmed, "Archived" tag), and **Restore**
+    reverses both steps. Hard deletion stays out of the app. New endpoints
+    `POST …/documents/{id}/archive|restore` + `?includeArchived=` on the
+    list/refresh, in the session tools and `/mentoradmin`.
+  - **CRM link write-back (DOC-08):** on upload, the record's
+    `documentsFolderUrl` field (CEngagement + Contact) is set to the record
+    FOLDER's permanent Drive link (one stable link per record, D-05).
+    Feature-detected from CRM metadata — inert until the field is built
+    (spec handoff: `documentsfolderurl-crm-field.md`); idempotent (no write
+    when it already matches); self-healing best-effort per Doug's ruling (a
+    failure heals on the next upload or the nightly re-check — no retry
+    queue). Written as the app's API user.
+
+  Verified in unit/router tests (43 new; 649 total green) and both UIs in
+  the stubbed-browser harness (archive → toggle → restore loops, two-step
+  confirm, no console errors). **NOT yet driven against the real shared
+  drive/CRM** — activation prerequisites (SA drive membership, human-member
+  removal, `GDRIVE_IDENTITY=service` on web + worker, the CRM field build)
+  are in `GDRIVE-DOCS-SETUP.md` Task 6.
+
 ## [0.75.1] — 2026-07-17
 
 ### Added

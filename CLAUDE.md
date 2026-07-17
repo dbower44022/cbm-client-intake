@@ -1070,6 +1070,53 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   involved) and run the pre-deploy migrate; (5) live smoke test — one upload
   as a real mentor → folder auto-creation + metadata row + rollback path.
   Runbook block in DEPLOYMENT.md.
+- **Documents — CRM integration and lifecycle (BUILT v0.76.0, 2026-07-17;
+  DOC-MGMT Phase 3, PRD v1.3 — closes the PRD's phased plan).** Doug's
+  session rulings: archive = **Drive move FIRST, metadata flip after,
+  move-back rollback on a mid-failure** (never inconsistent); DOC-08 =
+  **self-healing best-effort, no retry queue** (idempotent check on every
+  upload + the nightly job); scope = core only (OI-02 link-existing stays a
+  fast follow, OI-07 copyRequiresWriterPermission stays off). Pieces:
+  (1) **Drive access grants (DOC-09)** — `docs/grants.py`: per-person
+  folder-level **Commenter** grants mirroring CRM entitlements
+  (CEngagement → assigned mentor + co-mentors via `cbmEmail`;
+  CPartnerProfile/CSponsorProfile → their manager; **Contact folders → NO
+  ONE**, and the engine strips strays), issued/revoked best-effort
+  (`sync_record_grants_safe`) by `assign_engagement`, co-mentor add/remove,
+  and every upload (`docs.service.post_upload_hooks`), notification emails
+  suppressed; wrong-role grants are downgraded to Commenter; active ONLY
+  under `GDRIVE_IDENTITY=service` + real CRM creds (`grants_enabled`).
+  (2) **Nightly reconciliation** — `docs/reconcile.py`, run by the worker
+  (`GDRIVE_RECONCILE_SECONDS`, default 86400, monitoring-check pattern;
+  **the worker now needs the GDRIVE_* envs**): re-derives every folder's
+  entitled set from the CRM via the API-key client
+  (`store.list_folder_records`), corrects both drift directions, logs
+  corrections, ALERTS on removals (`core.monitoring.send_alert`), and
+  re-checks the DOC-08 link. Covers manager changes/offboarding done
+  directly in the CRM (no in-app action exists for those).
+  (3) **Archive/restore (DOC-07)** — `docs.service.archive_document`/
+  `restore_document` (`_lifecycle_move`): file moves to the record folder's
+  `/_Archived` subfolder (created on demand; source = the file's ACTUAL
+  parents, so a human re-file doesn't break it), then `store.set_status`;
+  endpoints `POST …/documents/{id}/archive|/restore` +
+  `?includeArchived=` on list/refresh (sessions ×3 + `/mentoradmin`); UI:
+  two-step-confirm Archive/Restore buttons, "Include archived" toggle,
+  dimmed rows with an Archived tag. Viewing/Download of archived rows
+  still works (fetch is status-agnostic).
+  (4) **CRM link write-back (DOC-08)** — `docs.service.write_back_folder_link`:
+  on every upload + nightly, sets `documentsFolderUrl` (CEngagement +
+  Contact only, PRD §3.5) to the record FOLDER's webViewLink (via
+  `DriveClient.get_file`), written as the API user; **feature-detected
+  from metadata** (10-min cache) so it's inert until the CRM team builds
+  the field — spec handoff: **`documentsfolderurl-crm-field.md`** (repo
+  root, csession-calendar-field.md style). New DriveClient surface:
+  `get_file`/`move_file`/`list_permissions`/`create_permission`/
+  `delete_permission` (inherited permissions never touched). 649 tests
+  green (43 new); both UIs verified in the stub harness. **NOT yet driven
+  live** — activation order (SA sole Content Manager membership + human
+  removal BEFORE `GDRIVE_IDENTITY=service` on web+worker; then the grants
+  verification) is `GDRIVE-DOCS-SETUP.md` Task 6; verified live items to
+  check are listed there.
 - **Google Calendar events + Meet links (v0.40.0, 2026-07-13 — LIVE on BOTH
   envs: crm-test activated + verified 2026-07-13, prod 2026-07-15; create
   path verified live by Doug on each).** Saving a **Scheduled** session
@@ -1243,7 +1290,32 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-17)
 
-**Main is at v0.75.1** (2026-07-17; 0.75.1 = a parallel session's
+**Main is at v0.76.0** (2026-07-17, committed NOT pushed) — **Documents:
+CRM integration and lifecycle (DOC-MGMT Phase 3, PRD v1.3) is BUILT**,
+closing the PRD's phased plan: Drive access grants + the nightly
+reconciliation (DOC-09), Archive/Restore with the "Include archived" toggle
+(DOC-07), and the `documentsFolderUrl` CRM write-back (DOC-08,
+feature-gated on the CRM field — spec handoff
+`documentsfolderurl-crm-field.md`). Doug's rulings this session: archive =
+move-first-then-flip with rollback; DOC-08 = self-healing best-effort (no
+retry queue); core scope only (OI-02/OI-05/OI-07 all deferred); build now,
+activate later. 649 tests green; both UIs stub-harness-verified; mechanics
+in the Session Management section's **"Documents — CRM integration and
+lifecycle"** bullet. **NOT yet activated/driven live** — prerequisites are
+Doug-side and were NOT yet done at session time (verified live via doctl:
+`GDRIVE_IDENTITY` is unset on both apps, i.e. both still run the
+impersonation mode; the SA's drive membership / human-member removal
+unverifiable locally): (1) SA = the shared drive's ONLY member (Content
+Manager), all humans removed; (2) THEN `GDRIVE_IDENTITY=service` +
+`GDRIVE_DOCS`/`GDRIVE_SHARED_DRIVE_ID` on **web AND worker** of both
+overlays (the worker runs the nightly job — order matters, membership
+first); (3) the `documentsFolderUrl` field build (crm-test then prod);
+(4) the Phase 3 live checklist — all step-by-step in
+**`GDRIVE-DOCS-SETUP.md` Task 6**. The overlays were deliberately NOT
+edited (applying identity=service before the membership swap would break
+uploads).
+
+Before that: **v0.75.1** (2026-07-17; 0.75.1 = a parallel session's
 conversation-grid sortable/resizable columns — see CHANGELOG; that session
 owns its own status entry). **This session's arc (v0.67.0 + v0.75.0) is
 COMPLETE — the full Email Template integration (ET) + email signatures,

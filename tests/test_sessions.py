@@ -1161,7 +1161,7 @@ async def test_add_comentor_stamps_client_records_and_posts_note():
         },
         related={"engagementContacts": [{"id": "c1"}, {"id": "c2"}]},
     )
-    res = await service.add_comentor(fake, "E1", "m2")
+    res = await service.add_comentor(fake, "E1", "m2", actor="Dana Staff")
     assert "warning" not in res
     assert ("Contact", "c1", {"assignedUsersIds": ["u1", "u9"]}) in fake.updates
     assert ("Contact", "c2", {"assignedUsersIds": ["u9"]}) in fake.updates
@@ -1172,6 +1172,7 @@ async def test_add_comentor_stamps_client_records_and_posts_note():
     n = notes[0]
     assert n["type"] == "Post" and n["parentType"] == "CEngagement" and n["parentId"] == "E1"
     assert "Robert Cohen" in n["post"] and "session tools" in n["post"]
+    assert "by Dana Staff" in n["post"]  # the note names the acting user
     assert "4/4" in n["post"]
 
 
@@ -1224,13 +1225,14 @@ async def test_remove_comentor_unstamps_client_records():
         },
         related={"additionalMentors": []},
     )
-    await service.remove_comentor(fake, "E1", "m2")
+    await service.remove_comentor(fake, "E1", "m2", actor="Dana Staff")
     assert ("CEngagement", "E1", {"assignedUsersIds": ["uA"]}) in fake.updates
     assert ("Contact", "c1", {"assignedUsersIds": ["uA"]}) in fake.updates
     assert ("CClientProfile", "cp1", {"assignedUsersIds": []}) in fake.updates
     assert not [u for u in fake.updates if u[0] == "Account"]
     notes = [p for e, p in fake.created if e == "Note"]
     assert len(notes) == 1 and "2/3" in notes[0]["post"]
+    assert "by Dana Staff" in notes[0]["post"]  # the note names the acting user
 
 
 @pytest.mark.asyncio
@@ -1422,7 +1424,7 @@ def test_remove_contact_and_comentor_endpoints(monkeypatch):
     async def fake_unlink(cfg, client, parent_id, contact_id):
         unlinked.append((cfg.slug, parent_id, contact_id))
 
-    async def fake_remove(client, engagement_id, mentor_profile_id):
+    async def fake_remove(client, engagement_id, mentor_profile_id, actor=None):
         removed.append((engagement_id, mentor_profile_id))
         return {"status": "ok"}
 

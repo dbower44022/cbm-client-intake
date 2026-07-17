@@ -432,6 +432,28 @@ async def list_all_mentors(client: AssignClient) -> dict[str, Any]:
     }
 
 
+async def _merged_assignment_payload(
+    client: AssignClient, entity: str, record_id: str,
+    user_id: str, all_user_ids: list[str],
+) -> dict[str, Any]:
+    """Assignment payload for a client-side record that MERGES ``all_user_ids``
+    (the new mentor + the engagement's co-mentors) into the record's existing
+    ``assignedUsers`` instead of overwriting the list. An overwrite silently
+    revoked the co-mentor access the session tools stamp onto the client
+    profile / company (``sessions.service.add_comentor`` — the 2026-07-17
+    review finding). The single ``assignedUserId`` still moves to the new
+    mentor; entities on the single field get exactly the old payload.
+    """
+    payload = _assigned_user_payload(entity, user_id)
+    if entity not in USES_ASSIGNED_USERS:
+        return payload
+    rec = await client.get(entity, record_id, select="assignedUsersIds")
+    merged = list(rec.get("assignedUsersIds") or [])
+    merged += [uid for uid in all_user_ids if uid not in merged]
+    payload["assignedUsersIds"] = merged
+    return payload
+
+
 async def assign_engagement(
     client: AssignClient, engagement_id: str, mentor_profile_id: str
 ) -> dict[str, Any]:
@@ -446,7 +468,9 @@ async def assign_engagement(
       1. Resolve + re-validate the mentor -> their User.
       2. Engagement: set assignedUser + mentorProfile, status -> Pending Acceptance.
       3. Read the engagement's related contact/client/account ids.
-      4. Set assignedUser on every contact, the CClientProfile, and the Account.
+      4. Set assignedUser on every contact, the CClientProfile, and the Account —
+         merging into (never overwriting) each record's ``assignedUsers`` so
+         co-mentor access stamps survive.
     """
     current = await client.get(
         ENGAGEMENT,
@@ -543,7 +567,9 @@ async def assign_engagement(
         reassignment_errors.append({"entity": ENGAGEMENT, "id": engagement_id, "error": str(exc)})
 
     # 4. Re-assign contacts, then the client profile + account. Each entity gets
-    # whichever assignment field it actually uses (single vs. collaborators).
+    # whichever assignment field it actually uses (single vs. collaborators);
+    # collaborators-field entities are MERGED, not overwritten — co-mentors
+    # stamped onto these records by the session tools must keep their access.
     contacts_updated = 0
     for cid in sorted(contact_ids):
         try:
@@ -556,7 +582,10 @@ async def assign_engagement(
     if client_id:
         try:
             await client.update(
-                CLIENT_PROFILE, client_id, _assigned_user_payload(CLIENT_PROFILE, user_id)
+                CLIENT_PROFILE, client_id,
+                await _merged_assignment_payload(
+                    client, CLIENT_PROFILE, client_id, user_id, assigned_ids
+                ),
             )
             client_profile_updated = True
         except EspoError as exc:
@@ -566,7 +595,10 @@ async def assign_engagement(
     if account_id:
         try:
             await client.update(
-                ACCOUNT, account_id, _assigned_user_payload(ACCOUNT, user_id)
+                ACCOUNT, account_id,
+                await _merged_assignment_payload(
+                    client, ACCOUNT, account_id, user_id, assigned_ids
+                ),
             )
             account_updated = True
         except EspoError as exc:

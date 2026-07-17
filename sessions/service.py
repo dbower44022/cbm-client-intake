@@ -1073,10 +1073,22 @@ async def _stamp_client_records(
     return updated, len(pairs)
 
 
+def _by(actor: Optional[str]) -> str:
+    """`` by <name>`` for the co-mentor stream notes. The Note is created as the
+    acting user, so Espo's stream already shows them as the author — naming them
+    in the text as well keeps the record self-contained when it's read via the
+    API, an export, or a quoted copy where authorship isn't visible.
+    """
+    return f" by {actor}" if actor else ""
+
+
 async def add_comentor(
-    client: SessionClient, engagement_id: str, mentor_profile_id: str
+    client: SessionClient, engagement_id: str, mentor_profile_id: str,
+    actor: Optional[str] = None,
 ) -> dict[str, Any]:
     """Attach a co-mentor (CMentorProfile) to an engagement (additionalMentors).
+    ``actor`` (the signed-in user's display name) is woven into the stream note
+    so the history reads "who did this" even outside the stream UI.
 
     Also adds the co-mentor's login User to the engagement's ``assignedUsers``:
     the Mentor Role reads CEngagement at "own", and with ``assignedUser``
@@ -1096,9 +1108,9 @@ async def add_comentor(
         if not user_id:
             await post_stream_note(
                 client, ENGAGEMENT, engagement_id,
-                f"Added co-mentor {name} via the session tools — they have no "
-                "linked login user, so no record access was granted (assign one "
-                "in Mentor Administration).",
+                f"Added co-mentor {name} via the session tools{_by(actor)} — "
+                "they have no linked login user, so no record access was granted "
+                "(assign one in Mentor Administration).",
             )
             return {
                 "status": "ok",
@@ -1145,9 +1157,9 @@ async def add_comentor(
         )
         await post_stream_note(
             client, ENGAGEMENT, engagement_id,
-            f"Added co-mentor {name} via the session tools — but granting their "
-            "user access to the engagement failed; they may not see it in their "
-            "list.",
+            f"Added co-mentor {name} via the session tools{_by(actor)} — but "
+            "granting their user access to the engagement failed; they may not "
+            "see it in their list.",
         )
         return {
             "status": "ok",
@@ -1159,17 +1171,20 @@ async def add_comentor(
         }
     await post_stream_note(
         client, ENGAGEMENT, engagement_id,
-        f"Added co-mentor {name} via the session tools — their user was added to "
-        f"the assigned users on the engagement, its sessions, and {stamped}/{total} "
-        "related client record(s) (contacts / client profile / company).",
+        f"Added co-mentor {name} via the session tools{_by(actor)} — their user "
+        f"was added to the assigned users on the engagement, its sessions, and "
+        f"{stamped}/{total} related client record(s) (contacts / client profile "
+        "/ company).",
     )
     return {"status": "ok"}
 
 
 async def remove_comentor(
-    client: SessionClient, engagement_id: str, mentor_profile_id: str
+    client: SessionClient, engagement_id: str, mentor_profile_id: str,
+    actor: Optional[str] = None,
 ) -> dict[str, Any]:
     """Detach a co-mentor from an engagement — the reverse of :func:`add_comentor`.
+    ``actor`` names the signed-in user in the stream note, like the add.
     Only the ``additionalMentors`` relation: the assigned mentor
     (``CEngagement.mentorProfile``) is managed in Client Administration, not here.
 
@@ -1182,7 +1197,7 @@ async def remove_comentor(
     """
     await client.unrelate(ENGAGEMENT, engagement_id, _COMENTOR_LINK, mentor_profile_id)
     name = await _profile_display_name(client, mentor_profile_id)
-    note = f"Removed co-mentor {name} via the session tools."
+    note = f"Removed co-mentor {name} via the session tools{_by(actor)}."
     try:
         user_id = await _profile_user_id(client, mentor_profile_id)
         if not user_id:
@@ -1238,15 +1253,15 @@ async def remove_comentor(
                 client, engagement_id, user_id, remove=True
             )
             note = (
-                f"Removed co-mentor {name} via the session tools — their user's "
-                f"access was removed from the engagement, its sessions, and "
-                f"{stamped}/{total} related client record(s)."
+                f"Removed co-mentor {name} via the session tools{_by(actor)} — "
+                f"their user's access was removed from the engagement, its "
+                f"sessions, and {stamped}/{total} related client record(s)."
             )
         else:
             note = (
-                f"Removed co-mentor {name} via the session tools — assigned-user "
-                "access kept (their user is shared with the assigned mentor or "
-                "another co-mentor)."
+                f"Removed co-mentor {name} via the session tools{_by(actor)} — "
+                "assigned-user access kept (their user is shared with the "
+                "assigned mentor or another co-mentor)."
             )
     except EspoError as exc:
         log.warning(
