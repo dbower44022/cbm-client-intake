@@ -1,25 +1,33 @@
-# Kickoff Prompt — Document Management (DOC-MGMT) Phase 3 (DRAFT)
+# Kickoff Prompt — Document Management (DOC-MGMT) Phase 3
 
 Operating mode: DETAIL
 
-> Drafted by Claude at the end of the Phase 2 session (2026-07-16), per the
-> Phase 2 prompt's definition of done. Review before use — especially the
-> web-adaptation decisions marked ⚠ and the open-issue scoping calls, which
-> Phase 2's rulings did not cover.
+> Drafted at the end of the Phase 2 session and REVISED 2026-07-17 after
+> Doug's access-model rulings (PRD v1.3, D-08/D-09) — those rulings are
+> final; do not re-litigate them. The ⚠ items below (archive failure
+> contract, DOC-08 retry depth, OI scoping) are still open — get rulings
+> before building each.
 
 ## Session setup (do these before any work)
 
 1. This session targets **`dbower44022/cbm-client-intake`** (Doug's Phase 1
    ruling: the web app, not crmbuilder). Read its `CLAUDE.md` (the
    "Documents tab" bullet in the Session Management section covers Phases
-   1+2 as built), `docs/`, `core/gdrive.py`, and the Documents sections of
+   1+2 as built; the "ACCESS MODEL RULED" block in Current status has the
+   rulings), `docs/`, `core/gdrive.py`, and the Documents sections of
    `sessions/frontend/app.js` + `mentoradmin/frontend/app.js`.
 2. Read the governing spec: `CBM-DocMgmt-Implementation-PRD.docx` (this
-   folder; v1.2 at drafting time). Sections 5 (DOC-07, DOC-08), 8 (open
-   issues), and 9 (Phase 3) govern this session.
-3. Confirm Phase 2 is verified live first (view a PDF/image/Google-native
-   doc against the real shared drive — `GDRIVE-DOCS-SETUP.md` Task 5
-   item 6). Phase 3 builds on trusted viewing.
+   folder; **v1.3**). Sections 3.4 (Authentication and Access Model), 5
+   (DOC-07, DOC-08, DOC-09 revised), 7 (D-08/D-09), 8 (open issues as of
+   v1.3), and 9 (Phase 3) govern this session. The Executive Summary v1.3
+   §1.2/§1.3 is the plain-language contract the build must honor.
+3. Confirm the operating prerequisites, live, before building on them:
+   `GDRIVE_IDENTITY=service` set on both envs' web components, the service
+   account's `client_email` a Content Manager member of the "CBM
+   Documents" shared drive, **all human members removed** (the ruling: no
+   person is ever a member), and Phase 2 viewing verified against the real
+   drive (`GDRIVE-DOCS-SETUP.md` Task 5 items 6–7). If any of these are
+   not yet done, they are Doug-side actions — ask, don't work around.
 
 ## Objective
 
