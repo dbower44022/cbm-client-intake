@@ -4,6 +4,21 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.85.0] — 2026-07-18
+
+### Changed
+- **Client Administration: the engagement grid's "Days Assigned" column is now
+  "Days Pending"** — it counts whole calendar days an engagement has been
+  waiting in **Pending Acceptance** (from `engagementAssignedDate`, which the
+  Assign action stamps at the same moment it sets that status). Rows in any
+  other status — and hand-set pending rows with no stamp — show "—"; sorting
+  still defaults to longest-waiting-first. Frontend-only.
+
+### Fixed
+- The Days Pending value now actually centers under its header: the generic
+  `.assign__table td { text-align: left }` rule outranked the cell's
+  `text-align: center` (CSS specificity), leaving the value left-aligned.
+
 ## [0.84.0] — 2026-07-18
 
 Reliability hardening **Phase 2 — "see the failures"** (worker liveness +

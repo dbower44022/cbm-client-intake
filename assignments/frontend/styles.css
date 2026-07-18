@@ -190,7 +190,10 @@ body { display: flex; flex-direction: column; }
 .assign__table th.col-assigned { width: 8.5rem; }
 .assign__table th.col-days { width: 7rem; }
 .assigned-date-cell { white-space: nowrap; color: var(--cbm-slate-700); }
-.days-cell { white-space: nowrap; color: var(--cbm-slate-700); text-align: center; }
+/* td selector needed: the generic `.assign__table td { text-align: left }`
+   outranks a bare class, which left the value left-aligned under the
+   centered header. */
+.assign__table td.days-cell { white-space: nowrap; color: var(--cbm-slate-700); text-align: center; }
 .assign__table th.col-days { text-align: center; }
 .assign__table th.is-sortable { cursor: pointer; user-select: none; }
 .assign__table th.is-sortable:hover { color: var(--cbm-blue); }

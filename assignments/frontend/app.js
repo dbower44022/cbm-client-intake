@@ -251,7 +251,7 @@
     // without one ("") sorts before any date ascending, after it descending.
     if (k === "assignedDate") return e.assignedDate || "";
     // Numeric: unassigned rows (-1) sort below any real day count.
-    if (k === "daysAssigned") { var d = daysSinceAssigned(e.assignedDate); return d == null ? -1 : d; }
+    if (k === "daysPending") { var d = daysPending(e); return d == null ? -1 : d; }
     return (e[k] || "").toString().toLowerCase();
   }
 
@@ -303,7 +303,7 @@
           engSort.key = key;
           // Dates most-recent-first and day counts longest-waiting-first on
           // the first click; text columns A→Z.
-          engSort.dir = (key === "assignedDate" || key === "daysAssigned") ? -1 : 1;
+          engSort.dir = (key === "assignedDate" || key === "daysPending") ? -1 : 1;
         }
         repaintEngagements();
       });
@@ -452,10 +452,19 @@
     return Math.round((today - d) / 86400000);
   }
 
+  // Days the engagement has been waiting in "Pending Acceptance". The Assign
+  // action is what sets that status, stamping engagementAssignedDate at the
+  // same moment — so for a row still pending, days-since-stamp IS days pending.
+  // Any other status (or a hand-set pending row with no stamp) shows —.
+  function daysPending(eng) {
+    if (eng.status !== "Pending Acceptance") return null;
+    return daysSinceAssigned(eng.assignedDate);
+  }
+
   function buildDaysCell(eng) {
     var td = document.createElement("td");
     td.className = "days-cell";
-    var days = daysSinceAssigned(eng.assignedDate);
+    var days = daysPending(eng);
     td.textContent = days == null ? "—" : String(days);
     return td;
   }
