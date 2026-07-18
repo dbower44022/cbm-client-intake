@@ -147,6 +147,22 @@ class Settings(BaseSettings):
     # inert until it exists. Off => the hook is a silent no-op.
     gcal_events: bool = False
 
+    # --- Meeting transcripts: Google Meet (prds/meet-transcript-integration.md).
+    # When on, every Meet the calendar hook schedules gets auto-transcription
+    # enabled on its Meet space (web), and the worker periodically retrieves
+    # finished transcripts into CSession.sessionTranscription + transcriptDocUrl
+    # (both CRM fields feature-detected — csession-transcript-fields.md). Needs
+    # the shared service account with the meetings.space.created scope authorized
+    # for delegation, the Meet API enabled in GCP, and Workspace licensing that
+    # includes Meet transcripts (Business Standard+) for the session-hosting
+    # users. Off => both hooks are silent no-ops.
+    meet_transcripts: bool = False
+    meet_transcripts_poll_seconds: int = 1800   # worker retrieval cadence
+    # How many days after a session's start the worker keeps looking for a
+    # transcript before giving up (a meeting never held / transcription off).
+    # Keep comfortably inside Google's 30-day transcript-entries retention.
+    transcript_give_up_days: int = 14
+
     # --- Documents: Google Drive document management (DOC-MGMT Phase 1). When
     # on (and a database is attached), the session tools' Documents tab lets a
     # manager upload files to the "CBM Documents" shared drive and lists each

@@ -3715,6 +3715,9 @@
     addKV(grid, "Meeting type", s.meetingType, "multiEnum");
     addKV(grid, "Location", locationValue(s), "text");
     addKV(grid, "Meeting link", (s.videoMeetingLink || "").trim(), "copylink");
+    // The permanent Google Doc transcript (feature-gated: the value only rides
+    // the payload once the CRM has transcriptDocUrl and the worker filled it).
+    addKV(grid, "Transcript document", (s.transcriptDocUrl || "").trim(), "copylink");
     addKV(grid, "Next session", s.nextSessionDateTime, "datetime");
     hcard.appendChild(grid);
     body.appendChild(hcard);

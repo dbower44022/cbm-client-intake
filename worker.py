@@ -190,6 +190,11 @@ async def main() -> None:
     # the service-identity access model is active (docs.grants.grants_enabled).
     next_docs = datetime.now(timezone.utc)
 
+    # Meeting transcripts: Meet transcript retrieval into CSession (plan
+    # prds/meet-transcript-integration.md §4). Inert unless MEET_TRANSCRIPTS is
+    # on; also feature-gated per cycle on the CRM's sessionTranscription field.
+    next_transcripts = datetime.now(timezone.utc)
+
     # Communications: Gmail conversation sync (+ optional AI summaries), on its
     # own timer. Inert unless GMAIL_SYNC is on and the pieces are configured.
     comms_store = None
@@ -224,6 +229,16 @@ async def main() -> None:
             except Exception as exc:  # noqa: BLE001
                 log.warning("schema-drift check failed: %s", exc)
             next_schema = now + timedelta(seconds=settings.schema_check_seconds)
+        if settings.meet_transcripts and now >= next_transcripts:
+            try:
+                from sessions.transcripts import run_transcript_cycle
+
+                await run_transcript_cycle(settings, _client(settings))
+            except Exception as exc:  # noqa: BLE001 — never crashes delivery
+                log.warning("transcript retrieval cycle failed: %s", exc)
+            next_transcripts = now + timedelta(
+                seconds=settings.meet_transcripts_poll_seconds
+            )
         if comms_store is not None and now >= next_gmail:
             try:
                 await run_gmail_cycle(settings, comms_store)

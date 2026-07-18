@@ -209,6 +209,12 @@ SESSION_FIELDS: list[dict] = [
 # The §12.5 feature-detected field: present in the spec above, gated at runtime.
 TRANSCRIPT_FIELD = "sessionTranscription"
 
+# The permanent Google Doc transcript link (csession-transcript-fields.md):
+# app-managed (written by the worker retrieval job), never user-editable — NOT
+# in SESSION_FIELDS; feature-detected like the transcript, shown read-only in
+# the session view's facts grid.
+TRANSCRIPT_DOC_URL_FIELD = "transcriptDocUrl"
+
 # ``duration`` is EspoCRM's virtual duration type (notStorable — computed as
 # dateEnd − dateStart), so the writable/readable scalar is ``dateEnd``: the
 # editor sends dateEnd (start + chosen duration) and reads compute the difference.

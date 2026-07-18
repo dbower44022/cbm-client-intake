@@ -40,6 +40,7 @@ from .config import (
     SESSION_ENUM_FIELDS,
     SESSION_OPTION_FIELDS,
     SESSION_FIELDS,
+    TRANSCRIPT_DOC_URL_FIELD,
     TRANSCRIPT_FIELD,
     DomainConfig,
 )
@@ -720,10 +721,13 @@ async def get_session(client: SessionClient, session_id: str) -> dict[str, Any]:
     transcript column itself is selected only when the CRM has it."""
     fields = await client.metadata(f"entityDefs.{SESSION}.fields")
     has_transcript = TRANSCRIPT_FIELD in fields
+    has_doc_url = TRANSCRIPT_DOC_URL_FIELD in fields
     has_cal = CAL_FIELD in fields
     select = _SESSION_SELECT
     if has_transcript:
         select += "," + TRANSCRIPT_FIELD
+    if has_doc_url:
+        select += "," + TRANSCRIPT_DOC_URL_FIELD
     if has_cal:
         select += "," + CAL_FIELD
     rec = await client.get(SESSION, session_id, select=select)

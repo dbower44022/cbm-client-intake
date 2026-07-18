@@ -28,6 +28,7 @@ import uuid
 from typing import Any, Optional
 
 from core.gcalendar import CalendarClient, CalendarError, build_event_body, event_times, meet_link
+from core.gmeet import MeetClient, meeting_code
 from sessions.config import DomainConfig
 from sessions.service import CAL_FIELD, SESSION, SessionClient, resolve_user_mailbox
 
@@ -131,7 +132,8 @@ async def _sync(
         cal = calendar or await _client_for_user(settings, client, user_id, sa_info)
         if isinstance(cal, dict):
             return cal
-        return await _create(cfg, client, cal, session, parent_id)
+        return await _create(cfg, client, cal, session, parent_id,
+                             settings=settings, sa_info=sa_info)
 
     if not relevant:
         return {"ok": True, "skipped": True}
@@ -183,6 +185,9 @@ async def _create(
     cal: CalendarClient,
     session: dict[str, Any],
     parent_id: Optional[str],
+    *,
+    settings: Any = None,
+    sa_info: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     sid = session["id"]
     existing_link = (session.get("videoMeetingLink") or "").strip()
@@ -226,4 +231,37 @@ async def _create(
         write_back["videoMeetingLink"] = link
     await client.update(SESSION, sid, write_back)
     session.update(write_back)
-    return {"ok": True, "eventId": event["id"], "meetLink": link}
+    result = {"ok": True, "eventId": event["id"], "meetLink": link}
+    # Auto-enable Meet transcription on the space we just generated (Doug's
+    # ruling: every app-scheduled Meet is transcribed — no per-session opt-in).
+    # Only generated Meet links: a hand-typed link isn't our space to configure.
+    if (
+        wants_meet and link and sa_info
+        and getattr(settings, "meet_transcripts", False)
+    ):
+        result["transcription"] = await _enable_transcription(
+            settings, sa_info, cal.mailbox, link
+        )
+    return result
+
+
+async def _enable_transcription(
+    settings: Any, sa_info: dict[str, Any], mailbox: str, link: str
+) -> dict[str, Any]:
+    """Turn on auto-transcription for the Meet space behind ``link``, as the
+    organizer. Best-effort: a failure only means the meeting isn't
+    auto-transcribed (the retrieval job still picks up manually-started
+    transcripts)."""
+    code = meeting_code(link)
+    if not code:
+        return {"ok": False, "error": f"no Meet meeting code in {link!r}"}
+    try:
+        meet = MeetClient(
+            sa_info, mailbox, getattr(settings, "request_timeout_seconds", 20)
+        )
+        space = await meet.get_space(code)
+        await meet.enable_auto_transcription(space["name"])
+        return {"ok": True, "enabled": True}
+    except Exception as exc:  # noqa: BLE001 — never break the saved session
+        log.warning("could not enable Meet transcription on %s: %s", code, exc)
+        return {"ok": False, "error": str(exc)}

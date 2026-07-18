@@ -4,6 +4,51 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.83.0] — 2026-07-18
+
+**Meeting Transcript integration — Google Meet (Phases 1+2 of
+`prds/meet-transcript-integration.md`), gated OFF by `MEET_TRANSCRIPTS`.**
+Every Meet the session tools schedule gets automatic transcription turned on,
+and a new worker job retrieves finished transcripts into the CRM — lighting up
+the session view's Transcript zone (feature-gated since v0.37.0) and adding a
+permanent Google Doc link. Inert until the CRM fields exist
+(`csession-transcript-fields.md`) and the flag is set (web + worker).
+
+### Added
+- **`core/gmeet.py`** — `MeetClient` (Meet REST v2, the gcalendar
+  service-account + DWD pattern, scope `meetings.space.created`): space lookup
+  by meeting code, auto-transcription enable (`spaces.patch`), conference
+  records filtered by meeting code + start-time window, paged transcript
+  entries + participants; pure helpers for meeting-code extraction and
+  speaker-attributed, elapsed-timestamped, escaped transcript HTML.
+- **Schedule-time auto-enable** (`sessions/gcal.py`): after the calendar hook
+  creates an event with a *generated* Meet conference, the Meet space's
+  `autoTranscriptionGeneration` is set ON as the organizer (Doug's ruling: no
+  per-session opt-in; participants see Google's standard in-meeting notice).
+  Best-effort — the result rides the existing `calendar:{...}` save notice as
+  `transcription:{ok,...}`; hand-typed links are never configured.
+- **Worker retrieval job** (`sessions/transcripts.py`, timer
+  `MEET_TRANSCRIPTS_POLL_SECONDS`, default 1800): under the API-key client,
+  finds past Meet-linked sessions still missing a transcript (window:
+  `TRANSCRIPT_GIVE_UP_DAYS`, default 14 — inside Google's 30-day entries
+  retention; status deliberately NOT required to be Completed), resolves the
+  organizer (session's assigned users → `CMentorProfile.cbmEmail`, parent
+  manager profile fallback), fetches the ended transcript via a provider seam
+  (`TranscriptSource` — Meet now, Zoom can slot in later), and writes back
+  `sessionTranscription` + `transcriptDocUrl` in one update (oversize
+  transcripts clamped at a paragraph boundary with a note pointing to the
+  Doc). Best-effort per session; nothing is stored for retries — a session
+  simply stays a candidate until it resolves or ages out.
+- **Session view**: a copyable "Transcript document" row in the facts grid
+  (feature-detected `transcriptDocUrl` selected by `get_session`).
+- **CRM handoff**: `csession-transcript-fields.md` — `sessionTranscription`
+  (wysiwyg) + `transcriptDocUrl` (url) + the CustomAppAPIRole CSession
+  read/edit grant; Google-side prerequisites incl. the **licensing gate**
+  (Meet transcripts need Business Standard+ for organizers).
+- Settings: `meet_transcripts`, `meet_transcripts_poll_seconds`,
+  `transcript_give_up_days`; runbook blocks in `.env.example` +
+  `DEPLOYMENT.md`.
+
 ## [0.82.0] — 2026-07-17
 
 Fix: **every mentor read "Incomplete — no User assigned to the Contact"** after

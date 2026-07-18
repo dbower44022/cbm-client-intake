@@ -194,6 +194,30 @@ flag. Worker not involved.
 |---|---|
 | `GCAL_EVENTS` | `true` to enable session calendar events + Meet links (web) |
 
+**Meeting transcripts — Google Meet (optional, web + worker, v0.83.0)** —
+`MEET_TRANSCRIPTS=true` makes every app-scheduled Meet get **automatic
+transcription** (enabled on the Meet space at schedule time, as the
+organizer), and the **worker** periodically retrieves finished transcripts
+into `CSession.sessionTranscription` (lights up the session view's Transcript
+zone) plus the permanent Google Doc link into `CSession.transcriptDocUrl`.
+Reuses `GOOGLE_SERVICE_ACCOUNT_JSON` (or the Email-Setup config) — no new
+secret. Activation order (the app is inert until ALL are done; plan:
+`prds/meet-transcript-integration.md`): **confirm Workspace licensing**
+(Meet transcripts need Business Standard+ for the meeting organizer — the
+free Nonprofits tier lacks them) and the Meet transcription admin toggle;
+enable the **Google Meet REST API** in the GCP project; add
+`https://www.googleapis.com/auth/meetings.space.created` to the service
+account's existing domain-wide-delegation row (edit the line — the field
+REPLACES, keep all current scopes); build the two CRM fields + the API-role
+CSession read/edit grant (`csession-transcript-fields.md` — feature-detected,
+crm-test first); then set the flag on **web AND worker**.
+
+| Variable | Value |
+|---|---|
+| `MEET_TRANSCRIPTS` | `true` to enable Meet auto-transcription + retrieval (web + worker) |
+| `MEET_TRANSCRIPTS_POLL_SECONDS` | worker retrieval cadence (default 1800) |
+| `TRANSCRIPT_GIVE_UP_DAYS` | stop looking this many days after a session's start (default 14) |
+
 **Google Drive documents (optional, web component, v0.65.0–v0.70.0 — DOC-MGMT
 Phases 1+2, PRD v1.2)** — `GDRIVE_DOCS=true` turns the session tools' Documents
 tab AND the Mentor Administration Documents tab live: staff upload files to

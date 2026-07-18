@@ -1200,8 +1200,10 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   delivery.
 - **Phase 1 (CRUD + review UI).** The **Start/Open Session** button uses
   `videoMeetingLink` when set. Google Calendar/Meet *scheduling* shipped
-  v0.40.0 (the bullet above; gated). Meet *transcription* (a new
-  `sessionTranscription` wysiwyg field) is still a later phase, not built. **The UI side of the transcript is now ready
+  v0.40.0 (the bullet above; gated). Meet *transcription* is BUILT (v0.83.0,
+  gated by `MEET_TRANSCRIPTS` — see the Current-status v0.83.0 block; plan
+  `prds/meet-transcript-integration.md`, CRM handoff
+  `csession-transcript-fields.md`). **The UI side of the transcript is now ready
   and feature-gated (v0.37.0):** the session view's Transcript zone (own scroll
   allotment + Find-in-transcript) and the editor's Transcript box both appear
   automatically once the `sessionTranscription` field exists in the CRM —
@@ -1331,9 +1333,55 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   Note: crm-test seed sessions carry out-of-enum `sessionType` values (harmless; a
   data-hygiene cleanup). **UI polish is the next work item** (a follow-up session).
 
-## Current status (updated 2026-07-17)
+## Current status (updated 2026-07-18)
 
-**Main is at v0.82.0** (2026-07-17, 674 tests green, committed NOT pushed) —
+**Main is at v0.83.0** (2026-07-18, 706 tests green, committed NOT pushed) —
+**Meeting Transcript integration — Google Meet (Phases 1+2 of
+`prds/meet-transcript-integration.md`), gated OFF by `MEET_TRANSCRIPTS`
+(default false; set on web AND worker at activation).** Built per Doug's
+2026-07-17 rulings (auto-enable always, Meet now / Zoom later behind a
+provider seam, store transcript text + the permanent Google Doc link):
+- **`core/gmeet.py`** — `MeetClient`, Meet REST v2 via the shared
+  service-account + DWD stack (scope `meetings.space.created`), gcalendar
+  pattern: space lookup by meeting code, auto-transcription enable,
+  conference-record search (meeting code + ±36h start window — handles reused
+  codes), paged transcript entries/participants; pure helpers (meeting-code
+  regex, speaker-attributed escaped HTML with elapsed [MM:SS] stamps,
+  consecutive same-speaker entries merged).
+- **Schedule-time** (`sessions/gcal.py` `_enable_transcription`): after the
+  hook creates an event with a GENERATED Meet link, the space's
+  `autoTranscriptionGeneration` is set ON as the organizer; result rides the
+  `calendar:{...}` notice as `transcription:{ok,...}`; best-effort; hand-typed
+  links untouched.
+- **Worker retrieval** (`sessions/transcripts.py`, timer
+  `MEET_TRANSCRIPTS_POLL_SECONDS` default 1800, monitoring-check pattern,
+  API-key client — needs the CustomAppAPIRole CSession read+edit grant):
+  candidates = past sessions inside `TRANSCRIPT_GIVE_UP_DAYS` (14) with a
+  meet.google.com link and null `sessionTranscription` (status deliberately
+  not required to be Completed); organizer = session assigned users →
+  `CMentorProfile.cbmEmail` map (Python match, never a where on
+  assignedUserId), parent-manager-profile fallback; `TranscriptSource` seam
+  (Meet only in phase 1); one CSession update writes the clamped transcript
+  HTML (+ `transcriptDocUrl` when that field exists). No retry state — a
+  session stays a candidate until it resolves or ages out of the window.
+- **Feature detection**: both CRM fields detected per read (`get_session`
+  selects `transcriptDocUrl` when present; the retrieval cycle no-ops until
+  `sessionTranscription` exists). Session view gains a copyable "Transcript
+  document" facts-grid row. CRM handoff doc: **`csession-transcript-fields.md`**
+  (two fields + the API-role grant + Google prerequisites).
+- **NOT yet activated/driven live.** Phase 0 is entirely Doug-side, in order:
+  (1) **licensing check (BLOCKING)** — Meet transcripts need Business
+  Standard+ for organizers (free Nonprofits tier lacks them) + the Meet
+  transcription admin toggle; (2) Meet API on in GCP `espcrm-498315`;
+  (3) `meetings.space.created` added to the SA's DWD row (edit the existing
+  line — the field REPLACES, keep all scopes); (4) CRM fields + grant per the
+  handoff doc (crm-test first); (5) `MEET_TRANSCRIPTS=true` on web+worker of
+  the overlay; then the live verification in the handoff doc §Verification
+  (real short Meet → transcript in the tab within a poll cycle, Doc link,
+  give-up path, non-admin mentor visibility). 26 new tests (gmeet helpers,
+  retrieval cycle, auto-enable hook).
+
+Before that: **v0.82.0** (2026-07-17, 674 tests green, committed NOT pushed) —
 **fix: mentors all read "Incomplete — no User assigned to the Contact"**
 (Doug's report). Root cause found by live probe: the CRM team's deliberate
 switch of **Contact (and Account) to Multiple Assigned Users on BOTH CRMs**

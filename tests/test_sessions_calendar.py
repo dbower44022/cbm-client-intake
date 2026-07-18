@@ -314,3 +314,74 @@ async def test_cancel_without_event_skips(monkeypatch):
         MENTOR, crm, "s1", {"status": "Cancelled"}, user_id="u1", settings=SETTINGS_ON)
     assert session["calendar"] == {"ok": True, "skipped": True}
     assert cal.deleted == []
+
+
+# --- Meet auto-transcription (MEET_TRANSCRIPTS) -------------------------------
+
+SETTINGS_TRANSCRIPTS = types.SimpleNamespace(
+    gcal_events=True, meet_transcripts=True, request_timeout_seconds=5)
+
+
+class FakeMeet:
+    def __init__(self, fail=False):
+        self.enabled, self.fail = [], fail
+
+    async def get_space(self, code):
+        if self.fail:
+            raise RuntimeError("meet api down")
+        return {"name": "spaces/xyz123", "meetingCode": code}
+
+    async def enable_auto_transcription(self, space_name):
+        self.enabled.append(space_name)
+
+
+def _wire_meet(monkeypatch, fake):
+    monkeypatch.setattr(gcal, "MeetClient", lambda sa, mailbox, timeout=20: fake)
+
+
+async def test_create_enables_meet_transcription(monkeypatch):
+    crm, cal, meet = _fake_crm(), FakeCalendar(), FakeMeet()
+    _wire(monkeypatch, cal)
+    _wire_meet(monkeypatch, meet)
+    session = await service.create_session(
+        MENTOR, crm, "E1", dict(NEW_CHANGES),
+        owner_user_id="u1", settings=SETTINGS_TRANSCRIPTS)
+    assert session["calendar"]["transcription"] == {"ok": True, "enabled": True}
+    assert meet.enabled == ["spaces/xyz123"]
+
+
+async def test_transcription_flag_off_no_meet_call(monkeypatch):
+    crm, cal, meet = _fake_crm(), FakeCalendar(), FakeMeet()
+    _wire(monkeypatch, cal)
+    _wire_meet(monkeypatch, meet)
+    session = await service.create_session(
+        MENTOR, crm, "E1", dict(NEW_CHANGES),
+        owner_user_id="u1", settings=SETTINGS_ON)
+    assert "transcription" not in session["calendar"]
+    assert meet.enabled == []
+
+
+async def test_transcription_failure_never_fails_event(monkeypatch):
+    """Best-effort: a Meet API failure means the meeting simply isn't
+    auto-transcribed — the event + link write-back stand."""
+    crm, cal, meet = _fake_crm(), FakeCalendar(), FakeMeet(fail=True)
+    _wire(monkeypatch, cal)
+    _wire_meet(monkeypatch, meet)
+    session = await service.create_session(
+        MENTOR, crm, "E1", dict(NEW_CHANGES),
+        owner_user_id="u1", settings=SETTINGS_TRANSCRIPTS)
+    assert session["calendar"]["ok"] is True
+    assert session["calendar"]["eventId"] == "ev1"
+    assert session["calendar"]["transcription"]["ok"] is False
+    assert "meet api down" in session["calendar"]["transcription"]["error"]
+
+
+async def test_hand_typed_link_never_configures_transcription(monkeypatch):
+    crm, cal, meet = _fake_crm(), FakeCalendar(), FakeMeet()
+    _wire(monkeypatch, cal)
+    _wire_meet(monkeypatch, meet)
+    session = await service.create_session(
+        MENTOR, crm, "E1", dict(NEW_CHANGES, videoMeetingLink="https://zoom.us/j/123"),
+        owner_user_id="u1", settings=SETTINGS_TRANSCRIPTS)
+    assert "transcription" not in session["calendar"]
+    assert meet.enabled == []
