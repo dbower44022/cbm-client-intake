@@ -38,16 +38,20 @@ EXPECTED_ENUMS: dict[tuple[str, str], list[str]] = {
     ("CMentorProfile", "mentorType"): ["Mentor"],
     # The volunteer ("Become a Mentor") form writes these — their options.js lists
     # must stay aligned or the CMentorProfile create 400s (drift caused a live
-    # failure 2026-06-23). Mirrors the live crm-test enums verbatim, typos and all.
-    ("CMentorProfile", "industrySector"): [
-        "Accounting and bookkeeping", "Advertising, Design, Marketing",
-        "Agriculture, Farming, Livestoack", "Archtecture, Engineering",
+    # failure 2026-06-23). Industry Experience writes the multiEnum
+    # `industryExperience` (v0.14.0 — the old single-enum `industrySector` is
+    # no longer written by any form, so it is no longer monitored; retargeted
+    # 2026-07-18 after the CRM team's typo cleanup on the enum fired a stale
+    # alert against the old field/values).
+    ("CMentorProfile", "industryExperience"): [
+        "Accounting and Bookkeeping", "Advertising, Design, Marketing",
+        "Agriculture, Farming, Livestock", "Architecture, Engineering",
         "Arts, Entertainment and Recreation", "Auto Repair",
         "Beauty, Cosmetics and Salon Services", "Business Consulting and Coaching",
         "Childcare", "Commercial and Residential Services", "Construction & Real Estate",
         "Counseling and Therapy", "Cybersecurity", "E-Commerce & Online Business",
         "Education", "Energy & Utilities", "Financial Services & Banking",
-        "Group  homes", "Healthcare & Medical",
+        "Group Homes", "Healthcare & Medical",
         "Hospitality, Restaurants & Food Service", "Manufacturing & Industrial",
         "Media, Marketing & Publishing", "Nonprofit & Social Impact",
         "Professional Services", "Retail & Consumer Products", "Technology & Software",
