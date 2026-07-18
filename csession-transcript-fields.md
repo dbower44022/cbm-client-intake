@@ -1,9 +1,13 @@
 # `CSession` transcript fields — CRM build specification
 
-**Status: NOT BUILT — required for the Meeting Transcript integration**
-(the app side ships gated off by `MEET_TRANSCRIPTS`; plan:
+**Status: BUILT on crm-test (2026-07-18, probe-verified — both fields present
+with the specified types, and the API key's CSession READ works; the EDIT
+half of the grant is proven by the first live write). Prod build status
+unverified from the app side (the overlay's API key is encrypted) — confirm
+at prod activation.** Required for the Meeting Transcript integration (the
+app side shipped in v0.83.0, gated off by `MEET_TRANSCRIPTS`; plan:
 `prds/meet-transcript-integration.md`). This is the CRM-team handoff, in the
-style of `csession-calendar-field.md`. Build on **crm-test first**; prod
+style of `csession-calendar-field.md`. Built on **crm-test first**; prod
 follows after live verification. Track as a crmbuilder program in
 `ClevelandBusinessMentors/programs/` per that repo's requirement-first process.
 

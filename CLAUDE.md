@@ -1451,7 +1451,8 @@ schema-drift alert fired on both envs — `CMentorProfile.industrySector`
 no longer offers the entire expected 28-value list (the CRM team changed
 the enum; re-sync `scripts/sync_form_options.py` / `core/schema_contract.py`).
 
-**Main is at v0.83.0** (2026-07-18, 706 tests green, committed NOT pushed) —
+**Main is at v0.83.0** (2026-07-18, 706 tests green, **pushed and DEPLOYED —
+prod + crm-test `/healthz` both verified at 0.83.0**) —
 **Meeting Transcript integration — Google Meet (Phases 1+2 of
 `prds/meet-transcript-integration.md`), gated OFF by `MEET_TRANSCRIPTS`
 (default false; set on web AND worker at activation).** Built per Doug's
@@ -1485,17 +1486,28 @@ provider seam, store transcript text + the permanent Google Doc link):
   `sessionTranscription` exists). Session view gains a copyable "Transcript
   document" facts-grid row. CRM handoff doc: **`csession-transcript-fields.md`**
   (two fields + the API-role grant + Google prerequisites).
-- **NOT yet activated/driven live.** Phase 0 is entirely Doug-side, in order:
-  (1) **licensing check (BLOCKING)** — Meet transcripts need Business
-  Standard+ for organizers (free Nonprofits tier lacks them) + the Meet
-  transcription admin toggle; (2) Meet API on in GCP `espcrm-498315`;
-  (3) `meetings.space.created` added to the SA's DWD row (edit the existing
-  line — the field REPLACES, keep all scopes); (4) CRM fields + grant per the
-  handoff doc (crm-test first); (5) `MEET_TRANSCRIPTS=true` on web+worker of
-  the overlay; then the live verification in the handoff doc §Verification
-  (real short Meet → transcript in the tab within a poll cycle, Doc link,
-  give-up path, non-admin mentor visibility). 26 new tests (gmeet helpers,
-  retrieval cycle, auto-enable hook).
+- **NOT yet activated — Phase 0 state as of 2026-07-18 (all but Google DONE):**
+  ✅ licensing confirmed by Doug — CBM is on **Business Standard**, so
+  transcripts are included; ✅ CRM fields built and probe-verified on crm-test
+  (`sessionTranscription` wysiwyg + `transcriptDocUrl` url) and the **API key's
+  CSession READ verified live** (56 rows; the EDIT half of the grant is proven
+  by the first live write — a miss surfaces as a logged 403, never a crash;
+  prod fields unverifiable from here, the overlay's API key is EV-encrypted);
+  ✅ v0.83.0 deployed to both envs (flag off ⇒ inert).
+  **REMAINING (Doug, in progress): the three Google-side changes** —
+  (1) Admin console → Meet video settings → **Transcription = ON** for the OU;
+  (2) DWD row: add `meetings.space.created` (edit the existing line — the
+  field REPLACES, keep all scopes; client id 109317126943210877831);
+  (3) **Meet REST API enabled in GCP `espcrm-498315`** (GCP console, not
+  Admin — easy to miss). **Deliberately do NOT set `MEET_TRANSCRIPTS=true`
+  before the DWD scope exists** — every Scheduled-session save would show
+  mentors a "transcription failed" notice. Once Doug confirms Google is done:
+  set the flag on web+worker of the crm-test overlay (doctl), then the live
+  verification in the handoff doc §Verification (real short Meet → transcript
+  in the tab within a poll cycle, Doc link, give-up path, non-admin mentor
+  visibility — this run also proves the edit grant + auto-enable). Prod
+  follows crm-test verification. 26 new tests (gmeet helpers, retrieval
+  cycle, auto-enable hook).
 
 Before that: **v0.82.0** (2026-07-17, 674 tests green) —
 **fix: mentors all read "Incomplete — no User assigned to the Contact"**

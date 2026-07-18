@@ -1,8 +1,12 @@
 # Meeting Transcript Integration — Google Meet (plan v0.1)
 
-**Status: Phases 1+2 BUILT (v0.83.0, 2026-07-18) — gated OFF by
-`MEET_TRANSCRIPTS`; Phase 0 (licensing/Google/CRM prerequisites) still to do
-before activation.** App side: `core/gmeet.py`, the schedule-time auto-enable
+**Status: Phases 1+2 BUILT and DEPLOYED (v0.83.0, 2026-07-18, both envs) —
+gated OFF by `MEET_TRANSCRIPTS`. Phase 0 progress (2026-07-18): licensing
+CONFIRMED (CBM is on Business Standard — the blocking prerequisite below is
+resolved); CRM fields built + probe-verified on crm-test, API-key CSession
+READ verified; REMAINING: the three Google-side changes (Meet transcription
+admin toggle, `meetings.space.created` on the DWD row, Meet API on in GCP),
+then the flag + live verification.** App side: `core/gmeet.py`, the schedule-time auto-enable
 in `sessions/gcal.py`, the worker retrieval job `sessions/transcripts.py`, and
 the "Transcript document" facts-grid row. CRM handoff:
 `csession-transcript-fields.md`. Originally drafted 2026-07-17 from Doug's
