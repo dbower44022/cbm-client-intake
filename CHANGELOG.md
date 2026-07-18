@@ -4,6 +4,62 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.88.0] — 2026-07-18
+
+**Compose email overhaul** — every finding from the compose-UX review, both
+surfaces (the session tools' record compose + the shared quick-compose
+widget), per Doug's "do them all" + resizable-at-90% ruling.
+
+### Added
+- **Cc/Bcc** end-to-end: reveal links on the recipients line (both dialogs);
+  server support through `send_message`/`send_quick_message`/`build_mime`
+  (Bcc header — Gmail delivers and strips it), the Espo Email write-back
+  (`cc`/`bcc` fields), and both request schemas. An address duplicated
+  across lists keeps its strongest slot (To > Cc > Bcc); a Cc-only send
+  promotes to To.
+- **Draft protection**: closing a compose with real content (Escape, ×,
+  backdrop, Cancel) asks "Discard this draft?" first; every draft also
+  autosaves to localStorage (debounced, 7-day expiry, keyed by record+reply
+  or app+recipient) and restores on reopen with a "Start fresh" escape —
+  a crash, tab close, or session expiry never loses a typed message.
+- **Reply improvements** (record compose): the original message rides into
+  the draft as a quoted block ("On <date>, <name> wrote:"), **Reply all**
+  appears when the thread has multiple participants (own mailbox excluded),
+  and Cancel/close returns to the conversation view instead of dumping out.
+- **Recipient hygiene**: `Name <email>` parsing, comma/semicolon splitting,
+  address-shape validation with the bad tokens named; a live "Sending to N
+  recipients (2 To, 1 Cc)" summary in the pinned footer; All/None toggles
+  when a record has >5 contacts.
+- **Send-time guards** (validate-on-click, never disabled): empty body
+  blocks with "Write a message first."; a missing subject or unresolved
+  `{X.y}` template placeholders turn Send into a one-click-armed
+  **"Send anyway"** with an amber explanation.
+- **Attachments**: per-file sizes on chips + a running "Total X of 20 MB"
+  line; over-cap files are refused with the file named. Upload **progress
+  percent** on the Send button for big messages (XHR send path).
+- **Keyboard**: autofocus lands on the first empty field, Tab is trapped
+  inside the dialog, **Ctrl/Cmd+Enter sends**.
+- **Template picker** is a single searchable combobox; picking **"No
+  template" restores the pre-template draft** (subject/body/attachment
+  chips); the placeholder warning is now amber and re-checked at send time.
+- The unknown-recipient step is explicit: the button relabels to
+  **"Add & Send"** while the add-to-record panel is open, the panel scrolls
+  into view, and any recipient edit resets the panel. The create-contact
+  row's company picker is a cached type-ahead (one /companies fetch per
+  compose) instead of a full select per row.
+
+### Changed
+- **Both dialogs open at 90% of the window and are user-resizable**
+  (bottom-right grip; header + Send/Cancel footer pinned, only the body
+  scrolls) — the record compose had been capped at 46rem by a later CSS
+  rule silently overriding the intended workspace width (styles.css:508,
+  now removed), with Send/Cancel below the fold. Footer button order is
+  Send-rightmost in both dialogs; validation errors show in the pinned
+  footer (always visible). The compose header now names the record; the
+  message editor sizes to the workspace.
+- The editor-leave "Unsaved changes" prompt was generalized into a shared
+  `openConfirm` helper (all labels set per call) used by both flows.
+
 ## [0.87.0] — 2026-07-18
 
 Reliability hardening **Phase 4 — Gmail sync loss prevention** (P1-5, findings

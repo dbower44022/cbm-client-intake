@@ -500,17 +500,60 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
   content: ""; position: absolute; left: 0.35rem; top: 50%; transform: translateY(-50%);
   width: 7px; height: 7px; border-radius: 50%; background: var(--cbm-blue, #1a5fb4);
 }
-/* Compose / view / reply modal — a workspace, not a pop-up: most of the
-   screen, so the message + add-contact rows are comfortable to fill in. */
-#commModal .sx__modal-card { max-width: min(90rem, 94vw); width: 94vw; }
+/* Compose / view / reply modal — a workspace, not a pop-up: it opens at 90%
+   of the window (no width cap — the no-page-width-caps ruling) and the user
+   can RESIZE it from the bottom-right grip. Flex column so the header and the
+   Send/Cancel footer stay pinned while only the body scrolls — the actions
+   are always visible. */
+#commModal .sx__modal-card {
+  width: 90vw; height: 90vh; max-width: 96vw; max-height: 94vh;
+  min-width: 22rem; min-height: 16rem;
+  resize: both; overflow: hidden;
+  display: flex; flex-direction: column;
+}
+#commModal .sx__modal-head { flex: 0 0 auto; }
+#commModal .sx__modal-body { flex: 1 1 auto; overflow: auto; }
+#commModal .sx__modal-foot { flex: 0 0 auto; align-items: center; }
 #commModal textarea.sx__msg-input { min-height: 16rem; }
-/* Compose: wide enough for the rich-text toolbar + comfortable email writing. */
-#commModal .sx__modal-card { max-width: 46rem; }
 .sx__msg-rich { width: 100%; }
+/* Validation/status message pinned in the footer, left of the buttons. */
+.sx__foot-msg { flex: 1 1 auto; margin: 0; text-align: left; }
+.sx__foot-summary { flex: 1 1 auto; margin: 0; color: var(--cbm-slate-700, #667); font-size: 0.85rem; text-align: left; }
+/* Amber "review this" notice — placeholder warnings etc. (errors stay red). */
+.sx__notice.is-warn { background: #fdf6e7; border: 1px solid #ecc94b; color: #744210; }
+/* To-list header line: label + All/None quick toggles. */
+.sx__to-head { display: flex; align-items: baseline; gap: 0.6rem; }
+.sx__to-head .sx__msg-label { margin-bottom: 0; }
+.sx__link-btn { background: none; border: none; padding: 0; font: inherit; font-size: 0.8rem; color: var(--cbm-blue, #1a5fb4); cursor: pointer; text-decoration: underline; }
+.sx__link-btn:hover { color: var(--cbm-navy, #123); }
+/* Cc/Bcc reveal links sit on the recipients label line. */
+.sx__ccbcc-toggles { margin-left: auto; display: inline-flex; gap: 0.7rem; }
+/* Attachment chips carry file sizes; a muted total line follows the list. */
+.sx__attach-size { color: var(--cbm-slate-700, #667); font-size: 0.78rem; }
+.sx__attach-total { margin: 0.15rem 0 0; color: var(--cbm-slate-700, #667); font-size: 0.8rem; }
+/* Searchable combobox (template picker, company picker): input + dropdown. */
+.sx__combo { position: relative; flex: 1; min-width: 0; }
+.sx__combo input { width: 100%; box-sizing: border-box; }
+.sx__combo-list {
+  position: absolute; left: 0; right: 0; top: calc(100% + 2px); z-index: 30;
+  max-height: 16rem; overflow: auto; background: var(--cbm-surface, #fff);
+  border: 1px solid var(--cbm-border, #d7dce2); border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(18, 28, 42, 0.18); margin: 0; padding: 0.2rem 0; list-style: none;
+}
+.sx__combo-list li { padding: 0.35rem 0.6rem; cursor: pointer; }
+.sx__combo-list li:hover, .sx__combo-list li.is-active { background: #eef4fb; }
+.sx__combo-list li.is-muted { color: var(--cbm-slate-700, #667); font-style: italic; }
+/* Restored-draft notice with its own Start-fresh action. */
+.sx__draft-note { display: flex; align-items: center; gap: 0.6rem; }
+/* The quoted original under a reply draft (view-side hint only — the editor
+   shows Jodit's own rendering of blockquote.quoted-reply). */
+#commModal .sx__msg-rich blockquote.quoted-reply { border-left: 3px solid var(--cbm-border, #d7dce2); margin: 0.6rem 0 0; padding: 0.2rem 0 0.2rem 0.8rem; color: #556; }
 .sx__modal-foot { display: flex; gap: 0.5rem; justify-content: flex-end; flex-wrap: wrap; padding: 0.75rem 1rem 1rem; border-top: 1px solid var(--cbm-border, #eef1f4); }
 .sx__modal-foot .cbm-button { padding: 0.5rem 0.9rem; font-size: 0.9rem; }
 .sx__msg-body { padding: 0.6rem 1rem 0.2rem; white-space: pre-wrap; line-height: 1.55; color: var(--cbm-navy, #223); }
 .sx__msg-field { display: block; padding: 0.4rem 1rem; }
+/* display:block would override the browser's [hidden] — the Cc/Bcc rows use it. */
+.sx__msg-field[hidden] { display: none; }
 .sx__msg-label { display: block; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--cbm-slate-700, #667); margin-bottom: 0.2rem; }
 .sx__msg-input { width: 100%; box-sizing: border-box; padding: 0.45rem 0.55rem; font: inherit; border: 1px solid var(--cbm-border, #d7dce2); border-radius: 6px; }
 .sx__msg-input:focus { outline: 2px solid var(--cbm-blue, #1a5fb4); outline-offset: -1px; border-color: transparent; }

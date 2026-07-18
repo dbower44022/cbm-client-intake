@@ -38,6 +38,8 @@ log = logging.getLogger("cbm_intake.comms.quicksend")
 
 class QuickSendIn(BaseModel):
     to: list[str] = Field(default_factory=list)
+    cc: list[str] = Field(default_factory=list)
+    bcc: list[str] = Field(default_factory=list)
     subject: str = ""
     body: str = ""
     # {"espoId": …} template chips / {"filename","contentType","dataBase64"}
@@ -53,6 +55,8 @@ class QuickWriteBackIn(BaseModel):
     subject: str = ""
     bodyHtml: str = ""
     to: list[str] = Field(default_factory=list)
+    cc: list[str] = Field(default_factory=list)
+    bcc: list[str] = Field(default_factory=list)
     parentType: str | None = None
     parentId: str | None = None
     messageId: str = ""
@@ -87,7 +91,8 @@ def register_quicksend(
         try:
             gmail = await comms_service.gmail_for_user(settings, client, user)
             result = await comms_service.send_quick_message(
-                gmail=gmail, to=body.to, subject=body.subject, body_html=body.body,
+                gmail=gmail, to=body.to, cc=body.cc, bcc=body.bcc,
+                subject=body.subject, body_html=body.body,
                 sender_name=user.get("name") or "",
                 user_client=client, attachments=body.attachments,
             )
@@ -154,7 +159,7 @@ def register_quicksend(
             mailbox = await resolve_user_mailbox(client, user["userId"])
             email_id = await comms_service.write_back_email(
                 client, subject=body.subject, body_html=body.bodyHtml,
-                sender=mailbox or "", to=body.to,
+                sender=mailbox or "", to=body.to, cc=body.cc, bcc=body.bcc,
                 parent_type=body.parentType, parent_id=body.parentId,
                 message_id=body.messageId,
             )

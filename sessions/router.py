@@ -58,6 +58,8 @@ class IncludeIn(BaseModel):
 
 class SendIn(BaseModel):
     to: list[str] = []
+    cc: list[str] = []
+    bcc: list[str] = []
     subject: str = ""
     body: str = ""
     replyToCommunicationId: Optional[str] = None
@@ -602,7 +604,8 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             result = await comms_service.send_message(
                 settings=settings, api_client=_api_client(settings), store=store,
                 gmail=gmail, cfg=cfg, parent_id=parent_id, user=user,
-                to=body.to, subject=body.subject, body_html=body.body,
+                to=body.to, cc=body.cc, bcc=body.bcc,
+                subject=body.subject, body_html=body.body,
                 reply_to_communication_id=body.replyToCommunicationId,
                 allow_unknown_recipients=body.allowUnknownRecipients,
                 user_client=client, attachments=body.attachments,

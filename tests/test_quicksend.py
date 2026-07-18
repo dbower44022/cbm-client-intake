@@ -214,3 +214,54 @@ def test_sendmail_no_mailbox_is_a_readable_400(monkeypatch):
         r = c.post("/assignments/api/sendmail", json={"to": ["a@b.c"], "body": "hi"})
     assert r.status_code == 400
     assert "no CBM email" in r.json()["detail"]
+
+
+def test_sendmail_cc_bcc_land_on_the_mime_headers(monkeypatch):
+    """Cc/Bcc ride the whole quick-send path: normalized, deduped against To,
+    and set as MIME headers (Gmail delivers to Bcc from the raw message and
+    strips the header from recipients' copies)."""
+    _as(monkeypatch)
+    gmail = FakeGmail()
+
+    async def fake_gmail_for_user(settings, client, user):
+        return gmail
+
+    monkeypatch.setattr(comms_service, "gmail_for_user", fake_gmail_for_user)
+    with TestClient(_app(monkeypatch, gmail_sync=True)) as c:
+        r = c.post(
+            "/assignments/api/sendmail",
+            json={
+                "to": ["james@acme.test"],
+                # duplicate of a To address is dropped from Cc; Bcc keeps its own
+                "cc": ["Maria@Acme.test", "james@acme.test"],
+                "bcc": ["boss@cbmentors.org", "maria@acme.test"],
+                "subject": "Hello",
+                "body": "note",
+            },
+        )
+    assert r.status_code == 200
+    msg = gmail.sent[0]
+    assert msg["To"] == "james@acme.test"
+    assert msg["Cc"] == "maria@acme.test"
+    assert msg["Bcc"] == "boss@cbmentors.org"
+
+
+def test_sendmail_cc_only_promotes_to_to(monkeypatch):
+    """A message with only Cc recipients still sends — the Cc list becomes To
+    (headers need at least one To address)."""
+    _as(monkeypatch)
+    gmail = FakeGmail()
+
+    async def fake_gmail_for_user(settings, client, user):
+        return gmail
+
+    monkeypatch.setattr(comms_service, "gmail_for_user", fake_gmail_for_user)
+    with TestClient(_app(monkeypatch, gmail_sync=True)) as c:
+        r = c.post(
+            "/assignments/api/sendmail",
+            json={"to": [], "cc": ["maria@acme.test"], "body": "note"},
+        )
+    assert r.status_code == 200
+    msg = gmail.sent[0]
+    assert msg["To"] == "maria@acme.test"
+    assert msg["Cc"] is None
