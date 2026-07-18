@@ -3076,6 +3076,20 @@
         [{ name: "partnerNotes", span: 12 }],
       ] },
     ] },
+    // Sponsorship profile (same pass as partner, Doug's 2026-07-18 ruling):
+    // curated form, no generic dump. Here `description` IS the sponsor-notes
+    // field (it feeds the Overview's Sponsor Notes panel), so it stays —
+    // labeled "Sponsor notes". Total contribution is CRM-computed (read-only
+    // on the strip); its currency companion is excluded like the client
+    // profile's revenue companions.
+    CSponsorProfile: { noExtras: true, groups: [
+      { label: "Sponsorship", grow: 1, basis: 32, rows: [
+        [{ name: "lastContribution", span: 6 }, { name: "lastContacted", span: 6 }],
+      ] },
+      { label: "Sponsor notes", grow: 3, basis: 52, rows: [
+        [{ name: "description", span: 12, label: "Sponsor notes" }],
+      ] },
+    ] },
     Contact: { groups: [
       { label: "Name", rows: [
         [{ name: "salutationName", span: 2, label: "Salutation" }, { name: "firstName", span: 4 },
@@ -3121,6 +3135,9 @@
     // CPartnerProfile: the record name mirrors the company (header shows it);
     // `description` is excluded server-side.
     CPartnerProfile: ["name"],
+    // CSponsorProfile: name as above; the currency companion of the computed
+    // total-contribution figure (the figure itself stays on the strip).
+    CSponsorProfile: ["name", "totalContributionCurrency"],
   };
   var ACCOUNT_PARTNER_FIELDS = ["cPartnerStatus", "cPartnerOrganizationType", "cPartnerContactCadence",
     "cPartnerType", "cPartnershipStartDate", "cPartnershipAgreementDate", "cPartnerNotes"];
@@ -3137,10 +3154,13 @@
       [{ name: "cPartnershipStartDate", span: 4 }, { name: "cPartnershipAgreementDate", span: 4 }],
       [{ checks: ["cPublicAnnouncementAllowed"] }],
     ] },
+    // No cSponsorNotes row (same fix as partner): the Account-level notes
+    // twin is retired — the ONE Sponsor Notes field is
+    // CSponsorProfile.description (it feeds the Overview panel), edited on
+    // the Sponsorship strip.
     sponsorsessions: { label: "Sponsorship", rows: [
       [{ name: "cSponsorshipLevel", span: 4 }, { name: "cSponsorshipStartDate", span: 4 }, { name: "cSponsorshipRenewalDate", span: 4 }],
       [{ checks: ["cPublicAnnouncementAllowed"] }],
-      [{ name: "cSponsorNotes", span: 12 }],
     ] },
   };
 
@@ -3162,6 +3182,10 @@
       ["description", "cClientNotes", "cPartnerNotes"].forEach(function (n) { ex[n] = 1; });
     } else if (SLUG === "sponsorsessions") {
       ACCOUNT_PARTNER_FIELDS.forEach(function (n) { ex[n] = 1; });
+      // Client-specific notes have no place on a sponsor's company, and the
+      // Account-level sponsor-notes twin is retired —
+      // CSponsorProfile.description is the one notes field.
+      ["description", "cClientNotes", "cSponsorNotes"].forEach(function (n) { ex[n] = 1; });
     }
     return ex;
   }

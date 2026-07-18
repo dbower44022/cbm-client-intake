@@ -4,6 +4,25 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.93.0] — 2026-07-18
+
+**Sponsor editing parity with the 0.91.0 partner fixes** (Doug's follow-up
+ruling). Frontend-only.
+
+### Changed
+- **Curated Sponsorship edit form** (`DETAILS_LAYOUTS.CSponsorProfile`,
+  `noExtras`): Sponsorship (last contribution / last contacted) + a
+  full-width **Sponsor notes** editor — `CSponsorProfile.description` IS the
+  sponsor-notes field (it feeds the Overview's Sponsor Notes panel), so it
+  stays editable under that label instead of being excluded like the
+  partner's. The record name and the computed total-contribution's currency
+  companion are excluded (the figure itself stays on the strip).
+- **Sponsor-domain Company form/view hides `description`, `cClientNotes`,
+  and the Account-level `cSponsorNotes` twin** — client-specific notes have
+  no place on a sponsor's company, and notes typed into the Account twin
+  could never reach the Overview. One notes field, and saves reflect on the
+  Overview immediately (the 0.91.0 `refreshRecordViews` covers all domains).
+
 ## [0.91.0] — 2026-07-18
 
 **Partner editing fixes** (Doug's report: partner notes typed in the edit

@@ -672,7 +672,11 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   strip edit is a curated `noExtras` layout ending in a full-width Partner
   notes editor, `CPartnerProfile.description` + the partner Company form's
   `description`/`cClientNotes` are hidden, and **every Details save
-  refreshes the Overview/Sessions tabs** (`refreshRecordViews`).
+  refreshes the Overview/Sessions tabs** (`refreshRecordViews`). **Sponsor
+  parity (v0.93.0):** same pass — curated `CSponsorProfile` form whose
+  full-width "Sponsor notes" box IS `description` (the domain's Overview
+  notes field — kept editable, NOT excluded); sponsor Company form/view
+  hides `description`/`cClientNotes`/the `cSponsorNotes` Account twin.
 - **Auth = per-user, acts as the logged-in user.** Portal SSO (shared staff
   session `staff_user`); each route enforces **its own team per request**
   (`_require_user` → `is_member`; 401 → frontend sends the user to the portal, 403
@@ -1418,7 +1422,20 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-18)
 
-**Main is at v0.92.0** (2026-07-18, 766 tests green, committed NOT pushed) —
+**Main is at v0.93.0** (2026-07-18, 766 tests green, committed NOT pushed) —
+**Sponsor editing parity with the v0.91.0 partner fixes** (Doug's follow-up
+ruling; frontend-only): curated `CSponsorProfile` edit form — where
+`description` IS the sponsor-notes field, kept editable as "Sponsor notes"
+(feeds the Overview panel; NOT excluded like the partner's) — with the
+record name + total-contribution currency companion excluded; the
+sponsor-domain Company form/view hides `description`/`cClientNotes`/the
+Account-level `cSponsorNotes` twin. Sponsor loop verified in the stub
+harness (view hides the fields, curated groups, notes save → diffed PUT →
+Overview updates without reload; no console errors). Mechanics recorded in
+the Session Management section's "Partner grid / notes" bullet + the
+v0.91.0 block below.
+
+Before that: **v0.92.0** (2026-07-18, 766 tests green) —
 **Reliability hardening Phase 5 — Drive + intake-pipeline residuals**
 (P1-13 + the P2 Drive/intake items; full list in CHANGELOG 0.92.0):
 - **Drive create safety (P1-13, strategy = pre-generated ids,** documented
@@ -1463,11 +1480,18 @@ Value & goals / full-width Partner notes; no more Additional-details
 dump), `CPartnerProfile.description` is server-excluded from Details
 (intake drift-note field, CEngagement precedent + smuggle-drop test),
 and the partner-domain Company form/view hides `description` +
-`cClientNotes`. Sponsor domain deliberately untouched (its Company form
-still shows description/client notes — same hazard, unreported). Full
+`cClientNotes`. Full
 loop verified in the stub harness (curated form, hidden fields, richtext
 edit → diffed PUT → Overview updates without reload; no console errors).
 (v0.90.0 = a parallel session's comms template-font fix.)
+**v0.93.0 extends the same pass to the SPONSOR domain** (Doug's follow-up,
+frontend-only): curated `CSponsorProfile` edit form — where
+`description` IS the sponsor-notes field, kept editable as "Sponsor
+notes" (feeds the Overview panel; NOT excluded like the partner's) —
+name + the total-contribution currency companion excluded; the sponsor
+Company form/view hides `description`/`cClientNotes`/the `cSponsorNotes`
+Account twin. Sponsor loop verified in the stub harness (766 tests
+green at commit).
 
 Before that: **v0.89.0** (2026-07-18, 746 tests green, deployed) —
 **Partner Sessions: all partners + Partner Notes on top + Partner Manager
