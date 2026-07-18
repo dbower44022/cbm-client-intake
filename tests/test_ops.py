@@ -44,17 +44,18 @@ class FakeOpsStore:
     async def counts_by_status(self):
         return {"needs_attention": 1}
 
-    async def redrive(self, submission_id):
+    async def redrive(self, submission_id, *, acted_by=None):
         if submission_id in self.rows:
-            self.redriven.append(submission_id)
+            self.redriven.append((submission_id, acted_by))
             return True
         return False
 
-    async def discard(self, submission_id):
+    async def discard(self, submission_id, *, acted_by=None):
         row = self.rows.get(submission_id)
         if row is None or row["status"] == "completed":
             return False
         row["status"] = "discarded"
+        row["acted_by"] = acted_by
         return True
 
     async def metrics(self):
@@ -118,7 +119,8 @@ def test_redrive(monkeypatch):
         ok = c.post("/ops/api/submissions/abc12345/redrive")
         missing = c.post("/ops/api/submissions/nope/redrive")
     assert ok.status_code == 200 and ok.json()["status"] == "requeued"
-    assert store.redriven == ["abc12345"]
+    # P1-11: the acting username is recorded on the row.
+    assert store.redriven == [("abc12345", _USER["userName"])]
     assert missing.status_code == 404
 
 

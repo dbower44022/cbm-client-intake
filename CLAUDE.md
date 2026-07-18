@@ -1392,7 +1392,41 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-18)
 
-**Main is at v0.84.0** (2026-07-18, 707 tests green, committed NOT pushed) —
+**Main is at v0.86.0** (2026-07-18, 723 tests green, committed NOT pushed) —
+**Reliability hardening Phase 3 — staff-tool write chains** (P1-9/11/12 +
+six P2 items; Doug's decision this session: **D5 = the hide-conversation
+unlink runs as the signed-in user**). Highlights (full list in CHANGELOG
+0.86.0):
+- **P1-9**: Assign with the SAME mentor the engagement already has = a
+  **repair run** (re-executes the idempotent re-homing + posts a
+  repair-labelled stream note, response `repaired:true`) instead of the
+  stale-guard 400 that made a half-assigned engagement unfixable in-app.
+- **P1-11**: `store.redrive` guarded to needs_attention/retry/held; new
+  `acted_by` column (Alembic **0008** — pre-deploy migrate) records who
+  redrove/discarded from /ops.
+- **P1-12**: staff API requests re-read team membership from the CRM when
+  the session stamp is older than `MEMBERSHIP_REFRESH_SECONDS` (default
+  900; middleware in `core/app.py`, stamp in `auth.set_session`); a dead
+  token clears the session → 401.
+- P2s: own-profile resolution by membership over ALL assignedUsersIds
+  (`assignments.service.is_assigned_to`); calendar **id-before-invite**
+  (quiet create → persist id → invite patch; failed persist deletes the
+  uninvited event, failed invites report `inviteError`); session-create
+  attendee failures = success-with-warning naming the session; provisioning
+  writes `cbmEmail` BEFORE User creation + caches the admin token
+  (re-login on 401); the status-check sweep computes engagement metrics
+  once per roster; exclude_conversation unlinks as the user FIRST and only
+  then records the override (failed unlink = readable error, nothing
+  recorded).
+- Verified: 723 tests green (20+ new incl. `tests/test_membership_ttl.py`);
+  PG integration with migration 0008 run live; assign-repair + session-
+  create-warning flows driven in the stubbed-browser harness; TTL flows
+  (refresh, no-recheck-when-fresh, dead-token 401, portal exemption)
+  against real local sessions. **Remaining phases 4–6, one per session**
+  (Phase 4 = Gmail sync loss prevention; its D6 dead-letter N — recommend
+  5 — still to confirm with Doug).
+
+Before that: **v0.84.0** (2026-07-18, 707 tests green) —
 **Reliability hardening Phase 2 — "see the failures"** (worker liveness +
 logging/telemetry, per `prompts/reliability-hardening-prompt-v0.1.md`;
 Doug confirmed decisions **D1 = keep the DB-down 503** (heartbeat/backlog

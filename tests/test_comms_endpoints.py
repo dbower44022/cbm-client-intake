@@ -127,3 +127,63 @@ def test_unauthenticated_401_before_comms_checks(monkeypatch):
     monkeypatch.setattr("sessions.router.current_user", lambda request, key=None: None)
     with TestClient(_app(monkeypatch, gmail_sync=True)) as c:
         assert c.get("/mentorsessions/api/records/E1/conversations").status_code == 401
+
+
+# --- exclude_conversation (P2 + D5, reliability review 2026-07-17) ------------
+
+
+class _ExcludeStore:
+    def __init__(self, fail=False):
+        self.overrides = []
+        self._fail = fail
+
+    async def set_override(self, parent_entity, parent_id, conversation_id, action, username):
+        if self._fail:
+            raise RuntimeError("db down")
+        self.overrides.append((parent_entity, parent_id, conversation_id, action, username))
+
+
+class _UnlinkClient:
+    def __init__(self, fail=False):
+        self.unrelates = []
+        self._fail = fail
+
+    async def unrelate(self, entity, record_id, link, related_id):
+        if self._fail:
+            from core.espo import EspoError
+            raise EspoError("unrelate CConversation failed: HTTP 403 denied")
+        self.unrelates.append((entity, record_id, link, related_id))
+
+
+async def test_exclude_unlinks_then_records_override():
+    client, store = _UnlinkClient(), _ExcludeStore()
+    await comms_service.exclude_conversation(
+        client, store, "CEngagement", "E1", "conv1", "jdoe"
+    )
+    assert client.unrelates == [("CConversation", "conv1", "engagements", "E1")]
+    assert store.overrides == [("CEngagement", "E1", "conv1", "exclude", "jdoe")]
+
+
+async def test_exclude_failed_unlink_records_nothing():
+    """A failed unlink raises (readable 403 at the router) with NO override
+    recorded — 'hidden in the app, still linked in the CRM' can't happen."""
+    from core.espo import EspoError
+
+    client, store = _UnlinkClient(fail=True), _ExcludeStore()
+    import pytest
+    with pytest.raises(EspoError):
+        await comms_service.exclude_conversation(
+            client, store, "CEngagement", "E1", "conv1", "jdoe"
+        )
+    assert store.overrides == []
+
+
+async def test_exclude_store_failure_after_unlink_raises_comms_error():
+    import pytest
+
+    client, store = _UnlinkClient(), _ExcludeStore(fail=True)
+    with pytest.raises(comms_service.CommsError, match="Hide it again"):
+        await comms_service.exclude_conversation(
+            client, store, "CEngagement", "E1", "conv1", "jdoe"
+        )
+    assert client.unrelates  # the unlink did happen first

@@ -39,24 +39,24 @@ class FakeCalendar:
         self.create_result = create_result or {"id": "ev1", "hangoutLink": MEET}
         self.fail = fail
 
-    async def create_event(self, body):
+    async def create_event(self, body, *, send_updates="all"):
         if self.fail:
             raise RuntimeError("google is down")
-        self.created.append(body)
+        self.created.append((body, send_updates))
         return dict(self.create_result)
 
     async def get_event(self, event_id):
         self.gets.append(event_id)
         return dict(self.create_result, id=event_id)
 
-    async def patch_event(self, event_id, body):
+    async def patch_event(self, event_id, body, *, send_updates="all"):
         if self.fail:
             raise RuntimeError("google is down")
-        self.patched.append((event_id, body))
+        self.patched.append((event_id, body, send_updates))
         return {"id": event_id}
 
-    async def delete_event(self, event_id):
-        self.deleted.append(event_id)
+    async def delete_event(self, event_id, *, send_updates="all"):
+        self.deleted.append((event_id, send_updates))
 
 
 def _wire(monkeypatch, fake):
@@ -100,12 +100,16 @@ async def test_create_scheduled_creates_event_and_stores_link(monkeypatch):
         MENTOR, crm, "E1", dict(NEW_CHANGES), ["c1"], owner_user_id="u1", settings=SETTINGS_ON)
     assert session["calendar"] == {"ok": True, "eventId": "ev1", "meetLink": MEET}
     assert len(cal.created) == 1
-    body = cal.created[0]
+    body, send = cal.created[0]
     assert body["summary"] == "Kickoff"
     assert "Agape W8 Loss" in body["description"]
     assert body["start"] == {"dateTime": "2026-07-20T19:30:00Z"}
+    # Id-before-invite: the create is QUIET (no attendees, sendUpdates=none);
+    # the invitations go out via a patch AFTER the event id is stored.
+    assert send == "none"
+    assert body["attendees"] == []
     # attendee emails: deduped, organizer (mgr@cbmentors.org) + blanks excluded
-    assert body["attendees"] == [{"email": "pat@x.com"}]
+    assert cal.patched == [("ev1", {"attendees": [{"email": "pat@x.com"}]}, "all")]
     assert body["conferenceData"]["createRequest"]["conferenceSolutionKey"] == {"type": "hangoutsMeet"}
     assert cal.mailbox == "mgr@cbmentors.org"  # cbmEmail, trimmed + lowercased
     # eventId + Meet link written back to the CSession, and onto the response
@@ -173,7 +177,7 @@ async def test_hand_typed_link_no_meet_and_not_overwritten(monkeypatch):
     session = await service.create_session(
         MENTOR, crm, "E1", dict(NEW_CHANGES, videoMeetingLink=zoom),
         owner_user_id="u1", settings=SETTINGS_ON)
-    body = cal.created[0]
+    body, _ = cal.created[0]
     assert "conferenceData" not in body
     assert body["location"] == zoom
     assert session["videoMeetingLink"] == zoom  # never replaced by a Meet link
@@ -212,6 +216,50 @@ async def test_no_cbm_email_skips_with_message(monkeypatch):
     assert session["id"]  # the session itself saved
 
 
+async def test_event_id_writeback_failure_deletes_uninvited_event(monkeypatch):
+    """P2 id-before-invite: if the event id can't be stored on the session, the
+    (quietly created, never-invited) event is deleted — no orphan, no
+    double-invite on the next save."""
+    from core.espo import EspoError
+
+    crm, cal = _fake_crm(), FakeCalendar()
+    _wire(monkeypatch, cal)
+    orig_update = crm.update
+
+    async def failing_update(entity, record_id, payload):
+        if entity == "CSession" and "googleCalendarEventId" in payload:
+            raise EspoError("update CSession failed: HTTP 500 down")
+        return await orig_update(entity, record_id, payload)
+
+    crm.update = failing_update
+    session = await service.create_session(
+        MENTOR, crm, "E1", dict(NEW_CHANGES), ["c1"], owner_user_id="u1", settings=SETTINGS_ON)
+    assert session["id"]  # the session itself saved
+    assert session["calendar"]["ok"] is False
+    assert "before any invitations" in session["calendar"]["error"]
+    # The rollback delete is QUIET (nobody was invited) and no invite patch ran.
+    assert cal.deleted == [("ev1", "none")]
+    assert cal.patched == []
+
+
+async def test_invite_patch_failure_reports_invite_error(monkeypatch):
+    """Event + stored id are safe; only the invitations failed — the save
+    succeeds with an inviteError the UI shows (re-save retries the invites)."""
+
+    class PatchFail(FakeCalendar):
+        async def patch_event(self, event_id, body, *, send_updates="all"):
+            raise RuntimeError("quota exceeded")
+
+    crm, cal = _fake_crm(), PatchFail()
+    _wire(monkeypatch, cal)
+    session = await service.create_session(
+        MENTOR, crm, "E1", dict(NEW_CHANGES), ["c1"], owner_user_id="u1", settings=SETTINGS_ON)
+    assert session["calendar"]["ok"] is True
+    assert session["calendar"]["eventId"] == "ev1"
+    assert "invitations could not be sent" in session["calendar"]["inviteError"]
+    assert session["googleCalendarEventId"] == "ev1"  # the id still stored
+
+
 async def test_calendar_failure_never_fails_save(monkeypatch):
     crm, cal = _fake_crm(), FakeCalendar(fail=True)
     _wire(monkeypatch, cal)
@@ -239,7 +287,7 @@ async def test_update_time_change_patches_event(monkeypatch):
         MENTOR, crm, "s1", {"dateStart": "2026-07-21 18:00:00"},
         user_id="u1", settings=SETTINGS_ON)
     assert session["calendar"] == {"ok": True, "eventId": "ev1", "updated": True}
-    (event_id, body), = cal.patched
+    (event_id, body, _send), = cal.patched
     assert event_id == "ev1"
     assert body["start"] == {"dateTime": "2026-07-21T18:00:00Z"}
     assert body["attendees"] == [{"email": "pat@x.com"}]
@@ -289,7 +337,7 @@ async def test_cancel_deletes_event_and_clears_meet_link(monkeypatch):
     session = await service.update_session(
         MENTOR, crm, "s1", {"status": "Cancelled"}, user_id="u1", settings=SETTINGS_ON)
     assert session["calendar"] == {"ok": True, "cancelled": True}
-    assert cal.deleted == ["ev1"]
+    assert cal.deleted == [("ev1", "all")]  # real cancellation emails attendees
     assert session["googleCalendarEventId"] is None
     assert session["videoMeetingLink"] is None
 
@@ -301,7 +349,7 @@ async def test_cancel_keeps_hand_typed_link(monkeypatch):
     _wire(monkeypatch, cal)
     session = await service.update_session(
         MENTOR, crm, "s1", {"status": "Cancelled"}, user_id="u1", settings=SETTINGS_ON)
-    assert cal.deleted == ["ev1"]
+    assert cal.deleted == [("ev1", "all")]
     assert session["videoMeetingLink"] == zoom
     assert session["googleCalendarEventId"] is None
 

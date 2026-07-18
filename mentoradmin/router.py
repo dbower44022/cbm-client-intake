@@ -37,6 +37,10 @@ from . import service
 router = APIRouter(prefix="/mentoradmin/api", tags=["mentoradmin"])
 log = logging.getLogger("cbm_intake.mentoradmin")
 
+# Provisioning-admin auth tokens, cached per (base URL, username) for the life
+# of the process — see _provision_factory.
+_PROVISION_TOKEN_CACHE: dict[str, tuple[str, str]] = {}
+
 class UpdateIn(BaseModel):
     changes: dict
     # When False (the browser default), the save only writes fields — the
@@ -457,12 +461,33 @@ def _provision_factory(settings: Settings):
         return None
 
     async def factory():
+        # Reuse the cached auth token across calls (P2, reliability review
+        # 2026-07-17): logging in with the password on EVERY provisioning /
+        # sweep call meant a rotated password turned each sweep into a run of
+        # failed admin logins — enough to trip EspoCRM's brute-force lockout
+        # on the service account. The cached token is validated with one cheap
+        # read; only a dead token triggers a fresh password login.
+        cache_key = f"{settings.espo_base_url}:{settings.espo_provision_username}"
+        cached = _PROVISION_TOKEN_CACHE.get(cache_key)
+        if cached:
+            client = EspoClient.for_user_token(
+                settings.espo_base_url, cached[0], cached[1],
+                settings.request_timeout_seconds,
+            )
+            try:
+                await client.app_user()
+                return client
+            except EspoError as exc:
+                if not session_expired(exc):
+                    raise
+                _PROVISION_TOKEN_CACHE.pop(cache_key, None)
         user_name, token = await login_token(
             settings.espo_base_url,
             settings.espo_provision_username,
             settings.espo_provision_password,
             settings.request_timeout_seconds,
         )
+        _PROVISION_TOKEN_CACHE[cache_key] = (user_name, token)
         return EspoClient.for_user_token(
             settings.espo_base_url, user_name, token, settings.request_timeout_seconds
         )

@@ -4,6 +4,71 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.86.0] — 2026-07-18
+
+Reliability hardening **Phase 3 — staff-tool write chains** (P1-9/11/12 + six
+P2 items, per `prompts/reliability-hardening-prompt-v0.1.md`; Doug's decision
+**D5 = the exclude unlink runs as the signed-in user**). 20+ new tests (723
+green + PG integration with migration **0008** run live); the assign-repair
+flow and the session-create warning verified in the stubbed-browser harness;
+the membership TTL verified against real local sessions (TestClient).
+
+### Fixed
+- **P1-9 — a half-assigned engagement is repairable in-app.** When Client
+  Administration's stale-guard trips but the stored mentor EQUALS the
+  requested mentor (a previous assignment died mid re-homing), Assign now
+  runs a **repair**: the idempotent re-homing re-executes and a
+  repair-labelled stream note posts, instead of the 400 that left the state
+  unfixable. The response (and grid notice) say "repair run"; the engagement
+  record itself is not rewritten, and a mentor who has since paused new
+  clients can still have their own assignment finished.
+- **P1-11 — /ops redrive is guarded and audited.** `store.redrive` only
+  accepts `needs_attention` / `retry` / `held_honeypot` rows (redriving a
+  completed row re-delivered CRM side effects; a processing row raced the
+  live worker into duplicate creates); redrive/discard record the acting
+  username in the new **`acted_by`** column (Alembic **0008** — pre-deploy
+  migrate) so "who discarded this?" is answerable from the row itself.
+- **P1-12 — stale cookie entitlements expire.** A new middleware re-reads the
+  session's team membership from the CRM (as the user) on staff API requests
+  once the stamp is older than **`MEMBERSHIP_REFRESH_SECONDS`** (default
+  900); a dead/revoked token clears the session → 401. Closes the hole where
+  a staffer removed from a team kept app access by bookmarking an app — /ops
+  worst of all, since it makes no CRM calls that would ever catch it.
+- **Own-profile resolution tests membership, not the first collaborator.**
+  `resolve_manager_profile` (sessions/mentorprofile/comms) matches the user
+  against ALL `assignedUsersIds` via the new `is_assigned_to` helper — a
+  profile listing someone else first no longer makes the mentor's own profile
+  unresolvable on the collaborators shape.
+- **Calendar id-before-invite.** The Google Calendar hook now creates the
+  event QUIETLY (no attendees, `sendUpdates=none`), persists the event id to
+  the CRM, and only then patches the attendees in with `sendUpdates=all`. A
+  failed id write-back deletes the never-invited event (no orphan, no
+  double-invite on the next save); a failed invite patch reports
+  `inviteError` on a successful save (re-save retries). The hook stays
+  best-effort throughout.
+- **Session-create follow-up failures are warnings, not phantom errors.** A
+  failed attendee attach after the CSession exists returns
+  success-with-warning ("open the session and re-save its attendees — do not
+  create it again") instead of "Could not create session", which invited a
+  duplicate. The save notice shows the warning.
+- **Provisioning can no longer mint duplicate Users.** `cbmEmail` is written
+  onto the profile BEFORE the EspoCRM User is created, so a failed link write
+  leaves the reuse guard armed for the next save (previously it minted
+  `jane.doe2@…` + a second welcome email). The provisioning admin's auth
+  token is now **cached per process** (re-login only on 401) — a rotated
+  password no longer turns every sweep into repeated failed password logins
+  that could brute-force-lock the service account.
+- **The mentor status-check sweep is no longer O(mentors × engagements).**
+  `verify_all_mentor_statuses` computes the engagement metrics ONCE for the
+  roster and passes them through (`get_mentor(metrics=…)`).
+- **Hide-conversation (exclude) is ordered and honest (D5).** The CRM unlink
+  runs FIRST, **as the signed-in user** (their ACL, their name in Espo
+  history — not the privileged API key), and only a successful unlink records
+  the durable exclusion; a failed unlink surfaces a readable 403/502 with
+  nothing recorded — the "hidden in the app, still linked in the CRM" split
+  state can't happen. A store failure after the unlink reports "hide it again
+  to finish".
+
 ## [0.85.0] — 2026-07-18
 
 ### Changed

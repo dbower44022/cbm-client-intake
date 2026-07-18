@@ -130,6 +130,37 @@ async def test_claim_leases_and_reclaims_stranded_processing():
     await store.dispose()
 
 
+async def test_redrive_guard_and_acted_by():
+    """P1-11: only needs_attention / retry / held rows can be re-driven —
+    a completed row must never re-deliver — and the acting username lands
+    durably in acted_by."""
+    store = PostgresStore(_URL)
+    await store.create_all()
+
+    stuck = await store.capture(
+        "info-request", f"guard-{uuid.uuid4()}", {"email": "g@example.com"},
+        status="needs_attention",
+    )
+    assert await store.redrive(stuck.id, acted_by="doug.staff") is True
+    row = await store.get_submission(stuck.id)
+    assert row["status"] == STATUS_PENDING
+    assert row["acted_by"] == "doug.staff"
+
+    done = await store.capture(
+        "info-request", f"guard-done-{uuid.uuid4()}", {"email": "d@example.com"},
+        status=STATUS_PENDING,
+    )
+    await store.mark_completed(done.id, {"contactId": "c1"})
+    assert await store.redrive(done.id, acted_by="doug.staff") is False
+    assert (await store.get_submission(done.id))["status"] == STATUS_COMPLETED
+
+    # Tidy the re-driven row so it isn't claimed by other tests' claim_batch.
+    assert await store.discard(stuck.id, acted_by="doug.staff") is True
+    assert (await store.get_submission(stuck.id))["acted_by"] == "doug.staff"
+
+    await store.dispose()
+
+
 async def test_heartbeat_and_stranded_metrics():
     """P1-6: the worker's heartbeat upsert + the stranded (lease-expired
     processing) count both surface in metrics()."""

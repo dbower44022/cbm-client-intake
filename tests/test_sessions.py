@@ -127,6 +127,18 @@ async def test_resolve_manager_profile_none_when_unlinked():
     assert await service.resolve_manager_profile(fake, "u1") is None
 
 
+@pytest.mark.asyncio
+async def test_resolve_manager_profile_membership_not_first_entry():
+    """P2 (reliability review 2026-07-17): on the collaborators shape a profile
+    listing someone else FIRST must still resolve as the mentor's own — and the
+    mentor must never resolve a profile they merely appear on ahead of their
+    own... i.e. membership over the WHOLE list, not [0]."""
+    fake = Fake(mentors=[{"id": "p9", "assignedUsersIds": ["u-other", "u1"]}])
+    assert await service.resolve_manager_profile(fake, "u1") == "p9"
+    # And a user on NO profile still resolves to None even when lists are long.
+    assert await service.resolve_manager_profile(fake, "u-absent") is None
+
+
 # --- list_records ----------------------------------------------------------
 
 @pytest.mark.asyncio
@@ -818,6 +830,31 @@ async def test_create_session_sets_parent_and_defaults_and_whitelists():
     assert "sessionAttendeesIds" not in payload
     related = {(r[2], r[3]) for r in fake.relates}
     assert ("sessionAttendees", "c1") in related and ("sessionAttendees", "c2") in related
+
+
+@pytest.mark.asyncio
+async def test_create_session_attendee_relate_failure_is_warning_not_error():
+    """P2 (reliability review 2026-07-17): once the CSession exists, a failed
+    attendee relate must return success-with-warning naming the situation —
+    'Could not create session' would invite a retry that duplicates it."""
+    from core.espo import EspoError
+
+    class FlakyRelate(Fake):
+        async def relate(self, entity, record_id, link, related_id):
+            if related_id == "c2":
+                raise EspoError("relate CSession failed: HTTP 403 denied")
+            await super().relate(entity, record_id, link, related_id)
+
+    fake = FlakyRelate()
+    session = await service.create_session(
+        PARTNER, fake, "P1", {"name": "Check-in"}, ["c1", "c2", "c3"]
+    )
+    assert session["id"]  # created, not raised
+    assert "1 of 3" in session["warning"]
+    assert "Do not create it again" in session["warning"]
+    # The other attendees still attached.
+    related = {r[3] for r in fake.relates}
+    assert related == {"c1", "c3"}
 
 
 @pytest.mark.asyncio

@@ -204,16 +204,23 @@ async def _create(
             log.warning("could not read parent name for calendar event: %s", exc)
     parts.append(f"Scheduled from CBM {cfg.title}.")
 
+    # Id-before-invite (P2, reliability review 2026-07-17): create the event
+    # QUIETLY (no attendees, sendUpdates=none), persist its id to the CRM, and
+    # only then patch the attendees in with sendUpdates=all. The old order
+    # emailed invitations on create — a failed id write-back then left an
+    # orphan event, and the next save created + re-emailed a second one (the
+    # double-invite bomb).
+    attendee_emails = _attendee_emails(session, cal.mailbox)
     body = build_event_body(
         summary=_summary(session),
         description="\n".join(parts),
         date_start=session.get("dateStart"),
         date_end=session.get("dateEnd"),
-        attendee_emails=_attendee_emails(session, cal.mailbox),
+        attendee_emails=[],
         request_id=f"cbm-{sid}-{uuid.uuid4().hex[:8]}" if wants_meet else None,
         external_link=existing_link or None,
     )
-    event = await cal.create_event(body)
+    event = await cal.create_event(body, send_updates="none")
     link = meet_link(event)
     if wants_meet and not link:
         # The Meet createRequest can resolve just after the create response;
@@ -229,9 +236,43 @@ async def _create(
     write_back: dict[str, Any] = {CAL_FIELD: event["id"]}
     if wants_meet and link:
         write_back["videoMeetingLink"] = link
-    await client.update(SESSION, sid, write_back)
+    try:
+        await client.update(SESSION, sid, write_back)
+    except Exception as exc:  # noqa: BLE001 — roll the uninvited event back
+        log.warning(
+            "event id write-back failed for session %s (event %s) — deleting "
+            "the uninvited event: %s", sid, event.get("id"), exc,
+        )
+        try:
+            # Nobody was invited, so no cancellation emails go out.
+            await cal.delete_event(event["id"], send_updates="none")
+        except Exception as exc2:  # noqa: BLE001
+            log.warning("orphan event %s could not be deleted: %s", event.get("id"), exc2)
+        return {
+            "ok": False,
+            "error": (
+                "the calendar event could not be recorded on the session, so it "
+                "was cancelled before any invitations went out — save again to retry"
+            ),
+        }
     session.update(write_back)
     result = {"ok": True, "eventId": event["id"], "meetLink": link}
+    if attendee_emails:
+        try:
+            await cal.patch_event(
+                event["id"],
+                {"attendees": [{"email": e} for e in attendee_emails]},
+                send_updates="all",
+            )
+        except Exception as exc:  # noqa: BLE001 — event + id are safe; invites aren't
+            log.warning(
+                "attendee invitations failed for event %s (session %s): %s",
+                event.get("id"), sid, exc,
+            )
+            result["inviteError"] = (
+                "the event was created but the attendee invitations could not be "
+                "sent — edit and re-save the session to retry"
+            )
     # Auto-enable Meet transcription on the space we just generated (Doug's
     # ruling: every app-scheduled Meet is transcribed — no per-session opt-in).
     # Only generated Meet links: a hand-typed link isn't our space to configure.

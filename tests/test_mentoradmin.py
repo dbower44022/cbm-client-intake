@@ -530,11 +530,44 @@ async def test_approval_provisions_user():
     # Write BOTH the single and collaborators link so it persists on prod
     # (CMentorProfile.assignedUser is disabled there — assignedUsers is used).
     assert link["assignedUsersIds"] == ["user-new"]
-    assert link["cbmEmail"] == "jane.doe@cbmentors.org"  # backfilled (was blank)
+    # cbmEmail is written BEFORE the User is created (P2, reliability review
+    # 2026-07-17) — a failed link write can no longer defeat the reuse guard
+    # into minting jane.doe2@… on the next save.
+    email_writes = [u[2] for u in c.updates if "cbmEmail" in u[2]]
+    assert email_writes and email_writes[0]["cbmEmail"] == "jane.doe@cbmentors.org"
     assert result["provision"] == {
         "ok": True, "userId": "user-new", "userName": "jane.doe@cbmentors.org",
         "email": "jane.doe@cbmentors.org", "team": "Mentor Team", "reused": False,
     }
+
+
+@pytest.mark.asyncio
+async def test_cbm_email_persisted_before_user_creation():
+    """P2 duplicate-User fix: the profile carries cbmEmail before any User
+    exists, so a crash/failed link write after the create still leaves the
+    reuse guard armed for the next save."""
+
+    class OrderedClient(ProvisionClient):
+        def __init__(self):
+            super().__init__()
+            self.log: list[str] = []
+
+        async def update(self, entity, record_id, payload):
+            if "cbmEmail" in payload:
+                self.log.append("write-cbmEmail")
+            return await super().update(entity, record_id, payload)
+
+        async def create(self, entity, payload):
+            self.log.append(f"create-{entity}")
+            return await super().create(entity, payload)
+
+    c = OrderedClient()
+    await service.update_mentor(
+        c, "m1", {"mentorStatus": "Approved"},
+        team_name="Mentor Team", admin_client_factory=_afactory(c),
+    )
+    assert "write-cbmEmail" in c.log and "create-User" in c.log
+    assert c.log.index("write-cbmEmail") < c.log.index("create-User")
 
 
 @pytest.mark.asyncio
@@ -1242,6 +1275,31 @@ async def test_verify_sweep_heals_contact_user_link():
     assert contact_updates == [
         ("Contact", "c1", {"assignedUserId": "u9", "assignedUsersIds": ["u9"]})
     ]
+
+
+@pytest.mark.asyncio
+async def test_verify_sweep_computes_engagement_metrics_once():
+    """P2 (reliability review 2026-07-17): the sweep was O(mentors ×
+    engagements) — every per-mentor get_mentor re-scanned the full CEngagement
+    table. It must run ONE scan for the whole roster."""
+
+    class CountingClient(VerifyClient):
+        def __init__(self, mentors):
+            super().__init__(mentors)
+            self.engagement_lists = 0
+
+        async def list(self, entity, **kwargs):
+            if entity == "CEngagement":
+                self.engagement_lists += 1
+                return {"list": []}
+            return await super().list(entity, **kwargs)
+
+    client = CountingClient(
+        [_mentor(f"m{i}", f"Mentor {i}", user=None, cbm=None) for i in range(4)]
+    )
+    rows = await service.verify_all_mentor_statuses(client)
+    assert len(rows) == 4
+    assert client.engagement_lists == 1
 
 
 def test_status_check_endpoint_requires_auth(monkeypatch):

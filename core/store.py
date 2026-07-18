@@ -78,6 +78,9 @@ submission = Table(
     Column("last_error", Text),
     Column("progress", JSONB),
     Column("result", JSONB),
+    # Who last acted on this row from /ops (redrive/discard) — the audit answer
+    # to "who discarded this submission?" (P1-11, reliability review 2026-07-17).
+    Column("acted_by", String(128)),
     Column("received_at", DateTime(timezone=True), nullable=False),
     Column("processed_at", DateTime(timezone=True)),
     Column("updated_at", DateTime(timezone=True), nullable=False),
@@ -146,8 +149,8 @@ class SubmissionStore(Protocol):
     ) -> list[dict[str, Any]]: ...
     async def get_submission(self, submission_id: str) -> Optional[dict[str, Any]]: ...
     async def counts_by_status(self) -> dict[str, int]: ...
-    async def redrive(self, submission_id: str) -> bool: ...
-    async def discard(self, submission_id: str) -> bool: ...
+    async def redrive(self, submission_id: str, *, acted_by: Optional[str] = None) -> bool: ...
+    async def discard(self, submission_id: str, *, acted_by: Optional[str] = None) -> bool: ...
     async def metrics(self) -> dict[str, Any]: ...
     async def ping(self) -> bool: ...
     # Worker liveness (P1-6):
@@ -393,23 +396,37 @@ class PostgresStore:
             ).all()
         return {r[0]: r[1] for r in rows}
 
-    async def redrive(self, submission_id: str) -> bool:
+    async def redrive(self, submission_id: str, *, acted_by: Optional[str] = None) -> bool:
         """Re-queue a submission: back to pending, due now, fresh attempt budget.
-        The worker re-runs it from saved ``progress`` (no duplication)."""
+        The worker re-runs it from saved ``progress`` (no duplication).
+
+        Guarded (P1-11): only ``needs_attention`` / ``retry`` /
+        ``held_honeypot`` rows may be re-driven (held = the honeypot
+        false-positive recovery). Redriving a ``completed`` row would
+        re-deliver (duplicate Normal audit record + re-run side effects);
+        redriving a ``processing`` row would race the live worker's
+        ``save_progress`` into duplicate creates.
+        """
         async with self._engine.begin() as conn:
             result = await conn.execute(
                 update(submission)
                 .where(submission.c.id == submission_id)
+                .where(
+                    submission.c.status.in_(
+                        (STATUS_NEEDS_ATTENTION, STATUS_RETRY, STATUS_HELD)
+                    )
+                )
                 .values(
                     status=STATUS_PENDING,
                     next_attempt_at=None,
                     attempt_count=0,
+                    acted_by=acted_by,
                     updated_at=_now(),
                 )
             )
         return result.rowcount > 0
 
-    async def discard(self, submission_id: str) -> bool:
+    async def discard(self, submission_id: str, *, acted_by: Optional[str] = None) -> bool:
         """Resolve a stuck submission manually: move it to the terminal
         ``discarded`` status so it leaves the worker queue and stops counting
         toward the needs-attention alert. Never touches a completed delivery.
@@ -423,6 +440,7 @@ class PostgresStore:
                     status=STATUS_DISCARDED,
                     next_attempt_at=None,
                     locked_until=None,
+                    acted_by=acted_by,
                     updated_at=_now(),
                 )
             )

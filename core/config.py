@@ -27,6 +27,12 @@ class Settings(BaseSettings):
     # the comms triage decisions without a redeploy. See core/logging_setup.py.
     log_level: str = "INFO"
 
+    # How long the staff session's cached team/role membership stays trusted
+    # before the gates re-read it from the CRM (P1-12: a staffer removed from a
+    # team — or whose token was revoked — loses app access within this window
+    # even if they bookmark an app and never revisit the portal). Seconds.
+    membership_refresh_seconds: int = 900
+
     # --- V2 Phase 0: durable submission store (prds/v2) ---
     # When set, every submission is captured to Postgres before any CRM work and
     # idempotency is enforced durably. Empty => the app keeps its V1 in-memory

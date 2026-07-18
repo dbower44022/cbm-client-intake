@@ -25,6 +25,7 @@ from assignments.service import (
     CLIENT_PROFILE,
     ENGAGEMENT_CONTACTS,
     assigned_user_id,
+    is_assigned_to,
 )
 from core.espo import EspoError
 from core.phone import format_us
@@ -147,7 +148,9 @@ async def resolve_manager_profile(client: SessionClient, user_id: str) -> Option
     Scans the profiles readable by this user and matches in Python — never a
     ``where`` on ``assignedUserId`` (prod forbids it). A regular user whose ACL
     scopes ``CMentorProfile`` to "own" simply gets a one-row list. Returns None
-    when no profile is linked to the user.
+    when no profile is linked to the user. Matching is MEMBERSHIP over the
+    whole collaborators list (``is_assigned_to``), not equality against the
+    first entry — a profile listing another user first must still resolve.
     """
     offset = 0
     while True:
@@ -159,7 +162,7 @@ async def resolve_manager_profile(client: SessionClient, user_id: str) -> Option
         )
         rows = data.get("list", [])
         for r in rows:
-            if assigned_user_id(r) == user_id:
+            if is_assigned_to(r, user_id):
                 return r["id"]
         if len(rows) < _PAGE:
             return None
@@ -931,15 +934,36 @@ async def create_session(
         )
     await _sanitize_enum_payload(client, payload)
     created = await client.create(SESSION, payload)
+    # The session EXISTS from here on — a failure on any follow-up write must
+    # surface as success-with-warning naming the session, never as "Could not
+    # create session" (which invites a retry that duplicates it). P2,
+    # reliability review 2026-07-17; the create_contact pattern.
+    attendee_warning = None
     if attendees:  # new record => relate all chosen attendees
+        failed: list[str] = []
         for cid in attendees:
-            await client.relate(SESSION, created["id"], _ATTENDEE_LINK, cid)
+            try:
+                await client.relate(SESSION, created["id"], _ATTENDEE_LINK, cid)
+            except EspoError as exc:
+                failed.append(cid)
+                log.warning(
+                    "attendee relate failed on new session %s (contact %s): %s",
+                    created.get("id"), cid, exc,
+                )
+        if failed:
+            attendee_warning = (
+                f"The session was created, but {len(failed)} of "
+                f"{len(attendees)} attendee(s) could not be attached — open the "
+                "session and re-save its attendees. Do not create it again."
+            )
     log.info(
         "created session %s on %s/%s type=%s attendees=%d",
         created.get("id"), cfg.parent_entity, parent_id, payload.get("sessionType"),
         len(attendees or []),
     )
     session = await get_session(client, created["id"])
+    if attendee_warning:
+        session["warning"] = attendee_warning
     engagement = await _activate_engagement_on_completed(
         cfg, client, parent_id, payload.get("status")
     )

@@ -16,6 +16,7 @@ from __future__ import annotations
 import base64
 import logging
 import re
+import time
 from typing import Any, Optional
 
 import httpx
@@ -324,7 +325,14 @@ def is_member(
 # --- session helpers (Starlette SessionMiddleware backs request.session) ---
 
 def set_session(request, user: dict[str, Any], key: str = SESSION_KEY) -> None:
-    request.session[key] = {k: user.get(k) for k in _SESSION_FIELDS}
+    data = {k: user.get(k) for k in _SESSION_FIELDS}
+    # Membership-freshness stamp (P1-12): every caller writes the session right
+    # after reading membership from the CRM (login, portal restore, the TTL
+    # middleware), so "now" is correct by construction. The staff-gate TTL
+    # middleware re-reads membership when this stamp is older than
+    # MEMBERSHIP_REFRESH_SECONDS.
+    data["refreshedAt"] = time.time()
+    request.session[key] = data
 
 
 def current_user(request, key: str = SESSION_KEY) -> Optional[dict[str, Any]]:

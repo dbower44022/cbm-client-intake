@@ -353,6 +353,73 @@ async def test_assign_rejects_non_submitted_engagement():
     assert client.updates == []
 
 
+# --- assign repair run (P1-9, reliability review 2026-07-17) ------------------
+
+
+def _half_assigned_engagement(**over):
+    """An engagement whose FIRST assignment died mid re-homing: the engagement
+    write landed (mentor + Pending Acceptance) but the related records were
+    never re-homed."""
+    return dict({
+        "engagementStatus": "Pending Acceptance",
+        "mentorProfileId": "mentor-1",
+        "mentorProfileName": "Matt Mentor",
+        "primaryEngagementContactId": "contact-primary",
+        "engagementClientId": "clientprofile-1",
+        "clientOrganizationId": "account-1",
+    }, **over)
+
+
+async def test_assign_same_mentor_repairs_rehoming():
+    """Stale-guard trip + stored mentor == requested mentor => a repair run:
+    the idempotent re-homing re-executes and the stream note posts, instead of
+    the 400 that made a half-assigned engagement unrepairable in-app."""
+    client = FakeClient(
+        mentor=_mentor(),
+        engagement=_half_assigned_engagement(),
+        related={"list": [{"id": "contact-primary"}]},
+    )
+    res = await service.assign_engagement(client, "eng-1", "mentor-1")
+
+    assert res["repaired"] is True
+    # The engagement record itself is NOT rewritten (its status — possibly
+    # staffer-adjusted since — and assignment stand as they are).
+    assert not [u for u in client.updates if u[0] == service.ENGAGEMENT]
+    assert res["engagementStatus"] == "Pending Acceptance"
+    # The re-homing ran.
+    assert res["contactsUpdated"] == 1
+    assert res["clientProfileUpdated"] is True and res["accountUpdated"] is True
+    # And the stream note says this was a repair, not a fresh assignment.
+    notes = [p for e, p in client.creates if e == "Note"]
+    assert len(notes) == 1 and "repair" in notes[0]["post"].lower()
+
+
+async def test_assign_repair_allowed_for_now_ineligible_mentor():
+    """A repair finishes an assignment that already happened — the mentor
+    having since paused new clients must not block completing it."""
+    client = FakeClient(
+        mentor=_mentor(acceptingNewClients=False),
+        engagement=_half_assigned_engagement(),
+        related={"list": [{"id": "contact-primary"}]},
+    )
+    res = await service.assign_engagement(client, "eng-1", "mentor-1")
+    assert res["repaired"] is True and res["contactsUpdated"] == 1
+
+
+async def test_assign_fresh_assignment_is_not_marked_repaired():
+    client = FakeClient(
+        mentor=_mentor(),
+        engagement={
+            "engagementStatus": "Submitted",
+            "primaryEngagementContactId": "contact-primary",
+        },
+        related={"list": [{"id": "contact-primary"}]},
+    )
+    res = await service.assign_engagement(client, "eng-1", "mentor-1")
+    assert res["repaired"] is False
+    assert res["engagementStatus"] == "Pending Acceptance"
+
+
 # --- reassign_engagement -----------------------------------------------------
 
 class ReassignClient(FakeClient):

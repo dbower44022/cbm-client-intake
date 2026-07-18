@@ -515,9 +515,20 @@ def make_router(cfg: DomainConfig) -> APIRouter:
     ) -> dict:
         user = _require_user(request)
         settings, store = _comms_ready()
-        await comms_service.exclude_conversation(
-            _api_client(settings), store, cfg.parent_entity, parent_id,
-            conversation_id, user.get("userName", ""),
+        try:
+            # D5: the unlink runs as the signed-in user (their ACL, their name
+            # in Espo history) — not the privileged API key.
+            await comms_service.exclude_conversation(
+                client_for(settings, user), store, cfg.parent_entity, parent_id,
+                conversation_id, user.get("userName", ""),
+            )
+        except comms_service.CommsError as exc:
+            raise HTTPException(status_code=502, detail=str(exc))
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not hide the conversation")
+        log.info(
+            "conversation %s hidden from %s/%s by %s",
+            conversation_id, cfg.parent_entity, parent_id, user.get("userName"),
         )
         return {"status": "ok"}
 

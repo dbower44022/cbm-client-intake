@@ -978,11 +978,18 @@
       // Re-fetch so the grid reflects the current filter (the engagement is now
       // Pending Acceptance — it stays if that status is selected, else drops off).
       await reloadEngagements();
-      var summary =
-        "Assigned “" + (eng.name || "engagement") + "” to " + res.mentorName +
-        " — status now Pending Acceptance (" + res.contactsUpdated + " contact(s)" +
-        (res.clientProfileUpdated ? ", client profile" : "") +
-        (res.accountUpdated ? ", account" : "") + " reassigned).";
+      // repaired = the engagement already had THIS mentor (a previous attempt
+      // died mid re-homing); the server re-ran the re-homing instead of a 400.
+      var summary = res.repaired
+        ? "Finished the earlier assignment of “" + (eng.name || "engagement") +
+          "” to " + res.mentorName + " (repair run — " + res.contactsUpdated +
+          " contact(s)" +
+          (res.clientProfileUpdated ? ", client profile" : "") +
+          (res.accountUpdated ? ", account" : "") + " re-homed)."
+        : "Assigned “" + (eng.name || "engagement") + "” to " + res.mentorName +
+          " — status now Pending Acceptance (" + res.contactsUpdated + " contact(s)" +
+          (res.clientProfileUpdated ? ", client profile" : "") +
+          (res.accountUpdated ? ", account" : "") + " reassigned).";
       var errs = res.reassignmentErrors || [];
       if (errs.length) {
         // The engagement WAS assigned, but some related records didn't re-home —

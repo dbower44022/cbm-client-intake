@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -280,6 +281,40 @@ def create_app(
     # Mentor assignment tool: signed-cookie sessions hold each staff user's
     # EspoCRM auth token. Only mounted when a session secret is configured.
     if settings.assignments_active:
+
+        @app.middleware("http")
+        async def _membership_ttl(request: Request, call_next):
+            """Staff-gate membership TTL (P1-12, reliability review 2026-07-17).
+
+            The signed cookie caches team membership at login; without this, a
+            staffer removed from a team kept their entitlements until the CRM
+            token died (which can be never — /ops makes no CRM calls at all).
+            On staff API requests, when the session's membership stamp is older
+            than MEMBERSHIP_REFRESH_SECONDS, re-read membership from the CRM as
+            the user and re-save the session; a dead token clears the session so
+            the app gate answers 401. Registered BEFORE SessionMiddleware in
+            code so it runs INSIDE it (request.session live, rewrites saved).
+            The portal is excluded — its session restore already refreshes.
+            """
+            path = request.url.path
+            if "/api/" in path and not path.startswith("/api/portal"):
+                from assignments import auth as staff_auth
+
+                sess = staff_auth.current_user(request)
+                stale = sess is not None and (
+                    time.time() - (sess.get("refreshedAt") or 0)
+                    >= settings.membership_refresh_seconds
+                )
+                if stale:
+                    try:
+                        updated = await staff_auth.refresh_membership(settings, sess)
+                        staff_auth.set_session(request, updated)
+                    except staff_auth.AuthError:
+                        # Token dead/revoked — drop the session; the gate 401s
+                        # and the frontend sends the user back to the portal.
+                        staff_auth.clear_session(request)
+            return await call_next(request)
+
         app.add_middleware(
             SessionMiddleware,
             secret_key=settings.session_secret,

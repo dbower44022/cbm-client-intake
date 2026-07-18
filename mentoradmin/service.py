@@ -169,15 +169,26 @@ READ_ONLY_FIELDS = [
 RECORD_STATUS_MANUAL = "Duplicate"
 
 _DETAIL_SELECT = ",".join(["id"] + sorted(PROFILE_EDIT_NAMES) + READ_ONLY_FIELDS)
+
+# Sentinel: "no precomputed metrics were passed" (None is a real value meaning
+# "metrics unavailable"), so get_mentor knows when to compute its own.
+_METRICS_UNSET = object()
 _CONTACT_SELECT = ",".join(sorted(CONTACT_NAMES))
 
 
-async def get_mentor(client: MentorClient, mentor_id: str) -> dict[str, Any]:
+async def get_mentor(
+    client: MentorClient, mentor_id: str, *, metrics: Any = _METRICS_UNSET
+) -> dict[str, Any]:
     """The full mentor record: every editable field + read-only context, plus
     ``clientCounts`` — the same app-computed counts the roster grid shows
     (Active/Max/Available/Assigned-30d/Lifetime), so the detail card and the
     grid always agree. Counts are best-effort (None when engagements can't be
-    read); ``update_mentor`` returns through here, so a save refreshes them."""
+    read); ``update_mentor`` returns through here, so a save refreshes them.
+
+    ``metrics``: pass a precomputed :func:`mentor_engagement_metrics` result
+    (or None for unavailable) to skip the full-CEngagement sweep — the
+    status-check sweep computes it ONCE for the whole roster instead of once
+    per mentor (P2, reliability review 2026-07-17)."""
     rec = await client.get(MENTOR_PROFILE, mentor_id, select=_DETAIL_SELECT)
     # Merge the linked Contact's editable fields (name/email/phone/address) into
     # the record for the Contact tab. Best-effort: a mentor with no Contact (or
@@ -190,11 +201,12 @@ async def get_mentor(client: MentorClient, mentor_id: str) -> dict[str, Any]:
                 rec[name] = contact.get(name)
         except Exception as exc:
             log.warning("contact info unavailable for mentor %s: %s", mentor_id, exc)
-    try:
-        metrics = await mentor_engagement_metrics(client)
-    except Exception as exc:  # no CEngagement grant, or a test fake without list()
-        log.warning("mentor clientCounts unavailable for %s: %s", mentor_id, exc)
-        metrics = None
+    if metrics is _METRICS_UNSET:
+        try:
+            metrics = await mentor_engagement_metrics(client)
+        except Exception as exc:  # no CEngagement grant, or a test fake without list()
+            log.warning("mentor clientCounts unavailable for %s: %s", mentor_id, exc)
+            metrics = None
     rec["clientCounts"] = client_counts_for(
         metrics, mentor_id, rec.get("maximumClientCapacity")
     )
@@ -665,6 +677,15 @@ async def provision_mentor_user_steps(
             yield _step("login", "running", f"Linking the existing login {cbm} to the mentor…")
         else:
             yield _step("login", "running", "Creating the EspoCRM login…")
+            # Persist cbmEmail BEFORE creating the User (P2, reliability review
+            # 2026-07-17): if the link write below fails, the profile still
+            # carries the address — so the next save's reuse guard (existing
+            # cbmEmail → find the User by userName) fires instead of minting
+            # jane.doe2@… and emailing a second welcome. A failure HERE aborts
+            # before any User exists.
+            if not existing_cbm:
+                await edit_client.update(MENTOR_PROFILE, mentor_id, {"cbmEmail": cbm})
+                existing_cbm = cbm
             user_name = await _unique_user_name(admin_client, cbm)
             team_id = await _find_team_id(admin_client, team_name)
             user_payload: dict[str, Any] = {
@@ -748,6 +769,7 @@ async def verify_mentor_status(
     *,
     user_client: Optional[MentorClient] = None,
     directory: Optional[MailboxDirectory] = None,
+    metrics: Any = _METRICS_UNSET,
 ) -> dict[str, Any]:
     """One mentor's row for the Update-Mentor-Status sweep.
 
@@ -774,7 +796,7 @@ async def verify_mentor_status(
     except Exception as exc:
         log.warning("status sweep: reconcile_user_links failed for %s: %s", mentor_id, exc)
 
-    rec = await get_mentor(client, mentor_id)
+    rec = await get_mentor(client, mentor_id, metrics=metrics)
     completeness = await check_completeness(client, rec)
     record_status = await sync_record_status(
         client, mentor_id, rec, completeness["status"]
@@ -850,13 +872,22 @@ async def verify_all_mentor_statuses(
         MENTOR_PROFILE, select="id,name", max_size=200, order_by="name"
     )
     roster = data.get("list", [])
+    # ONE engagement sweep for the whole roster (P2, reliability review
+    # 2026-07-17) — the per-mentor get_mentor path re-ran the full CEngagement
+    # scan for every row, making the sweep O(mentors × engagements).
+    try:
+        metrics = await mentor_engagement_metrics(client)
+    except Exception as exc:  # no CEngagement grant — counts render blank
+        log.warning("status sweep: clientCounts unavailable: %s", exc)
+        metrics = None
     sem = asyncio.Semaphore(5)
 
     async def one(row: dict[str, Any]) -> dict[str, Any]:
         async with sem:
             try:
                 return await verify_mentor_status(
-                    client, row["id"], user_client=user_client, directory=directory
+                    client, row["id"], user_client=user_client,
+                    directory=directory, metrics=metrics,
                 )
             except EspoError as exc:
                 return {"id": row["id"], "name": row.get("name"), "error": str(exc)}

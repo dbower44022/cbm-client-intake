@@ -93,8 +93,31 @@ def assigned_user_id(rec: dict[str, Any]) -> Optional[str]:
     """The assigned User id from a record that may use the single ``assignedUser``
     OR the multi-user ``assignedUsers`` (collaborators) field — whichever holds it.
     Read the mentor's User through this, never ``rec['assignedUserId']`` directly,
-    so it works on both crm-test (single) and prod (collaborators)."""
+    so it works on both crm-test (single) and prod (collaborators).
+
+    NOTE: on the collaborators shape this returns the FIRST listed user — the
+    right semantic for "the mentor a profile belongs to". To test whether a
+    record is assigned to a PARTICULAR user, use :func:`is_assigned_to` (which
+    checks the whole list), never ``assigned_user_id(rec) == user_id``.
+    """
     return rec.get("assignedUserId") or next(iter(rec.get("assignedUsersIds") or []), None)
+
+
+def is_assigned_to(rec: dict[str, Any], user_id: Optional[str]) -> bool:
+    """Whether ``user_id`` is the record's assigned user — the single
+    ``assignedUser`` OR ANY member of the ``assignedUsers`` collaborators list.
+
+    Membership must be tested over the whole list, never ``[0]`` (P2,
+    reliability review 2026-07-17): on a collaborators-shaped CRM a profile
+    listing someone else first would make the mentor's own profile
+    unresolvable — and an equality test against the first entry could resolve
+    someone ELSE's profile as "mine".
+    """
+    if not user_id:
+        return False
+    if rec.get("assignedUserId") == user_id:
+        return True
+    return user_id in (rec.get("assignedUsersIds") or [])
 
 
 def assigned_user_name(rec: dict[str, Any]) -> Optional[str]:
@@ -474,7 +497,13 @@ async def assign_engagement(
 
       0. Re-read the engagement and verify it is still assignable (Submitted,
          no mentor) — a stale grid in another browser/tab must not overwrite an
-         assignment already saved by someone else.
+         assignment already saved by someone else. EXCEPTION (P1-9, reliability
+         review 2026-07-17): if the stored mentor EQUALS the requested mentor,
+         this is a **repair run** — a previous assignment died mid re-homing
+         (or a transport error aborted it), and the stale guard used to make
+         that state unrepairable in-app. The repair skips the engagement write
+         (already done) and re-executes the idempotent re-homing + stream note;
+         the response carries ``"repaired": true``.
       1. Resolve + re-validate the mentor -> their User.
       2. Engagement: set assignedUser + mentorProfile, status -> Pending Acceptance.
       3. Read the engagement's related contact/client/account ids.
@@ -487,14 +516,15 @@ async def assign_engagement(
         engagement_id,
         select="name,engagementStatus,mentorProfileId,mentorProfileName",
     )
-    if current.get("mentorProfileId"):
+    repair = current.get("mentorProfileId") == mentor_profile_id
+    if current.get("mentorProfileId") and not repair:
         raise AssignError(
             "This engagement has already been assigned to "
             + (current.get("mentorProfileName") or "another mentor")
             + " — likely from another window or an out-of-date list. Nothing was "
             "changed; refresh the list to see its current state."
         )
-    if current.get("engagementStatus") != STATUS_SUBMITTED:
+    if not repair and current.get("engagementStatus") != STATUS_SUBMITTED:
         raise AssignError(
             "This engagement is no longer awaiting assignment (its status is now "
             f"“{current.get('engagementStatus') or 'unknown'}”). Nothing was "
@@ -510,7 +540,12 @@ async def assign_engagement(
     user_id = assigned_user_id(mentor)
     if not user_id:
         raise AssignError("The selected mentor has no linked user account.")
-    if not mentor.get("acceptingNewClients") or mentor.get("mentorStatus") != MENTOR_STATUS_ACTIVE:
+    # A repair finishes an assignment that already happened — the mentor having
+    # since paused new clients must not block completing THEIR OWN assignment.
+    if not repair and (
+        not mentor.get("acceptingNewClients")
+        or mentor.get("mentorStatus") != MENTOR_STATUS_ACTIVE
+    ):
         raise AssignError(
             "The selected mentor is no longer eligible (not Active / not accepting "
             "new clients). Refresh and try again."
@@ -543,17 +578,18 @@ async def assign_engagement(
             "co-mentor list unreadable on CEngagement/%s; the assignedUsers "
             "write may drop co-mentors: %s", engagement_id, exc,
         )
-    await client.update(
-        ENGAGEMENT,
-        engagement_id,
-        {
-            **_assigned_user_payload(ENGAGEMENT, user_id),
-            "assignedUsersIds": assigned_ids,
-            "mentorProfileId": mentor_profile_id,
-            "engagementStatus": STATUS_PENDING,
-            "engagementAssignedDate": espo_now(),
-        },
-    )
+    if not repair:
+        await client.update(
+            ENGAGEMENT,
+            engagement_id,
+            {
+                **_assigned_user_payload(ENGAGEMENT, user_id),
+                "assignedUsersIds": assigned_ids,
+                "mentorProfileId": mentor_profile_id,
+                "engagementStatus": STATUS_PENDING,
+                "engagementAssignedDate": espo_now(),
+            },
+        )
 
     # The core assignment (steps 1-2) is done. The downstream re-homing below is
     # best-effort and per-target: a CRM failure on one record is recorded in
@@ -633,13 +669,23 @@ async def assign_engagement(
             return f"{label}: no link"
         return label if updated else f"{label}: FAILED"
 
-    note = (
-        f"Assigned to {mentor.get('name') or 'the selected mentor'} via the Client "
-        f"Administration app — status set to {STATUS_PENDING}; re-homed to the "
-        f"mentor's user: {contacts_updated}/{len(contact_ids)} contact(s), "
-        f"{_rehomed('client profile', client_id, client_profile_updated)}, "
-        f"{_rehomed('company', account_id, account_updated)}."
-    )
+    if repair:
+        note = (
+            f"Finished the assignment to {mentor.get('name') or 'the assigned mentor'} "
+            f"via the Client Administration app (repair run — a previous attempt did "
+            f"not complete the re-homing); re-homed to the mentor's user: "
+            f"{contacts_updated}/{len(contact_ids)} contact(s), "
+            f"{_rehomed('client profile', client_id, client_profile_updated)}, "
+            f"{_rehomed('company', account_id, account_updated)}."
+        )
+    else:
+        note = (
+            f"Assigned to {mentor.get('name') or 'the selected mentor'} via the Client "
+            f"Administration app — status set to {STATUS_PENDING}; re-homed to the "
+            f"mentor's user: {contacts_updated}/{len(contact_ids)} contact(s), "
+            f"{_rehomed('client profile', client_id, client_profile_updated)}, "
+            f"{_rehomed('company', account_id, account_updated)}."
+        )
     if reassignment_errors:
         note += (
             f" {len(reassignment_errors)} related record(s) could not be re-homed —"
@@ -648,7 +694,8 @@ async def assign_engagement(
     await post_stream_note(client, ENGAGEMENT, engagement_id, note)
 
     log.info(
-        "assigned engagement=%s -> mentor=%s user=%s contacts=%d/%d client=%s account=%s errors=%d",
+        "%s engagement=%s -> mentor=%s user=%s contacts=%d/%d client=%s account=%s errors=%d",
+        "repaired" if repair else "assigned",
         engagement_id, mentor_profile_id, user_id, contacts_updated, len(contact_ids),
         client_profile_updated, account_updated, len(reassignment_errors),
     )
@@ -656,7 +703,10 @@ async def assign_engagement(
         log.warning("assign engagement=%s partial re-homing: %s", engagement_id, reassignment_errors)
     return {
         "engagementId": engagement_id,
-        "engagementStatus": STATUS_PENDING,
+        "repaired": repair,
+        "engagementStatus": (
+            current.get("engagementStatus") if repair else STATUS_PENDING
+        ),
         "mentorProfileId": mentor_profile_id,
         "mentorName": mentor.get("name"),
         "assignedUserId": user_id,

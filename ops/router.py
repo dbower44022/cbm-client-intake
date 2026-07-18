@@ -90,10 +90,19 @@ async def submission_detail(submission_id: str, request: Request) -> dict:
 async def redrive(submission_id: str, request: Request) -> dict:
     user = _require_user(request)
     store = _store(request)
-    if not await store.redrive(submission_id):
-        raise HTTPException(status_code=404, detail="Submission not found.")
-    # Audit: a redrive re-runs CRM side effects — record who asked for it.
-    # (The durable acted_by column is Phase 3 of the reliability plan.)
+    if not await store.redrive(submission_id, acted_by=user["userName"]):
+        # Unknown id OR a status the guard refuses (completed = would deliver
+        # twice; processing = would race the live worker; pending = already
+        # queued). See store.redrive (P1-11).
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Submission not found, or not in a re-drivable state "
+                "(only needs-attention, retry, and held submissions can be re-driven)."
+            ),
+        )
+    # Audit: a redrive re-runs CRM side effects — record who asked for it
+    # (also stored durably on the row as acted_by).
     log.info("redrive %s by %s", submission_id, user["userName"])
     return {"status": "requeued"}
 
@@ -102,7 +111,7 @@ async def redrive(submission_id: str, request: Request) -> dict:
 async def discard(submission_id: str, request: Request) -> dict:
     user = _require_user(request)
     store = _store(request)
-    if not await store.discard(submission_id):
+    if not await store.discard(submission_id, acted_by=user["userName"]):
         # Either not found, or already completed (which must not be discarded).
         raise HTTPException(
             status_code=404, detail="Submission not found or already completed."

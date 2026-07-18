@@ -176,7 +176,7 @@ async def get_conversation(user_client: Any, conversation_id: str) -> dict[str, 
 
 
 async def exclude_conversation(
-    api_client: Any,
+    user_client: Any,
     store: CommsStore,
     parent_entity: str,
     parent_id: str,
@@ -184,16 +184,36 @@ async def exclude_conversation(
     username: str,
 ) -> None:
     """Hide a conversation from this record (record-level, shared): unlink in
-    the CRM + persist the exclusion so the sync never re-links it."""
-    await store.set_override(
-        parent_entity, parent_id, conversation_id, ACTION_EXCLUDE, username
-    )
+    the CRM, then persist the exclusion so the sync never re-links it.
+
+    Contract (P2, reliability review 2026-07-17 + decision D5): the unlink runs
+    FIRST, **as the signed-in user** (their ACL applies and Espo history
+    records them — like every other staff write), and only a successful unlink
+    records the durable override. A failed unlink raises :class:`EspoError`
+    (the router maps it to a readable 403/502) with NOTHING recorded, so the
+    conversation stays visible — the old order recorded the override even when
+    the unlink failed, leaving "hidden in the app, still linked in the CRM"
+    with nothing retrying. A store failure AFTER the unlink raises
+    :class:`CommsError`; until the user retries, the sync may re-link the
+    conversation (it stays visible), which converges on retry.
+    """
     link = crm.PARENT_LINKS.get(parent_entity)
     if link:
-        try:
-            await api_client.unrelate(crm.CONVERSATION, conversation_id, link, parent_id)
-        except EspoError as exc:
-            log.warning("unlink %s from %s/%s failed: %s", conversation_id, parent_entity, parent_id, exc)
+        await user_client.unrelate(crm.CONVERSATION, conversation_id, link, parent_id)
+    try:
+        await store.set_override(
+            parent_entity, parent_id, conversation_id, ACTION_EXCLUDE, username
+        )
+    except Exception as exc:
+        log.warning(
+            "exclude override write failed for %s on %s/%s: %s",
+            conversation_id, parent_entity, parent_id, exc,
+        )
+        raise CommsError(
+            "The conversation was unlinked in the CRM, but the hide could not "
+            "be recorded — it may reappear after the next sync. Hide it again "
+            "to finish."
+        )
 
 
 async def search_mailbox(gmail: GmailClient, query: str) -> list[dict[str, Any]]:

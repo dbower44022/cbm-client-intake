@@ -103,9 +103,17 @@ class CalendarClient:
 
     # --- events (all on the impersonated user's own primary calendar) ------
 
-    async def create_event(self, body: dict[str, Any]) -> dict[str, Any]:
+    async def create_event(
+        self, body: dict[str, Any], *, send_updates: str = "all"
+    ) -> dict[str, Any]:
+        """``send_updates="none"`` creates without emailing anyone — the
+        id-before-invite pattern (create quietly, persist the id, then patch
+        with ``"all"`` so a failed persist can't leave an invited orphan)."""
         event = await self._request(
-            "POST", "/calendars/primary/events", params=_WRITE_PARAMS, json_body=body
+            "POST",
+            "/calendars/primary/events",
+            params={**_WRITE_PARAMS, "sendUpdates": send_updates},
+            json_body=body,
         )
         log.info("calendar event created as %s -> %s", self.mailbox, event.get("id"))
         return event
@@ -113,23 +121,27 @@ class CalendarClient:
     async def get_event(self, event_id: str) -> dict[str, Any]:
         return await self._request("GET", f"/calendars/primary/events/{event_id}")
 
-    async def patch_event(self, event_id: str, body: dict[str, Any]) -> dict[str, Any]:
+    async def patch_event(
+        self, event_id: str, body: dict[str, Any], *, send_updates: str = "all"
+    ) -> dict[str, Any]:
         event = await self._request(
             "PATCH",
             f"/calendars/primary/events/{event_id}",
-            params=_WRITE_PARAMS,
+            params={**_WRITE_PARAMS, "sendUpdates": send_updates},
             json_body=body,
         )
         log.info("calendar event updated as %s -> %s", self.mailbox, event_id)
         return event
 
-    async def delete_event(self, event_id: str) -> None:
-        """Cancel an event (attendees get the cancellation email). An event
-        that is already gone (404) or already cancelled (410) counts as done."""
+    async def delete_event(self, event_id: str, *, send_updates: str = "all") -> None:
+        """Cancel an event (attendees get the cancellation email unless
+        ``send_updates="none"`` — used when rolling back a never-invited
+        event). An event that is already gone (404) or already cancelled (410)
+        counts as done."""
         await self._request(
             "DELETE",
             f"/calendars/primary/events/{event_id}",
-            params={"sendUpdates": "all"},
+            params={"sendUpdates": send_updates},
             ok_statuses=(404, 410),
         )
         log.info("calendar event cancelled as %s -> %s", self.mailbox, event_id)
