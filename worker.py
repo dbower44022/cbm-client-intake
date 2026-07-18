@@ -13,8 +13,10 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+import signal
 import traceback
 from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 import httpx
 
@@ -136,8 +138,16 @@ async def process_one(store: SubmissionStore, settings: Settings, claimed: Claim
     )
 
 
-async def run_once(store: SubmissionStore, settings: Settings) -> int:
-    """Claim and deliver one batch. Returns how many were claimed."""
+async def run_once(
+    store: SubmissionStore, settings: Settings,
+    stop: Optional[asyncio.Event] = None,
+) -> int:
+    """Claim and deliver one batch. Returns how many were claimed.
+
+    ``stop`` set mid-batch (SIGTERM during a deploy) finishes the CURRENT
+    item and skips the rest — their leases were just taken, so the next
+    worker reclaims them after lease expiry; stopping cleanly beats being
+    SIGKILLed mid-CRM-write."""
     claimed = await store.claim_batch(
         settings.worker_batch_size, lease_seconds=settings.worker_lease_seconds
     )
@@ -149,12 +159,21 @@ async def run_once(store: SubmissionStore, settings: Settings) -> int:
                 f"{c.id} ({c.form_slug} token={c.submission_token})" for c in claimed
             ),
         )
-    for item in claimed:
+    for i, item in enumerate(claimed):
+        if stop is not None and stop.is_set() and i > 0:
+            log.info(
+                "stopping mid-batch (SIGTERM): %d of %d items delivered; the "
+                "rest are reclaimed after their lease", i, len(claimed),
+            )
+            break
         await process_one(store, settings, item)
     return len(claimed)
 
 
-async def run_cycle(store: SubmissionStore, settings: Settings) -> int:
+async def run_cycle(
+    store: SubmissionStore, settings: Settings,
+    stop: Optional[asyncio.Event] = None,
+) -> int:
     """One guarded delivery cycle — what the main loop actually runs.
 
     Two hardenings from the 2026-07-17 reliability review:
@@ -171,7 +190,7 @@ async def run_cycle(store: SubmissionStore, settings: Settings) -> int:
     if not settings.async_delivery:
         return 0
     try:
-        return await run_once(store, settings)
+        return await run_once(store, settings, stop)
     except Exception:  # noqa: BLE001 — nothing may crash the delivery loop
         log.exception("delivery cycle failed — continuing after the poll interval")
         return 0
@@ -188,7 +207,20 @@ async def main() -> None:
         while True:
             await asyncio.sleep(60)
 
-    await store.create_all()
+    # Graceful shutdown (Phase 6, reliability review 2026-07-17): every deploy
+    # SIGTERMs the worker; finishing the in-flight item and stopping new
+    # claims avoids rolling the duplicate-create dice on each push and the
+    # up-to-15-minute lease delay on the killed row. (Schema note: tables come
+    # from Alembic — the PRE_DEPLOY migrate job / `alembic upgrade head` —
+    # never built at boot; see the create_app lifespan note.)
+    stop = asyncio.Event()
+    loop = asyncio.get_running_loop()
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        try:
+            loop.add_signal_handler(sig, stop.set)
+        except NotImplementedError:  # non-unix (tests on odd platforms)
+            pass
+
     log.info(
         "worker started (async_delivery=%s, dry_run=%s, batch=%s)",
         settings.async_delivery, settings.espo_dry_run, settings.worker_batch_size,
@@ -226,15 +258,14 @@ async def main() -> None:
         if comms_store is None:
             log.warning("GMAIL_SYNC is on but DATABASE_URL is not set — sync disabled")
         else:
-            await comms_store.create_all()
             if settings.gmail_resync:
                 await comms_store.reset_all_sync_state()
                 log.warning("GMAIL_RESYNC: sync cursors cleared — the next pass "
                             "re-runs the initial backfill; unset the flag after")
             log.info("gmail sync enabled (every %ss)", settings.gmail_sync_seconds)
 
-    while True:
-        claimed = await run_cycle(store, settings)
+    while not stop.is_set():
+        claimed = await run_cycle(store, settings, stop)
 
         # Liveness heartbeat (P1-6): one upserted row per iteration; /healthz
         # reports its age so an external check can see a dead/wedged worker.
@@ -285,8 +316,15 @@ async def main() -> None:
                 log.warning("docs grant reconciliation failed: %s", exc)
             next_docs = now + timedelta(seconds=settings.gdrive_reconcile_seconds)
 
-        if claimed == 0:
-            await asyncio.sleep(settings.worker_poll_seconds)
+        if claimed == 0 and not stop.is_set():
+            # Sleep until the poll interval elapses OR SIGTERM arrives, so a
+            # deploy never waits out a sleep.
+            try:
+                await asyncio.wait_for(stop.wait(), timeout=settings.worker_poll_seconds)
+            except asyncio.TimeoutError:
+                pass
+
+    log.info("worker stopped cleanly (SIGTERM/SIGINT) — no in-flight delivery")
 
 
 async def run_gmail_cycle(settings: Settings, comms_store) -> None:

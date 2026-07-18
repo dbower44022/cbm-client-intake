@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -17,6 +18,14 @@ class Settings(BaseSettings):
     espo_dry_run: bool = True
     allowed_origins: str = "http://localhost:8000"
     request_timeout_seconds: int = 20
+
+    # --- public intake POST limits (Phase 6, decision D3: 2 MB / 30 per
+    # 10 min). The volunteer form keeps a larger body cap sized for its
+    # base64 resume (see core/app.py); photo/document uploads are separate
+    # endpoints with their own caps. rate limit 0 = disabled.
+    intake_max_body_mb: int = 2
+    intake_rate_limit: int = 30
+    intake_rate_window_seconds: int = 600
 
     # Environment label shown as a corner badge on every form (via /healthz ->
     # shared/footer.js). Empty => auto-derived from the CRM target below
@@ -204,8 +213,10 @@ class Settings(BaseSettings):
     #               check is the sole gate, and the app-level uploaded_by
     #               still records the real person.
     # Doug's ruling 2026-07-16: users are NOT drive members, so "service" is
-    # the operational mode; "user" remains for compatibility.
-    gdrive_identity: str = "user"
+    # the operational mode; "user" remains for compatibility. Literal so a
+    # typo ("Service", "sa") fails the boot loudly instead of silently
+    # meaning "user" (Phase 6, reliability review 2026-07-17).
+    gdrive_identity: Literal["user", "service"] = "user"
     # Top-level Drive folders are DISPLAY LABELS mapped from anchor entity
     # types (PRD v1.2 §3.2 rule 3), not raw entity names: Mentors/, Clients/…
     # An unmapped entity type falls back to the raw name.

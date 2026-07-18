@@ -1,9 +1,15 @@
 # Container image for the CBM Client Intake app (FastAPI + static wizard).
 # Used by DigitalOcean App Platform; also runnable with plain `docker run`.
-FROM python:3.12-slim
+#
+# Base images are PINNED (Phase 6, reliability review 2026-07-17): floating
+# tags meant a rebuild months later could get a different toolchain than the
+# build that was verified. Bump both pins DELIBERATELY (build + test locally,
+# then commit); the uv pin matches the version that generated uv.lock
+# (lockfile revision compatibility).
+FROM python:3.12.8-slim
 
 # uv for fast, reproducible installs from uv.lock.
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.10.6 /uv /uvx /bin/
 
 WORKDIR /app
 

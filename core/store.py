@@ -56,6 +56,9 @@ STATUS_DISCARDED = "discarded"
 # Statuses the worker is allowed to claim and deliver.
 CLAIMABLE = (STATUS_PENDING, STATUS_RETRY)
 
+# How many of the most recent completions feed metrics()'s windowed latency.
+RECENT_LATENCY_WINDOW = 50
+
 metadata = MetaData()
 
 # Phase 0 columns. attempt_count / next_attempt_at / progress are defined now so
@@ -477,6 +480,23 @@ class PostgresStore:
                     ).where(submission.c.processed_at.isnot(None))
                 )
             ).scalar()
+            # Windowed latency (Phase 6, reliability review 2026-07-17): the
+            # lifetime average above can never show THIS week's regression —
+            # this one averages only the most recent completions.
+            recent = (
+                select(
+                    func.extract(
+                        "epoch", submission.c.processed_at - submission.c.received_at
+                    ).label("latency")
+                )
+                .where(submission.c.processed_at.isnot(None))
+                .order_by(submission.c.processed_at.desc())
+                .limit(RECENT_LATENCY_WINDOW)
+                .subquery()
+            )
+            recent_latency = (
+                await conn.execute(select(func.avg(recent.c.latency)))
+            ).scalar()
             # A ``processing`` row whose lease has expired = a worker died (or
             # crash-looped) mid-delivery. It will be reclaimed by the next claim
             # pass — but with no live worker it lingers invisibly unless counted
@@ -504,6 +524,10 @@ class PostgresStore:
             "backlog": counts.get(STATUS_PENDING, 0) + counts.get(STATUS_RETRY, 0),
             "oldestPendingAgeSeconds": oldest_age,
             "avgLatencySeconds": float(avg_latency) if avg_latency is not None else None,
+            # Average over the last RECENT_LATENCY_WINDOW completions only.
+            "recentAvgLatencySeconds": (
+                float(recent_latency) if recent_latency is not None else None
+            ),
             "stranded": int(stranded or 0),
             # None = the worker has never stamped (fresh env, or pre-0.78 schema).
             "workerHeartbeatAgeSeconds": (

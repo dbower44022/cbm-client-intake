@@ -202,3 +202,23 @@ async def test_run_cycle_survives_store_errors():
 
     claimed = await worker.run_cycle(ExplodingStore(), _settings(async_delivery=True))
     assert claimed == 0
+
+
+async def test_sigterm_stops_mid_batch_after_current_item():
+    """Phase 6 graceful shutdown: stop set mid-batch finishes the CURRENT item
+    and skips the rest (their leases expire and the next worker reclaims)."""
+    import asyncio
+
+    store = FakeWorkerStore()
+    stop = asyncio.Event()
+    stop.set()  # SIGTERM arrived while the batch was being claimed
+    store.to_claim = [
+        _claimed(), 
+        Claimed(id="sub-2", form_slug="info-request", submission_token="tok-2",
+                payload={"first_name": "B", "last_name": "C", "email": "b@c.d",
+                         "message": "hi", "submission_token": "tok-2"},
+                progress=None, attempt_count=0),
+    ]
+    claimed = await worker.run_once(store, _settings(), stop)
+    assert claimed == 2  # both were claimed…
+    assert len(store.completed) == 1  # …but only the in-flight item delivered

@@ -4,6 +4,60 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.94.0] — 2026-07-18
+
+Reliability hardening **Phase 6 — infra/ops** — the FINAL phase of the
+2026-07-17 reliability review (`reliability-review-2026-07-17.md`); the
+whole P0/P1/P2 plan in `prompts/reliability-hardening-prompt-v0.1.md` is now
+implemented. Doug's decisions this session: **D3 = 2 MB body cap + 30
+submissions/IP/10 min**, **D4 = production-tier upgrade for both managed
+DBs** (runbook written; console action is Doug's). 11 new tests (777 green);
+SIGTERM drill run live (clean stop, exit 0); the pinned Docker tags verified
+against both registries.
+
+### Added
+- **Web-tier startup banner + fail-fast config.** `create_app` logs the
+  effective mode (environment, dryRun, store, async, staff stack, feature
+  flags — the worker has had one since V2) and now REFUSES to boot two
+  contradictory configs that used to fail silently at runtime:
+  `ESPO_DRY_RUN=false` without `ESPO_API_KEY` (every CRM call 401'd) and
+  `ASYNC_DELIVERY=true` without `DATABASE_URL` (silently fell back to sync).
+- **Public intake limits (D3).** `/api/*/intake` rejects bodies over 2 MB
+  early (Content-Length, before buffering; the volunteer form keeps an 8 MB
+  cap for its in-JSON base64 resume) and rate-limits each IP to 30
+  submissions per 10 minutes (in-memory sliding window; readable 413/429
+  responses; `INTAKE_MAX_BODY_MB` / `INTAKE_RATE_LIMIT` /
+  `INTAKE_RATE_WINDOW_SECONDS`, 0 disables). Previously the edge passed
+  ≥60 MB bodies into `request.json()` and a token-varying bot could write
+  unbounded rows.
+- **Worker graceful shutdown.** SIGTERM/SIGINT finish the current item,
+  stop claiming (mid-batch items return via lease expiry), and exit
+  cleanly — every deploy used to kill the worker mid-delivery and roll the
+  duplicate-create dice.
+- **`metrics()` windowed latency**: `recentAvgLatencySeconds` over the last
+  50 completions, so a fresh regression is visible next to the lifetime
+  average.
+- **DEPLOYMENT.md "Reliability operations"**: the D4 backup decision +
+  restore runbook (both DBs are dev-tier = NO backups today — the console
+  upgrade is the open action); DO uptime/alert guidance for the new
+  `/healthz` worker fields (alert when `worker.lastHeartbeatAgeSeconds`
+  exceeds ~120s); the worker `instance_count: 1` invariant; the
+  overlay-recovery paragraph naming which secret VALUES are unrecoverable
+  (ESPO_API_KEY, SESSION_SECRET, SA JSON, APP_ENCRYPTION_KEY,
+  ESPO_PROVISION_PASSWORD).
+
+### Changed
+- **Schema comes from Alembic only.** The web app and worker no longer run
+  `create_all()` at boot — a fresh environment booted before its migrate
+  job used to build current tables with no `alembic_version` stamp,
+  wedging every later `upgrade head`. Missing tables now surface as
+  visible capture 503s / worker cycle errors until the migration runs.
+- **Docker base images pinned**: `python:3.12.8-slim` +
+  `ghcr.io/astral-sh/uv:0.10.6` (the uv that generated `uv.lock`) — a
+  rebuild months later gets the same toolchain; bump the pins deliberately.
+- **`GDRIVE_IDENTITY` is a `Literal["user","service"]`** — a typo now fails
+  the boot loudly instead of silently meaning "user".
+
 ## [0.93.0] — 2026-07-18
 
 **Sponsor editing parity with the 0.91.0 partner fixes** (Doug's follow-up

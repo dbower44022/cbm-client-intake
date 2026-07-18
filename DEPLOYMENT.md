@@ -436,6 +436,88 @@ Two viable shapes — pick one:
    submission is `ERROR cbm_intake: … create <Entity> failed: HTTP <code> <body>`
    (the browser only shows a generic 502).
 
+## Reliability operations (added with the 2026-07-18 hardening, v0.94.0)
+
+### Database backups — DECISION NEEDED (P1-7, ruled: tier upgrade — Doug 2026-07-18)
+
+`pending` / `retry` / `needs_attention` submissions exist **only** in the two
+managed databases (`cbm-db` on crm-test, `cbm-db-prod` on prod). Both were
+created on the **dev tier**, which has **no automated backups or point-in-time
+recovery** — losing the database during a CRM outage backlog loses those
+submissions unrecoverably. Doug's ruling (decision D4): **upgrade both to a
+production tier** (DO then takes daily backups + PITR automatically; no
+scheduled-dump machinery to build or monitor).
+
+**To do (console, one time each):** DO console → Databases → `cbm-db` /
+`cbm-db-prod` → Settings → **Upgrade** to the smallest production tier.
+No app change; the connection string is unchanged.
+
+**Restore runbook** (once on a production tier): DO console → the database →
+Backups → restore creates a NEW cluster → update `DATABASE_URL` on the app's
+web + worker components (the gitignored overlay, applied with
+`doctl apps update <app-id> --spec …`) → redeploy. The design survives restore
+well: re-delivery is idempotent (per-record `progress`), and replayed rows
+dedupe on `uq_submission_form_token`. Comms sync cursors restore stale =
+the next pass re-reads the gap; Message-ID dedup absorbs the overlap.
+
+### Uptime + alert checks (point at /healthz)
+
+`/healthz` now reports worker liveness — configure a DO uptime check /
+alert (or any external monitor) on it:
+
+- `database: "error"` / HTTP 503 → the managed Postgres is down.
+- `worker.lastHeartbeatAgeSeconds` → the delivery worker stamps this every
+  loop; **alert when it exceeds ~120s** (a dead, wedged, or undeployed
+  worker produces no other signal — the in-app alerter runs INSIDE the
+  worker and dies with it).
+- `worker.backlog` / `worker.oldestPendingAgeSeconds` /
+  `worker.stranded` → growing values mean deliveries aren't completing.
+
+### Worker: exactly one instance
+
+Keep the `delivery-worker` component at `instance_count: 1`. The Gmail sync
+cursors, alert cooldowns, and reconciliation error-tracking assume a single
+worker process; a second instance would double-read mailboxes and race the
+timers (submission claiming itself is safe — `FOR UPDATE SKIP LOCKED` — but
+nothing else is). Deploys are now graceful: the worker finishes its current
+item on SIGTERM and stops claiming.
+
+### Overlay recovery (laptop loss)
+
+The gitignored `.do/app.prod.yaml` (crm-test) and `.do/app.prod-crm.yaml`
+(prod) are the only local copies of the live specs; they live inside
+Dropbox. If lost, regenerate structure with
+`doctl apps spec get <app-id> > file.yaml` — **but** every `type: SECRET`
+env var comes back as an encrypted `EV[…]` blob, which keeps working when
+re-applied **unchanged** yet can never be read back. The secret **values**
+that exist nowhere else and would need re-issuing if you ever must set them
+fresh: `ESPO_API_KEY` (re-key the API user in EspoCRM), `SESSION_SECRET`
+(generate anew — users just re-log-in), `GOOGLE_SERVICE_ACCOUNT_JSON`
+(create a new key on the service account in GCP), `APP_ENCRYPTION_KEY`
+(if lost, in-app Email-Setup config is unreadable — re-enter it), and
+`ESPO_PROVISION_PASSWORD` (reset the provisioning admin's password).
+Consider keeping a copy of the overlays (or just those values) in a real
+secret store.
+
+### Schema comes from Alembic only (v0.94.0 change)
+
+The web app and worker **no longer create tables at boot**. The schema
+authority is the PRE_DEPLOY `migrate` job (`alembic upgrade head`) — already
+in both overlays — and locally `uv run alembic upgrade head` after
+`docker compose up -d db`. (Boot-time `create_all` used to build current
+tables on a fresh environment WITHOUT an `alembic_version` stamp, wedging
+every later migration.) A brand-new environment booted without the migrate
+job now surfaces visible capture 503s / worker cycle errors until the
+migration runs — by design.
+
+### Intake limits (decision D3)
+
+Public form POSTs are capped at **2 MB** (`INTAKE_MAX_BODY_MB`; the
+volunteer form allows 8 MB for its in-JSON resume) and rate-limited to
+**30 submissions per IP per 10 minutes** (`INTAKE_RATE_LIMIT` /
+`INTAKE_RATE_WINDOW_SECONDS`; 0 disables). Limits are in-memory per web
+instance — fine at one instance; revisit if the web tier ever scales out.
+
 ## Rollback
 
 - List deployments: `doctl apps list-deployments <app-id>`

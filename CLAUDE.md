@@ -1422,7 +1422,44 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-18)
 
-**Main is at v0.93.0** (2026-07-18, 766 tests green, committed NOT pushed) —
+**Main is at v0.94.0** (2026-07-18, 777 tests green, committed NOT pushed) —
+**Reliability hardening Phase 6 — infra/ops — COMPLETES THE WHOLE
+RELIABILITY ARC** (all six phases of
+`prompts/reliability-hardening-prompt-v0.1.md` /
+`reliability-review-2026-07-17.md` are implemented: P0-1..4 v0.77.0,
+liveness+telemetry v0.84.0, staff write chains v0.86.0, Gmail loss
+prevention v0.87.0, Drive+intake residuals v0.92.0, infra/ops v0.94.0).
+Doug's decisions this session: **D3 = 2 MB / 30 per IP per 10 min**,
+**D4 = production-tier DB upgrade**. Phase 6 highlights (CHANGELOG 0.94.0):
+- Web startup banner + **fail-fast** on live-without-API-key and
+  async-without-DATABASE_URL; intake body cap (2 MB; volunteer 8 MB for
+  its in-JSON resume) + per-IP rate limit (30/10 min, in-memory,
+  readable 413/429); worker **SIGTERM graceful stop** (finish current
+  item, stop claiming — drilled live, clean exit 0);
+  `metrics().recentAvgLatencySeconds` (last 50 completions);
+  `GDRIVE_IDENTITY` is a Literal; Docker pins `python:3.12.8-slim` +
+  `uv:0.10.6` (tags verified against both registries); **boot-time
+  `create_all()` removed — Alembic (the PRE_DEPLOY migrate job) is the
+  sole schema authority** (fresh envs must migrate before first boot;
+  DEPLOYMENT.md notes it).
+- DEPLOYMENT.md gains a **"Reliability operations"** section: the D4
+  backup ruling + restore runbook, DO uptime/alert guidance on the
+  `/healthz` worker fields, the worker `instance_count: 1` invariant,
+  overlay-recovery + unrecoverable-secret list, and the D3 limits.
+- **Doug-side actions now open:** (1) console-upgrade `cbm-db` +
+  `cbm-db-prod` to a production tier (D4 — until then there are STILL no
+  backups); (2) after the next push/deploy, create a DO alert on
+  `worker.lastHeartbeatAgeSeconds` (~120s threshold); (3) the arc's
+  **live-verification checklist** (prompt §"Live-verification"):
+  poisoned-row drill on crm-test, kill-the-worker → healthz age grows →
+  alert, one Gmail pass with an over-length subject → failing/dead-letter
+  alerts (the known prod message `19f298a147e3ba38` should now surface),
+  assign-repair on a half-assigned engagement, details-PUT bypass → 404,
+  portal login lines in run logs. NOTE the deploy also runs migrations
+  0007–0009 on both managed DBs (heartbeat, acted_by, comms
+  loss-prevention) via the PRE_DEPLOY job.
+
+Before that: **v0.93.0** (2026-07-18, 766 tests green) —
 **Sponsor editing parity with the v0.91.0 partner fixes** (Doug's follow-up
 ruling; frontend-only): curated `CSponsorProfile` edit form — where
 `description` IS the sponsor-notes field, kept editable as "Sponsor notes"

@@ -193,3 +193,20 @@ async def test_heartbeat_and_stranded_metrics():
     await store.mark_completed(cap.id, {"contactId": "c-strand"})
 
     await store.dispose()
+
+
+async def test_metrics_windowed_latency():
+    """Phase 6: recentAvgLatencySeconds averages only the newest completions,
+    so a fresh regression is visible next to the lifetime average."""
+    store = PostgresStore(_URL)
+    await store.create_all()
+    cap = await store.capture(
+        "info-request", f"lat-{uuid.uuid4()}", {"email": "lat@example.com"},
+        status=STATUS_PENDING,
+    )
+    await store.mark_completed(cap.id, {"contactId": "c-lat"})
+    m = await store.metrics()
+    assert m["recentAvgLatencySeconds"] is not None
+    assert m["recentAvgLatencySeconds"] >= 0
+    assert "avgLatencySeconds" in m
+    await store.dispose()

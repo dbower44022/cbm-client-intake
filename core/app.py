@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-import time
+import time  # noqa: F401 — the TTL + rate-limit middlewares both use it
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -292,15 +292,47 @@ def create_app(
 ) -> FastAPI:
     settings = get_settings()
     setup_logging(settings.log_level)
+    # Fail-fast on contradictory config (Phase 6, reliability review
+    # 2026-07-17): these combinations used to boot fine and fail at runtime —
+    # live mode without an API key 401'd every CRM call; async delivery
+    # without a store silently fell back to synchronous.
+    if not settings.espo_dry_run and not settings.espo_api_key:
+        raise RuntimeError(
+            "ESPO_DRY_RUN=false requires ESPO_API_KEY — refusing to boot into "
+            "silent 401s on every CRM call."
+        )
+    if settings.async_delivery and not settings.database_url and store is None:
+        raise RuntimeError(
+            "ASYNC_DELIVERY=true requires DATABASE_URL (the durable store the "
+            "worker claims from) — refusing to boot into silent sync mode."
+        )
     # V2 Phase 0: a durable store when DATABASE_URL is set (else None = V1 behavior).
     # Tests inject a fake store directly.
     if store is None:
         store = store_mod.make_store(settings)
 
+    # Effective-mode banner (the worker has had one since Phase 1 of V2; the
+    # web tier booted silently — a degraded mode like "no store" was invisible
+    # until something failed).
+    log.info(
+        "intake app starting: environment=%s dryRun=%s durableStore=%s "
+        "asyncDelivery=%s staffStack=%s gmailSync=%s gcalEvents=%s "
+        "gdriveDocs=%s(identity=%s) provisioning=%s forms=%s",
+        settings.environment, settings.espo_dry_run, store is not None,
+        settings.async_delivery, settings.assignments_active,
+        settings.gmail_sync, settings.gcal_events,
+        settings.gdrive_docs, settings.gdrive_identity,
+        settings.mentor_provision_users, [f.slug for f in forms],
+    )
+
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
-        if store is not None:
-            await store.create_all()  # ensure the submission table exists
+        # NOTE deliberately no store.create_all() here (Phase 6): the schema
+        # authority is Alembic (the PRE_DEPLOY migrate job in production;
+        # `uv run alembic upgrade head` locally). Building tables at boot left
+        # a fresh environment WITHOUT an alembic_version stamp, wedging every
+        # later `upgrade head`. Missing tables now surface as visible capture
+        # 503s / worker cycle errors instead of a silently forked schema.
         yield
 
     app = FastAPI(title="CBM Intake Forms", version=__version__, lifespan=lifespan)
@@ -314,6 +346,67 @@ def create_app(
         allow_methods=["GET", "POST"],
         allow_headers=["*"],
     )
+
+    # --- public intake POST limits (Phase 6, decision D3: 2 MB / 30 per
+    # 10 min per IP). Before this the DO edge passed >=60 MB bodies into
+    # `await request.json()` and a token-varying bot could write unbounded
+    # rows/CRM records — the honeypot + idempotency only stop dumb repeats.
+    _mb = 1024 * 1024
+    _intake_caps = {
+        # The volunteer form carries its resume as base64 INSIDE the JSON
+        # (MAX_RESUME_B64_CHARS = 7,000,000 ≈ a 5 MB file) — its cap must
+        # clear that; every other form is plain text fields.
+        f"/api/{spec.slug}/intake": (
+            8 * _mb if spec.slug == "volunteer"
+            else settings.intake_max_body_mb * _mb
+        )
+        for spec in forms
+    }
+    # Per-IP sliding window, in-memory and per app instance (the worker is
+    # a separate process; the web tier runs a single instance).
+    _rate_hits: dict[str, list[float]] = {}
+
+    def _client_ip(request: Request) -> str:
+        forwarded = request.headers.get("x-forwarded-for", "")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
+        return request.client.host if request.client else "?"
+
+    @app.middleware("http")
+    async def _intake_limits(request: Request, call_next):
+        cap = _intake_caps.get(request.url.path)
+        if cap is not None and request.method == "POST":
+            length = request.headers.get("content-length", "")
+            if length.isdigit() and int(length) > cap:
+                return JSONResponse(
+                    status_code=413,
+                    content={
+                        "detail": (
+                            f"The submission is too large (limit "
+                            f"{cap // _mb} MB)."
+                        )
+                    },
+                )
+            if settings.intake_rate_limit > 0:
+                now = time.time()
+                window = settings.intake_rate_window_seconds
+                ip = _client_ip(request)
+                hits = [t for t in _rate_hits.get(ip, []) if now - t < window]
+                if len(hits) >= settings.intake_rate_limit:
+                    log.warning("intake rate limit hit for %s (%s)", ip, request.url.path)
+                    return JSONResponse(
+                        status_code=429,
+                        content={
+                            "detail": (
+                                "Too many submissions from your network — "
+                                "please wait a few minutes and try again."
+                            )
+                        },
+                        headers={"Retry-After": str(window)},
+                    )
+                hits.append(now)
+                _rate_hits[ip] = hits
+        return await call_next(request)
 
     # Mentor assignment tool: signed-cookie sessions hold each staff user's
     # EspoCRM auth token. Only mounted when a session secret is configured.
