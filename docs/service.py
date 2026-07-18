@@ -7,6 +7,20 @@ from their CRM identity — never from request input (the comms subject rule).
 
 The rollback contract (PRD DOC-01): a Drive file with no metadata row is
 deleted; a metadata row is never written without a confirmed Drive file.
+
+**Upload-safety strategy (P1-13, reliability review 2026-07-17 — the chosen
+one of the review's two options): pre-generated file ids.** Every upload
+first asks Drive for a server-generated id (``files.generateIds``) and
+creates the file WITH it, so (a) a retried create can never duplicate (the
+duplicate id is rejected; a 409 resolves to the already-committed file), and
+(b) when the upload RESPONSE is lost after Drive committed — previously an
+unfindable orphan the user's retry would duplicate — the rollback target is
+still known and the file is deleted before the error surfaces. When the id
+pre-generation itself fails, the upload proceeds the old way (single
+attempt, no blind retry) rather than blocking. The row-first/pending-sweep
+alternative was NOT chosen (no migration, no reconcile changes needed).
+Folder creation is not id-protected; instead a failed create re-runs
+find-or-create, which converges on the committed folder.
 """
 
 from __future__ import annotations
@@ -132,12 +146,21 @@ def folder_label(settings: Settings, entity_type: str) -> str:
 
 async def _ensure_path(drive: DriveClient, segments: list[str]) -> str:
     """Walk ``segments`` from the shared-drive root, find-or-creating each
-    folder level; returns the last segment's folder id."""
+    folder level; returns the last segment's folder id.
+
+    A failed folder create re-runs the find once (P1-13): the create POST is
+    never blind-retried (a 5xx after commit would mint a duplicate folder) —
+    if the create actually committed, the re-run find picks it up."""
     parent = drive.drive_id  # a shared drive's root folder id IS the drive id
     for name in segments:
         folder = await drive.find_child_folder(parent, name)
         if not folder:
-            folder = await drive.create_folder(parent, name)
+            try:
+                folder = await drive.create_folder(parent, name)
+            except DriveError:
+                folder = await drive.find_child_folder(parent, name)
+                if not folder:
+                    raise
         parent = folder
     return parent
 
@@ -225,11 +248,53 @@ async def upload_document(
         settings, filename=filename, doc_type=doc_type, data=data
     )
     mime_type = (mime_type or "").strip() or "application/octet-stream"
+    from_cache = bool(await store.cached_folder_id(entity_type, record_id))
     folder_id = await ensure_record_folder(
         settings, drive, store, entity_type, record_id, record_name,
         client_id=client_id, client_name=client_name,
     )
-    file = await drive.upload_file(folder_id, filename, mime_type, data)
+    # P1-13: pre-generate the file id so a lost response is recoverable (the
+    # rollback target is known) and a retried create can't duplicate. Fail
+    # open: no id just means the old single-attempt behavior.
+    pre_id: Optional[str] = None
+    try:
+        pre_id = await drive.generate_file_id()
+    except DriveError as exc:
+        log.warning("file-id pre-generation failed (continuing without): %s", exc)
+    try:
+        file = await drive.upload_file(
+            folder_id, filename, mime_type, data, file_id=pre_id
+        )
+    except DriveError as exc:
+        # Cached-folder staleness: the folder was deleted in the Drive console
+        # (404s every upload forever without this) — drop the cache, rebuild
+        # the path, and retry ONCE.
+        if from_cache and "404" in str(exc):
+            log.warning(
+                "cached Drive folder for %s %s is gone (%s) — rebuilding the "
+                "folder path", entity_type, record_id, exc,
+            )
+            await store.clear_folder_cache(entity_type, record_id)
+            folder_id = await ensure_record_folder(
+                settings, drive, store, entity_type, record_id, record_name,
+                client_id=client_id, client_name=client_name,
+            )
+            file = await drive.upload_file(
+                folder_id, filename, mime_type, data, file_id=pre_id
+            )
+        else:
+            # The response may have been LOST after Drive committed — with the
+            # pre-generated id the file (if any) is deletable before the error
+            # surfaces, so the user's retry can't duplicate it.
+            if pre_id:
+                try:
+                    await drive.delete_file(pre_id)
+                except DriveError as del_exc:
+                    log.error(
+                        "ROLLBACK FAILED: possibly-committed Drive file %s could "
+                        "not be deleted: %s", pre_id, del_exc,
+                    )
+            raise
     row = {
         "drive_file_id": file["id"],
         "drive_folder_id": folder_id,
@@ -478,6 +543,47 @@ async def fetch_document(
         "mime_type": mime,
         "filename": filename,
         "modified_time": row.get("modifiedTime"),
+    }
+
+
+async def stream_original(
+    store: DocumentStore,
+    drive: DriveClient,
+    entity_type: str,
+    record_id: str,
+    doc_id: str,
+) -> Optional[dict[str, Any]]:
+    """The Download-original path as a STREAM (P2, reliability review
+    2026-07-17): the stored file's exact bytes flow through in chunks instead
+    of buffering whole in memory — a few concurrent large downloads could OOM
+    a small instance. Returns ``{stream, mime_type, filename}`` (the stream is
+    primed, so pre-body errors still raise cleanly as DriveError), or None for
+    Google-native files (no native bytes — the caller uses the buffered export
+    path, which Drive itself caps at ~10 MB). Raises :class:`DocsNotFound`
+    when the document isn't on this record."""
+    row = await store.get_document(entity_type, record_id, doc_id)
+    if row is None:
+        raise DocsNotFound("That document isn't on this record.")
+    if is_google_native(row.get("mimeType")):
+        return None
+    gen = drive.stream_file(row["driveFileId"])
+    # Prime: force the HTTP open + status check NOW, while the router can
+    # still answer with a proper error response instead of a broken stream.
+    try:
+        first = await gen.__anext__()
+    except StopAsyncIteration:
+        first = b""
+
+    async def body():
+        if first:
+            yield first
+        async for chunk in gen:
+            yield chunk
+
+    return {
+        "stream": body(),
+        "mime_type": row.get("mimeType") or "application/octet-stream",
+        "filename": row.get("filename") or "document",
     }
 
 

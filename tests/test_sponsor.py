@@ -136,3 +136,11 @@ def test_company_is_required():
 def test_consent_required():
     with pytest.raises(ValidationError):
         _application(terms_accepted=False)
+
+
+def test_schema_contract_covers_sponsor_contact_type():
+    """P2 (reliability review 2026-07-17): the drift check must pre-warn if the
+    CRM ever loses the "Sponsor" option this orchestrator writes."""
+    from core.schema_contract import EXPECTED_ENUMS
+
+    assert "Sponsor" in EXPECTED_ENUMS[("Contact", "cContactType")]

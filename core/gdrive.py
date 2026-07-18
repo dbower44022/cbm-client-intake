@@ -179,14 +179,21 @@ class DriveClient:
         content: Optional[bytes] = None,
         headers: Optional[dict[str, str]] = None,
         ok_statuses: tuple[int, ...] = (),
+        retry: bool = True,
     ) -> httpx.Response:
-        """One authorized request, with backoff retries on rate-limit/5xx."""
+        """One authorized request, with backoff retries on rate-limit/5xx.
+
+        ``retry=False`` for non-idempotent creates WITHOUT a pre-set id
+        (P1-13): a 5xx after Drive committed would double-create on retry.
+        With a pre-generated id retries are safe — a committed-then-retried
+        create is rejected by the duplicate id, never duplicated."""
         token = await self._token()
         hdrs = {"Authorization": f"Bearer {token}"}
         if headers:
             hdrs.update(headers)
+        attempts = _MAX_ATTEMPTS if retry else 1
         last: Optional[httpx.Response] = None
-        for attempt in range(_MAX_ATTEMPTS):
+        for attempt in range(attempts):
             try:
                 async with httpx.AsyncClient(timeout=self._timeout) as client:
                     resp = await client.request(
@@ -198,7 +205,7 @@ class DriveClient:
             if resp.status_code < 400 or resp.status_code in ok_statuses:
                 return resp
             last = resp
-            if not _retryable(resp) or attempt == _MAX_ATTEMPTS - 1:
+            if not _retryable(resp) or attempt == attempts - 1:
                 break
             await asyncio.sleep(_BACKOFF_SECONDS * (2**attempt))
         assert last is not None
@@ -248,27 +255,58 @@ class DriveClient:
         return files[0]["id"] if files else None
 
     async def create_folder(self, parent_id: str, name: str) -> str:
-        data = await self._request(
+        """No blind retries (P1-13): a 5xx after the create committed would
+        mint a second same-named folder. Callers recover from a failure by
+        re-running find-or-create (:func:`docs.service._ensure_path`)."""
+        resp = await self._send(
             "POST",
-            "/files",
+            f"{_BASE}/files",
             params={"supportsAllDrives": "true", "fields": "id"},
             json_body={"name": name, "mimeType": FOLDER_MIME, "parents": [parent_id]},
+            retry=False,
         )
+        data = resp.json()
         log.info("drive folder created as %s -> %s (%s)", self.mailbox, name, data.get("id"))
         return data["id"]
+
+    # --- pre-generated file ids (P1-13, reliability review 2026-07-17) --------
+
+    async def generate_file_id(self) -> str:
+        """One server-generated file id (``files.generateIds``) to pre-assign
+        to an upload: a retry with the same id can never duplicate, and a
+        rollback always knows the id even when the upload RESPONSE was lost
+        after Drive committed."""
+        data = await self._request(
+            "GET",
+            "/files/generateIds",
+            params={"count": 1, "space": "drive", "type": "files"},
+        )
+        ids = data.get("ids") or []
+        if not ids:
+            raise DriveError("Drive returned no generated file id.")
+        return ids[0]
 
     # --- files ----------------------------------------------------------------
 
     async def upload_file(
-        self, folder_id: str, filename: str, mime_type: str, data: bytes
+        self, folder_id: str, filename: str, mime_type: str, data: bytes,
+        file_id: Optional[str] = None,
     ) -> dict[str, Any]:
         """Upload ``data`` into ``folder_id`` with its NATIVE MIME type (D-04 —
         no conversion to Google editor formats is ever requested). Returns the
-        Drive file resource (:data:`FILE_FIELDS`)."""
+        Drive file resource (:data:`FILE_FIELDS`).
+
+        ``file_id`` (from :meth:`generate_file_id`) makes the create
+        retry-safe and the rollback target known even on a lost response
+        (P1-13); without one the create POST is never blind-retried."""
         if len(data) > RESUMABLE_THRESHOLD:
-            file = await self._upload_resumable(folder_id, filename, mime_type, data)
+            file = await self._upload_resumable(
+                folder_id, filename, mime_type, data, file_id=file_id
+            )
         else:
-            file = await self._upload_multipart(folder_id, filename, mime_type, data)
+            file = await self._upload_multipart(
+                folder_id, filename, mime_type, data, file_id=file_id
+            )
         log.info(
             "drive upload as %s -> %s (%s, %d bytes)",
             self.mailbox, file.get("id"), filename, len(data),
@@ -276,30 +314,50 @@ class DriveClient:
         return file
 
     async def _upload_multipart(
-        self, folder_id: str, filename: str, mime_type: str, data: bytes
+        self, folder_id: str, filename: str, mime_type: str, data: bytes,
+        file_id: Optional[str] = None,
     ) -> dict[str, Any]:
         boundary = f"cbm-{uuid.uuid4().hex}"
-        meta = json.dumps({"name": filename, "parents": [folder_id]})
+        meta_body: dict[str, Any] = {"name": filename, "parents": [folder_id]}
+        if file_id:
+            meta_body["id"] = file_id
+        meta = json.dumps(meta_body)
         body = (
             f"--{boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n"
             f"{meta}\r\n--{boundary}\r\nContent-Type: {mime_type}\r\n\r\n"
         ).encode() + data + f"\r\n--{boundary}--".encode()
-        resp = await self._send(
-            "POST",
-            f"{_UPLOAD_BASE}/files",
-            params={
-                "uploadType": "multipart",
-                "supportsAllDrives": "true",
-                "fields": FILE_FIELDS,
-            },
-            content=body,
-            headers={"Content-Type": f"multipart/related; boundary={boundary}"},
-        )
+        try:
+            resp = await self._send(
+                "POST",
+                f"{_UPLOAD_BASE}/files",
+                params={
+                    "uploadType": "multipart",
+                    "supportsAllDrives": "true",
+                    "fields": FILE_FIELDS,
+                },
+                content=body,
+                headers={"Content-Type": f"multipart/related; boundary={boundary}"},
+                # Only a pre-set id makes a retried create safe (P1-13).
+                retry=bool(file_id),
+            )
+        except DriveError as exc:
+            # With a pre-set id, a 409 means an EARLIER attempt actually
+            # committed (the retry hit the duplicate id) — fetch that file
+            # instead of failing what is really a success.
+            if file_id and "HTTP 409" in str(exc):
+                return await self.get_file(file_id)
+            raise
         return resp.json()
 
     async def _upload_resumable(
-        self, folder_id: str, filename: str, mime_type: str, data: bytes
+        self, folder_id: str, filename: str, mime_type: str, data: bytes,
+        file_id: Optional[str] = None,
     ) -> dict[str, Any]:
+        start_meta: dict[str, Any] = {"name": filename, "parents": [folder_id]}
+        if file_id:
+            start_meta["id"] = file_id
+        # The session-start POST creates nothing (no file until the final
+        # chunk lands), so retrying it is always safe.
         start = await self._send(
             "POST",
             f"{_UPLOAD_BASE}/files",
@@ -308,7 +366,7 @@ class DriveClient:
                 "supportsAllDrives": "true",
                 "fields": FILE_FIELDS,
             },
-            json_body={"name": filename, "parents": [folder_id]},
+            json_body=start_meta,
             headers={
                 "X-Upload-Content-Type": mime_type,
                 "X-Upload-Content-Length": str(len(data)),
@@ -350,6 +408,33 @@ class DriveClient:
             self.mailbox, file_id, len(resp.content),
         )
         return resp.content
+
+    async def stream_file(self, file_id: str, chunk_size: int = 1 << 20):
+        """The file's native bytes as an async chunk generator — the original-
+        download proxy path (P2, reliability review 2026-07-17): a few
+        concurrent large downloads used to buffer whole in memory and could
+        OOM a small instance. Errors before the first byte raise
+        :class:`DriveError`; the caller wraps this in a StreamingResponse."""
+        token = await self._token()
+        client = httpx.AsyncClient(timeout=self._timeout)
+        try:
+            async with client.stream(
+                "GET",
+                f"{_BASE}/files/{file_id}",
+                params={"alt": "media", "supportsAllDrives": "true"},
+                headers={"Authorization": f"Bearer {token}"},
+            ) as resp:
+                if resp.status_code >= 400:
+                    body = (await resp.aread())[:300]
+                    raise DriveError(
+                        f"Drive GET /files/{file_id} for {self.mailbox}: "
+                        f"HTTP {resp.status_code} {body.decode(errors='replace')}"
+                    )
+                log.info("drive stream as %s -> %s", self.mailbox, file_id)
+                async for chunk in resp.aiter_bytes(chunk_size):
+                    yield chunk
+        finally:
+            await client.aclose()
 
     async def export_file(self, file_id: str, mime_type: str) -> bytes:
         """A Google-native file exported to ``mime_type`` (PDF for viewing,
@@ -476,7 +561,7 @@ class DriveClient:
             params: dict[str, Any] = {
                 "supportsAllDrives": "true",
                 "fields": (
-                    "nextPageToken,permissions(id,type,role,emailAddress,"
+                    "nextPageToken,permissions(id,type,role,emailAddress,domain,"
                     "permissionDetails)"
                 ),
                 "pageSize": 100,

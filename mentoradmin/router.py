@@ -341,6 +341,20 @@ async def mentor_document_content(
     try:
         contact_id, _ = await _mentor_contact_anchor(client, mentor_id)
         drive = await docs_service.drive_for_user(settings, client, user)
+        if original:
+            # Stream raw bytes (P2) — large originals never buffer whole;
+            # Google-native files fall through to the buffered export.
+            streamed = await docs_service.stream_original(
+                store, drive, "Contact", contact_id, doc_id
+            )
+            if streamed is not None:
+                return StreamingResponse(
+                    streamed["stream"],
+                    media_type=streamed["mime_type"],
+                    headers=docs_service.content_headers(
+                        streamed["filename"], attachment=True
+                    ),
+                )
         doc = await docs_service.fetch_document(
             store, drive, "Contact", contact_id, doc_id, original=original
         )

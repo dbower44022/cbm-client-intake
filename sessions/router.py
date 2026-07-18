@@ -13,7 +13,7 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 
 from assignments.auth import clear_session, current_user, is_member, session_expired
@@ -728,8 +728,17 @@ def make_router(cfg: DomainConfig) -> APIRouter:
     async def documents(
         parent_id: str, request: Request, includeArchived: bool = False
     ) -> dict:
-        _require_user(request)
+        user = _require_user(request)
         settings, store = _docs_ready()
+        # Per-record ACL read AS THE USER (review docs-D6): upload/content/
+        # refresh all gate on it — without it here, document METADATA
+        # (filenames, uploaders, Drive links) was enumerable across ACL
+        # boundaries by anyone past the team gate.
+        client = client_for(settings, user)
+        try:
+            await client.get(cfg.parent_entity, parent_id, select="name")
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not load documents")
         rows = await docs_service.list_documents(
             store, cfg.parent_entity, parent_id, include_archived=includeArchived
         )
@@ -822,6 +831,21 @@ def make_router(cfg: DomainConfig) -> APIRouter:
         try:
             await client.get(cfg.parent_entity, parent_id, select="name")
             drive = await docs_service.drive_for_user(settings, client, user)
+            if original:
+                # Stream the raw bytes (P2): large originals no longer buffer
+                # whole in memory. Google-native files (no native bytes) fall
+                # through to the buffered export path below.
+                streamed = await docs_service.stream_original(
+                    store, drive, cfg.parent_entity, parent_id, doc_id
+                )
+                if streamed is not None:
+                    return StreamingResponse(
+                        streamed["stream"],
+                        media_type=streamed["mime_type"],
+                        headers=docs_service.content_headers(
+                            streamed["filename"], attachment=True
+                        ),
+                    )
             doc = await docs_service.fetch_document(
                 store, drive, cfg.parent_entity, parent_id, doc_id,
                 original=original,

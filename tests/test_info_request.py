@@ -172,3 +172,41 @@ async def test_information_request_failure_does_not_break_submission():
 def test_message_is_required():
     with pytest.raises(ValidationError):
         _request(message="")
+
+
+@pytest.mark.asyncio
+async def test_description_append_not_repeated_on_resumable_retry():
+    """pipeline-M1 (reliability review 2026-07-17): the description APPEND
+    accumulates, so a delivery retry (worker or /ops redrive) must not re-run
+    it — a partial failure after the append used to duplicate the block in
+    staff-visible data. The named progress step guards it."""
+    from core.resumable import ResumableClient
+
+    saved: dict = {}
+
+    async def save(progress):
+        saved.clear()
+        saved.update(progress)
+
+    inner = CapturingClient(
+        existing_contact="contact-99", existing_description="Staff note.",
+    )
+    # First delivery completes; the append step lands in the saved progress.
+    await submit_request(_request(), ResumableClient(inner, None, save))
+    assert len(inner.updates) == 1
+    assert any(k.startswith("step:append-description:") for k in saved)
+
+    # Re-delivery of the SAME row (a worker killed between delivering and
+    # mark_completed is reclaimed after the lease; /ops redrive replays too):
+    # the append is skipped, and the recorded create is not repeated either.
+    await submit_request(_request(), ResumableClient(inner, dict(saved), save))
+    assert len(inner.updates) == 1  # STILL one append — never duplicated
+    assert len([e for e, _ in inner.creates if e == INFO_REQUEST]) == 1
+
+
+@pytest.mark.asyncio
+async def test_plain_client_append_runs_unguarded():
+    """V1 storeless mode has no retries — the append just runs."""
+    client = CapturingClient(existing_contact="c1", existing_description=None)
+    await submit_request(_request(), client)
+    assert len(client.updates) == 1

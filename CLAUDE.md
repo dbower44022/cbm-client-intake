@@ -1418,7 +1418,40 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-18)
 
-**Main is at v0.91.0** (2026-07-18, 765 tests green at commit) —
+**Main is at v0.92.0** (2026-07-18, 766 tests green, committed NOT pushed) —
+**Reliability hardening Phase 5 — Drive + intake-pipeline residuals**
+(P1-13 + the P2 Drive/intake items; full list in CHANGELOG 0.92.0):
+- **Drive create safety (P1-13, strategy = pre-generated ids,** documented
+  in the `docs/service.py` docstring): uploads pre-assign
+  `files.generateIds` ids — retries can't duplicate (409 resolves to the
+  committed file), lost responses roll back by the known id; creates
+  without a pre-set id are never blind-retried; failed folder creates
+  re-run find-or-create. Stale cached record folders (deleted in the Drive
+  console) self-heal via `clear_folder_cache` + one retry.
+- **Grants**: non-inherited group/domain/anyone permissions are revoked
+  (never CRM-justified — a console-added org share used to survive
+  forever); the nightly reconciliation alerts on a folder erroring two
+  consecutive passes, not just on removals.
+- **Content proxy**: `?original=true` STREAMS (sessions + /mentoradmin;
+  `DriveClient.stream_file` + `docs.service.stream_original`, primed so
+  pre-body errors still map to readable responses); the docs LIST endpoint
+  gained the per-record ACL read (docs-D6 — metadata was enumerable
+  across ACL boundaries).
+- **Intake residuals**: capture failure → payload at ERROR + controlled
+  503; malformed JSON → 422; the sync-with-store path delivers through
+  `ResumableClient` (P1-8 — /ops redrives now RESUME instead of
+  duplicating); `Sponsor` added to the `cContactType` drift contract; the
+  info-request description append is once-per-delivery
+  (`ResumableClient` named steps + `run_step_once`, pipeline-M1).
+- Verified: 766 tests green (16 new incl. the "lying Drive" sims —
+  committed-then-5xx folder create, lost upload response, rollback-failed
+  logging, 409-resolves-to-committed, stale-folder retry, stream path);
+  no new migration; `clear_folder_cache` round-tripped on live local
+  Postgres. **Remaining: Phase 6 (infra/ops: startup banner, fail-fast
+  config, body caps + rate limit, SIGTERM, Docker pins, windowed latency
+  + the DEPLOYMENT.md ops handoffs incl. the P1-7 backup decision D3/D4).**
+
+Before that: **v0.91.0** (2026-07-18, 765 tests green at commit) —
 **Partner editing fixes** (Doug's report after driving v0.89.0): a Details
 save now refreshes the Overview/Sessions tabs (`refreshRecordViews` — the
 Partner Notes he typed only appeared after a full reload), the partner

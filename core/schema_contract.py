@@ -81,5 +81,8 @@ EXPECTED_ENUMS: dict[tuple[str, str], list[str]] = {
     # Discriminators the orchestrators write.
     ("Account", "cAccountType"): ["Client", "Partner", "Donor/Sponsor"],
     ("Account", "cClientStatus"): ["Prospect"],
-    ("Contact", "cContactType"): ["Client", "Mentor", "Partner", "Donor", "Prospect"],
+    # "Sponsor" added 2026-07-18 (P2, reliability review): the sponsor
+    # orchestrator has written cContactType=["Sponsor"] since the CRM gained
+    # the option 2026-06-22, but the drift check never pre-warned on it.
+    ("Contact", "cContactType"): ["Client", "Mentor", "Partner", "Donor", "Sponsor", "Prospect"],
 }

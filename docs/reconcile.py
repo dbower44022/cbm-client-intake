@@ -28,6 +28,15 @@ from . import service as docs_service
 
 log = logging.getLogger("cbm_intake.docs.reconcile")
 
+# Folders that errored on consecutive passes (folder id -> count). A single
+# blip self-heals next pass; the SAME folder failing again means its grants
+# are silently drifting from the CRM — that persists, so it alerts (review
+# docs-F9: errors previously never alerted, only removals). In-memory is fine:
+# the worker is one long-lived process, and a restart merely delays the alert
+# by one pass.
+_error_passes: dict[str, int] = {}
+_PERSISTENT_ERROR_PASSES = 2
+
 
 async def run_docs_reconciliation(
     settings: Settings,
@@ -55,9 +64,22 @@ async def run_docs_reconciliation(
 
     summary = {"folders": 0, "granted": 0, "revoked": 0, "errors": 0, "linksWritten": 0}
     removal_lines: list[str] = []
+    persistent_error_lines: list[str] = []
+
+    def _track_errors(folder: str, label: str, had_errors: bool) -> None:
+        """Consecutive-pass error tracking: the SAME folder erroring again
+        means its grants are silently drifting — that alerts."""
+        if not had_errors:
+            _error_passes.pop(folder, None)
+            return
+        _error_passes[folder] = _error_passes.get(folder, 0) + 1
+        if _error_passes[folder] == _PERSISTENT_ERROR_PASSES:
+            persistent_error_lines.append(f"{label} (folder {folder})")
+
     for rec in await store.list_folder_records():
         entity_type, record_id = rec["entityType"], rec["recordId"]
         folder_id = rec["driveFolderId"]
+        label = f"{entity_type} {record_id}"
         summary["folders"] += 1
         try:
             desired = await grants.entitled_emails(espo, entity_type, record_id)
@@ -65,13 +87,15 @@ async def run_docs_reconciliation(
         except Exception as exc:  # noqa: BLE001 — one folder never stops the pass
             summary["errors"] += 1
             log.warning(
-                "docs reconciliation: %s %s (folder %s) failed: %s",
-                entity_type, record_id, folder_id, exc,
+                "docs reconciliation: %s (folder %s) failed: %s",
+                label, folder_id, exc,
             )
+            _track_errors(folder_id, label, True)
             continue
         summary["granted"] += len(result["added"])
         summary["revoked"] += len(result["removed"])
         summary["errors"] += len(result["errors"])
+        _track_errors(folder_id, label, bool(result["errors"]))
         for email in result["added"]:
             log.info(
                 "docs reconciliation: granted %s Commenter on %s %s (folder %s)",
@@ -107,6 +131,12 @@ async def run_docs_reconciliation(
         await send(
             "Drive grant reconciliation removed grant(s) the CRM no longer "
             "justifies:\n" + "\n".join(removal_lines)
+        )
+    if persistent_error_lines:
+        await send(
+            "Drive grant reconciliation keeps FAILING for these record folders "
+            "(second consecutive pass) — their access grants may be drifting "
+            "from the CRM:\n" + "\n".join(persistent_error_lines)
         )
     log.info(
         "docs reconciliation done: %s folder(s), +%s grant(s), -%s, "

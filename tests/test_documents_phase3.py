@@ -214,14 +214,30 @@ async def test_apply_grants_corrects_wrong_role_to_commenter():
     assert drive.perms["f1"][0]["role"] == "commenter"
 
 
-async def test_apply_grants_never_touches_inherited_or_nonuser():
+async def test_apply_grants_never_touches_inherited():
+    drive = GrantDrive()
+    drive.perms["f1"] = [
+        _perm("sa@project.iam.gserviceaccount.com", role="organizer", inherited=True),
+    ]
+    result = await grants.apply_folder_grants(drive, "f1", set())
+    assert result["removed"] == [] and drive.revoke_calls == []
+
+
+async def test_apply_grants_revokes_noninherited_nonuser_grants():
+    """Review docs-F9: a console-added domain/group/anyone share is never
+    justified by the access model (the CRM entitles individual people only) —
+    it must be revoked like any stray grant, not silently kept forever."""
     drive = GrantDrive()
     drive.perms["f1"] = [
         _perm("sa@project.iam.gserviceaccount.com", role="organizer", inherited=True),
         _perm("", role="reader", ptype="domain", pid="dom1"),
+        _perm("", role="reader", ptype="anyone", pid="any1"),
     ]
     result = await grants.apply_folder_grants(drive, "f1", set())
-    assert result["removed"] == [] and drive.revoke_calls == []
+    # The inherited membership stays; both org-wide shares are revoked.
+    assert ("f1", "dom1") in drive.revoke_calls
+    assert ("f1", "any1") in drive.revoke_calls
+    assert {r["email"] for r in result["removed"]} == {"domain:domain", "anyone:anyone"}
 
 
 async def test_apply_grants_tolerates_per_grant_failures():
@@ -556,3 +572,41 @@ async def test_post_upload_hooks_never_raise(monkeypatch):
     await docs_service.post_upload_hooks(
         _settings(), GrantDrive(), "CEngagement", "E1", {}
     )
+
+
+async def test_reconcile_alerts_on_persistent_folder_errors(monkeypatch):
+    """docs-F9: a folder that keeps erroring (second consecutive pass) alerts —
+    previously only removals alerted, so grant drift could persist silently."""
+    from docs import reconcile as rec_mod
+
+    monkeypatch.setattr(rec_mod, "_error_passes", {})
+
+    class ErroringDrive(GrantDrive):
+        async def list_permissions(self, file_id):
+            raise RuntimeError("permissions API down")
+
+    store = MemoryDocumentStore()
+    await store.insert_document(
+        {"drive_file_id": "a", "entity_type": "CEngagement", "record_id": "E1",
+         "original_filename": "x.pdf", "drive_folder_id": "f1"}
+    )
+    espo = FakeEspo()
+    espo.records[("CEngagement", "E1")] = {"mentorProfileId": None}
+    sent: list[str] = []
+
+    async def collect(text):
+        sent.append(text)
+
+    s = _settings()
+    drive = ErroringDrive()
+    await rec_mod.run_docs_reconciliation(s, store=store, espo=espo, drive=drive, send=collect)
+    assert sent == []  # first pass: a blip, no alert yet
+    await rec_mod.run_docs_reconciliation(s, store=store, espo=espo, drive=drive, send=collect)
+    assert len(sent) == 1 and "keeps FAILING" in sent[0]
+    # third pass: no repeat spam (alerts once at the persistence transition)
+    await rec_mod.run_docs_reconciliation(s, store=store, espo=espo, drive=drive, send=collect)
+    assert len(sent) == 1
+    # recovery clears the counter
+    ok_drive = GrantDrive()
+    await rec_mod.run_docs_reconciliation(s, store=store, espo=espo, drive=ok_drive, send=collect)
+    assert rec_mod._error_passes == {}

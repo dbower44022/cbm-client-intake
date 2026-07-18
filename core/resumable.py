@@ -60,6 +60,20 @@ class ResumableClient:
         await self._record(key, attachment_id)
         return attachment_id
 
+    # --- named-step guard (pipeline-M1, reliability review 2026-07-17) --------
+    # ``update``-based side effects are NOT naturally idempotent when they
+    # accumulate (the info-request description APPEND): a retry re-ran them,
+    # duplicating staff-visible text. A named step recorded in progress runs
+    # once per delivery. At-least-once like the creates (the marker persists
+    # AFTER the action) — a kill in between costs one duplicate, the accepted
+    # cost documented in the module docstring.
+
+    def step_done(self, name: str) -> bool:
+        return bool(self._progress.get(f"step:{name}"))
+
+    async def mark_step(self, name: str) -> None:
+        await self._record(f"step:{name}", True)
+
     # Naturally idempotent / safe to repeat — pass straight through.
     async def find_one(self, *args: Any, **kwargs: Any):
         return await self._inner.find_one(*args, **kwargs)
@@ -72,3 +86,17 @@ class ResumableClient:
 
     async def metadata_enum_options(self, *args: Any, **kwargs: Any):
         return await self._inner.metadata_enum_options(*args, **kwargs)
+
+
+async def run_step_once(client: Any, name: str, action: Callable[[], Awaitable[Any]]) -> bool:
+    """Run ``action`` at most once per delivery, guarded by a named progress
+    step when ``client`` is a :class:`ResumableClient` (a plain/dry-run client
+    just runs it — V1 storeless mode has no retries to guard against).
+    Returns True when the action ran, False when the step was already done."""
+    guarded = isinstance(client, ResumableClient)
+    if guarded and client.step_done(name):
+        return False
+    await action()
+    if guarded:
+        await client.mark_step(name)
+    return True

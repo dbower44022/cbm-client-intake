@@ -38,10 +38,15 @@ class FakeStore:
         self.captures: list[tuple[str, str, str, dict]] = []
         self.completed: list[tuple[str, dict]] = []
         self.failed: list[tuple[str, str, str]] = []
+        self.progress: dict[str, dict] = {}
         self._n = 0
 
     async def create_all(self) -> None:
         pass
+
+    async def save_progress(self, submission_id, progress) -> None:
+        # P1-8: the sync-with-store path records resumable progress too.
+        self.progress[submission_id] = dict(progress)
 
     async def ping(self) -> bool:
         return True
@@ -229,3 +234,48 @@ def test_async_delivery_defers_processing(monkeypatch):
         assert store.completed == []     # …but not processed inline
     finally:
         get_settings.cache_clear()
+
+
+# --- Phase 5 intake residuals (reliability review 2026-07-17) ------------------
+
+
+def test_malformed_json_is_422_not_500():
+    with TestClient(create_app([info_request.SPEC])) as c:
+        r = c.post(
+            "/api/info-request/intake",
+            content=b"{not json",
+            headers={"Content-Type": "application/json"},
+        )
+    assert r.status_code == 422
+    assert "not valid JSON" in r.json()["detail"]
+
+
+def test_capture_failure_is_controlled_503_with_payload_logged(caplog):
+    """A DB outage at accept: the payload's ONLY copy goes to the log at ERROR
+    (storeless-style) and the user gets a please-retry 503, not a raw 500."""
+
+    class DownStore(FakeStore):
+        async def capture(self, *a, **k):
+            raise RuntimeError("connection refused")
+
+    with caplog.at_level("ERROR", logger="cbm_intake"):
+        with _client(DownStore()) as c:
+            r = c.post("/api/info-request/intake", json=_body(submission_token="tok-dbdown-1"))
+    assert r.status_code == 503
+    assert "try again" in r.json()["detail"]
+    text = "\n".join(rec.getMessage() for rec in caplog.records)
+    assert "tok-dbdown-1" in text and "ada@example.com" in text  # the only copy
+
+
+def test_sync_with_store_records_resumable_progress():
+    """P1-8: the sync path saves per-record progress like the worker — a
+    partial failure marked needs_attention can then be REDRIVEN resumably
+    instead of duplicating the plain creates."""
+    store = FakeStore()
+    with _client(store) as c:
+        r = c.post("/api/info-request/intake", json=_body(submission_token="tok-prog-1"))
+    assert r.status_code == 200
+    # The dry-run orchestrator created records; each create was recorded.
+    assert store.progress, "sync delivery must save progress"
+    progress = next(iter(store.progress.values()))
+    assert any(k.startswith("create:") for k in progress)

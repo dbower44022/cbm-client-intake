@@ -229,6 +229,21 @@ class DocumentStore:
             ).first()
         return row.drive_folder_id if row else None
 
+    async def clear_folder_cache(self, entity_type: str, record_id: str) -> None:
+        """Forget the record's cached Drive folder id (P2, reliability review
+        2026-07-17): a record folder deleted in the Drive console otherwise
+        404s every subsequent upload forever. The next upload re-runs the
+        find-or-create path and re-caches the new folder on its row."""
+        async with self._engine.begin() as conn:
+            await conn.execute(
+                update(app_document)
+                .where(
+                    app_document.c.entity_type == entity_type,
+                    app_document.c.record_id == record_id,
+                )
+                .values(drive_folder_id=None)
+            )
+
 
 def make_document_store(settings: Settings) -> Optional[DocumentStore]:
     if not settings.database_url:
@@ -338,3 +353,8 @@ class MemoryDocumentStore:
         ]
         matches.sort(key=lambda r: r["uploaded_at"], reverse=True)
         return matches[0]["drive_folder_id"] if matches else None
+
+    async def clear_folder_cache(self, entity_type: str, record_id: str) -> None:
+        for r in self.rows:
+            if r["entity_type"] == entity_type and r["record_id"] == record_id:
+                r["drive_folder_id"] = None

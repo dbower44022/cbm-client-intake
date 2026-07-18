@@ -345,23 +345,55 @@ def test_document_content_streams_with_immutable_cache_headers(monkeypatch):
 
 
 def test_document_content_original_downloads_as_attachment(monkeypatch):
+    """?original=true STREAMS the stored bytes (P2 — no whole-file buffering)
+    as an attachment download."""
     _as(monkeypatch)
     monkeypatch.setattr(docs_service, "get_store", lambda settings: MemoryDocumentStore())
     monkeypatch.setattr(docs_service, "drive_for_user", _fake_drive_for_user)
     seen = {}
 
-    async def fake_fetch(store, drive, entity_type, record_id, doc_id, original=False):
-        seen["original"] = original
-        return {"data": b"xlsx-bytes", "mime_type": "application/vnd.ms-excel",
-                "filename": "Financials.xlsx", "modified_time": None}
+    async def fake_stream(store, drive, entity_type, record_id, doc_id):
+        seen["streamed"] = (entity_type, record_id, doc_id)
 
-    monkeypatch.setattr(docs_service, "fetch_document", fake_fetch)
+        async def body():
+            yield b"xlsx-"
+            yield b"bytes"
+
+        return {"stream": body(), "mime_type": "application/vnd.ms-excel",
+                "filename": "Financials.xlsx"}
+
+    async def fetch_must_not_run(*a, **k):  # pragma: no cover
+        raise AssertionError("the streamed path must not buffer via fetch_document")
+
+    monkeypatch.setattr(docs_service, "stream_original", fake_stream)
+    monkeypatch.setattr(docs_service, "fetch_document", fetch_must_not_run)
     with TestClient(_app(monkeypatch, gdrive_docs=True)) as c:
         r = c.get("/mentorsessions/api/records/E1/documents/D1/content?original=true")
     assert r.status_code == 200
-    assert seen["original"] is True
+    assert seen["streamed"] == ("CEngagement", "E1", "D1")
     assert r.headers["content-disposition"].startswith("attachment;")
     assert r.content == b"xlsx-bytes"
+
+
+def test_document_content_original_google_native_falls_back_to_export(monkeypatch):
+    """Google-native files have no native bytes — stream_original returns None
+    and the buffered export path serves the Office equivalent."""
+    _as(monkeypatch)
+    monkeypatch.setattr(docs_service, "get_store", lambda settings: MemoryDocumentStore())
+    monkeypatch.setattr(docs_service, "drive_for_user", _fake_drive_for_user)
+
+    async def fake_stream(store, drive, entity_type, record_id, doc_id):
+        return None
+
+    async def fake_fetch(store, drive, entity_type, record_id, doc_id, original=False):
+        return {"data": b"sheet-bytes", "mime_type": "application/vnd.ms-excel",
+                "filename": "Sheet.xlsx", "modified_time": None}
+
+    monkeypatch.setattr(docs_service, "stream_original", fake_stream)
+    monkeypatch.setattr(docs_service, "fetch_document", fake_fetch)
+    with TestClient(_app(monkeypatch, gdrive_docs=True)) as c:
+        r = c.get("/mentorsessions/api/records/E1/documents/D1/content?original=true")
+    assert r.status_code == 200 and r.content == b"sheet-bytes"
 
 
 def test_document_content_unknown_doc_404(monkeypatch):

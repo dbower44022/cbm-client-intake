@@ -8,7 +8,7 @@ from datetime import timezone
 import pytest
 
 from core.config import Settings
-from core.gdrive import RESUMABLE_THRESHOLD, DriveClient, _retryable
+from core.gdrive import RESUMABLE_THRESHOLD, DriveClient, DriveError, _retryable
 from docs import service as docs_service
 from docs.store import MemoryDocumentStore
 
@@ -39,7 +39,11 @@ class FakeDrive:
         self.created.append((parent_id, name))
         return folder_id
 
-    async def upload_file(self, folder_id, filename, mime_type, data):
+    async def generate_file_id(self):
+        # P1-13: uploads pre-generate their Drive id.
+        return f"pre{len(self.uploads) + 1}"
+
+    async def upload_file(self, folder_id, filename, mime_type, data, file_id=None):
         self.uploads.append((folder_id, filename, mime_type, len(data)))
         return {
             "id": f"file{len(self.uploads)}",
@@ -659,11 +663,11 @@ async def test_small_upload_uses_multipart(monkeypatch):
     client = DriveClient({}, "bob@cbmentors.org", "drv1")
     called = {}
 
-    async def fake_multipart(folder_id, filename, mime, data):
+    async def fake_multipart(folder_id, filename, mime, data, file_id=None):
         called["mode"] = "multipart"
         return {"id": "f"}
 
-    async def fake_resumable(folder_id, filename, mime, data):
+    async def fake_resumable(folder_id, filename, mime, data, file_id=None):
         called["mode"] = "resumable"
         return {"id": "f"}
 
@@ -686,3 +690,182 @@ def test_retryable_statuses():
     assert _retryable(resp(403, b'{"reason": "userRateLimitExceeded"}'))
     assert not _retryable(resp(403, b'{"reason": "insufficientFilePermissions"}'))
     assert not _retryable(resp(404))
+
+
+# --- P1-13 Drive create safety (reliability review 2026-07-17, Phase 5) ---------
+# "A fake Drive that lies": commits then 5xxs, times out on the response, etc.
+
+
+async def test_lost_upload_response_rolls_back_via_pregenerated_id():
+    """The response dies AFTER Drive committed: with the pre-generated id the
+    rollback target is known — the (possibly committed) file is deleted and no
+    row is written, so the user's retry can't duplicate."""
+
+    class LyingDrive(FakeDrive):
+        async def upload_file(self, folder_id, filename, mime_type, data, file_id=None):
+            await super().upload_file(folder_id, filename, mime_type, data, file_id)
+            raise DriveError("Drive request failed (upload): timeout on response")
+
+    store, drive = MemoryDocumentStore(), LyingDrive()
+    with pytest.raises(DriveError):
+        await docs_service.upload_document(
+            _settings(), store, drive,
+            entity_type="CEngagement", record_id="E1", record_name="Agape",
+            filename="a.pdf", mime_type="application/pdf", doc_type="Other",
+            data=b"x",
+        )
+    assert drive.deleted == ["pre1"]  # the pre-generated id was cleaned up
+    assert store.rows == []  # and no metadata row exists
+
+
+async def test_rollback_failure_is_logged_loudly(caplog):
+    class DoublyLyingDrive(FakeDrive):
+        async def upload_file(self, folder_id, filename, mime_type, data, file_id=None):
+            raise DriveError("HTTP 500 after commit")
+
+        async def delete_file(self, file_id):
+            raise DriveError("HTTP 503 still down")
+
+    store, drive = MemoryDocumentStore(), DoublyLyingDrive()
+    with caplog.at_level("ERROR", logger="cbm_intake.docs.service"):
+        with pytest.raises(DriveError):
+            await docs_service.upload_document(
+                _settings(), store, drive,
+                entity_type="CEngagement", record_id="E1", record_name="Agape",
+                filename="a.pdf", mime_type="application/pdf", doc_type="Other",
+                data=b"x",
+            )
+    assert any("ROLLBACK FAILED" in r.getMessage() for r in caplog.records)
+
+
+async def test_id_pregeneration_failure_falls_open():
+    """No pre-generated id => the upload still proceeds (single attempt)."""
+
+    class NoIdsDrive(FakeDrive):
+        async def generate_file_id(self):
+            raise DriveError("generateIds down")
+
+    store, drive = MemoryDocumentStore(), NoIdsDrive()
+    row = await docs_service.upload_document(
+        _settings(), store, drive,
+        entity_type="CEngagement", record_id="E1", record_name="Agape",
+        filename="a.pdf", mime_type="application/pdf", doc_type="Other",
+        data=b"x",
+    )
+    assert row["driveFileId"]
+
+
+async def test_stale_cached_folder_is_invalidated_and_upload_retried():
+    """A record folder deleted in the Drive console 404'd every upload forever
+    — now the cache is cleared, the path rebuilt, and the upload retried once."""
+
+    class StaleFolderDrive(FakeDrive):
+        def __init__(self):
+            super().__init__()
+            self.attempts = 0
+
+        async def upload_file(self, folder_id, filename, mime_type, data, file_id=None):
+            self.attempts += 1
+            if folder_id == "gone-folder":
+                raise DriveError("Drive POST upload: HTTP 404 File not found")
+            return await super().upload_file(folder_id, filename, mime_type, data, file_id)
+
+    store, drive = MemoryDocumentStore(), StaleFolderDrive()
+    # Seed a prior row whose cached folder no longer exists in Drive.
+    await store.insert_document({
+        "drive_file_id": "old1", "drive_folder_id": "gone-folder",
+        "entity_type": "CEngagement", "record_id": "E1", "record_name": "Agape",
+        "original_filename": "old.pdf", "mime_type": "application/pdf",
+        "doc_type": "Other", "uploaded_by": "x",
+    })
+    row = await docs_service.upload_document(
+        _settings(), store, drive,
+        entity_type="CEngagement", record_id="E1", record_name="Agape",
+        filename="a.pdf", mime_type="application/pdf", doc_type="Other",
+        data=b"x",
+    )
+    assert drive.attempts == 2  # 404 on the stale folder, success on the rebuilt one
+    assert row["driveFileId"]
+    # The new folder is cached for the next upload.
+    assert await store.cached_folder_id("CEngagement", "E1") not in (None, "gone-folder")
+
+
+async def test_ensure_path_recovers_from_committed_folder_create():
+    """A folder create that 5xx'd AFTER committing must not duplicate: the
+    create is never blind-retried — the re-run find picks up the committed
+    folder."""
+
+    class CommittedButErrored(FakeDrive):
+        def __init__(self):
+            super().__init__()
+            self.create_calls = 0
+
+        async def create_folder(self, parent_id, name):
+            self.create_calls += 1
+            # The folder DID commit…
+            folder_id = await super().create_folder(parent_id, name)
+            assert folder_id
+            # …but the response was a 500.
+            raise DriveError("HTTP 500 after commit")
+
+    drive = CommittedButErrored()
+    folder = await docs_service._ensure_path(drive, ["Clients"])
+    assert folder  # found on the post-failure re-run
+    assert drive.create_calls == 1  # never retried the create itself
+
+
+async def test_multipart_409_resolves_to_the_committed_file(monkeypatch):
+    """DriveClient: with a pre-set id, a retried create that already committed
+    comes back 409 — that is a SUCCESS (fetch the file), not a failure."""
+    client = DriveClient({}, "bob@cbmentors.org", "drv1")
+
+    async def fake_send(method, url, **kw):
+        raise DriveError("Drive POST upload for bob: HTTP 409 generated id used")
+
+    async def fake_get(file_id, fields=None):
+        return {"id": file_id, "webViewLink": "https://drive/x"}
+
+    monkeypatch.setattr(client, "_send", fake_send)
+    monkeypatch.setattr(client, "get_file", fake_get)
+    file = await client._upload_multipart("f1", "a.pdf", "application/pdf", b"x", file_id="pre9")
+    assert file["id"] == "pre9"
+
+
+async def test_stream_original_streams_and_skips_google_native():
+    store = MemoryDocumentStore()
+    await store.insert_document({
+        "drive_file_id": "df1", "drive_folder_id": "f1",
+        "entity_type": "CEngagement", "record_id": "E1", "record_name": "Agape",
+        "original_filename": "big.zip", "mime_type": "application/zip",
+        "doc_type": "Other", "uploaded_by": "x",
+    })
+    rows = await store.list_documents("CEngagement", "E1")
+    doc_id = rows[0]["id"]
+
+    class StreamingDrive(FakeDrive):
+        async def stream_file(self, file_id, chunk_size=1 << 20):
+            yield b"part1-"
+            yield b"part2"
+
+    out = await docs_service.stream_original(
+        store, StreamingDrive(), "CEngagement", "E1", doc_id
+    )
+    chunks = [c async for c in out["stream"]]
+    assert b"".join(chunks) == b"part1-part2"
+    assert out["filename"] == "big.zip"
+
+    # Google-native: no native bytes -> None (caller exports instead).
+    await store.insert_document({
+        "drive_file_id": "df2", "drive_folder_id": "f1",
+        "entity_type": "CEngagement", "record_id": "E1", "record_name": "Agape",
+        "original_filename": "Doc", "doc_type": "Other", "uploaded_by": "x",
+        "mime_type": "application/vnd.google-apps.document",
+    })
+    rows = await store.list_documents("CEngagement", "E1")
+    native_id = next(r["id"] for r in rows if r["driveFileId"] == "df2")
+    assert await docs_service.stream_original(
+        store, StreamingDrive(), "CEngagement", "E1", native_id
+    ) is None
+
+    with pytest.raises(docs_service.DocsNotFound):
+        await docs_service.stream_original(store, StreamingDrive(), "CEngagement", "E1", "nope")

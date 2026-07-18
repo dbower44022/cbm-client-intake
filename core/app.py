@@ -28,6 +28,7 @@ from .config import Settings, get_settings
 from .espo import DryRunEspoClient, EspoApi, EspoClient, EspoError
 from .forms import FormSpec
 from .logging_setup import setup_logging
+from .resumable import ResumableClient
 from .store import SubmissionStore
 from .submission_log import (
     REASON_HONEYPOT,
@@ -77,7 +78,15 @@ def _make_handler(
 ):
     async def handler(request: Request):
         try:
-            submission = spec.submission_model.model_validate(await request.json())
+            body = await request.json()
+        except Exception:  # noqa: BLE001 — malformed/truncated JSON is caller data
+            # Previously a raw 500; a bad body is a 422 like any invalid input.
+            return JSONResponse(
+                status_code=422,
+                content={"detail": "The request body is not valid JSON."},
+            )
+        try:
+            submission = spec.submission_model.model_validate(body)
         except ValidationError as exc:
             # exc.errors() can carry a raw exception in ctx (non-serializable);
             # project to a JSON-safe shape.
@@ -111,10 +120,26 @@ def _make_handler(
         if store is not None:
             payload = json.loads(submission.model_dump_json())
             payload["company_url"] = ""  # never persist the honeypot value
-            captured = await store.capture(
-                spec.slug, submission.submission_token, payload,
-                status=store_mod.STATUS_HELD if is_honeypot else store_mod.STATUS_PENDING,
-            )
+            try:
+                captured = await store.capture(
+                    spec.slug, submission.submission_token, payload,
+                    status=store_mod.STATUS_HELD if is_honeypot else store_mod.STATUS_PENDING,
+                )
+            except Exception as exc:  # noqa: BLE001 — DB outage at accept (P2)
+                # The log line is the submission's ONLY copy right now
+                # (storeless-style dump), and the user gets a controlled
+                # please-retry instead of a raw 500.
+                log.error(
+                    "durable capture FAILED for %s token=%s (%s); payload=%s",
+                    spec.slug, submission.submission_token, exc, payload,
+                )
+                raise HTTPException(
+                    status_code=503,
+                    detail=(
+                        "We couldn't record your submission just now — please "
+                        "try again in a moment. Nothing was saved."
+                    ),
+                )
             if not captured.is_new:
                 if captured.result is not None:
                     return {"status": "ok", "idempotent": True, **captured.result}
@@ -158,8 +183,20 @@ def _make_handler(
         if store is None and key in processed:
             return {"status": "ok", "idempotent": True, **processed[key]}
 
+        # P1-8: with a store, the sync path records per-record progress like
+        # the worker does — a partial failure marked needs_attention then
+        # carries its progress, so an /ops redrive RESUMES instead of
+        # re-running the whole chain and duplicating the plain creates.
+        delivery_client: EspoApi = client
+        if captured is not None:
+
+            async def _save_progress(progress: dict) -> None:
+                await store.save_progress(captured.id, progress)
+
+            delivery_client = ResumableClient(client, None, _save_progress)
+
         try:
-            ids = await spec.orchestrator(submission, client)
+            ids = await spec.orchestrator(submission, delivery_client)
         except EspoError as exc:
             # Capture the raw submission for recovery (some records may have been
             # created before the failure). Best-effort, then surface the 502.

@@ -34,6 +34,7 @@ from datetime import datetime, timezone
 
 from core.espo import EspoApi
 from core.phone import e164_or_none
+from core.resumable import run_step_once
 
 from .schemas import InfoRequest
 
@@ -146,11 +147,20 @@ async def submit_request(sub: InfoRequest, client: EspoApi) -> dict[str, str]:
     )
     if existing:
         contact_id = existing["id"]
-        prior = (existing.get("description") or "").rstrip()
-        block = _description_block(sub, include_company=True)
-        description = f"{prior}\n\n{block}" if prior else block
-        await client.update(CONTACT, contact_id, {"description": description})
-        log.info("appended info request to existing Contact %s", contact_id)
+
+        # The append ACCUMULATES, so a delivery retry must not re-run it
+        # (pipeline-M1: a partial failure after this update used to duplicate
+        # the block in staff-visible data on redrive). The named progress step
+        # guards it under the worker's / sync path's ResumableClient.
+        async def _append() -> None:
+            prior = (existing.get("description") or "").rstrip()
+            block = _description_block(sub, include_company=True)
+            description = f"{prior}\n\n{block}" if prior else block
+            await client.update(CONTACT, contact_id, {"description": description})
+            log.info("appended info request to existing Contact %s", contact_id)
+
+        if not await run_step_once(client, f"append-description:{contact_id}", _append):
+            log.info("description append already recorded for Contact %s (retry)", contact_id)
         account_id = None  # existing contact's account is left untouched (by design)
     else:
         account_id = await _find_or_create_account(sub, client) if sub.company else None

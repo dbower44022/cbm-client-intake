@@ -132,7 +132,11 @@ async def apply_folder_grants(
     Inherited permissions (the service account's drive membership) are never
     touched. An entitled person holding the wrong role is corrected to
     Commenter (Editor would let them bypass the app's index — D-09); anyone
-    the CRM doesn't justify is removed. Per-grant best-effort: one failure is
+    the CRM doesn't justify is removed. Non-inherited ``group``/``domain``/
+    ``anyone`` permissions are NEVER justified by the access model (the CRM
+    entitles individual people only) — a console-added org-wide share would
+    otherwise silently outlive every reconciliation (review docs-F9), so they
+    are revoked like any stray grant. Per-grant best-effort: one failure is
     recorded and the rest still apply."""
     desired = {e.lower() for e in desired if e}
     added: list[str] = []
@@ -140,7 +144,24 @@ async def apply_folder_grants(
     errors: list[str] = []
     current: dict[str, dict[str, Any]] = {}
     for perm in await drive.list_permissions(folder_id):
-        if perm.get("inherited") or perm.get("type") != "user":
+        if perm.get("inherited"):
+            continue
+        if perm.get("type") != "user":
+            # group/domain/anyone: the model never grants these — revoke.
+            label = (
+                perm.get("emailAddress")
+                or perm.get("domain")
+                or perm.get("type")
+                or "?"
+            )
+            try:
+                await drive.delete_permission(folder_id, perm["id"])
+                removed.append({
+                    "email": f"{perm.get('type')}:{label}",
+                    "role": perm.get("role") or "?",
+                })
+            except Exception as exc:  # noqa: BLE001 — per-grant best-effort
+                errors.append(f"remove {perm.get('type')}:{label}: {exc}")
             continue
         email = (perm.get("emailAddress") or "").lower()
         if email:
