@@ -66,10 +66,15 @@ mentor and opens a results table showing, per mentor:
   **Google Workspace** (via the same Directory integration as approval-time
   checks). Shows *"n/a — check not configured"* until Google is connected in
   **Email Setup**; a mentor with no CBM email is flagged.
-- **Record** — while sweeping, each mentor's completeness is recomputed and the
-  stored **Record status is re-synced** (same rules as a save: written only
-  when it changed, never over a manual *Duplicate*). The roster reloads
-  afterward, so the whole grid self-heals in one click.
+- **Record** — while sweeping, each mentor's **User links are first
+  reconciled** (the mentor's User is re-assigned to both the member record and
+  its Contact, same as a save — so a roster whose Contact assignments drifted,
+  e.g. after a CRM field-model change, is repaired in one click), then
+  completeness is recomputed and the stored **Record status is re-synced**
+  (same rules as a save: written only when it changed, never over a manual
+  *Duplicate*). The roster reloads afterward, so the whole grid self-heals in
+  one click. (Reconciling writes to Contacts, so run the sweep as a user whose
+  CRM role can edit Contacts — an admin always can.)
 
 A mentor whose record fails to load shows an error row; the rest of the sweep
 still completes.
@@ -132,7 +137,13 @@ profile** does not affect completeness either.)
 |---|---|
 | A **CBM email address** is set | `cbmEmail` |
 | A login **User** is assigned to the mentor (the CBM member record) | `assignedUser` |
-| The **same User** is assigned to the mentor's **Contact** | `Contact.assignedUser` |
+| The **same User** is assigned to the mentor's **Contact** | `Contact.assignedUsers` |
+
+(The Contact check accepts the User in **either** assignment shape — the single
+Assigned User or membership in the multi-user **Assigned Users** (collaborators)
+list, which Contact uses since the 2026-07-16 CRM change that lets co-mentors be
+assigned to client contacts. Other users on the contact — e.g. co-mentors — don't
+make the record incomplete.)
 
 ---
 
