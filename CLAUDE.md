@@ -1392,6 +1392,33 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-18)
 
+**DOC-MGMT Phase 3 ACTIVATED LIVE ON BOTH ENVIRONMENTS (2026-07-18)** —
+the v0.76.0 build is now operational. Session record: (1) drive membership
+verified via the browser and corrected under **Doug's amended ruling (PRD
+v1.5): the two designated system administrators (doug.bower@,
+allen.ingram@) RETAIN drive membership** for maintenance/review alongside
+the service account; `espo@cbmentors.org` was removed in the session
+(final list = SA + the two admins, all Manager). (2) Both overlays
+regenerated from the live specs and applied via doctl:
+`GDRIVE_IDENTITY=service` on **web**, and
+`GDRIVE_DOCS`/`GDRIVE_SHARED_DRIVE_ID`/`GDRIVE_IDENTITY` on **worker**
+(the nightly reconciliation runs there), both apps healthy after deploy.
+(3) **DOC-09 VERIFIED LIVE on prod:** the worker's startup reconciliation
+authenticated as the SA, enumerated the 2 real engagement folders, and
+issued 2 Commenter grants to the entitled mentor — `+2 grants, 0 errors,
+0 CRM links` (correct: `documentsFolderUrl` not built yet). crm-test pass
+clean (0 folders — no documents there yet). **Both governing docs bumped
+to v1.5** recording the amendment + activation; `prds/` exec-summary copy
+synced; GDRIVE-DOCS-SETUP.md Task 6 steps 1–2 marked DONE. **Remaining:**
+the `documentsFolderUrl` CRM field build
+(`documentsfolderurl-crm-field.md`), and the hand-driven checklist items
+(assign/unassign grant flow as a mentor, Mentors/-folder no-grant check,
+archive/restore against the real drive, hand-grant removal alert — Task 6
+verify list). Side observation from the deploy logs, NOT this feature: a
+schema-drift alert fired on both envs — `CMentorProfile.industrySector`
+no longer offers the entire expected 28-value list (the CRM team changed
+the enum; re-sync `scripts/sync_form_options.py` / `core/schema_contract.py`).
+
 **Main is at v0.83.0** (2026-07-18, 706 tests green, committed NOT pushed) —
 **Meeting Transcript integration — Google Meet (Phases 1+2 of
 `prds/meet-transcript-integration.md`), gated OFF by `MEET_TRANSCRIPTS`
@@ -1798,9 +1825,12 @@ sessions: sessions-grid sorting/resizing + the assignments stale-assign
 guard.)
 
 **ACCESS MODEL RULED + DOCUMENTED (Doug, 2026-07-16/17 — the former "Open
-in Drive fate" ruling is RESOLVED as option 4):** no person is EVER a
-member of the CBM Documents shared drive (service account = sole member;
-Workspace admins have console-only emergency access); all Drive ops run
+in Drive fate" ruling is RESOLVED as option 4; AMENDED 2026-07-17, PRD
+v1.5: the two designated system administrators — doug.bower@,
+allen.ingram@ — retain drive membership for maintenance/review; "no
+person" reads with that single named exception):** no OTHER person is
+ever a member of the CBM Documents shared drive (service account = the
+operational member; all app Drive ops run as it); all Drive ops run
 as the SA (`GDRIVE_IDENTITY=service`); Drive-side access = per-person
 **folder-level COMMENTER grants** mirroring CRM assignments (engagement
 folders → assigned mentor + co-mentors; partner/sponsor folders → their

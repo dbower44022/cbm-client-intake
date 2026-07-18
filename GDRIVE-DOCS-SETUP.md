@@ -5,14 +5,19 @@ management (`GDRIVE_DOCS`), reusing the service account the Gmail + Calendar
 integrations already run on — **no new service account, no new JSON key, no
 change to any app secret**.
 
-**Status (2026-07-17): Tasks 1–4 are DONE** (completed 2026-07-16 — Drive
-API enabled, the `auth/drive` scope authorized, the "CBM Documents" shared
-drive created, `GDRIVE_DOCS` live on both environments; first live upload
-verified on prod). **The one remaining Google-admin action is the
-membership swap in Task 6 step 1** (make the service account the drive's
-only member and remove all human members); everything else in Task 6 is
-deploy-side or CRM-side. The verification checklists (Tasks 5–6) run after
-that.
+**Status (2026-07-18): Tasks 1–4 AND the Task 6 activation are DONE.**
+2026-07-16: Drive API enabled, the `auth/drive` scope authorized, the "CBM
+Documents" shared drive created, `GDRIVE_DOCS` live on both environments,
+first live upload verified on prod. 2026-07-17/18: the membership swap
+completed under **Doug's amended ruling (PRD v1.5)** — the drive's members
+are the service account **plus the two designated system administrators
+(doug.bower@, allen.ingram@; maintenance and review)**, `espo@cbmentors.org`
+removed; `GDRIVE_IDENTITY=service` + the worker env applied to BOTH
+environments; and the first production reconciliation pass issued 2
+engagement-folder Commenter grants with zero errors. **Remaining:** the
+`documentsFolderUrl` CRM field build (Task 6 step 3) and the rest of the
+Task 6 verification checklist (items 1–3, 5–6 still to be driven by hand;
+item 4's grant-issuance half is proven by the production logs).
 
 The facts you'll need (from the activation records):
 
@@ -125,13 +130,14 @@ to the organization and survive staff turnover (PRD decision D-03).
    The last path segment (starting `0A…`) is the **shared drive ID** — this
    is the `GDRIVE_SHARED_DRIVE_ID` value the app needs. Paste it somewhere
    safe (it's not a secret, just fiddly to re-find).
-5. Click the drive name (top) → **Manage members**. Under the final access
-   model (PRD v1.3, Doug's ruling — supersedes the earlier "add every staff
-   member" guidance): the drive has **exactly one member — the service
-   account** (`espocrm@espcrm-498315.iam.gserviceaccount.com`, from the JSON
-   key's `client_email`), role **Content Manager**. **No person is ever a
-   member**; remove any human members that were added earlier. Workspace
-   super-admins keep emergency access through the admin console.
+5. Click the drive name (top) → **Manage members**. Under the amended
+   access model (PRD v1.5, Doug's ruling 2026-07-17 — supersedes both the
+   earlier "add every staff member" guidance AND v1.3's "exactly one
+   member"): the members are the **service account**
+   (`espocrm@espcrm-498315.iam.gserviceaccount.com`, the operational
+   identity) **plus the designated system administrators** (currently
+   doug.bower@ and allen.ingram@, for maintenance and review) — no other
+   person. Remove any other members.
 6. Human Drive access exists only as per-folder **Commenter** grants the app
    issues automatically (Phase 3, DOC-09) — mirroring CRM assignments. A
    manager who can see the record in the app can always view/upload through
@@ -242,33 +248,19 @@ Documents tab (DOC-07), and the **`documentsFolderUrl` CRM write-back**
 (DOC-08). Archive/Restore needs nothing beyond the Phase 1 flags. The other
 two activate as follows — **order matters**:
 
-1. **Drive-side membership swap (the Google admin, one time — the ONLY
-   remaining Workspace action).** Do this BEFORE step 2 — flipping the
-   identity first would leave the app unable to reach the drive.
-
-   1. Go to **https://drive.google.com** as a `cbmentors.org` super-admin →
-      **Shared drives** → open **CBM Documents**.
-   2. Click the drive name (top) → **Manage members**.
-   3. **Add** `espocrm@espcrm-498315.iam.gserviceaccount.com` with the role
-      **Content Manager** (uncheck "Notify people" if offered — it's a
-      machine account). It will show with a robot/service-account marker;
-      that's expected.
-   4. **Remove every human member**, whatever their role. Heads-up: the
-      Drive UI may refuse to remove the **last Manager** ("a shared drive
-      needs at least one manager"). If it does, either — (a) change the
-      service account's role to **Manager** first, then remove the humans
-      (fine: the sole member is still the machine identity, which is the
-      ruling's point), or (b) do the removal from the Admin console
-      (**admin.google.com → Apps → Google Workspace → Drive and Docs →
-      Manage shared drives** → CBM Documents → Manage members), where a
-      super-admin can edit membership regardless.
-   5. Verify: Manage members lists **exactly one member — the service
-      account**. Existing files/folders are unaffected, and super-admins
-      keep emergency access through that same Admin-console page (that is
-      the intended break-glass path; no personal membership needed).
-2. **Set the env on BOTH components** of each app's gitignored overlay
-   (crm-test first, then prod) and apply via
-   `doctl apps update <app-id> --spec <overlay> --wait`:
+1. **Drive-side membership swap** ✅ **DONE 2026-07-18** (under the PRD
+   v1.5 amended ruling): the service account was added as **Manager** and
+   `espo@cbmentors.org` removed; the final member list is the service
+   account + the two designated system administrators (doug.bower@,
+   allen.ingram@). For any future membership change: Drive → CBM Documents
+   → drive name → **Manage members**; the member list must always be the
+   SA + the designated admins, nothing else (the nightly reconciliation
+   governs FOLDER grants, not drive membership — membership is manual).
+2. **Set the env on BOTH components** ✅ **DONE 2026-07-18** (both
+   environments applied + verified; the first prod reconciliation pass
+   issued 2 grants, zero errors). For reference — each app's gitignored
+   overlay (`.do/app.prod.yaml` crm-test, `.do/app.prod-crm.yaml` prod),
+   applied via `doctl apps update <app-id> --spec <overlay> --wait`:
 
    ```yaml
    # web component — switches all Drive operations to the service account
