@@ -518,6 +518,12 @@ async def get_detail(
             "label": cfg.overall_notes_label,
             "value": "" if val in (None, []) else val,
             "type": cfg.overall_notes_type,
+            # Inline editing on the Overview (Doug's ruling 2026-07-18: notes
+            # are the most important item on partners/sponsors — no extra
+            # clicks): the frontend PUTs /details/{entity}/{parent id} with
+            # {attr: value}, the same whitelisted path the Details tab uses.
+            "entity": cfg.parent_entity,
+            "attr": cfg.overall_notes_attr,
         }
 
     detail: dict[str, Any] = {

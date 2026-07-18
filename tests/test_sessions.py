@@ -383,8 +383,12 @@ async def test_get_detail_assembles_partner():
     assert d["sessions"][0]["status"] == "Held"
     # the same attendee names feed the Sessions grid's Participants column
     assert d["sessions"][0]["participants"] == ["Pat", "Dana"]
-    # overall (partner-level) notes surface above the per-session feed
-    assert d["overallNotes"] == {"label": "Partner Notes", "value": "<p>key relationship</p>", "type": "html"}
+    # overall (partner-level) notes surface above the per-session feed, with
+    # the entity/attr the Overview's inline editor PUTs through /details.
+    assert d["overallNotes"] == {
+        "label": "Partner Notes", "value": "<p>key relationship</p>", "type": "html",
+        "entity": "CPartnerProfile", "attr": "partnerNotes",
+    }
     # the only session is in the past => nothing scheduled ahead
     assert d["nextSession"] is None
     assert "coMentors" not in d  # partner domain has no co-mentors
@@ -398,7 +402,10 @@ async def test_get_detail_overall_notes_panel_always_present():
     # muted placeholder), never None.
     fake = Fake(records={("CPartnerProfile", "P1"): {"name": "Acme"}})  # no partnerNotes
     d = await service.get_detail(PARTNER, fake, "P1")
-    assert d["overallNotes"] == {"label": "Partner Notes", "value": "", "type": "html"}
+    assert d["overallNotes"] == {
+        "label": "Partner Notes", "value": "", "type": "html",
+        "entity": "CPartnerProfile", "attr": "partnerNotes",
+    }
 
 
 @pytest.mark.asyncio

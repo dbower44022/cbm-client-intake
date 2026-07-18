@@ -4,6 +4,25 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.95.0] — 2026-07-18
+
+**Record notes edit in place on the Overview** (Doug's ruling: notes are the
+most important item on partners/sponsors — no trip to the Details tab).
+
+### Added
+- The Overview's record-notes panel (Partner Notes / Sponsor Notes /
+  Engagement Notes — all three domains) gains an **Edit** button: the panel
+  swaps to an inline editor (CBMRichText for wysiwyg notes, a textarea for
+  the sponsor's plain-text notes), Save PUTs through the same whitelisted
+  `/details/{entity}/{id}` path the Details tab uses, and the panel
+  re-renders with the saved value — no reload, no tab switch. Cancel
+  restores the read view untouched. The Details tab's cached copy is
+  invalidated so it re-reads on next activation. The Edit button is always
+  active — a user without the CRM edit grant gets the readable
+  permission message on Save (buttons-never-disabled convention).
+- `GET /records/{id}` `overallNotes` now carries `entity` + `attr` (the
+  write target) alongside label/value/type.
+
 ## [0.94.0] — 2026-07-18
 
 Reliability hardening **Phase 6 — infra/ops** — the FINAL phase of the

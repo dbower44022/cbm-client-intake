@@ -304,6 +304,10 @@ td.sxd__actions { text-align: right; white-space: nowrap; }
   border-radius: var(--cbm-radius, 8px); background: #fffdf7; padding: 0.7rem 0.95rem; margin-bottom: 1.1rem;
 }
 .sx__overall-h { margin: 0 0 0.4rem; font-size: 1.05rem; }
+.sx__overall-head { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; }
+.sx__overall-head .sxd__btn { flex: 0 0 auto; }
+.sx__overall-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.6rem; }
+.sx__overall textarea { width: 100%; box-sizing: border-box; font: inherit; padding: 0.5rem; }
 .sx__overall-body { font-size: 0.94rem; line-height: 1.5; }
 .sx__overall-body :first-child { margin-top: 0; } .sx__overall-body :last-child { margin-bottom: 0; }
 

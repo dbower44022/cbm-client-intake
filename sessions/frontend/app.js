@@ -584,13 +584,25 @@
   // Overall notes about the whole engagement / partner / sponsor — above the
   // per-session feed, since they're usually the most important. The panel
   // always renders when the domain has a notes field (empty => a muted
-  // placeholder), so the record-level notes are always visible at the top.
+  // placeholder), so the record-level notes are always visible at the top —
+  // and editable IN PLACE (Doug's ruling 2026-07-18: notes are the most
+  // important item on partners/sponsors, so no trip to the Details tab).
+  // The Edit button is always active; a user without the CRM edit grant
+  // gets the readable 403 on Save (buttons-never-disabled convention).
   function renderOverallNotes(d) {
     var box = $("overallNotes"); box.innerHTML = "";
     var n = d.overallNotes;
     if (!n) return;
     var card = document.createElement("div"); card.className = "sx__overall";
+    var head = document.createElement("div"); head.className = "sx__overall-head";
     var h = document.createElement("h3"); h.className = "sx__overall-h"; h.textContent = n.label;
+    head.appendChild(h);
+    if (n.entity && n.attr) {
+      var eb = document.createElement("button");
+      eb.type = "button"; eb.className = "sxd__btn"; eb.textContent = "Edit";
+      eb.addEventListener("click", function () { editOverallNotes(d); });
+      head.appendChild(eb);
+    }
     var body = document.createElement("div"); body.className = "sx__overall-body";
     var raw = n.value == null ? "" : String(n.value);
     // A wysiwyg field that's "empty" can still hold blank markup (<p><br></p>).
@@ -604,7 +616,55 @@
       body.textContent = "No " + String(n.label || "notes").toLowerCase() + " recorded yet.";
     } else if (n.type === "html") { body.innerHTML = sanitizeHtml(raw); }
     else { body.className += " sx__pre"; body.textContent = raw; }
-    card.appendChild(h); card.appendChild(body); box.appendChild(card);
+    card.appendChild(head); card.appendChild(body); box.appendChild(card);
+  }
+
+  // Swap the notes panel for an inline editor (CBMRichText for wysiwyg notes,
+  // a textarea for plain-text ones). Save PUTs through the same whitelisted
+  // /details endpoint the Details tab uses, then re-renders the panel; the
+  // Details tab's cached copy is invalidated so it re-reads on next activation.
+  function editOverallNotes(d) {
+    var n = d.overallNotes;
+    var box = $("overallNotes"); box.innerHTML = "";
+    var card = document.createElement("div"); card.className = "sx__overall";
+    var head = document.createElement("div"); head.className = "sx__overall-head";
+    var h = document.createElement("h3"); h.className = "sx__overall-h"; h.textContent = n.label;
+    head.appendChild(h); card.appendChild(head);
+    var ftype = n.type === "html" ? "wysiwyg" : "text";
+    var input = makeInput({ name: n.attr, type: ftype }, n.value == null ? "" : n.value);
+    input.dataset.field = n.attr; input.dataset.type = ftype;
+    if (ftype === "text") input.rows = 8;
+    card.appendChild(input);
+    var err = document.createElement("p"); err.className = "sx__notice"; err.hidden = true;
+    var actions = document.createElement("div"); actions.className = "sx__overall-actions";
+    var cancel = document.createElement("button");
+    cancel.type = "button"; cancel.className = "cbm-button cbm-button--secondary"; cancel.textContent = "Cancel";
+    cancel.addEventListener("click", function () { renderOverallNotes(d); });
+    var save = document.createElement("button");
+    save.type = "button"; save.className = "cbm-button"; save.textContent = "Save";
+    save.addEventListener("click", async function () {
+      var val = readField(input);
+      save.disabled = true; err.hidden = true;
+      try {
+        var changes = {}; changes[n.attr] = val;
+        await api("/details/" + encodeURIComponent(n.entity) + "/" + encodeURIComponent(d.id),
+          { method: "PUT", body: JSON.stringify({ changes: changes }) });
+        n.value = val;
+        currentDetails = null;  // the Details tab re-reads on next activation
+        renderOverallNotes(d);
+        notice("detailNotice", n.label + " saved.", "success");
+      } catch (e) {
+        if (e.status === 401) { showLogin(); return; }
+        save.disabled = false;
+        err.textContent = e.status === 403
+          ? "You don't have permission to edit " + n.label + "."
+          : "Couldn't save: " + e.message;
+        err.hidden = false; err.classList.add("is-error");
+      }
+    });
+    actions.appendChild(cancel); actions.appendChild(save);
+    card.appendChild(err); card.appendChild(actions);
+    box.appendChild(card);
   }
 
   // "Other contacts" (engagement contacts besides the primary, labeled) + the

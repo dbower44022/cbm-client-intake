@@ -1422,7 +1422,27 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-18)
 
-**Main is at v0.94.0** (2026-07-18, 777 tests green, committed NOT pushed) —
+**Main is at v0.95.0** (2026-07-18, 777 tests green, committed NOT pushed) —
+**record notes edit in place on the Overview** (Doug's ruling: notes are
+the most important item on partners/sponsors — save the clicks): the
+Overview's notes panel (Partner/Sponsor/Engagement Notes, all three
+domains) gains an always-active Edit button → inline editor (CBMRichText
+for wysiwyg, textarea for the sponsor's text notes) → Save PUTs through
+the same whitelisted `/details/{entity}/{id}` path (readable 403 for
+users without the grant), panel re-renders in place, Details-tab cache
+invalidated. `overallNotes` now carries `entity`+`attr`. Verified in the
+stub harness: partner richtext + sponsor textarea loops (Edit → type →
+Save → PUT diffs only the notes attr → panel updates + success notice;
+Cancel discards, no PUT; no console errors). ALSO answers Doug's "no
+place to edit partner attributes on the Details tab": the edit is the
+strip's right-edge Edit button — present only when the CRM grants edit
+on the record (an ACL-read-only record shows no button), and the curated
+Partnership/Sponsorship forms are in the UNDEPLOYED v0.91–0.93 — after
+deploy, if a partner manager still sees no Edit anywhere, grant their
+role CPartnerProfile edit at team scope (the same CRM pass as the
+v0.89.0 read-scope work).
+
+Before that: **v0.94.0** (2026-07-18, 777 tests green) —
 **Reliability hardening Phase 6 — infra/ops — COMPLETES THE WHOLE
 RELIABILITY ARC** (all six phases of
 `prompts/reliability-hardening-prompt-v0.1.md` /
