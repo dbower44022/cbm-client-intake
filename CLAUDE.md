@@ -526,12 +526,13 @@ mentor, not a redundant control); `list_engagements` returns `mentorId`/`mentorN
   user on every related Contact (`primaryEngagementContact` + `engagementContacts`),
   the `engagementClient` (CClientProfile), and `clientOrganization` (Account, when
   present). Source-of-truth mapping is the service module.
-  **Merge, never overwrite, on the client records (v0.76.1):** the
-  CClientProfile/Account re-home writes `assignedUsersIds` as the record's
-  EXISTING list + the new mentor + the engagement's co-mentors' users
-  (`_merged_assignment_payload`) — the old `[user_id]` overwrite silently
-  revoked co-mentor access stamped by the session tools. Contacts take only
-  the single `assignedUserId`, so they were never affected.
+  **Merge, never overwrite, on the client records (v0.76.1; contacts since the
+  2026-07-17 Contact collaborators switch):** every collaborators-entity
+  re-home (CClientProfile / Account / now Contact too) writes
+  `assignedUsersIds` as the record's EXISTING list + the new mentor + the
+  engagement's co-mentors' users (`_merged_assignment_payload`) — the old
+  `[user_id]` overwrite silently revoked co-mentor access stamped by the
+  session tools.
   **Stale-write guard (v0.72.1, 2026-07-16):** before any write the engagement is
   re-read and the call is rejected (AssignError → 400, nothing written) if it
   already has a mentor OR its status is no longer `Submitted` — a second
@@ -544,6 +545,47 @@ mentor, not a redundant control); `list_engagements` returns `mentorId`/`mentorN
   `core/stream.post_stream_note` — app writes are otherwise indistinguishable
   in Espo history from hand edits by the same user. The co-mentor add/remove
   paths post notes too.
+- **Grid UX (v0.79.0–v0.80.0, 2026-07-17, Doug's layout pass — all
+  frontend-only):** the page is a full-height flex column — the engagement
+  grid fills all vertical space under the control line and **scrolls
+  internally with a sticky header** (no page width cap; `box-sizing:
+  border-box` on `.assign` — width:100% + container padding overflowed
+  without it). "Signed in as …" + Sign out live in a **top-right user-profile
+  corner**; ONE control line holds the Status filter, a **live full-text
+  search** (name/status/client/contact/mentor/notes/created+assigned dates;
+  no-match state has its own message), and the Reassign Mentor / Review
+  Mentors / Refresh buttons. New sortable **Days Assigned** column (whole
+  local-calendar days from `engagementAssignedDate` to today; unassigned "—";
+  first click = longest first). **No gating disables** — the Assign button is
+  always active and a mentor-less click shows a notice + focuses the dropdown
+  ([[buttons-never-disabled-validate-on-click]], product-wide ruling).
+- **Post-assign notice email (v0.79.0):** a successful Assign OR Reassign
+  opens the shared quick-compose with To = the mentor's `cbmEmail` and the
+  EspoCRM **`MentorAssignmentNotice`** template pre-applied
+  (`CBMQuickMail.composeIfEnabled(email, {template})` — silent fallbacks:
+  missing template / failed parse ⇒ blank compose; sending unavailable ⇒
+  nothing opens). Template verified EXISTING on both CRMs 2026-07-17
+  (read-only DB query via the droplets; prod copy has a category — irrelevant,
+  the record-less quicksend list is context-unfiltered).
+- **Reassign Mentor (v0.81.0):** click a row to select it (right-click also
+  selects), then the toolbar button or **right-click context menu** (View
+  details / Reassign mentor… / Assign mentor… on unassigned rows / Edit
+  notes / Refresh — every row function is right-clickable). Mentor-picker
+  dialog (current mentor excluded; inline "Select a mentor first." on empty
+  confirm). `POST /engagements/{id}/reassign` →
+  `service.reassign_engagement`: same eligibility bar as assign; requires an
+  existing, DIFFERENT mentor; swaps `mentorProfile` + re-stamps
+  `engagementAssignedDate`; **`engagementStatus` deliberately untouched** (no
+  re-acceptance round); re-homes assigned users on the engagement + every
+  Contact + CClientProfile + Account + **every CSession on the engagement**
+  (swap-merge: old mentor's User removed unless a co-mentor shares it or they
+  personally own the session; co-mentors always preserved). Downstream
+  failures per-record best-effort (`reassignmentErrors` → UI + note); DOC-09
+  Drive grants re-synced after. **History** (stream note, Doug's exact
+  wording): "Mentor X was replaced with Mentor Y on MM/DD/YYYY by user NAME."
+  (Cleveland date) + the re-homing tally. NOT yet driven live — the staff
+  role needs CSession read+edit for the session re-stamp (failures surface,
+  never fatal) and Note create for the history stamp.
 - **CRM schema** (read live from crm-test 2026-06-19): `engagementStatus` enum has
   `Submitted`/`Pending Acceptance`; `CEngagement.mentorProfile` belongsTo
   CMentorProfile; `CMentorProfile.acceptingNewClients` (bool) +
