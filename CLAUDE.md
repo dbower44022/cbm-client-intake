@@ -875,10 +875,25 @@ segment of its own URL). Mounted only when `assignments_active` (needs
     and the far-right **Assigned Mentor column** links to the CMentorProfile
     peek (CBM email → compose/mailto) so co-mentors can reach the primary
     mentor in two clicks.
+  - **Grid accept action + mentor personal email (v0.78.0, 2026-07-17).**
+    (1) A **Pending Acceptance** engagement's Status cell renders as an amber
+    two-step accept pill → `POST /records/{id}/accept` moves it to
+    **Assigned** (`DomainConfig.list_status_accept`, mentor domain only —
+    the endpoint isn't registered elsewhere; `service.accept_engagement`).
+    The server re-reads the status first — a stale row ⇒ readable 400,
+    nothing written, the frontend reloads the grid (the v0.72.1 guard
+    shape); a best-effort stream note names the acting user (v0.74.0
+    convention); written as the signed-in user (mentors are in the
+    engagement's assignedUsers, same edit path as the v0.61.0 activation).
+    (2) Every **CMentorProfile peek** adds the linked Contact's email as a
+    **"Personal email"** compose link right after CBM email
+    (`service._mentor_personal_email`, best-effort — no linked Contact or a
+    forbidden Contact read just omits the row). NOT yet driven live.
   - **Peek** (`service.peek`, `PEEK_FIELDS` allowlist: Contact/Account/CClientProfile/
     CPartnerProfile/CSponsorProfile/CMentorProfile): a read-only pop-up; the
     aggregated Company link fetches each member and renders titled sections;
-    email-typed fields render as compose/mailto links.
+    email-typed fields render as compose/mailto links (the mentor peek also
+    carries the Personal-email row — the v0.78.0 bullet above).
   - **Friendlier empty grid** (`DomainConfig.empty_message`): "No client engagements
     / partners / sponsors found" — no "ask an administrator" alarm (past the team
     gate = you have permission); a Refresh picks up newly-assigned records (the
