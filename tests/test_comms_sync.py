@@ -135,6 +135,8 @@ class Cfg:
     request_timeout_seconds = 20
     comms_engagement_statuses_list = ["Active", "Assigned"]
     comms_partner_excluded_statuses_list = ["Ended"]
+    gmail_dead_letter_passes = 5  # D6
+    alert_webhook_url = ""
 
 
 # --- ingest ---------------------------------------------------------------
@@ -297,7 +299,7 @@ async def test_initial_sync_sets_cursor_and_known_addresses():
     sc = scope()
     gmail = FakeGmail(sc.mailbox, messages={"m1": raw_message()}, profile_history="1234")
     stats = await sync_mailbox(gmail, espo, store, sc, Cfg())
-    assert stats == {"fetched": 1, "stored": 1}
+    assert stats == {"fetched": 1, "stored": 1, "failed": 0, "deadLettered": 0}
     state = await store.get_sync_state(sc.mailbox)
     assert state.initial_done and state.history_id == "1234"
     assert "james@acme.test" in state.known_addresses
@@ -435,3 +437,232 @@ async def test_thread_following_ingests_reply_from_unknown_address():
     # …but an unrelated message from an unknown address is still skipped.
     other = raw_message(mid="m3", thread="OTHER", frm="stranger@else.test", rfc_id="r3")
     assert await ingest_message(espo, store, scope(), sync.parse_message(other)) is None
+
+
+# --- P1-5 loss prevention (reliability review 2026-07-17, Phase 4) ------------
+
+
+class FailingEspo(FakeEspo):
+    """CCommunication creates fail (the robert.cohen incident class)."""
+
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
+        self.fail_comm_create = True
+
+    async def create(self, entity, payload):
+        if self.fail_comm_create and entity == crm.COMMUNICATION:
+            from core.espo import EspoError
+
+            raise EspoError("create CCommunication failed: HTTP 400 maxLength")
+        return await super().create(entity, payload)
+
+
+_HIST_M1 = [{"id": "h1", "messagesAdded": [{"message": {"id": "m1"}}]}]
+
+
+async def _seed_done(store, cursor="100"):
+    sc = scope()
+    await store.save_sync_state(
+        sc.mailbox, history_id=cursor, initial_done=True,
+        known_addresses=sc.all_addresses,
+    )
+    return sc
+
+
+async def test_failed_ingest_holds_cursor_then_dead_letters_after_five():
+    """The DoD simulation: a message whose CRM create keeps failing holds the
+    cursor (nothing lost) and is dead-lettered on the 5th consecutive failing
+    pass (D6), after which the cursor moves on and the id is skipped."""
+    espo, store = FailingEspo(), MemoryCommsStore()
+    sc = await _seed_done(store, cursor="100")
+
+    for n in range(1, 5):
+        gmail = FakeGmail(sc.mailbox, messages={"m1": raw_message()},
+                          history=_HIST_M1, profile_history="200")
+        stats = await sync_mailbox(gmail, espo, store, sc, Cfg())
+        st = await store.get_sync_state(sc.mailbox)
+        assert stats["failed"] == 1 and stats["stored"] == 0
+        assert st.history_id == "100", f"cursor must hold on pass {n}"
+        assert st.failed_ids == {"m1": n}
+        assert st.dead_letter == []
+
+    # Pass 5: dead-lettered; the cursor finally advances past it.
+    gmail = FakeGmail(sc.mailbox, messages={"m1": raw_message()},
+                      history=_HIST_M1, profile_history="200")
+    stats = await sync_mailbox(gmail, espo, store, sc, Cfg())
+    st = await store.get_sync_state(sc.mailbox)
+    assert stats["deadLettered"] == 1
+    assert st.dead_letter == ["m1"] and st.failed_ids == {}
+    assert st.history_id == "200"
+
+    # Pass 6: the dead-lettered id is skipped entirely (not even fetched).
+    gmail = FakeGmail(sc.mailbox, messages={"m1": raw_message()},
+                      history=_HIST_M1, profile_history="300")
+    stats = await sync_mailbox(gmail, espo, store, sc, Cfg())
+    assert stats["fetched"] == 0 and stats["failed"] == 0
+
+
+async def test_recovered_message_clears_failure_count_and_advances():
+    espo, store = FailingEspo(), MemoryCommsStore()
+    sc = await _seed_done(store, cursor="100")
+    gmail = FakeGmail(sc.mailbox, messages={"m1": raw_message()},
+                      history=_HIST_M1, profile_history="200")
+    await sync_mailbox(gmail, espo, store, sc, Cfg())
+    assert (await store.get_sync_state(sc.mailbox)).failed_ids == {"m1": 1}
+
+    espo.fail_comm_create = False  # the CRM recovered
+    gmail = FakeGmail(sc.mailbox, messages={"m1": raw_message()},
+                      history=_HIST_M1, profile_history="200")
+    stats = await sync_mailbox(gmail, espo, store, sc, Cfg())
+    st = await store.get_sync_state(sc.mailbox)
+    assert stats["stored"] == 1
+    assert st.failed_ids == {} and st.dead_letter == []
+    assert st.history_id == "200"  # cursor advances once nothing is failing
+
+
+async def test_last_synced_at_only_advances_on_success():
+    """F2: last_synced_at is the expired-cursor backfill window source — a
+    failed/partial pass must never bump it."""
+    from datetime import datetime, timezone
+
+    espo, store = FailingEspo(), MemoryCommsStore()
+    sc = await _seed_done(store)
+    t0 = datetime(2026, 6, 1, tzinfo=timezone.utc)
+    store._state[sc.mailbox].last_synced_at = t0
+
+    gmail = FakeGmail(sc.mailbox, messages={"m1": raw_message()},
+                      history=_HIST_M1, profile_history="200")
+    await sync_mailbox(gmail, espo, store, sc, Cfg())  # failing pass
+    assert (await store.get_sync_state(sc.mailbox)).last_synced_at == t0
+
+    espo.fail_comm_create = False
+    gmail = FakeGmail(sc.mailbox, messages={"m1": raw_message()},
+                      history=_HIST_M1, profile_history="200")
+    await sync_mailbox(gmail, espo, store, sc, Cfg())  # clean pass
+    assert (await store.get_sync_state(sc.mailbox)).last_synced_at != t0
+
+
+async def test_expired_cursor_window_comes_from_last_success():
+    """The DoD outage simulation: after a two-week outage the expired-cursor
+    re-query window must start at the last SUCCESSFUL pass, not yesterday."""
+    from datetime import datetime, timezone
+
+    class QueryCapturingGmail(FakeGmail):
+        def __init__(self, *a, **k):
+            super().__init__(*a, **k)
+            self.queries = []
+
+        async def list_messages(self, query, page_token=None, max_results=100):
+            self.queries.append(query)
+            return await super().list_messages(query, page_token, max_results)
+
+    espo, store = FakeEspo(), MemoryCommsStore()
+    sc = await _seed_done(store)
+    store._state[sc.mailbox].last_synced_at = datetime(2026, 6, 1, tzinfo=timezone.utc)
+
+    gmail = QueryCapturingGmail(sc.mailbox, messages={}, history=None)  # None => expired
+    await sync_mailbox(gmail, espo, store, sc, Cfg())
+    assert gmail.queries, "the expired cursor must trigger a re-query"
+    assert all("after:2026/05/31" in q for q in gmail.queries)
+
+
+async def test_truncated_history_resumes_from_last_processed_entry():
+    """The DoD 21-page simulation: a history listing longer than the page cap
+    must NOT save the tip cursor (that skipped the unfetched pages) — it saves
+    the last processed entry's id and continues next pass."""
+    from comms.sync import _collect_history_ids
+
+    class EndlessHistoryGmail(FakeGmail):
+        async def list_history(self, start_history_id, page_token=None):
+            i = int(page_token or 0)
+            return {
+                "historyId": "tip-999",
+                "history": [
+                    {"id": f"h{i}", "messagesAdded": [{"message": {"id": f"m{i}"}}]}
+                ],
+                "nextPageToken": str(i + 1),  # never drains
+            }
+
+    gmail = EndlessHistoryGmail(scope().mailbox)
+    ids, cursor = await _collect_history_ids(gmail, "100")
+    assert len(ids) == 20  # one per page, capped
+    assert cursor == "h19"  # the LAST PROCESSED entry — never "tip-999"
+
+
+async def test_drained_history_still_saves_tip_cursor():
+    from comms.sync import _collect_history_ids
+
+    gmail = FakeGmail(scope().mailbox, history=_HIST_M1, profile_history="777")
+    ids, cursor = await _collect_history_ids(gmail, "100")
+    assert ids == ["m1"] and cursor == "777"
+
+
+async def test_resync_clears_failure_state():
+    """GMAIL_RESYNC still works: cursors AND failure tracking reset — a
+    formerly dead-lettered message gets its five new chances."""
+    store = MemoryCommsStore()
+    sc = await _seed_done(store)
+    await store.save_sync_state(
+        sc.mailbox, history_id="100", initial_done=True,
+        known_addresses=sc.all_addresses,
+        failed_ids={"m9": 3}, dead_letter=["m1"],
+    )
+    await store.reset_all_sync_state()
+    st = await store.get_sync_state(sc.mailbox)
+    assert st.initial_done is False and st.history_id is None
+    assert st.failed_ids == {} and st.dead_letter == []
+
+
+async def test_shell_conversation_is_reused_not_duplicated():
+    """F5: a conversation whose first message create failed is an empty shell;
+    the retry must fill the SAME conversation (the five hand-deleted crm-test
+    shells came from duplicating here)."""
+    espo, store = FailingEspo(), MemoryCommsStore()
+    sc = scope()
+    parsed = sync.parse_message(raw_message())
+    try:
+        await ingest_message(espo, store, sc, parsed)
+    except Exception:
+        pass  # the message create failed; the shell + thread map remain
+    shells = [rid for (ent, rid) in espo.records if ent == crm.CONVERSATION]
+    assert len(shells) == 1
+
+    espo.fail_comm_create = False
+    conv = await ingest_message(espo, store, sc, parsed)
+    assert conv == shells[0]  # reused, not duplicated
+    convs = [rid for (ent, rid) in espo.records if ent == crm.CONVERSATION]
+    assert len(convs) == 1
+
+
+async def test_alerts_fire_on_persistent_failure_and_dead_letter():
+    from comms.sync import _alert_on_persistent_failures
+
+    sent = []
+
+    async def collect(settings, text):
+        sent.append(text)
+
+    store = MemoryCommsStore()
+    sc = await _seed_done(store)
+    # count == 2 => "keeps failing" alert
+    await store.save_sync_state(
+        sc.mailbox, history_id="100", initial_done=True,
+        known_addresses=sc.all_addresses, failed_ids={"m1": 2},
+    )
+    await _alert_on_persistent_failures(Cfg(), store, sc.mailbox, {"failed": 1}, collect)
+    assert len(sent) == 1 and "keep failing" in sent[0]
+
+    # dead-letter => its own alert
+    await _alert_on_persistent_failures(
+        Cfg(), store, sc.mailbox, {"failed": 1, "deadLettered": 2}, collect
+    )
+    assert len(sent) == 2 and "DEAD-LETTERED" in sent[1]
+
+    # count == 1 (first failure) => no alert yet
+    sent.clear()
+    await store.save_sync_state(
+        sc.mailbox, history_id="100", initial_done=True,
+        known_addresses=sc.all_addresses, failed_ids={"m1": 1},
+    )
+    await _alert_on_persistent_failures(Cfg(), store, sc.mailbox, {"failed": 1}, collect)
+    assert sent == []

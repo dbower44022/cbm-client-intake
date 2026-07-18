@@ -40,6 +40,31 @@ email_sync_state = Table(
     Column("last_synced_at", DateTime(timezone=True)),
     Column("last_error", Text),
     Column("known_addresses", Text),
+    # P1-5 (reliability review 2026-07-17): per-message failure tracking.
+    # failed_ids = {"<gmail id>": consecutive-pass failure count} — while any
+    # id is failing the cursor is NOT advanced past it; after
+    # GMAIL_DEAD_LETTER_PASSES consecutive failures the id moves to
+    # dead_letter (a JSON list) and the cursor moves on. Dead-lettered ids
+    # are visible in the logs and /ops metrics.
+    Column("failed_ids", Text),
+    Column("dead_letter", Text),
+)
+
+# Local (mailbox, Gmail thread id) -> conversation id map, written whenever the
+# sync creates a CConversation. CConversation has no thread-id field (schema:
+# cconversation-entity.md), so a conversation whose FIRST message create failed
+# was an unfindable empty shell — the retry then minted a duplicate (the five
+# hand-deleted crm-test shells). This map makes shells findable so a retry
+# fills the same conversation; it also lets the send path resolve/create the
+# conversation BEFORE the best-effort write-through ingest (P1-5 F6).
+conversation_thread = Table(
+    "conversation_thread",
+    metadata,
+    Column("mailbox", String(255), nullable=False),
+    Column("thread_id", String(100), nullable=False),
+    Column("conversation_id", String(36), nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    PrimaryKeyConstraint("mailbox", "thread_id"),
 )
 
 conversation_override = Table(
@@ -64,8 +89,21 @@ class SyncState:
     mailbox: str
     history_id: Optional[str]
     initial_done: bool
+    # Last FULLY-successful pass (every fetched message ingested). This is the
+    # expired-cursor backfill window source, so it must never advance on a
+    # failed/partial pass (P1-5): a two-week outage would otherwise compute
+    # the re-query window as "yesterday" and silently skip the whole span.
     last_synced_at: Optional[datetime]
     known_addresses: set[str]
+    # {gmail id: consecutive failing passes} / ids skipped after 5 (D6).
+    failed_ids: dict[str, int] = None  # type: ignore[assignment]
+    dead_letter: list[str] = None  # type: ignore[assignment]
+
+    def __post_init__(self) -> None:
+        if self.failed_ids is None:
+            self.failed_ids = {}
+        if self.dead_letter is None:
+            self.dead_letter = []
 
 
 def _now() -> datetime:
@@ -98,16 +136,21 @@ class CommsStore:
             return None
         import json as _json
 
-        try:
-            known = set(_json.loads(row.known_addresses or "[]"))
-        except (ValueError, TypeError):
-            known = set()
+        def _load(raw, default):
+            try:
+                value = _json.loads(raw or "")
+                return value if isinstance(value, type(default)) else default
+            except (ValueError, TypeError):
+                return default
+
         return SyncState(
             mailbox=row.mailbox,
             history_id=row.history_id,
             initial_done=bool(row.initial_done),
             last_synced_at=row.last_synced_at,
-            known_addresses=known,
+            known_addresses=set(_load(row.known_addresses, [])),
+            failed_ids=_load(row.failed_ids, {}),
+            dead_letter=_load(row.dead_letter, []),
         )
 
     async def save_sync_state(
@@ -118,16 +161,25 @@ class CommsStore:
         initial_done: bool,
         error: Optional[str] = None,
         known_addresses: Optional[set[str]] = None,
+        success: bool = True,
+        failed_ids: Optional[dict[str, int]] = None,
+        dead_letter: Optional[list[str]] = None,
     ) -> None:
+        """``success=False`` (an errored or partial pass) keeps the stored
+        ``last_synced_at`` — it must reflect the last FULLY-successful pass,
+        because it is the expired-cursor backfill window source (P1-5)."""
         import json as _json
 
-        values = {
+        values: dict[str, Any] = {
             "history_id": history_id,
             "initial_done": initial_done,
-            "last_synced_at": _now(),
             "last_error": error,
             "known_addresses": _json.dumps(sorted(known_addresses or [])),
+            "failed_ids": _json.dumps(failed_ids or {}),
+            "dead_letter": _json.dumps(dead_letter or []),
         }
+        if success:
+            values["last_synced_at"] = _now()
         stmt = (
             pg_insert(email_sync_state)
             .values(mailbox=mailbox, **values)
@@ -136,17 +188,61 @@ class CommsStore:
         async with self._engine.begin() as conn:
             await conn.execute(stmt)
 
+    async def all_sync_states(self) -> list[SyncState]:
+        """Every mailbox's state — for /ops metrics (dead-letter visibility)."""
+        async with self._engine.begin() as conn:
+            rows = (await conn.execute(select(email_sync_state.c.mailbox))).all()
+        out = []
+        for r in rows:
+            state = await self.get_sync_state(r.mailbox)
+            if state:
+                out.append(state)
+        return out
+
     async def reset_all_sync_state(self) -> None:
         """One-shot re-drive (GMAIL_RESYNC): forget every cursor so the next
-        pass re-runs the initial backfill. Dedup makes the re-ingest idempotent."""
+        pass re-runs the initial backfill. Dedup makes the re-ingest idempotent.
+        Failure tracking resets too — a resync is a fresh start (a formerly
+        dead-lettered message gets its five new chances)."""
         from sqlalchemy import update
 
         async with self._engine.begin() as conn:
             await conn.execute(
                 update(email_sync_state).values(
-                    history_id=None, initial_done=False, known_addresses="[]"
+                    history_id=None, initial_done=False, known_addresses="[]",
+                    failed_ids="{}", dead_letter="[]",
                 )
             )
+
+    # --- conversation thread map (shell reuse, P1-5 F5) ----------------------
+
+    async def set_thread_conversation(
+        self, mailbox: str, thread_id: str, conversation_id: str
+    ) -> None:
+        values = {"conversation_id": conversation_id, "created_at": _now()}
+        stmt = (
+            pg_insert(conversation_thread)
+            .values(mailbox=mailbox, thread_id=thread_id, **values)
+            .on_conflict_do_update(
+                index_elements=["mailbox", "thread_id"], set_=values
+            )
+        )
+        async with self._engine.begin() as conn:
+            await conn.execute(stmt)
+
+    async def get_thread_conversation(
+        self, mailbox: str, thread_id: str
+    ) -> Optional[str]:
+        async with self._engine.begin() as conn:
+            row = (
+                await conn.execute(
+                    select(conversation_thread.c.conversation_id).where(
+                        conversation_thread.c.mailbox == mailbox,
+                        conversation_thread.c.thread_id == thread_id,
+                    )
+                )
+            ).first()
+        return row.conversation_id if row else None
 
     # --- curation overrides --------------------------------------------------
 
@@ -221,6 +317,7 @@ class MemoryCommsStore:
     def __init__(self) -> None:
         self._state: dict[str, SyncState] = {}
         self._overrides: dict[tuple[str, str, str], str] = {}
+        self._threads: dict[tuple[str, str], str] = {}
 
     async def create_all(self) -> None: ...
 
@@ -230,15 +327,22 @@ class MemoryCommsStore:
         return self._state.get(mailbox)
 
     async def save_sync_state(
-        self, mailbox: str, *, history_id, initial_done, error=None, known_addresses=None
+        self, mailbox: str, *, history_id, initial_done, error=None,
+        known_addresses=None, success=True, failed_ids=None, dead_letter=None,
     ) -> None:
+        prev = self._state.get(mailbox)
         self._state[mailbox] = SyncState(
             mailbox=mailbox,
             history_id=history_id,
             initial_done=initial_done,
-            last_synced_at=_now(),
+            last_synced_at=_now() if success else (prev.last_synced_at if prev else None),
             known_addresses=set(known_addresses or []),
+            failed_ids=dict(failed_ids or {}),
+            dead_letter=list(dead_letter or []),
         )
+
+    async def all_sync_states(self) -> list[SyncState]:
+        return list(self._state.values())
 
     async def reset_all_sync_state(self) -> None:
         for mailbox, st in list(self._state.items()):
@@ -246,6 +350,12 @@ class MemoryCommsStore:
                 mailbox=mailbox, history_id=None, initial_done=False,
                 last_synced_at=st.last_synced_at, known_addresses=set(),
             )
+
+    async def set_thread_conversation(self, mailbox, thread_id, conversation_id) -> None:
+        self._threads[(mailbox, thread_id)] = conversation_id
+
+    async def get_thread_conversation(self, mailbox, thread_id) -> Optional[str]:
+        return self._threads.get((mailbox, thread_id))
 
     async def set_override(
         self, parent_entity, parent_id, conversation_id, action, created_by=""

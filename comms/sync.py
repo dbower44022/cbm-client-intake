@@ -66,15 +66,25 @@ async def _collect_query_ids(gmail: GmailClient, queries: list[str]) -> list[str
 async def _collect_history_ids(
     gmail: GmailClient, start_history_id: str
 ) -> tuple[list[str], Optional[str]]:
-    """(added message ids, new cursor) since ``start_history_id``."""
+    """(added message ids, new cursor) since ``start_history_id``.
+
+    If ``_MAX_HISTORY_PAGES`` truncates the listing with a ``nextPageToken``
+    still pending, the returned cursor is the LAST PROCESSED history entry's
+    own id — the next pass continues from there. The old code saved the
+    current-tip ``historyId`` in that case, permanently skipping every
+    unfetched page after a long outage on a busy mailbox (P1-5, reliability
+    review 2026-07-17).
+    """
     ids: list[str] = []
     seen: set[str] = set()
-    new_cursor: Optional[str] = None
+    tip_cursor: Optional[str] = None
+    last_entry_id: Optional[str] = None
     token: Optional[str] = None
     for _ in range(_MAX_HISTORY_PAGES):
         page = await gmail.list_history(start_history_id, page_token=token)
-        new_cursor = page.get("historyId") or new_cursor
+        tip_cursor = page.get("historyId") or tip_cursor
         for entry in page.get("history", []) or []:
+            last_entry_id = entry.get("id") or last_entry_id
             for added in entry.get("messagesAdded", []) or []:
                 mid = (added.get("message") or {}).get("id")
                 if mid and mid not in seen:
@@ -82,8 +92,14 @@ async def _collect_history_ids(
                     ids.append(mid)
         token = page.get("nextPageToken")
         if not token:
-            break
-    return ids, new_cursor
+            return ids, tip_cursor
+    # Truncated: resume from the last processed entry (or hold the old cursor
+    # if nothing was processed at all).
+    log.warning(
+        "history listing truncated at %d pages for %s — resuming from the last "
+        "processed entry next pass", _MAX_HISTORY_PAGES, gmail.mailbox,
+    )
+    return ids, last_entry_id or start_history_id or None
 
 
 async def ingest_message(
@@ -166,10 +182,23 @@ async def ingest_message(
     )
     if not conv_id and refs:
         conv_id = await crm.find_conversation_by_refs(espo, refs)
+    if not conv_id and parsed.thread_id:
+        # Empty-shell reuse (P1-5 F5): a conversation whose first message
+        # create failed has no CCommunication rows, so the CRM lookups above
+        # can't find it — the local thread map can, so the retry fills the
+        # SAME conversation instead of minting a duplicate shell.
+        conv_id = await store.get_thread_conversation(scope.mailbox, parsed.thread_id)
     if not conv_id:
         conv_id = await crm.create_conversation(
             espo, subject=parsed.subject, sent_at=parsed.sent_at
         )
+        if parsed.thread_id:
+            try:
+                await store.set_thread_conversation(
+                    scope.mailbox, parsed.thread_id, conv_id
+                )
+            except Exception as exc:  # noqa: BLE001 — the map is a resilience aid
+                log.warning("thread-map write failed for %s: %s", conv_id, exc)
 
     # 3. Clean + store the message. Raw mail stays in Gmail (the ids deep-link).
     cleaned = clean_email(parsed.body_text, parsed.body_html)
@@ -205,87 +234,197 @@ async def ingest_message(
 
 async def _ingest_ids(
     gmail: GmailClient, espo: Any, store: Any, scope: MailboxScope, ids: list[str]
-) -> int:
+) -> tuple[int, list[str]]:
+    """Ingest each id; returns ``(stored, failed_ids)``.
+
+    A failure no longer just logs (P1-5): the caller holds the cursor back so
+    the failed message is re-read next pass instead of being silently lost —
+    the exact mechanics of the robert.cohen incident.
+    """
     stored = 0
+    failed: list[str] = []
     for mid in ids:
         try:
             parsed = parse_message(await gmail.get_message(mid))
             if await ingest_message(espo, store, scope, parsed):
                 stored += 1
         except (GmailError, EspoError) as exc:
+            failed.append(mid)
             log.warning("ingest %s/%s failed: %s", scope.mailbox, mid, exc)
         except Exception:  # noqa: BLE001 — one bad message never kills the cycle
+            failed.append(mid)
             log.exception("unexpected ingest failure %s/%s", scope.mailbox, mid)
-    return stored
+    return stored, failed
+
+
+def _update_failure_state(
+    state: Any, failed: list[str], dead_letter_passes: int
+) -> tuple[dict[str, int], list[str], list[str]]:
+    """Fold this pass's failed ids into the consecutive-failure counters.
+
+    Returns ``(failed_counts, dead_letter, newly_dead)``. Counting is
+    CONSECUTIVE: an id that stopped failing (or stopped appearing) is
+    forgotten. After ``dead_letter_passes`` consecutive failing passes (D6=5)
+    the id moves to the bounded dead-letter list and no longer holds the
+    cursor back.
+    """
+    prev_counts: dict[str, int] = dict(getattr(state, "failed_ids", None) or {})
+    dead: list[str] = list(getattr(state, "dead_letter", None) or [])
+    counts: dict[str, int] = {}
+    newly_dead: list[str] = []
+    for mid in failed:
+        n = prev_counts.get(mid, 0) + 1
+        if n >= dead_letter_passes:
+            if mid not in dead:
+                dead.append(mid)
+                newly_dead.append(mid)
+        else:
+            counts[mid] = n
+    return counts, dead, newly_dead
 
 
 async def sync_mailbox(
     gmail: GmailClient, espo: Any, store: Any, scope: MailboxScope, settings: Any
 ) -> dict[str, int]:
-    """One sync cycle for one mailbox. Returns counters for logging/monitoring."""
+    """One sync cycle for one mailbox. Returns counters for logging/monitoring.
+
+    Loss-prevention contract (P1-5): a message that fails ingest counts in
+    ``failed`` (not silently dropped), and the cursor is NOT advanced past it —
+    the next pass re-reads it (Message-ID dedup makes the replay cheap). Only
+    after ``gmail_dead_letter_passes`` consecutive failing passes is the id
+    dead-lettered and the cursor allowed past it. ``last_synced_at`` (the
+    expired-cursor backfill window source) only advances on a fully-successful
+    pass.
+    """
     state = await store.get_sync_state(scope.mailbox)
     addresses = scope.all_addresses
-    stats = {"fetched": 0, "stored": 0}
+    stats = {"fetched": 0, "stored": 0, "failed": 0, "deadLettered": 0}
+    dead_prev: set[str] = set(getattr(state, "dead_letter", None) or []) if state else set()
 
     if state is None or not state.initial_done:
         # Initial sync: bounded address-book backfill, then set the cursor.
         profile = await gmail.profile()
         queries = address_queries(sorted(addresses), extra=settings.gmail_backfill)
-        ids = await _collect_query_ids(gmail, queries)
+        ids = [i for i in await _collect_query_ids(gmail, queries) if i not in dead_prev]
         stats["fetched"] = len(ids)
-        stats["stored"] = await _ingest_ids(gmail, espo, store, scope, ids)
+        stats["stored"], failed = await _ingest_ids(gmail, espo, store, scope, ids)
+        counts, dead, newly_dead = _update_failure_state(
+            state, failed, settings.gmail_dead_letter_passes
+        )
+        stats["failed"] = len(failed)
+        stats["deadLettered"] = len(newly_dead)
+        # Failures (beyond the dead-lettered) => initial sync is NOT done, so
+        # the next pass re-runs the (deduped) backfill and retries them.
+        complete = not counts
         await store.save_sync_state(
             scope.mailbox,
-            history_id=str(profile.get("historyId") or ""),
-            initial_done=True,
-            known_addresses=addresses,
+            history_id=str(profile.get("historyId") or "") if complete else None,
+            initial_done=complete,
+            known_addresses=addresses if complete else set(),
+            success=complete,
+            failed_ids=counts,
+            dead_letter=dead,
         )
+        _log_failures(scope.mailbox, counts, newly_dead)
         return stats
 
     # Targeted backfill for addresses that are new since the last cycle
     # (a record went active / a contact gained an address) — retroactive match.
+    all_failed: list[str] = []
+    known_addresses = addresses
     new_addresses = addresses - state.known_addresses
     if new_addresses:
         queries = address_queries(sorted(new_addresses), extra=settings.gmail_backfill)
-        ids = await _collect_query_ids(gmail, queries)
+        ids = [i for i in await _collect_query_ids(gmail, queries) if i not in dead_prev]
         stats["fetched"] += len(ids)
-        stats["stored"] += await _ingest_ids(gmail, espo, store, scope, ids)
+        stored, failed = await _ingest_ids(gmail, espo, store, scope, ids)
+        stats["stored"] += stored
+        all_failed += failed
+        if failed:
+            # Keep the new addresses out of known_addresses so the next pass
+            # re-runs their targeted backfill (the cursor doesn't cover them).
+            known_addresses = addresses - new_addresses
 
     # Incremental via the history cursor; expired cursor => date-window requery.
     new_cursor = state.history_id
+    cursor_ids: list[str] = []
     try:
-        ids, cursor = await _collect_history_ids(gmail, state.history_id or "")
+        cursor_ids, cursor = await _collect_history_ids(gmail, state.history_id or "")
         new_cursor = cursor or new_cursor
     except HistoryExpiredError:
         log.info("history cursor expired for %s — date-window backfill", scope.mailbox)
         profile = await gmail.profile()
         new_cursor = str(profile.get("historyId") or "")
+        # The re-query window comes from the last FULLY-successful pass — an
+        # error-path save must never have bumped it (P1-5 F2).
         since = state.last_synced_at
         window = ""
         if since:
             window = "after:" + (since - timedelta(days=1)).strftime("%Y/%m/%d")
         queries = address_queries(sorted(addresses), extra=window)
-        ids = await _collect_query_ids(gmail, queries)
+        cursor_ids = await _collect_query_ids(gmail, queries)
 
-    if ids:
-        stats["fetched"] += len(ids)
-        stats["stored"] += await _ingest_ids(gmail, espo, store, scope, ids)
+    cursor_ids = [i for i in cursor_ids if i not in dead_prev]
+    if cursor_ids:
+        stats["fetched"] += len(cursor_ids)
+        stored, failed = await _ingest_ids(gmail, espo, store, scope, cursor_ids)
+        stats["stored"] += stored
+        all_failed += failed
 
+    counts, dead, newly_dead = _update_failure_state(
+        state, all_failed, settings.gmail_dead_letter_passes
+    )
+    stats["failed"] = len(all_failed)
+    stats["deadLettered"] = len(newly_dead)
+    # Any still-tracked failure holds the cursor at its OLD position so the
+    # failed messages are re-read next pass; dead-lettered ids no longer hold
+    # it back.
+    cursor_held = bool(counts)
     await store.save_sync_state(
         scope.mailbox,
-        history_id=new_cursor,
+        history_id=state.history_id if cursor_held else new_cursor,
         initial_done=True,
-        known_addresses=addresses,
+        known_addresses=known_addresses,
+        success=not all_failed,
+        failed_ids=counts,
+        dead_letter=dead,
     )
+    _log_failures(scope.mailbox, counts, newly_dead)
     return stats
+
+
+def _log_failures(mailbox: str, counts: dict[str, int], newly_dead: list[str]) -> None:
+    if counts:
+        log.warning(
+            "%s: %d message(s) failing ingest (cursor held back): %s",
+            mailbox, len(counts),
+            ", ".join(f"{m} (pass {n})" for m, n in sorted(counts.items())),
+        )
+    if newly_dead:
+        log.error(
+            "%s: DEAD-LETTERED %d message(s) after repeated failures — skipped "
+            "from now on (recover with GMAIL_RESYNC after fixing the cause): %s",
+            mailbox, len(newly_dead), ", ".join(newly_dead),
+        )
 
 
 async def run_gmail_sync(
     settings: Any, store: Any, espo: Any, service_account_info: dict[str, Any]
 ) -> dict[str, Any]:
-    """One full sync pass over every manager mailbox (the worker's timer body)."""
+    """One full sync pass over every manager mailbox (the worker's timer body).
+
+    ``failed`` counts messages whose ingest failed this pass (the cursor is
+    held for them — nothing is lost); an alert fires when a message KEEPS
+    failing (second consecutive pass) and again if it is dead-lettered, so the
+    robert.cohen class surfaces as an alert instead of "0 sync errors".
+    """
+    from core.monitoring import send_alert
+
     scopes = await crm.build_scopes(espo, settings)
-    totals: dict[str, Any] = {"mailboxes": len(scopes), "fetched": 0, "stored": 0, "errors": 0}
+    totals: dict[str, Any] = {
+        "mailboxes": len(scopes), "fetched": 0, "stored": 0,
+        "failed": 0, "deadLettered": 0, "errors": 0,
+    }
     for scope in scopes:
         gmail = GmailClient(
             service_account_info, scope.mailbox, settings.request_timeout_seconds
@@ -294,6 +433,9 @@ async def run_gmail_sync(
             stats = await sync_mailbox(gmail, espo, store, scope, settings)
             totals["fetched"] += stats["fetched"]
             totals["stored"] += stats["stored"]
+            totals["failed"] += stats.get("failed", 0)
+            totals["deadLettered"] += stats.get("deadLettered", 0)
+            await _alert_on_persistent_failures(settings, store, scope.mailbox, stats, send_alert)
         except (GmailError, EspoError) as exc:
             totals["errors"] += 1
             log.warning("sync failed for %s: %s", scope.mailbox, exc)
@@ -305,11 +447,51 @@ async def run_gmail_sync(
                     initial_done=bool(state and state.initial_done),
                     error=str(exc)[:500],
                     known_addresses=state.known_addresses if state else set(),
+                    # F2: an errored pass must NOT advance last_synced_at (the
+                    # expired-cursor backfill window source) — a long outage
+                    # would otherwise silently shrink the re-query window.
+                    success=False,
+                    failed_ids=state.failed_ids if state else {},
+                    dead_letter=state.dead_letter if state else [],
                 )
             except Exception:  # noqa: BLE001
-                pass
+                log.warning("could not record the sync error for %s", scope.mailbox)
         except Exception:  # noqa: BLE001 — one mailbox never kills the pass
             totals["errors"] += 1
             log.exception("unexpected sync failure for %s", scope.mailbox)
+        finally:
+            await gmail.aclose()
     log.info("gmail sync pass: %s", totals)
     return totals
+
+
+async def _alert_on_persistent_failures(
+    settings: Any, store: Any, mailbox: str, stats: dict[str, int], send
+) -> None:
+    """Webhook-alert when a message fails a SECOND consecutive pass (it will
+    now be retried until dead-lettered) and when messages are dead-lettered.
+    Keyed to those transitions, so each message alerts at most twice."""
+    try:
+        if stats.get("deadLettered"):
+            await send(
+                settings,
+                f"Gmail sync: {stats['deadLettered']} message(s) in {mailbox} were "
+                f"DEAD-LETTERED after {settings.gmail_dead_letter_passes} failed "
+                f"attempts — they are being skipped. Check the worker logs for the "
+                f"message ids and cause; a GMAIL_RESYNC re-attempts them.",
+            )
+            return
+        state = await store.get_sync_state(mailbox)
+        just_persistent = [
+            m for m, n in (state.failed_ids if state else {}).items() if n == 2
+        ]
+        if just_persistent:
+            await send(
+                settings,
+                f"Gmail sync: {len(just_persistent)} message(s) in {mailbox} keep "
+                f"failing to ingest (the sync cursor is held back so nothing is "
+                f"lost). They will be retried up to "
+                f"{settings.gmail_dead_letter_passes} passes — see the worker logs.",
+            )
+    except Exception as exc:  # noqa: BLE001 — alerting never breaks the pass
+        log.warning("gmail failure alert failed for %s: %s", mailbox, exc)

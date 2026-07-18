@@ -29,6 +29,8 @@
   var currentViewIndex = -1;    // position within currentViewSessions
   var senderMailbox;        // the user's own From address (/api/mailbox); undefined = not fetched yet
   var senderSignature;      // their EspoCRM Preferences signature (rides /api/mailbox)
+  var composeGuard = null;  // open compose dialog's close-guard: {dirty(), discard(), send(), backConvId}
+  var commTrapEl = null;    // focus-trap root while the comm modal is open
   var search = "";
   var statusFilter = "";        // selected status value ("" = all)
   var sortKey = null;           // grid column key to sort by (null = default order)
@@ -113,8 +115,8 @@
   // Communications: compose + view/reply modal.
   $("composeBtn").addEventListener("click", function () { composeMessage(null); });
   $("addEmailsBtn").addEventListener("click", function () { addEmailsDialog(); });
-  $("commModalClose").addEventListener("click", closeComm);
-  $("commBackdrop").addEventListener("click", closeComm);
+  $("commModalClose").addEventListener("click", requestCloseComm);
+  $("commBackdrop").addEventListener("click", requestCloseComm);
   // Unsaved-changes confirm dialog (leaving the session editor).
   $("confirmSave").addEventListener("click", function () { hide($("confirmModal")); if (confirmOnSave) confirmOnSave(); });
   $("confirmDiscard").addEventListener("click", function () { hide($("confirmModal")); if (confirmOnDiscard) confirmOnDiscard(); });
@@ -126,10 +128,34 @@
   $("gcalCancel").addEventListener("click", function () { hide($("gcalModal")); });
   $("gcalBackdrop").addEventListener("click", function () { hide($("gcalModal")); });
   document.addEventListener("keydown", function (e) {
+    // Ctrl/Cmd+Enter sends from anywhere inside an open compose dialog.
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter" &&
+        !$("commModal").hidden && composeGuard && composeGuard.send) {
+      e.preventDefault(); composeGuard.send(); return;
+    }
+    // Keep keyboard focus inside the comm modal while it's open (focus trap).
+    if (e.key === "Tab" && commTrapEl && $("confirmModal").hidden) {
+      var focusables = commTrapEl.querySelectorAll(
+        "button, [href], input, select, textarea, [contenteditable=true], [tabindex]:not([tabindex='-1'])"
+      );
+      var list = Array.prototype.filter.call(focusables, function (el) {
+        return !el.hidden && el.offsetParent !== null && !el.disabled;
+      });
+      if (list.length) {
+        var first = list[0], last = list[list.length - 1];
+        if (e.shiftKey && (document.activeElement === first || !commTrapEl.contains(document.activeElement))) {
+          e.preventDefault(); last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault(); first.focus();
+        } else if (!commTrapEl.contains(document.activeElement)) {
+          e.preventDefault(); first.focus();
+        }
+      }
+    }
     if (e.key !== "Escape") return;
     if (!$("confirmModal").hidden) { hide($("confirmModal")); }  // Escape = keep editing
     else if (!$("gcalModal").hidden) { hide($("gcalModal")); }
-    else if (!$("commModal").hidden) closeComm();
+    else if (!$("commModal").hidden) requestCloseComm();
     else if (!$("peekModal").hidden) closePeek();
   });
 
@@ -388,9 +414,9 @@
           cl.addEventListener("click", function () { openPeek("Contact", r.contactId, r[c.key]); });
           td.appendChild(cl);
         } else if (c.key === "mentor" && r.mentorId && r[c.key]) {
-          // Assigned Mentor -> the mentor-profile pop-up (CBM + personal email
-          // render as compose/mailto links there, so a co-mentor can email the
-          // primary mentor in two clicks).
+          // Assigned Mentor / Partner Manager -> the mentor-profile pop-up
+          // (CBM + personal email render as compose/mailto links there, so
+          // the assigned manager can be emailed in two clicks).
           var ml = document.createElement("button");
           ml.type = "button"; ml.className = "sx__link";
           ml.textContent = r[c.key];
@@ -556,7 +582,9 @@
   }
 
   // Overall notes about the whole engagement / partner / sponsor — above the
-  // per-session feed, since they're usually the most important.
+  // per-session feed, since they're usually the most important. The panel
+  // always renders when the domain has a notes field (empty => a muted
+  // placeholder), so the record-level notes are always visible at the top.
   function renderOverallNotes(d) {
     var box = $("overallNotes"); box.innerHTML = "";
     var n = d.overallNotes;
@@ -564,8 +592,18 @@
     var card = document.createElement("div"); card.className = "sx__overall";
     var h = document.createElement("h3"); h.className = "sx__overall-h"; h.textContent = n.label;
     var body = document.createElement("div"); body.className = "sx__overall-body";
-    if (n.type === "html") { body.innerHTML = sanitizeHtml(String(n.value || "")); }
-    else { body.className += " sx__pre"; body.textContent = n.value == null ? "" : String(n.value); }
+    var raw = n.value == null ? "" : String(n.value);
+    // A wysiwyg field that's "empty" can still hold blank markup (<p><br></p>).
+    var isEmpty = !raw.trim();
+    if (!isEmpty && n.type === "html") {
+      var probe = document.createElement("div"); probe.innerHTML = sanitizeHtml(raw);
+      isEmpty = !(probe.textContent || "").trim();
+    }
+    if (isEmpty) {
+      body.className += " sx__muted";
+      body.textContent = "No " + String(n.label || "notes").toLowerCase() + " recorded yet.";
+    } else if (n.type === "html") { body.innerHTML = sanitizeHtml(raw); }
+    else { body.className += " sx__pre"; body.textContent = raw; }
     card.appendChild(h); card.appendChild(body); box.appendChild(card);
   }
 
@@ -1275,6 +1313,14 @@
 
   async function loadConversations() {
     if (!currentDetail) return;
+    // Warm the mailbox/signature cache: Reply All excludes the user's own
+    // address, and the compose seeds their signature — both ride /mailbox.
+    if (senderMailbox === undefined && commsOn()) {
+      api("/mailbox").then(function (r) {
+        senderMailbox = (r && r.mailbox) || null;
+        senderSignature = (r && r.signature) || "";
+      }).catch(function () { /* compose refetches on open */ });
+    }
     var body = $("inboxBody"); body.innerHTML = "";
     $("noMessages").textContent = "Loading conversations…"; show($("noMessages")); hide($("inboxTable"));
     try {
@@ -1406,16 +1452,59 @@
     }
 
     var foot = $("commModalFoot"); foot.innerHTML = "";
+    // The message being answered rides into the compose as a quoted block, so
+    // the writer still sees what they're replying to (the compose replaces
+    // this thread view in the modal).
+    var lastMsg = (c.messages || [])[(c.messages || []).length - 1] || null;
+    var quoteSrc = lastInbound || lastMsg;
+    function quoteOf(m) {
+      if (!m || !m.bodyHtml) return null;
+      return {
+        html: m.bodyHtml,
+        from: m.from || m.fromAddress || "",
+        date: m.sentAt || "",
+      };
+    }
+    // Every address seen on the thread (senders + To + Cc), minus the user's
+    // own mailbox — the Reply All recipient set.
+    function threadParticipants() {
+      var seen = {}, out = [];
+      (c.messages || []).forEach(function (m) {
+        [m.fromAddress].concat(
+          String(m.to || "").split(/[,;]+/),
+          String(m.cc || "").split(/[,;]+/)
+        ).forEach(function (a) {
+          a = extractEmail(a || "").toLowerCase();
+          if (!a || a.indexOf("@") === -1 || seen[a]) return;
+          if (senderMailbox && a === String(senderMailbox).toLowerCase()) return;
+          seen[a] = 1; out.push(a);
+        });
+      });
+      return out;
+    }
+    function openReply(toList) {
+      composeMessage({
+        to: toList.join(", "),
+        subject: replySubject(c.subject),
+        replyToId: lastInbound ? lastInbound.id : null,
+        quote: quoteOf(quoteSrc),
+        backToConv: convId,
+      });
+    }
     var reply = document.createElement("button"); reply.type = "button"; reply.className = "cbm-button";
     reply.textContent = "↩ Reply";
     reply.addEventListener("click", function () {
-      composeMessage({
-        to: lastInbound ? lastInbound.fromAddress : "",
-        subject: replySubject(c.subject),
-        replyToId: lastInbound ? lastInbound.id : null,
-      });
+      openReply(lastInbound && lastInbound.fromAddress ? [lastInbound.fromAddress] : []);
     });
     foot.appendChild(reply);
+    var participants = threadParticipants();
+    if (participants.length > 1) {
+      var replyAll = document.createElement("button"); replyAll.type = "button";
+      replyAll.className = "cbm-button cbm-button--secondary";
+      replyAll.textContent = "↩ Reply all (" + participants.length + ")";
+      replyAll.addEventListener("click", function () { openReply(participants); });
+      foot.appendChild(replyAll);
+    }
     foot.appendChild(removeConversationBtn(convId));
     var close = document.createElement("button"); close.type = "button";
     close.className = "cbm-button cbm-button--secondary"; close.textContent = "Close";
@@ -1579,14 +1668,201 @@
     });
   }
 
+  // Generic styled confirm (the #confirmModal shell): every caller sets ALL
+  // the labels, so the dialog never leaks a previous caller's wording.
+  function openConfirm(opts) {
+    $("confirmTitle").textContent = opts.title || "Are you sure?";
+    $("confirmMsg").textContent = opts.msg || "";
+    var save = $("confirmSave");
+    save.hidden = !opts.onSave;
+    save.textContent = opts.saveLabel || "Save";
+    $("confirmDiscard").textContent = opts.discardLabel || "Discard";
+    $("confirmCancel").textContent = opts.cancelLabel || "Cancel";
+    confirmOnSave = opts.onSave || null;
+    confirmOnDiscard = opts.onDiscard || null;
+    show($("confirmModal"));
+    (opts.onSave ? save : $("confirmCancel")).focus();
+  }
+
   // --- Communications: view / compose / reply modal ---
   function openComm(kind, title) {
+    composeGuard = null;  // any (re)open resets the compose close-guard
     $("commModalKind").textContent = kind || "";
     $("commModalTitle").textContent = title || "";
     $("commModalBody").innerHTML = ""; $("commModalFoot").innerHTML = "";
     show($("commModal"));
+    commTrapEl = document.querySelector("#commModal .sx__modal-card");
   }
-  function closeComm() { hide($("commModal")); }
+  function closeComm() { composeGuard = null; commTrapEl = null; hide($("commModal")); }
+
+  // Closing the comm modal by Escape / × / backdrop / Cancel: a compose with
+  // real content asks before discarding (the draft also survives in
+  // localStorage either way — "Discard draft" is what deletes it).
+  function requestCloseComm() {
+    if (!composeGuard || !composeGuard.dirty()) {
+      var back = composeGuard && composeGuard.backConvId;
+      closeComm();
+      if (back) viewConversation(back);  // a reply returns to its thread
+      return;
+    }
+    var g = composeGuard;
+    openConfirm({
+      title: "Discard this draft?",
+      msg: "Your message hasn't been sent. It stays saved as a draft unless you discard it.",
+      discardLabel: "Discard draft",
+      cancelLabel: "Keep writing",
+      onDiscard: function () {
+        g.discard();
+        closeComm();
+        if (g.backConvId) viewConversation(g.backConvId);
+      },
+    });
+  }
+
+  // "a@b.c, Jane Doe <jane@x.org>; bob@y.io" -> {emails: [...], invalid: [...]}.
+  // Splits on commas/semicolons/newlines (NOT bare spaces — display names
+  // contain them); accepts Name <email>; validates the address shape.
+  function parseAddrList(str) {
+    var emails = [], invalid = [], seen = {};
+    String(str || "").split(/[,;\n]+/).forEach(function (tok) {
+      tok = tok.trim();
+      if (!tok) return;
+      var m = /<([^>]+)>/.exec(tok);
+      var addr = (m ? m[1] : tok).trim();
+      // A bare space-separated run without <>: keep the @-looking parts.
+      if (!m && /\s/.test(addr)) {
+        var parts = addr.split(/\s+/).filter(function (p) { return p.indexOf("@") !== -1; });
+        if (parts.length === 1) addr = parts[0];
+      }
+      if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addr)) {
+        var k = addr.toLowerCase();
+        if (!seen[k]) { seen[k] = 1; emails.push(addr); }
+      } else {
+        invalid.push(tok);
+      }
+    });
+    return { emails: emails, invalid: invalid };
+  }
+
+  function fmtBytes(n) {
+    if (!n && n !== 0) return "";
+    if (n < 1024) return n + " B";
+    if (n < 1024 * 1024) return (n / 1024).toFixed(n < 10240 ? 1 : 0) + " KB";
+    return (n / (1024 * 1024)).toFixed(1) + " MB";
+  }
+
+  // Searchable dropdown (template picker, company picker): one input, a
+  // filtered list below it. opts: {placeholder, options: [{id,label,muted}],
+  // emptyLabel, onSelect(id|null, option), allowClear}. Returns {el, setOptions,
+  // setText, close}.
+  function makeCombobox(opts) {
+    var wrap = document.createElement("div"); wrap.className = "sx__combo";
+    var input = document.createElement("input");
+    input.type = "text"; input.className = "sx__msg-input";
+    input.placeholder = opts.placeholder || "";
+    input.setAttribute("role", "combobox"); input.setAttribute("aria-expanded", "false");
+    var list = document.createElement("ul"); list.className = "sx__combo-list"; list.hidden = true;
+    wrap.appendChild(input); wrap.appendChild(list);
+    var options = opts.options || [];
+    var active = -1, visible = [];
+    function close() { list.hidden = true; input.setAttribute("aria-expanded", "false"); active = -1; }
+    function render(filter) {
+      list.innerHTML = ""; visible = []; active = -1;
+      if (opts.allowClear) visible.push({ id: null, label: opts.emptyLabel || "(none)", muted: true });
+      options.forEach(function (o) {
+        if (filter && String(o.label || "").toLowerCase().indexOf(filter.toLowerCase()) === -1) return;
+        visible.push(o);
+      });
+      visible.forEach(function (o, i) {
+        var li = document.createElement("li");
+        li.textContent = o.label; if (o.muted) li.className = "is-muted";
+        li.addEventListener("mousedown", function (e) { e.preventDefault(); pick(i); });
+        list.appendChild(li);
+      });
+      list.hidden = !visible.length;
+      input.setAttribute("aria-expanded", String(!visible.length ? false : true));
+    }
+    function highlight() {
+      Array.prototype.forEach.call(list.children, function (li, i) {
+        li.className = (visible[i] && visible[i].muted ? "is-muted" : "") + (i === active ? " is-active" : "");
+        if (i === active) li.scrollIntoView({ block: "nearest" });
+      });
+    }
+    function pick(i) {
+      var o = visible[i];
+      if (!o) return;
+      input.value = o.id === null ? "" : o.label;
+      close();
+      opts.onSelect(o.id, o);
+    }
+    input.addEventListener("input", function () { render(input.value); });
+    input.addEventListener("focus", function () { render(input.value); });
+    input.addEventListener("blur", function () { setTimeout(close, 150); });
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowDown") { if (list.hidden) render(input.value); active = Math.min(active + 1, visible.length - 1); highlight(); e.preventDefault(); }
+      else if (e.key === "ArrowUp") { active = Math.max(active - 1, 0); highlight(); e.preventDefault(); }
+      else if (e.key === "Enter") { if (!list.hidden && active >= 0) { pick(active); e.preventDefault(); } else if (!list.hidden && visible.length === 1) { pick(0); e.preventDefault(); } }
+      else if (e.key === "Escape" && !list.hidden) { close(); e.stopPropagation(); }
+    });
+    return {
+      el: wrap,
+      input: input,
+      setOptions: function (o) { options = o || []; },
+      setText: function (t) { input.value = t || ""; },
+      close: close,
+    };
+  }
+
+  // POST with upload progress (an email with attachments is one big JSON body
+  // — fetch gives no upload feedback). Mirrors api()'s error contract.
+  function apiPostProgress(path, payload, onProgress) {
+    return new Promise(function (resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", API + path);
+      xhr.setRequestHeader("Content-Type", "application/json");
+      xhr.withCredentials = true;
+      if (xhr.upload && onProgress) {
+        xhr.upload.addEventListener("progress", function (ev) {
+          if (ev.lengthComputable) onProgress(Math.round((ev.loaded / ev.total) * 100));
+        });
+      }
+      xhr.onload = function () {
+        var data = null;
+        try { data = JSON.parse(xhr.responseText); } catch (e) {}
+        if (xhr.status >= 200 && xhr.status < 300) { resolve(data); return; }
+        var msg = (data && data.detail) || ("Request failed (" + xhr.status + ")");
+        var err = new Error(typeof msg === "string" ? msg : JSON.stringify(msg));
+        err.status = xhr.status;
+        reject(err);
+      };
+      xhr.onerror = xhr.onabort = xhr.ontimeout = function () {
+        reject(new Error("The send was interrupted — check your connection and try again."));
+      };
+      xhr.send(JSON.stringify(payload));
+    });
+  }
+
+  // --- compose draft persistence (accidental close / session expiry) --------
+  function draftKey(replyToId) {
+    return "cbmDraft:" + SLUG + ":" + (currentDetail ? currentDetail.id : "none") +
+      ":" + (replyToId || "new");
+  }
+  function loadDraft(replyToId) {
+    try {
+      var raw = localStorage.getItem(draftKey(replyToId));
+      if (!raw) return null;
+      var d = JSON.parse(raw);
+      // Stale drafts (a week old) silently expire.
+      if (!d || !d.ts || Date.now() - d.ts > 7 * 24 * 3600 * 1000) return null;
+      return d;
+    } catch (e) { return null; }
+  }
+  function storeDraft(replyToId, state) {
+    try { localStorage.setItem(draftKey(replyToId), JSON.stringify(state)); } catch (e) {}
+  }
+  function clearDraft(replyToId) {
+    try { localStorage.removeItem(draftKey(replyToId)); } catch (e) {}
+  }
 
   function commHeaderRow(label, value) {
     var row = document.createElement("div"); row.className = "sx__fact";
@@ -1615,13 +1891,17 @@
     $("commModalFoot").appendChild(reply); $("commModalFoot").appendChild(close);
   }
 
-  function commField(label, id, value, isTextarea) {
+  function commField(label, id, value, isTextarea, opts) {
+    opts = opts || {};
     // The message body is the standard rich-text editor (CBMRichText/Jodit) —
     // the send path is HTML-native (comms.service.send_message body_html, with
     // a plain-text alternative derived server-side). A div wrapper, not label:
     // wrapping a whole editor in a <label> re-routes clicks to its first input.
     if (isTextarea && window.CBMRichText) {
-      var rich = window.CBMRichText.create(value || "", { minHeight: 220 });
+      // The dialog is a 90% workspace — give the editor real height (roughly
+      // the space left after the recipient/subject/attachment rows).
+      var minH = opts.minHeight || Math.max(240, Math.floor(window.innerHeight * 0.32));
+      var rich = window.CBMRichText.create(value || "", { minHeight: minH, onInput: opts.onInput });
       if (rich) {
         var rwrap = document.createElement("div"); rwrap.className = "sx__msg-field";
         var rl = document.createElement("span"); rl.className = "sx__msg-label"; rl.textContent = label;
@@ -1629,12 +1909,18 @@
         rwrap.appendChild(rl); rwrap.appendChild(rich); return rwrap;
       }
     }
-    var wrap = document.createElement("label"); wrap.className = "sx__msg-field";
-    var l = document.createElement("span"); l.className = "sx__msg-label"; l.textContent = label;
+    // A div wrapper + explicit label element (never a wrapping <label> — the
+    // recipients row carries the Cc/Bcc BUTTONS on its label line, and a
+    // button inside a <label> becomes the label's implicit control).
+    var wrap = document.createElement("div"); wrap.className = "sx__msg-field";
+    var l = document.createElement("label"); l.className = "sx__msg-label"; l.textContent = label;
+    l.htmlFor = id;
     var input = isTextarea ? document.createElement("textarea") : document.createElement("input");
     input.id = id; input.className = "sx__msg-input";
     if (isTextarea) { input.rows = 10; } else { input.type = "text"; }
+    if (opts.placeholder) input.placeholder = opts.placeholder;
     input.value = value || "";
+    if (opts.onInput) input.addEventListener("input", opts.onInput);
     wrap.appendChild(l); wrap.appendChild(input); return wrap;
   }
 
@@ -1671,7 +1957,10 @@
 
   function composeMessage(pre) {
     pre = pre || {};
-    openComm("New email", pre.replyToId ? "Reply" : "Compose");
+    var replyKey = pre.replyToId || null;
+    // Header: the record name for context, the action as the title.
+    openComm(currentDetail ? (currentDetail.name || "") : "",
+      pre.replyToId ? "Reply" : "New email");
     var body = $("commModalBody");
 
     // From: the signed-in user's own CBM mailbox — the address the message
@@ -1701,13 +1990,30 @@
     var recipChecks = [];   // {email, box} per listed contact
     if (contactRecips.length) {
       var toWrap = document.createElement("div"); toWrap.className = "sx__msg-field";
+      var toHead = document.createElement("div"); toHead.className = "sx__to-head";
       var toLab = document.createElement("span"); toLab.className = "sx__msg-label"; toLab.textContent = "To";
-      toWrap.appendChild(toLab);
+      toHead.appendChild(toLab);
+      // Long contact lists get one-click All / None.
+      if (contactRecips.length > 5) {
+        var allBtn = document.createElement("button"); allBtn.type = "button";
+        allBtn.className = "sx__link-btn"; allBtn.textContent = "All";
+        var noneBtn = document.createElement("button"); noneBtn.type = "button";
+        noneBtn.className = "sx__link-btn"; noneBtn.textContent = "None";
+        allBtn.addEventListener("click", function () {
+          recipChecks.forEach(function (r) { r.box.checked = true; }); onRecipientsChanged();
+        });
+        noneBtn.addEventListener("click", function () {
+          recipChecks.forEach(function (r) { r.box.checked = false; }); onRecipientsChanged();
+        });
+        toHead.appendChild(allBtn); toHead.appendChild(noneBtn);
+      }
+      toWrap.appendChild(toHead);
       var listEl = document.createElement("div"); listEl.className = "sx__to-list";
       contactRecips.forEach(function (c) {
         var lab = document.createElement("label"); lab.className = "sx__addr-check";
         var box = document.createElement("input"); box.type = "checkbox";
         box.checked = pre.to ? preKeys.indexOf(c.email.toLowerCase()) !== -1 : true;
+        box.addEventListener("change", onRecipientsChanged);
         lab.appendChild(box);
         lab.appendChild(document.createTextNode(" " + (c.name || c.email) + " — " + c.email));
         listEl.appendChild(lab);
@@ -1717,75 +2023,120 @@
       body.appendChild(toWrap);
     }
     // Free-entry field for anyone not on the record; reply addresses that
-    // aren't record contacts land here so they stay on the thread.
+    // aren't record contacts land here so they stay on the thread. Cc/Bcc
+    // reveal on demand (Gmail-style) from the label line.
     var knownEmails = {};
     recipChecks.forEach(function (r) { knownEmails[r.email.toLowerCase()] = 1; });
     var extra = preAddrs.filter(function (a) { return !knownEmails[a.toLowerCase()]; }).join(", ");
-    body.appendChild(commField(contactRecips.length ? "Other recipients" : "To", "commTo", extra, false));
+    var addrPlaceholder = "name@example.com, another@example.com";
+    var otherWrap = commField(contactRecips.length ? "Other recipients" : "To",
+      "commTo", extra, false, { placeholder: addrPlaceholder, onInput: onRecipientsChanged });
+    var otherLab = otherWrap.querySelector(".sx__msg-label");
+    var toggles = document.createElement("span"); toggles.className = "sx__ccbcc-toggles";
+    var ccLink = document.createElement("button"); ccLink.type = "button";
+    ccLink.className = "sx__link-btn"; ccLink.textContent = "Cc";
+    var bccLink = document.createElement("button"); bccLink.type = "button";
+    bccLink.className = "sx__link-btn"; bccLink.textContent = "Bcc";
+    toggles.appendChild(ccLink); toggles.appendChild(bccLink);
+    var labLine = document.createElement("div"); labLine.className = "sx__to-head";
+    otherWrap.insertBefore(labLine, otherLab);
+    labLine.appendChild(otherLab); labLine.appendChild(toggles);
+    body.appendChild(otherWrap);
+    var ccField = commField("Cc", "commCc", "", false,
+      { placeholder: addrPlaceholder, onInput: onRecipientsChanged });
+    var bccField = commField("Bcc", "commBcc", "", false,
+      { placeholder: addrPlaceholder, onInput: onRecipientsChanged });
+    ccField.hidden = true; bccField.hidden = true;
+    body.appendChild(ccField); body.appendChild(bccField);
+    ccLink.addEventListener("click", function () {
+      ccField.hidden = false; ccLink.hidden = true; $("commCc").focus();
+    });
+    bccLink.addEventListener("click", function () {
+      bccField.hidden = false; bccLink.hidden = true; $("commBcc").focus();
+    });
 
     // Checked contacts + whatever was typed, deduped case-insensitively.
-    function recipientList() {
-      var seen = {}, out = [];
-      function add(a) {
-        a = extractEmail(a); var k = a.toLowerCase();
-        if (a && !seen[k]) { seen[k] = 1; out.push(a); }
+    function fieldAddrs(id) {
+      var el = $(id);
+      return el && !el.closest(".sx__msg-field").hidden ? parseAddrList(el.value) : { emails: [], invalid: [] };
+    }
+    function recipientSets() {
+      var seen = {};
+      function dedupe(list) {
+        var out = [];
+        list.forEach(function (a) {
+          var k = a.toLowerCase();
+          if (!seen[k]) { seen[k] = 1; out.push(a); }
+        });
+        return out;
       }
-      recipChecks.forEach(function (r) { if (r.box.checked) add(r.email); });
-      $("commTo").value.split(/[,;\s]+/).filter(Boolean).forEach(add);
-      return out;
+      var toParsed = fieldAddrs("commTo"), ccParsed = fieldAddrs("commCc"), bccParsed = fieldAddrs("commBcc");
+      var checked = [];
+      recipChecks.forEach(function (r) { if (r.box.checked) checked.push(r.email); });
+      return {
+        to: dedupe(checked.concat(toParsed.emails)),
+        cc: dedupe(ccParsed.emails),
+        bcc: dedupe(bccParsed.emails),
+        invalid: toParsed.invalid.concat(ccParsed.invalid, bccParsed.invalid),
+      };
+    }
+    function recipientList() {
+      var s = recipientSets();
+      return s.to.concat(s.cc, s.bcc);
     }
 
     // --- Email template picker (ET). EspoCRM renders the template server-side
     // (placeholders resolved against this record + the first recipient); the
     // result loads here as a plain editable draft. Selecting over a non-empty
     // draft asks before replacing (ET-113); a parse failure leaves the draft
-    // untouched (ET-114).
+    // untouched (ET-114); "No template" restores the pre-template draft.
     var templateAttachments = [];   // {id, name} chips from the selected template
     var localAttachments = [];      // {filename, contentType, dataBase64, size} uploads
-    var tplAll = [], tplConfirmEl = null;
+    var tplAll = [], tplConfirmEl = null, preTplSnapshot = null;
     var tplWrap = document.createElement("div"); tplWrap.className = "sx__msg-field";
     tplWrap.hidden = true;
     var tplLab = document.createElement("span"); tplLab.className = "sx__msg-label"; tplLab.textContent = "Template";
     var tplLine = document.createElement("div"); tplLine.className = "sx__opt-line";
-    var tplSel = document.createElement("select"); tplSel.className = "sx__msg-input";
-    var tplFilter = document.createElement("input"); tplFilter.type = "text";
-    tplFilter.className = "sx__msg-input"; tplFilter.placeholder = "Type to filter templates…";
-    tplLine.appendChild(tplSel); tplLine.appendChild(tplFilter);
+    var tplCombo = makeCombobox({
+      placeholder: "Search templates…",
+      allowClear: true,
+      emptyLabel: "No template",
+      onSelect: function (id) { onTemplatePicked(id); },
+    });
+    tplLine.appendChild(tplCombo.el);
     var tplNotice = document.createElement("p"); tplNotice.className = "sx__notice"; tplNotice.hidden = true;
     tplWrap.appendChild(tplLab); tplWrap.appendChild(tplLine); tplWrap.appendChild(tplNotice);
     body.appendChild(tplWrap);
-    function renderTplOptions(filter) {
-      tplSel.innerHTML = "";
-      tplSel.appendChild(new Option("No template", ""));
-      tplAll.forEach(function (t) {
-        if (filter && String(t.name || "").toLowerCase().indexOf(filter.toLowerCase()) === -1) return;
-        tplSel.appendChild(new Option(t.name, t.id));
-      });
-    }
     if (commsOn()) {
       api("/emailtemplates").then(function (r) {
         tplAll = (r && r.templates) || [];
-        if (tplAll.length) { renderTplOptions(""); tplWrap.hidden = false; }
+        if (tplAll.length) {
+          tplCombo.setOptions(tplAll.map(function (t) { return { id: t.id, label: t.name }; }));
+          tplWrap.hidden = false;
+        }
       }).catch(function () { /* no picker — compose works without it */ });
     }
-    tplFilter.addEventListener("input", function () { renderTplOptions(this.value); });
     // Signature (the user's EspoCRM Preferences signature, riding /mailbox):
-    // seeded into an EMPTY body when the dialog opens — from there it's plain
-    // editable text. A body still equal to the seed counts as empty, so
-    // picking a template right after opening doesn't ask to "replace".
-    var sigSeed = "";
+    // seeded into a PRISTINE body when the dialog opens — from there it's
+    // plain editable text. A body still equal to any auto-generated state
+    // counts as empty/untouched, so a template pick right after opening
+    // doesn't ask to "replace" and closing doesn't ask to discard.
+    var quoteHtml = pre.quote ? buildQuoteHtml(pre.quote) : "";
+    var initialSubject = pre.subject || "";
+    var pristineBodies = {};   // every auto-generated body state we've set
+    function markPristine(v) { pristineBodies[String(v || "")] = 1; }
+    function bodyPristine() { return !!pristineBodies[String(commBodyValue() || "")]; }
     function seedSignature() {
       if (!senderSignature) return;
-      var v = String(commBodyValue() || "").replace(/<[^>]*>/g, "").trim();
-      if (v) return;  // the user already typed — never overwrite
-      setCommBody("<p><br></p><p><br></p>" + senderSignature);
-      sigSeed = String(commBodyValue() || "");
+      if (!bodyPristine()) return;  // the user already typed — never overwrite
+      setCommBody("<p><br></p><p><br></p>" + senderSignature +
+        (quoteHtml ? "<p><br></p>" + quoteHtml : ""));
+      markPristine(commBodyValue());
     }
     function draftHasContent() {
-      var raw = String(commBodyValue() || "");
-      var stripped = raw.replace(/<[^>]*>/g, "").trim();
-      if (sigSeed && raw === sigSeed) stripped = "";  // untouched seeded signature
-      return !!($("commSubject").value.trim() || stripped);
+      return !!($("commSubject").value.trim() !== initialSubject.trim() && $("commSubject").value.trim()) ||
+        !bodyPristine() ||
+        localAttachments.length > 0;
     }
     function setCommBody(html) {
       var el = $("commBody");
@@ -1793,13 +2144,31 @@
       if (el._cbmRichText) el._cbmRichText.setValue(html);
       else el.value = html.replace(/<br\s*\/?>/gi, "\n").replace(/<\/p\s*>/gi, "\n\n").replace(/<[^>]+>/g, "");
     }
-    tplSel.addEventListener("change", function () {
-      var id = tplSel.value;
+    function buildQuoteHtml(q) {
+      var head = "On " + (q.date ? fmtSessionDate(q.date, "short") : "an earlier date") +
+        ", " + (q.from || "they") + " wrote:";
+      var p = document.createElement("p"); p.textContent = head;  // escapes the name
+      return "<blockquote class=\"quoted-reply\">" + p.outerHTML + (q.html || "") + "</blockquote>";
+    }
+    function onTemplatePicked(id) {
       if (tplConfirmEl) { tplConfirmEl.remove(); tplConfirmEl = null; }
-      if (!id) return;
+      if (!id) {
+        // "No template": restore whatever the draft was before the last apply.
+        if (preTplSnapshot) {
+          $("commSubject").value = preTplSnapshot.subject;
+          setCommBody(preTplSnapshot.body);
+          if (preTplSnapshot.pristine) markPristine(commBodyValue());
+          templateAttachments = preTplSnapshot.tplAttach.slice();
+          renderAttachChips();
+          preTplSnapshot = null;
+          tplNotice.hidden = true;
+          markEdited();
+        }
+        return;
+      }
       if (!draftHasContent()) { applyTemplate(id); return; }
       // ET-113/ET-B1: never silently overwrite an edited draft.
-      tplConfirmEl = document.createElement("div"); tplConfirmEl.className = "sx__notice";
+      tplConfirmEl = document.createElement("div"); tplConfirmEl.className = "sx__notice is-warn";
       tplConfirmEl.appendChild(document.createTextNode("Replace current content? "));
       var yes = document.createElement("button"); yes.type = "button";
       yes.className = "cbm-button"; yes.textContent = "Replace";
@@ -1809,14 +2178,20 @@
         tplConfirmEl.remove(); tplConfirmEl = null; applyTemplate(id);
       });
       no.addEventListener("click", function () {
-        tplConfirmEl.remove(); tplConfirmEl = null; tplSel.value = "";
+        tplConfirmEl.remove(); tplConfirmEl = null; tplCombo.setText("");
       });
       tplConfirmEl.appendChild(yes); tplConfirmEl.appendChild(document.createTextNode(" "));
       tplConfirmEl.appendChild(no);
       tplWrap.appendChild(tplConfirmEl);
-    });
+    }
     async function applyTemplate(id) {
-      tplNotice.hidden = true; tplSel.disabled = true;
+      tplNotice.hidden = true;
+      preTplSnapshot = {
+        subject: $("commSubject").value,
+        body: String(commBodyValue() || ""),
+        pristine: bodyPristine(),
+        tplAttach: templateAttachments.slice(),
+      };
       try {
         var r = await api("/records/" + encodeURIComponent(currentDetail.id) +
           "/emailtemplates/" + encodeURIComponent(id) + "/parse", {
@@ -1826,36 +2201,47 @@
         $("commSubject").value = r.subject || "";
         // The rendered draft replaces the body; the signature re-appends
         // below it (EspoCRM's own compose behavior) — templates shouldn't
-        // carry their own sign-off.
+        // carry their own sign-off. A reply keeps its quoted original at
+        // the bottom.
         setCommBody((r.bodyHtml || "") +
-          (senderSignature ? "<p><br></p>" + senderSignature : ""));
+          (senderSignature ? "<p><br></p>" + senderSignature : "") +
+          (quoteHtml ? "<p><br></p>" + quoteHtml : ""));
         templateAttachments = (r.attachments || []).slice();
         renderAttachChips();
         if ((r.leftoverTokens || []).length) {
           tplNotice.textContent = "Some placeholders couldn't be filled: " +
             r.leftoverTokens.join(", ") + " — review the draft before sending.";
-          tplNotice.className = "sx__notice"; tplNotice.hidden = false;
+          tplNotice.className = "sx__notice is-warn"; tplNotice.hidden = false;
         }
+        markEdited();
       } catch (e) {
-        if (e.status === 401) { closeComm(); showLogin(); return; }
+        if (e.status === 401) { flushDraft(); closeComm(); showLogin(); return; }
         // ET-114: non-destructive — the existing draft stays untouched.
+        preTplSnapshot = null;
         tplNotice.textContent = e.message || "Couldn't apply the template.";
         tplNotice.className = "sx__notice is-error"; tplNotice.hidden = false;
-        tplSel.value = "";
-      } finally { tplSel.disabled = false; }
+        tplCombo.setText("");
+      }
     }
 
-    body.appendChild(commField("Subject", "commSubject", pre.subject, false));
-    body.appendChild(commField("Message", "commBody", "", true));
+    body.appendChild(commField("Subject", "commSubject", pre.subject, false,
+      { onInput: markEdited }));
+    body.appendChild(commField("Message", "commBody", "", true, { onInput: markEdited }));
+    markPristine("");
+    if (quoteHtml) {
+      setCommBody("<p><br></p>" + quoteHtml);
+      markPristine(commBodyValue());
+    }
     // Cached signature seeds now; a first-ever compose seeds when the
     // /mailbox fetch above resolves.
     if (senderSignature) seedSignature();
 
     // --- Attachments: template chips (bytes stay in the CRM until send) plus
-    // the user's own files. Removing a chip = it just isn't sent.
+    // the user's own files, with sizes and a running total against the cap.
     var attachWrap = document.createElement("div"); attachWrap.className = "sx__msg-field";
     var attachLab = document.createElement("span"); attachLab.className = "sx__msg-label"; attachLab.textContent = "Attachments";
     var chipsEl = document.createElement("div"); chipsEl.className = "sx__attach-chips";
+    var attachTotalEl = document.createElement("p"); attachTotalEl.className = "sx__attach-total"; attachTotalEl.hidden = true;
     var attachLine = document.createElement("div"); attachLine.className = "sx__opt-line";
     var fileBtn = document.createElement("button"); fileBtn.type = "button";
     fileBtn.className = "cbm-button cbm-button--secondary"; fileBtn.textContent = "Attach files…";
@@ -1863,7 +2249,8 @@
     fileInput.multiple = true; fileInput.hidden = true;
     fileBtn.addEventListener("click", function () { fileInput.click(); });
     attachLine.appendChild(fileBtn); attachLine.appendChild(fileInput);
-    attachWrap.appendChild(attachLab); attachWrap.appendChild(chipsEl); attachWrap.appendChild(attachLine);
+    attachWrap.appendChild(attachLab); attachWrap.appendChild(chipsEl);
+    attachWrap.appendChild(attachTotalEl); attachWrap.appendChild(attachLine);
     body.appendChild(attachWrap);
     var MAX_ATTACH_TOTAL = 20 * 1024 * 1024;  // matches the server cap
     function attachTotal() {
@@ -1871,30 +2258,37 @@
     }
     function renderAttachChips() {
       chipsEl.innerHTML = "";
-      function chip(name, onRemove) {
+      function chip(name, size, onRemove) {
         var c = document.createElement("span"); c.className = "sx__attach-chip";
         c.appendChild(document.createTextNode(name + " "));
+        if (size) {
+          var s = document.createElement("span"); s.className = "sx__attach-size";
+          s.textContent = "(" + fmtBytes(size) + ") ";
+          c.appendChild(s);
+        }
         var x = document.createElement("button"); x.type = "button";
         x.className = "sx__chip-x"; x.textContent = "✕"; x.title = "Remove attachment";
         x.addEventListener("click", onRemove);
         c.appendChild(x); chipsEl.appendChild(c);
       }
       templateAttachments.forEach(function (a, i) {
-        chip(a.name || "attachment", function () {
-          templateAttachments.splice(i, 1); renderAttachChips();
+        chip(a.name || "attachment", a.size || 0, function () {
+          templateAttachments.splice(i, 1); renderAttachChips(); markEdited();
         });
       });
       localAttachments.forEach(function (f, i) {
-        chip(f.filename, function () {
-          localAttachments.splice(i, 1); renderAttachChips();
+        chip(f.filename, f.size || 0, function () {
+          localAttachments.splice(i, 1); renderAttachChips(); markEdited();
         });
       });
+      var total = attachTotal();
+      attachTotalEl.hidden = !localAttachments.length;
+      attachTotalEl.textContent = "Total " + fmtBytes(total) + " of 20 MB";
     }
     fileInput.addEventListener("change", function () {
       Array.prototype.forEach.call(fileInput.files || [], function (file) {
         if (attachTotal() + file.size > MAX_ATTACH_TOTAL) {
-          err.textContent = "Attachments are too large — keep the total under 20 MB per message.";
-          err.hidden = false;
+          footErr("“" + file.name + "” would push the attachments over 20 MB — remove something first.");
           return;
         }
         var reader = new FileReader();
@@ -1907,6 +2301,7 @@
             size: file.size,
           });
           renderAttachChips();
+          markEdited();
         };
         reader.readAsDataURL(file);
       });
@@ -1920,14 +2315,148 @@
       }));
     }
 
-    var err = document.createElement("p"); err.className = "form-error"; err.hidden = true;
-    body.appendChild(err);
-
     var allowUnknown = false;
     var resolvedAddresses = {};   // addresses handled (linked/created) this compose
     var commResolvers = null;     // one entry per non-record recipient, built once
     var optionsPanel = document.createElement("div");
     body.appendChild(optionsPanel);
+
+    // --- footer: status line + Cancel + Send (Send rightmost, the app's
+    // primary-action slot; the message/summary stays pinned and visible).
+    var foot = $("commModalFoot"); foot.innerHTML = "";
+    var footMsg = document.createElement("p"); footMsg.className = "sx__foot-msg form-error"; footMsg.hidden = true;
+    var footSummary = document.createElement("p"); footSummary.className = "sx__foot-summary";
+    var cancel = document.createElement("button"); cancel.type = "button";
+    cancel.className = "cbm-button cbm-button--secondary"; cancel.textContent = "Cancel";
+    cancel.addEventListener("click", requestCloseComm);
+    var send = document.createElement("button"); send.type = "button";
+    send.className = "cbm-button"; send.textContent = "Send";
+    foot.appendChild(footSummary); foot.appendChild(footMsg);
+    foot.appendChild(cancel); foot.appendChild(send);
+
+    function footErr(text) {
+      footMsg.textContent = text; footMsg.className = "sx__foot-msg form-error";
+      footMsg.hidden = false; footSummary.hidden = true;
+    }
+    function footWarn(text) {
+      footMsg.textContent = text; footMsg.className = "sx__foot-msg sx__notice is-warn";
+      footMsg.hidden = false; footSummary.hidden = true;
+    }
+    function clearFootMsg() {
+      footMsg.hidden = true; footSummary.hidden = false;
+    }
+    function updateSummary() {
+      var s = recipientSets();
+      var n = s.to.length + s.cc.length + s.bcc.length;
+      if (!n) { footSummary.textContent = "No recipients selected."; return; }
+      var parts = [];
+      if (s.cc.length || s.bcc.length) {
+        parts.push(s.to.length + " To");
+        if (s.cc.length) parts.push(s.cc.length + " Cc");
+        if (s.bcc.length) parts.push(s.bcc.length + " Bcc");
+      }
+      footSummary.textContent = "Sending to " + n + (n === 1 ? " recipient" : " recipients") +
+        (parts.length ? " (" + parts.join(", ") + ")" : "");
+    }
+
+    // Any recipient change invalidates a built add-to-record panel and any
+    // armed "send anyway" state — the user changed the question.
+    var sendArmed = false;
+    function disarmSend() {
+      if (sendArmed) { sendArmed = false; send.textContent = commResolvers ? "Add & Send" : "Send"; }
+    }
+    function onRecipientsChanged() {
+      if (commResolvers) {
+        commResolvers = null; allowUnknown = false;
+        optionsPanel.innerHTML = "";
+        send.textContent = "Send";
+      }
+      disarmSend(); clearFootMsg(); updateSummary(); markEdited();
+    }
+    updateSummary();
+
+    // --- draft persistence: an accidental close, tab crash, or session
+    // expiry never loses a typed message. Saved (debounced) on every edit;
+    // cleared on send or an explicit "Discard draft".
+    var draftTimer = null;
+    function draftState() {
+      return {
+        ts: Date.now(),
+        subject: $("commSubject").value,
+        body: String(commBodyValue() || ""),
+        to: $("commTo").value,
+        cc: $("commCc") ? $("commCc").value : "",
+        bcc: $("commBcc") ? $("commBcc").value : "",
+        ccShown: !ccField.hidden, bccShown: !bccField.hidden,
+        checked: recipChecks.filter(function (r) { return r.box.checked; })
+          .map(function (r) { return r.email.toLowerCase(); }),
+        tplAttach: templateAttachments,
+      };
+    }
+    function flushDraft() {
+      if (draftTimer) { clearTimeout(draftTimer); draftTimer = null; }
+      if (draftHasContent()) storeDraft(replyKey, draftState());
+    }
+    function markEdited() {
+      disarmSend();
+      if (draftTimer) clearTimeout(draftTimer);
+      draftTimer = setTimeout(function () {
+        draftTimer = null;
+        if (draftHasContent()) storeDraft(replyKey, draftState());
+        else clearDraft(replyKey);
+      }, 800);
+    }
+    var savedDraft = loadDraft(replyKey);
+    if (savedDraft && (savedDraft.subject || savedDraft.body || savedDraft.to)) {
+      $("commSubject").value = savedDraft.subject || "";
+      if (savedDraft.body) setCommBody(savedDraft.body);
+      $("commTo").value = savedDraft.to || "";
+      if (savedDraft.ccShown || savedDraft.cc) { ccField.hidden = false; ccLink.hidden = true; $("commCc").value = savedDraft.cc || ""; }
+      if (savedDraft.bccShown || savedDraft.bcc) { bccField.hidden = false; bccLink.hidden = true; $("commBcc").value = savedDraft.bcc || ""; }
+      if (savedDraft.checked && recipChecks.length) {
+        var wanted = {};
+        savedDraft.checked.forEach(function (a) { wanted[a] = 1; });
+        recipChecks.forEach(function (r) { r.box.checked = !!wanted[r.email.toLowerCase()]; });
+      }
+      templateAttachments = (savedDraft.tplAttach || []).slice();
+      renderAttachChips();
+      updateSummary();
+      var note = document.createElement("div"); note.className = "sx__notice sx__draft-note";
+      note.appendChild(document.createTextNode("Restored your unsent draft."));
+      var fresh = document.createElement("button"); fresh.type = "button";
+      fresh.className = "sx__link-btn"; fresh.textContent = "Start fresh";
+      fresh.addEventListener("click", function () {
+        clearDraft(replyKey);
+        note.remove();
+        $("commSubject").value = initialSubject;
+        setCommBody("");
+        markPristine("");
+        if (quoteHtml) { setCommBody("<p><br></p>" + quoteHtml); markPristine(commBodyValue()); }
+        seedSignature();
+        $("commTo").value = extra;
+        if ($("commCc")) $("commCc").value = "";
+        if ($("commBcc")) $("commBcc").value = "";
+        recipChecks.forEach(function (r) {
+          r.box.checked = pre.to ? preKeys.indexOf(r.email.toLowerCase()) !== -1 : true;
+        });
+        templateAttachments = []; localAttachments = [];
+        renderAttachChips(); updateSummary(); clearFootMsg();
+      });
+      note.appendChild(fresh);
+      body.insertBefore(note, body.firstChild);
+    }
+
+    // The close-guard: Escape / × / backdrop / Cancel confirm before
+    // discarding real content; a reply returns to its conversation.
+    composeGuard = {
+      dirty: function () { return draftHasContent(); },
+      discard: function () { flushDraftCancel(); clearDraft(replyKey); },
+      send: function () { doSend(); },
+      backConvId: pre.backToConv || null,
+    };
+    function flushDraftCancel() {
+      if (draftTimer) { clearTimeout(draftTimer); draftTimer = null; }
+    }
 
     // Recipients that are neither record contacts nor CBM-internal addresses.
     function unknownRecipients(recipients) {
@@ -1937,16 +2466,23 @@
       });
       return recipients.filter(function (a) {
         a = a.toLowerCase();
-        return !known[a] && !resolvedAddresses[a];
+        return !known[a] && !resolvedAddresses[a] && !/@cbmentors\.org$/.test(a);
       });
     }
 
     // Checkbox-driven router: every non-record recipient gets an "Add to this
     // record" checkbox (checked by default). Existing CRM contacts (any type)
     // just show who they are; unknown addresses show a small create form
-    // (first/last/phone/company). ONE Send click then links/creates the
-    // checked ones and sends; unchecked recipients go as a one-off (the
+    // (first/last/phone/company). ONE "Add & Send" click then links/creates
+    // the checked ones and sends; unchecked recipients go as a one-off (the
     // conversation still attaches here and replies follow the thread).
+    var companiesPromise = null;
+    function getCompanies() {
+      if (!companiesPromise) {
+        companiesPromise = api("/companies").catch(function () { return { companies: [] }; });
+      }
+      return companiesPromise;
+    }
     async function buildUnknownPanel(unknown) {
       optionsPanel.innerHTML = "<p class='sx__muted'>Checking the CRM for " +
         (unknown.length === 1 ? "this address…" : "these addresses…") + "</p>";
@@ -1954,20 +2490,23 @@
       for (var i = 0; i < unknown.length; i++) {
         try { lookups[unknown[i]] = await api("/contactlookup?email=" + encodeURIComponent(unknown[i])); }
         catch (e) {
-          if (e.status === 401) { closeComm(); showLogin(); return; }
+          if (e.status === 401) { flushDraft(); closeComm(); showLogin(); return; }
           lookups[unknown[i]] = { found: false };
         }
       }
       optionsPanel.innerHTML = "";
-      var head = document.createElement("p"); head.className = "sx__notice";
+      var head = document.createElement("p"); head.className = "sx__notice is-warn";
       head.textContent = (unknown.length === 1 ? "This recipient isn't" : "These recipients aren't") +
         " a contact on this record. Leave \"Add to this record\" checked to link them" +
-        " (fill in the details for new people), or uncheck to send without adding.";
+        " (fill in the details for new people), or uncheck to send without adding." +
+        " Then click Add & Send.";
       optionsPanel.appendChild(head);
       commResolvers = [];
       unknown.forEach(function (addr) {
         optionsPanel.appendChild(addressRow(addr, lookups[addr] || { found: false }));
       });
+      send.textContent = "Add & Send";
+      optionsPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
 
     function addressRow(addr, lookup) {
@@ -2021,22 +2560,33 @@
         var phone = document.createElement("input"); phone.type = "tel"; phone.placeholder = "Phone (optional)"; phone.className = "sx__msg-input";
         line2.appendChild(first); line2.appendChild(last); line2.appendChild(phone);
         row.appendChild(line2);
+        // Company: type-ahead over the CRM's accounts (fetched once per
+        // compose, shared across rows) + a "+ New company…" escape.
         var line3 = document.createElement("div"); line3.className = "sx__opt-line";
-        var companySel = document.createElement("select"); companySel.className = "sx__msg-input";
-        companySel.appendChild(new Option("Company… (none)", ""));
-        companySel.appendChild(new Option("+ New company…", "__new__"));
-        api("/companies").then(function (res) {
-          (res.companies || []).forEach(function (a) {
-            companySel.insertBefore(new Option(a.name || a.id, a.id), companySel.lastChild);
-          });
-        }).catch(function () { /* picker just stays short */ });
+        var companyChoice = { id: "", newName: "" };
         var newCompany = document.createElement("input"); newCompany.type = "text";
         newCompany.placeholder = "New company name"; newCompany.className = "sx__msg-input"; newCompany.hidden = true;
-        companySel.addEventListener("change", function () { newCompany.hidden = companySel.value !== "__new__"; });
-        line3.appendChild(companySel); line3.appendChild(newCompany);
+        var companyCombo = makeCombobox({
+          placeholder: "Company… (type to search)",
+          allowClear: true,
+          emptyLabel: "No company",
+          onSelect: function (id, o) {
+            if (id === "__new__") {
+              companyChoice.id = "__new__"; newCompany.hidden = false; newCompany.focus();
+            } else {
+              companyChoice.id = id || ""; newCompany.hidden = true; newCompany.value = "";
+            }
+          },
+        });
+        getCompanies().then(function (res) {
+          var opts = (res.companies || []).map(function (a) { return { id: a.id, label: a.name || a.id }; });
+          opts.push({ id: "__new__", label: "+ New company…", muted: true });
+          companyCombo.setOptions(opts);
+        });
+        line3.appendChild(companyCombo.el); line3.appendChild(newCompany);
         row.appendChild(line3);
         function setEnabled() {
-          [first, last, phone, companySel, newCompany].forEach(function (el) { el.disabled = !check.checked; });
+          [first, last, phone, companyCombo.input, newCompany].forEach(function (el) { el.disabled = !check.checked; });
         }
         check.addEventListener("change", setEnabled);
         resolver = async function () {
@@ -2047,8 +2597,8 @@
           var changes = { firstName: first.value.trim(), lastName: last.value.trim(), emailAddress: addr };
           if (phone.value.trim()) changes.phoneNumber = phone.value.trim();
           var payload = { changes: changes };
-          if (companySel.value === "__new__" && newCompany.value.trim()) payload.newCompanyName = newCompany.value.trim();
-          else if (companySel.value && companySel.value !== "__new__") changes.accountId = companySel.value;
+          if (companyChoice.id === "__new__" && newCompany.value.trim()) payload.newCompanyName = newCompany.value.trim();
+          else if (companyChoice.id && companyChoice.id !== "__new__") changes.accountId = companyChoice.id;
           await api("/records/" + encodeURIComponent(currentDetail.id) + "/contacts", {
             method: "POST", body: JSON.stringify(payload),
           });
@@ -2061,8 +2611,6 @@
       return row;
     }
 
-    var send = document.createElement("button"); send.type = "button";
-    send.className = "cbm-button"; send.textContent = "Send";
     async function doSend() {
       if (!commsOn()) {
         // No delivery in scaffold mode — communicate that plainly.
@@ -2076,12 +2624,40 @@
         $("commModalFoot").appendChild(ok);
         return;
       }
-      var recipients = recipientList();
-      if (!recipients.length) {
-        err.textContent = "Choose at least one recipient."; err.hidden = false;
+      var sets = recipientSets();
+      if (sets.invalid.length) {
+        footErr("These don't look like email addresses: " + sets.invalid.join(", ") +
+          " — fix or remove them. Separate addresses with commas.");
         return;
       }
-      err.hidden = true;
+      var recipients = sets.to.concat(sets.cc, sets.bcc);
+      if (!recipients.length) {
+        footErr("Choose at least one recipient.");
+        $("commTo").focus();
+        return;
+      }
+      if (bodyPristine()) {
+        footErr("Write a message first.");
+        var bodyEl = $("commBody");
+        if (bodyEl && bodyEl._cbmRichText) bodyEl._cbmRichText.focus();
+        else if (bodyEl) bodyEl.focus();
+        return;
+      }
+      // "Send anyway" gate: a missing subject or unresolved template
+      // placeholders deserve one explicit look before the email goes out.
+      var holdups = [];
+      if (!$("commSubject").value.trim()) holdups.push("it has no subject");
+      var tokenScan = ($("commSubject").value + " " + String(commBodyValue() || ""))
+        .replace(new RegExp("<blockquote[\\s\\S]*$"), "");  // quoted original may legitimately carry braces
+      var leftover = tokenScan.match(/\{[A-Za-z][A-Za-z0-9]*\.[A-Za-z0-9_]+\}/g);
+      if (leftover) holdups.push("it still contains unfilled placeholders (" + leftover.slice(0, 3).join(", ") + ")");
+      if (holdups.length && !sendArmed) {
+        sendArmed = true;
+        footWarn("Before this goes out: " + holdups.join(", and ") + ". Click “Send anyway” to send it as is.");
+        send.textContent = "Send anyway";
+        return;
+      }
+      clearFootMsg();
       var unknown = unknownRecipients(recipients);
       if (unknown.length && commResolvers === null) {
         await buildUnknownPanel(unknown);   // first click: show the rows
@@ -2098,39 +2674,56 @@
             var did = await r.resolve();
             if (!did) allowUnknown = true;
           } catch (e) {
-            if (e.status === 401) { closeComm(); showLogin(); return; }
+            if (e.status === 401) { flushDraft(); closeComm(); showLogin(); return; }
             r.errEl.textContent = e.message; r.errEl.hidden = false;
-            return;  // fix or uncheck, then Send again
+            r.errEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            footErr("Fix the highlighted recipient above (or uncheck it), then Send again.");
+            return;
           }
         }
       }
-      err.hidden = true; send.disabled = true; send.textContent = "Sending…";
+      send.disabled = true; send.textContent = "Sending…";
+      var payload = {
+        to: sets.to,
+        cc: sets.cc,
+        bcc: sets.bcc,
+        subject: $("commSubject").value,
+        body: commBodyValue(),
+        replyToCommunicationId: pre.replyToId || null,
+        allowUnknownRecipients: allowUnknown,
+        attachments: attachmentPayload(),
+      };
+      // Attachments make the body big — show upload progress past ~300 KB.
+      var showProgress = JSON.stringify(payload).length > 300 * 1024;
       try {
-        var sendResult = await api("/records/" + encodeURIComponent(currentDetail.id) + "/messages", {
-          method: "POST",
-          body: JSON.stringify({
-            to: recipients,
-            subject: $("commSubject").value,
-            body: commBodyValue(),
-            replyToCommunicationId: pre.replyToId || null,
-            allowUnknownRecipients: allowUnknown,
-            attachments: attachmentPayload(),
-          }),
-        });
+        var sendResult = await apiPostProgress(
+          "/records/" + encodeURIComponent(currentDetail.id) + "/messages",
+          payload,
+          showProgress ? function (pct) { send.textContent = "Sending… " + pct + "%"; } : null
+        );
+        clearDraft(replyKey);
         // The message went out. If recording it in the CRM failed, say so and
         // offer a retry — a silent gap in CRM history is not acceptable (ET-142).
         if (sendResult && sendResult.writeBack && sendResult.writeBack.ok === false) {
+          composeGuard = null;
           showWriteBackRetry(sendResult.writeBack);
           loadConversations();
           return;
         }
         closeComm();
-        notice("detailNotice", "Email sent.", "success");
+        // ingestWarning: the email went OUT, but the tab may not show it yet
+        // (write-through/attach failure) — say so instead of silence.
+        if (sendResult && sendResult.ingestWarning) {
+          notice("detailNotice", "Email sent. " + sendResult.ingestWarning, "error");
+        } else {
+          notice("detailNotice", "Email sent.", "success");
+        }
         loadConversations();
       } catch (e) {
-        if (e.status === 401) { closeComm(); showLogin(); return; }
-        err.textContent = e.message; err.hidden = false;
-        send.disabled = false; send.textContent = "Send";
+        if (e.status === 401) { flushDraft(); closeComm(); showLogin(); return; }
+        footErr(e.message);
+        send.disabled = false; send.textContent = commResolvers ? "Add & Send" : "Send";
+        sendArmed = false;
         // The server is the authority: if it still refuses (contacts changed
         // under us), rebuild the rows for whatever is still unknown.
         if (e.status === 400 && /aren't contacts/.test(e.message || "")) {
@@ -2170,10 +2763,19 @@
       close.addEventListener("click", closeComm);
       $("commModalFoot").appendChild(retry); $("commModalFoot").appendChild(close);
     }
-    var cancel = document.createElement("button"); cancel.type = "button";
-    cancel.className = "cbm-button cbm-button--secondary"; cancel.textContent = "Cancel";
-    cancel.addEventListener("click", closeComm);
-    $("commModalFoot").appendChild(send); $("commModalFoot").appendChild(cancel);
+
+    // Keyboard start: the first thing that still needs filling in.
+    var focusTarget = null;
+    if (!recipientList().length) focusTarget = $("commTo");
+    else if (!$("commSubject").value.trim()) focusTarget = $("commSubject");
+    if (focusTarget) focusTarget.focus();
+    else {
+      // Everything prefilled — write the message. The caret lands at the top
+      // (above the signature / quoted original), Gmail-style.
+      var be = $("commBody");
+      if (be && be._cbmRichText) be._cbmRichText.focus();
+      else if (be) be.focus();
+    }
   }
 
   // --- pop-up detail (peek) ---
@@ -4428,10 +5030,13 @@
   function leaveEditor() {
     if (!currentDetail) return;
     if (!editorHasUnsavedChanges()) { openDetail(currentDetail.id); return; }
-    confirmOnSave = function () { saveSession(); };  // saveSession returns to the record on success
-    confirmOnDiscard = function () { openDetail(currentDetail.id); };
-    show($("confirmModal"));
-    $("confirmSave").focus();
+    openConfirm({
+      title: "Unsaved changes",
+      msg: "You have unsaved changes. Save them before going back?",
+      saveLabel: "Save changes", discardLabel: "Discard", cancelLabel: "Keep editing",
+      onSave: function () { saveSession(); },  // saveSession returns to the record on success
+      onDiscard: function () { openDetail(currentDetail.id); },
+    });
   }
 
   // calendarDecision: undefined = not asked yet; "create" = auto-create the

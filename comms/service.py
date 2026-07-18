@@ -378,6 +378,8 @@ async def write_back_email(
     body_html: str,
     sender: str,
     to: list[str],
+    cc: Optional[list[str]] = None,
+    bcc: Optional[list[str]] = None,
     parent_type: Optional[str] = None,
     parent_id: Optional[str] = None,
     message_id: str = "",
@@ -397,6 +399,10 @@ async def write_back_email(
         "dateSent": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
         # sender attribution = createdBy — the record is created as the acting user
     }
+    if cc:
+        payload["cc"] = ";".join(cc)
+    if bcc:
+        payload["bcc"] = ";".join(bcc)
     if message_id:
         payload["messageId"] = f"<{message_id}>" if not message_id.startswith("<") else message_id
     if parent_type and parent_id:
@@ -429,6 +435,8 @@ async def send_message(
     to: list[str],
     subject: str,
     body_html: str,
+    cc: Optional[list[str]] = None,
+    bcc: Optional[list[str]] = None,
     reply_to_communication_id: Optional[str] = None,
     allow_unknown_recipients: bool = False,
     user_client: Optional[Any] = None,
@@ -438,15 +446,25 @@ async def send_message(
     ingested immediately (write-through) so the tab shows it without waiting
     for the next sync — Message-ID dedup makes the sync's copy a no-op."""
     to = [a.strip().lower() for a in to if a and a.strip()]
+    cc = [a.strip().lower() for a in (cc or []) if a and a.strip()]
+    bcc = [a.strip().lower() for a in (bcc or []) if a and a.strip()]
+    # An address in To wins over a duplicate in Cc/Bcc (one copy per person).
+    cc = [a for a in cc if a not in to]
+    bcc = [a for a in bcc if a not in to and a not in cc]
+    if not to and cc:
+        # Headers need at least one To: promote the Cc list.
+        to, cc = cc, []
     if not to:
         raise CommsError("Add at least one recipient.")
 
     ref = await _record_ref(api_client, cfg, parent_id)
     # CBM-internal recipients are never "unknown" — emailing a co-mentor or
     # staff about the record shouldn't trip the guard (their copy dedups via
-    # Message-ID when their own mailbox syncs).
+    # Message-ID when their own mailbox syncs). Cc/Bcc count: they receive
+    # the email just the same.
+    everyone = to + cc + bcc
     unknown = [
-        a for a in to
+        a for a in everyone
         if a not in ref.addresses and not a.endswith("@cbmentors.org")
     ]
     if unknown and not allow_unknown_recipients:
@@ -483,6 +501,8 @@ async def send_message(
         sender=gmail.mailbox,
         sender_name=user.get("name") or "",
         to=to,
+        cc=cc,
+        bcc=bcc,
         subject=subject or "(no subject)",
         body_text="",
         body_html=body_html,
@@ -492,9 +512,43 @@ async def send_message(
     )
     sent = await gmail.send(mime, thread_id=thread_id)
 
-    # Write-through: ingest the sent message now (best-effort — the next sync
-    # cycle picks it up regardless).
+    # A confirmed send to non-contacts established this conversation manually.
+    # Persist the include override BEFORE the best-effort write-through (P1-5
+    # F6): the send already happened, and the override is what guarantees the
+    # thread ingests later — the sync alone never matches unknown recipients,
+    # so an override recorded only after a successful write-through orphaned
+    # the thread from the CRM on one Espo blip. The conversation is resolved
+    # or created as a shell here; the write-through (and the sync) fill it via
+    # the thread map.
     conv_id = None
+    ingest_warning = ""
+    sent_thread = sent.get("threadId") or thread_id or ""
+    if unknown and sent_thread:
+        try:
+            conv_id = await crm.find_conversation_for_thread(
+                api_client, gmail.mailbox, sent_thread
+            ) or await store.get_thread_conversation(gmail.mailbox, sent_thread)
+            if not conv_id:
+                conv_id = await crm.create_conversation(
+                    api_client, subject=subject or "(no subject)", sent_at=""
+                )
+                await store.set_thread_conversation(
+                    gmail.mailbox, sent_thread, conv_id
+                )
+            await store.set_override(
+                cfg.parent_entity, parent_id, conv_id, ACTION_INCLUDE,
+                user.get("userName", ""),
+            )
+        except Exception as exc:  # noqa: BLE001 — the send is out; keep going
+            log.warning("include-override persist failed for sent message: %s", exc)
+            ingest_warning = (
+                "The message was sent, but attaching its conversation to this "
+                "record failed — it may not appear here. Use “Add emails” to "
+                "attach the thread."
+            )
+
+    # Write-through: ingest the sent message now (best-effort — the next sync
+    # cycle picks it up regardless, now that the override is durable).
     sent_rfc_id = ""
     try:
         raw = await gmail.get_message(sent["id"])
@@ -506,19 +560,24 @@ async def send_message(
             owner_user_id=user.get("userId"),
             records=[ref],
         )
-        ref.addresses |= set(to)
-        conv_id = await ingest_message(api_client, store, scope, parsed)
+        ref.addresses |= set(everyone)
+        ingested = await ingest_message(api_client, store, scope, parsed)
+        if ingested and unknown and ingested != conv_id:
+            # The ingest resolved a different conversation than the pre-created
+            # shell (no/mismatched thread id) — the override must follow the
+            # conversation the messages actually live in.
+            await store.set_override(
+                cfg.parent_entity, parent_id, ingested, ACTION_INCLUDE,
+                user.get("userName", ""),
+            )
+        conv_id = ingested or conv_id
     except Exception as exc:  # noqa: BLE001
         log.warning("write-through ingest of sent message failed: %s", exc)
-
-    # A confirmed send to non-contacts established this conversation manually —
-    # persist the attachment (same include override "Add emails…" writes) so a
-    # resync can never drop it, and thread-following keeps its replies coming.
-    if conv_id and unknown:
-        await store.set_override(
-            cfg.parent_entity, parent_id, conv_id, ACTION_INCLUDE,
-            user.get("userName", ""),
-        )
+        if not ingest_warning:
+            ingest_warning = (
+                "The message was sent, but it couldn't be shown here yet — "
+                "it will appear after the next sync."
+            )
 
     # Native Email write-back (ET-140..143): parent it to the first recipient
     # who is a record contact so it shows in that Contact's History panel.
@@ -527,12 +586,15 @@ async def send_message(
     write_back: dict[str, Any] = {"ok": True, "emailId": ""}
     if user_client is not None:
         parent_contact_id = next(
-            (ref.contact_by_address[a] for a in to if a in ref.contact_by_address), None
+            (ref.contact_by_address[a] for a in everyone if a in ref.contact_by_address),
+            None,
         )
         wb_payload = {
             "subject": subject or "(no subject)",
             "bodyHtml": body_html,
             "to": to,
+            "cc": cc,
+            "bcc": bcc,
             "parentType": "Contact" if parent_contact_id else None,
             "parentId": parent_contact_id,
             "messageId": sent_rfc_id,
@@ -544,6 +606,8 @@ async def send_message(
                 body_html=body_html,
                 sender=gmail.mailbox,
                 to=to,
+                cc=cc,
+                bcc=bcc,
                 parent_type=wb_payload["parentType"],
                 parent_id=wb_payload["parentId"],
                 message_id=sent_rfc_id,
@@ -561,11 +625,16 @@ async def send_message(
         "gmailMessageId": sent.get("id"),
         "conversationId": conv_id,
         "writeBack": write_back,
+        # Non-empty = the send succeeded but the tab may not show the message
+        # yet (write-through/override failure) — shown as a notice, not silence.
+        "ingestWarning": ingest_warning,
     }
 
 
 async def send_quick_message(
     *, gmail: GmailClient, to: list[str], subject: str, body_html: str,
+    cc: Optional[list[str]] = None,
+    bcc: Optional[list[str]] = None,
     sender_name: str = "",
     user_client: Optional[Any] = None,
     attachments: Optional[list[dict[str, Any]]] = None,
@@ -580,6 +649,12 @@ async def send_quick_message(
     Email, parented to the recipient's Contact when one matches (ET-140..143).
     """
     to = [a.strip().lower() for a in to if a and a.strip()]
+    cc = [a.strip().lower() for a in (cc or []) if a and a.strip()]
+    bcc = [a.strip().lower() for a in (bcc or []) if a and a.strip()]
+    cc = [a for a in cc if a not in to]
+    bcc = [a for a in bcc if a not in to and a not in cc]
+    if not to and cc:
+        to, cc = cc, []
     if not to:
         raise CommsError("Add at least one recipient.")
 
@@ -593,6 +668,8 @@ async def send_quick_message(
         sender=gmail.mailbox,
         sender_name=sender_name,
         to=to,
+        cc=cc,
+        bcc=bcc,
         subject=subject or "(no subject)",
         body_text="",
         body_html=body_html,
@@ -603,7 +680,7 @@ async def send_quick_message(
     write_back: dict[str, Any] = {"ok": True, "emailId": ""}
     if user_client is not None:
         parent_contact_id = None
-        for addr in to:
+        for addr in to + cc + bcc:
             try:
                 hit = await lookup_contact_by_email(user_client, addr)
             except Exception:  # noqa: BLE001 — parenting is best-effort
@@ -615,6 +692,8 @@ async def send_quick_message(
             "subject": subject or "(no subject)",
             "bodyHtml": body_html,
             "to": to,
+            "cc": cc,
+            "bcc": bcc,
             "parentType": "Contact" if parent_contact_id else None,
             "parentId": parent_contact_id,
             "messageId": "",
@@ -626,6 +705,8 @@ async def send_quick_message(
                 body_html=body_html,
                 sender=gmail.mailbox,
                 to=to,
+                cc=cc,
+                bcc=bcc,
                 parent_type=wb_payload["parentType"],
                 parent_id=wb_payload["parentId"],
             )

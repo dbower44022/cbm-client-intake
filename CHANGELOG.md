@@ -4,6 +4,56 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.87.0] — 2026-07-18
+
+Reliability hardening **Phase 4 — Gmail sync loss prevention** (P1-5, findings
+F1–F6, per `prompts/reliability-hardening-prompt-v0.1.md`; Doug's decision
+**D6 = dead-letter after 5 consecutive failing passes**). 25 new tests (740
+green); migration **0009** + the new store surface verified against live local
+Postgres. NOT driven against live Gmail (by design this phase) — live
+re-verify items listed in CLAUDE.md.
+
+### Fixed
+- **The sync cursor can no longer advance past a failed message.** A message
+  whose ingest fails (Gmail fetch error, CRM 400 like the robert.cohen
+  length rejections) now HOLDS the mailbox cursor: the next pass re-reads it
+  (Message-ID dedup makes the replay cheap) instead of silently losing it
+  forever. Failures are counted per message (`failed` in the pass totals —
+  the incident pass had logged "0 sync errors"); after **5 consecutive
+  failing passes (D6)** the id is dead-lettered — skipped, logged at ERROR,
+  visible in `/ops/api/metrics` (`gmailSync` block), recoverable via
+  `GMAIL_RESYNC` (which also resets the failure tracking). Webhook alerts
+  fire when a message keeps failing (2nd pass) and again on dead-letter.
+- **`last_synced_at` only advances on a fully-successful pass.** It is the
+  expired-cursor backfill window source — the error path used to bump it,
+  so a two-week mailbox outage would have re-queried "since yesterday" and
+  silently skipped the whole span.
+- **History pagination never skips unfetched pages.** When the page cap
+  truncates a long history listing, the cursor now saves the last PROCESSED
+  entry's id (resuming next pass) instead of the current tip, which
+  permanently skipped everything unfetched after a long outage.
+- **Gmail transport hardening.** `GmailClient` gets the DriveClient
+  treatment: bounded exponential backoff on 429/5xx honoring Retry-After
+  (quota bursts during backfills previously surfaced as runs of per-message
+  failures); one shared HTTP connection per client lifetime (a sync pass no
+  longer re-handshakes TLS per call; the sync closes clients per mailbox);
+  and sends get their own 120s timeout sized for ~27 MB bodies with NO
+  retries (non-idempotent — a retry could double-send; full send idempotency
+  is out of scope, Gmail's API has no dedup token for messages.send).
+- **Empty conversation shells are reused, not duplicated.** A conversation
+  whose first message create failed was unfindable (CConversation has no
+  thread-id field), so the retry minted a duplicate shell — the five
+  hand-deleted crm-test shells. A local `(mailbox, thread id) →
+  conversation` map (Postgres, migration 0009) now makes shells findable;
+  no CRM build needed.
+- **A confirmed send to non-contacts can no longer orphan its thread.** The
+  include override is persisted BEFORE the best-effort write-through ingest
+  (resolving/creating the conversation via the thread map) — previously one
+  Espo blip during write-through meant the override was never recorded and
+  the sync could never match the thread (unknown recipients match nothing).
+  A write-through failure now also surfaces in the compose dialog ("sent,
+  but it may not appear here yet") instead of silence.
+
 ## [0.86.0] — 2026-07-18
 
 Reliability hardening **Phase 3 — staff-tool write chains** (P1-9/11/12 + six

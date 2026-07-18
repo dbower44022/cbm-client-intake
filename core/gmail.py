@@ -70,8 +70,34 @@ def resolve_gmail_service_account(
         return None
 
 
+# Bounded retries on 429/5xx (the DriveClient treatment, P1-5 F4): during a
+# large backfill, quota bursts previously surfaced as runs of swallowed
+# per-message failures. Retry-After is honored when Google sends it.
+_MAX_ATTEMPTS = 4
+_BACKOFF_SECONDS = 0.5
+# Sends carry bodies up to ~27 MB (attachments); the default 20s timeout could
+# expire AFTER Gmail committed the send — "try again" then double-sent. A
+# roomy send timeout shrinks that window (full send idempotency is out of
+# scope — Gmail's API has no client-token dedup for messages.send).
+SEND_TIMEOUT_SECONDS = 120
+
+
+def _retry_after(resp: httpx.Response, attempt: int) -> float:
+    ra = resp.headers.get("retry-after", "")
+    if ra.isdigit():
+        return min(float(ra), 30.0)
+    return _BACKOFF_SECONDS * (2 ** attempt)
+
+
 class GmailClient:
-    """Gmail REST for ONE mailbox, authenticated by delegated impersonation."""
+    """Gmail REST for ONE mailbox, authenticated by delegated impersonation.
+
+    Holds ONE ``httpx.AsyncClient`` for its lifetime (connection reuse across
+    a sync pass's hundreds of calls — previously every call re-handshook TLS).
+    Long-lived callers (the sync loop) should ``await client.aclose()`` when
+    done; short-lived web-endpoint instances may skip it (the transport is
+    closed by GC at worst).
+    """
 
     def __init__(
         self, service_account_info: dict[str, Any], mailbox: str, timeout: int = 20
@@ -80,6 +106,16 @@ class GmailClient:
         self._info = service_account_info
         self._timeout = timeout
         self._tokens: dict[str, tuple[str, float]] = {}  # scope -> (token, expiry)
+        self._http: Optional[httpx.AsyncClient] = None
+
+    def _client(self) -> httpx.AsyncClient:
+        if self._http is None or self._http.is_closed:
+            self._http = httpx.AsyncClient(timeout=self._timeout)
+        return self._http
+
+    async def aclose(self) -> None:
+        if self._http is not None and not self._http.is_closed:
+            await self._http.aclose()
 
     # --- auth -----------------------------------------------------------
 
@@ -114,27 +150,44 @@ class GmailClient:
         scope: str = GMAIL_READONLY_SCOPE,
         params: Optional[dict[str, Any]] = None,
         json_body: Optional[dict[str, Any]] = None,
+        timeout: Optional[float] = None,
+        retry: bool = True,
     ) -> dict[str, Any]:
+        """One authorized request, with bounded backoff retries on 429/5xx
+        (honoring Retry-After). ``retry=False`` for non-idempotent calls
+        (send): a 5xx/timeout is ambiguous — Gmail may have committed — so
+        retrying could double-send."""
         token = await self._token(scope)
-        try:
-            async with httpx.AsyncClient(timeout=self._timeout) as client:
-                resp = await client.request(
+        headers = {"Authorization": f"Bearer {token}"}
+        attempts = _MAX_ATTEMPTS if retry else 1
+        last: Optional[httpx.Response] = None
+        for attempt in range(attempts):
+            try:
+                resp = await self._client().request(
                     method,
                     f"{_BASE}{path}",
                     params=params,
                     json=json_body,
-                    headers={"Authorization": f"Bearer {token}"},
+                    headers=headers,
+                    timeout=timeout if timeout is not None else self._timeout,
                 )
-        except httpx.HTTPError as exc:
-            raise GmailError(f"Gmail request failed ({path}): {exc}") from exc
-        if resp.status_code == 404 and path.startswith("/history"):
-            raise HistoryExpiredError(f"historyId expired for {self.mailbox}")
-        if resp.status_code >= 400:
-            raise GmailError(
-                f"Gmail {method} {path} for {self.mailbox}: HTTP {resp.status_code} "
-                f"{resp.text[:300]}"
-            )
-        return resp.json() if resp.content else {}
+            except httpx.HTTPError as exc:
+                raise GmailError(f"Gmail request failed ({path}): {exc}") from exc
+            if resp.status_code == 404 and path.startswith("/history"):
+                raise HistoryExpiredError(f"historyId expired for {self.mailbox}")
+            if resp.status_code < 400:
+                return resp.json() if resp.content else {}
+            last = resp
+            if resp.status_code not in (429,) and resp.status_code < 500:
+                break
+            if attempt == attempts - 1:
+                break
+            await asyncio.sleep(_retry_after(resp, attempt))
+        assert last is not None
+        raise GmailError(
+            f"Gmail {method} {path} for {self.mailbox}: HTTP {last.status_code} "
+            f"{last.text[:300]}"
+        )
 
     # --- reads ------------------------------------------------------------
 
@@ -184,8 +237,12 @@ class GmailClient:
         body: dict[str, Any] = {"raw": raw}
         if thread_id:
             body["threadId"] = thread_id
+        # No retries (non-idempotent) + a roomy timeout sized for ~27 MB
+        # bodies — a timeout after Gmail committed used to invite a manual
+        # "try again" double-send.
         result = await self._request(
-            "POST", "/messages/send", scope=GMAIL_SEND_SCOPE, json_body=body
+            "POST", "/messages/send", scope=GMAIL_SEND_SCOPE, json_body=body,
+            timeout=SEND_TIMEOUT_SECONDS, retry=False,
         )
         log.info("gmail send as %s -> message %s", self.mailbox, result.get("id"))
         return result
@@ -323,6 +380,7 @@ def build_mime(
     body_text: str,
     body_html: Optional[str] = None,
     cc: Optional[list[str]] = None,
+    bcc: Optional[list[str]] = None,
     in_reply_to: str = "",
     references: str = "",
     sender_name: str = "",
@@ -342,6 +400,10 @@ def build_mime(
     msg["To"] = ", ".join(to)
     if cc:
         msg["Cc"] = ", ".join(cc)
+    if bcc:
+        # Gmail delivers to Bcc recipients listed on the raw message and strips
+        # the header from the copies it hands to To/Cc recipients.
+        msg["Bcc"] = ", ".join(bcc)
     msg["Subject"] = subject
     if in_reply_to:
         msg["In-Reply-To"] = f"<{_clean_msgid(in_reply_to)}>"

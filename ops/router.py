@@ -73,7 +73,28 @@ async def submissions(
 async def metrics(request: Request) -> dict:
     _require_user(request)
     store = _store(request)
-    return await store.metrics()
+    data = await store.metrics()
+    # Gmail sync failure visibility (P1-5): mailboxes with messages currently
+    # failing ingest (cursor held) or dead-lettered (skipped after repeated
+    # failures). Best-effort — absent when comms isn't configured.
+    try:
+        from comms.store import make_comms_store
+
+        comms = make_comms_store(get_settings())
+        if comms is not None:
+            try:
+                gmail = {
+                    s.mailbox: {"failing": s.failed_ids, "deadLetter": s.dead_letter}
+                    for s in await comms.all_sync_states()
+                    if s.failed_ids or s.dead_letter
+                }
+                if gmail:
+                    data["gmailSync"] = gmail
+            finally:
+                await comms.dispose()
+    except Exception as exc:  # noqa: BLE001 — metrics must never 500 over this
+        log.warning("gmail sync metrics unavailable: %s", exc)
+    return data
 
 
 @router.get("/submissions/{submission_id}")

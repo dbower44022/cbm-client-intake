@@ -92,6 +92,12 @@ class Settings(BaseSettings):
     mentor_profile_allowed_teams: str = "Mentor Team"
     # Team that approved mentors' new login users are placed in.
     mentor_team_name: str = "Mentor Team"
+    # Team stamped onto every NEW CPartnerProfile the partner intake form
+    # creates, so team-scoped roles (Partner Management Team members) can see
+    # all partners in /partnersessions. Best-effort: an unresolvable team
+    # (e.g. the API role lacks Team read) logs a WARNING and the partner is
+    # created without it. Empty string disables the stamp.
+    partner_team_name: str = "Partner Management Team"
     # Auto-provision a login User when a mentor is Approved. Off by default.
     # User creation is admin-only in EspoCRM (API keys can't do it), so this runs
     # as a dedicated admin service account via the App/user token flow — NEVER
@@ -135,6 +141,11 @@ class Settings(BaseSettings):
     # pass complete, then unset. Used to re-drive messages a bug dropped.
     gmail_resync: bool = False
     gmail_backfill: str = "newer_than:365d"  # initial-sync history window
+    # P1-5: a message failing ingest holds the cursor back (nothing skipped);
+    # after this many CONSECUTIVE failing passes it is dead-lettered (skipped,
+    # logged, visible in /ops metrics) so one poison message can't wedge the
+    # mailbox forever. Doug's decision D6 (2026-07-18): 5.
+    gmail_dead_letter_passes: int = 5
     # Statuses that make a record "active" (mail is only ingested for active
     # records). Comma-separated; engagement set matches the sessions tools.
     comms_engagement_statuses: str = "Active,Assigned,Pending Acceptance,On-Hold"

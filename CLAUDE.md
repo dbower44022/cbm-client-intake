@@ -1392,7 +1392,49 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-18)
 
-**Main is at v0.86.0** (2026-07-18, 723 tests green, committed NOT pushed) —
+**Main is at v0.87.0** (2026-07-18, 740 tests green, committed NOT pushed) —
+**Reliability hardening Phase 4 — Gmail sync loss prevention** (P1-5 F1–F6;
+Doug's decision this session: **D6 = dead-letter after 5 consecutive
+failing passes**). Highlights (full list in CHANGELOG 0.87.0):
+- A failed message ingest **holds the mailbox cursor** (re-read next pass,
+  dedup makes the replay cheap) and counts in the pass totals ("failed" —
+  the robert.cohen incident pass had logged "0 sync errors"); after 5
+  consecutive failing passes the id is **dead-lettered** (skipped, ERROR
+  log, `/ops/api/metrics` `gmailSync` block, recoverable via GMAIL_RESYNC
+  which also resets failure tracking); webhook alerts at persistence
+  (2nd pass) + dead-letter.
+- `last_synced_at` = last FULLY-successful pass only (the expired-cursor
+  backfill window source); truncated history listings resume from the last
+  processed entry instead of skipping to the tip; `GmailClient` gains
+  429/5xx backoff honoring Retry-After + one shared HTTP connection per
+  client (sync closes per mailbox) + a 120s no-retry send timeout (send
+  idempotency out of scope — noted).
+- **Empty conversation shells reuse** via a local `(mailbox, thread id) →
+  conversation` Postgres map (**Alembic 0009** — pre-deploy migrate; NO
+  CRM build needed — CConversation has no thread field, cconversation-
+  entity.md checked); the send path persists the **include override BEFORE
+  the write-through ingest** (one Espo blip used to permanently orphan a
+  confirmed-unknown-recipient thread), and a write-through failure now
+  surfaces in the compose dialog as a notice.
+- Verified: 740 tests green (25 new incl. the DoD sims — cursor-hold →
+  dead-letter-after-5, outage window from last success, 21-page history
+  no-skip, shell reuse, RESYNC reset, alert transitions, and
+  `tests/test_gmail_client.py` for the transport); migration 0009 + the
+  new store surface round-tripped on live local Postgres. **NOT driven
+  against live Gmail (by design). Live re-verify items for Doug after
+  deploy:** one clean sync pass on crm-test (totals now include
+  failed/deadLettered), the still-rejecting prod message
+  `19f298a147e3ba38` should now show as failing→dead-lettered with alerts
+  instead of silent loss ([[prod-ccommunication-field-length-drift]] —
+  its real fix is still app-side subject sanitizing, not built), and one
+  compose send confirming the roomier send timeout. **Remaining phases
+  5–6, one per session.**
+- Version-race note: `comms/service.py` + `sessions/frontend/app.js` carry
+  a parallel compose-arc's (Cc/Bcc, compose-guard) uncommitted hunks swept
+  into this release commit — that session's own release completes it (the
+  repo's established pattern; HEAD tests green at commit).
+
+Before that: **v0.86.0** (2026-07-18, 723 tests green) —
 **Reliability hardening Phase 3 — staff-tool write chains** (P1-9/11/12 +
 six P2 items; Doug's decision this session: **D5 = the hide-conversation
 unlink runs as the signed-in user**). Highlights (full list in CHANGELOG
