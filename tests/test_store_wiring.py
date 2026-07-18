@@ -152,6 +152,68 @@ def test_healthz_503_when_database_unreachable():
         assert resp.json()["database"] == "error"
 
 
+# --- P1-6 (reliability review 2026-07-17): worker liveness on /healthz --------
+
+
+def test_async_accept_logs_slug_token_reference(monkeypatch, caplog):
+    """Correlation: the accept side of the trace — one INFO line carrying the
+    slug, token, and durable reference (the worker logs the same slug+token)."""
+    from core.config import get_settings
+
+    monkeypatch.setenv("ASYNC_DELIVERY", "true")
+    get_settings.cache_clear()
+    try:
+        store = FakeStore()
+        with caplog.at_level("INFO", logger="cbm_intake"):
+            with _client(store) as c:
+                r = c.post(
+                    "/api/info-request/intake",
+                    json=_body(submission_token="tok-async-trace-1"),
+                )
+        body = r.json()
+        assert body["status"] == "received"
+        text = "\n".join(rec.getMessage() for rec in caplog.records)
+        assert "info-request" in text
+        assert "tok-async-trace-1" in text
+        assert body["reference"] in text
+    finally:
+        get_settings.cache_clear()
+
+
+def test_healthz_reports_worker_liveness_fields():
+    class MetricsStore(FakeStore):
+        async def metrics(self):
+            return {
+                "workerHeartbeatAgeSeconds": 12.5,
+                "backlog": 3,
+                "oldestPendingAgeSeconds": 40.0,
+                "stranded": 1,
+            }
+
+    with _client(MetricsStore()) as c:
+        body = c.get("/healthz").json()
+    assert body["worker"] == {
+        "lastHeartbeatAgeSeconds": 12.5,
+        "backlog": 3,
+        "oldestPendingAgeSeconds": 40.0,
+        "stranded": 1,
+    }
+
+
+def test_healthz_never_fails_on_metrics_error():
+    """Decision D1: only the DB ping may 503 — a metrics read failure reports
+    a null worker block on an otherwise-healthy 200."""
+
+    class BrokenMetricsStore(FakeStore):
+        async def metrics(self):
+            raise RuntimeError("boom")
+
+    with _client(BrokenMetricsStore()) as c:
+        resp = c.get("/healthz")
+    assert resp.status_code == 200
+    assert resp.json()["worker"] is None
+
+
 def test_async_delivery_defers_processing(monkeypatch):
     # With ASYNC_DELIVERY on, the accept endpoint captures and returns without
     # processing — the worker does the CRM work later.

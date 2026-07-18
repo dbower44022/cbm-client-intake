@@ -22,6 +22,7 @@ from core import monitoring
 from core import store as store_mod
 from core.config import Settings, get_settings
 from core.espo import DryRunEspoClient, EspoApi, EspoClient, EspoError, EspoTransportError
+from core.logging_setup import setup_logging
 from core.resumable import ResumableClient
 from core.store import Claimed, SubmissionStore
 from core.submission_log import (
@@ -98,7 +99,10 @@ async def process_one(store: SubmissionStore, settings: Settings, claimed: Claim
             await store.mark_retry(
                 claimed.id, attempt_count=attempt, next_attempt_at=next_at, error=str(exc)
             )
-            log.warning("retry %s (attempt %s): %s", claimed.id, attempt, exc)
+            log.warning(
+                "retry %s (%s token=%s, attempt %s): %s",
+                claimed.id, claimed.form_slug, claimed.submission_token, attempt, exc,
+            )
         else:
             # Store the traceback tail alongside the message so a code bug
             # (e.g. KeyError) landing in needs_attention is diagnosable from
@@ -112,16 +116,24 @@ async def process_one(store: SubmissionStore, settings: Settings, claimed: Claim
                 await log_submission(
                     base, spec.slug, submission,
                     reason=REASON_ORCHESTRATOR_ERROR, status=STATUS_NEW,
+                    payload_stored_durably=True,
                 )
-            log.exception("needs_attention %s (attempt %s): %s", claimed.id, attempt, exc)
+            log.exception(
+                "needs_attention %s (%s token=%s, attempt %s): %s",
+                claimed.id, claimed.form_slug, claimed.submission_token, attempt, exc,
+            )
         return
 
     await log_submission(
         base, spec.slug, submission,
         reason=REASON_NORMAL, status=STATUS_PROCESSED, contact_id=ids.get("contactId"),
+        payload_stored_durably=True,
     )
     await store.mark_completed(claimed.id, ids)
-    log.info("delivered %s -> %s", claimed.id, ids)
+    log.info(
+        "delivered %s (%s token=%s) -> %s",
+        claimed.id, claimed.form_slug, claimed.submission_token, ids,
+    )
 
 
 async def run_once(store: SubmissionStore, settings: Settings) -> int:
@@ -129,6 +141,14 @@ async def run_once(store: SubmissionStore, settings: Settings) -> int:
     claimed = await store.claim_batch(
         settings.worker_batch_size, lease_seconds=settings.worker_lease_seconds
     )
+    if claimed:
+        log.info(
+            "claimed %d: %s",
+            len(claimed),
+            "; ".join(
+                f"{c.id} ({c.form_slug} token={c.submission_token})" for c in claimed
+            ),
+        )
     for item in claimed:
         await process_one(store, settings, item)
     return len(claimed)
@@ -158,8 +178,8 @@ async def run_cycle(store: SubmissionStore, settings: Settings) -> int:
 
 
 async def main() -> None:
-    logging.basicConfig(level=logging.INFO)
     settings = get_settings()
+    setup_logging(settings.log_level)
     store = store_mod.make_store(settings)
     if store is None:
         # No database configured (e.g. before Phase 1 is activated). Stay up but
@@ -215,6 +235,13 @@ async def main() -> None:
 
     while True:
         claimed = await run_cycle(store, settings)
+
+        # Liveness heartbeat (P1-6): one upserted row per iteration; /healthz
+        # reports its age so an external check can see a dead/wedged worker.
+        try:
+            await store.heartbeat()
+        except Exception as exc:  # noqa: BLE001 — liveness must never crash the worker
+            log.warning("heartbeat write failed: %s", exc)
 
         now = datetime.now(timezone.utc)
         if now >= next_alert:

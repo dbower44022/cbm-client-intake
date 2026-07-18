@@ -69,6 +69,25 @@ async def test_alert_cooldown_suppresses_repeat():
     assert len(sent) == 1
 
 
+async def test_alerts_on_stranded_rows():
+    """P1-6: a lease-expired processing row (dead worker mid-delivery) alerts."""
+    sent, send = _collector()
+    store = FakeMetricsStore(
+        {"needsAttention": 0, "oldestPendingAgeSeconds": None, "stranded": 2}
+    )
+    await run_alert_check(store, _settings(), {}, now=_NOW, send=send)
+    assert any("stranded" in t.lower() for t in sent)
+
+
+async def test_no_stranded_alert_when_zero():
+    sent, send = _collector()
+    store = FakeMetricsStore(
+        {"needsAttention": 0, "oldestPendingAgeSeconds": None, "stranded": 0}
+    )
+    await run_alert_check(store, _settings(), {}, now=_NOW, send=send)
+    assert sent == []
+
+
 # --- schema drift -----------------------------------------------------------
 
 def _full_options(entity, field):

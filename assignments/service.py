@@ -534,8 +534,15 @@ async def assign_engagement(
             uid = assigned_user_id(r)
             if uid and uid not in assigned_ids:
                 assigned_ids.append(uid)
-    except EspoError:
-        pass
+    except EspoError as exc:
+        # P1-10: this read feeds the assignedUsers merge below — when it fails,
+        # the write proceeds with just the new mentor, silently revoking every
+        # co-mentor's engagement access (the defect class Doug already reported
+        # once). The failure must be visible in the logs.
+        log.warning(
+            "co-mentor list unreadable on CEngagement/%s; the assignedUsers "
+            "write may drop co-mentors: %s", engagement_id, exc,
+        )
     await client.update(
         ENGAGEMENT,
         engagement_id,
@@ -738,8 +745,12 @@ async def reassign_engagement(
         )
         old_user_id = assigned_user_id(old)
         old_name = old.get("name") or old_name
-    except EspoError:
-        pass
+    except EspoError as exc:
+        log.warning(
+            "outgoing mentor profile %s unreadable during reassign of "
+            "CEngagement/%s — their User cannot be un-stamped: %s",
+            old_profile_id, engagement_id, exc,
+        )
     old_name = old_name or "the previous mentor"
 
     # Users that must survive every write: the engagement's co-mentors.
@@ -753,8 +764,13 @@ async def reassign_engagement(
             uid = assigned_user_id(r)
             if uid:
                 protected.add(uid)
-    except EspoError:
-        pass
+    except EspoError as exc:
+        # Same consequence as the assign path (P1-10): an unreadable co-mentor
+        # list means the swap can drop co-mentors from assignedUsers.
+        log.warning(
+            "co-mentor list unreadable on CEngagement/%s; the reassign "
+            "may drop co-mentors from assignedUsers: %s", engagement_id, exc,
+        )
 
     def _swap(ids: list[str]) -> list[str]:
         """Current assigned users with old -> new swapped: the old mentor's User

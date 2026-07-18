@@ -18,6 +18,7 @@ Entitlements (team names come from settings, so they match the app gates):
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
@@ -34,6 +35,8 @@ from assignments.auth import (
     set_session,
 )
 from core.config import Settings, get_settings
+
+log = logging.getLogger("cbm_intake.portal")
 
 router = APIRouter(prefix="/api/portal", tags=["portal"])
 
@@ -104,8 +107,12 @@ async def login(body: LoginIn, request: Request) -> dict:
         # they can DO is decided per app, per request (is_member).
         user = await authenticate(settings, body.username, body.password, gate=False)
     except AuthError as exc:
+        # Audit: failed sign-ins were previously invisible (the staff front
+        # door had no log at all). Username only — never the password.
+        log.warning("portal login FAILED for %s: %s", body.username, exc)
         raise HTTPException(status_code=401, detail=str(exc))
     set_session(request, user)
+    log.info("portal login ok: %s (admin=%s)", user["userName"], user.get("isAdmin"))
     return _home_payload(user, request, settings)
 
 

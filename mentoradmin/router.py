@@ -87,7 +87,8 @@ def _crm_failure(request: Request, exc: EspoError, message: str) -> HTTPExceptio
         return HTTPException(status_code=401, detail="Your session has expired — please sign in again.")
     # Log the full CRM error (includes the response body) so failures like a
     # value rejected by EspoCRM are diagnosable from the run logs.
-    log.warning("%s: %s", message, exc)
+    actor = (current_user(request) or {}).get("userName", "?")
+    log.warning("%s (user=%s): %s", message, actor, exc)
     # A CRM validation rejection is the caller's data, not a server fault —
     # answer with a readable 400 naming the field, never a raw 502/504.
     friendly = validation_message(exc)
@@ -161,7 +162,14 @@ async def mentor_status_check(request: Request) -> dict:
     if factory is not None:
         try:
             user_client = await factory()
-        except Exception:  # admin login unavailable — staff token still tries
+        except Exception as exc:  # noqa: BLE001 — admin login unavailable
+            # The sweep silently downgrades to the staff token, which usually
+            # cannot read Users — every mentor then reports an unverifiable
+            # login. Name the downgrade so the sweep results are explainable.
+            log.warning(
+                "status-check: provisioning admin login failed — falling back "
+                "to the staff token (login checks may report unknown): %s", exc,
+            )
             user_client = client
 
     google = await _resolve_google(settings)
@@ -496,6 +504,11 @@ async def mentor_update(mentor_id: str, body: UpdateIn, request: Request) -> dic
         comp = await service.check_completeness(client, result)
         result["completeness"] = comp
         result["recordStatus"] = await service.sync_record_status(client, mentor_id, result, comp["status"])
+        # Audit: which fields changed (never the values — they may be PII).
+        log.info(
+            "mentor CMentorProfile/%s saved by %s (fields: %s)",
+            mentor_id, user["userName"], ", ".join(sorted(body.changes)) or "-",
+        )
         return result
     except service.MentorAdminError as exc:
         # e.g. contact fields saved on a mentor with no linked Contact record —
@@ -519,9 +532,20 @@ async def mentor_provision(mentor_id: str, request: Request) -> StreamingRespons
     factory = _provision_factory(settings)
     resolved = await _resolve_google(settings)
 
+    def _emit(event: dict) -> str:
+        # Server-side record of the highest-privilege flow in the app (mailbox
+        # + User creation) — previously the events went to the browser only.
+        # step/status/message ONLY: the extras can carry the temp password.
+        log.info(
+            "provision %s (by %s): [%s/%s] %s",
+            mentor_id, user["userName"],
+            event.get("step"), event.get("status"), event.get("message", ""),
+        )
+        return _sse(event)
+
     async def stream():
         if factory is None:
-            yield _sse(service._step(
+            yield _emit(service._step(
                 "login", "error",
                 "Mentor login provisioning is turned off on this server. An "
                 "administrator must enable it (MENTOR_PROVISION_USERS + a service "
@@ -536,19 +560,19 @@ async def mentor_provision(mentor_id: str, request: Request) -> StreamingRespons
                 select="assignedUserId,assignedUsersIds,assignedUsersNames,mentorStatus",
             )
         except EspoError as exc:
-            yield _sse(service._step("login", "error", f"Could not read the mentor: {exc}"))
+            yield _emit(service._step("login", "error", f"Could not read the mentor: {exc}"))
             return
         if service.assigned_user_id(prof):
-            yield _sse(service._step("login", "done", "This mentor already has an EspoCRM login — nothing to provision."))
-            yield _sse({"step": "done", "status": "done", "message": "No provisioning needed", "result": {"skipped": True}})
+            yield _emit(service._step("login", "done", "This mentor already has an EspoCRM login — nothing to provision."))
+            yield _emit({"step": "done", "status": "done", "message": "No provisioning needed", "result": {"skipped": True}})
             return
         if prof.get("mentorStatus") not in (service.STATUS_APPROVED, service.STATUS_ACTIVE):
-            yield _sse(service._step("login", "error", "A login is only created for an Approved or Active mentor."))
+            yield _emit(service._step("login", "error", "A login is only created for an Approved or Active mentor."))
             return
         try:
             admin_client = await factory()
         except Exception as exc:  # admin service-account login failed
-            yield _sse(service._step("login", "error", f"Could not sign in the provisioning service account: {exc}"))
+            yield _emit(service._step("login", "error", f"Could not sign in the provisioning service account: {exc}"))
             return
         try:
             async for event in service.provision_mentor_user_steps(
@@ -557,9 +581,9 @@ async def mentor_provision(mentor_id: str, request: Request) -> StreamingRespons
                 directory=resolved.directory,
                 create_mailbox=resolved.create_enabled,
             ):
-                yield _sse(event)
+                yield _emit(event)
         except Exception as exc:  # never leak a raw 500 into the stream
-            yield _sse(service._step("login", "error", f"Provisioning failed: {exc}"))
+            yield _emit(service._step("login", "error", f"Provisioning failed: {exc}"))
 
     return StreamingResponse(
         stream(),

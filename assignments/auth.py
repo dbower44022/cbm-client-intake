@@ -73,7 +73,10 @@ async def _fetch_names(
     )
     try:
         rec = await client.get("User", user_id, select=field)
-    except EspoError:
+    except EspoError as exc:
+        # An empty team list fails closed at every staff gate — a user losing
+        # tool access because this read failed must be diagnosable.
+        log.warning("membership fallback read failed for User/%s: %s", user_id, exc)
         return [], "fallback-error"
     return _names(rec, field) or [], "App/user-fallback"
 

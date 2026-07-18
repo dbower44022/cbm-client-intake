@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     # ("production" / "test" / "dev"); set explicitly to override the wording.
     env_label: str = ""
 
+    # Logging level for both processes (web + worker) — e.g. "DEBUG" exposes
+    # the comms triage decisions without a redeploy. See core/logging_setup.py.
+    log_level: str = "INFO"
+
     # --- V2 Phase 0: durable submission store (prds/v2) ---
     # When set, every submission is captured to Postgres before any CRM work and
     # idempotency is enforced durably. Empty => the app keeps its V1 in-memory

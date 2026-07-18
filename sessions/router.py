@@ -146,7 +146,8 @@ def make_router(cfg: DomainConfig) -> APIRouter:
         if session_expired(exc):
             clear_session(request)
             return HTTPException(status_code=401, detail="Your session has expired — please sign in again.")
-        log.warning("%s (%s): %s", message, cfg.slug, exc)
+        actor = (current_user(request) or {}).get("userName", "?")
+        log.warning("%s (%s, user=%s): %s", message, cfg.slug, actor, exc)
         # A CRM validation rejection is the caller's data, not a server fault —
         # answer with a readable 400 naming the field, never a raw 502/504.
         friendly = validation_message(exc)
@@ -275,9 +276,15 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             raise HTTPException(status_code=404, detail="Not found")
         client = client_for(get_settings(), user)
         try:
-            return await details_svc.save_details(client, entity, record_id, body.changes)
+            result = await details_svc.save_details(client, entity, record_id, body.changes)
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not save details")
+        # Audit: which fields changed (never the values — they may be PII).
+        log.info(
+            "details saved %s/%s by %s (fields: %s)",
+            entity, record_id, user["userName"], ", ".join(sorted(body.changes)) or "-",
+        )
+        return result
 
     @router.get("/contacts")
     async def contacts_search(request: Request, q: str = "") -> dict:
@@ -370,25 +377,36 @@ def make_router(cfg: DomainConfig) -> APIRouter:
         user = _require_user(request)
         client = client_for(get_settings(), user)
         try:
-            return await service.create_session(
+            result = await service.create_session(
                 cfg, client, parent_id, body.changes, body.attendees,
                 owner_user_id=user["userId"], settings=get_settings(),
                 skip_calendar=body.skipCalendar,
             )
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not create session")
+        log.info(
+            "session created on %s/%s by %s (fields: %s)",
+            cfg.parent_entity, parent_id, user["userName"],
+            ", ".join(sorted(body.changes)) or "-",
+        )
+        return result
 
     @router.put("/sessions/{session_id}")
     async def update_session(session_id: str, body: SessionIn, request: Request) -> dict:
         user = _require_user(request)
         client = client_for(get_settings(), user)
         try:
-            return await service.update_session(
+            result = await service.update_session(
                 cfg, client, session_id, body.changes, body.attendees,
                 user_id=user["userId"], settings=get_settings(),
             )
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not save session")
+        log.info(
+            "session CSession/%s saved by %s (fields: %s)",
+            session_id, user["userName"], ", ".join(sorted(body.changes)) or "-",
+        )
+        return result
 
     if cfg.supports_comentor:
 

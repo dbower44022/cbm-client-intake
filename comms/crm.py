@@ -347,8 +347,13 @@ async def link_records(
         for cid in rec.contact_ids:
             try:
                 await client.relate(CONVERSATION, conversation_id, CONTACTS_LINK, cid)
-            except EspoError:
-                pass  # contact link is a nicety; the record link is what matters
+            except EspoError as exc:
+                # The record link above is what matters, but a silently missing
+                # contact link still surprises in the CRM UI — log it.
+                log.warning(
+                    "contact link %s -> Contact/%s failed: %s",
+                    conversation_id, cid, exc,
+                )
 
 
 async def stamp_owners(client: Any, conversation_id: str, owner_ids: set[str]) -> None:

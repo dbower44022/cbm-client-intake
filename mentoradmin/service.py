@@ -266,7 +266,11 @@ async def sync_record_status(
         try:
             await client.update(MENTOR_PROFILE, mentor_id, {"recordStatus": status})
             return status
-        except Exception:
+        except Exception as exc:  # noqa: BLE001 — best-effort, but visibly so
+            log.warning(
+                "recordStatus persist failed for CMentorProfile/%s (wanted %s) "
+                "— the grid keeps showing %s: %s", mentor_id, status, current, exc,
+            )
             return current
     return current or status
 
@@ -418,8 +422,11 @@ async def update_mentor(
     # this self-heals records assigned on only one side). Best-effort.
     try:
         await reconcile_user_links(client, mentor_id)
-    except Exception:
-        pass
+    except Exception as exc:  # noqa: BLE001 — best-effort, but visibly so
+        log.warning(
+            "reconcile_user_links failed for CMentorProfile/%s — a one-sided "
+            "User assignment stays unhealed: %s", mentor_id, exc,
+        )
 
     result = await get_mentor(client, mentor_id)
     if warnings:

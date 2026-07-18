@@ -26,6 +26,7 @@ from . import store as store_mod
 from .config import Settings, get_settings
 from .espo import DryRunEspoClient, EspoApi, EspoClient, EspoError
 from .forms import FormSpec
+from .logging_setup import setup_logging
 from .store import SubmissionStore
 from .submission_log import (
     REASON_HONEYPOT,
@@ -37,13 +38,9 @@ from .submission_log import (
 )
 from .version import __version__
 
-# Prefix every app log line with the date/time so run logs show when each
-# event happened, e.g. "INFO: 2026-01-01 01:00 - created session ...".
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(levelname)s: %(asctime)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M",
-)
+# Shared format for both processes (level/name/seconds — see the module doc);
+# re-applied with the configured LOG_LEVEL in create_app once settings load.
+setup_logging()
 log = logging.getLogger("cbm_intake")
 
 SHARED_DIR = Path(__file__).resolve().parent.parent / "frontend" / "shared"
@@ -131,6 +128,7 @@ def _make_handler(
             logged = await log_submission(
                 client, spec.slug, submission,
                 reason=REASON_HONEYPOT, status=STATUS_NEW,
+                payload_stored_durably=captured is not None,
             )
             log.warning(
                 "honeypot %s token=%s email=%s logged=%s",
@@ -145,6 +143,13 @@ def _make_handler(
         # durably captured — the background worker delivers it into the CRM. The
         # CIntakeSubmission "Normal" log moves to the worker (on success).
         if captured is not None and settings.async_delivery:
+            # The accept-side end of the trace: the worker logs the same slug +
+            # token on claim/delivered/retry, so one submission is followable
+            # across both processes by token (reliability review, correlation).
+            log.info(
+                "%s received token=%s reference=%s (async)",
+                spec.slug, submission.submission_token, captured.id,
+            )
             return {"status": "received", "reference": captured.id}
 
         # In-memory idempotency only when there is no durable store.
@@ -160,6 +165,7 @@ def _make_handler(
             await log_submission(
                 client, spec.slug, submission,
                 reason=REASON_ORCHESTRATOR_ERROR, status=STATUS_NEW,
+                payload_stored_durably=captured is not None,
             )
             if captured is not None:
                 await store.mark_failed(
@@ -179,6 +185,7 @@ def _make_handler(
             client, spec.slug, submission,
             reason=REASON_NORMAL, status=STATUS_PROCESSED,
             contact_id=ids.get("contactId"),
+            payload_stored_durably=captured is not None,
         )
 
         if captured is not None:
@@ -246,6 +253,7 @@ def create_app(
     forms: list[FormSpec], *, store: Optional[SubmissionStore] = None
 ) -> FastAPI:
     settings = get_settings()
+    setup_logging(settings.log_level)
     # V2 Phase 0: a durable store when DATABASE_URL is set (else None = V1 behavior).
     # Tests inject a fake store directly.
     if store is None:
@@ -314,6 +322,7 @@ def create_app(
         # tier down, since durable capture + the async worker exist precisely to
         # ride it out.
         database = None
+        worker_info = None
         if store is not None:
             try:
                 await store.ping()
@@ -322,6 +331,21 @@ def create_app(
                 database = "error"
                 response.status_code = 503
                 log.warning("healthz: database ping failed: %s", exc)
+            # Worker liveness + backlog (P1-6): the in-worker alerter cannot
+            # alert on its own death, so an external uptime check watches these
+            # fields instead. Best-effort — a failed read reports null fields
+            # and NEVER degrades /healthz (decision D1: only the DB ping 503s).
+            if database == "ok":
+                try:
+                    m = await store.metrics()
+                    worker_info = {
+                        "lastHeartbeatAgeSeconds": m.get("workerHeartbeatAgeSeconds"),
+                        "backlog": m.get("backlog"),
+                        "oldestPendingAgeSeconds": m.get("oldestPendingAgeSeconds"),
+                        "stranded": m.get("stranded"),
+                    }
+                except Exception as exc:  # noqa: BLE001 — never fail healthz for this
+                    log.warning("healthz: metrics read failed: %s", exc)
         return {
             "status": "ok" if database != "error" else "degraded",
             "version": __version__,
@@ -331,6 +355,7 @@ def create_app(
             "assignments": settings.assignments_active,
             "durableStore": store is not None,
             "database": database,
+            "worker": worker_info,
         }
 
     for spec in forms:

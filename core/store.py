@@ -86,6 +86,19 @@ submission = Table(
     Index("ix_submission_claim", "status", "next_attempt_at", "received_at"),
 )
 
+# Worker liveness (P1-6, reliability review 2026-07-17): the worker upserts the
+# single row each loop iteration; /healthz reports the beat's age so an external
+# uptime check can see a dead/wedged worker — the in-worker alerter can't alert
+# on its own death. One row, fixed key.
+WORKER_HEARTBEAT_ID = "worker"
+
+worker_heartbeat = Table(
+    "worker_heartbeat",
+    metadata,
+    Column("id", String(16), primary_key=True),
+    Column("beat_at", DateTime(timezone=True), nullable=False),
+)
+
 
 @dataclass
 class Captured:
@@ -137,6 +150,8 @@ class SubmissionStore(Protocol):
     async def discard(self, submission_id: str) -> bool: ...
     async def metrics(self) -> dict[str, Any]: ...
     async def ping(self) -> bool: ...
+    # Worker liveness (P1-6):
+    async def heartbeat(self) -> None: ...
     async def dispose(self) -> None: ...
 
 
@@ -414,7 +429,9 @@ class PostgresStore:
         return result.rowcount > 0
 
     async def metrics(self) -> dict[str, Any]:
-        """Delivery health: counts, backlog, oldest-pending age, avg latency."""
+        """Delivery health: counts, backlog, oldest-pending age, avg latency,
+        stranded (lease-expired ``processing``) rows, worker-heartbeat age."""
+        now = _now()
         async with self._engine.begin() as conn:
             counts = {
                 r[0]: r[1]
@@ -442,14 +459,52 @@ class PostgresStore:
                     ).where(submission.c.processed_at.isnot(None))
                 )
             ).scalar()
-        oldest_age = (_now() - oldest).total_seconds() if oldest else None
+            # A ``processing`` row whose lease has expired = a worker died (or
+            # crash-looped) mid-delivery. It will be reclaimed by the next claim
+            # pass — but with no live worker it lingers invisibly unless counted
+            # here (P1-6; also the visibility gap behind the P0-1 crash loop).
+            stranded = (
+                await conn.execute(
+                    select(func.count())
+                    .select_from(submission)
+                    .where(submission.c.status == STATUS_PROCESSING)
+                    .where(submission.c.locked_until.isnot(None))
+                    .where(submission.c.locked_until < now)
+                )
+            ).scalar()
+            beat = (
+                await conn.execute(
+                    select(worker_heartbeat.c.beat_at).where(
+                        worker_heartbeat.c.id == WORKER_HEARTBEAT_ID
+                    )
+                )
+            ).scalar()
+        oldest_age = (now - oldest).total_seconds() if oldest else None
         return {
             "counts": counts,
             "needsAttention": counts.get(STATUS_NEEDS_ATTENTION, 0),
             "backlog": counts.get(STATUS_PENDING, 0) + counts.get(STATUS_RETRY, 0),
             "oldestPendingAgeSeconds": oldest_age,
             "avgLatencySeconds": float(avg_latency) if avg_latency is not None else None,
+            "stranded": int(stranded or 0),
+            # None = the worker has never stamped (fresh env, or pre-0.78 schema).
+            "workerHeartbeatAgeSeconds": (
+                (now - beat).total_seconds() if beat is not None else None
+            ),
         }
+
+    async def heartbeat(self) -> None:
+        """Stamp worker liveness (one fixed row, upserted each loop iteration)."""
+        async with self._engine.begin() as conn:
+            stmt = pg_insert(worker_heartbeat).values(
+                id=WORKER_HEARTBEAT_ID, beat_at=_now()
+            )
+            await conn.execute(
+                stmt.on_conflict_do_update(
+                    index_elements=[worker_heartbeat.c.id],
+                    set_={"beat_at": stmt.excluded.beat_at},
+                )
+            )
 
     async def ping(self) -> bool:
         """Liveness check for the database connection (``/healthz``)."""

@@ -1392,7 +1392,39 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-18)
 
-**DOC-MGMT Phase 3 ACTIVATED LIVE ON BOTH ENVIRONMENTS (2026-07-18)** —
+**Main is at v0.84.0** (2026-07-18, 707 tests green, committed NOT pushed) —
+**Reliability hardening Phase 2 — "see the failures"** (worker liveness +
+logging/telemetry, per `prompts/reliability-hardening-prompt-v0.1.md`;
+Doug confirmed decisions **D1 = keep the DB-down 503** (heartbeat/backlog
+reads never 503) and **D2 = metadata-only PII logging** this session):
+- **P1-6**: `worker_heartbeat` table (Alembic **0007** — remember the
+  pre-deploy migrate) stamped each worker loop; `/healthz` gains a
+  best-effort `worker` block (lastHeartbeatAgeSeconds / backlog /
+  oldestPendingAgeSeconds / stranded) for an external uptime check;
+  `metrics()` counts lease-expired `processing` rows as **stranded** (new
+  alert in `run_alert_check`, flows to `/ops/api/metrics`).
+- **Logging**: shared `core/logging_setup.py` (name + seconds in BOTH
+  processes; new `LOG_LEVEL` setting); async accept logs slug/token/
+  reference and the worker logs slug+token on claim/delivered/retry/
+  needs_attention — one submission traceable by token end-to-end; actor
+  (userName) in every staff `_crm_failure` + INFO on staff write successes
+  (changed field names, never values) + portal login success/failure +
+  `/ops` redrive/discard actor + server-side provisioning step log (never
+  the temp password); the review's eight silent `except: pass` sites now
+  WARN (incl. P1-10 co-mentor read naming the may-drop-co-mentors
+  consequence, also added to the newer reassign path).
+- **D2**: `log_submission` failure WARNING is metadata-only when a durable
+  store holds the payload; full dump only in storeless dev mode.
+- Verified: 707 tests green (+ PG integration incl. heartbeat/stranded run
+  against live local Postgres with migration 0007 applied); local
+  two-process drill — accept line → worker claimed/delivered lines by the
+  same token, `/healthz` showing the worker block, both processes logging
+  names + seconds. **Remaining phases 3–6 of the reliability prompt, one
+  per session.** After deploy: point a DO uptime alert at the new
+  `/healthz` worker fields (the Phase 6 ops handoff).
+
+Before that (same day): **DOC-MGMT Phase 3 ACTIVATED LIVE ON BOTH
+ENVIRONMENTS (2026-07-18)** —
 the v0.76.0 build is now operational. Session record: (1) drive membership
 verified via the browser and corrected under **Doug's amended ruling (PRD
 v1.5): the two designated system administrators (doug.bower@,

@@ -136,3 +136,37 @@ async def test_crm_failure_is_swallowed():
         client, "info-request", _submission(),
         reason=REASON_NORMAL, status=STATUS_PROCESSED,
     ) is False
+
+
+# --- D2 (reliability review 2026-07-17): PII in failure logs ------------------
+
+
+@pytest.mark.asyncio
+async def test_failure_log_is_metadata_only_when_durably_stored(caplog):
+    """With a durable store the payload is already safe in Postgres — the
+    WARNING must carry metadata (form, token, error), never the PII payload."""
+    client = CapturingClient(fail=True)
+    with caplog.at_level("WARNING", logger="cbm_intake.submission_log"):
+        await log_submission(
+            client, "info-request", _submission(),
+            reason=REASON_NORMAL, status=STATUS_PROCESSED,
+            payload_stored_durably=True,
+        )
+    text = "\n".join(r.getMessage() for r in caplog.records)
+    assert "info-request" in text
+    assert "ada@example.com" not in text and "Lovelace" not in text
+    assert "durable store" in text
+
+
+@pytest.mark.asyncio
+async def test_failure_log_keeps_full_payload_in_storeless_mode(caplog):
+    """Without a store the log line is the ONLY copy of the submission — the
+    full dump stays (dev mode)."""
+    client = CapturingClient(fail=True)
+    with caplog.at_level("WARNING", logger="cbm_intake.submission_log"):
+        await log_submission(
+            client, "info-request", _submission(),
+            reason=REASON_NORMAL, status=STATUS_PROCESSED,
+        )
+    text = "\n".join(r.getMessage() for r in caplog.records)
+    assert "ada@example.com" in text

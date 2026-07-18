@@ -1081,8 +1081,11 @@ async def _engagement_client_records(
         try:
             prof = await client.get(CLIENT_PROFILE, client_id, select="linkedCompanyId")
             account_id = prof.get("linkedCompanyId")
-        except EspoError:
-            pass
+        except EspoError as exc:
+            log.warning(
+                "linkedCompany fallback read failed for CClientProfile/%s — "
+                "the company stays blank: %s", client_id, exc,
+            )
     pairs: list[tuple[str, str]] = [(CONTACT, cid) for cid in contact_ids]
     if client_id:
         pairs.append((CLIENT_PROFILE, client_id))

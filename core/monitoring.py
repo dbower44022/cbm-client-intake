@@ -84,6 +84,19 @@ async def run_alert_check(
             f"{int(age // 60)} minutes old. The CRM may be slow or unavailable."
         )
 
+    # A lease-expired ``processing`` row means a worker died mid-delivery
+    # (P1-6). A healthy worker reclaims it within a claim pass or two; alerting
+    # on it makes a crash-looping or dead worker visible even before the
+    # backlog-age alert would fire.
+    stranded = metrics.get("stranded") or 0
+    if stranded and _due(state, "stranded", now, settings.alert_cooldown_seconds):
+        await send(
+            f"{stranded} submission(s) are stranded mid-delivery (their worker "
+            f"lease expired) — a delivery worker likely crashed. They will be "
+            f"reclaimed automatically if a worker is running; check the worker "
+            f"component if this persists."
+        )
+
 
 def _default_fetch(settings: Settings) -> FetchOptions:
     client = EspoClient(

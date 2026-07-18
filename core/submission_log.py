@@ -158,10 +158,16 @@ async def log_submission(
     reason: str,
     status: str,
     contact_id: Optional[str] = None,
+    payload_stored_durably: bool = False,
 ) -> bool:
     """Write a CIntakeSubmission record for this submission. Returns True on success.
 
-    Best-effort: never raises. On failure the full payload is logged at WARNING.
+    Best-effort: never raises. On failure a WARNING is logged — with the FULL
+    payload only when ``payload_stored_durably`` is False (storeless dev mode,
+    where the log line is the only copy). With a durable store the payload is
+    already safe in Postgres, so the log carries metadata only: dumping PII
+    into the platform logs precisely during CRM outages was decision D2 of the
+    2026-07-17 reliability review (Doug: metadata-only).
     """
     payload = build_submission_payload(
         slug, submission, reason=reason, status=status, contact_id=contact_id
@@ -170,6 +176,15 @@ async def log_submission(
         created = await client.create(SUBMISSION_ENTITY, payload)
         log.info("logged %s submission (%s) to %s/%s", slug, reason, SUBMISSION_ENTITY, created["id"])
         return True
-    except Exception as exc:  # noqa: BLE001 — best-effort; log everything
-        log.warning("submission log to CRM failed for %s (%s); payload=%s", slug, exc, payload)
+    except Exception as exc:  # noqa: BLE001 — best-effort; always visible
+        if payload_stored_durably:
+            log.warning(
+                "submission log to CRM failed for %s (reason=%s token=%s): %s "
+                "— the submission itself is safe in the durable store",
+                slug, reason, getattr(submission, "submission_token", "?"), exc,
+            )
+        else:
+            log.warning(
+                "submission log to CRM failed for %s (%s); payload=%s", slug, exc, payload
+            )
         return False

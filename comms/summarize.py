@@ -152,8 +152,13 @@ async def run_summary_pass(settings: Any, espo: Any) -> int:
                     conv["id"],
                     {"conversationStatus": "Uncertain", "summarizedAt": _now_stamp()},
                 )
-            except EspoError:
-                pass
+            except EspoError as exc2:
+                # Without the Uncertain stamp the conversation is re-summarized
+                # (and re-fails) every pass — worth seeing in the logs.
+                log.warning(
+                    "could not mark %s Uncertain — it will be retried every "
+                    "pass: %s", conv["id"], exc2,
+                )
     if done:
         log.info("summarized %d conversations", done)
     return done

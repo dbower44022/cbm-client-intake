@@ -128,3 +128,37 @@ async def test_claim_leases_and_reclaims_stranded_processing():
     assert any(c.id == stranded.id for c in reclaimed)
 
     await store.dispose()
+
+
+async def test_heartbeat_and_stranded_metrics():
+    """P1-6: the worker's heartbeat upsert + the stranded (lease-expired
+    processing) count both surface in metrics()."""
+    store = PostgresStore(_URL)
+    await store.create_all()
+
+    # Before any stamp the age may be None (fresh DB) or a real age (another
+    # test/session stamped) — after stamping it must be a small number.
+    await store.heartbeat()
+    m = await store.metrics()
+    assert m["workerHeartbeatAgeSeconds"] is not None
+    assert m["workerHeartbeatAgeSeconds"] < 60
+    # Upsert: a second stamp updates the single row, never inserts another.
+    await store.heartbeat()
+    m2 = await store.metrics()
+    assert m2["workerHeartbeatAgeSeconds"] < 60
+
+    # A row claimed with an already-expired lease counts as stranded.
+    cap = await store.capture(
+        "info-request", f"strand-metric-{uuid.uuid4()}",
+        {"email": "strand@example.com"}, status=STATUS_PENDING,
+    )
+    claimed = await store.claim_batch(50, lease_seconds=0)
+    assert any(c.id == cap.id for c in claimed)
+    m3 = await store.metrics()
+    assert m3["stranded"] >= 1
+
+    # Resolve the row (leaves the shared DB tidy) — no longer processing, so
+    # it stops counting as stranded.
+    await store.mark_completed(cap.id, {"contactId": "c-strand"})
+
+    await store.dispose()

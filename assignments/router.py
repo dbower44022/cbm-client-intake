@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
@@ -10,6 +12,8 @@ from core.espo import EspoError, forbidden_hint, is_forbidden, validation_messag
 
 from . import auth, service
 from .espo_user import client_for
+
+log = logging.getLogger("cbm_intake.assignments")
 
 router = APIRouter(prefix="/assignments/api", tags=["assignments"])
 
@@ -57,6 +61,8 @@ def _crm_failure(request: Request, exc: EspoError, message: str) -> HTTPExceptio
         return HTTPException(
             status_code=401, detail="Your session has expired — please sign in again."
         )
+    actor = (auth.current_user(request) or {}).get("userName", "?")
+    log.warning("%s (user=%s): %s", message, actor, exc)
     # A CRM validation rejection is the caller's data, not a server fault —
     # answer with a readable 400 naming the field, never a raw 502/504.
     friendly = validation_message(exc)
@@ -144,9 +150,11 @@ async def update_notes(engagement_id: str, body: NotesIn, request: Request) -> d
     user = _require_user(request)
     client = client_for(get_settings(), user)
     try:
-        return await service.update_engagement_notes(client, engagement_id, body.notes)
+        result = await service.update_engagement_notes(client, engagement_id, body.notes)
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not save notes")
+    log.info("notes saved on CEngagement/%s by %s", engagement_id, user["userName"])
+    return result
 
 
 @router.post("/engagements/{engagement_id}/assign")
@@ -159,6 +167,10 @@ async def assign(engagement_id: str, body: AssignIn, request: Request) -> dict:
         raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:
         raise _crm_failure(request, exc, "Assignment failed")
+    log.info(
+        "assigned CEngagement/%s to CMentorProfile/%s by %s",
+        engagement_id, body.mentorProfileId, user["userName"],
+    )
     # DOC-09: the assigned mentor gains the engagement folder's Drive Commenter
     # grant in the same action that grants the entitlement (no-op until the
     # record has a folder). Best-effort — never fails the assignment; the
@@ -186,6 +198,10 @@ async def reassign(engagement_id: str, body: AssignIn, request: Request) -> dict
         raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:
         raise _crm_failure(request, exc, "Reassignment failed")
+    log.info(
+        "reassigned CEngagement/%s to CMentorProfile/%s by %s",
+        engagement_id, body.mentorProfileId, user["userName"],
+    )
     # DOC-09: re-derive the engagement folder's Drive grants (new mentor gains,
     # the replaced mentor loses). Best-effort, like the assign path.
     from docs import grants as doc_grants

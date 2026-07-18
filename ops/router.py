@@ -8,12 +8,15 @@ admins always pass). The durable store is read from
 
 from __future__ import annotations
 
+import logging
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
 from assignments.auth import clear_session, current_user, is_member
 from core.config import get_settings
+
+log = logging.getLogger("cbm_intake.ops")
 
 router = APIRouter(prefix="/ops/api", tags=["ops"])
 
@@ -85,20 +88,26 @@ async def submission_detail(submission_id: str, request: Request) -> dict:
 
 @router.post("/submissions/{submission_id}/redrive")
 async def redrive(submission_id: str, request: Request) -> dict:
-    _require_user(request)
+    user = _require_user(request)
     store = _store(request)
     if not await store.redrive(submission_id):
         raise HTTPException(status_code=404, detail="Submission not found.")
+    # Audit: a redrive re-runs CRM side effects — record who asked for it.
+    # (The durable acted_by column is Phase 3 of the reliability plan.)
+    log.info("redrive %s by %s", submission_id, user["userName"])
     return {"status": "requeued"}
 
 
 @router.post("/submissions/{submission_id}/discard")
 async def discard(submission_id: str, request: Request) -> dict:
-    _require_user(request)
+    user = _require_user(request)
     store = _store(request)
     if not await store.discard(submission_id):
         # Either not found, or already completed (which must not be discarded).
         raise HTTPException(
             status_code=404, detail="Submission not found or already completed."
         )
+    # Audit: discard is a terminal staff decision — "who discarded this?"
+    # must be answerable from the run logs.
+    log.info("discard %s by %s", submission_id, user["userName"])
     return {"status": "discarded"}

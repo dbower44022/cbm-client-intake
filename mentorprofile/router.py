@@ -65,7 +65,8 @@ def _crm_failure(request: Request, exc: EspoError, message: str) -> HTTPExceptio
         return HTTPException(status_code=401, detail="Your session has expired — please sign in again.")
     # Log the full CRM error (includes the response body) so failures like a
     # value rejected by EspoCRM are diagnosable from the run logs.
-    log.warning("%s: %s", message, exc)
+    actor = (current_user(request) or {}).get("userName", "?")
+    log.warning("%s (user=%s): %s", message, actor, exc)
     # A CRM validation rejection is the caller's data, not a server fault —
     # answer with a readable 400 naming the field, never a raw 502/504.
     friendly = validation_message(exc)
@@ -131,11 +132,17 @@ async def profile_update(body: UpdateIn, request: Request) -> dict:
     user = _require_user(request)
     client = client_for(get_settings(), user)
     try:
-        return await service.update_own_profile(client, user["userId"], body.changes)
+        result = await service.update_own_profile(client, user["userId"], body.changes)
     except service.MentorProfileError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not save your profile")
+    # Audit: which fields changed (never the values — they may be PII).
+    log.info(
+        "own profile saved by %s (fields: %s)",
+        user["userName"], ", ".join(sorted(body.changes)) or "-",
+    )
+    return result
 
 
 @router.get("/signature")

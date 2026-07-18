@@ -4,6 +4,58 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.84.0] — 2026-07-18
+
+Reliability hardening **Phase 2 — "see the failures"** (worker liveness +
+logging/telemetry, per `prompts/reliability-hardening-prompt-v0.1.md`; Doug's
+decisions D1 = keep the DB-down 503, D2 = metadata-only PII logging). 54 new
+assertions across 8 test files (707 green + PG integration run live); the
+end-to-end trace, `/healthz` worker block, and shared log format all verified
+in a local two-process run.
+
+### Added
+- **Worker liveness is externally visible (P1-6).** The worker upserts a
+  one-row `worker_heartbeat` stamp each loop (Alembic **0007**); `/healthz`
+  gains a best-effort `worker` block — `lastHeartbeatAgeSeconds`, `backlog`,
+  `oldestPendingAgeSeconds`, `stranded` — so an external uptime check can see
+  a dead/wedged worker (the in-worker alerter can't alert on its own death).
+  Those reads NEVER fail `/healthz`; only the DB ping 503s (decision D1).
+  `store.metrics()` counts lease-expired `processing` rows as **stranded**
+  (they were invisible to every alert — the P0-1 visibility gap), surfaced in
+  `/ops/api/metrics` and a new alert in `run_alert_check`.
+- **One shared logging config for both processes** (`core/logging_setup.py`):
+  level + logger name + seconds-precision timestamps, level from the new
+  **`LOG_LEVEL`** setting (default INFO — DEBUG now reachable without a
+  deploy). Kills the divergent `basicConfig`s (worker lines previously had NO
+  timestamps at all).
+- **Submission correlation by token.** Async accept logs one INFO line
+  (slug, token, durable reference); the worker's claim / delivered / retry /
+  needs_attention lines carry slug + token alongside the row UUID — one
+  submission is now traceable across both processes with a single grep.
+- **Actor logging across the staff tools.** Every staff router's
+  `_crm_failure` WARNING names the acting user; staff write successes log one
+  INFO line (user, entity/id, changed FIELD NAMES — never values): sessions
+  details/session saves, assignments notes/assign/reassign, mentoradmin
+  mentor saves, mentorprofile own-profile saves. Portal logins log success
+  AND failure (username, never the password). `/ops` redrive/discard log the
+  actor. The provisioning SSE flow (mailbox + User creation — the
+  highest-privilege action in the app) now logs each step server-side at
+  INFO (step/status/message only — the temp password never logs).
+- **The silent `except: pass` inventory now logs.** One WARNING each at the
+  review's eight sites — most critically the assignments co-mentor read
+  (P1-10), whose failure means the `assignedUsers` write may silently drop
+  co-mentors; plus the same guard on the newer reassign path, mentoradmin's
+  `reconcile_user_links` / `recordStatus` persist / status-check admin-login
+  downgrade, sessions' linkedCompany fallback, comms' contact-link and
+  Uncertain-stamp failures, and the portal membership fallback read.
+
+### Changed
+- **PII no longer dumps into the logs when the CRM audit write fails
+  (decision D2).** With a durable store active, `log_submission`'s failure
+  WARNING is metadata-only (form, token, error) — the payload is already safe
+  in Postgres. The full-payload dump remains only in storeless dev mode,
+  where the log line is the sole copy.
+
 ## [0.83.0] — 2026-07-18
 
 **Meeting Transcript integration — Google Meet (Phases 1+2 of
