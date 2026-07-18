@@ -4,6 +4,27 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.90.0] — 2026-07-18
+
+### Fixed
+- **Applied email templates no longer betray themselves through mismatched
+  fonts** (Doug's report: EspoCRM fills the placeholder fields in a
+  different font color/style than the authored template text — the
+  recipient could tell it was a template). Root cause: EspoCRM's template
+  editor wraps hand-typed runs in styled spans (font-family/size/color)
+  while substituted placeholder values land outside them, and the app kept
+  those inline styles verbatim. The template parse
+  (`comms/templates.parse_template`, both compose surfaces) now
+  **neutralizes all font-identity styling** in the rendered body —
+  font-family, font-size, color, background, and legacy `<font>` tags —
+  so the authored text, the filled-in values, and whatever the user types
+  next all render in the compose's one default font, like a personally
+  written email. Structure survives (bold/italic via font-weight/style,
+  links, lists, headings, non-font inline styles such as margins).
+  The user's own SIGNATURE deliberately keeps its authored styling
+  (`sanitize_template_html` is unchanged for that path — a signature's
+  look is the sender's own design, not a template tell).
+
 ## [0.89.0] — 2026-07-18
 
 **Partner Sessions: all partners, Partner Notes on top, Partner Manager

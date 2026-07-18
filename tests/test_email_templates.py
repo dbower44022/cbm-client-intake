@@ -83,6 +83,49 @@ def test_sanitize_strips_script_events_and_js_urls():
     assert "https://ok.test" in clean  # formatting/links survive
 
 
+def test_sanitize_alone_keeps_inline_styles_for_signatures():
+    # The user's own signature runs through sanitize_template_html and must
+    # KEEP its authored fonts — only template BODIES get font neutralization.
+    styled = '<p style="color:#b58113; font-family:Georgia">Doug</p>'
+    assert tpl.sanitize_template_html(styled) == styled
+
+
+async def test_parse_neutralizes_template_fonts_but_keeps_structure():
+    """A rendered template shows its substituted values in whatever font the
+    surrounding authored spans DON'T carry — the recipient could tell it was
+    a template. parse_template therefore strips every font-identity style
+    (family/size/color/background, <font> tags) while keeping structure
+    (bold/italic/links/lists) and non-font styles."""
+    espo = TemplateEspo(prepare={
+        "subject": "s",
+        "body": (
+            '<p><span style="font-family: Verdana; font-size: 14px; color: rgb(34, 34, 34);">Dear </span>'
+            "James Koran"
+            '<span style="color:#222222; background-color: #ffffff;">, welcome.</span></p>'
+            '<p style="font-weight: bold; margin-top: 4px; font-size: 12px">Next steps</p>'
+            '<font face="Arial" color="#ff0000" size="3">Old-school styled</font>'
+            "<ul><li><strong>Keep</strong> <em>structure</em></li></ul>"
+            "<p>legacy attrs in prose stay: size=5 and color=red</p>"
+            '<a href="https://ok.test" style="color: blue">link</a>'
+        ),
+        "isHtml": True, "attachmentsIds": [], "attachmentsNames": {},
+    })
+    out = await tpl.parse_template(espo, "t1")
+    b = out["bodyHtml"]
+    # font identity gone…
+    assert "Verdana" not in b and "14px" not in b and "rgb(34" not in b
+    assert "#222222" not in b and "background-color" not in b
+    assert "<font" not in b and "Old-school styled" in b
+    assert 'style="color: blue"' not in b and "https://ok.test" in b
+    # …structure and non-font styling survive
+    assert "font-weight: bold" in b and "margin-top: 4px" in b
+    assert "<strong>" in b and "<em>" in b
+    # attribute stripping is tag-scoped — prose is never rewritten
+    assert "size=5 and color=red" in b
+    # the substituted value's surroundings now carry no competing font
+    assert "Dear " in b and "James Koran" in b
+
+
 def test_leftover_tokens_found_and_deduped():
     tokens = tpl.leftover_tokens(
         "About {Case.name}", "<p>{Person.name}, case {Case.name} ({Case.number})</p>"

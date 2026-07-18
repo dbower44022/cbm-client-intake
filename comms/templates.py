@@ -65,12 +65,59 @@ _SCRIPT_BLOCK = re.compile(r"<\s*(script|style)\b.*?<\s*/\s*\1\s*>", re.IGNORECA
 _EVENT_ATTR = re.compile(r"\s+on[a-z]+\s*=\s*(\"[^\"]*\"|'[^']*'|[^\s>]+)", re.IGNORECASE)
 _JS_URL = re.compile(r"(\shref|\ssrc)\s*=\s*([\"']?)\s*javascript:[^\"'>\s]*\2", re.IGNORECASE)
 
+# Font neutralization: EspoCRM's template editor wraps hand-typed runs in
+# styled spans (font-family/size/color), while substituted placeholder values
+# land OUTSIDE those spans — so a rendered draft shows the filled-in values in
+# a visibly different font than the authored text, and the recipient can tell
+# it's a template (Doug's report 2026-07-18). The whole body is therefore
+# normalized to the compose's default typography: every font-family /
+# font-size / color / background declaration and <font> tag is dropped.
+# STRUCTURE survives — bold/italic/underline (incl. font-weight/font-style
+# declarations), links, lists, headings — so the draft still reads as the
+# author formatted it, just in one uniform "personally written" font.
+_FONT_TAGS = re.compile(r"</?font\b[^>]*>", re.IGNORECASE)
+_ANY_TAG = re.compile(r"<[^>]+>")
+_STYLE_ATTR = re.compile(r"(\sstyle\s*=\s*)(\"[^\"]*\"|'[^']*')", re.IGNORECASE)
+_LEGACY_FONT_ATTR = re.compile(
+    r"\s+(?:color|face|size|bgcolor)\s*=\s*(\"[^\"]*\"|'[^']*'|[^\s>]+)", re.IGNORECASE
+)
+# Exactly these properties — "font-weight:"/"font-style:" must NOT match
+# (they carry bold/italic, which is formatting, not typeface identity).
+_FONT_PROP = re.compile(
+    r"^(?:font-family|font-size|font|color|background-color|background)\s*:", re.IGNORECASE
+)
+
+
+def _neutralize_fonts(html: str) -> str:
+    html = _FONT_TAGS.sub("", html)
+
+    def fix_style(m: "re.Match[str]") -> str:
+        quoted = m.group(2)
+        quote = quoted[0]
+        kept = [
+            d.strip() for d in quoted[1:-1].split(";")
+            if d.strip() and not _FONT_PROP.match(d.strip())
+        ]
+        if not kept:
+            return ""
+        return m.group(1) + quote + "; ".join(kept) + quote
+
+    def fix_tag(m: "re.Match[str]") -> str:
+        tag = _LEGACY_FONT_ATTR.sub("", m.group(0))
+        return _STYLE_ATTR.sub(fix_style, tag)
+
+    # Attribute rewrites run per-tag so prose like "size=5" is never touched.
+    return _ANY_TAG.sub(fix_tag, html)
+
 
 def sanitize_template_html(html: str) -> str:
-    """Light safety pass over CRM-authored template HTML before it enters the
-    editor: drop script/style blocks, inline event handlers, javascript: URLs.
-    Formatting (tags, inline styles) is kept — templates are trusted staff
-    content, this is defense in depth; the editor sanitizes again on load."""
+    """Light safety pass over CRM-authored HTML before it enters the editor:
+    drop script/style blocks, inline event handlers, javascript: URLs.
+    Formatting (tags, inline styles) is kept — this is defense in depth over
+    trusted staff content; the editor sanitizes again on load. Also used for
+    the user's own signature, which is why font styling survives HERE: a
+    signature's look is the author's deliberate design. Template BODIES get
+    the additional _neutralize_fonts pass in parse_template."""
     html = _SCRIPT_BLOCK.sub("", html or "")
     html = _EVENT_ATTR.sub("", html)
     html = _JS_URL.sub(r"\1=\2\2", html)
@@ -171,7 +218,11 @@ async def parse_template(
     type outside the context stays a literal token and lands in
     ``leftoverTokens``.
 
-    Returns ``subject``, sanitized ``bodyHtml``, ``attachments`` as
+    Returns ``subject``, sanitized ``bodyHtml`` — with ALL font styling
+    neutralized (family/size/color/background, ``<font>`` tags) so the
+    rendered draft, its filled-in placeholder values, and the user's own
+    typing share one uniform default font and the recipient can't tell a
+    template was used — ``attachments`` as
     ``[{id, name}]`` chips (ids only — bytes stay in the CRM until send,
     ET-B3), and ``leftoverTokens`` for the unresolved-placeholder notice.
     EspoErrors propagate — the routers map them (403 = no template access,
@@ -190,7 +241,7 @@ async def parse_template(
         from core.email_clean import _text_to_html
 
         body = _text_to_html(body)
-    body = sanitize_template_html(body)
+    body = _neutralize_fonts(sanitize_template_html(body))
     names = out.get("attachmentsNames") or {}
     attachments = [
         {"id": aid, "name": names.get(aid) or "attachment"}
