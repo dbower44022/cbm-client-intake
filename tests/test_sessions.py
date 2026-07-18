@@ -26,9 +26,10 @@ def _clear_settings_cache():
 # --- fake CRM client -------------------------------------------------------
 
 class Fake:
-    def __init__(self, *, mentors=None, contacts=None, related=None, records=None, meta_fields=None, acl=None):
+    def __init__(self, *, mentors=None, contacts=None, related=None, records=None, meta_fields=None, acl=None, entity_lists=None):
         self.mentors = mentors or []            # rows returned by list(CMentorProfile)
         self.contacts = contacts or []          # rows returned by list(Contact)
+        self.entity_lists = entity_lists or {}  # entity -> [rows] for plain list()
         self.related = related or {}            # link name -> [rows]
         self.records = dict(records or {})      # (entity, id) -> dict
         self.meta_fields = meta_fields or {}
@@ -42,6 +43,11 @@ class Fake:
 
     async def list(self, entity, **kw):
         self.list_calls.append((entity, kw))
+        if entity in self.entity_lists:  # honors offset/max_size (pagination)
+            rows = self.entity_lists[entity]
+            off = kw.get("offset") or 0
+            size = kw.get("max_size") or len(rows)
+            return {"list": rows[off:off + size]}
         if entity == "CMentorProfile":
             return {"list": self.mentors}
         if entity == "Contact":
@@ -144,18 +150,20 @@ async def test_resolve_manager_profile_membership_not_first_entry():
 @pytest.mark.asyncio
 async def test_list_records_no_profile():
     fake = Fake(mentors=[])
-    res = await service.list_records(PARTNER, fake, _USER)
+    res = await service.list_records(SPONSOR, fake, _USER)
     assert res == {"records": [], "profileFound": False}
 
 
 @pytest.mark.asyncio
 async def test_list_records_maps_columns():
+    # Partner is a list_all domain: rows come from a plain CPartnerProfile list
+    # (the user's ACL is the gate), not the manager's reverse link.
     fake = Fake(
-        mentors=[{"id": "p9", "assignedUserId": "u1"}],
-        related={"managedPartners": [
+        entity_lists={"CPartnerProfile": [
             {"id": "P1", "name": "Acme", "partnershipStatus": "Active",
              "partnerCompanyName": "Acme Co", "primaryPartnercontactName": "Pat",
              "primaryPartnercontactId": "c1", "partnershipStartDate": "2026-01-15",
+             "partnerManagerName": "Milt Sierra", "partnerManagerId": "mp7",
              "createdAt": "2026-01-02 00:00:00"},
         ]},
     )
@@ -167,6 +175,9 @@ async def test_list_records_maps_columns():
     # trailing date column (Start Date) + primary-contact id for the pop-up link
     assert row["startDate"] == "2026-01-15"
     assert row["contact"] == "Pat" and row["contactId"] == "c1"
+    # Partner Manager column links to the manager's mentor-profile pop-up
+    # (whose email rows are compose links — the quick-email path).
+    assert row["mentor"] == "Milt Sierra" and row["mentorId"] == "mp7"
 
 
 @pytest.mark.asyncio
@@ -220,8 +231,8 @@ async def test_mentor_list_includes_comentored_engagements():
 
 
 @pytest.mark.asyncio
-async def test_partner_list_reads_only_owned_link():
-    # No co-mentor concept outside the mentor domain: only managedPartners is read.
+async def test_sponsor_list_reads_only_owned_link():
+    # No co-mentor concept outside the mentor domain: only managedSponsors is read.
     class Recording(Fake):
         def __init__(self, **kw):
             super().__init__(**kw)
@@ -232,8 +243,46 @@ async def test_partner_list_reads_only_owned_link():
             return await super().list_related(entity, record_id, link, **kw)
 
     fake = Recording(mentors=[{"id": "p9", "assignedUserId": "u1"}])
-    await service.list_records(PARTNER, fake, _USER)
-    assert fake.related_calls == ["managedPartners"]
+    await service.list_records(SPONSOR, fake, _USER)
+    assert fake.related_calls == ["managedSponsors"]
+
+
+@pytest.mark.asyncio
+async def test_partner_list_lists_all_readable():
+    # The partner grid shows ALL partners the user can read (Doug's ruling
+    # 2026-07-18) — no manager-profile resolution, no reverse-link read, and
+    # profileFound is True even for a user with no linked CMentorProfile.
+    class Recording(Fake):
+        def __init__(self, **kw):
+            super().__init__(**kw)
+            self.related_calls = []
+
+        async def list_related(self, entity, record_id, link, **kw):
+            self.related_calls.append(link)
+            return await super().list_related(entity, record_id, link, **kw)
+
+    fake = Recording(
+        mentors=[],  # no linked profile — must not matter
+        entity_lists={"CPartnerProfile": [
+            {"id": "P1", "name": "Acme", "createdAt": "2026-01-02"},
+            {"id": "P2", "name": "Globex", "createdAt": "2026-01-03"},
+        ]},
+    )
+    res = await service.list_records(PARTNER, fake, _USER)
+    assert res["profileFound"] is True
+    assert {r["id"] for r in res["records"]} == {"P1", "P2"}
+    assert fake.related_calls == []  # never touches the reverse links
+    assert not any(e == "CMentorProfile" for e, _ in fake.list_calls)
+
+
+@pytest.mark.asyncio
+async def test_partner_list_paginates_past_one_page():
+    # More partners than one CRM page (200) — the plain list pages through.
+    rows = [{"id": f"P{i}", "name": f"Partner {i}", "createdAt": "2026-01-02"}
+            for i in range(250)]
+    fake = Fake(entity_lists={"CPartnerProfile": rows})
+    res = await service.list_records(PARTNER, fake, _USER)
+    assert len(res["records"]) == 250
 
 
 @pytest.mark.asyncio
@@ -339,6 +388,17 @@ async def test_get_detail_assembles_partner():
     # the only session is in the past => nothing scheduled ahead
     assert d["nextSession"] is None
     assert "coMentors" not in d  # partner domain has no co-mentors
+
+
+@pytest.mark.asyncio
+async def test_get_detail_overall_notes_panel_always_present():
+    # Doug's ruling 2026-07-18: the record-level notes panel (Partner Notes /
+    # Engagement Notes / Sponsor Notes) always shows at the top of the Overview
+    # — an empty field returns an empty-value panel (the frontend renders a
+    # muted placeholder), never None.
+    fake = Fake(records={("CPartnerProfile", "P1"): {"name": "Acme"}})  # no partnerNotes
+    d = await service.get_detail(PARTNER, fake, "P1")
+    assert d["overallNotes"] == {"label": "Partner Notes", "value": "", "type": "html"}
 
 
 @pytest.mark.asyncio

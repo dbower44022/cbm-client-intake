@@ -32,9 +32,10 @@ from __future__ import annotations
 
 import logging
 
+from core.config import get_settings
 from core.crm_upsert import find_create_or_fill
 from core.enum_filter import EnumSanitizer
-from core.espo import EspoApi
+from core.espo import EspoApi, EspoError
 from core.phone import e164_or_none
 
 from .schemas import PartnerApplication
@@ -44,6 +45,7 @@ log = logging.getLogger("cbm_intake.partner")
 ACCOUNT = "Account"
 CONTACT = "Contact"
 PARTNER_PROFILE = "CPartnerProfile"
+TEAM = "Team"
 
 # --- Discriminator attributes (reconciled against the deployed instance) ---
 A_ACCOUNT_TYPE = "cAccountType"   # multiEnum on Account — REQUIRED
@@ -131,6 +133,32 @@ async def _find_or_create_contact(
     return contact_id
 
 
+async def _partner_team_ids(client: EspoApi) -> list[str]:
+    """The Team ids to stamp on a new CPartnerProfile (``PARTNER_TEAM_NAME``).
+
+    New partners carry the Partner Management Team so team-scoped roles see the
+    whole partner list in /partnersessions. Best-effort: the team not being
+    resolvable (name lookup empty — e.g. the intake API role has no Team read
+    grant yet — or the read failing outright) logs a WARNING and returns [],
+    so a missing grant can never block a partner application.
+    """
+    name = get_settings().partner_team_name.strip()
+    if not name:
+        return []
+    try:
+        team = await client.find_one(TEAM, "name", name)
+    except EspoError as exc:
+        log.warning("Team %r lookup failed (%s) — partner profile created "
+                    "without a team; grant the intake API role Team read", name, exc)
+        return []
+    if not team:
+        log.warning("Team %r not found/readable — partner profile created "
+                    "without a team; grant the intake API role Team read "
+                    "(or create the team)", name)
+        return []
+    return [team["id"]]
+
+
 async def _create_partner_profile(
     sub: PartnerApplication, client: EspoApi, account_id: str, contact_id: str,
     san: EnumSanitizer,
@@ -148,6 +176,9 @@ async def _create_partner_profile(
         P_PRIMARY_CONTACT_LINK: contact_id,
         P_STATUS: PARTNERSHIP_STATUS_NEW,
     }
+    team_ids = await _partner_team_ids(client)
+    if team_ids:
+        payload["teamsIds"] = team_ids
     if sub.partnership_type:
         partnership_type = await san.enum(PARTNER_PROFILE, P_TYPE, sub.partnership_type)
         if partnership_type:

@@ -4,6 +4,50 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.89.0] — 2026-07-18
+
+**Partner Sessions: all partners, Partner Notes on top, Partner Manager
+quick-email** (Doug's three requests).
+
+### Changed
+- **The partner grid lists ALL partners** the signed-in user's CRM ACL can
+  read (`DomainConfig.list_all` — a plain paginated `CPartnerProfile` list
+  replaces the managed-partners reverse-link read; `profileFound` is always
+  true, so a team member without a linked CMentorProfile still sees the
+  shared list). Visibility is governed CRM-side by team permissions — see
+  the CRM prerequisites below.
+- **The Overview's record-level notes panel always renders** (all three
+  domains): an empty Partner Notes / Engagement Notes / Sponsor Notes field
+  now shows the panel with a muted "No … recorded yet." placeholder at the
+  top of the notes pane, above the session summaries, instead of omitting
+  it (blank wysiwyg markup like `<p><br></p>` counts as empty).
+
+### Added
+- **Partner Manager grid column** (partner domain): links to the manager's
+  standard CMentorProfile pop-up, whose CBM/personal email rows open the
+  quick-compose — a partner manager is two clicks from an email. The
+  mentor-domain Assigned Mentor link now shares the same config-driven
+  mechanics (`DomainConfig.list_manager_id_attr`).
+- **New partner intake submissions stamp the Partner Management Team** onto
+  the created CPartnerProfile (`PARTNER_TEAM_NAME`, default
+  `Partner Management Team`) so team-scoped roles see new partners.
+  Best-effort: an unresolvable team (the intake API role has no Team read
+  grant yet) logs a WARNING and never blocks the application.
+
+### CRM prerequisites (to activate the all-partners visibility)
+1. Partner Management Team role: `CPartnerProfile` read scope → **team**
+   (or all).
+2. Backfill existing CPartnerProfile records' Teams field with
+   `Partner Management Team` (the app only stamps NEW intake-created ones).
+3. Grant the intake API role (`CustomAppAPIRole`) **Team read** so the
+   intake form can resolve the team id (until then partners are created
+   without the stamp, logged as a WARNING).
+
+Version-race note: this feature's `core/config.py` (`partner_team_name`) and
+`sessions/frontend/app.js` (overall-notes placeholder + manager-link comment)
+halves were swept into the parallel session's 743a3db (v0.87.0) release
+commit — HEAD is coherent at/after this release's commit.
+
 ## [0.88.0] — 2026-07-18
 
 **Compose email overhaul** — every finding from the compose-UX review, both

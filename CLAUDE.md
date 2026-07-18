@@ -638,6 +638,17 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   | `sponsorsessions` | `CSponsorProfile` | `managedSponsors` (reverse of `CSponsorProfile.cBMSponsorManager`) | no |
   Mentor sessions restrict the owned list to active engagement statuses
   (`Active`/`Assigned`/`Pending Acceptance`/`On-Hold`, filtered in Python).
+  **EXCEPTION — the partner grid lists ALL partners (v0.89.0, Doug's ruling
+  2026-07-18):** `DomainConfig.list_all=True` on the partner domain replaces
+  the reverse-link read with a plain paginated `CPartnerProfile` list — the
+  user's ACL is the gate (team permissions CRM-side), `profileFound` is
+  always true, and the manager profile isn't resolved for the list. New
+  intake-created partners are stamped with the **Partner Management Team**
+  (see the partner form's orchestrator; `PARTNER_TEAM_NAME`). CRM prereqs
+  for full activation: the Partner Management Team role reads
+  CPartnerProfile at **team** scope, existing partner records backfilled
+  with the team, and the intake API role granted **Team read** (until then
+  the stamp is skipped with a WARNING — never blocks the application).
 - **All three managers are `CMentorProfile` records** — the one whose
   `assignedUser` is their login. `service.resolve_manager_profile` scans the
   `CMentorProfile` rows readable by this user and **matches `assignedUser` in
@@ -647,6 +658,14 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   ACL scopes `CMentorProfile`/the parents to "own" simply gets their own rows.
   `list_records` returns `{"records":[...], "profileFound": bool}` —
   `profileFound=false` means the user has no linked profile.
+- **Partner grid: Partner Manager column (v0.89.0).** The partner list's
+  far-right column links the assigned `partnerManager` to the standard
+  CMentorProfile pop-up (CBM + personal email rows are compose links → the
+  quick-compose), mirroring the mentor grid's Assigned Mentor column; both
+  now ride `DomainConfig.list_manager_id_attr`. The Overview's record-level
+  notes panel (Partner/Engagement/Sponsor Notes) **always renders at the top
+  of the notes pane** — an empty field shows a muted "No … recorded yet."
+  placeholder (blank wysiwyg markup counts as empty).
 - **Auth = per-user, acts as the logged-in user.** Portal SSO (shared staff
   session `staff_user`); each route enforces **its own team per request**
   (`_require_user` → `is_member`; 401 → frontend sends the user to the portal, 403
@@ -1392,7 +1411,30 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-18)
 
-**Main is at v0.87.0** (2026-07-18, 740 tests green, committed NOT pushed) —
+**Main is at v0.89.0** (2026-07-18, 746 tests green, committed NOT pushed) —
+**Partner Sessions: all partners + Partner Notes on top + Partner Manager
+quick-email** (Doug's three requests; mechanics in the Session Management
+section's domain-table EXCEPTION + "Partner grid: Partner Manager column"
+bullets, CRM prereqs in CHANGELOG 0.89.0): (1) the partner grid lists ALL
+partners the user can read (`DomainConfig.list_all`; team permissions are
+the CRM-side gate — role read scope → team + backfill existing records'
+Teams + grant the intake API role Team read), and the partner intake form
+stamps `Partner Management Team` on new CPartnerProfiles (best-effort,
+`PARTNER_TEAM_NAME`); (2) the Overview's record-notes panel (Partner
+Notes etc.) always renders at the top above the session summaries (muted
+placeholder when empty — why Doug never saw it: nearly all crm-test
+partnerNotes are empty, probe-verified live); (3) new Partner Manager grid
+column → CMentorProfile pop-up → email compose links. Verified: full suite
+green; the stub-harness drove all three flows in-browser (all-partners
+grid + "—" for unmanaged, manager link → peek → quick-compose with To
+pre-filled, notes placeholder on P1 / rich content on P2; no console
+errors). **NOT yet driven live** — needs the CRM-side team work above
+before "all partners" actually widens beyond the user's own rows.
+(Version-race note: this feature's core/config.py + app.js halves were
+swept into 743a3db (v0.87.0); HEAD is coherent at/after this release's
+commit. v0.88.0 = the parallel compose-overhaul session, see CHANGELOG.)
+
+Before that: **v0.87.0** (2026-07-18, 740 tests green, committed NOT pushed) —
 **Reliability hardening Phase 4 — Gmail sync loss prevention** (P1-5 F1–F6;
 Doug's decision this session: **D6 = dead-letter after 5 consecutive
 failing passes**). Highlights (full list in CHANGELOG 0.87.0):

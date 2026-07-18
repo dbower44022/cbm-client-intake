@@ -119,6 +119,18 @@ class DomainConfig:
     list_contact_id_attr: Optional[str] = None
     # Grid column key that holds the record's status (enables the status filter).
     list_status_key: Optional[str] = None
+    # List EVERY parent record the user's CRM ACL lets them read (a plain
+    # entity list) instead of only the ones reverse-linked to their own
+    # CMentorProfile. The partner domain uses this (Doug's ruling 2026-07-18:
+    # the grid shows ALL partners; visibility is governed CRM-side by team
+    # permissions — partner records carry the Partner Management Team and the
+    # role reads CPartnerProfile at "team" scope).
+    list_all: bool = False
+    # Attr on the raw record holding the assigned manager's CMentorProfile id
+    # (mentorProfileId / partnerManagerId). Feeds the grid's manager column
+    # link -> the mentor-profile pop-up, whose CBM/personal email rows are
+    # compose links (the quick-email path).
+    list_manager_id_attr: Optional[str] = None
     # Optional one-click status transition on the grid's status cell:
     # (from, to) — a row whose status equals ``from`` renders as a two-step
     # accept button that moves it to ``to`` (the mentor accepting an assigned
@@ -276,6 +288,7 @@ MENTOR = DomainConfig(
     list_contact_key="contact",
     list_contact_id_attr="primaryEngagementContactId",
     list_status_key="status",
+    list_manager_id_attr="mentorProfileId",
     # A mentor accepts a newly-assigned engagement straight from the grid.
     list_status_accept=("Pending Acceptance", "Assigned"),
     list_company_key="company",
@@ -359,9 +372,13 @@ PARTNER = DomainConfig(
     parent_contacts_link="contacts",
     primary_contact_id_attr="primaryPartnercontactId",
     default_session_type="Partner Session",
+    # The partner grid lists ALL partners the user's ACL can read (not just the
+    # ones they manage) — visibility is team-governed CRM-side.
+    list_all=True,
     list_select=(
         "name,partnershipStatus,partnerCompanyName,partnerCompanyId,"
         "primaryPartnercontactName,primaryPartnercontactId,"
+        "partnerManagerName,partnerManagerId,"
         "partnershipStartDate,createdAt"
     ),
     list_columns=(
@@ -369,11 +386,15 @@ PARTNER = DomainConfig(
         Column("status", "Partnership status", "partnershipStatus"),
         Column("company", "Company", "partnerCompanyName"),
         Column("contact", "Primary contact", "primaryPartnercontactName"),
+        # Links to the manager's CMentorProfile pop-up (CBM/personal email
+        # compose links there — the quick-email path).
+        Column("mentor", "Partner Manager", "partnerManagerName"),
     ),
     list_date_column=("startDate", "Start Date", "partnershipStartDate"),
     list_contact_key="contact",
     list_contact_id_attr="primaryPartnercontactId",
     list_status_key="status",
+    list_manager_id_attr="partnerManagerId",
     list_company_key="company",
     list_company_aggregate=(("Account", "partnerCompanyId"),
                             ("CPartnerProfile", "id")),

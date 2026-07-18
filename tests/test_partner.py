@@ -18,12 +18,13 @@ from forms.partner.schemas import PartnerApplication
 class CapturingClient:
     """Fake EspoApi that records calls and returns sequential ids."""
 
-    def __init__(self, existing_contact=None, existing_account=None, enum_options=None):
+    def __init__(self, existing_contact=None, existing_account=None, enum_options=None, team_id=None):
         self.creates: list[tuple[str, dict]] = []
         self.updates: list[tuple[str, str, dict]] = []
         self.relates: list[tuple[str, str, str, str]] = []
         self._existing_contact = existing_contact
         self._existing_account = existing_account
+        self._team_id = team_id  # id returned for a Team name lookup; None => not readable
         # {(entity, field): [valid options]}; absent => None ("keep all").
         self._enum_options = enum_options or {}
         self._n = 0
@@ -45,6 +46,8 @@ class CapturingClient:
             return {"id": self._existing_account}
         if entity == CONTACT and self._existing_contact:
             return {"id": self._existing_contact}
+        if entity == "Team" and self._team_id:
+            return {"id": self._team_id}
         return None
 
     async def relate(self, entity, record_id, link, related_id):
@@ -165,6 +168,47 @@ async def test_existing_account_and_contact_reused():
     _, profile = client.creates[0]
     assert profile["partnerCompanyId"] == "account-7"
     assert profile["primaryPartnercontactId"] == "contact-99"
+
+
+@pytest.mark.asyncio
+async def test_partner_profile_stamped_with_partner_management_team():
+    """A new CPartnerProfile carries the Partner Management Team (Doug's ruling
+    2026-07-18) so team-scoped roles can see every partner in /partnersessions."""
+    client = CapturingClient(team_id="team-pm")
+    await submit_partner(_application(), client)
+    _, profile = client.creates[2]
+    assert profile["teamsIds"] == ["team-pm"]
+    # Only the profile gets the team — Account/Contact are untouched.
+    assert "teamsIds" not in client.creates[0][1]
+    assert "teamsIds" not in client.creates[1][1]
+
+
+@pytest.mark.asyncio
+async def test_team_unresolvable_never_blocks_the_partner():
+    """The intake API role may lack Team read (lookup returns None) — the
+    profile is still created, just without the team stamp (logged WARNING)."""
+    client = CapturingClient()  # find_one(Team) -> None
+    ids = await submit_partner(_application(), client)
+    assert set(ids) == {"accountId", "contactId", "partnerProfileId"}
+    _, profile = client.creates[2]
+    assert "teamsIds" not in profile
+
+
+@pytest.mark.asyncio
+async def test_team_lookup_failure_never_blocks_the_partner():
+    from core.espo import EspoError
+
+    class Failing(CapturingClient):
+        async def find_one(self, entity, attribute, value, select="id"):
+            if entity == "Team":
+                raise EspoError("HTTP 403: forbidden")
+            return await super().find_one(entity, attribute, value, select)
+
+    client = Failing()
+    ids = await submit_partner(_application(), client)
+    assert set(ids) == {"accountId", "contactId", "partnerProfileId"}
+    _, profile = client.creates[2]
+    assert "teamsIds" not in profile
 
 
 def test_company_is_required():

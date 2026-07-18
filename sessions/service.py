@@ -190,8 +190,10 @@ def _grid_row(cfg: DomainConfig, r: dict[str, Any]) -> dict[str, Any]:
         row[dkey] = r.get(dattr)
     if cfg.list_contact_id_attr:
         row["contactId"] = r.get(cfg.list_contact_id_attr)  # for the contact pop-up link
-    if r.get("mentorProfileId"):  # mentor domain: the Assigned Mentor pop-up link
-        row["mentorId"] = r.get("mentorProfileId")
+    # Assigned manager (mentor / partner manager) pop-up link — the pop-up's
+    # email rows are compose links, so the grid is two clicks from an email.
+    if cfg.list_manager_id_attr and r.get(cfg.list_manager_id_attr):
+        row["mentorId"] = r.get(cfg.list_manager_id_attr)
     if cfg.list_company_aggregate:
         pairs = [
             {"entity": entity, "id": r["id"] if attr == "id" else r.get(attr)}
@@ -243,27 +245,47 @@ async def list_records(
 
     ``{"records": [...], "profileFound": bool}`` — ``profileFound=False`` means
     the user has no linked ``CMentorProfile`` (so nothing can be scoped to them).
+
+    A ``list_all`` domain (partner) skips the manager-profile scoping entirely
+    and lists every parent record the user's CRM ACL can read — the CRM's team
+    permissions are the visibility gate, so ``profileFound`` is always True
+    (a team member without a linked profile still sees the shared list).
     """
-    profile_id = await resolve_manager_profile(client, user["userId"])
-    if not profile_id:
-        return {"records": [], "profileFound": False}
-    links = [cfg.manager_owned_link]
-    if cfg.manager_comentor_link:  # engagements where the user is a CO-mentor
-        links.append(cfg.manager_comentor_link)
     rows: list[dict[str, Any]] = []
-    seen: set[str] = set()
-    for link in links:
-        data = await client.list_related(
-            MENTOR_PROFILE,
-            profile_id,
-            link,
-            select=cfg.list_select,
-            max_size=_PAGE,
-        )
-        for r in data.get("list", []):
-            if r["id"] not in seen:
-                seen.add(r["id"])
-                rows.append(r)
+    if cfg.list_all:
+        offset = 0
+        while True:
+            data = await client.list(
+                cfg.parent_entity,
+                select=cfg.list_select,
+                max_size=_PAGE,
+                offset=offset,
+            )
+            page = data.get("list", [])
+            rows.extend(page)
+            if len(page) < _PAGE:
+                break
+            offset += _PAGE
+    else:
+        profile_id = await resolve_manager_profile(client, user["userId"])
+        if not profile_id:
+            return {"records": [], "profileFound": False}
+        links = [cfg.manager_owned_link]
+        if cfg.manager_comentor_link:  # engagements where the user is a CO-mentor
+            links.append(cfg.manager_comentor_link)
+        seen: set[str] = set()
+        for link in links:
+            data = await client.list_related(
+                MENTOR_PROFILE,
+                profile_id,
+                link,
+                select=cfg.list_select,
+                max_size=_PAGE,
+            )
+            for r in data.get("list", []):
+                if r["id"] not in seen:
+                    seen.add(r["id"])
+                    rows.append(r)
     if cfg.status_attr and cfg.status_values:
         rows = [r for r in rows if r.get(cfg.status_attr) in cfg.status_values]
     await fill_company_fallback(cfg, client, rows)
@@ -485,13 +507,18 @@ async def get_detail(
         row["participants"] = names
 
     # Overall notes about the whole engagement/partner/sponsor (not a session).
+    # The panel is ALWAYS present when the domain has a notes field (Doug's
+    # ruling 2026-07-18: Partner Notes shows at the top of the Overview even
+    # when empty — the frontend renders a muted placeholder then), so managers
+    # always see where the record-level notes live.
     overall_notes = None
     if cfg.overall_notes_attr:
         val = parent.get(cfg.overall_notes_attr)
-        if val not in (None, "", []):
-            overall_notes = {
-                "label": cfg.overall_notes_label, "value": val, "type": cfg.overall_notes_type,
-            }
+        overall_notes = {
+            "label": cfg.overall_notes_label,
+            "value": "" if val in (None, []) else val,
+            "type": cfg.overall_notes_type,
+        }
 
     detail: dict[str, Any] = {
         "id": parent_id,
