@@ -1381,7 +1381,7 @@ provider seam, store transcript text + the permanent Google Doc link):
   give-up path, non-admin mentor visibility). 26 new tests (gmeet helpers,
   retrieval cycle, auto-enable hook).
 
-Before that: **v0.82.0** (2026-07-17, 674 tests green, committed NOT pushed) —
+Before that: **v0.82.0** (2026-07-17, 674 tests green) —
 **fix: mentors all read "Incomplete — no User assigned to the Contact"**
 (Doug's report). Root cause found by live probe: the CRM team's deliberate
 switch of **Contact (and Account) to Multiple Assigned Users on BOTH CRMs**
@@ -1395,12 +1395,12 @@ Reassign via the swap-merge (previously silent no-ops under the new schema);
 and **"Update Mentor Status" now heals the roster** — the sweep runs
 `reconcile_user_links` per mentor before recomputing, so one click re-stamps
 every Contact from its member's User and flips the drifted Incomplete records
-back. 6 new tests. **NOT yet driven live** — after deploy, run Update Mentor
-Status in `/mentoradmin` on each env and confirm the Active mentors return to
-Complete (the sweep runs as the signed-in user, whose role needs Contact
-edit). Side finds from the probe: one crm-test contact (Tommy Tranell)
-carries a value in a custom `cAssignedUser` field (manual workaround?), and
-old single-assignment values are hidden, not migrated, CRM-side.
+back. 6 new tests. **DEPLOYED + VERIFIED LIVE 2026-07-18** — Doug pushed,
+ran Update Mentor Status per the recovery steps, and confirmed the roster
+looks good again ("it looks good now!"). Side finds from the probe: one
+crm-test contact (Tommy Tranell) carries a value in a custom `cAssignedUser`
+field (manual workaround? — suggested clearing it in the CRM UI), and old
+single-assignment values are hidden, not migrated, CRM-side.
 
 Before that: **v0.81.0** (2026-07-17, 668 tests green, committed NOT pushed) —
 **Client Administration: Reassign Mentor** (Doug's request): select a grid row
