@@ -48,8 +48,13 @@ _SKIP_SUFFIX = ("IsInvalid", "IsOptedOut", "IsInactive", "AnyId", "Map")
 # Per-entity hidden fields, on top of the generic filters. CEngagement.description
 # holds Client Administration's internal process notes (the /assignments grid's
 # click-to-edit Notes column) — staff-only by design, so it must neither render
-# nor be writable in the session tools' Details view.
-_ENTITY_EXCLUDED: dict[str, frozenset[str]] = {"CEngagement": frozenset({"description"})}
+# nor be writable in the session tools' Details view. CPartnerProfile.description
+# holds the partner intake form's enum-drift triage note (Doug's 2026-07-18
+# ruling: not shown when editing a partner — `partnerNotes` is THE notes field).
+_ENTITY_EXCLUDED: dict[str, frozenset[str]] = {
+    "CEngagement": frozenset({"description"}),
+    "CPartnerProfile": frozenset({"description"}),
+}
 _PREFIX_C = re.compile(r"^c(?=[A-Z])")
 
 

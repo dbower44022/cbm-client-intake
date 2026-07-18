@@ -4,6 +4,89 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.91.0] — 2026-07-18
+
+**Partner editing fixes** (Doug's report: partner notes typed in the edit
+screen never showed on the Overview; the edit screen exposed client
+notes/description fields that don't belong on a partner).
+
+### Fixed
+- **A Details-tab save now refreshes the Overview** (`refreshRecordViews`
+  after every section/contact save): the record payload is re-fetched and
+  the Overview + Sessions tabs re-render, so Partner Notes (and any other
+  edit) appears immediately instead of only after a full page reload.
+- **One Partner Notes field.** The partner domain's Company form carried the
+  Account-level `cPartnerNotes` twin — notes typed there could never reach
+  the Overview (which reads `CPartnerProfile.partnerNotes`). The twin is
+  retired from the partner Company form/view; the Partnership form's Partner
+  Notes is the one notes field and feeds the Overview panel.
+
+### Changed
+- **Curated Partnership edit form** (`DETAILS_LAYOUTS.CPartnerProfile`,
+  `noExtras`): Partnership (status/type/cadence + dates) · Value & goals ·
+  a full-width Partner notes editor — replaces the generic "Additional
+  details" dump. The record name is excluded (mirrors the company; the
+  header shows it).
+- **`CPartnerProfile.description` is server-excluded** from the Details view
+  (`_ENTITY_EXCLUDED`) — it holds the intake form's enum-drift triage note
+  (the CEngagement.description precedent); a smuggled write is dropped.
+- **Partner-domain Company form/view hides `description` and `cClientNotes`**
+  ("Client notes") — client-specific fields have no place on a partner's
+  company. The Account layout's empty "Notes" group collapses. (Sponsor
+  domain untouched — its Company form still shows them; flag if unwanted.)
+
+## [0.92.0] — 2026-07-18
+
+Reliability hardening **Phase 5 — Drive + intake-pipeline residuals**
+(P1-13 + the P2 Drive/intake items, per
+`prompts/reliability-hardening-prompt-v0.1.md`). 16 new tests (766 green,
+incl. the "lying Drive" simulations); no new migration; the docs store's new
+surface round-tripped on live local Postgres.
+
+### Fixed
+- **Drive uploads are create-safe (P1-13; strategy: pre-generated ids,
+  documented in `docs/service.py`).** Every upload pre-assigns a
+  server-generated id (`files.generateIds`): a retried create can't
+  duplicate (a 409 on the duplicate id resolves to the already-committed
+  file), and when the upload RESPONSE is lost after Drive committed — the
+  orphan-then-user-retry-duplicates window — the rollback target is still
+  known and the file is deleted before the error surfaces. Non-idempotent
+  creates WITHOUT a pre-set id are never blind-retried; a failed folder
+  create re-runs find-or-create instead (a committed-then-5xx'd folder is
+  found, not duplicated).
+- **A stale cached record folder self-heals.** A folder deleted in the
+  Drive console used to 404 every subsequent upload for that record
+  forever; the upload now clears the folder cache
+  (`DocumentStore.clear_folder_cache`), rebuilds the path, and retries
+  once.
+- **The grants engine enforces the access model against org-wide shares
+  (docs-F9).** Non-inherited `group`/`domain`/`anyone` permissions — never
+  justified by the CRM, which entitles individual people only — are revoked
+  like any stray grant (previously a console-added domain share survived
+  every reconciliation). The nightly reconciliation also alerts when the
+  SAME folder keeps erroring on consecutive passes (silent grant drift),
+  not just on removals.
+- **The document content proxy streams original downloads.** `?original=true`
+  now streams the stored bytes in chunks (both the session tools and
+  `/mentoradmin`) instead of buffering whole files — a few concurrent large
+  downloads could OOM a small instance. Google-native files (no native
+  bytes) keep the buffered export path, which Drive itself caps.
+- **The docs LIST endpoint gained the per-record ACL read (docs-D6).**
+  Upload/content/refresh already read the parent as the user; the list
+  didn't — document metadata (filenames, uploaders, Drive links) was
+  enumerable across ACL boundaries by anyone past the team gate.
+- **Intake residuals:** a DB outage at accept now logs the payload at ERROR
+  (its only copy at that moment) and answers a controlled 503 "please
+  retry" instead of a raw 500; malformed JSON answers 422; the
+  sync-with-store path delivers through `ResumableClient` (P1-8 — a partial
+  failure carries progress, so an /ops redrive RESUMES instead of
+  duplicating the plain creates); `Sponsor` joined the
+  `Contact.cContactType` schema-drift contract (the sponsor orchestrator
+  has written it since 2026-06-22); and the info-request description APPEND
+  is guarded by a named progress step (`ResumableClient.mark_step` /
+  `run_step_once`) so a re-delivery can't double-append staff-visible text
+  (pipeline-M1).
+
 ## [0.90.0] — 2026-07-18
 
 ### Fixed

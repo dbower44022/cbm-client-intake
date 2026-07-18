@@ -651,6 +651,29 @@ async def test_save_details_drops_engagement_description():
     assert res["saved"] == ["meetingCadence"]
 
 
+def test_details_field_spec_hides_partner_profile_description():
+    """CPartnerProfile.description holds the intake form's enum-drift triage
+    note (Doug's 2026-07-18 ruling: not shown when editing a partner —
+    `partnerNotes` is the one notes field, and it stays editable)."""
+    fields = {"description": {"type": "text"}, "partnerNotes": {"type": "wysiwyg"}}
+    names = [f["name"] for f in details._field_spec(fields, "CPartnerProfile")]
+    assert names == ["partnerNotes"]
+
+
+@pytest.mark.asyncio
+async def test_save_details_drops_partner_profile_description():
+    fake = Fake(meta_fields={
+        "description": {"type": "text"},
+        "partnerNotes": {"type": "wysiwyg"},
+    })
+    res = await details.save_details(
+        fake, "CPartnerProfile", "P1",
+        {"partnerNotes": "<p>key relationship</p>", "description": "smuggled"},
+    )
+    assert fake.updates == [("CPartnerProfile", "P1", {"partnerNotes": "<p>key relationship</p>"})]
+    assert res["saved"] == ["partnerNotes"]
+
+
 @pytest.mark.asyncio
 async def test_save_details_whitelists_and_drops_drifted_enum():
     fake = Fake(meta_fields={

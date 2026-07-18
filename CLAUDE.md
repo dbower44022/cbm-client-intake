@@ -665,7 +665,14 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   now ride `DomainConfig.list_manager_id_attr`. The Overview's record-level
   notes panel (Partner/Engagement/Sponsor Notes) **always renders at the top
   of the notes pane** — an empty field shows a muted "No … recorded yet."
-  placeholder (blank wysiwyg markup counts as empty).
+  placeholder (blank wysiwyg markup counts as empty). **Partner notes edit
+  path (v0.91.0):** `CPartnerProfile.partnerNotes` is the ONE partner-notes
+  field — the partner-domain Company form's Account-level `cPartnerNotes`
+  twin is retired (edits there never reached the Overview), the Partnership
+  strip edit is a curated `noExtras` layout ending in a full-width Partner
+  notes editor, `CPartnerProfile.description` + the partner Company form's
+  `description`/`cClientNotes` are hidden, and **every Details save
+  refreshes the Overview/Sessions tabs** (`refreshRecordViews`).
 - **Auth = per-user, acts as the logged-in user.** Portal SSO (shared staff
   session `staff_user`); each route enforces **its own team per request**
   (`_require_user` → `is_member`; 401 → frontend sends the user to the portal, 403
@@ -1411,7 +1418,25 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-18)
 
-**Main is at v0.89.0** (2026-07-18, 746 tests green, committed NOT pushed) —
+**Main is at v0.91.0** (2026-07-18, 765 tests green at commit) —
+**Partner editing fixes** (Doug's report after driving v0.89.0): a Details
+save now refreshes the Overview/Sessions tabs (`refreshRecordViews` — the
+Partner Notes he typed only appeared after a full reload), the partner
+Company form's Account-level `cPartnerNotes` twin is retired (notes typed
+there could NEVER reach the Overview, which reads
+`CPartnerProfile.partnerNotes` — the root cause of "notes don't show"),
+the Partnership edit form is a curated `noExtras` layout (Partnership /
+Value & goals / full-width Partner notes; no more Additional-details
+dump), `CPartnerProfile.description` is server-excluded from Details
+(intake drift-note field, CEngagement precedent + smuggle-drop test),
+and the partner-domain Company form/view hides `description` +
+`cClientNotes`. Sponsor domain deliberately untouched (its Company form
+still shows description/client notes — same hazard, unreported). Full
+loop verified in the stub harness (curated form, hidden fields, richtext
+edit → diffed PUT → Overview updates without reload; no console errors).
+(v0.90.0 = a parallel session's comms template-font fix.)
+
+Before that: **v0.89.0** (2026-07-18, 746 tests green, deployed) —
 **Partner Sessions: all partners + Partner Notes on top + Partner Manager
 quick-email** (Doug's three requests; mechanics in the Session Management
 section's domain-table EXCEPTION + "Partner grid: Partner Manager column"

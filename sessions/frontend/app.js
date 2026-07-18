@@ -3056,6 +3056,26 @@
       ] },
       { label: "Goals", grow: 2, basis: 44, rows: [[{ name: "description", span: 12, label: "What does the client want help with?" }]] },
     ] },
+    // Partnership profile (Doug's 2026-07-18 report): a curated form instead
+    // of the generic "Additional details" dump. `description` (the intake
+    // form's enum-drift triage note) is excluded server-side; **Partner
+    // Notes is THE notes field** — it feeds the Overview's Partner Notes
+    // panel. The record name mirrors the company (excluded, header shows it).
+    CPartnerProfile: { noExtras: true, groups: [
+      { label: "Partnership", grow: 2, basis: 46, rows: [
+        [{ name: "partnershipStatus", span: 4 }, { name: "partnershipType", span: 4 },
+         { name: "partnerContactCadence", span: 4, label: "Contact cadence" }],
+        [{ name: "partnershipStartDate", span: 4 }, { name: "partnershipAgreementDate", span: 4 },
+         { name: "lastContacted", span: 4 }],
+      ] },
+      { label: "Value & goals", grow: 2, basis: 40, rows: [
+        [{ name: "partnershipValue", span: 6 }, { name: "cBMValueProvided", span: 6 }],
+        [{ name: "relationGoalsEst", span: 6, label: "Relationship goals established" }],
+      ] },
+      { label: "Partner notes", grow: 3, basis: 52, rows: [
+        [{ name: "partnerNotes", span: 12 }],
+      ] },
+    ] },
     Contact: { groups: [
       { label: "Name", rows: [
         [{ name: "salutationName", span: 2, label: "Salutation" }, { name: "firstName", span: 4 },
@@ -3098,18 +3118,24 @@
     CEngagement: ["name", "engagementAssignedDate", "lastSessionDate",
       "nextSessionDateTime", "totalSessions", "totalSessionsLast30Days",
       "totalSessionHours"],
+    // CPartnerProfile: the record name mirrors the company (header shows it);
+    // `description` is excluded server-side.
+    CPartnerProfile: ["name"],
   };
   var ACCOUNT_PARTNER_FIELDS = ["cPartnerStatus", "cPartnerOrganizationType", "cPartnerContactCadence",
     "cPartnerType", "cPartnershipStartDate", "cPartnershipAgreementDate", "cPartnerNotes"];
   var ACCOUNT_SPONSOR_FIELDS = ["cSponsorshipLevel", "cSponsorshipStartDate", "cSponsorshipRenewalDate", "cSponsorNotes"];
   // The other domains keep a curated group of their own relationship fields.
   var ACCOUNT_DOMAIN_GROUPS = {
+    // No cPartnerNotes row: the Account-level notes twin confused edits —
+    // the ONE Partner Notes field is CPartnerProfile.partnerNotes (it feeds
+    // the Overview panel), edited on the Partnership strip (Doug's
+    // 2026-07-18 report: notes typed here never showed on the Overview).
     partnersessions: { label: "Partnership", rows: [
       [{ name: "cPartnerStatus", span: 4 }, { name: "cPartnerOrganizationType", span: 4 }, { name: "cPartnerContactCadence", span: 4 }],
       [{ name: "cPartnerType", span: 12 }],
       [{ name: "cPartnershipStartDate", span: 4 }, { name: "cPartnershipAgreementDate", span: 4 }],
       [{ checks: ["cPublicAnnouncementAllowed"] }],
-      [{ name: "cPartnerNotes", span: 12 }],
     ] },
     sponsorsessions: { label: "Sponsorship", rows: [
       [{ name: "cSponsorshipLevel", span: 4 }, { name: "cSponsorshipStartDate", span: 4 }, { name: "cSponsorshipRenewalDate", span: 4 }],
@@ -3130,6 +3156,10 @@
       ex.cPublicAnnouncementAllowed = 1;
     } else if (SLUG === "partnersessions") {
       ACCOUNT_SPONSOR_FIELDS.forEach(function (n) { ex[n] = 1; });
+      // Client-specific notes have no place on a partner's company (Doug's
+      // 2026-07-18 report), and the Account-level partner-notes twin is
+      // retired — CPartnerProfile.partnerNotes is the one notes field.
+      ["description", "cClientNotes", "cPartnerNotes"].forEach(function (n) { ex[n] = 1; });
     } else if (SLUG === "sponsorsessions") {
       ACCOUNT_PARTNER_FIELDS.forEach(function (n) { ex[n] = 1; });
     }
@@ -3430,6 +3460,22 @@
     return wrap;
   }
 
+  // A Details save can change what the read-only tabs show (Partner Notes on
+  // the Overview, a renamed record in the header, contact lists) — re-fetch
+  // the record payload and re-render them. Best-effort: the Details tab is
+  // already refreshed, so a failed refresh here just leaves the old Overview
+  // until the next full load (Doug's 2026-07-18 report: partner notes saved
+  // in Details never appeared on the Overview without a page reload).
+  async function refreshRecordViews() {
+    if (!currentDetail) return;
+    try {
+      currentDetail = await api("/records/" + encodeURIComponent(currentDetail.id));
+      $("detailName").textContent = currentDetail.name || "(unnamed)";
+      renderOverview(currentDetail);
+      renderSessions(currentDetail);
+    } catch (_) { /* keep the stale Overview rather than fail the save UX */ }
+  }
+
   // Save one section; on failure keep the edit view open and show the error inline.
   async function savePanel(sec, key, body, saveBtn, errEl) {
     var snap = detailsSnapshot[key] || {}, changes = {};
@@ -3444,6 +3490,7 @@
         { method: "PUT", body: JSON.stringify({ changes: changes }) });
       delete detailsEditSet[key];
       await loadDetails(currentDetail.id);  // refresh values, everything back to view
+      refreshRecordViews();  // Overview (e.g. Partner Notes) reflects the save too
       notice("detailsNotice", sec.title + " saved.", "success");
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }
@@ -3916,6 +3963,7 @@
       try {
         await api(path, { method: "DELETE" });
         await loadDetails(currentDetail.id);
+        refreshRecordViews();
         notice("detailsNotice", isClient ? "Contact removed from this record." : "CBM contact removed.", "success");
       } catch (e) {
         if (e.status === 401) { showLogin(); return; }
@@ -4024,6 +4072,7 @@
         { method: "POST", body: JSON.stringify({ contactId: id }) });
       detailsAdd = null;
       await loadDetails(currentDetail.id);
+      refreshRecordViews();
       notice("detailsNotice", "Contact linked.", "success");
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }
@@ -4063,6 +4112,7 @@
           { method: "POST", body: JSON.stringify({ changes: changes }) });
         detailsAdd = null;
         await loadDetails(currentDetail.id);
+        refreshRecordViews();
         notice("detailsNotice", "Contact created and linked.", "success");
       } catch (e) {
         if (e.status === 401) { showLogin(); return; }
@@ -4101,6 +4151,7 @@
           { method: "POST", body: JSON.stringify({ mentorProfileId: sel.value }) });
         detailsAdd = null;
         await loadDetails(currentDetail.id);
+        refreshRecordViews();
         notice("detailsNotice", (res && res.warning) || "CBM contact added.",
           res && res.warning ? "error" : "success");
       } catch (e) {
