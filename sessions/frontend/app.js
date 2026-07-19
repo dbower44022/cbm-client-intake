@@ -743,22 +743,19 @@
     var card = document.createElement("div"); card.className = "sx__overall";
     var head = document.createElement("div"); head.className = "sx__overall-head";
     var h = document.createElement("h3"); h.className = "sx__overall-h"; h.textContent = n.label;
-    head.appendChild(h); card.appendChild(head);
+    head.appendChild(h);
     var ftype = n.type === "html" ? "wysiwyg" : "text";
     var input = makeInput({ name: n.attr, type: ftype }, n.value == null ? "" : n.value);
     input.dataset.field = n.attr; input.dataset.type = ftype;
     if (ftype === "text") input.rows = 8;
-    card.appendChild(input);
     var err = document.createElement("p"); err.className = "sx__notice"; err.hidden = true;
-    var actions = document.createElement("div"); actions.className = "sx__overall-actions";
-    var cancel = document.createElement("button");
-    cancel.type = "button"; cancel.className = "cbm-button cbm-button--secondary"; cancel.textContent = "Cancel";
-    cancel.addEventListener("click", function () { renderOverallNotes(d); });
-    var save = document.createElement("button");
-    save.type = "button"; save.className = "cbm-button"; save.textContent = "Save";
-    save.addEventListener("click", async function () {
+    // Save/Cancel at BOTH the top (in the header, always in reach on a long
+    // editor) and the bottom (Doug's ruling 2026-07-19). Shared handlers.
+    var saveBtns = [];
+    function doCancel() { renderOverallNotes(d); }
+    async function doSave() {
       var val = readField(input);
-      save.disabled = true; err.hidden = true;
+      saveBtns.forEach(function (b) { b.disabled = true; }); err.hidden = true;
       try {
         var changes = {}; changes[n.attr] = val;
         await api("/details/" + encodeURIComponent(n.entity) + "/" + encodeURIComponent(d.id),
@@ -769,15 +766,31 @@
         notice("detailNotice", n.label + " saved.", "success");
       } catch (e) {
         if (e.status === 401) { showLogin(); return; }
-        save.disabled = false;
+        saveBtns.forEach(function (b) { b.disabled = false; });
         err.textContent = e.status === 403
           ? "You don't have permission to edit " + n.label + "."
           : "Couldn't save: " + e.message;
         err.hidden = false; err.classList.add("is-error");
+        err.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
-    });
-    actions.appendChild(cancel); actions.appendChild(save);
-    card.appendChild(err); card.appendChild(actions);
+    }
+    function buttonPair(cls) {
+      var row = document.createElement("span"); row.className = cls;
+      var cancel = document.createElement("button");
+      cancel.type = "button"; cancel.className = "cbm-button cbm-button--secondary"; cancel.textContent = "Cancel";
+      cancel.addEventListener("click", doCancel);
+      var save = document.createElement("button");
+      save.type = "button"; save.className = "cbm-button"; save.textContent = "Save";
+      save.addEventListener("click", doSave);
+      row.appendChild(cancel); row.appendChild(save);
+      saveBtns.push(save);
+      return row;
+    }
+    head.appendChild(buttonPair("sx__overall-btns"));
+    card.appendChild(head);
+    card.appendChild(input);
+    card.appendChild(err);
+    card.appendChild(buttonPair("sx__overall-actions"));
     box.appendChild(card);
   }
 
@@ -3627,17 +3640,27 @@
       snap[el.dataset.field] = JSON.stringify(readField(el));
     });
     detailsSnapshot[key] = snap;
-    var actions = document.createElement("div"); actions.className = "sx__dpanel-actions sx__dpanel-actions--sticky";
     var notice = document.createElement("p"); notice.className = "sx__dpanel-error"; notice.hidden = true;
-    var status = document.createElement("span"); status.className = "sxf__savestatus"; status.textContent = "No changes yet";
-    var save = document.createElement("button"); save.type = "button"; save.className = "cbm-button"; save.textContent = "Save changes";
-    save.disabled = true;
-    var cancel = document.createElement("button"); cancel.type = "button"; cancel.className = "cbm-button cbm-button--secondary"; cancel.textContent = "Cancel";
-    save.addEventListener("click", function () { savePanel(sec, key, body, save, notice); });
-    cancel.addEventListener("click", function () { delete detailsEditSet[key]; repaintDetails(key); });
-    actions.appendChild(status); actions.appendChild(cancel); actions.appendChild(save);
+    // Save/Cancel render at BOTH the top of the form and the (sticky) bottom
+    // (Doug's ruling 2026-07-19: the top pair means no scrolling to save on a
+    // long form). Both pairs share state — one dirty scan drives them all.
+    var saveBtns = [], statusEls = [];
+    function doSave() { savePanel(sec, key, body, saveBtns, notice); }
+    function doCancel() { delete detailsEditSet[key]; repaintDetails(key); }
+    function actionsRow(cls) {
+      var row = document.createElement("div"); row.className = "sx__dpanel-actions " + cls;
+      var status = document.createElement("span"); status.className = "sxf__savestatus"; status.textContent = "No changes yet";
+      var cancel = document.createElement("button"); cancel.type = "button"; cancel.className = "cbm-button cbm-button--secondary"; cancel.textContent = "Cancel";
+      cancel.addEventListener("click", doCancel);
+      var save = document.createElement("button"); save.type = "button"; save.className = "cbm-button"; save.textContent = "Save changes";
+      save.disabled = true;
+      save.addEventListener("click", doSave);
+      row.appendChild(status); row.appendChild(cancel); row.appendChild(save);
+      saveBtns.push(save); statusEls.push(status);
+      return row;
+    }
     // Live diff feedback: a gold dot marks each field that differs from its
-    // loaded value, and the sticky bar narrates what a Save will write. The
+    // loaded value, and the bars narrate what a Save will write. The
     // scan reuses the snapshot/readField diff the save itself runs; "click"
     // covers rich-text toolbar actions, which fire no native input event.
     var scanTimer = null;
@@ -3648,13 +3671,17 @@
         (el.closest(".cbm-field") || el).classList.toggle("sxf__dirty", dirty);
         if (dirty) n++;
       });
-      save.disabled = !n;
-      status.textContent = n ? n + (n === 1 ? " field" : " fields") + " changed" : "No changes yet";
+      var label = n ? n + (n === 1 ? " field" : " fields") + " changed" : "No changes yet";
+      saveBtns.forEach(function (b) { b.disabled = !n; });
+      statusEls.forEach(function (s) { s.textContent = label; });
     }
     ["input", "change", "click", "keyup"].forEach(function (ev) {
       body.addEventListener(ev, function () { clearTimeout(scanTimer); scanTimer = setTimeout(scanDirty, 150); });
     });
-    var wrap = document.createElement("div"); wrap.appendChild(body); wrap.appendChild(notice); wrap.appendChild(actions);
+    var wrap = document.createElement("div");
+    wrap.appendChild(actionsRow("sx__dpanel-actions--top"));
+    wrap.appendChild(body); wrap.appendChild(notice);
+    wrap.appendChild(actionsRow("sx__dpanel-actions--sticky"));
     return wrap;
   }
 
@@ -3675,14 +3702,16 @@
   }
 
   // Save one section; on failure keep the edit view open and show the error inline.
+  // ``saveBtn`` may be one button or the list of paired top/bottom buttons.
   async function savePanel(sec, key, body, saveBtn, errEl) {
+    var btns = Array.isArray(saveBtn) ? saveBtn : [saveBtn];
     var snap = detailsSnapshot[key] || {}, changes = {};
     Array.prototype.forEach.call(body.querySelectorAll("[data-field]"), function (el) {
       var v = readField(el);
       if (JSON.stringify(v) !== snap[el.dataset.field]) changes[el.dataset.field] = v;
     });
     if (!Object.keys(changes).length) { delete detailsEditSet[key]; repaintDetails(key); return; }
-    saveBtn.disabled = true; errEl.hidden = true;
+    btns.forEach(function (b) { b.disabled = true; }); errEl.hidden = true;
     try {
       await api("/details/" + encodeURIComponent(sec.entity) + "/" + encodeURIComponent(sec.id),
         { method: "PUT", body: JSON.stringify({ changes: changes }) });
@@ -3692,11 +3721,12 @@
       notice("detailsNotice", sec.title + " saved.", "success");
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }
-      saveBtn.disabled = false;
+      btns.forEach(function (b) { b.disabled = false; });
       errEl.textContent = e.status === 403
         ? "You don't have permission to edit " + sec.title + "."
         : "Couldn't save: " + e.message;
       errEl.hidden = false;
+      errEl.scrollIntoView({ behavior: "smooth", block: "nearest" });  // visible from the TOP bar too
     }
   }
 

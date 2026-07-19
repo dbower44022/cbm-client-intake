@@ -4,6 +4,21 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.98.0] — 2026-07-19
+
+**Save/Cancel at the top AND bottom of every edit form** (Doug's ruling:
+saving must never require scrolling). Frontend-only.
+
+### Changed
+- The Details-tab section edit forms (strip, org cards, contact rows,
+  create-contact) render a second Save/Cancel bar at the TOP of the form,
+  paired with the existing sticky bottom bar; both share one state (the
+  "N fields changed" narration, the dirty-gated enable, and the in-flight
+  disable update together). A save error scrolls into view so it's seen
+  from either bar.
+- The Overview notes inline editor gets the same treatment: Save/Cancel in
+  the panel header (always in reach on a tall editor) plus the bottom pair.
+
 ## [0.97.1] — 2026-07-19
 
 ### Added

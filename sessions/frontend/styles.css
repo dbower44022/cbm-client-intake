@@ -755,6 +755,12 @@ textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
   background: rgba(251, 252, 253, 0.96); border-top: 1px solid #dfe3e8;
   backdrop-filter: blur(3px); margin-top: 0.35rem;
 }
+/* ...and a second pair sits at the TOP of the form (Doug's 2026-07-19 ruling:
+   saving must never require scrolling). Same row, lighter separator. */
+.sx__dpanel-actions--top {
+  align-items: center; padding-top: 0.5rem; padding-bottom: 0.5rem;
+  border-bottom: 1px solid #eef1f4;
+}
 
 /* Checkbox sets flow into as many columns as fit the width; the row gap
    matches the field-row rhythm so options never touch. */
