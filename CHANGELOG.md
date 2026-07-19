@@ -4,6 +4,48 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.106.0] — 2026-07-19
+
+**Submission Admin rebuilt** (Doug's spec: bring /ops up to the other apps'
+standard, then make it a place to RESOLVE a request, not just re-drive it).
+
+### Changed — list page
+- Full-height grid that fills the window and scrolls internally with a
+  sticky header; **sortable columns** (click; Received/Attempts default
+  newest/most first), **drag-resizable columns** (grip on each header),
+  **alternating row colours**, and whole-row click-through to the detail.
+- **Live search box centered in the top bar** (reference/form/status/
+  submitter/error/notes/date); "Signed in as … / Sign out" in the top-right
+  corner; one control line (status + form filters, counts chips, worker
+  metrics, Refresh).
+- Re-drive/Discard now use the product's **two-step confirm** (no more
+  browser confirm dialogs).
+
+### Added — detail view (replaces the modal; sessions-style tabs)
+- **Overview**: submitter + delivery facts on the LEFT (name, email as a
+  compose link, phone, company, message, status, received, attempts);
+  an editable **Submission notes** card top-center (new `notes` column,
+  migration **0011** — staff-only triage notes, saved with `acted_by`);
+  the **email conversation with the submitter** listed below the notes
+  (latest 5, newest first) so the history is visible at a glance.
+- **Details** tab: the payload / progress / result / error view that
+  clicking the id used to show — plus **deep links into EspoCRM** for each
+  record the delivery created (Contact/Account/CInformationRequest/…).
+- **Communications** tab: the full email history with expandable, cleaned
+  bodies (quoted replies demoted), Refresh, and **“Email the submitter”**
+  opening the shared quick-compose (admin's own @cbmentors.org mailbox,
+  templates + signature; `register_quicksend` on the ops router).
+- `GET /ops/api/submissions/{id}/messages`: a live Gmail search of the
+  signed-in admin's OWN mailbox (`from:X OR to:X`, capped at 25) — nothing
+  stored; degrades to a readable reason (Gmail off / no linked CBM mailbox /
+  no submitter email). NOTE: each admin sees the thread from their own
+  mailbox — a conversation another admin ran lives in THEIR mailbox.
+
+### Activation
+- Pre-deploy migrate runs 0011 automatically. Email features light up where
+  `GMAIL_SYNC=true` AND the admin's login is linked to a profile with a
+  `cbmEmail` (same requirement as every compose surface).
+
 ## [0.105.0] — 2026-07-19
 
 **Email, round two** (Doug picked items 1–4 of the functionality review):

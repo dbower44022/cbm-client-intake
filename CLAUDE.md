@@ -1432,7 +1432,29 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-19)
 
-**Main is at v0.105.0** (2026-07-19, 804 tests green, committed NOT pushed) —
+**Main is at v0.106.0** (2026-07-19, 807 tests green, committed NOT pushed) —
+**Submission Admin REBUILT** (Doug's spec; CHANGELOG 0.106.0 for the
+full list): list page = full-height sticky-header grid with sortable +
+drag-resizable columns, alternating rows, center search, top-right user
+corner, two-step Re-drive/Discard; detail = sessions-style tabs —
+Overview (facts rail left; editable staff NOTES card — new `notes`
+column, migration 0011, saved with acted_by; the submitter email
+conversation below), Details (payload/progress/result + EspoCRM deep
+links for created records), Communications (full history with cleaned
+expandable bodies + "Email the submitter" via register_quicksend on the
+ops router). Conversation = LIVE Gmail search of the signed-in admin's
+OWN mailbox (from:X OR to:X, cap 25, nothing stored; readable
+degradation reasons; per-admin visibility — noted in the changelog).
+Verified: 807 tests green (5 new ops tests); migration 0011 +
+set_notes round-tripped on live local Postgres; the whole UI driven in
+the stub harness (grid sort/resize/search/alt-rows, notes edit→PUT,
+CRM links, comms expand + quoted-reply demotion, compose prefilled,
+two-step redrive, empty states; no console errors). NOT yet driven
+live (needs deploy + an ops admin with a linked cbmEmail profile for
+the email half). Ops gotcha fixed: display:flex on a section beats
+[hidden] — the app CSS now guards `.ops [hidden]`.
+
+Before that: **v0.105.0** (2026-07-19, 804 tests green) —
 **Email round two (Doug's picks 1–4 from the compose-functionality review):
 My Email + unread/awaiting-reply + Forward + attach-from-Documents.**
 - **My Email (`/myemail/`, new `myemail/` package, portal tile, aliases

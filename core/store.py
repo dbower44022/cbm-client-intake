@@ -84,6 +84,9 @@ submission = Table(
     # Who last acted on this row from /ops (redrive/discard) — the audit answer
     # to "who discarded this submission?" (P1-11, reliability review 2026-07-17).
     Column("acted_by", String(128)),
+    # Staff triage notes on this submission, edited in /ops (Submission Admin
+    # rebuild, 2026-07-19). Free text, staff-only — never delivered to the CRM.
+    Column("notes", Text),
     Column("received_at", DateTime(timezone=True), nullable=False),
     Column("processed_at", DateTime(timezone=True)),
     Column("updated_at", DateTime(timezone=True), nullable=False),
@@ -154,6 +157,9 @@ class SubmissionStore(Protocol):
     async def counts_by_status(self) -> dict[str, int]: ...
     async def redrive(self, submission_id: str, *, acted_by: Optional[str] = None) -> bool: ...
     async def discard(self, submission_id: str, *, acted_by: Optional[str] = None) -> bool: ...
+    async def set_notes(
+        self, submission_id: str, notes: str, *, acted_by: Optional[str] = None
+    ) -> bool: ...
     async def metrics(self) -> dict[str, Any]: ...
     async def ping(self) -> bool: ...
     # Worker liveness (P1-6):
@@ -364,6 +370,7 @@ class PostgresStore:
                 submission.c.attempt_count,
                 submission.c.last_error,
                 submission.c.payload["email"].astext.label("email"),
+                submission.c.notes,
                 submission.c.received_at,
                 submission.c.processed_at,
                 submission.c.next_attempt_at,
@@ -426,6 +433,18 @@ class PostgresStore:
                     acted_by=acted_by,
                     updated_at=_now(),
                 )
+            )
+        return result.rowcount > 0
+
+    async def set_notes(
+        self, submission_id: str, notes: str, *, acted_by: Optional[str] = None
+    ) -> bool:
+        """Save the staff triage notes for a submission (Submission Admin)."""
+        async with self._engine.begin() as conn:
+            result = await conn.execute(
+                update(submission)
+                .where(submission.c.id == submission_id)
+                .values(notes=notes, acted_by=acted_by, updated_at=_now())
             )
         return result.rowcount > 0
 

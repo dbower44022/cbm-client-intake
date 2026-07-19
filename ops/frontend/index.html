@@ -7,13 +7,25 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/shared/tokens.css" />
+  <link rel="stylesheet" href="/shared/vendor/jodit/jodit.min.css" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <main class="cbm-container ops">
-    <header class="ops__header">
-      <h1>Submission Admin</h1>
-      <p class="ops__sub">Every captured submission, its delivery status, and re-drive for anything stuck.</p>
+  <main class="ops">
+    <!-- Top bar: title left, live search center, user corner right. -->
+    <header class="ops__topbar">
+      <div class="ops__title">
+        <h1>Submission Admin</h1>
+        <p class="ops__sub">Captured submissions, delivery status, and follow-up.</p>
+      </div>
+      <div class="ops__search">
+        <input type="search" id="searchBox" placeholder="Search submissions…"
+               aria-label="Search submissions" autocomplete="off" />
+      </div>
+      <div class="ops__usercorner" id="userCorner" hidden>
+        <span class="ops__who">Signed in as <strong id="whoName"></strong></span>
+        <button type="button" class="cbm-button cbm-button--secondary" id="logoutBtn">Sign out</button>
+      </div>
     </header>
 
     <!-- Sign-in happens at the portal (/); this shows access/server errors. -->
@@ -22,54 +34,79 @@
       <p><a href="/">Return to the sign-in page</a></p>
     </section>
 
-    <!-- Dashboard -->
+    <!-- List view -->
     <section class="ops__dash" id="dashView" hidden>
-      <div class="ops__toolbar">
-        <span class="ops__who">Signed in as <strong id="whoName"></strong></span>
-        <span class="ops__actions">
-          <button type="button" class="cbm-button cbm-button--secondary" id="refreshBtn">Refresh</button>
-          <button type="button" class="cbm-button cbm-button--secondary" id="logoutBtn">Sign out</button>
-        </span>
-      </div>
-
-      <p class="ops__metrics" id="metrics"></p>
-      <div class="ops__counts" id="counts"></div>
-
-      <div class="ops__filters">
+      <div class="ops__controls">
         <select id="statusFilter" aria-label="Filter by status"></select>
         <select id="formFilter" aria-label="Filter by form"></select>
+        <div class="ops__counts" id="counts"></div>
+        <span class="ops__metrics" id="metrics"></span>
+        <button type="button" class="cbm-button cbm-button--secondary" id="refreshBtn">Refresh</button>
       </div>
 
       <p class="ops__notice" id="notice" role="status" hidden></p>
 
-      <table class="ops__table" id="subTable" hidden>
-        <thead>
-          <tr>
-            <th>Reference</th><th>Form</th><th>Status</th><th>Submitter</th>
-            <th>Received</th><th class="num">Attempts</th><th>Last error</th><th></th>
-          </tr>
-        </thead>
-        <tbody id="subBody"></tbody>
-      </table>
-      <p class="ops__empty" id="emptyState" hidden>No submissions match.</p>
-      <p class="ops__loading" id="loadingState">Loading…</p>
+      <div class="ops__gridwrap" id="gridWrap">
+        <table class="ops__table" id="subTable" hidden>
+          <thead id="subHead"></thead>
+          <tbody id="subBody"></tbody>
+        </table>
+        <p class="ops__empty" id="emptyState" hidden>No submissions match.</p>
+        <p class="ops__loading" id="loadingState">Loading…</p>
+      </div>
     </section>
 
-    <!-- Detail modal -->
-    <div class="modal" id="detailModal" hidden>
-      <div class="modal__backdrop" data-close></div>
-      <div class="modal__dialog" role="dialog" aria-modal="true">
-        <button type="button" class="modal__close" aria-label="Close" data-close>&times;</button>
-        <h2 class="modal__title" id="detailTitle">Submission</h2>
+    <!-- Detail view (replaces the old modal): Overview / Details / Communications -->
+    <section class="ops__detail" id="detailView" hidden>
+      <div class="ops__detail-head">
+        <button type="button" class="cbm-button cbm-button--secondary" id="backBtn">← Back</button>
+        <span class="ops__detail-heading">
+          <h2 id="detailTitle">Submission</h2>
+          <span id="detailBadge"></span>
+        </span>
+        <span class="ops__detail-actions" id="detailActions"></span>
+      </div>
+      <p class="ops__notice" id="detailNotice" role="status" hidden></p>
+
+      <nav class="ops__tabs" id="detailTabs" role="tablist"></nav>
+
+      <div class="ops__panel" data-panel="overview">
+        <div class="ops__ov">
+          <aside class="ops__facts" id="ovFacts"></aside>
+          <div class="ops__ov-main">
+            <div class="ops__notes" id="notesCard"></div>
+            <div class="ops__conv">
+              <div class="ops__conv-head">
+                <h3>Conversation with the submitter</h3>
+                <span class="ops__conv-actions" id="convActions"></span>
+              </div>
+              <div id="convList"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ops__panel" data-panel="details" hidden>
         <div id="detailBody"></div>
       </div>
-    </div>
+
+      <div class="ops__panel" data-panel="communications" hidden>
+        <div class="ops__conv-head">
+          <h3>Email history</h3>
+          <span id="commActions"></span>
+        </div>
+        <div id="commList"></div>
+      </div>
+    </section>
 
     <footer class="cbm-footer">
       <p>&copy; <span data-cbm-year>2026</span> Cleveland Business Mentors.<span class="cbm-footer__version" data-cbm-version></span></p>
     </footer>
   </main>
 
+  <script src="/shared/vendor/jodit/jodit.min.js"></script>
+  <script src="/shared/richtext.js"></script>
+  <script src="/shared/quickmail.js"></script>
   <script src="app.js"></script>
   <script src="/shared/footer.js"></script>
 </body>

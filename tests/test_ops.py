@@ -25,7 +25,8 @@ class FakeOpsStore:
             "abc12345": {
                 "id": "abc12345", "form_slug": "info-request", "status": "needs_attention",
                 "attempt_count": 2, "last_error": "boom", "email": "a@b.com",
-                "payload": {"first_name": "Ada"}, "progress": None, "result": None,
+                "payload": {"first_name": "Ada", "email": "a@b.com"},
+                "progress": None, "result": None,
             }
         }
         self.redriven = []
@@ -55,6 +56,14 @@ class FakeOpsStore:
         if row is None or row["status"] == "completed":
             return False
         row["status"] = "discarded"
+        row["acted_by"] = acted_by
+        return True
+
+    async def set_notes(self, submission_id, notes, *, acted_by=None):
+        row = self.rows.get(submission_id)
+        if row is None:
+            return False
+        row["notes"] = notes
         row["acted_by"] = acted_by
         return True
 
@@ -148,3 +157,43 @@ def test_metrics(monkeypatch):
     with TestClient(_app(monkeypatch, FakeOpsStore())) as c:
         m = c.get("/ops/api/metrics").json()
     assert m["needsAttention"] == 1 and "backlog" in m
+
+
+def test_session_carries_crm_url_and_comms_flag(monkeypatch):
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, FakeOpsStore())) as c:
+        data = c.get("/ops/api/session").json()
+    assert "crmUrl" in data
+    assert data["commsEnabled"] is False  # gmail off in tests
+
+
+def test_save_notes(monkeypatch):
+    """Staff triage notes (Submission Admin rebuild): stored with acted_by."""
+    store = FakeOpsStore()
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, store)) as c:
+        ok = c.put("/ops/api/submissions/abc12345/notes", json={"notes": "called them"})
+        missing = c.put("/ops/api/submissions/nope/notes", json={"notes": "x"})
+    assert ok.status_code == 200
+    assert store.rows["abc12345"]["notes"] == "called them"
+    assert store.rows["abc12345"]["acted_by"] == _USER["userName"]
+    assert missing.status_code == 404
+
+
+def test_messages_degrade_readably(monkeypatch):
+    """The conversation endpoint degrades to a reason (never a 500): gmail off
+    on this deployment, and a submission with no submitter email."""
+    store = FakeOpsStore()
+    store.rows["noemail01"] = {
+        "id": "noemail01", "form_slug": "info-request", "status": "completed",
+        "attempt_count": 1, "last_error": None, "email": None,
+        "payload": {"first_name": "Nan"}, "progress": None, "result": None,
+    }
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, store)) as c:
+        off = c.get("/ops/api/submissions/abc12345/messages").json()
+        noaddr = c.get("/ops/api/submissions/noemail01/messages").json()
+        missing = c.get("/ops/api/submissions/nope/messages")
+    assert off["messages"] == [] and "enabled" in off["reason"]
+    assert noaddr["messages"] == [] and "no submitter email" in noaddr["reason"]
+    assert missing.status_code == 404
