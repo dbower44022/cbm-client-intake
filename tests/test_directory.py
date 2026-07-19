@@ -23,13 +23,17 @@ def _clear_settings_cache():
 # --- a configurable fake EspoClient -----------------------------------------
 
 class FakeClient:
-    def __init__(self, *, layouts, i18n, fields, records, acl=None):
+    def __init__(self, *, layouts, i18n, fields, records, acl=None, related=None):
         self.layouts = layouts        # {(entity, name): data}
         self._i18n = i18n             # {entity: {"fields": {...}}}
         self.fields = fields          # {entity: {field: def}}
         self.records = records        # {entity: [record, ...]}
         self.acl = acl or {}
+        self.related = related or {}  # {(entity, id, link): [record, ...]}
         self.updated = []
+
+    async def list_related(self, entity, record_id, link, *, select=None, max_size=200):
+        return {"list": list(self.related.get((entity, record_id, link), []))}
 
     async def layout(self, entity, name="list"):
         return self.layouts[(entity, name)]
@@ -87,23 +91,32 @@ def _accounts_client(acl_edit="own"):
                     [{"name": "cCompanyType"}, {"name": "website"}],
                     [{"name": "description"}, False],
                 ]},
+                {"customLabel": "Client Profile", "rows": [[{"name": "clientStage"}]]},
+                {"customLabel": "Partner Profile", "rows": [[{"name": "partnerTier"}]]},
             ],
         },
         i18n={"Account": {"fields": {"cCompanyType": "Company Type", "website": "Website", "name": "Name"}}},
         fields={"Account": {
             "name": {"type": "varchar"},
-            "cCompanyType": {"type": "multiEnum", "options": ["Client", "Partner", "Donor"]},
+            "cCompanyType": {"type": "multiEnum", "options": ["Client", "Partner", "Sponsor"]},
             "website": {"type": "url"},
             "description": {"type": "text"},
+            "clientStage": {"type": "varchar"},
+            "partnerTier": {"type": "varchar"},
         }},
         records={"Account": [
             {"id": "a1", "name": "Acme", "cCompanyType": ["Client"], "website": "acme.com",
-             "description": "note", "assignedUsersIds": ["u1"]},
+             "description": "note", "clientStage": "Active", "partnerTier": "Gold",
+             "assignedUsersIds": ["u1"]},
             {"id": "a2", "name": "Beta", "cCompanyType": ["Partner"], "website": "",
-             "assignedUsersIds": []},
-            {"id": "a3", "name": "Gamma", "cCompanyType": ["Donor"], "assignedUsersIds": ["u9"]},
+             "clientStage": "Active", "partnerTier": "Gold", "assignedUsersIds": []},
+            {"id": "a3", "name": "Gamma", "cCompanyType": ["Sponsor"], "assignedUsersIds": ["u9"]},
         ]},
         acl={"Account": {"edit": acl_edit}},
+        related={("Account", "a1", "contacts"): [
+            {"id": "c1", "name": "Andy Axle", "emailAddress": "andy@acme.com", "phoneNumber": "+12160001111"},
+            {"id": "c2", "name": "Bea Bolt", "emailAddress": "bea@acme.com", "phoneNumber": None},
+        ]},
     )
 
 
@@ -123,7 +136,7 @@ async def test_columns_come_from_the_list_layout():
 async def test_filters_resolve_options_from_metadata():
     flt = await service.filters(_accounts_client(), COMPANIES)
     assert flt == [{"key": "cCompanyType", "label": "Company Type", "type": "multi",
-                    "options": ["Client", "Partner", "Donor"]}]
+                    "options": ["Client", "Partner", "Sponsor"]}]
 
 
 # --- list / search / filter / paginate --------------------------------------
@@ -168,6 +181,39 @@ async def test_detail_edit_gate_non_owner_readonly():
     d = await service.detail(_accounts_client(), COMPANIES, "a2", user_id="u1")
     assert d["editable"] is False and d["isOwn"] is False
     assert all(not f["editable"] for p in d["panels"] for f in p["fields"])
+
+
+@pytest.mark.asyncio
+async def test_company_detail_shows_only_the_matching_type_profile():
+    # a1 is a Client -> Client Profile shown, Partner Profile hidden.
+    d = await service.detail(_accounts_client(), COMPANIES, "a1", user_id="u1")
+    titles = [p["title"] for p in d["panels"]]
+    assert "Identification" in titles          # non-profile panels always show
+    assert "Client Profile" in titles
+    assert "Partner Profile" not in titles
+    # a2 is a Partner -> the reverse.
+    d2 = await service.detail(_accounts_client(), COMPANIES, "a2", user_id="u1")
+    t2 = [p["title"] for p in d2["panels"]]
+    assert "Partner Profile" in t2 and "Client Profile" not in t2
+    # a3 is a Sponsor -> neither Client nor Partner profile shows.
+    d3 = await service.detail(_accounts_client(), COMPANIES, "a3", user_id="u1")
+    t3 = [p["title"] for p in d3["panels"]]
+    assert "Client Profile" not in t3 and "Partner Profile" not in t3
+
+
+@pytest.mark.asyncio
+async def test_company_detail_lists_contacts():
+    d = await service.detail(_accounts_client(), COMPANIES, "a1", user_id="u1")
+    assert [c["name"] for c in d["contacts"]] == ["Andy Axle", "Bea Bolt"]
+    assert d["contacts"][0] == {"id": "c1", "name": "Andy Axle",
+                                "email": "andy@acme.com", "phone": "+12160001111"}
+
+
+@pytest.mark.asyncio
+async def test_mentor_detail_has_no_contacts_list():
+    # Only kinds with a contacts_link get a contacts list.
+    d = await service.detail(_mentor_client(), MENTORS, "m1", user_id="u1")
+    assert d["contacts"] == []
 
 
 @pytest.mark.asyncio

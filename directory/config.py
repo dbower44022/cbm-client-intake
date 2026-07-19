@@ -38,6 +38,14 @@ class DirectoryConfig:
     # / bool) and options are resolved live from CRM metadata; a field that turns
     # out not to be filterable is silently dropped.
     filters: tuple[str, ...] = field(default_factory=tuple)
+    # A hasMany link to the record's contacts (e.g. Account -> "contacts"). When
+    # set, the detail pop-up lists them (name/phone/email) at the bottom.
+    contacts_link: Optional[str] = None
+    # An enum/multiEnum field naming the record's TYPE (e.g. Account ->
+    # "cCompanyType"). When set, detail panels titled "<Type> Profile" are shown
+    # only when the record's type includes that type — so a Client company hides
+    # the Partner Profile panel, etc. Non-"… Profile" panels are never filtered.
+    type_field: Optional[str] = None
 
 
 COMPANIES = DirectoryConfig(
@@ -45,6 +53,8 @@ COMPANIES = DirectoryConfig(
     title="Companies",
     entity="Account",
     filters=("cCompanyType",),
+    contacts_link="contacts",
+    type_field="cCompanyType",
 )
 
 CONTACTS = DirectoryConfig(

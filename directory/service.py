@@ -297,6 +297,62 @@ async def _detail_panels(
     return panels
 
 
+def _type_panel_type(title: str, type_words: list[str]) -> Optional[str]:
+    """If ``title`` is a "<Type> Profile" panel, the matching type word, else
+    None. So "Client Profile" -> "Client"; "Identification"/"Social Media" -> None
+    (never filtered). Requires the "Profile" suffix so a coincidental prefix like
+    "Partnership Details" isn't treated as a type panel."""
+    t = (title or "").strip()
+    if not t.lower().endswith("profile"):
+        return None
+    lead = t.split()[0].lower()
+    for w in type_words:
+        if w and w.lower() == lead:
+            return w
+    return None
+
+
+def _filter_type_panels(
+    panels: list[dict[str, Any]], type_words: list[str], record_types: Any
+) -> list[dict[str, Any]]:
+    """Drop "<Type> Profile" panels whose type isn't among the record's types."""
+    if isinstance(record_types, (list, tuple, set)):
+        have = {str(v) for v in record_types}
+    elif record_types:
+        have = {str(record_types)}
+    else:
+        have = set()
+    out = []
+    for p in panels:
+        mt = _type_panel_type(p.get("title", ""), type_words)
+        if mt is not None and mt not in have:
+            continue
+        out.append(p)
+    return out
+
+
+async def _company_contacts(
+    client: DirClient, cfg: DirectoryConfig, record_id: str
+) -> list[dict[str, Any]]:
+    """The record's related contacts (name/email/phone) for the pop-up's contacts
+    list. Best-effort: a forbidden/failed read just yields an empty list."""
+    if not cfg.contacts_link:
+        return []
+    try:
+        data = await client.list_related(
+            cfg.entity, record_id, cfg.contacts_link,
+            select="name,emailAddress,phoneNumber", max_size=200,
+        )
+    except EspoError as exc:
+        log.warning("could not read %s contacts for %s: %s", cfg.entity, record_id, exc)
+        return []
+    return [
+        {"id": c["id"], "name": c.get("name"),
+         "email": c.get("emailAddress"), "phone": c.get("phoneNumber")}
+        for c in data.get("list", [])
+    ]
+
+
 async def detail(
     client: DirClient, cfg: DirectoryConfig, record_id: str,
     user_id: Optional[str] = None,
@@ -309,9 +365,12 @@ async def detail(
     editable_spec = _field_spec(await meta.fields(), cfg.entity)
     spec_by_name = {f["name"]: f for f in editable_spec if f.get("editable")}
 
-    # Read the detail-layout fields + editable-spec fields + ownership.
+    # Read the detail-layout fields + editable-spec fields + ownership (+ the
+    # type field, so profile panels can be filtered to the company's type).
     layout = await meta.layout("detail")
     names: set[str] = {"id", "name", *_OWNER_FIELDS}
+    if cfg.type_field:
+        names.add(cfg.type_field)
     for panel in layout:
         for row in (panel.get("rows", []) if isinstance(panel, dict) else []):
             for cell in row or []:
@@ -327,11 +386,18 @@ async def detail(
     record_editable = cfg.editable and _editable_for(levels.get(cfg.entity), rec, user_id)
 
     panels = await _detail_panels(meta, rec, spec_by_name, record_editable)
+    if cfg.type_field:
+        type_words = [
+            o for o in ((await meta.fields()).get(cfg.type_field, {}).get("options") or [])
+            if o
+        ]
+        panels = _filter_type_panels(panels, type_words, rec.get(cfg.type_field))
     return {
         "id": record_id,
         "entity": cfg.entity,
         "name": rec.get("name"),
         "panels": panels,
+        "contacts": await _company_contacts(client, cfg, record_id),
         "editable": record_editable,   # inline edit allowed (owned + ACL + kind)
         "isOwn": is_own,               # for the mentor edit-handoff decision
         "editHandoff": cfg.edit_handoff,

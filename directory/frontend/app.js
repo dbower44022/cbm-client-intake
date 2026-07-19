@@ -220,17 +220,52 @@
   function openModal() { show($("modal")); }
   function closeModal() { hide($("modal")); editing = null; hide($("modalFoot")); }
 
+  function contactsInto(container, contacts) {
+    if (!contacts || !contacts.length) return;
+    var block = el("div", "dir__panel");
+    block.appendChild(el("h3", null, "Company Contacts"));
+    var table = el("table", "dir__contacts");
+    var thead = el("thead"); var htr = el("tr");
+    ["Name", "Phone", "Email"].forEach(function (h) { htr.appendChild(el("th", null, h)); });
+    thead.appendChild(htr); table.appendChild(thead);
+    var tbody = el("tbody");
+    contacts.forEach(function (c) {
+      var tr = el("tr");
+      var nameTd = el("td");
+      var a = el("a", null, c.name || "(no name)"); a.href = "#";
+      a.addEventListener("click", function (ev) { ev.preventDefault(); openContactPeek(c.id); });
+      nameTd.appendChild(a); tr.appendChild(nameTd);
+      var phoneTd = el("td"); renderValue(phoneTd, "phone", c.phone); tr.appendChild(phoneTd);
+      var emailTd = el("td"); renderValue(emailTd, "email", c.email); tr.appendChild(emailTd);
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody); block.appendChild(table); container.appendChild(block);
+  }
+
   async function openView(id) {
     try {
       var d = await getDetail(id);
       $("modalTitle").textContent = d.name || "(no name)";
       var body = $("modalBody"); body.innerHTML = "";
       panelsInto(body, d.panels);
+      contactsInto(body, d.contacts);
       editing = null; hide($("modalFoot"));
       var eb = $("modalEditBtn"); eb.textContent = "Edit"; show(eb);
       eb.onclick = function () { openEdit(id); };
       openModal();
     } catch (e) { notify(e.message); }
+  }
+
+  async function openContactPeek(contactId) {
+    var body = $("peekBody"); body.innerHTML = "";
+    $("peekTitle").textContent = "Loading…";
+    show($("peekModal"));
+    try {
+      var d = await api("/contactdetail/" + contactId);
+      $("peekTitle").textContent = d.name || "Contact";
+      panelsInto(body, d.panels);
+      if (!body.children.length) body.appendChild(el("p", "dir__restricted", "No details to show."));
+    } catch (e) { $("peekTitle").textContent = "Contact"; body.appendChild(el("p", "dir__restricted", e.message)); }
   }
 
   function fieldInput(f) {
@@ -436,7 +471,13 @@
     $("modalCancelBtn").addEventListener("click", closeModal);
     $("modalSaveBtn").addEventListener("click", saveEdit);
     $("modal").addEventListener("click", function (e) { if (e.target === $("modal")) closeModal(); });
-    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("modal").hidden) closeModal(); });
+    $("peekClose").addEventListener("click", function () { hide($("peekModal")); });
+    $("peekModal").addEventListener("click", function (e) { if (e.target === $("peekModal")) hide($("peekModal")); });
+    document.addEventListener("keydown", function (e) {
+      if (e.key !== "Escape") return;
+      if (!$("peekModal").hidden) hide($("peekModal"));   // close the nested one first
+      else if (!$("modal").hidden) closeModal();
+    });
     $("logoutBtn").addEventListener("click", async function () { try { await api("/logout", { method: "POST" }); } catch (e) {} location.href = "/"; });
     initSplitter();
   }

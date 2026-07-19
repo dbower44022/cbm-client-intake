@@ -95,6 +95,17 @@
     </div>
   </div>
 
+  <!-- Nested contact-detail pop-up (opened from the company contacts list). -->
+  <div class="dir__modal" id="peekModal" hidden>
+    <div class="dir__modal-card dir__modal-card--sm" role="dialog" aria-modal="true" aria-labelledby="peekTitle">
+      <div class="dir__modal-head">
+        <h2 id="peekTitle"></h2>
+        <button type="button" class="dir__modal-x" id="peekClose" aria-label="Close">&times;</button>
+      </div>
+      <div class="dir__modal-body" id="peekBody"></div>
+    </div>
+  </div>
+
   <script src="/shared/vendor/jodit/jodit.min.js"></script>
   <script src="/shared/richtext.js"></script>
   <script src="/shared/phone-format.js"></script>

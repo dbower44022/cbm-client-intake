@@ -137,6 +137,20 @@ def make_router(cfg: DirectoryConfig) -> APIRouter:
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not load the record")
 
+    @router.get("/contactdetail/{contact_id}")
+    async def contact_detail(contact_id: str, request: Request) -> dict:
+        """Read-only Contact detail for the company pop-up's contacts list (the
+        name link). Reuses the Contacts directory config, so it's the same
+        CRM-arranged view; the ACL read runs as the user."""
+        from .config import DIRECTORIES
+
+        user = _require_user(request)
+        client = client_for(get_settings(), user)
+        try:
+            return await service.detail(client, DIRECTORIES["contacts"], contact_id, user.get("userId"))
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not load the contact")
+
     @router.put("/records/{record_id}")
     async def save_record(record_id: str, body: SaveIn, request: Request) -> dict:
         user = _require_user(request)
