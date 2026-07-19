@@ -639,6 +639,13 @@
       if (n.entity && n.attr) items.push({ label: "Edit", fn: function () { editOverallNotes(d); } });
       openContextMenu(e.clientX, e.clientY, items);
     });
+    // Double-click = the fastest route to the full-page View (Doug's
+    // 2026-07-19 follow-up). Not when the double-click lands on a button
+    // or the drag bar — those have their own jobs.
+    card.addEventListener("dblclick", function (e) {
+      if (e.target.closest("button") || e.target.closest(".sx__overall-resize")) return;
+      viewOverallNotes(d);
+    });
     box.appendChild(card);
   }
 

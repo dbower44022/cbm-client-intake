@@ -1422,7 +1422,9 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-18)
 
-**Main is at v0.97.0** (2026-07-19, 777 tests green, committed NOT pushed) —
+**Main is at v0.97.1** (2026-07-19, 777 tests green, committed NOT pushed) —
+**+ double-click the notes panel opens the full-page View** (0.97.1 — the
+fastest route; button/drag-bar double-clicks keep their own jobs).
 **Overview notes: 50%-height cap + drag bar + full-page View** (Doug's
 request; frontend-only, all three domains): the notes panel body caps at
 50vh and scrolls, a drag bar under it resizes the cap (sticks across

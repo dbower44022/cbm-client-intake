@@ -4,6 +4,13 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.97.1] — 2026-07-19
+
+### Added
+- **Double-click the Overview notes panel to open the full-page View**
+  (Doug's follow-up to 0.97.0: the fastest route wins). A double-click on
+  a button or the drag bar keeps doing its own job.
+
 ## [0.97.0] — 2026-07-19
 
 **Overview notes panel: height cap, drag-resize, and a full-page View**
