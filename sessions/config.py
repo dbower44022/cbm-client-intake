@@ -249,8 +249,10 @@ DETAIL_SESSION_SELECT = (
 
 MENTOR = DomainConfig(
     slug="mentorsessions",
-    title="Mentor Sessions",
-    subtitle="Review your engagements and record mentoring sessions.",
+    # Display name only (Doug's renames 2026-07-19) — the package/route stay
+    # mentorsessions, like assignments/"Client Administration".
+    title="Client Management",
+    subtitle="Review your client engagements and record mentoring sessions.",
     allowed_teams_attr="session_mentor_allowed_teams_list",
     parent_entity=ENGAGEMENT,
     parent_label="Engagement",
@@ -359,7 +361,7 @@ MENTOR = DomainConfig(
 
 PARTNER = DomainConfig(
     slug="partnersessions",
-    title="Partner Sessions",
+    title="Partner Management",  # display name only — route stays partnersessions
     subtitle="Review the partners you manage and record partner sessions.",
     allowed_teams_attr="session_partner_allowed_teams_list",
     parent_entity=PARTNER_PROFILE,
@@ -439,8 +441,10 @@ PARTNER = DomainConfig(
 
 SPONSOR = DomainConfig(
     slug="sponsorsessions",
-    title="Sponsor Sessions",
-    subtitle="Review the sponsors you manage and record sponsor sessions.",
+    # "Funder" is the user-facing word (Doug's rename 2026-07-19); the CRM
+    # records and route keep the sponsor naming.
+    title="Funder Management",
+    subtitle="Review the funders you manage and record sessions.",
     allowed_teams_attr="session_sponsor_allowed_teams_list",
     parent_entity=SPONSOR_PROFILE,
     parent_label="Sponsor",

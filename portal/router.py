@@ -89,13 +89,15 @@ def _apps_for(user: dict[str, Any], settings: Settings) -> list[dict[str, str]]:
     # A mentor's self-service profile editor (own record + website preview).
     if is_member(user, settings.mentor_profile_allowed_teams_list):
         apps.append({"title": "My Mentor Profile", "url": "/mentorprofile/", "target": "cbm-mentorprofile"})
-    # Session Management tools — each gated to its own team.
+    # Session Management tools — each gated to its own team. Display names
+    # renamed 2026-07-19 (Doug): Client / Partner / Funder Management — the
+    # routes and team gates are unchanged.
     if is_member(user, settings.session_mentor_allowed_teams_list):
-        apps.append({"title": "Mentor Sessions", "url": "/mentorsessions/", "target": "cbm-mentorsessions"})
+        apps.append({"title": "Client Management", "url": "/mentorsessions/", "target": "cbm-mentorsessions"})
     if is_member(user, settings.session_partner_allowed_teams_list):
-        apps.append({"title": "Partner Sessions", "url": "/partnersessions/", "target": "cbm-partnersessions"})
+        apps.append({"title": "Partner Management", "url": "/partnersessions/", "target": "cbm-partnersessions"})
     if is_member(user, settings.session_sponsor_allowed_teams_list):
-        apps.append({"title": "Sponsor Sessions", "url": "/sponsorsessions/", "target": "cbm-sponsorsessions"})
+        apps.append({"title": "Funder Management", "url": "/sponsorsessions/", "target": "cbm-sponsorsessions"})
     return apps
 
 

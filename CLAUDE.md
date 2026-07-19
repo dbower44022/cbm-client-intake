@@ -619,6 +619,16 @@ mentor, not a redundant control); `list_engagements` returns `mentorId`/`mentorN
 
 ## Session Management tools — `/mentorsessions`, `/partnersessions`, `/sponsorsessions` (added 2026-07-08)
 
+**User-facing app titles (renamed 2026-07-19, v0.104.0 — Doug's ruling):
+"Client Management" (/mentorsessions), "Partner Management"
+(/partnersessions), "Funder Management" (/sponsorsessions)** — portal tiles,
+page headings, and browser-tab titles all read from `DomainConfig.title` /
+`portal/router._apps_for`, so the names live in exactly two places. The
+packages/routes/slugs/team gates are UNCHANGED (the assignments →
+"Client Administration" precedent). Note "Funder" is display wording only —
+the CRM entities stay CSponsorProfile etc.; deeper sponsor→funder copy
+(grid columns, empty states, "Sponsor Notes") was deliberately NOT swept.
+
 **One configurable engine, three team-gated routes.** Mentors, Partner Managers,
 and Sponsor Managers each review the records they own and record **meetings**
 against them as **`CSession`** records. It is **one `CSession` entity with the
@@ -1422,7 +1432,15 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-19)
 
-**Main is at v0.101.0** (2026-07-19, 789 tests green, committed NOT pushed) —
+**Main is at v0.104.0** (2026-07-19, 794 tests green, committed NOT pushed) —
+**session-tool display names renamed** (Doug): Mentor Sessions →
+"Client Management", Partner Sessions → "Partner Management", Sponsor
+Sessions → "Funder Management" — portal tiles + page headings + tab
+titles (DomainConfig.title / portal _apps_for; routes/gates unchanged;
+see the note atop the Session Management section). v0.102–0.103 = the
+parallel Workspace-Directories session.
+
+Before that: **v0.101.0** (2026-07-19, 789 tests green) —
 **edit-loss protection extended to the SESSION editor** (Doug's follow-up
 to v0.99.0): field + attendee changes autosave to localStorage
 (existing session keyed by id, new session per record with a :new

@@ -4,6 +4,18 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.104.0] — 2026-07-19
+
+**Session-tool display names** (Doug's ruling): **Mentor Sessions →
+"Client Management"**, **Partner Sessions → "Partner Management"**,
+**Sponsor Sessions → "Funder Management"** — on the portal home page, each
+app's page heading, and the browser-tab titles (all read from
+`DomainConfig.title` / the portal app list). Routes, packages, slugs, and
+team gates are unchanged (`/mentorsessions` etc.). Subtitles touched
+minimally ("client engagements", "funders you manage"); the CRM entities
+keep their sponsor naming, and deeper sponsor→funder copy (grid columns,
+Sponsor Notes) was deliberately not swept.
+
 ## [0.103.0] — 2026-07-19
 
 **feat(directory): add a Partners directory** (`CPartnerProfile`) as a fourth

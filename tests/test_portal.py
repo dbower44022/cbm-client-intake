@@ -115,12 +115,13 @@ def _login_payload(monkeypatch, user):
 
 
 def test_mentor_team_sees_crm_forms_and_mentor_sessions(monkeypatch):
-    # Mentor Team gates the CRM link, the public forms, AND the Mentor Sessions
-    # tool (SESSION_MENTOR_ALLOWED_TEAMS defaults to Mentor Team).
+    # Mentor Team gates the CRM link, the public forms, AND the Client
+    # Management tool — the retitled /mentorsessions app
+    # (SESSION_MENTOR_ALLOWED_TEAMS defaults to Mentor Team).
     data = _login_payload(monkeypatch, _user(teams=["Mentor Team"]))
     assert data["apps"] == [
         {"title": "My Mentor Profile", "url": "/mentorprofile/", "target": "cbm-mentorprofile"},
-        {"title": "Mentor Sessions", "url": "/mentorsessions/", "target": "cbm-mentorsessions"},
+        {"title": "Client Management", "url": "/mentorsessions/", "target": "cbm-mentorsessions"},
     ]
     # Mentor Team is the default workspace team, so the directories show too.
     assert [d["url"] for d in data["directories"]] == [
