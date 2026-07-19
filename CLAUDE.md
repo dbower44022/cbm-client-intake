@@ -1422,7 +1422,19 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-18)
 
-**Main is at v0.96.0** (2026-07-19, 777 tests green, committed NOT pushed) —
+**Main is at v0.97.0** (2026-07-19, 777 tests green, committed NOT pushed) —
+**Overview notes: 50%-height cap + drag bar + full-page View** (Doug's
+request; frontend-only, all three domains): the notes panel body caps at
+50vh and scrolls, a drag bar under it resizes the cap (sticks across
+re-renders), a View button + right-click menu (View/Edit,
+assignments-style) open the complete notes in a freely resizable
+92vw×86vh pop-up (no width cap per the ruling; Close/Escape/backdrop
+dismiss). Verified in the stub harness with 40-paragraph notes (cap =
+half the viewport + inner scroll, drag grows it, menu opens/closes,
+pop-up shows all content, resize:both, esc+backdrop close; no console
+errors — watch for the browser CACHING styles.css when eyeballing).
+
+Before that: **v0.96.0** (2026-07-19, 777 tests green) —
 **Details-tab edit buttons are NEVER hidden** (Doug's ruling, extending
 [[buttons-never-disabled-validate-on-click]] to hiding — a missing button
 reads as a bug and generates support calls): the parent strip's Edit, the

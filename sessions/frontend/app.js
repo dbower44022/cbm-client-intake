@@ -589,6 +589,11 @@
   // important item on partners/sponsors, so no trip to the Details tab).
   // The Edit button is always active; a user without the CRM edit grant
   // gets the readable 403 on Save (buttons-never-disabled convention).
+  // Long notes (Doug's rulings 2026-07-19): the panel body caps at 50% of
+  // the page height (scrolls inside); a horizontal splitter under it drags
+  // the cap; a View button (and right-click → View) opens the whole notes
+  // in a full-page, freely resizable pop-up.
+  var notesPanelPx = null;  // user-dragged cap (px); survives re-renders this page
   function renderOverallNotes(d) {
     var box = $("overallNotes"); box.innerHTML = "";
     var n = d.overallNotes;
@@ -597,13 +602,21 @@
     var head = document.createElement("div"); head.className = "sx__overall-head";
     var h = document.createElement("h3"); h.className = "sx__overall-h"; h.textContent = n.label;
     head.appendChild(h);
+    var btns = document.createElement("span"); btns.className = "sx__overall-btns";
+    var vb = document.createElement("button");
+    vb.type = "button"; vb.className = "sxd__btn"; vb.textContent = "View";
+    vb.title = "Open the full " + String(n.label || "notes").toLowerCase() + " in a resizable window";
+    vb.addEventListener("click", function () { viewOverallNotes(d); });
+    btns.appendChild(vb);
     if (n.entity && n.attr) {
       var eb = document.createElement("button");
       eb.type = "button"; eb.className = "sxd__btn"; eb.textContent = "Edit";
       eb.addEventListener("click", function () { editOverallNotes(d); });
-      head.appendChild(eb);
+      btns.appendChild(eb);
     }
-    var body = document.createElement("div"); body.className = "sx__overall-body";
+    head.appendChild(btns);
+    var body = document.createElement("div"); body.className = "sx__overall-body sx__overall-clip";
+    if (notesPanelPx) body.style.maxHeight = notesPanelPx + "px";
     var raw = n.value == null ? "" : String(n.value);
     // A wysiwyg field that's "empty" can still hold blank markup (<p><br></p>).
     var isEmpty = !raw.trim();
@@ -616,7 +629,101 @@
       body.textContent = "No " + String(n.label || "notes").toLowerCase() + " recorded yet.";
     } else if (n.type === "html") { body.innerHTML = sanitizeHtml(raw); }
     else { body.className += " sx__pre"; body.textContent = raw; }
-    card.appendChild(head); card.appendChild(body); box.appendChild(card);
+    card.appendChild(head); card.appendChild(body);
+    card.appendChild(notesResizeBar(body));
+    // Right-click anywhere on the panel: View / Edit (assignments' every-
+    // function-right-clickable convention).
+    card.addEventListener("contextmenu", function (e) {
+      e.preventDefault();
+      var items = [{ label: "View", fn: function () { viewOverallNotes(d); } }];
+      if (n.entity && n.attr) items.push({ label: "Edit", fn: function () { editOverallNotes(d); } });
+      openContextMenu(e.clientX, e.clientY, items);
+    });
+    box.appendChild(card);
+  }
+
+  // The horizontal drag handle under the notes body: dragging changes the
+  // body's max-height (min 6rem, max 90% of the viewport).
+  function notesResizeBar(body) {
+    var bar = document.createElement("div"); bar.className = "sx__overall-resize";
+    bar.setAttribute("role", "separator"); bar.setAttribute("aria-orientation", "horizontal");
+    bar.title = "Drag to resize the notes panel";
+    bar.addEventListener("pointerdown", function (e) {
+      e.preventDefault();
+      try { bar.setPointerCapture(e.pointerId); } catch (_) { /* synthetic events */ }
+      var startY = e.clientY, startH = body.getBoundingClientRect().height;
+      function move(ev) {
+        var h = Math.min(window.innerHeight * 0.9, Math.max(96, startH + (ev.clientY - startY)));
+        notesPanelPx = Math.round(h);
+        body.style.maxHeight = notesPanelPx + "px";
+        ev.preventDefault();
+      }
+      function up() {
+        window.removeEventListener("pointermove", move);
+        window.removeEventListener("pointerup", up);
+        window.removeEventListener("pointercancel", up);
+      }
+      window.addEventListener("pointermove", move);
+      window.addEventListener("pointerup", up);
+      window.addEventListener("pointercancel", up);
+    });
+    return bar;
+  }
+
+  // Small floating context menu (fixed at the cursor); click-away/Escape closes.
+  function openContextMenu(x, y, items) {
+    closeContextMenu();
+    var m = document.createElement("div"); m.className = "sx__ctxmenu"; m.id = "sxCtxMenu";
+    items.forEach(function (it) {
+      var b = document.createElement("button"); b.type = "button"; b.textContent = it.label;
+      b.addEventListener("click", function () { closeContextMenu(); it.fn(); });
+      m.appendChild(b);
+    });
+    m.style.left = x + "px"; m.style.top = y + "px";
+    document.body.appendChild(m);
+    // Keep it on-screen if opened near the edge.
+    var r = m.getBoundingClientRect();
+    if (r.right > window.innerWidth) m.style.left = Math.max(0, window.innerWidth - r.width - 4) + "px";
+    if (r.bottom > window.innerHeight) m.style.top = Math.max(0, window.innerHeight - r.height - 4) + "px";
+    setTimeout(function () {
+      document.addEventListener("click", closeContextMenu, { once: true });
+      document.addEventListener("contextmenu", closeContextMenu, { once: true });
+    }, 0);
+    document.addEventListener("keydown", ctxEscClose);
+  }
+  function ctxEscClose(e) { if (e.key === "Escape") closeContextMenu(); }
+  function closeContextMenu() {
+    var m = document.getElementById("sxCtxMenu");
+    if (m) m.remove();
+    document.removeEventListener("keydown", ctxEscClose);
+  }
+
+  // Full-page, freely resizable pop-up with the complete notes (for very long
+  // notes the capped panel clips). CSS resize on the card; Escape / × /
+  // backdrop close.
+  function viewOverallNotes(d) {
+    var n = d.overallNotes;
+    if (!n) return;
+    var overlay = document.createElement("div"); overlay.className = "sx__modal sx__notesview";
+    var backdrop = document.createElement("div"); backdrop.className = "sx__modal-backdrop";
+    backdrop.addEventListener("click", close);
+    var card = document.createElement("div"); card.className = "sx__notesview-card";
+    var head = document.createElement("div"); head.className = "sx__modal-head";
+    var t = document.createElement("h3"); t.className = "sx__modal-name"; t.textContent = n.label;
+    var x = document.createElement("button");
+    x.type = "button"; x.className = "sxd__btn"; x.textContent = "Close"; x.addEventListener("click", close);
+    head.appendChild(t); head.appendChild(x);
+    var body = document.createElement("div"); body.className = "sx__overall-body sx__notesview-body";
+    var raw = n.value == null ? "" : String(n.value);
+    if (!raw.trim()) { body.className += " sx__muted"; body.textContent = "No " + String(n.label || "notes").toLowerCase() + " recorded yet."; }
+    else if (n.type === "html") { body.innerHTML = sanitizeHtml(raw); }
+    else { body.className += " sx__pre"; body.textContent = raw; }
+    card.appendChild(head); card.appendChild(body);
+    overlay.appendChild(backdrop); overlay.appendChild(card);
+    document.body.appendChild(overlay);
+    function esc(e) { if (e.key === "Escape") close(); }
+    function close() { overlay.remove(); document.removeEventListener("keydown", esc); }
+    document.addEventListener("keydown", esc);
   }
 
   // Swap the notes panel for an inline editor (CBMRichText for wysiwyg notes,

@@ -305,11 +305,43 @@ td.sxd__actions { text-align: right; white-space: nowrap; }
 }
 .sx__overall-h { margin: 0 0 0.4rem; font-size: 1.05rem; }
 .sx__overall-head { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; }
-.sx__overall-head .sxd__btn { flex: 0 0 auto; }
+.sx__overall-btns { display: inline-flex; gap: 0.4rem; flex: 0 0 auto; }
 .sx__overall-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.6rem; }
 .sx__overall textarea { width: 100%; box-sizing: border-box; font: inherit; padding: 0.5rem; }
 .sx__overall-body { font-size: 0.94rem; line-height: 1.5; }
 .sx__overall-body :first-child { margin-top: 0; } .sx__overall-body :last-child { margin-bottom: 0; }
+/* Long notes: cap the panel at half the page by default (scrolls inside);
+   the drag bar below adjusts the cap (JS sets an explicit max-height). */
+.sx__overall-clip { max-height: 50vh; overflow-y: auto; }
+.sx__overall-resize {
+  height: 10px; margin: 0.35rem -0.4rem 0; cursor: ns-resize; border-radius: 5px;
+  background: linear-gradient(var(--cbm-border, #e3e7ec), var(--cbm-border, #e3e7ec)) center / 44px 3px no-repeat;
+  touch-action: none;
+}
+.sx__overall-resize:hover { background-color: rgba(203, 150, 59, 0.12); }
+
+/* Right-click context menu (notes panel View/Edit). */
+.sx__ctxmenu {
+  position: fixed; z-index: 70; min-width: 10rem; padding: 0.25rem;
+  background: #fff; border: 1px solid var(--cbm-border, #e3e7ec);
+  border-radius: var(--cbm-radius, 8px); box-shadow: 0 8px 24px rgba(18, 28, 42, 0.18);
+}
+.sx__ctxmenu button {
+  display: block; width: 100%; text-align: left; padding: 0.45rem 0.7rem;
+  border: 0; background: none; font: inherit; cursor: pointer; border-radius: 6px;
+}
+.sx__ctxmenu button:hover { background: var(--cbm-gray-100, #f2f4f7); }
+
+/* Full-page resizable notes pop-up (View). */
+.sx__notesview { align-items: center; }
+.sx__notesview-card {
+  position: relative; z-index: 1; display: flex; flex-direction: column;
+  width: 92vw; height: 86vh; min-width: 24rem; min-height: 14rem;  /* full page — no width cap (Doug's ruling) */
+  background: #fff; border-radius: var(--cbm-radius, 8px);
+  box-shadow: 0 18px 48px rgba(18, 28, 42, 0.35);
+  resize: both; overflow: hidden;  /* resize needs non-visible overflow */
+}
+.sx__notesview-body { flex: 1; overflow: auto; padding: 1rem 1.2rem; }
 
 /* Drag handle between the two panels. */
 .sx__splitter {

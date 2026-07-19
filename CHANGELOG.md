@@ -4,6 +4,24 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.97.0] — 2026-07-19
+
+**Overview notes panel: height cap, drag-resize, and a full-page View**
+(Doug's request for long engagement/partner/sponsor notes). Frontend-only.
+
+### Added
+- The record-notes panel body caps at **50% of the page height** by default
+  and scrolls inside; a **drag bar** under it resizes the cap (min 6rem,
+  max 90% of the viewport; the chosen height sticks across re-renders on
+  the page).
+- A **View** button next to Edit opens the complete notes in a full-page
+  pop-up (92vw × 86vh — no width cap, per the ruling) that is **freely
+  resizable** (drag the corner) with its own scroll; Close / Escape /
+  backdrop-click dismiss it.
+- **Right-click** anywhere on the notes panel opens a context menu with
+  View / Edit (the assignments every-function-right-clickable convention);
+  click-away / Escape closes it.
+
 ## [0.96.0] — 2026-07-19
 
 **Edit buttons are never hidden** (Doug's ruling, extending the
