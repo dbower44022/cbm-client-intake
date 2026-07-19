@@ -79,6 +79,7 @@
     if (type === "date") { node.textContent = fmtDate(value); return; }
     if (type === "datetime") { node.textContent = fmtDateTime(value); return; }
     if (type === "html") { var d = el("div", "dir__val-html"); d.innerHTML = (window.CBMRichText && window.CBMRichText.sanitizeHtml) ? window.CBMRichText.sanitizeHtml(String(value)) : ""; node.appendChild(d); return; }
+    if (type === "address") { node.style.whiteSpace = "pre-line"; node.textContent = String(value); return; }
     node.textContent = String(value);   // text / longtext / int / currency
   }
 
@@ -345,18 +346,25 @@
     $("modalTitle").textContent = d.name || "(no name)";
     var body = $("modalBody"); body.innerHTML = "";
     editing = { id: id, snapshot: {}, fields: [] };
+    function registerField(grid, f) {
+      var ctl = fieldInput(f);
+      ctl.control = ctl;   // self-ref used by markChanged toggling
+      grid.appendChild(ctl.wrap);
+      editing.snapshot[f.key] = f.value == null ? (f.type === "array" ? [] : "") : f.value;
+      editing.fields.push({ name: f.key, type: f.type, getVal: ctl.getVal, control: ctl });
+    }
     d.panels.forEach(function (p) {
-      var editable = p.fields.filter(function (f) { return f.editable; });
+      // An address field is editable via its sub-fields (Street/City/…).
+      var editable = p.fields.filter(function (f) {
+        return f.editable && (f.type !== "address" || (f.subFields && f.subFields.length));
+      });
       if (!editable.length) return;
       var panel = el("div", "dir__form-panel");
       if (p.title) panel.appendChild(el("h3", null, p.title));
       var grid = el("div", "dir__form-grid");
       editable.forEach(function (f) {
-        var ctl = fieldInput(f);
-        ctl.control = ctl;   // self-ref used by markChanged toggling
-        grid.appendChild(ctl.wrap);
-        editing.snapshot[f.key] = f.value == null ? (f.type === "array" ? [] : "") : f.value;
-        editing.fields.push({ name: f.key, type: f.type, getVal: ctl.getVal, control: ctl });
+        if (f.type === "address") { f.subFields.forEach(function (sf) { registerField(grid, sf); }); }
+        else { registerField(grid, f); }
       });
       panel.appendChild(grid); body.appendChild(panel);
     });

@@ -89,6 +89,7 @@ def _accounts_client(acl_edit="own"):
                 {"customLabel": "Identification", "rows": [
                     [{"name": "name"}],
                     [{"name": "cCompanyType"}, {"name": "website"}],
+                    [{"name": "shippingAddress"}, {"name": "emailAddress"}],
                     [{"name": "description"}, False],
                 ]},
                 {"customLabel": "Client Profile", "rows": [[{"name": "clientStage"}]]},
@@ -103,10 +104,21 @@ def _accounts_client(acl_edit="own"):
             "description": {"type": "text"},
             "clientStage": {"type": "varchar"},
             "partnerTier": {"type": "varchar"},
+            "emailAddress": {"type": "email"},
+            "shippingAddress": {"type": "address"},
+            "shippingAddressStreet": {"type": "text"},
+            "shippingAddressCity": {"type": "varchar"},
+            "shippingAddressState": {"type": "varchar"},
+            "shippingAddressPostalCode": {"type": "varchar"},
+            "shippingAddressCountry": {"type": "varchar"},
         }},
         records={"Account": [
             {"id": "a1", "name": "Acme", "cCompanyType": ["Client"], "website": "acme.com",
              "description": "note", "clientStage": "Active", "partnerTier": "Gold",
+             "emailAddress": "hello@acme.com",
+             "shippingAddressStreet": "1 Main St", "shippingAddressCity": "Cleveland",
+             "shippingAddressState": "OH", "shippingAddressPostalCode": "44113",
+             "shippingAddressCountry": "USA",
              "assignedUsersIds": ["u1"]},
             {"id": "a2", "name": "Beta", "cCompanyType": ["Partner"], "website": "",
              "clientStage": "Active", "partnerTier": "Gold", "assignedUsersIds": []},
@@ -199,6 +211,35 @@ async def test_company_detail_shows_only_the_matching_type_profile():
     d3 = await service.detail(_accounts_client(), COMPANIES, "a3", user_id="u1")
     t3 = [p["title"] for p in d3["panels"]]
     assert "Client Profile" not in t3 and "Partner Profile" not in t3
+
+
+@pytest.mark.asyncio
+async def test_company_detail_composes_address_and_shows_email():
+    d = await service.detail(_accounts_client(), COMPANIES, "a1", user_id="u1")
+    ident = next(p for p in d["panels"] if p["title"] == "Identification")
+    fields = {f["key"]: f for f in ident["fields"]}
+    # Company email renders (email type).
+    assert fields["emailAddress"]["type"] == "email"
+    assert fields["emailAddress"]["value"] == "hello@acme.com"
+    # Shipping address composes from its sub-fields + is editable via them.
+    addr = fields["shippingAddress"]
+    assert addr["type"] == "address"
+    assert addr["value"] == "1 Main St\nCleveland, OH 44113\nUSA"
+    assert addr["editable"] is True
+    assert [s["key"] for s in addr["subFields"]] == [
+        "shippingAddressStreet", "shippingAddressCity", "shippingAddressState",
+        "shippingAddressPostalCode", "shippingAddressCountry",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_company_address_not_editable_when_readonly():
+    # Non-owner (edit=own) -> address is shown but carries no editable sub-fields.
+    d = await service.detail(_accounts_client(), COMPANIES, "a1", user_id="someone-else")
+    ident = next(p for p in d["panels"] if p["title"] == "Identification")
+    addr = next(f for f in ident["fields"] if f["key"] == "shippingAddress")
+    assert addr["value"] == "1 Main St\nCleveland, OH 44113\nUSA"
+    assert addr["editable"] is False and addr["subFields"] == []
 
 
 @pytest.mark.asyncio

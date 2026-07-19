@@ -52,7 +52,17 @@ _CELL_TYPE = {
     "currency": "currency", "currencyConverted": "currency",
     "date": "date", "datetime": "datetime", "datetimeOptional": "datetime",
     "wysiwyg": "html",
+    # A composite postal address (shippingAddress / billingAddress): stored as
+    # five sub-fields (<name>Street/City/State/PostalCode/Country), so it reads
+    # empty as a single attribute. _detail_panels composes it for display and
+    # expands it into editable sub-fields.
+    "address": "address",
 }
+# The sub-field suffixes of an EspoCRM address field, and their editor labels.
+_ADDRESS_PARTS = (
+    ("Street", "Street"), ("City", "City"), ("State", "State"),
+    ("PostalCode", "ZIP / Postal code"), ("Country", "Country"),
+)
 # The assignment/ownership fields read so the edit gate can check ownership.
 _OWNER_FIELDS = ("assignedUserId", "assignedUsersIds")
 
@@ -105,6 +115,45 @@ class _Meta:
             if "phone" in low:
                 return "phone"
         return ctype
+
+
+def _compose_address(rec: dict[str, Any], name: str) -> str:
+    """A postal address as display lines from its sub-fields:
+    street / "City, ST 12345" / country."""
+    lines: list[str] = []
+    street = rec.get(name + "Street")
+    if street:
+        lines.append(str(street))
+    region = " ".join(
+        str(rec[name + k]) for k in ("State", "PostalCode") if rec.get(name + k)
+    )
+    city_line = ", ".join(p for p in [rec.get(name + "City"), region] if p)
+    if city_line:
+        lines.append(city_line)
+    if rec.get(name + "Country"):
+        lines.append(str(rec[name + "Country"]))
+    return "\n".join(lines)
+
+
+def _address_field(
+    name: str, label: str, rec: dict[str, Any], editable: bool
+) -> dict[str, Any]:
+    """A composite-address field for a detail panel: a composed value for the
+    view + the editable sub-fields (Street/City/State/ZIP/Country) for edit
+    mode. ``prefix`` (Shipping / Billing) disambiguates the sub-field labels."""
+    prefix = label.replace("Address", "").strip() or label
+    sub = [
+        {"key": name + suffix, "label": f"{prefix} {part_label}", "type": "text",
+         "value": rec.get(name + suffix), "editable": editable, "options": None,
+         "phone": False}
+        for suffix, part_label in _ADDRESS_PARTS
+    ]
+    return {
+        "key": name, "label": label, "type": "address",
+        "value": _compose_address(rec, name),
+        "editable": editable, "options": None, "phone": False,
+        "subFields": sub if editable else [],
+    }
 
 
 def _read_cell(rec: dict[str, Any], name: str) -> Any:
@@ -282,11 +331,17 @@ async def _detail_panels(
                 if not name or name in seen:
                     continue
                 seen.add(name)
+                ftype = await meta.cell_type(name)
+                if ftype == "address":
+                    fields.append(_address_field(
+                        name, await meta.label(name), rec, record_editable
+                    ))
+                    continue
                 spec = spec_by_name.get(name)
                 fields.append({
                     "key": name,
                     "label": await meta.label(name),
-                    "type": await meta.cell_type(name),
+                    "type": ftype,
                     "value": _read_cell(rec, name),
                     "editable": bool(spec and record_editable),
                     "options": (spec or {}).get("options"),

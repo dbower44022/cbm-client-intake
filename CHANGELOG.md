@@ -4,6 +4,35 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.107.0] — 2026-07-19
+
+**feat(directory): Company pop-up enhancements** (Doug's requests, all
+Account-specific — the engine is unchanged). Records the work from ffbaf90
+(which shipped unversioned during a parallel-session version race) plus the
+address/email fix:
+
+- **Type-matched profile panel**: the detail pop-up shows only the profile
+  panel matching the company's `cCompanyType` — a Client shows *Client
+  Profile* and hides *Partner Profile* (and vice versa; Sponsor/Other shows
+  neither). Generic: a panel titled "<Type> Profile" appears only when the
+  record's type includes that type; ordinary panels are never filtered.
+- **Company contacts list** at the bottom of the pop-up (name / phone /
+  email), each name a link opening a nested read-only contact-detail modal;
+  phone/email are tel/compose links. New `DirectoryConfig.contacts_link` +
+  `GET /api/contactdetail/{id}`.
+- **Composite address fields now render** (`shippingAddress` / `billingAddress`
+  are EspoCRM `address` fields, so reading them as one attribute returned
+  empty). They're composed from the sub-fields for display (multi-line) and
+  expanded into editable Street/City/State/ZIP/Country inputs in edit mode
+  (`DirectoryConfig.type_field` unrelated; see `_address_field`). The company
+  **email** already rendered when present — confirmed live.
+
+Verified live against crm-test (Client → Client Profile only + its contacts;
+Partner → Partner Profile only; Agape's shipping address now composes) and the
+full UI loop in the stub harness (contacts table + nested modal; address
+multi-line view + 5 sub-field edit inputs with change-detection). 19
+directory tests (7 new); 809 total green.
+
 ## [0.106.0] — 2026-07-19
 
 **Submission Admin rebuilt** (Doug's spec: bring /ops up to the other apps'
