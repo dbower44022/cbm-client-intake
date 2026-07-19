@@ -4,6 +4,26 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.96.0] — 2026-07-19
+
+**Edit buttons are never hidden** (Doug's ruling, extending the
+never-disabled convention: a hidden button reads as a bug and generates
+"the button is missing" support calls).
+
+### Changed
+- Every ACL-gated action on the Details tab now always renders and explains
+  itself on click when the user lacks the CRM grant, instead of being
+  omitted: the parent strip's Edit ("You don't have permission to edit the
+  Partnership — ask CBM staff if you need it."), the org-card Edit
+  (Company / profile cards), each contact row's Edit (names the contact),
+  and each row's Remove ("…to change this record's contacts…" — the
+  unrelate is a parent write; the two-step arm never starts without the
+  grant). Design exclusions are unchanged (the assigned-Mentor row still
+  has no Remove — that link belongs to Client Administration).
+- Frontend-only; the server-side ACL verdicts and readable save-time 403s
+  are unchanged. Memory updated:
+  buttons-never-disabled-validate-on-click now covers hiding.
+
 ## [0.95.0] — 2026-07-18
 
 **Record notes edit in place on the Overview** (Doug's ruling: notes are the

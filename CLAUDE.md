@@ -1422,7 +1422,19 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-18)
 
-**Main is at v0.95.0** (2026-07-18, 777 tests green, committed NOT pushed) —
+**Main is at v0.96.0** (2026-07-19, 777 tests green, committed NOT pushed) —
+**Details-tab edit buttons are NEVER hidden** (Doug's ruling, extending
+[[buttons-never-disabled-validate-on-click]] to hiding — a missing button
+reads as a bug and generates support calls): the parent strip's Edit, the
+org-card Edit, contact-row Edit, and row Remove all always render;
+clicking without the CRM edit grant shows a readable "You don't have
+permission to edit X — ask CBM staff if you need it." notice instead of
+opening the form / arming the remove (frontend-only; verified in the stub
+harness both ways — read-only sections message without opening, editable
+ones still open; design exclusions like the assigned-Mentor row's absent
+Remove are unchanged). The memory file records the extension.
+
+Before that: **v0.95.0** (2026-07-18, 777 tests green) —
 **record notes edit in place on the Overview** (Doug's ruling: notes are
 the most important item on partners/sponsors — save the clicks): the
 Overview's notes panel (Partner/Sponsor/Engagement Notes, all three
@@ -1435,12 +1447,12 @@ stub harness: partner richtext + sponsor textarea loops (Edit → type →
 Save → PUT diffs only the notes attr → panel updates + success notice;
 Cancel discards, no PUT; no console errors). ALSO answers Doug's "no
 place to edit partner attributes on the Details tab": the edit is the
-strip's right-edge Edit button — present only when the CRM grants edit
-on the record (an ACL-read-only record shows no button), and the curated
-Partnership/Sponsorship forms are in the UNDEPLOYED v0.91–0.93 — after
-deploy, if a partner manager still sees no Edit anywhere, grant their
-role CPartnerProfile edit at team scope (the same CRM pass as the
-v0.89.0 read-scope work).
+strip's right-edge Edit button — until v0.96.0 it was hidden when the CRM
+denied edit on the record (superseded: it now always shows and messages
+on click), and the curated Partnership/Sponsorship forms are in the
+UNDEPLOYED v0.91–0.93 — after deploy, a partner manager who gets the
+permission message needs their role granted CPartnerProfile edit at team
+scope (the same CRM pass as the v0.89.0 read-scope work).
 
 Before that: **v0.94.0** (2026-07-18, 777 tests green) —
 **Reliability hardening Phase 6 — infra/ops — COMPLETES THE WHOLE

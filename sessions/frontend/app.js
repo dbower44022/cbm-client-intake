@@ -3645,9 +3645,21 @@
     if (typeof value === "string") v.innerHTML = value; else v.appendChild(value);
     row.appendChild(k); row.appendChild(v); return row;
   }
-  function detailsEditBtn(key) {
+  // Edit buttons are NEVER hidden for permission reasons (Doug's ruling
+  // 2026-07-19): a missing button reads as a bug ("the button is missing"),
+  // so it always renders, and clicking without the CRM edit grant explains
+  // exactly that. `editable` = the per-record ACL verdict from the server;
+  // `what` names the record in the message ("the Partnership", "this contact").
+  function detailsEditBtn(key, editable, what) {
     var b = document.createElement("button"); b.type = "button"; b.className = "sxd__btn"; b.textContent = "Edit";
-    b.addEventListener("click", function () { detailsEditSet[key] = true; repaintDetails(key); });
+    b.addEventListener("click", function () {
+      if (editable === false) {
+        notice("detailsNotice", "You don't have permission to edit " + (what || "this record") +
+          " — ask CBM staff if you need it.", "error");
+        return;
+      }
+      detailsEditSet[key] = true; repaintDetails(key);
+    });
     return b;
   }
   function cardHeadEl(title, countText) {
@@ -3702,10 +3714,9 @@
     }
     var strip = document.createElement("div"); strip.className = "sxd__strip"; strip.dataset.dkey = key;
     stripCells(sec).forEach(function (c) { strip.appendChild(c); });
-    if (sec.editable) {
-      var b = detailsEditBtn(key); b.className += " sxd__strip-edit";
-      strip.appendChild(b);
-    }
+    var b = detailsEditBtn(key, sec.editable, "the " + (sec.title || "record"));
+    b.className += " sxd__strip-edit";
+    strip.appendChild(b);
     return strip;
   }
 
@@ -3754,7 +3765,7 @@
     var card = document.createElement("div"); card.className = "sxd__card"; card.dataset.dkey = key;
     var editing = !!detailsEditSet[key];
     var head = cardHeadEl(sec.title, null);
-    if (!editing && sec.editable) head.appendChild(detailsEditBtn(key));
+    if (!editing) head.appendChild(detailsEditBtn(key, sec.editable, "the " + (sec.title || "record")));
     card.appendChild(head);
     card.appendChild(editing ? panelEditForm(sec, key) : orgCardBody(sec));
     return card;
@@ -3956,15 +3967,24 @@
       tr.appendChild(tdText(vals.cPreferredContactMethod || ""));
       if (isClient) tr.appendChild(agreementsCell(vals));
       var act = document.createElement("td"); act.className = "sxd__actions";
-      if (sec && sec.editable && !detailsEditSet[editKey]) {
+      if (sec && !detailsEditSet[editKey]) {
         var e = document.createElement("button"); e.type = "button"; e.className = "sxd__rowedit"; e.textContent = "Edit";
-        e.addEventListener("click", function () { detailsEditSet[editKey] = true; repaintDetails(editKey); });
+        var rowEditable = sec.editable, rowName = (sec.name || "this contact");
+        e.addEventListener("click", function () {
+          if (rowEditable === false) {  // never hidden — explain on click
+            notice("detailsNotice", "You don't have permission to edit " + rowName +
+              " — ask CBM staff if you need it.", "error");
+            return;
+          }
+          detailsEditSet[editKey] = true; repaintDetails(editKey);
+        });
         act.appendChild(e);
       }
-      // Remove = an unrelate on the PARENT record, so it's gated on the parent's
-      // editability (not the contact's). The assigned Mentor row is never
-      // removable here — that link is managed in Client Administration.
-      var removable = parentEditable() && !detailsEditSet[editKey] &&
+      // Remove = an unrelate on the PARENT record. The assigned Mentor row is
+      // never removable here (that link is managed in Client Administration —
+      // a design exclusion, not a permission hide); a user without edit on the
+      // parent still SEES Remove and gets the permission message on click.
+      var removable = !detailsEditSet[editKey] &&
         (isClient ? !!(sec && sec.id) : item.role !== "Mentor" && !!item.profileId);
       if (removable) act.appendChild(removeContactBtn(item, sec, isClient));
       tr.appendChild(act);
@@ -4039,6 +4059,13 @@
     btn.className = "sxd__rowedit sxd__rowremove"; btn.textContent = "Remove";
     var armed = false;
     btn.addEventListener("click", async function () {
+      // The unrelate is a write on the PARENT record — without edit on it,
+      // explain on click rather than hiding the button (Doug's ruling).
+      if (!parentEditable()) {
+        notice("detailsNotice", "You don't have permission to change this record's contacts — " +
+          "ask CBM staff if you need it.", "error");
+        return;
+      }
       if (!armed) { armed = true; btn.textContent = "Really remove?"; return; }
       btn.disabled = true;
       var path = isClient
