@@ -61,25 +61,40 @@ def _forms(request: Request) -> list[dict[str, str]]:
     ]
 
 
+def _directories_for(user: dict[str, Any], settings: Settings) -> list[dict[str, str]]:
+    """The Workspace directory links (Companies / Contacts / Mentors). Gated to
+    the workspace team; the real data scope is each user's CRM ACL. ``target`` is
+    the stable browser-tab name the launcher opens each in (so re-clicking reuses
+    the tab instead of opening a duplicate)."""
+    if not is_member(user, settings.workspace_allowed_teams_list):
+        return []
+    return [
+        {"title": "Companies", "url": "/directory/companies/", "target": "cbm-companies"},
+        {"title": "Contacts", "url": "/directory/contacts/", "target": "cbm-contacts"},
+        {"title": "Mentors", "url": "/directory/mentors/", "target": "cbm-mentors"},
+    ]
+
+
 def _apps_for(user: dict[str, Any], settings: Settings) -> list[dict[str, str]]:
-    """The staff-app links this user's teams entitle them to (admins: all)."""
+    """The staff-app links this user's teams entitle them to (admins: all). Each
+    carries a stable ``target`` tab name so the launcher de-duplicates windows."""
     apps = []
     if is_member(user, settings.assign_allowed_teams_list, settings.assign_allowed_roles_list):
-        apps.append({"title": "Client Administration", "url": "/assignments/"})
+        apps.append({"title": "Client Administration", "url": "/assignments/", "target": "cbm-assignments"})
     if is_member(user, settings.mentor_admin_allowed_teams_list):
-        apps.append({"title": "Mentor Administration", "url": "/mentoradmin/"})
+        apps.append({"title": "Mentor Administration", "url": "/mentoradmin/", "target": "cbm-mentoradmin"})
     if is_member(user, settings.ops_allowed_teams_list):
-        apps.append({"title": "Submission Admin", "url": "/ops/"})
+        apps.append({"title": "Submission Admin", "url": "/ops/", "target": "cbm-ops"})
     # A mentor's self-service profile editor (own record + website preview).
     if is_member(user, settings.mentor_profile_allowed_teams_list):
-        apps.append({"title": "My Mentor Profile", "url": "/mentorprofile/"})
+        apps.append({"title": "My Mentor Profile", "url": "/mentorprofile/", "target": "cbm-mentorprofile"})
     # Session Management tools — each gated to its own team.
     if is_member(user, settings.session_mentor_allowed_teams_list):
-        apps.append({"title": "Mentor Sessions", "url": "/mentorsessions/"})
+        apps.append({"title": "Mentor Sessions", "url": "/mentorsessions/", "target": "cbm-mentorsessions"})
     if is_member(user, settings.session_partner_allowed_teams_list):
-        apps.append({"title": "Partner Sessions", "url": "/partnersessions/"})
+        apps.append({"title": "Partner Sessions", "url": "/partnersessions/", "target": "cbm-partnersessions"})
     if is_member(user, settings.session_sponsor_allowed_teams_list):
-        apps.append({"title": "Sponsor Sessions", "url": "/sponsorsessions/"})
+        apps.append({"title": "Sponsor Sessions", "url": "/sponsorsessions/", "target": "cbm-sponsorsessions"})
     return apps
 
 
@@ -91,6 +106,7 @@ def _home_payload(user: dict[str, Any], request: Request, settings: Settings) ->
             "name": user.get("name") or user["userName"],
             "isAdmin": bool(user.get("isAdmin")),
         },
+        "directories": _directories_for(user, settings),
         "apps": _apps_for(user, settings),
         # The CRM itself, for mentors (and admins) — the deploy's own target,
         # so the crm-test app links to crm-test and prod to production.

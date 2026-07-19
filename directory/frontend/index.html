@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cleveland Business Mentors — Directory</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/tokens.css" />
+  <link rel="stylesheet" href="/shared/vendor/jodit/jodit.min.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="dir">
+    <header class="dir__header">
+      <div class="dir__header-main">
+        <h1 id="title">Directory</h1>
+      </div>
+      <div class="dir__header-user">
+        <a class="dir__home" href="/" title="Workspace home">&#9632; Workspace</a>
+        <span class="dir__who">Signed in as <strong id="whoName"></strong></span>
+        <button type="button" class="cbm-button cbm-button--secondary dir__sm" id="logoutBtn">Sign out</button>
+      </div>
+    </header>
+
+    <!-- Sign-in happens at the portal (/); this shows access/server errors. -->
+    <section id="msgView" hidden>
+      <p class="form-error" id="msgText" role="alert"></p>
+      <p><a href="/">Return to the sign-in page</a></p>
+    </section>
+
+    <section id="mainView" hidden>
+      <!-- Toolbar: Filter (left) · Search (center) · View/Edit (right). -->
+      <div class="dir__toolbar">
+        <div class="dir__tb dir__tb--left">
+          <button type="button" class="cbm-button cbm-button--secondary dir__sm" id="filterBtn" aria-expanded="false">Filter</button>
+          <div class="dir__chips" id="filterChips"></div>
+        </div>
+        <div class="dir__tb dir__tb--center">
+          <input type="search" id="search" class="dir__search" placeholder="Search…" autocomplete="off" aria-label="Search" />
+        </div>
+        <div class="dir__tb dir__tb--right">
+          <button type="button" class="cbm-button cbm-button--secondary dir__sm" id="viewBtn">View</button>
+          <button type="button" class="cbm-button dir__sm" id="editBtn">Edit</button>
+        </div>
+      </div>
+
+      <!-- Filter panel (opened by the Filter button). -->
+      <div class="dir__filterpanel" id="filterPanel" hidden></div>
+
+      <p class="dir__notice" id="notice" role="status" hidden></p>
+
+      <div class="dir__body">
+        <div class="dir__gridwrap">
+          <div class="dir__gridscroll">
+            <table class="dir__table" id="grid">
+              <thead id="gridHead"></thead>
+              <tbody id="gridBody"></tbody>
+            </table>
+          </div>
+          <div class="dir__pager">
+            <button type="button" class="cbm-button cbm-button--secondary dir__sm" id="prevBtn">&lsaquo; Prev</button>
+            <span class="dir__pageinfo" id="pageInfo"></span>
+            <button type="button" class="cbm-button cbm-button--secondary dir__sm" id="nextBtn">Next &rsaquo;</button>
+          </div>
+        </div>
+        <div class="dir__split" id="split" title="Drag to resize"></div>
+        <aside class="dir__preview" id="preview">
+          <p class="dir__preview-empty">Select a record to preview it here. Use <strong>View</strong> for full details, or <strong>Edit</strong> to change a record you own.</p>
+        </aside>
+      </div>
+    </section>
+
+    <footer class="cbm-footer">
+      <p>&copy; <span data-cbm-year>2026</span> Cleveland Business Mentors. All rights reserved.<span class="cbm-footer__version" data-cbm-version></span></p>
+    </footer>
+  </main>
+
+  <!-- Detail pop-up: all data in view mode, with an Edit button to switch. -->
+  <div class="dir__modal" id="modal" hidden>
+    <div class="dir__modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="dir__modal-head">
+        <h2 id="modalTitle"></h2>
+        <div class="dir__modal-actions">
+          <button type="button" class="cbm-button dir__sm" id="modalEditBtn">Edit</button>
+          <button type="button" class="dir__modal-x" id="modalClose" aria-label="Close">&times;</button>
+        </div>
+      </div>
+      <div class="dir__modal-body" id="modalBody"></div>
+      <div class="dir__modal-foot" id="modalFoot" hidden>
+        <span class="dir__saveinfo" id="saveInfo"></span>
+        <button type="button" class="cbm-button cbm-button--secondary dir__sm" id="modalCancelBtn">Cancel</button>
+        <button type="button" class="cbm-button dir__sm" id="modalSaveBtn">Save changes</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/shared/vendor/jodit/jodit.min.js"></script>
+  <script src="/shared/richtext.js"></script>
+  <script src="/shared/phone-format.js"></script>
+  <script src="/shared/quickmail.js"></script>
+  <script src="app.js"></script>
+  <script src="/shared/footer.js"></script>
+</body>
+</html>

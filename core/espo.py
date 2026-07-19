@@ -391,6 +391,42 @@ class EspoClient:
             raise EspoError(f"App/user failed: HTTP {resp.status_code} {resp.text[:200]}")
         return resp.json()
 
+    async def layout(self, entity: str, name: str = "list") -> Any:
+        """An EspoCRM UI layout for ``entity`` (``GET {entity}/layout/{name}``).
+
+        ``list`` returns the grid columns as ``[{name, link?, width?,
+        notSortable?}, ...]`` — exactly the CRM's list view — and ``detail``
+        returns the detail panels (``[{rows:[[{name}...]], customLabel/tabLabel,
+        ...}]``). Used so directory grids/detail views MATCH the CRM's own
+        layout and stay in sync automatically. Readable by any authenticated
+        user (the CRM front-end fetches these too)."""
+        resp = await self._request(
+            "GET", f"{self._base}/{entity}/layout/{name}",
+            op=f"layout {entity}/{name}",
+        )
+        if resp.status_code >= 400:
+            raise EspoError(
+                f"layout {entity}/{name} failed: HTTP {resp.status_code} {resp.text[:200]}"
+            )
+        return resp.json()
+
+    async def i18n(self, scope: str) -> dict[str, Any]:
+        """The CRM's translated labels for ``scope`` (``GET I18n?scope=…``).
+
+        ``{"<scope>": {"fields": {field: label, ...}, "labels": {...}, ...}}`` —
+        so a grid header reads exactly like the CRM ("CBM Email", not a
+        humanized guess). Address sub-fields can be absent; callers fall back to
+        a humanizer for those."""
+        resp = await self._request(
+            "GET", f"{self._base}/I18n", op=f"i18n {scope}", params={"scope": scope}
+        )
+        if resp.status_code >= 400:
+            raise EspoError(
+                f"i18n {scope} failed: HTTP {resp.status_code} {resp.text[:200]}"
+            )
+        data = resp.json()
+        return data if isinstance(data, dict) else {}
+
     async def metadata_enum_options(
         self, entity: str, field: str
     ) -> Optional[list[str]]:

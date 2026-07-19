@@ -99,6 +99,11 @@ class Settings(BaseSettings):
     # My Mentor Profile (/mentorprofile) — a mentor edits their OWN profile +
     # Contact, with a live website preview. Gated to the Mentor Team.
     mentor_profile_allowed_teams: str = "Mentor Team"
+    # Workspace directories (/directory/{companies,contacts,mentors}) — the
+    # CRM-style browsable grids launched from the portal. Gated to this team;
+    # the real data scope is each user's EspoCRM ACL (reads run as them), so
+    # this is only "who sees the workspace at all". Mentor Team by default.
+    workspace_allowed_teams: str = "Mentor Team"
     # Team that approved mentors' new login users are placed in.
     mentor_team_name: str = "Mentor Team"
     # Team stamped onto every NEW CPartnerProfile the partner intake form
@@ -277,6 +282,10 @@ class Settings(BaseSettings):
     @property
     def mentor_profile_allowed_teams_list(self) -> list[str]:
         return [t.strip() for t in self.mentor_profile_allowed_teams.split(",") if t.strip()]
+
+    @property
+    def workspace_allowed_teams_list(self) -> list[str]:
+        return [t.strip() for t in self.workspace_allowed_teams.split(",") if t.strip()]
 
     @property
     def comms_engagement_statuses_list(self) -> list[str]:

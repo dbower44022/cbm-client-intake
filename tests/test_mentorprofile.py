@@ -485,7 +485,7 @@ def test_portal_lists_app_for_mentor_team(monkeypatch):
     from portal.router import _apps_for
     settings = Settings()
     apps = _apps_for(dict(_USER), settings)
-    assert {"title": "My Mentor Profile", "url": "/mentorprofile/"} in apps
+    assert any(a["url"] == "/mentorprofile/" and a["title"] == "My Mentor Profile" for a in apps)
     outsider = dict(_USER, teams=["Marketing Admin Team"])
     apps = _apps_for(outsider, settings)
     assert all(a["url"] != "/mentorprofile/" for a in apps)

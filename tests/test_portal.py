@@ -84,7 +84,10 @@ def test_login_returns_entitlements_and_sets_session(monkeypatch):
         s = c.get("/api/portal/session")
         assert s.status_code == 200 and s.json() == data
     assert data["user"] == {"userName": "jdoe", "name": "Jane Doe", "isAdmin": False}
-    assert data["apps"] == [{"title": "Client Administration", "url": "/assignments/"}]
+    assert data["apps"] == [
+        {"title": "Client Administration", "url": "/assignments/", "target": "cbm-assignments"}
+    ]
+    assert data["directories"] == []  # not on the workspace (Mentor) team
     assert data["crmUrl"] is None  # not on the Mentor Team
     assert {f["url"] for f in data["forms"]} == {"/info-request/", "/volunteer/"}
 
@@ -116,8 +119,12 @@ def test_mentor_team_sees_crm_forms_and_mentor_sessions(monkeypatch):
     # tool (SESSION_MENTOR_ALLOWED_TEAMS defaults to Mentor Team).
     data = _login_payload(monkeypatch, _user(teams=["Mentor Team"]))
     assert data["apps"] == [
-        {"title": "My Mentor Profile", "url": "/mentorprofile/"},
-        {"title": "Mentor Sessions", "url": "/mentorsessions/"},
+        {"title": "My Mentor Profile", "url": "/mentorprofile/", "target": "cbm-mentorprofile"},
+        {"title": "Mentor Sessions", "url": "/mentorsessions/", "target": "cbm-mentorsessions"},
+    ]
+    # Mentor Team is the default workspace team, so the directories show too.
+    assert [d["url"] for d in data["directories"]] == [
+        "/directory/companies/", "/directory/contacts/", "/directory/mentors/",
     ]
     assert data["crmUrl"]  # the deploy's CRM base URL
     assert len(data["forms"]) == 2
@@ -131,9 +138,11 @@ def test_no_team_user_sees_only_public_forms(monkeypatch):
 
 def test_each_admin_team_maps_to_its_app(monkeypatch):
     data = _login_payload(monkeypatch, _user(teams=["Mentor Administration Team"]))
-    assert data["apps"] == [{"title": "Mentor Administration", "url": "/mentoradmin/"}]
+    assert data["apps"] == [
+        {"title": "Mentor Administration", "url": "/mentoradmin/", "target": "cbm-mentoradmin"}
+    ]
     data = _login_payload(monkeypatch, _user(teams=["Marketing Admin Team"]))
-    assert data["apps"] == [{"title": "Submission Admin", "url": "/ops/"}]
+    assert data["apps"] == [{"title": "Submission Admin", "url": "/ops/", "target": "cbm-ops"}]
 
 
 def test_admin_sees_everything(monkeypatch):

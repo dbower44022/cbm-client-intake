@@ -1420,9 +1420,36 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   Note: crm-test seed sessions carry out-of-enum `sessionType` values (harmless; a
   data-hygiene cleanup). **UI polish is the next work item** (a follow-up session).
 
-## Current status (updated 2026-07-18)
+## Current status (updated 2026-07-19)
 
-**Main is at v0.99.0** (2026-07-19, 777 tests green, committed NOT pushed) —
+**Main is at v0.100.0** (2026-07-19, 789 tests green, committed NOT pushed) —
+**Workspace Directories — Phase 1** (the CRM-style workspace Doug requested).
+A new **`directory/`** package (one engine + one router per kind, the sessions
+pattern) serves three browsable grids — **Companies** (Account), **Contacts**
+(Contact), **Mentors** (CMentorProfile) — at `/directory/{kind}`, gated by the
+new `WORKSPACE_ALLOWED_TEAMS` (default `Mentor Team`); reads/writes run as the
+signed-in user (EspoCRM ACL is the data scope — the Mentor Role already reads
+all Contacts/Accounts, so those grids are org-wide with no CRM change). **Grid
+columns + the detail-pop-up arrangement are read LIVE from the CRM's own
+layouts** (new `EspoClient.layout`/`.i18n`: `{entity}/layout/list` +
+`/layout/detail`) so they match the CRM and auto-sync — nothing hardcoded (see
+[[espo-layout-api-readable]]). Toolbar = **Filter** (left, live options) ·
+**Search** (center) · **View/Edit** (right, act on the selected row, never
+disabled). Row-select → read-only **preview pane**; **View** → pop-up (all
+data, CRM-arranged); **Edit** → inline editor for records the user OWNS (reuses
+the sessions Details whitelist/gate; Contacts/Companies only — **Mentors** hand
+off to `/mentorprofile/`, own row only). The **portal is now a launcher**: a
+**Directories** tile section + app tiles open in **stable named browser tabs**
+(`window.open(url,"cbm-…")`) so re-clicking reuses the tab (de-dup); payload
+adds `directories` + per-app `target`. Plan:
+`prds/workspace-directories-plan.md`. Verified: 789 tests green (12 new); read
+path exercised LIVE against crm-test (68 companies / 128 contacts / 43
+mentors); full UI loop verified in the stub harness, no console errors. **NOT
+yet driven live as a real non-admin mentor** (needs a portal login). Inline
+Contact/Company edit (originally Phase 2) is already included; Phase 3
+(open-tab badges, saved filters) is future.
+
+Before that: **v0.99.0** (2026-07-19, 777 tests green) —
 **edit-loss protection** (Doug approved both recommendations): dirty edit
 forms (Details sections + Overview notes) two-step "Discard changes?" on
 Cancel (notes computes dirtiness at CLICK time, not the debounced flag),

@@ -70,3 +70,31 @@
   font-size: 0.85em;
   color: var(--cbm-slate-700);
 }
+
+/* Launcher tiles (Directories + Applications) — the "windows" you open. */
+.portal__hint { color: var(--cbm-slate-700); font-size: var(--cbm-text-sm); margin: 0 0 0.75rem; }
+.portal__tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  gap: 0.75rem;
+}
+.portal__tile {
+  display: flex;
+  align-items: center;
+  min-height: 3.5rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--cbm-border);
+  border-left: 4px solid var(--cbm-navy);
+  border-radius: var(--cbm-radius);
+  background: var(--cbm-surface);
+  color: var(--cbm-navy);
+  text-decoration: none;
+  font-weight: 600;
+  transition: box-shadow 0.12s ease, transform 0.12s ease, border-color 0.12s ease;
+}
+.portal__tile:hover {
+  border-left-color: var(--cbm-blue);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.1);
+  transform: translateY(-1px);
+}
+.portal__tile-title { font-size: 1.05rem; }

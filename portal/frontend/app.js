@@ -64,10 +64,37 @@
     if (entries.length) show($(sectionId)); else hide($(sectionId));
   }
 
+  // Open a workspace window in a STABLE, named browser tab: re-clicking a tile
+  // reuses/navigates that tab instead of opening a duplicate (the browser may
+  // or may not bring it to the foreground — that part is best-effort).
+  function openWindow(url, name) {
+    var w = window.open(url, name || "_blank");
+    try { if (w) w.focus(); } catch (e) {}
+  }
+
+  function tileItem(entry) {
+    var a = document.createElement("a");
+    a.className = "portal__tile";
+    a.href = entry.url;
+    a.appendChild(function () { var s = document.createElement("span"); s.className = "portal__tile-title"; s.textContent = entry.title; return s; }());
+    a.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      openWindow(entry.url, entry.target || null);
+    });
+    return a;
+  }
+
+  function fillTiles(sectionId, listId, entries) {
+    var box = $(listId); box.innerHTML = "";
+    entries.forEach(function (e) { box.appendChild(tileItem(e)); });
+    if (entries.length) show($(sectionId)); else hide($(sectionId));
+  }
+
   function renderHome(data) {
     hide($("loginView"));
     $("whoName").textContent = data.user.name || data.user.userName;
-    fillList("appsSection", "appsList", data.apps || [], false);
+    fillTiles("directoriesSection", "directoriesList", data.directories || []);
+    fillTiles("appsSection", "appsList", data.apps || []);
     fillList("crmSection", "crmList",
       data.crmUrl ? [{ title: "CBM CRM", url: data.crmUrl }] : [], true);
     fillList("formsSection", "formsList", data.forms || [], true);
@@ -81,6 +108,7 @@
     var next = new URLSearchParams(location.search).get("next");
     if (!next) return null;
     var ok = (data.apps || []).some(function (a) { return a.url === next; })
+      || (data.directories || []).some(function (d) { return d.url === next; })
       || (data.forms || []).some(function (f) { return f.url === next; });
     return ok ? next : null;
   }

@@ -4,6 +4,52 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.100.0] — 2026-07-19
+
+**Workspace Directories — Phase 1** (the CRM-style workspace Doug asked for:
+a central launcher that opens browsable directory grids in de-duplicated
+browser tabs). Plan: `prds/workspace-directories-plan.md`.
+
+- **New `directory/` package** (one engine + one router per kind, the
+  `sessions/` pattern): three directories — **Companies** (Account),
+  **Contacts** (Contact), **Mentors** (CMentorProfile) — at
+  `/directory/{kind}`, gated by the new `WORKSPACE_ALLOWED_TEAMS` (default
+  `Mentor Team`). Every read/write runs as the signed-in user, so EspoCRM
+  ACL is the data scope (the Mentor Role already reads all Contacts/Accounts,
+  so those grids are org-wide with no CRM change).
+- **Columns + detail arrangement are read LIVE from the CRM's own layouts**
+  (`EspoClient.layout` / `.i18n`, both new): the grid columns are exactly the
+  CRM list view (`{entity}/layout/list`) and the pop-up shows all data in the
+  CRM's own detail arrangement (`{entity}/layout/detail`) — nothing hardcoded,
+  auto-syncing when a layout changes. Labels from CRM i18n (humanizer
+  fallback); email/phone fields render as compose/tel links even when stored
+  as varchar.
+- **Grid** (server-side searched / filtered / sorted / paginated) with the
+  toolbar Doug specified: **Filter** (top-left, live options from metadata),
+  **Search** (top-center), **View / Edit** (top-right, act on the selected
+  row; never disabled — they message on empty selection or missing
+  permission). Sortable + resizable columns; row-select fills a **preview
+  pane** (read-only, CRM-arranged, information-dense).
+- **Detail pop-up**: all data in **view mode**, an **Edit** button switches
+  to an inline editor for records the user **owns** (reuses the sessions
+  Details whitelist/gate — editable scalar fields only, drifted enum values
+  dropped, gold changed-dot + "N fields changed"). **Mentors** are inline
+  read-only — Edit hands off to **My Mentor Profile** (own row only).
+- **Portal → Workspace launcher**: the home page gains a **Directories** tile
+  section (above Applications); directory + app tiles open in **stable named
+  browser tabs** (`window.open(url, "cbm-…")`) so re-clicking reuses the tab
+  instead of opening a duplicate. Payload adds `directories` + a per-app
+  `target`.
+- Verified: 789 tests green (12 new — live-layout columns, list/search/
+  filter/paginate, view+edit payload, owned-record edit gate, save
+  whitelist, mentor handoff, router gate); the whole read path exercised
+  live against crm-test (68 companies / 128 contacts / 43 mentors); full UI
+  loop (grid → preview → view → edit → save, filter, sort, launcher tab
+  de-dup) verified in the stubbed-browser harness with no console errors.
+  **NOT yet driven live** as a real non-admin mentor (needs a portal login);
+  Phase 2 = inline Contact/Company edit is already built here, Phase 3
+  (open-tab badges, saved filters) is future.
+
 ## [0.99.0] — 2026-07-19
 
 **Edit-loss protection** (Doug approved the two recommendations after the

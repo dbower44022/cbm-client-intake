@@ -60,6 +60,9 @@ PORTAL_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "portal" / "front
 # One shared frontend served at all three Session Management routes; the JS reads
 # the domain from its own URL path (see sessions/frontend/app.js).
 SESSIONS_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "sessions" / "frontend"
+# One shared frontend served at all Workspace Directory routes
+# (/directory/{companies,contacts,mentors}); the JS reads the kind from its URL.
+DIRECTORY_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "directory" / "frontend"
 
 
 def _make_client(settings: Settings) -> EspoApi:
@@ -539,6 +542,8 @@ def create_app(
         from mentoradmin import api_router as mentoradmin_router
         from mentorprofile import api_router as mentorprofile_router
         from ops import api_router as ops_router
+        from directory import DIRECTORIES as DIRECTORY_KINDS
+        from directory import make_router as make_directory_router
         from portal import api_router as portal_router
         from sessions import DOMAINS as SESSION_DOMAINS
         from sessions import make_router as make_sessions_router
@@ -551,6 +556,9 @@ def create_app(
         # Session Management: one router per domain, all from the same engine.
         for _cfg in SESSION_DOMAINS.values():
             app.include_router(make_sessions_router(_cfg))
+        # Workspace Directories: one router per kind, all from the same engine.
+        for _dcfg in DIRECTORY_KINDS.values():
+            app.include_router(make_directory_router(_dcfg))
 
     @app.get("/", response_class=HTMLResponse)
     async def index() -> HTMLResponse:
@@ -593,6 +601,9 @@ def create_app(
         alias_targets.update(
             {slug: f"/{slug}/" for slug in _SESSION_DOMAINS}
         )
+        # Workspace + its directories (a bare /directory lands on Companies).
+        alias_targets["directory"] = "/directory/companies/"
+        alias_targets["workspace"] = "/directory/companies/"
 
     @app.get("/{alias}", include_in_schema=False)
     async def form_alias(alias: str) -> RedirectResponse:
@@ -668,6 +679,18 @@ def create_app(
                 f"/{_slug}",
                 StaticFiles(directory=str(SESSIONS_FRONTEND_DIR), html=True),
                 name=f"sessions-frontend-{_slug}",
+            )
+    if settings.assignments_active and DIRECTORY_FRONTEND_DIR.is_dir():
+        # One shared frontend, mounted at each directory kind's route. The JS
+        # derives its kind (and API base) from the second path segment
+        # (/directory/{kind}/…).
+        from directory import DIRECTORIES as _DIRECTORY_KINDS
+
+        for _kind in _DIRECTORY_KINDS:
+            app.mount(
+                f"/directory/{_kind}",
+                StaticFiles(directory=str(DIRECTORY_FRONTEND_DIR), html=True),
+                name=f"directory-frontend-{_kind}",
             )
     app.mount("/shared", StaticFiles(directory=str(SHARED_DIR)), name="shared")
 
