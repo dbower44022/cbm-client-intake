@@ -63,6 +63,13 @@ MENTORS = DirectoryConfig(
     filters=("mentorStatus", "mentorType", "acceptingNewClients"),
 )
 
+PARTNERS = DirectoryConfig(
+    slug="partners",
+    title="Partners",
+    entity="CPartnerProfile",
+    filters=("partnershipStatus", "partnershipType"),
+)
+
 DIRECTORIES: dict[str, DirectoryConfig] = {
-    d.slug: d for d in (COMPANIES, CONTACTS, MENTORS)
+    d.slug: d for d in (COMPANIES, CONTACTS, MENTORS, PARTNERS)
 }

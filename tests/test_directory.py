@@ -253,9 +253,25 @@ def _login(monkeypatch, teams):
     monkeypatch.setattr("portal.router.refresh_membership", fake_refresh)
 
 
+def test_partners_directory_is_registered():
+    from directory.config import DIRECTORIES
+    partners = DIRECTORIES.get("partners")
+    assert partners is not None
+    assert partners.entity == "CPartnerProfile"
+    assert partners.editable is True and partners.edit_handoff is None
+
+
+def test_all_directory_kinds_have_routes(monkeypatch):
+    app = _app(monkeypatch)
+    paths = {r.path for r in app.routes if isinstance(getattr(r, "path", None), str)}
+    for kind in ("companies", "contacts", "mentors", "partners"):
+        assert f"/directory/{kind}/api/session" in paths
+
+
 def test_directory_requires_authentication(monkeypatch):
     with TestClient(_app(monkeypatch)) as c:
         assert c.get("/directory/companies/api/session").status_code == 401
+        assert c.get("/directory/partners/api/session").status_code == 401
 
 
 def test_directory_403_for_non_workspace_team(monkeypatch):

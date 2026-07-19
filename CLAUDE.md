@@ -1439,8 +1439,9 @@ by id; leave-Discard clears.
 Before that: **v0.100.0** (2026-07-19, 789 tests green) —
 **Workspace Directories — Phase 1** (the CRM-style workspace Doug requested).
 A new **`directory/`** package (one engine + one router per kind, the sessions
-pattern) serves three browsable grids — **Companies** (Account), **Contacts**
-(Contact), **Mentors** (CMentorProfile) — at `/directory/{kind}`, gated by the
+pattern) serves browsable grids — **Companies** (Account), **Contacts**
+(Contact), **Mentors** (CMentorProfile), **Partners** (CPartnerProfile;
+inline-editable, added v0.103.0) — at `/directory/{kind}`, gated by the
 new `WORKSPACE_ALLOWED_TEAMS` (default `Mentor Team`); reads/writes run as the
 signed-in user (EspoCRM ACL is the data scope — the Mentor Role already reads
 all Contacts/Accounts, so those grids are org-wide with no CRM change). **Grid

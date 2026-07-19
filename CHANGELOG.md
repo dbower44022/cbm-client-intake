@@ -4,6 +4,18 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.103.0] — 2026-07-19
+
+**feat(directory): add a Partners directory** (`CPartnerProfile`) as a fourth
+Workspace directory — `/directory/partners/`, inline-editable for owned records
+(no handoff), filters `partnershipStatus` + `partnershipType`. The engine is
+unchanged (columns/detail read live from the CRM layout); routes + the static
+mount + the portal launcher tile all derive from the `DIRECTORIES` registry, so
+adding the config is all it took. The portal's directory list is now built from
+the registry (a new kind appears automatically). Verified live against crm-test
+(14 partners; columns Name/CBM Partner Manager/Primary Partner Contact/Last
+Contacted; detail panels Overview + Partner Profile). 791 tests green (2 new).
+
 ## [0.102.0] — 2026-07-19
 
 **fix(directory): the detail pop-up's overlay covered the whole page on load,

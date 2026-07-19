@@ -62,16 +62,17 @@ def _forms(request: Request) -> list[dict[str, str]]:
 
 
 def _directories_for(user: dict[str, Any], settings: Settings) -> list[dict[str, str]]:
-    """The Workspace directory links (Companies / Contacts / Mentors). Gated to
-    the workspace team; the real data scope is each user's CRM ACL. ``target`` is
-    the stable browser-tab name the launcher opens each in (so re-clicking reuses
-    the tab instead of opening a duplicate)."""
+    """The Workspace directory links, derived from the directory registry so a
+    new kind appears here automatically. Gated to the workspace team; the real
+    data scope is each user's CRM ACL. ``target`` is the stable browser-tab name
+    the launcher opens each in (so re-clicking reuses the tab, not a duplicate)."""
     if not is_member(user, settings.workspace_allowed_teams_list):
         return []
+    from directory import DIRECTORIES
+
     return [
-        {"title": "Companies", "url": "/directory/companies/", "target": "cbm-companies"},
-        {"title": "Contacts", "url": "/directory/contacts/", "target": "cbm-contacts"},
-        {"title": "Mentors", "url": "/directory/mentors/", "target": "cbm-mentors"},
+        {"title": cfg.title, "url": f"/directory/{cfg.slug}/", "target": f"cbm-{cfg.slug}"}
+        for cfg in DIRECTORIES.values()
     ]
 
 

@@ -124,7 +124,8 @@ def test_mentor_team_sees_crm_forms_and_mentor_sessions(monkeypatch):
     ]
     # Mentor Team is the default workspace team, so the directories show too.
     assert [d["url"] for d in data["directories"]] == [
-        "/directory/companies/", "/directory/contacts/", "/directory/mentors/",
+        "/directory/companies/", "/directory/contacts/",
+        "/directory/mentors/", "/directory/partners/",
     ]
     assert data["crmUrl"]  # the deploy's CRM base URL
     assert len(data["forms"]) == 2
