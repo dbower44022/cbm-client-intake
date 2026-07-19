@@ -4,6 +4,18 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.102.0] — 2026-07-19
+
+**fix(directory): the detail pop-up's overlay covered the whole page on load,
+blocking access to every directory grid.** `.dir__modal` (and
+`.dir__filterpanel`) set `display: flex` in CSS, which overrides the `hidden`
+attribute's UA `display: none` — so the full-screen modal backdrop rendered
+immediately and intercepted all clicks. Fixed with `[hidden] { display: none
+!important; }` so the attribute is authoritative. Verified with a REAL mouse
+click (the prior stub-harness pass used JS `.click()`, which bypasses an
+overlay — an attribute check `el.hidden === true` is NOT the same as visually
+hidden when CSS sets `display`).
+
 ## [0.101.0] — 2026-07-19
 
 **Edit-loss protection extended to the session editor** (Doug's follow-up

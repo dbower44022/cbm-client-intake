@@ -4,6 +4,11 @@
 
 * { box-sizing: border-box; }
 
+/* The `hidden` attribute must win over any element's CSS `display` (the modal
+   and filter panel set display:flex, which otherwise overrides the UA
+   [hidden]{display:none} and leaves the overlay covering the page). */
+[hidden] { display: none !important; }
+
 html, body { height: 100%; margin: 0; }
 
 .dir {
