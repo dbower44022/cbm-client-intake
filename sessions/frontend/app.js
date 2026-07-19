@@ -25,6 +25,41 @@
   var detailsSnapshot = {}; // editKey -> {field: JSON of value at edit-render}
   var detailsEditSet = {};  // editKey ("parent"/"orgN"/"cN"/"bN") -> true when editing
   var detailsAdd = null;    // open add-contact flow: "client-menu"|"client-existing"|"client-new"|"cbm-menu"|"cbm-pick"
+  var detailsDraftApply = {}; // editKey -> draft values to merge into the next form build (Restore)
+
+  // --- Edit-draft protection (Doug's 2026-07-19 ruling: typed work must
+  // survive accidents — crash, tab close, session expiry). Dirty edit-form
+  // fields autosave to localStorage (7-day expiry) and are offered back when
+  // the form reopens; a successful save (or a confirmed discard) clears the
+  // draft. Same pattern as the compose dialogs (v0.88.0). ---
+  // NOTE: names must not collide with the COMPOSE draft helpers
+  // (draftKey/loadDraft/storeDraft/clearDraft, the v0.88.0 email-draft
+  // persistence further down this file) — in one shared scope the later
+  // function declaration silently wins, which mis-keyed these drafts once.
+  var EDIT_DRAFT_TTL_MS = 7 * 24 * 3600 * 1000;
+  function editDraftKey(entity, id, part) {
+    return "cbmEditDraft:" + SLUG + ":" + entity + ":" + id + (part ? ":" + part : "");
+  }
+  function saveEditDraft(key, values) {
+    try { localStorage.setItem(key, JSON.stringify({ t: Date.now(), v: values })); } catch (_) {}
+  }
+  function readEditDraft(key) {
+    try {
+      var d = JSON.parse(localStorage.getItem(key));
+      if (!d || Date.now() - d.t > EDIT_DRAFT_TTL_MS) return null;
+      return d.v;
+    } catch (_) { return null; }
+  }
+  function clearEditDraft(key) { try { localStorage.removeItem(key); } catch (_) {} }
+
+  // Warn before leaving the page with unsaved edits (the .sxf__dirty marks
+  // the live diff scan maintains + the Overview notes editor's own flag).
+  var overallNotesDirty = false;
+  window.addEventListener("beforeunload", function (e) {
+    if (document.querySelector(".sxf__dirty") || overallNotesDirty) {
+      e.preventDefault(); e.returnValue = "";
+    }
+  });
   var currentViewSessions = []; // ordered session rows for the read-only view's prev/next
   var currentViewIndex = -1;    // position within currentViewSessions
   var senderMailbox;        // the user's own From address (/api/mailbox); undefined = not fetched yet
@@ -595,6 +630,7 @@
   // in a full-page, freely resizable pop-up.
   var notesPanelPx = null;  // user-dragged cap (px); survives re-renders this page
   function renderOverallNotes(d) {
+    overallNotesDirty = false;  // read view = nothing unsaved in this panel
     var box = $("overallNotes"); box.innerHTML = "";
     var n = d.overallNotes;
     if (!n) return;
@@ -744,15 +780,34 @@
     var head = document.createElement("div"); head.className = "sx__overall-head";
     var h = document.createElement("h3"); h.className = "sx__overall-h"; h.textContent = n.label;
     head.appendChild(h);
+    var stored = n.value == null ? "" : n.value;
+    var dkey = editDraftKey(n.entity, d.id, n.attr);
+    var draft = readEditDraft(dkey);
     var ftype = n.type === "html" ? "wysiwyg" : "text";
-    var input = makeInput({ name: n.attr, type: ftype }, n.value == null ? "" : n.value);
+    // A stashed draft from an earlier visit opens IN the editor (with a
+    // "Start fresh" escape back to the stored value — quickmail pattern).
+    var input = makeInput({ name: n.attr, type: ftype }, draft != null ? draft : stored);
     input.dataset.field = n.attr; input.dataset.type = ftype;
     if (ftype === "text") input.rows = 8;
+    overallNotesDirty = draft != null;
+    var closed = false;  // stops the autosave debounce once the editor is done
     var err = document.createElement("p"); err.className = "sx__notice"; err.hidden = true;
     // Save/Cancel at BOTH the top (in the header, always in reach on a long
     // editor) and the bottom (Doug's ruling 2026-07-19). Shared handlers.
     var saveBtns = [];
-    function doCancel() { renderOverallNotes(d); }
+    function doCancel(ev) {
+      var btn = ev.currentTarget;
+      // Compute dirtiness AT CLICK TIME (never trust the debounced flag —
+      // a click inside the debounce window must still get the two-step).
+      var dirtyNow = overallNotesDirty ||
+        JSON.stringify(readField(input)) !== JSON.stringify(stored);
+      if (dirtyNow && btn.dataset.armed !== "1") {  // two-step discard
+        btn.dataset.armed = "1"; btn.textContent = "Discard changes?";
+        return;
+      }
+      closed = true; clearEditDraft(dkey); overallNotesDirty = false;
+      renderOverallNotes(d);
+    }
     async function doSave() {
       var val = readField(input);
       saveBtns.forEach(function (b) { b.disabled = true; }); err.hidden = true;
@@ -761,6 +816,7 @@
         await api("/details/" + encodeURIComponent(n.entity) + "/" + encodeURIComponent(d.id),
           { method: "PUT", body: JSON.stringify({ changes: changes }) });
         n.value = val;
+        closed = true; clearEditDraft(dkey); overallNotesDirty = false;
         currentDetails = null;  // the Details tab re-reads on next activation
         renderOverallNotes(d);
         notice("detailNotice", n.label + " saved.", "success");
@@ -788,9 +844,33 @@
     }
     head.appendChild(buttonPair("sx__overall-btns"));
     card.appendChild(head);
+    if (draft != null) {
+      var bar = document.createElement("div"); bar.className = "sxf__draftbar";
+      var msg = document.createElement("span");
+      msg.textContent = "Restored your unsaved changes from earlier.";
+      var fresh = document.createElement("button");
+      fresh.type = "button"; fresh.className = "sxd__btn"; fresh.textContent = "Start fresh";
+      fresh.addEventListener("click", function () {
+        closed = true; clearEditDraft(dkey); overallNotesDirty = false; editOverallNotes(d);
+      });
+      bar.appendChild(msg); bar.appendChild(fresh);
+      card.appendChild(bar);
+    }
     card.appendChild(input);
     card.appendChild(err);
     card.appendChild(buttonPair("sx__overall-actions"));
+    // Autosave the draft as the user types (debounced; keyup/click cover the
+    // rich-text editor, which fires no native input events on toolbar use).
+    var stashTimer = null;
+    function stash() {
+      if (closed) return;  // a late debounce must not resurrect a cleared draft
+      var v = readField(input);
+      overallNotesDirty = JSON.stringify(v) !== JSON.stringify(stored);
+      if (overallNotesDirty) saveEditDraft(dkey, v); else clearEditDraft(dkey);
+    }
+    ["input", "change", "keyup", "click"].forEach(function (ev) {
+      card.addEventListener(ev, function () { clearTimeout(stashTimer); stashTimer = setTimeout(stash, 300); });
+    });
     box.appendChild(card);
   }
 
@@ -3634,19 +3714,57 @@
 
   // === Edit mode (per section): the grouped form + Save/Cancel ===
   function panelEditForm(sec, key) {
-    var body = layoutForm(sec, detailsLayoutFor(sec.entity));
+    var dkey = editDraftKey(sec.entity, sec.id);
+    var draft = readEditDraft(dkey);
+    // Restore (the banner's button) re-renders the form with the stashed
+    // values merged in; those fields then always count as changes (their
+    // snapshot is a sentinel), so Save writes exactly what was restored.
+    var applying = detailsDraftApply[key];
+    delete detailsDraftApply[key];
+    var buildSec = sec;
+    if (applying) {
+      buildSec = Object.assign({}, sec, {
+        fields: (sec.fields || []).map(function (f) {
+          return applying[f.name] !== undefined
+            ? Object.assign({}, f, { value: applying[f.name] }) : f;
+        }),
+      });
+    }
+    var body = layoutForm(buildSec, detailsLayoutFor(sec.entity));
     var snap = {};
     Array.prototype.forEach.call(body.querySelectorAll("[data-field]"), function (el) {
       snap[el.dataset.field] = JSON.stringify(readField(el));
     });
+    if (applying) {
+      Object.keys(applying).forEach(function (fn) {
+        if (fn in snap) snap[fn] = "restored-draft";  // never equals a JSON.stringify result => dirty
+      });
+    }
     detailsSnapshot[key] = snap;
     var notice = document.createElement("p"); notice.className = "sx__dpanel-error"; notice.hidden = true;
     // Save/Cancel render at BOTH the top of the form and the (sticky) bottom
     // (Doug's ruling 2026-07-19: the top pair means no scrolling to save on a
     // long form). Both pairs share state — one dirty scan drives them all.
     var saveBtns = [], statusEls = [];
+    function countDirty() {
+      var n = 0;
+      Array.prototype.forEach.call(body.querySelectorAll("[data-field]"), function (el) {
+        if (JSON.stringify(readField(el)) !== snap[el.dataset.field]) n++;
+      });
+      return n;
+    }
     function doSave() { savePanel(sec, key, body, saveBtns, notice); }
-    function doCancel() { delete detailsEditSet[key]; repaintDetails(key); }
+    function doCancel(ev) {
+      var btn = ev.currentTarget;
+      // Discarding typed work needs a second click (two-step, no browser
+      // dialogs — the Remove-button convention). A clean form just closes.
+      if (countDirty() && btn.dataset.armed !== "1") {
+        btn.dataset.armed = "1"; btn.textContent = "Discard changes?";
+        return;
+      }
+      clearEditDraft(dkey);
+      delete detailsEditSet[key]; repaintDetails(key);
+    }
     function actionsRow(cls) {
       var row = document.createElement("div"); row.className = "sx__dpanel-actions " + cls;
       var status = document.createElement("span"); status.className = "sxf__savestatus"; status.textContent = "No changes yet";
@@ -3663,23 +3781,43 @@
     // loaded value, and the bars narrate what a Save will write. The
     // scan reuses the snapshot/readField diff the save itself runs; "click"
     // covers rich-text toolbar actions, which fire no native input event.
+    // The same scan AUTOSAVES the dirty fields as the localStorage draft.
     var scanTimer = null;
     function scanDirty() {
-      var n = 0;
+      // The form may have been saved/cancelled while this debounce was
+      // pending — never let a late scan resurrect the cleared draft.
+      if (!detailsEditSet[key]) return;
+      var n = 0, dirtyVals = {};
       Array.prototype.forEach.call(body.querySelectorAll("[data-field]"), function (el) {
-        var dirty = JSON.stringify(readField(el)) !== snap[el.dataset.field];
+        var v = readField(el);
+        var dirty = JSON.stringify(v) !== snap[el.dataset.field];
         (el.closest(".cbm-field") || el).classList.toggle("sxf__dirty", dirty);
-        if (dirty) n++;
+        if (dirty) { n++; dirtyVals[el.dataset.field] = v; }
       });
       var label = n ? n + (n === 1 ? " field" : " fields") + " changed" : "No changes yet";
       saveBtns.forEach(function (b) { b.disabled = !n; });
       statusEls.forEach(function (s) { s.textContent = label; });
+      if (n) saveEditDraft(dkey, dirtyVals); else clearEditDraft(dkey);
     }
     ["input", "change", "click", "keyup"].forEach(function (ev) {
       body.addEventListener(ev, function () { clearTimeout(scanTimer); scanTimer = setTimeout(scanDirty, 150); });
     });
     var wrap = document.createElement("div");
     wrap.appendChild(actionsRow("sx__dpanel-actions--top"));
+    // A stashed draft from an earlier visit is OFFERED, never silently applied.
+    if (draft && !applying) {
+      var bar = document.createElement("div"); bar.className = "sxf__draftbar";
+      var msg = document.createElement("span");
+      msg.textContent = "You have unsaved changes on this form from earlier.";
+      var restore = document.createElement("button"); restore.type = "button"; restore.className = "sxd__btn"; restore.textContent = "Restore them";
+      restore.addEventListener("click", function () {
+        detailsDraftApply[key] = draft; repaintDetails(key);
+      });
+      var discard = document.createElement("button"); discard.type = "button"; discard.className = "sxd__btn"; discard.textContent = "Discard";
+      discard.addEventListener("click", function () { clearEditDraft(dkey); bar.remove(); });
+      bar.appendChild(msg); bar.appendChild(restore); bar.appendChild(discard);
+      wrap.appendChild(bar);
+    }
     wrap.appendChild(body); wrap.appendChild(notice);
     wrap.appendChild(actionsRow("sx__dpanel-actions--sticky"));
     return wrap;
@@ -3715,6 +3853,7 @@
     try {
       await api("/details/" + encodeURIComponent(sec.entity) + "/" + encodeURIComponent(sec.id),
         { method: "PUT", body: JSON.stringify({ changes: changes }) });
+      clearEditDraft(editDraftKey(sec.entity, sec.id));  // saved => the stashed draft is obsolete
       delete detailsEditSet[key];
       await loadDetails(currentDetail.id);  // refresh values, everything back to view
       refreshRecordViews();  // Overview (e.g. Partner Notes) reflects the save too

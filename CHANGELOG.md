@@ -4,6 +4,32 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.99.0] — 2026-07-19
+
+**Edit-loss protection** (Doug approved the two recommendations after the
+0.98.0 top/bottom Save bars). Frontend-only, all three session domains.
+
+### Added
+- **Discard confirmation**: Cancel on a dirty edit form (Details sections +
+  the Overview notes editor) two-steps to "Discard changes?" before
+  throwing typed work away; the notes editor computes dirtiness at click
+  time (never trusts the debounce). A `beforeunload` guard warns before
+  closing/refreshing the page with unsaved edits.
+- **Draft autosave**: dirty edit-form fields autosave to localStorage
+  (`cbmEditDraft:` keys, 7-day expiry — the v0.88.0 compose pattern).
+  Reopening a Details form with a stashed draft shows a banner
+  ("You have unsaved changes on this form from earlier" — Restore / Discard);
+  restoring merges the values in and counts them as changes, so Save writes
+  exactly what was restored. The notes editor reopens straight INTO its
+  draft with a "Start fresh" escape. A successful save or confirmed discard
+  clears the draft; late debounce ticks can't resurrect it.
+
+### Fixed (during build)
+- The new helpers originally collided with the v0.88.0 record-compose
+  draft functions (`draftKey`/`clearDraft` — in one shared scope the later
+  function declaration wins, silently mis-keying edit drafts) — renamed to
+  `editDraftKey`/`saveEditDraft`/`readEditDraft`/`clearEditDraft`.
+
 ## [0.98.0] — 2026-07-19
 
 **Save/Cancel at the top AND bottom of every edit form** (Doug's ruling:

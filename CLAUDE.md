@@ -1422,7 +1422,24 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-18)
 
-**Main is at v0.98.0** (2026-07-19, 777 tests green, committed NOT pushed) —
+**Main is at v0.99.0** (2026-07-19, 777 tests green, committed NOT pushed) —
+**edit-loss protection** (Doug approved both recommendations): dirty edit
+forms (Details sections + Overview notes) two-step "Discard changes?" on
+Cancel (notes computes dirtiness at CLICK time, not the debounced flag),
+a beforeunload guard warns on page close/refresh, and dirty fields
+AUTOSAVE to localStorage (cbmEditDraft: keys, 7-day expiry, quickmail
+pattern) — Details forms offer a Restore/Discard banner on reopen
+(restored fields count as changes so Save writes them); the notes editor
+reopens INTO its draft with a Start-fresh escape; save/discard clears,
+late debounce ticks can never resurrect a cleared draft. GOTCHA burned
+an hour: the helpers first collided with the v0.88.0 COMPOSE draft fns
+(draftKey/clearDraft — later function declaration wins in the shared
+IIFE, silently mis-keying drafts) → renamed editDraftKey/saveEditDraft/
+readEditDraft/clearEditDraft; and an invisible NUL byte in a sentinel
+string made grep treat app.js as binary. Full lifecycle harness-verified
+(autosave key/value, two-step cancel, crash→banner→Restore→"2 fields
+changed"→Save PUTs restored values→cleared, notes reopen-into-draft +
+Start fresh, instant-cancel arming).
 **Save/Cancel at the top AND bottom of every edit form** (Details section
 forms get a top bar paired with the sticky bottom bar, one shared dirty
 state; the Overview notes editor gets header Save/Cancel + the bottom

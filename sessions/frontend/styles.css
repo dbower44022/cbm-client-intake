@@ -762,6 +762,14 @@ textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
   border-bottom: 1px solid #eef1f4;
 }
 
+/* Draft-protection banner: an earlier visit left unsaved changes. */
+.sxf__draftbar {
+  display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+  margin: 0.5rem 1.15rem; padding: 0.5rem 0.75rem; font-size: 0.9rem;
+  background: #fff7e8; border: 1px solid #ecd9b0; border-radius: 6px;
+}
+.sx__overall .sxf__draftbar { margin: 0 0 0.5rem; }
+
 /* Checkbox sets flow into as many columns as fit the width; the row gap
    matches the field-row rhythm so options never touch. */
 .sxf__checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: 8px 24px; }
