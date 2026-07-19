@@ -45,6 +45,12 @@ class QuickSendIn(BaseModel):
     # {"espoId": …} template chips / {"filename","contentType","dataBase64"}
     # local uploads — comms.service.resolve_attachments.
     attachments: list[dict] = Field(default_factory=list)
+    # Reply threading (Submission Admin follow-ups, 2026-07-19): keeps the
+    # send on the original Gmail thread + RFC chain. All optional — absent
+    # means a fresh message, the pre-existing behavior.
+    threadId: str | None = None
+    inReplyTo: str = ""
+    references: str = ""
 
 
 class QuickParseIn(BaseModel):
@@ -95,6 +101,8 @@ def register_quicksend(
                 subject=body.subject, body_html=body.body,
                 sender_name=user.get("name") or "",
                 user_client=client, attachments=body.attachments,
+                thread_id=body.threadId, in_reply_to=body.inReplyTo,
+                references=body.references,
             )
             return {"status": "ok", **result}
         except comms_service.CommsError as exc:

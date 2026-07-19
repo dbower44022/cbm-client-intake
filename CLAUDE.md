@@ -1432,7 +1432,29 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-19)
 
-**Main is at v0.106.0** (2026-07-19, 807 tests green, committed NOT pushed) —
+**Main is at v0.108.0** (2026-07-19, 814 tests green, committed NOT pushed) —
+**Submission Admin follow-ups (the four 0.106.0 suggestions, Doug
+approved all): Resolved/Open workflow** (migration 0012 resolved_at/by;
+Mark resolved/Reopen on the detail; Open/Resolved/All filter DEFAULTS
+TO OPEN; ✓ chips + open/resolved counts), **awaiting-reply grid column**
+(POST /replystates — 1 Gmail search + 1 headers fetch per OPEN row, cap
+30, async after render; "reply owed"/"waiting on them"; new
+GmailClient.get_message_headers), **reply threading end-to-end** (an
+existing conversation makes the compose a Reply: Re: subject +
+threadId/In-Reply-To/References through quickmail → /sendmail →
+send_quick_message → build_mime/gmail.send — quickmail opts gained
+subject+reply passthrough, QuickSendIn the three fields), and the
+**InfoRequestReply template pre-applied** on fresh info-request
+composes (OPS_REPLY_TEMPLATE, default InfoRequestReply — Doug already
+built the template; silent blank-compose fallback). Verified: 814
+tests green (7 new); migration 0012 + set_resolved round-tripped on
+live local Postgres; every flow driven in the stub harness (open-only
+default + chips, reply column states, resolve/reopen, reply compose
+carrying threadId/inReplyTo/references in the send payload, template
+pre-applied subject+body; boot null-guard for stale cached
+index.html). v0.107.0 = the parallel directory session.
+
+Before that: **v0.106.0** (2026-07-19, 807 tests green) —
 **Submission Admin REBUILT** (Doug's spec; CHANGELOG 0.106.0 for the
 full list): list page = full-height sticky-header grid with sortable +
 drag-resizable columns, alternating rows, center search, top-right user

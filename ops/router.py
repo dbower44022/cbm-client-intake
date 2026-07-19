@@ -102,6 +102,9 @@ async def session(request: Request) -> dict:
         # True => the Communications tab talks to the real endpoints below;
         # false => it explains that email isn't enabled on this deployment.
         "commsEnabled": settings.gmail_sync,
+        # EspoCRM email template pre-applied when starting a NEW conversation
+        # on an info-request (Doug's canned reply; blank compose if missing).
+        "replyTemplate": settings.ops_reply_template,
     }
 
 
@@ -158,6 +161,25 @@ async def submission_detail(submission_id: str, request: Request) -> dict:
 
 class NotesIn(BaseModel):
     notes: str = ""
+
+
+class ResolvedIn(BaseModel):
+    resolved: bool = True
+
+
+@router.put("/submissions/{submission_id}/resolved")
+async def save_resolved(submission_id: str, body: ResolvedIn, request: Request) -> dict:
+    """Mark a submission resolved / reopen it — the staff workflow marker
+    ("is anyone still waiting on us?"), independent of the delivery status."""
+    user = _require_user(request)
+    store = _store(request)
+    if not await store.set_resolved(
+        submission_id, body.resolved, acted_by=user["userName"]
+    ):
+        raise HTTPException(status_code=404, detail="Submission not found.")
+    log.info("%s %s by %s", "resolved" if body.resolved else "reopened",
+             submission_id, user["userName"])
+    return {"status": "ok", "resolved": body.resolved}
 
 
 @router.put("/submissions/{submission_id}/notes")
@@ -235,6 +257,10 @@ async def submission_messages(submission_id: str, request: Request) -> dict:
         messages.append({
             "id": p.gmail_id,
             "threadId": p.thread_id,
+            # For reply threading: the frontend passes these back so the next
+            # send stays on this Gmail thread + RFC References chain.
+            "rfcMessageId": p.rfc_message_id,
+            "references": p.references,
             "direction": "sent" if p.from_address != address else "received",
             "fromName": p.from_name or p.from_address,
             "fromAddress": p.from_address,
@@ -246,6 +272,74 @@ async def submission_messages(submission_id: str, request: Request) -> dict:
         })
     messages.sort(key=lambda m: m["date"] or "", reverse=True)
     return {"messages": messages, "address": address, "mailbox": gmail.mailbox}
+
+
+class ReplyStatesIn(BaseModel):
+    ids: list[str] = []
+
+
+# Reply-state checks per grid load are capped: 2 Gmail calls per row, and the
+# open-request work queue is small by nature.
+_REPLY_STATE_LIMIT = 30
+
+
+@router.post("/replystates")
+async def reply_states(body: ReplyStatesIn, request: Request) -> dict:
+    """Who spoke last, per submission — the grid's awaiting-reply column.
+
+    For each id: one Gmail search (newest message with the submitter) + one
+    headers-only fetch. States: ``owed`` (their message is newest — we owe a
+    reply), ``waiting`` (ours is newest — waiting on them), ``none`` (no
+    conversation). Best-effort per id; an empty map when email is off or the
+    admin has no linked mailbox."""
+    user = _require_user(request)
+    store = _store(request)
+    settings = get_settings()
+    if not settings.gmail_sync:
+        return {"states": {}}
+
+    from email.utils import parseaddr
+
+    from comms import service as comms_service
+    from core.gmail import GmailError
+
+    client = client_for(settings, user)
+    try:
+        gmail = await comms_service.gmail_for_user(settings, client, user)
+    except comms_service.CommsError:
+        return {"states": {}}
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not look up your mailbox")
+
+    async def one(sid: str):
+        try:
+            row = await store.get_submission(sid)
+            address = ((row or {}).get("payload") or {}).get("email")
+            address = (address or "").strip().lower()
+            if not address:
+                return sid, {"state": "none"}
+            listing = await gmail.list_messages(
+                f"from:{address} OR to:{address}", max_results=1
+            )
+            msgs = listing.get("messages") or []
+            if not msgs:
+                return sid, {"state": "none"}
+            meta = await gmail.get_message_headers(msgs[0]["id"])
+            headers = {
+                (h.get("name") or "").lower(): h.get("value") or ""
+                for h in (meta.get("payload") or {}).get("headers") or []
+            }
+            sender = parseaddr(headers.get("from", ""))[1].lower()
+            return sid, {
+                "state": "owed" if sender == address else "waiting",
+                "date": headers.get("date", ""),
+            }
+        except (GmailError, Exception):  # noqa: BLE001 — per-id best-effort
+            return sid, {"state": "unknown"}
+
+    ids = body.ids[:_REPLY_STATE_LIMIT]
+    results = await asyncio.gather(*(one(s) for s in ids))
+    return {"states": dict(results)}
 
 
 @router.post("/submissions/{submission_id}/redrive")

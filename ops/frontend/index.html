@@ -37,6 +37,11 @@
     <!-- List view -->
     <section class="ops__dash" id="dashView" hidden>
       <div class="ops__controls">
+        <select id="resolvedFilter" aria-label="Open or resolved">
+          <option value="open">Open</option>
+          <option value="resolved">Resolved</option>
+          <option value="">All</option>
+        </select>
         <select id="statusFilter" aria-label="Filter by status"></select>
         <select id="formFilter" aria-label="Filter by form"></select>
         <div class="ops__counts" id="counts"></div>

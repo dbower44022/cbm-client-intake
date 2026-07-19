@@ -67,6 +67,14 @@ class FakeOpsStore:
         row["acted_by"] = acted_by
         return True
 
+    async def set_resolved(self, submission_id, resolved, *, acted_by=None):
+        row = self.rows.get(submission_id)
+        if row is None:
+            return False
+        row["resolved_at"] = "2026-07-19 12:00:00" if resolved else None
+        row["resolved_by"] = acted_by if resolved else None
+        return True
+
     async def metrics(self):
         return {"counts": {"needs_attention": 1}, "needsAttention": 1,
                 "backlog": 0, "oldestPendingAgeSeconds": None, "avgLatencySeconds": None}
@@ -197,3 +205,37 @@ def test_messages_degrade_readably(monkeypatch):
     assert off["messages"] == [] and "enabled" in off["reason"]
     assert noaddr["messages"] == [] and "no submitter email" in noaddr["reason"]
     assert missing.status_code == 404
+
+
+def test_resolve_and_reopen(monkeypatch):
+    """The staff resolution marker: resolved_at/resolved_by set and cleared,
+    independent of the delivery status."""
+    store = FakeOpsStore()
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, store)) as c:
+        ok = c.put("/ops/api/submissions/abc12345/resolved", json={"resolved": True})
+        assert ok.status_code == 200 and ok.json()["resolved"] is True
+        assert store.rows["abc12345"]["resolved_by"] == _USER["userName"]
+        assert store.rows["abc12345"]["resolved_at"] is not None
+        undo = c.put("/ops/api/submissions/abc12345/resolved", json={"resolved": False})
+        assert undo.status_code == 200
+        assert store.rows["abc12345"]["resolved_at"] is None
+        missing = c.put("/ops/api/submissions/nope/resolved", json={"resolved": True})
+        assert missing.status_code == 404
+
+
+def test_reply_states_empty_when_gmail_off(monkeypatch):
+    """The awaiting-reply column degrades to an empty map (never an error)
+    when the deployment has no Gmail integration."""
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, FakeOpsStore())) as c:
+        r = c.post("/ops/api/replystates", json={"ids": ["abc12345"]})
+    assert r.status_code == 200
+    assert r.json() == {"states": {}}
+
+
+def test_session_carries_reply_template(monkeypatch):
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, FakeOpsStore())) as c:
+        data = c.get("/ops/api/session").json()
+    assert data["replyTemplate"] == "InfoRequestReply"

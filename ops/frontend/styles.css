@@ -68,6 +68,13 @@ body { margin: 0; display: flex; flex-direction: column; }
 .ref-link:hover { text-decoration: underline; }
 .row-btn { padding: 0.25rem 0.6rem; font-size: 12px; }
 
+/* resolution + awaiting-reply indicators */
+.resolved-chip { margin-left: 0.4rem; font-size: 11px; font-weight: 600; color: #2f7a3f; white-space: nowrap; }
+.chip-open { background: #fff6e6; color: #8a5a00; border-color: var(--cbm-warning); }
+.chip-resolved { background: #eafaef; color: #2f7a3f; border-color: var(--cbm-success); }
+.reply-owed { color: #a23b38; font-weight: 600; font-size: var(--cbm-text-sm); white-space: nowrap; }
+.reply-waiting { color: var(--cbm-slate-700); font-size: var(--cbm-text-sm); white-space: nowrap; }
+
 /* status colours, shared by badges and count chips */
 .status-badge { display: inline-block; padding: 0.1rem 0.55rem; border-radius: 999px;
   font-size: 12px; font-weight: 600; border: 1px solid var(--cbm-border); text-transform: capitalize; }

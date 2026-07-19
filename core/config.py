@@ -90,6 +90,10 @@ class Settings(BaseSettings):
     # Submission Admin app (/ops) — gated to its own team (v0.30.0; it
     # previously shared the assignments gate). The team must exist in the CRM.
     ops_allowed_teams: str = "Marketing Admin Team"
+    # EspoCRM email template pre-applied when Submission Admin starts a NEW
+    # conversation on an info-request (the canned reply; the compose opens
+    # blank if no template with this name exists — silent fallback).
+    ops_reply_template: str = "InfoRequestReply"
     # Session Management tools — one engine, three team-gated routes
     # (/mentorsessions, /partnersessions, /sponsorsessions). Each lets its users
     # record CSession meetings against the records they own.

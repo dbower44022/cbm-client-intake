@@ -222,6 +222,13 @@ class GmailClient:
             "GET", f"/messages/{message_id}", params={"format": "full"}
         )
 
+    async def get_message_headers(self, message_id: str) -> dict[str, Any]:
+        """Headers-only fetch (format=metadata) — the cheap read for questions
+        like "who wrote the last message?" (the /ops awaiting-reply column)."""
+        return await self._request(
+            "GET", f"/messages/{message_id}", params={"format": "metadata"}
+        )
+
     async def get_thread(self, thread_id: str) -> dict[str, Any]:
         return await self._request(
             "GET", f"/threads/{thread_id}", params={"format": "full"}

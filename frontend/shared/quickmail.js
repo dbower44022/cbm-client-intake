@@ -304,7 +304,7 @@
     tplRow.appendChild(tplLab); tplRow.appendChild(combo); tplRow.appendChild(tplNote);
     body.appendChild(tplRow);
 
-    var subjField = field("Subject", "qmSubject", "", false);
+    var subjField = field("Subject", "qmSubject", opts.subject || "", false);
     var subjInput = subjField.input;
     var bodyField = field("Message", "qmBody", "", true);
     var bodyInput = bodyField.input;
@@ -675,6 +675,13 @@
         to: toParsed.emails, cc: ccParsed.emails, bcc: bccParsed.emails,
         subject: subjInput.value.trim(), body: bodyValue(), attachments: attachments,
       };
+      // Reply threading (opts.reply = {threadId, inReplyTo, references}): the
+      // send stays on the original Gmail thread instead of starting a new one.
+      if (opts.reply) {
+        payload.threadId = opts.reply.threadId || null;
+        payload.inReplyTo = opts.reply.inReplyTo || "";
+        payload.references = opts.reply.references || "";
+      }
       var showProgress = JSON.stringify(payload).length > 300 * 1024;
       postProgress("/sendmail", payload,
         showProgress ? function (pct) { send.textContent = "Sending… " + pct + "%"; } : null)

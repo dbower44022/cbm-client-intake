@@ -47,9 +47,11 @@ class FakeGmail:
 
     def __init__(self):
         self.sent = []
+        self.thread_ids = []
 
     async def send(self, mime, thread_id=None):
         self.sent.append(mime)
+        self.thread_ids.append(thread_id)
         return {"id": "gm-1"}
 
 
@@ -265,3 +267,47 @@ def test_sendmail_cc_only_promotes_to_to(monkeypatch):
     msg = gmail.sent[0]
     assert msg["To"] == "maria@acme.test"
     assert msg["Cc"] is None
+
+
+def test_sendmail_reply_threading(monkeypatch):
+    """threadId/inReplyTo/references (Submission Admin follow-ups) keep the
+    send on the original Gmail thread + RFC chain; build_mime appends the
+    replied-to id to References."""
+    _as(monkeypatch)
+    gmail = FakeGmail()
+
+    async def fake_gmail_for_user(settings, client, user):
+        return gmail
+
+    monkeypatch.setattr(comms_service, "gmail_for_user", fake_gmail_for_user)
+    with TestClient(_app(monkeypatch, gmail_sync=True)) as c:
+        r = c.post(
+            "/assignments/api/sendmail",
+            json={
+                "to": ["kim@keybank.test"], "subject": "Re: Your request",
+                "body": "Following up.",
+                "threadId": "t-123", "inReplyTo": "msg-1@mail.test",
+                "references": "<msg-0@mail.test>",
+            },
+        )
+    assert r.status_code == 200
+    assert gmail.thread_ids == ["t-123"]
+    msg = gmail.sent[0]
+    assert msg["In-Reply-To"] == "<msg-1@mail.test>"
+    assert msg["References"] == "<msg-0@mail.test> <msg-1@mail.test>"
+
+
+def test_sendmail_without_reply_fields_is_a_fresh_message(monkeypatch):
+    _as(monkeypatch)
+    gmail = FakeGmail()
+
+    async def fake_gmail_for_user(settings, client, user):
+        return gmail
+
+    monkeypatch.setattr(comms_service, "gmail_for_user", fake_gmail_for_user)
+    with TestClient(_app(monkeypatch, gmail_sync=True)) as c:
+        r = c.post("/assignments/api/sendmail",
+                   json={"to": ["a@b.test"], "subject": "Hi", "body": "x"})
+    assert r.status_code == 200
+    assert gmail.thread_ids == [None]
+    assert gmail.sent[0]["In-Reply-To"] is None

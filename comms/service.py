@@ -713,6 +713,9 @@ async def send_quick_message(
     sender_name: str = "",
     user_client: Optional[Any] = None,
     attachments: Optional[list[dict[str, Any]]] = None,
+    thread_id: Optional[str] = None,
+    in_reply_to: str = "",
+    references: str = "",
 ) -> dict[str, Any]:
     """A record-less "quick email" — behind the email-address links shown in
     the staff tools outside a record context (Client/Mentor Administration).
@@ -749,8 +752,10 @@ async def send_quick_message(
         body_text="",
         body_html=body_html,
         attachments=mime_attachments,
+        in_reply_to=in_reply_to,
+        references=references,
     )
-    sent = await gmail.send(mime)
+    sent = await gmail.send(mime, thread_id=thread_id)
 
     write_back: dict[str, Any] = {"ok": True, "emailId": ""}
     if user_client is not None:

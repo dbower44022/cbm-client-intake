@@ -87,6 +87,10 @@ submission = Table(
     # Staff triage notes on this submission, edited in /ops (Submission Admin
     # rebuild, 2026-07-19). Free text, staff-only — never delivered to the CRM.
     Column("notes", Text),
+    # Staff resolution marker (independent of delivery status): "is anyone
+    # still waiting on us?" NULL = open. The /ops grid defaults to open rows.
+    Column("resolved_at", DateTime(timezone=True)),
+    Column("resolved_by", String(128)),
     Column("received_at", DateTime(timezone=True), nullable=False),
     Column("processed_at", DateTime(timezone=True)),
     Column("updated_at", DateTime(timezone=True), nullable=False),
@@ -159,6 +163,9 @@ class SubmissionStore(Protocol):
     async def discard(self, submission_id: str, *, acted_by: Optional[str] = None) -> bool: ...
     async def set_notes(
         self, submission_id: str, notes: str, *, acted_by: Optional[str] = None
+    ) -> bool: ...
+    async def set_resolved(
+        self, submission_id: str, resolved: bool, *, acted_by: Optional[str] = None
     ) -> bool: ...
     async def metrics(self) -> dict[str, Any]: ...
     async def ping(self) -> bool: ...
@@ -371,6 +378,8 @@ class PostgresStore:
                 submission.c.last_error,
                 submission.c.payload["email"].astext.label("email"),
                 submission.c.notes,
+                submission.c.resolved_at,
+                submission.c.resolved_by,
                 submission.c.received_at,
                 submission.c.processed_at,
                 submission.c.next_attempt_at,
@@ -445,6 +454,23 @@ class PostgresStore:
                 update(submission)
                 .where(submission.c.id == submission_id)
                 .values(notes=notes, acted_by=acted_by, updated_at=_now())
+            )
+        return result.rowcount > 0
+
+    async def set_resolved(
+        self, submission_id: str, resolved: bool, *, acted_by: Optional[str] = None
+    ) -> bool:
+        """Mark a submission resolved (or reopen it). A staff workflow marker,
+        independent of the delivery status — the /ops grid defaults to open."""
+        async with self._engine.begin() as conn:
+            result = await conn.execute(
+                update(submission)
+                .where(submission.c.id == submission_id)
+                .values(
+                    resolved_at=_now() if resolved else None,
+                    resolved_by=acted_by if resolved else None,
+                    updated_at=_now(),
+                )
             )
         return result.rowcount > 0
 

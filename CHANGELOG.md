@@ -4,6 +4,36 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.108.0] — 2026-07-19
+
+**Submission Admin: resolution workflow, awaiting-reply queue, reply
+threading, canned-reply template** (the four 0.106.0 follow-ups, Doug's
+approval).
+
+### Added
+- **Resolved / Open workflow** (migration **0012**: `resolved_at` +
+  `resolved_by`): a one-click **Mark resolved / Reopen** button on the
+  detail (independent of the delivery status), a Resolved ✓ chip + fact,
+  an **Open / Resolved / All** filter defaulting to **Open** (the grid is a
+  work queue), and open/resolved count chips.
+- **Awaiting-reply column** ("Reply"): who spoke last with each OPEN
+  submitter — "↳ reply owed" (their message is newest), "waiting on them"
+  (ours is), "—" (no conversation). Loaded asynchronously after the grid
+  renders (`POST /ops/api/replystates`, capped at 30 open rows; 1 Gmail
+  search + 1 headers-only fetch per row — new
+  `GmailClient.get_message_headers`); sortable; empty when email is off.
+- **Reply threading**: with an existing conversation, "Email the submitter"
+  becomes **"↩ Reply to the submitter"** — the compose opens with the
+  "Re:" subject and the send stays on the original Gmail thread
+  (`threadId` + In-Reply-To/References through the whole quick-send path:
+  quickmail widget → `POST /sendmail` → `send_quick_message` →
+  `build_mime`/`gmail.send`). Fresh sends are unchanged.
+- **Canned reply pre-applied**: starting a NEW conversation on an
+  info-request opens the compose with the **`InfoRequestReply`** EspoCRM
+  template already applied (subject + body; `OPS_REPLY_TEMPLATE` overrides
+  the name; a missing template silently falls back to a blank compose).
+- Boot null-guard so a stale cached index.html can't crash the new app.js.
+
 ## [0.107.0] — 2026-07-19
 
 **feat(directory): Company pop-up enhancements** (Doug's requests, all

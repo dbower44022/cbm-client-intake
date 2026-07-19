@@ -18,7 +18,9 @@
   // Discard resolves a stuck row that can't be re-driven (e.g. a bad payload).
   var DISCARDABLE = { held_honeypot: 1, needs_attention: 1, retry: 1 };
 
-  var state = { status: "", form: "", search: "" };
+  // resolution defaults to "open": the grid is a work queue ("is anyone
+  // still waiting on us?"), resolved rows are one select away.
+  var state = { status: "", form: "", search: "", resolution: "open" };
   var rows = [];                 // the loaded submissions
   var sortKey = null, sortDir = 1;
   var colWidths = null;          // frozen column widths after the first grip drag
@@ -108,6 +110,10 @@
     location.href = "/";
   });
   $("refreshBtn").addEventListener("click", loadData);
+  // Null-guarded: a browser holding yesterday's cached index.html (no
+  // resolvedFilter element) must not die on boot with the new app.js.
+  var _rf = $("resolvedFilter");
+  if (_rf) _rf.addEventListener("change", function () { state.resolution = this.value; renderTable(); });
   $("statusFilter").addEventListener("change", function () { state.status = this.value; loadData(); });
   $("formFilter").addEventListener("change", function () { state.form = this.value; loadData(); });
   $("searchBox").addEventListener("input", function () { state.search = this.value.trim().toLowerCase(); renderTable(); });
@@ -131,6 +137,7 @@
       rows = data.submissions || [];
       renderCounts(data.counts || {});
       renderTable();
+      loadReplyStates();
       api("/metrics").then(renderMetrics).catch(function () {
         $("metrics").textContent = "metrics unavailable";
         $("metrics").className = "ops__metrics is-muted";
@@ -162,6 +169,14 @@
     });
     var t = document.createElement("span"); t.className = "count-chip"; t.textContent = "total: " + total;
     box.appendChild(t);
+    // Open vs resolved (the staff workflow split), from the loaded rows.
+    var resolved = rows.filter(function (r) { return r.resolved_at; }).length;
+    var o = document.createElement("span"); o.className = "count-chip chip-open";
+    o.textContent = "open: " + (rows.length - resolved); box.appendChild(o);
+    if (resolved) {
+      var rc = document.createElement("span"); rc.className = "count-chip chip-resolved";
+      rc.textContent = "resolved: " + resolved; box.appendChild(rc);
+    }
   }
 
   var COLUMNS = [
@@ -169,6 +184,7 @@
     { key: "form_slug", label: "Form" },
     { key: "status", label: "Status" },
     { key: "email", label: "Submitter" },
+    { key: "_reply", label: "Reply", sortKey: "_replyState" },
     { key: "received_at", label: "Received", fmt: fmtDate },
     { key: "attempt_count", label: "Attempts", cls: "num" },
     { key: "last_error", label: "Last error", cls: "err",
@@ -177,6 +193,8 @@
   ];
 
   function rowMatches(r) {
+    if (state.resolution === "open" && r.resolved_at) return false;
+    if (state.resolution === "resolved" && !r.resolved_at) return false;
     if (!state.search) return true;
     var hay = [r.id, r.form_slug, r.status, r.email, r.last_error, r.notes, fmtDate(r.received_at)]
       .filter(Boolean).join(" ").toLowerCase();
@@ -203,14 +221,15 @@
       th.textContent = c.label;
       if (colWidths && colWidths[i]) th.style.width = colWidths[i] + "px";
       if (c.sort !== false) {
-        if (sortKey === c.key) {
+        var sk = c.sortKey || c.key;
+        if (sortKey === sk) {
           var ind = document.createElement("span"); ind.textContent = sortDir > 0 ? " ▲" : " ▼";
           th.appendChild(ind);
           th.setAttribute("aria-sort", sortDir > 0 ? "ascending" : "descending");
         }
         th.addEventListener("click", function () {
-          if (sortKey === c.key) { sortDir = -sortDir; }
-          else { sortKey = c.key; sortDir = c.key === "received_at" || c.key === "attempt_count" ? -1 : 1; }
+          if (sortKey === sk) { sortDir = -sortDir; }
+          else { sortKey = sk; sortDir = sk === "received_at" || sk === "attempt_count" ? -1 : 1; }
           renderTable();
         });
       }
@@ -274,6 +293,14 @@
         td.appendChild(link);
       } else if (c.key === "status") {
         td.appendChild(badgeEl(r.status));
+        if (r.resolved_at) {
+          var rv = document.createElement("span"); rv.className = "resolved-chip";
+          rv.textContent = "✓ resolved"; rv.title = "Resolved " + fmtDate(r.resolved_at) +
+            (r.resolved_by ? " by " + r.resolved_by : "");
+          td.appendChild(rv);
+        }
+      } else if (c.key === "_reply") {
+        td.appendChild(replyCell(r));
       } else if (c.key === "_actions") {
         td.className = "actions";
         if (REDRIVABLE[r.status]) td.appendChild(actionBtn("Re-drive", "Re-drive?", function () { redrive(r, "notice"); }));
@@ -286,6 +313,41 @@
       tr.appendChild(td);
     });
     return tr;
+  }
+
+  // The awaiting-reply column: who spoke last with each OPEN submitter (2
+  // Gmail calls per row server-side, so open rows only, capped at 30).
+  // "reply owed" = their message is newest; "waiting" = ours is.
+  function replyCell(r) {
+    var s = document.createElement("span");
+    var st = r._replyState;
+    if (st === "owed") { s.className = "reply-owed"; s.textContent = "↳ reply owed"; }
+    else if (st === "waiting") { s.className = "reply-waiting"; s.textContent = "waiting on them"; }
+    else if (st === "none") { s.className = "is-muted"; s.textContent = "—"; }
+    else if (st === "pending") { s.className = "is-muted"; s.textContent = "…"; }
+    else { s.className = "is-muted"; s.textContent = ""; }
+    return s;
+  }
+
+  async function loadReplyStates() {
+    if (!config || config.commsEnabled === false) return;
+    var open = rows.filter(function (r) { return !r.resolved_at && r.email; }).slice(0, 30);
+    if (!open.length) return;
+    open.forEach(function (r) { if (!r._replyState) r._replyState = "pending"; });
+    renderTable();
+    try {
+      var res = await api("/replystates", {
+        method: "POST", body: JSON.stringify({ ids: open.map(function (r) { return r.id; }) })
+      });
+      var states = (res && res.states) || {};
+      rows.forEach(function (r) {
+        if (states[r.id]) { r._replyState = states[r.id].state; r._replyDate = states[r.id].date || ""; }
+        else if (r._replyState === "pending") { r._replyState = ""; }
+      });
+    } catch (e) {
+      rows.forEach(function (r) { if (r._replyState === "pending") r._replyState = ""; });
+    }
+    renderTable();
   }
 
   function actionBtn(label, armedText, fn) {
@@ -377,6 +439,26 @@
 
   function renderDetailActions() {
     var box = $("detailActions"); box.innerHTML = "";
+    // Resolve/Reopen: the staff workflow marker — single click, reversible.
+    var rb = document.createElement("button");
+    rb.type = "button"; rb.className = "cbm-button" + (current.resolved_at ? " cbm-button--secondary" : "");
+    rb.textContent = current.resolved_at ? "Reopen" : "Mark resolved";
+    rb.addEventListener("click", async function () {
+      rb.disabled = true;
+      try {
+        await api("/submissions/" + encodeURIComponent(current.id) + "/resolved",
+          { method: "PUT", body: JSON.stringify({ resolved: !current.resolved_at }) });
+        notice("detailNotice", current.resolved_at ? "Reopened." : "Marked resolved.", "success");
+        await refreshDetailRow();
+        var row = rows.filter(function (r) { return r.id === current.id; })[0];
+        if (row) { row.resolved_at = current.resolved_at; row.resolved_by = current.resolved_by; }
+      } catch (e) {
+        if (e.status === 401) { showLogin(); return; }
+        rb.disabled = false;
+        notice("detailNotice", e.message, "error");
+      }
+    });
+    box.appendChild(rb);
     if (REDRIVABLE[current.status]) box.appendChild(actionBtn("Re-drive", "Re-drive?", function () { redrive(current, "detailNotice"); }));
     if (DISCARDABLE[current.status]) box.appendChild(actionBtn("Discard", "Really discard?", function () { discard(current, "detailNotice"); }));
   }
@@ -412,6 +494,10 @@
     box.appendChild(fact("Received", fmtDate(current.received_at)));
     if (current.processed_at) box.appendChild(fact("Processed", fmtDate(current.processed_at)));
     box.appendChild(fact("Attempts", current.attempt_count || 0));
+    if (current.resolved_at) {
+      box.appendChild(fact("Resolved", fmtDate(current.resolved_at) +
+        (current.resolved_by ? " by " + current.resolved_by : "")));
+    }
     if (current.acted_by) box.appendChild(fact("Last acted by", current.acted_by));
     PAYLOAD_FACTS.forEach(function (f) {
       var label = f[0], src = f[1];
@@ -530,16 +616,46 @@
   }
 
   // --- conversation (Overview list + Communications tab) --------------------
+  // Compose options for "Email the submitter": an existing conversation makes
+  // the send a REPLY on its newest Gmail thread (subject + In-Reply-To /
+  // References; build_mime chains them); a fresh conversation on an
+  // info-request pre-applies the canned reply template (silent fallback to a
+  // blank compose when no template with that name exists).
+  function composeOpts() {
+    var last = messages && messages.length ? messages[0] : null;  // newest first
+    if (last) {
+      var subj = last.subject || "";
+      if (subj && !/^re:/i.test(subj)) subj = "Re: " + subj;
+      return {
+        subject: subj,
+        reply: {
+          threadId: last.threadId || null,
+          inReplyTo: last.rfcMessageId || "",
+          references: last.references || "",
+        },
+      };
+    }
+    if (current.form_slug === "info-request" && config && config.replyTemplate) {
+      return { template: config.replyTemplate };
+    }
+    return {};
+  }
+
   function emailButton() {
     var addr = (current.payload || {}).email;
     if (!addr) return null;
-    if (window.CBMQuickMail) {
-      var a = CBMQuickMail.emailLink(String(addr));
-      a.className = "small-btn"; a.textContent = "✉ Email the submitter";
-      return a;
+    var replying = messages && messages.length;
+    var label = replying ? "↩ Reply to the submitter" : "✉ Email the submitter";
+    if (config && config.commsEnabled && window.CBMQuickMail) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "small-btn"; b.textContent = label;
+      b.addEventListener("click", function () {
+        CBMQuickMail.composeIfEnabled(String(addr), composeOpts());
+      });
+      return b;
     }
     var m = document.createElement("a");
-    m.className = "small-btn"; m.href = "mailto:" + addr; m.textContent = "✉ Email the submitter";
+    m.className = "small-btn"; m.href = "mailto:" + addr; m.textContent = label;
     return m;
   }
 
