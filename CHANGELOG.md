@@ -4,6 +4,28 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.101.0] — 2026-07-19
+
+**Edit-loss protection extended to the session editor** (Doug's follow-up
+to 0.99.0 — the most-typed surface in the app). Frontend-only.
+
+### Added
+- **Draft autosave**: as the user works in the session editor, changed
+  fields AND a changed attendee selection stash to localStorage — an
+  existing session under its id (`cbmEditDraft:…:CSession:<id>`), a new
+  session per record (`…:CSession:<recordId>:new`). Reopening offers a
+  "You have unsaved changes to this session from earlier" banner
+  (Restore them / Discard); restored fields count as changes (sentinel
+  snapshot) so an update-save sends exactly what was restored, and
+  restored attendees re-check the boxes without touching the diff
+  baseline. A successful save — or choosing Discard in the existing
+  leave-editor confirm — clears the draft; a hidden editor never stashes
+  (no late-debounce resurrection).
+- **`beforeunload` coverage**: an open session editor with unsaved changes
+  (the existing `editorHasUnsavedChanges` check) now also triggers the
+  leave-page warning. (The in-app leave path already had the
+  Save / Discard / Keep-editing confirm since v0.31.0 — unchanged.)
+
 ## [0.100.0] — 2026-07-19
 
 **Workspace Directories — Phase 1** (the CRM-style workspace Doug asked for:

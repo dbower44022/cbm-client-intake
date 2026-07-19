@@ -53,10 +53,13 @@
   function clearEditDraft(key) { try { localStorage.removeItem(key); } catch (_) {} }
 
   // Warn before leaving the page with unsaved edits (the .sxf__dirty marks
-  // the live diff scan maintains + the Overview notes editor's own flag).
+  // the live diff scan maintains, the Overview notes editor's own flag, and
+  // an open session editor with changes).
   var overallNotesDirty = false;
   window.addEventListener("beforeunload", function (e) {
-    if (document.querySelector(".sxf__dirty") || overallNotesDirty) {
+    var ev = document.getElementById("editorView");
+    if (document.querySelector(".sxf__dirty") || overallNotesDirty ||
+        (ev && !ev.hidden && editorHasUnsavedChanges())) {
       e.preventDefault(); e.returnValue = "";
     }
   });
@@ -120,6 +123,14 @@
   $("statusFilter").addEventListener("change", function () { statusFilter = this.value; renderTable(); });
   $("newSessionBtn").addEventListener("click", function () { openEditor(null); });
   $("editorBackBtn").addEventListener("click", function () { leaveEditor(); });
+  // Session-editor draft autosave: any interaction inside the editor view
+  // (typing, checking attendees, rich-text toolbar clicks) debounces a stash.
+  ["input", "change", "keyup", "click"].forEach(function (ev) {
+    $("editorView").addEventListener(ev, function () {
+      clearTimeout(sessionStashTimer);
+      sessionStashTimer = setTimeout(stashSessionDraft, 300);
+    });
+  });
   $("saveSessionBtn").addEventListener("click", function () { saveSession(); });
   // Read-only session view.
   $("viewBackBtn").addEventListener("click", function () { showDetail(); });
@@ -5113,6 +5124,13 @@
     renderForm(currentSession);
     snapshotForm();
     renderAttendees();
+    // A stashed draft from an earlier visit (crash, tab close, session
+    // expiry) is OFFERED back, never silently applied.
+    var oldBar = document.getElementById("sessionDraftBar");
+    if (oldBar) oldBar.remove();
+    var dkey = sessionDraftKey();
+    var draft = dkey ? readEditDraft(dkey) : null;
+    if (draft) offerSessionDraft(dkey, draft);
     showEditor();
     window.scrollTo(0, 0);
   }
@@ -5126,6 +5144,69 @@
     Array.prototype.forEach.call($("sessionForm").querySelectorAll("[data-field]"), function (el) {
       editorSnapshot[el.dataset.field] = JSON.stringify(readField(el));
     });
+  }
+
+  // --- session-editor draft autosave (extends the v0.99.0 edit-loss
+  // protection to the most-typed surface in the app). Dirty fields + a
+  // changed attendee set stash to localStorage as the user types; reopening
+  // the same session (or the record's New-session form) offers them back. ---
+  function sessionDraftKey() {
+    if (!currentDetail) return null;
+    return currentSession && currentSession.id
+      ? editDraftKey("CSession", currentSession.id)
+      : editDraftKey("CSession", currentDetail.id, "new");
+  }
+  var sessionStashTimer = null;
+  function stashSessionDraft() {
+    if ($("editorView").hidden) return;  // saved/left — never resurrect a cleared draft
+    var dk = sessionDraftKey();
+    if (!dk) return;
+    var fields = {}, n = 0;
+    Array.prototype.forEach.call($("sessionForm").querySelectorAll("[data-field]"), function (el) {
+      var v = readField(el);
+      if (JSON.stringify(v) !== editorSnapshot[el.dataset.field]) { fields[el.dataset.field] = v; n++; }
+    });
+    var orig = ((currentSession && currentSession.attendees) || []).slice().sort().join(",");
+    var now = chosenAttendees();
+    var attendeesDirty = orig !== now.slice().sort().join(",");
+    if (!n && !attendeesDirty) { clearEditDraft(dk); return; }
+    var d = { fields: fields };
+    if (attendeesDirty) d.attendees = now;
+    saveEditDraft(dk, d);
+  }
+
+  // Re-render the editor with the stashed values merged in. Drafted fields'
+  // snapshots become a sentinel (never equals a JSON.stringify result), so
+  // they read as changes and an UPDATE save sends exactly what was restored.
+  // Drafted attendees re-check the boxes only — the baseline
+  // (currentSession.attendees) stays original, so the diff sees them too.
+  function applySessionDraft(draft) {
+    renderForm(Object.assign({}, currentSession, draft.fields || {}));
+    snapshotForm();
+    Object.keys(draft.fields || {}).forEach(function (fn) {
+      if (fn in editorSnapshot) editorSnapshot[fn] = "restored-draft";
+    });
+    renderAttendees();
+    if (draft.attendees) {
+      Array.prototype.forEach.call($("attendees").querySelectorAll(".sx__attendee"), function (cb) {
+        cb.checked = draft.attendees.indexOf(cb.value) >= 0;
+      });
+    }
+  }
+
+  function offerSessionDraft(dkey, draft) {
+    var bar = document.createElement("div"); bar.className = "sxf__draftbar"; bar.id = "sessionDraftBar";
+    var msg = document.createElement("span");
+    msg.textContent = "You have unsaved changes to this session from earlier.";
+    var restore = document.createElement("button");
+    restore.type = "button"; restore.className = "sxd__btn"; restore.textContent = "Restore them";
+    restore.addEventListener("click", function () { applySessionDraft(draft); bar.remove(); });
+    var discard = document.createElement("button");
+    discard.type = "button"; discard.className = "sxd__btn"; discard.textContent = "Discard";
+    discard.addEventListener("click", function () { clearEditDraft(dkey); bar.remove(); });
+    bar.appendChild(msg); bar.appendChild(restore); bar.appendChild(discard);
+    var tabs = $("editorTabs");
+    tabs.parentNode.insertBefore(bar, tabs);
   }
 
   function renderForm(values) {
@@ -5480,7 +5561,11 @@
       msg: "You have unsaved changes. Save them before going back?",
       saveLabel: "Save changes", discardLabel: "Discard", cancelLabel: "Keep editing",
       onSave: function () { saveSession(); },  // saveSession returns to the record on success
-      onDiscard: function () { openDetail(currentDetail.id); },
+      onDiscard: function () {
+        var dk = sessionDraftKey();  // deliberate discard clears the stash too
+        if (dk) clearEditDraft(dk);
+        openDetail(currentDetail.id);
+      },
     });
   }
 
@@ -5526,6 +5611,7 @@
     }
     delete changes.duration;
     var attendees = chosenAttendees();
+    var dkey = sessionDraftKey();  // captured now — a create's "new" key is gone after
     $("saveSessionBtn").disabled = true;
     try {
       var saved;
@@ -5539,6 +5625,7 @@
           body: JSON.stringify({ changes: changes, attendees: attendees, skipCalendar: calendarDecision === "skip" })
         });
       }
+      if (dkey) clearEditDraft(dkey);  // saved => the stashed draft is obsolete
       // Await the re-fetch: openDetail hides detailNotice while rendering, so
       // showing the notice first would get it wiped a moment later.
       await openDetail(currentDetail.id);

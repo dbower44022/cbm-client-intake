@@ -1422,7 +1422,21 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-19)
 
-**Main is at v0.100.0** (2026-07-19, 789 tests green, committed NOT pushed) —
+**Main is at v0.101.0** (2026-07-19, 789 tests green, committed NOT pushed) —
+**edit-loss protection extended to the SESSION editor** (Doug's follow-up
+to v0.99.0): field + attendee changes autosave to localStorage
+(existing session keyed by id, new session per record with a :new
+suffix); reopening offers Restore/Discard; restored fields ride the
+sentinel-snapshot so an update-save sends them; restored attendees
+re-check boxes without touching the diff baseline; save or the
+leave-confirm Discard clears; hidden editor never stashes. beforeunload
+now also fires for an open dirty session editor (the in-app
+Save/Discard/Keep-editing confirm predates this, unchanged).
+Harness-verified: new-session crash->banner->Restore->Save POSTs the
+restored notes->cleared+no resurrection; existing-session draft keyed
+by id; leave-Discard clears.
+
+Before that: **v0.100.0** (2026-07-19, 789 tests green) —
 **Workspace Directories — Phase 1** (the CRM-style workspace Doug requested).
 A new **`directory/`** package (one engine + one router per kind, the sessions
 pattern) serves three browsable grids — **Companies** (Account), **Contacts**
