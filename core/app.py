@@ -63,6 +63,7 @@ SESSIONS_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "sessions" / "f
 # One shared frontend served at all Workspace Directory routes
 # (/directory/{companies,contacts,mentors}); the JS reads the kind from its URL.
 DIRECTORY_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "directory" / "frontend"
+MYEMAIL_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "myemail" / "frontend"
 
 
 def _make_client(settings: Settings) -> EspoApi:
@@ -544,10 +545,12 @@ def create_app(
         from ops import api_router as ops_router
         from directory import DIRECTORIES as DIRECTORY_KINDS
         from directory import make_router as make_directory_router
+        from myemail import api_router as myemail_router
         from portal import api_router as portal_router
         from sessions import DOMAINS as SESSION_DOMAINS
         from sessions import make_router as make_sessions_router
 
+        app.include_router(myemail_router)
         app.include_router(assignments_router)
         app.include_router(ops_router)
         app.include_router(mentoradmin_router)
@@ -594,6 +597,8 @@ def create_app(
                 "mentoradmin": "/mentoradmin/",
                 "mentorprofile": "/mentorprofile/",
                 "myprofile": "/mentorprofile/",
+                "myemail": "/myemail/",
+                "email": "/myemail/",
             }
         )
         from sessions import DOMAINS as _SESSION_DOMAINS
@@ -645,6 +650,12 @@ def create_app(
             "/mentorprofile",
             StaticFiles(directory=str(MENTORPROFILE_FRONTEND_DIR), html=True),
             name="mentorprofile-frontend",
+        )
+    if settings.assignments_active and MYEMAIL_FRONTEND_DIR.is_dir():
+        app.mount(
+            "/myemail",
+            StaticFiles(directory=str(MYEMAIL_FRONTEND_DIR), html=True),
+            name="myemail-frontend",
         )
     if settings.assignments_active and PORTAL_FRONTEND_DIR.is_dir():
         # The portal's assets (its index.html is served at "/" above).

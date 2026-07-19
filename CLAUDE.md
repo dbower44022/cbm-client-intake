@@ -1432,7 +1432,46 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-19)
 
-**Main is at v0.104.0** (2026-07-19, 794 tests green, committed NOT pushed) —
+**Main is at v0.105.0** (2026-07-19, 804 tests green, committed NOT pushed) —
+**Email round two (Doug's picks 1–4 from the compose-functionality review):
+My Email + unread/awaiting-reply + Forward + attach-from-Documents.**
+- **My Email (`/myemail/`, new `myemail/` package, portal tile, aliases
+  `/myemail` `/email`)**: ONE inbox across every record the manager handles —
+  scope = the CMentorProfile reverse links (owned + co-mentored, all three
+  domains, status-filtered like the grids), deliberately NOT ACL-wide (manager
+  roles read CConversation at all). Rows carry record chips
+  (`/{slug}/record/{id}` deep links), unread dot/bold, amber "Awaiting reply"
+  chip, filter tabs with counts, search, Mark-all-read; the thread modal's
+  reply path is "Open in record — reply there" (full compose lives on the
+  record page). Gate: member of ANY session-tool team (admins pass); portal
+  tile only when `gmail_sync`. All reads as the user.
+- **Unread/awaiting enrichment** (`comms/service.enrich_conversation_rows`,
+  BOTH My Email and the record Communications tabs): per-user read stamps in
+  the new **`conversation_seen`** table (**Alembic 0010 — pre-deploy migrate
+  required**; `CommsStore.mark_seen/seen_map/mark_many_seen` + Memory mirror);
+  never-opened conversations count unread only within a 30-day window;
+  awaiting-reply = last message inbound, derived from ONE batched
+  CCommunication `in`-query per page (decoration — fails open). Thread GETs
+  (sessions + myemail) stamp seen; the record tab button shows "(N)" unread.
+- **Forward** (record compose): thread-view ↪ Forward button → Gmail-style
+  forwarded block (headers + message), NOBODY pre-checked (`pre.forward`),
+  "Fwd:" subject, title "Forward"; a no-comment forward sends (pristine-body
+  guard exempts forwards).
+- **Attach from documents** (record compose, `docsOn()`): picker over the
+  record's Documents (active, not-yet-attached only); chips send
+  `{documentId}` and `sessions/router._resolve_document_attachments` fetches
+  ORIGINAL bytes at send time via `docs_service.fetch_document(original=True)`
+  (record-scoped — foreign doc ids 404; failure = CommsError, send blocked).
+  Doc chips ride the compose draft.
+- Verified: 804 tests green (10 new in tests/test_myemail.py); both UIs driven
+  in the stub harness (inbox filters/thread/mark-read/full-width, record-tab
+  badges + tab count clearing, forward incl. no-comment send + doc chip →
+  payload). **NOT yet driven live** — first live pass: open /myemail as a
+  real mentor (rows + record links), open a thread (unread clears), forward a
+  real message, send with a document attached (Drive fetch under the
+  service identity). Migration 0010 rides the pre-deploy migrate job.
+
+Before that: **v0.104.0** (2026-07-19, 794 tests green, committed NOT pushed) —
 **session-tool display names renamed** (Doug): Mentor Sessions →
 "Client Management", Partner Sessions → "Partner Management", Sponsor
 Sessions → "Funder Management" — portal tiles + page headings + tab

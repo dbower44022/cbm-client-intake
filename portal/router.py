@@ -98,6 +98,17 @@ def _apps_for(user: dict[str, Any], settings: Settings) -> list[dict[str, str]]:
         apps.append({"title": "Partner Management", "url": "/partnersessions/", "target": "cbm-partnersessions"})
     if is_member(user, settings.session_sponsor_allowed_teams_list):
         apps.append({"title": "Funder Management", "url": "/sponsorsessions/", "target": "cbm-sponsorsessions"})
+    # My Email — the unified inbox across the records those tools manage.
+    # Shown only where the Gmail integration is on (the page 503s otherwise).
+    if settings.gmail_sync and any(
+        is_member(user, getattr(settings, attr))
+        for attr in (
+            "session_mentor_allowed_teams_list",
+            "session_partner_allowed_teams_list",
+            "session_sponsor_allowed_teams_list",
+        )
+    ):
+        apps.append({"title": "My Email", "url": "/myemail/", "target": "cbm-myemail"})
     return apps
 
 

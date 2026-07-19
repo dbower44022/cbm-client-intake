@@ -557,6 +557,8 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
 .sx__foot-summary { flex: 1 1 auto; margin: 0; color: var(--cbm-slate-700, #667); font-size: 0.85rem; text-align: left; }
 /* Amber "review this" notice — placeholder warnings etc. (errors stay red). */
 .sx__notice.is-warn { background: #fdf6e7; border: 1px solid #ecc94b; color: #744210; }
+/* "The last message is theirs" flag on conversation rows. */
+.sx__chip-awaiting { display: inline-block; margin-top: 0.2rem; padding: 0.08rem 0.45rem; border-radius: 999px; background: #fdf6e7; border: 1px solid #ecc94b; color: #744210; font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
 /* To-list header line: label + All/None quick toggles. */
 .sx__to-head { display: flex; align-items: baseline; gap: 0.6rem; }
 .sx__to-head .sx__msg-label { margin-bottom: 0; }

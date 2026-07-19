@@ -131,6 +131,81 @@ async def list_conversations(
     return rows
 
 
+# A conversation the user has NEVER opened counts as unread only when its last
+# message is this recent — without the window, day one would bold a year of
+# history. Opening a thread (or "Mark all read") stamps it read permanently.
+_NEVER_SEEN_UNREAD_DAYS = 30
+
+
+def _parse_crm_stamp(value: Any) -> Optional[Any]:
+    """EspoCRM datetime string ("YYYY-MM-DD HH:MM:SS", UTC) -> aware datetime."""
+    from datetime import datetime, timezone
+
+    try:
+        return datetime.strptime(str(value), "%Y-%m-%d %H:%M:%S").replace(
+            tzinfo=timezone.utc
+        )
+    except (ValueError, TypeError):
+        return None
+
+
+async def enrich_conversation_rows(
+    user_client: Any, store: Any, username: str, rows: list[dict[str, Any]]
+) -> None:
+    """Stamp each conversation row with ``unread`` + ``awaitingReply``.
+
+    - ``awaitingReply``: the conversation's LAST message is inbound — the ball
+      is in the manager's court. One batched CCommunication query for the whole
+      page (newest-first, capped), never one query per row.
+    - ``unread``: the last message is newer than this user's read stamp
+      (conversation_seen); a never-opened conversation counts as unread only
+      inside the recent window above.
+
+    Pure decoration: any failure leaves the rows unstamped (both keys default
+    False) and never breaks the listing."""
+    if not rows:
+        return
+    from datetime import datetime, timedelta, timezone
+
+    for r in rows:
+        r.setdefault("unread", False)
+        r.setdefault("awaitingReply", False)
+    ids = [r["id"] for r in rows]
+    try:
+        data = await user_client.list(
+            crm.COMMUNICATION,
+            where=[{"type": "in", "attribute": crm.CONVERSATION_FK, "value": ids}],
+            select=f"{crm.CONVERSATION_FK},direction,sentAt",
+            order_by="sentAt",
+            order="desc",
+            max_size=400,
+        )
+        last_direction: dict[str, str] = {}
+        for m in data.get("list", []):
+            cid = m.get(crm.CONVERSATION_FK)
+            if cid and cid not in last_direction:
+                last_direction[cid] = m.get("direction") or ""
+        for r in rows:
+            r["awaitingReply"] = last_direction.get(r["id"]) == "Inbound"
+    except Exception as exc:  # noqa: BLE001 — decoration only
+        log.warning("awaiting-reply enrichment failed: %s", exc)
+    try:
+        seen = await store.seen_map(username, ids) if store else {}
+        window_start = datetime.now(timezone.utc) - timedelta(
+            days=_NEVER_SEEN_UNREAD_DAYS
+        )
+        for r in rows:
+            last_at = _parse_crm_stamp(r.get("lastMessageAt"))
+            if last_at is None:
+                continue
+            seen_at = seen.get(r["id"])
+            r["unread"] = (
+                last_at > window_start if seen_at is None else last_at > seen_at
+            )
+    except Exception as exc:  # noqa: BLE001 — decoration only
+        log.warning("unread enrichment failed: %s", exc)
+
+
 _MSG_SELECT = (
     "name,direction,sentAt,fromAddress,fromName,toAddresses,ccAddresses,"
     "snippet,bodyCleaned,gmailThreadId,gmailMessageId,sourceMailbox,rfcMessageId"

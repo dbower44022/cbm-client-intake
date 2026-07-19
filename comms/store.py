@@ -80,6 +80,18 @@ conversation_override = Table(
     Index("ix_conversation_override_conv", "conversation_id"),
 )
 
+# Per-user read state: when this user last opened each conversation. Unread =
+# lastMessageAt newer than this stamp (or no stamp at all — see the never-seen
+# window in comms.service.enrich_conversation_rows). Alembic 0010.
+conversation_seen = Table(
+    "conversation_seen",
+    metadata,
+    Column("username", String(64), nullable=False),
+    Column("conversation_id", String(36), nullable=False),
+    Column("last_seen_at", DateTime(timezone=True), nullable=False),
+    PrimaryKeyConstraint("username", "conversation_id"),
+)
+
 ACTION_INCLUDE = "include"
 ACTION_EXCLUDE = "exclude"
 
@@ -304,6 +316,48 @@ class CommsStore:
             ).all()
         return {(r.parent_entity, r.parent_id, r.conversation_id) for r in rows}
 
+    # --- per-user read state (unread badges) ---------------------------------
+
+    async def mark_seen(self, username: str, conversation_id: str) -> None:
+        stmt = (
+            pg_insert(conversation_seen)
+            .values(
+                username=username, conversation_id=conversation_id,
+                last_seen_at=_now(),
+            )
+            .on_conflict_do_update(
+                index_elements=["username", "conversation_id"],
+                set_={"last_seen_at": _now()},
+            )
+        )
+        async with self._engine.begin() as conn:
+            await conn.execute(stmt)
+
+    async def mark_many_seen(self, username: str, conversation_ids: list[str]) -> None:
+        for cid in conversation_ids:
+            await self.mark_seen(username, cid)
+
+    async def seen_map(
+        self, username: str, conversation_ids: list[str]
+    ) -> dict[str, datetime]:
+        """``{conversation_id: last_seen_at}`` for this user, limited to the
+        listed conversations (one page's worth)."""
+        if not conversation_ids:
+            return {}
+        async with self._engine.begin() as conn:
+            rows = (
+                await conn.execute(
+                    select(
+                        conversation_seen.c.conversation_id,
+                        conversation_seen.c.last_seen_at,
+                    ).where(
+                        conversation_seen.c.username == username,
+                        conversation_seen.c.conversation_id.in_(conversation_ids),
+                    )
+                )
+            ).all()
+        return {r.conversation_id: r.last_seen_at for r in rows}
+
 
 def make_comms_store(settings: Settings) -> Optional[CommsStore]:
     if not settings.database_url:
@@ -318,6 +372,7 @@ class MemoryCommsStore:
         self._state: dict[str, SyncState] = {}
         self._overrides: dict[tuple[str, str, str], str] = {}
         self._threads: dict[tuple[str, str], str] = {}
+        self._seen: dict[tuple[str, str], datetime] = {}
 
     async def create_all(self) -> None: ...
 
@@ -372,4 +427,20 @@ class MemoryCommsStore:
     async def all_excludes(self) -> set[tuple[str, str, str]]:
         return {
             key for key, action in self._overrides.items() if action == ACTION_EXCLUDE
+        }
+
+    async def mark_seen(self, username: str, conversation_id: str) -> None:
+        self._seen[(username, conversation_id)] = _now()
+
+    async def mark_many_seen(self, username: str, conversation_ids: list[str]) -> None:
+        for cid in conversation_ids:
+            await self.mark_seen(username, cid)
+
+    async def seen_map(
+        self, username: str, conversation_ids: list[str]
+    ) -> dict[str, datetime]:
+        return {
+            cid: ts
+            for (u, cid), ts in self._seen.items()
+            if u == username and cid in set(conversation_ids)
         }

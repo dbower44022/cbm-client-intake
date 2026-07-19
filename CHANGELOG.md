@@ -4,6 +4,45 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.105.0] — 2026-07-19
+
+**Email, round two** (Doug picked items 1–4 of the functionality review):
+the unified **My Email** inbox, unread + awaiting-reply tracking, **Forward**,
+and **attach-from-Documents**. Pre-deploy migrate required (Alembic **0010**,
+`conversation_seen`).
+
+### Added
+- **My Email (`/myemail/`, portal tile, aliases `/myemail` + `/email`)** — one
+  inbox across every record the signed-in manager handles (all three domains:
+  owned + co-mentored, the same reverse-link scope as the grids — NOT
+  "everything the ACL can read"). Filters (All / Unread / Awaiting your
+  reply, with counts), live search, thread view with per-message cards, and
+  **"Open in record — reply there"** deep links into the session tools'
+  record pages. "Mark all as read" clears the backlog. Gated to members of
+  any management-tool team; shown on the portal only when the Gmail
+  integration is on. New package `myemail/` (router + service + frontend).
+- **Unread + "Awaiting reply" flags** on My Email AND every record
+  Communications tab: unread = the last message is newer than when this user
+  last opened the thread (per-user `conversation_seen` table, Alembic 0010;
+  a never-opened conversation counts as unread only within the last 30 days,
+  so day one doesn't bold a year of history); awaiting = the conversation's
+  last message is inbound — the ball is in your court (derived, one batched
+  CCommunication query per page). Unread rows read bold with the inbox dot;
+  the record's Communications tab button carries its unread count; opening a
+  thread clears both immediately.
+- **Forward** (record compose): the thread view gains ↪ Forward — a
+  Gmail-style forwarded block (From/Date/Subject/To + the message), nobody
+  pre-selected, "Fwd:" subject, and a forward with no added comment sends
+  (the forwarded block IS the message — the empty-body guard now knows).
+- **Attach from documents** (record compose, when the document integration is
+  on): a picker over the record's Documents tab — no download/re-upload
+  round-trip. Chips carry ``{documentId}``; the SERVER fetches the original
+  bytes at send time through the same record-scoped path as the Download
+  action (Google-native files go as their Office equivalent), and a fetch
+  failure BLOCKS the send (the ET-131 contract). Archived documents and
+  already-attached ones stay out of the picker; document chips persist in
+  the compose draft.
+
 ## [0.104.0] — 2026-07-19
 
 **Session-tool display names** (Doug's ruling): **Mentor Sessions →

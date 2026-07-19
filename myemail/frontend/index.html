@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cleveland Business Mentors — My Email</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/tokens.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="cbm-container me">
+    <header class="me__header">
+      <div>
+        <h1>My Email</h1>
+        <p class="me__sub">Every conversation on the records you manage — across clients, partners, and funders.</p>
+      </div>
+      <div class="me__header-user">
+        <span class="me__who">Signed in as <strong id="whoName"></strong></span>
+        <button type="button" class="cbm-button cbm-button--secondary me__sm" id="logoutBtn">Sign out</button>
+      </div>
+    </header>
+
+    <section id="msgView" hidden>
+      <p class="form-error" id="msgText" role="alert"></p>
+      <p><a href="/">Return to the sign-in page</a></p>
+    </section>
+
+    <section id="inboxView" hidden>
+      <div class="me__controls">
+        <div class="me__filters" role="group" aria-label="Filter conversations">
+          <button type="button" class="me__filter is-active" data-filter="all">All</button>
+          <button type="button" class="me__filter" data-filter="unread">Unread <span id="unreadCount" class="me__count" hidden></span></button>
+          <button type="button" class="me__filter" data-filter="awaiting">Awaiting your reply <span id="awaitingCount" class="me__count" hidden></span></button>
+        </div>
+        <input type="text" id="search" class="me__search" placeholder="Search subject, people, records…" />
+        <button type="button" class="cbm-button cbm-button--secondary me__sm" id="markAllBtn">Mark all as read</button>
+        <button type="button" class="cbm-button cbm-button--secondary me__sm" id="refreshBtn">Refresh</button>
+      </div>
+      <p class="me__notice" id="notice" hidden></p>
+      <p class="me__muted" id="loadingState">Loading your email…</p>
+      <p class="me__muted" id="emptyState" hidden>No conversations found on your records yet.</p>
+      <div class="me__tablewrap">
+        <table class="me__table" id="inboxTable" hidden>
+          <thead>
+            <tr>
+              <th class="me__col-state"></th>
+              <th>Record</th>
+              <th>People</th>
+              <th>Conversation</th>
+              <th class="me__col-date">Last message</th>
+            </tr>
+          </thead>
+          <tbody id="inboxBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer class="cbm-footer">
+      <p>&copy; <span data-cbm-year>2026</span> Cleveland Business Mentors.<span class="cbm-footer__version" data-cbm-version></span></p>
+    </footer>
+  </main>
+
+  <!-- Thread view -->
+  <div class="me__modal" id="threadModal" hidden role="dialog" aria-modal="true" aria-labelledby="threadTitle">
+    <div class="me__modal-backdrop" id="threadBackdrop"></div>
+    <div class="me__modal-card" role="document">
+      <div class="me__modal-head">
+        <div>
+          <p class="me__modal-kind" id="threadKind"></p>
+          <h3 class="me__modal-name" id="threadTitle"></h3>
+        </div>
+        <button type="button" class="me__modal-close" id="threadClose" aria-label="Close">×</button>
+      </div>
+      <div class="me__modal-body" id="threadBody"></div>
+      <div class="me__modal-foot" id="threadFoot"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script src="/shared/footer.js"></script>
+</body>
+</html>

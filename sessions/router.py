@@ -493,10 +493,14 @@ def make_router(cfg: DomainConfig) -> APIRouter:
     @router.get("/records/{parent_id}/conversations")
     async def conversations(parent_id: str, request: Request) -> dict:
         user = _require_user(request)
-        _comms_ready()
+        _, store = _comms_ready()
         client = client_for(get_settings(), user)
         try:
             rows = await comms_service.list_conversations(client, cfg.parent_entity, parent_id)
+            # unread + awaiting-reply badges (best-effort decoration).
+            await comms_service.enrich_conversation_rows(
+                client, store, user["userName"], rows
+            )
             return {"conversations": rows}
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not load conversations")
@@ -504,12 +508,18 @@ def make_router(cfg: DomainConfig) -> APIRouter:
     @router.get("/conversations/{conversation_id}")
     async def conversation_detail(conversation_id: str, request: Request) -> dict:
         user = _require_user(request)
-        _comms_ready()
+        _, store = _comms_ready()
         client = client_for(get_settings(), user)
         try:
-            return await comms_service.get_conversation(client, conversation_id)
+            thread = await comms_service.get_conversation(client, conversation_id)
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not load the conversation")
+        # Opening the thread stamps it read for THIS user (unread badges).
+        try:
+            await store.mark_seen(user["userName"], conversation_id)
+        except Exception as exc:  # noqa: BLE001 — a read stamp never blocks reading
+            log.warning("mark_seen failed for %s: %s", user.get("userName"), exc)
+        return thread
 
     @router.post("/records/{parent_id}/conversations/{conversation_id}/exclude")
     async def exclude_conversation(
@@ -594,12 +604,69 @@ def make_router(cfg: DomainConfig) -> APIRouter:
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not add the conversation")
 
+    async def _resolve_document_attachments(
+        settings, client, user, parent_id: str, attachments: list[dict]
+    ) -> list[dict]:
+        """Turn ``{"documentId": …}`` chips (the record's Documents tab) into
+        the local-upload shape at send time: the document's ORIGINAL bytes,
+        fetched through the same record-scoped path as the Download action —
+        a doc id never resolves through another record's route. Any failure
+        raises CommsError so the send is BLOCKED, never sent incomplete
+        (the ET-131 contract, extended to document attachments)."""
+        if not any(a.get("documentId") for a in attachments):
+            return attachments
+        import base64 as b64
+
+        if not settings.gdrive_docs:
+            raise comms_service.CommsError(
+                "Document attachments aren't available — the document "
+                "integration isn't enabled."
+            )
+        dstore = docs_service.get_store(settings)
+        if dstore is None:
+            raise comms_service.CommsError(
+                "Document attachments need the database — remove them and send."
+            )
+        drive = await docs_service.drive_for_user(settings, client, user)
+        out: list[dict] = []
+        for a in attachments:
+            doc_id = (a.get("documentId") or "").strip()
+            if not doc_id:
+                out.append(a)
+                continue
+            name = a.get("filename") or "document"
+            try:
+                doc = await docs_service.fetch_document(
+                    dstore, drive, cfg.parent_entity, parent_id, doc_id,
+                    original=True,
+                )
+            except docs_service.DocsNotFound:
+                raise comms_service.CommsError(
+                    f"The attached document \"{name}\" isn't on this record "
+                    "anymore — remove the attachment and send again."
+                )
+            except DriveError as exc:
+                log.warning("document attachment fetch failed (%s): %s", cfg.slug, exc)
+                raise comms_service.CommsError(
+                    f"Couldn't fetch the document \"{name}\" from Google Drive — "
+                    "the message was NOT sent. Remove the attachment or try again."
+                )
+            out.append({
+                "filename": doc["filename"],
+                "contentType": doc["mime_type"],
+                "dataBase64": b64.b64encode(doc["data"]).decode("ascii"),
+            })
+        return out
+
     @router.post("/records/{parent_id}/messages")
     async def send_message(parent_id: str, body: SendIn, request: Request) -> dict:
         user = _require_user(request)
         settings, store = _comms_ready()
         client = client_for(settings, user)
         try:
+            attachments = await _resolve_document_attachments(
+                settings, client, user, parent_id, body.attachments
+            )
             gmail = await comms_service.gmail_for_user(settings, client, user)
             result = await comms_service.send_message(
                 settings=settings, api_client=_api_client(settings), store=store,
@@ -608,7 +675,7 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 subject=body.subject, body_html=body.body,
                 reply_to_communication_id=body.replyToCommunicationId,
                 allow_unknown_recipients=body.allowUnknownRecipients,
-                user_client=client, attachments=body.attachments,
+                user_client=client, attachments=attachments,
             )
             return {"status": "ok", **result}
         except comms_service.CommsError as exc:

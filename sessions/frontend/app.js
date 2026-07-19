@@ -1643,11 +1643,18 @@
     }
     rows.forEach(function (c) {
       var tr = document.createElement("tr");
-      tr.className = "sx__inbox-row";
+      // Unread (this user hasn't opened it since the last message) reads bold
+      // with the classic inbox dot; opening the thread clears it.
+      tr.className = "sx__inbox-row" + (c.unread ? " is-unread" : "");
       tr.tabIndex = 0; tr.setAttribute("role", "button");
 
       var c0 = document.createElement("td"); c0.className = "sx__inbox-dir";
       if (c.status) c0.appendChild(tag(c.status, c.status === "Open" ? "status" : "type"));
+      if (c.awaitingReply) {
+        var aw = document.createElement("span"); aw.className = "sx__chip-awaiting";
+        aw.textContent = "Awaiting reply"; aw.title = "The last message is from them — the ball is in your court.";
+        c0.appendChild(aw);
+      }
 
       var c1 = document.createElement("td"); c1.className = "sx__inbox-party";
       c1.textContent = c.participants || "—";
@@ -1667,6 +1674,19 @@
       tr.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); viewConversation(c.id); } });
       body.appendChild(tr);
     });
+    updateCommTabBadge();
+  }
+
+  // The Communications tab button carries the record's unread count.
+  function updateCommTabBadge() {
+    var btn = document.querySelector('[data-dtab="communications"]');
+    if (!btn) return;
+    var label = "Communications";
+    ((config && config.detailTabs) || []).forEach(function (t) {
+      if (t.key === "communications") label = t.label || label;
+    });
+    var n = convRows.filter(function (c) { return c.unread; }).length;
+    btn.textContent = n ? label + " (" + n + ")" : label;
   }
 
   async function viewConversation(convId) {
@@ -1681,6 +1701,9 @@
     }
     $("commModalTitle").textContent = c.subject || "(no subject)";
     body.innerHTML = "";
+    // The server stamped this thread read on the fetch — reflect it locally.
+    convRows.forEach(function (r) { if (r.id === convId) r.unread = false; });
+    renderConversationRows(convRows);
 
     // Optional AI summary block (empty when the summary layer is off).
     if (c.summary || (c.actionItems || []).length) {
@@ -1782,6 +1805,27 @@
       replyAll.textContent = "↩ Reply all (" + participants.length + ")";
       replyAll.addEventListener("click", function () { openReply(participants); });
       foot.appendChild(replyAll);
+    }
+    // Forward the latest message to someone new: nobody pre-selected, the
+    // message rides along as a forwarded block (headers + body).
+    if (lastMsg && lastMsg.bodyHtml) {
+      var fwd = document.createElement("button"); fwd.type = "button";
+      fwd.className = "cbm-button cbm-button--secondary"; fwd.textContent = "↪ Forward";
+      fwd.addEventListener("click", function () {
+        var s = String(c.subject || "");
+        composeMessage({
+          subject: /^fwd:/i.test(s) ? s : "Fwd: " + s,
+          forward: {
+            html: lastMsg.bodyHtml,
+            from: lastMsg.from || lastMsg.fromAddress || "",
+            date: lastMsg.sentAt || "",
+            to: lastMsg.to || "",
+            subject: c.subject || "",
+          },
+          backToConv: convId,
+        });
+      });
+      foot.appendChild(fwd);
     }
     foot.appendChild(removeConversationBtn(convId));
     var close = document.createElement("button"); close.type = "button";
@@ -2238,7 +2282,7 @@
     var replyKey = pre.replyToId || null;
     // Header: the record name for context, the action as the title.
     openComm(currentDetail ? (currentDetail.name || "") : "",
-      pre.replyToId ? "Reply" : "New email");
+      pre.forward ? "Forward" : (pre.replyToId ? "Reply" : "New email"));
     var body = $("commModalBody");
 
     // From: the signed-in user's own CBM mailbox — the address the message
@@ -2290,7 +2334,11 @@
       contactRecips.forEach(function (c) {
         var lab = document.createElement("label"); lab.className = "sx__addr-check";
         var box = document.createElement("input"); box.type = "checkbox";
-        box.checked = pre.to ? preKeys.indexOf(c.email.toLowerCase()) !== -1 : true;
+        // A forward starts with NOBODY selected (the whole point is sending
+        // to someone new); a reply pre-checks the replied-to addresses; a
+        // fresh compose selects every record contact.
+        box.checked = pre.forward ? false
+          : (pre.to ? preKeys.indexOf(c.email.toLowerCase()) !== -1 : true);
         box.addEventListener("change", onRecipientsChanged);
         lab.appendChild(box);
         lab.appendChild(document.createTextNode(" " + (c.name || c.email) + " — " + c.email));
@@ -2399,7 +2447,8 @@
     // plain editable text. A body still equal to any auto-generated state
     // counts as empty/untouched, so a template pick right after opening
     // doesn't ask to "replace" and closing doesn't ask to discard.
-    var quoteHtml = pre.quote ? buildQuoteHtml(pre.quote) : "";
+    var quoteHtml = pre.quote ? buildQuoteHtml(pre.quote)
+      : (pre.forward ? buildForwardHtml(pre.forward) : "");
     var initialSubject = pre.subject || "";
     var pristineBodies = {};   // every auto-generated body state we've set
     function markPristine(v) { pristineBodies[String(v || "")] = 1; }
@@ -2414,7 +2463,8 @@
     function draftHasContent() {
       return !!($("commSubject").value.trim() !== initialSubject.trim() && $("commSubject").value.trim()) ||
         !bodyPristine() ||
-        localAttachments.length > 0;
+        localAttachments.length > 0 ||
+        docAttachments.length > 0;
     }
     function setCommBody(html) {
       var el = $("commBody");
@@ -2427,6 +2477,21 @@
         ", " + (q.from || "they") + " wrote:";
       var p = document.createElement("p"); p.textContent = head;  // escapes the name
       return "<blockquote class=\"quoted-reply\">" + p.outerHTML + (q.html || "") + "</blockquote>";
+    }
+    // Gmail-style forwarded block: header lines, then the original message.
+    function buildForwardHtml(f) {
+      var lines = [
+        "---------- Forwarded message ----------",
+        "From: " + (f.from || "?"),
+        f.date ? "Date: " + fmtSessionDate(f.date, "short") : "",
+        f.subject ? "Subject: " + f.subject : "",
+        f.to ? "To: " + f.to : "",
+      ].filter(Boolean);
+      var headHtml = lines.map(function (t) {
+        var p = document.createElement("p"); p.textContent = t;  // escapes everything
+        return p.outerHTML;
+      }).join("");
+      return "<blockquote class=\"quoted-reply\">" + headHtml + (f.html || "") + "</blockquote>";
     }
     function onTemplatePicked(id) {
       if (tplConfirmEl) { tplConfirmEl.remove(); tplConfirmEl = null; }
@@ -2527,6 +2592,68 @@
     fileInput.multiple = true; fileInput.hidden = true;
     fileBtn.addEventListener("click", function () { fileInput.click(); });
     attachLine.appendChild(fileBtn); attachLine.appendChild(fileInput);
+    // "Attach from documents…" — the record's Google Drive documents, without
+    // a round-trip through the user's disk. Chips carry {documentId}; the
+    // SERVER fetches the original bytes at send time through the same
+    // record-scoped path as the Download action.
+    var docAttachments = [];   // {documentId, filename}
+    var docPickWrap = null, docPickList = null, docsCache = null;
+    if (docsOn() && currentDetail) {
+      docPickWrap = document.createElement("div"); docPickWrap.className = "sx__combo";
+      var docBtn = document.createElement("button"); docBtn.type = "button";
+      docBtn.className = "cbm-button cbm-button--secondary"; docBtn.textContent = "Attach from documents…";
+      docPickList = document.createElement("ul"); docPickList.className = "sx__combo-list"; docPickList.hidden = true;
+      docPickWrap.appendChild(docBtn); docPickWrap.appendChild(docPickList);
+      attachLine.appendChild(docPickWrap);
+      docBtn.addEventListener("click", async function () {
+        if (!docPickList.hidden) { docPickList.hidden = true; return; }
+        if (docsCache === null) {
+          docBtn.disabled = true;
+          try {
+            var res = await api("/records/" + encodeURIComponent(currentDetail.id) + "/documents");
+            docsCache = res.documents || [];
+          } catch (e) {
+            docsCache = null;
+            if (e.status === 401) { flushDraft(); closeComm(); showLogin(); return; }
+            footErr(e.status === 503
+              ? "The document integration isn't enabled — attach a file from your computer instead."
+              : (e.message || "Couldn't load this record's documents."));
+            return;
+          } finally { docBtn.disabled = false; }
+        }
+        renderDocPick();
+      });
+      document.addEventListener("click", function (e) {
+        if (docPickWrap && !docPickWrap.contains(e.target)) docPickList.hidden = true;
+      });
+    }
+    function renderDocPick() {
+      docPickList.innerHTML = "";
+      var chosen = {};
+      docAttachments.forEach(function (d) { chosen[d.documentId] = 1; });
+      var avail = (docsCache || []).filter(function (d) {
+        return !chosen[d.id] && (d.status || "active") === "active";
+      });
+      if (!avail.length) {
+        var li = document.createElement("li"); li.className = "is-muted";
+        li.textContent = (docsCache || []).length
+          ? "Every document is already attached."
+          : "No documents on this record yet.";
+        docPickList.appendChild(li);
+      }
+      avail.forEach(function (d) {
+        var li = document.createElement("li");
+        li.textContent = d.filename + (d.docType ? " — " + d.docType : "");
+        li.addEventListener("mousedown", function (e) {
+          e.preventDefault();
+          docAttachments.push({ documentId: d.id, filename: d.filename });
+          docPickList.hidden = true;
+          renderAttachChips(); markEdited();
+        });
+        docPickList.appendChild(li);
+      });
+      docPickList.hidden = false;
+    }
     attachWrap.appendChild(attachLab); attachWrap.appendChild(chipsEl);
     attachWrap.appendChild(attachTotalEl); attachWrap.appendChild(attachLine);
     body.appendChild(attachWrap);
@@ -2557,6 +2684,11 @@
       localAttachments.forEach(function (f, i) {
         chip(f.filename, f.size || 0, function () {
           localAttachments.splice(i, 1); renderAttachChips(); markEdited();
+        });
+      });
+      docAttachments.forEach(function (d, i) {
+        chip("📄 " + d.filename, 0, function () {
+          docAttachments.splice(i, 1); renderAttachChips(); markEdited();
         });
       });
       var total = attachTotal();
@@ -2590,6 +2722,8 @@
         return { espoId: a.id, filename: a.name };
       }).concat(localAttachments.map(function (f) {
         return { filename: f.filename, contentType: f.contentType, dataBase64: f.dataBase64 };
+      })).concat(docAttachments.map(function (d) {
+        return { documentId: d.documentId, filename: d.filename };
       }));
     }
 
@@ -2669,6 +2803,7 @@
         checked: recipChecks.filter(function (r) { return r.box.checked; })
           .map(function (r) { return r.email.toLowerCase(); }),
         tplAttach: templateAttachments,
+        docAttach: docAttachments,
       };
     }
     function flushDraft() {
@@ -2697,6 +2832,7 @@
         recipChecks.forEach(function (r) { r.box.checked = !!wanted[r.email.toLowerCase()]; });
       }
       templateAttachments = (savedDraft.tplAttach || []).slice();
+      docAttachments = (savedDraft.docAttach || []).slice();
       renderAttachChips();
       updateSummary();
       var note = document.createElement("div"); note.className = "sx__notice sx__draft-note";
@@ -2715,9 +2851,10 @@
         if ($("commCc")) $("commCc").value = "";
         if ($("commBcc")) $("commBcc").value = "";
         recipChecks.forEach(function (r) {
-          r.box.checked = pre.to ? preKeys.indexOf(r.email.toLowerCase()) !== -1 : true;
+          r.box.checked = pre.forward ? false
+            : (pre.to ? preKeys.indexOf(r.email.toLowerCase()) !== -1 : true);
         });
-        templateAttachments = []; localAttachments = [];
+        templateAttachments = []; localAttachments = []; docAttachments = [];
         renderAttachChips(); updateSummary(); clearFootMsg();
       });
       note.appendChild(fresh);
@@ -2914,7 +3051,10 @@
         $("commTo").focus();
         return;
       }
-      if (bodyPristine()) {
+      // A pristine body blocks the send — EXCEPT on a forward, where the
+      // forwarded block alone IS the message (forwarding without comment is
+      // normal email behavior).
+      if (bodyPristine() && !pre.forward) {
         footErr("Write a message first.");
         var bodyEl = $("commBody");
         if (bodyEl && bodyEl._cbmRichText) bodyEl._cbmRichText.focus();
