@@ -4,6 +4,43 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.113.0] — 2026-07-20
+
+**feat(sessions): Funder Management lists ALL sponsors to every sponsor-team
+member (the partner-domain pattern).** Doug's report: the sponsor grid failed
+with "Could not load records: your CRM role is missing read access to
+CMentorProfile records" even though the team's users are meant to see the
+funders — the old list resolved the signed-in user's own `CMentorProfile`
+(then read the `managedSponsors` reverse link), so a sponsor-team role with
+no CMentorProfile grant could never load the page, and even with the grant a
+user only saw the sponsors THEY manage. Changes:
+
+- **`sessions/config.py`: the sponsor domain is now `list_all=True`** (the
+  v0.89.0 partner precedent) — the grid is a plain paginated `CSponsorProfile`
+  list; the user's CRM ACL is the visibility gate, `profileFound` is always
+  true, and **the list never reads CMentorProfile at all** (which is what was
+  403ing).
+- **New "Sponsor Manager" grid column** (`cBMSponsorManagerName`, riding the
+  existing `list_manager_id_attr` plumbing like the partner grid) linking to
+  the manager's mentor-profile pop-up, so users can tell who manages each
+  funder in the shared list ("—" when unmanaged). Note: opening that pop-up
+  still needs CMentorProfile read — without it the click shows the standard
+  readable permission message; the LIST no longer depends on it.
+- **The sponsor intake form stamps the sponsor team on new CSponsorProfiles**
+  (`SPONSOR_TEAM_NAME`, default `Sponsor Management Team`; best-effort, the
+  partner form's `_partner_team_ids` pattern — an unresolvable team logs a
+  WARNING and never blocks the application), so team-scoped roles see
+  intake-created funders too.
+
+**CRM prerequisites for the "all funders" widening** (mirror of the partner
+v0.89.0 checklist): the sponsor team's role must read `CSponsorProfile` at
+**team** scope (or all), existing sponsor records must be backfilled with the
+team in the CRM, and the intake API role needs Team read for the stamp (until
+then the stamp is skipped with a WARNING). If the real CRM team is named
+something other than `Sponsor Management Team` (e.g. "Sponsor Admin Team"),
+set BOTH `SESSION_SPONSOR_ALLOWED_TEAMS` (the app gate) and
+`SPONSOR_TEAM_NAME` (the intake stamp) in the overlay.
+
 ## [0.112.0] — 2026-07-20
 
 **fix(sessions): saving a session twice can no longer create two sessions.**

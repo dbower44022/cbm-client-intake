@@ -149,9 +149,43 @@ async def test_resolve_manager_profile_membership_not_first_entry():
 
 @pytest.mark.asyncio
 async def test_list_records_no_profile():
+    # Mentor is a reverse-link domain: no linked CMentorProfile => empty +
+    # profileFound False. (Partner/sponsor are list_all and never resolve it.)
     fake = Fake(mentors=[])
-    res = await service.list_records(SPONSOR, fake, _USER)
+    res = await service.list_records(MENTOR, fake, _USER)
     assert res == {"records": [], "profileFound": False}
+
+
+@pytest.mark.asyncio
+async def test_sponsor_list_is_all_records_without_mentor_profile_read():
+    """Sponsor is a list_all domain (2026-07-20): every CSponsorProfile the
+    user's ACL can read, WITHOUT resolving their CMentorProfile — a sponsor-team
+    role with no CMentorProfile grant must still load the grid."""
+
+    class NoMentorRead(Fake):
+        async def list(self, entity, select=None, max_size=200, offset=0, order_by=None, order=None):
+            if entity == "CMentorProfile":
+                raise AssertionError("sponsor list must never read CMentorProfile")
+            return await super().list(entity, select=select, max_size=max_size,
+                                      offset=offset, order_by=order_by, order=order)
+
+    fake = NoMentorRead(
+        mentors=[],  # user has NO linked profile — must not matter
+        entity_lists={"CSponsorProfile": [
+            {"id": "S1", "name": "Generous Corp", "sponsorCompanyName": "Generous Co",
+             "sponsorContactName": "Sam", "sponsorContactId": "c9",
+             "cBMSponsorManagerName": "Milt Sierra", "cBMSponsorManagerId": "mp7",
+             "createdAt": "2026-01-02 00:00:00"},
+        ]},
+    )
+    res = await service.list_records(SPONSOR, fake, _USER)
+    assert res["profileFound"] is True
+    row = res["records"][0]
+    assert row["id"] == "S1" and row["name"] == "Generous Corp"
+    assert row["company"] == "Generous Co"
+    assert row["contact"] == "Sam" and row["contactId"] == "c9"
+    # Sponsor Manager column links to the manager's mentor-profile pop-up.
+    assert row["mentor"] == "Milt Sierra" and row["mentorId"] == "mp7"
 
 
 @pytest.mark.asyncio
@@ -231,8 +265,10 @@ async def test_mentor_list_includes_comentored_engagements():
 
 
 @pytest.mark.asyncio
-async def test_sponsor_list_reads_only_owned_link():
-    # No co-mentor concept outside the mentor domain: only managedSponsors is read.
+async def test_sponsor_list_lists_all_readable():
+    # The sponsor grid shows ALL sponsors the user can read (Doug's ruling
+    # 2026-07-20, the partner precedent) — no manager-profile resolution, no
+    # reverse-link read, and profileFound is True even without a linked profile.
     class Recording(Fake):
         def __init__(self, **kw):
             super().__init__(**kw)
@@ -242,9 +278,18 @@ async def test_sponsor_list_reads_only_owned_link():
             self.related_calls.append(link)
             return await super().list_related(entity, record_id, link, **kw)
 
-    fake = Recording(mentors=[{"id": "p9", "assignedUserId": "u1"}])
-    await service.list_records(SPONSOR, fake, _USER)
-    assert fake.related_calls == ["managedSponsors"]
+    fake = Recording(
+        mentors=[],  # no linked profile — must not matter
+        entity_lists={"CSponsorProfile": [
+            {"id": "S1", "name": "Generous Corp", "createdAt": "2026-01-02"},
+            {"id": "S2", "name": "Benefactor Inc", "createdAt": "2026-01-03"},
+        ]},
+    )
+    res = await service.list_records(SPONSOR, fake, _USER)
+    assert res["profileFound"] is True
+    assert {r["id"] for r in res["records"]} == {"S1", "S2"}
+    assert fake.related_calls == []  # never touches the reverse links
+    assert not any(e == "CMentorProfile" for e, _ in fake.list_calls)
 
 
 @pytest.mark.asyncio

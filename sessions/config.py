@@ -124,7 +124,10 @@ class DomainConfig:
     # CMentorProfile. The partner domain uses this (Doug's ruling 2026-07-18:
     # the grid shows ALL partners; visibility is governed CRM-side by team
     # permissions — partner records carry the Partner Management Team and the
-    # role reads CPartnerProfile at "team" scope).
+    # role reads CPartnerProfile at "team" scope), and the sponsor domain since
+    # 2026-07-20 (all funders visible to every sponsor-team member; this also
+    # drops the list's CMentorProfile read, which the sponsor team's role may
+    # not have at all).
     list_all: bool = False
     # Attr on the raw record holding the assigned manager's CMentorProfile id
     # (mentorProfileId / partnerManagerId). Feeds the grid's manager column
@@ -456,17 +459,27 @@ SPONSOR = DomainConfig(
     parent_contacts_link="sponsorContacts",
     primary_contact_id_attr="sponsorContactId",
     default_session_type="Sponsor Session",
+    # The sponsor grid lists ALL sponsors the user's ACL can read (not just the
+    # ones they manage) — every sponsor-team member works the shared list
+    # (Doug's ruling 2026-07-20, the partner-domain precedent). This also means
+    # the list never reads CMentorProfile, which the sponsor team's role may
+    # not be granted.
+    list_all=True,
     list_select=(
         "name,sponsorCompanyName,sponsorCompanyId,sponsorContactName,"
-        "sponsorContactId,createdAt"
+        "sponsorContactId,cBMSponsorManagerName,cBMSponsorManagerId,createdAt"
     ),
     list_columns=(
         Column("name", "Sponsor", "name"),
         Column("company", "Company", "sponsorCompanyName"),
         Column("contact", "Primary contact", "sponsorContactName"),
+        # Links to the manager's CMentorProfile pop-up (CBM/personal email
+        # compose links there — the quick-email path); "—" when unmanaged.
+        Column("mentor", "Sponsor Manager", "cBMSponsorManagerName"),
     ),
     list_contact_key="contact",
     list_contact_id_attr="sponsorContactId",
+    list_manager_id_attr="cBMSponsorManagerId",
     list_company_key="company",
     list_company_aggregate=(("Account", "sponsorCompanyId"),
                             ("CSponsorProfile", "id")),

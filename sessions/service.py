@@ -246,10 +246,12 @@ async def list_records(
     ``{"records": [...], "profileFound": bool}`` — ``profileFound=False`` means
     the user has no linked ``CMentorProfile`` (so nothing can be scoped to them).
 
-    A ``list_all`` domain (partner) skips the manager-profile scoping entirely
-    and lists every parent record the user's CRM ACL can read — the CRM's team
-    permissions are the visibility gate, so ``profileFound`` is always True
-    (a team member without a linked profile still sees the shared list).
+    A ``list_all`` domain (partner, sponsor) skips the manager-profile scoping
+    entirely and lists every parent record the user's CRM ACL can read — the
+    CRM's team permissions are the visibility gate, so ``profileFound`` is
+    always True (a team member without a linked profile still sees the shared
+    list). This also keeps CMentorProfile out of the list read path, so a
+    team whose role has no CMentorProfile grant can still load the grid.
     """
     rows: list[dict[str, Any]] = []
     if cfg.list_all:

@@ -24,9 +24,10 @@ from __future__ import annotations
 
 import logging
 
+from core.config import get_settings
 from core.crm_upsert import find_create_or_fill
 from core.enum_filter import EnumSanitizer
-from core.espo import EspoApi
+from core.espo import EspoApi, EspoError
 from core.phone import e164_or_none
 
 from .schemas import SponsorApplication
@@ -36,6 +37,7 @@ log = logging.getLogger("cbm_intake.sponsor")
 ACCOUNT = "Account"
 CONTACT = "Contact"
 SPONSOR_PROFILE = "CSponsorProfile"
+TEAM = "Team"
 
 # --- Discriminator attributes (reconciled against the deployed instance) ---
 A_ACCOUNT_TYPE = "cAccountType"   # multiEnum on Account — REQUIRED
@@ -118,6 +120,33 @@ async def _find_or_create_contact(
     return contact_id
 
 
+async def _sponsor_team_ids(client: EspoApi) -> list[str]:
+    """The Team ids to stamp on a new CSponsorProfile (``SPONSOR_TEAM_NAME``).
+
+    New sponsors carry the sponsor team so team-scoped roles see the whole
+    funder list in /sponsorsessions (the partner-form pattern). Best-effort:
+    the team not being resolvable (name lookup empty — e.g. the intake API
+    role has no Team read grant yet — or the read failing outright) logs a
+    WARNING and returns [], so a missing grant can never block a sponsor
+    application.
+    """
+    name = get_settings().sponsor_team_name.strip()
+    if not name:
+        return []
+    try:
+        team = await client.find_one(TEAM, "name", name)
+    except EspoError as exc:
+        log.warning("Team %r lookup failed (%s) — sponsor profile created "
+                    "without a team; grant the intake API role Team read", name, exc)
+        return []
+    if not team:
+        log.warning("Team %r not found/readable — sponsor profile created "
+                    "without a team; grant the intake API role Team read "
+                    "(or create the team)", name)
+        return []
+    return [team["id"]]
+
+
 async def _create_sponsor_profile(
     sub: SponsorApplication, client: EspoApi, account_id: str, contact_id: str
 ) -> str:
@@ -128,6 +157,9 @@ async def _create_sponsor_profile(
         S_CONTACT_LINK: contact_id,
         "description": sub.message.strip(),
     }
+    team_ids = await _sponsor_team_ids(client)
+    if team_ids:
+        payload["teamsIds"] = team_ids
     created = await client.create(SPONSOR_PROFILE, payload)
     return created["id"]
 

@@ -662,17 +662,20 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   | `sponsorsessions` | `CSponsorProfile` | `managedSponsors` (reverse of `CSponsorProfile.cBMSponsorManager`) | no |
   Mentor sessions restrict the owned list to active engagement statuses
   (`Active`/`Assigned`/`Pending Acceptance`/`On-Hold`, filtered in Python).
-  **EXCEPTION — the partner grid lists ALL partners (v0.89.0, Doug's ruling
-  2026-07-18):** `DomainConfig.list_all=True` on the partner domain replaces
-  the reverse-link read with a plain paginated `CPartnerProfile` list — the
-  user's ACL is the gate (team permissions CRM-side), `profileFound` is
-  always true, and the manager profile isn't resolved for the list. New
-  intake-created partners are stamped with the **Partner Management Team**
-  (see the partner form's orchestrator; `PARTNER_TEAM_NAME`). CRM prereqs
-  for full activation: the Partner Management Team role reads
-  CPartnerProfile at **team** scope, existing partner records backfilled
-  with the team, and the intake API role granted **Team read** (until then
-  the stamp is skipped with a WARNING — never blocks the application).
+  **EXCEPTION — the partner AND sponsor grids list ALL records (partner
+  v0.89.0, Doug's ruling 2026-07-18; sponsor v0.113.0, Doug's ruling
+  2026-07-20):** `DomainConfig.list_all=True` on those domains replaces
+  the reverse-link read with a plain paginated `CPartnerProfile` /
+  `CSponsorProfile` list — the user's ACL is the gate (team permissions
+  CRM-side), `profileFound` is always true, and the manager profile isn't
+  resolved for the list (so the list never reads CMentorProfile — the
+  sponsor-team 403 that prompted v0.113.0). New intake-created partners /
+  sponsors are stamped with their team (orchestrators; `PARTNER_TEAM_NAME` /
+  `SPONSOR_TEAM_NAME`). CRM prereqs for full activation (each domain): the
+  team's role reads the profile entity at **team** scope, existing records
+  backfilled with the team, and the intake API role granted **Team read**
+  (until then the stamp is skipped with a WARNING — never blocks the
+  application).
 - **All three managers are `CMentorProfile` records** — the one whose
   `assignedUser` is their login. `service.resolve_manager_profile` scans the
   `CMentorProfile` rows readable by this user and **matches `assignedUser` in
@@ -1446,7 +1449,26 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-20)
 
-**Main is at v0.112.0** (2026-07-20, 835 tests green, committed NOT pushed) —
+**Main is at v0.113.0** (2026-07-20, 839 tests green, committed NOT pushed) —
+**Funder Management lists ALL sponsors to every sponsor-team member** (Doug's
+report: the grid failed with "your CRM role is missing read access to
+CMentorProfile records" even though the users are meant to see the funders).
+Root cause: the sponsor list resolved the user's own CMentorProfile + the
+`managedSponsors` reverse link, so a sponsor-team role without a
+CMentorProfile grant 403'd the whole page. Fix = the partner v0.89.0 pattern:
+sponsor domain `list_all=True` (plain ACL-gated CSponsorProfile list, no
+CMentorProfile read), a new **Sponsor Manager** grid column (rides
+`list_manager_id_attr` → mentor-profile pop-up; "—" when unmanaged), and the
+sponsor intake form stamps `SPONSOR_TEAM_NAME` (default `Sponsor Management
+Team`, best-effort) on new profiles. Mechanics in the Session Management
+domain-table EXCEPTION bullet; CRM prereqs in CHANGELOG 0.113.0 (role reads
+CSponsorProfile at team scope + backfill existing sponsors with the team +
+intake API Team read; if the real team is named "Sponsor Admin Team", set
+BOTH `SESSION_SPONSOR_ALLOWED_TEAMS` and `SPONSOR_TEAM_NAME` in the overlay).
+4 new tests. **NOT yet driven live** — the CRM-side team work above decides
+whether the widened list actually shows all funders.
+
+Before that: **v0.112.0** (2026-07-20, 835 tests green, committed NOT pushed) —
 **fix: saving a session twice no longer creates two sessions.** Doug's report
 (a mentor made three sessions from one editor) diagnosed against the live prod
 record `6a5a2c6ab50ca311f`: three byte-identical CSessions (same name/status

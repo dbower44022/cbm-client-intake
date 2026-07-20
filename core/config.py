@@ -137,6 +137,10 @@ class Settings(BaseSettings):
     # (e.g. the API role lacks Team read) logs a WARNING and the partner is
     # created without it. Empty string disables the stamp.
     partner_team_name: str = "Partner Management Team"
+    # Same stamp for every NEW CSponsorProfile the sponsor intake form creates
+    # (all funders are visible to every sponsor-team member — /sponsorsessions
+    # lists ALL sponsors the user's ACL can read). Empty string disables.
+    sponsor_team_name: str = "Sponsor Management Team"
     # Auto-provision a login User when a mentor is Approved. Off by default.
     # User creation is admin-only in EspoCRM (API keys can't do it), so this runs
     # as a dedicated admin service account via the App/user token flow — NEVER
