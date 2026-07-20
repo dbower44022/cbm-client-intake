@@ -292,6 +292,7 @@
       p.hidden = p.dataset.dpanel !== tab;
     });
     if (tab === "details") ensureDetails();
+    if (tab === "contributions") renderContributions();
     if (tab === "communications") renderComms();
     if (tab === "documents") renderDocuments();
   }
@@ -4920,6 +4921,434 @@
     });
   }
   makeColumnsResizable($("sessionsTable"));
+
+  // --- Contributions tab (the funder ledger — sponsor domain only) ----------
+  // prds/funder-contributions-plan.md. Panel + endpoints exist only when the
+  // domain config declared the tab (the server registers nothing elsewhere).
+  // Totals count Received only; Cancelled/Unsuccessful rows render dimmed and
+  // are excluded server-side; soft delete = the editor's status → Cancelled.
+  var ctb = {
+    forId: null, rows: [], summary: null, parentName: "",
+    spec: null, options: {}, required: [],
+    sort: { key: null, dir: 1 }, periodMode: "half",
+    editing: null,        // the row being edited (null = create)
+    fieldEls: {},         // field name -> input element
+    snapshot: {},         // field name -> value at render (diffed on save)
+    nameAuto: "",         // last auto-generated title (user edits win)
+    discardArmed: false,
+    saving: false,
+  };
+
+  function ctbMoney(v, cur) {
+    if (v == null || v === "") return "—";
+    var n = Number(v);
+    if (isNaN(n)) return String(v);
+    try {
+      return new Intl.NumberFormat("en-US", {
+        style: "currency", currency: cur || (ctb.summary && ctb.summary.currency) || "USD",
+        minimumFractionDigits: 0, maximumFractionDigits: n % 1 ? 2 : 0,
+      }).format(n);
+    } catch (e) { return "$" + n; }
+  }
+
+  function ctbDate(v) {
+    if (!v) return "—";
+    var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(v));
+    if (!m) return String(v);
+    // Built from parts — new Date("YYYY-MM-DD") parses as UTC and can shift a day.
+    var d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  }
+
+  async function renderContributions() {
+    if (!currentDetail) return;
+    if (ctb.forId === currentDetail.id && ctb.summary) { paintContributions(); return; }
+    ctb.forId = currentDetail.id;
+    ctb.rows = []; ctb.summary = null;
+    hide($("ctbNotice")); hide($("ctbTiles")); hide($("ctbRecency"));
+    hide($("ctbTable")); hide($("noCtb")); hide($("ctbPeriods"));
+    show($("ctbLoading"));
+    try {
+      if (!ctb.spec) {
+        var f = await api("/contributionfields");
+        ctb.spec = f.fields || []; ctb.options = f.options || {}; ctb.required = f.required || [];
+      }
+      var res = await api("/records/" + encodeURIComponent(currentDetail.id) + "/contributions");
+      ctb.rows = res.records || [];
+      ctb.summary = res.summary || null;
+      ctb.parentName = res.parentName || (currentDetail.record && currentDetail.record.name) || "";
+      paintContributions();
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      notice("ctbNotice", e.message, "error");
+    } finally { hide($("ctbLoading")); }
+  }
+
+  function paintContributions() {
+    paintCtbTiles();
+    paintCtbRecency();
+    paintCtbPeriods();
+    paintCtbTable();
+  }
+
+  function ctbTile(value, label, sub) {
+    var t = document.createElement("div"); t.className = "ctb__tile";
+    var v = document.createElement("div"); v.className = "ctb__tile-value"; v.textContent = value;
+    var l = document.createElement("div"); l.className = "ctb__tile-label"; l.textContent = label;
+    t.appendChild(v); t.appendChild(l);
+    if (sub) { var s = document.createElement("div"); s.className = "ctb__tile-sub"; s.textContent = sub; t.appendChild(s); }
+    return t;
+  }
+
+  function paintCtbTiles() {
+    var s = ctb.summary; var box = $("ctbTiles"); box.innerHTML = "";
+    if (!s) { hide(box); return; }
+    box.appendChild(ctbTile(String(s.totalCount), "Contributions", "received"));
+    box.appendChild(ctbTile(ctbMoney(s.totalAmount), "Total received"));
+    box.appendChild(ctbTile(ctbMoney(s.last12MonthsAmount), "Last 12 months", "rolling"));
+    box.appendChild(ctbTile(
+      ctbMoney(s.scheduledAmount), "Scheduled (upcoming)",
+      s.scheduledCount ? s.scheduledCount + " pledged/committed" : "nothing scheduled"
+    ));
+    show(box);
+  }
+
+  function paintCtbRecency() {
+    var s = ctb.summary; var el = $("ctbRecency");
+    if (!s) { hide(el); return; }
+    el.classList.remove("is-stale");
+    if (!s.lastReceived) {
+      el.textContent = "No contributions received yet.";
+    } else {
+      var lr = s.lastReceived;
+      var ago = lr.monthsAgo === 0 ? "this month"
+        : lr.monthsAgo + (lr.monthsAgo === 1 ? " month ago" : " months ago");
+      var text = "Last received: " + ctbMoney(lr.amount) + " on " + ctbDate(lr.date) + " — " + ago + ".";
+      if (s.nextExpected) {
+        text += " Next expected: " + ctbMoney(s.nextExpected.amount) + " on " + ctbDate(s.nextExpected.date) + ".";
+      }
+      el.textContent = text;
+      if (lr.monthsAgo > 6) el.classList.add("is-stale");  // the continuity nudge
+    }
+    show(el);
+  }
+
+  function paintCtbPeriods() {
+    var s = ctb.summary;
+    if (!s || $("ctbPeriods").hidden) return;
+    $("ctbHalfBtn").classList.toggle("is-active", ctb.periodMode === "half");
+    $("ctbYearBtn").classList.toggle("is-active", ctb.periodMode === "year");
+    var rows = (s.periods && s.periods[ctb.periodMode]) || [];
+    var tb = $("ctbPeriodBody"); tb.innerHTML = "";
+    rows.forEach(function (w) {
+      var tr = document.createElement("tr");
+      tr.appendChild(td(ctbDate(w.start) + " – " + ctbDate(w.end)));
+      tr.appendChild(td(w.count ? String(w.count) : "—"));
+      tr.appendChild(td(w.count ? ctbMoney(w.total) : "—"));
+      if (!w.count) tr.className = "ctb__period-empty";
+      tb.appendChild(tr);
+    });
+  }
+
+  function ctbSortVal(r, k) {
+    if (k === "amount") return Number(r.amount) || 0;
+    if (k === "acknowledgmentSent") return r.acknowledgmentSent ? 1 : 0;
+    return (r[k] || "").toString().toLowerCase();
+  }
+
+  function updateCtbSortIndicators() {
+    Array.prototype.forEach.call(document.querySelectorAll("#ctbTable th[data-sort]"), function (th) {
+      var active = th.getAttribute("data-sort") === ctb.sort.key;
+      th.setAttribute("aria-sort", active ? (ctb.sort.dir === 1 ? "ascending" : "descending") : "none");
+      th.dataset.dir = active ? (ctb.sort.dir === 1 ? "asc" : "desc") : "";
+    });
+  }
+
+  function paintCtbTable() {
+    var list = ctb.rows.slice();
+    var tb = $("ctbBody"); tb.innerHTML = "";
+    $("noCtb").hidden = list.length > 0;
+    $("ctbTable").hidden = list.length === 0;
+    updateCtbSortIndicators();
+    if (ctb.sort.key) {
+      var k = ctb.sort.key, dir = ctb.sort.dir;
+      list.sort(function (a, b) {
+        var va = ctbSortVal(a, k), vb = ctbSortVal(b, k);
+        return (va < vb ? -1 : va > vb ? 1 : 0) * dir;
+      });
+    }
+    list.forEach(function (r) {
+      var tr = document.createElement("tr");
+      if (r.excluded) tr.className = "ctb__row--excluded";
+      else if (r.upcoming) tr.className = "ctb__row--upcoming";
+      var nameCell = document.createElement("td");
+      var link = document.createElement("button"); link.type = "button"; link.className = "sx__link";
+      link.textContent = r.name || "(untitled)";
+      link.addEventListener("click", function () { openContribEditor(r); });
+      nameCell.appendChild(link); tr.appendChild(nameCell);
+      tr.appendChild(td(r.contributionType || "—"));
+      var st = document.createElement("td"); st.textContent = r.status || "—";
+      if (r.excluded) {
+        var tag = document.createElement("span"); tag.className = "ctb__tag";
+        tag.textContent = "not counted"; st.appendChild(tag);
+      } else if (r.upcoming) {
+        var utag = document.createElement("span"); utag.className = "ctb__tag ctb__tag--up";
+        utag.textContent = "upcoming"; st.appendChild(utag);
+      }
+      tr.appendChild(st);
+      tr.appendChild(td(ctbMoney(r.amount, r.amountCurrency)));
+      tr.appendChild(td(ctbDate(r.expectedPaymentDate)));
+      tr.appendChild(td(ctbDate(r.receivedDate)));
+      tr.appendChild(td(r.giftType || "—"));
+      tr.appendChild(td(r.acknowledgmentSent ? "✓" : "—"));
+      var actions = document.createElement("td");
+      var edit = document.createElement("button"); edit.type = "button";
+      edit.className = "cbm-button cbm-button--secondary sx__sm"; edit.textContent = "Edit";
+      edit.addEventListener("click", function () { openContribEditor(r); });
+      actions.appendChild(edit); tr.appendChild(actions);
+      tb.appendChild(tr);
+    });
+  }
+
+  Array.prototype.forEach.call(
+    document.querySelectorAll("#ctbTable th[data-sort]"),
+    function (th) {
+      th.classList.add("sx__th-sort");
+      th.addEventListener("click", function () {
+        var key = th.getAttribute("data-sort");
+        if (ctb.sort.key === key) ctb.sort.dir = -ctb.sort.dir;
+        else { ctb.sort.key = key; ctb.sort.dir = /Date$/.test(key) || key === "amount" ? -1 : 1; }
+        paintCtbTable();
+      });
+    }
+  );
+  makeColumnsResizable($("ctbTable"));
+
+  $("ctbPeriodBtn").addEventListener("click", function () {
+    var p = $("ctbPeriods");
+    p.hidden = !p.hidden;
+    if (!p.hidden) paintCtbPeriods();
+  });
+  $("ctbHalfBtn").addEventListener("click", function () { ctb.periodMode = "half"; paintCtbPeriods(); });
+  $("ctbYearBtn").addEventListener("click", function () { ctb.periodMode = "year"; paintCtbPeriods(); });
+  $("ctbAddBtn").addEventListener("click", function () { openContribEditor(null); });
+
+  // --- contribution editor (modal) ---
+  function ctbDefaultName(type) {
+    var today = new Date();
+    var iso = today.getFullYear() + "-" + String(today.getMonth() + 1).padStart(2, "0")
+      + "-" + String(today.getDate()).padStart(2, "0");
+    return iso + " — " + (ctb.parentName || "Contribution") + (type ? " " + type : "");
+  }
+
+  function ctbFieldValue(name) {
+    var el = ctb.fieldEls[name];
+    if (!el) return "";
+    if (el._cbmRichText) return el._cbmRichText.getValue();
+    if (el.type === "checkbox") return el.checked;
+    return el.value;
+  }
+
+  async function openContribEditor(row) {
+    hide($("ctbFormNotice"));
+    ctb.editing = row || null;
+    ctb.discardArmed = false;
+    $("ctbModalTitle").textContent = row ? (row.name || "Contribution") : "New contribution";
+    var full = row;
+    if (row) {
+      // The list rows omit notes/description — fetch the full record for edit.
+      try { full = await api("/contributions/" + encodeURIComponent(row.id)); }
+      catch (e) { notice("ctbNotice", e.message, "error"); return; }
+      ctb.editing = full;
+    }
+    buildContribForm(full);
+    show($("ctbModal"));
+  }
+
+  function closeContribModal() {
+    hide($("ctbModal"));
+    ctb.editing = null; ctb.fieldEls = {}; ctb.snapshot = {};
+  }
+
+  function ctbDirty() {
+    for (var name in ctb.snapshot) {
+      // The auto title on a pristine NEW form is a default, not a user edit.
+      if (!ctb.editing && name === "name" && ctbFieldValue("name") === ctb.nameAuto) continue;
+      if (String(ctbFieldValue(name)) !== String(ctb.snapshot[name])) return true;
+    }
+    return false;
+  }
+
+  function requestCloseContrib() {
+    if (ctbDirty() && !ctb.discardArmed) {
+      ctb.discardArmed = true;
+      $("ctbCancelBtn").textContent = "Discard changes?";
+      notice("ctbFormNotice", "You have unsaved changes — Cancel again to discard them, or Save.", "error");
+      return;
+    }
+    $("ctbCancelBtn").textContent = "Cancel";
+    closeContribModal();
+  }
+
+  function buildContribForm(rec) {
+    var form = $("ctbForm"); form.innerHTML = "";
+    ctb.fieldEls = {}; ctb.snapshot = {};
+    $("ctbCancelBtn").textContent = "Cancel";
+    var groups = [];   // preserve spec order
+    var byGroup = {};
+    (ctb.spec || []).forEach(function (f) {
+      if (!byGroup[f.group]) { byGroup[f.group] = []; groups.push(f.group); }
+      byGroup[f.group].push(f);
+    });
+    groups.forEach(function (g) {
+      var panel = document.createElement("fieldset"); panel.className = "ctb__group";
+      var legend = document.createElement("legend"); legend.textContent = g; panel.appendChild(legend);
+      var rows = [], byRow = {};
+      byGroup[g].forEach(function (f) {
+        var key = f.row || f.name;
+        if (!byRow[key]) { byRow[key] = []; rows.push(key); }
+        byRow[key].push(f);
+      });
+      rows.forEach(function (rk) {
+        var line = document.createElement("div"); line.className = "ctb__line";
+        var inkindLine = byRow[rk].every(function (f) { return f.inKindOnly; });
+        if (inkindLine) line.dataset.inkind = "1";
+        byRow[rk].forEach(function (f) { line.appendChild(ctbField(f, rec)); });
+        panel.appendChild(line);
+      });
+      form.appendChild(panel);
+    });
+    // In-kind pair only shows for In-Kind gifts (display only — values kept).
+    var gift = ctb.fieldEls.giftType;
+    function syncInKind() {
+      var on = gift && gift.value === "In-Kind";
+      Array.prototype.forEach.call(form.querySelectorAll("[data-inkind]"), function (el) {
+        el.hidden = !on;
+      });
+    }
+    if (gift) gift.addEventListener("change", syncInKind);
+    syncInKind();
+    // New contributions get an auto title the user can overwrite; picking a
+    // type refreshes it only while the title is still the auto value.
+    if (!rec) {
+      var nameEl = ctb.fieldEls.name, typeEl = ctb.fieldEls.contributionType;
+      if (nameEl) { ctb.nameAuto = ctbDefaultName(""); nameEl.value = ctb.nameAuto; }
+      if (typeEl && nameEl) {
+        typeEl.addEventListener("change", function () {
+          if (nameEl.value === ctb.nameAuto) {
+            ctb.nameAuto = ctbDefaultName(typeEl.value);
+            nameEl.value = ctb.nameAuto;
+          }
+        });
+      }
+    }
+    // Snapshot AFTER defaults so an untouched form is clean — but the default
+    // title on a create must reach the save payload, so snapshot it as empty.
+    (ctb.spec || []).forEach(function (f) {
+      ctb.snapshot[f.name] = rec ? String(ctbFieldValue(f.name)) : (f.name === "name" ? "" : String(ctbFieldValue(f.name)));
+    });
+  }
+
+  function ctbField(f, rec) {
+    var value = rec ? rec[f.name] : null;
+    var wrap = document.createElement("div");
+    wrap.className = "ctb__field" + (f.big ? " ctb__field--big" : "");
+    var label = document.createElement("label"); label.className = "ctb__label";
+    label.textContent = f.label + (ctb.required.indexOf(f.name) >= 0 ? " *" : "");
+    wrap.appendChild(label);
+    var el;
+    if (f.type === "enum") {
+      el = document.createElement("select");
+      var blank = document.createElement("option"); blank.value = ""; blank.textContent = "—";
+      el.appendChild(blank);
+      var opts = (ctb.options[f.name] || []).slice();
+      // A stored value drifted out of the live options still renders selected
+      // (and re-saves unchanged) instead of silently vanishing from the form.
+      if (value && opts.indexOf(value) < 0) opts.push(value);
+      opts.forEach(function (o) {
+        var op = document.createElement("option"); op.value = o; op.textContent = o;
+        el.appendChild(op);
+      });
+      el.value = value || "";
+    } else if (f.type === "bool") {
+      el = document.createElement("input"); el.type = "checkbox"; el.checked = !!value;
+    } else if (f.type === "date") {
+      el = document.createElement("input"); el.type = "date";
+      el.value = value ? String(value).slice(0, 10) : "";
+    } else if (f.type === "currency") {
+      el = document.createElement("input"); el.type = "number";
+      el.step = "0.01"; el.min = "0"; el.inputMode = "decimal";
+      el.value = value == null ? "" : value;
+    } else if (f.type === "text") {
+      el = document.createElement("textarea"); el.rows = 3; el.value = value || "";
+    } else if (f.type === "wysiwyg") {
+      el = window.CBMRichText && window.CBMRichText.create(value || "", { minHeight: 180 });
+      if (!el) { el = document.createElement("textarea"); el.rows = 6; el.value = value || ""; }
+    }
+    if (!el) { el = document.createElement("input"); el.type = "text"; el.value = value || ""; }
+    el.className = (el.className ? el.className + " " : "") + "ctb__input";
+    ctb.fieldEls[f.name] = el;
+    wrap.appendChild(el);
+    return el.type === "checkbox" ? ctbCheckWrap(wrap, label, el) : wrap;
+  }
+
+  function ctbCheckWrap(wrap, label, el) {
+    // Checkbox reads better with the box before the text on one line.
+    wrap.innerHTML = ""; wrap.classList.add("ctb__field--check");
+    var line = document.createElement("label"); line.className = "ctb__checkline";
+    line.appendChild(el); line.appendChild(document.createTextNode(" " + label.textContent));
+    wrap.appendChild(line);
+    return wrap;
+  }
+
+  async function saveContribution() {
+    if (ctb.saving) return;
+    hide($("ctbFormNotice"));
+    var changes = {};
+    (ctb.spec || []).forEach(function (f) {
+      var raw = ctbFieldValue(f.name);
+      if (String(raw) === String(ctb.snapshot[f.name])) return;  // unchanged
+      changes[f.name] = f.type === "currency" ? (raw === "" ? null : Number(raw)) : raw;
+    });
+    // Required check (from live CRM metadata): the FORM value must be present.
+    var missing = [];
+    (ctb.spec || []).forEach(function (f) {
+      if (ctb.required.indexOf(f.name) >= 0) {
+        var v = ctbFieldValue(f.name);
+        if (v === "" || v == null) missing.push(f.label);
+      }
+    });
+    if (missing.length) {
+      notice("ctbFormNotice", "Please complete: " + missing.join(", ") + ".", "error");
+      return;
+    }
+    if (ctb.editing && !Object.keys(changes).length) { closeContribModal(); return; }
+    ctb.saving = true; $("ctbSaveBtn").disabled = true;
+    try {
+      if (ctb.editing) {
+        await api("/contributions/" + encodeURIComponent(ctb.editing.id),
+          { method: "PUT", body: JSON.stringify({ changes: changes }) });
+      } else {
+        await api("/records/" + encodeURIComponent(currentDetail.id) + "/contributions",
+          { method: "POST", body: JSON.stringify({ changes: changes }) });
+      }
+      closeContribModal();
+      ctb.forId = null;              // force a refetch (summary must recompute)
+      await renderContributions();
+      notice("ctbNotice", "Contribution saved.", "success");
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      notice("ctbFormNotice", e.message, "error");
+    } finally { ctb.saving = false; $("ctbSaveBtn").disabled = false; }
+  }
+
+  $("ctbSaveBtn").addEventListener("click", saveContribution);
+  $("ctbCancelBtn").addEventListener("click", requestCloseContrib);
+  $("ctbClose").addEventListener("click", requestCloseContrib);
+  $("ctbBackdrop").addEventListener("click", requestCloseContrib);
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !$("ctbModal").hidden) requestCloseContrib();
+  });
 
   // --- read-only session view (with prev/next through the record's sessions) ---
   function openSessionView(sessionId) {

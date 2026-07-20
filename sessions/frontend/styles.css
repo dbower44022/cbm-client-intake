@@ -876,3 +876,62 @@ textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
   margin: auto; text-align: center; padding: 2rem; color: var(--cbm-slate-700, #556);
 }
 .sx__docview-fallback p { margin: 0 0 1rem; }
+
+/* --- Contributions tab (the funder ledger — sponsor domain) --- */
+.ctb__tiles {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.75rem; margin: 0.5rem 0 0.75rem;
+}
+.ctb__tile {
+  background: #fff; border: 1px solid var(--cbm-border, #d7dce2);
+  border-radius: var(--cbm-radius, 6px); padding: 0.7rem 0.9rem;
+  border-top: 3px solid var(--cbm-navy, #00205B);
+}
+.ctb__tile-value { font-size: 1.5rem; font-weight: 700; color: var(--cbm-navy, #00205B); }
+.ctb__tile-label { font-size: var(--cbm-text-sm, 0.9rem); color: var(--cbm-slate-700, #556); margin-top: 0.1rem; }
+.ctb__tile-sub { font-size: 0.78rem; color: var(--cbm-slate-700, #889); margin-top: 0.15rem; }
+/* Recency callout — the continuous-contributions principle: everything reads
+   relative to the last contribution; a >6-month gap turns the line amber. */
+.ctb__recency { margin: 0.25rem 0 0.6rem; font-weight: 600; color: var(--cbm-navy, #00205B); }
+.ctb__recency.is-stale { color: #8a5a12; }
+.ctb__periods {
+  border: 1px solid var(--cbm-border, #d7dce2); border-radius: var(--cbm-radius, 6px);
+  padding: 0.6rem 0.8rem; margin: 0 0 0.75rem; background: #fafbfc;
+}
+.ctb__periods-head { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; }
+.ctb__periods-toggle .cbm-button.is-active { background: var(--cbm-navy, #00205B); color: #fff; }
+.ctb__period-empty td { color: #98a1ab; }
+/* Grid row states: scheduled money still in motion vs. soft-deleted rows. */
+.ctb__row--upcoming td { background: #f2f6fd; }
+.ctb__row--upcoming td:first-child { box-shadow: inset 3px 0 0 var(--cbm-navy, #00205B); }
+.ctb__row--excluded td { color: #98a1ab; }
+.ctb__row--excluded td:first-child { text-decoration: none; opacity: 0.85; }
+.ctb__tag {
+  display: inline-block; margin-left: 0.45rem; padding: 0.05rem 0.45rem;
+  border-radius: 999px; font-size: 0.72rem; background: #eef0f3; color: #667;
+}
+.ctb__tag--up { background: #e3ecfa; color: var(--cbm-navy, #00205B); }
+/* Editor modal: roomier than a peek, grouped panels pack full width. */
+.ctb__modal-card { max-width: min(64rem, 94vw); width: 94vw; }
+.ctb__form { display: block; }
+.ctb__group {
+  border: 1px solid var(--cbm-border, #d7dce2); border-radius: var(--cbm-radius, 6px);
+  padding: 0.6rem 0.8rem 0.8rem; margin: 0 0 0.8rem;
+}
+.ctb__group legend { font-weight: 700; color: var(--cbm-navy, #00205B); padding: 0 0.3rem; }
+.ctb__line { display: flex; flex-wrap: wrap; gap: 0.75rem 1rem; margin-bottom: 0.6rem; }
+/* display:flex would beat the [hidden] attribute (the v0.102.0 lesson) — the
+   in-kind row must actually disappear for non-In-Kind gifts. */
+.ctb__line[hidden] { display: none !important; }
+.ctb__line:last-child { margin-bottom: 0; }
+.ctb__field { display: flex; flex-direction: column; gap: 0.25rem; flex: 1 1 10rem; min-width: 9rem; }
+.ctb__field--big { flex: 1 1 100%; }
+.ctb__label { font-size: var(--cbm-text-sm, 0.9rem); color: var(--cbm-slate-700, #556); font-weight: 600; }
+.ctb__input, .ctb__field select, .ctb__field input, .ctb__field textarea {
+  padding: 0.45rem 0.5rem; border: 1px solid var(--cbm-border, #d7dce2);
+  border-radius: var(--cbm-radius, 6px); font: inherit; width: 100%; box-sizing: border-box;
+}
+.ctb__field--check { justify-content: flex-end; }
+.ctb__checkline { display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 600; color: var(--cbm-slate-700, #556); }
+.ctb__checkline input { width: auto; }
+.ctb__form-actions { display: flex; gap: 0.6rem; margin-top: 0.4rem; }

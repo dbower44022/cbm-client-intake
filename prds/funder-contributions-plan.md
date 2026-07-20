@@ -3,7 +3,9 @@
 Approved plan from the 2026-07-20 solution-architecture session with Doug.
 Scope: Funder Management (`/sponsorsessions`) gains a **Contributions** tab on
 the funder record — enter contributions, see all future and past ones, with a
-dashboard on top. Status: **PLANNED, not built.**
+dashboard on top. Status: **BUILT v0.115.0 (same day)** — 25 tests + the full
+stub-harness loop; NOT yet driven live (needs the CRM role grant in
+"CRM prerequisites" below). Mechanics in CHANGELOG 0.115.0.
 
 ## Verified facts (read live from crm-test metadata 2026-07-20)
 

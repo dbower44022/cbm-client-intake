@@ -184,6 +184,19 @@ class DomainConfig:
     status_attr: Optional[str] = None
     status_values: tuple[str, ...] = ()
 
+    # --- Contributions (the funder ledger — sponsor domain only; plan:
+    # prds/funder-contributions-plan.md). Setting ``contributions_link`` (the
+    # hasMany link on the parent to its CContribution rows) enables the whole
+    # feature: the Contributions detail tab + the contribution endpoints.
+    contributions_link: Optional[str] = None
+    # FK attr written on a new CContribution to bind it to the parent.
+    contributions_parent_fk: str = "sponsorProfileId"
+    # Parent attrs the create defaults the contribution's donor links from
+    # (the funder's company Account + primary Contact); blank parent values
+    # simply leave the link unset.
+    contributions_donor_account_attr: Optional[str] = None
+    contributions_donor_contact_attr: Optional[str] = None
+
     @property
     def session_parent_fk(self) -> str:
         return f"{self.session_parent_link}Id"
@@ -240,6 +253,50 @@ SESSION_ENUM_FIELDS = [f["name"] for f in SESSION_FIELDS if f["type"] in ("enum"
 SESSION_OPTION_FIELDS = SESSION_ENUM_FIELDS + [
     f["name"] for f in SESSION_FIELDS if f["type"] == "duration"
 ]
+
+# --- CContribution editable-field spec (sponsor domain — the funder ledger) --
+# Same contract as SESSION_FIELDS: ONE spec drives the editor form layout AND
+# the server-side update whitelist; enum options + required flags are read live
+# from CRM metadata. The entity was built CRM-side (verified live 2026-07-20);
+# ``inKindOnly`` marks the pair the editor shows only when giftType = In-Kind
+# (display-only — both stay whitelisted). Soft delete = status Cancelled; there
+# is deliberately NO delete surface anywhere.
+CONTRIBUTION_FIELDS: list[dict] = [
+    {"name": "name", "label": "Contribution", "type": "varchar", "group": "Contribution"},
+    {"name": "contributionType", "label": "Type", "type": "enum", "group": "Contribution", "row": "top"},
+    {"name": "status", "label": "Status", "type": "enum", "group": "Contribution", "row": "top"},
+    {"name": "amount", "label": "Amount", "type": "currency", "group": "Contribution", "row": "top"},
+    {"name": "applicationDate", "label": "Application date", "type": "date", "group": "Contribution", "row": "dates"},
+    {"name": "commitmentDate", "label": "Commitment date", "type": "date", "group": "Contribution", "row": "dates"},
+    {"name": "expectedPaymentDate", "label": "Expected payment", "type": "date", "group": "Contribution", "row": "dates"},
+    {"name": "receivedDate", "label": "Received date", "type": "date", "group": "Contribution", "row": "dates"},
+    {"name": "nextGrantDeadline", "label": "Next grant deadline", "type": "date", "group": "Contribution", "row": "dates2"},
+    {"name": "giftType", "label": "Gift type", "type": "enum", "group": "Payment", "row": "pay"},
+    {"name": "designation", "label": "Designation", "type": "varchar", "group": "Payment", "row": "pay"},
+    {"name": "inKindDescription", "label": "In-kind description", "type": "varchar", "group": "Payment", "row": "inkind", "inKindOnly": True},
+    {"name": "inKindValuationBasis", "label": "In-kind valuation basis", "type": "varchar", "group": "Payment", "row": "inkind", "inKindOnly": True},
+    {"name": "acknowledgmentSent", "label": "Acknowledgment sent", "type": "bool", "group": "Acknowledgment", "row": "ack"},
+    {"name": "acknowledgmentDate", "label": "Acknowledgment date", "type": "date", "group": "Acknowledgment", "row": "ack"},
+    {"name": "notes", "label": "Notes", "type": "wysiwyg", "group": "Notes", "big": True},
+    {"name": "description", "label": "Description", "type": "text", "group": "Notes"},
+]
+
+# ``amountCurrency`` rides along with the currency amount (EspoCRM currency
+# type); the editor doesn't collect it (server/instance default applies) but a
+# supplied value must not be dropped by the whitelist.
+CONTRIBUTION_EDIT_NAMES = {f["name"] for f in CONTRIBUTION_FIELDS} | {"amountCurrency"}
+CONTRIBUTION_ENUM_FIELDS = [
+    f["name"] for f in CONTRIBUTION_FIELDS if f["type"] in ("enum", "multiEnum")
+]
+
+# Fields read for the tab's grid + summary math (notes/description load on the
+# editor's per-record GET, not the list).
+CONTRIBUTION_LIST_SELECT = (
+    "name,contributionType,status,amount,amountCurrency,applicationDate,"
+    "commitmentDate,expectedPaymentDate,receivedDate,acknowledgmentDate,"
+    "acknowledgmentSent,nextGrantDeadline,giftType,designation,createdAt"
+)
+
 
 # Fields read for each session on the parent detail — feeds both the Sessions
 # table and the Overview note feed (sessionNotes/nextSteps stamped with the time;
@@ -512,6 +569,14 @@ SPONSOR = DomainConfig(
         ("Sponsorship", "CSponsorProfile", "id"),  # the sponsor record itself, first
         ("Company", "Account", "sponsorCompanyId"),
     ),
+    # The funder ledger (prds/funder-contributions-plan.md): the Contributions
+    # tab + endpoints, reading the CRM-built CContribution entity through the
+    # parent's sponsorContributions link. Donor links on a new contribution
+    # default from the funder's company + primary contact.
+    contributions_link="sponsorContributions",
+    contributions_parent_fk="sponsorProfileId",
+    contributions_donor_account_attr="sponsorCompanyId",
+    contributions_donor_contact_attr="sponsorContactId",
 )
 
 DOMAINS: dict[str, DomainConfig] = {d.slug: d for d in (MENTOR, PARTNER, SPONSOR)}

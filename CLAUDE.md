@@ -1449,7 +1449,30 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-20)
 
-**Main is at v0.114.0** (2026-07-20, 839 tests green, committed NOT pushed) —
+**Main is at v0.115.0** (2026-07-20, 864 tests green, committed NOT pushed) —
+**Funder Contributions tab (the funder ledger)** — built to the same-day plan
+`prds/funder-contributions-plan.md` (Doug's rulings baked in: Received-only
+totals; soft delete = status Cancelled, NO delete surface; effective date =
+received → expected → commitment → application; rolling-12-months tile; four
+tiles incl. Scheduled-upcoming; period rollups = rolling 6-month/yearly
+windows ANCHORED at the last received contribution with empty gap windows
+rendered — everything relative to the last contribution). Funder Management's
+record detail gains a Contributions tab (sponsor domain only —
+`DomainConfig.contributions_link` gates the tab + endpoint registration):
+tiles + recency callout + totals-by-period + sortable/resizable grid
+(upcoming accent, dimmed not-counted rows) + a grouped modal editor
+(`CONTRIBUTION_FIELDS` = layout AND whitelist; live enum options/required;
+in-kind pair shown only for In-Kind gifts; auto title; diffed saves;
+two-step discard guard). All summary math on the fly, server-side, in
+`sessions/service.contribution_summary` (25 new tests). The CRM
+`CContribution` entity ALREADY EXISTS on both CRMs (probe-verified crm-test
+2026-07-20; prod enum parity to eyeball). Full mechanics: CHANGELOG 0.115.0.
+**NOT yet driven live** — CRM prereq: sponsor team's role gets CContribution
+create/read/edit (Read=All, no delete). Harness gotcha reconfirmed:
+`.ctb__line{display:flex}` beat `[hidden]` until the explicit
+`[hidden]{display:none !important}` guard ([[harness-js-clicks-bypass-overlays]]).
+
+Before that: **v0.114.0** (2026-07-20, 839 tests green, committed NOT pushed) —
 **press feedback + request timeout**, closing the two follow-ups from v0.112.0
 (Doug: "immediately after any button press a spinner is displayed so the user
 knows the press worked. Then add timeout too"). New shared

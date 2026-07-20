@@ -4,6 +4,56 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.115.0] — 2026-07-20
+
+**feat(sessions): Funder Contributions tab — the funder ledger**
+(`prds/funder-contributions-plan.md`, built to plan; the `CContribution` CRM
+entity already exists on both CRMs — verified live on crm-test 2026-07-20).
+Funder Management's record detail gains a **Contributions** tab (inserted
+after Sessions; sponsor domain only — the mentor/partner routers never
+register the endpoints):
+
+- **Dashboard tiles** (status=Received ONLY, Cancelled/Unsuccessful excluded
+  everywhere): contribution count · total received $ · rolling-12-months $ ·
+  **Scheduled (upcoming) $** (future-dated Pledged + Committed; Applied
+  deliberately excluded). Under them, a **recency callout** — "Last received:
+  $X on DATE — N months ago" (amber past a 6-month gap) + "Next expected" —
+  the everything-relative-to-last-contribution principle.
+- **Totals by period**: rolling 6-month (or yearly) windows anchored at the
+  LAST received contribution, walking back; empty windows still render so
+  giving gaps show. All math computed on the fly server-side in ONE tested
+  place (`sessions/service.contribution_summary`); effective date =
+  receivedDate → expectedPaymentDate → commitmentDate → applicationDate.
+- **Grid**: sortable + drag-resizable columns (the Sessions-tab treatment);
+  future-dated scheduled rows get the upcoming accent, Cancelled/Unsuccessful
+  rows render dimmed with a "not counted" tag (visible for audit).
+- **Editor** (modal): grouped panels driven by `CONTRIBUTION_FIELDS` in
+  `sessions/config.py` — ONE spec for the form layout AND the server-side
+  whitelist (`update/create` drop anything else, incl. FK smuggling); enum
+  options + required flags read live from CRM metadata; in-kind fields shown
+  only for In-Kind gifts; auto title "{date} — {funder} {type}" (user edits
+  win); diffed saves; drifted enum values sanitized server-side (fails open);
+  two-step discard guard on a dirty close. **No delete anywhere** — soft
+  delete = status Cancelled through the normal edit (Doug's ruling).
+- Endpoints (`/sponsorsessions/api`): `GET /contributionfields`,
+  `GET|POST /records/{id}/contributions`, `GET|PUT /contributions/{id}` —
+  all as the signed-in user; the parent funder is read first (the ACL gate),
+  a contribution id never resolves outside a readable funder record, and a
+  new contribution's donor links default from the funder's company + primary
+  contact.
+
+Verified: 864 tests green (25 new in `tests/test_contributions.py` — summary
+math incl. anchor/empty-window/rolling rules, whitelist, scope checks,
+sponsor-only registration); the full UI loop driven in the stub harness
+(tiles/recency/rollup incl. the yearly toggle, create with diffed payload,
+required-field block, in-kind show/hide — plus the `[hidden]`-vs-display:flex
+CSS guard, soft-delete via status → tiles recompute, dirty-close guard,
+stubbed 502 keeps the editor open with a readable error; no console errors).
+**NOT yet driven live.** CRM prerequisite: the sponsor team's role needs
+**CContribution create + read + edit** (Read = All to match the v0.113.0
+CSponsorProfile decision; NO delete grant). Prod's CContribution enum options
+should be eyeballed against crm-test (unprobeable locally — EV-encrypted key).
+
 ## [0.114.0] — 2026-07-20
 
 **feat(ui): a spinner on every button press that waits on the server, and a

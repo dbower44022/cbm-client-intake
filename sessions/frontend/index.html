@@ -123,6 +123,53 @@
         <p class="sx__muted" id="noSessions" hidden>No sessions recorded yet.</p>
       </div>
 
+      <!-- Contributions: the funder ledger (sponsor domain only —
+           prds/funder-contributions-plan.md). Four Received-only tiles +
+           recency callout + rolling-window rollup + grid. Soft delete = the
+           editor's status set to Cancelled; no delete button exists. -->
+      <div class="sx__dpanel" data-dpanel="contributions" hidden>
+        <div class="sx__comm-head">
+          <h3>Contributions</h3>
+          <span class="sx__comm-acts">
+            <button type="button" class="cbm-button cbm-button--secondary" id="ctbPeriodBtn">Totals by period</button>
+            <button type="button" class="cbm-button" id="ctbAddBtn">+ Add contribution</button>
+          </span>
+        </div>
+        <p class="sx__notice" id="ctbNotice" role="status" hidden></p>
+        <p class="sx__loading" id="ctbLoading" hidden>Loading…</p>
+        <div class="ctb__tiles" id="ctbTiles" hidden></div>
+        <p class="ctb__recency" id="ctbRecency" hidden></p>
+        <div class="ctb__periods" id="ctbPeriods" hidden>
+          <div class="ctb__periods-head">
+            <strong>Totals by period</strong>
+            <span class="ctb__periods-toggle">
+              <button type="button" class="cbm-button cbm-button--secondary sx__sm is-active" id="ctbHalfBtn">6-month</button>
+              <button type="button" class="cbm-button cbm-button--secondary sx__sm" id="ctbYearBtn">Yearly</button>
+            </span>
+          </div>
+          <table class="sx__table" id="ctbPeriodTable">
+            <thead><tr><th scope="col">Period</th><th scope="col">Contributions</th><th scope="col">Received</th></tr></thead>
+            <tbody id="ctbPeriodBody"></tbody>
+          </table>
+          <p class="sx__muted">Rolling windows counted back from the most recent received contribution — an empty window means a giving gap. Received contributions only.</p>
+        </div>
+        <table class="sx__table" id="ctbTable" hidden>
+          <thead><tr>
+            <th data-sort="name" scope="col">Contribution</th>
+            <th data-sort="contributionType" scope="col">Type</th>
+            <th data-sort="status" scope="col">Status</th>
+            <th data-sort="amount" scope="col">Amount</th>
+            <th data-sort="expectedPaymentDate" scope="col">Expected</th>
+            <th data-sort="receivedDate" scope="col">Received</th>
+            <th data-sort="giftType" scope="col">Gift type</th>
+            <th data-sort="acknowledgmentSent" scope="col">Ack’d</th>
+            <th scope="col"></th>
+          </tr></thead>
+          <tbody id="ctbBody"></tbody>
+        </table>
+        <p class="sx__muted" id="noCtb" hidden>No contributions recorded.</p>
+      </div>
+
       <!-- Communications: email inbox for this record. UI only for now — no CRM
            email data is read yet (structure still being designed). -->
       <div class="sx__dpanel" data-dpanel="communications" hidden>
@@ -215,6 +262,32 @@
       <p>&copy; <span data-cbm-year>2026</span> Cleveland Business Mentors.<span class="cbm-footer__version" data-cbm-version></span></p>
     </footer>
   </main>
+
+  <!-- Create / edit a contribution (the funder ledger). Soft delete = set the
+       status to Cancelled here; there is deliberately no delete button. -->
+  <div class="sx__modal" id="ctbModal" hidden role="dialog" aria-modal="true" aria-labelledby="ctbModalTitle">
+    <div class="sx__modal-backdrop" id="ctbBackdrop"></div>
+    <div class="sx__modal-card ctb__modal-card" role="document">
+      <div class="sx__modal-head">
+        <div>
+          <p class="sx__modal-kind" id="ctbModalKind">Contribution</p>
+          <h3 class="sx__modal-name" id="ctbModalTitle">New contribution</h3>
+        </div>
+        <span class="sx__modal-actions">
+          <button type="button" class="sx__modal-close" id="ctbClose" aria-label="Close">×</button>
+        </span>
+      </div>
+      <div class="sx__modal-body">
+        <p class="sx__notice" id="ctbFormNotice" role="status" hidden></p>
+        <form id="ctbForm" class="ctb__form"></form>
+        <p class="sx__muted">To remove a contribution, set its status to <strong>Cancelled</strong> — it stays visible for the record but is excluded from every total.</p>
+        <div class="ctb__form-actions">
+          <button type="button" class="cbm-button" id="ctbSaveBtn">Save contribution</button>
+          <button type="button" class="cbm-button cbm-button--secondary" id="ctbCancelBtn">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Pop-up detail for a contact / company / client link on the Overview -->
   <div class="sx__modal" id="peekModal" hidden role="dialog" aria-modal="true" aria-labelledby="peekName">

@@ -31,7 +31,7 @@ from docs import service as docs_service
 
 from . import details as details_svc
 from . import service
-from .config import DomainConfig
+from .config import CONTRIBUTION_FIELDS, DomainConfig
 
 log = logging.getLogger("cbm_intake.sessions")
 
@@ -95,6 +95,10 @@ class SessionIn(BaseModel):
 
 class CoMentorIn(BaseModel):
     mentorProfileId: str
+
+
+class ContributionIn(BaseModel):
+    changes: dict = {}
 
 
 class DetailsSaveIn(BaseModel):
@@ -167,6 +171,16 @@ NO_PROFILE_MESSAGE = (
     "records to show. Ask an administrator to set your user as the Assigned "
     "User on your profile in the CRM, then Refresh."
 )
+
+
+def _detail_tabs(cfg: DomainConfig) -> list[dict]:
+    """The domain's tab bar: the common tabs, plus Contributions (inserted
+    right after Sessions) on a domain with a contributions link (sponsor)."""
+    tabs = list(COMMON_DETAIL_TABS)
+    if cfg.contributions_link:
+        idx = next((i for i, t in enumerate(tabs) if t["key"] == "sessions"), len(tabs) - 1)
+        tabs.insert(idx + 1, {"key": "contributions", "label": "Contributions"})
+    return tabs
 
 
 def make_router(cfg: DomainConfig) -> APIRouter:
@@ -250,7 +264,7 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             "companyKey": cfg.list_company_key,
             "emptyMessage": cfg.empty_message,
             "noProfileMessage": NO_PROFILE_MESSAGE,
-            "detailTabs": COMMON_DETAIL_TABS,
+            "detailTabs": _detail_tabs(cfg),
             "supportsComentor": cfg.supports_comentor,
             "defaultSessionType": cfg.default_session_type,
             # True => the Communications tab talks to the real endpoints below;
@@ -413,6 +427,73 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 raise HTTPException(status_code=400, detail=str(exc))
             except EspoError as exc:
                 raise _crm_failure(request, exc, "Could not accept the engagement")
+
+    if cfg.contributions_link:
+        # The funder ledger (prds/funder-contributions-plan.md) — registered
+        # ONLY on a domain with a contributions link (sponsor), the
+        # accept-endpoint precedent. No DELETE: soft delete = status Cancelled
+        # through the normal update.
+
+        @router.get("/contributionfields")
+        async def contribution_fields(request: Request) -> dict:
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            try:
+                return {
+                    "fields": CONTRIBUTION_FIELDS,
+                    "options": await service.contribution_field_options(client),
+                    "required": await service.contribution_field_required(client),
+                }
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not load contribution field options")
+
+        @router.get("/records/{parent_id}/contributions")
+        async def list_contributions(parent_id: str, request: Request) -> dict:
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            try:
+                return await service.list_contributions(cfg, client, parent_id)
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not load contributions")
+
+        @router.post("/records/{parent_id}/contributions")
+        async def create_contribution(
+            parent_id: str, body: ContributionIn, request: Request
+        ) -> dict:
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            try:
+                return await service.create_contribution(cfg, client, parent_id, body.changes)
+            except service.SessionError as exc:
+                raise HTTPException(status_code=400, detail=str(exc))
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not save the contribution")
+
+        @router.get("/contributions/{contribution_id}")
+        async def contribution_detail(contribution_id: str, request: Request) -> dict:
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            try:
+                return await service.get_contribution(cfg, client, contribution_id)
+            except service.SessionError as exc:
+                raise HTTPException(status_code=400, detail=str(exc))
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not load the contribution")
+
+        @router.put("/contributions/{contribution_id}")
+        async def update_contribution(
+            contribution_id: str, body: ContributionIn, request: Request
+        ) -> dict:
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            try:
+                return await service.update_contribution(
+                    cfg, client, contribution_id, body.changes
+                )
+            except service.SessionError as exc:
+                raise HTTPException(status_code=400, detail=str(exc))
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not save the contribution")
 
     @router.get("/sessions/{session_id}")
     async def session_detail(session_id: str, request: Request) -> dict:

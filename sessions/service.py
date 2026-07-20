@@ -17,7 +17,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Optional, Protocol
 
 from assignments.service import (
@@ -33,6 +33,10 @@ from core.stream import post_stream_note
 
 from .config import (
     CONTACT,
+    CONTRIBUTION_EDIT_NAMES,
+    CONTRIBUTION_ENUM_FIELDS,
+    CONTRIBUTION_FIELDS,
+    CONTRIBUTION_LIST_SELECT,
     DETAIL_SESSION_SELECT,
     ENGAGEMENT,
     MENTOR_PROFILE,
@@ -1461,3 +1465,315 @@ async def field_spec_live(client: SessionClient) -> list[dict]:
     if await transcript_field_exists(client):
         return SESSION_FIELDS
     return [f for f in SESSION_FIELDS if f["name"] != TRANSCRIPT_FIELD]
+
+
+# --- Contributions (the funder ledger — sponsor domain only) -----------------
+# Plan: prds/funder-contributions-plan.md. Business rules (Doug, 2026-07-20):
+# totals count status=Received ONLY; Cancelled = soft delete (excluded from
+# every number, kept visible for audit; Unsuccessful excluded the same way);
+# "future" = effective date on/after today; everything is computed on the fly,
+# never stored; the period rollup anchors at the LAST received contribution
+# and walks BACK in rolling windows so giving gaps show (the
+# continuous-contributions principle).
+
+CONTRIBUTION = "CContribution"
+_CONTRIB_RECEIVED = "Received"
+_CONTRIB_EXCLUDED = ("Cancelled", "Unsuccessful")
+_CONTRIB_SCHEDULED = ("Pledged", "Committed")  # Applied deliberately excluded
+# Effective date = first set wins (Doug's ruling): drives ordering, the
+# future/past split, and every time window.
+_CONTRIB_DATE_CHAIN = (
+    "receivedDate", "expectedPaymentDate", "commitmentDate", "applicationDate"
+)
+_CONTRIB_PERIOD_CAP = 12  # rollup windows walked back from the anchor, max
+
+
+def contribution_effective_date(row: dict[str, Any]) -> Optional[str]:
+    """The row's effective date (``YYYY-MM-DD``) per the fallback chain."""
+    for attr in _CONTRIB_DATE_CHAIN:
+        if row.get(attr):
+            return row[attr]
+    return None
+
+
+def _iso_date(value: Optional[str]) -> Optional[date]:
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(str(value)[:10])
+    except ValueError:
+        return None
+
+
+def _add_months(d: date, months: int) -> date:
+    """Calendar-month arithmetic (day clamped to the target month's length)."""
+    m = d.month - 1 + months
+    year, month = d.year + m // 12, m % 12 + 1
+    day = min(d.day, [31, 29 if year % 4 == 0 and (year % 100 != 0 or year % 400 == 0) else 28,
+                      31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1])
+    return date(year, month, day)
+
+
+def _months_between(earlier: date, later: date) -> int:
+    """Whole calendar months from ``earlier`` to ``later`` (floor, >= 0)."""
+    months = (later.year - earlier.year) * 12 + later.month - earlier.month
+    if later.day < earlier.day:
+        months -= 1
+    return max(0, months)
+
+
+def _amount(row: dict[str, Any]) -> float:
+    try:
+        return float(row.get("amount") or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _contribution_row(r: dict[str, Any], today: date) -> dict[str, Any]:
+    """A decorated grid row: raw scalars + the derived flags the tab renders."""
+    eff = contribution_effective_date(r)
+    eff_d = _iso_date(eff)
+    status = r.get("status")
+    excluded = status in _CONTRIB_EXCLUDED
+    row = {k: r.get(k) for k in (
+        "id", "name", "contributionType", "status", "amount", "amountCurrency",
+        "applicationDate", "commitmentDate", "expectedPaymentDate",
+        "receivedDate", "acknowledgmentDate", "acknowledgmentSent",
+        "nextGrantDeadline", "giftType", "designation", "createdAt",
+    )}
+    row["effectiveDate"] = eff
+    # Upcoming = scheduled money still in motion, dated today or later.
+    row["upcoming"] = bool(
+        eff_d and eff_d >= today and not excluded and status != _CONTRIB_RECEIVED
+    )
+    row["excluded"] = excluded  # soft-deleted / unsuccessful: visible, never counted
+    return row
+
+
+def _period_rollup(
+    received: list[tuple[date, float]], anchor: date, earliest: Optional[date], months: int
+) -> list[dict[str, Any]]:
+    """Rolling windows of ``months`` walking BACK from ``anchor`` (inclusive).
+
+    Every window renders even when empty — a funder who paused shows the gap.
+    Windows stop once they cover ``earliest`` (or after one window when there
+    is no data), capped at ``_CONTRIB_PERIOD_CAP``.
+    """
+    windows: list[dict[str, Any]] = []
+    end = anchor
+    while len(windows) < _CONTRIB_PERIOD_CAP:
+        start = _add_months(end, -months) + timedelta(days=1)
+        in_window = [amt for (d, amt) in received if start <= d <= end]
+        windows.append({
+            "start": start.isoformat(),
+            "end": end.isoformat(),
+            "count": len(in_window),
+            "total": round(sum(in_window), 2),
+        })
+        if earliest is None or start <= earliest:
+            break
+        end = start - timedelta(days=1)
+    return windows
+
+
+def contribution_summary(rows: list[dict[str, Any]], today: date) -> dict[str, Any]:
+    """The dashboard block: four tiles + recency callout + period rollups.
+
+    Pure math over the decorated rows so every business rule lives (and is
+    tested) in one place. Received-only totals; Cancelled/Unsuccessful never
+    counted; rolling 12-month tile window; rollups anchored at the last
+    received contribution (today when none).
+    """
+    received_amounts: list[float] = []   # every Received row (count/total tiles)
+    received: list[tuple[date, float]] = []  # dated Received rows (time math)
+    for r in rows:
+        if r.get("status") == _CONTRIB_RECEIVED:
+            received_amounts.append(_amount(r))
+            d = _iso_date(r.get("effectiveDate"))
+            if d:  # an undated Received row counts in totals, never in windows
+                received.append((d, _amount(r)))
+    year_ago = today - timedelta(days=365)
+    scheduled = [
+        r for r in rows
+        if r.get("status") in _CONTRIB_SCHEDULED
+        and (_iso_date(r.get("effectiveDate")) or today) >= today
+    ]
+    dated = sorted((d for d, _ in received))
+    anchor = dated[-1] if dated else today
+    counted_dates = [
+        _iso_date(r.get("effectiveDate")) for r in rows
+        if not r.get("excluded") and _iso_date(r.get("effectiveDate"))
+    ]
+    earliest = min(counted_dates) if counted_dates else None
+
+    last_received = None
+    if received:
+        d, amt = max(received, key=lambda t: t[0])
+        last_received = {
+            "date": d.isoformat(), "amount": amt, "monthsAgo": _months_between(d, today),
+        }
+    next_expected = None
+    upcoming = sorted(
+        ((_iso_date(r.get("effectiveDate")) or today, _amount(r)) for r in scheduled),
+        key=lambda t: t[0],
+    )
+    if upcoming:
+        next_expected = {"date": upcoming[0][0].isoformat(), "amount": upcoming[0][1]}
+
+    currencies = [r.get("amountCurrency") for r in rows if r.get("amountCurrency")]
+    return {
+        "totalCount": len(received_amounts),
+        "totalAmount": round(sum(received_amounts), 2),
+        "last12MonthsAmount": round(sum(a for d, a in received if d >= year_ago), 2),
+        "scheduledAmount": round(sum(_amount(r) for r in scheduled), 2),
+        "scheduledCount": len(scheduled),
+        "lastReceived": last_received,
+        "nextExpected": next_expected,
+        "currency": currencies[0] if currencies else "USD",
+        "periods": {
+            "half": _period_rollup(received, anchor, earliest, 6),
+            "year": _period_rollup(received, anchor, earliest, 12),
+        },
+    }
+
+
+async def list_contributions(
+    cfg: DomainConfig, client: SessionClient, parent_id: str
+) -> dict[str, Any]:
+    """All of a funder's contributions + the computed summary block.
+
+    The parent record is read first AS THE USER — that's the ACL gate (a
+    forbidden funder never leaks its ledger) and supplies the funder name for
+    the editor's default title.
+    """
+    parent = await client.get(cfg.parent_entity, parent_id, select="name")
+    data = await client.list_related(
+        cfg.parent_entity, parent_id, cfg.contributions_link,
+        select=CONTRIBUTION_LIST_SELECT, max_size=_PAGE,
+    )
+    today = datetime.now(timezone.utc).date()
+    rows = [_contribution_row(r, today) for r in data.get("list", [])]
+    rows.sort(key=lambda r: (r.get("effectiveDate") or "", r.get("createdAt") or ""),
+              reverse=True)
+    return {
+        "records": rows,
+        "summary": contribution_summary(rows, today),
+        "parentName": parent.get("name"),
+    }
+
+
+async def get_contribution(
+    cfg: DomainConfig, client: SessionClient, contribution_id: str
+) -> dict[str, Any]:
+    """One contribution's full editable values, record-scope checked.
+
+    The row must be linked to a parent of THIS domain's type that the user can
+    read (the documents-endpoint precedent) — a bare CContribution id never
+    resolves outside the funder workspace.
+    """
+    rec = await client.get(
+        CONTRIBUTION, contribution_id,
+        select=CONTRIBUTION_LIST_SELECT + ",notes,description," + cfg.contributions_parent_fk,
+    )
+    parent_id = rec.get(cfg.contributions_parent_fk)
+    if not parent_id:
+        raise SessionError("That contribution isn't linked to a funder record.")
+    await client.get(cfg.parent_entity, parent_id, select="id")  # ACL gate
+    today = datetime.now(timezone.utc).date()
+    row = _contribution_row(rec, today)
+    row["notes"] = rec.get("notes")
+    row["description"] = rec.get("description")
+    row["parentId"] = parent_id
+    return row
+
+
+def _contribution_payload(changes: dict[str, Any]) -> dict[str, Any]:
+    """Whitelisted payload for a contribution write — anything outside
+    ``CONTRIBUTION_EDIT_NAMES`` (smuggled links, FK swaps) is dropped."""
+    return {k: v for k, v in changes.items() if k in CONTRIBUTION_EDIT_NAMES}
+
+
+async def contribution_field_options(client: SessionClient) -> dict[str, list[Any]]:
+    """Live option lists for the CContribution enum fields (CRM = truth)."""
+    fields = await client.metadata(f"entityDefs.{CONTRIBUTION}.fields")
+    options: dict[str, list[Any]] = {}
+    for name in CONTRIBUTION_ENUM_FIELDS:
+        opts = (fields.get(name) or {}).get("options")
+        if isinstance(opts, list):
+            options[name] = [o for o in opts if o != ""]
+    return options
+
+
+async def contribution_field_required(client: SessionClient) -> list[str]:
+    """Editable CContribution fields the CRM marks required (read live)."""
+    fields = await client.metadata(f"entityDefs.{CONTRIBUTION}.fields")
+    return [
+        name for name in sorted(CONTRIBUTION_EDIT_NAMES)
+        if isinstance(fields.get(name), dict) and fields[name].get("required")
+    ]
+
+
+async def _sanitize_contribution_enums(
+    client: SessionClient, payload: dict[str, Any]
+) -> None:
+    """Drop enum values the live CContribution no longer accepts, in place
+    (the CSession `_sanitize_enum_payload` contract: single enums omitted,
+    fails open when options can't be fetched)."""
+    enum_keys = [k for k in payload if k in CONTRIBUTION_ENUM_FIELDS]
+    if not enum_keys:
+        return
+    try:
+        options = await contribution_field_options(client)
+    except Exception as exc:  # noqa: BLE001 — fail open, never block the save
+        log.warning("could not fetch CContribution enum options (%s); keeping values", exc)
+        return
+    for key in enum_keys:
+        opts = options.get(key)
+        value = payload[key]
+        if opts is None or value in (None, ""):
+            continue
+        if value not in opts:
+            log.warning("CContribution.%s: dropping unrecognized value %r", key, value)
+            del payload[key]
+
+
+async def create_contribution(
+    cfg: DomainConfig, client: SessionClient, parent_id: str, changes: dict[str, Any]
+) -> dict[str, Any]:
+    """Create a contribution on a funder record, as the signed-in user.
+
+    The parent read doubles as the ACL gate and supplies the donor-link
+    defaults (the funder's company Account + primary Contact) — ``setdefault``,
+    so an explicit value in ``changes`` would win if the editor ever collects
+    them. Returns the decorated row (the tab refreshes in place).
+    """
+    select = "name"
+    for attr in (cfg.contributions_donor_account_attr, cfg.contributions_donor_contact_attr):
+        if attr:
+            select += "," + attr
+    parent = await client.get(cfg.parent_entity, parent_id, select=select)
+    payload = _contribution_payload(changes)
+    await _sanitize_contribution_enums(client, payload)
+    payload[cfg.contributions_parent_fk] = parent_id
+    if cfg.contributions_donor_account_attr and parent.get(cfg.contributions_donor_account_attr):
+        payload.setdefault("donorAccountId", parent[cfg.contributions_donor_account_attr])
+    if cfg.contributions_donor_contact_attr and parent.get(cfg.contributions_donor_contact_attr):
+        payload.setdefault("donorContactId", parent[cfg.contributions_donor_contact_attr])
+    created = await client.create(CONTRIBUTION, payload)
+    log.info("contribution created on %s/%s: CContribution/%s",
+             cfg.parent_entity, parent_id, created.get("id"))
+    return await get_contribution(cfg, client, created["id"])
+
+
+async def update_contribution(
+    cfg: DomainConfig, client: SessionClient, contribution_id: str, changes: dict[str, Any]
+) -> dict[str, Any]:
+    """Whitelisted, enum-sanitized update. Soft delete = status Cancelled
+    through this same path; there is NO hard-delete surface anywhere."""
+    await get_contribution(cfg, client, contribution_id)  # scope + ACL gate first
+    payload = _contribution_payload(changes)
+    await _sanitize_contribution_enums(client, payload)
+    if payload:
+        await client.update(CONTRIBUTION, contribution_id, payload)
+        log.info("contribution %s updated (%s)", contribution_id, ", ".join(sorted(payload)))
+    return await get_contribution(cfg, client, contribution_id)
