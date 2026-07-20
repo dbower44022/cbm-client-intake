@@ -1485,10 +1485,16 @@ sponsor intake form stamps `SPONSOR_TEAM_NAME` (default `Sponsor Management
 Team`, best-effort) on new profiles. Mechanics in the Session Management
 domain-table EXCEPTION bullet; CRM prereqs in CHANGELOG 0.113.0 (role reads
 CSponsorProfile at team scope + backfill existing sponsors with the team +
-intake API Team read; if the real team is named "Sponsor Admin Team", set
-BOTH `SESSION_SPONSOR_ALLOWED_TEAMS` and `SPONSOR_TEAM_NAME` in the overlay).
-4 new tests. **NOT yet driven live** — the CRM-side team work above decides
-whether the widened list actually shows all funders.
+intake API Team read; the prod team IS named `Sponsor Management Team`, so
+no overlay override was needed).
+4 new tests. **VERIFIED LIVE on prod 2026-07-20** — after deploy the grid
+403'd on `list CSponsorProfile` (run-log diagnosis): prod's Sponsor
+Management Team had no role granting CSponsorProfile read (the user's
+merged ACL = only team-attached roles; Mentor Team carries Mentor Role,
+which doesn't cover sponsors). Doug attached the grant CRM-side and the
+funder list loads. Lesson: the 403 message names the exact denied
+entity/operation (`forbidden_hint`) — read it precisely, and check a
+user's real merged ACL via the Users → Access button.
 
 Before that: **v0.112.0** (2026-07-20, 835 tests green, committed NOT pushed) —
 **fix: saving a session twice no longer creates two sessions.** Doug's report
