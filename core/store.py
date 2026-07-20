@@ -48,6 +48,11 @@ STATUS_RETRY = "retry"
 STATUS_COMPLETED = "completed"
 STATUS_NEEDS_ATTENTION = "needs_attention"
 STATUS_HELD = "held_honeypot"
+# An inbound info@ email captured by the worker's mailbox poller, waiting for
+# staff triage in /ops (v0.110.0). Approve = redrive (→ pending, the worker
+# delivers it through the info-email orchestrator, creating the CRM records);
+# Discard = spam, no CRM residue. Never claimed by the worker while held.
+STATUS_HELD_REVIEW = "held_review"
 # Terminal, staff-set: a stuck submission resolved manually in /ops (e.g. a bad
 # payload that can't be re-driven). Kept in the table for audit; excluded from
 # the backlog / needs-attention alerting and never claimed by the worker.
@@ -91,6 +96,12 @@ submission = Table(
     # still waiting on us?" NULL = open. The /ops grid defaults to open rows.
     Column("resolved_at", DateTime(timezone=True)),
     Column("resolved_by", String(128)),
+    # Gmail thread ids anchored to this submission (JSON list, v0.110.0): the
+    # threads staff started from /ops (recorded after each send) and — for an
+    # email-originated submission — the inbound thread itself (in the payload
+    # as gmail_thread_id AND mirrored here at capture). The conversation view
+    # shows exactly these threads, never an address search.
+    Column("thread_ids", JSONB),
     Column("received_at", DateTime(timezone=True), nullable=False),
     Column("processed_at", DateTime(timezone=True)),
     Column("updated_at", DateTime(timezone=True), nullable=False),
@@ -167,6 +178,10 @@ class SubmissionStore(Protocol):
     async def set_resolved(
         self, submission_id: str, resolved: bool, *, acted_by: Optional[str] = None
     ) -> bool: ...
+    # Gmail thread anchoring (v0.110.0):
+    async def add_thread_id(self, submission_id: str, thread_id: str) -> bool: ...
+    async def existing_tokens(self, form_slug: str, tokens: list[str]) -> set[str]: ...
+    async def known_gmail_threads(self, thread_ids: list[str]) -> set[str]: ...
     async def metrics(self) -> dict[str, Any]: ...
     async def ping(self) -> bool: ...
     # Worker liveness (P1-6):
@@ -420,11 +435,15 @@ class PostgresStore:
         The worker re-runs it from saved ``progress`` (no duplication).
 
         Guarded (P1-11): only ``needs_attention`` / ``retry`` /
-        ``held_honeypot`` rows may be re-driven (held = the honeypot
-        false-positive recovery). Redriving a ``completed`` row would
-        re-deliver (duplicate Normal audit record + re-run side effects);
-        redriving a ``processing`` row would race the live worker's
-        ``save_progress`` into duplicate creates.
+        ``held_honeypot`` / ``held_review`` / ``discarded`` rows may be
+        re-driven (held_honeypot = the honeypot false-positive recovery;
+        held_review = staff APPROVING an inbound info@ email — delivery
+        creates the CRM records; discarded = undoing a mistaken discard,
+        which the /ops UI has offered since v0.106.0 but this guard used to
+        refuse). Redriving a ``completed`` row would re-deliver (duplicate
+        Normal audit record + re-run side effects); redriving a
+        ``processing`` row would race the live worker's ``save_progress``
+        into duplicate creates.
         """
         async with self._engine.begin() as conn:
             result = await conn.execute(
@@ -432,7 +451,8 @@ class PostgresStore:
                 .where(submission.c.id == submission_id)
                 .where(
                     submission.c.status.in_(
-                        (STATUS_NEEDS_ATTENTION, STATUS_RETRY, STATUS_HELD)
+                        (STATUS_NEEDS_ATTENTION, STATUS_RETRY, STATUS_HELD,
+                         STATUS_HELD_REVIEW, STATUS_DISCARDED)
                     )
                 )
                 .values(
@@ -473,6 +493,69 @@ class PostgresStore:
                 )
             )
         return result.rowcount > 0
+
+    async def add_thread_id(self, submission_id: str, thread_id: str) -> bool:
+        """Anchor a Gmail thread to a submission (recorded after each /ops send;
+        also at inbound capture). Appends to the ``thread_ids`` JSON list,
+        skipping duplicates."""
+        if not thread_id:
+            return False
+        async with self._engine.begin() as conn:
+            row = (
+                await conn.execute(
+                    select(submission.c.thread_ids).where(submission.c.id == submission_id)
+                )
+            ).first()
+            if row is None:
+                return False
+            threads = list(row[0] or [])
+            if thread_id in threads:
+                return True
+            threads.append(thread_id)
+            await conn.execute(
+                update(submission)
+                .where(submission.c.id == submission_id)
+                .values(thread_ids=threads, updated_at=_now())
+            )
+        return True
+
+    async def existing_tokens(self, form_slug: str, tokens: list[str]) -> set[str]:
+        """Which of these submission tokens already exist for the form — the
+        inbound poller's cheap pre-check before fetching thread content."""
+        if not tokens:
+            return set()
+        async with self._engine.begin() as conn:
+            rows = (
+                await conn.execute(
+                    select(submission.c.submission_token).where(
+                        submission.c.form_slug == form_slug,
+                        submission.c.submission_token.in_(tokens),
+                    )
+                )
+            ).all()
+        return {r[0] for r in rows}
+
+    async def known_gmail_threads(self, thread_ids: list[str]) -> set[str]:
+        """Which of these Gmail thread ids are already anchored to ANY
+        submission (``thread_ids`` membership). Keeps the inbound poller from
+        capturing a submitter's REPLY to a conversation staff started from a
+        form submission as if it were a brand-new request."""
+        if not thread_ids:
+            return set()
+        conds = [submission.c.thread_ids.contains([t]) for t in thread_ids]
+        async with self._engine.begin() as conn:
+            rows = (
+                await conn.execute(
+                    select(submission.c.thread_ids).where(
+                        submission.c.thread_ids.isnot(None), or_(*conds)
+                    )
+                )
+            ).all()
+        known: set[str] = set()
+        wanted = set(thread_ids)
+        for (threads,) in rows:
+            known.update(t for t in (threads or []) if t in wanted)
+        return known
 
     async def discard(self, submission_id: str, *, acted_by: Optional[str] = None) -> bool:
         """Resolve a stuck submission manually: move it to the terminal

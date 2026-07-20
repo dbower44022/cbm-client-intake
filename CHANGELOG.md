@@ -4,6 +4,70 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.110.0] — 2026-07-19
+
+**feat(ops): the shared info@ mailbox model — thread-anchored conversations,
+send as CBM Info, and inbound info@ email captured into the /ops queue**
+(Doug's rulings this session: info@cbmentors.org becomes a real mailbox and
+the single identity for the information-request process; the inbound-requests
+table + Information Requests are the single source of truth; triage-first —
+no CRM records until staff approve; replies use the generic "CBM Info" alias,
+never a staffer's name). Fixes his report that submissions — volunteer ones
+especially — were "picking up numerous unrelated emails": the conversation
+was a `from:X OR to:X` search over the whole mailbox.
+
+- **Thread anchoring** (migration **0013**, `submission.thread_ids` +
+  store `add_thread_id`/`existing_tokens`/`known_gmail_threads`): every /ops
+  send records the resulting Gmail thread on its submission (the compose
+  passes `submissionId`; `register_quicksend` gained an `after_send` hook and
+  `send_quick_message` now returns `gmailThreadId`). The conversation view
+  and the Reply column read EXACTLY the anchored threads — never an address
+  search — so unrelated mail cannot appear.
+- **Shared mailbox** (`OPS_MAILBOX`, default empty = old behavior;
+  `OPS_MAILBOX_NAME`, default "CBM Info"): /ops sends as info@ under the
+  generic name with NO personal signature (`register_quicksend` gained
+  `shared_mailbox`; GET /mailbox reports the shared identity; the CRM Email
+  write-back stamps info@ as sender), and reads conversations from that one
+  mailbox — every admin sees the same conversation (the v0.106.0 per-admin
+  caveat is gone in shared mode). Acting user still logged on every send.
+- **Inbound capture** (`ops/inbound.py`, worker timer `OPS_INBOUND_SECONDS`,
+  default 300): the worker lists the info@ inbox and captures each NEW
+  inbound thread as a **held** (`held_review`) **info-email** submission —
+  sender name/address, subject, cleaned message text, origin thread id.
+  Dedup is stateless and layered: the submission token IS the thread id
+  (unique key), and threads anchored to ANY submission are skipped — a
+  submitter's reply to a form-submission conversation joins that
+  conversation instead of becoming a new item. Outbound-initiated threads
+  and mailer-daemon bounces are ignored. Never validated at capture (spam
+  must be capturable); per-thread best-effort.
+- **Triage-first delivery**: new form kind **info-email**
+  (`forms/info_email`, registered for worker delivery only — deliberately NO
+  public endpoint), whose orchestrator reuses the info-request mapping with
+  email wording: Contact description stamped "[Information request via
+  email…]", `CInformationRequest.form="info-email"`, `source="Email"`,
+  subject folded into the message. In /ops the row's action reads
+  **Approve** ("Create CRM records?") — redrive under the hood — and
+  **Discard** removes it with zero CRM residue. `held_review` added to the
+  redrive guard; the guard also now allows `discarded` (the UI has offered
+  undo-discard since v0.106.0 but the store refused it — latent bug fixed).
+- Legacy mode hardening: without OPS_MAILBOX the per-admin search is now
+  **time-boxed to the submission's lifetime** (`after:` received, `before:`
+  resolved + 2 days).
+- Verified: 829 tests green (31 new across test_ops/test_ops_inbound);
+  migration 0013 + anchoring/token/thread lookups + held_review/discarded
+  redrive round-tripped on live local Postgres.
+- **Activation (Doug-side, in order):** (1) make info@cbmentors.org a REAL
+  licensed Workspace mailbox (delegation can't impersonate groups/aliases —
+  the existing DWD grant then covers it automatically); (2) set
+  `OPS_MAILBOX=info@cbmentors.org` on **web AND worker** (+ optionally
+  `OPS_MAILBOX_NAME`/`OPS_INBOUND_SECONDS`) in the overlays; the pre-deploy
+  migrate runs 0013; (3) CRM build: add an **"Email"** option to
+  `CIntakeSubmission.form` (the audit log for approved email submissions
+  writes `form="Email"`; until built that best-effort write logs a WARNING);
+  (4) separately, stop CRM-direct mail going out with the
+  espo@cbmentors.org return address — that is EspoCRM's own outbound SMTP /
+  group email account configuration (CRM Admin), not this app.
+
 ## [0.109.0] — 2026-07-19
 
 **feat(sessions): one record, one tab** (Doug's request — the same engagement

@@ -2,16 +2,26 @@
 
 *For CBM staff on the Marketing Admin Team (CRM admins always have access).
 Sign in once at the portal (`/`); the Submission Admin tile appears if you're
-entitled. Rebuilt 2026-07-19 (v0.106.0–v0.108.0).*
+entitled. Rebuilt 2026-07-19 (v0.106.0–v0.108.0); the shared info@ mailbox
+model added in v0.110.0.*
 
 ## What it is
 
 Every submission from the public forms (client intake, volunteer,
 info-request, partner, sponsor) is captured durably before anything else
-happens, then delivered into the CRM by a background worker. Submission Admin
-is where staff watch that pipeline, fix anything stuck, and — for
-information requests — **carry the conversation with the submitter through to
-resolution** without leaving the page.
+happens, then delivered into the CRM by a background worker. **Emails sent to
+info@cbmentors.org enter the same queue**: the worker watches that mailbox and
+each new inbound conversation appears as an "info-email" submission awaiting
+your triage. Submission Admin is where staff watch that pipeline, fix anything
+stuck, and **carry the conversation with the submitter through to resolution**
+without leaving the page.
+
+All submission email — reading and sending — goes through the **shared
+info@cbmentors.org mailbox** under the generic name **CBM Info**: every admin
+sees the same conversation, replies come from the same address the public
+already knows, and a submission's conversation shows **only the email threads
+that belong to it** (the thread the submitter started, plus any thread you
+started from the submission page — never their unrelated mail).
 
 ## The front page (the work queue)
 
@@ -34,6 +44,11 @@ resolution** without leaving the page.
   discarded) for the worker to run again — safe, it resumes from what was
   already created. **Discard** parks an undeliverable one (undo by
   re-driving). Both ask for a confirming second click.
+- **Inbound emails** (form "info-email", status "held review") carry
+  **Approve** instead of Re-drive: approving creates the CRM records —
+  Contact, plus the Information Request — exactly as if the person had used
+  the website form (marked as source "Email"). **Discard** is the spam
+  button: the email leaves the queue and nothing is ever written to the CRM.
 
 ## The submission page
 
@@ -46,9 +61,10 @@ Three tabs, like the Client Management record pages.
 - **Top center**: **Submission notes** — free-form triage notes for other
   admins ("left a voicemail", "duplicate of…"). Click Edit, type, Save.
   Notes are staff-only; they never go to the CRM or the submitter.
-- **Below the notes**: the **conversation with the submitter** — the latest
-  emails between your CBM mailbox and their address, newest first. Click a
-  message to jump to the Communications tab.
+- **Below the notes**: the **conversation with the submitter** — the emails
+  on this submission's own threads in the shared info@ mailbox, newest
+  first; every admin sees the same list. Click a message to jump to the
+  Communications tab.
 - **Header buttons**: **Mark resolved / Reopen** (the workflow flag — use it
   when the request is done, whatever "done" meant), plus Re-drive/Discard
   when applicable.
@@ -70,20 +86,22 @@ block). **Email the submitter** opens the standard compose:
   and the compose opens as a reply: "Re:" subject, and the send stays on the
   same email thread in both inboxes.
 
-Messages send from **your own @cbmentors.org mailbox** (your name on the
-From line, your signature appended), exactly like the composes in the other
-staff tools.
+Messages send from **the shared info@cbmentors.org mailbox as "CBM Info"** —
+deliberately not your personal name or address (no personal signature is
+added either). Who actually clicked Send is still recorded internally. Every
+send ties its email thread to the submission, which is exactly what the
+conversation view (and the Reply column) reads.
 
 ## Why don't I see…
 
 - **…the conversation / the Reply column?** Email features need the Gmail
-  integration on for the deployment AND your login linked to a CBM profile
-  with a `cbmEmail`. Without them the page says exactly which is missing —
-  everything else still works.
-- **…an email another admin exchanged with this submitter?** The
-  conversation is read live from **your** mailbox. If a colleague ran the
-  exchange, it's in theirs. Check the submission notes — that's what they're
-  for — or ask them to Mark resolved when done.
+  integration on for the deployment (and the shared mailbox configured).
+  Without them the page says exactly which is missing — everything else
+  still works.
+- **…an email the submitter sent that isn't in the conversation?** The
+  conversation shows only the threads that belong to THIS submission. Mail
+  they sent info@ about something else becomes its own queue item; mail they
+  exchanged with a staffer's personal mailbox never involves info@ at all.
 - **…the template in the compose?** The template must exist in EspoCRM with
   the exact name `InfoRequestReply` (or the name set in `OPS_REPLY_TEMPLATE`).
   A missing template just opens a blank compose — the template picker inside
@@ -95,8 +113,28 @@ staff tools.
    to see who's waiting on you.
 2. Click the request. Read the message and facts on the left; check the
    notes for anything a colleague already did.
-3. **Email the submitter** — the canned reply is pre-filled on first
-   contact; later rounds are proper replies on the same thread.
-4. Jot what happened in **Submission notes**.
-5. When it's handled, **Mark resolved** — it leaves the queue (still
+3. **If it arrived by email** (form "info-email"): first decide — **Approve**
+   (a real request; the CRM records are created) or **Discard** (spam; gone,
+   no CRM residue). Form submissions skip this step — they delivered on
+   arrival.
+4. **Email the submitter** — the canned reply is pre-filled on first
+   contact; later rounds are proper replies on the same thread. Everything
+   sends as **CBM Info <info@cbmentors.org>**.
+5. Jot what happened in **Submission notes**.
+6. When it's handled, **Mark resolved** — it leaves the queue (still
    findable under Resolved/All).
+
+## How email-originated submissions work (v0.110.0)
+
+- The worker checks the info@ inbox every few minutes. A **new** conversation
+  (a thread not already tied to any submission) becomes a queue item holding
+  the sender's name/address, the subject, and the readable message text.
+- A **reply** to an existing conversation never becomes a new item — it
+  simply appears in that submission's conversation view.
+- Mail the mailbox itself started (someone writing from the Gmail UI) and
+  delivery bounces are ignored.
+- The same person emailing again later — a genuinely new thread — is a new
+  queue item, which is correct: a resolved request stays resolved, and new
+  contact means someone is waiting again. If they ALSO filled the form, the
+  two items show up separately; handle one and discard/resolve the other
+  (the notes field is the place to say so).

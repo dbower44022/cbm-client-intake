@@ -105,6 +105,10 @@ async def session(request: Request) -> dict:
         # EspoCRM email template pre-applied when starting a NEW conversation
         # on an info-request (Doug's canned reply; blank compose if missing).
         "replyTemplate": settings.ops_reply_template,
+        # The shared send/read mailbox (info@ model, v0.110.0); null = the
+        # legacy per-admin-mailbox mode.
+        "opsMailbox": settings.ops_mailbox or None,
+        "opsMailboxName": settings.ops_mailbox_name,
     }
 
 
@@ -195,19 +199,52 @@ async def save_notes(submission_id: str, body: NotesIn, request: Request) -> dic
     return {"status": "ok"}
 
 
-# How many matched messages the conversation view fetches in full. A triage
-# conversation is short; a submitter address that matches hundreds of messages
-# (a colleague!) is clamped rather than hammering Gmail.
+# How many messages the conversation view fetches in full. A triage
+# conversation is short; a runaway match set is clamped rather than hammering
+# Gmail.
 _MESSAGES_LIMIT = 25
+
+
+def submission_thread_ids(row: dict) -> list[str]:
+    """The Gmail threads anchored to a submission: the inbound origin thread
+    (email-originated submissions carry it in the payload) + every thread a
+    staff reply started (recorded by the send hook in ``thread_ids``)."""
+    threads = [t for t in (row.get("thread_ids") or []) if t]
+    origin = ((row.get("payload") or {}).get("gmail_thread_id") or "").strip()
+    if origin and origin not in threads:
+        threads.insert(0, origin)
+    return threads
+
+
+def _lifetime_query(address: str, row: dict) -> str:
+    """The legacy per-admin address search, time-boxed to the submission's
+    lifetime (``after:`` received, ``before:`` resolved + 2 days grace) so a
+    submitter's unrelated history/later mail stays out. Used only when no
+    shared OPS_MAILBOX is configured."""
+    q = f"from:{address} OR to:{address}"
+    received = row.get("received_at")
+    if received is not None:
+        q = f"({q}) after:{int(received.timestamp())}"
+    resolved = row.get("resolved_at")
+    if resolved is not None:
+        q = f"{q} before:{int(resolved.timestamp()) + 2 * 86400}"
+    return q
 
 
 @router.get("/submissions/{submission_id}/messages")
 async def submission_messages(submission_id: str, request: Request) -> dict:
-    """The email conversation with the SUBMITTER — a live Gmail search of the
-    signed-in admin's OWN mailbox (``from:X OR to:X``), newest first. Nothing
-    is stored; each admin sees the thread from their own mailbox. Degrades to
-    a readable reason (no Gmail integration / no linked CBM mailbox / no
-    submitter email) instead of failing the page."""
+    """The email conversation belonging to this submission, newest first.
+
+    With a shared **OPS_MAILBOX** configured (the info@ model, v0.110.0) this
+    reads exactly the submission's ANCHORED Gmail threads from that one
+    mailbox — the inbound thread that created an email submission, plus every
+    thread staff started from here. Every admin sees the same conversation,
+    and a submitter's unrelated mail can never appear (the old ``from:X OR
+    to:X`` search polluted volunteer submissions especially).
+
+    Without OPS_MAILBOX it falls back to the per-admin mailbox search, now
+    time-boxed to the submission's lifetime. Nothing is stored either way;
+    degrades to a readable reason instead of failing the page."""
     user = _require_user(request)
     store = _store(request)
     row = await store.get_submission(submission_id)
@@ -225,26 +262,62 @@ async def submission_messages(submission_id: str, request: Request) -> dict:
     from comms import service as comms_service
     from core.gmail import GmailError, parse_message
 
-    client = client_for(settings, user)
-    try:
-        gmail = await comms_service.gmail_for_user(settings, client, user)
-    except comms_service.CommsError as exc:
-        # No linked profile / no cbmEmail — a readable reason, not an error.
-        return {"messages": [], "address": address, "reason": str(exc)}
-    except EspoError as exc:
-        raise _crm_failure(request, exc, "Could not look up your mailbox")
-
-    try:
-        listing = await gmail.list_messages(
-            f"from:{address} OR to:{address}", max_results=_MESSAGES_LIMIT
-        )
-        ids = [m["id"] for m in listing.get("messages") or []]
-        raw = await asyncio.gather(*(gmail.get_message(i) for i in ids[:_MESSAGES_LIMIT]))
-    except GmailError as exc:
-        log.warning("ops mailbox search failed for %s: %s", user.get("userName"), exc)
-        raise HTTPException(
-            status_code=502, detail="Couldn't read your mailbox — try again."
-        )
+    shared = bool(settings.ops_mailbox)
+    if shared:
+        try:
+            gmail = await comms_service.gmail_for_shared_mailbox(
+                settings, settings.ops_mailbox
+            )
+        except comms_service.CommsError as exc:
+            return {"messages": [], "address": address, "reason": str(exc)}
+        thread_ids = submission_thread_ids(row)
+        if not thread_ids:
+            return {
+                "messages": [], "address": address, "mailbox": gmail.mailbox,
+                "reason": ("No conversation for this submission yet — use "
+                           "“Email the submitter” to start one from "
+                           f"{gmail.mailbox}."),
+            }
+        try:
+            threads = await asyncio.gather(
+                *(gmail.get_thread(t) for t in thread_ids), return_exceptions=True
+            )
+        except GmailError as exc:  # auth-level failure before any fetch
+            log.warning("ops shared-mailbox read failed: %s", exc)
+            raise HTTPException(
+                status_code=502, detail="Couldn't read the shared mailbox — try again."
+            )
+        raw = []
+        for t in threads:
+            if isinstance(t, Exception):
+                # A single deleted/inaccessible thread shouldn't kill the view.
+                log.warning("ops thread fetch failed: %s", t)
+                continue
+            raw.extend(t.get("messages") or [])
+    else:
+        client = client_for(settings, user)
+        try:
+            gmail = await comms_service.gmail_for_user(settings, client, user)
+        except comms_service.CommsError as exc:
+            # No linked profile / no cbmEmail — a readable reason, not an error.
+            return {"messages": [], "address": address, "reason": str(exc)}
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not look up your mailbox")
+        try:
+            listing = await gmail.list_messages(
+                _lifetime_query(address, row), max_results=_MESSAGES_LIMIT
+            )
+            ids = [m["id"] for m in listing.get("messages") or []]
+            raw = await asyncio.gather(
+                *(gmail.get_message(i) for i in ids[:_MESSAGES_LIMIT])
+            )
+        except GmailError as exc:
+            log.warning(
+                "ops mailbox search failed for %s: %s", user.get("userName"), exc
+            )
+            raise HTTPException(
+                status_code=502, detail="Couldn't read your mailbox — try again."
+            )
 
     from core.email_clean import clean_email
 
@@ -253,6 +326,9 @@ async def submission_messages(submission_id: str, request: Request) -> dict:
         p = parse_message(r)
         if {"DRAFT", "SPAM", "TRASH"} & set(p.label_ids):
             continue
+        # Shared mode: "sent" = written by the shared mailbox; legacy mode
+        # keeps the old submitter comparison.
+        sent = (p.from_address == gmail.mailbox) if shared else (p.from_address != address)
         cleaned = clean_email(p.body_text, p.body_html or None)
         messages.append({
             "id": p.gmail_id,
@@ -261,7 +337,7 @@ async def submission_messages(submission_id: str, request: Request) -> dict:
             # send stays on this Gmail thread + RFC References chain.
             "rfcMessageId": p.rfc_message_id,
             "references": p.references,
-            "direction": "sent" if p.from_address != address else "received",
+            "direction": "sent" if sent else "received",
             "fromName": p.from_name or p.from_address,
             "fromAddress": p.from_address,
             "to": ", ".join(p.to_addresses),
@@ -271,7 +347,11 @@ async def submission_messages(submission_id: str, request: Request) -> dict:
             "bodyHtml": cleaned.html,
         })
     messages.sort(key=lambda m: m["date"] or "", reverse=True)
-    return {"messages": messages, "address": address, "mailbox": gmail.mailbox}
+    return {
+        "messages": messages[:_MESSAGES_LIMIT],
+        "address": address,
+        "mailbox": gmail.mailbox,
+    }
 
 
 class ReplyStatesIn(BaseModel):
@@ -287,11 +367,13 @@ _REPLY_STATE_LIMIT = 30
 async def reply_states(body: ReplyStatesIn, request: Request) -> dict:
     """Who spoke last, per submission — the grid's awaiting-reply column.
 
-    For each id: one Gmail search (newest message with the submitter) + one
-    headers-only fetch. States: ``owed`` (their message is newest — we owe a
-    reply), ``waiting`` (ours is newest — waiting on them), ``none`` (no
-    conversation). Best-effort per id; an empty map when email is off or the
-    admin has no linked mailbox."""
+    Shared-mailbox mode (OPS_MAILBOX set): reads only the submission's
+    anchored threads (headers-only), so the state reflects THIS conversation
+    — never the submitter's unrelated mail. ``owed`` = the newest message
+    wasn't ours; ``waiting`` = ours is newest; ``none`` = no conversation.
+    Legacy mode searches the admin's own mailbox, time-boxed to the
+    submission's lifetime. Best-effort per id; an empty map when email is
+    off or no mailbox resolves."""
     user = _require_user(request)
     store = _store(request)
     settings = get_settings()
@@ -303,13 +385,28 @@ async def reply_states(body: ReplyStatesIn, request: Request) -> dict:
     from comms import service as comms_service
     from core.gmail import GmailError
 
-    client = client_for(settings, user)
-    try:
-        gmail = await comms_service.gmail_for_user(settings, client, user)
-    except comms_service.CommsError:
-        return {"states": {}}
-    except EspoError as exc:
-        raise _crm_failure(request, exc, "Could not look up your mailbox")
+    shared = bool(settings.ops_mailbox)
+    if shared:
+        try:
+            gmail = await comms_service.gmail_for_shared_mailbox(
+                settings, settings.ops_mailbox
+            )
+        except comms_service.CommsError:
+            return {"states": {}}
+    else:
+        client = client_for(settings, user)
+        try:
+            gmail = await comms_service.gmail_for_user(settings, client, user)
+        except comms_service.CommsError:
+            return {"states": {}}
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not look up your mailbox")
+
+    def _headers(meta: dict) -> dict:
+        return {
+            (h.get("name") or "").lower(): h.get("value") or ""
+            for h in (meta.get("payload") or {}).get("headers") or []
+        }
 
     async def one(sid: str):
         try:
@@ -318,17 +415,32 @@ async def reply_states(body: ReplyStatesIn, request: Request) -> dict:
             address = (address or "").strip().lower()
             if not address:
                 return sid, {"state": "none"}
+            if shared:
+                thread_ids = submission_thread_ids(row)
+                if not thread_ids:
+                    return sid, {"state": "none"}
+                newest = None  # (internalDate, headers)
+                for tid in thread_ids:
+                    thread = await gmail.get_thread(tid, headers_only=True)
+                    for m in thread.get("messages") or []:
+                        stamp = int(m.get("internalDate") or 0)
+                        if newest is None or stamp > newest[0]:
+                            newest = (stamp, _headers(m))
+                if newest is None:
+                    return sid, {"state": "none"}
+                headers = newest[1]
+                sender = parseaddr(headers.get("from", ""))[1].lower()
+                return sid, {
+                    "state": "waiting" if sender == gmail.mailbox else "owed",
+                    "date": headers.get("date", ""),
+                }
             listing = await gmail.list_messages(
-                f"from:{address} OR to:{address}", max_results=1
+                _lifetime_query(address, row), max_results=1
             )
             msgs = listing.get("messages") or []
             if not msgs:
                 return sid, {"state": "none"}
-            meta = await gmail.get_message_headers(msgs[0]["id"])
-            headers = {
-                (h.get("name") or "").lower(): h.get("value") or ""
-                for h in (meta.get("payload") or {}).get("headers") or []
-            }
+            headers = _headers(await gmail.get_message_headers(msgs[0]["id"]))
             sender = parseaddr(headers.get("from", ""))[1].lower()
             return sid, {
                 "state": "owed" if sender == address else "waiting",
@@ -378,9 +490,34 @@ async def discard(submission_id: str, request: Request) -> dict:
     return {"status": "discarded"}
 
 
-# Quick-send email (compose to the submitter, templates + signature included):
-# GET /mailbox + POST /sendmail + the template endpoints, behind this app's own
-# gate. See comms/quicksend.py.
+# Quick-send email (compose to the submitter, templates included), behind this
+# app's own gate. See comms/quicksend.py. With OPS_MAILBOX configured the
+# compose sends as the SHARED info@ mailbox under the generic display name
+# (Doug's ruling 2026-07-19) and the sent message's Gmail thread is anchored
+# to the submission, which is what the conversation view reads.
 from comms.quicksend import register_quicksend  # noqa: E402  (needs router + helpers above)
 
-register_quicksend(router, _require_user, client_for, _crm_failure)
+
+def _ops_shared_mailbox(settings) -> tuple[str, str] | None:
+    if settings.ops_mailbox:
+        return (settings.ops_mailbox.strip().lower(), settings.ops_mailbox_name)
+    return None
+
+
+async def _ops_after_send(request: Request, body, result: dict) -> None:
+    """Anchor the sent message's Gmail thread to the submission it was
+    composed from (best-effort — the caller swallows failures)."""
+    thread_id = (result or {}).get("gmailThreadId")
+    if not body.submissionId or not thread_id:
+        return
+    store = getattr(request.app.state, "submission_store", None)
+    if store is None:
+        return
+    if await store.add_thread_id(body.submissionId, thread_id):
+        log.info("anchored gmail thread %s to submission %s", thread_id, body.submissionId)
+
+
+register_quicksend(
+    router, _require_user, client_for, _crm_failure,
+    shared_mailbox=_ops_shared_mailbox, after_send=_ops_after_send,
+)

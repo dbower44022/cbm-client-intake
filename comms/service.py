@@ -93,6 +93,19 @@ async def gmail_for_user(
     return GmailClient(sa_info, mailbox, settings.request_timeout_seconds)
 
 
+async def gmail_for_shared_mailbox(settings: Settings, mailbox: str) -> GmailClient:
+    """A Gmail client for a SHARED mailbox (the /ops info@ channel) — same
+    delegated stack, fixed subject from config instead of the user's profile.
+    The mailbox must be a real Workspace user mailbox (not a group/alias)."""
+    mailbox = (mailbox or "").strip().lower()
+    if not mailbox:
+        raise CommsError("No shared mailbox is configured.")
+    sa_info = await get_service_account(settings)
+    if sa_info is None:
+        raise CommsError("The Gmail integration isn't configured.")
+    return GmailClient(sa_info, mailbox, settings.request_timeout_seconds)
+
+
 # --- reads (as the user) -------------------------------------------------------
 
 _CONV_SELECT = (
@@ -799,7 +812,13 @@ async def send_quick_message(
                 error="The message WAS sent, but recording it in the CRM failed.",
                 retry_payload=wb_payload,
             )
-    return {"gmailMessageId": sent.get("id"), "writeBack": write_back}
+    return {
+        "gmailMessageId": sent.get("id"),
+        # The Gmail thread the sent message landed on — /ops anchors it to the
+        # submission so the conversation view can show exactly this thread.
+        "gmailThreadId": sent.get("threadId"),
+        "writeBack": write_back,
+    }
 
 
 # --- compose-dialog lookups -----------------------------------------------------

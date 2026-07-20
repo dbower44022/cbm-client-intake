@@ -81,6 +81,8 @@ body { margin: 0; display: flex; flex-direction: column; }
 .status-completed { background: #eafaef; color: #2f7a3f; border-color: var(--cbm-success); }
 .status-needs_attention { background: #fdeaea; color: #a23b38; border-color: var(--cbm-danger); }
 .status-retry, .status-held_honeypot { background: #fff6e6; color: #8a5a00; border-color: var(--cbm-warning); }
+/* An inbound info@ email awaiting staff triage (Approve / Discard). */
+.status-held_review { background: #e8f0fb; color: #1f4e8c; border-color: #9dbce4; }
 .status-pending, .status-processing, .status-discarded { background: var(--cbm-surface); color: var(--cbm-slate-700); }
 
 /* --- detail view --- */

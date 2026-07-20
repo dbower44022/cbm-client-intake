@@ -229,9 +229,16 @@ class GmailClient:
             "GET", f"/messages/{message_id}", params={"format": "metadata"}
         )
 
-    async def get_thread(self, thread_id: str) -> dict[str, Any]:
+    async def get_thread(
+        self, thread_id: str, *, headers_only: bool = False
+    ) -> dict[str, Any]:
+        """One thread with its messages. ``headers_only`` (format=metadata) is
+        the cheap read for questions like "who wrote the thread's last
+        message?" (the /ops awaiting-reply column)."""
         return await self._request(
-            "GET", f"/threads/{thread_id}", params={"format": "full"}
+            "GET",
+            f"/threads/{thread_id}",
+            params={"format": "metadata" if headers_only else "full"},
         )
 
     # --- send -------------------------------------------------------------

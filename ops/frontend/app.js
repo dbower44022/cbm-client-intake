@@ -11,12 +11,14 @@
   "use strict";
 
   var API = "/ops/api";
-  var STATUSES = ["pending", "processing", "retry", "completed", "needs_attention", "held_honeypot", "discarded"];
-  var FORMS = ["client-intake", "volunteer", "info-request", "partner", "sponsor"];
+  var STATUSES = ["pending", "processing", "retry", "completed", "needs_attention", "held_honeypot", "held_review", "discarded"];
+  // info-email = an inbound email to the shared info@ mailbox, captured by the
+  // worker's poller (held_review until staff Approve or Discard it).
+  var FORMS = ["client-intake", "volunteer", "info-request", "partner", "sponsor", "info-email"];
   // Re-drive includes discarded so a mistaken discard can be undone (re-queued).
-  var REDRIVABLE = { held_honeypot: 1, needs_attention: 1, retry: 1, discarded: 1 };
+  var REDRIVABLE = { held_honeypot: 1, held_review: 1, needs_attention: 1, retry: 1, discarded: 1 };
   // Discard resolves a stuck row that can't be re-driven (e.g. a bad payload).
-  var DISCARDABLE = { held_honeypot: 1, needs_attention: 1, retry: 1 };
+  var DISCARDABLE = { held_honeypot: 1, held_review: 1, needs_attention: 1, retry: 1 };
 
   // resolution defaults to "open": the grid is a work queue ("is anyone
   // still waiting on us?"), resolved rows are one select away.
@@ -303,7 +305,7 @@
         td.appendChild(replyCell(r));
       } else if (c.key === "_actions") {
         td.className = "actions";
-        if (REDRIVABLE[r.status]) td.appendChild(actionBtn("Re-drive", "Re-drive?", function () { redrive(r, "notice"); }));
+        if (REDRIVABLE[r.status]) td.appendChild(redriveBtn(r, "notice"));
         if (DISCARDABLE[r.status]) td.appendChild(actionBtn("Discard", "Really discard?", function () { discard(r, "notice"); }));
       } else {
         var v = c.get ? c.get(r) : r[c.key];
@@ -356,6 +358,18 @@
     btn.textContent = label;
     twoStep(btn, armedText, fn);
     return btn;
+  }
+
+  // Re-drive, labelled for what it means on this row: approving a held
+  // inbound email DELIVERS it (creates the CRM records) — same endpoint,
+  // honest words.
+  function redriveBtn(r, noticeEl) {
+    var approve = r.form_slug === "info-email" && r.status === "held_review";
+    return actionBtn(
+      approve ? "Approve" : "Re-drive",
+      approve ? "Create CRM records?" : "Re-drive?",
+      function () { redrive(r, noticeEl); }
+    );
   }
 
   async function redrive(r, noticeEl) {
@@ -459,7 +473,7 @@
       }
     });
     box.appendChild(rb);
-    if (REDRIVABLE[current.status]) box.appendChild(actionBtn("Re-drive", "Re-drive?", function () { redrive(current, "detailNotice"); }));
+    if (REDRIVABLE[current.status]) box.appendChild(redriveBtn(current, "detailNotice"));
     if (DISCARDABLE[current.status]) box.appendChild(actionBtn("Discard", "Really discard?", function () { discard(current, "detailNotice"); }));
   }
 
@@ -472,6 +486,7 @@
     ["Company", "company"],
     ["Website", "business_website"],
     ["How they heard", "how_did_you_hear"],
+    ["Subject", "subject"],
     ["Message", "message"],
   ];
 
@@ -622,23 +637,26 @@
   // info-request pre-applies the canned reply template (silent fallback to a
   // blank compose when no template with that name exists).
   function composeOpts() {
+    // Every ops compose carries the submission id: the server anchors the
+    // sent message's Gmail thread to the submission, and the conversation
+    // view reads exactly the anchored threads (never an address search).
+    var opts = { extra: { submissionId: current.id } };
     var last = messages && messages.length ? messages[0] : null;  // newest first
     if (last) {
       var subj = last.subject || "";
       if (subj && !/^re:/i.test(subj)) subj = "Re: " + subj;
-      return {
-        subject: subj,
-        reply: {
-          threadId: last.threadId || null,
-          inReplyTo: last.rfcMessageId || "",
-          references: last.references || "",
-        },
+      opts.subject = subj;
+      opts.reply = {
+        threadId: last.threadId || null,
+        inReplyTo: last.rfcMessageId || "",
+        references: last.references || "",
       };
+      return opts;
     }
     if (current.form_slug === "info-request" && config && config.replyTemplate) {
-      return { template: config.replyTemplate };
+      opts.template = config.replyTemplate;
     }
-    return {};
+    return opts;
   }
 
   function emailButton() {

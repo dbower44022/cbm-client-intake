@@ -94,6 +94,23 @@ class Settings(BaseSettings):
     # conversation on an info-request (the canned reply; the compose opens
     # blank if no template with this name exists — silent fallback).
     ops_reply_template: str = "InfoRequestReply"
+    # The SHARED mailbox Submission Admin speaks as (Doug's ruling 2026-07-19:
+    # the public information channel is info@cbmentors.org, not any staffer's
+    # personal CBM address). When set (and GMAIL_SYNC is on):
+    #   * ops replies SEND as this mailbox (generic display name below),
+    #   * the submission conversation READS this mailbox's threads — every
+    #     admin sees the same conversation (the per-admin-visibility caveat of
+    #     v0.106.0 goes away), and only the threads anchored to the submission
+    #     (no more from:X OR to:X address search picking up unrelated mail),
+    #   * the worker polls its inbox and captures each NEW inbound thread as a
+    #     held info-email submission in the /ops work queue (triage-first —
+    #     no CRM records until staff approve; Discard leaves no CRM residue).
+    # Must be a REAL Workspace mailbox (not a group/alias) — Gmail delegation
+    # only works against a licensed user mailbox. Empty = the pre-v0.110.0
+    # behavior (per-admin mailbox + address search, no inbound capture).
+    ops_mailbox: str = ""
+    ops_mailbox_name: str = "CBM Info"      # From display name on ops sends
+    ops_inbound_seconds: int = 300          # inbound info@ poll cadence (0 = off)
     # Session Management tools — one engine, three team-gated routes
     # (/mentorsessions, /partnersessions, /sponsorsessions). Each lets its users
     # record CSession meetings against the records they own.

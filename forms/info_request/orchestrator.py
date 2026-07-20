@@ -55,9 +55,11 @@ PROSPECT = "Prospect"
 REQUEST_STATUS_NEW = "New"
 
 
-def _description_block(sub: InfoRequest, *, include_company: bool) -> str:
+def _description_block(
+    sub: InfoRequest, *, include_company: bool, via: str = "website"
+) -> str:
     """The stamped, human-readable note staff will read on the Contact."""
-    lines = [f"[Information request via website — {datetime.now(timezone.utc):%Y-%m-%d}]"]
+    lines = [f"[Information request via {via} — {datetime.now(timezone.utc):%Y-%m-%d}]"]
     if include_company and sub.company:
         lines.append(f"Company: {sub.company}")
     if sub.how_did_you_hear:
@@ -84,7 +86,7 @@ async def _find_or_create_account(sub: InfoRequest, client: EspoApi) -> str:
     return created["id"]
 
 
-def _submission_json(sub: InfoRequest) -> str:
+def _submission_json(sub: InfoRequest, *, channel: str = "the website") -> str:
     """The raw submission as a readable note + JSON, for the entity's description
     (mirrors the CIntakeSubmission audit record)."""
     data = json.loads(sub.model_dump_json())
@@ -92,13 +94,20 @@ def _submission_json(sub: InfoRequest) -> str:
     data.pop("submission_token", None)  # internal idempotency token, not useful here
     body = json.dumps(data, indent=2, sort_keys=True)
     return (
-        "Information request submitted via the website.\n\n"
+        f"Information request submitted via {channel}.\n\n"
         "----- submission payload -----\n" + body
     )
 
 
 async def _create_information_request(
-    sub: InfoRequest, client: EspoApi, contact_id: str, account_id: str | None
+    sub: InfoRequest,
+    client: EspoApi,
+    contact_id: str,
+    account_id: str | None,
+    *,
+    form_slug: str = FORM_SLUG,
+    channel: str = "the website",
+    source: str | None = None,
 ) -> str | None:
     """Create the dedicated CInformationRequest record, linked to the Contact.
 
@@ -115,9 +124,9 @@ async def _create_information_request(
         "lastName": sub.last_name,
         "email": str(sub.email),
         "submitterEmail": str(sub.email),
-        "form": FORM_SLUG,
+        "form": form_slug,
         "message": sub.message.strip(),
-        "description": _submission_json(sub),
+        "description": _submission_json(sub, channel=channel),
         "requestStatus": REQUEST_STATUS_NEW,
         "contactId": contact_id,
     }
@@ -126,8 +135,8 @@ async def _create_information_request(
         payload["phone"] = phone
     if sub.company:
         payload["company"] = sub.company
-    if sub.how_did_you_hear:
-        payload["source"] = sub.how_did_you_hear
+    if source or sub.how_did_you_hear:
+        payload["source"] = source or sub.how_did_you_hear
     if account_id:
         payload["infoRequestCompanyId"] = account_id  # belongsTo Account link
     try:
@@ -141,7 +150,19 @@ async def _create_information_request(
         return None
 
 
-async def submit_request(sub: InfoRequest, client: EspoApi) -> dict[str, str]:
+async def submit_request(
+    sub: InfoRequest,
+    client: EspoApi,
+    *,
+    form_slug: str = FORM_SLUG,
+    via: str = "website",
+    channel: str = "the website",
+    source: str | None = None,
+) -> dict[str, str]:
+    """Deliver one information request. The keyword args let another channel
+    reuse the whole mapping — the info-email kind (inbound info@ mail approved
+    in /ops, v0.110.0) passes its own form value, "via email" wording, and
+    ``source="Email"``; the defaults keep the website form's exact behavior."""
     existing = await client.find_one(
         CONTACT, "emailAddress", str(sub.email), select="id,description"
     )
@@ -154,7 +175,7 @@ async def submit_request(sub: InfoRequest, client: EspoApi) -> dict[str, str]:
         # guards it under the worker's / sync path's ResumableClient.
         async def _append() -> None:
             prior = (existing.get("description") or "").rstrip()
-            block = _description_block(sub, include_company=True)
+            block = _description_block(sub, include_company=True, via=via)
             description = f"{prior}\n\n{block}" if prior else block
             await client.update(CONTACT, contact_id, {"description": description})
             log.info("appended info request to existing Contact %s", contact_id)
@@ -169,7 +190,7 @@ async def submit_request(sub: InfoRequest, client: EspoApi) -> dict[str, str]:
             "lastName": sub.last_name,
             "emailAddress": str(sub.email),
             C_CONTACT_TYPE: [PROSPECT],
-            "description": _description_block(sub, include_company=False),
+            "description": _description_block(sub, include_company=False, via=via),
         }
         phone = e164_or_none(sub.phone)  # omit an implausible phone rather than 400
         if phone:
@@ -184,7 +205,10 @@ async def submit_request(sub: InfoRequest, client: EspoApi) -> dict[str, str]:
         ids["accountId"] = account_id
     # Additive: a dedicated Information Request record linked to the contact, on
     # top of the Contact.description stamp and the generic CIntakeSubmission log.
-    info_request_id = await _create_information_request(sub, client, contact_id, account_id)
+    info_request_id = await _create_information_request(
+        sub, client, contact_id, account_id,
+        form_slug=form_slug, channel=channel, source=source,
+    )
     if info_request_id:
         ids["informationRequestId"] = info_request_id
     return ids

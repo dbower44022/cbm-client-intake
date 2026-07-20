@@ -682,6 +682,9 @@
         payload.inReplyTo = opts.reply.inReplyTo || "";
         payload.references = opts.reply.references || "";
       }
+      // Caller-supplied payload extras (e.g. /ops passes submissionId so the
+      // server can anchor the sent thread to the submission).
+      if (opts.extra) Object.assign(payload, opts.extra);
       var showProgress = JSON.stringify(payload).length > 300 * 1024;
       postProgress("/sendmail", payload,
         showProgress ? function (pct) { send.textContent = "Sending… " + pct + "%"; } : null)

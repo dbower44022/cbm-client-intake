@@ -210,3 +210,56 @@ async def test_metrics_windowed_latency():
     assert m["recentAvgLatencySeconds"] >= 0
     assert "avgLatencySeconds" in m
     await store.dispose()
+
+
+async def test_thread_anchoring_round_trip():
+    """v0.110.0: Gmail thread anchors (migration 0013) — append/dedup, the
+    poller's token pre-check, cross-submission thread lookup, and the
+    held_review approval path (redrive)."""
+    store = PostgresStore(_URL)
+    await store.create_all()
+    token = f"thr-{uuid.uuid4()}"
+    cap = await store.capture(
+        "info-email", token,
+        {"email": "thr@example.com", "gmail_thread_id": "tA"},
+        status="held_review",
+    )
+    assert await store.add_thread_id(cap.id, "tA") is True
+    assert await store.add_thread_id(cap.id, "tB") is True
+    assert await store.add_thread_id(cap.id, "tA") is True  # dupe = no-op
+    assert await store.add_thread_id("missing-id", "tX") is False
+
+    row = await store.get_submission(cap.id)
+    assert row["thread_ids"] == ["tA", "tB"]
+
+    got = await store.existing_tokens("info-email", [token, "nope"])
+    assert got == {token}
+    assert await store.existing_tokens("info-email", []) == set()
+
+    known = await store.known_gmail_threads(["tA", "tB", "tZ"])
+    assert known == {"tA", "tB"}
+
+    # Approval = redrive: held_review rows are re-drivable (→ pending).
+    assert await store.redrive(cap.id, acted_by="tester") is True
+    row2 = await store.get_submission(cap.id)
+    assert row2["status"] == STATUS_PENDING
+    # Tidy: park the row terminally so reruns of the suite stay clean.
+    await store.discard(cap.id, acted_by="tester")
+    await store.dispose()
+
+
+async def test_discarded_rows_are_redrivable():
+    """The /ops UI has offered Re-drive on discarded rows since v0.106.0; the
+    store guard now actually allows it (mistaken-discard recovery)."""
+    store = PostgresStore(_URL)
+    await store.create_all()
+    cap = await store.capture(
+        "info-request", f"undo-{uuid.uuid4()}", {"email": "undo@example.com"},
+        status="needs_attention",
+    )
+    assert await store.discard(cap.id, acted_by="tester") is True
+    assert await store.redrive(cap.id, acted_by="tester") is True
+    row = await store.get_submission(cap.id)
+    assert row["status"] == STATUS_PENDING
+    await store.discard(cap.id, acted_by="tester")
+    await store.dispose()

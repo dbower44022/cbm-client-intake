@@ -247,6 +247,19 @@ async def main() -> None:
     # on; also feature-gated per cycle on the CRM's sessionTranscription field.
     next_transcripts = datetime.now(timezone.utc)
 
+    # Inbound info@ poller (v0.110.0): captures new inbound threads on the
+    # shared OPS_MAILBOX as held info-email submissions for /ops triage.
+    # Inert unless GMAIL_SYNC + OPS_MAILBOX are set.
+    next_inbound = datetime.now(timezone.utc)
+    inbound_on = bool(
+        settings.gmail_sync and settings.ops_mailbox and settings.ops_inbound_seconds > 0
+    )
+    if inbound_on:
+        log.info(
+            "inbound mailbox poll enabled (%s, every %ss)",
+            settings.ops_mailbox, settings.ops_inbound_seconds,
+        )
+
     # Communications: Gmail conversation sync (+ optional AI summaries), on its
     # own timer. Inert unless GMAIL_SYNC is on and the pieces are configured.
     comms_store = None
@@ -303,6 +316,14 @@ async def main() -> None:
             except Exception as exc:  # noqa: BLE001 — comms never crashes delivery
                 log.warning("gmail sync cycle failed: %s", exc)
             next_gmail = now + timedelta(seconds=settings.gmail_sync_seconds)
+        if inbound_on and now >= next_inbound:
+            try:
+                from ops.inbound import run_inbound_cycle
+
+                await run_inbound_cycle(settings, store)
+            except Exception as exc:  # noqa: BLE001 — never crashes delivery
+                log.warning("inbound mailbox poll failed: %s", exc)
+            next_inbound = now + timedelta(seconds=settings.ops_inbound_seconds)
         if (
             settings.gdrive_docs
             and settings.gdrive_reconcile_seconds > 0

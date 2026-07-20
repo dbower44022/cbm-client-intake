@@ -56,7 +56,7 @@ STATUS_PROCESSED = "Processed"
 # the original three use the lowercase slug, but partner/sponsor were added to the
 # enum as Title-case, so the app logs exactly that (else the enum rejects it and
 # the audit write falls back to a WARNING).
-_FORM_VALUES = {"partner": "Partner", "sponsor": "Sponsor"}
+_FORM_VALUES = {"partner": "Partner", "sponsor": "Sponsor", "info-email": "Email"}
 
 # Strings longer than this (base64 résumé uploads, mainly) are redacted from
 # the stored payload so the CRM text field stays manageable.

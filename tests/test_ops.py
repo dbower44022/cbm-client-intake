@@ -9,7 +9,8 @@ from core.app import create_app
 from core.config import get_settings
 from forms import info_request
 
-_USER = {"userName": "staffer", "name": "Staff Person", "isAdmin": True}
+_USER = {"userName": "staffer", "name": "Staff Person", "isAdmin": True,
+         "userId": "u-staff", "token": "tok-staff"}
 
 
 @pytest.fixture(autouse=True)
@@ -26,10 +27,11 @@ class FakeOpsStore:
                 "id": "abc12345", "form_slug": "info-request", "status": "needs_attention",
                 "attempt_count": 2, "last_error": "boom", "email": "a@b.com",
                 "payload": {"first_name": "Ada", "email": "a@b.com"},
-                "progress": None, "result": None,
+                "progress": None, "result": None, "thread_ids": None,
             }
         }
         self.redriven = []
+        self.anchored = []
 
     async def list_submissions(self, *, status=None, form=None, limit=200):
         rows = list(self.rows.values())
@@ -73,6 +75,17 @@ class FakeOpsStore:
             return False
         row["resolved_at"] = "2026-07-19 12:00:00" if resolved else None
         row["resolved_by"] = acted_by if resolved else None
+        return True
+
+    async def add_thread_id(self, submission_id, thread_id):
+        row = self.rows.get(submission_id)
+        if row is None:
+            return False
+        threads = list(row.get("thread_ids") or [])
+        if thread_id not in threads:
+            threads.append(thread_id)
+        row["thread_ids"] = threads
+        self.anchored.append((submission_id, thread_id))
         return True
 
     async def metrics(self):
@@ -239,3 +252,195 @@ def test_session_carries_reply_template(monkeypatch):
     with TestClient(_app(monkeypatch, FakeOpsStore())) as c:
         data = c.get("/ops/api/session").json()
     assert data["replyTemplate"] == "InfoRequestReply"
+
+
+# --- shared info@ mailbox mode (OPS_MAILBOX, v0.110.0) ----------------------
+
+_MAILBOX = "info@cbmentors.org"
+
+
+def _b64(text):
+    import base64
+    return base64.urlsafe_b64encode(text.encode()).decode()
+
+
+def _raw_msg(msg_id, thread_id, frm, *, subject="Hello", body="hi",
+             internal="1753000000000", labels=("INBOX",)):
+    return {
+        "id": msg_id, "threadId": thread_id, "labelIds": list(labels),
+        "internalDate": internal, "snippet": body,
+        "payload": {
+            "mimeType": "text/plain",
+            "headers": [
+                {"name": "From", "value": frm},
+                {"name": "To", "value": _MAILBOX},
+                {"name": "Subject", "value": subject},
+                {"name": "Message-ID", "value": f"<{msg_id}@mail.test>"},
+            ],
+            "body": {"data": _b64(body)},
+        },
+    }
+
+
+class FakeSharedGmail:
+    def __init__(self, threads):
+        self.mailbox = _MAILBOX
+        self._threads = threads
+
+    async def get_thread(self, thread_id, *, headers_only=False):
+        return self._threads[thread_id]
+
+    async def aclose(self):
+        pass
+
+
+def _shared_env(monkeypatch, gmail):
+    monkeypatch.setenv("GMAIL_SYNC", "true")
+    monkeypatch.setenv("OPS_MAILBOX", _MAILBOX)
+
+    async def fake(settings, mailbox):
+        assert mailbox == _MAILBOX
+        return gmail
+
+    monkeypatch.setattr("comms.service.gmail_for_shared_mailbox", fake)
+
+
+def test_shared_conversation_shows_only_anchored_threads(monkeypatch):
+    """With OPS_MAILBOX set, the conversation is exactly the submission's
+    anchored threads — a submitter's unrelated mail can't appear because no
+    address search happens at all."""
+    store = FakeOpsStore()
+    store.rows["abc12345"]["thread_ids"] = ["t1"]
+    gmail = FakeSharedGmail({
+        "t1": {"messages": [
+            _raw_msg("m1", "t1", "Ada <a@b.com>", internal="1753000000000"),
+            _raw_msg("m2", "t1", f"CBM Info <{_MAILBOX}>", internal="1753000600000"),
+        ]},
+    })
+    _shared_env(monkeypatch, gmail)
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, store)) as c:
+        data = c.get("/ops/api/submissions/abc12345/messages").json()
+    assert data["mailbox"] == _MAILBOX
+    assert len(data["messages"]) == 2
+    by_id = {m["id"]: m for m in data["messages"]}
+    assert by_id["m1"]["direction"] == "received"
+    assert by_id["m2"]["direction"] == "sent"  # written by the shared mailbox
+    # newest first
+    assert [m["id"] for m in data["messages"]] == ["m2", "m1"]
+
+
+def test_shared_conversation_without_anchor_names_the_reason(monkeypatch):
+    store = FakeOpsStore()
+    _shared_env(monkeypatch, FakeSharedGmail({}))
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, store)) as c:
+        data = c.get("/ops/api/submissions/abc12345/messages").json()
+    assert data["messages"] == []
+    assert "No conversation" in data["reason"] and _MAILBOX in data["reason"]
+
+
+def test_shared_conversation_uses_payload_origin_thread(monkeypatch):
+    """An email-originated submission carries its inbound thread in the
+    payload — the conversation shows it even before any staff reply."""
+    store = FakeOpsStore()
+    store.rows["em1"] = {
+        "id": "em1", "form_slug": "info-email", "status": "held_review",
+        "attempt_count": 0, "last_error": None, "email": "j@x.test",
+        "payload": {"email": "j@x.test", "gmail_thread_id": "t-in"},
+        "progress": None, "result": None, "thread_ids": None,
+    }
+    gmail = FakeSharedGmail({
+        "t-in": {"messages": [_raw_msg("m1", "t-in", "J <j@x.test>")]},
+    })
+    _shared_env(monkeypatch, gmail)
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, store)) as c:
+        data = c.get("/ops/api/submissions/em1/messages").json()
+    assert [m["id"] for m in data["messages"]] == ["m1"]
+    assert data["messages"][0]["direction"] == "received"
+
+
+def test_shared_mailbox_endpoint_reports_info_identity(monkeypatch):
+    """GET /ops/api/mailbox in shared mode: the info@ identity, no personal
+    signature (the recipient sees "CBM Info", not a staffer's sign-off)."""
+    _shared_env(monkeypatch, FakeSharedGmail({}))
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, FakeOpsStore())) as c:
+        data = c.get("/ops/api/mailbox").json()
+    assert data["mailbox"] == _MAILBOX
+    assert data["sendEnabled"] is True
+    assert data["signature"] == ""
+
+
+def test_send_anchors_thread_to_submission(monkeypatch):
+    """POST /ops/api/sendmail with submissionId: sends as the shared mailbox
+    and records the resulting Gmail thread on the submission."""
+    store = FakeOpsStore()
+    _shared_env(monkeypatch, FakeSharedGmail({}))
+    _authed(monkeypatch)
+    sent = {}
+
+    async def fake_send(**kwargs):
+        sent.update(kwargs)
+        return {"gmailMessageId": "m9", "gmailThreadId": "t9",
+                "writeBack": {"ok": True, "emailId": ""}}
+
+    monkeypatch.setattr("comms.service.send_quick_message", fake_send)
+    with TestClient(_app(monkeypatch, store)) as c:
+        r = c.post("/ops/api/sendmail", json={
+            "to": ["a@b.com"], "subject": "Hi", "body": "<p>hello</p>",
+            "submissionId": "abc12345",
+        })
+    assert r.status_code == 200
+    assert r.json()["gmailThreadId"] == "t9"
+    assert sent["gmail"].mailbox == _MAILBOX
+    assert sent["sender_name"] == "CBM Info"
+    assert store.anchored == [("abc12345", "t9")]
+    assert store.rows["abc12345"]["thread_ids"] == ["t9"]
+
+
+def test_replystates_shared_mode_reads_anchored_threads(monkeypatch):
+    """owed = the newest message on the submission's threads wasn't ours;
+    waiting = it was; none = nothing anchored yet."""
+    store = FakeOpsStore()
+    store.rows["abc12345"]["thread_ids"] = ["t1"]
+    store.rows["w1"] = dict(store.rows["abc12345"], id="w1", thread_ids=["t2"])
+    store.rows["n1"] = dict(store.rows["abc12345"], id="n1", thread_ids=None)
+    gmail = FakeSharedGmail({
+        "t1": {"messages": [
+            _raw_msg("m1", "t1", f"CBM Info <{_MAILBOX}>", internal="1"),
+            _raw_msg("m2", "t1", "Ada <a@b.com>", internal="2"),
+        ]},
+        "t2": {"messages": [
+            _raw_msg("m3", "t2", "Ada <a@b.com>", internal="1"),
+            _raw_msg("m4", "t2", f"CBM Info <{_MAILBOX}>", internal="2"),
+        ]},
+    })
+    _shared_env(monkeypatch, gmail)
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, store)) as c:
+        r = c.post("/ops/api/replystates", json={"ids": ["abc12345", "w1", "n1"]})
+    states = r.json()["states"]
+    assert states["abc12345"]["state"] == "owed"
+    assert states["w1"]["state"] == "waiting"
+    assert states["n1"]["state"] == "none"
+
+
+def test_lifetime_query_time_boxes_legacy_search():
+    """Without OPS_MAILBOX the per-admin search is bounded to the submission's
+    lifetime: after received_at, and (once resolved) before resolved + grace."""
+    from datetime import datetime, timezone
+
+    from ops.router import _lifetime_query
+
+    received = datetime(2026, 7, 1, 12, 0, tzinfo=timezone.utc)
+    resolved = datetime(2026, 7, 10, 12, 0, tzinfo=timezone.utc)
+    open_q = _lifetime_query("a@b.com", {"received_at": received})
+    assert open_q.startswith("(from:a@b.com OR to:a@b.com)")
+    assert f"after:{int(received.timestamp())}" in open_q
+    assert "before:" not in open_q
+    closed_q = _lifetime_query(
+        "a@b.com", {"received_at": received, "resolved_at": resolved}
+    )
+    assert f"before:{int(resolved.timestamp()) + 2 * 86400}" in closed_q

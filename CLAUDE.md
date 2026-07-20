@@ -163,10 +163,14 @@ resolution filter, awaiting-reply column), sessions-style tabbed detail
 (Overview facts + staff `notes` (migration 0011) + submitter conversation;
 Details with CRM deep links; Communications with reply-threaded compose +
 the `InfoRequestReply` template pre-applied via `OPS_REPLY_TEMPLATE`),
-`resolved_at/by` workflow (migration 0012). Conversation = live Gmail
-search of the signed-in admin's OWN mailbox (per-admin visibility).
-Functional reference for staff: **`submission-admin.md`**; mechanics in
-CHANGELOG 0.106.0/0.108.0 and the Current-status blocks.
+`resolved_at/by` workflow (migration 0012). Conversation was originally a
+live Gmail search of the signed-in admin's OWN mailbox (per-admin
+visibility) — **superseded in v0.110.0 by the shared info@ mailbox model**
+(thread-anchored conversations read/sent as OPS_MAILBOX, inbound info@
+capture into the queue as held info-email submissions; see the v0.110.0
+Current-status block). Functional reference for staff:
+**`submission-admin.md`**; mechanics in CHANGELOG 0.106.0/0.108.0/0.110.0
+and the Current-status blocks.
 
 **Phase 3 — monitoring + alerting, scaffolded 2026-06-22.** The worker runs two
 periodic checks (own timers, no cron dependency): (1) **alerting** —
@@ -1442,7 +1446,43 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-19)
 
-**Main is at v0.108.0** (2026-07-19, 814 tests green, committed NOT pushed) —
+**Main is at v0.110.0** (2026-07-19, 829 tests green, committed NOT pushed) —
+**Submission Admin: the shared info@ mailbox model** (Doug's rulings after
+his "submissions pick up unrelated emails" report — full mechanics in
+CHANGELOG 0.110.0): (1) **thread anchoring** — every /ops send records its
+Gmail thread on the submission (migration **0013** `thread_ids`; compose
+passes `submissionId`, `register_quicksend` gained `after_send` +
+`shared_mailbox` hooks) and the conversation view + Reply column read ONLY
+anchored threads, never an address search; (2) **send + read as
+`OPS_MAILBOX`** (info@cbmentors.org, display name `OPS_MAILBOX_NAME` = "CBM
+Info", no personal signature) — every admin sees the same conversation, the
+v0.106.0 per-admin caveat gone; empty OPS_MAILBOX = legacy per-admin mode,
+whose address search is now time-boxed to the submission lifetime;
+(3) **inbound capture** — the worker polls the info@ inbox
+(`ops/inbound.py`, `OPS_INBOUND_SECONDS`) and captures each NEW thread as a
+**held_review `info-email`** submission (stateless layered dedup: token =
+thread id + known_gmail_threads, so replies to anchored form-conversations
+never double-capture; outbound-initiated threads + bounces skipped);
+(4) **triage-first delivery** — new delivery-only form kind
+`forms/info_email` (NO public endpoint) reusing the info-request
+orchestrator (now parameterized: form_slug/via/channel/source) with
+`form="info-email"`, `source="Email"`; /ops shows **Approve** ("Create CRM
+records?") = redrive, Discard = spam with zero CRM residue; the redrive
+guard also now permits `discarded` (fixed a latent undo-discard refusal).
+Verified: 829 tests green (31 new); migration 0013 + all new store surface
+round-tripped on live local Postgres. **NOT yet live. Activation (Doug):**
+make info@ a REAL Workspace mailbox (not a group — DWD then covers it, no
+new scopes); set `OPS_MAILBOX` on web AND worker overlays (pre-deploy
+migrate runs 0013); CRM: add an **"Email"** option to
+`CIntakeSubmission.form` (until then the audit log for approved email
+submissions WARNs, best-effort); and — CRM-side, unrelated to this app —
+stop CRM-direct sends using the espo@ return address (EspoCRM outbound
+SMTP/group-account config; Doug wants it ended). First live pass: send a
+real email to info@ → held row appears → Approve → Contact +
+CInformationRequest created → reply from the detail → thread shows for a
+second admin too.
+
+Before that: **v0.108.0** (2026-07-19, 814 tests green) —
 **Submission Admin follow-ups (the four 0.106.0 suggestions, Doug
 approved all): Resolved/Open workflow** (migration 0012 resolved_at/by;
 Mark resolved/Reopen on the detail; Open/Resolved/All filter DEFAULTS
