@@ -1008,7 +1008,9 @@
       // template pre-applied. Best-effort — a missing/erroring template just
       // leaves the blank compose, and when app-sending is unavailable
       // (Gmail integration off / no mailbox) nothing opens.
-      if (window.CBMQuickMail) {
+      // NOT on a repair run: the mentor was notified at the original
+      // assignment — a repair only re-applies their record access.
+      if (window.CBMQuickMail && !res.repaired) {
         var mentor = mentors.filter(function (m) { return m.id === mentorProfileId; })[0];
         CBMQuickMail.composeIfEnabled(
           (mentor && mentor.cbmEmail) || "",
@@ -1025,6 +1027,26 @@
       }
       notice(e.message, "error");
     }
+  }
+
+  // --- Repair assignment -----------------------------------------------------
+  // The UI door to the server's repair run (P1-9): re-assigning the SAME
+  // mentor re-executes the idempotent re-homing — merging the mentor's (and
+  // co-mentors') users back onto the engagement's contacts, client profile,
+  // and company. The fix for "the mentor can't attach a client contact as a
+  // session attendee" (edit-on-the-foreign-record 403, Anthony Sacco
+  // 2026-07-20) and any other half-applied assignment, without touching the
+  // engagement's status or date, and without a notice email.
+  function repairAssignment(tr, eng) {
+    showConfirmModal({
+      title: "Repair the assignment of “" + (eng.name || "this engagement") + "”?",
+      body: "Re-applies " + (eng.mentorName || "the assigned mentor") + "'s " +
+        "access to the engagement's contacts, client profile, and company " +
+        "(fixes permission errors like a mentor being unable to add a client " +
+        "contact to a session). The mentor, status, and assigned date are " +
+        "unchanged, and no notice email is sent.",
+      confirmLabel: "Repair",
+    }, function () { performAssign(tr, eng, eng.mentorId); });
   }
 
   // --- Reassign Mentor -------------------------------------------------------
@@ -1170,6 +1192,10 @@
       items.push({
         label: "Reassign mentor…",
         action: function () { openMentorPicker(tr, eng, "reassign"); },
+      });
+      items.push({
+        label: "Repair assignment…",
+        action: function () { repairAssignment(tr, eng); },
       });
     } else {
       items.push({

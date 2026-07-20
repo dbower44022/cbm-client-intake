@@ -91,3 +91,15 @@ async def test_shared_client_reused_across_calls():
     await client._request("GET", "/profile")
     await client._request("GET", "/profile")
     assert client._client() is http  # one connection pool, not one per call
+
+
+async def test_message_get_404_raises_message_gone():
+    client = _client([_resp(404)])
+    with pytest.raises(gm.MessageGoneError, match="no longer exists"):
+        await client._request("GET", "/messages/19f80c7961a0ddb5")
+
+
+async def test_message_gone_is_a_gmail_error_subclass():
+    # Existing nets that catch GmailError keep working; only the sync's
+    # explicit skip handler treats it specially.
+    assert issubclass(gm.MessageGoneError, gm.GmailError)

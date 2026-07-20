@@ -31,6 +31,7 @@ from core.gmail import (
     GmailClient,
     GmailError,
     HistoryExpiredError,
+    MessageGoneError,
     ParsedGmailMessage,
     address_queries,
     parse_message,
@@ -248,6 +249,12 @@ async def _ingest_ids(
             parsed = parse_message(await gmail.get_message(mid))
             if await ingest_message(espo, store, scope, parsed):
                 stored += 1
+        except MessageGoneError as exc:
+            # The message no longer exists (deleted pre-fetch / a Meet-Chat
+            # history artifact) — nothing to ingest, nothing to lose. A skip,
+            # NOT a failure: holding the cursor and dead-lettering these
+            # churned alerts for mail that never existed (live, 2026-07-20).
+            log.info("ingest %s/%s skipped: %s", scope.mailbox, mid, exc)
         except (GmailError, EspoError) as exc:
             failed.append(mid)
             log.warning("ingest %s/%s failed: %s", scope.mailbox, mid, exc)

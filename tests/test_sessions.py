@@ -2032,3 +2032,53 @@ async def test_create_survives_a_failed_post_create_read(monkeypatch):
     assert result["id"]  # the created record is returned, not an exception
     assert "could not be re-read" in result["warning"]
     assert "Do not create it again" in result["warning"]
+
+
+@pytest.mark.asyncio
+async def test_update_session_attendee_failure_is_warning_not_error():
+    """2026-07-20 (Anthony Sacco): re-saving attendees was the create-path
+    warning's own recovery advice, yet a relate 403 failed the WHOLE update.
+    The field edits are already saved by then — the save must succeed with a
+    warning naming the permission problem."""
+    from core.espo import EspoError
+
+    class FlakyRelate(Fake):
+        async def relate(self, entity, record_id, link, related_id):
+            raise EspoError(
+                'relate CSession/s1/sessionAttendees failed: HTTP 403 '
+                '{"messageTranslation":{"label":"noAccessToForeignRecord"}}'
+            )
+
+    fake = FlakyRelate(records={("CSession", "s1"): {"name": "Kickoff"}})
+    session = await service.update_session(
+        MENTOR, fake, "s1", {"sessionNotes": "<p>updated</p>"}, attendees=["c1"]
+    )
+    # The field update went through and the response reads as a saved session…
+    assert ("CSession", "s1") in {(e, r) for e, r, _ in fake.updates}
+    # …with the attendee problem surfaced as a warning, not an exception.
+    assert "1 attendee change(s)" in session["warning"]
+    assert "permission" in session["warning"]
+
+
+@pytest.mark.asyncio
+async def test_update_session_attendee_unrelate_failure_also_warns():
+    from core.espo import EspoError
+
+    class FlakyUnrelate(Fake):
+        async def unrelate(self, entity, record_id, link, related_id):
+            raise EspoError("unrelate CSession/s1/sessionAttendees (c9) failed: HTTP 403 ")
+
+    fake = FlakyUnrelate(
+        records={("CSession", "s1"): {"name": "Kickoff"}},
+        related={"sessionAttendees": [{"id": "c9", "name": "Old Attendee"}]},
+    )
+    session = await service.update_session(MENTOR, fake, "s1", {}, attendees=[])
+    assert "1 attendee change(s)" in session["warning"]
+
+
+@pytest.mark.asyncio
+async def test_update_session_clean_attendee_sync_has_no_warning():
+    fake = Fake(records={("CSession", "s1"): {"name": "Kickoff"}})
+    session = await service.update_session(MENTOR, fake, "s1", {}, attendees=["c1"])
+    assert "warning" not in session
+    assert ("CSession", "s1", "sessionAttendees", "c1") in fake.relates

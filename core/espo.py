@@ -119,11 +119,27 @@ def forbidden_hint(exc: Exception) -> Optional[str]:
     permission-denied 403s so the user (and the CRM admin they ask) can see
     exactly which grant is missing instead of a generic "no permission".
     Returns ``None`` when the operation can't be determined.
+
+    A relate/unrelate rejected with ``noAccessToForeignRecord`` names the
+    LINKED record instead: EspoCRM requires edit on BOTH sides, and that body
+    means the denial is on the foreign side (found live 2026-07-20 — a mentor
+    attaching a session attendee was told his role lacked edit on CSession
+    when the real gap was edit on the client Contact).
     """
-    m = _FORBIDDEN_OP_RE.match(str(exc))
+    text = str(exc)
+    m = _FORBIDDEN_OP_RE.match(text)
     if not m:
         return None
-    return f"{_OP_PERMISSION[m.group(1)]} access to {m.group(2)} records"
+    op, entity = m.group(1), m.group(2)
+    if op in ("relate", "unrelate") and "noAccessToForeignRecord" in text:
+        # The link name rides in the op prefix: "relate Entity/id/link failed".
+        link = re.match(rf"^{op}\s+\S+/\S+/(\S+)", text)
+        via = f" (the “{link.group(1)}” link)" if link else ""
+        return (
+            f"edit access to the record being linked{via} — the linked record "
+            f"itself, not the {entity}"
+        )
+    return f"{_OP_PERMISSION[op]} access to {entity} records"
 
 
 class EspoApi(Protocol):

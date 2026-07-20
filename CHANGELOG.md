@@ -4,6 +4,52 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.116.0] — 2026-07-20
+
+Four fixes from the Anthony Sacco log investigation (2026-07-20): a mentor
+whose engagement's client contact was never stamped with his user hit an
+attendee-attach 403 that (a) named the wrong record, (b) failed the exact
+recovery step the app suggested, and (c) had no in-app repair; meanwhile his
+mailbox's Gmail sync churned dead-letter alerts on messages that no longer
+exist. 10 new/updated tests (872 green); the repair door driven end-to-end in
+the stub harness.
+
+### Fixed
+- **Permission errors on linking now name the RIGHT record.** A
+  relate/unrelate 403 carrying EspoCRM's `noAccessToForeignRecord` means the
+  denial is on the record BEING LINKED (edit is required on both sides) —
+  `forbidden_hint` now says "edit access to the record being linked (the
+  “sessionAttendees” link) — the linked record itself, not the CSession"
+  instead of blaming the wrong entity (Anthony was told his role lacked edit
+  on CSession when the gap was the client Contact's assigned users).
+- **Re-saving a session's attendees can no longer fail the whole save.** The
+  update path now gives attendee relate/unrelate failures the create path's
+  treatment: per-contact best-effort, save succeeds, and the response carries
+  a warning naming the permission problem and the fix ("ask CBM staff to
+  check the contact's assigned users"). Previously the create-path warning
+  told users to "open the session and re-save its attendees" — and that
+  exact step then failed outright.
+- **Gmail sync: a message that 404s on fetch is SKIPPED, not retried.** A
+  `messages.get` 404 (`MessageGoneError`) means the message no longer exists
+  — deleted before the fetch, or a Meet/Chat history artifact; there is
+  nothing to ingest and nothing to lose. These were churning the P1-5
+  machinery: 5 retry passes holding the cursor, then DEAD-LETTERED errors +
+  alerts, in batches (8–13 at a time across two mailboxes on 2026-07-20).
+  Real failures (5xx, CRM rejections) still hold the cursor exactly as
+  before.
+
+### Added
+- **Client Administration: “Repair assignment…”** on an assigned row's
+  right-click menu — the missing UI door to the v0.86.0 repair run (the
+  backend accepted assign-with-the-same-mentor as a repair, but assigned
+  rows offered no Assign control and Reassign excludes the current mentor,
+  so it was unreachable). Confirm modal → re-executes the idempotent
+  re-homing (mentor + co-mentor users merged onto the engagement's
+  contacts, client profile, and company), leaves status/date untouched,
+  posts the repair stream note, and deliberately does NOT open the
+  assignment-notice email compose. This is the one-click fix for "mentor
+  can't add a client contact to a session".
+
 ## [0.115.0] — 2026-07-20
 
 **feat(sessions): Funder Contributions tab — the funder ledger**

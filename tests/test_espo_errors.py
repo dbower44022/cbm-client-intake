@@ -76,10 +76,30 @@ def test_forbidden_hint_names_operation_and_entity():
         "update Account/a1 failed: HTTP 403 "
     )) == "edit access to Account records"
     # relate/unrelate need EDIT on the records being linked
+    # relate/unrelate WITHOUT the foreign-record label = denied on the record
+    # whose link is being changed.
     assert forbidden_hint(EspoError(
-        'relate CEngagement/E1/engagementContacts failed: HTTP 403 '
-        '{"messageTranslation":{"label":"noAccessToForeignRecord"}}'
+        "relate CEngagement/E1/engagementContacts failed: HTTP 403 Forbidden"
     )) == "edit access to CEngagement records"
+
+
+def test_forbidden_hint_names_the_linked_record_on_foreign_denial():
+    """noAccessToForeignRecord = the denial is on the LINKED record, not the
+    relate's own entity (Anthony Sacco 2026-07-20: told 'edit access to
+    CSession' when the real gap was edit on the client Contact)."""
+    hint = forbidden_hint(EspoError(
+        'relate CSession/s1/sessionAttendees failed: HTTP 403 '
+        '{"messageTranslation":{"label":"noAccessToForeignRecord","data":{"action":"edit"}}}'
+    ))
+    assert "record being linked" in hint
+    assert "sessionAttendees" in hint
+    assert "not the CSession" in hint
+    # unrelate gets the same treatment (its op prefix carries the related id).
+    hint2 = forbidden_hint(EspoError(
+        'unrelate CEngagement/E1/engagementContacts (C9) failed: HTTP 403 '
+        '{"messageTranslation":{"label":"noAccessToForeignRecord"}}'
+    ))
+    assert "record being linked" in hint2 and "engagementContacts" in hint2
 
 
 def test_forbidden_hint_none_for_unrecognized_message():

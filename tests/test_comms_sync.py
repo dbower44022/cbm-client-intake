@@ -666,3 +666,45 @@ async def test_alerts_fire_on_persistent_failure_and_dead_letter():
     )
     await _alert_on_persistent_failures(Cfg(), store, sc.mailbox, {"failed": 1}, collect)
     assert sent == []
+
+
+async def test_message_gone_is_skipped_not_failed():
+    """2026-07-20: batches of history ids that 404 on fetch (deleted pre-fetch /
+    Meet-Chat artifacts) churned the 5-pass dead-letter machinery for mail that
+    never existed. A 404 means nothing to ingest and nothing to lose — skip it
+    immediately; the cursor advances and no alert fires."""
+    from core.gmail import MessageGoneError
+
+    class GoneGmail(FakeGmail):
+        async def get_message(self, message_id):
+            raise MessageGoneError(f"Gmail message {message_id} no longer exists")
+
+    espo, store = FakeEspo(), MemoryCommsStore()
+    sc = await _seed_done(store, cursor="100")
+    gmail = GoneGmail(sc.mailbox, messages={"m1": raw_message()},
+                      history=_HIST_M1, profile_history="200")
+    stats = await sync_mailbox(gmail, espo, store, sc, Cfg())
+    st = await store.get_sync_state(sc.mailbox)
+    assert stats["failed"] == 0 and stats["deadLettered"] == 0
+    assert st.failed_ids == {} and st.dead_letter == []
+    assert st.history_id == "200"  # the cursor moves on — nothing was lost
+    assert st.last_synced_at is not None  # a fully-successful pass
+
+
+async def test_real_failures_still_hold_the_cursor():
+    """The gone-skip must not weaken P1-5: any OTHER GmailError still counts
+    as a failure and holds the cursor."""
+    from core.gmail import GmailError
+
+    class ErroringGmail(FakeGmail):
+        async def get_message(self, message_id):
+            raise GmailError(f"Gmail GET /messages/{message_id}: HTTP 500 boom")
+
+    espo, store = FakeEspo(), MemoryCommsStore()
+    sc = await _seed_done(store, cursor="100")
+    gmail = ErroringGmail(sc.mailbox, messages={"m1": raw_message()},
+                          history=_HIST_M1, profile_history="200")
+    stats = await sync_mailbox(gmail, espo, store, sc, Cfg())
+    st = await store.get_sync_state(sc.mailbox)
+    assert stats["failed"] == 1
+    assert st.history_id == "100"  # held

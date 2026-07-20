@@ -1449,7 +1449,31 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-20)
 
-**Main is at v0.115.0** (2026-07-20, 864 tests green, committed NOT pushed) —
+**Main is at v0.116.0** (2026-07-20, 872 tests green, committed NOT pushed) —
+**the Anthony Sacco incident fixes** (his attendee-attach 403 diagnosed from
+the prod logs; Doug hand-fixed the contact in the CRM, these close the app
+gaps; CHANGELOG 0.116.0): (1) `forbidden_hint` on a relate/unrelate
+`noAccessToForeignRecord` 403 names the LINKED record (the denial is on the
+foreign side — he was told "edit access to CSession" when the gap was the
+client Contact's assignedUsers); (2) session UPDATE attendee failures are
+success-with-warning like create (the create-path warning's own recovery
+advice — "re-save its attendees" — used to fail the whole save);
+(3) Gmail `messages.get` 404 (`core.gmail.MessageGoneError`) = immediate
+SKIP, not a P1-5 failure (deleted-pre-fetch / Meet-Chat history artifacts
+were churning 5-pass dead-letter alerts in batches — nothing exists to
+lose; real errors still hold the cursor); (4) **Client Administration
+"Repair assignment…"** on assigned rows' right-click menu — the missing UI
+door to the v0.86.0 P1-9 repair run (assigned rows had no Assign control
+and Reassign excludes the current mentor, so the repair was unreachable);
+confirm modal → idempotent re-homing, status/date untouched, repair stream
+note, NO notice-email compose. Harness-verified end-to-end. **Root-cause
+class still open (the prevention discussion):** client records that predate
+the stamping era / lost stamps to the Contact collaborators switch mean
+more engagements like Anthony's exist; options (one-time audit+heal sweep,
+stamp-on-contact-link, a nightly CRM-stamp reconciliation like DOC-09, and
+setting ALERT_WEBHOOK_URL) are with Doug.
+
+Before that: **v0.115.0** (2026-07-20, 864 tests green) —
 **Funder Contributions tab (the funder ledger)** — built to the same-day plan
 `prds/funder-contributions-plan.md` (Doug's rulings baked in: Received-only
 totals; soft delete = status Cancelled, NO delete surface; effective date =

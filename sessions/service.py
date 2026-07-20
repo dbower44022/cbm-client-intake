@@ -800,20 +800,43 @@ def _session_payload(changes: dict[str, Any]) -> dict[str, Any]:
 
 async def _sync_attendees(
     client: SessionClient, session_id: str, attendees: list[str]
-) -> None:
+) -> int:
     """Make the session's attendee set exactly ``attendees``, via the relationship
     link endpoints. Setting ``sessionAttendeesIds`` on a record update does NOT
     reliably sync this custom many-to-many (same reason co-mentors use ``relate``),
-    so we relate the added contacts and unrelate the removed ones."""
+    so we relate the added contacts and unrelate the removed ones.
+
+    Per-contact best-effort, returning the failure count (2026-07-20, Anthony
+    Sacco's live incident): the FIELD edits are already saved when this runs, so
+    a relate/unrelate rejection (typically EspoCRM's edit-on-the-foreign-Contact
+    requirement) must surface as a warning on a successful save — raising made
+    the whole save read as failed, and it was the exact recovery step the
+    create-path warning tells users to take."""
     current = set((await get_session(client, session_id)).get("attendees") or [])
     target = set(attendees or [])
     add, remove = target - current, current - target
     if add or remove:
         log.info("session %s attendees: +%d -%d", session_id, len(add), len(remove))
+    failed = 0
     for cid in add:
-        await client.relate(SESSION, session_id, _ATTENDEE_LINK, cid)
+        try:
+            await client.relate(SESSION, session_id, _ATTENDEE_LINK, cid)
+        except EspoError as exc:
+            failed += 1
+            log.warning(
+                "attendee relate failed on session %s (contact %s): %s",
+                session_id, cid, exc,
+            )
     for cid in remove:
-        await client.unrelate(SESSION, session_id, _ATTENDEE_LINK, cid)
+        try:
+            await client.unrelate(SESSION, session_id, _ATTENDEE_LINK, cid)
+        except EspoError as exc:
+            failed += 1
+            log.warning(
+                "attendee unrelate failed on session %s (contact %s): %s",
+                session_id, cid, exc,
+            )
+    return failed
 
 
 async def _sanitize_enum_payload(client: SessionClient, payload: dict[str, Any]) -> None:
@@ -1051,9 +1074,17 @@ async def update_session(
     await _sanitize_enum_payload(client, payload)
     if payload:
         await client.update(SESSION, session_id, payload)
+    attendee_failures = 0
     if attendees is not None:
-        await _sync_attendees(client, session_id, attendees)
+        attendee_failures = await _sync_attendees(client, session_id, attendees)
     session = await get_session(client, session_id)
+    if attendee_failures:
+        session["warning"] = (
+            f"The session was saved, but {attendee_failures} attendee "
+            f"change(s) could not be applied — you may not have permission to "
+            f"those contact records. Ask CBM staff to check the contact's "
+            f"assigned users, then re-save the attendees."
+        )
     # Only a save that CHANGES the status to Completed triggers the engagement
     # activation (the frontend diffs, so an untouched status never rides the
     # payload) — a notes-only edit to an already-completed session can't

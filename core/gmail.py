@@ -47,6 +47,15 @@ class HistoryExpiredError(GmailError):
     """The stored historyId is too old (Gmail 404) — do a date-window backfill."""
 
 
+class MessageGoneError(GmailError):
+    """``messages.get`` 404 — the message no longer exists (deleted before the
+    fetch, or a history artifact like Meet/Chat records that never fetch).
+    There is nothing to ingest and nothing to lose, so the sync SKIPS it
+    immediately instead of holding the cursor through retry passes and
+    dead-lettering with alerts (seen live 2026-07-20: batches of these across
+    two mailboxes churned the 5-pass machinery for mail that never existed)."""
+
+
 def resolve_gmail_service_account(
     settings: Any, db_config: Optional[dict[str, Any]] = None
 ) -> Optional[dict[str, Any]]:
@@ -175,6 +184,15 @@ class GmailClient:
                 raise GmailError(f"Gmail request failed ({path}): {exc}") from exc
             if resp.status_code == 404 and path.startswith("/history"):
                 raise HistoryExpiredError(f"historyId expired for {self.mailbox}")
+            if (
+                resp.status_code == 404
+                and method == "GET"
+                and path.startswith("/messages/")
+            ):
+                raise MessageGoneError(
+                    f"Gmail message {path.rsplit('/', 1)[-1]} no longer exists "
+                    f"in {self.mailbox}"
+                )
             if resp.status_code < 400:
                 return resp.json() if resp.content else {}
             last = resp
