@@ -1449,7 +1449,27 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-20)
 
-**Main is at v0.116.0** (2026-07-20, 872 tests green, committed NOT pushed) —
+**Main is at v0.117.0** (2026-07-20, 876 tests green, committed NOT pushed) —
+**assignment-stamp prevention layers 1+4** (Doug's ruling; CHANGELOG
+0.117.0): **email alerts** — `send_alert` now delivers via the existing
+Gmail delegation (`ALERT_EMAIL_TO` any addresses + `ALERT_EMAIL_FROM` a
+real @cbmentors.org mailbox, `OPS_MAILBOX` fallback sender; set on the
+WORKER; webhook still works; no channel = WARNING log) — and
+**`scripts/audit_assignment_stamps.py`** (read-only report of assigned
+engagements whose engagement/contacts/client profile/company lack the
+mentor+co-mentor `assignedUsers` stamps; `--heal` = merge-only fix; also
+flags mentors with no linked User + dangling mentorProfile FKs).
+**crm-test audit result: 20 of 29 assigned engagements have missing
+stamps** (left unhealed — Doug's call), 3 mentor profiles with no login
+User (Fred Flinstone, Anita Khayat ×2, Rick Bosman), 1 dangling
+mentorProfile FK (Tom Cook eng `6a203ce8d59eccbeb`). **Next (approved):
+layer 2 — stamp the mentor team onto contacts at link/create time — and
+layer 3 — a nightly merge-only stamp reconciliation in the worker (DOC-09
+pattern; CRM links = source of truth, hand-removals get re-added — Doug
+accepted). Doug-side: run the audit against PROD (overlay key one-liner),
+decide --heal, set ALERT_EMAIL_TO/FROM on both workers' overlays.**
+
+Before that: **v0.116.0** (2026-07-20, 872 tests green) —
 **the Anthony Sacco incident fixes** (his attendee-attach 403 diagnosed from
 the prod logs; Doug hand-fixed the contact in the CRM, these close the app
 gaps; CHANGELOG 0.116.0): (1) `forbidden_hint` on a relate/unrelate

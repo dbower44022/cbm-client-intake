@@ -137,3 +137,84 @@ async def test_schema_drift_skipped_in_dry_run():
         _settings(espo_dry_run=True), {}, now=_NOW, fetch=fetch, send=send
     )
     assert sent == [] and called == []
+
+
+# --- email alert channel (2026-07-20 — CBM uses no messaging service) ----------
+
+
+class _CapturingGmail:
+    sent: list = []
+
+    def __init__(self, sa_info, mailbox, timeout=20):
+        self.mailbox = mailbox
+
+    async def send(self, mime, thread_id=None):
+        _CapturingGmail.sent.append((self.mailbox, mime))
+        return {"id": "sent1"}
+
+    async def aclose(self):
+        pass
+
+
+async def _wire_email(monkeypatch):
+    import core.gmail as gmail_mod
+    import comms.service as comms_service
+
+    _CapturingGmail.sent = []
+    monkeypatch.setattr(gmail_mod, "GmailClient", _CapturingGmail)
+
+    async def fake_sa(settings):
+        return {"client_email": "sa@x"}
+
+    monkeypatch.setattr(comms_service, "get_service_account", fake_sa)
+
+
+async def test_alert_email_sends_via_delegation(monkeypatch):
+    from core.monitoring import send_alert
+
+    await _wire_email(monkeypatch)
+    s = _settings(
+        alert_email_to="doug@example.com, ops@cbmentors.org",
+        alert_email_from="alerts.bot@cbmentors.org",
+    )
+    await send_alert(s, "3 submission(s) need attention — delivery failed.\nDetails…")
+    [(mailbox, mime)] = _CapturingGmail.sent
+    assert mailbox == "alerts.bot@cbmentors.org"
+    assert mime["To"] == "doug@example.com, ops@cbmentors.org"
+    assert "[CBM Intake" in mime["Subject"]
+    assert "3 submission(s) need attention" in mime["Subject"]
+    assert "CBM Intake Alerts" in mime["From"]
+
+
+async def test_alert_email_falls_back_to_ops_mailbox_sender(monkeypatch):
+    from core.monitoring import send_alert
+
+    await _wire_email(monkeypatch)
+    s = _settings(alert_email_to="doug@example.com", ops_mailbox="info@cbmentors.org")
+    await send_alert(s, "backlog growing")
+    [(mailbox, _)] = _CapturingGmail.sent
+    assert mailbox == "info@cbmentors.org"
+
+
+async def test_alert_email_failure_never_raises(monkeypatch, caplog):
+    from core.monitoring import send_alert
+
+    await _wire_email(monkeypatch)
+
+    async def boom(self, mime, thread_id=None):
+        raise RuntimeError("delegation rejected")
+
+    monkeypatch.setattr(_CapturingGmail, "send", boom)
+    s = _settings(alert_email_to="doug@example.com", alert_email_from="a@cbmentors.org")
+    with caplog.at_level("WARNING", logger="cbm_intake.monitoring"):
+        await send_alert(s, "the alert text")  # must not raise
+    text = "\n".join(r.getMessage() for r in caplog.records)
+    assert "alert email failed" in text and "the alert text" in text
+
+
+async def test_alert_without_any_channel_still_logs(caplog):
+    from core.monitoring import send_alert
+
+    with caplog.at_level("WARNING", logger="cbm_intake.monitoring"):
+        await send_alert(_settings(), "nobody is listening")
+    assert any("nobody is listening" in r.getMessage() for r in caplog.records)

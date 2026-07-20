@@ -460,6 +460,23 @@ well: re-delivery is idempotent (per-record `progress`), and replayed rows
 dedupe on `uq_submission_form_token`. Comms sync cursors restore stale =
 the next pass re-reads the gap; Message-ID dedup absorbs the overlap.
 
+### Alert delivery by EMAIL (v0.117.0 — CBM uses no messaging service)
+
+Every worker alert (needs-attention backlog, stranded rows, Gmail sync
+failures/dead-letters, Drive-grant reconciliation findings, schema drift) can
+be delivered as **email** through the existing Gmail service-account
+delegation — no new infrastructure. On the **worker** component set:
+
+- `ALERT_EMAIL_TO` — comma-separated recipients (any addresses, personal
+  Gmail included).
+- `ALERT_EMAIL_FROM` — the `@cbmentors.org` mailbox to send AS. Must be a
+  real licensed Workspace mailbox (delegation can't send as a group/alias);
+  falls back to `OPS_MAILBOX` when unset.
+
+The webhook (`ALERT_WEBHOOK_URL`) still works, alone or alongside email; with
+no channel configured (or all deliveries failing) alerts log at WARNING, as
+always.
+
 ### Uptime + alert checks (point at /healthz)
 
 `/healthz` now reports worker liveness — configure a DO uptime check /

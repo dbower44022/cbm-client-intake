@@ -31,16 +31,63 @@ FetchOptions = Callable[[str, str], Awaitable[Optional[list[str]]]]
 
 
 async def send_alert(settings: Settings, text: str) -> None:
-    """Deliver an alert to the webhook, or log it if none is configured."""
-    if not settings.alert_webhook_url:
-        log.warning("ALERT (no webhook configured): %s", text)
-        return
+    """Deliver an alert to every configured channel — the Slack-compatible
+    webhook and/or EMAIL (CBM uses no messaging service, so email via the
+    existing Gmail delegation is the primary channel — Doug 2026-07-20).
+    With no channel configured, or every delivery failing, the alert lands in
+    the log at WARNING so it is never silently dropped. Never raises."""
+    delivered = False
+    if settings.alert_webhook_url:
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                await client.post(settings.alert_webhook_url, json={"text": text})
+            log.info("alert sent (webhook): %s", text)
+            delivered = True
+        except Exception as exc:  # noqa: BLE001 — alerting must never crash the worker
+            log.warning("alert webhook failed (%s); alert was: %s", exc, text)
+    if settings.alert_email_to_list:
+        try:
+            await _email_alert(settings, text)
+            log.info("alert sent (email to %s)", ", ".join(settings.alert_email_to_list))
+            delivered = True
+        except Exception as exc:  # noqa: BLE001
+            log.warning("alert email failed (%s); alert was: %s", exc, text)
+    if not delivered:
+        log.warning("ALERT (no delivery channel configured/working): %s", text)
+
+
+async def _email_alert(settings: Settings, text: str) -> None:
+    """One alert as a plain-text email, sent via the Gmail service-account
+    delegation AS ``alert_email_from`` (a real @cbmentors.org mailbox;
+    OPS_MAILBOX is the fallback sender) TO the ``alert_email_to`` list."""
+    # Lazy imports: comms.sync imports this module (its failure alerts), and
+    # comms.service imports comms.sync — a top-level import here would cycle.
+    from comms.service import get_service_account
+    from core.gmail import GmailClient, build_mime
+
+    sender = (settings.alert_email_from or settings.ops_mailbox or "").strip().lower()
+    if not sender:
+        raise RuntimeError(
+            "ALERT_EMAIL_TO is set but no sender mailbox is configured — set "
+            "ALERT_EMAIL_FROM (an @cbmentors.org Workspace mailbox) or OPS_MAILBOX"
+        )
+    sa_info = await get_service_account(settings)
+    if sa_info is None:
+        raise RuntimeError("no Google service-account credentials configured")
+    # First line of the alert makes the subject scannable in an inbox.
+    first_line = text.strip().splitlines()[0][:120] if text.strip() else "alert"
+    mime = build_mime(
+        sender=sender,
+        sender_name="CBM Intake Alerts",
+        to=settings.alert_email_to_list,
+        subject=f"[CBM Intake — {settings.environment}] {first_line}",
+        body_text=text,
+    )
+    gmail = GmailClient(sa_info, sender, settings.request_timeout_seconds)
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            await client.post(settings.alert_webhook_url, json={"text": text})
-        log.info("alert sent: %s", text)
-    except Exception as exc:  # noqa: BLE001 — alerting must never crash the worker
-        log.warning("alert webhook failed (%s); alert was: %s", exc, text)
+        await gmail.send(mime)
+    finally:
+        await gmail.aclose()
 
 
 def _due(state: dict, key: str, now: datetime, cooldown: int) -> bool:

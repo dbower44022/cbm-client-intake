@@ -4,6 +4,33 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.117.0] — 2026-07-20
+
+Layers 1 + 4 of the assignment-stamp prevention plan (Doug's ruling after the
+Anthony Sacco incident; layers 2 + 3 — stamp-on-contact-link and the nightly
+reconciliation — are next).
+
+### Added
+- **Alerts by EMAIL.** CBM uses no messaging service, so `send_alert` gains
+  an email channel over the EXISTING Gmail service-account delegation:
+  set **`ALERT_EMAIL_TO`** (comma list — any addresses, personal Gmail
+  included) and **`ALERT_EMAIL_FROM`** (a real `@cbmentors.org` Workspace
+  mailbox to send as; falls back to `OPS_MAILBOX`) on the **worker**. Every
+  alert — needs-attention, stranded rows, Gmail sync failures/dead-letters,
+  Drive-grant reconciliation, schema drift — arrives as
+  "[CBM Intake — production] <first line>". The webhook still works
+  (either or both); no channel (or all failing) = the WARNING log, as
+  always. 5 new tests.
+- **`scripts/audit_assignment_stamps.py`** — finds every assigned engagement
+  whose engagement/contacts/client profile/company are missing the assigned
+  mentor's + co-mentors' users in `assignedUsers` (the drift class behind
+  Anthony's attendee 403). Read-only report by default; `--heal` merges the
+  missing users (merge-only, never removes; the same write as Repair
+  assignment). Also flags mentors with no linked login User and dangling
+  mentorProfile references. **First run against crm-test (read-only): 20 of
+  29 audited engagements had missing stamps** — confirming the class is
+  widespread, not a one-off; crm-test left unhealed pending Doug's call.
+
 ## [0.116.0] — 2026-07-20
 
 Four fixes from the Anthony Sacco log investigation (2026-07-20): a mentor

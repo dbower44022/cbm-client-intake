@@ -69,8 +69,18 @@ class Settings(BaseSettings):
 
     # --- V2 Phase 3: monitoring + alerting (run as periodic worker tasks) ---
     # Where to send alerts (a Slack-compatible {"text": ...} webhook). Empty =>
-    # alerts are logged at WARNING only.
+    # webhook delivery is off.
     alert_webhook_url: str = ""
+    # EMAIL alert delivery (2026-07-20 — CBM uses no messaging service): every
+    # alert is emailed via the existing Gmail service-account delegation, sent
+    # AS `alert_email_from` (must be a real @cbmentors.org Workspace mailbox;
+    # falls back to OPS_MAILBOX when empty) TO `alert_email_to` (comma list —
+    # any addresses, personal Gmail included). Both delivery channels can be
+    # on at once; with NEITHER configured (or all deliveries failing), alerts
+    # log at WARNING as before. Set on the WORKER component (alerts originate
+    # there).
+    alert_email_to: str = ""
+    alert_email_from: str = ""
     alert_check_seconds: int = 300          # how often the worker evaluates thresholds
     alert_needs_attention_threshold: int = 1  # alert when this many are stuck
     alert_pending_age_minutes: int = 30     # alert when the oldest pending is older
@@ -279,6 +289,10 @@ class Settings(BaseSettings):
     @property
     def allowed_origins_list(self) -> list[str]:
         return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
+
+    @property
+    def alert_email_to_list(self) -> list[str]:
+        return [a.strip() for a in self.alert_email_to.split(",") if a.strip()]
 
     @property
     def assign_allowed_teams_list(self) -> list[str]:
