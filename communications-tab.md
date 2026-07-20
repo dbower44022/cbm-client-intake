@@ -6,6 +6,12 @@ in the style of `mentor-administration.md`. Technical design:
 `prds/communications-gmail-integration.md`; setup:
 `GMAIL-INTEGRATION-GUIDE.md`.
 
+> **The bigger picture:** this tab is one surface of CBM's email system.
+> [`email-management.md`](email-management.md) is the umbrella reference —
+> the My Email unified inbox, the compose dialog's full feature set, the
+> two sending identities, and Submission Admin's email handling (form
+> submitters + the shared info@ mailbox) are documented there.
+
 ## What it is
 
 Each engagement / partner / sponsor record has a Communications tab showing

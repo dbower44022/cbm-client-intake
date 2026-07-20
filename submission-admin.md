@@ -5,6 +5,11 @@ Sign in once at the portal (`/`); the Submission Admin tile appears if you're
 entitled. Rebuilt 2026-07-19 (v0.106.0–v0.108.0); the shared info@ mailbox
 model added in v0.110.0.*
 
+> **The bigger picture:** submission email is one part of CBM's email
+> system — [`email-management.md`](email-management.md) is the umbrella
+> reference (the sending identities, My Email, the compose dialog,
+> templates/signatures, and how submissions fit in).
+
 ## What it is
 
 Every submission from the public forms (client intake, volunteer,

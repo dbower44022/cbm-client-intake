@@ -75,7 +75,9 @@ This is a multi-form app: a shared core hosts any number of intake forms.
     shows the email conversations with each record's contacts — synced from the
     manager's `@cbmentors.org` Gmail, cleaned to just the new text per message,
     with reply/compose from the tool (gated by `GMAIL_SYNC`); see
-    [`communications-tab.md`](communications-tab.md) for how it works. Opening a record shows a tabbed,
+    [`email-management.md`](email-management.md) for the whole email system
+    (My Email, compose, identities, submissions) and
+    [`communications-tab.md`](communications-tab.md) for this tab in depth. Opening a record shows a tabbed,
     information-dense detail — an **Overview** (aggregated company pop-up, a
     session-notes feed, a Next-session Start/Open button), an editable
     permission-aware **Details** tab (`sessions/details.py`), the Sessions list,

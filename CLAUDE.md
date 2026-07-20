@@ -3690,6 +3690,13 @@ the synced lists were verified identical on crm-test and prod.
 - `mentor-administration.md` — functional reference for the `/mentoradmin` tool:
   overall functionality + the **complete-record requirements** (the completeness
   rules, in plain language).
+- `email-management.md` — the UMBRELLA email reference (plain language): the
+  whole system end-to-end — sync, the two sending identities (personal
+  @cbmentors.org vs the shared info@/"CBM Info"), My Email, the compose
+  dialog's full feature set, templates/signatures, **submissions as a subset**
+  (Submission Admin email: thread anchoring, reply-owed queue, inbound info@
+  capture/triage), who-sees-what, the admin requirements table, FAQ. Links
+  down to the two deep-dives below.
 - `communications-tab.md` — plain-language functional reference for the session
   tools' Communications tab (where conversations come from, cleaning, curation,
   compose rules, who-sees-what, "why don't I see…" answers).
