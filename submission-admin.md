@@ -8,7 +8,10 @@ model added in v0.110.0.*
 > **The bigger picture:** submission email is one part of CBM's email
 > system — [`email-management.md`](email-management.md) is the umbrella
 > reference (the sending identities, My Email, the compose dialog,
-> templates/signatures, and how submissions fit in).
+> templates/signatures, and how submissions fit in), and
+> [`submission-email-flow.md`](submission-email-flow.md) is the end-to-end
+> design summary: the inbound and outbound email lifecycles plus the Google
+> Workspace changes that activate the shared info@ mailbox.
 
 ## What it is
 

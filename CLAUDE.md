@@ -3707,6 +3707,12 @@ the synced lists were verified identical on crm-test and prod.
   (Submission Admin email: thread anchoring, reply-owed queue, inbound info@
   capture/triage), who-sees-what, the admin requirements table, FAQ. Links
   down to the two deep-dives below.
+- `submission-email-flow.md` — the submission-email DESIGN SUMMARY (Doug's
+  2026-07-20 request): the inbound info@→queue lifecycle, the outbound
+  respond-to-a-form lifecycle, and the Google Workspace changes that
+  activate the v0.110.0 shared mailbox (one: make info@ a real licensed
+  user mailbox — DWD/GCP need nothing new) + the app/CRM activation table
+  and the 15-minute live verification script.
 - `communications-tab.md` — plain-language functional reference for the session
   tools' Communications tab (where conversations come from, cleaning, curation,
   compose rules, who-sees-what, "why don't I see…" answers).

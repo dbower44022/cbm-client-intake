@@ -191,7 +191,10 @@ Form submissions are a **subset of email management** with their own rules,
 handled in **Submission Admin** (`/ops`, Marketing Admin Team). This section
 covers the email side; the tool's full reference — the work queue, the
 detail tabs, the intended information-request flow — is
-[`submission-admin.md`](submission-admin.md). A
+[`submission-admin.md`](submission-admin.md), and the end-to-end design
+summary (inbound + outbound lifecycles, plus the Google Workspace changes
+that activate the shared mailbox) is
+[`submission-email-flow.md`](submission-email-flow.md). A
 "submission" is anything that enters the intake pipeline:
 
 - the five public forms (client intake, volunteer, information request,
