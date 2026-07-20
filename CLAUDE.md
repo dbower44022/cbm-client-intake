@@ -1446,7 +1446,43 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-20)
 
-**Main is at v0.111.0** (2026-07-20, 830 tests green, committed NOT pushed) —
+**Main is at v0.112.0** (2026-07-20, 835 tests green, committed NOT pushed) —
+**fix: saving a session twice no longer creates two sessions.** Doug's report
+(a mentor made three sessions from one editor) diagnosed against the live prod
+record `6a5a2c6ab50ca311f`: three byte-identical CSessions (same name/status
+Completed/`dateStart` 13:00/39,866-char notes), created 17:27:20, 17:28:04,
+17:28:06 UTC 2026-07-17, never modified. The "no date" recollection is NOT the
+cause — `dateStart` is required in CRM metadata and the editor blocks an empty
+save client-side (verified live via `/mentorsessions/api/fields`). One editor
+was saved three times because the save looked like it failed. Fixes: (1) the
+in-flight guard moved off `saveSessionBtn` into `saveSession` itself — it has
+THREE entry points (Save button, unsaved-changes dialog's "Save changes", the
+calendar prompt) and only the button could be disabled; (2) creates are
+idempotent per `(domain, user, parent, token)`, one token per open new-session
+editor, per-key `asyncio.Lock` so a concurrent duplicate waits and takes the
+first result (in-memory, 15-min TTL — both apps run one web instance, the
+`core/app.py` storeless pattern); (3) a failed post-create `get_session` re-read
+no longer surfaces as "Could not create session" (it invites the duplicating
+retry — the same rule the attendee-relate path already followed). Verified in
+the stub harness with a **counterfactual**: save → Back → "Save changes" ×2
+produces **3 POSTs with the guard removed, 1 with it** — a faithful
+reproduction of the incident. 6 new tests.
+**Open, needs a CRM-side decision:** the engagement is STILL `Assigned` despite
+three Completed sessions, so `_activate_engagement_on_completed` failed all
+three times (best-effort ⇒ swallowed into a log warning). Anthony Sacco IS the
+assigned mentor and IS in the engagement's `assignedUsers`, so record-level
+edit should pass — meaning it is either a field-level ACL on `engagementStatus`
+(which EspoCRM applies by **silently stripping** the attribute on a 200 OK, so
+the app would wrongly report "now Active" — see
+[[espo-field-acl-silently-strips-writes]]) or a rejected write. The prod run
+logs for 2026-07-17 are past DO retention, so it can't be settled from here;
+check the Mentor Role's `fieldData` for `CEngagement.engagementStatus`. Also
+still open: `api()` in the sessions frontend has no timeout, so a slow save
+gives no feedback and nothing to abort — the condition that starts the whole
+retry sequence. Cleanup: delete two of the three duplicates in EspoCRM (keep
+`6a5a65f843ddcee0b`, the first).
+
+Before that: **v0.111.0** (2026-07-20, 830 tests green, committed NOT pushed) —
 **portal Documentation link**: the signed-in portal home page gains a
 "Documentation" section linking to the CBM documentation site
 (`https://docs.clevelandbusinessmentors.org`, a BookStack instance) so users

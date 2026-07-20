@@ -4,6 +4,52 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.112.0] — 2026-07-20
+
+**fix(sessions): saving a session twice can no longer create two sessions.**
+A mentor reported creating three sessions from one editor; the engagement
+(`6a5a2c6ab50ca311f`) held three byte-identical `CSession` records — same
+name, status Completed, `dateStart` 2026-07-17 13:00, same 39,866-character
+notes — created 17:27:20, 17:28:04 and 17:28:06 UTC and never modified since.
+Nothing was retyped between them: one editor was saved three times because the
+save appeared not to work. (The "no date entered" recollection is not what
+happened — `dateStart` is required in CRM metadata and the editor blocks an
+empty save before any request goes out.) Three fixes:
+
+- **The in-flight guard moved off the Save button and into `saveSession`
+  itself.** `saveSession` has THREE entry points — the Save button, the
+  unsaved-changes dialog's "Save changes", and the calendar prompt's two
+  buttons — but only the button could be `disabled`, so a save in flight
+  could be fired again from either of the other two. Reproduced in the stub
+  harness: save, then "Back to record" → "Save changes" twice = **3 POSTs**
+  without the guard, **1** with it.
+- **Session creates are now idempotent.** The frontend mints one token per
+  open new-session editor and sends it with every save attempt of that
+  editor; `POST /records/{id}/sessions` keys off `(domain, user, parent,
+  token)` and returns the session already created (`idempotent: true`)
+  instead of making a second one. A per-key lock makes a concurrent second
+  submit wait for the first and take its result. In-memory, TTL 15 min —
+  both deployed apps run a single web instance, mirroring the storeless
+  idempotency path in `core/app.py`. No token (an older cached frontend) =
+  previous behavior.
+- **A failed post-create re-read no longer reports as "Could not create
+  session."** `create_session` already treated a failed attendee-relate as
+  success-with-warning precisely because a failure message "invites a retry
+  that duplicates it", but the `get_session` re-read on the next line was
+  unguarded — a session that WAS created could be reported as a failure. It
+  now falls back to the created record and warns "Do not create it again."
+
+Six new tests (repeat token = one create, distinct tokens = two, no token =
+unchanged, same token on different records, failed post-create read).
+
+Two related findings, **not** fixed here — both need a CRM-side decision:
+this engagement is still `Assigned` despite three Completed sessions, so
+`_activate_engagement_on_completed` failed all three times (it is
+best-effort, so the failure was swallowed into a log warning); and `api()`
+in the sessions frontend still has no timeout, so a slow save gives the user
+no feedback and nothing to abort — the condition that starts this whole
+sequence.
+
 ## [0.111.0] — 2026-07-20
 
 **feat(portal): Documentation link on the home page.** The portal home page

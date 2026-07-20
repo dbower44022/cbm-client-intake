@@ -1886,3 +1886,104 @@ async def test_build_details_non_403_errors_still_raise():
     )
     with pytest.raises(EspoError):
         await details.build_details(PARTNER, fake, "P1")
+
+
+# --- duplicate-save protection (three identical sessions, 2026-07-17) -------
+
+@pytest.fixture
+def _no_create_tokens():
+    """Isolate the module-level idempotency cache between tests."""
+    from sessions import router as sessions_router
+    sessions_router._recent_creates.clear()
+    sessions_router._create_locks.clear()
+    yield
+    sessions_router._recent_creates.clear()
+    sessions_router._create_locks.clear()
+
+
+def _stub_create(monkeypatch, calls):
+    async def fake_create(cfg, client, parent_id, changes, attendees,
+                          owner_user_id=None, settings=None, skip_calendar=False):
+        calls.append(parent_id)
+        return {"id": "s%d" % len(calls), "parent": parent_id, **changes}
+
+    async def fake_get(client, session_id):
+        return {"id": session_id, "name": "Re-read"}
+
+    monkeypatch.setattr("sessions.service.create_session", fake_create)
+    monkeypatch.setattr("sessions.service.get_session", fake_get)
+
+
+def test_repeat_create_with_same_token_creates_one_session(monkeypatch, _no_create_tokens):
+    """The 2026-07-17 defect: an editor saved three times made three sessions."""
+    _as(monkeypatch, _USER)
+    calls = []
+    _stub_create(monkeypatch, calls)
+    body = {"changes": {"name": "Session"}, "submissionToken": "tok-A"}
+    with TestClient(_app(monkeypatch)) as c:
+        first = c.post("/mentorsessions/api/records/E1/sessions", json=body)
+        second = c.post("/mentorsessions/api/records/E1/sessions", json=body)
+        third = c.post("/mentorsessions/api/records/E1/sessions", json=body)
+    assert first.status_code == second.status_code == third.status_code == 200
+    assert calls == ["E1"]  # created ONCE, not three times
+    assert first.json()["id"] == "s1"
+    # The repeats report the session that already exists, not a failure.
+    assert second.json()["id"] == "s1" and second.json()["idempotent"] is True
+    assert third.json()["idempotent"] is True
+
+
+def test_distinct_tokens_create_distinct_sessions(monkeypatch, _no_create_tokens):
+    """Two genuinely separate sessions on one record must both be created."""
+    _as(monkeypatch, _USER)
+    calls = []
+    _stub_create(monkeypatch, calls)
+    with TestClient(_app(monkeypatch)) as c:
+        a = c.post("/mentorsessions/api/records/E1/sessions",
+                   json={"changes": {"name": "One"}, "submissionToken": "tok-1"})
+        b = c.post("/mentorsessions/api/records/E1/sessions",
+                   json={"changes": {"name": "Two"}, "submissionToken": "tok-2"})
+    assert len(calls) == 2
+    assert a.json()["id"] == "s1" and b.json()["id"] == "s2"
+    assert "idempotent" not in b.json()
+
+
+def test_create_without_token_is_unchanged(monkeypatch, _no_create_tokens):
+    """A cached older frontend sends no token — it must still be able to save."""
+    _as(monkeypatch, _USER)
+    calls = []
+    _stub_create(monkeypatch, calls)
+    with TestClient(_app(monkeypatch)) as c:
+        for _ in range(2):
+            r = c.post("/mentorsessions/api/records/E1/sessions",
+                       json={"changes": {"name": "Session"}})
+            assert r.status_code == 200
+    assert len(calls) == 2  # no token => no dedup, previous behavior
+
+
+def test_same_token_on_different_records_is_not_deduped(monkeypatch, _no_create_tokens):
+    _as(monkeypatch, _USER)
+    calls = []
+    _stub_create(monkeypatch, calls)
+    body = {"changes": {"name": "Session"}, "submissionToken": "tok-A"}
+    with TestClient(_app(monkeypatch)) as c:
+        c.post("/mentorsessions/api/records/E1/sessions", json=body)
+        c.post("/mentorsessions/api/records/E2/sessions", json=body)
+    assert calls == ["E1", "E2"]
+
+
+@pytest.mark.anyio
+async def test_create_survives_a_failed_post_create_read(monkeypatch):
+    """The session EXISTS once created: a failed re-read must not surface as
+    "Could not create session" (that invites the duplicating retry)."""
+    fake = Fake()
+
+    async def boom(client, session_id):
+        raise EspoError("read failed")
+
+    monkeypatch.setattr("sessions.service.get_session", boom)
+    result = await service.create_session(
+        MENTOR, fake, "E1", {"name": "Session", "status": "Scheduled"},
+    )
+    assert result["id"]  # the created record is returned, not an exception
+    assert "could not be re-read" in result["warning"]
+    assert "Do not create it again" in result["warning"]

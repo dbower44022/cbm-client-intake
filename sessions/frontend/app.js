@@ -20,6 +20,16 @@
   var currentDetail = null; // the open parent detail (has contacts/sessions)
   var currentSession = null;// the session being edited (null attendees only for new)
   var editorSnapshot = {};  // {field: JSON of value at render} — save diffs against this
+  // Duplicate-save protection. saveSession has THREE entry points (the Save
+  // button, the unsaved-changes dialog's "Save changes", and the calendar
+  // prompt's two buttons) and only the button could be disabled — so a save
+  // in flight could be fired again from the other two, creating a second
+  // identical session (it happened: 3 on one engagement, 2026-07-17). The flag
+  // guards saveSession itself, so it covers every entry point; the token makes
+  // the CREATE idempotent server-side for retries the flag can't see (lost
+  // response, reload, second tab). One token per open new-session editor.
+  var savingSession = false;
+  var editorCreateToken = null;
   var confirmOnSave = null, confirmOnDiscard = null;  // unsaved-changes dialog callbacks
   var currentDetails = null;// Details tab payload for the open record (lazy-loaded)
   var detailsSnapshot = {}; // editKey -> {field: JSON of value at edit-render}
@@ -5297,7 +5307,15 @@
   }
 
   // --- session editor ---
+  // A fresh idempotency key for one new-session editor (every save attempt of
+  // that editor carries it, so the server can tell a retry from a new session).
+  function newCreateToken() {
+    if (window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID();
+    return "t-" + Date.now() + "-" + Math.random().toString(36).slice(2, 10);
+  }
+
   async function openEditor(sessionId) {
+    editorCreateToken = sessionId ? null : newCreateToken();
     if (sessionId) {
       try { currentSession = await api("/sessions/" + encodeURIComponent(sessionId)); }
       catch (e) { if (e.status === 401) { showLogin(); return; } notice("detailNotice", e.message, "error"); return; }
@@ -5773,6 +5791,9 @@
   // meeting manually (the session still saves, no event/invitations).
   async function saveSession(calendarDecision) {
     if (!currentDetail) return;
+    // A save is already in flight. Guarding here (not on the Save button) is
+    // what makes this cover the dialog and calendar-prompt entry points too.
+    if (savingSession) return;
     // Enforce the CRM's required fields (e.g. dateStart) client-side so the user
     // gets a clear message instead of a raw CRM 400 (validationFailure).
     var missing = [];
@@ -5811,6 +5832,7 @@
     delete changes.duration;
     var attendees = chosenAttendees();
     var dkey = sessionDraftKey();  // captured now — a create's "new" key is gone after
+    savingSession = true;
     $("saveSessionBtn").disabled = true;
     try {
       var saved;
@@ -5821,7 +5843,11 @@
       } else {
         saved = await api("/records/" + encodeURIComponent(currentDetail.id) + "/sessions", {
           method: "POST",
-          body: JSON.stringify({ changes: changes, attendees: attendees, skipCalendar: calendarDecision === "skip" })
+          body: JSON.stringify({
+            changes: changes, attendees: attendees,
+            skipCalendar: calendarDecision === "skip",
+            submissionToken: editorCreateToken,
+          })
         });
       }
       if (dkey) clearEditDraft(dkey);  // saved => the stashed draft is obsolete
@@ -5862,6 +5888,6 @@
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }
       notice("editorNotice", e.message, "error");
-    } finally { $("saveSessionBtn").disabled = false; }
+    } finally { savingSession = false; $("saveSessionBtn").disabled = false; }
   }
 })();

@@ -994,7 +994,20 @@ async def create_session(
         created.get("id"), cfg.parent_entity, parent_id, payload.get("sessionType"),
         len(attendees or []),
     )
-    session = await get_session(client, created["id"])
+    # Same rule as the attendee relate above: the session EXISTS, so a failure
+    # re-reading it must not surface as "Could not create session" — that reads
+    # as "nothing was saved" and invites the retry that duplicates it (three
+    # identical sessions on one engagement, 2026-07-17). Fall back to the record
+    # the create returned; the UI re-fetches the record right after a save.
+    try:
+        session = await get_session(client, created["id"])
+    except EspoError as exc:
+        log.warning("could not re-read new session %s: %s", created.get("id"), exc)
+        session = dict(created)
+        attendee_warning = (attendee_warning or "") + (
+            " The session was created, but its details could not be re-read — "
+            "refresh the record to see it. Do not create it again."
+        ).strip()
     if attendee_warning:
         session["warning"] = attendee_warning
     engagement = await _activate_engagement_on_completed(

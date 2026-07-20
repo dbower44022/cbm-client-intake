@@ -9,7 +9,9 @@ run as the logged-in user, so EspoCRM enforces their ACL.
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import time
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Request
@@ -33,6 +35,49 @@ from .config import DomainConfig
 
 log = logging.getLogger("cbm_intake.sessions")
 
+# --- duplicate-save protection for session creates -------------------------
+# The staff tools had no equivalent of the intake forms' ``submission_token``:
+# a save that LOOKED like it failed (a slow request with no feedback, or a
+# post-create read error reported as "Could not create session") could be saved
+# again and silently create a second identical CSession. On 2026-07-17 that put
+# three byte-identical Completed sessions on one engagement, 44s and 2s apart.
+#
+# The editor now also guards re-entry client-side, but that cannot cover a
+# genuine retry (lost response, reload, impatient second tab), so the create is
+# idempotent per (domain, user, parent, token): the frontend mints one token
+# when it opens a NEW-session editor and sends it with every save attempt of
+# that editor. The per-key lock makes a CONCURRENT second submit wait for the
+# first and then take its result, rather than racing past the cache check.
+#
+# In-memory is sufficient: both deployed apps run a single web instance
+# (``instance_count: 1``), and the window that matters is seconds. A redeploy
+# clears it, which only re-opens the duplicate window for saves in flight at
+# that moment. Mirrors the storeless idempotency path in ``core/app.py``.
+_CREATE_TOKEN_TTL = 900.0  # seconds
+_recent_creates: dict[str, tuple[float, str]] = {}  # key -> (stamped_at, session id)
+_create_locks: dict[str, tuple[float, asyncio.Lock]] = {}
+_locks_guard = asyncio.Lock()
+
+
+def _prune_create_tokens(now: float) -> None:
+    """Drop idempotency entries older than the TTL (keeps both maps bounded)."""
+    for key, (stamped, _) in list(_recent_creates.items()):
+        if now - stamped > _CREATE_TOKEN_TTL:
+            _recent_creates.pop(key, None)
+    for key, (stamped, _) in list(_create_locks.items()):
+        if now - stamped > _CREATE_TOKEN_TTL:
+            _create_locks.pop(key, None)
+
+
+async def _create_token_lock(key: str) -> asyncio.Lock:
+    """The lock for one idempotency key, created on first use."""
+    async with _locks_guard:
+        entry = _create_locks.get(key)
+        if entry is None:
+            entry = (time.monotonic(), asyncio.Lock())
+            _create_locks[key] = entry
+        return entry[1]
+
 
 class SessionIn(BaseModel):
     changes: dict = {}
@@ -42,6 +87,10 @@ class SessionIn(BaseModel):
     # True = the user declined the automatic calendar invite in the pre-save
     # prompt (new Scheduled sessions only) — save the session, skip the event.
     skipCalendar: bool = False
+    # Idempotency key for a CREATE: one token per open new-session editor, sent
+    # with every save attempt of that editor, so a retry returns the session
+    # already created instead of making a second one. Ignored on update.
+    submissionToken: Optional[str] = None
 
 
 class CoMentorIn(BaseModel):
@@ -378,6 +427,39 @@ def make_router(cfg: DomainConfig) -> APIRouter:
     async def create_session(parent_id: str, body: SessionIn, request: Request) -> dict:
         user = _require_user(request)
         client = client_for(get_settings(), user)
+        token = (body.submissionToken or "").strip()
+        if not token:  # no token (older cached frontend) => no dedup, create as before
+            return await _do_create_session(client, parent_id, body, user, request)
+        key = f"{cfg.slug}:{user['userId']}:{parent_id}:{token}"
+        lock = await _create_token_lock(key)
+        # Held across the whole check-create-record section so a concurrent
+        # duplicate submit waits here and then takes the first one's result.
+        async with lock:
+            now = time.monotonic()
+            _prune_create_tokens(now)
+            existing = _recent_creates.get(key)
+            if existing is not None:
+                session_id = existing[1]
+                log.info(
+                    "duplicate session create suppressed on %s/%s by %s "
+                    "(token=%s, returning CSession/%s)",
+                    cfg.parent_entity, parent_id, user["userName"], token, session_id,
+                )
+                try:
+                    result = await service.get_session(client, session_id)
+                except EspoError as exc:
+                    raise _crm_failure(request, exc, "Could not load session")
+                result["idempotent"] = True
+                return result
+            result = await _do_create_session(client, parent_id, body, user, request)
+            if result.get("id"):
+                _recent_creates[key] = (now, result["id"])
+            return result
+
+    async def _do_create_session(
+        client, parent_id: str, body: SessionIn, user: dict, request: Request,
+    ) -> dict:
+        """The actual create (``cfg`` comes from the enclosing router)."""
         try:
             result = await service.create_session(
                 cfg, client, parent_id, body.changes, body.attendees,
