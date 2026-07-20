@@ -1615,6 +1615,32 @@ yet driven live as a real non-admin mentor** (needs a portal login). Inline
 Contact/Company edit (originally Phase 2) is already included; Phase 3
 (open-tab badges, saved filters) is future.
 
+The directory arc continued the same day (all committed, push per convention;
+CHANGELOG has each entry): **v0.102.0** — fix: the detail-pop-up's `.dir__modal`
+overlay (`display:flex`) overrode the `hidden` attribute, so it covered the
+grid on load and blocked every directory; fixed with `[hidden]{display:none
+!important}` (verified with a REAL mouse click — an attribute check isn't visual
+visibility; see [[harness-js-clicks-bypass-overlays]]). **v0.103.0** — the
+Partners directory. **v0.107.0** — Company pop-up enhancements (Doug's
+requests, Account-only): shows only the **profile panel matching
+`cCompanyType`** (a Client hides Partner Profile, etc.); a **Company Contacts**
+list at the bottom (name link → nested read-only contact-detail modal, phone/
+email as tel/compose links); **composite `address` fields now render** —
+`shippingAddress`/`billingAddress` are EspoCRM `address` type, so reading them
+as one attribute returned empty; now composed from the sub-fields for display +
+expanded into editable Street/City/State/ZIP/Country inputs in edit mode; the
+company email already rendered when set (confirmed live). **v0.109.0 — one
+record, one tab** (session tools, NOT a directory feature — the session-tools
+arc): the same engagement open in two browser tabs invites dirty-data edits, so
+Client/Partner/Funder Management now (a) open each grid record in a STABLE
+per-record window (`window.open(url,"cbm-rec-<slug>-<id>")`) so re-clicking
+reuses the tab, and (b) elect ONE owner tab per record on the dedicated record
+page via a `BroadcastChannel` — a second tab shows a "already open in another
+tab" block instead of the editor, with owner-close handoff. Slug-scoped, so it
+covers all three session domains from the one shared frontend (verified live
+two-tab on `/mentorsessions` AND `/partnersessions`). See
+[[single-tab-record-guard]].
+
 Before that: **v0.99.0** (2026-07-19, 777 tests green) —
 **edit-loss protection** (Doug approved both recommendations): dirty edit
 forms (Details sections + Overview notes) two-step "Discard changes?" on
