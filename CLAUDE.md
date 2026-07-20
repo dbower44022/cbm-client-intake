@@ -1449,7 +1449,29 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-20)
 
-**Main is at v0.113.0** (2026-07-20, 839 tests green, committed NOT pushed) —
+**Main is at v0.114.0** (2026-07-20, 839 tests green, committed NOT pushed) —
+**press feedback + request timeout**, closing the two follow-ups from v0.112.0
+(Doug: "immediately after any button press a spinner is displayed so the user
+knows the press worked. Then add timeout too"). New shared
+**`frontend/shared/busy.js`**, wired into EVERY app page (5 public forms,
+portal, sessions ×3 + the record page, assignments, mentoradmin, mentorprofile,
+ops, myemail, directory ×4) — self-wiring, one script tag, and it must load
+FIRST because it wraps `fetch` + `XMLHttpRequest` (quickmail sends via XHR).
+A spinner appears on the clicked button only when that click actually starts a
+request (attributed within 150 ms) and clears when every request from that click
+settles; a local-only button (wizard Next, tab switch) gets none. **Visual only
+— it never touches `disabled`** (apps own their in-flight guards, and
+[[buttons-never-disabled-validate-on-click]]). Sessions `api()` now times out at
+60 s (AbortController) with a message that reflects idempotent creates: nothing
+typed is lost, and saving again is safe. Verified in the stub harness AND
+against the running app (portal Sign in spins/clears; volunteer Next doesn't; no
+console errors). **Harness gotcha worth remembering:** a fetch stub that ignores
+`AbortSignal` silently never times out — the stub must reject on abort like real
+fetch, and a stub that REPLACES `window.fetch` after busy.js loads bypasses the
+instrumentation entirely (load the stub first). **Still open:** the timeout is
+sessions-only (the other apps' `api()` helpers don't have one yet).
+
+Before that: **v0.113.0** (2026-07-20, 839 tests green) —
 **Funder Management lists ALL sponsors to every sponsor-team member** (Doug's
 report: the grid failed with "your CRM role is missing read access to
 CMentorProfile records" even though the users are meant to see the funders).
@@ -3784,6 +3806,13 @@ the synced lists were verified identical on crm-test and prod.
 
 - **Push convention:** Claude commits in this local clone; **Doug reviews and
   pushes**. Do not push without being asked.
+- **Every app page loads `frontend/shared/busy.js`, FIRST** (Doug's ruling
+  2026-07-20, v0.114.0): the press-feedback spinner. It is self-wiring — one
+  script tag, no per-app code — but it wraps `fetch` + `XMLHttpRequest`, so it
+  must come before any other script that can start a request. A NEW app page
+  (or any new `index.html`) must include it. It is visual only and never sets
+  `disabled`; apps keep their own in-flight guards. Manual control for a wait
+  it can't see: `var done = CBMBusy.start(btn); … done();`.
 - **Rich-text (wysiwyg) fields use the shared CBMRichText editor** (Doug's
   ruling 2026-07-15): every wysiwyg field — existing or future, any app —
   renders through `frontend/shared/richtext.js` (`CBMRichText.create`), which

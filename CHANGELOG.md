@@ -4,6 +4,53 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.114.0] — 2026-07-20
+
+**feat(ui): a spinner on every button press that waits on the server, and a
+timeout so a request can no longer hang forever** (Doug's ruling, closing the
+two follow-ups left open by 0.112.0's duplicate-session fix). A button whose
+action went to the server looked identical before and after the click, so a
+save that was really in flight read as "nothing happened" — the condition that
+produced three identical sessions on one engagement.
+
+- **New shared `frontend/shared/busy.js`, wired into every app page** (all five
+  public forms, portal, sessions ×3 incl. the dedicated record page,
+  assignments, mentoradmin, mentorprofile, ops, myemail, directory ×4). It is
+  self-wiring — one script tag, no per-app code — and must load **first**,
+  because it wraps `fetch` and `XMLHttpRequest` (quickmail sends via XHR for
+  upload progress).
+- **How it decides:** a spinner is for waiting on the SERVER, so it appears on
+  the clicked button only when that click actually starts a request (attributed
+  within 150 ms of the click) and stays until every request from that click has
+  settled — success or failure. A button that only changes the page locally (a
+  wizard's Next, a tab switch, a modal close) starts no request and gets no
+  spinner: it already gives instant feedback and a flicker there would be noise.
+  Verified both ways in the harness and against the running app.
+- **Visual only — it never sets `disabled`.** Apps own their own in-flight
+  guards (the session editor's, 0.112.0), and the product rule is that action
+  buttons stay clickable and validate on click
+  ([[buttons-never-disabled-validate-on-click]]). Honors
+  `prefers-reduced-motion`. `CBMBusy.start(el)` is available for a wait this
+  module cannot see.
+- **`api()` in the sessions frontend now times out at 60s** (AbortController),
+  with a message that tells the user the truth now that creates are idempotent:
+  "…Nothing you typed has been lost. Refresh the record to see whether it saved
+  — and if it didn't, saving again is safe (it won't create a duplicate)." The
+  editor stays open with their work and the button is usable again. Generous by
+  design: a real save can legitimately take a while (large notes body, the CRM
+  write, the calendar hook).
+
+Verified in the stub harness (spinner present on the press, still spinning
+mid-request, cleared on settle, animation running; timeout path drives all the
+way to the readable notice with the editor intact) and against the **real app**
+(portal Sign in spins and clears; the volunteer wizard's Next does not; no
+console errors). The timeout needed a stub that honors `AbortSignal` the way
+real `fetch` does — a stub that ignores the signal silently never times out.
+
+**Still open** (unchanged by this release): the sessions `api()` timeout is not
+yet applied to the other apps' own `api()` helpers, and the engagement
+activation failure noted in 0.112.0 still needs a CRM-side answer.
+
 ## [0.113.0] — 2026-07-20
 
 **feat(sessions): Funder Management lists ALL sponsors to every sponsor-team

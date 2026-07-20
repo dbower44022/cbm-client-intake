@@ -88,11 +88,46 @@
   function show(el) { el.hidden = false; }
   function hide(el) { el.hidden = true; }
 
+  // A request that hangs forever is what made a save look like it had failed
+  // (no spinner, no end, nothing to cancel) — the user then saved again and
+  // again. Generous, because a real save can legitimately take a while: a big
+  // notes body, the CRM write, the calendar hook. Long enough that a normal
+  // save never trips it; short enough that a dead request ends in a readable
+  // message instead of silence.
+  var API_TIMEOUT_MS = 60000;
+
   async function api(path, opts) {
     opts = opts || {};
     opts.headers = Object.assign({ "Content-Type": "application/json" }, opts.headers || {});
     opts.credentials = "same-origin";
-    var resp = await fetch(API + path, opts);
+    var ctl = window.AbortController ? new AbortController() : null;
+    var timedOut = false;
+    var timer = null;
+    if (ctl && !opts.signal) {
+      opts.signal = ctl.signal;
+      timer = setTimeout(function () { timedOut = true; ctl.abort(); }, API_TIMEOUT_MS);
+    }
+    var resp;
+    try {
+      resp = await fetch(API + path, opts);
+    } catch (e) {
+      if (timedOut) {
+        // Deliberately says a retry is safe: session creates carry an
+        // idempotency token (v0.112.0), so saving again after a timeout
+        // returns the session already created rather than duplicating it.
+        var t = new Error(
+          "The server is taking too long to respond. Nothing you typed has been "
+          + "lost. Refresh the record to see whether it saved — and if it didn't, "
+          + "saving again is safe (it won't create a duplicate)."
+        );
+        t.status = 0;
+        t.timeout = true;
+        throw t;
+      }
+      throw e;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
     var data = null;
     try { data = await resp.json(); } catch (e) {}
     if (!resp.ok) {
