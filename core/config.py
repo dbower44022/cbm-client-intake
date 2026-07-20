@@ -81,6 +81,15 @@ class Settings(BaseSettings):
     # there).
     alert_email_to: str = ""
     alert_email_from: str = ""
+    # Nightly assignment-stamp reconciliation (layer 3 of the stamp-drift
+    # prevention plan, 2026-07-20): the worker re-derives each assigned
+    # engagement's entitled users from the CRM's own links (mentorProfile +
+    # additionalMentors) and MERGES missing users onto the engagement /
+    # contacts / client profile / company assignedUsers — merge-only, never
+    # removes. Makes the Anthony-Sacco drift class self-healing regardless of
+    # how the drift happened (pre-stamp-era records, the collaborators
+    # switch, hand edits in the CRM UI). 0 disables.
+    assignment_reconcile_seconds: int = 86400
     alert_check_seconds: int = 300          # how often the worker evaluates thresholds
     alert_needs_attention_threshold: int = 1  # alert when this many are stuck
     alert_pending_age_minutes: int = 30     # alert when the oldest pending is older

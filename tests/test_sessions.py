@@ -2082,3 +2082,73 @@ async def test_update_session_clean_attendee_sync_has_no_warning():
     session = await service.update_session(MENTOR, fake, "s1", {}, attendees=["c1"])
     assert "warning" not in session
     assert ("CSession", "s1", "sessionAttendees", "c1") in fake.relates
+
+
+# --- mentor-team stamp on contact link/create (stamp-drift layer 2) -----------
+
+
+def _assigned_world(**extra_records):
+    """An ASSIGNED engagement (mentor uM via MP1, co-mentor uC) to link onto."""
+    return Fake(
+        records=dict({
+            ("CEngagement", "E1"): {"clientOrganizationId": "acct1", "mentorProfileId": "MP1"},
+            ("CMentorProfile", "MP1"): {"assignedUserId": "uM"},
+            ("Contact", "c9"): {"accountId": "other-co", "assignedUsersIds": ["uExisting"]},
+        }, **extra_records),
+        related={"additionalMentors": [{"id": "MP2", "assignedUsersIds": ["uC"]}]},
+    )
+
+
+@pytest.mark.asyncio
+async def test_link_contact_stamps_mentor_team():
+    """Layer 2 (2026-07-20): a contact added AFTER assignment was born
+    unstamped — the mentor then 403'd attaching them to sessions. The link now
+    merges the mentor team into the contact's assignedUsers (merge-only)."""
+    fake = _assigned_world()
+    await details.link_contact(MENTOR, fake, "E1", "c9")
+    stamp = [u for u in fake.updates if u[0] == "Contact" and "assignedUsersIds" in u[2]]
+    assert stamp == [("Contact", "c9", {"assignedUsersIds": ["uExisting", "uM", "uC"]})]
+
+
+@pytest.mark.asyncio
+async def test_link_contact_no_stamp_when_unassigned():
+    fake = Fake(records={
+        ("CEngagement", "E1"): {"clientOrganizationId": "acct1"},
+        ("Contact", "c9"): {"accountId": "other-co"},
+    })
+    await details.link_contact(MENTOR, fake, "E1", "c9")
+    assert not [u for u in fake.updates if "assignedUsersIds" in u[2]]
+
+
+@pytest.mark.asyncio
+async def test_link_contact_no_stamp_on_partner_domain():
+    fake = Fake(records={("CPartnerProfile", "P1"): {}, ("Contact", "c9"): {}})
+    await details.link_contact(PARTNER, fake, "P1", "c9")
+    assert not [u for u in fake.updates if "assignedUsersIds" in u[2]]
+
+
+@pytest.mark.asyncio
+async def test_link_contact_stamp_failure_never_fails_the_link():
+    from core.espo import EspoError
+
+    class StampRejecting(Fake):
+        async def update(self, entity, record_id, payload):
+            if "assignedUsersIds" in payload:
+                raise EspoError("update Contact/c9 failed: HTTP 403 denied")
+            return await super().update(entity, record_id, payload)
+
+    fake = _assigned_world()
+    fake.__class__ = StampRejecting
+    await details.link_contact(MENTOR, fake, "E1", "c9")  # must not raise
+    assert fake.relates == [("CEngagement", "E1", "engagementContacts", "c9")]
+
+
+@pytest.mark.asyncio
+async def test_create_contact_stamps_mentor_team():
+    fake = _assigned_world()
+    fake.records[("Contact", "contact-1")] = {"assignedUsersIds": []}
+    fake.meta_fields = {"firstName": {"type": "varchar"}, "lastName": {"type": "varchar"}}
+    created = await details.create_contact(MENTOR, fake, "E1", {"lastName": "New"})
+    cid = created["id"]
+    stamp = [u for u in fake.updates if u[1] == cid and "assignedUsersIds" in u[2]]
+    assert stamp and set(stamp[0][2]["assignedUsersIds"]) == {"uM", "uC"}

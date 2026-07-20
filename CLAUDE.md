@@ -1449,7 +1449,26 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-20)
 
-**Main is at v0.117.0** (2026-07-20, 876 tests green, committed NOT pushed) —
+**Main is at v0.118.0** (2026-07-20, 890 tests green, committed NOT pushed) —
+**stamp-drift prevention layers 2+3 — the plan is COMPLETE** (CHANGELOG
+0.118.0): **layer 2** — `sessions/details._stamp_mentor_team` merges the
+engagement's mentor team onto every contact linked/created via the + Add
+flows (mentor domain, merge-only, best-effort); **layer 3** — nightly
+merge-only reconciliation in the worker
+(`assignments/stamps.run_stamp_reconciliation`,
+`ASSIGNMENT_RECONCILE_SECONDS` default 86400, API-key client, DOC-09
+pattern; CRM links = truth, never removes anyone — hand-REMOVALS re-added
+nightly is the accepted trade-off). The audit CLI now rides the same
+shared engine (`assignments/stamps.py`); re-verified read-only on
+crm-test (identical findings). 14 new tests. **After the next
+push/deploy the reconciliation runs automatically on both envs — its
+first pass will heal the drift the audits found (crm-test: 20
+engagements; prod: Doug to run the audit first if he wants the report
+before the heal happens).** Doug-side still open: ALERT_EMAIL_TO/FROM on
+both workers' overlays; the 3 crm-test mentor profiles with no linked
+User; the dangling Tom Cook mentorProfile FK.
+
+Before that: **v0.117.0** (2026-07-20, 876 tests green) —
 **assignment-stamp prevention layers 1+4** (Doug's ruling; CHANGELOG
 0.117.0): **email alerts** — `send_alert` now delivers via the existing
 Gmail delegation (`ALERT_EMAIL_TO` any addresses + `ALERT_EMAIL_FROM` a

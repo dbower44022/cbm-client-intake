@@ -414,13 +414,51 @@ async def _backfill_company(cfg: DomainConfig, client: SessionClient, parent_id:
         log.warning("could not backfill company on contact %s: %s", contact_id, exc)
 
 
+async def _stamp_mentor_team(
+    cfg: DomainConfig, client: SessionClient, parent_id: str, contact_id: str
+) -> None:
+    """Merge the engagement's mentor team (assigned mentor + co-mentors) into a
+    newly-attached contact's ``assignedUsers`` — stamp-drift layer 2
+    (2026-07-20): a contact added AFTER assignment was otherwise born
+    unstamped, so the mentors' own-scope roles couldn't touch it (the
+    session-attendee 403 class). Mentor domain only; best-effort — a stamp
+    failure never fails the link (the nightly reconciliation is the backstop).
+    Merge-only: existing assigned users are always kept."""
+    if not cfg.supports_comentor:  # mentor domain only — no manager stamping elsewhere
+        return
+    try:
+        from .service import _engagement_mentor_user_ids
+
+        team = await _engagement_mentor_user_ids(cfg, client, parent_id)
+        if not team:
+            return  # unassigned engagement — the Assign re-homing stamps later
+        rec = await client.get(CONTACT, contact_id, select="assignedUsersIds")
+        current = list(rec.get("assignedUsersIds") or [])
+        add = [u for u in team if u not in current]
+        if not add:
+            return
+        await client.update(CONTACT, contact_id, {"assignedUsersIds": current + add})
+        log.info(
+            "stamped mentor team onto Contact/%s (+%d user(s), engagement %s)",
+            contact_id, len(add), parent_id,
+        )
+    except EspoError as exc:
+        log.warning(
+            "mentor-team stamp failed for Contact/%s (engagement %s) — the "
+            "nightly reconciliation will correct it: %s",
+            contact_id, parent_id, exc,
+        )
+
+
 async def link_contact(cfg: DomainConfig, client: SessionClient, parent_id: str, contact_id: str) -> None:
     """Attach an EXISTING contact to this record via the domain's contacts link
     (``CEngagement.engagementContacts`` / ``CPartnerProfile.contacts`` /
     ``CSponsorProfile.sponsorContacts`` — the relation the Details tab lists), then
-    backfill its company affiliation (see :func:`_backfill_company`)."""
+    backfill its company affiliation (see :func:`_backfill_company`) and stamp
+    the mentor team onto it (see :func:`_stamp_mentor_team`)."""
     await client.relate(cfg.parent_entity, parent_id, cfg.parent_contacts_link, contact_id)
     await _backfill_company(cfg, client, parent_id, contact_id)
+    await _stamp_mentor_team(cfg, client, parent_id, contact_id)
 
 
 async def unlink_contact(cfg: DomainConfig, client: SessionClient, parent_id: str, contact_id: str) -> None:
@@ -457,6 +495,7 @@ async def create_contact(cfg: DomainConfig, client: SessionClient, parent_id: st
             f"The contact was created (id {created['id']}) but could not be linked "
             f"to this record: {exc}"
         ) from exc
+    await _stamp_mentor_team(cfg, client, parent_id, created["id"])
     return {"id": created["id"]}
 
 

@@ -247,6 +247,11 @@ async def main() -> None:
     # on; also feature-gated per cycle on the CRM's sessionTranscription field.
     next_transcripts = datetime.now(timezone.utc)
 
+    # Assignment-stamp reconciliation (stamp-drift layer 3, 2026-07-20):
+    # nightly merge-only self-heal of mentor/co-mentor assignedUsers stamps on
+    # engagement client records. Inert in dry-run / without an API key.
+    next_stamps = datetime.now(timezone.utc)
+
     # Inbound info@ poller (v0.110.0): captures new inbound threads on the
     # shared OPS_MAILBOX as held info-email submissions for /ops triage.
     # Inert unless GMAIL_SYNC + OPS_MAILBOX are set.
@@ -336,6 +341,14 @@ async def main() -> None:
             except Exception as exc:  # noqa: BLE001 — never crashes delivery
                 log.warning("docs grant reconciliation failed: %s", exc)
             next_docs = now + timedelta(seconds=settings.gdrive_reconcile_seconds)
+        if settings.assignment_reconcile_seconds > 0 and now >= next_stamps:
+            try:
+                from assignments.stamps import run_stamp_reconciliation
+
+                await run_stamp_reconciliation(settings)
+            except Exception as exc:  # noqa: BLE001 — never crashes delivery
+                log.warning("assignment stamp reconciliation failed: %s", exc)
+            next_stamps = now + timedelta(seconds=settings.assignment_reconcile_seconds)
 
         if claimed == 0 and not stop.is_set():
             # Sleep until the poll interval elapses OR SIGTERM arrives, so a

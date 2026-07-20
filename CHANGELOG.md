@@ -4,6 +4,39 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.118.0] — 2026-07-20
+
+Stamp-drift prevention **layers 2 + 3** — completes the plan (1: audit
+script, 4: email alerts in v0.117.0). The Anthony-Sacco class (client
+records missing the mentor team's `assignedUsers` stamps) is now prevented
+at creation AND self-healing.
+
+### Added
+- **Layer 2 — contacts are stamped when attached.** Linking or creating a
+  contact on an ASSIGNED engagement (the Details tab's + Add flows, and the
+  comms add-contact path that routes through them) now merges the
+  engagement's mentor team (assigned mentor + co-mentors) into the contact's
+  `assignedUsers` — previously such a contact was born unstamped and the
+  mentors' own-scope roles couldn't touch it. Mentor domain only;
+  merge-only; best-effort (a stamp failure logs and never fails the link —
+  the nightly reconciliation is the backstop).
+- **Layer 3 — nightly assignment-stamp reconciliation.** The worker runs
+  `assignments.stamps.run_stamp_reconciliation` on its own timer
+  (**`ASSIGNMENT_RECONCILE_SECONDS`**, default daily; 0 disables; inert in
+  dry-run): for every assigned, non-terminal engagement it re-derives the
+  entitled users from the CRM's own links (`mentorProfile` +
+  `additionalMentors`) and MERGES any missing onto the engagement /
+  contacts / client profile / company. Merge-only — it never removes
+  anyone, so it cannot revoke access; the CRM links are the source of truth
+  (Doug's accepted trade-off: a deliberate hand-REMOVAL gets re-added
+  nightly). Corrections log at INFO; mentors with no linked login User log
+  at WARNING. Covers drift from any cause: pre-stamp-era records, the
+  collaborators switch, hand edits in the CRM UI.
+- The audit CLI (`scripts/audit_assignment_stamps.py`) now runs on the same
+  shared engine (`assignments/stamps.py`) as the reconciliation — one
+  derivation of "who should hold access", two consumers. Re-verified
+  read-only against crm-test: identical findings to v0.117.0's run.
+
 ## [0.117.0] — 2026-07-20
 
 Layers 1 + 4 of the assignment-stamp prevention plan (Doug's ruling after the
