@@ -29,6 +29,16 @@
       <p><a href="/">Return to the sign-in page</a></p>
     </section>
 
+    <!-- Shown when this record is already open in another browser tab: editing
+         it here too could overwrite the other tab's work with stale data, so we
+         block this tab until the user closes the other one (or reloads here). -->
+    <section id="blockedView" hidden>
+      <p class="form-error" role="alert">This record is already open in another browser tab.</p>
+      <p>To avoid conflicting edits, please continue working with it in the tab
+         you already have open. If you've since closed that tab, reload this one.</p>
+      <button type="button" class="cbm-button" id="blockedReloadBtn">Reload this tab</button>
+    </section>
+
     <!-- List of the records the user owns -->
     <section id="listView" hidden>
       <div class="sx__filters">

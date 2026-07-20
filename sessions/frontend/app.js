@@ -102,8 +102,9 @@
     if (e && e.status === 403) { showMessage(e.message); return; }
     showMessage("The server isn't responding right now. Please try again in a moment.");
   }
-  function hideAll() { hide($("msgView")); hide($("listView")); hide($("detailView")); hide($("editorView")); hide($("sessionView")); }
+  function hideAll() { hide($("msgView")); hide($("blockedView")); hide($("listView")); hide($("detailView")); hide($("editorView")); hide($("sessionView")); }
   function showList() { hideAll(); show($("listView")); }
+  function showBlocked() { hideAll(); show($("blockedView")); }
   function showDetail() { hideAll(); show($("detailView")); }
   function showEditor() { hideAll(); show($("editorView")); }
   function showSessionView() { hideAll(); show($("sessionView")); }
@@ -281,6 +282,50 @@
   })();
 
   // --- boot ---
+  $("blockedReloadBtn").addEventListener("click", function () { location.reload(); });
+
+  // --- Single-tab guard (Doug 2026-07-19): the same engagement open in two
+  // browser tabs invites dirty-data edits — each tab saves values that are
+  // stale relative to the other. On the dedicated record page we elect ONE
+  // owner tab per record via a BroadcastChannel; a second tab opening the same
+  // record yields and shows the blocked view. Deterministic tiebreak on
+  // (openedAt, tabId) so even simultaneous opens pick a single owner. When the
+  // owner tab closes, a blocked tab reloads to take over. Degrades to "allow"
+  // where BroadcastChannel is unavailable (the named-tab reuse still helps).
+  function acquireRecordLock(key) {
+    return new Promise(function (resolve) {
+      var BC = window.BroadcastChannel;
+      if (!BC) { resolve(true); return; }
+      var ch;
+      try { ch = new BC("cbm-record-lock"); } catch (_) { resolve(true); return; }
+      var me = { openedAt: Date.now(), tabId: Math.random().toString(36).slice(2) + "-" + Date.now() };
+      var decided = false, owner = true;
+      function isOlder(a, b) {
+        return a.openedAt < b.openedAt || (a.openedAt === b.openedAt && a.tabId < b.tabId);
+      }
+      ch.onmessage = function (ev) {
+        var m = ev.data || {};
+        if (!m || m.key !== key || m.tabId === me.tabId) return;
+        if (m.type === "hello") {
+          // Announce myself so the newcomer can compare against me.
+          try { ch.postMessage({ type: "present", key: key, openedAt: me.openedAt, tabId: me.tabId }); } catch (_) {}
+        }
+        if ((m.type === "hello" || m.type === "present") && isOlder(m, me) && !decided) {
+          decided = true; owner = false; resolve(false);   // an older tab owns it — I'm the duplicate
+        }
+        if (m.type === "bye" && m.owner && !owner) {
+          location.reload();   // the owner left — reclaim by re-running the election
+        }
+      };
+      try { ch.postMessage({ type: "hello", key: key, openedAt: me.openedAt, tabId: me.tabId }); } catch (_) {}
+      window.__cbmRecordLock = ch;   // keep the channel alive (GC guard)
+      window.addEventListener("pagehide", function () {
+        try { ch.postMessage({ type: "bye", key: key, tabId: me.tabId, owner: owner }); } catch (_) {}
+      });
+      setTimeout(function () { if (!decided) { decided = true; resolve(true); } }, 350);
+    });
+  }
+
   (async function init() {
     try {
       config = await api("/session");
@@ -291,6 +336,10 @@
       if (config.emptyMessage) $("emptyState").textContent = config.emptyMessage;
       buildDetailTabs();
       if (RECORD_ID) {
+        // Single-tab guard: if this engagement is already open in another tab,
+        // block this one before loading/rendering anything editable.
+        var owned = await acquireRecordLock(SLUG + ":" + RECORD_ID);
+        if (!owned) { showBlocked(); return; }
         // Record page: fields only (for the session editor) — the list is
         // never fetched here.
         try {
@@ -426,13 +475,23 @@
       cols.forEach(function (c, i) {
         var td = document.createElement("td");
         if (i === 0) {
-          // A real link to the record's own PAGE, opened in a separate tab —
-          // several records can be worked on simultaneously.
+          // A real link to the record's own PAGE. A plain click opens it in a
+          // STABLE per-record tab (window name), so re-clicking the same record
+          // reuses that tab instead of spawning a duplicate — several DIFFERENT
+          // records still open side by side. Modifier/middle clicks fall through
+          // to the browser (a new tab); the record page's single-tab guard then
+          // blocks that duplicate.
           var link = document.createElement("a");
           link.className = "sx__link";
           link.href = "/" + SLUG + "/record/" + encodeURIComponent(r.id);
-          link.target = "_blank"; link.rel = "noopener";
           link.textContent = r[c.key] || "(unnamed)";
+          (function (recId, href) {
+            link.addEventListener("click", function (ev) {
+              if (ev.defaultPrevented || ev.button !== 0 || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
+              ev.preventDefault();
+              window.open(href, "cbm-rec-" + SLUG + "-" + recId);
+            });
+          })(r.id, link.href);
           // A record with a session scheduled TODAY (viewer-local, from the
           // server's upcomingSessions window) reads red + bold in the grid.
           if ((r.upcomingSessions || []).some(isTodaySession)) {

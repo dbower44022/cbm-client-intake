@@ -4,6 +4,30 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.109.0] — 2026-07-19
+
+**feat(sessions): one record, one tab** (Doug's request — the same engagement
+open in two browser tabs invites dirty-data edits, each tab saving values stale
+relative to the other). Client Management / the session tools now guard against
+it two ways (frontend-only, all three domains):
+
+- **Reuse the tab**: the grid opens each record in a STABLE per-record window
+  (`window.open(url, "cbm-rec-<slug>-<id>")`), so re-clicking the same
+  engagement focuses its existing tab instead of spawning a duplicate; different
+  records still open side by side. Modifier/middle clicks fall through to the
+  browser and are caught by the block below.
+- **Block a duplicate**: the dedicated record page (`/{slug}/record/{id}`)
+  elects ONE owner tab per record via a `BroadcastChannel` (deterministic
+  `(openedAt, tabId)` tiebreak so simultaneous opens still pick one owner). A
+  second tab on the same record shows a "This record is already open in another
+  browser tab" block INSTEAD of the editor — so no stale save is possible. When
+  the owner tab closes, a blocked tab reloads and takes over. Degrades to
+  allow-with-named-tab-reuse where `BroadcastChannel` is unavailable.
+
+Verified in a two-tab stub harness: owner renders the record, the second tab is
+blocked, the owner leaving hands off to the blocked tab, the grid link opens a
+named (not `_blank`) tab; no console errors.
+
 ## [0.108.0] — 2026-07-19
 
 **Submission Admin: resolution workflow, awaiting-reply queue, reply
