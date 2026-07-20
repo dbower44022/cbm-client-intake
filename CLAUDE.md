@@ -157,6 +157,16 @@ Endpoints 503 if no store. Linked from the portal for Marketing-Admin members.
 Verified
 against local Postgres (list/counts/redrive) + console wiring (serves, 401 unauth).
 Phase 3 (alerting + schema-drift) is next.
+**REBUILT 2026-07-19 (v0.106.0–v0.108.0, Doug's spec)** into a resolution
+console — modern grid (sort/resize/search/alt-rows, Open-by-default
+resolution filter, awaiting-reply column), sessions-style tabbed detail
+(Overview facts + staff `notes` (migration 0011) + submitter conversation;
+Details with CRM deep links; Communications with reply-threaded compose +
+the `InfoRequestReply` template pre-applied via `OPS_REPLY_TEMPLATE`),
+`resolved_at/by` workflow (migration 0012). Conversation = live Gmail
+search of the signed-in admin's OWN mailbox (per-admin visibility).
+Functional reference for staff: **`submission-admin.md`**; mechanics in
+CHANGELOG 0.106.0/0.108.0 and the Current-status blocks.
 
 **Phase 3 — monitoring + alerting, scaffolded 2026-06-22.** The worker runs two
 periodic checks (own timers, no cron dependency): (1) **alerting** —
@@ -3617,6 +3627,9 @@ the synced lists were verified identical on crm-test and prod.
 - `communications-tab.md` — plain-language functional reference for the session
   tools' Communications tab (where conversations come from, cleaning, curation,
   compose rules, who-sees-what, "why don't I see…" answers).
+- `submission-admin.md` — plain-language functional reference for the rebuilt
+  `/ops` Submission Admin (the work-queue grid, resolution workflow, notes,
+  the submitter email conversation, and the intended info-request flow).
 - `prds/v2/` — the V2 reliability platform specs (durable capture + async worker
   + ops + alerting).
 
