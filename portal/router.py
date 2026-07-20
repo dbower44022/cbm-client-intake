@@ -125,6 +125,9 @@ def _home_payload(user: dict[str, Any], request: Request, settings: Settings) ->
         # The CRM itself, for mentors (and admins) — the deploy's own target,
         # so the crm-test app links to crm-test and prod to production.
         "crmUrl": settings.espo_base_url if mentor else None,
+        # The documentation site — every signed-in user gets it (the app user
+        # guides live there). Empty setting => no link.
+        "docsUrl": settings.docs_site_url or None,
         "forms": _forms(request),
     }
 

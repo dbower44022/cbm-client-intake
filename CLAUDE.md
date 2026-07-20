@@ -1444,9 +1444,19 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   Note: crm-test seed sessions carry out-of-enum `sessionType` values (harmless; a
   data-hygiene cleanup). **UI polish is the next work item** (a follow-up session).
 
-## Current status (updated 2026-07-19)
+## Current status (updated 2026-07-20)
 
-**Main is at v0.110.0** (2026-07-19, 829 tests green, committed NOT pushed) —
+**Main is at v0.111.0** (2026-07-20, 830 tests green, committed NOT pushed) —
+**portal Documentation link**: the signed-in portal home page gains a
+"Documentation" section linking to the CBM documentation site
+(`https://docs.clevelandbusinessmentors.org`, a BookStack instance) so users
+can open the user guides for any of the apps. Every signed-in user sees it
+(no team gate — the guides span all the apps), new-tab. URL = the new
+`DOCS_SITE_URL` setting (`core/config.py`, default = the live site, empty
+hides it) → `docsUrl` on the portal payload (`portal/router._home_payload`)
+→ rendered by `portal/frontend/` next to the CRM section.
+
+Before that: **v0.110.0** (2026-07-19, 829 tests green) —
 **Submission Admin: the shared info@ mailbox model** (Doug's rulings after
 his "submissions pick up unrelated emails" report — full mechanics in
 CHANGELOG 0.110.0): (1) **thread anchoring** — every /ops send records its

@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     # ("production" / "test" / "dev"); set explicitly to override the wording.
     env_label: str = ""
 
+    # The CBM documentation site (BookStack), linked from the portal home page
+    # so signed-in users can find the app user guides. Empty hides the link.
+    docs_site_url: str = "https://docs.clevelandbusinessmentors.org"
+
     # Logging level for both processes (web + worker) — e.g. "DEBUG" exposes
     # the comms triage decisions without a redeploy. See core/logging_setup.py.
     log_level: str = "INFO"

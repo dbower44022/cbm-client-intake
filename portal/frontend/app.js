@@ -97,6 +97,8 @@
     fillTiles("appsSection", "appsList", data.apps || []);
     fillList("crmSection", "crmList",
       data.crmUrl ? [{ title: "CBM CRM", url: data.crmUrl }] : [], true);
+    fillList("docsSection", "docsList",
+      data.docsUrl ? [{ title: "CBM Documentation", url: data.docsUrl }] : [], true);
     fillList("formsSection", "formsList", data.forms || [], true);
     show($("homeView"));
   }

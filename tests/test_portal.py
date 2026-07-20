@@ -138,6 +138,18 @@ def test_no_team_user_sees_only_public_forms(monkeypatch):
     assert len(data["forms"]) == 2
 
 
+def test_docs_link_for_every_signed_in_user(monkeypatch):
+    # The documentation site shows regardless of teams (the guides cover all
+    # the apps); an empty DOCS_SITE_URL hides it.
+    data = _login_payload(monkeypatch, _user())
+    assert data["docsUrl"] == "https://docs.clevelandbusinessmentors.org"
+
+    _fake_login(monkeypatch, _user())
+    with TestClient(_app(monkeypatch, DOCS_SITE_URL="")) as c:
+        data = c.post("/api/portal/login", json={"username": "x", "password": "y"}).json()
+    assert data["docsUrl"] is None
+
+
 def test_each_admin_team_maps_to_its_app(monkeypatch):
     data = _login_payload(monkeypatch, _user(teams=["Mentor Administration Team"]))
     assert data["apps"] == [

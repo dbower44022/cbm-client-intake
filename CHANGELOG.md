@@ -4,6 +4,16 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.111.0] — 2026-07-20
+
+**feat(portal): Documentation link on the home page.** The portal home page
+(the signed-in view) gains a **Documentation** section linking to the CBM
+documentation site — `https://docs.clevelandbusinessmentors.org` — so users
+can open the user guides for any of the apps. Shown to every signed-in user
+(the guides span all the apps; no team gate), opens in a new tab. The URL is
+the new `DOCS_SITE_URL` setting (defaults to the live site; empty hides the
+section), surfaced on the portal payload as `docsUrl`.
+
 ## [0.110.0] — 2026-07-19
 
 **feat(ops): the shared info@ mailbox model — thread-anchored conversations,
