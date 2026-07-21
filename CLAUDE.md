@@ -1474,12 +1474,19 @@ own profile is always classified too** (`acting_user_id` on the map), so
 the self-invite can't recur through the side door of the organizer's
 Contact being linked to the record as a plain client contact / the
 organizer not being the record's manager (partner/sponsor domains).
-**PROD AUDIT RUN 2026-07-20: 3 affected sessions total (2 upcoming —
-Anthony Sacco's Krystal Drake 7/31 = the reported one, event already
-deleted in Google so cancel+recreate it; Doug's tonya hegler 7/22 =
-re-save after deploy, doubles as live verification). Prod API key
-obtained via `doctl apps console` printenv (overlay copy is
-EV-encrypted).** New read-only
+**PROD AUDIT RUN 2026-07-20: 3 affected sessions total (2 upcoming).
+VERIFIED LIVE ON PROD 2026-07-21:** Doug pushed (prod `/healthz` 0.123.1)
+and re-saved the tonya hegler 7/22 session — run logs show the PATCH 200
+as doug.bower@cbmentors.org with no member-map warnings, and the Google
+event's guest list (read via Chrome) now holds ONLY the client
+tonya@fuams.design — doug@dougbower.com removed; the hand-typed Zoom link
+untouched. The remaining flagged session (Anthony Sacco's Krystal Drake
+7/31 — the reported one, its Google event already hand-deleted) is
+**handed to Anthony**: Doug emailed him instructions to cancel it in the
+app and create a fresh session (re-saving would just patch a dead event).
+Note: the audit script infers from CRM data, so it still lists repaired
+sessions — proof lives in the Google guest list. Prod API key obtained
+via `doctl apps console` printenv (overlay copy is EV-encrypted).** New read-only
 `scripts/audit_calendar_invites.py` measures the retroactive blast radius
 (crm-test: 1 upcoming session flagged — Douglas Bower invited at
 doug@dougbower.com). **Retroactive decision open with Doug** (notify
