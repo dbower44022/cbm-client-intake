@@ -1456,8 +1456,10 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-20)
 
-**Main is at v0.122.0** (2026-07-20, 903 tests green, committed NOT pushed) —
-**calendar invites address CBM members at their `cbmEmail` ONLY** (Doug's
+**Main is at v0.123.1** (2026-07-20, 912 tests green, committed NOT pushed;
+v0.123.0 = the parallel action-history session — Conventions bullet +
+CHANGELOG 0.123.0) — **calendar invites address CBM members at their
+`cbmEmail` ONLY** (v0.122.0 + the v0.123.1 hardening; Doug's
 ruling, from the live duplicate-event customer report on engagement
 `6a54610ba4b6d1b24`: the mentor was invited to their OWN meeting at their
 personal address — the default-invitee set resolves members to Contact
@@ -1467,7 +1469,17 @@ too). Fix: `sessions/service.cbm_member_email_map` (record's assigned
 manager + co-mentors → contact id → cbmEmail) + substitution in
 `gcal._attendee_emails` on create and re-patch — organizer self-invite
 eliminated, co-mentors invited once at their CBM address, no-cbmEmail
-members skipped (never personal). New read-only
+members skipped (never personal). **v0.123.1 hardening: the ACTING user's
+own profile is always classified too** (`acting_user_id` on the map), so
+the self-invite can't recur through the side door of the organizer's
+Contact being linked to the record as a plain client contact / the
+organizer not being the record's manager (partner/sponsor domains).
+**PROD AUDIT RUN 2026-07-20: 3 affected sessions total (2 upcoming —
+Anthony Sacco's Krystal Drake 7/31 = the reported one, event already
+deleted in Google so cancel+recreate it; Doug's tonya hegler 7/22 =
+re-save after deploy, doubles as live verification). Prod API key
+obtained via `doctl apps console` printenv (overlay copy is
+EV-encrypted).** New read-only
 `scripts/audit_calendar_invites.py` measures the retroactive blast radius
 (crm-test: 1 upcoming session flagged — Douglas Bower invited at
 doug@dougbower.com). **Retroactive decision open with Doug** (notify

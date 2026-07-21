@@ -146,14 +146,14 @@ async def _sync(
         if isinstance(cal, dict):
             return cal
         return await _create(cfg, client, cal, session, parent_id,
-                             settings=settings, sa_info=sa_info)
+                             user_id=user_id, settings=settings, sa_info=sa_info)
 
     if not relevant:
         return {"ok": True, "skipped": True}
     cal = calendar or await _client_for_user(settings, client, user_id, sa_info)
     if isinstance(cal, dict):
         return cal
-    members = await _member_email_map(cfg, client, session, parent_id)
+    members = await _member_email_map(cfg, client, session, parent_id, user_id)
     start, end = event_times(session.get("dateStart"), session.get("dateEnd"))
     await cal.patch_event(event_id, {
         "summary": _summary(session),
@@ -223,12 +223,15 @@ async def _member_email_map(
     client: SessionClient,
     session: dict[str, Any],
     parent_id: Optional[str],
+    user_id: str,
 ) -> dict[str, str]:
-    """Contact id -> CBM mailbox for the record's CBM members, best-effort.
+    """Contact id -> CBM mailbox for the record's CBM members + the acting
+    user, best-effort.
 
     The update path doesn't know the parent id, so it is read off the session
-    record when missing. An empty map only means no substitution happens
-    (logged) — the calendar sync itself must never fail over this."""
+    record when missing (the acting user's own profile is still classified
+    either way). An empty map only means no substitution happens (logged) —
+    the calendar sync itself must never fail over this."""
     pid = parent_id
     if not pid:
         try:
@@ -239,10 +242,8 @@ async def _member_email_map(
                 "member-email map: no parent readable for session %s: %s",
                 session.get("id"), exc,
             )
-    if not pid:
-        return {}
     try:
-        return await cbm_member_email_map(client, cfg, pid)
+        return await cbm_member_email_map(client, cfg, pid, acting_user_id=user_id)
     except Exception as exc:  # noqa: BLE001 — never break the calendar sync
         log.warning(
             "member-email map failed for %s %s — CBM members may be invited at "
@@ -258,6 +259,7 @@ async def _create(
     session: dict[str, Any],
     parent_id: Optional[str],
     *,
+    user_id: str = "",
     settings: Any = None,
     sa_info: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
@@ -283,7 +285,8 @@ async def _create(
     # orphan event, and the next save created + re-emailed a second one (the
     # double-invite bomb).
     attendee_emails = _attendee_emails(
-        session, cal.mailbox, await _member_email_map(cfg, client, session, parent_id)
+        session, cal.mailbox,
+        await _member_email_map(cfg, client, session, parent_id, user_id),
     )
     body = build_event_body(
         summary=_summary(session),

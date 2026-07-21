@@ -383,6 +383,30 @@ async def test_member_without_cbm_email_never_invited_personally(monkeypatch):
     assert body == {"attendees": [{"email": "pat@x.com"}]}
 
 
+async def test_acting_user_classified_even_when_not_record_manager(monkeypatch):
+    """The acting organizer's own profile is always classified — if their
+    Contact reached the record as a plain CLIENT contact (no mentorProfile /
+    co-mentor link on the engagement), the self-invitation is still
+    suppressed."""
+    crm, cal = _fake_crm(
+        attendee_rows=[
+            {"id": "c1", "name": "Pat Koran", "emailAddress": "pat@x.com"},
+            {"id": "c9", "name": "Mgr Self", "emailAddress": "mgr.personal@gmail.com"},
+        ],
+    ), FakeCalendar()
+    # E1 keeps its default record (NO mentorProfileId); mp1 is only reachable
+    # as the acting user's own profile (crm.mentors links it to u1).
+    crm.records[("CMentorProfile", "mp1")] = {
+        "cbmEmail": " Mgr@CBMentors.org ", "contactRecordId": "c9",
+    }
+    _wire(monkeypatch, cal)
+    await service.create_session(
+        MENTOR, crm, "E1", dict(NEW_CHANGES), ["c1", "c9"],
+        owner_user_id="u1", settings=SETTINGS_ON)
+    (_eid, body, _send), = cal.patched
+    assert body == {"attendees": [{"email": "pat@x.com"}]}
+
+
 async def test_update_patch_substitutes_member_emails(monkeypatch):
     """The update path has no parent id in hand — the hook reads it off the
     session record and still classifies CBM members on the re-patch."""

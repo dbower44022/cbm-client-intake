@@ -638,7 +638,10 @@ async def _cbm_contacts(
 
 
 async def cbm_member_email_map(
-    client: SessionClient, cfg: DomainConfig, parent_id: str
+    client: SessionClient,
+    cfg: DomainConfig,
+    parent_id: Optional[str],
+    acting_user_id: Optional[str] = None,
 ) -> dict[str, str]:
     """Contact id -> CBM mailbox (lowercased) for every CBM member on the record.
 
@@ -648,12 +651,31 @@ async def cbm_member_email_map(
     their Contact's primary email when building event invitations; a member
     whose profile has no cbmEmail maps to ``""`` (skip — never invite
     personally). Members = the parent's assigned manager + (mentor domain)
-    co-mentors, the same set as the default-invitee list. Best-effort per
-    read: an unreadable profile just isn't in the map (logged), degrading that
-    one person to client-contact treatment rather than failing the caller.
+    co-mentors, the same set as the default-invitee list — plus the ACTING
+    user's own profile (``acting_user_id``), so the organizer is classified
+    even when they aren't the record's manager/co-mentor (e.g. their Contact
+    linked to the record as a plain client contact — the self-invite could
+    otherwise recur through that side door). Best-effort per read: an
+    unreadable profile just isn't in the map (logged), degrading that one
+    person to client-contact treatment rather than failing the caller.
     """
     profiles: list[dict[str, Any]] = []
-    if cfg.parent_manager_link:
+    if acting_user_id:
+        try:
+            profile_id = await resolve_manager_profile(client, acting_user_id)
+            if profile_id:
+                profiles.append(
+                    await client.get(
+                        MENTOR_PROFILE, profile_id,
+                        select="name,cbmEmail,contactRecordId",
+                    )
+                )
+        except EspoError as exc:
+            log.warning(
+                "member-email map: acting user %s profile unreadable: %s",
+                acting_user_id, exc,
+            )
+    if parent_id and cfg.parent_manager_link:
         try:
             parent = await client.get(
                 cfg.parent_entity, parent_id, select=f"{cfg.parent_manager_link}Id"
@@ -671,7 +693,7 @@ async def cbm_member_email_map(
                 "member-email map: manager profile unreadable for %s %s: %s",
                 cfg.parent_entity, parent_id, exc,
             )
-    if cfg.supports_comentor:
+    if parent_id and cfg.supports_comentor:
         try:
             co_data = await client.list_related(
                 cfg.parent_entity, parent_id, _COMENTOR_LINK,

@@ -34,6 +34,22 @@ audited and most multi-record actions post no note. This starts the fix.
 10 new tests (7 `test_action_log` + wiring integration); 911 green. Inert
 against the CRM until `CActionLog` is built.
 
+## [0.123.1] — 2026-07-20
+
+### Fixed
+- **Calendar member classification hardened: the acting organizer's own
+  profile is always in the member map** (`cbm_member_email_map` gains
+  `acting_user_id`, resolved via `resolve_manager_profile`). The v0.122.0 map
+  only classified people ON the record (assigned manager + co-mentors), so
+  the self-invitation could recur through a side door: the organizer's
+  Contact linked to the record as a plain client contact, or (partner/
+  sponsor domains) the acting manager not being the record's assigned
+  manager. Now the organizer is classified regardless — their contact
+  resolves to the organizer mailbox and drops out of the invite list.
+  Prod retroactive audit run the same day: 3 affected sessions (2 upcoming;
+  plan = cancel+recreate the reported one whose event is already deleted,
+  re-save the other post-deploy).
+
 ## [0.122.0] — 2026-07-20
 
 ### Fixed
