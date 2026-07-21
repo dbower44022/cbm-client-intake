@@ -42,7 +42,12 @@ plan routes **all appropriate** outbound and inbound email through it.
 
 1. **CRM (both instances):** add an **"Email"** option to
    `CIntakeSubmission.form` — until it exists the audit log for approved
-   email submissions WARNs (best-effort, non-blocking).
+   email submissions WARNs (best-effort, non-blocking). ALSO: the /ops
+   admins' gate-team role needs **Email: Create** (+Read) — every app send
+   writes a native Email record as the acting user, and a missing grant
+   surfaces as "The message WAS sent, but recording it in the CRM failed"
+   (hit live on crm-test 2026-07-21, HTTP 403 on create Email; verify via
+   Users → the account → Access).
 2. **crm-test first:** set `OPS_MAILBOX=info@cbmentors.org` on **web AND
    worker** of the crm-test overlay (`.do/app.prod.yaml`), apply via doctl.
    Run the verification pass (below). NOTE: both envs polling the same
