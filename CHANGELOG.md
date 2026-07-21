@@ -4,6 +4,41 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.119.0] — 2026-07-20
+
+**feat(ui): request timeout on every app's `api()` helper** (Doug's follow-up
+to 0.114.0 — extends the sessions-only timeout to the rest). New shared
+`CBMBusy.fetch(url, opts)` in `frontend/shared/busy.js`: an AbortController
+aborts a request that hangs past 60 s so it ends in a readable message
+("The server took too long to respond. Nothing you typed has been lost — check
+whether your change was saved before trying again.") instead of a silent stuck
+button. It calls the busy-wrapped `window.fetch`, so the press spinner still
+applies, and it throws a `.timeout` Error that propagates to the caller's catch
+exactly as a network error already does. Wired into the `api()` helper of every
+remaining app — assignments, mentoradmin, mentorprofile, myemail, ops,
+directory, portal — as a one-line swap (`await CBMBusy.fetch(…)` with a plain
+`fetch` fallback if busy.js somehow didn't load). The sessions app keeps its own
+tailored timeout, whose message can promise no duplicate because its creates
+carry an idempotency token (0.112.0); this shared one is deliberately neutral
+since those apps' writes aren't all idempotent. Verified against the running app
+(login spins through `CBMBusy.fetch` and clears; the timeout path throws the
+readable error; no console errors).
+
+Also settled this session — **the engagement-activation question from 0.112.0,
+now answered and NOT a systemic problem.** Using an admin CRM read: the Mentor
+Role has **no field-level lock** on `CEngagement` (the silent-strip theory is
+wrong), `edit` scope is `own` and the assigned mentor is in `assignedUsers`, and
+"Active" is a valid `engagementStatus` option. Blast radius: of the **16**
+engagements with a Completed session, **15 are correctly Active** (each with an
+app-written "→ Active" stream note, multiple mentors/dates) — the activation
+feature works. **Only Christopher Maurer (`6a5a2c6ab50ca311f`) is stuck at
+Assigned**, and it is exactly the engagement that got the triple-duplicate-save.
+Its stream shows the status set to Assigned at 17:01 and never changed again —
+activation left no trace, so the best-effort write was swallowed during the
+duplicate-save storm and no later Completed save retried it. With duplicate
+saves now prevented (0.112.0) the trigger is gone, and the rule self-heals on
+the next Completed-session save; the one record can be set to Active by hand.
+
 ## [0.118.0] — 2026-07-20
 
 Stamp-drift prevention **layers 2 + 3** — completes the plan (1: audit

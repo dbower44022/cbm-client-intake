@@ -160,5 +160,48 @@
     };
   }
 
-  window.CBMBusy = { start: start };
+  // --- request timeout -----------------------------------------------------
+  // A request that hangs forever is what made a save look like it had failed
+  // (no spinner, no end, nothing to cancel) — the user then acted again. The
+  // sessions app has its own tailored timeout (its message can promise no
+  // duplicate, because its creates carry an idempotency token); this is the
+  // shared one for every other app's api() helper. AbortController aborts a
+  // stuck request so it ends in a readable message instead of silence.
+  //
+  //   var resp = await CBMBusy.fetch(url, opts);   // 60s default
+  //
+  // Calls the busy-wrapped window.fetch, so the spinner still applies. Throws a
+  // timeout Error (``.timeout === true``, ``.status === 0``) that propagates
+  // out of api() to the caller's catch, exactly as a network error does today.
+  var DEFAULT_TIMEOUT_MS = 60000;
+
+  function fetchWithTimeout(url, opts, timeoutMs) {
+    opts = opts || {};
+    timeoutMs = timeoutMs || DEFAULT_TIMEOUT_MS;
+    // No AbortController, or the caller supplied its own signal => don't
+    // interfere; just pass through (still spinner-wrapped).
+    if (!window.AbortController || opts.signal) return window.fetch(url, opts);
+    var ctl = new AbortController();
+    opts.signal = ctl.signal;
+    var timedOut = false;
+    var timer = setTimeout(function () { timedOut = true; ctl.abort(); }, timeoutMs);
+    return window.fetch(url, opts).then(
+      function (resp) { clearTimeout(timer); return resp; },
+      function (err) {
+        clearTimeout(timer);
+        if (timedOut) {
+          var e = new Error(
+            "The server took too long to respond. Nothing you typed has been "
+            + "lost — check whether your change was saved before trying again."
+          );
+          e.status = 0;
+          e.timeout = true;
+          throw e;
+        }
+        throw err;
+      }
+    );
+  }
+
+  window.CBMBusy = { start: start, fetch: fetchWithTimeout };
 })();

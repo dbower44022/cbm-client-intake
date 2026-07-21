@@ -17,7 +17,12 @@
     opts = opts || {};
     opts.headers = Object.assign({ "Content-Type": "application/json" }, opts.headers || {});
     opts.credentials = "same-origin";
-    var resp = await fetch(API + path, opts);
+    // Timeout-wrapped (CBMBusy.fetch): a hung request ends in a readable
+    // message instead of silence. Falls back to plain fetch if busy.js
+    // somehow did not load.
+    var resp = await (window.CBMBusy && CBMBusy.fetch
+      ? CBMBusy.fetch(API + path, opts)
+      : fetch(API + path, opts));
     var data = null;
     try { data = await resp.json(); } catch (e) {}
     if (!resp.ok) {
