@@ -192,7 +192,8 @@ Proposed fields:
 | Field | Type | Purpose |
 |-------|------|---------|
 | `name` | varchar (auto) | the one-line summary — same text as the stream note |
-| `actionType` | enum | Mentor Assigned / Reassigned / Approved, Login Provisioned, Session Recorded, Engagement Activated, Profile Edited, Contact Linked/Unlinked, Email Sent, Document Uploaded, Access Granted, Contribution Recorded, Field Edited, … |
+| `category` | enum (small, stable) | the coarse grouping for report filters — see §4.3 (Assignment / Status Change / Record Edit / Contact & Company / Session / Provisioning / Contribution / Communication / Document / Intake / Config) |
+| `actionType` | **varchar** (canonical vocabulary in code) | the specific verb — e.g. `Mentor Reassigned`, `Login Provisioned`, `Drive Access Granted`. Free-text on purpose (see §4.3): it **never rejects a new action**, and it's still exactly filterable in reports |
 | `app` | enum | Client Administration / Mentor Administration / Client-Partner-Funder Management / My Mentor Profile / Directories / Submission Admin / Communications / Intake |
 | `actor` | link → User | who did it (click-through, filter "everything Jane did") |
 | `actorName` | varchar | stored explicitly so attribution survives even when the row is written under the API key (see below) |
@@ -210,6 +211,46 @@ staff role having a grant, and can't be silently dropped by a role gap. Because
 (The *Stream note* still posts as the signed-in user, so on-record history reads
 naturally as authored by them.) Best-effort but logged: a failed `CActionLog`
 create still emits the structured app-log line (§6).
+
+### 4.3 Does `actionType` cover *all* actions? Yes — by design, not by list
+
+A fixed `actionType` enum **cannot** be provably complete: every new feature adds
+an action, and — the trap we've hit repeatedly in this codebase — if the app ever
+sends a value the enum doesn't contain, **EspoCRM rejects the whole write**
+(`validationFailure`), so the log entry we most wanted (a *new* kind of action)
+is the one that fails. That's why the whole app already treats non-required enums
+as free strings guarded by a sanitizer.
+
+So the design guarantees coverage two ways:
+
+- **`actionType` is a free-text varchar** drawn from a **canonical vocabulary kept
+  in code** (one constants module). Any action — today's or a future one — always
+  logs; a typo or a new verb can never reject the write. It's still exactly
+  filterable (`actionType = "Mentor Reassigned"`) and groupable in reports.
+- **`category` is the small, stable enum** (11 values) that the report filters and
+  charts group by. New verbs slot under an existing category without any CRM
+  change.
+
+**The full canonical vocabulary today** (every mutating action from the §5.1
+inventory — this *is* the completeness check):
+
+| `category` | `actionType` values |
+|-----------|---------------------|
+| **Assignment** | Mentor Assigned · Mentor Reassigned · Assignment Repaired · Engagement Accepted · Engagement Activated · Co-mentor Added · Co-mentor Removed |
+| **Status Change** | Status Changed *(carries entity + before→after; e.g. mentorStatus, partnershipStatus, engagementStatus)* |
+| **Record Edit** | Record Edited *(entity + changed fields in `details`)* · Notes Edited · Profile Photo Updated · Email Signature Updated |
+| **Contact & Company** | Contact Linked · Contact Unlinked · Contact Created · Company Created · Contact Email Added |
+| **Session** | Session Recorded · Session Edited · Calendar Event Created · Calendar Event Updated · Calendar Event Cancelled |
+| **Provisioning** | Mentor Approved · Login Provisioned · Mailbox Provisioned · User Links Reconciled |
+| **Contribution** | Contribution Recorded · Contribution Edited · Contribution Cancelled |
+| **Communication** | Email Sent · Conversation Linked · Conversation Removed |
+| **Document** | Document Uploaded · Document Archived · Document Restored · Drive Access Granted · Drive Access Revoked |
+| **Intake** | Submission Received · Submission Redriven · Submission Resolved · Submission Discarded |
+| **Config** | Integration Config Changed |
+
+That's ~40 verbs across 11 categories, covering every write in §5.1. New actions
+append to this table in code — no CRM change, no risk of a rejected log — so the
+answer to "does it have enough values?" stays *yes* permanently.
 
 **Reporting, two ways:**
 - **Immediately, in the CRM (zero app code):** a saved-search list view by actor
@@ -373,9 +414,12 @@ both app and hand edits; item 3 unlocks the Phase-1 reporting.
   entities (Phase 0, item 1).
 
 **Still worth your call:**
-1. **`CActionLog` fields — confirm the shape in §4.2** before I wire to it (the
-   `actionType`/`app` enum value lists especially, since they drive the report
-   filters). I can propose the final enum lists with the code.
+1. **`CActionLog` fields — confirm the shape in §4.2/§4.3** before I wire to it.
+   Note the deliberate choice: `category` is the small stable **enum** (11 values,
+   drives report grouping) and `actionType` is a **free-text** verb from a
+   code-kept vocabulary (§4.3) so a new action can never be rejected. If you'd
+   rather `actionType` also be a hard enum for a tidy dropdown, we can — but it
+   then must be kept in sync and risks rejecting a new action's log entry.
 2. **How much to log?** Recommendation: **key actions + audited value fields**, not
    every keystroke — log an *action* (with before→after), let audited fields carry
    incidental edits. Say the word if you want every Details-tab field edit as its
