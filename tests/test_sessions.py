@@ -2152,3 +2152,46 @@ async def test_create_contact_stamps_mentor_team():
     cid = created["id"]
     stamp = [u for u in fake.updates if u[1] == cid and "assignedUsersIds" in u[2]]
     assert stamp and set(stamp[0][2]["assignedUsersIds"]) == {"uM", "uC"}
+
+
+# --- action-history logging (plan §5.1: Session Recorded + activation) ------
+
+class _FakeActionLogClient:
+    def __init__(self):
+        self.created = []
+
+    async def metadata(self, key):
+        return {"CActionLog": {}} if key == "scopes" else {}
+
+    async def create(self, entity, payload):
+        self.created.append((entity, payload))
+        return {"id": "log1"}
+
+
+def test_create_session_writes_action_log_rows(monkeypatch):
+    """The create endpoint logs Session Recorded, and Engagement Activated when
+    the save activated the engagement (the reporting half of the plan)."""
+    _as(monkeypatch, _USER)
+
+    async def fake_create(cfg, client, parent_id, changes, attendees,
+                          owner_user_id=None, settings=None, skip_calendar=False):
+        return {"id": "s1", "name": "2026-07-20 - Acme", "status": "Completed",
+                "sessionType": "Client Session",
+                "engagement": {"activated": True, "from": "Assigned", "to": "Active"}}
+
+    monkeypatch.setattr("sessions.service.create_session", fake_create)
+    from core import action_log
+    action_log._exists_cache.clear()
+    fake = _FakeActionLogClient()
+    monkeypatch.setattr(action_log, "_actionlog_client", lambda: fake)
+
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.post("/mentorsessions/api/records/E1/sessions",
+                   json={"changes": {"name": "X"}})
+    assert r.status_code == 200
+    logged = {p["actionType"]: p for e, p in fake.created if e == "CActionLog"}
+    assert "Session Recorded" in logged and "Engagement Activated" in logged
+    assert logged["Session Recorded"]["parentId"] == "E1"
+    assert logged["Session Recorded"]["app"] == "Client Management"
+    assert logged["Engagement Activated"]["category"] == "Status Change"
+    assert logged["Session Recorded"]["actorName"] == _USER["name"]

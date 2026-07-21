@@ -20,6 +20,7 @@ from pydantic import BaseModel
 
 from assignments.auth import clear_session, current_user, is_member, session_expired
 from assignments.espo_user import client_for
+from core import action_log
 from comms import service as comms_service
 from comms import templates as comms_templates
 from core.config import get_settings
@@ -419,7 +420,7 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             user = _require_user(request)
             client = client_for(get_settings(), user)
             try:
-                return await service.accept_engagement(
+                result = await service.accept_engagement(
                     cfg, client, parent_id,
                     actor=user.get("name") or user.get("userName"),
                 )
@@ -427,6 +428,14 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 raise HTTPException(status_code=400, detail=str(exc))
             except EspoError as exc:
                 raise _crm_failure(request, exc, "Could not accept the engagement")
+            await action_log.log_action(
+                app=cfg.title, category=action_log.CAT_ASSIGNMENT,
+                action=action_log.ACT_ENGAGEMENT_ACCEPTED,
+                parent_type=cfg.parent_entity, parent_id=parent_id,
+                summary=f"Engagement accepted: {result.get('from')} → {result.get('to')}.",
+                actor_id=user["userId"], actor_name=user["name"], details=result,
+            )
+            return result
 
     if cfg.contributions_link:
         # The funder ledger (prds/funder-contributions-plan.md) — registered
@@ -554,6 +563,29 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             cfg.parent_entity, parent_id, user["userName"],
             ", ".join(sorted(body.changes)) or "-",
         )
+        if result.get("id"):
+            _label = (result.get("name") or "session").strip()
+            _status = result.get("status")
+            await action_log.log_action(
+                app=cfg.title, category=action_log.CAT_SESSION,
+                action=action_log.ACT_SESSION_RECORDED,
+                parent_type=cfg.parent_entity, parent_id=parent_id,
+                summary=f"Session recorded: {_label}"
+                + (f" ({_status})." if _status else "."),
+                actor_id=user["userId"], actor_name=user["name"],
+                details={"sessionId": result.get("id"), "status": _status,
+                         "sessionType": result.get("sessionType")},
+            )
+        _eng = result.get("engagement") or {}
+        if _eng.get("activated"):
+            await action_log.log_action(
+                app=cfg.title, category=action_log.CAT_STATUS,
+                action=action_log.ACT_ENGAGEMENT_ACTIVATED,
+                parent_type=cfg.parent_entity, parent_id=parent_id,
+                summary=f"Engagement activated: {_eng.get('from')} → {_eng.get('to')} "
+                "(first completed session).",
+                actor_id=user["userId"], actor_name=user["name"], details=_eng,
+            )
         return result
 
     @router.put("/sessions/{session_id}")
@@ -571,6 +603,17 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             "session CSession/%s saved by %s (fields: %s)",
             session_id, user["userName"], ", ".join(sorted(body.changes)) or "-",
         )
+        _eng = result.get("engagement") or {}
+        _eng_id = result.get("engagementId") or result.get("parentId")
+        if _eng.get("activated") and _eng_id:
+            await action_log.log_action(
+                app=cfg.title, category=action_log.CAT_STATUS,
+                action=action_log.ACT_ENGAGEMENT_ACTIVATED,
+                parent_type=cfg.parent_entity, parent_id=_eng_id,
+                summary=f"Engagement activated: {_eng.get('from')} → {_eng.get('to')} "
+                "(first completed session).",
+                actor_id=user["userId"], actor_name=user["name"], details=_eng,
+            )
         return result
 
     if cfg.supports_comentor:
@@ -595,6 +638,14 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 )
             except EspoError as exc:
                 raise _crm_failure(request, exc, "Could not add co-mentor")
+            await action_log.log_action(
+                app=cfg.title, category=action_log.CAT_ASSIGNMENT,
+                action=action_log.ACT_COMENTOR_ADDED,
+                parent_type=cfg.parent_entity, parent_id=parent_id,
+                summary="Co-mentor added.",
+                actor_id=user["userId"], actor_name=user["name"],
+                details={"mentorProfileId": body.mentorProfileId, **(result or {})},
+            )
             # DOC-09: the co-mentor gains the engagement folder's Commenter
             # grant in the same action that grants the entitlement. Best-effort
             # — a failure never fails the add (nightly reconciliation backstop).
@@ -618,6 +669,14 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 )
             except EspoError as exc:
                 raise _crm_failure(request, exc, "Could not remove the co-mentor")
+            await action_log.log_action(
+                app=cfg.title, category=action_log.CAT_ASSIGNMENT,
+                action=action_log.ACT_COMENTOR_REMOVED,
+                parent_type=cfg.parent_entity, parent_id=parent_id,
+                summary="Co-mentor removed.",
+                actor_id=user["userId"], actor_name=user["name"],
+                details={"mentorProfileId": mentor_profile_id, **(result or {})},
+            )
             # DOC-09: revocation rides the same action that ends the
             # entitlement (best-effort, reconciliation backstop).
             await doc_grants.sync_record_grants_safe(
