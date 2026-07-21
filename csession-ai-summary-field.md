@@ -1,6 +1,9 @@
 # `CSession.sessionAiSummary` — CRM build specification
 
-**Status: NOT BUILT (spec'd 2026-07-21).** Required for Phase 2 of the Fathom
+**Status: BUILT (2026-07-21, per Doug) — probe-verified on crm-test the same
+day (`sessionAiSummary` present, type wysiwyg, alongside both transcript
+fields); prod build reported by Doug, unverifiable from the app side (the
+prod overlay's API key is EV-encrypted).** Required for Phase 2 of the Fathom
 note-taker integration (app side shipped in v0.124.0, gated off by
 `FATHOM_TRANSCRIPTS`; plan: `prds/fathom-transcript-integration.md`). This is
 the CRM-team handoff, in the style of `csession-transcript-fields.md` /
