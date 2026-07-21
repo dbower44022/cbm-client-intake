@@ -38,6 +38,8 @@ from sessions.config import AI_SUMMARY_FIELD, SESSION, TRANSCRIPT_DOC_URL_FIELD 
 from sessions.transcripts import (  # noqa: E402
     FathomTranscriptSource,
     _candidate_sessions,
+    _mentor_mailboxes,
+    _session_attendee_emails,
     _write_back,
 )
 
@@ -144,15 +146,22 @@ async def main() -> None:
                  "or pass --key.")
     client = FathomClient(args.key, base_url=args.base_url)
     now = datetime.now(timezone.utc)
-    # --days drives the source's sweep window too, so an old test recording
-    # is still matchable (the worker itself uses transcript_give_up_days).
-    source = FathomTranscriptSource(client, now=now, give_up_days=args.days)
 
     await list_meetings(client, args.days)
 
     if args.match or args.deliver:
         espo = EspoClient(settings.espo_base_url, settings.espo_api_key)
         print(f"\nCRM: {settings.espo_base_url}")
+        mailboxes = await _mentor_mailboxes(espo)
+
+        async def emails(session):
+            return await _session_attendee_emails(espo, session, mailboxes)
+
+        # --days drives the source's sweep window too, so an old test recording
+        # is still matchable (the worker itself uses transcript_give_up_days);
+        # attendee emails feed the invitee-overlap match preference.
+        source = FathomTranscriptSource(
+            client, now=now, give_up_days=args.days, attendee_emails=emails)
         if args.match:
             await match_sessions(settings, espo, source)
         if args.deliver:

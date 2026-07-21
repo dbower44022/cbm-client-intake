@@ -191,11 +191,18 @@ stays a candidate until it resolves or ages out of
   All candidate sessions resolve against this in-memory index; only a
   matched session costs a per-recording transcript call. Worst case at
   CBM volume: a handful of calls per cycle against the 60/min limit.
-- **Match rule** (mirrors the Meet source's reused-code handling):
-  normalized URL equal AND the meeting's start
-  (`recording_start_time`, falling back to `scheduled_start_time`)
-  within the existing ±36h `_MATCH_WINDOW` of the session's `dateStart`;
-  multiple matches ⇒ closest start wins.
+- **Match rule** (mirrors the Meet source's reused-code handling, hardened
+  for personal Zoom rooms in v0.125.0): normalized URL equal AND the
+  meeting's start (`recording_start_time`, falling back to
+  `scheduled_start_time`) within the existing ±36h `_MATCH_WINDOW` of the
+  session's `dateStart`. Among window matches, **invitee overlap outranks
+  time proximity**: a meeting whose `calendar_invitees` include any of the
+  session's expected emails (attendee contacts + assigned users'
+  cbmEmails) wins over a closer non-overlapping one — a personal meeting
+  room hosts many meetings, and the one with the session's people on the
+  calendar is the session's meeting. Closest start breaks ties and is the
+  fallback when nothing overlaps or no emails are resolvable (the overlap
+  check is a preference, never a gate).
 - `ready` ⇒ `SourceResult(html=transcript_html,
   doc_url=share_url, summary_html=…, action_items_html=…)`. A matched
   meeting whose transcript array is empty ⇒ `not_ready` (Fathom may

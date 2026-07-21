@@ -4,7 +4,7 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
-## [0.125.0] — 2026-07-21
+## [0.126.0] — 2026-07-21
 
 **fix(comms): sent emails no longer look cut off — outbound messages keep
 everything the author wrote.** Doug's report (example: Douglas Bower →
@@ -43,6 +43,24 @@ it self-heals on deploy).
   content after an early valediction / a person introduction / the sign-off
   + signature; still strips quoted history in HTML and plain text; inbound
   default unchanged).
+
+## [0.125.0] — 2026-07-21
+
+**feat(fathom): invitee-overlap match preference — reused links (personal
+Zoom rooms) can't grab the wrong recording.** Doug's follow-up to "how do
+you match a personal meeting URL that never changes": time proximity alone
+picks the closest recording in the room, which could be someone else's
+meeting. `_best_meeting` now prefers, among the window-matched recordings,
+those whose Fathom `calendar_invitees` overlap the session's expected
+people — the session's attendee contacts' emails plus its assigned users'
+cbmEmails (`_session_attendee_emails`: one `sessionAttendees` relationship
+read per fetched session + the cycle's existing mentor-mailbox map, now a
+shared lazy `mailbox_map()`); closest start breaks ties and remains the
+fallback when nothing overlaps or no emails are known. Preference only —
+the resolver failing (or the role lacking the attendee read) never blocks
+a match. `FathomTranscriptSource` gains `attendee_emails=` (async callable,
+injected by the cycle and by `scripts/probe_fathom.py`). 957 tests green at commit
+(5 new).
 
 ## [0.124.1] — 2026-07-21
 

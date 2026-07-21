@@ -506,3 +506,75 @@ async def test_fathom_source_documented_summary_key_fallback():
     result = await _fathom_source(FakeFathom(meetings=[legacy])).fetch(
         _session(), "")
     assert "<p><strong>Alt</strong></p>" in result.summary_html
+
+
+# --- invitee-overlap match preference (v0.125.0) --------------------------------
+
+async def _emails_doug(_session_dict):
+    return {"client@acme.test", "doug.bower@cbmentors.org"}
+
+
+def _room_meeting(rid, start, invitees):
+    return dict(FATHOM_MEETING, recording_id=rid, recording_start_time=start,
+                calendar_invitees=[{"email": e} for e in invitees])
+
+
+async def test_overlap_outranks_time_proximity():
+    """Personal-room case: the closer recording belongs to someone else's
+    meeting; the session's real meeting (invitee overlap) wins despite the
+    larger time gap."""
+    closer_wrong = _room_meeting(1, "2026-07-16T15:10:00Z",
+                                 ["other.person@example.test"])
+    farther_right = _room_meeting(2, "2026-07-16T16:30:00Z",
+                                  ["client@acme.test"])
+    fake = FakeFathom(meetings=[closer_wrong, farther_right])
+    source = FathomTranscriptSource(fake, now=NOW, give_up_days=14,
+                                    attendee_emails=_emails_doug)
+    result = await source.fetch(_session(), "")
+    assert result.status == "ready" and fake.transcript_calls == [2]
+
+
+async def test_no_overlap_anywhere_falls_back_to_closest():
+    a = _room_meeting(1, "2026-07-16T15:10:00Z", ["x@example.test"])
+    b = _room_meeting(2, "2026-07-16T16:30:00Z", ["y@example.test"])
+    fake = FakeFathom(meetings=[a, b])
+    source = FathomTranscriptSource(fake, now=NOW, give_up_days=14,
+                                    attendee_emails=_emails_doug)
+    result = await source.fetch(_session(), "")
+    assert result.status == "ready" and fake.transcript_calls == [1]
+
+
+async def test_no_email_resolver_keeps_closest_behavior():
+    a = _room_meeting(1, "2026-07-16T15:10:00Z", ["client@acme.test"])
+    b = _room_meeting(2, "2026-07-16T14:55:00Z", [])
+    fake = FakeFathom(meetings=[a, b])
+    source = _fathom_source(fake)  # no attendee_emails
+    result = await source.fetch(_session(), "")
+    assert result.status == "ready" and fake.transcript_calls == [2]
+
+
+async def test_email_resolver_failure_never_blocks():
+    async def boom(_s):
+        raise RuntimeError("attendee read failed")
+    fake = FakeFathom()
+    source = FathomTranscriptSource(fake, now=NOW, give_up_days=14,
+                                    attendee_emails=boom)
+    result = await source.fetch(_session(), "")
+    assert result.status == "ready"
+
+
+async def test_default_cycle_resolver_reads_attendees_and_mailboxes():
+    """_session_attendee_emails: attendee contact emails + assigned users'
+    cbmEmails, best-effort."""
+    from sessions.transcripts import _session_attendee_emails
+
+    class RelEspo(FakeEspo):
+        async def list_related(self, entity, record_id, link, **kw):
+            assert (entity, link) == ("CSession", "sessionAttendees")
+            return {"list": [{"emailAddress": "Client@Acme.test"},
+                             {"emailAddress": None}]}
+
+    emails = await _session_attendee_emails(
+        RelEspo(), _session(assignedUsersIds=["u1"]),
+        {"u1": "doug.bower@cbmentors.org"})
+    assert emails == {"client@acme.test", "doug.bower@cbmentors.org"}

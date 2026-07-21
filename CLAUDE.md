@@ -1525,6 +1525,17 @@ markdown links now render as safe anchors. Cleanup: ZZTEST CSession
 `6a5f011bce8e19a19` in crm-test (parentless — delete in the EspoCRM UI).
 Next: team key or per-mentor ruling, worker overlay flag, in-UI eyeball
 of the AI SUMMARY zone on a parented session.
+**v0.126.0 — invitee-overlap match preference** (v0.125.0 = the parallel outbound-email-truncation fix session) (957 tests green): for
+reused links (personal Zoom rooms — Doug's question), a window-matched
+meeting whose Fathom `calendar_invitees` overlap the session's people
+(attendee contacts' emails + assigned users' cbmEmails,
+`_session_attendee_emails`) outranks a closer non-overlapping recording;
+closest start remains tie-break + fallback; preference never blocks
+(resolver failure / missing grant ⇒ plain time match). Also noted: Fathom
+emits TWO next-step lists by design — the structured `action_items` (what
+we route to nextSteps, has assignees) and the summary template's own
+"Next Steps" prose section (stays inside sessionAiSummary); counts will
+disagree, not a bug (Doug reviewed, kept as-is).
 
 Before that: **v0.123.1** (2026-07-20, 912 tests green, committed NOT pushed;
 v0.123.0 = the parallel action-history session — Conventions bullet +

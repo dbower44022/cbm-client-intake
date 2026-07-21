@@ -175,7 +175,12 @@ class FathomTranscriptSource(TranscriptSource):
     link_contains = None  # Fathom records Meet, Zoom, and Teams meetings
 
     def __init__(
-        self, client: FathomClient, *, now: datetime, give_up_days: int = 14
+        self,
+        client: FathomClient,
+        *,
+        now: datetime,
+        give_up_days: int = 14,
+        attendee_emails: Optional[Any] = None,
     ) -> None:
         self._client = client
         # Cover a meeting held up to a match-window before the oldest
@@ -183,6 +188,12 @@ class FathomTranscriptSource(TranscriptSource):
         self._created_after = now - timedelta(days=give_up_days) - _MATCH_WINDOW
         self._index: Optional[dict[str, list[dict[str, Any]]]] = None
         self._listing_failed = False
+        # Optional async callable session -> set[str] of expected participant
+        # emails (attendee contacts + the mentor team's cbmEmails). Used to
+        # prefer the meeting whose calendar invitees overlap the session's
+        # people — disambiguates reused links (personal Zoom rooms) beyond
+        # plain time proximity.
+        self._attendee_emails = attendee_emails
 
     def matches(self, link: str) -> bool:
         return normalize_meeting_url(link) is not None
@@ -214,8 +225,15 @@ class FathomTranscriptSource(TranscriptSource):
         await self._ensure_index()
         if self._listing_failed:
             return SourceResult("not_ready", reason="Fathom unavailable this cycle")
-        meeting = _closest_meeting(
-            (self._index or {}).get(key, []), start
+        expected_emails: set[str] = set()
+        if self._attendee_emails is not None:
+            try:
+                expected_emails = set(await self._attendee_emails(session)) or set()
+            except Exception as exc:  # noqa: BLE001 — preference only, never blocks
+                log.debug("attendee-email lookup failed for session %s: %s",
+                          session.get("id"), exc)
+        meeting = _best_meeting(
+            (self._index or {}).get(key, []), start, expected_emails
         )
         if meeting is None:
             return SourceResult("not_ready", reason="no Fathom recording yet")
@@ -260,13 +278,28 @@ def _summary_markdown(meeting: dict[str, Any]) -> str:
     return str(raw or "")
 
 
-def _closest_meeting(
-    meetings: list[dict[str, Any]], session_start: datetime
+def _invitee_emails(meeting: dict[str, Any]) -> set[str]:
+    emails = set()
+    for invitee in meeting.get("calendar_invitees") or []:
+        email = ((invitee or {}).get("email") or "").strip().lower()
+        if email:
+            emails.add(email)
+    return emails
+
+
+def _best_meeting(
+    meetings: list[dict[str, Any]],
+    session_start: datetime,
+    expected_emails: set[str],
 ) -> Optional[dict[str, Any]]:
-    """The meeting starting closest to the session inside the match window
-    (disambiguates reused meeting links, mirroring the Meet source)."""
-    best: Optional[dict[str, Any]] = None
-    best_gap: Optional[timedelta] = None
+    """The best meeting for a session among those inside the match window.
+
+    Invitee overlap outranks time proximity (a personal Zoom room hosts many
+    meetings — the one whose calendar invitees include the session's people
+    is the session's meeting even when another recording is closer in time);
+    closest start breaks ties and is the fallback when no meeting overlaps
+    or no expected emails are known."""
+    in_window: list[tuple[dict[str, Any], timedelta]] = []
     for meeting in meetings:
         start = _parse_iso(
             meeting.get("recording_start_time") or meeting.get("scheduled_start_time")
@@ -274,11 +307,18 @@ def _closest_meeting(
         if start is None:
             continue
         gap = abs(start - session_start)
-        if gap > _MATCH_WINDOW:
-            continue
-        if best_gap is None or gap < best_gap:
-            best, best_gap = meeting, gap
-    return best
+        if gap <= _MATCH_WINDOW:
+            in_window.append((meeting, gap))
+    if not in_window:
+        return None
+    if expected_emails:
+        overlapping = [
+            (m, gap) for m, gap in in_window
+            if _invitee_emails(m) & expected_emails
+        ]
+        if overlapping:
+            in_window = overlapping
+    return min(in_window, key=lambda pair: pair[1])[0]
 
 
 def _parse_iso(stamp: Any) -> Optional[datetime]:
@@ -322,6 +362,17 @@ async def run_transcript_cycle(
     has_ai_summary = AI_SUMMARY_FIELD in fields
 
     now = now or datetime.now(timezone.utc)
+    mailboxes: Optional[dict[str, str]] = None  # user id -> cbmEmail, lazy
+
+    async def mailbox_map() -> dict[str, str]:
+        nonlocal mailboxes
+        if mailboxes is None:
+            mailboxes = await _mentor_mailboxes(espo)
+        return mailboxes
+
+    async def attendee_emails(session: dict[str, Any]) -> set[str]:
+        return await _session_attendee_emails(espo, session, await mailbox_map())
+
     if sources is None:
         sources = []
         if fathom_on:
@@ -337,6 +388,7 @@ async def run_transcript_cycle(
                     ),
                     now=now,
                     give_up_days=getattr(settings, "transcript_give_up_days", 14),
+                    attendee_emails=attendee_emails,
                 ))
             else:
                 log.warning("transcript retrieval: FATHOM_TRANSCRIPTS is on "
@@ -360,7 +412,6 @@ async def run_transcript_cycle(
         any_link=any(s.link_contains is None for s in sources),
     )
     summary = {"candidates": len(candidates), "stored": 0, "pending": 0, "skipped": 0}
-    mailboxes: Optional[dict[str, str]] = None  # user id -> cbmEmail, lazy
     for session in candidates:
         try:
             link = session.get("videoMeetingLink") or ""
@@ -370,9 +421,9 @@ async def run_transcript_cycle(
                     continue
                 mailbox = ""
                 if source.needs_mailbox:
-                    if mailboxes is None:
-                        mailboxes = await _mentor_mailboxes(espo)
-                    mailbox = await _organizer_mailbox(espo, session, mailboxes) or ""
+                    mailbox = await _organizer_mailbox(
+                        espo, session, await mailbox_map()
+                    ) or ""
                     if not mailbox:
                         log.info(
                             "transcript skip %s (%s): no resolvable organizer "
@@ -462,6 +513,35 @@ async def _candidate_sessions(
         if len(rows) < _PAGE:
             return sessions
         offset += _PAGE
+
+
+_ATTENDEE_LINK = "sessionAttendees"  # relationship read, service._attendees precedent
+
+
+async def _session_attendee_emails(
+    espo: Any, session: dict[str, Any], mailboxes: dict[str, str]
+) -> set[str]:
+    """The emails expected on the session's calendar event: attendee contacts'
+    addresses plus the session's assigned users' cbmEmails. Best-effort — used
+    only as a match preference (invitee overlap), never to block."""
+    emails: set[str] = set()
+    try:
+        related = await espo.list_related(
+            SESSION, session["id"], _ATTENDEE_LINK,
+            select="emailAddress", max_size=50,
+        )
+        for contact in related.get("list", []):
+            email = ((contact or {}).get("emailAddress") or "").strip().lower()
+            if email:
+                emails.add(email)
+    except Exception as exc:  # noqa: BLE001
+        log.debug("attendee read failed for session %s: %s",
+                  session.get("id"), exc)
+    for uid in [session.get("assignedUserId"),
+                *(session.get("assignedUsersIds") or [])]:
+        if uid and mailboxes.get(uid):
+            emails.add(mailboxes[uid])
+    return emails
 
 
 async def _mentor_mailboxes(espo: Any) -> dict[str, str]:
