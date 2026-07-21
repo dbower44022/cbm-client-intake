@@ -179,7 +179,10 @@ the env vars are the fallback.
 **Google Calendar events for sessions (optional, web component, v0.40.0)** —
 `GCAL_EVENTS=true` makes a saved **Scheduled** session create/patch/cancel a
 Google Calendar event (with a Meet link written to `videoMeetingLink`) on the
-manager's own calendar, inviting the attendees. Reuses
+manager's own calendar, inviting the attendees. CBM members on the attendee
+list are invited at their **`cbmEmail` only** (v0.122.0/v0.123.1 — never the
+personal email on their Contact record; the organizer is never self-invited).
+Reuses
 `GOOGLE_SERVICE_ACCOUNT_JSON` (or the Email-Setup config) — no new secret.
 Activation order (the app is inert until ALL are done): enable the **Google
 Calendar API** in the GCP project; add

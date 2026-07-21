@@ -117,6 +117,22 @@ attendees receive invitations, and the session's `videoMeetingLink` gains a
 `meet.google.com` URL; edit the time → the event moves; set status Cancelled
 → the event is cancelled.
 
+**How attendees are addressed (v0.122.0/v0.123.1, verified live on prod
+2026-07-21):** client contacts are invited at their Contact record's email.
+**CBM members** (the assigned mentor, co-mentors, and the acting organizer)
+are invited at their **`cbmEmail` only** — never the personal email on their
+Contact record — and the organizer is never invited at all (Google shows the
+event on their calendar as organizer). A member whose profile has no
+`cbmEmail` is silently skipped (logged), not invited personally. This closed
+the duplicate-event report: the organizer used to get a self-invitation at
+their personal address, and accepting it created a second event copy.
+
+**User guidance worth repeating in the mentor guide:** the meeting lives on
+the mentor's `@cbmentors.org` calendar and the CRM session record is the
+source of truth — cancel/reschedule from the app, not Google Calendar.
+Deleting the event by hand in Google cancels it for the client too, and the
+CRM never learns of Google-side deletions (sync is one-way, app → Google).
+
 ## Troubleshooting
 
 | Symptom (app log / UI notice) | Cause / fix |
@@ -126,3 +142,6 @@ attendees receive invitations, and the session's `videoMeetingLink` gains a
 | `HTTP 403 … forbidden` on a specific mailbox | The impersonated user doesn't exist / is suspended in Workspace (check the mentor's `cbmEmail` matches a real account) |
 | Event created but no Meet link | Meet service disabled for the org, or the link was still pending (the app retries once; re-saving the session's time backfills it) |
 | "your profile has no CBM email address" notice | Not Google — the manager's `CMentorProfile.cbmEmail` is blank in the CRM |
+| Mentor sees TWO copies of the meeting / is asked to accept their own meeting | Fixed in v0.122.0/v0.123.1 (members were invited at their Contact's personal email). On an older event, re-save the session with a schedule-relevant change — the re-patch removes the personal-address invite (Google emails it a cancellation) |
+| Mentor deleted the event in Google Calendar; the CRM still shows the session | By design — sync is one-way (app → Google). Deleting the organizer copy cancels it for all guests. Cancel the session in the app (tolerates the already-deleted event) and create a fresh one if the meeting should still happen |
+| A CBM member on the attendees got no invitation | Their `CMentorProfile.cbmEmail` is blank (members are never invited at personal addresses) — set the CBM email, or check the run log warning naming them |
