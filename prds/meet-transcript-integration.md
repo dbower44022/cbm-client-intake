@@ -6,9 +6,14 @@ CONFIRMED (CBM is on Business Standard — the blocking prerequisite below is
 resolved); CRM fields built + probe-verified on crm-test, API-key CSession
 READ verified; REMAINING: the three Google-side changes (Meet transcription
 admin toggle, `meetings.space.created` on the DWD row, Meet API on in GCP),
-then the flag + live verification.** App side: `core/gmeet.py`, the schedule-time auto-enable
+then the flag + live verification.
+EXTENDED 2026-07-21 (v0.124.0–v0.126.0): the provider seam is now an
+ORDERED SOURCE LIST shared with the **Fathom note-taker source** — see
+`prds/fathom-transcript-integration.md` (Fathom first when enabled, this
+Meet source is the fallback; `run_transcript_cycle(sources=…)`; the
+worker timer runs on either flag).** App side: `core/gmeet.py`, the schedule-time auto-enable
 in `sessions/gcal.py`, the worker retrieval job `sessions/transcripts.py`, and
-the "Transcript document" facts-grid row. CRM handoff:
+the "Transcript / recording link" facts-grid row (relabelled v0.124.0). CRM handoff:
 `csession-transcript-fields.md`. Originally drafted 2026-07-17 from Doug's
 rulings (below) and verified API research. The app-side UI was already built
 and feature-gated (v0.37.0): the session view's Transcript zone and the

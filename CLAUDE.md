@@ -1456,7 +1456,22 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-21)
 
-**Main is at v0.125.0** (2026-07-21, 952 tests green, committed NOT pushed) —
+**Main is at v0.126.0** (2026-07-21, 957 tests green, committed NOT pushed) —
+**the Fathom note-taker transcript arc is COMPLETE and VERIFIED LIVE on
+crm-test** (one session, three releases: v0.124.0 build — ordered-source
+seam, Fathom first / Meet fallback, action-items routing; v0.124.1 live
+delivery of a real recording via `scripts/probe_fathom.py` + real-API
+shape fixes; v0.126.0 invitee-overlap match preference for reused personal
+meeting rooms). Full mechanics in the v0.124.0 Current-status block below,
+CHANGELOG 0.124.0/0.124.1/0.126.0, and the plan
+`prds/fathom-transcript-integration.md` (status header current).
+**Remaining, all Doug-side:** the team-key vs per-mentor ruling (an
+individual key sees only own + team-shared recordings), setting
+`FATHOM_TRANSCRIPTS=true` + `FATHOM_API_KEY` on the crm-test WORKER
+overlay, an in-UI eyeball of the AI SUMMARY zone on a parented session,
+and deleting the ZZTEST CSession `6a5f011bce8e19a19` in the crm-test UI.
+
+Before that: **v0.125.0** (2026-07-21, 952 tests green, committed NOT pushed) —
 **fix: sent emails no longer look cut off in the Communications viewer**
 (Doug's report, example Douglas Bower → mindy@mindybower.com 7/17). Root
 cause: OUTBOUND messages were cleaned at ingest with the full INBOUND

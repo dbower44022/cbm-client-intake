@@ -7,10 +7,15 @@ Zoom meeting) delivered end-to-end via `scripts/probe_fathom.py --deliver`:
 transcript + action-items→empty-nextSteps + linked summary→sessionAiSummary
 (field BUILT on crm-test, probe-verified) + share URL, all GET-verified.
 Live probe corrected two API shapes: the summary key is `default_summary`
-and summaries are markdown-link-dense (now rendered). Remaining: the team
-key / team-sharing decision (an individual key only sees its own + shared
-recordings), the worker overlay flag, and an in-UI eyeball of the AI
-SUMMARY zone on a parented session.** App
+and summaries are markdown-link-dense (now rendered). **v0.126.0 hardened
+matching for reused links** (personal Zoom rooms — see the Match-rule
+bullet: invitee overlap outranks time proximity). Also noted with Doug:
+Fathom emits TWO next-step lists by design — the structured `action_items`
+(routed to `nextSteps`, has assignees) and the summary template's own
+"Next Steps" prose section (stays inside the summary); counts will
+disagree, not a bug. Remaining: the team key / team-sharing decision (an
+individual key only sees its own + shared recordings), the worker overlay
+flag, and an in-UI eyeball of the AI SUMMARY zone on a parented session.** App
 side: `core/fathom.py`, the multi-source seam + `FathomTranscriptSource` in
 `sessions/transcripts.py`, the AI Summary view zone. One build note: when
 the CRM lacks `sessionAiSummary`, the action-items → empty-`nextSteps` path
