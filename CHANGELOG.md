@@ -4,6 +4,19 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.123.2] — 2026-07-21
+
+**fix(sessions): saving a contribution amount no longer trips EspoCRM's
+validCurrency check.** Doug's live report: editing an amount onto a
+contribution created without one failed — "'Amount' failed the CRM's
+'validCurrency' check". EspoCRM's currency type validates ``amount`` against
+``amountCurrency``, and the editor collects only the number; a record whose
+stored currency is null (created amount-less) rejected the bare value.
+Any save that sets an amount now carries a currency
+(`sessions/service._backfill_amount_currency`, on create AND update): the
+record's existing ``amountCurrency`` when present, else USD (CBM is
+USD-only). Clearing an amount adds nothing. 1 new test (4 cases).
+
 ## [0.123.0] — 2026-07-20
 
 **feat(history): action-history + cross-record reporting — Phase 1 foundation

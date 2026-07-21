@@ -287,6 +287,39 @@ async def test_update_contribution_whitelists_and_reads_scope_first():
 
 
 @pytest.mark.asyncio
+async def test_amount_save_backfills_currency():
+    """EspoCRM's validCurrency check rejects a bare amount when the record's
+    stored amountCurrency is null (live 2026-07-21) — any save setting an
+    amount carries a currency: the record's existing one, else USD."""
+    # update on a record with no stored currency -> USD
+    fake = _fake(records={("CContribution", "c9"): {
+        "name": "Pledge", "sponsorProfileId": "S1",
+    }})
+    await service.update_contribution(SPONSOR, fake, "c9", {"amount": 1200})
+    assert fake.updates[0][2] == {"amount": 1200, "amountCurrency": "USD"}
+
+    # update on a record that already has a currency -> keep it
+    fake2 = _fake(records={("CContribution", "c9"): {
+        "name": "Pledge", "sponsorProfileId": "S1", "amountCurrency": "EUR",
+    }})
+    await service.update_contribution(SPONSOR, fake2, "c9", {"amount": 500})
+    assert fake2.updates[0][2] == {"amount": 500, "amountCurrency": "EUR"}
+
+    # create with an amount -> USD; clearing an amount adds NO currency
+    fake3 = _fake()
+    await service.create_contribution(
+        SPONSOR, fake3, "S1", {"name": "G", "contributionType": "Donation",
+                               "status": "Received", "amount": 100},
+    )
+    assert fake3.created[0][1]["amountCurrency"] == "USD"
+    fake4 = _fake(records={("CContribution", "c9"): {
+        "name": "Pledge", "sponsorProfileId": "S1",
+    }})
+    await service.update_contribution(SPONSOR, fake4, "c9", {"amount": None, "designation": "x"})
+    assert "amountCurrency" not in fake4.updates[0][2]
+
+
+@pytest.mark.asyncio
 async def test_update_with_no_effective_changes_writes_nothing():
     fake = _fake(records={("CContribution", "c9"): {
         "name": "Gift", "sponsorProfileId": "S1",

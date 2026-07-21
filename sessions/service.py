@@ -1844,6 +1844,24 @@ async def _sanitize_contribution_enums(
             del payload[key]
 
 
+# The instance's currency; the editor collects a bare number, the app supplies
+# the code. CBM operates in USD only.
+_CONTRIB_DEFAULT_CURRENCY = "USD"
+
+
+def _backfill_amount_currency(
+    payload: dict[str, Any], existing_currency: Optional[str] = None
+) -> None:
+    """EspoCRM's currency type validates ``amount`` against ``amountCurrency``
+    (``validCurrency``) — a bare amount on a record whose stored currency is
+    null is REJECTED. The editor never collects a currency, so any save that
+    sets an amount carries one: the record's existing currency, else USD.
+    (Found live 2026-07-21: editing an amount onto a contribution created
+    without one 400'd; creates passed only via the instance default.)"""
+    if payload.get("amount") is not None and not payload.get("amountCurrency"):
+        payload["amountCurrency"] = existing_currency or _CONTRIB_DEFAULT_CURRENCY
+
+
 async def create_contribution(
     cfg: DomainConfig, client: SessionClient, parent_id: str, changes: dict[str, Any]
 ) -> dict[str, Any]:
@@ -1861,6 +1879,7 @@ async def create_contribution(
     parent = await client.get(cfg.parent_entity, parent_id, select=select)
     payload = _contribution_payload(changes)
     await _sanitize_contribution_enums(client, payload)
+    _backfill_amount_currency(payload)
     payload[cfg.contributions_parent_fk] = parent_id
     if cfg.contributions_donor_account_attr and parent.get(cfg.contributions_donor_account_attr):
         payload.setdefault("donorAccountId", parent[cfg.contributions_donor_account_attr])
@@ -1877,9 +1896,10 @@ async def update_contribution(
 ) -> dict[str, Any]:
     """Whitelisted, enum-sanitized update. Soft delete = status Cancelled
     through this same path; there is NO hard-delete surface anywhere."""
-    await get_contribution(cfg, client, contribution_id)  # scope + ACL gate first
+    current = await get_contribution(cfg, client, contribution_id)  # scope + ACL gate first
     payload = _contribution_payload(changes)
     await _sanitize_contribution_enums(client, payload)
+    _backfill_amount_currency(payload, current.get("amountCurrency"))
     if payload:
         await client.update(CONTRIBUTION, contribution_id, payload)
         log.info("contribution %s updated (%s)", contribution_id, ", ".join(sorted(payload)))
