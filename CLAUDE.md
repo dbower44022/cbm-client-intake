@@ -1612,8 +1612,15 @@ two-step discard guard). All summary math on the fly, server-side, in
 `sessions/service.contribution_summary` (25 new tests). The CRM
 `CContribution` entity ALREADY EXISTS on both CRMs (probe-verified crm-test
 2026-07-20; prod enum parity to eyeball). Full mechanics: CHANGELOG 0.115.0.
-**NOT yet driven live** — CRM prereq: sponsor team's role gets CContribution
-create/read/edit (Read=All, no delete). Harness gotcha reconfirmed:
+**VERIFIED LIVE on crm-test 2026-07-21** — first attempts 403'd (empty-body
+`POST /CContribution` denial in the run logs; read passed, create didn't):
+the crm-test sponsor role's CContribution **Create was set wrong** — fixed by
+Doug via the Users → Access merged-ACL check ([[espo-403-diagnosis-merged-team-roles]]),
+then a contribution saved end-to-end. CRM prereq per instance: sponsor team's
+role gets CContribution create/read/edit (Read=All, no delete) — **replicate
+on PROD before prod use**. Still worth one eyeball live: future-dated pledge
+→ Scheduled tile + upcoming accent, Cancel → excluded-but-visible, period
+rollup on real data. Harness gotcha reconfirmed:
 `.ctb__line{display:flex}` beat `[hidden]` until the explicit
 `[hidden]{display:none !important}` guard ([[harness-js-clicks-bypass-overlays]]).
 
