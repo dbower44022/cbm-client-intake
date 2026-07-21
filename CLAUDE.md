@@ -1456,7 +1456,29 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-21)
 
-**Main is at v0.124.0** (2026-07-21, 944 tests green, committed NOT pushed) —
+**Main is at v0.125.0** (2026-07-21, 952 tests green, committed NOT pushed) —
+**fix: sent emails no longer look cut off in the Communications viewer**
+(Doug's report, example Douglas Bower → mindy@mindybower.com 7/17). Root
+cause: OUTBOUND messages were cleaned at ingest with the full INBOUND
+signature-stripping heuristics — an early "Thanks,"/"Best," line or a
+"Name / Title / email" person-introduction deleted every paragraph after
+it, and even a normal sign-off + signature was removed (reproduced all
+three modes locally). Fix: `clean_email(..., outbound=True)` — messages
+our user wrote keep everything authored; ONLY quoted reply history is
+still demoted (the new-text-only ruling holds for inbound, unchanged
+byte-for-byte). Wired in `comms/sync.py` (covers app-send write-through +
+the periodic sync of sent copies) and the /ops conversation view (cleans
+per-request → self-heals on deploy). **Stored truncated rows do NOT
+self-heal** (rfc-id dedup never re-stores): new
+**`scripts/repair_outbound_bodies.py`** re-fetches each Outbound
+CCommunication from Gmail and rewrites `bodyCleaned`/`snippet`
+(dry-run default, `--write` applies; needs GOOGLE_SERVICE_ACCOUNT_JSON —
+run inside the deployed worker via `doctl apps console`, per env).
+CHANGELOG 0.125.0. **Doug-side after deploy:** run the repair dry-run on
+each env, eyeball the report, then `--write`; re-open the mindy example
+to confirm.
+
+Before that: **v0.124.0** (2026-07-21, 944 tests green, committed NOT pushed) —
 **Fathom note-taker transcript source: the retrieval pipeline supports
 either note taker** (plan `prds/fathom-transcript-integration.md`, drafted +
 built this session from Doug's rulings: one team API key; **Fathom first,

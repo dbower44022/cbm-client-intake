@@ -4,6 +4,46 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.125.0] — 2026-07-21
+
+**fix(comms): sent emails no longer look cut off — outbound messages keep
+everything the author wrote.** Doug's report (example: Douglas Bower →
+mindy@mindybower.com, 2026-07-17): the Communications viewer renders the
+stored `bodyCleaned`, and at ingest OUTBOUND messages were run through the
+same aggressive inbound signature-stripping heuristics as received mail.
+Reproduced three truncation modes on realistic app-composed bodies:
+- an early "Thanks," / "Best," line deleted every paragraph after it
+  (`_strip_signature_block` — its has-real-sentences guard also fails on
+  lines starting with "I …", since `_NAME_LINE`-style regexes require a
+  lowercase run after the capital);
+- introducing a person ("Jane Smith / Marketing Consultant / jane@…")
+  truncated the rest of the message (`_strip_standalone_signature`);
+- even a normal sign-off + signature was removed, so sent mail read as
+  chopped mid-thought.
+Fix: `clean_email(..., outbound=True)` — for messages OUR user wrote (app
+compose write-through, their own mailbox's sent copies in the sync, /ops
+shared-mailbox sent messages) only the **quoted reply history** is still
+removed (quotequail + quote containers + "On … wrote:" / `>`-tails; Doug's
+2026-07-11 new-text-only ruling holds); the signature/valediction/
+boilerplate heuristics are skipped entirely, incl. the structural
+`gmail_signature` removal and the text-search unsubscribe cutoff (both can
+eat authored content; faithful storage wins for outbound). Inbound cleaning
+is byte-identical to before. Wired: `comms/sync.py` (direction computed
+before cleaning), `ops/router.py` conversation view (cleans per-request, so
+it self-heals on deploy).
+- **Stored rows do NOT self-heal** (the sync's rfc-id dedup never re-stores
+  a message) — new **`scripts/repair_outbound_bodies.py`**: re-fetches every
+  Outbound CCommunication's raw from Gmail (sourceMailbox + gmailMessageId,
+  the sync's delegation), re-cleans with `outbound=True`, reports the diffs;
+  `--write` updates `bodyCleaned` + `snippet`. Needs
+  GOOGLE_SERVICE_ACCOUNT_JSON, so run it where the env has it (e.g.
+  `doctl apps console <app> delivery-worker` → `python
+  scripts/repair_outbound_bodies.py` then `--write`), per env.
+- 952 tests green (6 new in tests/test_email_clean.py: outbound keeps
+  content after an early valediction / a person introduction / the sign-off
+  + signature; still strips quoted history in HTML and plain text; inbound
+  default unchanged).
+
 ## [0.124.1] — 2026-07-21
 
 **fix(fathom): align to the REAL API shapes + VERIFIED LIVE against a real

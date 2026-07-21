@@ -127,3 +127,75 @@ def test_quote_only_reply_gets_placeholder():
 def test_html_escaped_in_output():
     out = clean_email("Use <b>bold</b> & such.")
     assert "&lt;b&gt;" in out.html and "&amp;" in out.html
+
+
+# --- outbound mode (the 2026-07-21 "sent emails look cut off" fix) -----------
+# Messages OUR user wrote get the light clean: quoted history removed, but the
+# inbound signature/valediction heuristics — which truncate authored content —
+# are skipped entirely.
+
+
+def test_outbound_keeps_content_after_early_valediction():
+    html = (
+        "<p>Hi Mindy,</p><p>Thanks,</p>"
+        "<p>I reviewed your business plan and have three suggestions. "
+        "Contact our partner at info@cbmentors.org for funding help.</p>"
+    )
+    out = clean_email("", html, outbound=True)
+    assert "three suggestions" in out.text
+    assert "info@cbmentors.org" in out.text
+
+
+def test_outbound_keeps_person_introduction():
+    html = (
+        "<p>Hi Mindy,</p><p>I want to introduce you to my colleague:</p>"
+        "<p>Jane Smith<br>Marketing Consultant<br>jane@example.com</p>"
+        "<p>She can help with your social media strategy.</p>"
+    )
+    out = clean_email("", html, outbound=True)
+    assert "Jane Smith" in out.text
+    assert "social media strategy" in out.text
+
+
+def test_outbound_keeps_signature_and_signoff():
+    html = (
+        "<p>Great meeting today.</p><p>Thanks,</p>"
+        "<p>Douglas Bower<br>Mentor, Cleveland Business Mentors</p>"
+    )
+    out = clean_email("", html, outbound=True)
+    assert "Thanks" in out.text
+    assert "Douglas Bower" in out.text
+
+
+def test_outbound_still_strips_quoted_history():
+    html = (
+        "<div dir='ltr'><p>Sounds good, see you Friday.</p>"
+        "<div class='gmail_signature'>Doug Bower<br>Mentor</div></div>"
+        "<div class='gmail_quote'>On Thu, Jul 16, 2026 Mindy wrote:<br>"
+        "<blockquote>Can we meet Friday instead?</blockquote></div>"
+    )
+    out = clean_email("", html, outbound=True)
+    assert "see you Friday" in out.text
+    assert "Doug Bower" in out.text  # own gmail_signature kept on outbound
+    assert "meet Friday instead" not in out.text
+    assert "meet Friday instead" in out.quoted
+
+
+def test_outbound_plaintext_strips_on_wrote_tail():
+    body = (
+        "Sounds great, talk soon!\n\n"
+        "On Fri, Jun 26, 2026 at 1:06 AM Mindy Bower <mindy@mindybower.com>\n"
+        "wrote:\n\n> Are we still on for Friday?\n"
+    )
+    out = clean_email(body, outbound=True)
+    assert out.text == "Sounds great, talk soon!"
+
+
+def test_inbound_default_unchanged_strips_signature():
+    html = (
+        "<p>Great meeting today.</p><p>Thanks,</p>"
+        "<p>Douglas Bower<br>Mentor, Cleveland Business Mentors<br>"
+        "doug.bower@cbmentors.org</p>"
+    )
+    out = clean_email("", html)
+    assert "Douglas Bower" not in out.text

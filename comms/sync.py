@@ -202,8 +202,12 @@ async def ingest_message(
                 log.warning("thread-map write failed for %s: %s", conv_id, exc)
 
     # 3. Clean + store the message. Raw mail stays in Gmail (the ids deep-link).
-    cleaned = clean_email(parsed.body_text, parsed.body_html)
+    # Outbound (our user wrote it) gets the light clean — quoted history only;
+    # the inbound signature heuristics truncate authored content.
     direction = "Outbound" if parsed.from_address == scope.mailbox else "Inbound"
+    cleaned = clean_email(
+        parsed.body_text, parsed.body_html, outbound=direction == "Outbound"
+    )
     await espo.create(
         crm.COMMUNICATION,
         {

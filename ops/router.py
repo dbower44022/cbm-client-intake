@@ -329,7 +329,7 @@ async def submission_messages(submission_id: str, request: Request) -> dict:
         # Shared mode: "sent" = written by the shared mailbox; legacy mode
         # keeps the old submitter comparison.
         sent = (p.from_address == gmail.mailbox) if shared else (p.from_address != address)
-        cleaned = clean_email(p.body_text, p.body_html or None)
+        cleaned = clean_email(p.body_text, p.body_html or None, outbound=sent)
         messages.append({
             "id": p.gmail_id,
             "threadId": p.thread_id,

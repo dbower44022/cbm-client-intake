@@ -330,14 +330,24 @@ def _strip_gt_quotes(text: str) -> str:
     return text
 
 
-def _text_level_cleanup(text: str) -> str:
+def _text_level_cleanup(text: str, outbound: bool = False) -> str:
     """The shared tail of both tracks (quote headers → mobile sigs →
     disclaimers → separators → signature detection → promo → unsubscribe →
-    unwrap → whitespace)."""
+    unwrap → whitespace).
+
+    ``outbound=True`` = a message OUR user wrote (app compose or their own
+    Gmail): only quoted reply history is removed — the signature/valediction/
+    promo heuristics are for inbound mail and truncate real authored content
+    (an early "Thanks," or a "Jane Smith / Consultant" introduction deleted
+    everything after it — the 2026-07-21 "sent emails look cut off" report).
+    """
     m = _ON_WROTE.search(text)
     if m:
         text = text[: m.start()].rstrip()
     text = _strip_gt_quotes(text)
+    if outbound:
+        text = _unwrap_lines(text)
+        return re.sub(r"\n{3,}", "\n\n", text).strip()
     text = _MOBILE_SIGNATURE.sub("", text).rstrip()
     m = _CONFIDENTIAL_NOTICE.search(text)
     if m:
@@ -412,11 +422,13 @@ def _remove_outlook_separators_html(soup) -> None:
             break
 
 
-def _html_track(html: str) -> tuple[str, str]:
+def _html_track(html: str, outbound: bool = False) -> tuple[str, str]:
     """(author_text, quoted_text) from an HTML body — structural stripping.
 
     ``quoted_text`` is the meaningful quoted reply chain (kept for the
     de-emphasized zone); signatures/boilerplate are removed outright.
+    ``outbound=True`` keeps the author's signature and footers — only the
+    quoted history (quote containers / cutoff markers) is removed.
     """
     from bs4 import BeautifulSoup
 
@@ -444,18 +456,21 @@ def _html_track(html: str) -> tuple[str, str]:
             el.decompose()
 
     # 3. Signatures — with the "whole body inside gmail_signature" re-parse.
-    sig_elements = []
-    for selector in _SIGNATURE_SELECTORS:
-        sig_elements.extend(soup.select(selector))
-    if sig_elements:
-        for el in sig_elements:
-            el.decompose()
-        if not soup.get_text(strip=True):
-            log.debug("signature removal emptied result — re-parsing without it")
-            soup = BeautifulSoup(html, "lxml")
-            for selector in _QUOTE_SELECTORS:
-                for el in soup.select(selector):
-                    el.decompose()
+    #    Skipped for outbound: the author's own signature is part of what they
+    #    sent and removing it makes the stored copy read as truncated.
+    if not outbound:
+        sig_elements = []
+        for selector in _SIGNATURE_SELECTORS:
+            sig_elements.extend(soup.select(selector))
+        if sig_elements:
+            for el in sig_elements:
+                el.decompose()
+            if not soup.get_text(strip=True):
+                log.debug("signature removal emptied result — re-parsing without it")
+                soup = BeautifulSoup(html, "lxml")
+                for selector in _QUOTE_SELECTORS:
+                    for el in soup.select(selector):
+                        el.decompose()
 
     # 4. Cutoff markers (+ all following siblings), Outlook separators, footers.
     for selector in _CUTOFF_SELECTORS:
@@ -465,7 +480,8 @@ def _html_track(html: str) -> tuple[str, str]:
                 sibling.decompose()
             el.decompose()
     _remove_outlook_separators_html(soup)
-    _remove_unsubscribe_footers_html(soup)
+    if not outbound:
+        _remove_unsubscribe_footers_html(soup)
 
     author_text = soup.get_text(separator="\n", strip=True)
 
@@ -496,17 +512,25 @@ def _text_to_html(text: str) -> str:
     )
 
 
-def clean_email(body_text: str, body_html: str | None = None) -> CleanedEmail:
-    """Clean one email body. HTML-first with a plain-text fallback."""
+def clean_email(
+    body_text: str, body_html: str | None = None, *, outbound: bool = False
+) -> CleanedEmail:
+    """Clean one email body. HTML-first with a plain-text fallback.
+
+    ``outbound=True`` = a message written by OUR user (app compose, or their
+    own mailbox's sent copy): only the quoted reply history is removed; the
+    signature/valediction/boilerplate heuristics — tuned for inbound mail —
+    are skipped, because on authored content they truncate real paragraphs.
+    """
     quoted = ""
     text = ""
 
     # ── HTML track ────────────────────────────────────────────────────────
     if body_html and body_html.strip():
         try:
-            author_text, quoted = _html_track(body_html)
+            author_text, quoted = _html_track(body_html, outbound=outbound)
             if author_text and author_text.strip():
-                text = _text_level_cleanup(author_text)
+                text = _text_level_cleanup(author_text, outbound=outbound)
         except Exception as exc:  # noqa: BLE001 — fall back to plain text
             log.debug("HTML track failed, falling back to plain text: %s", exc)
 
@@ -529,7 +553,7 @@ def clean_email(body_text: str, body_html: str | None = None) -> CleanedEmail:
                 if not quoted:
                     quoted = body[m.start():].strip()
                 body = body[: m.start()].rstrip()
-        text = _text_level_cleanup(body)
+        text = _text_level_cleanup(body, outbound=outbound)
 
     if not text and (body_text or body_html):
         # Everything stripped — a quote-only reply or image-only mail. Never
