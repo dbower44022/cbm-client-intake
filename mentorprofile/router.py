@@ -122,7 +122,7 @@ async def profile(request: Request) -> dict:
     user = _require_user(request)
     client = client_for(get_settings(), user)
     try:
-        return await service.get_own_profile(client, user["userId"])
+        return await service.get_own_profile(client, user["userId"], get_settings())
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not load your profile")
 
@@ -132,7 +132,9 @@ async def profile_update(body: UpdateIn, request: Request) -> dict:
     user = _require_user(request)
     client = client_for(get_settings(), user)
     try:
-        result = await service.update_own_profile(client, user["userId"], body.changes)
+        result = await service.update_own_profile(
+            client, user["userId"], body.changes, get_settings()
+        )
     except service.MentorProfileError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except EspoError as exc:

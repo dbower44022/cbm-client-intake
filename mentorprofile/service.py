@@ -162,11 +162,45 @@ async def field_spec_live(client: ProfileClient) -> list[dict[str, Any]]:
     ]
 
 
-async def get_own_profile(client: ProfileClient, user_id: str) -> dict[str, Any]:
+async def heal_own_contact_stamp(
+    settings: Any, contact_id: str, user_id: str
+) -> None:
+    """Merge the signed-in mentor's own User onto their linked Contact when it
+    is missing (heal-on-access, 2026-07-20: an unstamped own-Contact 403s the
+    mentor's contact-field saves — the Mentor Role edits Contacts at own
+    scope). Runs under the app's API-key identity because the mentor
+    themselves CAN'T fix it (that's the whole problem); tightly scoped — only
+    the caller's own server-resolved contact, only their own user id, merge-
+    only. Best-effort: any failure just logs (the nightly reconciliation is
+    the backstop)."""
+    if settings is None or settings.espo_dry_run or not settings.espo_api_key:
+        return
+    from assignments import stamps  # lazy — keeps import graphs simple
+
+    try:
+        if await stamps.ensure_user_on_record(
+            stamps.system_client(settings), CONTACT_ENTITY, contact_id, user_id
+        ):
+            log.info(
+                "healed own-contact stamp: merged User/%s onto Contact/%s",
+                user_id, contact_id,
+            )
+    except Exception as exc:  # noqa: BLE001 — never blocks the profile flow
+        log.warning(
+            "own-contact stamp heal failed (Contact/%s, User/%s): %s",
+            contact_id, user_id, exc,
+        )
+
+
+async def get_own_profile(
+    client: ProfileClient, user_id: str, settings: Any = None
+) -> dict[str, Any]:
     """The signed-in user's own mentor record: every editable field + the linked
     Contact's fields merged in (best-effort — a profile with no Contact still
     opens; those fields just render blank). ``{"profileFound": False}`` when the
-    login has no linked ``CMentorProfile``."""
+    login has no linked ``CMentorProfile``. With ``settings``, an own-Contact
+    missing the user's stamp is healed on the way (see
+    :func:`heal_own_contact_stamp`), so the later save just works."""
     profile_id = await resolve_manager_profile(client, user_id)
     if not profile_id:
         return {"profileFound": False}
@@ -177,6 +211,7 @@ async def get_own_profile(client: ProfileClient, user_id: str) -> dict[str, Any]
     rec = await client.get(MENTOR_PROFILE, profile_id, select=select)
     contact_id = rec.get("contactRecordId")
     if contact_id:
+        await heal_own_contact_stamp(settings, contact_id, user_id)
         try:
             contact = await client.get(CONTACT_ENTITY, contact_id, select=_CONTACT_SELECT)
             for name in CONTACT_NAMES:
@@ -234,7 +269,8 @@ async def _sanitize_enum_changes(
 
 
 async def update_own_profile(
-    client: ProfileClient, user_id: str, changes: dict[str, Any]
+    client: ProfileClient, user_id: str, changes: dict[str, Any],
+    settings: Any = None,
 ) -> dict[str, Any]:
     """Update whitelisted editable fields on the caller's OWN profile; ignore
     anything else. Profile fields write to CMentorProfile; Contact fields to the
@@ -267,6 +303,9 @@ async def update_own_profile(
         phone = contact_payload.get("phoneNumber")
         if isinstance(phone, str) and phone.strip():
             contact_payload["phoneNumber"] = to_e164(phone)
+        # Heal-on-save: an own-Contact missing this user's stamp would 403 the
+        # write below under the Mentor Role's own-scope Contact edit.
+        await heal_own_contact_stamp(settings, contact_id, user_id)
 
     if payload:
         await client.update(MENTOR_PROFILE, profile_id, payload)

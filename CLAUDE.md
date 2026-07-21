@@ -1449,7 +1449,26 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-20)
 
-**Main is at v0.118.0** (2026-07-20, 890 tests green, committed NOT pushed) —
+**Main is at v0.120.0** (2026-07-20, 897 tests green, committed NOT pushed) —
+**the SECOND stamp-drift class** (live report an hour after layers 1–4: a
+mentor's /mentorprofile save 403'd because their OWN linked Contact lacked
+their User — a different record class from engagement client records;
+staff workaround on deployed code = /mentoradmin **Update Mentor Status**).
+CHANGELOG 0.120.0: (1) the stamp engine + audit CLI gain a **mentor
+personnel phase** (every CMentorProfile with User+Contact → User merged
+onto the Contact's assignedUsers); (2) **/mentorprofile heal-on-access**
+(`mentorprofile.service.heal_own_contact_stamp` via
+`stamps.ensure_user_on_record` under the API-key identity — the mentor
+can't fix it themselves; own server-resolved Contact + own user id only,
+merge-only, best-effort, on profile GET and before contact-field PUT).
+Extended audit re-run on crm-test: all 43 mentor own-Contacts already
+stamped there (the v0.82.0 sweep healed them 2026-07-18) — the reported
+case is prod data drift; prod heals via the sweep now or the first
+reconciliation pass after deploy. **ALERT_EMAIL_TO/FROM=admin@cbmentors.org
+applied to both workers' overlays via doctl 2026-07-20** (activates when
+the unpushed code deploys).
+
+Before that: **v0.118.0** (2026-07-20, 890 tests green) —
 **stamp-drift prevention layers 2+3 — the plan is COMPLETE** (CHANGELOG
 0.118.0): **layer 2** — `sessions/details._stamp_mentor_team` merges the
 engagement's mentor team onto every contact linked/created via the + Add

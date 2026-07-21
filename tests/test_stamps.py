@@ -8,15 +8,16 @@ from assignments import stamps
 
 
 class FakeEspo:
-    def __init__(self, engagements=None, records=None, related=None):
+    def __init__(self, engagements=None, records=None, related=None, profiles=None):
         self.engagements = engagements or []
+        self.profiles = profiles or []           # CMentorProfile roster (phase A)
         self.records = dict(records or {})       # (entity, id) -> dict
         self.related = dict(related or {})       # (entity, id, link) -> [rows]
         self.updates: list[tuple[str, str, dict]] = []
 
     async def list(self, entity, *, select=None, max_size=200, offset=0, **kw):
-        assert entity == "CEngagement"
-        return {"list": self.engagements[offset:offset + max_size]}
+        rows = {"CEngagement": self.engagements, "CMentorProfile": self.profiles}[entity]
+        return {"list": rows[offset:offset + max_size]}
 
     async def list_related(self, entity, record_id, link, *, select=None, max_size=50):
         return {"list": self.related.get((entity, record_id, link), [])}
@@ -160,3 +161,38 @@ async def test_reconciliation_inert_without_a_real_crm():
     assert await stamps.run_stamp_reconciliation(
         Settings(espo_dry_run=False, espo_api_key="")
     ) is None
+
+
+# --- mentor own-Contact phase (the SECOND drift class, 2026-07-20) ------------
+
+
+async def test_reconciliation_heals_mentor_own_contacts():
+    """/mentorprofile 403 class: a profile's linked Contact missing the
+    profile's own User is merged; already-stamped and unlinked profiles are
+    left alone."""
+    espo = FakeEspo(
+        profiles=[
+            {"id": "MP1", "name": "Jane", "assignedUserId": "uJ", "contactRecordId": "cJ"},
+            {"id": "MP2", "name": "Ok", "assignedUserId": "uO", "contactRecordId": "cO"},
+            {"id": "MP3", "name": "NoUser", "contactRecordId": "cN"},
+            {"id": "MP4", "name": "NoContact", "assignedUserId": "uX"},
+        ],
+        engagements=[],
+        records={
+            ("Contact", "cJ"): {"assignedUsersIds": ["uStranger"]},
+            ("Contact", "cO"): {"assignedUsersIds": ["uO"]},
+        },
+    )
+    summary = await stamps.run_stamp_reconciliation(_settings(), client=espo)
+    assert summary["mentorProfiles"] == 2  # MP3/MP4 aren't stampable pairs
+    assert summary["mentorContactsHealed"] == 1
+    writes = {(e, r): p["assignedUsersIds"] for e, r, p in espo.updates}
+    assert writes == {("Contact", "cJ"): ["uStranger", "uJ"]}  # merge-only
+
+
+async def test_ensure_user_on_record_is_noop_when_present():
+    espo = FakeEspo(records={("Contact", "c1"): {"assignedUsersIds": ["u1"]}})
+    assert await stamps.ensure_user_on_record(espo, "Contact", "c1", "u1") is False
+    assert espo.updates == []
+    assert await stamps.ensure_user_on_record(espo, "Contact", "c1", "u2") is True
+    assert espo.updates == [("Contact", "c1", {"assignedUsersIds": ["u1", "u2"]})]

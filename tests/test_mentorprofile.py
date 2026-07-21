@@ -344,7 +344,7 @@ def test_admin_passes_gate(monkeypatch):
     admin = dict(_USER, teams=[], isAdmin=True)
     _authed(monkeypatch, admin)
 
-    async def fake_get(client, user_id):
+    async def fake_get(client, user_id, settings=None):
         return {"profileFound": False}
 
     monkeypatch.setattr("mentorprofile.router.service.get_own_profile", fake_get)
@@ -356,7 +356,7 @@ def test_profile_uses_session_user_id(monkeypatch):
     _authed(monkeypatch)
     seen = {}
 
-    async def fake_get(client, user_id):
+    async def fake_get(client, user_id, settings=None):
         seen["user_id"] = user_id
         return {"profileFound": True, "record": {"id": "m1"}}
 
@@ -370,7 +370,7 @@ def test_profile_uses_session_user_id(monkeypatch):
 def test_update_reports_profile_error_as_400(monkeypatch):
     _authed(monkeypatch)
 
-    async def fake_update(client, user_id, changes):
+    async def fake_update(client, user_id, changes, settings=None):
         raise service.MentorProfileError("Your mentor profile has no linked Contact record.")
 
     monkeypatch.setattr("mentorprofile.router.service.update_own_profile", fake_update)
@@ -400,7 +400,7 @@ def test_crm_403_returns_readable_permission_message(monkeypatch):
 def test_expired_token_returns_401(monkeypatch):
     _authed(monkeypatch)
 
-    async def boom(client, user_id):
+    async def boom(client, user_id, settings=None):
         raise EspoError("list CMentorProfile failed: HTTP 401 Unauthorized")
 
     monkeypatch.setattr("mentorprofile.router.service.get_own_profile", boom)
@@ -489,3 +489,96 @@ def test_portal_lists_app_for_mentor_team(monkeypatch):
     outsider = dict(_USER, teams=["Marketing Admin Team"])
     apps = _apps_for(outsider, settings)
     assert all(a["url"] != "/mentorprofile/" for a in apps)
+
+
+# --- own-Contact heal-on-access (2026-07-20 — the second stamp-drift class) ----
+
+
+class _SystemFake:
+    """Stands in for the API-key client the heal runs under."""
+
+    def __init__(self, contact_assigned=None):
+        self.contact = {"assignedUsersIds": list(contact_assigned or [])}
+        self.updates = []
+
+    async def get(self, entity, record_id, select=None):
+        return dict(self.contact, id=record_id)
+
+    async def update(self, entity, record_id, payload):
+        self.updates.append((entity, record_id, dict(payload)))
+        self.contact.update(payload)
+        return {"id": record_id}
+
+
+def _heal_settings():
+    from core.config import Settings
+
+    return Settings(espo_dry_run=False, espo_api_key="k")
+
+
+@pytest.mark.asyncio
+async def test_profile_load_heals_unstamped_own_contact(monkeypatch):
+    """The reported failure: a mentor's linked Contact missing their User 403s
+    their own contact-field save. Opening the profile now heals it via the
+    system identity BEFORE they ever hit Save."""
+    from assignments import stamps as stamps_mod
+
+    system = _SystemFake(contact_assigned=["someone-else"])
+    monkeypatch.setattr(stamps_mod, "system_client", lambda settings: system)
+    client = FakeClient()
+    result = await service.get_own_profile(client, "u1", _heal_settings())
+    assert result["profileFound"] is True
+    # Merge-only: the existing user is kept, the mentor's own added.
+    assert system.updates == [("Contact", "c1", {"assignedUsersIds": ["someone-else", "u1"]})]
+
+
+@pytest.mark.asyncio
+async def test_profile_save_heals_before_the_contact_write(monkeypatch):
+    from assignments import stamps as stamps_mod
+
+    system = _SystemFake()
+    monkeypatch.setattr(stamps_mod, "system_client", lambda settings: system)
+    client = FakeClient()
+    await service.update_own_profile(
+        client, "u1", {"phoneNumber": "216-555-0100"}, _heal_settings()
+    )
+    # The heal wrote through the SYSTEM client…
+    assert system.updates == [("Contact", "c1", {"assignedUsersIds": ["u1"]})]
+    # …and the user's own contact write then proceeded as them.
+    assert ("Contact", "c1", {"phoneNumber": "+12165550100"}) in client.updates
+
+
+@pytest.mark.asyncio
+async def test_heal_is_noop_when_already_stamped(monkeypatch):
+    from assignments import stamps as stamps_mod
+
+    system = _SystemFake(contact_assigned=["u1"])
+    monkeypatch.setattr(stamps_mod, "system_client", lambda settings: system)
+    await service.get_own_profile(FakeClient(), "u1", _heal_settings())
+    assert system.updates == []
+
+
+@pytest.mark.asyncio
+async def test_heal_failure_never_blocks_the_profile(monkeypatch):
+    from assignments import stamps as stamps_mod
+
+    class Exploding(_SystemFake):
+        async def get(self, entity, record_id, select=None):
+            raise RuntimeError("CRM down")
+
+    monkeypatch.setattr(stamps_mod, "system_client", lambda settings: Exploding())
+    result = await service.get_own_profile(FakeClient(), "u1", _heal_settings())
+    assert result["profileFound"] is True  # the page still loads
+
+
+@pytest.mark.asyncio
+async def test_heal_inert_without_settings_or_in_dry_run(monkeypatch):
+    from core.config import Settings
+    from assignments import stamps as stamps_mod
+
+    called = []
+    monkeypatch.setattr(stamps_mod, "system_client",
+                        lambda settings: called.append(1))
+    await service.get_own_profile(FakeClient(), "u1")  # no settings
+    await service.get_own_profile(FakeClient(), "u1", Settings(espo_dry_run=True))
+    assert called == []

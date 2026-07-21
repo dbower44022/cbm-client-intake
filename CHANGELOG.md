@@ -4,6 +4,38 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.120.0] — 2026-07-20
+
+The SECOND stamp-drift class, live-reported an hour after layers 1–4 were
+built (a mentor's "/mentorprofile → Could not save your profile: … missing
+edit access to Contact records"): the mentor's OWN linked Contact
+(`CMentorProfile.contactRecord`) missing their own User — a different record
+class from the engagement client records the original plan covered. Immediate
+staff workaround (deployed code, no push needed): /mentoradmin → **Update
+Mentor Status** re-stamps every mentor's own Contact roster-wide.
+
+### Added
+- **The stamp engine now covers mentor personnel records.** The nightly
+  reconciliation gains a phase over every `CMentorProfile`: a profile with a
+  linked User and a linked Contact gets the User merged onto the Contact's
+  `assignedUsers` when missing (merge-only, like everything else). The audit
+  CLI reports + `--heal`s the same class, and its exit summary counts both
+  classes.
+- **`/mentorprofile` heals its own Contact on access.** Opening the profile
+  (and saving contact fields) now checks the signed-in mentor's linked
+  Contact and merges their User onto it when missing — under the app's
+  API-key identity, because the mentor themselves CANNOT fix it (that's the
+  defect). Tightly scoped: only the caller's own server-resolved Contact,
+  only their own user id, merge-only, best-effort (a heal failure never
+  blocks the page; the nightly job is the backstop). The reported failure
+  mode — open profile, edit phone, Save → 403 — now self-corrects before
+  the save ever runs.
+- Verified: the extended audit ran read-only against crm-test — all 43
+  mentor own-Contacts are correctly stamped there (the v0.82.0 sweep healed
+  them on 2026-07-18), so the class is prod-specific data drift; prod heals
+  on the first reconciliation pass after deploy, or immediately via Update
+  Mentor Status.
+
 ## [0.119.0] — 2026-07-20
 
 **feat(ui): request timeout on every app's `api()` helper** (Doug's follow-up

@@ -52,6 +52,41 @@ async def run(heal: bool, all_statuses: bool) -> int:
         print("ESPO_BASE_URL / ESPO_API_KEY must be set (see the module docstring).")
         return 2
     client = EspoClient(base, key)
+
+    # Phase A — mentor personnel: each profile's linked Contact must carry the
+    # profile's own User (the /mentorprofile own-save 403 class, 2026-07-20).
+    profiles = await stamps.all_mentor_profiles(client)
+    print(f"Auditing {len(profiles)} mentor profile(s) on {base}")
+    broken_mentor_contacts = healed_mentor_contacts = 0
+    for prof in profiles:
+        uid = stamps.assigned_user_id(prof)
+        contact_id = prof.get("contactRecordId")
+        if not uid or not contact_id:
+            continue
+        try:
+            current, missing = await stamps.missing_on(
+                client, stamps.CONTACT, contact_id, {uid: prof.get("name") or "mentor"}
+            )
+            if not missing:
+                continue
+            broken_mentor_contacts += 1
+            print(
+                f"✗ mentor {prof.get('name')!r} ({prof.get('mentorStatus')}): own "
+                f"Contact/{contact_id} is missing their User "
+                f"(assignedUsers={current or []})"
+            )
+            if heal:
+                merged = await stamps.merge_missing(
+                    client, stamps.CONTACT, contact_id, current, missing
+                )
+                healed_mentor_contacts += 1
+                print(f"  ✚ healed: Contact/{contact_id} -> {merged}")
+        except EspoError as exc:
+            print(f"⚠ mentor {prof.get('name')!r}: contact audit failed: {exc}")
+    if not broken_mentor_contacts:
+        print("All mentor own-Contacts carry their User. ✔")
+    print()
+
     engagements = await stamps.all_engagements(client)
     print(f"Auditing {len(engagements)} engagement(s) on {base}\n")
 
@@ -106,16 +141,21 @@ async def run(heal: bool, all_statuses: bool) -> int:
     for line in findings:
         print(line)
     print(
-        f"\nSummary: {audited} audited, {broken_engagements} engagement(s) with "
+        f"\nSummary: {audited} engagement(s) audited, {broken_engagements} with "
         f"missing stamps, {skipped_unassigned} unassigned skipped, "
-        f"{skipped_status} terminal-status skipped."
+        f"{skipped_status} terminal-status skipped; "
+        f"{broken_mentor_contacts} mentor own-Contact(s) missing their User."
     )
     if heal:
-        print(f"Healed {healed_records} record(s) (merge-only; nothing removed).")
-    elif broken_engagements:
-        print("Re-run with --heal to merge the missing users, or use Client "
-              "Administration's right-click → Repair assignment per engagement.")
-    return 1 if broken_engagements else 0
+        print(
+            f"Healed {healed_records} engagement record(s) + "
+            f"{healed_mentor_contacts} mentor Contact(s) (merge-only; nothing removed)."
+        )
+    elif broken_engagements or broken_mentor_contacts:
+        print("Re-run with --heal to merge the missing users (mentor own-Contacts "
+              "can also be healed by /mentoradmin's Update Mentor Status; "
+              "engagements by right-click → Repair assignment).")
+    return 1 if (broken_engagements or broken_mentor_contacts) else 0
 
 
 def main() -> None:

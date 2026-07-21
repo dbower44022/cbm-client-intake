@@ -142,6 +142,43 @@ async def merge_missing(
     return merged
 
 
+async def ensure_user_on_record(
+    client: Any, entity: str, record_id: str, user_id: str
+) -> bool:
+    """Merge ONE user onto ONE record's ``assignedUsers`` if missing (the
+    heal-on-access primitive). Returns True when a write happened."""
+    rec = await client.get(entity, record_id, select="assignedUserId,assignedUsersIds")
+    if is_assigned_to(rec, user_id):
+        return False
+    await merge_missing(client, entity, record_id, rec.get("assignedUsersIds"), [user_id])
+    return True
+
+
+# --- mentor personnel records (the SECOND drift class, found 2026-07-20) -------
+# A mentor's own linked Contact (``CMentorProfile.contactRecord``) missing the
+# mentor's own User: /mentorprofile routes contact-field saves to that Contact,
+# and the Mentor Role edits Contacts at own scope — an unstamped own-Contact
+# 403s the mentor's own profile save. Same drift causes as the engagement
+# class; healed by the same merge-only rule (profile links = truth).
+
+_PROFILE_SELECT = "id,name,mentorStatus,contactRecordId,assignedUserId,assignedUsersIds"
+
+
+async def all_mentor_profiles(client: Any) -> list[dict[str, Any]]:
+    """Every mentor profile (paged), with the mentor-contact audit fields."""
+    rows: list[dict[str, Any]] = []
+    offset = 0
+    while True:
+        data = await client.list(
+            MENTOR_PROFILE, select=_PROFILE_SELECT, max_size=_PAGE, offset=offset
+        )
+        page = data.get("list", [])
+        rows.extend(page)
+        if len(page) < _PAGE:
+            return rows
+        offset += _PAGE
+
+
 def system_client(settings: Settings) -> EspoClient:
     """The app's API-key client — entitlement derivation and healing must not
     vary with any staff user's ACL (the docs.grants pattern)."""
@@ -167,7 +204,34 @@ async def run_stamp_reconciliation(
     summary = {
         "audited": 0, "engagementsHealed": 0, "recordsHealed": 0,
         "profilesWithoutUser": 0, "errors": 0,
+        "mentorProfiles": 0, "mentorContactsHealed": 0,
     }
+
+    # Phase A — mentor personnel: every profile's linked Contact must carry the
+    # profile's own User (the /mentorprofile own-save class, 2026-07-20).
+    try:
+        for prof in await all_mentor_profiles(client):
+            uid = assigned_user_id(prof)
+            contact_id = prof.get("contactRecordId")
+            if not uid or not contact_id:
+                continue
+            summary["mentorProfiles"] += 1
+            try:
+                if await ensure_user_on_record(client, CONTACT, contact_id, uid):
+                    summary["mentorContactsHealed"] += 1
+                    log.info(
+                        "stamp reconciliation: merged %r's User onto their own "
+                        "Contact/%s", prof.get("name"), contact_id,
+                    )
+            except EspoError as exc:
+                summary["errors"] += 1
+                log.warning(
+                    "stamp reconciliation: mentor contact heal failed for %r "
+                    "(Contact/%s): %s", prof.get("name"), contact_id, exc,
+                )
+    except EspoError as exc:
+        summary["errors"] += 1
+        log.warning("stamp reconciliation: mentor profile listing failed: %s", exc)
     for eng in await all_engagements(client):
         if not eng.get("mentorProfileId"):
             continue
