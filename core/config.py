@@ -246,6 +246,20 @@ class Settings(BaseSettings):
     # Keep comfortably inside Google's 30-day transcript-entries retention.
     transcript_give_up_days: int = 14
 
+    # --- Meeting transcripts: Fathom note taker
+    # (prds/fathom-transcript-integration.md). When on (worker only — there is
+    # no schedule-time Fathom hook; Fathom auto-joins from the mentor's own
+    # calendar), the retrieval cycle tries Fathom FIRST for every past session
+    # with a meeting link on any platform Fathom records (Meet/Zoom/Teams),
+    # falling back to the Meet-native source when both are enabled. Auth is ONE
+    # team API key — Fathom keys are user-level and read meetings recorded by
+    # that account or shared to its Team, so CBM's team-sharing setup is the
+    # coverage prerequisite. Shares MEET_TRANSCRIPTS_POLL_SECONDS and
+    # TRANSCRIPT_GIVE_UP_DAYS with the Meet path. Off => the source isn't built.
+    fathom_transcripts: bool = False
+    fathom_api_key: str = ""  # SECRET (worker component)
+    fathom_base_url: str = "https://api.fathom.ai/external/v1"
+
     # --- Documents: Google Drive document management (DOC-MGMT Phase 1). When
     # on (and a database is attached), the session tools' Documents tab lets a
     # manager upload files to the "CBM Documents" shared drive and lists each

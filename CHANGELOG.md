@@ -4,6 +4,69 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.124.0] — 2026-07-21
+
+**feat(transcripts): Fathom note-taker transcript source — the retrieval
+pipeline now supports either note taker** (plan:
+`prds/fathom-transcript-integration.md`, drafted + ruled this session; gated
+OFF by `FATHOM_TRANSCRIPTS`, default false). Doug's rulings: one team API
+key; **Fathom first, Meet-native fallback**; store everything Fathom offers
+(transcript + AI summary + action items); poll, don't webhook; action items
+go into the EXISTING `nextSteps` when it's empty, otherwise append to the
+new `sessionAiSummary` field (2026-07-21 amendment).
+
+- **`core/fathom.py`** (new): `FathomClient` — Fathom external API v1
+  (`X-Api-Key`, cursor pagination, 429/5xx backoff honoring Retry-After,
+  60/min rate limit is Fathom-side) — plus pure helpers:
+  `normalize_meeting_url` (Meet code / Zoom id / Teams id — the correlation
+  key between `CSession.videoMeetingLink` and Fathom's `meeting_url`),
+  `format_transcript_html` (same speaker-attributed shape as the gmeet
+  formatter, so both providers render identically), `summary_html` (escaped
+  markdown subset), `action_items_html`.
+- **`sessions/transcripts.py`**: the provider seam is now an **ordered
+  source list** (`run_transcript_cycle(sources=…)`; order IS precedence —
+  Fathom then Meet when both are enabled). `FathomTranscriptSource`: ONE
+  `GET /meetings` listing sweep per cycle (lazy, cached on the instance),
+  indexed by normalized join URL; match = same URL + start within the
+  existing ±36h window, closest start wins (reused links); only matched
+  sessions cost a per-recording transcript call; a listing failure idles
+  the source for the cycle (Meet fallback still runs). Sources declare
+  `needs_mailbox` (Fathom false — no DWD) and `link_contains` (the
+  candidate query widens from Meet-only to any non-empty link ONLY when a
+  wide source is active). Per-source fetch failures fall through to the
+  next source instead of skipping the session.
+- **Write-back routing** (`_write_back` + `richtext_empty`): transcript →
+  `sessionTranscription` (clamped, unchanged); link → `transcriptDocUrl`
+  now carries the Google Doc OR the Fathom `share_url`; action items →
+  an EMPTY `nextSteps` (null or blank markup like `<p><br></p>`), else
+  appended to `sessionAiSummary` under an "Action items" heading — human
+  content never overwritten, and since write-back fires once per session
+  (candidates are transcript-null) later mentor edits can't be clobbered;
+  summary → `sessionAiSummary` (feature-detected; missing field ⇒ skipped
+  with a log line, transcript still stored).
+- **New CRM field (handoff: `csession-ai-summary-field.md`, NOT built)**:
+  `CSession.sessionAiSummary` (wysiwyg, app-managed). Feature-detected —
+  everything else works before it exists. No new grants (CustomAppAPIRole
+  already has CSession read+edit).
+- **UI**: session view gains a read-only **AI SUMMARY** zone above the
+  Transcript zone (renders only when the field exists and is non-empty);
+  the facts-grid link row is relabelled "Transcript / recording link".
+- **Settings**: `FATHOM_TRANSCRIPTS` + `FATHOM_API_KEY` (SECRET) +
+  `FATHOM_BASE_URL` — worker component only (there is no schedule-time
+  Fathom hook; Fathom auto-joins from the mentor's own calendar; the Meet
+  auto-transcription enable is untouched). Shares
+  `MEET_TRANSCRIPTS_POLL_SECONDS`/`TRANSCRIPT_GIVE_UP_DAYS`; the worker
+  timer now runs on either flag.
+- Tests: 944 green (23 new — `tests/test_fathom.py` client/helpers;
+  multi-source ordering/fallback/widening + routing + FathomTranscriptSource
+  in `tests/test_transcripts.py`).
+- **NOT yet activated — Phase 0 is Doug-side** (plan §prerequisites):
+  Fathom plan tier includes API access; a CBM service/admin Fathom account
+  owns the key; mentors' recordings **shared to the CBM team** (user-level
+  keys read only own + team-shared meetings — the load-bearing unknown);
+  the read-only listing probe; then `sessionAiSummary` on crm-test and the
+  flag on the crm-test worker overlay.
+
 ## [0.123.2] — 2026-07-21
 
 **fix(sessions): saving a contribution amount no longer trips EspoCRM's

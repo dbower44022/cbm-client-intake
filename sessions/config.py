@@ -237,11 +237,19 @@ SESSION_FIELDS: list[dict] = [
 # The §12.5 feature-detected field: present in the spec above, gated at runtime.
 TRANSCRIPT_FIELD = "sessionTranscription"
 
-# The permanent Google Doc transcript link (csession-transcript-fields.md):
+# The permanent transcript/recording link (csession-transcript-fields.md):
 # app-managed (written by the worker retrieval job), never user-editable — NOT
 # in SESSION_FIELDS; feature-detected like the transcript, shown read-only in
-# the session view's facts grid.
+# the session view's facts grid. Carries the Google Doc export link (Meet
+# source) or the Fathom share link (Fathom source).
 TRANSCRIPT_DOC_URL_FIELD = "transcriptDocUrl"
+
+# The Fathom AI summary — csession-ai-summary-field.md
+# (prds/fathom-transcript-integration.md): app-managed (worker write-back),
+# never user-editable — NOT in SESSION_FIELDS; feature-detected like the
+# transcript, rendered read-only as the session view's AI Summary zone. Also
+# carries the action-items overflow when the mentor already wrote nextSteps.
+AI_SUMMARY_FIELD = "sessionAiSummary"
 
 # ``duration`` is EspoCRM's virtual duration type (notStorable — computed as
 # dateEnd − dateStart), so the writable/readable scalar is ``dateEnd``: the

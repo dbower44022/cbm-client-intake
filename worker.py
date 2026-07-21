@@ -305,7 +305,9 @@ async def main() -> None:
             except Exception as exc:  # noqa: BLE001
                 log.warning("schema-drift check failed: %s", exc)
             next_schema = now + timedelta(seconds=settings.schema_check_seconds)
-        if settings.meet_transcripts and now >= next_transcripts:
+        if (
+            settings.meet_transcripts or settings.fathom_transcripts
+        ) and now >= next_transcripts:
             try:
                 from sessions.transcripts import run_transcript_cycle
 

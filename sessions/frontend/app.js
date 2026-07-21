@@ -5446,9 +5446,10 @@
     addKV(grid, "Meeting type", s.meetingType, "multiEnum");
     addKV(grid, "Location", locationValue(s), "text");
     addKV(grid, "Meeting link", (s.videoMeetingLink || "").trim(), "copylink");
-    // The permanent Google Doc transcript (feature-gated: the value only rides
-    // the payload once the CRM has transcriptDocUrl and the worker filled it).
-    addKV(grid, "Transcript document", (s.transcriptDocUrl || "").trim(), "copylink");
+    // The permanent transcript/recording link — Google Doc (Meet) or Fathom
+    // share URL (feature-gated: the value only rides the payload once the CRM
+    // has transcriptDocUrl and the worker filled it).
+    addKV(grid, "Transcript / recording link", (s.transcriptDocUrl || "").trim(), "copylink");
     addKV(grid, "Next session", s.nextSessionDateTime, "datetime");
     hcard.appendChild(grid);
     body.appendChild(hcard);
@@ -5480,11 +5481,28 @@
       cal.appendChild(cl); cal.appendChild(cb); body.appendChild(cal);
     }
 
+    // === AI Summary (Fathom note taker — feature-gated on the CRM field;
+    // unlike the transcript zone, an empty value renders nothing: the summary
+    // is optional AI output, not a capability to educate about).
+    var az = renderViewAiSummary(s);
+    if (az) body.appendChild(az);
+
     // === §12.3.3 Transcript (§12.5 feature-gated — nothing renders until the
     // CRM field exists; the zone then explains an empty transcript instead of
     // silently omitting the capability).
     var tz = renderViewTranscript(s, scls);
     if (tz) body.appendChild(tz);
+  }
+
+  function renderViewAiSummary(s) {
+    if (!s.aiSummaryFieldExists) return null;
+    var text = s.sessionAiSummary;
+    if (!text || !String(text).trim()) return null;
+    var zone = vZone("AI SUMMARY");
+    var bodyEl = document.createElement("div"); bodyEl.className = "sx__vzone-body";
+    bodyEl.innerHTML = sanitizeHtml(String(text));
+    zone.appendChild(bodyEl);
+    return zone;
   }
 
   // The band's one time statement (each fact exactly once — no Duration row):

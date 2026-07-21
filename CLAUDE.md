@@ -1454,9 +1454,43 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   Note: crm-test seed sessions carry out-of-enum `sessionType` values (harmless; a
   data-hygiene cleanup). **UI polish is the next work item** (a follow-up session).
 
-## Current status (updated 2026-07-20)
+## Current status (updated 2026-07-21)
 
-**Main is at v0.123.1** (2026-07-20, 912 tests green, committed NOT pushed;
+**Main is at v0.124.0** (2026-07-21, 944 tests green, committed NOT pushed) —
+**Fathom note-taker transcript source: the retrieval pipeline supports
+either note taker** (plan `prds/fathom-transcript-integration.md`, drafted +
+built this session from Doug's rulings: one team API key; **Fathom first,
+Meet-native fallback**; store transcript + AI summary + action items; poll).
+New `core/fathom.py` (FathomClient — X-Api-Key, cursor paging, 429/5xx
+backoff — + normalize_meeting_url (Meet/Zoom/Teams — the videoMeetingLink ↔
+Fathom `meeting_url` correlation key), transcript/summary/action-items HTML
+formatters matching the gmeet shape); `sessions/transcripts.py` seam is now
+an **ordered source list** (`sources=`, order = precedence;
+`FathomTranscriptSource`: ONE listing sweep per cycle indexed by normalized
+URL, ±36h window + closest-start match, `needs_mailbox=False` — no DWD;
+candidate query widens to any non-empty link only when a wide source is
+active; per-source failures fall through to the next source).
+**Action-items routing (Doug's 2026-07-21 amendment):** task list → the
+EXISTING `nextSteps` when empty (blank markup counts empty,
+`richtext_empty`), else appended to the NEW feature-detected
+`CSession.sessionAiSummary` (wysiwyg; handoff `csession-ai-summary-field.md`,
+NOT built — until it exists the summary/overflow are skipped with a log
+line, transcript + nextSteps routing still work); human content never
+overwritten. `transcriptDocUrl` now carries the Google Doc OR Fathom share
+link (view row relabelled "Transcript / recording link"); session view
+gains a read-only AI SUMMARY zone. Gated by `FATHOM_TRANSCRIPTS` +
+`FATHOM_API_KEY` (SECRET) + `FATHOM_BASE_URL`, **worker only** (no
+schedule-time Fathom hook — Fathom auto-joins from the mentor's calendar;
+the Meet auto-enable is untouched); shares the existing poll/give-up
+settings; the worker timer runs on either flag. 23 new tests. **NOT
+activated — Phase 0 is Doug-side** (the load-bearing unknown: Fathom keys
+are USER-level, reading only own + team-SHARED meetings — CBM team sharing
+must cover mentors' recordings; plus tier/API check, service-account key,
+the read-only listing probe), then the CRM field on crm-test + the flag on
+the crm-test worker overlay + plan §Phase 3 live verification. CHANGELOG
+0.124.0. (v0.123.2 = the parallel contribution-currency fix session.)
+
+Before that: **v0.123.1** (2026-07-20, 912 tests green, committed NOT pushed;
 v0.123.0 = the parallel action-history session — Conventions bullet +
 CHANGELOG 0.123.0) — **calendar invites address CBM members at their
 `cbmEmail` ONLY** (v0.122.0 + the v0.123.1 hardening; Doug's

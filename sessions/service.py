@@ -45,6 +45,7 @@ from .config import (
     SESSION_ENUM_FIELDS,
     SESSION_OPTION_FIELDS,
     SESSION_FIELDS,
+    AI_SUMMARY_FIELD,
     TRANSCRIPT_DOC_URL_FIELD,
     TRANSCRIPT_FIELD,
     DomainConfig,
@@ -840,12 +841,15 @@ async def get_session(client: SessionClient, session_id: str) -> dict[str, Any]:
     fields = await client.metadata(f"entityDefs.{SESSION}.fields")
     has_transcript = TRANSCRIPT_FIELD in fields
     has_doc_url = TRANSCRIPT_DOC_URL_FIELD in fields
+    has_ai_summary = AI_SUMMARY_FIELD in fields
     has_cal = CAL_FIELD in fields
     select = _SESSION_SELECT
     if has_transcript:
         select += "," + TRANSCRIPT_FIELD
     if has_doc_url:
         select += "," + TRANSCRIPT_DOC_URL_FIELD
+    if has_ai_summary:
+        select += "," + AI_SUMMARY_FIELD
     if has_cal:
         select += "," + CAL_FIELD
     rec = await client.get(SESSION, session_id, select=select)
@@ -864,6 +868,7 @@ async def get_session(client: SessionClient, session_id: str) -> dict[str, Any]:
         for c in atts
     ]
     rec["transcriptFieldExists"] = has_transcript
+    rec["aiSummaryFieldExists"] = has_ai_summary
     rec["googleCalendarEventIdFieldExists"] = has_cal
     return rec
 
