@@ -50,6 +50,9 @@ async def test_log_action_writes_a_row_when_entity_exists(monkeypatch):
     assert payload["category"] == "Assignment"
     assert payload["app"] == "Client Administration"
     assert payload["parentType"] == "CEngagement" and payload["parentId"] == "E1"
+    # The CActionLog belongs-to-parent link is named `record` (parent is reserved
+    # on the entity), so the reference is written as recordType/recordId too.
+    assert payload["recordType"] == "CEngagement" and payload["recordId"] == "E1"
     assert payload["actorId"] == "u1" and payload["actorName"] == "Bob Staff"
     assert '"n": 3' in payload["details"]                  # details serialized to JSON
     assert payload["outcome"] == "Success"

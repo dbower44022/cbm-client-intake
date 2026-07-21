@@ -180,6 +180,14 @@ async def log_action(
             "summary": summary,
             "details": json.dumps(details, default=str, ensure_ascii=False) if details else None,
             "outcome": outcome,
+            # The CActionLog "belongs-to-parent" link is named `record`, not
+            # `parent` (that name is reserved on the entity — it already has the
+            # built-in activity parent/child links). So the record reference is
+            # written as recordType/recordId. parentType/parentId are sent too so
+            # this also works against a `parent`-named link; EspoCRM ignores an
+            # attribute for a field that doesn't exist.
+            "recordType": parent_type,
+            "recordId": parent_id,
             "parentType": parent_type,
             "parentId": parent_id,
         }
