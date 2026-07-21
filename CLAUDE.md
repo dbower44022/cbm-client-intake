@@ -1456,7 +1456,29 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-21)
 
-**Main is at v0.126.0** (2026-07-21, 957 tests green, committed NOT pushed) —
+**Main is at v0.127.0** (2026-07-21, 960 tests green, committed NOT pushed) —
+**the Gmail sweep no longer ingests internal cbmentor↔cbmentor mail**
+(Doug's ruling this session: the sync is for mentor↔client correspondence;
+staff-to-staff email is useless in the CRM — reported as "a ton" of
+internal messages in the repair-script output). Cause: mentors' own
+Contact records with @cbmentors.org addresses are linked to engagements as
+contacts, putting those addresses into the match scope — every mentor's
+sweep then ingested ALL their internal mail with those people. Fix (new
+`COMMS_INTERNAL_DOMAINS`, default `cbmentors.org`): internal-domain
+addresses never enter the sweep's match scope (`build_scopes`), and
+`ingest_message` skips any message whose every participant is internal —
+incl. thread-following replies. Explicit actions (record compose
+write-through, "Add emails" include) are exempt via their own scopes.
+Already-stored internal conversations are NOT auto-removed (API user
+can't delete) — EspoCRM UI cleanup if wanted; CHANGELOG 0.127.0. Also
+recorded there: `tests/test_comms_sync.py` single-file collection fails
+on a PRE-EXISTING latent circular import (full suite unaffected).
+This session also shipped **v0.125.0** (the outbound truncation fix —
+see its block below) and verified both envs deployed at 0.126.0;
+`scripts/repair_outbound_bodies.py` is still to run per env (worker
+console) to heal stored truncated sent bodies.
+
+Before that: **v0.126.0** (2026-07-21, 957 tests green, committed NOT pushed) —
 **the Fathom note-taker transcript arc is COMPLETE and VERIFIED LIVE on
 crm-test** (one session, three releases: v0.124.0 build — ordered-source
 seam, Fathom first / Meet fallback, action-items routing; v0.124.1 live

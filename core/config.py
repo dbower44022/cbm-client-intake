@@ -212,6 +212,13 @@ class Settings(BaseSettings):
     # records). Comma-separated; engagement set matches the sessions tools.
     comms_engagement_statuses: str = "Active,Assigned,Pending Acceptance,On-Hold"
     comms_partner_excluded_statuses: str = "Ended,Declined"
+    # Internal email domains (comma-separated). The background sync exists to
+    # capture mentor↔client correspondence — addresses at these domains are
+    # dropped from the sweep's match scope, and a message whose every
+    # participant is internal is never auto-stored (Doug's ruling 2026-07-21:
+    # cbmentor-to-cbmentor internal mail is useless in the CRM). Explicit user
+    # actions (record-page compose, "Add emails" thread include) are exempt.
+    comms_internal_domains: str = "cbmentors.org"
     # OPTIONAL AI layer: per-conversation Claude summaries/status/action items.
     # Off by default — with it off, nothing leaves Google/the CRM and no
     # Anthropic key is needed. Requires ANTHROPIC_API_KEY when on.
@@ -374,6 +381,14 @@ class Settings(BaseSettings):
     @property
     def comms_partner_excluded_statuses_list(self) -> list[str]:
         return [s.strip() for s in self.comms_partner_excluded_statuses.split(",") if s.strip()]
+
+    @property
+    def comms_internal_domains_list(self) -> list[str]:
+        return [
+            d.strip().lower().lstrip("@")
+            for d in self.comms_internal_domains.split(",")
+            if d.strip()
+        ]
 
     @property
     def assignments_active(self) -> bool:

@@ -135,6 +135,7 @@ class Cfg:
     request_timeout_seconds = 20
     comms_engagement_statuses_list = ["Active", "Assigned"]
     comms_partner_excluded_statuses_list = ["Ended"]
+    comms_internal_domains_list = ["cbmentors.org"]
     gmail_dead_letter_passes = 5  # D6
     alert_webhook_url = ""
 
@@ -382,6 +383,76 @@ async def test_build_scopes_filters_statuses_and_requires_mailbox():
     assert sc.mailbox == "bob@cbmentors.org"
     assert [r.id for r in sc.records] == ["E1"]
     assert sc.records[0].addresses == {"james@acme.test"}  # lowercased
+
+
+async def test_build_scopes_drops_internal_contact_addresses():
+    # A mentor's own Contact linked to an engagement must not put their
+    # @cbmentors.org address into the match scope (it would sweep ALL internal
+    # mail with that mentor into the CRM — the 2026-07-21 report).
+    lists = {
+        "CMentorProfile": [
+            {"id": "p1", "name": "Bob", "cbmEmail": "bob@cbmentors.org", "assignedUserId": "u1"},
+        ],
+        ("CMentorProfile", "p1", "engagements1"): [
+            {"id": "E1", "name": "Acme", "engagementStatus": "Active"},
+            {"id": "E2", "name": "Internal Only", "engagementStatus": "Active"},
+        ],
+        ("CMentorProfile", "p1", "managedPartners"): [],
+        ("CMentorProfile", "p1", "managedSponsors"): [],
+        ("CEngagement", "E1", "engagementContacts"): [
+            {"id": "c1", "name": "James", "emailAddress": "james@acme.test"},
+            {"id": "c2", "name": "Jane Mentor", "emailAddress": "jane.mentor@cbmentors.org"},
+        ],
+        # A record whose only contact is internal contributes no scope at all.
+        ("CEngagement", "E2", "engagementContacts"): [
+            {"id": "c3", "name": "Rick Mentor", "emailAddress": "rick.mentor@cbmentors.org"},
+        ],
+    }
+    scopes = await crm.build_scopes(FakeEspo(lists=lists), Cfg())
+    assert len(scopes) == 1
+    sc = scopes[0]
+    assert sc.internal_domains == {"cbmentors.org"}
+    assert [r.id for r in sc.records] == ["E1"]
+    assert sc.records[0].addresses == {"james@acme.test"}
+
+
+async def test_ingest_skips_all_internal_message_even_thread_following():
+    espo = FakeEspo()
+    store = MemoryCommsStore()
+    sweep = scope()
+    sweep.internal_domains = {"cbmentors.org"}
+    # Establish a client conversation, then an internal-only reply on the SAME
+    # thread: thread-following must not store it.
+    first = sync.parse_message(raw_message(mid="m1", thread="t9"))
+    assert await ingest_message(espo, store, sweep, first)
+    internal_reply = sync.parse_message(raw_message(
+        mid="m2", thread="t9", frm="rick.mentor@cbmentors.org",
+        to="bob.mentor@cbmentors.org", rfc_id="int-1",
+        body="What do you think about this client?",
+    ))
+    assert await ingest_message(espo, store, sweep, internal_reply) is None
+    stored = [r for (e, _), r in espo.records.items() if e == crm.COMMUNICATION]
+    assert len(stored) == 1
+
+    # A message with ANY external participant still stores normally.
+    mixed = sync.parse_message(raw_message(
+        mid="m3", thread="t9", frm="rick.mentor@cbmentors.org",
+        to="bob.mentor@cbmentors.org, james@acme.test", rfc_id="mix-1",
+    ))
+    assert await ingest_message(espo, store, sweep, mixed)
+
+
+async def test_ingest_explicit_scope_still_stores_internal():
+    # Explicit-action scopes (write-through / thread include) leave
+    # internal_domains empty — a deliberate internal send still shows.
+    espo = FakeEspo()
+    store = MemoryCommsStore()
+    explicit = scope(addresses={"rick.mentor@cbmentors.org"})
+    msg = sync.parse_message(raw_message(
+        frm="bob.mentor@cbmentors.org", to="rick.mentor@cbmentors.org",
+        rfc_id="exp-1",
+    ))
+    assert await ingest_message(espo, store, explicit, msg)
 
 
 # --- triage --------------------------------------------------------------------

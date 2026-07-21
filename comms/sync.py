@@ -124,6 +124,18 @@ async def ingest_message(
         log.debug("skipping %s (labels=%s)", parsed.rfc_message_id, parsed.label_ids)
         return None
 
+    # Internal chatter guard (Doug's ruling 2026-07-21): when the scope names
+    # internal domains (the background sweep — explicit-action scopes leave it
+    # empty), a message whose EVERY participant is internal is staff-to-staff
+    # mail, not client correspondence, and is never auto-stored — even as a
+    # thread-following reply on a stored conversation.
+    if scope.internal_domains and parsed.all_addresses and all(
+        a.rsplit("@", 1)[-1].lower() in scope.internal_domains
+        for a in parsed.all_addresses
+    ):
+        log.debug("skipping %s (all participants internal)", parsed.rfc_message_id)
+        return None
+
     # Conversation resolution inputs, shared by matching and storing.
     refs = [r.strip().strip("<>") for r in parsed.references.split() if r.strip()]
     if parsed.in_reply_to:

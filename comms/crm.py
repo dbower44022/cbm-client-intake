@@ -64,6 +64,12 @@ class MailboxScope:
     manager_name: str
     owner_user_id: Optional[str]  # their login User (for owner-stamping)
     records: list[RecordRef] = field(default_factory=list)
+    # Internal email domains: a message whose EVERY participant is at one of
+    # these is internal chatter, not client correspondence — the sweep skips
+    # it (see ingest_message). Left empty by the explicit-action scopes
+    # (record-page compose write-through, thread include) so a deliberate
+    # internal send still shows on its record.
+    internal_domains: set[str] = field(default_factory=set)
 
     @property
     def all_addresses(self) -> set[str]:
@@ -108,6 +114,7 @@ async def build_scopes(client: Any, settings: Any) -> list[MailboxScope]:
     )
     include_eng = set(settings.comms_engagement_statuses_list)
     exclude_partner = set(settings.comms_partner_excluded_statuses_list)
+    internal = set(settings.comms_internal_domains_list)
 
     scopes: list[MailboxScope] = []
     for profile in data.get("list", []):
@@ -116,7 +123,10 @@ async def build_scopes(client: Any, settings: Any) -> list[MailboxScope]:
         if not mailbox or not owner:
             continue  # no mailbox to read, or no login user to own the records
         scope = MailboxScope(
-            mailbox=mailbox, manager_name=profile.get("name") or "", owner_user_id=owner
+            mailbox=mailbox,
+            manager_name=profile.get("name") or "",
+            owner_user_id=owner,
+            internal_domains=internal,
         )
         for entity, reverse_link, contacts_link, status_attr, mode in _DOMAINS:
             try:
@@ -145,7 +155,15 @@ async def build_scopes(client: Any, settings: Any) -> list[MailboxScope]:
                     contacts = {}
                 for c in contacts.get("list", []) or []:
                     ref.contact_ids.add(c["id"])
-                    ref.addresses |= _contact_addresses(c)
+                    # Internal (staff) addresses never define the match scope:
+                    # a mentor's own Contact linked to an engagement would
+                    # otherwise sweep ALL internal mail with that mentor into
+                    # the CRM (the cbmentor↔cbmentor noise, 2026-07-21).
+                    ref.addresses |= {
+                        a
+                        for a in _contact_addresses(c)
+                        if a.rsplit("@", 1)[-1] not in internal
+                    }
                 if ref.addresses:
                     scope.records.append(ref)
         if scope.records:

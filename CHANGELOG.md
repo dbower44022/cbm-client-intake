@@ -4,6 +4,36 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.127.0] — 2026-07-21
+
+**fix(comms): the Gmail sweep no longer ingests internal cbmentor↔cbmentor
+mail** (Doug's ruling: the sync exists for mentor↔client correspondence —
+staff-to-staff email is useless in the CRM). Root cause of the noise: some
+mentors' own Contact records (with @cbmentors.org addresses) are linked to
+engagements as contacts, so those addresses entered the match scope and
+EVERY mentor's sweep ingested all their internal mail with those people.
+Two layers, driven by the new **`COMMS_INTERNAL_DOMAINS`** setting (default
+`cbmentors.org`, comma-separated):
+- **Scope filter** (`comms/crm.py:build_scopes`): contact addresses at an
+  internal domain never enter a record's match scope (so the address-book
+  backfill queries don't fetch internal mail and history-feed candidates
+  don't match on it); a record whose only contacts are internal contributes
+  no scope at all.
+- **Ingest guard** (`comms/sync.py:ingest_message`): a message whose EVERY
+  participant (From/To/Cc) is at an internal domain is never auto-stored —
+  covers thread-following, so an internal-only reply on a stored client
+  thread stays out. Any external participant ⇒ normal ingest.
+Explicit user actions are exempt (their scopes carry no internal_domains):
+the record-page compose write-through and "Add emails" thread include still
+store deliberate internal sends on the record. Already-stored internal
+conversations are NOT auto-deleted (the API user can't delete) — clean up
+in the EspoCRM UI if wanted. 960 tests green (3 new).
+Note: `tests/test_comms_sync.py` fails COLLECTION when run as a single
+file (pre-existing latent circular import comms.crm → assignments →
+comms.quicksend → comms.service → comms.sync; full-suite runs import
+assignments first and are unaffected) — verified present on the parent
+commit, not introduced here.
+
 ## [0.126.0] — 2026-07-21
 
 **fix(comms): sent emails no longer look cut off — outbound messages keep
