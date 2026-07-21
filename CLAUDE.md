@@ -1449,7 +1449,11 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-20)
 
-**Main is at v0.121.0** (2026-07-20, 900 tests green, committed NOT pushed) —
+**Main is at v0.121.0** (2026-07-20, 900 tests green; v0.120.0 pushed +
+DEPLOYED — **prod's first reconciliation pass ran clean 2026-07-21 01:17
+UTC: 41 engagements audited, 0 records needed healing, 0 errors, 1 mentor
+own-Contact healed (Andrew Ciszczon — the reported case)**; only the
+v0.121.0 provisioning fix awaits push) —
 **the ROOT-CAUSE fix (Doug's challenge): provisioning stamps the mentor's
 Contact.** Approval created the User + linked the PROFILE only — every new
 mentor was BORN with an unstamped Contact (guaranteed /mentorprofile 403

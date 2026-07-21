@@ -460,6 +460,35 @@ well: re-delivery is idempotent (per-record `progress`), and replayed rows
 dedupe on `uq_submission_form_token`. Comms sync cursors restore stale =
 the next pass re-reads the gap; Message-ID dedup absorbs the overlap.
 
+### Assignment-stamp integrity (v0.117.0–0.121.0)
+
+Mentors and co-mentors can only touch records whose `assignedUsers` include
+their login User ("own"-scope roles). Four mechanisms keep those stamps
+matching what the CRM's own links (`mentorProfile`, `additionalMentors`,
+`contactRecord`) say they should be:
+
+- **At creation** — assignment/reassignment re-homes everything; adding a
+  contact to an assigned engagement stamps the mentor team (v0.118.0);
+  provisioning a mentor's login stamps their own Contact (v0.121.0).
+- **Nightly** — the worker's merge-only reconciliation
+  (`ASSIGNMENT_RECONCILE_SECONDS`, default daily; also runs at worker boot)
+  re-derives entitlements per assigned engagement AND per mentor profile,
+  merging any missing users. It never removes anyone — the CRM links are
+  the source of truth, so a deliberate hand-REMOVAL gets re-added; remove
+  the CRM link instead.
+- **On demand** — `uv run python scripts/audit_assignment_stamps.py`
+  (read-only report; `--heal` applies the merges), Client Administration's
+  right-click → **Repair assignment** (one engagement), and
+  `/mentoradmin` → **Update Mentor Status** (all mentor own-Contacts).
+- **Self-serve** — `/mentorprofile` heals the signed-in mentor's own
+  Contact stamp on page load and before contact-field saves (v0.120.0).
+
+Symptom to recognize: a mentor reporting *"your CRM role is missing edit
+access to … records"* on a session-attendee add or a profile save almost
+always means a missing stamp — check the record's Assigned Users, then ask
+why the reconciliation hadn't fixed it yet (run logs:
+`assignment stamp reconciliation done: {...}`).
+
 ### Alert delivery by EMAIL (v0.117.0 — CBM uses no messaging service)
 
 Every worker alert (needs-attention backlog, stranded rows, Gmail sync

@@ -173,8 +173,11 @@ When you press **Save**:
      instead **blocks** with *"the Google Workspace mailbox … does not exist —
      create it before approving"*. If the check can't run, provisioning proceeds.
    - **EspoCRM login.** Finally the app creates an EspoCRM **User**, places it in
-     the **Mentor Team**, assigns it to the mentor record, and emails the welcome /
-     set-password link to the new CBM mailbox.
+     the **Mentor Team**, assigns it to the mentor record **and to the mentor's
+     linked Contact record** (v0.121.0 — without the Contact assignment, the
+     mentor's own "My Mentor Profile" contact-field saves would be rejected by
+     their role's permissions), and emails the welcome / set-password link to
+     the new CBM mailbox.
    - The Google connection is configured in the admin-only **Email Setup** screen
      (top of the list view) — service-account key, delegated admin, and the
      check / create toggles, with a **Test connection** button.
