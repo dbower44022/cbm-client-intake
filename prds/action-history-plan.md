@@ -1,6 +1,7 @@
 # Reliable Action History Across the CBM Apps — Plan
 
-**Status:** Draft for Doug's review · 2026-07-20
+**Status:** Draft for Doug's review · 2026-07-20 · rev 2 (reporting entity moved
+into Phase 1 per Doug; audited-field config owned by Doug)
 **Author:** Claude (grounded in a live read of the production CRM's stream/audit config)
 
 ---
@@ -13,8 +14,12 @@ later ask *"who changed this, when, and how?"*, the record's history often can't
 answer, so we can't reconstruct what happened (the duplicate-session and
 mentor-swap investigations both dead-ended here).
 
-This plan fixes that: **every meaningful action taken through an app leaves one
-clear, attributable line in the CRM that a non-technical staffer can read.**
+This plan fixes that on two levels: **every meaningful action leaves one clear,
+attributable line on the record** (so the history reads right in context), **and
+every action is also written to a queryable reporting log** (so "who did what,
+when, across which records" is a filter-and-read, not an investigation). The
+second half is the priority — the recent problems need to be diagnosed faster,
+and cross-record reporting is what does that.
 
 ---
 
@@ -53,7 +58,15 @@ job:
 
 Neither alone is enough. Audited fields miss actions and miss the app/actor
 context; posted notes miss the convenience of native field diffs and don't cover
-manual CRM edits. Together they give a complete, readable trail.
+manual CRM edits. Together they give a complete, readable **on-record** trail.
+
+**But the stream answers only "what happened *to this record*."** It can't answer
+"what did Jane do last week?" or "every mentor assignment in July, across all
+engagements" — the *cross-record* questions our recent investigations actually
+needed. For those we add a third leg: a **custom reporting entity** the app
+writes one row to per action (§4.2). That's the change from the first draft — it
+is now part of Phase 1, not a later option — because faster investigations are
+the point.
 
 ---
 
@@ -118,9 +131,11 @@ ledger has no history at all.
 
 ## 4. The target model — one convention, everywhere
 
-**Rule:** every mutating action a user takes through an app posts **one
-structured Stream note** to the primary record, and the CRM has the key
-**value-change fields marked Audited**.
+**Rule:** every mutating action a user takes through an app performs **two
+writes** — a structured **Stream note** on the primary record (on-record history)
+**and** a **`CActionLog` row** (cross-record reporting, §4.2) — and the CRM has
+the key **value-change fields marked Audited**. One shared helper does both from
+one call, so a write path can't do one and forget the other.
 
 ### The standard note format
 
@@ -152,13 +167,60 @@ contact's history, the document metadata row).
 
 ### How it's built
 
-- A single shared helper (extend the existing `core/stream.post_stream_note`)
-  that enforces the format and **always** prepends `[App]` and appends `by
-  <Actor>`. Every write path calls it. One place to get the wording and the
-  actor-stamping right.
+- A single shared helper — `record_action(...)` (extends the existing
+  `core/stream.post_stream_note`) — takes the app, actor, action type, primary
+  record, before→after, and downstream list **once**, then does both writes: the
+  formatted Stream note **and** the `CActionLog` row. Every write path calls this
+  one function, so the wording, the `[App]`/actor stamping, and the reporting row
+  are all guaranteed together.
 - The routers already know the app and the signed-in user, so the actor and
   channel are free.
 - Keep it **best-effort but never silent** (see §6).
+
+### 4.2 The reporting entity — `CActionLog` (now a Phase-1 deliverable)
+
+A custom EspoCRM entity, **one row per action** (the proven `CIntakeSubmission`
+pattern). This is what makes investigations fast: because it's a native entity,
+**EspoCRM's own list view gives filterable, sortable, exportable reporting for
+free** — filter by *who*, *which app*, *which action*, *date range*, or *which
+record* and read the answer, with **no app UI to build**. It turns
+"reconstruct what happened" from a code-forensics exercise (which is where the
+duplicate-session and mentor-swap questions ended up) into a saved search.
+
+Proposed fields:
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `name` | varchar (auto) | the one-line summary — same text as the stream note |
+| `actionType` | enum | Mentor Assigned / Reassigned / Approved, Login Provisioned, Session Recorded, Engagement Activated, Profile Edited, Contact Linked/Unlinked, Email Sent, Document Uploaded, Access Granted, Contribution Recorded, Field Edited, … |
+| `app` | enum | Client Administration / Mentor Administration / Client-Partner-Funder Management / My Mentor Profile / Directories / Submission Admin / Communications / Intake |
+| `actor` | link → User | who did it (click-through, filter "everything Jane did") |
+| `actorName` | varchar | stored explicitly so attribution survives even when the row is written under the API key (see below) |
+| `parent` | belongs-to-parent | the primary record acted on (Account / Contact / CEngagement / CMentorProfile / CPartnerProfile / CSponsorProfile / CSession) — click-through + "all actions on this engagement" |
+| `summary` | text | the full human-readable line |
+| `details` | text (JSON) | before→after field diffs + the downstream records touched |
+| `outcome` | enum | Success / Partial / Failed |
+| *(native)* `createdAt` | datetime | when |
+
+**Who writes it, and why that matters for reliability.** The `CActionLog` row is
+written via the **shared create-only API key** (the same one the intake forms
+use), **not** the per-user token — so the reporting log never depends on each
+staff role having a grant, and can't be silently dropped by a role gap. Because
+`actor`/`actorName` are stored explicitly, attribution stays exact regardless.
+(The *Stream note* still posts as the signed-in user, so on-record history reads
+naturally as authored by them.) Best-effort but logged: a failed `CActionLog`
+create still emits the structured app-log line (§6).
+
+**Reporting, two ways:**
+- **Immediately, in the CRM (zero app code):** a saved-search list view by actor
+  / app / action / date, plus CSV export — available the moment rows start
+  flowing.
+- **Optionally later:** a small in-app "Activity" view (in Submission Admin, or a
+  new page) over the same entity, if staff shouldn't go into the CRM directly.
+
+**CRM prerequisite (Doug / CRM side):** create the `CActionLog` entity + the
+fields above + the `parent` link's target list + the intake API user's **create**
+grant + a **read** grant for whoever should browse the reports.
 
 ---
 
@@ -243,69 +305,88 @@ So:
 
 1. **Never break the operation.** A note failure must never roll back the save
    (unchanged from today).
-2. **But never lose it either.** On a failed note, write a **structured
+2. **But never lose it either.** If *either* write fails, emit a **structured
    application-log line** (`action`, `actor`, `record`, `summary`) at WARNING so
-   the event is still recoverable from run logs. For the highest-value actions
-   (approval/provisioning, assignment) consider also recording to the durable
-   Postgres store we already run, so a CRM outage can't erase the trail.
-3. **Prove the note posts.** Confirm each gate role can create Notes on the
-   entities it touches (spot-check: default ACL currently allows it, but the
-   provisioning admin path and any team-scoped role should be verified live once).
+   the event is recoverable from run logs. Writing the `CActionLog` row under the
+   API key (not the per-user role) already removes the most likely failure — a
+   role missing a grant. For the highest-value actions (approval/provisioning,
+   assignment) we can additionally mirror to the durable Postgres store we already
+   run, so even a full CRM outage can't erase the reporting trail.
+3. **Prove both writes land.** Confirm the gate roles can create Notes on the
+   entities they touch (default ACL allows it; verify the provisioning-admin path
+   once), and confirm the API user has `CActionLog` **create**.
 
 ---
 
-## 7. CRM-side prerequisites (Phase 0 — cheap, and it helps immediately)
+## 7. CRM-side prerequisites (Phase 0 — CRM config, owned by Doug)
 
-These are configuration changes in EspoCRM, no app code, and they pay off the
-moment they're made — including for **manual** UI edits, not just app actions:
+Configuration changes in EspoCRM, no app code, that pay off the moment they're
+made — including for **manual** UI edits, not just app actions:
 
-1. **Mark these fields "Audited"** (Entity Manager → field → Audited): CEngagement
-   `mentorProfile`, `assignedUsers`, `engagementAssignedDate`, `closeReason`;
-   CMentorProfile `mentorStatus`, `acceptingNewClients`, `cbmEmail`,
-   `recordStatus`; CPartnerProfile `partnershipStatus`, `partnerManager`,
-   `partnershipType`; CSponsorProfile `cBMSponsorManager`; CSession `sessionType`;
-   Contact/Account `assignedUsers`. (Status/date fields already audited stay.)
+1. **Mark the key fields "Audited"** across all entities (Entity Manager → field →
+   Audited). *Doug is handling this.* The concrete gap list from the live audit is
+   a good starting checklist: CEngagement `mentorProfile`, `assignedUsers`,
+   `engagementAssignedDate`, `closeReason`; CMentorProfile `mentorStatus`,
+   `acceptingNewClients`, `cbmEmail`, `recordStatus`; CPartnerProfile
+   `partnershipStatus`, `partnerManager`, `partnershipType`; CSponsorProfile
+   `cBMSponsorManager`; CSession `sessionType`; Contact/Account `assignedUsers`
+   (status/date fields already audited stay).
 2. **Enable Stream on `CContribution`** so the funder ledger has any history.
-3. **Confirm Note-create** for the staff gate roles and the provisioning admin
+3. **Create the `CActionLog` entity** (fields + `parent` target list per §4.2) and
+   grant the intake API user **create** + the reporting audience **read**.
+4. **Confirm Note-create** for the staff gate roles and the provisioning admin
    account on the entities they act on (default allows it; verify once live).
 
-Doing only Phase 0 already closes Gap A — the "mentor changed, no trace" class —
-for both app and hand edits.
+Items 1–2 alone already close Gap A — the "mentor changed, no trace" class — for
+both app and hand edits; item 3 unlocks the Phase-1 reporting.
 
 ---
 
 ## 8. Phased rollout
 
-- **Phase 0 — CRM config (days, no deploy):** mark fields Audited, enable stream on
-  CContribution, verify Note grants. *Immediate partial win; low risk; reversible.*
-- **Phase 1 — the shared helper + wiring (the bulk of the app work):** extend
-  `core/stream` into a standard action-note helper (format + app tag + actor +
-  fail-loud logging); wire it into every Tier-1 then Tier-2 write path; add the
-  activation/provisioning/details/contact/contribution/document/email notes. Ship
-  per app, verified against crm-test as we go.
-- **Phase 2 — optional, only if reporting needs it:** a dedicated **`CActionLog`**
-  entity (the `CIntakeSubmission` pattern) so we can answer cross-record questions
-  the per-record stream can't — *"everything Jane did last week"*, *"every
-  assignment in July"* — with a small admin view. Recommended **only if** the
-  stream notes prove insufficient for reporting; the stream covers "what happened
-  to this record," a log entity covers "what did this person/app do across
-  records."
+- **Phase 0 — CRM config (owned by Doug; no deploy):** mark the key fields Audited
+  across all entities, enable Stream on `CContribution`, **create the `CActionLog`
+  entity + grants** (§4.2/§7), verify Note-create. *Immediate partial win on its
+  own; low risk; reversible.*
+- **Phase 1 — the shared helper + wiring + reporting (the app work):**
+  1. Build `record_action(...)` — the one shared helper that does **both** writes
+     (formatted Stream note **and** the `CActionLog` row), with app tag, actor
+     stamp, and fail-loud logging (§4.1/§4.2/§6).
+  2. Wire it into every mutating endpoint on the §5.1 checklist — Tier 1
+     (assignment, status, identity, provisioning, activation) first, Tier 2 next.
+  3. **Reporting comes free** the moment rows flow: the CRM's native `CActionLog`
+     list view (filter by actor / app / action / date / record, + CSV export).
+  Ship per app, verified against crm-test as we go.
+- **Phase 2 — optional polish:** a small in-app "Activity" view over `CActionLog`
+  (so staff needn't open the CRM), and retention/rollup if volume ever warrants.
+  Not required for the reporting goal — the CRM list view already delivers it.
 
 ---
 
-## 9. Decisions I need from you
+## 9. Decisions & division of labor
 
-1. **Stream notes now, log-entity later?** My recommendation: yes — Phase 0 + 1
-   (audited fields + posted action-notes) solves the stated problem; treat the
-   `CActionLog` reporting entity (Phase 2) as a fast-follow only if you want
-   cross-record reporting. Or we build the log entity up front if reporting is a
-   primary goal.
-2. **How much to log?** My recommendation: **key actions + audited value fields**,
-   not every keystroke. We log an *action* (and its before→after), and let audited
-   fields carry incidental field edits. If you'd rather every Details-tab field
-   edit produce its own note, we can — it's just noisier.
-3. **Green-light Phase 0 now?** It's cheap CRM config, reversible, and helps
-   immediately even before any app work — I'd suggest doing it regardless.
+**Settled (your direction, 2026-07-20):**
+- **Full reporting via the `CActionLog` custom entity is in Phase 1**, not a later
+  option — the app dual-writes a stream note *and* a log row per action, and the
+  CRM's native list view gives filterable/exportable reporting immediately.
+- **You are updating the Audited-field settings** for the key fields across all
+  entities (Phase 0, item 1).
+
+**Still worth your call:**
+1. **`CActionLog` fields — confirm the shape in §4.2** before I wire to it (the
+   `actionType`/`app` enum value lists especially, since they drive the report
+   filters). I can propose the final enum lists with the code.
+2. **How much to log?** Recommendation: **key actions + audited value fields**, not
+   every keystroke — log an *action* (with before→after), let audited fields carry
+   incidental edits. Say the word if you want every Details-tab field edit as its
+   own row (more complete, noisier).
+3. **Who reads the reports?** If only admins go into the CRM list view, Phase 1 is
+   done at that; if front-line staff need it, we add the small in-app Activity view
+   (Phase 2).
+
+**Next step:** once you've set the Audited fields and created the `CActionLog`
+entity (I can hand you an exact field/grant spec to build from), I start Phase 1
+with the shared helper and the Tier-1 endpoints.
 
 ---
 
