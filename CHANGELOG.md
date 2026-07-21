@@ -26,8 +26,13 @@ Two layers, driven by the new **`COMMS_INTERNAL_DOMAINS`** setting (default
 Explicit user actions are exempt (their scopes carry no internal_domains):
 the record-page compose write-through and "Add emails" thread include still
 store deliberate internal sends on the record. Already-stored internal
-conversations are NOT auto-deleted (the API user can't delete) — clean up
-in the EspoCRM UI if wanted. 960 tests green (3 new).
+conversations are NOT auto-deleted (the API user can't delete) — the new
+READ-ONLY **`scripts/list_internal_conversations.py`** lists the cleanup
+candidates (every conversation whose messages' From/To/Cc are all at an
+internal domain — subject, message count, date span, addresses, direct CRM
+link; empty shells reported separately) for deletion in the EspoCRM UI
+(delete the conversation's CCommunications too — they don't cascade).
+Verified live against crm-test. 960 tests green (3 new).
 Note: `tests/test_comms_sync.py` fails COLLECTION when run as a single
 file (pre-existing latent circular import comms.crm → assignments →
 comms.quicksend → comms.service → comms.sync; full-suite runs import
