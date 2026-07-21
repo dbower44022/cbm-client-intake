@@ -1,8 +1,19 @@
 # Reliable Action History Across the CBM Apps — Plan
 
-**Status:** Draft for Doug's review · 2026-07-20 · rev 2 (reporting entity moved
-into Phase 1 per Doug; audited-field config owned by Doug)
+**Status:** Approved · Phase 1 build **in progress** · 2026-07-20 · rev 3
 **Author:** Claude (grounded in a live read of the production CRM's stream/audit config)
+
+> **Build status (2026-07-20).** Foundation shipped: `core/action_log.py`
+> (`record_action` / `log_action`, the free-text `actionType` vocabulary, the
+> feature-gate so it's a no-op until `CActionLog` exists). **Wired:** Client
+> Administration *assign* / *reassign*; the session tools *accept*, *session
+> recorded*, *engagement activated* (create + update), *co-mentor add/remove*.
+> **Remaining to wire:** mentor **provisioning** (SSE flow) + mentoradmin edits;
+> session **Details** edits / contact link-unlink / contributions;
+> mentorprofile self-edits; directory edits; documents; email sends. **Doug
+> (Phase 0):** set the Audited fields, enable Stream on `CContribution`, and
+> **create the `CActionLog` entity** (§4.2/§7) — until then the log rows are
+> skipped (stream notes already post).
 
 ---
 

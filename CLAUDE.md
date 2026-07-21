@@ -3982,6 +3982,16 @@ the synced lists were verified identical on crm-test and prod.
   (or any new `index.html`) must include it. It is visual only and never sets
   `disabled`; apps keep their own in-flight guards. Manual control for a wait
   it can't see: `var done = CBMBusy.start(btn); … done();`.
+- **Every mutating staff action is recorded via `core/action_log.py`** (Doug's
+  ruling 2026-07-20, v0.123.0; plan `prds/action-history-plan.md`): a new
+  write path calls `record_action(...)` (posts an on-record Stream note as the
+  user AND writes a `CActionLog` reporting row via the API key) — or
+  `log_action(...)` when the service already posts the stream note. `actionType`
+  is free-text from the vocabulary constants in that module (add new verbs
+  there); `category` is the small stable enum. Both writes are best-effort and
+  the `CActionLog` half is feature-gated (inert until the CRM entity exists), so
+  it's safe to wire ahead of the CRM build. Do the logging at the **router**
+  layer (it has the actor, app identity, and the service result).
 - **Rich-text (wysiwyg) fields use the shared CBMRichText editor** (Doug's
   ruling 2026-07-15): every wysiwyg field — existing or future, any app —
   renders through `frontend/shared/richtext.js` (`CBMRichText.create`), which

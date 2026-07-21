@@ -4,6 +4,36 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.123.0] — 2026-07-20
+
+**feat(history): action-history + cross-record reporting — Phase 1 foundation
+and the first wired actions** (plan: `prds/action-history-plan.md`). Staff
+actions have been hard to reconstruct because the fields that change most aren't
+audited and most multi-record actions post no note. This starts the fix.
+
+- **New `core/action_log.py`.** `record_action()` dual-writes an on-record
+  **Stream note** (as the acting user) **and** a **`CActionLog`** reporting row
+  (via the shared API key, so the log never depends on a per-user grant;
+  `actorName`/`actorId` stored explicitly). `log_action()` writes just the
+  reporting row where a stream note already exists. `actionType` is **free-text**
+  over a code-kept vocabulary (with a small stable `category` enum), so a new
+  action can never be rejected by an enum. `CActionLog` is **feature-gated**:
+  the log write is skipped (and the stream note still posts) until the CRM entity
+  exists, then activates automatically — so this ships ahead of the CRM build.
+  Best-effort throughout: a failure warns and never breaks the operation.
+- **Wired (each now writes a `CActionLog` row with actor + before→after):**
+  Client Administration *Mentor Assigned / Reassigned / Assignment Repaired*;
+  the session tools *Engagement Accepted*, *Session Recorded*, *Engagement
+  Activated* (on create and update), *Co-mentor Added / Removed*.
+- **Not yet wired** (follow-ups): mentor provisioning (SSE flow) + mentoradmin
+  edits, session Details edits / contact link-unlink / contributions, My Mentor
+  Profile self-edits, directory edits, documents, email sends.
+- **CRM prerequisites (Doug, Phase 0):** create the `CActionLog` entity + grants
+  (§4.2/§7), mark the key fields Audited, enable Stream on `CContribution`.
+
+10 new tests (7 `test_action_log` + wiring integration); 911 green. Inert
+against the CRM until `CActionLog` is built.
+
 ## [0.122.0] — 2026-07-20
 
 ### Fixed
