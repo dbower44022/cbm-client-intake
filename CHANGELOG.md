@@ -16,6 +16,10 @@ Any save that sets an amount now carries a currency
 (`sessions/service._backfill_amount_currency`, on create AND update): the
 record's existing ``amountCurrency`` when present, else USD (CBM is
 USD-only). Clearing an amount adds nothing. 1 new test (4 cases).
+**VERIFIED LIVE on crm-test 2026-07-21** (Doug: amount edit on the
+previously-failing record saved cleanly) — closing the contributions
+feature's live checklist: create, edit, soft delete, and the amount fix
+have all now been exercised against the real CRM.
 
 ## [0.123.0] — 2026-07-20
 
