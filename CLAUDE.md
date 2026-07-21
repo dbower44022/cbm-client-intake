@@ -1489,6 +1489,20 @@ must cover mentors' recordings; plus tier/API check, service-account key,
 the read-only listing probe), then the CRM field on crm-test + the flag on
 the crm-test worker overlay + plan §Phase 3 live verification. CHANGELOG
 0.124.0. (v0.123.2 = the parallel contribution-currency fix session.)
+**v0.124.1 — VERIFIED LIVE on crm-test the same day** (946 tests green):
+Doug's INDIVIDUAL Fathom API key (in .env; sees own + team-shared
+recordings — fine for testing, the team-key/sharing decision stays open)
+drove a real recording ("Doug-Racine Meeting", Zoom 2026-03-31) end-to-end
+via the new **`scripts/probe_fathom.py`** (read-only listing/--match;
+--deliver = explicit one-session write): 70k-char/300-turn transcript +
+4 assigned action items → empty nextSteps + 11.5k-char linked summary →
+sessionAiSummary (field BUILT + probe-verified on crm-test; prod per Doug)
++ share URL, all GET-verified. Live-probe contract fixes: summary key is
+**`default_summary`** (docs' `summary` kept as fallback) and summary
+markdown links now render as safe anchors. Cleanup: ZZTEST CSession
+`6a5f011bce8e19a19` in crm-test (parentless — delete in the EspoCRM UI).
+Next: team key or per-mentor ruling, worker overlay flag, in-UI eyeball
+of the AI SUMMARY zone on a parented session.
 
 Before that: **v0.123.1** (2026-07-20, 912 tests green, committed NOT pushed;
 v0.123.0 = the parallel action-history session — Conventions bullet +

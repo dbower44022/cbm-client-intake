@@ -4,6 +4,35 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.124.1] — 2026-07-21
+
+**fix(fathom): align to the REAL API shapes + VERIFIED LIVE against a real
+Fathom recording on crm-test.** Driven with Doug's individual API key (a
+user-level key sees own + team-shared recordings — fine for testing): the
+"Doug-Racine Meeting" (Zoom, 2026-03-31) delivered end-to-end into a ZZTEST
+CSession via `scripts/probe_fathom.py --deliver` and GET-verified — 70,574
+chars / 300 speaker turns into `sessionTranscription`, 4 action items with
+assignees into the EMPTY `nextSteps`, an 11,546-char summary with rendered
+timestamp links into `sessionAiSummary` (field probe-verified built on
+crm-test), Fathom share URL into `transcriptDocUrl`.
+- Contract fixes from the live probe: the summary rides
+  **`default_summary`** `{markdown_formatted, template_name}` (documented
+  name `summary` kept as fallback), and `summary_html` now renders the
+  markdown links real summaries are dense with (`[text](https://…)` →
+  safe anchor, http(s) only, escaped first).
+- New **`scripts/probe_fathom.py`**: read-only key probe (listing +
+  normalized correlation keys, `--match` pairs CRM candidate sessions);
+  `--deliver SESSION_ID` is the explicit one-session write test; key from
+  $FATHOM_API_KEY / .env / --key; `--days` drives the source window so old
+  test recordings stay matchable.
+- 946 tests green (2 new). **Cleanup:** ZZTEST CSession
+  `6a5f011bce8e19a19` ("ZZTEST-FATHOM Doug-Racine probe") left in crm-test
+  — parentless, so invisible in the session tools; view/delete in the
+  EspoCRM UI. **Remaining for real activation:** team key or per-mentor
+  decision (team sharing), `FATHOM_TRANSCRIPTS`+`FATHOM_API_KEY` on the
+  crm-test worker overlay, and an in-UI eyeball of the AI SUMMARY zone on
+  a parented session.
+
 ## [0.124.0] — 2026-07-21
 
 **feat(transcripts): Fathom note-taker transcript source — the retrieval

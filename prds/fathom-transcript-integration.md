@@ -1,9 +1,16 @@
 # Meeting Transcript Integration — Fathom note taker (plan v0.1)
 
-**Status: Phases 1+2 BUILT (v0.124.0, 2026-07-21, 944 tests green) — gated
-OFF by `FATHOM_TRANSCRIPTS`. Remaining: Phase 0 (Doug — Fathom tier/key/
-team-sharing + the listing probe), the `sessionAiSummary` CRM field build
-(`csession-ai-summary-field.md`), then Phase 3 live verification.** App
+**Status: Phases 1+2 BUILT (v0.124.0) and the delivery pipeline VERIFIED
+LIVE on crm-test (v0.124.1, 2026-07-21, 946 tests green) — gated OFF by
+`FATHOM_TRANSCRIPTS`. A real Fathom recording (Doug's individual API key,
+Zoom meeting) delivered end-to-end via `scripts/probe_fathom.py --deliver`:
+transcript + action-items→empty-nextSteps + linked summary→sessionAiSummary
+(field BUILT on crm-test, probe-verified) + share URL, all GET-verified.
+Live probe corrected two API shapes: the summary key is `default_summary`
+and summaries are markdown-link-dense (now rendered). Remaining: the team
+key / team-sharing decision (an individual key only sees its own + shared
+recordings), the worker overlay flag, and an in-UI eyeball of the AI
+SUMMARY zone on a parented session.** App
 side: `core/fathom.py`, the multi-source seam + `FathomTranscriptSource` in
 `sessions/transcripts.py`, the AI Summary view zone. One build note: when
 the CRM lacks `sessionAiSummary`, the action-items → empty-`nextSteps` path

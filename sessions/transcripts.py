@@ -245,8 +245,13 @@ class FathomTranscriptSource(TranscriptSource):
 
 
 def _summary_markdown(meeting: dict[str, Any]) -> str:
-    """The meeting's summary markdown, whatever shape the API returned."""
-    raw = meeting.get("summary")
+    """The meeting's summary markdown, whatever shape the API returned.
+
+    The live listing calls it ``default_summary`` — ``{markdown_formatted,
+    template_name}`` (verified against the real API 2026-07-21); ``summary``
+    is kept as a fallback for the documented name.
+    """
+    raw = meeting.get("default_summary") or meeting.get("summary")
     if isinstance(raw, dict):
         return (
             raw.get("markdown_formatted") or raw.get("markdown")

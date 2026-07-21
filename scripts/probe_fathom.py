@@ -144,8 +144,9 @@ async def main() -> None:
                  "or pass --key.")
     client = FathomClient(args.key, base_url=args.base_url)
     now = datetime.now(timezone.utc)
-    source = FathomTranscriptSource(
-        client, now=now, give_up_days=settings.transcript_give_up_days)
+    # --days drives the source's sweep window too, so an old test recording
+    # is still matchable (the worker itself uses transcript_give_up_days).
+    source = FathomTranscriptSource(client, now=now, give_up_days=args.days)
 
     await list_meetings(client, args.days)
 

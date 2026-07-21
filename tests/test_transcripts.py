@@ -407,7 +407,9 @@ FATHOM_MEETING = {
     "recording_start_time": "2026-07-16T15:03:00Z",
     "share_url": "https://fathom.video/share/abc",
     "recorded_by": {"email": "doug.bower@cbmentors.org"},
-    "summary": {"markdown_formatted": "## Recap\n- went well"},
+    # the live API's name for the summary (verified 2026-07-21)
+    "default_summary": {"markdown_formatted": "## Recap\n- went well",
+                        "template_name": "Enhanced"},
     "action_items": [{"description": "Send deck"}],
 }
 
@@ -495,3 +497,12 @@ async def test_fathom_source_unrecognized_link_skips():
     result = await _fathom_source(FakeFathom()).fetch(
         _session(videoMeetingLink="https://example.com/x"), "")
     assert result.status == "skip"
+
+
+async def test_fathom_source_documented_summary_key_fallback():
+    legacy = dict(FATHOM_MEETING)
+    del legacy["default_summary"]
+    legacy["summary"] = {"markdown_formatted": "## Alt"}
+    result = await _fathom_source(FakeFathom(meetings=[legacy])).fetch(
+        _session(), "")
+    assert "<p><strong>Alt</strong></p>" in result.summary_html

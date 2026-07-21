@@ -183,3 +183,13 @@ async def test_4xx_raises_fathom_error():
 
     with pytest.raises(FathomError, match="HTTP 401"):
         await _client(handler).get_transcript(7)
+
+
+def test_summary_renders_markdown_links_http_only():
+    out = summary_html(
+        "[Reviewed the plan](https://fathom.video/share/x?t=1) with **Doug**\n"
+        "- [bad](javascript:alert(1)) stays literal\n")
+    assert ('<a href="https://fathom.video/share/x?t=1" target="_blank" '
+            'rel="noopener">Reviewed the plan</a>') in out
+    assert "<strong>Doug</strong>" in out
+    assert "javascript:" in out and "<a href=\"javascript" not in out

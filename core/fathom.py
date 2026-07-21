@@ -229,11 +229,20 @@ def format_transcript_html(entries: list[dict[str, Any]]) -> str:
 _HEADING_RE = re.compile(r"#{1,6}\s+(.*)")
 _BULLET_RE = re.compile(r"(?:[-*•]|\d+[.)])\s+(.*)")
 _BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
+# Markdown links AFTER escaping (real Fathom summaries are link-dense — every
+# claim carries a fathom.video timestamp link). http(s) targets only.
+_LINK_RE = re.compile(r"\[([^\]]+)\]\((https?://[^)\s]+)\)")
 
 
 def _inline(text: str) -> str:
-    """Escape, then render the one inline mark Fathom summaries use (bold)."""
-    return _BOLD_RE.sub(r"<strong>\1</strong>", html.escape(text))
+    """Escape, then render the inline marks Fathom summaries use: ``**bold**``
+    and ``[text](https://…)`` links (escaped first, so only the tags emitted
+    here reach the CRM; non-http(s) link targets stay literal)."""
+    escaped = html.escape(text)
+    escaped = _LINK_RE.sub(
+        r'<a href="\2" target="_blank" rel="noopener">\1</a>', escaped
+    )
+    return _BOLD_RE.sub(r"<strong>\1</strong>", escaped)
 
 
 def summary_html(markdown_text: Optional[str]) -> str:
