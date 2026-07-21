@@ -4,6 +4,26 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.121.0] — 2026-07-20
+
+### Fixed
+- **ROOT CAUSE (Doug's challenge): mentor provisioning now stamps the
+  mentor's own Contact.** Approving a mentor created their login User and
+  linked it to the PROFILE only — every newly provisioned mentor was BORN
+  with an unstamped Contact, guaranteed to 403 their own /mentorprofile
+  contact-field saves until a later staff re-save or status sweep happened
+  to reconcile it. The provisioning flow (both the SSE window and the
+  inline path) now merges the new User onto the linked Contact right after
+  the profile link, via the admin credential (merge-only: an existing
+  owner/collaborator is preserved, the single `assignedUserId` only set
+  when empty). Non-fatal: a stamp failure emits a status note naming the
+  recovery ("run Update Mentor Status") — the login itself always
+  completes. With this, every known CREATION path assigns correctly at the
+  source; the heal-on-access and nightly reconciliation remain as the
+  control for drift the app can't prevent (hand edits, CRM schema
+  changes) and as the one-time migration for the July-16 collaborators
+  switch, which orphaned all previously-stored single-user assignments.
+
 ## [0.120.0] — 2026-07-20
 
 The SECOND stamp-drift class, live-reported an hour after layers 1–4 were

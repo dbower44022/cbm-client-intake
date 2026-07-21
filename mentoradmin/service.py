@@ -712,6 +712,37 @@ async def provision_mentor_user_steps(
         if not existing_cbm:
             link_payload["cbmEmail"] = cbm
         await edit_client.update(MENTOR_PROFILE, mentor_id, link_payload)
+
+        # ROOT-CAUSE FIX (2026-07-20, Doug's finding): stamp the mentor's own
+        # CONTACT with the new login too. Provisioning previously linked the
+        # User to the profile only, so every newly provisioned mentor was BORN
+        # with an unstamped Contact — their /mentorprofile contact-field saves
+        # 403'd (Mentor Role edits Contacts at own scope) until a later staff
+        # re-save or the status sweep happened to reconcile it. Written by the
+        # admin credential (always permitted); merge-only; non-fatal — the
+        # login exists either way, and the reconciliation is the backstop.
+        if contact_id:
+            try:
+                rec = await admin_client.get(
+                    "Contact", contact_id, select="assignedUserId,assignedUsersIds"
+                )
+                ids = list(rec.get("assignedUsersIds") or [])
+                if user_id not in ids and rec.get("assignedUserId") != user_id:
+                    contact_link: dict[str, Any] = {"assignedUsersIds": ids + [user_id]}
+                    if not rec.get("assignedUserId"):
+                        contact_link["assignedUserId"] = user_id
+                    await admin_client.update("Contact", contact_id, contact_link)
+                yield _step(
+                    "login", "running",
+                    "Linked the login to the mentor's contact record",
+                )
+            except Exception as exc:  # noqa: BLE001 — never fails the provisioning
+                yield _step(
+                    "login", "running",
+                    f"Note: the login could not be linked to the mentor's "
+                    f"contact record ({exc}) — run Update Mentor Status to "
+                    f"finish, or it self-heals overnight.",
+                )
     except MentorAdminError as exc:
         yield _step("login", "error", str(exc))
         return

@@ -1449,7 +1449,22 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-20)
 
-**Main is at v0.120.0** (2026-07-20, 897 tests green, committed NOT pushed) —
+**Main is at v0.121.0** (2026-07-20, 900 tests green, committed NOT pushed) —
+**the ROOT-CAUSE fix (Doug's challenge): provisioning stamps the mentor's
+Contact.** Approval created the User + linked the PROFILE only — every new
+mentor was BORN with an unstamped Contact (guaranteed /mentorprofile 403
+on contact saves until a later staff re-save/sweep). Provisioning now
+merges the User onto the linked Contact right after the profile link
+(admin credential, merge-only, non-fatal note on failure). **Root-cause
+map, complete:** (1) July-16 collaborators switch orphaned old
+single-user assignments → the one-time heal IS the migration (audit
+--heal or first reconciliation pass); (2) provisioning never stamped the
+Contact → FIXED at source (this release); (3) post-assignment contact
+adds unstamped → FIXED at source (v0.118.0 layer 2); (4) hand edits/CRM
+schema changes → can't fix at source; nightly reconciliation is the
+control. CHANGELOG 0.121.0.
+
+Before that: **v0.120.0** (2026-07-20, 897 tests green) —
 **the SECOND stamp-drift class** (live report an hour after layers 1–4: a
 mentor's /mentorprofile save 403'd because their OWN linked Contact lacked
 their User — a different record class from engagement client records;
@@ -1573,8 +1588,41 @@ against the running app (portal Sign in spins/clears; volunteer Next doesn't; no
 console errors). **Harness gotcha worth remembering:** a fetch stub that ignores
 `AbortSignal` silently never times out — the stub must reject on abort like real
 fetch, and a stub that REPLACES `window.fetch` after busy.js loads bypasses the
-instrumentation entirely (load the stub first). **Still open:** the timeout is
-sessions-only (the other apps' `api()` helpers don't have one yet).
+instrumentation entirely (load the stub first). **v0.119.0 extended the timeout
+to every OTHER app** (see its block below), so this is no longer sessions-only.
+
+Also settled during the v0.119.0 session: **the engagement-activation question
+from v0.112.0 is ANSWERED — a one-off, NOT systemic** (memory:
+[[engagement-activation-not-systemic]]). Read live from prod as admin: Mentor
+Role has **no field-level lock** on `CEngagement` (silent-strip theory wrong;
+edit=own + the mentor is in `assignedUsers`; "Active" is a valid option). Of the
+**16** engagements with a Completed session, **15 are correctly Active** (each
+with an app-written "→ Active" stream note) — the feature works. **Only
+Christopher Maurer (`6a5a2c6ab50ca311f`) is stuck**, the exact engagement that
+got the triple-duplicate-save; its stream shows the status set to Assigned at
+17:01 and never changed again (activation swallowed during the duplicate storm,
+no later Completed save to retry). Duplicate saves are now prevented, so the
+trigger is gone and the rule self-heals on the next Completed save; the one
+record can be set to Active by hand. Do NOT re-open as a field-ACL hunt.
+
+Before that: **v0.119.0** (2026-07-20, committed NOT pushed) — **request timeout
+rolled out to every app's `api()` helper** (Doug's follow-up to v0.114.0). New
+shared `CBMBusy.fetch(url, opts)` in `frontend/shared/busy.js`: an
+AbortController aborts a request hanging past 60 s → a readable message instead
+of a silent stuck button; it calls the busy-wrapped `window.fetch` so the press
+spinner still applies, and throws a `.timeout` Error that propagates to the
+caller's catch exactly as a network error does. Wired into assignments,
+mentoradmin, mentorprofile, myemail, ops, directory, portal as a one-line swap
+(`await CBMBusy.fetch(…)` with a plain-`fetch` fallback if busy.js didn't load).
+The sessions app keeps its own tailored timeout (its message promises no
+duplicate — its creates carry an idempotency token); this shared one is neutral
+since those apps' writes aren't all idempotent. Verified against the running app
+(login spins through `CBMBusy.fetch` and clears; the timeout path throws the
+readable error; no console errors). Committed with ONLY the 8 frontend files +
+version/changelog — a parallel session's uncommitted stamp work
+(`assignments/stamps.py`, `tests/test_stamps.py`, etc.) was deliberately left
+unstaged, so a `pytest` that shows `test_stamps.py` failures is THEIR
+in-progress work, not this change (this change is frontend JS only).
 
 Before that: **v0.113.0** (2026-07-20, 839 tests green) —
 **Funder Management lists ALL sponsors to every sponsor-team member** (Doug's

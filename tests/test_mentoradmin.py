@@ -1321,3 +1321,58 @@ def test_status_check_endpoint_returns_rows(monkeypatch):
         data = resp.json()
         assert data["mailboxCheckEnabled"] is False
         assert data["mentors"][0]["id"] == "m1"
+
+
+@pytest.mark.asyncio
+async def test_provisioning_stamps_the_mentors_contact():
+    """ROOT-CAUSE fix (2026-07-20): provisioning linked the User to the
+    PROFILE only — every newly provisioned mentor was born with an unstamped
+    Contact, 403ing their own /mentorprofile contact saves. The flow now
+    stamps the Contact too (merge-only, admin credential)."""
+    c = ProvisionClient()
+    await service.update_mentor(
+        c, "m1", {"mentorStatus": "Approved"},
+        team_name="Mentor Team", admin_client_factory=_afactory(c),
+    )
+    contact_links = [u for u in c.updates if u[0] == "Contact" and "assignedUsersIds" in u[2]]
+    # The provisioning stamp is the FIRST contact write (the fake doesn't
+    # persist contact updates, so the post-save reconcile re-writes — a no-op
+    # against a real CRM).
+    assert contact_links[0] == (
+        "Contact", "c1", {"assignedUsersIds": ["user-new"], "assignedUserId": "user-new"}
+    )
+
+
+@pytest.mark.asyncio
+async def test_provisioning_contact_stamp_merges_and_keeps_existing_owner():
+    c = ProvisionClient(contact={
+        "id": "c1", "firstName": "Jane", "lastName": "Doe",
+        "assignedUserId": "u-staff", "assignedUsersIds": ["u-staff"],
+    })
+    await service.update_mentor(
+        c, "m1", {"mentorStatus": "Approved"},
+        team_name="Mentor Team", admin_client_factory=_afactory(c),
+    )
+    contact_links = [u for u in c.updates if u[0] == "Contact" and "assignedUsersIds" in u[2]]
+    # Merge-only: the existing owner is kept, the single assignedUserId untouched.
+    assert contact_links[0] == (
+        "Contact", "c1", {"assignedUsersIds": ["u-staff", "user-new"]}
+    )
+
+
+@pytest.mark.asyncio
+async def test_provisioning_contact_stamp_failure_is_not_fatal():
+    class ContactRejecting(ProvisionClient):
+        async def update(self, entity, record_id, payload):
+            if entity == "Contact":
+                raise EspoError("update Contact/c1 failed: HTTP 403 denied")
+            return await super().update(entity, record_id, payload)
+
+    c = ContactRejecting()
+    result = await service.update_mentor(
+        c, "m1", {"mentorStatus": "Approved"},
+        team_name="Mentor Team", admin_client_factory=_afactory(c),
+    )
+    # The provisioning still succeeded — the stamp failure is a note, not an error.
+    assert result["provision"]["ok"] is True
+    assert result["provision"]["userId"] == "user-new"
