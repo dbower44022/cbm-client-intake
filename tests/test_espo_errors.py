@@ -154,3 +154,25 @@ def test_transport_error_not_a_validation_or_forbidden_match():
     )
     assert validation_message(exc) is None
     assert not str(exc).startswith("HTTP")
+
+
+def test_http_error_detail_includes_x_status_reason():
+    # EspoCRM puts the denial reason in the X-Status-Reason HEADER with an
+    # empty body (e.g. the Email from-address rejection) — the detail string
+    # must carry it so errors never read as a bare "HTTP 403".
+    from core.espo import http_error_detail
+
+    class Resp:
+        status_code = 403
+        headers = {"x-status-reason": "Not allowed 'from' address."}
+        text = ""
+
+    assert http_error_detail(Resp()) == "HTTP 403 [Not allowed 'from' address.]"
+
+    class RespBody:
+        status_code = 400
+        headers = {}
+        text = '{"messageTranslation": {"label": "validationFailure"}}'
+
+    detail = http_error_detail(RespBody())
+    assert detail.startswith("HTTP 400 {")

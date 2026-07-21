@@ -41,6 +41,26 @@ class EspoTransportError(EspoError):
 _HTTP_STATUS_RE = re.compile(r"HTTP (\d{3})")
 
 
+def http_error_detail(resp: Any) -> str:
+    """``HTTP <status> [<X-Status-Reason>] <body>`` for error messages.
+
+    EspoCRM puts the human reason for many 4xx denials in the
+    ``X-Status-Reason`` response HEADER with an EMPTY body (e.g. the Email
+    from-address rejection: "Not allowed 'from' address."), so an error
+    message built from the body alone reads as a bare "HTTP 403" — which
+    cost a live diagnosis round-trip 2026-07-21. Every EspoError raise site
+    uses this so the reason is never dropped.
+    """
+    parts = [f"HTTP {resp.status_code}"]
+    reason = (resp.headers.get("x-status-reason") or "").strip()
+    if reason:
+        parts.append(f"[{reason[:200]}]")
+    body = (resp.text or "").strip()
+    if body:
+        parts.append(body[:300])
+    return " ".join(parts)
+
+
 def _humanize_field(name: str) -> str:
     """``howDidYouHearAboutCBM`` → ``How Did You Hear About CBM``."""
     spaced = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", name)
@@ -241,7 +261,7 @@ class EspoClient:
         )
         if resp.status_code >= 400:
             raise EspoError(
-                f"get {entity}/{record_id} failed: HTTP {resp.status_code} {resp.text[:300]}"
+                f"get {entity}/{record_id} failed: {http_error_detail(resp)}"
             )
         return resp.json()
 
@@ -282,7 +302,7 @@ class EspoClient:
         )
         if resp.status_code >= 400:
             raise EspoError(
-                f"list {entity} failed: HTTP {resp.status_code} {resp.text[:300]}"
+                f"list {entity} failed: {http_error_detail(resp)}"
             )
         return resp.json()
 
@@ -306,7 +326,7 @@ class EspoClient:
         if resp.status_code >= 400:
             raise EspoError(
                 f"list_related {entity}/{record_id}/{link} failed: "
-                f"HTTP {resp.status_code} {resp.text[:300]}"
+                f"{http_error_detail(resp)}"
             )
         return resp.json()
 
@@ -316,7 +336,7 @@ class EspoClient:
         )
         if resp.status_code >= 400:
             raise EspoError(
-                f"create {entity} failed: HTTP {resp.status_code} {resp.text[:300]}"
+                f"create {entity} failed: {http_error_detail(resp)}"
             )
         return resp.json()
 
@@ -330,7 +350,7 @@ class EspoClient:
         if resp.status_code >= 400:
             raise EspoError(
                 f"update {entity}/{record_id} failed: "
-                f"HTTP {resp.status_code} {resp.text[:300]}"
+                f"{http_error_detail(resp)}"
             )
         return resp.json()
 
@@ -349,7 +369,7 @@ class EspoClient:
         )
         if resp.status_code >= 400:
             raise EspoError(
-                f"find {entity} failed: HTTP {resp.status_code} {resp.text[:300]}"
+                f"find {entity} failed: {http_error_detail(resp)}"
             )
         rows = resp.json().get("list") or []
         return rows[0] if rows else None
@@ -365,7 +385,7 @@ class EspoClient:
         if resp.status_code >= 400:
             raise EspoError(
                 f"relate {entity}/{record_id}/{link} failed: "
-                f"HTTP {resp.status_code} {resp.text[:300]}"
+                f"{http_error_detail(resp)}"
             )
 
     async def unrelate(
@@ -385,7 +405,7 @@ class EspoClient:
         if resp.status_code >= 400:
             raise EspoError(
                 f"unrelate {entity}/{record_id}/{link} ({related_id}) failed: "
-                f"HTTP {resp.status_code} {resp.text[:300]}"
+                f"{http_error_detail(resp)}"
             )
 
     async def metadata(self, key: str) -> Any:
@@ -395,7 +415,7 @@ class EspoClient:
         )
         if resp.status_code >= 400:
             raise EspoError(
-                f"metadata {key} failed: HTTP {resp.status_code} {resp.text[:200]}"
+                f"metadata {key} failed: {http_error_detail(resp)}"
             )
         return resp.json()
 
@@ -404,7 +424,7 @@ class EspoClient:
         ACL table (per-entity create/read/edit/delete levels)."""
         resp = await self._request("GET", f"{self._base}/App/user", op="get App/user")
         if resp.status_code >= 400:
-            raise EspoError(f"App/user failed: HTTP {resp.status_code} {resp.text[:200]}")
+            raise EspoError(f"App/user failed: {http_error_detail(resp)}")
         return resp.json()
 
     async def layout(self, entity: str, name: str = "list") -> Any:
@@ -422,7 +442,7 @@ class EspoClient:
         )
         if resp.status_code >= 400:
             raise EspoError(
-                f"layout {entity}/{name} failed: HTTP {resp.status_code} {resp.text[:200]}"
+                f"layout {entity}/{name} failed: {http_error_detail(resp)}"
             )
         return resp.json()
 
@@ -438,7 +458,7 @@ class EspoClient:
         )
         if resp.status_code >= 400:
             raise EspoError(
-                f"i18n {scope} failed: HTTP {resp.status_code} {resp.text[:200]}"
+                f"i18n {scope} failed: {http_error_detail(resp)}"
             )
         data = resp.json()
         return data if isinstance(data, dict) else {}
@@ -457,7 +477,7 @@ class EspoClient:
         )
         if resp.status_code >= 400:
             raise EspoError(
-                f"metadata {entity}.{field} failed: HTTP {resp.status_code} {resp.text[:200]}"
+                f"metadata {entity}.{field} failed: {http_error_detail(resp)}"
             )
         options = resp.json()
         return options if isinstance(options, list) else None
@@ -486,7 +506,7 @@ class EspoClient:
         )
         if resp.status_code >= 400:
             raise EspoError(
-                f"upload attachment failed: HTTP {resp.status_code} {resp.text[:300]}"
+                f"upload attachment failed: {http_error_detail(resp)}"
             )
         return resp.json()["id"]
 
@@ -500,7 +520,7 @@ class EspoClient:
         )
         if resp.status_code >= 400:
             raise EspoError(
-                f"download attachment {attachment_id} failed: HTTP {resp.status_code} {resp.text[:200]}"
+                f"download attachment {attachment_id} failed: {http_error_detail(resp)}"
             )
         content_type = resp.headers.get("content-type", "application/octet-stream")
         return resp.content, content_type
@@ -546,7 +566,7 @@ class EspoClient:
         if resp.status_code >= 400:
             raise EspoError(
                 f"prepare EmailTemplate/{template_id} failed: "
-                f"HTTP {resp.status_code} {resp.text[:300]}"
+                f"{http_error_detail(resp)}"
             )
         return resp.json()
 

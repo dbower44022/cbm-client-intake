@@ -4,6 +4,24 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.128.0] — 2026-07-21
+
+**fix(espo): error messages carry EspoCRM's X-Status-Reason header.** EspoCRM
+puts the human reason for many 4xx denials in the `X-Status-Reason` response
+HEADER with an empty body, so `EspoError` messages read as a bare
+"HTTP 403" — which cost a live diagnosis round-trip during the info@ rollout
+(the Email write-back 403 was actually the `CheckFromAddress` hook's
+"Not allowed 'from' address.", visible only in the CRM server log). New
+`core.espo.http_error_detail(resp)` formats `HTTP <status> [<reason>] <body>`
+and every raise site uses it; `validation_message`/`is_forbidden`/
+`forbidden_hint` parsing unaffected (op prefix + first HTTP code unchanged).
+960 tests green (1 new).
+- **Rollout finding recorded in `prds/info-mailbox-rollout-plan.md`:** the
+  shared-mailbox Email write-back (`from: info@`) requires info@ to be the
+  CRM's SHARED system outbound address (or a shared Group Email Account) —
+  fix is Administration → Outbound Emails → From Address = info@ (which also
+  retires espo@ for CRM-native sends, most of Phase 3).
+
 ## [0.127.0] — 2026-07-21
 
 **fix(comms): the Gmail sweep no longer ingests internal cbmentor↔cbmentor
