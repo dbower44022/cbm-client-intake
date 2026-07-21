@@ -7,6 +7,7 @@ import logging
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
+from core import action_log
 from core.config import get_settings
 from core.espo import EspoError, forbidden_hint, is_forbidden, validation_message
 
@@ -171,6 +172,27 @@ async def assign(engagement_id: str, body: AssignIn, request: Request) -> dict:
         "assigned CEngagement/%s to CMentorProfile/%s by %s",
         engagement_id, body.mentorProfileId, user["userName"],
     )
+    # Reporting log (the service already posted the on-record stream note).
+    repaired = bool(result.get("repaired"))
+    errs = result.get("reassignmentErrors") or []
+    _summary = (
+        f"Assignment repaired: {result.get('mentorName')} (re-ran re-homing)."
+        if repaired else
+        f"Mentor assigned: {result.get('mentorName')}. "
+        f"Status → {result.get('engagementStatus')}. "
+        f"Re-homed {result.get('contactsUpdated')}/{result.get('contactsTotal')} "
+        f"contact(s)"
+        + (", client profile" if result.get("clientProfileUpdated") else "")
+        + (", company" if result.get("accountUpdated") else "")
+        + (f"; {len(errs)} could not be re-homed" if errs else "") + "."
+    )
+    await action_log.log_action(
+        app=action_log.APP_CLIENT_ADMIN, category=action_log.CAT_ASSIGNMENT,
+        action=action_log.ACT_ASSIGNMENT_REPAIRED if repaired else action_log.ACT_MENTOR_ASSIGNED,
+        parent_type=service.ENGAGEMENT, parent_id=engagement_id,
+        summary=_summary, actor_id=user["userId"], actor_name=user["name"],
+        details=result, outcome="Partial" if errs else "Success",
+    )
     # DOC-09: the assigned mentor gains the engagement folder's Drive Commenter
     # grant in the same action that grants the entitlement (no-op until the
     # record has a folder). Best-effort — never fails the assignment; the
@@ -201,6 +223,19 @@ async def reassign(engagement_id: str, body: AssignIn, request: Request) -> dict
     log.info(
         "reassigned CEngagement/%s to CMentorProfile/%s by %s",
         engagement_id, body.mentorProfileId, user["userName"],
+    )
+    # Reporting log (the service already posted the on-record stream note).
+    _errs = result.get("reassignmentErrors") or []
+    await action_log.log_action(
+        app=action_log.APP_CLIENT_ADMIN, category=action_log.CAT_ASSIGNMENT,
+        action=action_log.ACT_MENTOR_REASSIGNED,
+        parent_type=service.ENGAGEMENT, parent_id=engagement_id,
+        summary=(
+            f"Mentor reassigned to {result.get('mentorName')}"
+            + (f"; {len(_errs)} record(s) could not be re-homed" if _errs else "") + "."
+        ),
+        actor_id=user["userId"], actor_name=user["name"],
+        details=result, outcome="Partial" if _errs else "Success",
     )
     # DOC-09: re-derive the engagement folder's Drive grants (new mentor gains,
     # the replaced mentor loses). Best-effort, like the assign path.
