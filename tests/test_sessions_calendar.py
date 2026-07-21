@@ -328,6 +328,86 @@ async def test_update_backfills_event_when_missing(monkeypatch):
     assert len(cal.created) == 1
 
 
+# --- CBM member addressing (Doug's ruling 2026-07-20: cbmEmail ONLY) ----------
+
+async def test_member_attendees_invited_at_cbm_email_only(monkeypatch):
+    """A co-mentor on the attendee list is invited at their cbmEmail, never the
+    personal address on their Contact; the acting organizer's own Contact
+    resolves to the organizer mailbox and is excluded entirely (the
+    self-invite duplicate-event fix, customer report 2026-07-20)."""
+    crm, cal = _fake_crm(
+        attendee_rows=[
+            {"id": "c1", "name": "Pat Koran", "emailAddress": "pat@x.com"},
+            {"id": "c8", "name": "Robert Cohen", "emailAddress": "rob@gmail.com"},
+            {"id": "c9", "name": "Mgr Self", "emailAddress": "mgr.personal@gmail.com"},
+        ],
+    ), FakeCalendar()
+    crm.records[("CEngagement", "E1")] = {
+        "name": "Agape W8 Loss", "mentorProfileId": "mp1",
+    }
+    crm.records[("CMentorProfile", "mp1")] = {
+        "cbmEmail": " Mgr@CBMentors.org ", "contactRecordId": "c9",
+    }
+    crm.related["additionalMentors"] = [
+        {"id": "mpC", "name": "Robert Cohen",
+         "cbmEmail": "Robert.Cohen@cbmentors.org", "contactRecordId": "c8"},
+    ]
+    _wire(monkeypatch, cal)
+    session = await service.create_session(
+        MENTOR, crm, "E1", dict(NEW_CHANGES), ["c1", "c8", "c9"],
+        owner_user_id="u1", settings=SETTINGS_ON)
+    assert session["calendar"]["ok"] is True
+    (_eid, body, _send), = cal.patched
+    assert body == {"attendees": [
+        {"email": "pat@x.com"}, {"email": "robert.cohen@cbmentors.org"},
+    ]}
+
+
+async def test_member_without_cbm_email_never_invited_personally(monkeypatch):
+    """A CBM member whose profile has no cbmEmail is skipped — the personal
+    Contact address is never used as a fallback."""
+    crm, cal = _fake_crm(
+        attendee_rows=[
+            {"id": "c1", "name": "Pat Koran", "emailAddress": "pat@x.com"},
+            {"id": "c8", "name": "New Mentor", "emailAddress": "new@gmail.com"},
+        ],
+    ), FakeCalendar()
+    crm.related["additionalMentors"] = [
+        {"id": "mpC", "name": "New Mentor", "cbmEmail": "", "contactRecordId": "c8"},
+    ]
+    _wire(monkeypatch, cal)
+    await service.create_session(
+        MENTOR, crm, "E1", dict(NEW_CHANGES), ["c1", "c8"],
+        owner_user_id="u1", settings=SETTINGS_ON)
+    (_eid, body, _send), = cal.patched
+    assert body == {"attendees": [{"email": "pat@x.com"}]}
+
+
+async def test_update_patch_substitutes_member_emails(monkeypatch):
+    """The update path has no parent id in hand — the hook reads it off the
+    session record and still classifies CBM members on the re-patch."""
+    crm, cal = _fake_crm(
+        attendee_rows=[
+            {"id": "c1", "name": "Pat Koran", "emailAddress": "pat@x.com"},
+            {"id": "c9", "name": "Mgr Self", "emailAddress": "mgr.personal@gmail.com"},
+        ],
+    ), FakeCalendar()
+    crm.records[("CEngagement", "E1")] = {
+        "name": "Agape W8 Loss", "mentorProfileId": "mp1",
+    }
+    crm.records[("CMentorProfile", "mp1")] = {
+        "cbmEmail": " Mgr@CBMentors.org ", "contactRecordId": "c9",
+    }
+    _seed_session(crm, googleCalendarEventId="ev1", engagementId="E1")
+    _wire(monkeypatch, cal)
+    await service.update_session(
+        MENTOR, crm, "s1", {"dateStart": "2026-07-21 18:00:00"},
+        user_id="u1", settings=SETTINGS_ON)
+    (_eid, body, _send), = cal.patched
+    # Without the substitution, mgr.personal@gmail.com would be re-invited here.
+    assert body["attendees"] == [{"email": "pat@x.com"}]
+
+
 # --- cancel -------------------------------------------------------------------
 
 async def test_cancel_deletes_event_and_clears_meet_link(monkeypatch):

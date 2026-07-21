@@ -1294,7 +1294,14 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   + a generated Meet link, never a hand-typed one); Completed/No Show →
   skipped (Doug: only Scheduled sessions get events). Attendee contacts are
   invited (`sendUpdates=all` — Google emails invitations; organizer
-  excluded, blanks skipped). **Best-effort** (mentoradmin-provision
+  excluded, blanks skipped). **CBM members are invited at their `cbmEmail`
+  ONLY (v0.122.0, Doug's ruling 2026-07-20 — see the Current-status block):**
+  `service.cbm_member_email_map` classifies the record's members (assigned
+  manager + co-mentors, contact id → cbmEmail) and `gcal._attendee_emails`
+  substitutes it for the Contact's personal address on create AND re-patch;
+  the acting organizer's own contact then matches the organizer mailbox and
+  drops out (no self-invitation), and a member with no cbmEmail is skipped,
+  never invited personally. **Best-effort** (mentoradmin-provision
   precedent): never raises; the save response carries `calendar:{ok,…}`
   and `saveSession` shows it as a notice. **Pre-save prompt (v0.56.0):**
   saving a NEW Scheduled session (start time set, `gcalEnabled` from
@@ -1449,7 +1456,25 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-20)
 
-**Main is at v0.121.0** (2026-07-20, 900 tests green; v0.120.0 pushed +
+**Main is at v0.122.0** (2026-07-20, 903 tests green, committed NOT pushed) —
+**calendar invites address CBM members at their `cbmEmail` ONLY** (Doug's
+ruling, from the live duplicate-event customer report on engagement
+`6a54610ba4b6d1b24`: the mentor was invited to their OWN meeting at their
+personal address — the default-invitee set resolves members to Contact
+records and the hook used the Contact's primary email; accepting made a
+second event copy, and deleting the organizer copy cancelled the client's
+too). Fix: `sessions/service.cbm_member_email_map` (record's assigned
+manager + co-mentors → contact id → cbmEmail) + substitution in
+`gcal._attendee_emails` on create and re-patch — organizer self-invite
+eliminated, co-mentors invited once at their CBM address, no-cbmEmail
+members skipped (never personal). New read-only
+`scripts/audit_calendar_invites.py` measures the retroactive blast radius
+(crm-test: 1 upcoming session flagged — Douglas Bower invited at
+doug@dougbower.com). **Retroactive decision open with Doug** (notify
+mentors vs. re-save flagged sessions post-deploy to re-patch their events;
+Doug to run the audit against prod for the count). CHANGELOG 0.122.0.
+
+Before that: **v0.121.0** (2026-07-20, 900 tests green; v0.120.0 pushed +
 DEPLOYED — **prod's first reconciliation pass ran clean 2026-07-21 01:17
 UTC: 41 engagements audited, 0 records needed healing, 0 errors, 1 mentor
 own-Contact healed (Andrew Ciszczon — the reported case)**; only the

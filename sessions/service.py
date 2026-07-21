@@ -637,6 +637,60 @@ async def _cbm_contacts(
     return resolved
 
 
+async def cbm_member_email_map(
+    client: SessionClient, cfg: DomainConfig, parent_id: str
+) -> dict[str, str]:
+    """Contact id -> CBM mailbox (lowercased) for every CBM member on the record.
+
+    Doug's ruling (2026-07-20): a CBM member is contacted ONLY at their
+    ``cbmEmail`` — never the personal address on their Contact record. The
+    calendar hook uses this map to substitute each member's CBM mailbox for
+    their Contact's primary email when building event invitations; a member
+    whose profile has no cbmEmail maps to ``""`` (skip — never invite
+    personally). Members = the parent's assigned manager + (mentor domain)
+    co-mentors, the same set as the default-invitee list. Best-effort per
+    read: an unreadable profile just isn't in the map (logged), degrading that
+    one person to client-contact treatment rather than failing the caller.
+    """
+    profiles: list[dict[str, Any]] = []
+    if cfg.parent_manager_link:
+        try:
+            parent = await client.get(
+                cfg.parent_entity, parent_id, select=f"{cfg.parent_manager_link}Id"
+            )
+            manager_id = parent.get(f"{cfg.parent_manager_link}Id")
+            if manager_id:
+                profiles.append(
+                    await client.get(
+                        MENTOR_PROFILE, manager_id,
+                        select="name,cbmEmail,contactRecordId",
+                    )
+                )
+        except EspoError as exc:
+            log.warning(
+                "member-email map: manager profile unreadable for %s %s: %s",
+                cfg.parent_entity, parent_id, exc,
+            )
+    if cfg.supports_comentor:
+        try:
+            co_data = await client.list_related(
+                cfg.parent_entity, parent_id, _COMENTOR_LINK,
+                select="name,cbmEmail,contactRecordId", max_size=_PAGE,
+            )
+            profiles.extend(co_data.get("list", []))
+        except EspoError as exc:
+            log.warning(
+                "member-email map: co-mentors unreadable for %s %s: %s",
+                cfg.parent_entity, parent_id, exc,
+            )
+    mapping: dict[str, str] = {}
+    for profile in profiles:
+        contact_id = await _resolve_member_contact(client, profile)
+        if contact_id:
+            mapping[contact_id] = (profile.get("cbmEmail") or "").strip().lower()
+    return mapping
+
+
 # Address parts read for a Contact peek (shown as one combined "Address" field
 # and used to build the copy-to-clipboard contact card).
 _CONTACT_ADDRESS_ATTRS = (

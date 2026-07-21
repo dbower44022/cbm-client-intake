@@ -4,6 +4,42 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.122.0] — 2026-07-20
+
+### Fixed
+- **Calendar invites address CBM members at their CBM email ONLY (Doug's
+  ruling), fixing the self-invite duplicate-event report.** A live customer
+  report (engagement `6a54610ba4b6d1b24`): after creating a Scheduled
+  session, the mentor got an event on their calendar AND an invitation email
+  to accept; accepting created a second copy, and deleting the wrong copy
+  (the organizer's) cancelled the meeting for the client too. Root cause: the
+  default-invitee set resolves CBM members (assigned mentor + co-mentors) to
+  their CRM **Contact** records, and the calendar hook invited each attendee
+  at the Contact's primary email — usually the member's PERSONAL address. The
+  organizer-exclusion only matched the `cbmEmail` mailbox, so the acting
+  mentor was invited to their own meeting at their personal address. Fix:
+  `sessions/service.cbm_member_email_map` classifies the record's CBM members
+  (contact id → `cbmEmail`), and `sessions/gcal._attendee_emails` substitutes
+  the CBM mailbox for every member on both the create and re-patch paths —
+  the acting organizer's own contact then resolves to the organizer mailbox
+  and is excluded entirely (no self-invite), co-mentors get exactly one
+  invitation at their CBM address, and a member whose profile has no
+  `cbmEmail` is skipped, never invited personally (logged). Clients are
+  unaffected — their Contact email is the right one. Best-effort per read: an
+  unreadable profile degrades that one person to client-contact treatment
+  with a warning; the calendar sync never fails over classification.
+
+### Added
+- **`scripts/audit_calendar_invites.py`** — read-only report of the
+  retroactive blast radius: upcoming Scheduled sessions whose existing Google
+  event invited a CBM member at a personal address (CRM reads only, never
+  touches Google). Run live against crm-test: 1 upcoming session flagged
+  (plus it surfaces the known dangling Tom Cook `mentorProfile` FK as a
+  warning). Repair for a flagged session after deploy: re-save it with a
+  schedule-relevant change so the hook re-patches the event — Google then
+  emails the removed personal address a cancellation, clearing the duplicate
+  copy — or just notify the mentor.
+
 ## [0.121.0] — 2026-07-20
 
 ### Fixed

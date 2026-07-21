@@ -8,6 +8,13 @@ invitations); the Meet URL is written back to ``videoMeetingLink`` and the
 event id to ``googleCalendarEventId`` so later edits patch the same event and
 a Cancelled session cancels it.
 
+Attendee addressing (Doug's ruling 2026-07-20, v0.122.0): a CBM member on the
+attendee list is invited at their ``cbmEmail`` ONLY — never their Contact
+record's personal address (:func:`sessions.service.cbm_member_email_map`
+classifies the record's members). Before this, the organizer's own Contact was
+invited at their personal email, producing a self-invitation and a duplicate
+event copy (the 2026-07-20 customer report).
+
 Best-effort by design (the mentoradmin ``provision`` precedent): this module
 NEVER raises — the session save must never fail because of Google. Every call
 returns ``{"ok": bool, ...}`` which the router response carries as
@@ -30,7 +37,13 @@ from typing import Any, Optional
 from core.gcalendar import CalendarClient, CalendarError, build_event_body, event_times, meet_link
 from core.gmeet import MeetClient, meeting_code
 from sessions.config import DomainConfig
-from sessions.service import CAL_FIELD, SESSION, SessionClient, resolve_user_mailbox
+from sessions.service import (
+    CAL_FIELD,
+    SESSION,
+    SessionClient,
+    cbm_member_email_map,
+    resolve_user_mailbox,
+)
 
 log = logging.getLogger("cbm_intake.sessions.gcal")
 
@@ -140,12 +153,15 @@ async def _sync(
     cal = calendar or await _client_for_user(settings, client, user_id, sa_info)
     if isinstance(cal, dict):
         return cal
+    members = await _member_email_map(cfg, client, session, parent_id)
     start, end = event_times(session.get("dateStart"), session.get("dateEnd"))
     await cal.patch_event(event_id, {
         "summary": _summary(session),
         "start": start,
         "end": end,
-        "attendees": [{"email": e} for e in _attendee_emails(session, cal.mailbox)],
+        "attendees": [
+            {"email": e} for e in _attendee_emails(session, cal.mailbox, members)
+        ],
     })
     return {"ok": True, "eventId": event_id, "updated": True}
 
@@ -168,15 +184,71 @@ def _summary(session: dict[str, Any]) -> str:
     return session.get("name") or f"CBM {session.get('sessionType') or 'Session'}"
 
 
-def _attendee_emails(session: dict[str, Any], organizer: str) -> list[str]:
+def _attendee_emails(
+    session: dict[str, Any],
+    organizer: str,
+    member_emails: Optional[dict[str, str]] = None,
+) -> list[str]:
     """The attendee contacts' emails, deduped, without the organizer (Google
-    adds the organizer implicitly) or blank addresses."""
+    adds the organizer implicitly) or blank addresses.
+
+    ``member_emails`` (contact id -> CBM mailbox, from
+    :func:`sessions.service.cbm_member_email_map`) substitutes each CBM
+    member's mailbox for their Contact's personal address — Doug's ruling
+    2026-07-20: CBM members are invited ONLY at ``@cbmentors.org``. A member
+    with no mailbox is skipped, never invited personally; the acting
+    organizer's own contact resolves to the organizer mailbox and drops out
+    here (the fix for the self-invite duplicate-event report)."""
+    members = member_emails or {}
     seen: list[str] = []
     for d in session.get("attendeeDetails") or []:
-        email = (d.get("email") or "").strip().lower()
+        contact_id = str(d.get("id") or "")
+        if contact_id in members:
+            email = members[contact_id]
+            if not email:
+                log.warning(
+                    "attendee %s is a CBM member with no cbmEmail — not invited",
+                    d.get("name") or contact_id,
+                )
+                continue
+        else:
+            email = (d.get("email") or "").strip().lower()
         if email and email != organizer and email not in seen:
             seen.append(email)
     return seen
+
+
+async def _member_email_map(
+    cfg: DomainConfig,
+    client: SessionClient,
+    session: dict[str, Any],
+    parent_id: Optional[str],
+) -> dict[str, str]:
+    """Contact id -> CBM mailbox for the record's CBM members, best-effort.
+
+    The update path doesn't know the parent id, so it is read off the session
+    record when missing. An empty map only means no substitution happens
+    (logged) — the calendar sync itself must never fail over this."""
+    pid = parent_id
+    if not pid:
+        try:
+            rec = await client.get(SESSION, session["id"], select=cfg.session_parent_fk)
+            pid = rec.get(cfg.session_parent_fk)
+        except Exception as exc:  # noqa: BLE001 — classification is best-effort
+            log.warning(
+                "member-email map: no parent readable for session %s: %s",
+                session.get("id"), exc,
+            )
+    if not pid:
+        return {}
+    try:
+        return await cbm_member_email_map(client, cfg, pid)
+    except Exception as exc:  # noqa: BLE001 — never break the calendar sync
+        log.warning(
+            "member-email map failed for %s %s — CBM members may be invited at "
+            "their personal address this save: %s", cfg.parent_entity, pid, exc,
+        )
+    return {}
 
 
 async def _create(
@@ -210,7 +282,9 @@ async def _create(
     # emailed invitations on create — a failed id write-back then left an
     # orphan event, and the next save created + re-emailed a second one (the
     # double-invite bomb).
-    attendee_emails = _attendee_emails(session, cal.mailbox)
+    attendee_emails = _attendee_emails(
+        session, cal.mailbox, await _member_email_map(cfg, client, session, parent_id)
+    )
     body = build_event_body(
         summary=_summary(session),
         description="\n".join(parts),
