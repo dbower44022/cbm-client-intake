@@ -1456,7 +1456,42 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-21)
 
-**Main is at v0.127.0** (2026-07-21, 960 tests green, committed NOT pushed) —
+**Main is at v0.129.0** (2026-07-21, 964 tests green, committed NOT pushed) —
+**the info@cbmentors.org shared-mailbox rollout: Phases 1–3 of
+`prds/info-mailbox-rollout-plan.md` are LIVE/BUILT** (Doug's rulings: all
+staff-tool outbound as info@; mentor↔client stays personal; no auto-acks;
+alerts keep admin@; Marketing Admin Team owns the queue + info@ inbox).
+- **Phase 1 VERIFIED LIVE ON PROD** (Doug: "all inbound and outbound
+  replies work"): `OPS_MAILBOX=info@cbmentors.org` on the PROD overlay
+  (web+worker; crm-test verified first, then removed — ONE poller only,
+  double-capture otherwise). The v0.110.0 machinery all proved out live:
+  inbound capture → held rows → Approve → reply as "CBM Info" →
+  thread-following reply, no double-capture.
+- **The CheckFromAddress gotcha (cost the verification an hour):**
+  EspoCRM 403s a non-admin creating an Email record (the send write-back)
+  whose `from` isn't their own address — "The message WAS sent, but
+  recording it in the CRM failed". Fix is CRM-side, BOTH done on both
+  CRMs: system outbound From Address = info@ (shared) AND an Active
+  **Group Email Account** for info@ with Use SMTP (getSystem() requires
+  the record, not just the setting; smtp.gmail.com/587/login + app
+  password). This also moved EspoCRM's own outbound off espo@ (= Phase
+  3's core; the old espo@ group account is still Active — deactivate once
+  info@ SMTP creds are proven). Diagnosed via the CRM server log — and
+  **v0.128.0** now surfaces EspoCRM's `X-Status-Reason` header in every
+  EspoError, so such denials name themselves in our own logs.
+- **Phase 2 BUILT (v0.129.0):** assignments + mentoradmin quick-compose
+  send as the shared identity — `comms.quicksend.shared_staff_mailbox`
+  (reads OPS_MAILBOX) passed to `register_quicksend` on both routers
+  (/ops imports the same helper); session tools deliberately per-user
+  (regression-tested). Compose From line shows "CBM Info (info@…)".
+  Live check after deploy: an Assign notice compose + arrival as CBM
+  Info. Replies to such notices land in the info@ Gmail INBOX (not /ops,
+  not the personal sync) — Marketing Admin watches it.
+- Cleanup: Discard the two no-reply@accounts.google.com rows in the prod
+  /ops queue (+ the leftover crm-test copies); crm-test queue is frozen
+  (no poller).
+
+Before that: **v0.127.0** (2026-07-21, 960 tests green, committed NOT pushed) —
 **the Gmail sweep no longer ingests internal cbmentor↔cbmentor mail**
 (Doug's ruling this session: the sync is for mentor↔client correspondence;
 staff-to-staff email is useless in the CRM — reported as "a ton" of

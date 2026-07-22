@@ -1,6 +1,15 @@
 # info@cbmentors.org rollout plan — shared identity for outbound + inbound email
 
-**Status: PLAN (Doug's rulings captured 2026-07-21; build/activation not started)**
+**Status (2026-07-21 EOD): Phases 1–3 LIVE / BUILT.** Phase 1 verified live
+on PROD (Doug: all inbound and outbound replies work; the crm-test
+verification found the CheckFromAddress prereq below and OPS_MAILBOX was
+then swapped crm-test → prod — prod is the sole poller). Phase 3's core
+landed with it (system outbound = info@ + the Group Email Account on BOTH
+CRMs; the old espo@ group account is still Active — deactivate once info@
+SMTP creds are proven). Phase 2 BUILT v0.129.0 (committed; live check after
+deploy: an Assign compose shows "CBM Info (info@cbmentors.org)" and the
+notice arrives from CBM Info). Phase 4's bounce-visibility follow-up
+remains an optional build.
 
 The info@cbmentors.org Workspace mailbox is now live (real licensed user, so
 the existing domain-wide delegation covers it — no new Google scopes). This

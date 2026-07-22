@@ -495,13 +495,10 @@ async def discard(submission_id: str, request: Request) -> dict:
 # compose sends as the SHARED info@ mailbox under the generic display name
 # (Doug's ruling 2026-07-19) and the sent message's Gmail thread is anchored
 # to the submission, which is what the conversation view reads.
-from comms.quicksend import register_quicksend  # noqa: E402  (needs router + helpers above)
-
-
-def _ops_shared_mailbox(settings) -> tuple[str, str] | None:
-    if settings.ops_mailbox:
-        return (settings.ops_mailbox.strip().lower(), settings.ops_mailbox_name)
-    return None
+from comms.quicksend import (  # noqa: E402  (needs router + helpers above)
+    register_quicksend,
+    shared_staff_mailbox as _ops_shared_mailbox,
+)
 
 
 async def _ops_after_send(request: Request, body, result: dict) -> None:

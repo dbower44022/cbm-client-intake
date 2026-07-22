@@ -39,12 +39,22 @@
 
   var MAX_ATTACH_TOTAL = 20 * 1024 * 1024;  // matches the server cap
 
+  function fromDisplay() {
+    // Shared identity (info@) shows its display name so staff see the
+    // message will arrive as "CBM Info", not as them personally.
+    if (!state.mailbox) return "";
+    return state.mailboxName
+      ? state.mailboxName + " (" + state.mailbox + ")"
+      : state.mailbox;
+  }
+
   function probeMailbox() {
     if (state.probe) return state.probe;
     state.probe = fetch(state.apiBase + "/mailbox", { credentials: "same-origin" })
       .then(function (r) { return r.ok ? r.json() : { mailbox: null, sendEnabled: false }; })
       .then(function (d) {
         state.mailbox = d.mailbox || null;
+        state.mailboxName = d.mailboxName || "";
         state.enabled = !!d.sendEnabled;
         state.signature = d.signature || "";
         return state;
@@ -242,7 +252,7 @@
 
     var from = document.createElement("p"); from.className = "qm-from";
     from.innerHTML = "From <strong></strong>";
-    from.querySelector("strong").textContent = state.mailbox || "…";
+    from.querySelector("strong").textContent = fromDisplay() || "…";
     body.appendChild(from);
 
     function field(labelText, id, value, multiline, placeholder) {
@@ -329,7 +339,7 @@
     }
     seedSignature();
     probeMailbox().then(function () {
-      from.querySelector("strong").textContent = state.mailbox || "…";
+      from.querySelector("strong").textContent = fromDisplay() || "…";
       seedSignature();
     });
     function bodyIsEmpty() {

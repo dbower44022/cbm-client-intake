@@ -249,6 +249,14 @@ async def reassign(engagement_id: str, body: AssignIn, request: Request) -> dict
 
 # Quick-send email (the email-address links product-wide): GET /mailbox +
 # POST /sendmail, behind this app's own gate. See comms/quicksend.py.
-from comms.quicksend import register_quicksend  # noqa: E402  (needs router + helpers above)
+from comms.quicksend import (  # noqa: E402  (needs router + helpers above)
+    register_quicksend,
+    shared_staff_mailbox,
+)
 
-register_quicksend(router, _require_user, client_for, _crm_failure)
+# Sends as the shared info@ identity when OPS_MAILBOX is set (info@ rollout
+# Phase 2, Doug's ruling 2026-07-21); per-user cbmEmail fallback otherwise.
+register_quicksend(
+    router, _require_user, client_for, _crm_failure,
+    shared_mailbox=shared_staff_mailbox,
+)

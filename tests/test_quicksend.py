@@ -23,9 +23,13 @@ _USER = {
 }
 
 
-def _app(monkeypatch, gmail_sync: bool):
+def _app(monkeypatch, gmail_sync: bool, ops_mailbox: str = ""):
     monkeypatch.setenv("SESSION_SECRET", "test-secret")
     monkeypatch.setenv("GMAIL_SYNC", "true" if gmail_sync else "false")
+    if ops_mailbox:
+        monkeypatch.setenv("OPS_MAILBOX", ops_mailbox)
+    else:
+        monkeypatch.delenv("OPS_MAILBOX", raising=False)
     get_settings.cache_clear()
     return create_app([info_request.SPEC])
 
@@ -311,3 +315,66 @@ def test_sendmail_without_reply_fields_is_a_fresh_message(monkeypatch):
     assert r.status_code == 200
     assert gmail.thread_ids == [None]
     assert gmail.sent[0]["In-Reply-To"] is None
+
+
+# --- shared info@ identity (info@ rollout Phase 2, 2026-07-21) ---------------
+# With OPS_MAILBOX set, assignments + mentoradmin compose as the shared
+# mailbox; unset = the per-user behavior above. Session tools stay per-user
+# by design (no shared_mailbox passed there).
+
+
+def test_mailbox_reports_shared_identity_when_ops_mailbox_set(monkeypatch):
+    _as(monkeypatch)
+    with TestClient(_app(monkeypatch, gmail_sync=True, ops_mailbox="info@cbmentors.org")) as c:
+        for base in ("/assignments/api", "/mentoradmin/api"):
+            r = c.get(base + "/mailbox")
+            assert r.status_code == 200
+            assert r.json() == {
+                "mailbox": "info@cbmentors.org",
+                "mailboxName": "CBM Info",
+                "sendEnabled": True,
+                "signature": "",
+            }
+
+
+def test_sendmail_sends_as_shared_mailbox(monkeypatch):
+    _as(monkeypatch)
+    gmail = FakeGmail()
+    gmail.mailbox = "info@cbmentors.org"
+    seen = {}
+
+    async def fake_shared(settings, mailbox):
+        seen["mailbox"] = mailbox
+        return gmail
+
+    monkeypatch.setattr(comms_service, "gmail_for_shared_mailbox", fake_shared)
+    with TestClient(_app(monkeypatch, gmail_sync=True, ops_mailbox="info@cbmentors.org")) as c:
+        r = c.post(
+            "/mentoradmin/api/sendmail",
+            json={"to": ["mentor@example.test"], "subject": "Notice", "body": "Hi"},
+        )
+    assert r.status_code == 200 and r.json()["status"] == "ok"
+    assert seen["mailbox"] == "info@cbmentors.org"
+    assert gmail.sent[0]["From"] == "CBM Info <info@cbmentors.org>"
+
+
+def test_sessions_router_stays_per_user_with_ops_mailbox_set(monkeypatch):
+    # The mentor↔client surfaces must NOT switch identity (Doug's ruling).
+    _as(monkeypatch)
+
+    async def fake_resolve(client, user_id):
+        return "staff.admin@cbmentors.org"
+
+    monkeypatch.setattr("sessions.service.resolve_user_mailbox", fake_resolve)
+    monkeypatch.setattr(
+        "comms.service.resolve_user_mailbox", fake_resolve, raising=False
+    )
+    app = _app(monkeypatch, gmail_sync=True, ops_mailbox="info@cbmentors.org")
+    monkeypatch.setattr(
+        "sessions.router.current_user", lambda request, key=None: _USER
+    )
+    monkeypatch.setattr("sessions.router.client_for", lambda settings, user: object())
+    with TestClient(app) as c:
+        r = c.get("/mentorsessions/api/mailbox")
+    assert r.status_code == 200
+    assert r.json()["mailbox"] == "staff.admin@cbmentors.org"

@@ -4,6 +4,26 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.129.0] — 2026-07-21
+
+**feat(comms): Client Administration + Mentor Administration quick-compose
+sends as the shared info@ identity** (info@ rollout Phase 2, Doug's ruling
+2026-07-21 — `prds/info-mailbox-rollout-plan.md`). The ops
+shared-mailbox resolver is promoted to `comms.quicksend.shared_staff_mailbox`
+(reads `OPS_MAILBOX`/`OPS_MAILBOX_NAME`) and passed to `register_quicksend`
+on the assignments + mentoradmin routers; /ops now imports the same helper.
+With `OPS_MAILBOX` set, those apps' composes (incl. the MentorAssignmentNotice
+flow) go out as "CBM Info <info@cbmentors.org>" with no personal signature;
+unset = the per-user cbmEmail behavior, unchanged. The **session tools stay
+per-user by design** (mentor↔client relationship mail comes from a person) —
+covered by a regression test. The compose dialog's From line shows the display
+name ("CBM Info (info@cbmentors.org)") when a shared identity is active
+(`quickmail.js` `fromDisplay`). 964 tests green (3 new).
+Consequence (accepted in the plan): replies to these notices land in the
+info@ Gmail inbox — not /ops (outbound-initiated threads are skipped by
+inbound capture) and not the personal-mailbox sync — the Marketing Admin
+Team watches that inbox.
+
 ## [0.128.0] — 2026-07-21
 
 **fix(espo): error messages carry EspoCRM's X-Status-Reason header.** EspoCRM

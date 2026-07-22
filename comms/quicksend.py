@@ -36,6 +36,22 @@ from . import templates as comms_templates
 log = logging.getLogger("cbm_intake.comms.quicksend")
 
 
+def shared_staff_mailbox(settings: Any) -> tuple[str, str] | None:
+    """The shared staff sending identity — (``OPS_MAILBOX``, its display
+    name) — or ``None`` when unconfigured (per-user fallback).
+
+    Doug's ruling 2026-07-21 (info@ rollout Phase 2): EVERY staff-tool
+    quick-compose surface — /ops, Client Administration, Mentor
+    Administration — sends as the shared info@ mailbox. The session tools'
+    composes are deliberately NOT wired to this: mentor↔client
+    relationship mail keeps coming from the mentor's own cbmEmail.
+    """
+    mailbox = (getattr(settings, "ops_mailbox", "") or "").strip()
+    if mailbox:
+        return (mailbox.lower(), settings.ops_mailbox_name)
+    return None
+
+
 class QuickSendIn(BaseModel):
     to: list[str] = Field(default_factory=list)
     cc: list[str] = Field(default_factory=list)
