@@ -195,19 +195,30 @@ async def enrich_conversation_rows(
         r.setdefault("bounced", False)
     ids = [r["id"] for r in rows]
     try:
-        data = await user_client.list(
-            crm.COMMUNICATION,
-            where=[{"type": "in", "attribute": crm.CONVERSATION_FK, "value": ids}],
-            select=f"{crm.CONVERSATION_FK},direction,sentAt,fromAddress,name",
-            order_by="sentAt",
-            order="desc",
-            max_size=400,
-        )
+        # Newest-first, paged at EspoCRM's hard 200-per-page cap (a larger
+        # maxSize is a 403 that silently killed this whole enrichment — found
+        # live 2026-07-22); stop as soon as every listed conversation has its
+        # newest message, bounded so a page of long threads can't spin.
         last_message: dict[str, dict[str, Any]] = {}
-        for m in data.get("list", []):
-            cid = m.get(crm.CONVERSATION_FK)
-            if cid and cid not in last_message:
-                last_message[cid] = m
+        offset = 0
+        for _ in range(3):
+            data = await user_client.list(
+                crm.COMMUNICATION,
+                where=[{"type": "in", "attribute": crm.CONVERSATION_FK, "value": ids}],
+                select=f"{crm.CONVERSATION_FK},direction,sentAt,fromAddress,name",
+                order_by="sentAt",
+                order="desc",
+                max_size=200,
+                offset=offset,
+            )
+            batch = data.get("list", [])
+            for m in batch:
+                cid = m.get(crm.CONVERSATION_FK)
+                if cid and cid not in last_message:
+                    last_message[cid] = m
+            if len(last_message) >= len(ids) or len(batch) < 200:
+                break
+            offset += 200
         for r in rows:
             m = last_message.get(r["id"])
             if not m or (m.get("direction") or "") != "Inbound":

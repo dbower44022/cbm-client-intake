@@ -540,3 +540,37 @@ async def test_bounce_without_stored_thread_stays_junk():
     bounce = parse_message(_bounce_raw(thread="t-unknown"))
     assert await ingest_message(espo, store, scope(), bounce) is None
     assert not any(e == "CCommunication" for (e, _) in espo.records)
+
+
+async def test_enrich_pages_within_espo_200_cap():
+    """EspoCRM hard-caps list pages at 200 (a larger maxSize is a 403 that
+    silently killed the whole enrichment — found live 2026-07-22): the query
+    must page, never ask for more than 200."""
+    calls = []
+
+    class PagedEspo(ThreadEspo):
+        async def list(self, entity, *, where=None, select=None, max_size=50,
+                       offset=0, **kw):
+            calls.append((max_size, offset))
+            assert max_size <= 200
+            if offset == 0:
+                # 200 messages, all for conv1 — conv2's newest is on page 2.
+                return {"list": [
+                    {"conversationId": "conv1", "direction": "Outbound",
+                     "fromAddress": "b@cbmentors.org", "name": "x",
+                     "sentAt": f"2026-07-21 10:{i:02d}:00"}
+                    for i in range(200)
+                ]}
+            return {"list": [
+                {"conversationId": "conv2", "direction": "Inbound",
+                 "fromAddress": "james@acme.test", "name": "Re: plan",
+                 "sentAt": "2026-07-20 09:00:00"},
+            ]}
+
+    rows = [{"id": "conv1"}, {"id": "conv2"}]
+    await comms_service.enrich_conversation_rows(
+        PagedEspo([]), MemoryCommsStore(), "staff", rows
+    )
+    assert calls[0] == (200, 0) and calls[1] == (200, 200)
+    assert rows[0]["awaitingReply"] is False   # last message outbound
+    assert rows[1]["awaitingReply"] is True    # found on page 2
