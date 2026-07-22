@@ -4,6 +4,52 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.134.0] — 2026-07-22
+
+**feat(ops): Submission Admin — editable Request status + the complete
+submission on the Overview** (Doug's report: "the detail page does not show
+all of the fields and we need a way to … set the Response and request
+status"; his rulings: app field with CRM write-through, one field where
+"Responded" is a status value, all fields as labeled facts).
+
+- **Request status (New / In Progress / Responded / Closed)** — the staff
+  work state of the request itself, deliberately the same vocabulary as the
+  CRM's `CInformationRequest.requestStatus` (which the app previously set to
+  "New" on create and never touched again). New nullable
+  `submission.request_status` column (**Alembic 0015** — rides the
+  PRE_DEPLOY migrate; NULL reads as "New", so pre-existing rows are
+  untouched), `store.set_request_status` (acted_by stamped), and
+  `PUT /ops/api/submissions/{id}/requeststatus` (value validated against the
+  vocabulary → 422 naming the options). **CRM write-through, best-effort:**
+  when the submission's delivery created a `CInformationRequest`
+  (`result.informationRequestId`), the same value is written to that
+  record's `requestStatus` via the shared API-key client (the API role has
+  the edit grant; ops admins' own tokens don't) and the change is recorded
+  per the action-history convention (`record_action` — stream note on the
+  info-request + CActionLog row, actor named). A CRM failure never loses
+  the app-side save — the response carries a readable `crmWarning` the UI
+  surfaces. Forms that create no info-request simply keep the app-side
+  status.
+- **UI:** the detail header gains an always-active **Request status**
+  dropdown (saves on change; success notice says when the CRM record was
+  updated too) next to Mark resolved; the Overview facts rail shows the
+  value; the grid gains a sortable **Request** column (after Status; also
+  searchable). Note the machine delivery `status` (completed/pending/…)
+  stays non-editable by design — Re-drive/Discard remain its only controls.
+- **Overview shows the COMPLETE submission:** after the curated facts,
+  every remaining payload field renders as a humanized labeled fact
+  (arrays joined, booleans Yes/No, file uploads as "name (N KB)" — never
+  base64; internal fields hidden: honeypot `company_url`,
+  `submission_token`, `gmail_thread_id`; empties skipped). Raw JSON stays
+  on the Details tab as the technical view.
+- Verified: 1000 tests green (18 new — router validation/write-through/
+  failure-keeps-save + the store round-trip); migration 0015 applied and
+  round-tripped on live local Postgres; the whole flow driven in the stub
+  harness (grid column, select → PUT → notice + fact + grid row update,
+  volunteer detail rendering all 25 fields with the resume summarized;
+  no console errors). NOT yet driven live — after deploy, flip a real
+  info-request's status and confirm the CRM record + stream note.
+
 ## [0.133.0] — 2026-07-22
 
 **feat(sessions): the engagement's Referring partner is visible AND settable

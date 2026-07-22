@@ -1509,7 +1509,30 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-22)
 
-**Main is at v0.132.0** (2026-07-22, 982 tests green, committed NOT pushed) —
+**Main is at v0.134.0** (2026-07-22, 1000 tests green, committed NOT pushed) —
+**Submission Admin: editable Request status + the complete submission on the
+Overview** (Doug's request; his rulings: app field + CRM write-through, ONE
+field where "Responded" is a value, all payload fields as labeled facts).
+New staff-set **Request status** (New / In Progress / Responded / Closed —
+the `CInformationRequest.requestStatus` vocabulary): `submission.request_status`
+(**Alembic 0015** — pre-deploy migrate; NULL reads "New"),
+`PUT /ops/api/submissions/{id}/requeststatus` (validated → readable 422),
+best-effort **write-through to the CRM info-request record** via the API-key
+client when `result.informationRequestId` exists (failure = app save kept +
+readable `crmWarning`; recorded via `record_action` — stream note +
+CActionLog). UI: always-active dropdown in the detail header (saves on
+change), Request fact on the rail, sortable/searchable **Request** grid
+column. The machine delivery `status` stays non-editable by design. The
+Overview now renders EVERY payload field after the curated facts (humanized
+labels; arrays joined, bools Yes/No, uploads as "name (N KB)" never base64;
+honeypot/token/thread-anchor hidden). Verified: 1000 tests (18 new);
+migration 0015 + round-trip on live local Postgres; full flow in the stub
+harness (no console errors). **NOT yet driven live** — after deploy: set a
+real info-request's status → GET-verify the CRM record + stream note.
+Full mechanics: CHANGELOG 0.134.0; staff reference updated in
+`submission-admin.md`.
+
+Before that: **Main was at v0.132.0** (2026-07-22, 982 tests green, committed NOT pushed) —
 **Email Quality Phase 1 ("never lose information") is BUILT** — §3 of
 `prds/email-quality-improvement-plan.md`, all four pieces (CHANGELOG
 0.132.0 has the full mechanics):

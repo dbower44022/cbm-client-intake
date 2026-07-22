@@ -171,6 +171,93 @@ class ResolvedIn(BaseModel):
     resolved: bool = True
 
 
+# The staff request-status vocabulary — deliberately the same values as the
+# CRM's CInformationRequest.requestStatus enum so the write-through below keeps
+# both in step ("Responded" doubles as the response marker, Doug's ruling
+# 2026-07-22).
+REQUEST_STATUSES = ("New", "In Progress", "Responded", "Closed")
+
+
+class RequestStatusIn(BaseModel):
+    status: str
+
+
+def _api_client():
+    """The shared API-key EspoCRM client for the requestStatus write-through
+    (None in dry-run / keyless deploys). Its own function so tests can
+    monkeypatch it; the per-user token is deliberately NOT used — ops admins
+    have no CInformationRequest grant, and the API role does."""
+    from core.espo import EspoClient
+
+    settings = get_settings()
+    if settings.espo_dry_run or not settings.espo_api_key:
+        return None
+    return EspoClient(
+        settings.espo_base_url, settings.espo_api_key, settings.request_timeout_seconds
+    )
+
+
+@router.put("/submissions/{submission_id}/requeststatus")
+async def save_request_status(
+    submission_id: str, body: RequestStatusIn, request: Request
+) -> dict:
+    """Set the submission's request status (New / In Progress / Responded /
+    Closed) — the staff work state of the request itself, distinct from the
+    machine-managed delivery status. Best-effort write-through: when this
+    submission's delivery created a CInformationRequest, the same value is
+    written to that CRM record's ``requestStatus`` so the CRM worklist stays
+    in step (a CRM failure never loses the app-side save)."""
+    user = _require_user(request)
+    if body.status not in REQUEST_STATUSES:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Unknown request status {body.status!r} "
+                f"(expected one of: {', '.join(REQUEST_STATUSES)})."
+            ),
+        )
+    store = _store(request)
+    row = await store.get_submission(submission_id)
+    if row is None or not await store.set_request_status(
+        submission_id, body.status, acted_by=user["userName"]
+    ):
+        raise HTTPException(status_code=404, detail="Submission not found.")
+    log.info("request status %s on %s by %s", body.status, submission_id, user["userName"])
+    out: dict = {"status": "ok", "requestStatus": body.status}
+    info_id = ((row.get("result") or {}).get("informationRequestId") or "").strip()
+    if info_id:
+        client = _api_client()
+        if client is not None:
+            try:
+                await client.update(
+                    "CInformationRequest", info_id, {"requestStatus": body.status}
+                )
+                out["crmUpdated"] = True
+                from core import action_log
+
+                await action_log.record_action(
+                    client,
+                    app=action_log.APP_SUBMISSION_ADMIN,
+                    category=action_log.CAT_STATUS,
+                    action=action_log.ACT_STATUS_CHANGED,
+                    parent_type="CInformationRequest",
+                    parent_id=info_id,
+                    summary=f"Request status set to {body.status}",
+                    actor_name=user.get("name") or user["userName"],
+                )
+            except EspoError as exc:
+                log.warning(
+                    "requestStatus write-through failed on CInformationRequest/%s: %s",
+                    info_id, exc,
+                )
+                out["crmWarning"] = (
+                    "Saved here, but the CRM information-request record "
+                    "couldn't be updated — its Request Status may be out of "
+                    f"date. ({exc})"
+                )
+    return out
+
+
 @router.put("/submissions/{submission_id}/resolved")
 async def save_resolved(submission_id: str, body: ResolvedIn, request: Request) -> dict:
     """Mark a submission resolved / reopen it — the staff workflow marker

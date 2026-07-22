@@ -96,6 +96,10 @@ submission = Table(
     # still waiting on us?" NULL = open. The /ops grid defaults to open rows.
     Column("resolved_at", DateTime(timezone=True)),
     Column("resolved_by", String(128)),
+    # Staff-set request status (New / In Progress / Responded / Closed — the
+    # CInformationRequest.requestStatus vocabulary; migration 0015). NULL reads
+    # as "New". Written through to the CRM info-request record when one exists.
+    Column("request_status", String(32)),
     # Gmail thread ids anchored to this submission (JSON list, v0.110.0): the
     # threads staff started from /ops (recorded after each send) and — for an
     # email-originated submission — the inbound thread itself (in the payload
@@ -177,6 +181,9 @@ class SubmissionStore(Protocol):
     ) -> bool: ...
     async def set_resolved(
         self, submission_id: str, resolved: bool, *, acted_by: Optional[str] = None
+    ) -> bool: ...
+    async def set_request_status(
+        self, submission_id: str, request_status: str, *, acted_by: Optional[str] = None
     ) -> bool: ...
     # Gmail thread anchoring (v0.110.0):
     async def add_thread_id(self, submission_id: str, thread_id: str) -> bool: ...
@@ -395,6 +402,7 @@ class PostgresStore:
                 submission.c.notes,
                 submission.c.resolved_at,
                 submission.c.resolved_by,
+                submission.c.request_status,
                 submission.c.received_at,
                 submission.c.processed_at,
                 submission.c.next_attempt_at,
@@ -490,6 +498,21 @@ class PostgresStore:
                     resolved_at=_now() if resolved else None,
                     resolved_by=acted_by if resolved else None,
                     updated_at=_now(),
+                )
+            )
+        return result.rowcount > 0
+
+    async def set_request_status(
+        self, submission_id: str, request_status: str, *, acted_by: Optional[str] = None
+    ) -> bool:
+        """Set the staff request status (New / In Progress / Responded / Closed).
+        The router validates the value and handles the CRM write-through."""
+        async with self._engine.begin() as conn:
+            result = await conn.execute(
+                update(submission)
+                .where(submission.c.id == submission_id)
+                .values(
+                    request_status=request_status, acted_by=acted_by, updated_at=_now()
                 )
             )
         return result.rowcount > 0

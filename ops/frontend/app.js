@@ -15,6 +15,10 @@
   // info-email = an inbound email to the shared info@ mailbox, captured by the
   // worker's poller (held_review until staff Approve or Discard it).
   var FORMS = ["client-intake", "volunteer", "info-request", "partner", "sponsor", "info-email"];
+  // The staff-set request status (distinct from the machine delivery status
+  // above): the work state of the request itself. Mirrors the CRM's
+  // CInformationRequest.requestStatus vocabulary; null on a row reads as New.
+  var REQUEST_STATUSES = ["New", "In Progress", "Responded", "Closed"];
   // Re-drive includes discarded so a mistaken discard can be undone (re-queued).
   var REDRIVABLE = { held_honeypot: 1, held_review: 1, needs_attention: 1, retry: 1, discarded: 1 };
   // Discard resolves a stuck row that can't be re-driven (e.g. a bad payload).
@@ -190,6 +194,8 @@
     { key: "id", label: "Reference", get: function (r) { return (r.id || "").slice(0, 8); } },
     { key: "form_slug", label: "Form" },
     { key: "status", label: "Status" },
+    { key: "request_status", label: "Request",
+      get: function (r) { return r.request_status || "New"; } },
     { key: "email", label: "Submitter" },
     { key: "_reply", label: "Reply", sortKey: "_replyState" },
     { key: "received_at", label: "Received", fmt: fmtDate },
@@ -203,7 +209,7 @@
     if (state.resolution === "open" && r.resolved_at) return false;
     if (state.resolution === "resolved" && !r.resolved_at) return false;
     if (!state.search) return true;
-    var hay = [r.id, r.form_slug, r.status, r.email, r.last_error, r.notes, fmtDate(r.received_at)]
+    var hay = [r.id, r.form_slug, r.status, r.request_status, r.email, r.last_error, r.notes, fmtDate(r.received_at)]
       .filter(Boolean).join(" ").toLowerCase();
     return hay.indexOf(state.search) >= 0;
   }
@@ -459,6 +465,38 @@
 
   function renderDetailActions() {
     var box = $("detailActions"); box.innerHTML = "";
+    // Request status: the staff-set work state of the request (New /
+    // In Progress / Responded / Closed). Saves on change; when the delivery
+    // created a CInformationRequest the server writes the CRM record too.
+    var wrap = document.createElement("label"); wrap.className = "req-status";
+    wrap.appendChild(document.createTextNode("Request status"));
+    var sel = document.createElement("select");
+    REQUEST_STATUSES.forEach(function (v) { sel.appendChild(new Option(v, v)); });
+    sel.value = current.request_status || "New";
+    sel.addEventListener("change", async function () {
+      var prev = current.request_status || "New";
+      clearNotice("detailNotice");
+      try {
+        var res = await api("/submissions/" + encodeURIComponent(current.id) + "/requeststatus",
+          { method: "PUT", body: JSON.stringify({ status: sel.value }) });
+        current.request_status = sel.value;
+        var row = rows.filter(function (r) { return r.id === current.id; })[0];
+        if (row) row.request_status = sel.value;
+        if (res && res.crmWarning) {
+          notice("detailNotice", res.crmWarning, "error");
+        } else {
+          notice("detailNotice", "Request status set to " + sel.value +
+            (res && res.crmUpdated ? " (CRM record updated too)." : "."), "success");
+        }
+        renderOverview();
+      } catch (e) {
+        if (e.status === 401) { showLogin(); return; }
+        sel.value = prev;
+        notice("detailNotice", e.message, "error");
+      }
+    });
+    wrap.appendChild(sel);
+    box.appendChild(wrap);
     // Resolve/Reopen: the staff workflow marker — single click, reversible.
     var rb = document.createElement("button");
     rb.type = "button"; rb.className = "cbm-button" + (current.resolved_at ? " cbm-button--secondary" : "");
@@ -483,8 +521,9 @@
     if (DISCARDABLE[current.status]) box.appendChild(actionBtn("Discard", "Really discard?", function () { discard(current, "detailNotice"); }));
   }
 
-  // Payload keys shown as curated facts (label + the payload field). Forms
-  // share these names; anything else stays on the Details tab.
+  // Payload keys shown first, with curated labels; every OTHER payload field
+  // renders after them with a humanized label (Doug's ruling 2026-07-22 —
+  // nothing the submitter typed should be visible only as raw JSON).
   var PAYLOAD_FACTS = [
     ["Name", function (p) { return [p.first_name, p.last_name].filter(Boolean).join(" "); }],
     ["Email", "email"],
@@ -495,6 +534,33 @@
     ["Subject", "subject"],
     ["Message", "message"],
   ];
+  // Keys the curated facts above already consume.
+  var CURATED_KEYS = { first_name: 1, last_name: 1, email: 1, phone: 1, company: 1,
+                       business_website: 1, how_did_you_hear: 1, subject: 1, message: 1 };
+  // Internal/system fields never shown as facts (honeypot, idempotency token,
+  // the email-capture thread anchor).
+  var HIDDEN_PAYLOAD_KEYS = { company_url: 1, submission_token: 1, gmail_thread_id: 1 };
+
+  function humanizeKey(key) {
+    var s = String(key).replace(/_/g, " ");
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
+  // A payload value as display text; null = skip the row (empty). File uploads
+  // (base64 objects, e.g. the volunteer resume) show name + size, never bytes.
+  function payloadValueText(v) {
+    if (v == null || v === "") return null;
+    if (Array.isArray(v)) return v.length ? v.map(String).join(", ") : null;
+    if (typeof v === "boolean") return v ? "Yes" : "No";
+    if (typeof v === "object") {
+      if (v.data_base64) {
+        var kb = Math.round((v.data_base64.length * 3) / 4 / 1024);
+        return (v.filename || "attached file") + " (" + kb + " KB)";
+      }
+      try { return JSON.stringify(v); } catch (e) { return String(v); }
+    }
+    return String(v);
+  }
 
   function fact(label, value) {
     var row = document.createElement("div"); row.className = "ops__fact";
@@ -512,6 +578,7 @@
     box.appendChild(fact("Reference", (current.id || "").slice(0, 8)));
     box.appendChild(fact("Form", current.form_slug));
     box.appendChild(fact("Status", badgeEl(current.status)));
+    box.appendChild(fact("Request status", current.request_status || "New"));
     box.appendChild(fact("Received", fmtDate(current.received_at)));
     if (current.processed_at) box.appendChild(fact("Processed", fmtDate(current.processed_at)));
     box.appendChild(fact("Attempts", current.attempt_count || 0));
@@ -529,6 +596,14 @@
       } else {
         box.appendChild(fact(label, v));
       }
+    });
+    // Every remaining payload field, humanized — the complete submission is
+    // readable here without opening the raw JSON on the Details tab.
+    Object.keys(p).sort().forEach(function (k) {
+      if (CURATED_KEYS[k] || HIDDEN_PAYLOAD_KEYS[k]) return;
+      var t = payloadValueText(p[k]);
+      if (t == null) return;
+      box.appendChild(fact(humanizeKey(k), t));
     });
     renderNotes();
   }

@@ -77,6 +77,14 @@ class FakeOpsStore:
         row["resolved_by"] = acted_by if resolved else None
         return True
 
+    async def set_request_status(self, submission_id, request_status, *, acted_by=None):
+        row = self.rows.get(submission_id)
+        if row is None:
+            return False
+        row["request_status"] = request_status
+        row["acted_by"] = acted_by
+        return True
+
     async def add_thread_id(self, submission_id, thread_id):
         row = self.rows.get(submission_id)
         if row is None:
@@ -235,6 +243,77 @@ def test_resolve_and_reopen(monkeypatch):
         assert store.rows["abc12345"]["resolved_at"] is None
         missing = c.put("/ops/api/submissions/nope/resolved", json={"resolved": True})
         assert missing.status_code == 404
+
+
+def test_set_request_status(monkeypatch):
+    """The staff request status (New/In Progress/Responded/Closed): stored with
+    acted_by; bad values 422 with the vocabulary named; unknown id 404. No
+    CInformationRequest on the row = app-only save (no crmUpdated)."""
+    store = FakeOpsStore()
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, store)) as c:
+        ok = c.put("/ops/api/submissions/abc12345/requeststatus",
+                   json={"status": "In Progress"})
+        bad = c.put("/ops/api/submissions/abc12345/requeststatus",
+                    json={"status": "Sideways"})
+        missing = c.put("/ops/api/submissions/nope/requeststatus",
+                        json={"status": "Closed"})
+    assert ok.status_code == 200
+    assert ok.json()["requestStatus"] == "In Progress"
+    assert "crmUpdated" not in ok.json() and "crmWarning" not in ok.json()
+    assert store.rows["abc12345"]["request_status"] == "In Progress"
+    assert store.rows["abc12345"]["acted_by"] == _USER["userName"]
+    assert bad.status_code == 422 and "Responded" in bad.json()["detail"]
+    assert missing.status_code == 404
+
+
+class _FakeCrm:
+    def __init__(self, fail=False):
+        self.fail = fail
+        self.updates = []
+        self.creates = []
+
+    async def update(self, entity, record_id, payload):
+        if self.fail:
+            from core.espo import EspoError
+            raise EspoError("update CInformationRequest: 403 Forbidden")
+        self.updates.append((entity, record_id, payload))
+        return {"id": record_id}
+
+    async def create(self, entity, payload):  # stream note from record_action
+        self.creates.append((entity, payload))
+        return {"id": "note1"}
+
+
+def test_request_status_writes_through_to_crm(monkeypatch):
+    """When the delivery created a CInformationRequest, its requestStatus is
+    written too (via the API-key client) so the CRM worklist stays in step."""
+    store = FakeOpsStore()
+    store.rows["abc12345"]["result"] = {"informationRequestId": "ir-77"}
+    crm = _FakeCrm()
+    monkeypatch.setattr("ops.router._api_client", lambda: crm)
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, store)) as c:
+        r = c.put("/ops/api/submissions/abc12345/requeststatus",
+                  json={"status": "Responded"})
+    assert r.status_code == 200 and r.json().get("crmUpdated") is True
+    assert crm.updates == [("CInformationRequest", "ir-77", {"requestStatus": "Responded"})]
+    assert store.rows["abc12345"]["request_status"] == "Responded"
+
+
+def test_request_status_crm_failure_keeps_app_save(monkeypatch):
+    """A CRM rejection never loses the app-side save — the response carries a
+    readable crmWarning instead of an error status."""
+    store = FakeOpsStore()
+    store.rows["abc12345"]["result"] = {"informationRequestId": "ir-77"}
+    monkeypatch.setattr("ops.router._api_client", lambda: _FakeCrm(fail=True))
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, store)) as c:
+        r = c.put("/ops/api/submissions/abc12345/requeststatus",
+                  json={"status": "Closed"})
+    assert r.status_code == 200
+    assert "couldn't be updated" in r.json()["crmWarning"]
+    assert store.rows["abc12345"]["request_status"] == "Closed"
 
 
 def test_reply_states_empty_when_gmail_off(monkeypatch):

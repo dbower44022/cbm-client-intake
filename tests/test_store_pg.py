@@ -248,6 +248,29 @@ async def test_thread_anchoring_round_trip():
     await store.dispose()
 
 
+async def test_request_status_round_trip():
+    """v0.134.0: the staff request status (migration 0015) — set, read back on
+    detail AND list, acted_by stamped; unknown id = False."""
+    store = PostgresStore(_URL)
+    await store.create_all()
+    cap = await store.capture(
+        "info-request", f"rs-{uuid.uuid4()}", {"email": "rs@example.com"},
+        status=STATUS_COMPLETED,
+    )
+    row = await store.get_submission(cap.id)
+    assert row["request_status"] is None  # pre-existing rows read as "New"
+
+    assert await store.set_request_status(cap.id, "Responded", acted_by="tester") is True
+    assert await store.set_request_status("missing-id", "Closed") is False
+
+    row = await store.get_submission(cap.id)
+    assert row["request_status"] == "Responded"
+    assert row["acted_by"] == "tester"
+    listed = [r for r in await store.list_submissions() if r["id"] == cap.id]
+    assert listed and listed[0]["request_status"] == "Responded"
+    await store.dispose()
+
+
 async def test_discarded_rows_are_redrivable():
     """The /ops UI has offered Re-drive on discarded rows since v0.106.0; the
     store guard now actually allows it (mistaken-discard recovery)."""

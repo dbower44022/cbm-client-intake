@@ -42,6 +42,12 @@ started from the submission page — never their unrelated mail).
 - The **Open / Resolved / All** select defaults to **Open** — the grid shows
   the requests still waiting on someone. Resolved rows carry a green
   ✓ chip; the count chips include `open` / `resolved` totals.
+- The **Request** column is the staff-set state of the request itself —
+  **New / In Progress / Responded / Closed** (every submission starts New).
+  It's distinct from **Status**, which is the machine's delivery state
+  (whether the submission reached the CRM — that one is not editable; nearly
+  everything correctly reads "completed"). Set the Request status on the
+  submission page.
 - The **Reply** column answers "who spoke last?" for each open submitter:
   - **↳ reply owed** (red) — their email is the newest; we owe them a reply.
   - **waiting on them** — our email is the newest.
@@ -64,8 +70,11 @@ Three tabs, like the Client Management record pages.
 
 ### Overview
 - **Left**: who submitted and where it stands — name, email (click to
-  compose), phone, company, their message, the form, delivery status,
-  received/processed times, attempts, and the resolved stamp.
+  compose), phone, company, their message, the form, delivery status, the
+  Request status, received/processed times, attempts, and the resolved
+  stamp — followed by **everything else the submitter entered on the form**,
+  each field with a readable label (a file upload shows its name and size).
+  Nothing they typed is hidden behind the raw JSON anymore.
 - **Top center**: **Submission notes** — free-form triage notes for other
   admins ("left a voicemail", "duplicate of…"). Click Edit, type, Save.
   Notes are staff-only; they never go to the CRM or the submitter.
@@ -73,9 +82,12 @@ Three tabs, like the Client Management record pages.
   on this submission's own threads in the shared info@ mailbox, newest
   first; every admin sees the same list. Click a message to jump to the
   Communications tab.
-- **Header buttons**: **Mark resolved / Reopen** (the workflow flag — use it
-  when the request is done, whatever "done" meant), plus Re-drive/Discard
-  when applicable.
+- **Header controls**: the **Request status** dropdown (New / In Progress /
+  Responded / Closed — saves the moment you pick a value; on an information
+  request the matching CRM record's own Request Status field is updated too,
+  so the EspoCRM worklist stays in step), **Mark resolved / Reopen** (the
+  workflow flag — use it when the request is done, whatever "done" meant),
+  plus Re-drive/Discard when applicable.
 
 ### Details
 The raw record: the exact payload the form sent, delivery progress, the last
@@ -128,7 +140,8 @@ conversation view (and the Reply column) reads.
 4. **Email the submitter** — the canned reply is pre-filled on first
    contact; later rounds are proper replies on the same thread. Everything
    sends as **Cleveland Business Mentors <info@cbmentors.org>**.
-5. Jot what happened in **Submission notes**.
+5. Jot what happened in **Submission notes**, and move the **Request
+   status** along as you work it (In Progress → Responded → Closed).
 6. When it's handled, **Mark resolved** — it leaves the queue (still
    findable under Resolved/All).
 
