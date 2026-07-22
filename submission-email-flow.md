@@ -14,7 +14,7 @@ CBM's information-request process has two front doors — the **website form**
 and the **info@cbmentors.org address** — and one back office: the
 **Submission Admin queue**. Both doors feed the same queue; all email in the
 process, inbound and outbound, lives in the **one shared info@ mailbox**
-under the generic identity **"CBM Info"**. Each submission is tied to *its
+under the generic identity **"Cleveland Business Mentors"**. Each submission is tied to *its
 own email threads* in that mailbox — the thread the submitter started, plus
 any thread staff started from the submission page — so its conversation
 shows exactly the correspondence about that request and nothing else, and
@@ -95,7 +95,7 @@ primary case):
    conversation the **`InfoRequestReply`** EspoCRM template is pre-applied
    (subject + body, personalized to the recipient — edit freely). The
    template picker offers every other template too.
-3. **The message sends as `CBM Info <info@cbmentors.org>`** — never the
+3. **The message sends as `Cleveland Business Mentors <info@cbmentors.org>`** — never the
    staffer's name, address, or personal signature. (Which admin clicked
    Send is logged internally, and the send is also written back as a native
    EspoCRM **Email** on the matching Contact's History panel.)
@@ -187,7 +187,7 @@ no inbound capture) — activation is a config change, not a deploy.
    right name, subject, and message.
 2. **Approve** it → worker delivers → Contact + Information Request in the
    CRM (source "Email"), deep links on the Details tab.
-3. **Reply from the submission page** → arrives from "CBM Info
+3. **Reply from the submission page** → arrives from "Cleveland Business Mentors
    <info@cbmentors.org>"; the conversation shows it; a second admin opens
    the same submission and sees the identical conversation.
 4. Reply from the personal account → no new queue item; the message joins

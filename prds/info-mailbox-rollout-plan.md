@@ -11,6 +11,10 @@ deploy: an Assign compose shows "CBM Info (info@cbmentors.org)" and the
 notice arrives from CBM Info). Phase 4's bounce-visibility follow-up is
 BUILT v0.130.0 (red "delivery failed" chip in the awaiting-reply column +
 a red bounce card in the conversation; `core.gmail.looks_like_bounce`).
+**Display-name rename (v0.131.0, Doug's ruling):** the shared identity's
+From name is **"Cleveland Business Mentors"** (was "CBM Info" — new
+contacts don't know the acronym). Older "CBM Info" mentions below are
+historical.
 
 The info@cbmentors.org Workspace mailbox is now live (real licensed user, so
 the existing domain-wide delegation covers it — no new Google scopes). This
@@ -54,7 +58,7 @@ plan routes **all appropriate** outbound and inbound email through it.
    `CIntakeSubmission.form` — until it exists the audit log for approved
    email submissions WARNs (best-effort, non-blocking). ALSO: **set the
    system outbound From Address to info@cbmentors.org** (Administration →
-   Outbound Emails; keep "Is Shared" checked, From Name "CBM Info").
+   Outbound Emails; keep "Is Shared" checked, From Name "Cleveland Business Mentors").
    Root cause found live on crm-test 2026-07-21: EspoCRM's
    `CheckFromAddress` hook 403s any non-admin creating an Email record
    whose `from` isn't their own address, a shared Group Email Account, or

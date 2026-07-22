@@ -56,7 +56,7 @@ the history.
 | Identity | Used by | Signature | Purpose |
 |---|---|---|---|
 | **Your own mailbox** (`firstname.lastname@cbmentors.org`) | My Email, the record Communications tabs, every quick-compose in the staff tools | Your personal signature, seeded automatically | Relationship mail — you, personally, working with your clients, partners, and funders |
-| **The shared mailbox** (`info@cbmentors.org`, displayed as **"CBM Info"**) | Submission Admin (`/ops`) only | None (deliberately generic) | Process mail — answering form submitters and information requests on behalf of the organization |
+| **The shared mailbox** (`info@cbmentors.org`, displayed as **"Cleveland Business Mentors"**) | Submission Admin (`/ops`) only | None (deliberately generic) | Process mail — answering form submitters and information requests on behalf of the organization |
 
 The split is intentional: a mentoring relationship speaks with a person's
 voice; the intake process speaks with the organization's. Submission Admin
@@ -215,12 +215,12 @@ each open submitter:
 - **waiting on them** — CBM spoke last.
 - **—** — no conversation yet.
 
-### Talking to submitters — as CBM Info
+### Talking to submitters — as Cleveland Business Mentors
 
 Opening a submission shows the submitter's details, staff triage notes, and
 the **email conversation with that submitter**. "Email the submitter" (or
 **"↩ Reply to the submitter"** once a conversation exists) opens the
-standard compose — but it sends as **info@cbmentors.org / "CBM Info"**, with
+standard compose — but it sends as **info@cbmentors.org / "Cleveland Business Mentors"**, with
 no personal name or signature. Replies stay on the same Gmail thread, so
 the submitter sees one continuous conversation no matter which admin
 answers.
@@ -330,7 +330,7 @@ message (template text, filled-in names, your own additions) reads as one
 personally-written email.
 
 **Can a submitter tell which admin replied?** No — Submission Admin mail is
-from "CBM Info <info@cbmentors.org>" with no personal signature. The app's
+from "Cleveland Business Mentors <info@cbmentors.org>" with no personal signature. The app's
 logs (not the email) record which admin sent it.
 
 **Someone emailed info@ — where did it go?** If it started a new thread, it

@@ -41,7 +41,7 @@
 
   function fromDisplay() {
     // Shared identity (info@) shows its display name so staff see the
-    // message will arrive as "CBM Info", not as them personally.
+    // message will arrive as "Cleveland Business Mentors", not as them personally.
     if (!state.mailbox) return "";
     return state.mailboxName
       ? state.mailboxName + " (" + state.mailbox + ")"

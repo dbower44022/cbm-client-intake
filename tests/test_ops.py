@@ -363,7 +363,7 @@ def test_shared_conversation_uses_payload_origin_thread(monkeypatch):
 
 def test_shared_mailbox_endpoint_reports_info_identity(monkeypatch):
     """GET /ops/api/mailbox in shared mode: the info@ identity, no personal
-    signature (the recipient sees "CBM Info", not a staffer's sign-off)."""
+    signature (the recipient sees the organization name, not a staffer's sign-off)."""
     _shared_env(monkeypatch, FakeSharedGmail({}))
     _authed(monkeypatch)
     with TestClient(_app(monkeypatch, FakeOpsStore())) as c:
@@ -395,7 +395,7 @@ def test_send_anchors_thread_to_submission(monkeypatch):
     assert r.status_code == 200
     assert r.json()["gmailThreadId"] == "t9"
     assert sent["gmail"].mailbox == _MAILBOX
-    assert sent["sender_name"] == "CBM Info"
+    assert sent["sender_name"] == "Cleveland Business Mentors"
     assert store.anchored == [("abc12345", "t9")]
     assert store.rows["abc12345"]["thread_ids"] == ["t9"]
 

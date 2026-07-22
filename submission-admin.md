@@ -25,7 +25,7 @@ stuck, and **carry the conversation with the submitter through to resolution**
 without leaving the page.
 
 All submission email — reading and sending — goes through the **shared
-info@cbmentors.org mailbox** under the generic name **CBM Info**: every admin
+info@cbmentors.org mailbox** under the generic name **Cleveland Business Mentors**: every admin
 sees the same conversation, replies come from the same address the public
 already knows, and a submission's conversation shows **only the email threads
 that belong to it** (the thread the submitter started, plus any thread you
@@ -94,7 +94,7 @@ block). **Email the submitter** opens the standard compose:
   and the compose opens as a reply: "Re:" subject, and the send stays on the
   same email thread in both inboxes.
 
-Messages send from **the shared info@cbmentors.org mailbox as "CBM Info"** —
+Messages send from **the shared info@cbmentors.org mailbox as "Cleveland Business Mentors"** —
 deliberately not your personal name or address (no personal signature is
 added either). Who actually clicked Send is still recorded internally. Every
 send ties its email thread to the submission, which is exactly what the
@@ -127,7 +127,7 @@ conversation view (and the Reply column) reads.
    arrival.
 4. **Email the submitter** — the canned reply is pre-filled on first
    contact; later rounds are proper replies on the same thread. Everything
-   sends as **CBM Info <info@cbmentors.org>**.
+   sends as **Cleveland Business Mentors <info@cbmentors.org>**.
 5. Jot what happened in **Submission notes**.
 6. When it's handled, **Mark resolved** — it leaves the queue (still
    findable under Resolved/All).

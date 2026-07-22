@@ -331,7 +331,7 @@ def test_mailbox_reports_shared_identity_when_ops_mailbox_set(monkeypatch):
             assert r.status_code == 200
             assert r.json() == {
                 "mailbox": "info@cbmentors.org",
-                "mailboxName": "CBM Info",
+                "mailboxName": "Cleveland Business Mentors",
                 "sendEnabled": True,
                 "signature": "",
             }
@@ -355,7 +355,7 @@ def test_sendmail_sends_as_shared_mailbox(monkeypatch):
         )
     assert r.status_code == 200 and r.json()["status"] == "ok"
     assert seen["mailbox"] == "info@cbmentors.org"
-    assert gmail.sent[0]["From"] == "CBM Info <info@cbmentors.org>"
+    assert gmail.sent[0]["From"] == "Cleveland Business Mentors <info@cbmentors.org>"
 
 
 def test_sessions_router_stays_per_user_with_ops_mailbox_set(monkeypatch):

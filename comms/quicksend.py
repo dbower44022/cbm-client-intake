@@ -105,7 +105,7 @@ def register_quicksend(
     ``shared_mailbox(settings) -> (mailbox, display_name) | None`` makes the
     router send (and report on ``GET /mailbox``) as a SHARED mailbox instead
     of the signed-in user's own — /ops speaks as info@cbmentors.org with the
-    generic "CBM Info" name (Doug's ruling 2026-07-19). Returning None falls
+    organization display name (Doug's ruling 2026-07-19; "Cleveland Business Mentors" since 2026-07-21). Returning None falls
     back to the per-user behavior, so a deploy without OPS_MAILBOX keeps
     working. The shared identity deliberately seeds NO personal signature.
 
@@ -242,7 +242,7 @@ def register_quicksend(
         shared = _shared(settings)
         if shared:
             # The shared channel identity: generic display name, no personal
-            # signature (the recipient sees "CBM Info", not a staffer's name).
+            # signature (the recipient sees the organization name, not a staffer's name).
             return {
                 "mailbox": shared[0],
                 "mailboxName": shared[1],

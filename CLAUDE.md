@@ -1456,7 +1456,7 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-21)
 
-**Main is at v0.130.0** (2026-07-21, 967 tests green, committed NOT pushed) —
+**Main is at v0.131.0** (2026-07-21, 967 tests green, committed NOT pushed; shared-identity display name renamed to "Cleveland Business Mentors" in 0.131.0 — prod CRM Outbound From Name still says "Mentoring", Doug to fix) —
 **the info@cbmentors.org shared-mailbox rollout: Phases 1–3 of
 `prds/info-mailbox-rollout-plan.md` are LIVE/BUILT** (Doug's rulings: all
 staff-tool outbound as info@; mentor↔client stays personal; no auto-acks;

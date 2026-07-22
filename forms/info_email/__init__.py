@@ -14,7 +14,7 @@ from .schemas import InfoEmail
 
 SPEC = FormSpec(
     slug="info-email",
-    title="Email to CBM Info",
+    title="Email to Cleveland Business Mentors",
     submission_model=InfoEmail,
     orchestrator=submit_email,
     frontend_dir=None,

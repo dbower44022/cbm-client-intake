@@ -4,6 +4,22 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.131.0] — 2026-07-21
+
+**feat(comms): shared-identity display name is "Cleveland Business Mentors"**
+(Doug's ruling: new contacts don't know the CBM acronym, and the full name
+is more professional). `OPS_MAILBOX_NAME` default changed from "CBM Info" —
+no overlay sets it, so the new default takes effect on deploy for every
+shared-identity surface (/ops replies, assignments/mentoradmin
+quick-compose, the compose From line). The info-email form kind's display
+title follows ("Email to Cleveland Business Mentors"). User-facing docs
+(email-executive-summary / email-management / submission-admin /
+submission-email-flow) updated. 967 tests green.
+**Doug-side:** the PROD CRM's Outbound Emails From Name reads "Cleveland
+Business Mentoring" (with -ing) — fix to "Cleveland Business Mentors" in
+Administration → Outbound Emails so CRM-native sends match (crm-test is
+already correct).
+
 ## [0.130.0] — 2026-07-21
 
 **feat(ops): bounce visibility — a failed delivery is never silent again**

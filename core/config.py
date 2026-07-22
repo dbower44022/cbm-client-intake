@@ -132,7 +132,7 @@ class Settings(BaseSettings):
     # only works against a licensed user mailbox. Empty = the pre-v0.110.0
     # behavior (per-admin mailbox + address search, no inbound capture).
     ops_mailbox: str = ""
-    ops_mailbox_name: str = "CBM Info"      # From display name on ops sends
+    ops_mailbox_name: str = "Cleveland Business Mentors"  # From display name on shared sends
     ops_inbound_seconds: int = 300          # inbound info@ poll cadence (0 = off)
     # Session Management tools — one engine, three team-gated routes
     # (/mentorsessions, /partnersessions, /sponsorsessions). Each lets its users
