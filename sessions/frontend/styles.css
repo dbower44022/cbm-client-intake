@@ -559,6 +559,21 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
 .sx__notice.is-warn { background: #fdf6e7; border: 1px solid #ecc94b; color: #744210; }
 /* "The last message is theirs" flag on conversation rows. */
 .sx__chip-awaiting { display: inline-block; margin-top: 0.2rem; padding: 0.08rem 0.45rem; border-radius: 999px; background: #fdf6e7; border: 1px solid #ecc94b; color: #744210; font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
+/* "The newest message is a bounce" flag — the send did NOT arrive (§3.4). */
+.sx__chip-bounced { display: inline-block; margin-top: 0.2rem; padding: 0.08rem 0.45rem; border-radius: 3px; background: #b3261e; color: #fff; font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
+/* Bounce message card (the /ops treatment) + its warning line. */
+.sx__msg-card--bounce { border-left: 4px solid #b3261e; background: #fdf3f2; }
+.sx__msg-bounce-note { margin: 0.35rem 0; color: #b3261e; font-weight: 700; font-size: 0.85rem; }
+/* Per-message attachment chips (filed documents / not-filed states). */
+.sx__msg-atts { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
+.sx__att-chip { display: inline-block; padding: 0.15rem 0.55rem; border-radius: 999px; background: #eef3fa; border: 1px solid #b9cbe4; color: var(--cbm-navy, #123); font-size: 0.78rem; text-decoration: none; white-space: nowrap; max-width: 24rem; overflow: hidden; text-overflow: ellipsis; }
+.sx__att-chip:hover { background: #dfe9f7; }
+.sx__att-chip--muted { background: #f2f2f2; border-color: #ddd; color: #666; }
+/* View-original: header block + sandboxed render frame. */
+.sx__orig-meta { margin: 0 0 0.5rem; font-size: 0.85rem; color: #333; }
+.sx__orig-meta .sx__orig-l { font-weight: 700; color: var(--cbm-navy, #123); }
+.sx__orig-atts { margin: 0 0 0.5rem; font-size: 0.82rem; color: #555; }
+.sx__orig-frame { width: 100%; height: 62vh; border: 1px solid #ddd; border-radius: 6px; background: #fff; }
 /* To-list header line: label + All/None quick toggles. */
 .sx__to-head { display: flex; align-items: baseline; gap: 0.6rem; }
 .sx__to-head .sx__msg-label { margin-bottom: 0; }

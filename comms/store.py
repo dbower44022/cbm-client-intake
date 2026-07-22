@@ -13,10 +13,12 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     Column,
     DateTime,
     Index,
+    Integer,
     MetaData,
     PrimaryKeyConstraint,
     String,
@@ -91,6 +93,44 @@ conversation_seen = Table(
     Column("last_seen_at", DateTime(timezone=True), nullable=False),
     PrimaryKeyConstraint("username", "conversation_id"),
 )
+
+# Per-record filing ledger for inbound email attachments (email-quality plan
+# §3.1, Alembic 0014): one row per (message part, target record). It is both
+# the render source for the thread view's attachment chips and the retry
+# ledger — a "failed" row is re-attempted on later sync passes until filed
+# (or it exhausts ATTACHMENT_MAX_ATTEMPTS).
+comm_attachment = Table(
+    "comm_attachment",
+    metadata,
+    Column("rfc_message_id", String(255), nullable=False),
+    Column("part_index", Integer, nullable=False),
+    Column("entity_type", String(64), nullable=False),
+    Column("record_id", String(64), nullable=False),
+    Column("filename", String(255)),
+    Column("mime_type", String(128)),
+    Column("size", BigInteger),
+    Column("sha256", String(64)),
+    # filed | duplicate | too_large | failed
+    Column("status", String(16), nullable=False),
+    Column("document_id", String(36)),  # app_document.id when filed/duplicate
+    # Where the bytes live, for retry/backfill refetches.
+    Column("gmail_message_id", String(100)),
+    Column("source_mailbox", String(255)),
+    Column("attempts", Integer, nullable=False, server_default="0"),
+    Column("last_error", Text),
+    Column("updated_at", DateTime(timezone=True), nullable=False),
+    PrimaryKeyConstraint("rfc_message_id", "part_index", "entity_type", "record_id"),
+    Index("ix_comm_attachment_record", "entity_type", "record_id"),
+    Index("ix_comm_attachment_status", "status"),
+)
+
+ATTACHMENT_FILED = "filed"
+ATTACHMENT_DUPLICATE = "duplicate"
+ATTACHMENT_TOO_LARGE = "too_large"
+ATTACHMENT_FAILED = "failed"
+# A failed row stops being retried after this many attempts (a WARN marks the
+# give-up); View original still has the bytes, so nothing is lost outright.
+ATTACHMENT_MAX_ATTEMPTS = 10
 
 ACTION_INCLUDE = "include"
 ACTION_EXCLUDE = "exclude"
@@ -316,6 +356,99 @@ class CommsStore:
             ).all()
         return {(r.parent_entity, r.parent_id, r.conversation_id) for r in rows}
 
+    # --- attachment filing ledger (email-quality §3.1) -----------------------
+
+    async def upsert_attachment(self, values: dict[str, Any]) -> None:
+        """Insert-or-update one ledger row (PK: rfc id + part + record)."""
+        values = dict(values)
+        values["updated_at"] = _now()
+        keys = ("rfc_message_id", "part_index", "entity_type", "record_id")
+        stmt = (
+            pg_insert(comm_attachment)
+            .values(**values)
+            .on_conflict_do_update(
+                index_elements=list(keys),
+                set_={k: v for k, v in values.items() if k not in keys},
+            )
+        )
+        async with self._engine.begin() as conn:
+            await conn.execute(stmt)
+
+    @staticmethod
+    def _attachment_dict(row: Any) -> dict[str, Any]:
+        return {
+            "rfcMessageId": row.rfc_message_id,
+            "partIndex": row.part_index,
+            "entityType": row.entity_type,
+            "recordId": row.record_id,
+            "filename": row.filename,
+            "mimeType": row.mime_type,
+            "size": row.size,
+            "sha256": row.sha256,
+            "status": row.status,
+            "documentId": row.document_id,
+            "gmailMessageId": row.gmail_message_id,
+            "sourceMailbox": row.source_mailbox,
+            "attempts": row.attempts,
+            "lastError": row.last_error,
+        }
+
+    async def attachment_state(
+        self, rfc_message_id: str, part_index: int, entity_type: str, record_id: str
+    ) -> Optional[dict[str, Any]]:
+        async with self._engine.begin() as conn:
+            row = (
+                await conn.execute(
+                    select(comm_attachment).where(
+                        comm_attachment.c.rfc_message_id == rfc_message_id,
+                        comm_attachment.c.part_index == part_index,
+                        comm_attachment.c.entity_type == entity_type,
+                        comm_attachment.c.record_id == record_id,
+                    )
+                )
+            ).first()
+        return self._attachment_dict(row) if row else None
+
+    async def attachments_for_record(
+        self, entity_type: str, record_id: str, rfc_ids: list[str]
+    ) -> dict[str, list[dict[str, Any]]]:
+        """``{rfc_message_id: [ledger rows]}`` for one record's thread view."""
+        if not rfc_ids:
+            return {}
+        async with self._engine.begin() as conn:
+            rows = (
+                await conn.execute(
+                    select(comm_attachment)
+                    .where(
+                        comm_attachment.c.entity_type == entity_type,
+                        comm_attachment.c.record_id == record_id,
+                        comm_attachment.c.rfc_message_id.in_(rfc_ids),
+                    )
+                    .order_by(comm_attachment.c.part_index)
+                )
+            ).all()
+        out: dict[str, list[dict[str, Any]]] = {}
+        for r in rows:
+            out.setdefault(r.rfc_message_id, []).append(self._attachment_dict(r))
+        return out
+
+    async def failed_attachments(self, limit: int = 25) -> list[dict[str, Any]]:
+        """Failed rows still worth retrying (attempts under the give-up cap),
+        oldest first — the sync pass's retry sweep."""
+        async with self._engine.begin() as conn:
+            rows = (
+                await conn.execute(
+                    select(comm_attachment)
+                    .where(
+                        comm_attachment.c.status == ATTACHMENT_FAILED,
+                        comm_attachment.c.attempts < ATTACHMENT_MAX_ATTEMPTS,
+                    )
+                    .order_by(comm_attachment.c.updated_at)
+                    .limit(limit)
+                )
+            ).all()
+        return [self._attachment_dict(r) for r in rows]
+
     # --- per-user read state (unread badges) ---------------------------------
 
     async def mark_seen(self, username: str, conversation_id: str) -> None:
@@ -373,6 +506,7 @@ class MemoryCommsStore:
         self._overrides: dict[tuple[str, str, str], str] = {}
         self._threads: dict[tuple[str, str], str] = {}
         self._seen: dict[tuple[str, str], datetime] = {}
+        self._attachments: dict[tuple[str, int, str, str], dict[str, Any]] = {}
 
     async def create_all(self) -> None: ...
 
@@ -428,6 +562,60 @@ class MemoryCommsStore:
         return {
             key for key, action in self._overrides.items() if action == ACTION_EXCLUDE
         }
+
+    @staticmethod
+    def _mem_attachment_dict(v: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "rfcMessageId": v.get("rfc_message_id"),
+            "partIndex": v.get("part_index"),
+            "entityType": v.get("entity_type"),
+            "recordId": v.get("record_id"),
+            "filename": v.get("filename"),
+            "mimeType": v.get("mime_type"),
+            "size": v.get("size"),
+            "sha256": v.get("sha256"),
+            "status": v.get("status"),
+            "documentId": v.get("document_id"),
+            "gmailMessageId": v.get("gmail_message_id"),
+            "sourceMailbox": v.get("source_mailbox"),
+            "attempts": v.get("attempts", 0),
+            "lastError": v.get("last_error"),
+        }
+
+    async def upsert_attachment(self, values: dict[str, Any]) -> None:
+        key = (
+            values["rfc_message_id"], values["part_index"],
+            values["entity_type"], values["record_id"],
+        )
+        merged = dict(self._attachments.get(key) or {})
+        merged.update(values)
+        merged["updated_at"] = _now()
+        self._attachments[key] = merged
+
+    async def attachment_state(
+        self, rfc_message_id: str, part_index: int, entity_type: str, record_id: str
+    ) -> Optional[dict[str, Any]]:
+        v = self._attachments.get((rfc_message_id, part_index, entity_type, record_id))
+        return self._mem_attachment_dict(v) if v else None
+
+    async def attachments_for_record(
+        self, entity_type: str, record_id: str, rfc_ids: list[str]
+    ) -> dict[str, list[dict[str, Any]]]:
+        out: dict[str, list[dict[str, Any]]] = {}
+        wanted = set(rfc_ids)
+        for (rfc, idx, ent, rid), v in sorted(self._attachments.items()):
+            if ent == entity_type and rid == record_id and rfc in wanted:
+                out.setdefault(rfc, []).append(self._mem_attachment_dict(v))
+        return out
+
+    async def failed_attachments(self, limit: int = 25) -> list[dict[str, Any]]:
+        rows = [
+            self._mem_attachment_dict(v)
+            for v in self._attachments.values()
+            if v.get("status") == ATTACHMENT_FAILED
+            and v.get("attempts", 0) < ATTACHMENT_MAX_ATTEMPTS
+        ]
+        return rows[:limit]
 
     async def mark_seen(self, username: str, conversation_id: str) -> None:
         self._seen[(username, conversation_id)] = _now()

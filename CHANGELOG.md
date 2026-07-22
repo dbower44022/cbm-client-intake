@@ -4,6 +4,81 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.132.0] — 2026-07-22
+
+**feat(comms): Email Quality Phase 1 — never lose information**
+(`prds/email-quality-improvement-plan.md` §3, Doug's 2026-07-21 rulings).
+Four pieces, all riding existing Google scopes and CRM schema (no new
+grants, no entity changes; one Alembic migration — **0014**, pre-deploy
+migrate required):
+
+- **Inbound attachments auto-file to the record Documents tab (§3.1).**
+  `parse_message` now collects attachment parts (`GmailAttachment`;
+  `GmailClient.get_attachment` fetches bytes via `gmail.readonly`). REAL
+  attachments only (Content-Disposition: attachment — inline/cid signature
+  images never file, per the ruling); inbound messages only. The sync's
+  ingest files each qualifying attachment onto every record the
+  conversation links to (all three domains), through the existing documents
+  pipeline (`comms/attachments.py` → `docs.service.upload_document`) under
+  the **service identity**, docType **"Email attachment"** (accepted by the
+  pipeline, never shown in the upload picker), `uploaded_by` = the source
+  mailbox. **Dedup per record by SHA-256**: `app_document.content_sha256`
+  (now computed for ALL uploads, user uploads included) — a five-reply
+  thread re-attaching the same PDF stores it once (`duplicate` ledger row
+  pointing at the existing document). New **`comm_attachment`** ledger
+  (PK: rfc id + part + record) = the thread-view chip source AND the retry
+  ledger: a failure marks the row `failed` and later passes re-attempt it
+  (sweep bounded to 25/pass, give-up WARN after 10 attempts); over-cap
+  files mark `too_large` without fetching. Best-effort throughout — filing
+  never fails message ingest. Gated by GMAIL_SYNC + GDRIVE_DOCS +
+  DATABASE_URL + GDRIVE_SHARED_DRIVE_ID + **GDRIVE_IDENTITY=service** (all
+  already set on both deployed envs). **Thread-view chips**: each message
+  renders its attachments — filed/duplicate chips open the record's
+  document via the existing content proxy; too_large/failed chips say so
+  and point at View original. Backfill for historical mail:
+  `scripts/backfill_email_attachments.py` (dry-run default, `--write`
+  applies; run per env from the worker console AFTER the feature is
+  verified live).
+- **"View original" in-app (§3.2).** New
+  `GET /{slug}/api/communications/{id}/original` (+ `…/original/cid/{cid}`
+  for inline images): the stored CCommunication is read AS THE SIGNED-IN
+  USER (the same ACL gate as the thread read), then the complete original
+  is fetched from the SOURCE mailbox under the service delegation — any
+  viewer entitled to the record sees the full message, real formatting and
+  inline images intact (`sanitize_original_html`: scripts/handlers/js-URLs
+  stripped, formatting kept, `cid:` refs rewritten to the companion
+  endpoint). Renders in the conversation modal inside a sandboxed iframe
+  (styles isolated, scripts blocked) with a Back button. Every access is
+  provenance-logged (mailbox, message, acting user). Message deleted in
+  Gmail → readable 404. This is the systemic answer to over-stripping: the
+  cleaner's placeholder now reads "(no new text — use View original…)".
+- **"Open in Gmail" fixed (§3.3).** The link now searches the VIEWER'S own
+  mailbox by RFC Message-ID
+  (`…/mail/u/<viewer cbmEmail>/#search/rfc822msgid:<id>`) — the old link
+  used the sync's source mailbox + a Gmail message id, which is
+  mailbox-specific, so it failed for everyone but that mailbox's owner.
+  Non-participants get an empty search; the tooltip points at View
+  original as the guaranteed path.
+- **Bounce visibility in record threads (§3.4, closes F14).** The v0.130.0
+  /ops treatment extended to the record surfaces, classified at
+  render/enrichment time from stored fields (self-heals on deploy, no data
+  migration): thread view renders a bounce as a red "Delivery failed" card
+  (Reply no longer targets mailer-daemon); `enrich_conversation_rows`
+  reports a bounce-terminated thread as **`bounced`** — a red "✕ delivery
+  failed" chip on the Communications conversation list AND My Email rows —
+  instead of unread/awaiting-reply.
+
+982 tests green (24 new: `tests/test_email_attachments.py` + endpoint
+coverage in test_comms_endpoints). Migration 0014 + the ledger/dedup store
+surface round-tripped on live local Postgres; both frontends
+(sessions record page + My Email) driven end-to-end in the stub harness —
+chips, bounce cards/chips, View original incl. Back, the new Gmail href,
+`?parentId` scoping — no console errors. **NOT yet driven live** — the
+§3.5 live verification (real PDF + signature-logo email → files once, logo
+doesn't; duplicate re-attach; View original for mentor AND co-mentor;
+viewer-mailbox Gmail link; a real bounce) is the next step, along with the
+still-pending `scripts/repair_outbound_bodies.py` run per env (v0.125.0).
+
 ## [0.131.0] — 2026-07-21
 
 **feat(comms): shared-identity display name is "Cleveland Business Mentors"**

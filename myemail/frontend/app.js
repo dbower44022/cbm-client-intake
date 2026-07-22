@@ -188,7 +188,12 @@
         var dot = document.createElement("span"); dot.className = "me__dot"; dot.title = "Unread";
         c0.appendChild(dot);
       }
-      if (r.awaitingReply) {
+      if (r.bounced) {
+        var bchip = document.createElement("span"); bchip.className = "me__chip me__chip--bounced";
+        bchip.textContent = "✕ delivery failed";
+        bchip.title = "The newest message is a bounce — the last email did NOT reach the recipient.";
+        c0.appendChild(bchip);
+      } else if (r.awaitingReply) {
         var chip = document.createElement("span"); chip.className = "me__chip me__chip--awaiting";
         chip.textContent = "Awaiting reply";
         c0.appendChild(chip);
@@ -254,7 +259,8 @@
 
     var body = $("threadBody"); body.innerHTML = "";
     (c.messages || []).forEach(function (m) {
-      var card = document.createElement("div"); card.className = "me__msg-card";
+      var card = document.createElement("div");
+      card.className = "me__msg-card" + (m.bounce ? " me__msg-card--bounce" : "");
       var head = document.createElement("div"); head.className = "me__msg-head";
       var who = document.createElement("span"); who.className = "me__msg-who";
       who.textContent = (m.from || m.fromAddress || "") +
@@ -263,6 +269,11 @@
       when.textContent = fmtWhen(m.sentAt);
       head.appendChild(who); head.appendChild(when);
       card.appendChild(head);
+      if (m.bounce) {
+        var warn = document.createElement("div"); warn.className = "me__msg-bounce-note";
+        warn.textContent = "✕ Delivery failed — the address rejected the message. The email was not delivered.";
+        card.appendChild(warn);
+      }
       var mb = document.createElement("div"); mb.className = "me__msg-html";
       mb.innerHTML = sanitizeHtml(m.bodyHtml || "");
       card.appendChild(mb);

@@ -187,3 +187,74 @@ async def test_exclude_store_failure_after_unlink_raises_comms_error():
             client, store, "CEngagement", "E1", "conv1", "jdoe"
         )
     assert client.unrelates  # the unlink did happen first
+
+
+# --- View original + attachment-scoped thread reads (email-quality Phase 1) ---
+
+
+def test_conversation_detail_passes_record_scope(monkeypatch):
+    _as(monkeypatch)
+    seen = {}
+
+    async def fake_get_conversation(client, conversation_id, *, store=None,
+                                    parent_entity=None, parent_id=None):
+        seen.update(parent_entity=parent_entity, parent_id=parent_id)
+        return {"id": conversation_id, "messages": []}
+
+    class _Store:
+        async def mark_seen(self, username, conversation_id):
+            pass
+
+    monkeypatch.setattr(comms_service, "get_conversation", fake_get_conversation)
+    monkeypatch.setattr(comms_service, "get_store", lambda settings: _Store())
+    with TestClient(_app(monkeypatch, gmail_sync=True)) as c:
+        r = c.get("/mentorsessions/api/conversations/conv1?parentId=E1")
+    assert r.status_code == 200
+    assert seen == {"parent_entity": "CEngagement", "parent_id": "E1"}
+
+
+def test_original_endpoint_serves_and_maps_gone_to_404(monkeypatch):
+    _as(monkeypatch)
+    monkeypatch.setattr(comms_service, "get_store", lambda settings: object())
+    calls = {}
+
+    async def fake_get_original(settings, client, communication_id, *, cid_base,
+                                acting_user=""):
+        calls["cid_base"] = cid_base
+        if communication_id == "gone":
+            raise comms_service.OriginalGoneError("The original no longer exists.")
+        return {"id": communication_id, "subject": "S", "bodyHtml": "<p>x</p>"}
+
+    monkeypatch.setattr(comms_service, "get_original", fake_get_original)
+    with TestClient(_app(monkeypatch, gmail_sync=True)) as c:
+        ok = c.get("/mentorsessions/api/communications/comm1/original")
+        assert calls["cid_base"] == "/mentorsessions/api/communications/comm1/original/cid"
+        gone = c.get("/mentorsessions/api/communications/gone/original")
+    assert ok.status_code == 200 and ok.json()["subject"] == "S"
+    assert gone.status_code == 404
+    assert "no longer exists" in gone.json()["detail"]
+
+
+def test_original_cid_endpoint_streams_bytes(monkeypatch):
+    _as(monkeypatch)
+    monkeypatch.setattr(comms_service, "get_store", lambda settings: object())
+
+    async def fake_part(settings, client, communication_id, content_id, *,
+                        acting_user=""):
+        assert content_id == "logo@cid"
+        return {"data": b"PNG", "mime_type": "image/png"}
+
+    monkeypatch.setattr(comms_service, "get_original_part", fake_part)
+    with TestClient(_app(monkeypatch, gmail_sync=True)) as c:
+        r = c.get("/mentorsessions/api/communications/comm1/original/cid/logo%40cid")
+    assert r.status_code == 200
+    assert r.content == b"PNG"
+    assert r.headers["content-type"].startswith("image/png")
+    assert "private" in r.headers["cache-control"]
+
+
+def test_original_endpoint_503_when_comms_off(monkeypatch):
+    _as(monkeypatch)
+    with TestClient(_app(monkeypatch, gmail_sync=False)) as c:
+        r = c.get("/mentorsessions/api/communications/comm1/original")
+    assert r.status_code == 503

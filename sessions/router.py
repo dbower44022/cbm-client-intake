@@ -728,12 +728,21 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             raise _crm_failure(request, exc, "Could not load conversations")
 
     @router.get("/conversations/{conversation_id}")
-    async def conversation_detail(conversation_id: str, request: Request) -> dict:
+    async def conversation_detail(
+        conversation_id: str, request: Request, parentId: str = ""
+    ) -> dict:
         user = _require_user(request)
         _, store = _comms_ready()
         client = client_for(get_settings(), user)
         try:
-            thread = await comms_service.get_conversation(client, conversation_id)
+            # parentId (the open record) scopes the per-message attachment
+            # chips — filings are per record, so the chips must be too.
+            thread = await comms_service.get_conversation(
+                client, conversation_id,
+                store=store,
+                parent_entity=cfg.parent_entity if parentId else None,
+                parent_id=parentId or None,
+            )
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not load the conversation")
         # Opening the thread stamps it read for THIS user (unread badges).
@@ -765,6 +774,68 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             conversation_id, cfg.parent_entity, parent_id, user.get("userName"),
         )
         return {"status": "ok"}
+
+    @router.get("/communications/{communication_id}/original")
+    async def communication_original(communication_id: str, request: Request) -> dict:
+        """View original (§3.2): the complete message — real formatting,
+        inline images — fetched on demand from the SOURCE mailbox under the
+        service delegation. The stored CCommunication row is read first AS THE
+        SIGNED-IN USER, so their CRM ACL is the gate (the same one that let
+        them read the thread); every access is provenance-logged."""
+        user = _require_user(request)
+        settings, _ = _comms_ready()
+        client = client_for(settings, user)
+        try:
+            return await comms_service.get_original(
+                settings, client, communication_id,
+                cid_base=(
+                    f"/{cfg.slug}/api/communications/{communication_id}/original/cid"
+                ),
+                acting_user=user.get("userName", ""),
+            )
+        except comms_service.OriginalGoneError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+        except comms_service.CommsError as exc:
+            raise _comms_error(exc)
+        except GmailError as exc:
+            log.warning("original fetch failed (%s): %s", cfg.slug, exc)
+            raise HTTPException(
+                status_code=502,
+                detail="Couldn't fetch the original from the mailbox — try again.",
+            )
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not load the original message")
+
+    @router.get("/communications/{communication_id}/original/cid/{content_id}")
+    async def communication_original_cid(
+        communication_id: str, content_id: str, request: Request
+    ) -> Response:
+        """Inline-image subresource for the View original render (one ``cid:``
+        part's bytes). Same ACL gate + provenance logging as the original."""
+        user = _require_user(request)
+        settings, _ = _comms_ready()
+        client = client_for(settings, user)
+        try:
+            part = await comms_service.get_original_part(
+                settings, client, communication_id, content_id,
+                acting_user=user.get("userName", ""),
+            )
+        except comms_service.OriginalGoneError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+        except comms_service.CommsError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+        except GmailError as exc:
+            log.warning("original cid fetch failed (%s): %s", cfg.slug, exc)
+            raise HTTPException(
+                status_code=502, detail="Couldn't fetch the image — try again."
+            )
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not load the image")
+        return Response(
+            content=part["data"],
+            media_type=part["mime_type"],
+            headers={"Cache-Control": "private, max-age=86400"},
+        )
 
     @router.get("/mailbox")
     async def mailbox(request: Request) -> dict:

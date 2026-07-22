@@ -240,6 +240,20 @@ class GmailClient:
             "GET", f"/messages/{message_id}", params={"format": "full"}
         )
 
+    async def get_attachment(self, message_id: str, attachment_id: str) -> bytes:
+        """One attachment part's bytes (``users.messages.attachments.get``).
+        Covered by ``gmail.readonly`` — no extra scope."""
+        data = await self._request(
+            "GET", f"/messages/{message_id}/attachments/{attachment_id}"
+        )
+        raw = data.get("data") or ""
+        try:
+            return base64.urlsafe_b64decode(raw + "===")
+        except Exception as exc:  # malformed base64 from the API — treat as failure
+            raise GmailError(
+                f"Gmail attachment {attachment_id} of {message_id} did not decode: {exc}"
+            ) from exc
+
     async def get_message_headers(self, message_id: str) -> dict[str, Any]:
         """Headers-only fetch (format=metadata) — the cheap read for questions
         like "who wrote the last message?" (the /ops awaiting-reply column)."""
@@ -284,6 +298,45 @@ class GmailClient:
 
 
 @dataclass
+class GmailAttachment:
+    """One non-body part of a message (``messages.get format=full``).
+
+    ``part_index`` is the part's position in the depth-first walk of the MIME
+    tree — stable for a given stored message, so it doubles as the durable
+    per-attachment key (the ledger's ``(rfc_message_id, part_index)``).
+    ``is_attachment`` is True only for REAL attachments (Content-Disposition:
+    attachment) — inline images (cid-referenced, signature logos) stay
+    viewable through View original but are never auto-filed (Doug's ruling
+    2026-07-21).
+    """
+
+    part_index: int
+    filename: str
+    mime_type: str
+    size: int
+    attachment_id: str
+    disposition: str = ""  # "attachment" | "inline" | "" (header absent)
+    content_id: str = ""   # the Content-ID (without <>), for cid: resolution
+
+    @property
+    def is_attachment(self) -> bool:
+        # The ruling's filter, applied by spirit: anything inline (explicit
+        # disposition, or cid-referenced with no disposition header) never
+        # qualifies; an explicit "attachment" always does; a named part with
+        # NO disposition header at all (some MTAs omit it) still counts —
+        # requiring the header verbatim would silently drop real documents.
+        if self.disposition == "attachment":
+            return True
+        if self.disposition:  # "inline" or anything else explicit
+            return False
+        return bool(self.filename) and not self.content_id
+
+    @property
+    def is_inline_image(self) -> bool:
+        return bool(self.content_id) and self.mime_type.startswith("image/")
+
+
+@dataclass
 class ParsedGmailMessage:
     """The fields the pipeline needs from a ``messages.get format=full`` payload."""
 
@@ -306,6 +359,14 @@ class ParsedGmailMessage:
     snippet: str = ""
     body_text: str = ""
     body_html: str = ""
+    # Every non-body part with retrievable bytes (real attachments AND inline
+    # parts). Filter with .real_attachments for the auto-filing pipeline.
+    attachments: list[GmailAttachment] = field(default_factory=list)
+
+    @property
+    def real_attachments(self) -> list[GmailAttachment]:
+        """Only Content-Disposition: attachment parts (the auto-file set)."""
+        return [a for a in self.attachments if a.is_attachment]
 
     @property
     def all_addresses(self) -> set[str]:
@@ -358,6 +419,40 @@ def _clean_msgid(value: str) -> str:
     return value.strip().strip("<>").strip()
 
 
+def _part_headers(part: dict[str, Any]) -> dict[str, str]:
+    return {
+        (h.get("name") or "").lower(): h.get("value") or ""
+        for h in part.get("headers") or []
+    }
+
+
+def _collect_attachments(payload: dict[str, Any]) -> list[GmailAttachment]:
+    """Every part with retrievable bytes (an ``attachmentId``), indexed by its
+    depth-first position. Bodies (the first text/plain + text/html) carry
+    their data inline and have no attachmentId, so they never appear here."""
+    out: list[GmailAttachment] = []
+    for idx, part in enumerate(_walk_parts(payload)):
+        body = part.get("body") or {}
+        attachment_id = body.get("attachmentId")
+        if not attachment_id:
+            continue
+        headers = _part_headers(part)
+        disposition = headers.get("content-disposition", "").split(";", 1)[0]
+        disposition = disposition.strip().lower()
+        out.append(
+            GmailAttachment(
+                part_index=idx,
+                filename=(part.get("filename") or "").strip(),
+                mime_type=(part.get("mimeType") or "application/octet-stream").lower(),
+                size=int(body.get("size") or 0),
+                attachment_id=attachment_id,
+                disposition=disposition,
+                content_id=_clean_msgid(headers.get("content-id", "")),
+            )
+        )
+    return out
+
+
 def parse_message(raw: dict[str, Any]) -> ParsedGmailMessage:
     """Flatten a Gmail message resource into :class:`ParsedGmailMessage`."""
     payload = raw.get("payload") or {}
@@ -402,6 +497,7 @@ def parse_message(raw: dict[str, Any]) -> ParsedGmailMessage:
         snippet=raw.get("snippet", ""),
         body_text=text,
         body_html=html,
+        attachments=_collect_attachments(payload),
     )
 
 

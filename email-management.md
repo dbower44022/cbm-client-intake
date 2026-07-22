@@ -34,7 +34,14 @@ Gmail and do three things:
   and files the mail that belongs to a client / partner / funder record into
   the CRM as a *conversation* on that record. Messages are cleaned (quoted
   copies, signatures, and boilerplate stripped) so the record reads like a
-  transcript; the complete original always stays one click away in Gmail.
+  transcript; the complete original — real formatting, inline images — is
+  one click away via **View original** on every message (and **Open in
+  Gmail** finds it in your own mailbox when you were on the email). Real
+  attachments a client sends are **auto-filed into the record's Documents
+  tab** (deduplicated, so the same file re-attached in replies is stored
+  once) and show as chips on the message; a bounced send shows a red
+  **"Delivery failed"** flag on the thread and its list rows instead of
+  looking delivered. (Details: `communications-tab.md`.)
 - **Show.** You read those conversations in three places — your unified
   **My Email** inbox, each record's **Communications tab**, and (for
   form submissions) **Submission Admin**. The same conversation looks the

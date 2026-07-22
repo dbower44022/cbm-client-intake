@@ -55,6 +55,12 @@ class DocsError(Exception):
     """A user-visible failure (message is safe to show)."""
 
 
+# System doc type for inbound email attachments auto-filed by the sync
+# (email-quality plan §3.1). Not part of GDRIVE_DOC_TYPES — it never appears
+# in the upload picker, but _validate_upload accepts it for the pipeline.
+EMAIL_ATTACHMENT_DOC_TYPE = "Email attachment"
+
+
 class DocsNotFound(DocsError):
     """The requested document isn't on this record (routes map it to a 404)."""
 
@@ -220,7 +226,10 @@ def _validate_upload(
         raise DocsError(
             f"The file is too large — the limit is {settings.gdrive_max_file_mb} MB."
         )
-    if doc_type not in settings.gdrive_doc_types_list:
+    if (
+        doc_type not in settings.gdrive_doc_types_list
+        and doc_type != EMAIL_ATTACHMENT_DOC_TYPE
+    ):
         raise DocsError("Please choose a document type from the list.")
     return filename
 
@@ -239,6 +248,8 @@ async def upload_document(
     data: bytes,
     client_id: Optional[str] = None,
     client_name: Optional[str] = None,
+    content_sha256: Optional[str] = None,
+    uploaded_by: Optional[str] = None,
 ) -> dict[str, Any]:
     """DOC-01: upload to the anchor record's folder (all levels created as
     needed), then write the metadata row — including ``client_record_id`` for
@@ -248,6 +259,13 @@ async def upload_document(
         settings, filename=filename, doc_type=doc_type, data=data
     )
     mime_type = (mime_type or "").strip() or "application/octet-stream"
+    if not content_sha256:
+        import hashlib
+
+        # Every upload gets a content hash — it is the email-attachment dedup
+        # key, and hashing user uploads too means a document a user filed by
+        # hand still dedups a later inbound copy of the same file.
+        content_sha256 = hashlib.sha256(data).hexdigest()
     from_cache = bool(await store.cached_folder_id(entity_type, record_id))
     folder_id = await ensure_record_folder(
         settings, drive, store, entity_type, record_id, record_name,
@@ -306,9 +324,10 @@ async def upload_document(
         "mime_type": mime_type,
         "doc_type": doc_type,
         "web_view_link": file.get("webViewLink"),
-        "uploaded_by": drive.mailbox,
+        "uploaded_by": uploaded_by or drive.mailbox,
         "modified_time": _parse_drive_time(file.get("modifiedTime")),
         "checksum_md5": file.get("md5Checksum"),
+        "content_sha256": content_sha256,
     }
     try:
         await store.insert_document(row)

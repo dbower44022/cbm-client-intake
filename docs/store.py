@@ -58,6 +58,10 @@ app_document = Table(
     Column("uploaded_at", DateTime(timezone=True), nullable=False),  # UTC
     Column("modified_time", DateTime(timezone=True)),  # Drive modifiedTime
     Column("checksum_md5", String(64)),  # null for Google-native formats
+    # SHA-256 of the stored bytes — the per-record dedup key for email
+    # attachments (Phase 1, email-quality plan section 3.1). Null for uploads
+    # made before the column existed.
+    Column("content_sha256", String(64), index=True),
     Column("status", String(16), nullable=False, server_default=STATUS_ACTIVE),
     # Supports the per-record listing query (PRD §4).
     Index("ix_app_document_record", "entity_type", "record_id", "status"),
@@ -89,6 +93,7 @@ def _row_dict(row: Any) -> dict[str, Any]:
         "uploadedAt": row.uploaded_at.isoformat() if row.uploaded_at else None,
         "modifiedTime": row.modified_time.isoformat() if row.modified_time else None,
         "checksumMd5": row.checksum_md5,
+        "contentSha256": row.content_sha256,
         "status": row.status,
     }
 
@@ -210,6 +215,27 @@ class DocumentStore:
                 .where(app_document.c.id == doc_id)
                 .values(**values)
             )
+
+    async def find_by_sha256(
+        self, entity_type: str, record_id: str, sha256: str
+    ) -> Optional[dict[str, Any]]:
+        """A document on THIS record whose stored bytes hash to ``sha256`` —
+        the email-attachment dedup lookup (any status: an archived copy still
+        means the record has the file; per-record by design, since Drive
+        grants and folder placement are per-record)."""
+        if not sha256:
+            return None
+        async with self._engine.begin() as conn:
+            row = (
+                await conn.execute(
+                    select(app_document).where(
+                        app_document.c.entity_type == entity_type,
+                        app_document.c.record_id == record_id,
+                        app_document.c.content_sha256 == sha256,
+                    )
+                )
+            ).first()
+        return _row_dict(row) if row else None
 
     async def cached_folder_id(self, entity_type: str, record_id: str) -> Optional[str]:
         """The record's Drive folder id, from any prior upload (folder-ID cache,
@@ -342,6 +368,20 @@ class MemoryDocumentStore:
                 "driveFolderId": r["drive_folder_id"],
             }
         return list(seen.values())
+
+    async def find_by_sha256(
+        self, entity_type: str, record_id: str, sha256: str
+    ) -> Optional[dict[str, Any]]:
+        if not sha256:
+            return None
+        for r in self.rows:
+            if (
+                r["entity_type"] == entity_type
+                and r["record_id"] == record_id
+                and r.get("content_sha256") == sha256
+            ):
+                return (await self._as_rows([r]))[0]
+        return None
 
     async def cached_folder_id(self, entity_type: str, record_id: str) -> Optional[str]:
         matches = [

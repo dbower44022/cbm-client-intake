@@ -1755,7 +1755,12 @@
 
       var c0 = document.createElement("td"); c0.className = "sx__inbox-dir";
       if (c.status) c0.appendChild(tag(c.status, c.status === "Open" ? "status" : "type"));
-      if (c.awaitingReply) {
+      if (c.bounced) {
+        var bn = document.createElement("span"); bn.className = "sx__chip-bounced";
+        bn.textContent = "✕ delivery failed";
+        bn.title = "The newest message is a bounce — the last email did NOT reach the recipient.";
+        c0.appendChild(bn);
+      } else if (c.awaitingReply) {
         var aw = document.createElement("span"); aw.className = "sx__chip-awaiting";
         aw.textContent = "Awaiting reply"; aw.title = "The last message is from them — the ball is in your court.";
         c0.appendChild(aw);
@@ -1794,11 +1799,99 @@
     btn.textContent = n ? label + " (" + n + ")" : label;
   }
 
+  // Per-message attachment chips (email-quality §3.1): filed/duplicate link
+  // to the record's Documents copy; too_large/failed say so and point at
+  // View original (the bytes are always one click away there).
+  function attachmentChips(m, c, convId) {
+    var wrap = document.createElement("div"); wrap.className = "sx__msg-atts";
+    (m.attachments || []).forEach(function (a) {
+      var label = "📎 " + (a.filename || "attachment") +
+        (a.size ? " (" + fmtBytes(a.size) + ")" : "");
+      if ((a.status === "filed" || a.status === "duplicate") && a.documentId && currentDetail) {
+        var link = document.createElement("a");
+        link.className = "sx__att-chip";
+        link.href = API + "/records/" + encodeURIComponent(currentDetail.id) +
+          "/documents/" + encodeURIComponent(a.documentId) + "/content?v=email";
+        link.target = "_blank"; link.rel = "noopener";
+        link.textContent = label;
+        link.title = a.status === "duplicate"
+          ? "This file was already in Documents — the chip opens the existing copy."
+          : "Filed in this record's Documents tab — click to view.";
+        wrap.appendChild(link);
+      } else {
+        var span = document.createElement("span");
+        span.className = "sx__att-chip sx__att-chip--muted";
+        span.textContent = label + (a.status === "too_large"
+          ? " — too large to file" : " — not filed yet");
+        span.title = "Use View original to see the message with this attachment.";
+        wrap.appendChild(span);
+      }
+    });
+    return wrap;
+  }
+
+  // View original (email-quality §3.2): the complete message as it arrived —
+  // real formatting + inline images — fetched from the source mailbox and
+  // rendered in a sandboxed iframe (styles isolated, scripts blocked).
+  async function viewOriginal(m, c, convId) {
+    var body = $("commModalBody");
+    $("commModalTitle").textContent = (c.subject || "(no subject)") + " — original";
+    body.innerHTML = "<p class='sx__muted'>Loading the original message…</p>";
+    var foot = $("commModalFoot"); foot.innerHTML = "";
+    var back = document.createElement("button"); back.type = "button";
+    back.className = "cbm-button cbm-button--secondary";
+    back.textContent = "← Back to conversation";
+    back.addEventListener("click", function () { viewConversation(convId); });
+    foot.appendChild(back);
+    try {
+      var o = await api("/communications/" + encodeURIComponent(m.id) + "/original");
+    } catch (e) {
+      if (e.status === 401) { closeComm(); showLogin(); return; }
+      body.innerHTML = "";
+      var p = document.createElement("p"); p.className = "form-error";
+      p.textContent = e.message; body.appendChild(p);
+      return;
+    }
+    body.innerHTML = "";
+    var meta = document.createElement("div"); meta.className = "sx__orig-meta";
+    [["From", o.from || o.fromAddress], ["To", o.to], ["Cc", o.cc],
+     ["Date", fmtSessionDate(o.sentAt, "short")], ["Subject", o.subject]
+    ].forEach(function (pair) {
+      if (!pair[1]) return;
+      var row = document.createElement("div");
+      var l = document.createElement("span"); l.className = "sx__orig-l";
+      l.textContent = pair[0] + ": ";
+      var v = document.createElement("span"); v.textContent = pair[1];
+      row.appendChild(l); row.appendChild(v); meta.appendChild(row);
+    });
+    body.appendChild(meta);
+    var atts = (o.attachments || []).filter(function (a) { return !a.inline; });
+    if (atts.length) {
+      var al = document.createElement("div"); al.className = "sx__orig-atts";
+      al.textContent = "Attachments: " + atts.map(function (a) {
+        return (a.filename || "attachment") + (a.size ? " (" + fmtBytes(a.size) + ")" : "");
+      }).join(", ");
+      body.appendChild(al);
+    }
+    var frame = document.createElement("iframe");
+    frame.className = "sx__orig-frame";
+    frame.setAttribute("sandbox", "allow-same-origin allow-popups allow-popups-to-escape-sandbox");
+    frame.srcdoc = "<!doctype html><html><head><style>" +
+      "body{margin:12px;font-family:Arial,Helvetica,sans-serif;color:#222;background:#fff;word-break:break-word}" +
+      "img{max-width:100%}" +
+      "</style><base target=\"_blank\"></head><body>" +
+      (o.bodyHtml || "<p>(no content)</p>") + "</body></html>";
+    body.appendChild(frame);
+  }
+
   async function viewConversation(convId) {
     openComm("Conversation", "Loading…");
     var body = $("commModalBody");
     try {
-      var c = await api("/conversations/" + encodeURIComponent(convId));
+      // parentId scopes the per-message attachment chips to THIS record's
+      // filed documents (filings are per record).
+      var c = await api("/conversations/" + encodeURIComponent(convId) +
+        (currentDetail ? "?parentId=" + encodeURIComponent(currentDetail.id) : ""));
     } catch (e) {
       if (e.status === 401) { closeComm(); showLogin(); return; }
       body.innerHTML = ""; var p = document.createElement("p"); p.className = "form-error";
@@ -1828,8 +1921,11 @@
 
     var lastInbound = null;
     (c.messages || []).forEach(function (m) {
-      if (m.direction === "Inbound") lastInbound = m;
-      var card = document.createElement("div"); card.className = "sx__msg-card";
+      if (m.direction === "Inbound" && !m.bounce) lastInbound = m;
+      var card = document.createElement("div");
+      // A delivery-status bounce reads as "your send did NOT arrive" — the
+      // red treatment (the /ops card), never an ordinary received message.
+      card.className = "sx__msg-card" + (m.bounce ? " sx__msg-card--bounce" : "");
       var head = document.createElement("div"); head.className = "sx__msg-head";
       var who = document.createElement("span"); who.className = "sx__msg-who";
       // Always lead with WHO WROTE IT (a mentor and co-mentor can both send on
@@ -1840,16 +1936,38 @@
       var when = document.createElement("span"); when.className = "sx__msg-when";
       when.textContent = fmtSessionDate(m.sentAt, "short");
       head.appendChild(who); head.appendChild(when);
-      if (m.gmailMessageId && m.sourceMailbox) {
+      if (m.id && m.gmailMessageId && m.sourceMailbox) {
+        var orig = document.createElement("a");
+        orig.href = "#"; orig.className = "sx__msg-gmail"; orig.textContent = "View original";
+        orig.title = "The complete message as it arrived — real formatting, inline images.";
+        orig.addEventListener("click", function (e) { e.preventDefault(); viewOriginal(m, c, convId); });
+        head.appendChild(orig);
+      }
+      if (m.rfcMessageId) {
+        // The RFC Message-ID is identical in EVERY mailbox, so the link
+        // searches the VIEWER'S own Gmail (Gmail message ids are
+        // mailbox-specific — the old sourceMailbox link was refused for
+        // anyone but that mailbox's owner).
         var a = document.createElement("a");
-        a.href = "https://mail.google.com/mail/u/" + encodeURIComponent(m.sourceMailbox) + "/#all/" + encodeURIComponent(m.gmailMessageId);
+        a.href = "https://mail.google.com/mail/u/" +
+          (senderMailbox ? encodeURIComponent(senderMailbox) : "0") +
+          "/#search/rfc822msgid:" + encodeURIComponent(m.rfcMessageId);
         a.target = "_blank"; a.rel = "noopener"; a.className = "sx__msg-gmail"; a.textContent = "Open in Gmail";
+        a.title = "Opens your own Gmail. If the message isn't in your mailbox, use View original instead.";
         head.appendChild(a);
       }
       card.appendChild(head);
+      if (m.bounce) {
+        var warn = document.createElement("div"); warn.className = "sx__msg-bounce-note";
+        warn.textContent = "✕ Delivery failed — the address rejected the message. The email was not delivered.";
+        card.appendChild(warn);
+      }
       var mb = document.createElement("div"); mb.className = "sx__msg-html";
       mb.innerHTML = sanitizeHtml(m.bodyHtml || "");
       card.appendChild(mb);
+      if ((m.attachments || []).length) {
+        card.appendChild(attachmentChips(m, c, convId));
+      }
       body.appendChild(card);
     });
     if (!(c.messages || []).length) {

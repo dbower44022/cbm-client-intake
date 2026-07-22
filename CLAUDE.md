@@ -1454,7 +1454,66 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   Note: crm-test seed sessions carry out-of-enum `sessionType` values (harmless; a
   data-hygiene cleanup). **UI polish is the next work item** (a follow-up session).
 
-## Current status (updated 2026-07-21)
+## Current status (updated 2026-07-22)
+
+**Main is at v0.132.0** (2026-07-22, 982 tests green, committed NOT pushed) —
+**Email Quality Phase 1 ("never lose information") is BUILT** — §3 of
+`prds/email-quality-improvement-plan.md`, all four pieces (CHANGELOG
+0.132.0 has the full mechanics):
+1. **Inbound attachments auto-file to the record Documents tab.**
+   `parse_message` collects attachment parts (`GmailAttachment`);
+   `GmailClient.get_attachment` fetches bytes (gmail.readonly — no new
+   scope). REAL attachments only (Content-Disposition: attachment; inline/
+   cid images never file — ruling), INBOUND only; filed onto every record
+   the conversation links to via `comms/attachments.py` → the docs
+   pipeline, service identity, docType "Email attachment", uploaded_by =
+   the source mailbox. **Per-record SHA-256 dedup**
+   (`app_document.content_sha256` — now computed for ALL uploads) + the
+   **`comm_attachment` ledger** (Alembic **0014** — pre-deploy migrate;
+   chip render source AND retry ledger: failed rows re-attempt each sync
+   pass, 25/pass, give-up WARN at 10 attempts; over-cap = `too_large`, no
+   fetch). Gates: GMAIL_SYNC + GDRIVE_DOCS + DATABASE_URL + shared-drive id
+   + GDRIVE_IDENTITY=service (all live on both envs already). Thread-view
+   chips link filed/duplicate files to the record's document; too_large/
+   failed chips point at View original. Historical backfill:
+   `scripts/backfill_email_attachments.py` (dry-run default; run per env
+   AFTER live verification).
+2. **View original in-app** — `GET /{slug}/api/communications/{id}/original`
+   (+ `/original/cid/{cid}` for inline images): CCommunication read AS THE
+   USER (the thread-read ACL gate), full original fetched from the SOURCE
+   mailbox under the service delegation (any record-entitled viewer sees
+   it), `sanitize_original_html` (scripts/handlers stripped, formatting
+   kept, cid → companion endpoint), rendered in a sandboxed iframe with
+   Back; provenance-logged per access; deleted-in-Gmail → readable 404.
+   Cleaner placeholder now says "use View original".
+3. **Open in Gmail fixed** — viewer's own mailbox +
+   `#search/rfc822msgid:<rfc id>` (ids are mailbox-specific; the old
+   sourceMailbox link only worked for that mailbox's owner). Tooltip
+   points at View original when the message isn't in the viewer's mailbox.
+4. **Bounce visibility on record threads** (closes F14) — classified at
+   render/enrichment time from stored fields: red "Delivery failed" card in
+   the thread (Reply no longer targets mailer-daemon), `bounced` state from
+   `enrich_conversation_rows` → red "✕ delivery failed" chip on the
+   Communications list AND My Email rows (replaces awaiting-reply).
+Verified: 982 tests (24 new); migration 0014 + ledger/dedup round-tripped
+on live local Postgres; both frontends driven in the stub harness (chips,
+bounce cards/chips, View original + Back, new Gmail href, ?parentId
+scoping; no console errors). **NOT yet driven live** — next: deploy (the
+PRE_DEPLOY migrate runs 0014), then the plan §3.5 live pass (PDF +
+signature-logo email → files once / logo doesn't / duplicate dedups; View
+original as mentor AND co-mentor; viewer-mailbox Gmail link; a real
+bounce), then the attachment backfill dry-run → --write per env. Still
+pending ops from v0.125.0: `scripts/repair_outbound_bodies.py` per env.
+Phases 2–3 of the plan not started.
+
+Before that, the **Email Quality Improvement arc was PLANNED 2026-07-21** —
+`prds/email-quality-improvement-plan.md`, authored from Doug's priority
+rulings after a full email-system gap review (app vs Gmail). Phase 2
+server-side Forward-with-attachments (SME use case) + unread awareness on
+all four surfaces (grid unread + awaiting-reply chips, portal badge, daily
+digest from the shared identity); Phase 3 info@ poller pagination + a
+surface for staff-notice replies. B (push), C (gmail.modify state sync),
+E (full-text search) explicitly deferred — rulings + rationale in the plan.
 
 **Main is at v0.131.0** (2026-07-21, 967 tests green, committed NOT pushed; shared-identity display name renamed to "Cleveland Business Mentors" in 0.131.0 — prod CRM Outbound From Name still says "Mentoring", Doug to fix) —
 **the info@cbmentors.org shared-mailbox rollout: Phases 1–3 of

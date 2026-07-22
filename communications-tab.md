@@ -49,11 +49,35 @@ pulled in on the next cycle, not just future messages.
 Each stored message is **only the new text that person wrote**. Quoted
 copies of earlier messages, signatures, legal disclaimers, and "sent from my
 iPhone" lines are stripped. A reply that contained *nothing but* quoted text
-shows as "(no new text — view the original in Gmail)".
+shows as "(no new text — use View original to see the full message)".
 
-Nothing is lost: every message has an **Open in Gmail** link to the complete
-original, formatting and attachments included. The CRM copy is the readable
-record; Gmail remains the source of truth.
+Nothing is lost — two escape hatches sit on every message:
+
+- **View original** opens the complete message *in the app* — real
+  formatting, colors, tables, and inline images, exactly as it arrived.
+  Anyone who can see the record can view it (a co-mentor doesn't need the
+  message in their own mailbox). If the message was since deleted in Gmail,
+  the viewer says so plainly.
+- **Open in Gmail** opens your OWN Gmail, searching for that exact message.
+  It works when the message is in your mailbox (you sent or received it);
+  if it isn't — say a co-mentor's correspondence — use View original
+  instead. The CRM copy is the readable record; Gmail remains the source
+  of truth.
+
+**Attachments file themselves.** When a client emails a real attachment
+(a PDF, a spreadsheet…), it is automatically saved into the record's
+**Documents tab** (document type "Email attachment") and the message shows
+a chip for each file — click it to open the document. The same file
+re-attached in later replies is stored **once**; signature logos and other
+inline images are never filed (they stay visible in View original). A file
+too large to store, or one that hit a temporary error, shows a greyed chip
+— the bytes are always available through View original.
+
+**A bounced send is never silent.** If your email couldn't be delivered
+(a typoed address, a dead mailbox), the mail system's bounce notice renders
+as a red **"Delivery failed"** card in the thread, and the conversation row
+(here and in My Email) shows a red **"✕ delivery failed"** chip instead of
+"Awaiting reply" — so you know to fix the address and resend.
 
 The same email in two mentors' mailboxes (e.g. a CC'd co-mentor) is stored
 **once** — both of you see the same conversation.

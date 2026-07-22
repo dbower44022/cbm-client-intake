@@ -512,6 +512,52 @@ def _text_to_html(text: str) -> str:
     )
 
 
+# Tags that can execute, navigate, or restyle the page — removed outright from
+# a View-original render. Everything presentational stays (the point of the
+# view is formatting fidelity); the frontend additionally isolates it in a
+# sandboxed iframe.
+_ORIGINAL_STRIP_TAGS = (
+    "script", "style", "iframe", "object", "embed", "link", "meta", "base",
+    "form", "input", "button",
+)
+
+
+def sanitize_original_html(html: str, cid_base: str = "") -> str:
+    """A View-original safety pass over a full raw email body (email-quality
+    plan §3.2): scripts/embeds/on* handlers/javascript: URLs are removed,
+    formatting and inline styles are KEPT (fidelity is the point), and
+    ``cid:`` image references are rewritten to ``{cid_base}/{content-id}`` —
+    the companion subresource endpoint that streams the inline part's bytes
+    under the same ACL gate."""
+    import urllib.parse
+
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(html or "", "lxml")
+    for el in soup(list(_ORIGINAL_STRIP_TAGS)):
+        el.decompose()
+    for el in soup.find_all(True):
+        for attr in list(el.attrs):
+            low = attr.lower()
+            value = el.attrs[attr]
+            if low.startswith("on"):
+                del el.attrs[attr]
+            elif low in ("href", "src", "background", "action") and str(
+                value
+            ).strip().lower().startswith("javascript:"):
+                del el.attrs[attr]
+        src = el.attrs.get("src")
+        if src and str(src).strip().lower().startswith("cid:") and cid_base:
+            cid = str(src).strip()[4:].strip("<>")
+            el.attrs["src"] = (
+                cid_base.rstrip("/") + "/" + urllib.parse.quote(cid, safe="")
+            )
+    body = soup.body
+    if body is not None:
+        return body.decode_contents()
+    return str(soup)
+
+
 def clean_email(
     body_text: str, body_html: str | None = None, *, outbound: bool = False
 ) -> CleanedEmail:
@@ -559,7 +605,7 @@ def clean_email(
         # Everything stripped — a quote-only reply or image-only mail. Never
         # dump the raw (quoted) body back in; a small placeholder keeps the
         # message visible as an event, with the original a click away in Gmail.
-        text = "(no new text — view the original in Gmail)"
+        text = "(no new text — use View original to see the full message)"
 
     quoted = re.sub(r"\n{3,}", "\n\n", (quoted or "").strip())[:_QUOTED_ZONE_MAX]
     html_out = _text_to_html(text)

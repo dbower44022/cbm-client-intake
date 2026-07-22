@@ -37,6 +37,7 @@ from core.gmail import (
     parse_message,
 )
 
+from . import attachments as attachments_mod
 from . import crm, triage
 from .crm import MailboxScope
 
@@ -108,6 +109,9 @@ async def ingest_message(
     store: Any,
     scope: MailboxScope,
     parsed: ParsedGmailMessage,
+    *,
+    settings: Any = None,
+    gmail: Any = None,
 ) -> Optional[str]:
     """Store one matched message; returns the conversation id (None = skipped).
 
@@ -186,6 +190,13 @@ async def ingest_message(
             await crm.link_records(espo, conv_id, matched, excludes)
             if scope.owner_user_id:
                 await crm.stamp_owners(espo, conv_id, {scope.owner_user_id})
+            # The co-mentor's copy may link NEW records — file its inbound
+            # attachments onto them too (per-record ledger keeps it idempotent).
+            if settings is not None:
+                await attachments_mod.file_for_ingest(
+                    settings, espo, store, gmail, scope, parsed,
+                    conv_id, matched, excludes,
+                )
         return conv_id
 
     # 2. Conversation: the thread-followed one, else same-mailbox Gmail thread,
@@ -246,11 +257,18 @@ async def ingest_message(
     await crm.link_records(espo, conv_id, matched, excludes)
     if scope.owner_user_id:
         await crm.stamp_owners(espo, conv_id, {scope.owner_user_id})
+    # Inbound attachments auto-file to the linked records' Documents tabs
+    # (email-quality §3.1) — best-effort, gated, never fails the ingest.
+    if settings is not None:
+        await attachments_mod.file_for_ingest(
+            settings, espo, store, gmail, scope, parsed, conv_id, matched, excludes,
+        )
     return conv_id
 
 
 async def _ingest_ids(
-    gmail: GmailClient, espo: Any, store: Any, scope: MailboxScope, ids: list[str]
+    gmail: GmailClient, espo: Any, store: Any, scope: MailboxScope, ids: list[str],
+    settings: Any = None,
 ) -> tuple[int, list[str]]:
     """Ingest each id; returns ``(stored, failed_ids)``.
 
@@ -263,7 +281,9 @@ async def _ingest_ids(
     for mid in ids:
         try:
             parsed = parse_message(await gmail.get_message(mid))
-            if await ingest_message(espo, store, scope, parsed):
+            if await ingest_message(
+                espo, store, scope, parsed, settings=settings, gmail=gmail
+            ):
                 stored += 1
         except MessageGoneError as exc:
             # The message no longer exists (deleted pre-fetch / a Meet-Chat
@@ -330,7 +350,9 @@ async def sync_mailbox(
         queries = address_queries(sorted(addresses), extra=settings.gmail_backfill)
         ids = [i for i in await _collect_query_ids(gmail, queries) if i not in dead_prev]
         stats["fetched"] = len(ids)
-        stats["stored"], failed = await _ingest_ids(gmail, espo, store, scope, ids)
+        stats["stored"], failed = await _ingest_ids(
+            gmail, espo, store, scope, ids, settings
+        )
         counts, dead, newly_dead = _update_failure_state(
             state, failed, settings.gmail_dead_letter_passes
         )
@@ -360,7 +382,7 @@ async def sync_mailbox(
         queries = address_queries(sorted(new_addresses), extra=settings.gmail_backfill)
         ids = [i for i in await _collect_query_ids(gmail, queries) if i not in dead_prev]
         stats["fetched"] += len(ids)
-        stored, failed = await _ingest_ids(gmail, espo, store, scope, ids)
+        stored, failed = await _ingest_ids(gmail, espo, store, scope, ids, settings)
         stats["stored"] += stored
         all_failed += failed
         if failed:
@@ -390,7 +412,9 @@ async def sync_mailbox(
     cursor_ids = [i for i in cursor_ids if i not in dead_prev]
     if cursor_ids:
         stats["fetched"] += len(cursor_ids)
-        stored, failed = await _ingest_ids(gmail, espo, store, scope, cursor_ids)
+        stored, failed = await _ingest_ids(
+            gmail, espo, store, scope, cursor_ids, settings
+        )
         stats["stored"] += stored
         all_failed += failed
 
@@ -484,6 +508,16 @@ async def run_gmail_sync(
             log.exception("unexpected sync failure for %s", scope.mailbox)
         finally:
             await gmail.aclose()
+    # Retry sweep for failed attachment filings (email-quality §3.1): bounded,
+    # best-effort — a persistent failure warns and eventually gives up.
+    try:
+        retried = await attachments_mod.retry_failed_attachments(
+            settings, espo, store, service_account_info
+        )
+        if retried:
+            totals["attachmentRetries"] = retried
+    except Exception as exc:  # noqa: BLE001 — never fails the pass
+        log.warning("failed-attachment retry sweep failed: %s", exc)
     log.info("gmail sync pass: %s", totals)
     return totals
 

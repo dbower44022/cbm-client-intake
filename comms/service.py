@@ -33,6 +33,10 @@ class CommsError(Exception):
     """A user-visible failure (message is safe to show)."""
 
 
+class OriginalGoneError(CommsError):
+    """The message no longer exists in the source mailbox (View original)."""
+
+
 # --- lazy singletons ---------------------------------------------------------
 
 _store: Optional[CommsStore] = None
@@ -165,11 +169,14 @@ def _parse_crm_stamp(value: Any) -> Optional[Any]:
 async def enrich_conversation_rows(
     user_client: Any, store: Any, username: str, rows: list[dict[str, Any]]
 ) -> None:
-    """Stamp each conversation row with ``unread`` + ``awaitingReply``.
+    """Stamp each conversation row with ``unread`` + ``awaitingReply`` +
+    ``bounced``.
 
     - ``awaitingReply``: the conversation's LAST message is inbound — the ball
       is in the manager's court. One batched CCommunication query for the whole
       page (newest-first, capped), never one query per row.
+    - ``bounced``: that last inbound message is a delivery-status bounce — the
+      manager's send did NOT arrive (rendered as "delivery failed", §3.4).
     - ``unread``: the last message is newer than this user's read stamp
       (conversation_seen); a never-opened conversation counts as unread only
       inside the recent window above.
@@ -180,26 +187,37 @@ async def enrich_conversation_rows(
         return
     from datetime import datetime, timedelta, timezone
 
+    from core.gmail import looks_like_bounce
+
     for r in rows:
         r.setdefault("unread", False)
         r.setdefault("awaitingReply", False)
+        r.setdefault("bounced", False)
     ids = [r["id"] for r in rows]
     try:
         data = await user_client.list(
             crm.COMMUNICATION,
             where=[{"type": "in", "attribute": crm.CONVERSATION_FK, "value": ids}],
-            select=f"{crm.CONVERSATION_FK},direction,sentAt",
+            select=f"{crm.CONVERSATION_FK},direction,sentAt,fromAddress,name",
             order_by="sentAt",
             order="desc",
             max_size=400,
         )
-        last_direction: dict[str, str] = {}
+        last_message: dict[str, dict[str, Any]] = {}
         for m in data.get("list", []):
             cid = m.get(crm.CONVERSATION_FK)
-            if cid and cid not in last_direction:
-                last_direction[cid] = m.get("direction") or ""
+            if cid and cid not in last_message:
+                last_message[cid] = m
         for r in rows:
-            r["awaitingReply"] = last_direction.get(r["id"]) == "Inbound"
+            m = last_message.get(r["id"])
+            if not m or (m.get("direction") or "") != "Inbound":
+                continue
+            # A bounce as the newest message = the manager's send did NOT
+            # arrive — "delivery failed", never "reply owed" (§3.4).
+            if looks_like_bounce(m.get("fromAddress") or "", m.get("name") or ""):
+                r["bounced"] = True
+            else:
+                r["awaitingReply"] = True
     except Exception as exc:  # noqa: BLE001 — decoration only
         log.warning("awaiting-reply enrichment failed: %s", exc)
     try:
@@ -225,7 +243,19 @@ _MSG_SELECT = (
 )
 
 
-async def get_conversation(user_client: Any, conversation_id: str) -> dict[str, Any]:
+async def get_conversation(
+    user_client: Any,
+    conversation_id: str,
+    *,
+    store: Any = None,
+    parent_entity: Optional[str] = None,
+    parent_id: Optional[str] = None,
+) -> dict[str, Any]:
+    """The thread payload. With a record context (``parent_entity`` +
+    ``parent_id`` + ``store``), each message also carries its ``attachments``
+    ledger rows for THAT record — the thread view's chips (§3.1)."""
+    from core.gmail import looks_like_bounce
+
     conv = await user_client.get(crm.CONVERSATION, conversation_id, select=_CONV_SELECT)
     msgs = await user_client.list(
         crm.COMMUNICATION,
@@ -234,6 +264,50 @@ async def get_conversation(user_client: Any, conversation_id: str) -> dict[str, 
         max_size=_PAGE,
         order_by="sentAt",
     )
+    messages = [
+        {
+            "id": m["id"],
+            "direction": m.get("direction"),
+            "sentAt": m.get("sentAt"),
+            "from": m.get("fromName") or m.get("fromAddress"),
+            "fromAddress": m.get("fromAddress"),
+            "to": m.get("toAddresses"),
+            "cc": m.get("ccAddresses"),
+            "subject": m.get("name"),
+            "bodyHtml": m.get("bodyCleaned") or "",
+            "gmailMessageId": m.get("gmailMessageId"),
+            "sourceMailbox": m.get("sourceMailbox"),
+            "rfcMessageId": m.get("rfcMessageId"),
+            # A delivery-status bounce renders as a red "Delivery failed"
+            # card instead of an ordinary received message (§3.4).
+            "bounce": (
+                m.get("direction") == "Inbound"
+                and looks_like_bounce(m.get("fromAddress") or "", m.get("name") or "")
+            ),
+        }
+        for m in msgs.get("list", [])
+    ]
+    if store is not None and parent_entity and parent_id:
+        try:
+            by_rfc = await store.attachments_for_record(
+                parent_entity, parent_id,
+                [m["rfcMessageId"] for m in messages if m.get("rfcMessageId")],
+            )
+            for m in messages:
+                rows = by_rfc.get(m.get("rfcMessageId") or "") or []
+                if rows:
+                    m["attachments"] = [
+                        {
+                            "filename": a.get("filename"),
+                            "status": a.get("status"),
+                            "documentId": a.get("documentId"),
+                            "size": a.get("size"),
+                            "mimeType": a.get("mimeType"),
+                        }
+                        for a in rows
+                    ]
+        except Exception as exc:  # noqa: BLE001 — chips are decoration
+            log.warning("attachment chip lookup failed: %s", exc)
     return {
         "id": conversation_id,
         "subject": conv.get("name"),
@@ -241,23 +315,126 @@ async def get_conversation(user_client: Any, conversation_id: str) -> dict[str, 
         "summary": conv.get("summary"),
         "actionItems": [a for a in (conv.get("actionItems") or "").split("\n") if a.strip()],
         "keyTopics": [t.strip() for t in (conv.get("keyTopics") or "").split(",") if t.strip()],
-        "messages": [
+        "messages": messages,
+    }
+
+
+# --- View original (§3.2) ----------------------------------------------------
+
+_ORIGINAL_SELECT = (
+    "name,direction,sentAt,fromAddress,fromName,toAddresses,ccAddresses,"
+    "gmailThreadId,gmailMessageId,sourceMailbox,rfcMessageId"
+)
+
+
+async def _original_comm(
+    settings: Settings, user_client: Any, communication_id: str
+) -> tuple[dict[str, Any], GmailClient]:
+    """The stored message row (read AS THE USER — the same ACL gate as the
+    thread read) and a Gmail client for its SOURCE mailbox. The source-mailbox
+    fetch runs under the service delegation regardless of the viewer (Doug's
+    ruling: any viewer entitled to the record sees the full original —
+    consistent with the conversation already being shared on the record)."""
+    comm = await user_client.get(
+        crm.COMMUNICATION, communication_id, select=_ORIGINAL_SELECT
+    )
+    mailbox = (comm.get("sourceMailbox") or "").strip().lower()
+    gmail_id = comm.get("gmailMessageId") or ""
+    if not mailbox or not gmail_id:
+        raise CommsError(
+            "This message's Gmail original isn't tracked, so it can't be shown."
+        )
+    return comm, await gmail_for_shared_mailbox(settings, mailbox)
+
+
+async def get_original(
+    settings: Settings,
+    user_client: Any,
+    communication_id: str,
+    *,
+    cid_base: str,
+    acting_user: str = "",
+) -> dict[str, Any]:
+    """The complete original message, formatting intact, for the in-app
+    viewer: sanitized original HTML (``cid:`` inline images rewritten to the
+    companion endpoint at ``cid_base``), headers, and the attachment parts.
+    Every access is provenance-logged (§3.4 trust note)."""
+    from core.email_clean import _text_to_html, sanitize_original_html
+    from core.gmail import MessageGoneError, parse_message
+
+    comm, gmail = await _original_comm(settings, user_client, communication_id)
+    log.info(
+        "original view: %s/%s fetched for %s (communication %s)",
+        gmail.mailbox, comm.get("gmailMessageId"), acting_user or "?",
+        communication_id,
+    )
+    try:
+        raw = await gmail.get_message(comm["gmailMessageId"])
+    except MessageGoneError:
+        raise OriginalGoneError(
+            "The original message no longer exists in the source mailbox."
+        )
+    finally:
+        await gmail.aclose()
+    parsed = parse_message(raw)
+    html = parsed.body_html or _text_to_html(parsed.body_text or "")
+    return {
+        "id": communication_id,
+        "subject": parsed.subject or comm.get("name"),
+        "from": parsed.from_name or parsed.from_address,
+        "fromAddress": parsed.from_address,
+        "to": ", ".join(parsed.to_addresses),
+        "cc": ", ".join(parsed.cc_addresses),
+        "sentAt": parsed.sent_at or comm.get("sentAt"),
+        "bodyHtml": sanitize_original_html(html, cid_base=cid_base),
+        "attachments": [
             {
-                "id": m["id"],
-                "direction": m.get("direction"),
-                "sentAt": m.get("sentAt"),
-                "from": m.get("fromName") or m.get("fromAddress"),
-                "fromAddress": m.get("fromAddress"),
-                "to": m.get("toAddresses"),
-                "cc": m.get("ccAddresses"),
-                "subject": m.get("name"),
-                "bodyHtml": m.get("bodyCleaned") or "",
-                "gmailMessageId": m.get("gmailMessageId"),
-                "sourceMailbox": m.get("sourceMailbox"),
+                "filename": a.filename,
+                "mimeType": a.mime_type,
+                "size": a.size,
+                "inline": not a.is_attachment,
             }
-            for m in msgs.get("list", [])
+            for a in parsed.attachments
         ],
     }
+
+
+async def get_original_part(
+    settings: Settings,
+    user_client: Any,
+    communication_id: str,
+    content_id: str,
+    *,
+    acting_user: str = "",
+) -> dict[str, Any]:
+    """One inline part's bytes by Content-ID — the ``cid:`` subresource behind
+    the View original render. Same ACL gate + provenance logging as the
+    original itself."""
+    from core.gmail import MessageGoneError, parse_message
+
+    comm, gmail = await _original_comm(settings, user_client, communication_id)
+    wanted = (content_id or "").strip().strip("<>").strip()
+    try:
+        try:
+            raw = await gmail.get_message(comm["gmailMessageId"])
+        except MessageGoneError:
+            raise OriginalGoneError(
+                "The original message no longer exists in the source mailbox."
+            )
+        parsed = parse_message(raw)
+        part = next(
+            (a for a in parsed.attachments if a.content_id == wanted), None
+        )
+        if part is None:
+            raise CommsError("That inline image isn't part of this message.")
+        log.info(
+            "original cid fetch: %s/%s part %s for %s",
+            gmail.mailbox, comm.get("gmailMessageId"), wanted, acting_user or "?",
+        )
+        data = await gmail.get_attachment(parsed.gmail_id, part.attachment_id)
+    finally:
+        await gmail.aclose()
+    return {"data": data, "mime_type": part.mime_type or "application/octet-stream"}
 
 
 # --- curation ---------------------------------------------------------------
@@ -374,7 +551,9 @@ async def include_thread(
         # Force the match: an included thread belongs to this record even when
         # no known contact address appears on it.
         ref.addresses |= parsed.all_addresses
-        result = await ingest_message(api_client, store, scope, parsed)
+        result = await ingest_message(
+            api_client, store, scope, parsed, settings=settings, gmail=gmail
+        )
         conv_id = result or conv_id
     if conv_id:
         await store.set_override(

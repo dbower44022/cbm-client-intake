@@ -33,6 +33,7 @@
 .me__dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--cbm-blue, #1a5fb4); margin-right: 0.35rem; vertical-align: middle; }
 .me__chip { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 999px; font-size: 0.74rem; font-weight: 700; white-space: nowrap; }
 .me__chip--awaiting { background: #fdf6e7; border: 1px solid #ecc94b; color: #744210; }
+.me__chip--bounced { background: #b3261e; border: 1px solid #b3261e; color: #fff; border-radius: 3px; }
 .me__rec { display: inline-block; margin: 0 0.3rem 0.15rem 0; padding: 0.1rem 0.5rem; border-radius: 6px; background: #eef4fb; border: 1px solid #cfe0f3; color: var(--cbm-navy, #123); font-size: 0.8rem; white-space: nowrap; }
 .me__subject { display: block; color: var(--cbm-navy, #123); }
 .me__snippet { display: block; color: var(--cbm-slate-700, #667); font-size: 0.82rem; margin-top: 0.1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60ch; }
@@ -51,6 +52,8 @@
 .me__modal-body { flex: 1 1 auto; overflow: auto; padding: 0.4rem 0 0.8rem; }
 .me__modal-foot { flex: 0 0 auto; display: flex; gap: 0.5rem; align-items: center; justify-content: flex-end; flex-wrap: wrap; padding: 0.75rem 1rem 1rem; border-top: 1px solid var(--cbm-border, #eef1f4); }
 .me__msg-card { margin: 0.6rem 1rem; border: 1px solid var(--cbm-border, #e3e8ee); border-radius: 8px; overflow: hidden; }
+.me__msg-card--bounce { border-left: 4px solid #b3261e; background: #fdf3f2; }
+.me__msg-bounce-note { margin: 0.35rem 1rem; color: #b3261e; font-weight: 700; font-size: 0.85rem; }
 .me__msg-head { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; padding: 0.45rem 0.7rem; background: var(--cbm-slate-050, #f5f7fa); border-bottom: 1px solid var(--cbm-border, #eef1f4); }
 .me__msg-who { font-weight: 600; font-size: 0.9rem; color: var(--cbm-navy, #123); }
 .me__msg-when { color: var(--cbm-slate-700, #667); font-size: 0.82rem; }
