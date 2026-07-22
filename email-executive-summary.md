@@ -70,14 +70,36 @@ keeps it that way.
 - Every message sent from the app is also recorded in the CRM on the
   recipient's contact history, so the CRM remains the complete record.
 
-## 4. Staff administration tools — Client Administration and Mentor Administration
+## 4. Mentor-to-mentor email
+
+When one mentor emails another — a co-mentor, or a colleague — the message
+always goes out from **the sending mentor's own** @cbmentors.org mailbox,
+never from Cleveland Business Mentors. Peer discussion is personal mail.
+
+What differs is **whether the CRM keeps a copy**, and that depends on where
+the message is written:
+
+- **Written from a client record** (the Communications tab of an engagement,
+  partner, or funder): the message is filed on that record, exactly like a
+  message to the client. Writing from the record is the deliberate signal
+  that the discussion belongs to it — for example, co-mentors coordinating
+  about their shared client.
+- **Written anywhere else** (Gmail directly, or a compose window not tied to
+  a record): internal mail between @cbmentors.org addresses is **not**
+  captured into the CRM at all. Private peer conversation stays in Gmail.
+
+The rule of thumb for mentors: *if the discussion is about a client and
+should be part of the client's history, write it from the client's record;
+otherwise use Gmail and it stays between you.*
+
+## 5. Staff administration tools — Client Administration and Mentor Administration
 
 Notices sent from the staff tools — for example, the assignment notice a
 mentor receives when a new client is assigned — go out as **Cleveland Business Mentors**.
 These are organizational messages, not personal correspondence. Replies to
 them arrive in the info@ inbox, which the Marketing Admin team monitors.
 
-## 5. Meeting invitations
+## 6. Meeting invitations
 
 When a mentor schedules a session, the calendar invitation comes from
 **Google Calendar** on the mentor's behalf — it is a calendar event, not an
@@ -85,13 +107,13 @@ app email. Clients are invited at their own addresses; CBM members are
 always invited at their @cbmentors.org address, never a personal one, so
 nobody receives a duplicate copy of their own meeting.
 
-## 6. The CRM's own automated email
+## 7. The CRM's own automated email
 
 Messages EspoCRM generates itself — the welcome email when a new mentor
 login is created, password-reset links — are sent from **info@cbmentors.org**
 ("Cleveland Business Mentors"). The old espo@ address has been retired from outgoing mail.
 
-## 7. System monitoring
+## 8. System monitoring
 
 Operational alerts (delivery backlogs, integration problems) go to
 **admin@cbmentors.org** and come from admin@ — internal plumbing,
