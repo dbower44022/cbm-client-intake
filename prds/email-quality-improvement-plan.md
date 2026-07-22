@@ -1,11 +1,21 @@
 # Email Quality Improvement Plan — closing the gaps between the app and Gmail
 
-**Status: Phase 1 BUILT (v0.132.0, 2026-07-22) — §3 complete in code
-(attachment auto-filing + ledger/chips, View original + cid endpoint, the
-viewer-mailbox Open-in-Gmail fix, bounce cards/chips on record threads +
-My Email), harness/test-verified, NOT yet driven live (§3.5 verification
-open; the outbound-body repair script run per env still pending). Phases
-2–3 not started.** Originally authored 2026-07-21 from Doug's
+**Status: Phase 1 BUILT (v0.132.0) + crm-test live verification IN
+PROGRESS (2026-07-22).** Verified live on crm-test at 0.132.0: migration
+0014 on the managed DB; **View original** as a non-admin mentor (real
+service-delegation fetch of Mindy's message, formatting + quoted chain
+intact, provenance-logged); **Open in Gmail** hrefs = viewer mailbox +
+`rfc822msgid:`; outbound-body **repair applied on crm-test** (4 rows;
+PROD run pending). Two fixes came out of the verification (v0.132.1,
+committed): bounces were triage-junked before storage (§3.4 could never
+fire — the §3.4 premise here was wrong), and the awaiting/unread
+enrichment 403'd on EspoCRM's 200-row page cap (the awaiting chip had
+NEVER worked live). **Remaining §3.5 legs (after 0.132.1 deploys):** the
+inbound PDF + inline-logo email (needs an external send, e.g. from
+james@agapew8loss.com → doug.bower@cbmentors.org; ZZTEST contacts are
+staged on the Tester Tommy engagement), the same-PDF duplicate re-send,
+and the bounce send → red card/chip. Phases 2–3 not started.**
+Originally authored 2026-07-21 from Doug's
 priority rulings this session (recorded in §2) after a full review of the
 email system (docs + code sweep of `core/gmail.py`, `core/email_clean.py`,
 `comms/`, `myemail/`, `ops/inbound.py`, and the compose frontend).

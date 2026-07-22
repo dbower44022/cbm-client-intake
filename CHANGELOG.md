@@ -4,6 +4,33 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.132.1] — 2026-07-22
+
+**Two fixes found by the crm-test live verification of 0.132.0** (both were
+invisible to the harness because they only show against the real Gmail/CRM):
+
+- **Bounces on stored conversations survive triage.** The junk filter drops
+  mailer-daemon/DSN mail before storage, so a bounce never reached a record
+  thread and the §3.4 red card/chip could never fire (the plan's premise
+  that "the sync ingests bounces as ordinary replies" was wrong). A bounce
+  that thread-follows a STORED conversation — the fate of our own sent
+  message — is now exempt from the junk drop; a bounce with no stored
+  thread behind it stays junk.
+- **The unread/awaiting-reply enrichment pages at EspoCRM's 200 cap.** The
+  batched newest-message query asked for maxSize=400; EspoCRM hard-caps
+  list pages at 200 and 403s the call, and the decoration contract
+  swallowed it — so the **awaiting-reply chip (v0.105/v0.108) had never
+  worked in production** ("awaiting-reply enrichment failed: HTTP 403 [Max
+  size should not exceed 200]" in the crm-test run logs), and the new
+  bounce chip failed identically. Now newest-first pages of 200 (bounded),
+  stopping once every listed conversation has its newest message.
+
+Also this session: `scripts/repair_outbound_bodies.py` run on crm-test
+(dry-run eyeballed → `--write`: 4 truncated outbound bodies repaired, 0
+errors; PROD run still pending), and the §3.5 live checks that don't need
+these fixes passed on the deployed 0.132.0 — see the plan's status header.
+989 tests green.
+
 ## [0.132.0] — 2026-07-22
 
 **feat(comms): Email Quality Phase 1 — never lose information**
