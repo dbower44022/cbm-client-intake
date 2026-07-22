@@ -704,7 +704,45 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   full-width "Sponsor notes" box IS `description` (the domain's Overview
   notes field — kept editable, NOT excluded); sponsor Company form/view
   hides `description`/`cClientNotes`/the `cSponsorNotes` Account twin.
-- **Auth = per-user, acts as the logged-in user.** Portal SSO (shared staff
+- **Contributions tab — the funder ledger (v0.115.0, sponsor domain only;
+  VERIFIED LIVE on crm-test 2026-07-21).** Plan (with Doug's rulings):
+  `prds/funder-contributions-plan.md`; mechanics: CHANGELOG 0.115.0/0.123.2.
+  The funder record detail gains a Contributions tab (inserted after
+  Sessions; `DomainConfig.contributions_link="sponsorContributions"` gates
+  BOTH the tab and the endpoint registration — mentor/partner routers never
+  register the routes) over the CRM-built **`CContribution`** entity
+  (belongsTo `sponsorProfile`; type/status enums, currency `amount`, five
+  dates, gift type, in-kind pair, acknowledgment, notes). Business rules
+  (Doug, 2026-07-20): **totals count status=Received ONLY**; Cancelled =
+  the soft delete (excluded from every number, visible dimmed; NO delete
+  surface exists — the role gets no delete grant); **effective date** =
+  receivedDate → expectedPaymentDate → commitmentDate → applicationDate;
+  everything computed **on the fly, never stored**
+  (`sessions/service.contribution_summary` — the one tested home of the
+  math). UI: four tiles (count / total $ / rolling-12-months $ / Scheduled
+  upcoming $ = future-dated Pledged+Committed, Applied deliberately
+  excluded), a recency callout ("Last received … N months ago", amber past
+  6 months, + Next expected — the everything-relative-to-last-contribution
+  principle), **Totals by period** (rolling 6-month/yearly windows ANCHORED
+  at the last received contribution, walking back, empty gap windows
+  rendered), and a sortable/resizable grid (upcoming accent, "not counted"
+  tags). Editor = modal grouped by `CONTRIBUTION_FIELDS` in
+  `sessions/config.py` (ONE spec = form layout AND server whitelist; live
+  enum options/required from metadata; in-kind pair shown only for In-Kind
+  gifts; auto title "{date} — {funder} {type}"; diffed saves; two-step
+  discard guard). Endpoints (`/sponsorsessions/api`): `GET
+  /contributionfields`, `GET|POST /records/{id}/contributions`, `GET|PUT
+  /contributions/{id}` — parent funder read first (the ACL gate), a
+  contribution id never resolves outside a readable funder, donor links
+  default from the funder's company + primary contact. **Gotcha (v0.123.2,
+  live-found):** EspoCRM's currency type validates `amount` against
+  `amountCurrency` — any save setting an amount backfills the currency
+  (existing value, else USD) or the CRM 400s `validCurrency`. **CRM prereq
+  per instance:** the sponsor team's role needs CContribution
+  create/read(All)/edit, NO delete (done on crm-test 2026-07-21 — the first
+  403 was that role's Create set wrong, diagnosed via Users → Access;
+  **still TO DO on prod** before prod use, plus an enum-parity eyeball —
+  prod unprobeable locally, EV-encrypted key).
   session `staff_user`); each route enforces **its own team per request**
   (`_require_user` → `is_member`; 401 → frontend sends the user to the portal, 403
   names the team, admins pass). Teams: `SESSION_MENTOR_ALLOWED_TEAMS` (default

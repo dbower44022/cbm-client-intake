@@ -3,9 +3,29 @@
 Approved plan from the 2026-07-20 solution-architecture session with Doug.
 Scope: Funder Management (`/sponsorsessions`) gains a **Contributions** tab on
 the funder record — enter contributions, see all future and past ones, with a
-dashboard on top. Status: **BUILT v0.115.0 (same day)** — 25 tests + the full
-stub-harness loop; NOT yet driven live (needs the CRM role grant in
-"CRM prerequisites" below). Mechanics in CHANGELOG 0.115.0.
+dashboard on top.
+
+Status: **BUILT v0.115.0 (same day) — VERIFIED LIVE on crm-test 2026-07-21**
+(create, edit, soft delete, tiles/rollups on real data). Two live-found
+issues, both closed: (1) the crm-test sponsor role's CContribution **Create
+grant was set wrong** (empty-body 403 on POST; read passed — diagnosed from
+run logs + the Users → Access merged-ACL view); (2) **v0.123.2**: EspoCRM's
+`validCurrency` rejects a bare `amount` on a record whose stored
+`amountCurrency` is null — amount-setting saves now backfill the currency
+(existing value, else USD). Mechanics: CHANGELOG 0.115.0 + 0.123.2; durable
+reference: the "Contributions tab" bullet in CLAUDE.md's Session Management
+section.
+
+**Open for PROD use:** add the same role grants there (CContribution
+create / read=All / edit, NO delete — attached to the sponsor team), and
+eyeball prod's CContribution enum options against crm-test.
+
+**Open design nuance (Doug to rule, from the 2026-07-21 Key Bank review):**
+an *Applied* row with a future date gets the grid's "upcoming" tag but does
+NOT count in the Scheduled tile (Pledged+Committed only) — reads as
+contradictory side by side. Recommended fix: restrict the "upcoming" tag to
+Pledged/Committed too (keep the tile a strict cash-flow number); alternative:
+widen the tile to include Applied. One-line change either way.
 
 ## Verified facts (read live from crm-test metadata 2026-07-20)
 
