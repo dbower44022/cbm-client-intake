@@ -998,6 +998,21 @@ segment of its own URL). Mounted only when `assignments_active` (needs
     each changed field (driven by the save's own snapshot diff) and a
     **sticky Save bar** narrates "N fields changed" (Save disabled when
     clean). All harness-verified; live save exercised earlier (v0.55.1).
+  - **Curated link-field pickers (v0.133.0, 2026-07-22 — the Referring
+    partner regression report).** The metadata-driven Details forms cover
+    scalars ONLY, so belongsTo links render nowhere unless curated into
+    `sessions/details.py:_ENTITY_LINK_FIELDS` (today:
+    `CEngagement.referringPartner` → CPartnerProfile). A listed link becomes
+    a `linkselect` field: a select over the foreign records the user can
+    read (`linkOptions` on the details payload, best-effort — forbidden
+    list ⇒ read-only), feature-detected from metadata, stored value kept
+    selectable even off-list, blank = clear (explicit null), written through
+    the normal whitelisted details PUT; the strip shows the linked name.
+    Paired change: `OverviewItem.always=True` on the mentor rail's
+    Referring-partner fact — it renders "—" when unlinked instead of
+    vanishing (empty facts otherwise drop, which read as a missing
+    feature). NB the app never wrote `referringPartnerId` before v0.133.0 —
+    existing values were set in the EspoCRM UI.
   - **Grid + Overview session flags (v0.62.0–0.64.1, 2026-07-16).** The
     Overview feed's **Upcoming/Past sections always render** when sessions
     exist (empty group ⇒ muted note; the old both-groups-and-3+ heuristic

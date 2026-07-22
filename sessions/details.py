@@ -57,6 +57,17 @@ _ENTITY_EXCLUDED: dict[str, frozenset[str]] = {
 }
 _PREFIX_C = re.compile(r"^c(?=[A-Z])")
 
+# Curated LINK fields exposed as pickers in the edit forms. The metadata-driven
+# spec deliberately covers scalars only, so a belongsTo link renders nowhere
+# unless listed here (Doug's 2026-07-22 report: no way to set an engagement's
+# referring partner in the app — the values on record were set in the EspoCRM
+# UI). Each entry: (link name, label, foreign entity). The editor is a select
+# over the foreign records the user can read (``linkOptions`` on the payload,
+# best-effort); the write goes through ``{name}Id`` ("" clears the link).
+_ENTITY_LINK_FIELDS: dict[str, tuple[tuple[str, str, str], ...]] = {
+    "CEngagement": (("referringPartner", "Referring partner", "CPartnerProfile"),),
+}
+
 
 def _label(name: str) -> str:
     """A human label from a CRM field name (camelCase → Title Case, custom-field
@@ -93,6 +104,14 @@ def _field_spec(meta_fields: dict[str, Any], entity: str = "") -> list[dict[str,
             spec.append(item)
         elif ctype in _READONLY_TYPES:
             spec.append({"name": name, "label": _label(name), "type": "readonly", "editable": False})
+    # Curated link pickers (present only when the CRM really has the link).
+    for link_name, label, foreign in _ENTITY_LINK_FIELDS.get(entity, ()):
+        fdef = meta_fields.get(link_name)
+        if isinstance(fdef, dict) and fdef.get("type") in ("link", "linkParent"):
+            spec.append({
+                "name": link_name + "Id", "label": label, "type": "linkselect",
+                "editable": True, "linkEntity": foreign, "nameAttr": link_name + "Name",
+            })
     return spec
 
 
@@ -115,6 +134,7 @@ def _select_for(spec: list[dict[str, Any]], raw: dict[str, Any], extra: tuple[st
     if "assignedUsers" in raw:
         fields.append("assignedUsersIds")
     fields += [f["name"] for f in spec]
+    fields += [f["nameAttr"] for f in spec if f.get("nameAttr")]  # link display names
     # extras: keep only those whose base link/field exists on the entity.
     for attr in extra:
         base = attr
@@ -136,9 +156,15 @@ def _section(
         value = rec.get(f["name"])
         if value in (None, "", []) and not f["editable"]:
             continue  # hide empty read-only fields; keep empty editable ones
-        fields.append({**f, "value": value})
+        entry = {**f, "value": value}
+        if f.get("nameAttr"):  # link picker: the display name rides along
+            entry["valueName"] = rec.get(f["nameAttr"])
+        fields.append(entry)
     # A flat value map (all spec fields + display extras) for the summary composer.
     values = {f["name"]: rec.get(f["name"]) for f in spec}
+    for f in spec:
+        if f.get("nameAttr"):
+            values[f["nameAttr"]] = rec.get(f["nameAttr"])
     for attr in extra:
         values[attr] = rec.get(attr)
     return {
@@ -273,6 +299,26 @@ async def build_details(
         "id": parent_id, "sections": sections, "contacts": contacts,
         "contactSpec": contact_spec,
     }
+    # Option lists for the curated link pickers (id+name of every foreign
+    # record the USER can read, alphabetical). Best-effort: a forbidden or
+    # failed list just omits the options — the picker renders read-only.
+    link_entities = {
+        f["linkEntity"]
+        for sec in sections for f in sec.get("fields", ())
+        if f.get("linkEntity")
+    }
+    if link_entities:
+        options: dict[str, list[dict[str, Any]]] = {}
+        for entity in sorted(link_entities):
+            try:
+                data = await client.list(entity, select="name", order_by="name", max_size=200)
+                options[entity] = [
+                    {"id": r["id"], "name": r.get("name")} for r in data.get("list", [])
+                ]
+            except EspoError as exc:
+                log.warning("link-picker options for %s unavailable: %s", entity, exc)
+        if options:
+            result["linkOptions"] = options
     if contacts_restricted:
         result["contactsRestricted"] = True
     if cfg.supports_comentor:
@@ -517,6 +563,8 @@ def _clean_changes(spec: dict[str, dict[str, Any]], changes: dict[str, Any]) -> 
             value = [v for v in value if v in opts]
         if f.get("phone") and isinstance(value, str) and value.strip():
             value = to_e164(value)
+        if f["type"] == "linkselect" and value == "":
+            value = None  # "" from the select's blank option = clear the link
         payload[name] = value
     return payload
 

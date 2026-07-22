@@ -64,6 +64,11 @@ class OverviewItem:
     # single link labelled with the company name; the peek merges every record.
     aggregate: tuple[tuple[str, str], ...] = ()
     name_fallback_attr: Optional[str] = None  # display name when ``attr`` is empty
+    # Render this fact even when the value is empty (shown as "—"). For slots
+    # that must stay discoverable — e.g. Referring partner, which otherwise
+    # vanished on unlinked engagements and read as a missing feature (Doug's
+    # 2026-07-22 report).
+    always: bool = False
     # Which fact group on the Overview rail this belongs to (the frontend renders
     # one card per section, in first-seen order): "key" (identity) / "activity"
     # (session stats & tags). ``block`` items ignore this — they stack at the bottom.
@@ -400,7 +405,8 @@ MENTOR = DomainConfig(
                      link_entity="CMentorProfile", id_attr="mentorProfileId"),
         OverviewItem("Meeting cadence", "meetingCadence", section="key"),
         OverviewItem("Referring partner", "referringPartnerName", "text", section="key",
-                     link_entity="CPartnerProfile", id_attr="referringPartnerId"),
+                     link_entity="CPartnerProfile", id_attr="referringPartnerId",
+                     always=True),
         # session activity
         OverviewItem("Start date", "engagementStartDate", "date", section="activity"),
         OverviewItem("Total sessions", "totalSessions", "int", section="activity"),

@@ -4,6 +4,39 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.133.0] — 2026-07-22
+
+**feat(sessions): the engagement's Referring partner is visible AND settable
+in the app** (Doug's report: the Overview's partner fact "disappeared" and
+Details had nowhere to select one). Investigation found no regression — the
+Overview drops empty facts by design (only 4 of 37 crm-test engagements have
+a partner linked), and the app NEVER had a partner selector: link-type fields
+were excluded from the metadata-driven Details forms, and nothing in the app
+writes `referringPartnerId` (the values on record were set in the EspoCRM
+UI). Two changes close it:
+
+- **The Overview "Referring partner" fact always renders** on engagements —
+  "—" when unlinked (`OverviewItem.always`, mentor domain) — so the slot
+  stays discoverable instead of silently vanishing.
+- **Curated link-field pickers in Details**
+  (`sessions/details.py:_ENTITY_LINK_FIELDS` — the app's first Details link
+  editor): the Engagement strip's edit form gains a "Referring partner"
+  select over the CPartnerProfiles the user can read (`linkOptions` on the
+  details payload, alphabetical, best-effort — a forbidden partner list just
+  renders the field read-only). Feature-detected from metadata (present only
+  when the CRM has the link); the stored value renders selected even when
+  it's outside the option list; the blank option clears the link (explicit
+  `null`); writes go through the existing whitelisted
+  `PUT /details/CEngagement/{id}` as the signed-in user; the summary strip
+  shows the linked partner's name.
+
+Verified: 997 tests green (8 new in `tests/test_details_linkfields.py`);
+full loop driven in the stub harness (always-"—" fact, picker options,
+"1 field changed" diff → PUT `{referringPartnerId}`, strip + Overview
+refresh with the partner peek, clear-to-null; no console errors). Live
+check: pick a partner on a real engagement as a mentor — the write needs
+the role's CEngagement edit (the same grant the status/notes edits use).
+
 ## [0.132.1] — 2026-07-22
 
 **Two fixes found by the crm-test live verification of 0.132.0** (both were

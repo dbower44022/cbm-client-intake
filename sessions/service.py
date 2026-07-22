@@ -462,7 +462,9 @@ def _overview_items(cfg: DomainConfig, parent: dict[str, Any]) -> list[dict[str,
             continue
         value = parent.get(it.attr)
         if value in (None, "", []):
-            continue
+            if not it.always:
+                continue
+            value = None  # rendered as "—" — the slot stays discoverable
         entry = {
             "label": it.label, "value": value, "type": it.type,
             "block": it.block, "section": it.section,

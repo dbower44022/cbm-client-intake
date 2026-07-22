@@ -3619,6 +3619,9 @@
       { label: "Engagement", grow: 2, basis: 46, rows: [
         [{ name: "engagementStatus", span: 3 }, { name: "engagementStartDate", span: 3 },
          { ro: "mentorProfileName", label: "Mentor", span: 3 }, { name: "meetingCadence", span: 3 }],
+        // The referring-partner link picker (curated link field — Doug's
+        // 2026-07-22 report: there was no way to set it in the app).
+        [{ name: "referringPartnerId", span: 6, label: "Referring partner" }],
         [{ name: "holdEndDate", span: 4 }, { name: "closeDate", span: 4 }, { name: "closeReason", span: 4 }],
       ] },
       { label: "Outcomes", grow: 2, basis: 40, rows: [
@@ -4248,6 +4251,7 @@
     var l = document.createElement("span"); l.className = "sx__fact-l"; l.textContent = f.label;
     var v = document.createElement("span"); v.className = "sx__fact-v";
     var t = f.type, val = f.value;
+    if (t === "linkselect") { t = "varchar"; val = f.valueName; }  // show the name, not the id
     if (val == null || val === "" || (Array.isArray(val) && !val.length)) { v.textContent = "—"; v.className += " sx__muted"; }
     else if (t === "multiEnum" && Array.isArray(val)) { val.forEach(function (o) { var c = document.createElement("span"); c.className = "sx__chip"; c.textContent = o; v.appendChild(c); }); }
     else if (t === "bool") { v.textContent = val ? "Yes" : "No"; }
@@ -4335,6 +4339,7 @@
     lastSessionDate: "Last session", nextSessionDateTime: "Next session",
     engagementAssignedDate: "Assigned", closeDate: "Closed", closeReason: "Close reason",
     holdEndDate: "Hold ends", mentoringFocusAreas: "Focus areas",
+    referringPartnerId: "Referring partner",
     revenueIncreasePercentage: "Revenue growth %", employmentIncreasePercentage: "Employment growth %",
     significantRevenueIncrease: "Sig. revenue growth", significantEmploymentIncrease: "Sig. employment growth",
     newBusinessStarted: "New business", newLocationOpened: "New location",
@@ -4391,6 +4396,10 @@
     function addField(f) {
       if (done[f.name] || f.name === "name") return; done[f.name] = 1;  // page header shows the name
       if (f.type === "text" || f.type === "wysiwyg") return;
+      if (f.type === "linkselect") {  // link picker: show the linked record's NAME
+        if (f.valueName) add(STRIP_LABELS[f.name] || f.label, String(f.valueName));
+        return;
+      }
       var v = f.value;
       if (v == null || v === "" || v === false || (Array.isArray(v) && !v.length)) return;
       var label = STRIP_LABELS[f.name] || f.label;
@@ -6216,6 +6225,20 @@
       el = document.createElement("input"); el.type = "date"; el.value = value || "";
     } else if (f.type === "datetime") {
       el = makeDateTimeInput(value);
+    } else if (f.type === "linkselect") {
+      // Curated link picker (e.g. the engagement's Referring partner): a select
+      // over the foreign records the user can read (detailsData.linkOptions,
+      // server-supplied). The stored link renders selected even when it isn't
+      // in the option list (unreadable/archived record) so a save can't drop it.
+      el = document.createElement("select");
+      var lopts = ((currentDetails && currentDetails.linkOptions &&
+                    currentDetails.linkOptions[f.linkEntity]) || []).slice();
+      if (value && !lopts.some(function (o) { return o.id === value; })) {
+        lopts.unshift({ id: value, name: f.valueName || "(current value)" });
+      }
+      el.appendChild(new Option("(none)", ""));
+      lopts.forEach(function (o) { el.appendChild(new Option(o.name || o.id, o.id)); });
+      el.value = value == null ? "" : value;
     } else if (f.type === "duration") {
       // Select of the CRM's preset choices (seconds); a stored duration outside
       // the presets is offered as-is so an existing value is never lost.
@@ -6262,6 +6285,7 @@
       return l2 ? l1 + "\n" + l2 : l1;
     }
     if (t === "duration") return el.value === "" ? null : Number(el.value);
+    if (t === "linkselect") return el.value || null;  // "" = clear the link
     if (t === "wysiwyg") {
       if (el._cbmRichText) return el._cbmRichText.getValue();
       var a = el.querySelector(".wysiwyg__area");
