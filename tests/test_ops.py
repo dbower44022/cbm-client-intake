@@ -444,3 +444,62 @@ def test_lifetime_query_time_boxes_legacy_search():
         "a@b.com", {"received_at": received, "resolved_at": resolved}
     )
     assert f"before:{int(resolved.timestamp()) + 2 * 86400}" in closed_q
+
+
+# --- bounce visibility (info@ rollout Phase 4 follow-up, 2026-07-21) ---------
+# A bounced reply threads with the original send; unclassified it reads as an
+# ordinary received message and the admin believes the reply was delivered.
+
+
+def test_looks_like_bounce_classifier():
+    from core.gmail import looks_like_bounce
+
+    assert looks_like_bounce("mailer-daemon@googlemail.com", "")
+    assert looks_like_bounce("MAILER-DAEMON@x.test", "anything")
+    assert looks_like_bounce("postmaster@corp.test", "")
+    assert looks_like_bounce("odd@mta.test", "Undeliverable: Hello")
+    assert looks_like_bounce("odd@mta.test", "Delivery Status Notification (Failure)")
+    assert not looks_like_bounce("ada@b.com", "Re: Hello")
+    assert not looks_like_bounce("info@cbmentors.org", "Following up")
+
+
+def test_shared_conversation_marks_bounce_messages(monkeypatch):
+    store = FakeOpsStore()
+    store.rows["abc12345"]["thread_ids"] = ["t1"]
+    gmail = FakeSharedGmail({
+        "t1": {"messages": [
+            _raw_msg("m1", "t1", f"CBM Info <{_MAILBOX}>", internal="1753000000000"),
+            _raw_msg(
+                "m2", "t1", "Mail Delivery Subsystem <mailer-daemon@googlemail.com>",
+                subject="Delivery Status Notification (Failure)",
+                body="Address not found", internal="1753000600000",
+            ),
+        ]},
+    })
+    _shared_env(monkeypatch, gmail)
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, store)) as c:
+        data = c.get("/ops/api/submissions/abc12345/messages").json()
+    by_id = {m["id"]: m for m in data["messages"]}
+    assert by_id["m2"]["bounce"] is True
+    assert by_id["m2"]["direction"] == "received"
+    assert by_id["m1"]["bounce"] is False  # our own send never marks
+
+
+def test_replystates_bounced_when_newest_is_a_bounce(monkeypatch):
+    store = FakeOpsStore()
+    store.rows["abc12345"]["thread_ids"] = ["t1"]
+    gmail = FakeSharedGmail({
+        "t1": {"messages": [
+            _raw_msg("m1", "t1", f"CBM Info <{_MAILBOX}>", internal="1"),
+            _raw_msg(
+                "m2", "t1", "mailer-daemon@googlemail.com",
+                subject="Delivery Status Notification (Failure)", internal="2",
+            ),
+        ]},
+    })
+    _shared_env(monkeypatch, gmail)
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, store)) as c:
+        r = c.post("/ops/api/replystates", json={"ids": ["abc12345"]})
+    assert r.json()["states"]["abc12345"]["state"] == "bounced"

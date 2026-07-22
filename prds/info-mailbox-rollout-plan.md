@@ -8,8 +8,9 @@ landed with it (system outbound = info@ + the Group Email Account on BOTH
 CRMs; the old espo@ group account is still Active — deactivate once info@
 SMTP creds are proven). Phase 2 BUILT v0.129.0 (committed; live check after
 deploy: an Assign compose shows "CBM Info (info@cbmentors.org)" and the
-notice arrives from CBM Info). Phase 4's bounce-visibility follow-up
-remains an optional build.
+notice arrives from CBM Info). Phase 4's bounce-visibility follow-up is
+BUILT v0.130.0 (red "delivery failed" chip in the awaiting-reply column +
+a red bounce card in the conversation; `core.gmail.looks_like_bounce`).
 
 The info@cbmentors.org Workspace mailbox is now live (real licensed user, so
 the existing domain-wide delegation covers it — no new Google scopes). This

@@ -329,6 +329,7 @@
     var s = document.createElement("span");
     var st = r._replyState;
     if (st === "owed") { s.className = "reply-owed"; s.textContent = "↳ reply owed"; }
+    else if (st === "bounced") { s.className = "reply-bounced"; s.textContent = "✕ delivery failed"; }
     else if (st === "waiting") { s.className = "reply-waiting"; s.textContent = "waiting on them"; }
     else if (st === "none") { s.className = "is-muted"; s.textContent = "—"; }
     else if (st === "pending") { s.className = "is-muted"; s.textContent = "…"; }
@@ -707,11 +708,20 @@
   function msgCard(m, expandable) {
     var card = document.createElement("div");
     card.className = "msg " + (m.direction === "sent" ? "msg--sent" : "msg--received");
+    if (m.bounce) card.className += " msg--bounce";
     var head = document.createElement("div"); head.className = "msg__head";
     var who = document.createElement("span"); who.className = "msg__who";
     who.textContent = m.direction === "sent" ? "You → " + (m.to || "") : (m.fromName || m.fromAddress);
     var dir = document.createElement("span"); dir.className = "msg__dir";
     dir.textContent = m.direction === "sent" ? "sent" : "received";
+    if (m.bounce) {
+      who.textContent = "Delivery failed";
+      dir.textContent = "bounce";
+      var warn = document.createElement("div"); warn.className = "msg__bounce-note";
+      warn.textContent = "Your reply could NOT be delivered — the address rejected it. " +
+        "Check the address for typos (open this notice for the mail system's reason).";
+      card.appendChild(warn);
+    }
     var date = document.createElement("span"); date.className = "msg__date"; date.textContent = fmtDate(m.date);
     var subj = document.createElement("span"); subj.className = "msg__subject"; subj.textContent = m.subject;
     head.appendChild(who); head.appendChild(dir); head.appendChild(date); head.appendChild(subj);

@@ -260,7 +260,7 @@ async def submission_messages(submission_id: str, request: Request) -> dict:
                 "reason": "Email isn't enabled on this deployment."}
 
     from comms import service as comms_service
-    from core.gmail import GmailError, parse_message
+    from core.gmail import GmailError, looks_like_bounce, parse_message
 
     shared = bool(settings.ops_mailbox)
     if shared:
@@ -330,7 +330,11 @@ async def submission_messages(submission_id: str, request: Request) -> dict:
         # keeps the old submitter comparison.
         sent = (p.from_address == gmail.mailbox) if shared else (p.from_address != address)
         cleaned = clean_email(p.body_text, p.body_html or None, outbound=sent)
+        # Delivery failures thread with the original send — mark them so the
+        # UI shows "delivery failed" instead of an ordinary received message.
+        bounce = (not sent) and looks_like_bounce(p.from_address, p.subject or "")
         messages.append({
+            "bounce": bounce,
             "id": p.gmail_id,
             "threadId": p.thread_id,
             # For reply threading: the frontend passes these back so the next
@@ -383,7 +387,7 @@ async def reply_states(body: ReplyStatesIn, request: Request) -> dict:
     from email.utils import parseaddr
 
     from comms import service as comms_service
-    from core.gmail import GmailError
+    from core.gmail import GmailError, looks_like_bounce
 
     shared = bool(settings.ops_mailbox)
     if shared:
@@ -430,6 +434,10 @@ async def reply_states(body: ReplyStatesIn, request: Request) -> dict:
                     return sid, {"state": "none"}
                 headers = newest[1]
                 sender = parseaddr(headers.get("from", ""))[1].lower()
+                # A bounce as the newest message = our reply did NOT arrive —
+                # its own state, else it reads as "they replied" (owed).
+                if looks_like_bounce(sender, headers.get("subject", "")):
+                    return sid, {"state": "bounced", "date": headers.get("date", "")}
                 return sid, {
                     "state": "waiting" if sender == gmail.mailbox else "owed",
                     "date": headers.get("date", ""),
@@ -442,6 +450,8 @@ async def reply_states(body: ReplyStatesIn, request: Request) -> dict:
                 return sid, {"state": "none"}
             headers = _headers(await gmail.get_message_headers(msgs[0]["id"]))
             sender = parseaddr(headers.get("from", ""))[1].lower()
+            if looks_like_bounce(sender, headers.get("subject", "")):
+                return sid, {"state": "bounced", "date": headers.get("date", "")}
             return sid, {
                 "state": "owed" if sender == address else "waiting",
                 "date": headers.get("date", ""),

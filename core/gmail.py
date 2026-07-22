@@ -313,6 +313,31 @@ class ParsedGmailMessage:
         return {a for a in out if a}
 
 
+_BOUNCE_SENDER_RE = re.compile(r"^(mailer-daemon|postmaster)@", re.IGNORECASE)
+_BOUNCE_SUBJECT_RE = re.compile(
+    r"delivery status notification|undeliverable|returned mail|"
+    r"mail delivery (?:failed|failure|subsystem)|failure notice|"
+    r"delivery (?:has )?failed|delivery incomplete|address not found",
+    re.IGNORECASE,
+)
+
+
+def looks_like_bounce(from_address: str, subject: str) -> bool:
+    """True when a message is a delivery-status bounce (mailer-daemon /
+    postmaster sender, or a DSN-style subject).
+
+    Bounces land IN the original Gmail thread, so thread-based views (the
+    /ops conversation) receive them — but they read as an ordinary reply
+    unless classified, and an admin believes their reply was delivered (the
+    2026-07-21 allen.ingram incident). Sender match is the strong signal;
+    the subject patterns catch non-Gmail MTAs with odd sender addresses —
+    a rare cosmetic false positive beats a missed real bounce.
+    """
+    if _BOUNCE_SENDER_RE.match((from_address or "").strip()):
+        return True
+    return bool(_BOUNCE_SUBJECT_RE.search(subject or ""))
+
+
 def _walk_parts(payload: dict[str, Any]):
     yield payload
     for part in payload.get("parts") or []:

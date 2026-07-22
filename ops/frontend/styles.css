@@ -74,6 +74,7 @@ body { margin: 0; display: flex; flex-direction: column; }
 .chip-resolved { background: #eafaef; color: #2f7a3f; border-color: var(--cbm-success); }
 .reply-owed { color: #a23b38; font-weight: 600; font-size: var(--cbm-text-sm); white-space: nowrap; }
 .reply-waiting { color: var(--cbm-slate-700); font-size: var(--cbm-text-sm); white-space: nowrap; }
+.reply-bounced { color: #fff; background: #b3261e; border-radius: 3px; padding: 1px 6px; font-weight: 700; font-size: var(--cbm-text-sm); white-space: nowrap; }
 
 /* status colours, shared by badges and count chips */
 .status-badge { display: inline-block; padding: 0.1rem 0.55rem; border-radius: 999px;
@@ -132,6 +133,8 @@ body { margin: 0; display: flex; flex-direction: column; }
   background: var(--cbm-white); padding: 0.55rem 0.8rem; margin-bottom: 0.55rem; }
 .msg--received { border-left: 4px solid var(--cbm-blue, #1c6cb5); }
 .msg--sent { border-left: 4px solid var(--cbm-gold, #CB963B); }
+.msg--bounce { border-left: 4px solid #b3261e; background: #fdf3f2; }
+.msg__bounce-note { color: #b3261e; font-weight: 700; font-size: var(--cbm-text-sm); padding: 6px 10px 0; }
 .msg__head { display: flex; gap: 0.6rem; align-items: baseline; flex-wrap: wrap; cursor: pointer; }
 .msg__who { font-weight: 600; color: var(--cbm-navy); }
 .msg__dir { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em;

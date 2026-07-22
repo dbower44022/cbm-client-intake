@@ -1456,7 +1456,7 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-21)
 
-**Main is at v0.129.0** (2026-07-21, 964 tests green, committed NOT pushed) —
+**Main is at v0.130.0** (2026-07-21, 967 tests green, committed NOT pushed) —
 **the info@cbmentors.org shared-mailbox rollout: Phases 1–3 of
 `prds/info-mailbox-rollout-plan.md` are LIVE/BUILT** (Doug's rulings: all
 staff-tool outbound as info@; mentor↔client stays personal; no auto-acks;
@@ -1487,6 +1487,15 @@ alerts keep admin@; Marketing Admin Team owns the queue + info@ inbox).
   Live check after deploy: an Assign notice compose + arrival as CBM
   Info. Replies to such notices land in the info@ Gmail INBOX (not /ops,
   not the personal sync) — Marketing Admin watches it.
+- **Phase 4 bounce visibility BUILT (v0.130.0):** `core.gmail.
+  looks_like_bounce` (mailer-daemon/postmaster sender or DSN subject);
+  /ops conversation renders bounces as a red "Delivery failed" card
+  (bounces thread with the original send, so the anchored fetch already
+  had them — they just read as ordinary replies), and the awaiting-reply
+  column shows a red "✕ delivery failed" chip when the newest thread
+  message is a bounce (was masquerading as "reply owed"). Closes the
+  allen.ingram silent-bounce gap. Live check: reply to a bogus address
+  from /ops → red chip + card within a refresh.
 - Cleanup: Discard the two no-reply@accounts.google.com rows in the prod
   /ops queue (+ the leftover crm-test copies); crm-test queue is frozen
   (no poller).

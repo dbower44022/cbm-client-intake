@@ -4,6 +4,26 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.130.0] — 2026-07-21
+
+**feat(ops): bounce visibility — a failed delivery is never silent again**
+(the info@ rollout plan's Phase 4 follow-up; closes the gap behind the
+2026-07-21 allen.ingram incident, where a bounced /ops reply looked sent
+and nobody learned otherwise). New `core.gmail.looks_like_bounce`
+(mailer-daemon/postmaster sender, DSN-style subjects — sender is the
+strong signal, subjects catch odd MTAs; a rare cosmetic false positive
+beats a missed bounce). Wired into both /ops surfaces:
+- **Conversation view:** a bounce message (they thread with the original
+  send, so the anchored-thread fetch already receives them) is marked
+  `bounce: true` and renders as a red "Delivery failed" card with a
+  plain-language note (check the address for typos; open the notice for
+  the mail system's reason) instead of an ordinary received message.
+- **Awaiting-reply column:** when the newest message on a submission's
+  threads is a bounce, the state is **`bounced`** — a red "✕ delivery
+  failed" chip — instead of masquerading as "reply owed" (or worse,
+  the send counting as "waiting on them"). Both shared and legacy modes.
+967 tests green (3 new).
+
 ## [0.129.0] — 2026-07-21
 
 **feat(comms): Client Administration + Mentor Administration quick-compose
