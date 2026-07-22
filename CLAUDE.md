@@ -1021,9 +1021,13 @@ segment of its own URL). Mounted only when `assignments_active` (needs
     (viewer-local) gets a red bold-white header band (card + session view)
     and files under Upcoming. The engagements grid: `list_records` attaches
     `upcomingSessions` (ONE ACL-scoped CSession query, dateStart ≥ now−36h,
-    soonest first, best-effort) — the **Next Session column derives from it**
-    (the stored `CEngagement.nextSessionDateTime` is NEVER populated by the
-    CRM — do not read it), a today-session record's name renders red+bold,
+    soonest first, best-effort) — the **Next Session column derives from it
+    ONLY** (since v0.136.0 the stored `CEngagement.nextSessionDateTime` is
+    deliberately DISCARDED: no CRM formula fills it, but staff CAN hand-edit
+    it in the EspoCRM UI, and a stale value there showed as a ghost next
+    session — the Calvin Boss report; a session-close with an agreed next
+    date now books a real follow-up session instead, see the v0.136.0
+    Current-status block), a today-session record's name renders red+bold,
     and the far-right **Assigned Mentor column** links to the CMentorProfile
     peek (CBM email → compose/mailto) so co-mentors can reach the primary
     mentor in two clicks.
@@ -1508,6 +1512,30 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   data-hygiene cleanup). **UI polish is the next work item** (a follow-up session).
 
 ## Current status (updated 2026-07-22)
+
+**Main is at v0.136.0** (2026-07-22, 1009 tests green, committed NOT pushed) —
+**closing a session books the agreed next session + the grid stops trusting
+the stored engagement field** (Doug's design, all four rulings taken from
+the Calvin Boss ghost-date investigation; full mechanics CHANGELOG 0.136.0):
+a save that leaves a session **Completed with a future "Next session" date**
+auto-creates the agreed follow-up (Scheduled, 1h, all client + CBM contacts
+invited, calendar hook applies) with quiet guards (past date = reference
+only; exact-date or any upcoming-Scheduled session on the record skips;
+update fires only when the save touched status/nextSessionDateTime;
+best-effort). Save-time confirm asks about calendar invitations
+(Send / Don't send / Keep editing → `skipFollowUpInvite`). The grid's Next
+Session column now derives ONLY from real sessions — the stored
+`CEngagement.nextSessionDateTime` is DISCARDED (it is hand-editable in the
+EspoCRM UI, which is how Sue Marrone's hand-entered "Tue Jul 21 9:30am" on
+engagement `6a58730a41bff3de8` showed as a next session no session record
+supported; the field stays read-only on the Details strip). Investigation
+facts: no CRM formula touches the field (checked on the prod droplet); the
+engagement's one session was created 7/16 by Doug, edited 7/20 by Sue to
+Completed with the odd dateStart 2025-09-08 (probable wrong-year entry —
+still worth asking Sue). **NOT yet driven live** — after deploy: close a
+real session with a next date → follow-up appears with invites; Calvin
+Boss's row shows no ghost date. Clearing the stored field in the CRM is
+optional cleanup.
 
 **Main is at v0.134.0** (2026-07-22, 1000 tests green, committed NOT pushed) —
 **Submission Admin: editable Request status + the complete submission on the

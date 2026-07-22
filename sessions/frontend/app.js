@@ -421,17 +421,19 @@
     try {
       var res = await api("/records");
       records = res.records || [];
-      // The Next Session column derives from the row's real sessions (the
-      // stored CEngagement.nextSessionDateTime is never populated): soonest
-      // SCHEDULED session that is today (viewer-local) or later. Falls back
-      // to whatever the stored attr held. Done here so column sorting works
-      // on the derived value.
+      // The Next Session column derives ONLY from the row's real sessions:
+      // soonest SCHEDULED session that is today (viewer-local) or later. The
+      // stored CEngagement.nextSessionDateTime the server row carries is
+      // deliberately DISCARDED (Doug's ruling 2026-07-22): staff can hand-fill
+      // that field in the CRM UI, and a stale agreed-date there showed as a
+      // ghost "next session" no session record supported (the Calvin Boss
+      // report). Done here so column sorting works on the derived value.
       records.forEach(function (r) {
         var next = (r.upcomingSessions || []).filter(function (s) {
           return statusClass(s.status) === "scheduled" &&
             (isTodayLocal(s.dateStart) || (parseNaive(s.dateStart) || 0) >= Date.now());
         })[0];
-        if (next) r.nextSession = next.dateStart;
+        r.nextSession = next ? next.dateStart : "";
       });
       // Both empty states are normal, not errors, but they read differently:
       // profileFound=false means no CMentorProfile is linked to this login (an
@@ -6410,10 +6412,38 @@
     });
   }
 
+  // A save that leaves the session Completed with a future "Next session" date
+  // auto-creates the agreed follow-up session server-side (all client + CBM
+  // contacts invited). This mirrors the server's own guards so the invite
+  // prompt only appears when a follow-up will actually be created: the value
+  // must be a future date, the save must establish it (new session, or status/
+  // next-date changed on an edit), and no session may already sit at that
+  // date/time nor any upcoming Scheduled session exist on the record.
+  function followUpPlan() {
+    if (!currentDetail) return null;
+    if ((editorFieldValue("status") || "") !== "Completed") return null;
+    var nd = editorFieldValue("nextSessionDateTime");
+    if (!nd) return null;
+    var t = parseNaive(nd);
+    if (!t || t <= Date.now()) return null;
+    var isNew = !(currentSession && currentSession.id);
+    if (!isNew &&
+        JSON.stringify(editorFieldValue("status")) === editorSnapshot.status &&
+        JSON.stringify(nd) === editorSnapshot.nextSessionDateTime) return null;
+    var blocked = ((currentDetail.sessions) || []).some(function (s) {
+      if (s.dateStart === nd) return true;
+      var d = parseNaive(s.dateStart);
+      return statusClass(s.status) === "scheduled" && d && d > Date.now();
+    });
+    return blocked ? null : { when: nd };
+  }
+
   // calendarDecision: undefined = not asked yet; "create" = auto-create the
   // Google Calendar event as usual; "skip" = the user chose to schedule the
   // meeting manually (the session still saves, no event/invitations).
-  async function saveSession(calendarDecision) {
+  // followUpDecision: undefined = not asked yet; "invite"/"skip" = whether the
+  // auto-created follow-up session should send calendar invitations.
+  async function saveSession(calendarDecision, followUpDecision) {
     if (!currentDetail) return;
     // A save is already in flight. Guarding here (not on the Save button) is
     // what makes this cover the dialog and calendar-prompt entry points too.
@@ -6436,6 +6466,23 @@
         && editorFieldValue("dateStart")) {
       show($("gcalModal"));
       $("gcalCreate").focus();
+      return;
+    }
+    // Closing a session with an agreed next date books the follow-up session —
+    // ask whether to send its calendar invitations (the follow-up is created
+    // either way; Keep editing aborts the save). Mutually exclusive with the
+    // new-Scheduled prompt above (this one requires status Completed).
+    var followUp = followUpDecision === undefined ? followUpPlan() : null;
+    if (followUp && config && config.gcalEnabled) {
+      openConfirm({
+        title: "Schedule the next session",
+        msg: "This will create the agreed next session on " + fmtWhen(followUp.when) +
+          " for all client and CBM contacts. Send calendar invitations now?",
+        saveLabel: "Send invites", discardLabel: "Don't send invites",
+        cancelLabel: "Keep editing",
+        onSave: function () { saveSession(calendarDecision, "invite"); },
+        onDiscard: function () { saveSession(calendarDecision, "skip"); },
+      });
       return;
     }
     var changes = {};
@@ -6462,7 +6509,10 @@
       var saved;
       if (currentSession && currentSession.id) {
         saved = await api("/sessions/" + encodeURIComponent(currentSession.id), {
-          method: "PUT", body: JSON.stringify({ changes: changes, attendees: attendees })
+          method: "PUT", body: JSON.stringify({
+            changes: changes, attendees: attendees,
+            skipFollowUpInvite: followUpDecision === "skip",
+          })
         });
       } else {
         saved = await api("/records/" + encodeURIComponent(currentDetail.id) + "/sessions", {
@@ -6470,6 +6520,7 @@
           body: JSON.stringify({
             changes: changes, attendees: attendees,
             skipCalendar: calendarDecision === "skip",
+            skipFollowUpInvite: followUpDecision === "skip",
             submissionToken: editorCreateToken,
           })
         });
@@ -6493,6 +6544,21 @@
       if (saved && saved.warning) warnExtra += " " + saved.warning;
       var cal = saved && saved.calendar;
       if (cal && cal.ok && cal.inviteError) warnExtra += " " + cal.inviteError;
+      // The auto-created follow-up session (Completed save with a next date).
+      var fu = saved && saved.followUp;
+      if (fu && fu.created) {
+        engExtra += " The next session was scheduled for " + fmtWhen(fu.dateStart) + ".";
+        var fcal = fu.calendar;
+        if (fcal && fcal.ok === false && !fcal.disabled) {
+          warnExtra += " (The new session's calendar invitation failed: " + (fcal.error || "unknown error") + " — open it and re-save to retry.)";
+        } else if (fcal && fcal.ok && fcal.declined) {
+          engExtra += " No calendar invite was sent for it.";
+        }
+        if (fu.warning) warnExtra += " " + fu.warning;
+      } else if (fu && fu.created === false) {
+        warnExtra += " The agreed next session could not be created automatically (" +
+          (fu.error || "unknown error") + ") — add it from New Session.";
+      }
       var msg, style = warnExtra ? "error" : "success";
       if (cal && cal.ok === false && !cal.disabled) {
         msg = "Session saved, but the Google Calendar invitation failed: " + (cal.error || "unknown error");

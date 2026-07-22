@@ -1043,6 +1043,160 @@ async def test_create_session_partner_domain_stamps_creator_only():
     assert payload["assignedUsersIds"] == ["u1"]
 
 
+# --- follow-up session auto-creation (Completed + agreed next date) ---------
+
+_FUTURE = "2999-01-05 14:00:00"
+
+
+def _follow_up_fake(**over):
+    """A mentor-domain world ready for the follow-up rule: engagement E1 with a
+    manager (whose Contact is cm1), one client contact c1, and session S1."""
+    kw = dict(
+        records={
+            ("CSession", "S1"): {"engagementId": "E1", "name": "Old",
+                                  "status": "Scheduled"},
+            ("CEngagement", "E1"): {"name": "Calvin Boss — Intake",
+                                     "engagementStatus": "Active",
+                                     "mentorProfileId": "mA"},
+            ("CMentorProfile", "mA"): {"name": "Mentor A", "assignedUserId": "uA",
+                                        "contactRecordId": "cm1"},
+        },
+        related={"engagementContacts": [{"id": "c1", "name": "Calvin Boss"}]},
+    )
+    kw.update(over)
+    return Fake(**kw)
+
+
+@pytest.mark.asyncio
+async def test_completed_save_with_next_date_books_the_follow_up():
+    fake = _follow_up_fake()
+    res = await service.update_session(
+        MENTOR, fake, "S1",
+        {"status": "Completed", "nextSessionDateTime": _FUTURE}, user_id="u1",
+    )
+    made = [(e, p) for e, p in fake.created if e == "CSession"]
+    assert len(made) == 1
+    _, payload = made[0]
+    assert payload["engagementId"] == "E1"
+    assert payload["status"] == "Scheduled"
+    assert payload["dateStart"] == _FUTURE
+    assert payload["dateEnd"] == "2999-01-05 15:00:00"  # default one-hour slot
+    assert payload["name"] == "2999-01-05 - Calvin Boss — Intake"
+    # invited: the client contact + the manager's Contact
+    related = {r[3] for r in fake.relates if r[2] == "sessionAttendees"}
+    assert related == {"c1", "cm1"}
+    fu = res["followUp"]
+    assert fu["created"] is True and fu["dateStart"] == _FUTURE
+    assert fu["parentId"] == "E1"
+
+
+@pytest.mark.asyncio
+async def test_notes_only_edit_never_books_a_follow_up():
+    # The closed session already stores Completed + a future next date, but the
+    # save touches neither trigger field — a reschedule of the created session
+    # must not be resurrected by later notes edits.
+    fake = _follow_up_fake()
+    fake.records[("CSession", "S1")].update(
+        {"status": "Completed", "nextSessionDateTime": _FUTURE}
+    )
+    res = await service.update_session(
+        MENTOR, fake, "S1", {"sessionNotes": "<p>x</p>"}, user_id="u1"
+    )
+    assert [e for e, _ in fake.created] == []
+    assert "followUp" not in res
+
+
+@pytest.mark.asyncio
+async def test_past_next_date_is_reference_only():
+    fake = _follow_up_fake()
+    res = await service.update_session(
+        MENTOR, fake, "S1",
+        {"status": "Completed", "nextSessionDateTime": "2020-01-01 10:00:00"},
+        user_id="u1",
+    )
+    assert [e for e, _ in fake.created] == []
+    assert "followUp" not in res
+
+
+@pytest.mark.asyncio
+async def test_existing_upcoming_session_blocks_the_follow_up():
+    fake = _follow_up_fake(related={
+        "engagementContacts": [{"id": "c1"}],
+        "engagementSessions": [{"dateStart": "2999-02-01 10:00:00", "status": "Scheduled"}],
+    })
+    res = await service.update_session(
+        MENTOR, fake, "S1",
+        {"status": "Completed", "nextSessionDateTime": _FUTURE}, user_id="u1",
+    )
+    assert [e for e, _ in fake.created] == []
+    assert "followUp" not in res
+
+
+@pytest.mark.asyncio
+async def test_session_already_at_the_agreed_date_blocks_even_when_cancelled():
+    # The exact-date guard is status-agnostic: a Cancelled session at that
+    # date/time means the follow-up was made once and then called off — a
+    # re-save must not re-book it.
+    fake = _follow_up_fake(related={
+        "engagementContacts": [{"id": "c1"}],
+        "engagementSessions": [{"dateStart": _FUTURE, "status": "Cancelled"}],
+    })
+    res = await service.update_session(
+        MENTOR, fake, "S1",
+        {"status": "Completed", "nextSessionDateTime": _FUTURE}, user_id="u1",
+    )
+    assert [e for e, _ in fake.created] == []
+    assert "followUp" not in res
+
+
+@pytest.mark.asyncio
+async def test_follow_up_invite_decline_skips_the_calendar():
+    fake = _follow_up_fake()
+    res = await service.update_session(
+        MENTOR, fake, "S1",
+        {"status": "Completed", "nextSessionDateTime": _FUTURE},
+        user_id="u1", skip_follow_up_invite=True,
+    )
+    assert res["followUp"]["created"] is True
+    assert res["followUp"]["calendar"]["declined"] is True
+
+
+@pytest.mark.asyncio
+async def test_session_created_directly_as_completed_books_the_follow_up():
+    # Recording a held meeting and its agreed next one in a single save.
+    fake = _follow_up_fake()
+    res = await service.create_session(
+        MENTOR, fake, "E1",
+        {"name": "Held", "status": "Completed", "dateStart": "2026-07-01 13:00:00",
+         "nextSessionDateTime": _FUTURE},
+        None, owner_user_id="u1",
+    )
+    made = [(e, p) for e, p in fake.created if e == "CSession"]
+    assert len(made) == 2
+    assert made[1][1]["status"] == "Scheduled" and made[1][1]["dateStart"] == _FUTURE
+    assert res["followUp"]["created"] is True
+    # len == 2 also proves no recursion: the Scheduled follow-up booked nothing.
+
+
+@pytest.mark.asyncio
+async def test_follow_up_create_failure_is_best_effort():
+    class FailSecondCreate(Fake):
+        async def create(self, entity, payload):
+            if entity == "CSession" and payload.get("status") == "Scheduled":
+                raise EspoError("create CSession failed: HTTP 403 denied")
+            return await super().create(entity, payload)
+
+    fake = _follow_up_fake()
+    fake.__class__ = FailSecondCreate
+    res = await service.update_session(
+        MENTOR, fake, "S1",
+        {"status": "Completed", "nextSessionDateTime": _FUTURE}, user_id="u1",
+    )
+    # The closing save itself succeeded; the follow-up reports its failure.
+    assert res["followUp"]["created"] is False
+    assert "denied" in res["followUp"]["error"]
+
+
 # --- accept an assigned engagement from the grid ----------------------------
 
 @pytest.mark.asyncio
@@ -1668,7 +1822,8 @@ def test_create_session_endpoint(monkeypatch):
     _as(monkeypatch, _USER)
 
     async def fake_create(cfg, client, parent_id, changes, attendees,
-                          owner_user_id=None, settings=None, skip_calendar=False):
+                          owner_user_id=None, settings=None, skip_calendar=False,
+                          skip_follow_up_invite=False):
         return {"id": "s1", "parent": parent_id, "attendees": attendees,
                 "owner": owner_user_id, "skipCal": skip_calendar, **changes}
 
@@ -1948,7 +2103,8 @@ def _no_create_tokens():
 
 def _stub_create(monkeypatch, calls):
     async def fake_create(cfg, client, parent_id, changes, attendees,
-                          owner_user_id=None, settings=None, skip_calendar=False):
+                          owner_user_id=None, settings=None, skip_calendar=False,
+                          skip_follow_up_invite=False):
         calls.append(parent_id)
         return {"id": "s%d" % len(calls), "parent": parent_id, **changes}
 
@@ -2174,7 +2330,8 @@ def test_create_session_writes_action_log_rows(monkeypatch):
     _as(monkeypatch, _USER)
 
     async def fake_create(cfg, client, parent_id, changes, attendees,
-                          owner_user_id=None, settings=None, skip_calendar=False):
+                          owner_user_id=None, settings=None, skip_calendar=False,
+                          skip_follow_up_invite=False):
         return {"id": "s1", "name": "2026-07-20 - Acme", "status": "Completed",
                 "sessionType": "Client Session",
                 "engagement": {"activated": True, "from": "Assigned", "to": "Active"}}

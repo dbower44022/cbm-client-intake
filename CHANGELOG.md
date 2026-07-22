@@ -4,6 +4,63 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.136.0] — 2026-07-22
+
+**feat(sessions): closing a session books the agreed next session; the grid's
+Next Session column stops trusting the stored engagement field.** Doug's
+design (from the Calvin Boss ghost-date investigation): the session editor's
+"Next session" field captures *what was agreed at the end of a session about
+when to meet next* — and closing the session should turn that agreement into
+a real booked session, not just a note. All four of his rulings implemented
+(trigger, save-time invite prompt, all-contacts attendees, drop the grid
+fallback):
+
+- **Auto-created follow-up** (`sessions/service._maybe_create_follow_up`,
+  called from `create_session` + `update_session`, all three domains): any
+  save that leaves a session **Completed** with a **future** "Next session"
+  date creates a new **Scheduled** session on the record at that date/time —
+  default one-hour slot, name `YYYY-MM-DD - <record name>`, invited to every
+  client contact plus every CBM contact (assigned manager + co-mentors via
+  `_cbm_contacts`, the same default-invitee set as a hand-created session).
+  Reuses the normal create path, so owner/team stamping, enum sanitizing, and
+  the Google Calendar hook all apply; no recursion (the follow-up is
+  Scheduled).
+- **Guards** (all quiet no-ops): a **past** next date is reference data —
+  never booked; a session already at exactly that date/time (any status,
+  incl. Cancelled) skips; ANY upcoming Scheduled session on the record skips
+  (the next meeting is already on the books — also prevents a later notes
+  edit resurrecting an old agreed date after a reschedule). On update the
+  rule is payload-gated (fires only when the save touched `status` or
+  `nextSessionDateTime`), the engagement-activation pattern. Best-effort:
+  a CRM failure never fails the closing save — the response carries
+  `followUp:{created:false,error}` and the UI says to add it manually.
+- **Save-time invite prompt** (frontend, `gcalEnabled` only): when a save
+  will book the follow-up, a confirm asks "Send calendar invitations now?" —
+  Send invites / Don't send invites / Keep editing. Declining still creates
+  the session (`skipFollowUpInvite` on the session POST/PUT →
+  `skip_calendar` on the inner create). The frontend mirrors the server
+  guards so the prompt only appears when a booking will actually happen.
+  The save notice reports the outcome ("The next session was scheduled for
+  …"); an auto-booking is also action-logged (`core/action_log`).
+- **Grid: stored `CEngagement.nextSessionDateTime` no longer shows.** The
+  Next Session column now derives ONLY from real upcoming Scheduled
+  sessions; the stored engagement-level field — hand-editable in the EspoCRM
+  UI, which is how a stale July 21 "next session" with no session behind it
+  reached the grid (Calvin Boss engagement `6a58730a41bff3de8`, field set by
+  hand in the CRM 2026-07-20) — is deliberately discarded. That field stays
+  visible read-only on the Details summary strip.
+
+Verified: 1009 tests green (8 new in tests/test_sessions.py: booking with
+attendees, notes-only/past-date/upcoming-session/cancelled-at-date guards,
+invite decline, create-as-Completed, best-effort failure); full editor flow
+driven in the stub harness (prompt wording/buttons, decline → PUT carries
+`skipFollowUpInvite:true` + diffed fields only, accept → `false`, save
+notice, grid cell blank despite a stored value; no console errors). **NOT
+yet driven live.** Live checks: close a real session with a next date →
+follow-up appears in the grid/Sessions tab with invites; the Calvin Boss
+grid row shows no Next Session after deploy (clearing the stored field in
+the CRM is optional cleanup — the grid ignores it now).
+
 ## [0.135.0] — 2026-07-22
 
 **feat(assignments): Client Administration default status filter = the

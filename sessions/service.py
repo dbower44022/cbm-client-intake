@@ -972,6 +972,20 @@ async def _sanitize_enum_payload(client: SessionClient, payload: dict[str, Any])
 _ACTIVATE_ON_COMPLETED = ("Assigned", "Assignment Dormant")
 _ENGAGEMENT_ACTIVE = "Active"
 _SESSION_COMPLETED = "Completed"
+_SESSION_SCHEDULED = "Scheduled"
+
+
+def _parse_stamp(value: Any) -> Optional[datetime]:
+    """A stored CRM datetime ("YYYY-MM-DD HH:MM:SS", UTC) — or a bare date —
+    as an aware UTC datetime; ``None`` when empty/unparseable."""
+    if not value:
+        return None
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(str(value), fmt).replace(tzinfo=timezone.utc)
+        except ValueError:
+            continue
+    return None
 
 
 async def _activate_engagement_on_completed(
@@ -1000,6 +1014,128 @@ async def _activate_engagement_on_completed(
         log.warning("could not activate engagement %s after a completed session: %s",
                     parent_id, exc)
         return {"activated": False, "error": str(exc)}
+
+
+async def _maybe_create_follow_up(
+    cfg: DomainConfig,
+    client: SessionClient,
+    parent_id: str,
+    session: dict[str, Any],
+    *,
+    owner_user_id: str,
+    settings: Optional[Any],
+    skip_invite: bool,
+) -> Optional[dict[str, Any]]:
+    """Auto-create the agreed next session when one is closed (Doug's design,
+    2026-07-22): a session saved as **Completed** with a future "Next session"
+    date books a new **Scheduled** session on the record at that date/time,
+    invited to every client contact + every CBM contact — the same default-
+    invitee set a hand-created session starts with. The closed session's
+    ``nextSessionDateTime`` stays untouched as the record of what was agreed;
+    rescheduling happens by editing the created session, never this field.
+
+    Guards (all quiet no-ops, ``None`` returned):
+    - status not Completed, no next date, or the date is past/unparseable —
+      a past "next date" is reference data, never a booking;
+    - a session already exists at exactly that date/time (the re-save case);
+    - ANY future Scheduled session already exists on the record — the next
+      meeting is already on the books, and re-firing here would resurrect an
+      old agreed date after a reschedule.
+
+    Best-effort like the engagement-activation hook: a CRM failure never fails
+    the closing save — the result dict carries ``created:false`` + the error
+    for the UI. ``skip_invite`` = the user declined calendar invitations in
+    the save-time prompt (the session is still created)."""
+    if session.get("status") != _SESSION_COMPLETED:
+        return None
+    raw = session.get("nextSessionDateTime")
+    next_dt = _parse_stamp(raw)
+    if next_dt is None:
+        return None
+    if next_dt <= datetime.now(timezone.utc):
+        log.info(
+            "follow-up: next-session date %r on CSession/%s is in the past — "
+            "kept as reference, nothing scheduled", raw, session.get("id"),
+        )
+        return None
+    try:
+        existing = await client.list_related(
+            cfg.parent_entity, parent_id, cfg.parent_sessions_link,
+            select="dateStart,status", max_size=_PAGE,
+        )
+        now = datetime.now(timezone.utc)
+        for s in existing.get("list", []):
+            ds = s.get("dateStart")
+            if ds == raw:
+                log.info(
+                    "follow-up: %s/%s already has a session at %s — skipping",
+                    cfg.parent_entity, parent_id, raw,
+                )
+                return None
+            d = _parse_stamp(ds)
+            if d and d > now and s.get("status") == _SESSION_SCHEDULED:
+                log.info(
+                    "follow-up: %s/%s already has an upcoming scheduled session "
+                    "(%s) — skipping", cfg.parent_entity, parent_id, ds,
+                )
+                return None
+        select = "name"
+        if cfg.parent_manager_link:
+            select += f",{cfg.parent_manager_link}Id"
+        parent = await client.get(cfg.parent_entity, parent_id, select=select)
+        contacts = await client.list_related(
+            cfg.parent_entity, parent_id, cfg.parent_contacts_link,
+            select="name", max_size=_PAGE,
+        )
+        attendee_ids = [str(c["id"]) for c in contacts.get("list", [])]
+        co_mentors: list[dict[str, Any]] = []
+        if cfg.supports_comentor:
+            co_data = await client.list_related(
+                cfg.parent_entity, parent_id, _COMENTOR_LINK,
+                select="name,cbmEmail,contactRecordId", max_size=_PAGE,
+            )
+            co_mentors = co_data.get("list", [])
+        for member in await _cbm_contacts(client, cfg, parent, co_mentors):
+            if member["contactId"] not in attendee_ids:
+                attendee_ids.append(member["contactId"])
+        changes = {
+            "name": f"{next_dt:%Y-%m-%d} - " + (parent.get("name") or "").strip(),
+            "status": _SESSION_SCHEDULED,
+            "dateStart": str(raw),
+            # Default one-hour slot, the editor's own duration default.
+            "dateEnd": (next_dt + timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        # Reuse the normal create path: owner/team stamping, enum sanitizing,
+        # attendee relates, and the calendar hook all apply. No recursion — the
+        # created session is Scheduled, so its own follow-up check no-ops.
+        created = await create_session(
+            cfg, client, parent_id, changes, attendee_ids,
+            owner_user_id=owner_user_id, settings=settings,
+            skip_calendar=skip_invite,
+        )
+    except EspoError as exc:
+        log.warning(
+            "follow-up session create failed on %s/%s: %s",
+            cfg.parent_entity, parent_id, exc,
+        )
+        return {"created": False, "error": str(exc)}
+    log.info(
+        "follow-up session %s created on %s/%s for %s (%d attendee(s), invites %s)",
+        created.get("id"), cfg.parent_entity, parent_id, raw,
+        len(attendee_ids), "skipped" if skip_invite else "requested",
+    )
+    result: dict[str, Any] = {
+        "created": True,
+        "id": created.get("id"),
+        "name": created.get("name"),
+        "dateStart": str(raw),
+        "parentId": parent_id,
+    }
+    if created.get("calendar") is not None:
+        result["calendar"] = created["calendar"]
+    if created.get("warning"):
+        result["warning"] = created["warning"]
+    return result
 
 
 async def accept_engagement(
@@ -1047,6 +1183,7 @@ async def create_session(
     *,
     settings: Optional[Any] = None,
     skip_calendar: bool = False,
+    skip_follow_up_invite: bool = False,
 ) -> dict[str, Any]:
     """Create a ``CSession`` linked to ``parent_id`` and return it (with id).
 
@@ -1136,6 +1273,17 @@ async def create_session(
             settings, cfg, client, owner_user_id, session, changes,
             attendees_changed=bool(attendees), is_new=True, parent_id=parent_id,
         )
+    # A session created straight in the Completed state with an agreed next
+    # date books the follow-up too (the mentor recorded a held meeting and its
+    # agreed next one in a single save).
+    if owner_user_id:
+        follow_up = await _maybe_create_follow_up(
+            cfg, client, parent_id, session,
+            owner_user_id=owner_user_id, settings=settings,
+            skip_invite=skip_follow_up_invite,
+        )
+        if follow_up is not None:
+            session["followUp"] = follow_up
     return session
 
 
@@ -1148,6 +1296,7 @@ async def update_session(
     *,
     user_id: Optional[str] = None,
     settings: Optional[Any] = None,
+    skip_follow_up_invite: bool = False,
 ) -> dict[str, Any]:
     """Update whitelisted fields on a session; sync attendees separately.
 
@@ -1168,14 +1317,24 @@ async def update_session(
             f"those contact records. Ask CBM staff to check the contact's "
             f"assigned users, then re-save the attendees."
         )
-    # Only a save that CHANGES the status to Completed triggers the engagement
-    # activation (the frontend diffs, so an untouched status never rides the
-    # payload) — a notes-only edit to an already-completed session can't
-    # re-activate an engagement a staffer deliberately parked.
-    if cfg.parent_entity == ENGAGEMENT and payload.get("status") == _SESSION_COMPLETED:
+    # The status / next-date payload triggers below are diff-driven (the
+    # frontend sends only changed fields), so a notes-only edit to an
+    # already-completed session can neither re-activate a parked engagement
+    # nor re-book a follow-up whose date has since been rescheduled.
+    follow_up_trigger = (
+        "status" in payload or "nextSessionDateTime" in payload
+    ) and user_id
+    parent_id: Optional[str] = None
+    if follow_up_trigger or (
+        cfg.parent_entity == ENGAGEMENT and payload.get("status") == _SESSION_COMPLETED
+    ):
         parent = await client.get(SESSION, session_id, select=cfg.session_parent_fk)
+        parent_id = parent.get(cfg.session_parent_fk)
+    # Only a save that CHANGES the status to Completed triggers the engagement
+    # activation.
+    if cfg.parent_entity == ENGAGEMENT and payload.get("status") == _SESSION_COMPLETED:
         engagement = await _activate_engagement_on_completed(
-            cfg, client, parent.get(cfg.session_parent_fk), payload.get("status")
+            cfg, client, parent_id, payload.get("status")
         )
         if engagement is not None:
             session["engagement"] = engagement
@@ -1186,6 +1345,17 @@ async def update_session(
             settings, cfg, client, user_id, session, changes,
             attendees_changed=(attendees is not None), is_new=False,
         )
+    # A save that leaves the session Completed with an agreed next date books
+    # the follow-up session (see _maybe_create_follow_up). Payload-gated: only
+    # a save that touched status or the next date can fire.
+    if follow_up_trigger and parent_id:
+        follow_up = await _maybe_create_follow_up(
+            cfg, client, parent_id, session,
+            owner_user_id=user_id, settings=settings,
+            skip_invite=skip_follow_up_invite,
+        )
+        if follow_up is not None:
+            session["followUp"] = follow_up
     return session
 
 

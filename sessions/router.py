@@ -88,6 +88,11 @@ class SessionIn(BaseModel):
     # True = the user declined the automatic calendar invite in the pre-save
     # prompt (new Scheduled sessions only) — save the session, skip the event.
     skipCalendar: bool = False
+    # True = the user declined calendar invitations for the AUTO-CREATED
+    # follow-up session (a Completed save with a future "Next session" date
+    # books the agreed next meeting — see service._maybe_create_follow_up).
+    # The follow-up session is created either way.
+    skipFollowUpInvite: bool = False
     # Idempotency key for a CREATE: one token per open new-session editor, sent
     # with every save attempt of that editor, so a retry returns the session
     # already created instead of making a second one. Ignored on update.
@@ -555,6 +560,7 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 cfg, client, parent_id, body.changes, body.attendees,
                 owner_user_id=user["userId"], settings=get_settings(),
                 skip_calendar=body.skipCalendar,
+                skip_follow_up_invite=body.skipFollowUpInvite,
             )
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not create session")
@@ -586,7 +592,25 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 "(first completed session).",
                 actor_id=user["userId"], actor_name=user["name"], details=_eng,
             )
+        await _log_follow_up(result, user)
         return result
+
+    async def _log_follow_up(result: dict, user: dict) -> None:
+        """Action-history entry for a follow-up session the save auto-created
+        (the Completed-with-next-date rule)."""
+        fu = result.get("followUp") or {}
+        if not fu.get("created") or not fu.get("parentId"):
+            return
+        await action_log.log_action(
+            app=cfg.title, category=action_log.CAT_SESSION,
+            action=action_log.ACT_SESSION_RECORDED,
+            parent_type=cfg.parent_entity, parent_id=fu["parentId"],
+            summary="Next session scheduled automatically from the completed "
+            f"session's agreed date: {fu.get('name') or fu.get('id')}.",
+            actor_id=user["userId"], actor_name=user["name"],
+            details={"sessionId": fu.get("id"), "dateStart": fu.get("dateStart"),
+                     "autoCreated": True},
+        )
 
     @router.put("/sessions/{session_id}")
     async def update_session(session_id: str, body: SessionIn, request: Request) -> dict:
@@ -596,6 +620,7 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             result = await service.update_session(
                 cfg, client, session_id, body.changes, body.attendees,
                 user_id=user["userId"], settings=get_settings(),
+                skip_follow_up_invite=body.skipFollowUpInvite,
             )
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not save session")
@@ -614,6 +639,7 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 "(first completed session).",
                 actor_id=user["userId"], actor_name=user["name"], details=_eng,
             )
+        await _log_follow_up(result, user)
         return result
 
     if cfg.supports_comentor:

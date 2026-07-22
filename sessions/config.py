@@ -346,9 +346,10 @@ MENTOR = DomainConfig(
     # Company, Client, Assigned Mentor (far right — so a co-mentor can see
     # who the primary mentor is, 2026-07-16). Both date columns are laid out
     # inline (so no trailing date column — list_date_column=None below).
-    # Next Session's stored attr (nextSessionDateTime) is never populated by
-    # the CRM — the frontend fills the cell from the row's upcomingSessions
-    # (see service._attach_sessions_near_now).
+    # Next Session's stored attr (nextSessionDateTime) is hand-editable in the
+    # EspoCRM UI and can go stale (the Calvin Boss ghost date, 2026-07-22) —
+    # the frontend DISCARDS it and fills the cell only from the row's
+    # upcomingSessions (see service._attach_sessions_near_now).
     list_columns=(
         Column("name", "Engagement", "name"),
         Column("status", "Status", "engagementStatus"),
