@@ -488,3 +488,55 @@ async def test_get_original_gone_message(monkeypatch):
         await comms_service.get_original(
             Cfg(), OriginalEspo(), "comm1", cid_base="/x"
         )
+
+
+# --- bounce ingest exemption (§3.4 — found in live-verification prep) ---------
+
+
+def _bounce_raw(mid="dsn1", thread="t1"):
+    import base64 as b64
+
+    body = b64.urlsafe_b64encode(b"Address not found: casey@typo.test").decode()
+    return {
+        "id": mid, "threadId": thread, "internalDate": "1780000100000",
+        "snippet": "Address not found",
+        "payload": {
+            "mimeType": "text/plain",
+            "headers": [
+                {"name": "From", "value": "Mail Delivery Subsystem <mailer-daemon@googlemail.com>"},
+                {"name": "To", "value": "bob.mentor@cbmentors.org"},
+                {"name": "Subject", "value": "Delivery Status Notification (Failure)"},
+                {"name": "Message-ID", "value": f"<{mid}@mail>"},
+            ],
+            "body": {"data": body},
+        },
+    }
+
+
+async def test_bounce_on_stored_thread_is_ingested_not_junked():
+    """Triage junks mailer-daemon mail — but a bounce replying on a STORED
+    conversation is the fate of our own send and must reach the thread."""
+    from comms.sync import ingest_message
+    from tests.test_comms_sync import FakeEspo as SyncEspo, raw_message, scope
+
+    espo, store = SyncEspo(), MemoryCommsStore()
+    # An outbound conversation exists on thread t1.
+    first = parse_message(raw_message())
+    conv = await ingest_message(espo, store, scope(), first)
+    assert conv
+    # The bounce arrives on the same thread from mailer-daemon: stored.
+    bounce = parse_message(_bounce_raw(thread="t1"))
+    got = await ingest_message(espo, store, scope(), bounce)
+    assert got == conv
+    stored = [r for (e, _), r in espo.records.items() if e == "CCommunication"]
+    assert any("Delivery Status" in (r.get("name") or "") for r in stored)
+
+
+async def test_bounce_without_stored_thread_stays_junk():
+    from comms.sync import ingest_message
+    from tests.test_comms_sync import FakeEspo as SyncEspo, scope
+
+    espo, store = SyncEspo(), MemoryCommsStore()
+    bounce = parse_message(_bounce_raw(thread="t-unknown"))
+    assert await ingest_message(espo, store, scope(), bounce) is None
+    assert not any(e == "CCommunication" for (e, _) in espo.records)

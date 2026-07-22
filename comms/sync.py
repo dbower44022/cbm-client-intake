@@ -158,7 +158,17 @@ async def ingest_message(
         if not known_conv:
             return None
 
-    if triage.is_junk(parsed):
+    # A delivery-status bounce reads as automated mail to the triage filter
+    # (mailer-daemon sender, "Delivery Status" subject) — but a bounce that
+    # REPLIES ON A STORED CONVERSATION is the fate of our own sent message,
+    # exactly what §3.4 must surface. Only that case is exempt: a bounce with
+    # no stored thread behind it stays junk like any other automated mail.
+    from core.gmail import looks_like_bounce
+
+    bounce_on_thread = bool(known_conv) and looks_like_bounce(
+        parsed.from_address, parsed.subject
+    )
+    if triage.is_junk(parsed) and not bounce_on_thread:
         log.debug("triage: dropping %s (%s)", parsed.rfc_message_id, parsed.subject)
         return None
 
