@@ -51,6 +51,9 @@ ENGAGEMENT_STATUSES = [
     "Dormant", "Inactive", "Abandoned", "Completed",
 ]
 
+# Default filter: every status that needs staff action on first login.
+DEFAULT_FILTER_STATUSES = [STATUS_SUBMITTED, "Assignment Declined", "Assignment Dormant"]
+
 # Link of CEngagement -> the hasMany of additional/secondary contacts.
 ENGAGEMENT_CONTACTS = "engagementContacts"
 

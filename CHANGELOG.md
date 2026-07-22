@@ -4,6 +4,19 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.135.0] — 2026-07-22
+
+**feat(assignments): Client Administration default status filter = the
+action-needed set.** First load of the engagements grid (no `?status=`
+params) now filters to **Submitted + Assignment Declined + Assignment
+Dormant** — every `engagementStatus` value that requires staff action —
+instead of Submitted alone (Doug's request). Server-side default
+(`assignments/service.DEFAULT_FILTER_STATUSES`, applied in the router when
+no valid statuses arrive), so the frontend adopts it from
+`selectedStatuses` with no JS change; the filter's initial summary text
+updated to match ("Status: 3 selected"). Explicit status selections behave
+exactly as before.
+
 ## [0.134.0] — 2026-07-22
 
 **feat(ops): Submission Admin — editable Request status + the complete

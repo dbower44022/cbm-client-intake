@@ -105,10 +105,11 @@ async def engagements(
 ) -> dict:
     user = _require_user(request)
     client = client_for(get_settings(), user)
-    # Keep only known statuses; default to Submitted (the primary triage view).
+    # Keep only known statuses; default to the action-needed set (Submitted +
+    # Assignment Declined + Assignment Dormant — the primary triage view).
     statuses = [s for s in (status or []) if s in service.ENGAGEMENT_STATUSES]
     if not statuses:
-        statuses = [service.STATUS_SUBMITTED]
+        statuses = list(service.DEFAULT_FILTER_STATUSES)
     try:
         rows = await service.list_engagements(client, statuses)
     except EspoError as exc:

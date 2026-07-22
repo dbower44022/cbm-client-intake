@@ -1134,6 +1134,34 @@ def test_request_gate_rejects_wrong_team_with_team_name(monkeypatch):
         get_settings.cache_clear()  # don't leak the patched env into other tests
 
 
+def test_engagements_default_filter_is_action_needed_set(monkeypatch):
+    """No ?status= params → Submitted + Assignment Declined + Assignment Dormant."""
+    monkeypatch.setenv("SESSION_SECRET", "test-secret")
+    get_settings.cache_clear()
+    staff = {"userId": "u", "userName": "x", "name": "X", "isAdmin": True,
+             "token": "t", "teams": [], "roles": []}
+    monkeypatch.setattr("assignments.auth.current_user", lambda request: staff)
+    monkeypatch.setattr("assignments.router.client_for", lambda settings, user: object())
+    seen = {}
+
+    async def fake_list(client, statuses):
+        seen["statuses"] = statuses
+        return []
+
+    monkeypatch.setattr(service, "list_engagements", fake_list)
+    from core.app import create_app
+    from forms import info_request
+    try:
+        with TestClient(create_app([info_request.SPEC])) as c:
+            r = c.get("/assignments/api/engagements")
+        assert r.status_code == 200
+        expected = ["Submitted", "Assignment Declined", "Assignment Dormant"]
+        assert r.json()["selectedStatuses"] == expected
+        assert seen["statuses"] == expected
+    finally:
+        get_settings.cache_clear()  # don't leak the patched env into other tests
+
+
 # --- refresh_membership (portal session restore re-reads CRM teams) ----------
 
 class _RefreshClient:
