@@ -1765,6 +1765,21 @@ def test_session_endpoint_reports_domain(monkeypatch):
     assert not any("placeholder" in t for t in tabs)
 
 
+def test_calendar_busy_endpoint_gated_and_degrades(monkeypatch):
+    # Unauthenticated -> 401; signed in with GCAL_EVENTS off (the test env
+    # default) -> a 200 that degrades to no shading, never an error.
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.get("/mentorsessions/api/calendar/busy",
+                  params={"timeMin": "2026-07-23 04:00:00", "timeMax": "2026-07-24 04:00:00"})
+        assert r.status_code == 401
+    _as(monkeypatch, _USER)
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.get("/mentorsessions/api/calendar/busy",
+                  params={"timeMin": "2026-07-23 04:00:00", "timeMax": "2026-07-24 04:00:00"})
+    assert r.status_code == 200
+    assert r.json() == {"available": False, "busy": []}
+
+
 def test_session_config_reports_status_accept(monkeypatch):
     # The mentor grid's accept action rides the /session config; the other
     # domains have no engagement lifecycle so they report None.

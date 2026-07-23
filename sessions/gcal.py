@@ -32,9 +32,17 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
+from datetime import datetime, timedelta
 from typing import Any, Optional
 
-from core.gcalendar import CalendarClient, CalendarError, build_event_body, event_times, meet_link
+from core.gcalendar import (
+    CalendarClient,
+    CalendarError,
+    build_event_body,
+    busy_intervals,
+    event_times,
+    meet_link,
+)
 from core.gmeet import MeetClient, meeting_code
 from sessions.config import DomainConfig
 from sessions.service import (
@@ -164,6 +172,71 @@ async def _sync(
         ],
     })
     return {"ok": True, "eventId": event_id, "updated": True}
+
+
+#: The busy lookup never scans more than this window in one call (the picker
+#: asks for one local day; the cap only bounds a misbehaving client).
+_BUSY_WINDOW_MAX = timedelta(days=8)
+
+
+async def calendar_busy(
+    settings: Any,
+    client: SessionClient,
+    user_id: str,
+    time_min: str,
+    time_max: str,
+    *,
+    exclude_session_id: Optional[str] = None,
+    calendar: Optional[CalendarClient] = None,
+) -> dict[str, Any]:
+    """Busy blocks on the signed-in manager's OWN calendar, for the session
+    editor's time-picker conflict shading.
+
+    ``time_min``/``time_max`` are CRM-style UTC stamps (``YYYY-MM-DD HH:MM:SS``).
+    Read-only and best-effort by design: any failure — flag off, no service
+    account, no CBM mailbox, a bad window, Google down — degrades to
+    ``{"available": False, "busy": []}`` and the picker simply shows no
+    shading. It NEVER blocks a save: a shaded slot stays selectable (the
+    user deconflicts manually — Doug's ruling). ``exclude_session_id`` keeps
+    the session's own event from reading as a conflict when editing."""
+    empty = {"available": False, "busy": []}
+    if not getattr(settings, "gcal_events", False):
+        return empty
+    try:
+        lo = datetime.strptime(time_min, "%Y-%m-%d %H:%M:%S")
+        hi = datetime.strptime(time_max, "%Y-%m-%d %H:%M:%S")
+    except (ValueError, TypeError):
+        return empty
+    if not (lo < hi <= lo + _BUSY_WINDOW_MAX):
+        return empty
+    try:
+        from comms.service import get_service_account  # shared, process-cached
+
+        sa_info = await get_service_account(settings)
+        if sa_info is None:
+            return empty
+        cal = calendar
+        if cal is None:
+            got = await _client_for_user(settings, client, user_id, sa_info)
+            if isinstance(got, dict):  # no CBM mailbox — no calendar to check
+                return empty
+            cal = got
+        exclude_event: Optional[str] = None
+        if exclude_session_id:
+            try:
+                rec = await client.get(SESSION, exclude_session_id, select=CAL_FIELD)
+                exclude_event = rec.get(CAL_FIELD)
+            except Exception:  # noqa: BLE001 — field missing/unreadable: shade anyway
+                exclude_event = None
+        fmt = "%Y-%m-%dT%H:%M:%SZ"
+        events = await cal.list_events(lo.strftime(fmt), hi.strftime(fmt))
+        return {
+            "available": True,
+            "busy": busy_intervals(events, exclude_event_id=exclude_event),
+        }
+    except Exception as exc:  # noqa: BLE001 — shading is decoration, never an error
+        log.warning("calendar busy lookup failed for user %s: %s", user_id, exc)
+        return empty
 
 
 async def _client_for_user(

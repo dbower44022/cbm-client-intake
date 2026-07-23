@@ -4,6 +4,81 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.142.0] — 2026-07-23
+
+**feat(sessions): Discussion pane on the Partner & Funder Overview**
+(Doug's request; decisions settled 2026-07-23 —
+`prompts/record-discussion-pane-prompt.md`). The Submission-Admin
+Discussion UI is ported onto the Overview tab of Partner Management
+(`/partnersessions`) and Funder Management (`/sponsorsessions`) as a fourth
+column — **facts rail | Session Notes | Discussion (far right)**. It's a
+staff-internal, attributed, timestamped, **append-only** comment stream (no
+edit/delete) where a record's managers leave running notes to each other,
+separate from the record's own Notes field.
+- **Storage:** a NEW generalized `record_comment` Postgres table keyed by
+  `(parent_type, parent_id)` (Alembic **0020** — pre-deploy migrate), a
+  sibling of `submission_comment`; the existing Submission-Admin comment path
+  is untouched. **App-only** — comments are NEVER written to the CRM or shown
+  to the partner/funder. `PostgresStore.add_record_comment` /
+  `list_record_comments`.
+- **Gating:** a per-domain `DomainConfig.discussion_enabled` flag (True on
+  partner + sponsor; mentor can be switched on later) gates BOTH the endpoint
+  registration and the frontend pane, exactly like `contributions_link` gates
+  the contributions routes — the mentor router never registers it. Visibility
+  is the domain's existing per-request team gate (team-wide, staff-internal).
+- **Endpoints** (registered only when `discussion_enabled`):
+  `GET/POST /{slug}/api/records/{parent_id}/comments` — the parent record is
+  read AS THE USER first (the ACL gate), comments read/written via the durable
+  store; attributed to `userName`/`name` (display name → avatar initials);
+  503 when no store is configured. The `GET /records/{parent_id}` detail merges
+  a `comments` list best-effort at the ROUTER (the service `get_detail` stays
+  pure) — a store failure never fails the detail.
+- **Frontend:** a `#discussionPane` column right of the notes; `renderDiscussion`
+  (ported `initials`/`avatar` + comment rows + add box) appends on success (no
+  refetch — the /ops pattern). `config.discussionEnabled` off, or a detail
+  without `comments` (no store), hides the pane and keeps the 3-column grid.
+  Press feedback rides the shared `busy.js` (no manual spinner).
+- 9 new router/config tests + a live-Postgres `record_comment` round-trip;
+  migration 0020 up+down verified; the pane verified in the sessions
+  stub-harness with **real computed styles** — 4 grid tracks
+  (`340px 6px notes Discussion`), left-to-right order facts→notes→Discussion,
+  add-comment POST recorded + appended + trimmed. The harness caught (and the
+  fix confirmed) a `display:flex`-beats-`[hidden]` bug on the pane
+  (`.sx__ov-discussion[hidden]{display:none!important}`). Full suite green.
+
+## [0.141.0] — 2026-07-23
+
+**feat(sessions): the session editor's time picker shades calendar
+conflicts** (Doug's request 2026-07-23). With a date chosen, opening the
+Time selector checks the signed-in user's OWN Google calendar and renders
+each half-hour slot that overlaps an existing meeting with a light-red
+background + a tooltip naming the busy event(s), plus a one-line note in
+the popover. **Advisory only:** a shaded slot stays fully selectable — the
+user may deliberately double-book and deconflict manually (the ruling).
+One shared frontend covers every Create/Edit Session surface (all three
+session domains + the dedicated record page); both session-editor datetime
+fields (Start and Next session) get the shading, while Details-tab datetime
+fields stay plain.
+- Backend: new `GET /{slug}/api/calendar/busy?timeMin=&timeMax=[&session=]`
+  (UTC stamps, window capped at 8 days) → `sessions.gcal.calendar_busy` →
+  the delegated `CalendarClient.list_events` (Calendar `events.list`,
+  recurrences expanded — covered by the ALREADY-authorized
+  `calendar.events` DWD scope, so no Google-side work) →
+  `core.gcalendar.busy_intervals` (skips cancelled / transparent-"free" /
+  all-day / user-declined events; `session=` excludes the edited session's
+  own event via its stored `googleCalendarEventId`). Rides the existing
+  `GCAL_EVENTS` gate; best-effort everywhere — any failure (flag off, no
+  service account, no cbmEmail, Google down, bad window) degrades to
+  `{"available": false, "busy": []}` and the picker simply shows no
+  shading. Never blocks a save.
+- Frontend: `makeDateTimeInput` gains an optional busy-fetch hook (marked
+  on popover open + on date change while open; stale responses discarded);
+  per-day result cache cleared on each editor open; slot buttons get
+  `.conflict` (declared before `.sel`, so a selected conflicting slot still
+  renders navy).
+- 13 new tests (busy_intervals, list_events request shape, calendar_busy
+  incl. exclude/degrade paths, router gating). 1046 green.
+
 ## [0.140.0] — 2026-07-23
 
 **feat(monitoring): worker-liveness alerting — the dead-worker gap is closed**

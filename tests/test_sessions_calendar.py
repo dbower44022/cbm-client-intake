@@ -33,11 +33,12 @@ def _service_account(monkeypatch):
 
 
 class FakeCalendar:
-    def __init__(self, create_result=None, fail=False):
+    def __init__(self, create_result=None, fail=False, events=None):
         self.mailbox = "mgr@cbmentors.org"
-        self.created, self.patched, self.deleted, self.gets = [], [], [], []
+        self.created, self.patched, self.deleted, self.gets, self.listed = [], [], [], [], []
         self.create_result = create_result or {"id": "ev1", "hangoutLink": MEET}
         self.fail = fail
+        self.events = events or []  # list_events rows (the busy lookup)
 
     async def create_event(self, body, *, send_updates="all"):
         if self.fail:
@@ -57,6 +58,12 @@ class FakeCalendar:
 
     async def delete_event(self, event_id, *, send_updates="all"):
         self.deleted.append((event_id, send_updates))
+
+    async def list_events(self, time_min, time_max):
+        if self.fail:
+            raise RuntimeError("google is down")
+        self.listed.append((time_min, time_max))
+        return list(self.events)
 
 
 def _wire(monkeypatch, fake):
@@ -537,3 +544,77 @@ async def test_hand_typed_link_never_configures_transcription(monkeypatch):
         owner_user_id="u1", settings=SETTINGS_TRANSCRIPTS)
     assert "transcription" not in session["calendar"]
     assert meet.enabled == []
+
+
+# --- calendar_busy (the time picker's conflict shading) -------------------------
+
+BUSY_EVENTS = [
+    {"id": "evA", "summary": "Board call",
+     "start": {"dateTime": "2026-07-23T13:00:00Z"},
+     "end": {"dateTime": "2026-07-23T14:00:00Z"}},
+    {"id": "ev-own", "summary": "This session",
+     "start": {"dateTime": "2026-07-23T15:00:00Z"},
+     "end": {"dateTime": "2026-07-23T16:00:00Z"}},
+]
+WINDOW = ("2026-07-23 04:00:00", "2026-07-24 04:00:00")
+
+
+async def test_busy_flag_off_degrades(monkeypatch):
+    crm, cal = _fake_crm(), FakeCalendar(events=BUSY_EVENTS)
+    _wire(monkeypatch, cal)
+    out = await gcal.calendar_busy(SETTINGS_OFF, crm, "u1", *WINDOW)
+    assert out == {"available": False, "busy": []}
+    assert cal.listed == []
+
+
+async def test_busy_happy_path_resolves_mailbox_and_converts(monkeypatch):
+    crm, cal = _fake_crm(), FakeCalendar(events=BUSY_EVENTS)
+    _wire(monkeypatch, cal)
+    out = await gcal.calendar_busy(SETTINGS_ON, crm, "u1", *WINDOW)
+    assert out["available"] is True
+    assert out["busy"] == [
+        {"start": "2026-07-23 13:00:00", "end": "2026-07-23 14:00:00", "summary": "Board call"},
+        {"start": "2026-07-23 15:00:00", "end": "2026-07-23 16:00:00", "summary": "This session"},
+    ]
+    assert cal.mailbox == "mgr@cbmentors.org"  # own cbmEmail, via _client_for_user
+    assert cal.listed == [("2026-07-23T04:00:00Z", "2026-07-24T04:00:00Z")]
+
+
+async def test_busy_excludes_the_edited_sessions_own_event(monkeypatch):
+    crm = _fake_crm()
+    crm.records[("CSession", "S1")] = {"googleCalendarEventId": "ev-own"}
+    cal = FakeCalendar(events=BUSY_EVENTS)
+    _wire(monkeypatch, cal)
+    out = await gcal.calendar_busy(
+        SETTINGS_ON, crm, "u1", *WINDOW, exclude_session_id="S1")
+    assert [b["summary"] for b in out["busy"]] == ["Board call"]
+
+
+async def test_busy_bad_window_degrades_without_google(monkeypatch):
+    crm, cal = _fake_crm(), FakeCalendar(events=BUSY_EVENTS)
+    _wire(monkeypatch, cal)
+    for lo, hi in [
+        ("not a stamp", WINDOW[1]),                       # unparseable
+        (WINDOW[1], WINDOW[0]),                           # reversed
+        ("2026-07-01 00:00:00", "2026-08-01 00:00:00"),   # wider than the cap
+    ]:
+        out = await gcal.calendar_busy(SETTINGS_ON, crm, "u1", lo, hi)
+        assert out == {"available": False, "busy": []}
+    assert cal.listed == []
+
+
+async def test_busy_google_failure_degrades(monkeypatch):
+    crm, cal = _fake_crm(), FakeCalendar(fail=True)
+    _wire(monkeypatch, cal)
+    out = await gcal.calendar_busy(SETTINGS_ON, crm, "u1", *WINDOW)
+    assert out == {"available": False, "busy": []}
+
+
+async def test_busy_no_cbm_mailbox_degrades(monkeypatch):
+    crm = _fake_crm()
+    crm.records[("CMentorProfile", "mp1")] = {"cbmEmail": ""}
+    cal = FakeCalendar(events=BUSY_EVENTS)
+    _wire(monkeypatch, cal)
+    out = await gcal.calendar_busy(SETTINGS_ON, crm, "u1", *WINDOW)
+    assert out == {"available": False, "busy": []}
+    assert cal.listed == []

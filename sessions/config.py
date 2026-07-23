@@ -202,6 +202,15 @@ class DomainConfig:
     contributions_donor_account_attr: Optional[str] = None
     contributions_donor_contact_attr: Optional[str] = None
 
+    # --- Discussion pane (2026-07-23; prompts/record-discussion-pane-prompt.md).
+    # Enables the Overview's staff-internal, attributed comment stream (the
+    # Submission-Admin Discussion, ported). Set on partner + sponsor; a per-domain
+    # flag so mentor can be switched on later. Backed by the durable store's
+    # ``record_comment`` table keyed by (parent_entity, record id) — app-only,
+    # NEVER written to the CRM. Gates BOTH the endpoint registration and the
+    # frontend pane (like ``contributions_link`` gates the contributions routes).
+    discussion_enabled: bool = False
+
     @property
     def session_parent_fk(self) -> str:
         return f"{self.session_parent_link}Id"
@@ -512,6 +521,7 @@ PARTNER = DomainConfig(
         ("Partnership", "CPartnerProfile", "id"),  # the partnership record itself, first
         ("Company", "Account", "partnerCompanyId"),
     ),
+    discussion_enabled=True,
 )
 
 SPONSOR = DomainConfig(
@@ -592,6 +602,7 @@ SPONSOR = DomainConfig(
     contributions_parent_fk="sponsorProfileId",
     contributions_donor_account_attr="sponsorCompanyId",
     contributions_donor_contact_attr="sponsorContactId",
+    discussion_enabled=True,
 )
 
 DOMAINS: dict[str, DomainConfig] = {d.slug: d for d in (MENTOR, PARTNER, SPONSOR)}

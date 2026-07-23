@@ -269,9 +269,16 @@ td.sxd__actions { text-align: right; white-space: nowrap; }
    splitter is the middle grid track; --ov-left is set by the drag handler. */
 .sx__ov { display: grid; grid-template-columns: var(--ov-left, 340px) 6px 1fr; gap: 1rem; align-items: start; }
 @media (max-width: 900px) { .sx__ov { grid-template-columns: 1fr; } }
+/* Discussion variant (partner + sponsor, config.discussionEnabled): a fourth
+   column to the RIGHT of the notes — facts | splitter | notes | Discussion.
+   The Discussion pane has a min-width so it can't be crushed, and the whole
+   grid collapses to a single stacked column earlier (Discussion drops below
+   the notes) — no page-width cap. */
+.sx__ov--discuss { grid-template-columns: var(--ov-left, 340px) 6px minmax(0, 1fr) minmax(320px, 0.85fr); }
+@media (max-width: 1100px) { .sx__ov--discuss { grid-template-columns: 1fr; } }
 /* min-width:0 lets these grid tracks shrink below their content (else the note
    feed overflows the viewport horizontally). */
-.sx__ov-facts, .sx__ov-notes { min-width: 0; }
+.sx__ov-facts, .sx__ov-notes, .sx__ov-discussion { min-width: 0; }
 .sx__ov-facts { position: sticky; top: 0.5rem; }
 .sx__ov-facts > * + * { margin-top: 0.9rem; }
 .sx__ov-facts > :empty { display: none; }  /* nextSession/otherContacts/blocks when empty */
@@ -319,6 +326,40 @@ td.sxd__actions { text-align: right; white-space: nowrap; }
   touch-action: none;
 }
 .sx__overall-resize:hover { background-color: rgba(203, 150, 59, 0.12); }
+
+/* --- Discussion pane (partner + sponsor): staff-internal attributed comments,
+   ported from Submission Admin's Discussion into the sx__ namespace. --- */
+.sx__ov-discussion {
+  border: 1px solid var(--cbm-border, #e3e7ec); border-radius: var(--cbm-radius, 8px);
+  background: var(--cbm-white, #fff); display: flex; flex-direction: column;
+}
+/* An explicit display wins over the `hidden` attribute's UA display:none, so the
+   pane would still show when disabled/no-store — guard it (the display:flex-beats-
+   [hidden] gotcha). The inner #discussion keeps the column layout when shown. */
+.sx__ov-discussion[hidden] { display: none !important; }
+.sx__ov-discussion #discussion { display: flex; flex-direction: column; min-height: 16rem; }
+.sx__disc-head { display: flex; align-items: baseline; justify-content: space-between;
+  gap: 0.6rem; padding: 0.6rem 0.85rem; border-bottom: 1px solid #f0f2f5; }
+.sx__disc-head .sx__overall-h { margin: 0; color: var(--cbm-navy, #123); font-size: 1.05rem; }
+.sx__disc-hint { font-size: 11px; color: var(--cbm-slate-700, #667); flex: none; }
+.sx__disc-list { padding: 0.75rem 0.85rem; display: flex; flex-direction: column;
+  gap: 0.85rem; flex: 1; max-height: 60vh; overflow-y: auto; }
+.sx__comment { display: flex; gap: 0.6rem; }
+.sx__comment-body { flex: 1; min-width: 0; }
+.sx__comment-meta { font-size: 12px; margin-bottom: 0.1rem; }
+.sx__comment-meta b { color: var(--cbm-navy, #123); }
+.sx__comment-meta time { color: var(--cbm-slate-700, #667); margin-left: 0.4rem; }
+.sx__comment-body p { margin: 0; font-size: 0.93rem; line-height: 1.45; white-space: pre-wrap;
+  overflow-wrap: anywhere; }
+.sx__av { width: 22px; height: 22px; border-radius: 50%; background: #8a5a00; color: #fff;
+  font-size: 10px; font-weight: 700; display: inline-flex; align-items: center;
+  justify-content: center; flex: none; }
+.sx__disc-add { margin-top: auto; border-top: 1px solid #f0f2f5; padding: 0.7rem 0.85rem 0.85rem; }
+.sx__disc-add textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: 0.92rem;
+  padding: 0.5rem; min-height: 3rem; border: 1px solid var(--cbm-border, #d7dce2);
+  border-radius: var(--cbm-radius, 6px); resize: vertical; }
+.sx__disc-add-row { display: flex; justify-content: flex-end; margin-top: 0.5rem; }
+.sx__disc-add-row .cbm-button { padding: 0.35rem 0.9rem; font-size: var(--cbm-text-sm, 0.9rem); }
 
 /* Right-click context menu (notes panel View/Edit). */
 .sx__ctxmenu {
@@ -838,7 +879,16 @@ textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
   font-size: 12.5px; cursor: pointer; font-family: inherit;
 }
 .sx__timegrid button:hover { background: #f4f6f8; }
+/* Calendar-conflict shading: the slot overlaps a meeting already on the
+   user's own calendar. Advisory only — still clickable (declared BEFORE .sel
+   so a selected conflicting slot renders navy like any selection). */
+.sx__timegrid button.conflict { background: #fdecea; border-color: #edb4ac; }
+.sx__timegrid button.conflict:hover { background: #fadbd7; }
 .sx__timegrid button.sel { background: var(--cbm-navy, #173B60); border-color: var(--cbm-navy, #173B60); color: #fff; font-weight: 600; }
+.sx__tp-conflictnote {
+  font-size: 11.5px; line-height: 1.35; color: #8a3b31; background: #fdecea;
+  border: 1px solid #f3d0cb; border-radius: 5px; padding: 6px 8px; margin-bottom: 9px;
+}
 .sx__tp-foot { display: flex; align-items: center; gap: 8px; margin-top: 11px; padding-top: 10px; border-top: 1px solid #f0f2f4; }
 .sx__tp-foot span { font-size: 12px; color: #77828f; }
 .sx__tp-foot input { width: 92px; padding: 5px 7px; font-size: 12.5px; }

@@ -111,6 +111,10 @@ class DetailsSaveIn(BaseModel):
     changes: dict = {}
 
 
+class CommentIn(BaseModel):
+    body: str
+
+
 class IncludeIn(BaseModel):
     gmailThreadId: str
 
@@ -282,12 +286,36 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             # True => the Documents tab talks to the real endpoints below;
             # false => it shows a "coming soon" placeholder.
             "docsEnabled": get_settings().gdrive_docs,
+            # True => the Overview shows the staff-internal Discussion pane
+            # (partner + sponsor). Also requires the durable store to be
+            # configured; the frontend hides the pane if a comments read 503s.
+            "discussionEnabled": cfg.discussion_enabled,
         }
 
     @router.post("/logout")
     async def logout(request: Request) -> dict:
         clear_session(request)
         return {"status": "ok"}
+
+    @router.get("/calendar/busy")
+    async def calendar_busy(
+        request: Request, timeMin: str, timeMax: str, session: str = ""
+    ) -> dict:
+        """Busy blocks on the signed-in user's OWN Google calendar between two
+        UTC stamps (``YYYY-MM-DD HH:MM:SS``) — the session editor's time picker
+        shades conflicting slots light red. Purely advisory: a shaded time is
+        still selectable (deconflicting is the user's responsibility), and any
+        failure degrades to ``available: false`` with no shading — this
+        endpoint never errors. ``session`` (optional) = the session being
+        edited, so its own event doesn't read as a conflict."""
+        user = _require_user(request)
+        settings = get_settings()
+        from sessions import gcal  # lazy — gcal imports sessions.service
+
+        return await gcal.calendar_busy(
+            settings, client_for(settings, user), user["userId"],
+            timeMin, timeMax, exclude_session_id=session or None,
+        )
 
     @router.get("/records")
     async def records(request: Request) -> dict:
@@ -311,14 +339,34 @@ def make_router(cfg: DomainConfig) -> APIRouter:
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not load field options")
 
+    def _discussion_store(request: Request):
+        """The durable store when discussion is enabled AND a database is
+        configured, else None. The comment endpoints 503 on None; the detail
+        merge just omits ``comments`` (the frontend hides the pane)."""
+        if not cfg.discussion_enabled:
+            return None
+        return getattr(request.app.state, "submission_store", None)
+
     @router.get("/records/{parent_id}")
     async def record_detail(parent_id: str, request: Request) -> dict:
         user = _require_user(request)
         client = client_for(get_settings(), user)
         try:
-            return await service.get_detail(cfg, client, parent_id)
+            detail = await service.get_detail(cfg, client, parent_id)
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not load record")
+        # The record read above is the ACL gate; the discussion is a best-effort
+        # add-on keyed by (parent entity, id). Never fail the detail over it —
+        # if the store is absent the frontend simply hides the pane.
+        store = _discussion_store(request)
+        if store is not None:
+            try:
+                detail["comments"] = await store.list_record_comments(
+                    cfg.parent_entity, parent_id
+                )
+            except Exception as exc:  # noqa: BLE001 — discussion is non-load-bearing
+                log.warning("discussion read failed (%s/%s): %s", cfg.slug, parent_id, exc)
+        return detail
 
     @router.get("/details/{parent_id}")
     async def details(parent_id: str, request: Request) -> dict:
@@ -508,6 +556,55 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 raise HTTPException(status_code=400, detail=str(exc))
             except EspoError as exc:
                 raise _crm_failure(request, exc, "Could not save the contribution")
+
+    if cfg.discussion_enabled:
+        # Staff-internal Discussion pane (partner + sponsor) — an attributed,
+        # append-only comment stream keyed by (parent entity, record id) in the
+        # durable store. App-only: NEVER written to the CRM or shown to the
+        # partner/funder. Registered ONLY on a discussion-enabled domain (the
+        # contributions-endpoint precedent), so the mentor router never has it.
+
+        @router.get("/records/{parent_id}/comments")
+        async def list_comments(parent_id: str, request: Request) -> dict:
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            # Read the parent AS THE USER first — that is the ACL gate (a user who
+            # can't read the record can't read its discussion).
+            try:
+                await client.get(cfg.parent_entity, parent_id, select="id")
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not load record")
+            store = _discussion_store(request)
+            if store is None:
+                raise HTTPException(status_code=503, detail="Discussion is not available.")
+            comments = await store.list_record_comments(cfg.parent_entity, parent_id)
+            return {"comments": comments}
+
+        @router.post("/records/{parent_id}/comments")
+        async def add_comment(parent_id: str, body: CommentIn, request: Request) -> dict:
+            user = _require_user(request)
+            text = (body.body or "").strip()
+            if not text:
+                raise HTTPException(status_code=422, detail="A comment can't be empty.")
+            client = client_for(get_settings(), user)
+            # ACL gate: the caller must be able to read the record it's about.
+            try:
+                await client.get(cfg.parent_entity, parent_id, select="id")
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not load record")
+            store = _discussion_store(request)
+            if store is None:
+                raise HTTPException(status_code=503, detail="Discussion is not available.")
+            comment = await store.add_record_comment(
+                cfg.parent_entity, parent_id,
+                author=user["userName"],
+                author_name=user.get("name") or user["userName"],
+                body=text,
+            )
+            log.info(
+                "discussion comment on %s/%s by %s", cfg.slug, parent_id, user["userName"]
+            )
+            return {"status": "ok", "comment": comment}
 
     @router.get("/sessions/{session_id}")
     async def session_detail(session_id: str, request: Request) -> dict:

@@ -693,6 +693,105 @@
     renderOtherContacts(d);
     renderOverallNotes(d);
     renderNoteFeed(d.noteFeed || []);
+    renderDiscussion(d);
+  }
+
+  // --- Discussion pane (partner + sponsor): a staff-internal, attributed,
+  // append-only comment stream — the managers of a partner/funder leaving
+  // running notes to each other about the record, separate from its Notes
+  // field. App-only (never written to the CRM). Enabled by
+  // config.discussionEnabled; when off (mentor, or no durable store) the pane
+  // stays hidden and the Overview grid keeps its 3-column layout.
+  function discussionOn() { return !!(config && config.discussionEnabled); }
+
+  function commentTime(s) {
+    var d = s ? new Date(String(s).indexOf("T") < 0 ? String(s).replace(" ", "T") + "Z" : s) : null;
+    if (!d || isNaN(d)) return "";
+    return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  }
+  function commentInitials(name) {
+    var parts = String(name || "?").trim().split(/\s+/);
+    return ((parts[0] || "?")[0] + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
+  }
+  function commentAvatar(name) {
+    var a = document.createElement("span"); a.className = "sx__av";
+    a.textContent = commentInitials(name); a.title = name || ""; return a;
+  }
+
+  function renderDiscussion(d) {
+    var grid = $("ovGrid");
+    var pane = $("discussionPane");
+    if (!discussionOn()) {
+      if (pane) hide(pane);
+      if (grid) grid.classList.remove("sx__ov--discuss");
+      return;
+    }
+    // The record read (get_detail) omits `comments` only when the durable store
+    // isn't configured — hide the pane in that case (mirrors comms/docs).
+    if (d && !("comments" in d)) {
+      if (pane) hide(pane);
+      if (grid) grid.classList.remove("sx__ov--discuss");
+      return;
+    }
+    if (grid) grid.classList.add("sx__ov--discuss");
+    if (pane) show(pane);
+
+    var box = $("discussion"); box.innerHTML = "";
+    var head = document.createElement("div"); head.className = "sx__disc-head";
+    var h = document.createElement("h3"); h.className = "sx__overall-h"; h.textContent = "Discussion";
+    var hint = document.createElement("span"); hint.className = "sx__disc-hint";
+    hint.textContent = "internal · staff only";
+    head.appendChild(h); head.appendChild(hint); box.appendChild(head);
+
+    var list = document.createElement("div"); list.className = "sx__disc-list";
+    var comments = (d && d.comments) || [];
+    if (!comments.length) {
+      var empty = document.createElement("p"); empty.className = "sx__muted";
+      empty.textContent = "No comments yet — start the thread for the team.";
+      list.appendChild(empty);
+    } else {
+      comments.forEach(function (c) { list.appendChild(commentRow(c)); });
+    }
+    box.appendChild(list);
+
+    // Add box.
+    var add = document.createElement("div"); add.className = "sx__disc-add";
+    var ta = document.createElement("textarea");
+    ta.placeholder = "Add a comment for the team…"; ta.rows = 3;
+    var row = document.createElement("div"); row.className = "sx__disc-add-row";
+    var btn = document.createElement("button");
+    btn.type = "button"; btn.className = "cbm-button"; btn.textContent = "Comment";
+    btn.addEventListener("click", async function () {
+      var text = ta.value.trim();
+      if (!text) { ta.focus(); return; }
+      try {
+        var res = await api("/records/" + encodeURIComponent(d.id) + "/comments",
+          { method: "POST", body: JSON.stringify({ body: text }) });
+        d.comments = (d.comments || []).concat(res.comment);
+        // Append on success (no full refetch — the /ops pattern).
+        if (list.querySelector(".sx__muted")) list.innerHTML = "";
+        list.appendChild(commentRow(res.comment));
+        ta.value = "";
+      } catch (e) {
+        if (e.status === 401) { showLogin(); return; }
+        notice("detailNotice", e.message, "error");
+      }
+    });
+    row.appendChild(btn); add.appendChild(ta); add.appendChild(row);
+    box.appendChild(add);
+  }
+
+  function commentRow(c) {
+    var row = document.createElement("div"); row.className = "sx__comment";
+    row.appendChild(commentAvatar(c.author_name || c.author));
+    var b = document.createElement("div"); b.className = "sx__comment-body";
+    var meta = document.createElement("div"); meta.className = "sx__comment-meta";
+    var who = document.createElement("b"); who.textContent = c.author_name || c.author;
+    var when = document.createElement("time"); when.textContent = commentTime(c.created_at);
+    meta.appendChild(who); meta.appendChild(when);
+    var p = document.createElement("p"); p.textContent = c.body;
+    b.appendChild(meta); b.appendChild(p); row.appendChild(b);
+    return row;
   }
 
   // Bold, easy-to-read "Next session" panel (soonest upcoming session), on the
@@ -5927,6 +6026,7 @@
 
   async function openEditor(sessionId) {
     editorCreateToken = sessionId ? null : newCreateToken();
+    busyCache = {};  // fresh calendar-conflict data per editor open
     if (sessionId) {
       try { currentSession = await api("/sessions/" + encodeURIComponent(sessionId)); }
       catch (e) { if (e.status === 401) { showLogin(); return; } notice("detailNotice", e.message, "error"); return; }
@@ -6071,7 +6171,11 @@
   function buildField(f, value) {
     var wrap = document.createElement("div"); wrap.className = "cbm-field field-" + f.type;
     if (f.big) wrap.className += " cbm-field--big";  // large, prominent editor (notes/action items)
-    var input = makeInput(f, value); input.dataset.field = f.name; input.dataset.type = f.type;
+    // Session-editor time pickers (Start, Next session) shade slots that
+    // conflict with the user's own calendar; Details-tab datetime fields
+    // (built elsewhere) don't set the flag and stay plain.
+    var spec = f.type === "datetime" ? Object.assign({ busyCheck: true }, f) : f;
+    var input = makeInput(spec, value); input.dataset.field = f.name; input.dataset.type = f.type;
     var required = fieldRequired.indexOf(f.name) >= 0;
     if (required) { input.dataset.required = "1"; input.dataset.label = f.label; }
     if (f.type === "bool") {
@@ -6127,7 +6231,7 @@
     for (var h = fromH; h < toH; h++) { out.push(fmtTimeText(h, 0)); out.push(fmtTimeText(h, 30)); }
     return out;
   }
-  function makeDateTimeInput(value) {
+  function makeDateTimeInput(value, busyFetch) {
     var wrap = document.createElement("div"); wrap.className = "sx__dtwrap";
     var d = parseNaive(value);
     var dateEl = document.createElement("input"); dateEl.type = "date"; dateEl.className = "sx__dtdate";
@@ -6137,6 +6241,54 @@
     timeEl.readOnly = true; timeEl.placeholder = "Time";
     if (d) timeEl.value = fmtTimeText(d.getHours(), d.getMinutes());
     var pop = document.createElement("div"); pop.className = "sx__timepop";
+    // Calendar-conflict shading (busyFetch set = the session editor, gcal on):
+    // slots overlapping a meeting already on the user's own calendar get a
+    // light-red tint + a tooltip naming it. Advisory ONLY — the slot stays
+    // clickable; picking it schedules a conflicting event and deconflicting
+    // is the user's responsibility. Best-effort: no busy data = no shading.
+    var conflictNote = null;
+    if (busyFetch) {
+      conflictNote = document.createElement("div");
+      conflictNote.className = "sx__tp-conflictnote";
+      conflictNote.textContent =
+        "Shaded times conflict with your calendar. You can still choose one — " +
+        "you'll need to resolve the overlap yourself.";
+      conflictNote.hidden = true;
+      pop.appendChild(conflictNote);
+    }
+    function markConflicts() {
+      if (!busyFetch) return;
+      var buttons = pop.querySelectorAll(".sx__timegrid button");
+      Array.prototype.forEach.call(buttons, function (b) {
+        b.classList.remove("conflict"); b.removeAttribute("title");
+      });
+      conflictNote.hidden = true;
+      var dm = (dateEl.value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!dm) return;
+      var dateAtCall = dateEl.value;
+      busyFetch(dateAtCall).then(function (busy) {
+        // Stale by the time it returns (date changed / popover closed) — skip.
+        if (!busy || !busy.length || dateEl.value !== dateAtCall ||
+            !pop.classList.contains("open")) return;
+        var any = false;
+        Array.prototype.forEach.call(buttons, function (b) {
+          var t = parseTimeText(b.textContent);
+          if (!t) return;
+          var s = new Date(+dm[1], +dm[2] - 1, +dm[3], t.h, t.m).getTime();
+          var e = s + 30 * 60000;  // each slot claims its half-hour block
+          var hits = busy.filter(function (iv) {
+            var bs = parseNaive(iv.start), be = parseNaive(iv.end);
+            return bs && be && bs.getTime() < e && be.getTime() > s;
+          });
+          if (hits.length) {
+            any = true;
+            b.classList.add("conflict");
+            b.title = "Busy: " + hits.map(function (iv) { return iv.summary; }).join("; ");
+          }
+        });
+        conflictNote.hidden = !any;
+      });
+    }
     function slotGrid(labelText, slots) {
       var lab = document.createElement("div"); lab.className = "sx__tp-label"; lab.textContent = labelText;
       pop.appendChild(lab);
@@ -6177,7 +6329,12 @@
           b.classList.toggle("sel", b.textContent === timeEl.value);
         });
         other.value = "";
+        markConflicts();
       }
+    });
+    // Changing the date while the popover is open re-shades for the new day.
+    dateEl.addEventListener("change", function () {
+      if (pop.classList.contains("open")) markConflicts();
     });
     pop.addEventListener("click", function (e) { e.stopPropagation(); });
     tw.appendChild(timeEl); tw.appendChild(pop);
@@ -6190,6 +6347,35 @@
     });
   }
   document.addEventListener("click", function () { closeTimePops(null); });
+
+  // Busy blocks on the signed-in user's own calendar for one local day
+  // ("YYYY-MM-DD"), for the time picker's conflict shading. Cached per
+  // (day, session) for the life of one editor (openEditor clears it) so
+  // opening the popover repeatedly doesn't refetch. Resolves [] on any
+  // failure — shading is decoration, never an error the user sees.
+  var busyCache = {};
+  function sessionBusyFetch(dateStr) {
+    if (!config || !config.gcalEnabled) return Promise.resolve([]);
+    var m = (dateStr || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return Promise.resolve([]);
+    function utcStamp(d) {
+      return d.getUTCFullYear() + "-" + pad2(d.getUTCMonth() + 1) + "-" + pad2(d.getUTCDate()) +
+             " " + pad2(d.getUTCHours()) + ":" + pad2(d.getUTCMinutes()) + ":00";
+    }
+    var dayStart = new Date(+m[1], +m[2] - 1, +m[3], 0, 0);  // local midnight
+    var from = utcStamp(dayStart);
+    var to = utcStamp(new Date(dayStart.getTime() + 24 * 3600 * 1000));
+    var sid = (currentSession && currentSession.id) || "";
+    var key = from + "|" + sid;
+    if (!busyCache[key]) {
+      busyCache[key] = api("/calendar/busy?timeMin=" + encodeURIComponent(from) +
+                           "&timeMax=" + encodeURIComponent(to) +
+                           (sid ? "&session=" + encodeURIComponent(sid) : ""))
+        .then(function (r) { return (r && r.available && r.busy) || []; })
+        .catch(function () { return []; });
+    }
+    return busyCache[key];
+  }
 
   function makeInput(f, value) {
     var el;
@@ -6226,7 +6412,7 @@
     } else if (f.type === "date") {
       el = document.createElement("input"); el.type = "date"; el.value = value || "";
     } else if (f.type === "datetime") {
-      el = makeDateTimeInput(value);
+      el = makeDateTimeInput(value, f.busyCheck ? sessionBusyFetch : null);
     } else if (f.type === "linkselect") {
       // Curated link picker (e.g. the engagement's Referring partner): a select
       // over the foreign records the user can read (detailsData.linkOptions,

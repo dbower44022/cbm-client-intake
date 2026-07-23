@@ -16,7 +16,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 import httpx
@@ -133,6 +133,35 @@ class CalendarClient:
         log.info("calendar event updated as %s -> %s", self.mailbox, event_id)
         return event
 
+    async def list_events(self, time_min: str, time_max: str) -> list[dict[str, Any]]:
+        """Every event on the impersonated user's primary calendar overlapping
+        ``[time_min, time_max)`` (RFC3339 ``Z`` stamps), recurrences expanded.
+        Feeds the time picker's conflict shading — read-only, and the
+        ``calendar.events`` scope the sync hook already uses covers it (no new
+        delegation grant)."""
+        items: list[dict[str, Any]] = []
+        page: Optional[str] = None
+        for _ in range(4):  # one day is one page; hard cap regardless
+            params: dict[str, Any] = {
+                "singleEvents": "true",
+                "orderBy": "startTime",
+                "timeMin": time_min,
+                "timeMax": time_max,
+                "maxResults": 250,
+                "fields": (
+                    "items(id,status,transparency,summary,start,end,"
+                    "attendees(self,responseStatus)),nextPageToken"
+                ),
+            }
+            if page:
+                params["pageToken"] = page
+            data = await self._request("GET", "/calendars/primary/events", params=params)
+            items.extend(data.get("items") or [])
+            page = data.get("nextPageToken")
+            if not page:
+                break
+        return items
+
     async def delete_event(self, event_id: str, *, send_updates: str = "all") -> None:
         """Cancel an event (attendees get the cancellation email unless
         ``send_updates="none"`` — used when rolling back a never-invited
@@ -208,6 +237,50 @@ def build_event_body(
         body["location"] = external_link
         body["description"] = f"{description}\nJoin: {external_link}".strip()
     return body
+
+
+def _utc_stamp(rfc3339: str) -> str:
+    """RFC3339 (any offset) -> the CRM-style UTC ``"YYYY-MM-DD HH:MM:SS"``."""
+    dt = datetime.fromisoformat(rfc3339.replace("Z", "+00:00"))
+    if dt.tzinfo is not None:
+        dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def busy_intervals(
+    events: list[dict[str, Any]], *, exclude_event_id: Optional[str] = None
+) -> list[dict[str, str]]:
+    """Calendar events -> the blocks that actually claim the user's time, as
+    UTC stamps (``start``/``end``) plus the event ``summary`` for the tooltip.
+
+    Skipped: cancelled events, "free" (transparent) events, all-day events
+    (date-only — they don't block a meeting slot), events the user declined,
+    and ``exclude_event_id`` (the session being edited — its own event isn't a
+    conflict with itself). A malformed event is dropped, never fatal."""
+    out: list[dict[str, str]] = []
+    for ev in events or []:
+        if exclude_event_id and ev.get("id") == exclude_event_id:
+            continue
+        if ev.get("status") == "cancelled" or ev.get("transparency") == "transparent":
+            continue
+        start = (ev.get("start") or {}).get("dateTime")
+        end = (ev.get("end") or {}).get("dateTime")
+        if not start or not end:  # all-day events carry date-only start/end
+            continue
+        if any(
+            a.get("self") and a.get("responseStatus") == "declined"
+            for a in ev.get("attendees") or []
+        ):
+            continue
+        try:
+            out.append({
+                "start": _utc_stamp(start),
+                "end": _utc_stamp(end),
+                "summary": ev.get("summary") or "(busy)",
+            })
+        except ValueError:
+            log.warning("unparseable event time on %s — skipped", ev.get("id"))
+    return out
 
 
 def meet_link(event: dict[str, Any]) -> str:

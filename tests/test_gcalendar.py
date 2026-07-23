@@ -8,6 +8,7 @@ from core.gcalendar import (
     CalendarClient,
     CalendarError,
     build_event_body,
+    busy_intervals,
     event_times,
     meet_link,
 )
@@ -96,6 +97,63 @@ def test_meet_link_missing():
     assert meet_link({"conferenceData": {"entryPoints": []}}) == ""
 
 
+# --- busy_intervals -------------------------------------------------------------
+
+def _ev(**kw):
+    base = {
+        "id": "e1",
+        "summary": "Standup",
+        "start": {"dateTime": "2026-07-23T13:00:00Z"},
+        "end": {"dateTime": "2026-07-23T13:30:00Z"},
+    }
+    base.update(kw)
+    return base
+
+
+def test_busy_intervals_utc_stamps_and_summary():
+    out = busy_intervals([_ev()])
+    assert out == [{"start": "2026-07-23 13:00:00", "end": "2026-07-23 13:30:00",
+                    "summary": "Standup"}]
+
+
+def test_busy_intervals_converts_offsets_to_utc():
+    out = busy_intervals([_ev(
+        start={"dateTime": "2026-07-23T09:00:00-04:00"},
+        end={"dateTime": "2026-07-23T10:00:00-04:00"},
+    )])
+    assert out[0]["start"] == "2026-07-23 13:00:00"
+    assert out[0]["end"] == "2026-07-23 14:00:00"
+
+
+def test_busy_intervals_skips_non_blocking_events():
+    events = [
+        _ev(id="cancelled", status="cancelled"),
+        _ev(id="free", transparency="transparent"),
+        _ev(id="allday", start={"date": "2026-07-23"}, end={"date": "2026-07-24"}),
+        _ev(id="declined", attendees=[{"self": True, "responseStatus": "declined"}]),
+        _ev(id="other-declined", attendees=[{"responseStatus": "declined"}]),  # not me
+        _ev(id="kept"),
+    ]
+    out = busy_intervals(events)
+    assert [o["summary"] for o in out] == ["Standup", "Standup"]
+    assert len(out) == 2  # other-declined + kept
+
+
+def test_busy_intervals_excludes_own_event_and_defaults_summary():
+    events = [_ev(id="mine", summary=None), _ev(id="other")]
+    out = busy_intervals(events, exclude_event_id="mine")
+    assert len(out) == 1
+    assert busy_intervals(events)[0]["summary"] == "(busy)"
+
+
+def test_busy_intervals_drops_malformed_never_raises():
+    out = busy_intervals([
+        _ev(start={"dateTime": "not a time"}, end={"dateTime": "also bad"}),
+        _ev(id="ok"),
+    ])
+    assert len(out) == 1
+
+
 # --- CalendarClient request shapes ---------------------------------------------
 
 class _Recorder:
@@ -146,3 +204,22 @@ async def test_delete_event_tolerates_gone(monkeypatch):
     assert call["method"] == "DELETE"
     assert call["params"] == {"sendUpdates": "all"}
     assert set(call["ok_statuses"]) == {404, 410}
+
+
+async def test_list_events_params_and_paging(monkeypatch):
+    rec = _Recorder([
+        {"items": [{"id": "a"}], "nextPageToken": "p2"},
+        {"items": [{"id": "b"}]},
+    ])
+    client = _client(monkeypatch, rec)
+    items = await client.list_events("2026-07-23T04:00:00Z", "2026-07-24T04:00:00Z")
+    assert [i["id"] for i in items] == ["a", "b"]
+    first = rec.calls[0]
+    assert first["method"] == "GET"
+    assert first["path"] == "/calendars/primary/events"
+    assert first["params"]["singleEvents"] == "true"
+    assert first["params"]["orderBy"] == "startTime"
+    assert first["params"]["timeMin"] == "2026-07-23T04:00:00Z"
+    assert first["params"]["timeMax"] == "2026-07-24T04:00:00Z"
+    assert "pageToken" not in first["params"]
+    assert rec.calls[1]["params"]["pageToken"] == "p2"
