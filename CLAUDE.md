@@ -1530,7 +1530,49 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-23)
 
-**v0.142.0** (2026-07-23, committed NOT pushed) — **Discussion pane on the
+**v0.144.0** (2026-07-23, 1066 tests green, committed NOT pushed) —
+**View Contact page on the directory apps** (Doug's request; his rulings
+elicited this session: **only MY conversations** — filter to threads the
+signed-in user's own mailbox participates in, server-side; **name click
+opens the tab** (stable named window `cbm-contact-<id>`, View pop-up/preview
+unchanged); **Overview + Communications only**). Clicking a Contacts-grid
+name — or a Mentors-grid name via the mentor's `contactRecordId`; no linked
+contact ⇒ readable notice — opens `/directory/contacts/record/{id}` (own
+frontend `directory/frontend/record.{html,js,css}` + shared
+`detail-render.js` extracted from app.js; sessions record-page serving
+pattern; BroadcastChannel single-tab guard `contact:<id>`): Overview = the
+CRM-layout panels, Communications = the engagement tab's full feature set
+(list w/ unread/awaiting/bounce chips, thread view, View original,
+reply/reply-all/forward, compose w/ templates + signature + attachments +
+drafts + write-back retry, Add emails, two-step Remove) scoped to the ONE
+contact. Mechanics: the conversation list reads the Contact-side
+**`cConversations`** reverse link (**probe-verified live on crm-test
+2026-07-23**, the first code path to read it) filtered by the new
+`comms.crm.participants_contain`; sends/includes ride a Contact `RecordRef`
+(`comms.service.contact_ref` — `send_message`/`include_thread` gained a
+`ref` kwarg, overrides key `(ref.entity, ref.id)`), so the write-through
+links the conversation to the contact's `contacts` many-to-many and NO
+parent record; `link_records` honors per-contact excludes (a Remove
+survives the sync re-matching the contact through a record scope);
+endpoints in **`directory/comms_router.py`** (contacts kind only, gated by
+`DirectoryConfig.contact_page`; quicksend already provides
+/mailbox+/emailtemplates+/emailwriteback; exclude/include/send/address-add
+action-logged). Full mechanics: CHANGELOG 0.144.0. Verified: 1066 tests
+(20 new); the whole loop in the stub-browser harness (no console errors).
+**NOT yet driven live — after deploy, on crm-test as a real mentor:**
+(1) open a contact from both grids (named-tab reuse, mentor-without-contact
+notice); (2) Communications lists ONLY own conversations (a co-mentor's
+thread with the same contact must not show); (3) open a thread, reply,
+apply a template, send — conversation stays linked to the contact, Email
+write-back in the contact's History; (4) Add emails + Remove round-trip
+(needs the workspace role's CConversation EDIT for the relate/unrelate —
+403s name the missing grant); (5) send to a brand-new address → the
+add-address-to-contact flow stores it on the Contact. CRM prereq: none
+built — `Contact.cConversations` exists (probe-verified); confirm the
+Mentor Team role reads CConversation/CCommunication (it does today —
+read=all) and can edit CConversation for include/remove.
+
+Before that: **v0.142.0** (2026-07-23, committed NOT pushed) — **Discussion pane on the
 Partner & Funder Overview** (Doug's request; decisions settled this session in
 `prompts/record-discussion-pane-prompt.md`). The Submission-Admin Discussion UI
 is ported onto the Overview of Partner Management (`/partnersessions`) and Funder

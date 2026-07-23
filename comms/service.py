@@ -118,13 +118,8 @@ _CONV_SELECT = (
 )
 
 
-async def list_conversations(
-    user_client: Any, parent_entity: str, parent_id: str
-) -> list[dict[str, Any]]:
-    data = await user_client.list_related(
-        parent_entity, parent_id, PARENT_CONVERSATIONS_LINK,
-        select=_CONV_SELECT, max_size=_PAGE,
-    )
+def _conversation_rows(data: dict[str, Any]) -> list[dict[str, Any]]:
+    """Map a CConversation list envelope to the API row shape, newest first."""
     rows = [
         {
             "id": c["id"],
@@ -146,6 +141,34 @@ async def list_conversations(
     ]
     rows.sort(key=lambda r: r.get("lastMessageAt") or "", reverse=True)
     return rows
+
+
+async def list_conversations(
+    user_client: Any, parent_entity: str, parent_id: str
+) -> list[dict[str, Any]]:
+    data = await user_client.list_related(
+        parent_entity, parent_id, PARENT_CONVERSATIONS_LINK,
+        select=_CONV_SELECT, max_size=_PAGE,
+    )
+    return _conversation_rows(data)
+
+
+# The Contact side of the CConversation.contacts many-to-many — EspoCRM
+# auto-prefixed the custom link on the built-in Contact entity (see
+# cconversation-entity.md). Probe-verified live on crm-test 2026-07-23.
+CONTACT_CONVERSATIONS_LINK = "cConversations"
+
+
+async def list_contact_conversations(
+    user_client: Any, contact_id: str
+) -> list[dict[str, Any]]:
+    """Every conversation linked to ONE Contact (the View Contact page read).
+    Callers apply their own visibility filter (e.g. only-my-conversations)."""
+    data = await user_client.list_related(
+        "Contact", contact_id, CONTACT_CONVERSATIONS_LINK,
+        select=_CONV_SELECT, max_size=_PAGE,
+    )
+    return _conversation_rows(data)
 
 
 # A conversation the user has NEVER opened counts as unread only when its last
@@ -473,7 +496,12 @@ async def exclude_conversation(
     :class:`CommsError`; until the user retries, the sync may re-link the
     conversation (it stays visible), which converges on retry.
     """
-    link = crm.PARENT_LINKS.get(parent_entity)
+    if parent_entity == "Contact":
+        # A View Contact page "Remove": detach the conversation from the one
+        # contact (the contacts many-to-many), not from any parent record.
+        link = crm.CONTACTS_LINK
+    else:
+        link = crm.PARENT_LINKS.get(parent_entity)
     if link:
         await user_client.unrelate(crm.CONVERSATION, conversation_id, link, parent_id)
     try:
@@ -535,20 +563,41 @@ async def _record_ref(
     return ref
 
 
+async def contact_ref(client: Any, contact_id: str) -> crm.RecordRef:
+    """A RecordRef for ONE Contact (the View Contact page scope): the ingest
+    links the conversation to the contact via the ``contacts`` many-to-many
+    and to NO parent record, and the contact's own addresses are the
+    known-recipient allowlist."""
+    contact = await client.get(
+        "Contact", contact_id, select="name,emailAddress,emailAddressData"
+    )
+    ref = crm.RecordRef(
+        entity="Contact", id=contact_id, name=contact.get("name") or ""
+    )
+    ref.contact_ids.add(contact_id)
+    for addr in crm._contact_addresses(contact):
+        ref.addresses.add(addr)
+        ref.contact_by_address.setdefault(addr, contact_id)
+    return ref
+
+
 async def include_thread(
     *,
     settings: Settings,
     api_client: Any,
     store: CommsStore,
     gmail: GmailClient,
-    cfg: Any,
-    parent_id: str,
+    cfg: Any = None,
+    parent_id: str = "",
     gmail_thread_id: str,
     user: dict[str, Any],
+    ref: Optional[crm.RecordRef] = None,
 ) -> Optional[str]:
     """Attach a mailbox thread to this record: ingest its messages (targeted —
-    the record's contacts are force-matched) + persist the inclusion."""
-    ref = await _record_ref(api_client, cfg, parent_id)
+    the record's contacts are force-matched) + persist the inclusion. Pass a
+    pre-built ``ref`` (e.g. :func:`contact_ref`) to scope to something other
+    than a ``cfg`` parent record; overrides key off ``(ref.entity, ref.id)``."""
+    ref = ref or await _record_ref(api_client, cfg, parent_id)
     scope = crm.MailboxScope(
         mailbox=gmail.mailbox,
         manager_name=user.get("name") or "",
@@ -568,7 +617,7 @@ async def include_thread(
         conv_id = result or conv_id
     if conv_id:
         await store.set_override(
-            cfg.parent_entity, parent_id, conv_id, ACTION_INCLUDE, user.get("userName", "")
+            ref.entity, ref.id, conv_id, ACTION_INCLUDE, user.get("userName", "")
         )
     return conv_id
 
@@ -707,8 +756,8 @@ async def send_message(
     api_client: Any,
     store: CommsStore,
     gmail: GmailClient,
-    cfg: Any,
-    parent_id: str,
+    cfg: Any = None,
+    parent_id: str = "",
     user: dict[str, Any],
     to: list[str],
     subject: str,
@@ -719,10 +768,15 @@ async def send_message(
     allow_unknown_recipients: bool = False,
     user_client: Optional[Any] = None,
     attachments: Optional[list[dict[str, Any]]] = None,
+    ref: Optional[crm.RecordRef] = None,
 ) -> dict[str, Any]:
     """Send as the signed-in manager's own mailbox; the sent message is
     ingested immediately (write-through) so the tab shows it without waiting
-    for the next sync — Message-ID dedup makes the sync's copy a no-op."""
+    for the next sync — Message-ID dedup makes the sync's copy a no-op.
+
+    Pass a pre-built ``ref`` (e.g. :func:`contact_ref`) instead of
+    ``cfg``/``parent_id`` to scope the send to something other than a parent
+    record; the include overrides then key off ``(ref.entity, ref.id)``."""
     to = [a.strip().lower() for a in to if a and a.strip()]
     cc = [a.strip().lower() for a in (cc or []) if a and a.strip()]
     bcc = [a.strip().lower() for a in (bcc or []) if a and a.strip()]
@@ -735,7 +789,7 @@ async def send_message(
     if not to:
         raise CommsError("Add at least one recipient.")
 
-    ref = await _record_ref(api_client, cfg, parent_id)
+    ref = ref or await _record_ref(api_client, cfg, parent_id)
     # CBM-internal recipients are never "unknown" — emailing a co-mentor or
     # staff about the record shouldn't trip the guard (their copy dedups via
     # Message-ID when their own mailbox syncs). Cc/Bcc count: they receive
@@ -814,7 +868,7 @@ async def send_message(
                     gmail.mailbox, sent_thread, conv_id
                 )
             await store.set_override(
-                cfg.parent_entity, parent_id, conv_id, ACTION_INCLUDE,
+                ref.entity, ref.id, conv_id, ACTION_INCLUDE,
                 user.get("userName", ""),
             )
         except Exception as exc:  # noqa: BLE001 — the send is out; keep going
@@ -845,7 +899,7 @@ async def send_message(
             # shell (no/mismatched thread id) — the override must follow the
             # conversation the messages actually live in.
             await store.set_override(
-                cfg.parent_entity, parent_id, ingested, ACTION_INCLUDE,
+                ref.entity, ref.id, ingested, ACTION_INCLUDE,
                 user.get("userName", ""),
             )
         conv_id = ingested or conv_id

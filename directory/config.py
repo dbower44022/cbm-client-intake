@@ -46,6 +46,15 @@ class DirectoryConfig:
     # only when the record's type includes that type — so a Client company hides
     # the Partner Profile panel, etc. Non-"… Profile" panels are never filtered.
     type_field: Optional[str] = None
+    # This kind's records open the full View Contact page (its own browser
+    # tab: Overview + Communications) and its router carries the
+    # contact-scoped comms endpoints (directory.comms_router).
+    contact_page: bool = False
+    # A belongsTo id attribute on this kind's rows naming the record's linked
+    # Contact (e.g. CMentorProfile -> "contactRecordId"). When set, grid rows
+    # carry it as ``contactId`` so a row can open the View Contact page for
+    # its underlying contact.
+    contact_ref_attr: Optional[str] = None
 
 
 COMPANIES = DirectoryConfig(
@@ -62,6 +71,7 @@ CONTACTS = DirectoryConfig(
     title="Contacts",
     entity="Contact",
     filters=("cContactType",),
+    contact_page=True,
 )
 
 MENTORS = DirectoryConfig(
@@ -71,6 +81,7 @@ MENTORS = DirectoryConfig(
     editable=False,
     edit_handoff="/mentorprofile/",
     filters=("mentorStatus", "mentorType", "acceptingNewClients"),
+    contact_ref_attr="contactRecordId",
 )
 
 PARTNERS = DirectoryConfig(

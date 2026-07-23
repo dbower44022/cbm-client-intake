@@ -241,6 +241,21 @@ def _participant_key(entry: str) -> str:
     return "name:" + entry.lower()
 
 
+def participants_contain(existing: str, address: str) -> bool:
+    """True when the stored participants display string contains ``address``
+    (case-insensitive), using the same entry parser the merge uses. Legacy
+    name-only entries (pre-v0.55.0 senders-only format) never match an
+    address — callers filtering "my conversations" accept that gap."""
+    addr = (address or "").strip().lower()
+    if not addr:
+        return False
+    for token in (existing or "").split(","):
+        token = token.strip()
+        if token and _participant_key(token) == addr:
+            return True
+    return False
+
+
 def merge_participants(existing: str, additions: Iterable[tuple[str, str]]) -> str:
     """Fold ``(display name, address)`` pairs into the participants display
     string, deduping by email address so the same person never appears twice.
@@ -356,13 +371,20 @@ async def link_records(
         if (rec.entity, rec.id, conversation_id) in excludes:
             continue
         link = PARENT_LINKS.get(rec.entity)
-        if not link:
+        if not link and rec.entity != "Contact":
             continue
-        try:
-            await client.relate(CONVERSATION, conversation_id, link, rec.id)
-        except EspoError as exc:
-            log.warning("link %s->%s/%s failed: %s", conversation_id, rec.entity, rec.id, exc)
+        if link:
+            try:
+                await client.relate(CONVERSATION, conversation_id, link, rec.id)
+            except EspoError as exc:
+                log.warning(
+                    "link %s->%s/%s failed: %s", conversation_id, rec.entity, rec.id, exc
+                )
         for cid in rec.contact_ids:
+            # A contact-level exclude (a View Contact page "Remove") must hold
+            # against re-linking, whichever record scope matched the contact.
+            if ("Contact", cid, conversation_id) in excludes:
+                continue
             try:
                 await client.relate(CONVERSATION, conversation_id, CONTACTS_LINK, cid)
             except EspoError as exc:

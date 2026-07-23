@@ -94,6 +94,10 @@ def make_router(cfg: DirectoryConfig) -> APIRouter:
             "editable": cfg.editable,
             "editHandoff": cfg.edit_handoff,
             "filters": filter_defs,
+            # The View Contact page: whether this kind's rows open it, and
+            # whether its Communications tab has a live backend (GMAIL_SYNC).
+            "contactPage": cfg.contact_page,
+            "commsEnabled": get_settings().gmail_sync,
         }
 
     @router.post("/logout")
@@ -178,5 +182,13 @@ def make_router(cfg: DirectoryConfig) -> APIRouter:
     register_quicksend(
         router, _require_user, client_for, _crm_failure, include_mailbox=True
     )
+
+    # The View Contact page's contact-scoped Communications endpoints
+    # (conversation list/thread/compose/include/exclude, scoped to ONE
+    # contact). Only the kind that opens the page carries them.
+    if cfg.contact_page:
+        from .comms_router import register_contact_comms
+
+        register_contact_comms(router, cfg, _require_user, _crm_failure)
 
     return router

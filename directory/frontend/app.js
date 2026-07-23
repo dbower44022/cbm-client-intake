@@ -56,37 +56,10 @@
     notify._t = setTimeout(function () { hide(n); }, 6000);
   }
 
-  // ---- value rendering (type-aware, shared by grid/preview/view) ----------
-  function fmtDate(v) { if (!v) return ""; var s = String(v).slice(0, 10); return s; }
-  function fmtDateTime(v) {
-    if (!v) return "";
-    var d = new Date(String(v).replace(" ", "T") + (/[Zz]|[+\-]\d\d:?\d\d$/.test(String(v)) ? "" : "Z"));
-    if (isNaN(d)) return String(v);
-    return d.toLocaleString(undefined, { weekday: "short", year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-  }
-  function fmtPhone(v) { try { return (window.CBM && window.CBM.formatPhone) ? window.CBM.formatPhone(v) : v; } catch (e) { return v; } }
-
-  function emailLink(addr) {
-    try {
-      if (window.CBMQuickMail && window.CBMQuickMail.emailLink) return window.CBMQuickMail.emailLink(addr);
-    } catch (e) {}
-    var a = el("a", null, addr); a.href = "mailto:" + addr; return a;
-  }
-
-  // Render a value into a container node (used by preview + view modal cells).
-  function renderValue(node, type, value) {
-    if (value == null || value === "" || (Array.isArray(value) && !value.length)) { node.textContent = "—"; return; }
-    if (type === "email") { node.appendChild(emailLink(String(value))); return; }
-    if (type === "phone") { var a = el("a", null, fmtPhone(String(value))); a.href = "tel:" + String(value).replace(/[^0-9+]/g, ""); node.appendChild(a); return; }
-    if (type === "url") { var u = String(value); var href = /^https?:\/\//i.test(u) ? u : "https://" + u; var l = el("a", null, u); l.href = href; l.target = "_blank"; l.rel = "noopener"; node.appendChild(l); return; }
-    if (type === "array") { var wrap = el("div", "dir__cell-chips"); (Array.isArray(value) ? value : [value]).forEach(function (v) { wrap.appendChild(el("span", "dir__pill", String(v))); }); node.appendChild(wrap); return; }
-    if (type === "bool") { node.textContent = value ? "Yes" : "No"; return; }
-    if (type === "date") { node.textContent = fmtDate(value); return; }
-    if (type === "datetime") { node.textContent = fmtDateTime(value); return; }
-    if (type === "html") { var d = el("div", "dir__val-html"); d.innerHTML = (window.CBMRichText && window.CBMRichText.sanitizeHtml) ? window.CBMRichText.sanitizeHtml(String(value)) : ""; node.appendChild(d); return; }
-    if (type === "address") { node.style.whiteSpace = "pre-line"; node.textContent = String(value); return; }
-    node.textContent = String(value);   // text / longtext / int / currency
-  }
+  // ---- value rendering: shared with the View Contact page (detail-render.js).
+  var R = window.CBMDirRender;
+  var fmtDate = R.fmtDate, fmtDateTime = R.fmtDateTime, fmtPhone = R.fmtPhone;
+  var emailLink = R.emailLink, renderValue = R.renderValue;
 
   // Compact grid-cell rendering (single-line-ish).
   function cellInto(td, type, value) {
@@ -129,10 +102,35 @@
       if (r.id === state.selectedId) row.classList.add("is-selected");
       state.columns.forEach(function (c, i) {
         var td = el("td");
-        if (i === 0) {  // name column: link opens View
+        if (i === 0) {  // name column: link opens the View Contact page / View
           var a = el("a", null, r[c.key] || "(no name)");
-          a.href = "#";
-          a.addEventListener("click", function (ev) { ev.preventDefault(); ev.stopPropagation(); selectRow(r.id); openView(r.id); });
+          var contactId = contactPageId(r);
+          if (contactId) {
+            // Contacts (and mentor rows with a linked contact): the name opens
+            // the full View Contact page in its own STABLE named tab —
+            // re-clicking reuses the tab. Modifier/middle clicks fall through
+            // to the real href. The View button / pop-up stay as they were.
+            a.href = "/directory/contacts/record/" + encodeURIComponent(contactId);
+            a.addEventListener("click", function (ev) {
+              if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey || ev.button !== 0) return;
+              ev.preventDefault(); ev.stopPropagation();
+              selectRow(r.id);
+              openWindow(a.href, "cbm-contact-" + contactId);
+            });
+          } else {
+            a.href = "#";
+            a.addEventListener("click", function (ev) {
+              ev.preventDefault(); ev.stopPropagation();
+              selectRow(r.id);
+              if (KIND === "mentors") {
+                // A mentor row without a linked Contact has no contact page to
+                // open (never a dead/hidden control — say why).
+                notify("This mentor has no linked contact record yet, so there is no contact page to open. Ask CBM staff to link one in the CRM.");
+              } else {
+                openView(r.id);
+              }
+            });
+          }
           td.appendChild(a);
         } else { cellInto(td, c.type, r[c.key]); }
         row.appendChild(td);
@@ -169,6 +167,15 @@
     });
   }
 
+  // The Contact id a row's name click opens the View Contact page for:
+  // the row itself on the contacts kind, the linked contact (contactId,
+  // from DirectoryConfig.contact_ref_attr) on mentors; null = no page.
+  function contactPageId(r) {
+    if (state.session && state.session.contactPage) return r.id;
+    if (KIND === "mentors") return r.contactId || null;
+    return null;
+  }
+
   function selectRow(id) {
     state.selectedId = id;
     $("gridBody").querySelectorAll("tr").forEach(function (tr) { tr.classList.toggle("is-selected", tr.dataset.id === id); });
@@ -194,19 +201,7 @@
     state.detailCache[id] = d; return d;
   }
 
-  function panelsInto(container, panels) {
-    panels.forEach(function (p) {
-      var block = el("div", "dir__panel");
-      if (p.title) block.appendChild(el("h3", null, p.title));
-      var dl = el("dl", "dir__kv");
-      p.fields.forEach(function (f) {
-        if (f.value == null || f.value === "" || (Array.isArray(f.value) && !f.value.length)) return; // hide empty in view
-        dl.appendChild(el("dt", null, f.label));
-        var dd = el("dd"); renderValue(dd, f.type, f.value); dl.appendChild(dd);
-      });
-      if (dl.children.length) { block.appendChild(dl); container.appendChild(block); }
-    });
-  }
+  var panelsInto = R.panelsInto;
 
   async function renderPreview(id) {
     var pane = $("preview");

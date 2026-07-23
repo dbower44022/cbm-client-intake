@@ -4,6 +4,75 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.144.0] — 2026-07-23
+
+**feat(directory): View Contact page — Overview + a contact-scoped
+Communications tab** (Doug's request: from the Contacts and Mentors
+directories, open a contact in its own tab with an overview and all of MY
+conversations with that person, with the engagement tab's create/reply/add
+functions scoped to the one contact).
+
+- **Launch (Doug's ruling): the grid NAME click opens the page** in a stable
+  named browser tab (`cbm-contact-<id>` — re-clicking reuses it; modifier/
+  middle clicks fall through to the real href). The in-page View pop-up +
+  preview pane are unchanged, still on the View button. A **Mentors row opens
+  its linked contact's page** (`contactRecordId`, now on mentor grid rows via
+  `DirectoryConfig.contact_ref_attr`); a mentor with no linked contact gets a
+  readable notice (buttons-never-dead rule). Companies/partners unchanged.
+- **The page** (`GET /directory/contacts/record/{id}`, the sessions
+  record-page pattern in `core/app.py` — base-href injection + no-store;
+  registered only for kinds with the new `DirectoryConfig.contact_page`
+  flag): its own frontend (`directory/frontend/record.html`/`record.js`/
+  `record.css`), single-tab BroadcastChannel guard keyed `contact:<id>`,
+  busy.js first, no width caps. **Overview** = the same CRM-layout-driven
+  panels as the pop-up (shared renderers extracted to
+  `directory/frontend/detail-render.js`, used by both pages). 401 → portal
+  with `next` back to the page.
+- **Communications tab — ONLY MY CONVERSATIONS (Doug's ruling):** the list
+  reads the Contact-side `cConversations` reverse link (probe-verified live
+  on crm-test 2026-07-23; `comms.service.list_contact_conversations`) and the
+  ROUTER filters to conversations the signed-in user's own mailbox
+  participates in (`comms.crm.participants_contain` against
+  `resolve_user_mailbox` — server-side: manager roles read CConversation
+  broadly, so this filter is the privacy boundary; direct thread opens are
+  checked too, a non-participant conversation 404s). No linked CBM mailbox →
+  a readable notice, never an error. Unread/awaiting-reply/delivery-failed
+  enrichment, thread view (View original + Open in Gmail included),
+  reply/reply-all/forward, and the full compose (recipient checklist =
+  the contact's addresses, templates — parsed with the contact as the
+  `{Parent.*}` context — signature seed, local + template attachments, draft
+  persistence keyed `contact:<id>`, write-back retry) are ports of the
+  session tools' tab. "Add emails…" attaches a mailbox thread to the
+  contact; "Not related — remove" detaches it (two-step).
+- **Comms layer parameterized, not forked** (`comms/`): `send_message` /
+  `include_thread` accept a pre-built `ref` (new
+  `comms.service.contact_ref`) and key their include overrides off
+  `(ref.entity, ref.id)` — a contact-scoped send links the conversation to
+  the contact via the `contacts` many-to-many and to NO parent record, and
+  the contact's own addresses are the unknown-recipient allowlist (the
+  compose's unknown panel offers "add this address to the contact" /
+  send-anyway — no create-contact branch, that lives on record pages).
+  `exclude_conversation("Contact", …)` unrelates the `contacts` link;
+  `crm.link_records` now honors per-contact excludes in its contact loop so
+  a contact-page Remove survives the background sync re-matching the contact
+  through a record scope, and handles Contact refs (contacts link only).
+  New endpoints in `directory/comms_router.py` (contacts kind only), riding
+  the existing quicksend `/mailbox`/`/emailtemplates`/`/emailwriteback`;
+  exclude/include/send/address-add are action-logged (`core/action_log`,
+  first use of ACT_EMAIL_SENT/ACT_CONVERSATION_LINKED/REMOVED — sessions
+  sends are deliberately not action-logged yet, noted divergence).
+  `/session` gains `contactPage` + `commsEnabled`.
+- Verified: 1066 tests green (20 new in
+  `tests/test_directory_contactpage.py` — participants filter, Contact refs,
+  contact-keyed overrides, exclude-durability regression, record route,
+  contactId rows); the full loop driven in the stub-browser harness
+  (overview, list chips + unread tab count, thread, reply w/ signature+quote,
+  template apply incl. leftover-token warning + attachment chip, placeholder
+  send-anyway gate, XHR send payload, unknown-recipient add-address flow,
+  exclude two-step, mailsearch include, both grids' launch behaviors,
+  two-tab blocked view; no console errors). **NOT yet driven live** — see
+  the live checklist in CLAUDE.md Current status.
+
 ## [0.143.0] — 2026-07-23
 
 **feat(sessions): the create/edit contact form is curated for a fast add**

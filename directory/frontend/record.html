@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cleveland Business Mentors — Contact</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/tokens.css" />
+  <link rel="stylesheet" href="/shared/vendor/jodit/jodit.min.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="record.css" />
+</head>
+<body>
+  <main class="dir cr">
+    <header class="dir__header">
+      <div class="dir__header-main">
+        <h1 id="crTitle">Contact</h1>
+      </div>
+      <div class="dir__header-user">
+        <a class="dir__home" href="/" title="Workspace home">&#9632; Workspace</a>
+        <span class="dir__who">Signed in as <strong id="crWhoName"></strong></span>
+        <button type="button" class="cbm-button cbm-button--secondary dir__sm" id="crLogoutBtn">Sign out</button>
+      </div>
+    </header>
+
+    <!-- Access/server errors (sign-in happens at the portal). -->
+    <section id="crMsgView" hidden>
+      <p class="form-error" id="crMsgText" role="alert"></p>
+      <p><a href="/">Return to the sign-in page</a></p>
+    </section>
+
+    <!-- Single-tab guard: this contact is already open in another tab. -->
+    <section id="crBlockedView" hidden>
+      <p class="dir__notice">This contact is already open in another browser tab — use that tab, or close it and
+        <button type="button" class="cbm-button dir__sm" id="crReloadBtn">reload here</button>.</p>
+    </section>
+
+    <section id="crMainView" hidden>
+      <nav class="cr__tabs" id="crTabs">
+        <button type="button" class="cr__tab is-active" data-crtab="overview">Overview</button>
+        <button type="button" class="cr__tab" data-crtab="communications">Communications</button>
+      </nav>
+
+      <p class="dir__notice" id="crNotice" role="status" hidden></p>
+
+      <div class="cr__panel" data-crpanel="overview">
+        <div id="crOverviewBody"></div>
+      </div>
+
+      <div class="cr__panel" data-crpanel="communications" hidden>
+        <div class="cr__comm-toolbar">
+          <button type="button" class="cbm-button dir__sm" id="crComposeBtn">✉ Compose</button>
+          <button type="button" class="cbm-button cbm-button--secondary dir__sm" id="crAddEmailsBtn">Add emails…</button>
+          <button type="button" class="cbm-button cbm-button--secondary dir__sm" id="crRefreshBtn">Refresh</button>
+        </div>
+        <p class="form-error" id="crCommError" hidden></p>
+        <p class="dir__preview-empty" id="crNoMessages" hidden></p>
+        <div class="cr__inbox-wrap">
+          <table class="dir__table cr__inbox" id="crInboxTable" hidden>
+            <thead id="crInboxHead"></thead>
+            <tbody id="crInboxBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <footer class="cbm-footer">
+      <p>&copy; <span data-cbm-year>2026</span> Cleveland Business Mentors. All rights reserved.<span class="cbm-footer__version" data-cbm-version></span></p>
+    </footer>
+  </main>
+
+  <!-- Conversation / compose modal (thread view, reply, forward, Add emails). -->
+  <div class="dir__modal" id="crCommModal" hidden>
+    <div class="dir__modal-card cr__comm-card" role="dialog" aria-modal="true" aria-labelledby="crCommTitle">
+      <div class="dir__modal-head">
+        <div>
+          <p class="cr__comm-kind" id="crCommKind"></p>
+          <h2 id="crCommTitle"></h2>
+        </div>
+        <button type="button" class="dir__modal-x" id="crCommClose" aria-label="Close">&times;</button>
+      </div>
+      <div class="dir__modal-body" id="crCommBody"></div>
+      <div class="dir__modal-foot" id="crCommFoot"></div>
+    </div>
+  </div>
+
+  <!-- Styled confirm (discard-draft guard). -->
+  <div class="dir__modal" id="crConfirmModal" hidden>
+    <div class="dir__modal-card dir__modal-card--sm" role="dialog" aria-modal="true" aria-labelledby="crConfirmTitle">
+      <div class="dir__modal-head">
+        <h2 id="crConfirmTitle"></h2>
+      </div>
+      <div class="dir__modal-body"><p id="crConfirmMsg"></p></div>
+      <div class="dir__modal-foot">
+        <button type="button" class="cbm-button cbm-button--secondary" id="crConfirmCancel">Cancel</button>
+        <button type="button" class="cbm-button" id="crConfirmDiscard">Discard</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- busy.js first: it wraps fetch/XHR, so it must be in place before any
+       other script can start a request. -->
+  <script src="/shared/busy.js"></script>
+  <script src="/shared/vendor/jodit/jodit.min.js"></script>
+  <script src="/shared/richtext.js"></script>
+  <script src="/shared/phone-format.js"></script>
+  <script src="/shared/quickmail.js"></script>
+  <script src="detail-render.js"></script>
+  <script src="record.js"></script>
+  <script src="/shared/footer.js"></script>
+</body>
+</html>

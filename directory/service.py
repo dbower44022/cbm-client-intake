@@ -276,9 +276,10 @@ async def list_records(
     page = max(1, page)
     page_size = max(1, min(page_size, 200))
     ob = order_by if order_by else cfg.default_order
+    extra = (cfg.contact_ref_attr,) if cfg.contact_ref_attr else ()
     data = await client.list(
         cfg.entity,
-        select=await _select(meta, cfg),
+        select=await _select(meta, cfg, extra=extra),
         where=where or None,
         max_size=page_size,
         offset=(page - 1) * page_size,
@@ -289,6 +290,10 @@ async def list_records(
     rows = []
     for r in raw:
         row = {"id": r["id"]}
+        if cfg.contact_ref_attr:
+            # The row's linked Contact — lets the grid open the View Contact
+            # page for e.g. a mentor row (null when no contact is linked).
+            row["contactId"] = r.get(cfg.contact_ref_attr)
         for c in cols:
             row[c["key"]] = _read_cell(r, c["key"])
         rows.append(row)

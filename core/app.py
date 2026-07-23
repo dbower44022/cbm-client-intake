@@ -737,7 +737,24 @@ def create_app(
         # (/directory/{kind}/…).
         from directory import DIRECTORIES as _DIRECTORY_KINDS
 
-        for _kind in _DIRECTORY_KINDS:
+        def _directory_record_page(kind: str) -> HTMLResponse:
+            """The View Contact page (/directory/{kind}/record/{id}) — its own
+            dedicated frontend booted straight into one contact (the JS reads
+            the id from the path). A <base> tag makes relative assets resolve
+            against /directory/{kind}/ from the nested path."""
+            html = (DIRECTORY_FRONTEND_DIR / "record.html").read_text(encoding="utf-8")
+            html = html.replace("<head>", f'<head><base href="/directory/{kind}/">', 1)
+            return HTMLResponse(html, headers={"Cache-Control": "no-store"})
+
+        for _kind, _dcfg in _DIRECTORY_KINDS.items():
+            if getattr(_dcfg, "contact_page", False):
+                app.add_api_route(
+                    f"/directory/{_kind}/record/{{record_id}}",
+                    (lambda _k: (lambda record_id: _directory_record_page(_k)))(_kind),
+                    methods=["GET"],
+                    response_class=HTMLResponse,
+                    include_in_schema=False,
+                )
             app.mount(
                 f"/directory/{_kind}",
                 StaticFiles(directory=str(DIRECTORY_FRONTEND_DIR), html=True),

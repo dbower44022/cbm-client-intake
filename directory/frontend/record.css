@@ -1,0 +1,142 @@
+/* View Contact page (record.html/record.js) — layered on top of the shared
+   directory styles.css (header, panels, modal shell, tables, buttons).
+   cr__-prefixed comms UI ported from the session tools' Communications tab.
+   No page-width caps (product rule). */
+
+.cr { min-height: 100vh; display: flex; flex-direction: column; }
+
+/* Tabs */
+.cr__tabs { display: flex; gap: 0.25rem; border-bottom: 2px solid var(--cbm-border); margin: 0 0 0.9rem; }
+.cr__tab {
+  background: none; border: none; border-bottom: 3px solid transparent;
+  padding: 0.55rem 1rem; font: inherit; font-weight: 600; color: var(--cbm-slate-700);
+  cursor: pointer;
+}
+.cr__tab:hover { color: var(--cbm-navy); }
+.cr__tab.is-active { color: var(--cbm-navy); border-bottom-color: var(--cbm-gold, #B58113); }
+
+.cr__panel { flex: 1 1 auto; min-height: 0; }
+
+/* Overview: pack the CRM panels side by side on wide screens. */
+[data-crpanel="overview"] #crOverviewBody {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(24rem, 1fr)); gap: 0 2rem;
+}
+
+/* Communications toolbar + list */
+.cr__comm-toolbar { display: flex; gap: 0.6rem; margin: 0 0 0.7rem; }
+.cr__inbox-wrap { overflow: auto; border: 1px solid var(--cbm-border); border-radius: var(--cbm-radius); }
+/* Fixed layout so long participants/snippets wrap inside their columns
+   instead of pushing Conversation/Last-activity off-screen. */
+.cr__inbox { table-layout: fixed; }
+.cr__inbox th:nth-child(1) { width: 12rem; }
+.cr__inbox th:nth-child(2) { width: 30%; }
+.cr__inbox th:nth-child(4) { width: 13rem; }
+.cr__inbox td { overflow: hidden; }
+.cr__inbox tbody tr { cursor: pointer; }
+.cr__inbox-row.is-unread .cr__inbox-subject { font-weight: 700; }
+.cr__inbox-row.is-unread .cr__inbox-subject::before {
+  content: "●"; color: var(--cbm-blue); margin-right: 0.35rem; font-size: 0.7em; vertical-align: middle;
+}
+.cr__inbox-dir { white-space: nowrap; }
+.cr__inbox-party { max-width: 22rem; overflow-wrap: anywhere; }
+.cr__inbox-subject { display: block; }
+.cr__inbox-snippet { display: block; color: var(--cbm-slate-700); font-size: 0.85rem; }
+.cr__inbox-date { white-space: nowrap; color: var(--cbm-slate-700); }
+.cr__th-sort { cursor: pointer; user-select: none; }
+.cr__th-sort[data-dir="asc"]::after { content: " ▲"; font-size: 0.75em; }
+.cr__th-sort[data-dir="desc"]::after { content: " ▼"; font-size: 0.75em; }
+
+.cr__tag {
+  display: inline-block; background: var(--cbm-surface); border: 1px solid var(--cbm-border);
+  border-radius: 999px; padding: 0.05rem 0.55rem; font-size: 0.78rem; color: var(--cbm-slate-700);
+}
+.cr__chip-awaiting {
+  display: inline-block; margin-top: 0.2rem; background: #fdf3dd; border: 1px solid #e5c877;
+  color: #7a5a10; border-radius: 999px; padding: 0.05rem 0.55rem; font-size: 0.78rem; white-space: nowrap;
+}
+.cr__chip-bounced {
+  display: inline-block; margin-top: 0.2rem; background: #fdeaea; border: 1px solid #e3a6a6;
+  color: #8f1f1f; border-radius: 999px; padding: 0.05rem 0.55rem; font-size: 0.78rem; white-space: nowrap;
+}
+
+/* Comm modal (thread + compose): a big workspace. */
+.cr__comm-card { width: min(78rem, 96vw); height: 92vh; }
+.cr__comm-kind { margin: 0; color: var(--cbm-slate-700); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
+
+/* Thread view */
+.cr__conv-summary { background: var(--cbm-surface); border: 1px solid var(--cbm-border); border-radius: var(--cbm-radius); padding: 0.6rem 0.9rem; margin: 0 0 0.8rem; }
+.cr__conv-summary p { margin: 0.35rem 0 0; }
+.cr__msg-card { border: 1px solid var(--cbm-border); border-radius: var(--cbm-radius); padding: 0.7rem 0.9rem; margin: 0 0 0.7rem; }
+.cr__msg-card--bounce { border-color: #e3a6a6; background: #fdf7f7; }
+.cr__msg-head { display: flex; align-items: baseline; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 0.4rem; }
+.cr__msg-who { font-weight: 600; color: var(--cbm-navy); }
+.cr__msg-when { color: var(--cbm-slate-700); font-size: 0.85rem; }
+.cr__msg-gmail { margin-left: auto; font-size: 0.85rem; color: var(--cbm-blue); }
+.cr__msg-gmail + .cr__msg-gmail { margin-left: 0.6rem; }
+.cr__msg-bounce-note { color: #8f1f1f; font-weight: 600; margin: 0 0 0.4rem; }
+.cr__msg-html { font-size: 0.95rem; overflow-wrap: anywhere; }
+.cr__msg-html img { max-width: 100%; }
+.cr__msg-html blockquote.quoted-reply {
+  border-left: 3px solid var(--cbm-border); margin: 0.6rem 0 0; padding: 0.2rem 0 0.2rem 0.8rem;
+  color: var(--cbm-slate-700);
+}
+
+/* View original */
+.cr__orig-meta { background: var(--cbm-surface); border: 1px solid var(--cbm-border); border-radius: var(--cbm-radius); padding: 0.5rem 0.8rem; margin-bottom: 0.5rem; font-size: 0.9rem; }
+.cr__orig-l { font-weight: 600; color: var(--cbm-navy); }
+.cr__orig-atts { color: var(--cbm-slate-700); font-size: 0.85rem; margin-bottom: 0.5rem; }
+.cr__orig-frame { width: 100%; flex: 1 1 auto; min-height: 55vh; border: 1px solid var(--cbm-border); border-radius: var(--cbm-radius); background: #fff; }
+
+/* Compose */
+.cr__fact { display: flex; gap: 0.6rem; margin: 0 0 0.5rem; font-size: 0.9rem; }
+.cr__fact-l { flex: 0 0 5.5rem; color: var(--cbm-slate-700); font-weight: 600; }
+.cr__msg-field { margin: 0 0 0.7rem; }
+.cr__msg-label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--cbm-slate-700); margin-bottom: 0.25rem; }
+.cr__msg-input {
+  width: 100%; padding: 0.45rem 0.6rem; border: 1px solid var(--cbm-border);
+  border-radius: var(--cbm-radius); font: inherit; font-size: 0.95rem;
+}
+.cr__msg-rich { border: 1px solid var(--cbm-border); border-radius: var(--cbm-radius); }
+.cr__to-head { display: flex; align-items: baseline; gap: 0.6rem; }
+.cr__to-list { display: flex; flex-direction: column; gap: 0.15rem; max-height: 9rem; overflow: auto; border: 1px solid var(--cbm-border); border-radius: var(--cbm-radius); padding: 0.4rem 0.6rem; }
+.cr__addr-check { display: flex; align-items: center; gap: 0.35rem; font-size: 0.92rem; }
+.cr__ccbcc-toggles { margin-left: auto; display: flex; gap: 0.5rem; }
+.cr__link-btn { background: none; border: none; color: var(--cbm-blue); cursor: pointer; font: inherit; font-size: 0.85rem; padding: 0; }
+.cr__link-btn:hover { text-decoration: underline; }
+.cr__opt-line { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.cr__search-row { display: flex; gap: 0.6rem; }
+.cr__search-row .cr__msg-input { flex: 1 1 auto; }
+.cr__addr-row { border: 1px solid var(--cbm-border); border-radius: var(--cbm-radius); padding: 0.5rem 0.7rem; }
+
+.cr__combo { position: relative; }
+.cr__combo-list {
+  position: absolute; z-index: 20; left: 0; right: 0; top: 100%; margin: 0; padding: 0.2rem 0;
+  list-style: none; background: #fff; border: 1px solid var(--cbm-border); border-radius: var(--cbm-radius);
+  max-height: 14rem; overflow: auto; box-shadow: 0 6px 16px rgba(15, 23, 42, 0.15);
+}
+.cr__combo-list li { padding: 0.35rem 0.7rem; cursor: pointer; }
+.cr__combo-list li:hover, .cr__combo-list li.is-active { background: var(--cbm-blue-50, #eef4fb); }
+.cr__combo-list li.is-muted { color: var(--cbm-slate-700); font-style: italic; }
+
+.cr__attach-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.2rem 0; }
+.cr__attach-chip {
+  display: inline-flex; align-items: center; gap: 0.2rem; background: var(--cbm-surface);
+  border: 1px solid var(--cbm-border); border-radius: 999px; padding: 0.15rem 0.6rem; font-size: 0.85rem;
+}
+.cr__attach-size { color: var(--cbm-slate-700); }
+.cr__chip-x { background: none; border: none; cursor: pointer; color: var(--cbm-slate-700); font-size: 0.85rem; padding: 0 0 0 0.2rem; }
+.cr__attach-total { color: var(--cbm-slate-700); font-size: 0.85rem; margin: 0.1rem 0; }
+
+.cr__notice-line { border-radius: var(--cbm-radius); padding: 0.45rem 0.7rem; margin: 0.4rem 0; font-size: 0.9rem; background: var(--cbm-surface); border: 1px solid var(--cbm-border); }
+.cr__notice-line.is-warn { background: #fdf3dd; border-color: #e5c877; color: #7a5a10; }
+.cr__notice-line.is-error { background: #fdeaea; border-color: #e3a6a6; color: #8f1f1f; }
+.cr__notice-line button { margin-left: 0.4rem; }
+.cr__draft-note { display: flex; align-items: center; gap: 0.5rem; }
+
+.cr__foot-summary { margin: 0 auto 0 0; color: var(--cbm-slate-700); font-size: 0.9rem; }
+.cr__foot-msg { margin: 0 auto 0 0; font-size: 0.9rem; }
+
+/* The comm modal body is a column so the original iframe can flex-fill. */
+#crCommModal .dir__modal-body { display: flex; flex-direction: column; }
+#crCommModal .dir__modal-body > * { flex-shrink: 0; }
+#crCommModal .dir__modal-body > .cr__orig-frame { flex-shrink: 1; }
