@@ -14,10 +14,18 @@ are the service account **plus the two designated system administrators
 (doug.bower@, allen.ingram@; maintenance and review)**, `espo@cbmentors.org`
 removed; `GDRIVE_IDENTITY=service` + the worker env applied to BOTH
 environments; and the first production reconciliation pass issued 2
-engagement-folder Commenter grants with zero errors. **Remaining:** the
-`documentsFolderUrl` CRM field build (Task 6 step 3) and the rest of the
-Task 6 verification checklist (items 1–3, 5–6 still to be driven by hand;
-item 4's grant-issuance half is proven by the production logs).
+engagement-folder Commenter grants with zero errors (by 2026-07-22 the
+nightly pass covers 6 record folders, still zero errors). **Remaining:**
+the `documentsFolderUrl` CRM field build (Task 6 step 3 — the nightly
+log's "0 CRM link(s) written" flips to nonzero once it exists) and the
+rest of the Task 6 verification checklist (items 1–3, 5–6 still to be
+driven by hand; item 4's grant-issuance half is proven by the production
+logs). **Known benign quirk:** folders whose entitled mentor is ALSO a
+drive member (i.e. a system admin who is the assigned mentor — test-data
+reality) get re-granted on every pass, because Drive merges a member's
+redundant Commenter grant rather than storing it as a direct permission.
+Logged, no errors, no emails; non-member mentors' grants persist
+normally.
 
 The facts you'll need (from the activation records):
 

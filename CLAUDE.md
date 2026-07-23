@@ -2621,10 +2621,23 @@ the `documentsFolderUrl` CRM field build
 (`documentsfolderurl-crm-field.md`), and the hand-driven checklist items
 (assign/unassign grant flow as a mentor, Mentors/-folder no-grant check,
 archive/restore against the real drive, hand-grant removal alert — Task 6
-verify list). Side observation from the deploy logs, NOT this feature: a
-schema-drift alert fired on both envs — `CMentorProfile.industrySector`
-no longer offers the entire expected 28-value list (the CRM team changed
-the enum; re-sync `scripts/sync_form_options.py` / `core/schema_contract.py`).
+verify list). The schema-drift alert that fired alongside the deploy was
+STALE MONITORING, not form drift — RESOLVED 2026-07-18 (93d558f): all 16
+managed options.js lists already matched the live CRM;
+`core/schema_contract.py` was watching the obsolete `industrySector`
+field (unwritten since v0.14.0) with pre-typo-cleanup values, and was
+retargeted to `industryExperience` with the cleaned 28-value list.
+Alert confirmed gone from the prod worker logs 2026-07-22.
+**Known benign quirk (observed in prod logs 2026-07-22):** the nightly
+reconciliation RE-GRANTS folders whose entitled mentor is also a DRIVE
+MEMBER (currently only Doug, who is both a system admin and the test
+data's assigned mentor) — Drive merges a member's redundant Commenter
+grant instead of storing a direct permission, so each pass re-issues it
+(logged `+N grants`, 0 errors, no emails). Harmless and self-limiting:
+real (non-member) mentors' grants persist normally. If the noise ever
+matters, the fix is to skip entitled people who are drive members in
+`docs/grants.apply_folder_grants` (list the drive's own permissions once
+per pass).
 
 **Main is at v0.83.0** (2026-07-18, 706 tests green, **pushed and DEPLOYED —
 prod + crm-test `/healthz` both verified at 0.83.0**) —
