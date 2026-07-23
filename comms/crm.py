@@ -17,7 +17,12 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Optional
 
-from assignments.service import assigned_user_id
+# NOTE: assignments.service is imported lazily inside build_scopes — a
+# module-level import here is the root of a circular chain (crm → assignments
+# → assignments.router → comms.quicksend → comms.service → comms.sync →
+# crm), which broke any process whose FIRST comms import reached this module
+# (the worker's gmail cycle via comms.summarize, single-file test
+# collection). Live failure 2026-07-23; keep this import lazy.
 from core.espo import EspoError
 
 log = logging.getLogger("cbm_intake.comms.crm")
@@ -127,6 +132,8 @@ def _contact_addresses(contact: dict[str, Any]) -> set[str]:
 
 async def build_scopes(client: Any, settings: Any) -> list[MailboxScope]:
     """One :class:`MailboxScope` per manager with a CBM mailbox + active records."""
+    from assignments.service import assigned_user_id  # lazy — see the note atop
+
     data = await client.list(
         MENTOR_PROFILE,
         select="name,cbmEmail,assignedUserId,assignedUsersIds,contactRecordId",

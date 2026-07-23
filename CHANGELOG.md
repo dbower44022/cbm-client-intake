@@ -4,6 +4,24 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.145.1] — 2026-07-23
+
+**fix(comms): the worker's gmail sync cycle died on the latent circular
+import — cycles were failing live.** Caught in the crm-test worker run logs
+while activating the v0.145.0 resync ("gmail sync cycle failed: cannot
+import name 'MailboxScope' from partially initialized module 'comms.crm'"):
+`run_gmail_cycle` imports `comms.summarize` BEFORE `comms.sync`, and
+summarize's `from .crm import …` made comms.crm the process's first comms
+module — whose module-level `from assignments.service import
+assigned_user_id` walks assignments.router → comms.quicksend →
+comms.service → comms.sync → back into the half-initialized crm. This is
+the same latent cycle CHANGELOG 0.127.0 documented for single-file test
+collection, now biting at runtime. Fix: the assignments import in
+`comms/crm.py` is LAZY (inside `build_scopes`), which breaks the cycle for
+every import order — `pytest tests/test_comms_sync.py` alone now collects
+too. **Deploy urgency: with GMAIL_RESYNC set on both workers, no resync
+pass can run until this ships.**
+
 ## [0.145.0] — 2026-07-23
 
 **feat(comms): internal CBM-to-CBM email now syncs — to the members' own
