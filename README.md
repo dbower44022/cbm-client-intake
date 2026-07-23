@@ -81,7 +81,10 @@ This is a multi-form app: a shared core hosts any number of intake forms.
     (My Email, compose, identities, submissions) and
     [`communications-tab.md`](communications-tab.md) for this tab in depth. Opening a record shows a tabbed,
     information-dense detail — an **Overview** (aggregated company pop-up, a
-    session-notes feed, a Next-session Start/Open button), an editable
+    session-notes feed, a Next-session Start/Open button; on Partner + Funder
+    records a staff-internal, attributed **Discussion** pane — running notes
+    between the record's managers, separate from its Notes field, stored
+    app-side and never written to the CRM), an editable
     permission-aware **Details** tab (`sessions/details.py`), the Sessions list,
     the Communications tab above, and a **Documents** tab — Google Drive
     document management (upload/list/in-app viewing/archive on the "CBM
