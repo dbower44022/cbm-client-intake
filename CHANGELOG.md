@@ -20,6 +20,12 @@ shell may be a send mid-flight). Per-record failures never abort. New
 the default. Also this session: `repair_outbound_bodies.py --write` RUN on
 prod — 1 truncated row repaired (651 already correct; the sole error is the
 ZZTEST probe record with no Gmail id).
+**RUN ON PROD 2026-07-22 (Doug approved):** `--delete --delete-shells` from
+the WEB component's console (the provisioning creds live on web, NOT the
+worker) — **373 conversations + 798 messages + 48 shells deleted, zero
+failures**; re-scan clean (313 conversations / 720 messages remain, none
+internal-only). Note for future runs: the deletion belongs on the web
+console; the worker env lacks ESPO_PROVISION_*.
 
 ## [0.138.1] — 2026-07-22
 
