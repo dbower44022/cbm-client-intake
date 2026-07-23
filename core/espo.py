@@ -354,6 +354,20 @@ class EspoClient:
             )
         return resp.json()
 
+    async def delete(self, entity: str, record_id: str) -> None:
+        """Delete one record. The intake API user's role has NO delete grant
+        (by design) — this exists for ADMIN-credentialed clients only (e.g.
+        the internal-conversation cleanup running as the provisioning
+        service account)."""
+        resp = await self._request(
+            "DELETE", f"{self._base}/{entity}/{record_id}",
+            op=f"delete {entity}/{record_id}",
+        )
+        if resp.status_code >= 400:
+            raise EspoError(
+                f"delete {entity}/{record_id} failed: {http_error_detail(resp)}"
+            )
+
     async def find_one(
         self, entity: str, attribute: str, value: str, select: str = "id"
     ) -> Optional[dict[str, Any]]:

@@ -4,6 +4,23 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.139.0] — 2026-07-22
+
+**feat(scripts): internal-conversation cleanup gains `--delete`** — the prod
+report found **373 internal-only conversations / 798 messages** (over half
+the Communications data; pre-v0.127.0 sweep residue) plus 48 empty shells,
+far beyond UI deletion. `list_internal_conversations.py --delete` removes
+each internal-only conversation's CCommunications then the CConversation,
+authenticated as the ADMIN provisioning service account
+(ESPO_PROVISION_USERNAME/PASSWORD, already in the deployed containers; the
+intake API key has no delete grant by design). `--delete-shells` also
+removes empty shells older than `--shell-age-days` (default 2 — a fresh
+shell may be a send mid-flight). Per-record failures never abort. New
+`EspoClient.delete` (admin-credentialed clients only). Report-only remains
+the default. Also this session: `repair_outbound_bodies.py --write` RUN on
+prod — 1 truncated row repaired (651 already correct; the sole error is the
+ZZTEST probe record with no Gmail id).
+
 ## [0.138.1] — 2026-07-22
 
 **fix(ops): the detail-header action buttons are all the same height.** On the

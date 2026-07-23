@@ -20,6 +20,20 @@ dropdown lists" section, or run in the deployed worker console):
 
     uv run python scripts/list_internal_conversations.py
     uv run python scripts/list_internal_conversations.py --domains cbmentors.org
+
+**Deletion** (added 2026-07-22 — the prod report found 373 internal-only
+conversations / 798 messages, far beyond UI deletion): ``--delete`` removes
+each internal-only conversation's CCommunications and then the CConversation
+itself, authenticated as the ADMIN provisioning service account
+(``ESPO_PROVISION_USERNAME`` / ``ESPO_PROVISION_PASSWORD`` — present in the
+deployed containers' env; the intake API key has no delete grant by design).
+``--delete-shells`` additionally removes EMPTY conversation shells older
+than ``--shell-age-days`` (default 2 — a very recent shell may be a send
+mid-flight). Both print exactly what they deleted; failures are per-record
+and never abort the run.
+
+    .venv/bin/python scripts/list_internal_conversations.py --delete
+    .venv/bin/python scripts/list_internal_conversations.py --delete --delete-shells
 """
 
 from __future__ import annotations
@@ -72,7 +86,32 @@ async def _list_all(client: EspoClient, entity: str, select: str) -> list[dict]:
     return rows
 
 
-async def run(domains: set[str]) -> int:
+async def _admin_client(settings) -> EspoClient:
+    """An EspoClient authenticated as the provisioning ADMIN account (the
+    only identity with delete rights; the intake API key is create-only)."""
+    from assignments.auth import login_token
+
+    username = settings.espo_provision_username
+    password = settings.espo_provision_password
+    if not username or not password:
+        raise SystemExit(
+            "--delete needs ESPO_PROVISION_USERNAME / ESPO_PROVISION_PASSWORD "
+            "in the env (present in the deployed worker/web containers)."
+        )
+    user_name, token = await login_token(
+        settings.espo_base_url, username, password, settings.request_timeout_seconds
+    )
+    return EspoClient.for_user_token(
+        settings.espo_base_url, user_name, token, settings.request_timeout_seconds
+    )
+
+
+async def run(
+    domains: set[str],
+    delete: bool = False,
+    delete_shells: bool = False,
+    shell_age_days: int = 2,
+) -> int:
     settings = get_settings()
     if not settings.espo_base_url or not settings.espo_api_key:
         print("ESPO_BASE_URL / ESPO_API_KEY must be set (see the module docstring).")
@@ -141,6 +180,58 @@ async def run(domains: set[str]) -> int:
             "Shells are usually failed first-message ingests; verify in the UI "
             "before deleting (a very recent one may be a send mid-flight)."
         )
+
+    if not delete:
+        if internal or shells:
+            print("\nRe-run with --delete (and optionally --delete-shells) to remove.")
+        return 0
+
+    # --- deletion (as the admin service account) ------------------------------
+    from datetime import datetime, timedelta, timezone
+
+    admin = await _admin_client(settings)
+    deleted_convs = deleted_msgs = failed = 0
+    for conv, msgs, _addrs in internal:
+        ok = True
+        for m in msgs:
+            try:
+                await admin.delete(COMMUNICATION, m["id"])
+                deleted_msgs += 1
+            except EspoError as exc:
+                failed += 1
+                ok = False
+                print(f"  DELETE FAILED (message {m['id']}): {exc}")
+        if ok:
+            try:
+                await admin.delete(CONVERSATION, conv["id"])
+                deleted_convs += 1
+            except EspoError as exc:
+                failed += 1
+                print(f"  DELETE FAILED (conversation {conv['id']}): {exc}")
+    shell_cutoff = datetime.now(timezone.utc) - timedelta(days=shell_age_days)
+    deleted_shells = 0
+    if delete_shells:
+        for conv in shells:
+            created = str(conv.get("createdAt") or "")
+            try:
+                created_dt = datetime.strptime(created, "%Y-%m-%d %H:%M:%S").replace(
+                    tzinfo=timezone.utc
+                )
+            except ValueError:
+                continue  # unparseable stamp — leave it for the UI
+            if created_dt > shell_cutoff:
+                continue  # too recent — could be a send mid-flight
+            try:
+                await admin.delete(CONVERSATION, conv["id"])
+                deleted_shells += 1
+            except EspoError as exc:
+                failed += 1
+                print(f"  DELETE FAILED (shell {conv['id']}): {exc}")
+    print(
+        f"\nDeleted {deleted_convs} internal conversations, {deleted_msgs} messages"
+        + (f", {deleted_shells} empty shells" if delete_shells else "")
+        + (f"; {failed} failures." if failed else "; no failures.")
+    )
     return 0
 
 
@@ -151,6 +242,15 @@ def main() -> None:
         default="",
         help="comma-separated internal domains (default: COMMS_INTERNAL_DOMAINS)",
     )
+    ap.add_argument(
+        "--delete", action="store_true",
+        help="delete internal-only conversations + their messages (admin creds)",
+    )
+    ap.add_argument(
+        "--delete-shells", action="store_true",
+        help="with --delete: also remove empty shells older than --shell-age-days",
+    )
+    ap.add_argument("--shell-age-days", type=int, default=2)
     args = ap.parse_args()
     settings = get_settings()
     domains = {
@@ -158,7 +258,12 @@ def main() -> None:
         for d in (args.domains or settings.comms_internal_domains).split(",")
         if d.strip()
     }
-    raise SystemExit(asyncio.run(run(domains)))
+    raise SystemExit(asyncio.run(run(
+        domains,
+        delete=args.delete,
+        delete_shells=args.delete_shells,
+        shell_age_days=args.shell_age_days,
+    )))
 
 
 if __name__ == "__main__":
