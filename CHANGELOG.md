@@ -4,6 +4,39 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.143.0] — 2026-07-23
+
+**feat(sessions): the create/edit contact form is curated for a fast add**
+(Doug's request — "the create contact UI is terrible… allow a user to
+quickly add a new contact to a session, partner, funder, etc as fast as
+possible"). The Details-tab **Contact** layout was the only entity layout
+without `noExtras`, so every field the layout didn't place dumped into a
+sprawling "Additional details" pile (Account Role, Opportunity Role, the
+three Acceptance Status enums, LinkedIn, Spouse Name, Birthday, Personal
+Profile, Suffix, Middle Name, How-heard, Employment Status, Meeting
+Preference, Description) plus the three consent checkboxes. Now the layout
+is `noExtras` with a lean, packed set — the same treatment every other
+entity got (mockup-v4). Frontend-only; the change serves BOTH the "Create
+new contact" panel and the row-edit form (they share the layout).
+- **Kept (the essentials, two packing bands):** Name (Salutation / First /
+  Last / Preferred) · Contact information (Email / Phone / Job title /
+  Contact type) · Address · Preferences (Contact via / Notification
+  preference / Do not call / Marketing opt-in).
+- **Dropped:** the CRM fields this app never uses — Opportunity Role, the
+  three Acceptance Status enums, Account Role, plus Spouse Name, Birthday,
+  Personal Profile, Suffix, Middle Name, How-heard, Employment Status,
+  Meeting Preference, LinkedIn, Description.
+- **Removed the consent checkboxes** (Privacy policy / Terms of use / Code
+  of conduct accepted): the staffer creating a contact can't accept these
+  on the person's behalf, so the boxes don't belong on the form. The
+  Client-Contacts table's computed "Agreements" badge is unaffected (it
+  reads the stored values directly).
+- Verified in the sessions stub harness: the form renders as two compact
+  bands (Name | Contact information; Address | Preferences), all 18
+  junk/consent fields are gone (17 useful fields remain), and Create
+  contact still POSTs only the filled fields to
+  `/records/{id}/contacts`.
+
 ## [0.142.0] — 2026-07-23
 
 **feat(sessions): Discussion pane on the Partner & Funder Overview**

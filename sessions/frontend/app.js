@@ -3835,21 +3835,31 @@
         [{ name: "description", span: 12, label: "Sponsor notes" }],
       ] },
     ] },
-    Contact: { groups: [
-      { label: "Name", rows: [
+    // Contact form — curated for a FAST add/edit (Doug's 2026-07-23 ruling:
+    // the create-contact screen must let staff add a session / partner / funder
+    // contact as quickly as possible). `noExtras` — like every other entity,
+    // unplaced schema fields are dropped, never dumped into an "Additional
+    // details" pile. Deliberately OMITTED: the consent bools (privacy policy /
+    // terms of use / code of conduct — staff can't accept these on the
+    // contact's behalf) and the CRM fields this app never uses (opportunity
+    // role, the three acceptance-status enums, account role, spouse name,
+    // birthday, personal profile, suffix / middle name, how-heard, employment
+    // status, meeting preference, LinkedIn, description). The essentials pack
+    // into one band: who they are, how to reach them, their role, address.
+    Contact: { noExtras: true, groups: [
+      { label: "Name", grow: 1, basis: 30, rows: [
         [{ name: "salutationName", span: 2, label: "Salutation" }, { name: "firstName", span: 4 },
-         { name: "lastName", span: 4 }, { name: "cPreferredName", span: 2 }],
+         { name: "lastName", span: 4 }, { name: "cPreferredName", span: 2, label: "Preferred" }],
       ] },
-      { label: "Contact information", rows: [
-        [{ name: "emailAddress", span: 6 }, { name: "phoneNumber", span: 3 }, { name: "cContactType", span: 3 }],
+      { label: "Contact information", grow: 2, basis: 38, rows: [
+        [{ name: "emailAddress", span: 6 }, { name: "phoneNumber", span: 3 }, { name: "title", span: 3, label: "Job title" }],
+        [{ name: "cContactType", span: 12, label: "Contact type" }],
       ] },
-      { label: "Address", rows: [[{ addr: "address", span: 6 }]] },
-      { label: "Preferences & agreements", rows: [
-        [{ name: "cPreferredContactMethod", span: 4 }, { name: "cNotificationPreference", span: 4 }, { name: "doNotCall", span: 4 }],
-        [{ checks: [{ name: "cMarketingOptIn", label: "Marketing opt-in" },
-                    { name: "cPrivacyPolicyAccepted", label: "Privacy policy accepted" },
-                    { name: "cTermsOfUseAccepted", label: "Terms of use accepted" },
-                    { name: "cCodeOfConductAccepted", label: "Code of conduct accepted" }] }],
+      { label: "Address", grow: 2, basis: 38, rows: [[{ addr: "address", span: 12 }]] },
+      { label: "Preferences", grow: 1, basis: 26, rows: [
+        [{ name: "cPreferredContactMethod", span: 6, label: "Contact via" }, { name: "cNotificationPreference", span: 6 }],
+        [{ checks: [{ name: "doNotCall", label: "Do not call" },
+                    { name: "cMarketingOptIn", label: "Marketing opt-in" }] }],
       ] },
     ] },
   };
