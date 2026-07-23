@@ -4,6 +4,41 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.145.0] — 2026-07-23
+
+**feat(comms): internal CBM-to-CBM email now syncs — to the members' own
+Contact records** (Doug's follow-up to the View Contact page: "it works great
+for emails we have sent to clients, but does not show emails with other
+CBMentors… now they make sense because we have a place to view them"). His
+rulings: internal conversations link to **member Contacts only, never
+records** (the v0.127.0 fix for record-tab noise holds); **mixed client
+threads also link** the Contacts of any CBM members on them; **backfill both
+envs** from Gmail.
+
+- `build_scopes` builds a shared **member map** (`CMentorProfile.cbmEmail →
+  contactRecordId`) carried on every sweep scope; a manager with NO active
+  records now sweeps too (their member↔member mail is worth capturing).
+- `ingest_message`: an all-internal message ingests when a mapped member
+  OTHER than the mailbox owner is on it — linked via the conversation's
+  `contacts` many-to-many to every mapped participant's Contact (owner
+  included) and to no record; with no mapped counterpart (a note to self,
+  an unmapped shared address like info@) it stays skipped, as does
+  everything under a scope with no member map (explicit-action scopes are
+  unchanged). EVERY ingested message — internal or client — now also links
+  its internal participants' member Contacts (`link_records` gained
+  `member_contact_ids`, honoring the per-contact excludes, so a View
+  Contact page "Remove" survives the sweep).
+- Both sides' mailboxes see the same internal message; the rfc-id dedup
+  stores it once and the second sweep adds its links + owner stamp.
+- Verified: 1071 tests green (5 new in tests/test_comms_sync.py — internal
+  ingest + member links, no-counterpart skip, mixed-thread member link,
+  contact-exclude durability, member map + recordless-manager scope).
+- **Ops after deploy (Doug): one-shot `GMAIL_RESYNC=true` per env** (worker)
+  to re-ingest history — including the 373 internal conversations purged
+  from prod 2026-07-23, which come back as fresh records linked to member
+  Contacts instead of engagements. Remove the flag right after the pass
+  (the standing gotcha: while set, every deploy re-reads all mailboxes).
+
 ## [0.144.0] — 2026-07-23
 
 **feat(directory): View Contact page — Overview + a contact-scoped

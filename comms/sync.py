@@ -128,15 +128,22 @@ async def ingest_message(
         log.debug("skipping %s (labels=%s)", parsed.rfc_message_id, parsed.label_ids)
         return None
 
-    # Internal chatter guard (Doug's ruling 2026-07-21): when the scope names
-    # internal domains (the background sweep — explicit-action scopes leave it
-    # empty), a message whose EVERY participant is internal is staff-to-staff
-    # mail, not client correspondence, and is never auto-stored — even as a
-    # thread-following reply on a stored conversation.
-    if scope.internal_domains and parsed.all_addresses and all(
-        a.rsplit("@", 1)[-1].lower() in scope.internal_domains
-        for a in parsed.all_addresses
-    ):
+    # Internal mail (Doug's rulings 2026-07-21 + 2026-07-23): a message whose
+    # EVERY participant is internal never lands on a RECORD — but when a
+    # mapped CBM member other than this mailbox's owner is on it, it ingests
+    # linked to the members' own Contacts (its home is the View Contact
+    # page). With no mapped counterpart (a note to self, an unmapped shared
+    # address) it stays skipped, as does everything under a scope with no
+    # member map. Explicit-action scopes leave internal_domains empty, so a
+    # deliberate internal send still shows on its record.
+    all_internal = bool(
+        scope.internal_domains and parsed.all_addresses and all(
+            a.rsplit("@", 1)[-1].lower() in scope.internal_domains
+            for a in parsed.all_addresses
+        )
+    )
+    internal_ok = all_internal and scope.has_member_counterpart(parsed.all_addresses)
+    if all_internal and not internal_ok:
         log.debug("skipping %s (all participants internal)", parsed.rfc_message_id)
         return None
 
@@ -145,9 +152,13 @@ async def ingest_message(
     if parsed.in_reply_to:
         refs.insert(0, parsed.in_reply_to)
 
+    # The Contacts of the CBM members on the message — linked alongside any
+    # record links so member correspondence shows on their contact pages.
+    member_ids = scope.member_contact_ids_for(parsed.all_addresses)
+
     matched = scope.records_for(parsed.all_addresses)
     known_conv: Optional[str] = None
-    if not matched:
+    if not matched and not internal_ok:
         # Thread-following: no address match, but is this a reply on a thread
         # we already store? (same-mailbox thread id, else the References chain)
         known_conv = await crm.find_conversation_for_thread(
@@ -197,7 +208,9 @@ async def ingest_message(
         conv_id = existing.get(crm.CONVERSATION_FK)
         if conv_id:
             await crm.refresh_participants(espo, conv_id, participants)
-            await crm.link_records(espo, conv_id, matched, excludes)
+            await crm.link_records(
+                espo, conv_id, matched, excludes, member_contact_ids=member_ids
+            )
             if scope.owner_user_id:
                 await crm.stamp_owners(espo, conv_id, {scope.owner_user_id})
             # The co-mentor's copy may link NEW records — file its inbound
@@ -264,7 +277,9 @@ async def ingest_message(
     await crm.refresh_conversation_aggregates(
         espo, conv_id, sent_at=parsed.sent_at, participants=participants
     )
-    await crm.link_records(espo, conv_id, matched, excludes)
+    await crm.link_records(
+        espo, conv_id, matched, excludes, member_contact_ids=member_ids
+    )
     if scope.owner_user_id:
         await crm.stamp_owners(espo, conv_id, {scope.owner_user_id})
     # Inbound attachments auto-file to the linked records' Documents tabs

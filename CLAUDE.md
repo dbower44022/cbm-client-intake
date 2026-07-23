@@ -1530,7 +1530,31 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-23)
 
-**v0.144.0** (2026-07-23, 1066 tests green, committed NOT pushed) —
+**v0.145.0** (2026-07-23, 1071 tests green, committed NOT pushed) —
+**internal CBM↔CBM email syncs again — to member Contacts, never records**
+(Doug's follow-up after driving the View Contact page: internal mail now has
+a home, so the v0.127.0 never-ingest rule is superseded — but its
+record-noise fix HOLDS). Rulings: internal conversations link to the
+members' own Contact records only; mixed client threads ALSO link any CBM
+participants' Contacts; backfill both envs. Mechanics: `build_scopes` builds
+a shared member map (cbmEmail → contactRecordId) on every sweep scope
+(recordless managers now sweep too); `ingest_message` ingests an
+all-internal message when a mapped member other than the mailbox owner is
+on it, linking every mapped participant's Contact via the `contacts`
+many-to-many (no-counterpart mail — notes-to-self, unmapped info@ — still
+skips; explicit-action scopes unchanged); `link_records` gained
+`member_contact_ids` (honors per-contact excludes, so a contact-page Remove
+survives the sweep). CHANGELOG 0.145.0. **After deploy (Doug): one-shot
+`GMAIL_RESYNC=true` per env on the WORKER, removed right after the pass** —
+re-ingests history incl. the 373 internal conversations purged from prod
+2026-07-23 (they return linked to member Contacts, not engagements). Live
+check: open a fellow mentor's View Contact page → your correspondence with
+them lists; an engagement's Communications tab stays free of internal
+threads. (A parallel session is extracting a shared conversation component
+— `frontend/shared/conversation.{js,css}` + record.html/record.js edits are
+ITS work, not part of this commit.)
+
+Before that: **v0.144.0** (2026-07-23, 1066 tests green, committed NOT pushed) —
 **View Contact page on the directory apps** (Doug's request; his rulings
 elicited this session: **only MY conversations** — filter to threads the
 signed-in user's own mailbox participates in, server-side; **name click

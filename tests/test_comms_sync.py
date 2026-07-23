@@ -442,6 +442,124 @@ async def test_ingest_skips_all_internal_message_even_thread_following():
     assert await ingest_message(espo, store, sweep, mixed)
 
 
+async def test_ingest_internal_with_member_map_links_member_contacts_only():
+    # Member↔member mail ingests linked to BOTH members' Contacts and to NO
+    # record (Doug's ruling 2026-07-23 — its home is the View Contact page).
+    espo, store = FakeEspo(), MemoryCommsStore()
+    sweep = scope()
+    sweep.internal_domains = {"cbmentors.org"}
+    sweep.member_contacts = {
+        "bob.mentor@cbmentors.org": "mcBob",
+        "rick.mentor@cbmentors.org": "mcRick",
+    }
+    msg = sync.parse_message(raw_message(
+        mid="m5", thread="t5", frm="rick.mentor@cbmentors.org",
+        to="bob.mentor@cbmentors.org", rfc_id="int-ok-1",
+        body="Can you cover my Tuesday session?",
+    ))
+    conv_id = await ingest_message(espo, store, sweep, msg)
+    assert conv_id
+    assert (crm.CONVERSATION, conv_id, "contacts", "mcBob") in espo.relates
+    assert (crm.CONVERSATION, conv_id, "contacts", "mcRick") in espo.relates
+    record_links = [r for r in espo.relates if r[2] in ("engagements", "partnerProfiles", "sponsorProfiles")]
+    assert record_links == []   # never a record link
+
+
+async def test_ingest_internal_without_mapped_counterpart_still_skips():
+    # The map exists but only covers the mailbox owner (the other side is an
+    # unmapped shared address) — no home, still skipped.
+    espo, store = FakeEspo(), MemoryCommsStore()
+    sweep = scope()
+    sweep.internal_domains = {"cbmentors.org"}
+    sweep.member_contacts = {"bob.mentor@cbmentors.org": "mcBob"}
+    msg = sync.parse_message(raw_message(
+        mid="m6", frm="bob.mentor@cbmentors.org", to="info@cbmentors.org",
+        rfc_id="int-skip-1",
+    ))
+    assert await ingest_message(espo, store, sweep, msg) is None
+    assert espo.records == {}
+
+
+async def test_ingest_mixed_thread_also_links_ccd_member_contact():
+    # A client thread cc'ing a CBM member links the member's Contact alongside
+    # the record links (Doug's ruling 2026-07-23 — the member's contact page
+    # shows everything between you and them).
+    espo, store = FakeEspo(), MemoryCommsStore()
+    sweep = scope()
+    sweep.internal_domains = {"cbmentors.org"}
+    sweep.member_contacts = {
+        "bob.mentor@cbmentors.org": "mcBob",
+        "carol.mentor@cbmentors.org": "mcCarol",
+    }
+    msg = sync.parse_message(raw_message(
+        mid="m7", frm="james@acme.test",
+        to="bob.mentor@cbmentors.org, carol.mentor@cbmentors.org",
+        rfc_id="mix-member-1",
+    ))
+    conv_id = await ingest_message(espo, store, sweep, msg)
+    assert conv_id
+    assert (crm.CONVERSATION, conv_id, "engagements", "E1") in espo.relates
+    assert (crm.CONVERSATION, conv_id, "contacts", "c1") in espo.relates       # client
+    assert (crm.CONVERSATION, conv_id, "contacts", "mcCarol") in espo.relates  # cc'd member
+    assert (crm.CONVERSATION, conv_id, "contacts", "mcBob") in espo.relates    # the owner
+
+
+async def test_member_contact_link_honors_contact_exclude():
+    # A View Contact page "Remove" holds against the sweep re-linking the
+    # member's contact.
+    espo, store = FakeEspo(), MemoryCommsStore()
+    sweep = scope()
+    sweep.internal_domains = {"cbmentors.org"}
+    sweep.member_contacts = {
+        "bob.mentor@cbmentors.org": "mcBob",
+        "rick.mentor@cbmentors.org": "mcRick",
+    }
+    first = sync.parse_message(raw_message(
+        mid="m8", thread="t8", frm="rick.mentor@cbmentors.org",
+        to="bob.mentor@cbmentors.org", rfc_id="int-x-1",
+    ))
+    conv_id = await ingest_message(espo, store, sweep, first)
+    await store.set_override("Contact", "mcRick", conv_id, ACTION_EXCLUDE)
+    espo.relates.clear()
+    reply = sync.parse_message(raw_message(
+        mid="m9", thread="t8", frm="bob.mentor@cbmentors.org",
+        to="rick.mentor@cbmentors.org", rfc_id="int-x-2",
+    ))
+    assert await ingest_message(espo, store, sweep, reply) == conv_id
+    assert (crm.CONVERSATION, conv_id, "contacts", "mcRick") not in espo.relates
+    assert (crm.CONVERSATION, conv_id, "contacts", "mcBob") in espo.relates
+
+
+async def test_build_scopes_member_map_and_recordless_manager():
+    lists = {
+        "CMentorProfile": [
+            {"id": "p1", "name": "Bob", "cbmEmail": "bob@cbmentors.org",
+             "assignedUserId": "u1", "contactRecordId": "mcBob"},
+            # No active records, but a mapped counterpart exists — sweeps now.
+            {"id": "p2", "name": "Rick", "cbmEmail": "rick@cbmentors.org",
+             "assignedUserId": "u2", "contactRecordId": "mcRick"},
+        ],
+        ("CMentorProfile", "p1", "engagements1"): [
+            {"id": "E1", "name": "Acme", "engagementStatus": "Active"},
+        ],
+        ("CMentorProfile", "p1", "managedPartners"): [],
+        ("CMentorProfile", "p1", "managedSponsors"): [],
+        ("CMentorProfile", "p2", "engagements1"): [],
+        ("CMentorProfile", "p2", "managedPartners"): [],
+        ("CMentorProfile", "p2", "managedSponsors"): [],
+        ("CEngagement", "E1", "engagementContacts"): [
+            {"id": "c1", "name": "James", "emailAddress": "james@acme.test"},
+        ],
+    }
+    scopes = await crm.build_scopes(FakeEspo(lists=lists), Cfg())
+    assert [s.mailbox for s in scopes] == ["bob@cbmentors.org", "rick@cbmentors.org"]
+    for s in scopes:
+        assert s.member_contacts == {
+            "bob@cbmentors.org": "mcBob", "rick@cbmentors.org": "mcRick",
+        }
+    assert scopes[1].records == []   # recordless, swept for member mail only
+
+
 async def test_ingest_explicit_scope_still_stores_internal():
     # Explicit-action scopes (write-through / thread include) leave
     # internal_domains empty — a deliberate internal send still shows.

@@ -65,11 +65,17 @@ class MailboxScope:
     owner_user_id: Optional[str]  # their login User (for owner-stamping)
     records: list[RecordRef] = field(default_factory=list)
     # Internal email domains: a message whose EVERY participant is at one of
-    # these is internal chatter, not client correspondence — the sweep skips
-    # it (see ingest_message). Left empty by the explicit-action scopes
-    # (record-page compose write-through, thread include) so a deliberate
-    # internal send still shows on its record.
+    # these is internal chatter — it never matches RECORD scopes (see the
+    # build_scopes note) and ingests only through the member map below. Left
+    # empty by the explicit-action scopes (record-page compose write-through,
+    # thread include) so a deliberate internal send still shows on its record.
     internal_domains: set[str] = field(default_factory=set)
+    # CBM member map: cbmEmail -> the member's own Contact id (from
+    # CMentorProfile.contactRecord). Member↔member mail ingests linked to
+    # these Contacts (the View Contact page's home for internal
+    # correspondence, Doug's ruling 2026-07-23) and to NO record; any
+    # ingested message also links the Contacts of its internal participants.
+    member_contacts: dict[str, str] = field(default_factory=dict)
 
     @property
     def all_addresses(self) -> set[str]:
@@ -81,6 +87,20 @@ class MailboxScope:
     def records_for(self, addresses: set[str]) -> list[RecordRef]:
         """The records whose contacts include any of ``addresses``."""
         return [r for r in self.records if r.addresses & addresses]
+
+    def member_contact_ids_for(self, addresses: set[str]) -> set[str]:
+        """The member Contact ids of every mapped address on the message."""
+        return {
+            self.member_contacts[a] for a in addresses if a in self.member_contacts
+        }
+
+    def has_member_counterpart(self, addresses: set[str]) -> bool:
+        """True when a mapped member OTHER than this mailbox's owner is on the
+        message — the gate for ingesting an all-internal message (a note to
+        self, or mail with only unmapped internal addresses, stays skipped)."""
+        return any(
+            a != self.mailbox and a in self.member_contacts for a in addresses
+        )
 
 
 # Per-domain: (profile reverse link, contacts link, status attr, mode)
@@ -109,12 +129,22 @@ async def build_scopes(client: Any, settings: Any) -> list[MailboxScope]:
     """One :class:`MailboxScope` per manager with a CBM mailbox + active records."""
     data = await client.list(
         MENTOR_PROFILE,
-        select="name,cbmEmail,assignedUserId,assignedUsersIds",
+        select="name,cbmEmail,assignedUserId,assignedUsersIds,contactRecordId",
         max_size=_PAGE,
     )
     include_eng = set(settings.comms_engagement_statuses_list)
     exclude_partner = set(settings.comms_partner_excluded_statuses_list)
     internal = set(settings.comms_internal_domains_list)
+
+    # The CBM member map (shared by every scope): cbmEmail -> the member's own
+    # Contact. This is how member↔member mail finds a home (the View Contact
+    # page) without ever entering a RECORD's match scope.
+    member_contacts: dict[str, str] = {}
+    for profile in data.get("list", []):
+        addr = (profile.get("cbmEmail") or "").strip().lower()
+        contact_id = profile.get("contactRecordId")
+        if addr and contact_id:
+            member_contacts[addr] = contact_id
 
     scopes: list[MailboxScope] = []
     for profile in data.get("list", []):
@@ -127,6 +157,7 @@ async def build_scopes(client: Any, settings: Any) -> list[MailboxScope]:
             manager_name=profile.get("name") or "",
             owner_user_id=owner,
             internal_domains=internal,
+            member_contacts=member_contacts,
         )
         for entity, reverse_link, contacts_link, status_attr, mode in _DOMAINS:
             try:
@@ -166,7 +197,10 @@ async def build_scopes(client: Any, settings: Any) -> list[MailboxScope]:
                     }
                 if ref.addresses:
                     scope.records.append(ref)
-        if scope.records:
+        # A manager with no active records still sweeps when other mapped
+        # members exist — their member↔member mail is worth capturing now
+        # that it has a home (the View Contact page).
+        if scope.records or scope.has_member_counterpart(set(member_contacts)):
             scopes.append(scope)
     return scopes
 
@@ -364,9 +398,23 @@ async def link_records(
     conversation_id: str,
     records: list[RecordRef],
     excludes: set[tuple[str, str, str]],
+    member_contact_ids: Optional[set[str]] = None,
 ) -> None:
     """Relate the conversation to each matched record (+ its matched contacts),
-    honoring exclusions. Relates are idempotent; failures are logged, not fatal."""
+    honoring exclusions. ``member_contact_ids`` — the Contacts of the CBM
+    members on the message — link via the same contacts many-to-many (never a
+    record link), so the thread shows on their View Contact pages. Relates are
+    idempotent; failures are logged, not fatal."""
+    for cid in member_contact_ids or ():
+        if ("Contact", cid, conversation_id) in excludes:
+            continue
+        try:
+            await client.relate(CONVERSATION, conversation_id, CONTACTS_LINK, cid)
+        except EspoError as exc:
+            log.warning(
+                "member contact link %s -> Contact/%s failed: %s",
+                conversation_id, cid, exc,
+            )
     for rec in records:
         if (rec.entity, rec.id, conversation_id) in excludes:
             continue
