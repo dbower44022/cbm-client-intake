@@ -186,11 +186,11 @@ attendees, notes-only/past-date/upcoming-session/cancelled-at-date guards,
 invite decline, create-as-Completed, best-effort failure); full editor flow
 driven in the stub harness (prompt wording/buttons, decline → PUT carries
 `skipFollowUpInvite:true` + diffed fields only, accept → `false`, save
-notice, grid cell blank despite a stored value; no console errors). **NOT
-yet driven live.** Live checks: close a real session with a next date →
-follow-up appears in the grid/Sessions tab with invites; the Calvin Boss
-grid row shows no Next Session after deploy (clearing the stored field in
-the CRM is optional cleanup — the grid ignores it now).
+notice, grid cell blank despite a stored value; no console errors).
+**VERIFIED LIVE 2026-07-23** — Doug drove it on the deployed app ("worked
+great"): closing a session with a next date booked the follow-up, and the
+Calvin Boss ghost date is gone from the grid. Clearing the stored
+engagement field in the CRM remains optional cleanup — the grid ignores it.
 
 ## [0.135.0] — 2026-07-22
 

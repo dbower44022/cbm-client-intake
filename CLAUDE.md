@@ -1566,7 +1566,7 @@ Close popover — no console errors). **DEPLOYED (see the v0.138.1 header above)
 the live two-admin pass is the remaining verification.** Staff reference:
 `submission-admin.md`; plan: `prds/submission-admin-collaboration-plan.md`.
 
-**Main is at v0.136.0** (2026-07-22, 1009 tests green, committed NOT pushed) —
+**v0.136.0** (2026-07-22, 1009 tests green; deployed with the later pushes) —
 **closing a session books the agreed next session + the grid stops trusting
 the stored engagement field** (Doug's design, all four rulings taken from
 the Calvin Boss ghost-date investigation; full mechanics CHANGELOG 0.136.0):
@@ -1585,10 +1585,10 @@ supported; the field stays read-only on the Details strip). Investigation
 facts: no CRM formula touches the field (checked on the prod droplet); the
 engagement's one session was created 7/16 by Doug, edited 7/20 by Sue to
 Completed with the odd dateStart 2025-09-08 (probable wrong-year entry —
-still worth asking Sue). **NOT yet driven live** — after deploy: close a
-real session with a next date → follow-up appears with invites; Calvin
-Boss's row shows no ghost date. Clearing the stored field in the CRM is
-optional cleanup.
+still worth asking Sue). **VERIFIED LIVE 2026-07-23 — Doug: "worked
+great"** (arc closed: session closed with a next date books the follow-up;
+the ghost date is gone from the grid). Clearing the stored engagement
+field in the CRM stays optional cleanup — the grid ignores it.
 
 **Main is at v0.134.0** (2026-07-22, 1000 tests green, committed NOT pushed) —
 **Submission Admin: editable Request status + the complete submission on the
