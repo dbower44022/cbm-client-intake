@@ -145,6 +145,57 @@ async def run_alert_check(
         )
 
 
+async def run_worker_liveness_check(
+    store,
+    settings: Settings,
+    state: dict,
+    *,
+    now: Optional[datetime] = None,
+    send: Optional[Send] = None,
+) -> None:
+    """WEB-side worker liveness (2026-07-23): a dead worker can't alert on
+    itself, so the web process — which survives it — watches the heartbeat
+    row and alerts when it goes stale; a one-time all-clear goes out on
+    recovery. Pairs with an external uptime check on ``/healthz`` (which
+    covers the web process itself being down — the case THIS check can't
+    see). ``state`` carries the cooldown stamps, the alerted flag, and a
+    first-seen stamp so a fresh environment (worker not yet started, no
+    heartbeat row) gets a grace window instead of an instant alert.
+    """
+    now = now or datetime.now(timezone.utc)
+    send = send or (lambda text: send_alert(settings, text))
+    threshold = settings.worker_heartbeat_alert_seconds
+    state.setdefault("liveness_first_seen", now)
+
+    metrics = await store.metrics()
+    age = metrics.get("workerHeartbeatAgeSeconds")
+    if age is None:
+        # Never stamped: stale only once we've been watching longer than the
+        # threshold (web usually boots before the worker's first stamp).
+        stale = (
+            now - state["liveness_first_seen"]
+        ).total_seconds() >= threshold
+    else:
+        stale = age >= threshold
+
+    if stale:
+        if _due(state, "worker_liveness", now, settings.alert_cooldown_seconds):
+            state["liveness_alerted"] = True
+            last = f"{int(age)}s ago" if age is not None else "never"
+            await send(
+                f"The delivery worker's heartbeat is stale (last beat: {last}; "
+                f"threshold {threshold}s) — the worker may be down or "
+                f"crash-looping. Submissions will queue safely until it "
+                f"recovers; check the delivery-worker component."
+            )
+    elif state.get("liveness_alerted"):
+        state["liveness_alerted"] = False
+        # Clear the cooldown stamp so the NEXT incident alerts immediately
+        # instead of waiting out the cooldown from this one.
+        state.pop("worker_liveness", None)
+        await send("The delivery worker's heartbeat has recovered.")
+
+
 def _default_fetch(settings: Settings) -> FetchOptions:
     client = EspoClient(
         settings.espo_base_url, settings.espo_api_key, settings.request_timeout_seconds

@@ -218,3 +218,52 @@ async def test_alert_without_any_channel_still_logs(caplog):
     with caplog.at_level("WARNING", logger="cbm_intake.monitoring"):
         await send_alert(_settings(), "nobody is listening")
     assert any("nobody is listening" in r.getMessage() for r in caplog.records)
+
+
+# --- web-side worker-liveness watch (2026-07-23) ----------------------------
+
+from datetime import timedelta
+
+from core.monitoring import run_worker_liveness_check
+
+
+async def test_liveness_alerts_on_stale_heartbeat():
+    sent, send = _collector()
+    store = FakeMetricsStore({"workerHeartbeatAgeSeconds": 400})
+    await run_worker_liveness_check(store, _settings(), {}, now=_NOW, send=send)
+    assert len(sent) == 1 and "heartbeat is stale" in sent[0]
+
+
+async def test_liveness_quiet_when_fresh():
+    sent, send = _collector()
+    store = FakeMetricsStore({"workerHeartbeatAgeSeconds": 5})
+    await run_worker_liveness_check(store, _settings(), {}, now=_NOW, send=send)
+    assert sent == []
+
+
+async def test_liveness_cooldown_then_recovery_notice():
+    sent, send = _collector()
+    state = {}
+    stale = FakeMetricsStore({"workerHeartbeatAgeSeconds": 400})
+    await run_worker_liveness_check(stale, _settings(), state, now=_NOW, send=send)
+    await run_worker_liveness_check(stale, _settings(), state, now=_NOW, send=send)
+    assert len(sent) == 1  # cooldown suppresses the repeat
+    healthy = FakeMetricsStore({"workerHeartbeatAgeSeconds": 3})
+    await run_worker_liveness_check(healthy, _settings(), state, now=_NOW, send=send)
+    assert len(sent) == 2 and "recovered" in sent[1]
+    # A NEW incident after recovery alerts immediately (cooldown was cleared).
+    await run_worker_liveness_check(stale, _settings(), state, now=_NOW, send=send)
+    assert len(sent) == 3 and "stale" in sent[2]
+
+
+async def test_liveness_never_stamped_gets_grace_then_alerts():
+    sent, send = _collector()
+    state = {}
+    store = FakeMetricsStore({"workerHeartbeatAgeSeconds": None})
+    # First check right after boot: inside the grace window — quiet.
+    await run_worker_liveness_check(store, _settings(), state, now=_NOW, send=send)
+    assert sent == []
+    # Still no heartbeat after the threshold has elapsed — alert.
+    later = _NOW + timedelta(seconds=400)
+    await run_worker_liveness_check(store, _settings(), state, now=later, send=send)
+    assert len(sent) == 1 and "never" in sent[0]

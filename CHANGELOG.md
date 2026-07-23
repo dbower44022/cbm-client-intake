@@ -4,6 +4,30 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.140.0] — 2026-07-23
+
+**feat(monitoring): worker-liveness alerting — the dead-worker gap is closed**
+(the D4 follow-up; combination ruled by Doug 2026-07-23):
+- **In-app:** the WEB process (which survives a dead worker) runs
+  `core.monitoring.run_worker_liveness_check` on a timer
+  (`WORKER_LIVENESS_CHECK_SECONDS` default 120, 0 disables; gated on a
+  durable store + ASYNC_DELIVERY): alerts via the existing email/webhook
+  channels when the worker heartbeat is older than
+  `WORKER_HEARTBEAT_ALERT_SECONDS` (default 180), with the standard
+  cooldown, a one-time recovery all-clear (which also resets the cooldown
+  so the next incident alerts immediately), and a boot grace window for a
+  never-stamped fresh environment. ALERT_EMAIL_TO/FROM added to the WEB
+  component of both overlays (previously worker-only).
+- **External:** a DO Uptime check on the prod `/healthz`
+  (`cbm-intake-prod-healthz`) with a 2-minute **down** alert emailing
+  admin@cbmentors.org — covers the whole-app-down case the in-app watch
+  cannot see. (DO uptime checks can't inspect JSON, which is why the
+  heartbeat half lives in-app.)
+1024 tests green (4 new). Also this day (ops, no code): **D4 prod DB
+conversion** (see DEPLOYMENT.md — managed cluster, daily backups verified)
+and **espo@ retired** (Doug: CRM-native sends now deliver as info@; the
+espo@ group account is deactivated).
+
 ## [0.139.0] — 2026-07-22
 
 **feat(scripts): internal-conversation cleanup gains `--delete`** — the prod

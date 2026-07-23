@@ -341,7 +341,43 @@ def create_app(
         # a fresh environment WITHOUT an alembic_version stamp, wedging every
         # later `upgrade head`. Missing tables now surface as visible capture
         # 503s / worker cycle errors instead of a silently forked schema.
-        yield
+        #
+        # Worker-liveness watch (2026-07-23): the web process — which survives
+        # a dead worker — periodically checks the heartbeat row and alerts
+        # when it goes stale. Only meaningful when a worker is expected
+        # (async delivery) and a store exists to read the heartbeat from.
+        liveness_task = None
+        if (
+            store is not None
+            and settings.async_delivery
+            and settings.worker_liveness_check_seconds > 0
+        ):
+            import asyncio as _asyncio
+
+            from core import monitoring as _monitoring
+
+            async def _liveness_loop() -> None:
+                state: dict = {}
+                while True:
+                    await _asyncio.sleep(settings.worker_liveness_check_seconds)
+                    try:
+                        await _monitoring.run_worker_liveness_check(
+                            store, settings, state
+                        )
+                    except Exception:  # noqa: BLE001 — the watch must survive
+                        log.exception("worker liveness check failed")
+
+            liveness_task = _asyncio.create_task(_liveness_loop())
+            log.info(
+                "worker liveness watch enabled (every %ss, stale after %ss)",
+                settings.worker_liveness_check_seconds,
+                settings.worker_heartbeat_alert_seconds,
+            )
+        try:
+            yield
+        finally:
+            if liveness_task is not None:
+                liveness_task.cancel()
 
     app = FastAPI(title="CBM Intake Forms", version=__version__, lifespan=lifespan)
     # Exposed to the ops console router (V2 Phase 2).

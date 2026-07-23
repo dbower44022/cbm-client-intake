@@ -91,6 +91,13 @@ class Settings(BaseSettings):
     # switch, hand edits in the CRM UI). 0 disables.
     assignment_reconcile_seconds: int = 86400
     alert_check_seconds: int = 300          # how often the worker evaluates thresholds
+    # WEB-side worker-liveness watch (2026-07-23): the web process checks the
+    # worker's heartbeat row and alerts (email/webhook, same channels) when it
+    # goes stale — a dead worker can't alert on itself. Runs only with a
+    # durable store AND async delivery. 0 disables. Set ALERT_EMAIL_TO/FROM on
+    # the WEB component too for email delivery of these.
+    worker_liveness_check_seconds: int = 120
+    worker_heartbeat_alert_seconds: int = 180
     alert_needs_attention_threshold: int = 1  # alert when this many are stuck
     alert_pending_age_minutes: int = 30     # alert when the oldest pending is older
     alert_cooldown_seconds: int = 3600      # minimum gap between repeats of an alert
