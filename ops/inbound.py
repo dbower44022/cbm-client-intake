@@ -28,11 +28,13 @@ theoretical, and the window is a constant below if it ever needs raising.
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
+from email.utils import parseaddr
 from typing import Any
 
 from core.config import Settings
 from core.email_clean import clean_email
-from core.gmail import GmailClient, parse_message
+from core.gmail import GmailClient, looks_like_bounce, parse_message
 from core.store import STATUS_HELD_REVIEW, SubmissionStore
 
 log = logging.getLogger("cbm_intake.ops.inbound")
@@ -125,10 +127,72 @@ async def _capture_thread(
     return captured.is_new
 
 
+def _newest_message(thread: dict) -> dict | None:
+    """The most recent message in a headers-only thread (Gmail internalDate)."""
+    newest = None
+    for m in thread.get("messages") or []:
+        stamp = int(m.get("internalDate") or 0)
+        if newest is None or stamp > newest[0]:
+            newest = (stamp, m)
+    return None if newest is None else {"stamp": newest[0], "msg": newest[1]}
+
+
+async def _reopen_after_close(
+    gmail: GmailClient, store: SubmissionStore, thread_ids: list[str]
+) -> int:
+    """Auto-reopen (Doug's ruling): a submitter replying on an anchored thread
+    of a CLOSED submission brings it back into the open queue. Fires only for a
+    message that arrived AFTER the close (else a request closed on an inbound
+    message would reopen itself every poll). Best-effort, closed rows only —
+    typically none, so this costs one headers-only thread read per closed
+    submission touched this poll."""
+    if not hasattr(store, "submissions_for_threads"):
+        return 0
+    rows = await store.submissions_for_threads(thread_ids)
+    wanted = set(thread_ids)
+    reopened = 0
+    for r in rows:
+        closed_at = r.get("closed_at")
+        if not closed_at:
+            continue
+        anchored = [t for t in (r.get("thread_ids") or []) if t in wanted]
+        newest = None
+        for tid in anchored:
+            try:
+                thread = await gmail.get_thread(tid, headers_only=True)
+            except Exception as exc:  # noqa: BLE001 — per-thread best-effort
+                log.warning("auto-reopen thread read failed for %s: %s", tid, exc)
+                continue
+            cand = _newest_message(thread)
+            if cand and (newest is None or cand["stamp"] > newest["stamp"]):
+                newest = cand
+        if newest is None:
+            continue
+        headers = {
+            (h.get("name") or "").lower(): h.get("value") or ""
+            for h in (newest["msg"].get("payload") or {}).get("headers") or []
+        }
+        sender = parseaddr(headers.get("from", ""))[1].lower()
+        if not sender or sender == gmail.mailbox:
+            continue  # our own message is newest — nothing to reopen for
+        if looks_like_bounce(sender, headers.get("subject", "")):
+            continue
+        arrived = datetime.fromtimestamp(newest["stamp"] / 1000, tz=timezone.utc)
+        if arrived <= closed_at:
+            continue  # the newest message predates the close
+        if await store.reopen_submission(r["id"], acted_by=None):
+            reopened += 1
+            log.info(
+                "auto-reopened submission %s — submitter replied after close", r["id"]
+            )
+    return reopened
+
+
 async def run_inbound_cycle(settings: Settings, store: SubmissionStore) -> dict[str, int]:
     """One poll of the shared mailbox. Returns cycle stats (for logs/tests).
     Never raises — the worker loop treats this like the other periodic checks."""
-    stats = {"listed": 0, "threads": 0, "captured": 0, "skippedKnown": 0, "errors": 0}
+    stats = {"listed": 0, "threads": 0, "captured": 0, "skippedKnown": 0,
+             "reopened": 0, "errors": 0}
     if not (settings.gmail_sync and settings.ops_mailbox):
         return stats
 
@@ -162,6 +226,12 @@ async def run_inbound_cycle(settings: Settings, store: SubmissionStore) -> dict[
             if thread_token(t) not in have and t not in known
         ]
         stats["skippedKnown"] = len(thread_ids) - len(fresh)
+        # Auto-reopen closed submissions whose submitter replied on the thread
+        # (best-effort; runs over the anchored/known threads in this poll).
+        try:
+            stats["reopened"] = await _reopen_after_close(gmail, store, thread_ids)
+        except Exception as exc:  # noqa: BLE001 — never crash the poll
+            log.warning("auto-reopen pass failed: %s", exc)
         for tid in fresh:
             try:
                 if await _capture_thread(gmail, store, tid):

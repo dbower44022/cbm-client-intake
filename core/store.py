@@ -99,7 +99,26 @@ submission = Table(
     # Staff-set request status (New / In Progress / Responded / Closed — the
     # CInformationRequest.requestStatus vocabulary; migration 0015). NULL reads
     # as "New". Written through to the CRM info-request record when one exists.
+    # NOTE: the Submission Admin collaboration rebuild (2026-07-22) drives this
+    # column from the Close action only ("Closed"); the manual dropdown is gone
+    # and the *display* state is derived (see base_state / conversationState).
     Column("request_status", String(32)),
+    # Close-with-reason (collaboration rebuild, migration 0018): the single
+    # terminal action. closed_at set => the request is done; close_reason is one
+    # of the disposition values (Responded — resolved / Referred / Duplicate /
+    # No response needed / Spam), close_note an optional free-text line. Close
+    # also sets resolved_at/by (below) and request_status="Closed" so the queue,
+    # the resolved flag, and the CRM never drift.
+    Column("closed_at", DateTime(timezone=True)),
+    Column("closed_by", String(128)),
+    Column("close_reason", String(64)),
+    Column("close_note", Text),
+    # The grid's collision signal: who did the last staff-meaningful thing
+    # (comment, reply, status change) and when — so anyone about to act sees a
+    # colleague is already on it. NULL = untouched (reads as "New"). Delivery /
+    # system events do NOT bump this; they live in the activity feed only.
+    Column("last_activity_at", DateTime(timezone=True)),
+    Column("last_activity_by", String(128)),
     # Gmail thread ids anchored to this submission (JSON list, v0.110.0): the
     # threads staff started from /ops (recorded after each send) and — for an
     # email-originated submission — the inbound thread itself (in the payload
@@ -125,6 +144,77 @@ worker_heartbeat = Table(
     metadata,
     Column("id", String(16), primary_key=True),
     Column("beat_at", DateTime(timezone=True), nullable=False),
+)
+
+# --- Submission Admin collaboration (2026-07-22) ---------------------------
+# A shared queue worked by a group of Marketing-Admin staff, with no formal
+# owner: coordination comes from visibility (comments + activity + presence),
+# not assignment. See prds/submission-admin-collaboration-plan.md.
+
+# Internal, attributed discussion among admins — replaces the single-blob
+# ``submission.notes`` (whose value is folded in as a seed comment on upgrade).
+# Append-only; a correction is a new comment. (Migration 0016.)
+submission_comment = Table(
+    "submission_comment",
+    metadata,
+    Column("id", String(36), primary_key=True),
+    Column("submission_id", String(36), nullable=False),
+    Column("author", String(128), nullable=False),      # userName
+    Column("author_name", String(255)),                 # display name when written
+    Column("body", Text, nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Index("ix_comment_submission", "submission_id", "created_at"),
+)
+
+# The automatic activity feed: one ordered log of everything that happened to a
+# submission (system + staff). ``actor`` is a userName, or "system" for poller /
+# delivery events. (Migration 0017.)
+submission_activity = Table(
+    "submission_activity",
+    metadata,
+    Column("id", String(36), primary_key=True),
+    Column("submission_id", String(36), nullable=False),
+    Column("kind", String(32), nullable=False),         # see ACTIVITY_KINDS
+    Column("actor", String(128)),
+    Column("actor_name", String(255)),
+    Column("summary", Text, nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Index("ix_activity_submission", "submission_id", "created_at"),
+)
+
+# Lightweight presence: each admin's last view of a submission, so the detail
+# page can show "Bob viewed 4 min ago" — the anti-double-reply cue in the
+# no-owner model. One row per (submission, user), upserted on view. (Migration
+# 0017 ships it alongside the activity table.)
+submission_presence = Table(
+    "submission_presence",
+    metadata,
+    Column("submission_id", String(36), primary_key=True),
+    Column("user_name", String(128), primary_key=True),
+    Column("display_name", String(255)),
+    Column("viewed_at", DateTime(timezone=True), nullable=False),
+)
+
+# Activity feed kinds — the vocabulary the summary lines are grouped by.
+ACT_SUBMITTED = "submitted"
+ACT_DELIVERED = "delivered"
+ACT_INBOUND = "inbound_received"
+ACT_COMMENT = "comment_added"
+ACT_REPLY_SENT = "reply_sent"
+ACT_STATUS = "status_changed"
+ACT_RESOLVED = "resolved"
+ACT_REOPENED = "reopened"
+ACT_CLOSED = "closed"
+ACT_REDRIVEN = "redriven"
+ACT_DISCARDED = "discarded"
+
+# Close-with-reason disposition values (Doug's approved pick-list, 2026-07-22).
+CLOSE_REASONS = (
+    "Responded — resolved",
+    "Referred",
+    "Duplicate",
+    "No response needed",
+    "Spam / not legitimate",
 )
 
 
@@ -153,6 +243,18 @@ class Claimed:
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def base_state(row: dict[str, Any]) -> str:
+    """A submission's conversational state from its OWN stored data (no Gmail):
+    ``closed`` / ``in_progress`` / ``new``. The frontend overlays the live reply
+    state (reply-owed / waiting-on-them) when the base is ``in_progress`` — a
+    ``new`` (untouched) row stays New, a ``closed`` row stays Closed."""
+    if row.get("closed_at"):
+        return "closed"
+    if row.get("last_activity_at") or (row.get("comment_count") or 0):
+        return "in_progress"
+    return "new"
 
 
 class SubmissionStore(Protocol):
@@ -185,10 +287,38 @@ class SubmissionStore(Protocol):
     async def set_request_status(
         self, submission_id: str, request_status: str, *, acted_by: Optional[str] = None
     ) -> bool: ...
+    # Collaboration (2026-07-22): comments, activity, close/reopen, presence.
+    async def add_comment(
+        self, submission_id: str, *, author: str, author_name: str, body: str
+    ) -> Optional[dict[str, Any]]: ...
+    async def list_comments(self, submission_id: str) -> list[dict[str, Any]]: ...
+    async def add_activity(
+        self, submission_id: str, *, kind: str, actor: Optional[str],
+        actor_name: Optional[str], summary: str, bump: bool = True,
+    ) -> None: ...
+    async def list_activity(
+        self, submission_id: str, *, limit: int = 100
+    ) -> list[dict[str, Any]]: ...
+    async def close_submission(
+        self, submission_id: str, *, reason: str, note: str = "",
+        closed_by: str, closed_by_name: str,
+    ) -> bool: ...
+    async def reopen_submission(
+        self, submission_id: str, *, acted_by: Optional[str] = None
+    ) -> bool: ...
+    async def record_presence(
+        self, submission_id: str, *, user_name: str, display_name: str
+    ) -> None: ...
+    async def recent_presence(
+        self, submission_id: str, *, exclude: str, within_seconds: int = 900
+    ) -> list[dict[str, Any]]: ...
     # Gmail thread anchoring (v0.110.0):
     async def add_thread_id(self, submission_id: str, thread_id: str) -> bool: ...
     async def existing_tokens(self, form_slug: str, tokens: list[str]) -> set[str]: ...
     async def known_gmail_threads(self, thread_ids: list[str]) -> set[str]: ...
+    async def submissions_for_threads(
+        self, thread_ids: list[str]
+    ) -> list[dict[str, Any]]: ...
     async def metrics(self) -> dict[str, Any]: ...
     async def ping(self) -> bool: ...
     # Worker liveness (P1-6):
@@ -403,9 +533,19 @@ class PostgresStore:
                 submission.c.resolved_at,
                 submission.c.resolved_by,
                 submission.c.request_status,
+                submission.c.closed_at,
+                submission.c.closed_by,
+                submission.c.close_reason,
+                submission.c.last_activity_at,
+                submission.c.last_activity_by,
                 submission.c.received_at,
                 submission.c.processed_at,
                 submission.c.next_attempt_at,
+                select(func.count())
+                .select_from(submission_comment)
+                .where(submission_comment.c.submission_id == submission.c.id)
+                .scalar_subquery()
+                .label("comment_count"),
             )
             .order_by(submission.c.received_at.desc())
             .limit(limit)
@@ -517,6 +657,185 @@ class PostgresStore:
             )
         return result.rowcount > 0
 
+    async def _bump_activity(self, conn, submission_id: str, actor: Optional[str]) -> None:
+        """Stamp last_activity_at/by — the grid's collision signal. Called for
+        staff-meaningful events only (comments, replies, status changes); NOT
+        for system delivery/inbound (those live in the feed only)."""
+        await conn.execute(
+            update(submission)
+            .where(submission.c.id == submission_id)
+            .values(last_activity_at=_now(), last_activity_by=actor, updated_at=_now())
+        )
+
+    async def add_comment(
+        self, submission_id: str, *, author: str, author_name: str, body: str
+    ) -> Optional[dict[str, Any]]:
+        """Append an attributed comment to the internal discussion + bump the
+        collision signal. Returns the new comment (None if the submission is
+        gone)."""
+        now = _now()
+        cid = str(uuid.uuid4())
+        async with self._engine.begin() as conn:
+            exists = (
+                await conn.execute(
+                    select(submission.c.id).where(submission.c.id == submission_id)
+                )
+            ).first()
+            if exists is None:
+                return None
+            await conn.execute(
+                submission_comment.insert().values(
+                    id=cid, submission_id=submission_id, author=author,
+                    author_name=author_name, body=body, created_at=now,
+                )
+            )
+            await self._bump_activity(conn, submission_id, author)
+        return {
+            "id": cid, "author": author, "author_name": author_name,
+            "body": body, "created_at": now,
+        }
+
+    async def list_comments(self, submission_id: str) -> list[dict[str, Any]]:
+        async with self._engine.begin() as conn:
+            rows = (
+                await conn.execute(
+                    select(submission_comment)
+                    .where(submission_comment.c.submission_id == submission_id)
+                    .order_by(submission_comment.c.created_at)
+                )
+            ).mappings().all()
+        return [dict(r) for r in rows]
+
+    async def add_activity(
+        self, submission_id: str, *, kind: str, actor: Optional[str],
+        actor_name: Optional[str], summary: str, bump: bool = True,
+    ) -> None:
+        """Write one activity-feed entry. ``bump`` stamps the collision signal
+        (staff events); pass bump=False for system events (submitted/delivered/
+        inbound) so an untouched submission still reads as New."""
+        now = _now()
+        async with self._engine.begin() as conn:
+            await conn.execute(
+                submission_activity.insert().values(
+                    id=str(uuid.uuid4()), submission_id=submission_id, kind=kind,
+                    actor=actor, actor_name=actor_name, summary=summary, created_at=now,
+                )
+            )
+            if bump and actor and actor != "system":
+                await self._bump_activity(conn, submission_id, actor)
+
+    async def list_activity(
+        self, submission_id: str, *, limit: int = 100
+    ) -> list[dict[str, Any]]:
+        async with self._engine.begin() as conn:
+            rows = (
+                await conn.execute(
+                    select(submission_activity)
+                    .where(submission_activity.c.submission_id == submission_id)
+                    .order_by(submission_activity.c.created_at.desc())
+                    .limit(limit)
+                )
+            ).mappings().all()
+        return [dict(r) for r in rows]
+
+    async def close_submission(
+        self, submission_id: str, *, reason: str, note: str = "",
+        closed_by: str, closed_by_name: str,
+    ) -> bool:
+        """The single terminal action: set closed_* + resolved_* +
+        request_status="Closed" in one write so queue, resolved flag, and the
+        CRM carrier never drift. The CRM write-through is the router's job."""
+        now = _now()
+        async with self._engine.begin() as conn:
+            result = await conn.execute(
+                update(submission)
+                .where(submission.c.id == submission_id)
+                .values(
+                    closed_at=now, closed_by=closed_by, close_reason=reason,
+                    close_note=note or None,
+                    resolved_at=now, resolved_by=closed_by,
+                    request_status="Closed",
+                    last_activity_at=now, last_activity_by=closed_by,
+                    updated_at=now,
+                )
+            )
+            if result.rowcount:
+                await conn.execute(
+                    submission_activity.insert().values(
+                        id=str(uuid.uuid4()), submission_id=submission_id,
+                        kind=ACT_CLOSED, actor=closed_by, actor_name=closed_by_name,
+                        summary=f"Closed — {reason}" + (f" · {note}" if note else ""),
+                        created_at=now,
+                    )
+                )
+        return result.rowcount > 0
+
+    async def reopen_submission(
+        self, submission_id: str, *, acted_by: Optional[str] = None
+    ) -> bool:
+        """Undo Close (staff, or automatic on an anchored inbound reply): clears
+        closed_* + resolved_* so it re-enters the open queue."""
+        now = _now()
+        async with self._engine.begin() as conn:
+            result = await conn.execute(
+                update(submission)
+                .where(submission.c.id == submission_id)
+                .where(submission.c.closed_at.isnot(None))
+                .values(
+                    closed_at=None, closed_by=None, close_reason=None, close_note=None,
+                    resolved_at=None, resolved_by=None,
+                    last_activity_at=now, last_activity_by=acted_by,
+                    updated_at=now,
+                )
+            )
+            if result.rowcount:
+                await conn.execute(
+                    submission_activity.insert().values(
+                        id=str(uuid.uuid4()), submission_id=submission_id,
+                        kind=ACT_REOPENED, actor=acted_by or "system",
+                        actor_name=acted_by or "system",
+                        summary="Reopened" + ("" if acted_by else " — the submitter replied"),
+                        created_at=now,
+                    )
+                )
+        return result.rowcount > 0
+
+    async def record_presence(
+        self, submission_id: str, *, user_name: str, display_name: str
+    ) -> None:
+        """Upsert this admin's last view of the submission (presence cue)."""
+        now = _now()
+        async with self._engine.begin() as conn:
+            stmt = pg_insert(submission_presence).values(
+                submission_id=submission_id, user_name=user_name,
+                display_name=display_name, viewed_at=now,
+            )
+            await conn.execute(
+                stmt.on_conflict_do_update(
+                    index_elements=["submission_id", "user_name"],
+                    set_={"viewed_at": stmt.excluded.viewed_at,
+                          "display_name": stmt.excluded.display_name},
+                )
+            )
+
+    async def recent_presence(
+        self, submission_id: str, *, exclude: str, within_seconds: int = 900
+    ) -> list[dict[str, Any]]:
+        """Other admins who viewed this submission recently (newest first) — the
+        'Bob viewed 4 min ago' line. Excludes the caller."""
+        cutoff = _now() - timedelta(seconds=within_seconds)
+        async with self._engine.begin() as conn:
+            rows = (
+                await conn.execute(
+                    select(submission_presence)
+                    .where(submission_presence.c.submission_id == submission_id)
+                    .where(submission_presence.c.user_name != exclude)
+                    .where(submission_presence.c.viewed_at >= cutoff)
+                    .order_by(submission_presence.c.viewed_at.desc())
+                )
+            ).mappings().all()
+        return [dict(r) for r in rows]
+
     async def add_thread_id(self, submission_id: str, thread_id: str) -> bool:
         """Anchor a Gmail thread to a submission (recorded after each /ops send;
         also at inbound capture). Appends to the ``thread_ids`` JSON list,
@@ -579,6 +898,27 @@ class PostgresStore:
         for (threads,) in rows:
             known.update(t for t in (threads or []) if t in wanted)
         return known
+
+    async def submissions_for_threads(
+        self, thread_ids: list[str]
+    ) -> list[dict[str, Any]]:
+        """Submissions (id, closed_at, thread_ids) anchored to any of these
+        Gmail threads — the inbound poller's input for auto-reopening a closed
+        submission when the submitter replies on its thread."""
+        if not thread_ids:
+            return []
+        conds = [submission.c.thread_ids.contains([t]) for t in thread_ids]
+        async with self._engine.begin() as conn:
+            rows = (
+                await conn.execute(
+                    select(
+                        submission.c.id,
+                        submission.c.closed_at,
+                        submission.c.thread_ids,
+                    ).where(submission.c.thread_ids.isnot(None), or_(*conds))
+                )
+            ).mappings().all()
+        return [dict(r) for r in rows]
 
     async def discard(self, submission_id: str, *, acted_by: Optional[str] = None) -> bool:
         """Resolve a stuck submission manually: move it to the terminal

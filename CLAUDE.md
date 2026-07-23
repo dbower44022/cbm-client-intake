@@ -1513,6 +1513,36 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-22)
 
+**Working tree at v0.137.0** (2026-07-22, full suite green + pg round-trip,
+NOT committed) — **Submission Admin becomes a multi-admin review-and-respond
+workspace** (Doug's design, elicited this session; plan + approved rulings:
+`prds/submission-admin-collaboration-plan.md`; mechanics: CHANGELOG 0.137.0;
+mockup published as an artifact). No owner — coordination by **visibility**:
+(1) the single `notes` blob → an attributed **comment stream**
+(`submission_comment`, migration 0016; old notes folded in as a `legacy` seed
+comment) beside an automatic **activity feed** (`submission_activity`, 0017);
+(2) **presence** ("Marcus viewed 4 min ago" on the detail + a **Last activity**
+grid column; `submission_presence`, 0017; `last_activity_at/by`, 0018;
+~20s poll); (3) **direct send, attributed** — replies still go as the shared
+*Cleveland Business Mentors* identity but the feed records which admin sent each
+(`_ops_after_send`); (4) **derived State** (Status/Request/Reply collapsed into
+one `store.base_state` + reply overlay: Closed / Reply owed / Waiting / In
+progress / New, delivery problems as a sub-badge) and **one Close-with-reason**
+(Responded—resolved / Referred / Duplicate / No response needed / Spam) that
+sets closed + resolved + `requestStatus="Closed"` together with the v0.134.0 CRM
+write-through; Reopen undoes it; **auto-reopen** when the submitter replies on an
+anchored thread after Close (`ops/inbound._reopen_after_close`, only for a
+message arriving after the close). New endpoints: `/comments`, `/close`,
+`/reopen`, `GET …/presence`; detail carries `comments`/`activity`/`viewers`/
+`baseState`; list carries `baseState`+`last_activity_*`. Migrations 0016–0018
+(pre-deploy migrate). Verified: full suite green + a Postgres round-trip of the
+new store methods + migration up/down + the notes→comment fold + a stub-harness
+browser pass (grid State column, presence, Discussion+Activity, add-comment,
+Close popover — no console errors). **NOT committed, NOT deployed, NOT driven
+live.** Live pass after deploy (migrations run): two admins — comment, presence,
+reply attribution, Close→CRM `requestStatus`, auto-reopen on an anchored reply.
+Staff reference updated in `submission-admin.md`.
+
 **Main is at v0.136.0** (2026-07-22, 1009 tests green, committed NOT pushed) —
 **closing a session books the agreed next session + the grid stops trusting
 the stored engagement field** (Doug's design, all four rulings taken from

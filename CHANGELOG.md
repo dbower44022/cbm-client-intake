@@ -4,6 +4,56 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.137.0] — 2026-07-22
+
+**feat(ops): Submission Admin becomes a multi-admin review-and-respond
+workspace.** Doug's design (elicited this session; plan +
+approved rulings in `prds/submission-admin-collaboration-plan.md`): a group
+of Marketing-Admin staff share one queue with **no owner** — coordination
+comes from *visibility*, not assignment. Four parts:
+
+- **Discussion + Activity, side by side (Overview).** The single `notes`
+  blob is replaced by an attributed, timestamped **comment stream**
+  (`submission_comment`, migration 0016 — the old notes value is folded in
+  as a `legacy` seed comment, no history lost); beside it an automatic
+  **activity feed** (`submission_activity`, migration 0017) logging every
+  event — submitted / delivered / inbound / comment / reply sent / status
+  change / resolved / reopened / closed / redriven / discarded.
+- **Presence — the anti-double-reply cue.** The detail page shows who else is
+  looking ("Marcus viewed 4 min ago"), and the grid gains a **Last activity —
+  who / when** column. Each admin's view is upserted to `submission_presence`
+  (migration 0017) and polled every ~20s. `last_activity_at/by` (migration
+  0018) is bumped by staff-meaningful events only (never system delivery).
+- **Direct send, attributed.** Replies still send as the shared *Cleveland
+  Business Mentors* identity, but each send now logs a `reply_sent` activity
+  stamped with the admin who sent it (the `_ops_after_send` hook).
+- **Derived state + one Close-with-reason.** The grid's old Status / Request /
+  Reply columns collapse into a single **State**, derived server-side
+  (`store.base_state` + the live reply overlay): Closed · Reply owed · Waiting
+  on them · In progress · New (a delivery problem shows as a sub-badge). The
+  manual request-status dropdown and the separate Mark-resolved control are
+  replaced by **one terminal Close action with a disposition reason**
+  (Responded — resolved / Referred / Duplicate / No response needed / Spam)
+  that sets closed + resolved + `requestStatus="Closed"` together (with the
+  v0.134.0 CRM write-through) so the queue and the CRM never drift; Reopen
+  undoes it. A submitter who **replies on the anchored thread after Close**
+  auto-reopens the item (the inbound poller, `_reopen_after_close`, fires only
+  for a message that arrived after the close).
+
+New endpoints: `POST /ops/api/submissions/{id}/comments`, `/close`, `/reopen`,
+`GET …/presence`; the detail GET carries `comments`/`activity`/`viewers`/
+`baseState`; the list carries `baseState` + `last_activity_*`. Migrations
+0016–0018 (pre-deploy migrate). Verified: full suite green (1017 + new store/
+router tests; pg round-trip of comments/activity/close/reopen/presence/
+thread-lookup against live Postgres; migration up/down + the notes→comment
+fold); the frontend driven in the stub-browser harness (grid state column,
+presence line, Discussion + Activity, add-comment, Close popover; no console
+errors). Design mockup + plan: `prds/submission-admin-collaboration-plan.md`.
+**NOT yet driven live** (deploy runs migrations 0016–0018; then a two-admin
+pass: comment, presence, reply attribution, Close-with-reason → CRM
+`requestStatus`, auto-reopen on an anchored reply). Staff reference updated in
+`submission-admin.md`.
+
 ## [0.136.0] — 2026-07-22
 
 **feat(sessions): closing a session books the agreed next session; the grid's

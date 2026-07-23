@@ -30,6 +30,15 @@ from assignments.auth import clear_session, current_user, is_member
 from assignments.espo_user import client_for
 from core.config import get_settings
 from core.espo import EspoError, forbidden_hint, is_forbidden
+from core.store import (
+    ACT_DISCARDED,
+    ACT_REDRIVEN,
+    ACT_REOPENED,
+    ACT_REPLY_SENT,
+    ACT_RESOLVED,
+    CLOSE_REASONS,
+    base_state,
+)
 
 log = logging.getLogger("cbm_intake.ops")
 
@@ -57,6 +66,21 @@ def _store(request: Request):
     if store is None:
         raise HTTPException(status_code=503, detail="Durable store is not configured.")
     return store
+
+
+async def _activity(store, submission_id: str, **kw) -> None:
+    """Best-effort activity-feed write (a store predating the feed just no-ops).
+    Activity is context, never load-bearing — it must not fail the action."""
+    try:
+        await store.add_activity(submission_id, **kw)
+    except AttributeError:
+        pass
+    except Exception as exc:  # noqa: BLE001 — feed write is best-effort
+        log.warning("activity write failed on %s: %s", submission_id, exc)
+
+
+def _actor(user: dict) -> str:
+    return user.get("name") or user["userName"]
 
 
 def _crm_failure(request: Request, exc: EspoError, message: str) -> HTTPException:
@@ -109,6 +133,8 @@ async def session(request: Request) -> dict:
         # legacy per-admin-mailbox mode.
         "opsMailbox": settings.ops_mailbox or None,
         "opsMailboxName": settings.ops_mailbox_name,
+        # The Close-with-reason disposition pick-list (Doug's approved values).
+        "closeReasons": list(CLOSE_REASONS),
     }
 
 
@@ -121,6 +147,11 @@ async def submissions(
     _require_user(request)
     store = _store(request)
     rows = await store.list_submissions(status=status, form=form)
+    # The derived conversational state from the row's OWN data (closed / in
+    # progress / new). The grid overlays the live reply state (owed / waiting)
+    # from /replystates on top of an in-progress base.
+    for r in rows:
+        r["baseState"] = base_state(r)
     counts = await store.counts_by_status()
     return {"submissions": rows, "counts": counts}
 
@@ -155,12 +186,124 @@ async def metrics(request: Request) -> dict:
 
 @router.get("/submissions/{submission_id}")
 async def submission_detail(submission_id: str, request: Request) -> dict:
-    _require_user(request)
+    user = _require_user(request)
     store = _store(request)
     row = await store.get_submission(submission_id)
     if row is None:
         raise HTTPException(status_code=404, detail="Submission not found.")
+    # The collaboration surface: the internal discussion, the activity feed, and
+    # who else is looking at this right now (presence). Best-effort — a store
+    # without these (older deploy / test fake) just omits them.
+    try:
+        row["comments"] = await store.list_comments(submission_id)
+        row["activity"] = await store.list_activity(submission_id)
+        await store.record_presence(
+            submission_id, user_name=user["userName"],
+            display_name=user.get("name") or user["userName"],
+        )
+        row["viewers"] = await store.recent_presence(
+            submission_id, exclude=user["userName"]
+        )
+    except AttributeError:  # store predates collaboration
+        row.setdefault("comments", [])
+        row.setdefault("activity", [])
+        row.setdefault("viewers", [])
+    row["baseState"] = base_state(row)
     return row
+
+
+@router.get("/submissions/{submission_id}/presence")
+async def submission_presence(submission_id: str, request: Request) -> dict:
+    """Poll target for the presence line: record the caller's view and return
+    the other admins who looked recently. Cheap enough to poll every ~20s."""
+    user = _require_user(request)
+    store = _store(request)
+    try:
+        await store.record_presence(
+            submission_id, user_name=user["userName"],
+            display_name=user.get("name") or user["userName"],
+        )
+        viewers = await store.recent_presence(submission_id, exclude=user["userName"])
+    except AttributeError:
+        viewers = []
+    return {"viewers": viewers}
+
+
+class CommentIn(BaseModel):
+    body: str
+
+
+@router.post("/submissions/{submission_id}/comments")
+async def add_comment(submission_id: str, body: CommentIn, request: Request) -> dict:
+    """Append an attributed comment to the internal discussion (staff-only —
+    never delivered to the CRM or the submitter). Bumps the collision signal
+    and writes a ``comment_added`` activity entry."""
+    user = _require_user(request)
+    text = (body.body or "").strip()
+    if not text:
+        raise HTTPException(status_code=422, detail="A comment can't be empty.")
+    store = _store(request)
+    comment = await store.add_comment(
+        submission_id, author=user["userName"],
+        author_name=user.get("name") or user["userName"], body=text,
+    )
+    if comment is None:
+        raise HTTPException(status_code=404, detail="Submission not found.")
+    await store.add_activity(
+        submission_id, kind="comment_added", actor=user["userName"],
+        actor_name=user.get("name") or user["userName"],
+        summary="added a comment",
+    )
+    log.info("comment on %s by %s", submission_id, user["userName"])
+    return {"status": "ok", "comment": comment}
+
+
+class CloseIn(BaseModel):
+    reason: str
+    note: str = ""
+
+
+@router.post("/submissions/{submission_id}/close")
+async def close_submission(submission_id: str, body: CloseIn, request: Request) -> dict:
+    """The single terminal action: close the request with a disposition reason.
+    Sets the done-state + the resolved flag + ``request_status="Closed"`` and —
+    when the delivery created a CInformationRequest — writes that CRM record's
+    Request Status too, so the queue and the CRM never drift."""
+    user = _require_user(request)
+    if body.reason not in CLOSE_REASONS:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Unknown close reason {body.reason!r} "
+                f"(expected one of: {', '.join(CLOSE_REASONS)})."
+            ),
+        )
+    store = _store(request)
+    row = await store.get_submission(submission_id)
+    if row is None or not await store.close_submission(
+        submission_id, reason=body.reason, note=(body.note or "").strip(),
+        closed_by=user["userName"], closed_by_name=user.get("name") or user["userName"],
+    ):
+        raise HTTPException(status_code=404, detail="Submission not found.")
+    log.info("close %s (%s) by %s", submission_id, body.reason, user["userName"])
+    out: dict = {"status": "ok", "closed": True}
+    _updated, warning = await _writethrough_request_status(row, "Closed", user)
+    if warning:
+        out["crmWarning"] = warning
+    return out
+
+
+@router.post("/submissions/{submission_id}/reopen")
+async def reopen_submission(submission_id: str, request: Request) -> dict:
+    """Undo Close — the request goes back into the open queue."""
+    user = _require_user(request)
+    store = _store(request)
+    if not await store.reopen_submission(submission_id, acted_by=user["userName"]):
+        raise HTTPException(
+            status_code=404, detail="Submission not found, or it isn't closed."
+        )
+    log.info("reopen %s by %s", submission_id, user["userName"])
+    return {"status": "ok", "closed": False}
 
 
 class NotesIn(BaseModel):
@@ -224,38 +367,51 @@ async def save_request_status(
         raise HTTPException(status_code=404, detail="Submission not found.")
     log.info("request status %s on %s by %s", body.status, submission_id, user["userName"])
     out: dict = {"status": "ok", "requestStatus": body.status}
-    info_id = ((row.get("result") or {}).get("informationRequestId") or "").strip()
-    if info_id:
-        client = _api_client()
-        if client is not None:
-            try:
-                await client.update(
-                    "CInformationRequest", info_id, {"requestStatus": body.status}
-                )
-                out["crmUpdated"] = True
-                from core import action_log
-
-                await action_log.record_action(
-                    client,
-                    app=action_log.APP_SUBMISSION_ADMIN,
-                    category=action_log.CAT_STATUS,
-                    action=action_log.ACT_STATUS_CHANGED,
-                    parent_type="CInformationRequest",
-                    parent_id=info_id,
-                    summary=f"Request status set to {body.status}",
-                    actor_name=user.get("name") or user["userName"],
-                )
-            except EspoError as exc:
-                log.warning(
-                    "requestStatus write-through failed on CInformationRequest/%s: %s",
-                    info_id, exc,
-                )
-                out["crmWarning"] = (
-                    "Saved here, but the CRM information-request record "
-                    "couldn't be updated — its Request Status may be out of "
-                    f"date. ({exc})"
-                )
+    updated, warning = await _writethrough_request_status(row, body.status, user)
+    if updated:
+        out["crmUpdated"] = True
+    if warning:
+        out["crmWarning"] = warning
     return out
+
+
+async def _writethrough_request_status(
+    row: dict, value: str, user: dict
+) -> tuple[bool, Optional[str]]:
+    """Best-effort mirror of the staff request status onto the delivery's
+    CInformationRequest (when it created one). Returns ``(updated, warning)`` —
+    ``warning`` is a readable string if the CRM write failed (the app-side
+    state is already saved). Shared by the request-status endpoint and Close."""
+    info_id = ((row.get("result") or {}).get("informationRequestId") or "").strip()
+    if not info_id:
+        return False, None
+    client = _api_client()
+    if client is None:
+        return False, None
+    try:
+        await client.update("CInformationRequest", info_id, {"requestStatus": value})
+        from core import action_log
+
+        await action_log.record_action(
+            client,
+            app=action_log.APP_SUBMISSION_ADMIN,
+            category=action_log.CAT_STATUS,
+            action=action_log.ACT_STATUS_CHANGED,
+            parent_type="CInformationRequest",
+            parent_id=info_id,
+            summary=f"Request status set to {value}",
+            actor_name=user.get("name") or user["userName"],
+        )
+        return True, None
+    except EspoError as exc:
+        log.warning(
+            "requestStatus write-through failed on CInformationRequest/%s: %s",
+            info_id, exc,
+        )
+        return False, (
+            "Saved here, but the CRM information-request record couldn't be "
+            f"updated — its Request Status may be out of date. ({exc})"
+        )
 
 
 @router.put("/submissions/{submission_id}/resolved")
@@ -270,6 +426,12 @@ async def save_resolved(submission_id: str, body: ResolvedIn, request: Request) 
         raise HTTPException(status_code=404, detail="Submission not found.")
     log.info("%s %s by %s", "resolved" if body.resolved else "reopened",
              submission_id, user["userName"])
+    await _activity(
+        store, submission_id,
+        kind=ACT_RESOLVED if body.resolved else ACT_REOPENED,
+        actor=user["userName"], actor_name=_actor(user),
+        summary="marked this resolved" if body.resolved else "reopened this",
+    )
     return {"status": "ok", "resolved": body.resolved}
 
 
@@ -569,6 +731,8 @@ async def redrive(submission_id: str, request: Request) -> dict:
     # Audit: a redrive re-runs CRM side effects — record who asked for it
     # (also stored durably on the row as acted_by).
     log.info("redrive %s by %s", submission_id, user["userName"])
+    await _activity(store, submission_id, kind=ACT_REDRIVEN, actor=user["userName"],
+                    actor_name=_actor(user), summary="re-queued for delivery")
     return {"status": "requeued"}
 
 
@@ -584,6 +748,8 @@ async def discard(submission_id: str, request: Request) -> dict:
     # Audit: discard is a terminal staff decision — "who discarded this?"
     # must be answerable from the run logs.
     log.info("discard %s by %s", submission_id, user["userName"])
+    await _activity(store, submission_id, kind=ACT_DISCARDED, actor=user["userName"],
+                    actor_name=_actor(user), summary="discarded this submission")
     return {"status": "discarded"}
 
 
@@ -599,16 +765,25 @@ from comms.quicksend import (  # noqa: E402  (needs router + helpers above)
 
 
 async def _ops_after_send(request: Request, body, result: dict) -> None:
-    """Anchor the sent message's Gmail thread to the submission it was
-    composed from (best-effort — the caller swallows failures)."""
-    thread_id = (result or {}).get("gmailThreadId")
-    if not body.submissionId or not thread_id:
+    """After an /ops reply is sent: anchor its Gmail thread to the submission,
+    and log a ``reply_sent`` activity stamped with the admin who sent it — the
+    reply goes out as the shared identity, but the feed records the person
+    (best-effort; the caller swallows failures)."""
+    if not body.submissionId:
         return
     store = getattr(request.app.state, "submission_store", None)
     if store is None:
         return
-    if await store.add_thread_id(body.submissionId, thread_id):
+    thread_id = (result or {}).get("gmailThreadId")
+    if thread_id and await store.add_thread_id(body.submissionId, thread_id):
         log.info("anchored gmail thread %s to submission %s", thread_id, body.submissionId)
+    user = current_user(request) or {}
+    to = ", ".join(getattr(body, "to", None) or []) or "the submitter"
+    await _activity(
+        store, body.submissionId, kind=ACT_REPLY_SENT,
+        actor=user.get("userName", "?"), actor_name=_actor(user) if user else "?",
+        summary=f"sent a reply to {to}",
+    )
 
 
 register_quicksend(

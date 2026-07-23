@@ -40,20 +40,25 @@ started from the submission page — never their unrelated mail).
 - The **search box at the top center** filters live across reference, form,
   status, submitter, error text, notes, and dates.
 - The **Open / Resolved / All** select defaults to **Open** — the grid shows
-  the requests still waiting on someone. Resolved rows carry a green
-  ✓ chip; the count chips include `open` / `resolved` totals.
-- The **Request** column is the staff-set state of the request itself —
-  **New / In Progress / Responded / Closed** (every submission starts New).
-  It's distinct from **Status**, which is the machine's delivery state
-  (whether the submission reached the CRM — that one is not editable; nearly
-  everything correctly reads "completed"). Set the Request status on the
-  submission page.
-- The **Reply** column answers "who spoke last?" for each open submitter:
-  - **↳ reply owed** (red) — their email is the newest; we owe them a reply.
-  - **waiting on them** — our email is the newest.
-  - **—** — no email conversation yet.
-  It fills in a moment after the grid loads (it checks your mailbox), and
-  sorting by it surfaces everything that needs a response.
+  the requests still waiting on someone. The count chips include `open` /
+  `resolved` totals.
+- The **State** column is one at-a-glance answer to "where does this stand?",
+  worked out for you from the emails and what staff have done:
+  - **↳ Reply owed** (red) — the submitter's email is newest; we owe them a reply.
+  - **Waiting on them** — our email is newest.
+  - **In progress** — someone has commented / replied, no reply currently owed.
+  - **New** — nobody has touched it yet.
+  - **Closed** (green) — it's been closed with a reason.
+  - **Delivery failed** — a reply bounced.
+
+  If the machine had trouble *delivering* the submission to the CRM (rare),
+  that shows as a small sub-badge next to the state (e.g. `needs attention`,
+  or `held review` on an inbound email awaiting Approve). Sorting by State
+  surfaces the reply-owed items first.
+- The **Last activity** column shows **who did the last thing and when** —
+  the signal that a colleague is already on an item (there's no formal
+  "owner"; visibility is how the team avoids two people answering the same
+  request). Sort by it to find what's gone quiet.
 - **Re-drive** re-queues a stuck submission (needs-attention / retry / held /
   discarded) for the worker to run again — safe, it resumes from what was
   already created. **Discard** parks an undeliverable one (undo by
@@ -69,25 +74,34 @@ started from the submission page — never their unrelated mail).
 Three tabs, like the Client Management record pages.
 
 ### Overview
+- **A presence line at the top** tells you who else is looking right now
+  ("Marcus viewed 4 min ago") — check it before you reply, so two people
+  don't answer the same request. It refreshes on its own every few seconds.
 - **Left**: who submitted and where it stands — name, email (click to
-  compose), phone, company, their message, the form, delivery status, the
-  Request status, received/processed times, attempts, and the resolved
-  stamp — followed by **everything else the submitter entered on the form**,
-  each field with a readable label (a file upload shows its name and size).
-  Nothing they typed is hidden behind the raw JSON anymore.
-- **Top center**: **Submission notes** — free-form triage notes for other
-  admins ("left a voicemail", "duplicate of…"). Click Edit, type, Save.
-  Notes are staff-only; they never go to the CRM or the submitter.
-- **Below the notes**: the **conversation with the submitter** — the emails
-  on this submission's own threads in the shared info@ mailbox, newest
-  first; every admin sees the same list. Click a message to jump to the
-  Communications tab.
-- **Header controls**: the **Request status** dropdown (New / In Progress /
-  Responded / Closed — saves the moment you pick a value; on an information
-  request the matching CRM record's own Request Status field is updated too,
-  so the EspoCRM worklist stays in step), **Mark resolved / Reopen** (the
-  workflow flag — use it when the request is done, whatever "done" meant),
-  plus Re-drive/Discard when applicable.
+  compose), phone, company, their message, the form, delivery status,
+  received/processed times, attempts, and the resolved stamp — followed by
+  **everything else the submitter entered on the form**, each field with a
+  readable label (a file upload shows its name and size).
+- **Center: Discussion and Activity, side by side.**
+  - **Discussion** is the internal, staff-only conversation among admins —
+    attributed, timestamped comments ("left a voicemail", "duplicate of…").
+    Type in the box and click **Comment**. Every admin sees the same thread;
+    nothing here goes to the CRM or the submitter.
+  - **Activity** is the automatic log: what happened and who did it —
+    submitted, delivered, a reply sent (**and which admin sent it**, even
+    though it goes out as the shared identity), comments, resolved, closed,
+    re-driven, and so on.
+- **Below**: the **conversation with the submitter** — the emails on this
+  submission's own threads in the shared info@ mailbox, newest first. Click a
+  message to jump to the Communications tab.
+- **Header controls**: **Close ▾** — the single "this is done" action. Pick a
+  **reason** (Responded — resolved / Referred / Duplicate / No response
+  needed / Spam) and optionally add a note; closing marks the request resolved
+  *and*, on an information request, sets the matching CRM record's Request
+  Status to Closed, so the queue and EspoCRM stay in step. A closed request
+  shows its reason and a **Reopen** button. Re-drive / Discard appear when
+  applicable. (There's no manual status dropdown any more — the State column
+  works itself out from the conversation.)
 
 ### Details
 The raw record: the exact payload the form sent, delivery progress, the last
@@ -114,10 +128,11 @@ conversation view (and the Reply column) reads.
 
 ## Why don't I see…
 
-- **…the conversation / the Reply column?** Email features need the Gmail
-  integration on for the deployment (and the shared mailbox configured).
-  Without them the page says exactly which is missing — everything else
-  still works.
+- **…the conversation / the reply-owed State?** The email-derived parts of
+  the State column and the conversation need the Gmail integration on for the
+  deployment (and the shared mailbox configured). Without them the page says
+  exactly which is missing — the queue, Discussion, Activity, and Close all
+  still work.
 - **…an email the submitter sent that isn't in the conversation?** The
   conversation shows only the threads that belong to THIS submission. Mail
   they sent info@ about something else becomes its own queue item; mail they
@@ -129,21 +144,24 @@ conversation view (and the Reply column) reads.
 
 ## The intended flow for an information request
 
-1. Open Submission Admin — the grid shows **open** items; sort by **Reply**
-   to see who's waiting on you.
-2. Click the request. Read the message and facts on the left; check the
-   notes for anything a colleague already did.
+1. Open Submission Admin — the grid shows **open** items; sort by **State**
+   to bring the reply-owed ones to the top.
+2. Click the request. Check the **presence line** (is a colleague already on
+   it?), read the message and facts on the left, and skim **Discussion** for
+   anything a colleague already did.
 3. **If it arrived by email** (form "info-email"): first decide — **Approve**
    (a real request; the CRM records are created) or **Discard** (spam; gone,
    no CRM residue). Form submissions skip this step — they delivered on
    arrival.
 4. **Email the submitter** — the canned reply is pre-filled on first
    contact; later rounds are proper replies on the same thread. Everything
-   sends as **Cleveland Business Mentors <info@cbmentors.org>**.
-5. Jot what happened in **Submission notes**, and move the **Request
-   status** along as you work it (In Progress → Responded → Closed).
-6. When it's handled, **Mark resolved** — it leaves the queue (still
-   findable under Resolved/All).
+   sends as **Cleveland Business Mentors <info@cbmentors.org>**, and the
+   **Activity** log records that you were the one who sent it.
+5. Jot what happened for the team in **Discussion**. The State moves along on
+   its own as the conversation goes back and forth.
+6. When it's handled, **Close** it with a reason — it leaves the queue (still
+   findable under Resolved/All). If the submitter later replies on that same
+   thread, it **reopens automatically** and comes back to the queue.
 
 ## How email-originated submissions work (v0.110.0)
 

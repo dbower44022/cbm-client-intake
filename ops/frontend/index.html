@@ -73,13 +73,20 @@
       </div>
       <p class="ops__notice" id="detailNotice" role="status" hidden></p>
 
+      <!-- presence line: who else is looking at this right now -->
+      <div class="ops__presence" id="presence" hidden></div>
+
       <nav class="ops__tabs" id="detailTabs" role="tablist"></nav>
 
       <div class="ops__panel" data-panel="overview">
         <div class="ops__ov">
           <aside class="ops__facts" id="ovFacts"></aside>
           <div class="ops__ov-main">
-            <div class="ops__notes" id="notesCard"></div>
+            <!-- Discussion (internal comments) + Activity, side by side -->
+            <div class="ops__duo">
+              <section class="ops__col" id="discussionCol"></section>
+              <section class="ops__col" id="activityCol"></section>
+            </div>
             <div class="ops__conv">
               <div class="ops__conv-head">
                 <h3>Conversation with the submitter</h3>

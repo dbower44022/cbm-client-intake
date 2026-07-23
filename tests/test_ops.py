@@ -32,6 +32,9 @@ class FakeOpsStore:
         }
         self.redriven = []
         self.anchored = []
+        self.comments = {}
+        self.activity = []
+        self.presence = {}
 
     async def list_submissions(self, *, status=None, form=None, limit=200):
         rows = list(self.rows.values())
@@ -95,6 +98,52 @@ class FakeOpsStore:
         row["thread_ids"] = threads
         self.anchored.append((submission_id, thread_id))
         return True
+
+    async def add_comment(self, submission_id, *, author, author_name, body):
+        row = self.rows.get(submission_id)
+        if row is None:
+            return None
+        c = {"id": f"c{len(self.comments.get(submission_id, []))}", "author": author,
+             "author_name": author_name, "body": body, "created_at": "2026-07-22 12:00:00"}
+        self.comments.setdefault(submission_id, []).append(c)
+        row["last_activity_at"] = c["created_at"]; row["last_activity_by"] = author
+        return c
+
+    async def list_comments(self, submission_id):
+        return list(self.comments.get(submission_id, []))
+
+    async def add_activity(self, submission_id, *, kind, actor, actor_name, summary, bump=True):
+        self.activity.append({"submission_id": submission_id, "kind": kind, "actor": actor,
+                              "actor_name": actor_name, "summary": summary,
+                              "created_at": "2026-07-22 12:00:00"})
+
+    async def list_activity(self, submission_id, *, limit=100):
+        return [a for a in self.activity if a["submission_id"] == submission_id]
+
+    async def close_submission(self, submission_id, *, reason, note="", closed_by, closed_by_name):
+        row = self.rows.get(submission_id)
+        if row is None:
+            return False
+        row.update(closed_at="2026-07-22 12:00:00", closed_by=closed_by, close_reason=reason,
+                   close_note=note or None, resolved_at="2026-07-22 12:00:00",
+                   resolved_by=closed_by, request_status="Closed")
+        return True
+
+    async def reopen_submission(self, submission_id, *, acted_by=None):
+        row = self.rows.get(submission_id)
+        if row is None or not row.get("closed_at"):
+            return False
+        row.update(closed_at=None, closed_by=None, close_reason=None, resolved_at=None,
+                   resolved_by=None)
+        return True
+
+    async def record_presence(self, submission_id, *, user_name, display_name):
+        self.presence.setdefault(submission_id, {})[user_name] = {
+            "user_name": user_name, "display_name": display_name,
+            "viewed_at": "2026-07-22 12:00:00"}
+
+    async def recent_presence(self, submission_id, *, exclude, within_seconds=900):
+        return [v for k, v in self.presence.get(submission_id, {}).items() if k != exclude]
 
     async def metrics(self):
         return {"counts": {"needs_attention": 1}, "needsAttention": 1,
@@ -582,3 +631,115 @@ def test_replystates_bounced_when_newest_is_a_bounce(monkeypatch):
     with TestClient(_app(monkeypatch, store)) as c:
         r = c.post("/ops/api/replystates", json={"ids": ["abc12345"]})
     assert r.json()["states"]["abc12345"]["state"] == "bounced"
+
+
+# --- collaboration: comments, activity, presence, close-with-reason ----------
+
+
+def test_session_carries_close_reasons(monkeypatch):
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, FakeOpsStore())) as c:
+        data = c.get("/ops/api/session").json()
+    assert "Responded — resolved" in data["closeReasons"]
+    assert "Spam / not legitimate" in data["closeReasons"]
+
+
+def test_detail_includes_collaboration_and_presence(monkeypatch):
+    """Opening a submission returns the discussion, the activity feed, the
+    derived base state, and records/returns presence (excluding the caller)."""
+    store = FakeOpsStore()
+    # a second admin already looked
+    store.presence["abc12345"] = {"other": {"user_name": "other",
+                                            "display_name": "Other Admin",
+                                            "viewed_at": "2026-07-22 11:00:00"}}
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, store)) as c:
+        d = c.get("/ops/api/submissions/abc12345").json()
+    assert d["comments"] == [] and d["activity"] == []
+    assert d["baseState"] == "new"            # untouched
+    assert d["viewers"] == [{"user_name": "other", "display_name": "Other Admin",
+                             "viewed_at": "2026-07-22 11:00:00"}]
+    # the caller's own view was recorded
+    assert _USER["userName"] in store.presence["abc12345"]
+
+
+def test_add_comment_touches_and_logs(monkeypatch):
+    store = FakeOpsStore()
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, store)) as c:
+        ok = c.post("/ops/api/submissions/abc12345/comments",
+                    json={"body": "left a voicemail"})
+        empty = c.post("/ops/api/submissions/abc12345/comments", json={"body": "  "})
+        missing = c.post("/ops/api/submissions/nope/comments", json={"body": "x"})
+    assert ok.status_code == 200
+    assert ok.json()["comment"]["body"] == "left a voicemail"
+    assert store.comments["abc12345"][0]["author"] == _USER["userName"]
+    # base state moves off "new" and a comment_added activity was logged
+    assert store.rows["abc12345"]["last_activity_by"] == _USER["userName"]
+    assert any(a["kind"] == "comment_added" for a in store.activity)
+    assert empty.status_code == 422
+    assert missing.status_code == 404
+
+
+def test_close_with_reason(monkeypatch):
+    """Close sets closed/resolved/request_status together; a bad reason 422s."""
+    store = FakeOpsStore()
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, store)) as c:
+        ok = c.post("/ops/api/submissions/abc12345/close",
+                    json={"reason": "Responded — resolved", "note": "done"})
+        bad = c.post("/ops/api/submissions/abc12345/close",
+                     json={"reason": "Whatever"})
+        missing = c.post("/ops/api/submissions/nope/close",
+                         json={"reason": "Duplicate"})
+    assert ok.status_code == 200 and ok.json()["closed"] is True
+    row = store.rows["abc12345"]
+    assert row["closed_at"] and row["resolved_at"] and row["request_status"] == "Closed"
+    assert row["close_reason"] == "Responded — resolved"
+    assert bad.status_code == 422 and "Duplicate" in bad.json()["detail"]
+    assert missing.status_code == 404
+
+
+def test_close_writes_through_to_crm(monkeypatch):
+    """Closing an info-request whose delivery made a CInformationRequest sets
+    that record's requestStatus to Closed too."""
+    store = FakeOpsStore()
+    store.rows["abc12345"]["result"] = {"informationRequestId": "ir-9"}
+    crm = _FakeCrm()
+    monkeypatch.setattr("ops.router._api_client", lambda: crm)
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, store)) as c:
+        r = c.post("/ops/api/submissions/abc12345/close",
+                   json={"reason": "Responded — resolved"})
+    assert r.status_code == 200
+    assert crm.updates == [("CInformationRequest", "ir-9", {"requestStatus": "Closed"})]
+
+
+def test_reopen(monkeypatch):
+    store = FakeOpsStore()
+    store.rows["abc12345"]["closed_at"] = "2026-07-22 10:00:00"
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, store)) as c:
+        ok = c.post("/ops/api/submissions/abc12345/reopen")
+        again = c.post("/ops/api/submissions/abc12345/reopen")  # not closed now
+    assert ok.status_code == 200 and ok.json()["closed"] is False
+    assert store.rows["abc12345"]["closed_at"] is None
+    assert again.status_code == 404
+
+
+def test_presence_endpoint(monkeypatch):
+    store = FakeOpsStore()
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, store)) as c:
+        r = c.get("/ops/api/submissions/abc12345/presence")
+    assert r.status_code == 200 and r.json() == {"viewers": []}
+    assert _USER["userName"] in store.presence["abc12345"]
+
+
+def test_list_carries_base_state(monkeypatch):
+    store = FakeOpsStore()
+    store.rows["abc12345"]["last_activity_at"] = "2026-07-22 12:00:00"
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, store)) as c:
+        rows = c.get("/ops/api/submissions").json()["submissions"]
+    assert rows[0]["baseState"] == "in_progress"

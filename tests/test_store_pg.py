@@ -286,3 +286,59 @@ async def test_discarded_rows_are_redrivable():
     assert row["status"] == STATUS_PENDING
     await store.discard(cap.id, acted_by="tester")
     await store.dispose()
+
+
+async def test_collaboration_roundtrip():
+    """Comments, activity, close/reopen, presence, base_state, and the
+    thread lookup all round-trip through the real Postgres store."""
+    from core.store import base_state
+
+    store = PostgresStore(_URL)
+    await store.create_all()
+    token = f"collab-{uuid.uuid4()}"
+    cap = await store.capture("info-request", token, {"email": "z@x.com"},
+                              status=STATUS_COMPLETED)
+    sid = cap.id
+
+    # untouched => base_state new (fetch the row so it carries last_activity_at)
+    row = await store.get_submission(sid)
+    assert base_state(row) == "new"
+
+    # comment bumps the collision signal -> in_progress
+    c = await store.add_comment(sid, author="jane", author_name="Jane R", body="hi")
+    assert c["body"] == "hi"
+    assert [x["author"] for x in await store.list_comments(sid)] == ["jane"]
+    row = await store.get_submission(sid)
+    assert row["last_activity_by"] == "jane" and base_state(row) == "in_progress"
+
+    # activity feed (system event does NOT bump)
+    await store.add_activity(sid, kind="reply_sent", actor="bob", actor_name="Bob",
+                             summary="sent a reply")
+    await store.add_activity(sid, kind="delivered", actor="system", actor_name="system",
+                             summary="delivered", bump=False)
+    kinds = [a["kind"] for a in await store.list_activity(sid)]
+    assert "reply_sent" in kinds and "delivered" in kinds  # newest-first order
+
+    # presence: another admin's view is visible, the caller's own is excluded
+    await store.record_presence(sid, user_name="bob", display_name="Bob")
+    await store.record_presence(sid, user_name="jane", display_name="Jane R")
+    seen = await store.recent_presence(sid, exclude="jane")
+    assert [v["user_name"] for v in seen] == ["bob"]
+
+    # close sets everything together + logs a closed activity
+    assert await store.close_submission(sid, reason="Duplicate", note="dupe of 12",
+                                        closed_by="jane", closed_by_name="Jane R")
+    row = await store.get_submission(sid)
+    assert row["closed_at"] and row["resolved_at"] and row["request_status"] == "Closed"
+    assert row["close_reason"] == "Duplicate" and base_state(row) == "closed"
+    assert any(a["kind"] == "closed" for a in await store.list_activity(sid))
+
+    # thread anchor + lookup (feeds auto-reopen), then reopen
+    await store.add_thread_id(sid, "t-123")
+    found = await store.submissions_for_threads(["t-123"])
+    assert found and found[0]["id"] == sid and found[0]["closed_at"] is not None
+    assert await store.reopen_submission(sid, acted_by=None)
+    row = await store.get_submission(sid)
+    assert row["closed_at"] is None and row["resolved_at"] is None
+    assert base_state(row) == "in_progress"  # last_activity still set
+    await store.dispose()

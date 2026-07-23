@@ -15,10 +15,10 @@
   // info-email = an inbound email to the shared info@ mailbox, captured by the
   // worker's poller (held_review until staff Approve or Discard it).
   var FORMS = ["client-intake", "volunteer", "info-request", "partner", "sponsor", "info-email"];
-  // The staff-set request status (distinct from the machine delivery status
-  // above): the work state of the request itself. Mirrors the CRM's
-  // CInformationRequest.requestStatus vocabulary; null on a row reads as New.
-  var REQUEST_STATUSES = ["New", "In Progress", "Responded", "Closed"];
+  // Delivery statuses that are "an exception worth showing" next to the derived
+  // conversational state (everything else reads plainly "completed").
+  var DELIVERY_EXCEPTIONS = { pending: 1, processing: 1, retry: 1,
+                              needs_attention: 1, held_honeypot: 1, discarded: 1 };
   // Re-drive includes discarded so a mistaken discard can be undone (re-queued).
   var REDRIVABLE = { held_honeypot: 1, held_review: 1, needs_attention: 1, retry: 1, discarded: 1 };
   // Discard resolves a stuck row that can't be re-driven (e.g. a bad payload).
@@ -34,6 +34,8 @@
   var current = null;            // the open submission row (full detail)
   var messages = null;           // cached conversation for the open submission
   var messagesReason = null;     // why the conversation is unavailable (if it is)
+  var closeReasons = [];         // /session closeReasons — the disposition list
+  var presenceTimer = null;      // periodic presence poll on the open detail
 
   function $(id) { return document.getElementById(id); }
   function show(el) { el.hidden = false; }
@@ -89,10 +91,24 @@
     return tmp.innerHTML;
   }
 
-  function fmtDate(s) {
-    if (!s) return "—";
+  function parseTs(s) {
+    if (!s) return null;
     var d = new Date(s.indexOf("T") < 0 ? s.replace(" ", "T") + "Z" : s);
-    return isNaN(d) ? s : d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+    return isNaN(d) ? null : d;
+  }
+  function fmtDate(s) {
+    var d = parseTs(s);
+    return d ? d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : (s || "—");
+  }
+  // Compact relative time ("just now", "12 min ago", "3 hr ago", "2 days ago").
+  function relTime(s) {
+    var d = parseTs(s); if (!d) return "";
+    var sec = Math.round((Date.now() - d.getTime()) / 1000);
+    if (sec < 45) return "just now";
+    if (sec < 3600) return Math.round(sec / 60) + " min ago";
+    if (sec < 86400) return Math.round(sec / 3600) + " hr ago";
+    var days = Math.round(sec / 86400);
+    return days + (days === 1 ? " day ago" : " days ago");
   }
 
   function badgeEl(status) {
@@ -128,7 +144,7 @@
   $("statusFilter").addEventListener("change", function () { state.status = this.value; loadData(); });
   $("formFilter").addEventListener("change", function () { state.form = this.value; loadData(); });
   $("searchBox").addEventListener("input", function () { state.search = this.value.trim().toLowerCase(); renderTable(); });
-  $("backBtn").addEventListener("click", function () { hide($("detailView")); show($("dashView")); loadData(); });
+  $("backBtn").addEventListener("click", function () { stopPresencePoll(); hide($("detailView")); show($("dashView")); loadData(); });
 
   function fillSelect(sel, values, placeholder) {
     sel.innerHTML = "";
@@ -190,26 +206,63 @@
     }
   }
 
+  // The grid collapses the old Status / Request / Reply columns into ONE derived
+  // "State" (see stateInfo) + a "Last activity" collision signal.
   var COLUMNS = [
     { key: "id", label: "Reference", get: function (r) { return (r.id || "").slice(0, 8); } },
     { key: "form_slug", label: "Form" },
-    { key: "status", label: "Status" },
-    { key: "request_status", label: "Request",
-      get: function (r) { return r.request_status || "New"; } },
+    { key: "_state", label: "State", sortKey: "_stateSort" },
     { key: "email", label: "Submitter" },
-    { key: "_reply", label: "Reply", sortKey: "_replyState" },
+    { key: "_lastact", label: "Last activity", sortKey: "last_activity_at" },
     { key: "received_at", label: "Received", fmt: fmtDate },
-    { key: "attempt_count", label: "Attempts", cls: "num" },
-    { key: "last_error", label: "Last error", cls: "err",
-      get: function (r) { return r.last_error ? r.last_error.slice(0, 80) : ""; } },
     { key: "_actions", label: "", sort: false },
   ];
+
+  // The derived conversational state: closed wins, then the live reply state
+  // (owed / bounced / waiting) overlays an otherwise in-progress/new base.
+  function stateInfo(r) {
+    if (r.baseState === "closed") return { cls: "closed", text: "Closed", reason: r.close_reason };
+    var rs = r._replyState;
+    if (rs === "owed") return { cls: "owed", text: "Reply owed" };
+    if (rs === "bounced") return { cls: "bounced", text: "Delivery failed" };
+    if (rs === "waiting") return { cls: "wait", text: "Waiting on them" };
+    if (r.baseState === "in_progress") return { cls: "prog", text: "In progress" };
+    return { cls: "new", text: "New" };
+  }
+  var STATE_RANK = { owed: 0, bounced: 1, prog: 2, new: 3, wait: 4, closed: 5 };
+  function stateRank(r) { return STATE_RANK[stateInfo(r).cls]; }
+
+  function subBadge(text, tone) {
+    var b = document.createElement("span");
+    b.className = "state-sub tone-" + tone; b.textContent = text; return b;
+  }
+  function stateCell(r) {
+    var info = stateInfo(r);
+    var wrap = document.createElement("span"); wrap.className = "state state-" + info.cls;
+    var dot = document.createElement("span"); dot.className = "state-dot"; wrap.appendChild(dot);
+    var t = document.createElement("span"); t.textContent = info.text; wrap.appendChild(t);
+    if (info.reason) wrap.title = "Closed — " + info.reason;
+    // A delivery problem (or an inbound email awaiting Approve) stays visible.
+    if (r.status === "held_review") wrap.appendChild(subBadge("held review", "warn"));
+    else if (r.status === "discarded") wrap.appendChild(subBadge("discarded", "muted"));
+    else if (DELIVERY_EXCEPTIONS[r.status]) wrap.appendChild(subBadge(r.status.replace(/_/g, " "), "crit"));
+    return wrap;
+  }
+  function lastActCell(r) {
+    var s = document.createElement("span"); s.className = "lastact";
+    if (!r.last_activity_at) { s.innerHTML = "<span class='is-muted'>—</span>"; return s; }
+    var who = document.createElement("b"); who.textContent = r.last_activity_by || "—";
+    var t = document.createElement("span"); t.className = "is-muted";
+    t.textContent = " · " + relTime(r.last_activity_at);
+    s.appendChild(who); s.appendChild(t); return s;
+  }
 
   function rowMatches(r) {
     if (state.resolution === "open" && r.resolved_at) return false;
     if (state.resolution === "resolved" && !r.resolved_at) return false;
     if (!state.search) return true;
-    var hay = [r.id, r.form_slug, r.status, r.request_status, r.email, r.last_error, r.notes, fmtDate(r.received_at)]
+    var hay = [r.id, r.form_slug, r.status, stateInfo(r).text, r.close_reason,
+               r.email, r.last_error, r.last_activity_by, fmtDate(r.received_at)]
       .filter(Boolean).join(" ").toLowerCase();
     return hay.indexOf(state.search) >= 0;
   }
@@ -278,6 +331,7 @@
     });
     head.appendChild(htr);
 
+    rows.forEach(function (r) { r._stateSort = stateRank(r); });  // for the State sort
     var list = sortedRows(rows.filter(rowMatches));
     var body = $("subBody"); body.innerHTML = "";
     if (!list.length) {
@@ -304,16 +358,10 @@
         link.textContent = (r.id || "").slice(0, 8);
         link.addEventListener("click", function (ev) { ev.stopPropagation(); openDetail(r.id); });
         td.appendChild(link);
-      } else if (c.key === "status") {
-        td.appendChild(badgeEl(r.status));
-        if (r.resolved_at) {
-          var rv = document.createElement("span"); rv.className = "resolved-chip";
-          rv.textContent = "✓ resolved"; rv.title = "Resolved " + fmtDate(r.resolved_at) +
-            (r.resolved_by ? " by " + r.resolved_by : "");
-          td.appendChild(rv);
-        }
-      } else if (c.key === "_reply") {
-        td.appendChild(replyCell(r));
+      } else if (c.key === "_state") {
+        td.appendChild(stateCell(r));
+      } else if (c.key === "_lastact") {
+        td.appendChild(lastActCell(r));
       } else if (c.key === "_actions") {
         td.className = "actions";
         if (REDRIVABLE[r.status]) td.appendChild(redriveBtn(r, "notice"));
@@ -326,21 +374,6 @@
       tr.appendChild(td);
     });
     return tr;
-  }
-
-  // The awaiting-reply column: who spoke last with each OPEN submitter (2
-  // Gmail calls per row server-side, so open rows only, capped at 30).
-  // "reply owed" = their message is newest; "waiting" = ours is.
-  function replyCell(r) {
-    var s = document.createElement("span");
-    var st = r._replyState;
-    if (st === "owed") { s.className = "reply-owed"; s.textContent = "↳ reply owed"; }
-    else if (st === "bounced") { s.className = "reply-bounced"; s.textContent = "✕ delivery failed"; }
-    else if (st === "waiting") { s.className = "reply-waiting"; s.textContent = "waiting on them"; }
-    else if (st === "none") { s.className = "is-muted"; s.textContent = "—"; }
-    else if (st === "pending") { s.className = "is-muted"; s.textContent = "…"; }
-    else { s.className = "is-muted"; s.textContent = ""; }
-    return s;
   }
 
   async function loadReplyStates() {
@@ -443,13 +476,29 @@
       b.addEventListener("click", function () { activateTab(t.key); });
       tabs.appendChild(b);
     });
+    renderPresence();
     renderOverview();
     renderDetailsTab();
     renderComms();       // both surfaces render from the same fetch
     activateTab("overview");
     loadMessages();
+    startPresencePoll();
     window.scrollTo(0, 0);
   }
+
+  // Presence: re-check who else is looking every ~20s while a detail is open.
+  function startPresencePoll() {
+    stopPresencePoll();
+    presenceTimer = setInterval(async function () {
+      if (!current) { stopPresencePoll(); return; }
+      try {
+        var d = await api("/submissions/" + encodeURIComponent(current.id) + "/presence");
+        current.viewers = d.viewers || [];
+        renderPresence();
+      } catch (e) { /* transient — keep the last presence line */ }
+    }, 20000);
+  }
+  function stopPresencePoll() { if (presenceTimer) { clearInterval(presenceTimer); presenceTimer = null; } }
 
   // Re-read the open submission after an action (status changed).
   async function refreshDetailRow() {
@@ -458,6 +507,7 @@
       current = await api("/submissions/" + encodeURIComponent(current.id));
       var badgeBox = $("detailBadge"); badgeBox.innerHTML = ""; badgeBox.appendChild(badgeEl(current.status));
       renderDetailActions();
+      renderPresence();
       renderOverview();
       renderDetailsTab();
     } catch (e) { /* keep the stale view; the list refresh will correct */ }
@@ -465,60 +515,81 @@
 
   function renderDetailActions() {
     var box = $("detailActions"); box.innerHTML = "";
-    // Request status: the staff-set work state of the request (New /
-    // In Progress / Responded / Closed). Saves on change; when the delivery
-    // created a CInformationRequest the server writes the CRM record too.
-    var wrap = document.createElement("label"); wrap.className = "req-status";
-    wrap.appendChild(document.createTextNode("Request status"));
-    var sel = document.createElement("select");
-    REQUEST_STATUSES.forEach(function (v) { sel.appendChild(new Option(v, v)); });
-    sel.value = current.request_status || "New";
-    sel.addEventListener("change", async function () {
-      var prev = current.request_status || "New";
-      clearNotice("detailNotice");
-      try {
-        var res = await api("/submissions/" + encodeURIComponent(current.id) + "/requeststatus",
-          { method: "PUT", body: JSON.stringify({ status: sel.value }) });
-        current.request_status = sel.value;
-        var row = rows.filter(function (r) { return r.id === current.id; })[0];
-        if (row) row.request_status = sel.value;
-        if (res && res.crmWarning) {
-          notice("detailNotice", res.crmWarning, "error");
-        } else {
-          notice("detailNotice", "Request status set to " + sel.value +
-            (res && res.crmUpdated ? " (CRM record updated too)." : "."), "success");
-        }
-        renderOverview();
-      } catch (e) {
-        if (e.status === 401) { showLogin(); return; }
-        sel.value = prev;
-        notice("detailNotice", e.message, "error");
-      }
-    });
-    wrap.appendChild(sel);
-    box.appendChild(wrap);
-    // Resolve/Reopen: the staff workflow marker — single click, reversible.
-    var rb = document.createElement("button");
-    rb.type = "button"; rb.className = "cbm-button" + (current.resolved_at ? " cbm-button--secondary" : "");
-    rb.textContent = current.resolved_at ? "Reopen" : "Mark resolved";
-    rb.addEventListener("click", async function () {
-      rb.disabled = true;
-      try {
-        await api("/submissions/" + encodeURIComponent(current.id) + "/resolved",
-          { method: "PUT", body: JSON.stringify({ resolved: !current.resolved_at }) });
-        notice("detailNotice", current.resolved_at ? "Reopened." : "Marked resolved.", "success");
-        await refreshDetailRow();
-        var row = rows.filter(function (r) { return r.id === current.id; })[0];
-        if (row) { row.resolved_at = current.resolved_at; row.resolved_by = current.resolved_by; }
-      } catch (e) {
-        if (e.status === 401) { showLogin(); return; }
-        rb.disabled = false;
-        notice("detailNotice", e.message, "error");
-      }
-    });
-    box.appendChild(rb);
+    if (current.closed_at) {
+      // Closed: show the disposition + a Reopen escape hatch.
+      var lbl = document.createElement("span"); lbl.className = "closed-label";
+      lbl.textContent = "Closed — " + (current.close_reason || "");
+      if (current.closed_by) lbl.title = "Closed by " + current.closed_by;
+      box.appendChild(lbl);
+      var reopen = document.createElement("button");
+      reopen.type = "button"; reopen.className = "cbm-button cbm-button--secondary";
+      reopen.textContent = "Reopen";
+      reopen.addEventListener("click", reopenSubmission);
+      box.appendChild(reopen);
+    } else {
+      box.appendChild(closeControl());  // the single terminal action
+    }
     if (REDRIVABLE[current.status]) box.appendChild(redriveBtn(current, "detailNotice"));
     if (DISCARDABLE[current.status]) box.appendChild(actionBtn("Discard", "Really discard?", function () { discard(current, "detailNotice"); }));
+  }
+
+  // Close ▾ — one deliberate action with a disposition reason (+ optional note).
+  function closeControl() {
+    var wrap = document.createElement("span"); wrap.className = "closewrap";
+    var btn = document.createElement("button");
+    btn.type = "button"; btn.className = "cbm-button"; btn.textContent = "Close ▾";
+    var menu = document.createElement("div"); menu.className = "closemenu"; menu.hidden = true;
+    var h = document.createElement("h5"); h.textContent = "Close this request — reason"; menu.appendChild(h);
+    var note = document.createElement("input");
+    note.type = "text"; note.className = "closemenu__note"; note.placeholder = "Optional note…";
+    menu.appendChild(note);
+    (closeReasons.length ? closeReasons : ["Responded — resolved"]).forEach(function (reason) {
+      var b = document.createElement("button"); b.type = "button"; b.className = "closemenu__opt";
+      b.textContent = reason;
+      b.addEventListener("click", function () { menu.hidden = true; closeSubmission(reason, note.value.trim()); });
+      menu.appendChild(b);
+    });
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation(); menu.hidden = !menu.hidden; if (!menu.hidden) note.focus();
+    });
+    document.addEventListener("click", function (ev) { if (!wrap.contains(ev.target)) menu.hidden = true; });
+    wrap.appendChild(btn); wrap.appendChild(menu);
+    return wrap;
+  }
+
+  function syncListRow() {
+    var row = rows.filter(function (r) { return r.id === current.id; })[0];
+    if (!row) return;
+    row.resolved_at = current.resolved_at; row.resolved_by = current.resolved_by;
+    row.closed_at = current.closed_at; row.close_reason = current.close_reason;
+    row.baseState = current.baseState; row.request_status = current.request_status;
+    row.last_activity_at = current.last_activity_at; row.last_activity_by = current.last_activity_by;
+  }
+
+  async function closeSubmission(reason, note) {
+    clearNotice("detailNotice");
+    try {
+      var res = await api("/submissions/" + encodeURIComponent(current.id) + "/close",
+        { method: "POST", body: JSON.stringify({ reason: reason, note: note || "" }) });
+      if (res && res.crmWarning) notice("detailNotice", res.crmWarning, "error");
+      else notice("detailNotice", "Closed — " + reason + ".", "success");
+      await refreshDetailRow(); syncListRow();
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      notice("detailNotice", e.message, "error");
+    }
+  }
+
+  async function reopenSubmission() {
+    clearNotice("detailNotice");
+    try {
+      await api("/submissions/" + encodeURIComponent(current.id) + "/reopen", { method: "POST" });
+      notice("detailNotice", "Reopened — back in the open queue.", "success");
+      await refreshDetailRow(); syncListRow();
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      notice("detailNotice", e.message, "error");
+    }
   }
 
   // Payload keys shown first, with curated labels; every OTHER payload field
@@ -605,67 +676,143 @@
       if (t == null) return;
       box.appendChild(fact(humanizeKey(k), t));
     });
-    renderNotes();
+    renderDiscussion();
+    renderActivity();
   }
 
-  // --- staff notes (view + inline edit; the Edit button is always visible) --
-  function renderNotes() {
-    var card = $("notesCard"); card.innerHTML = "";
-    var head = document.createElement("div"); head.className = "ops__notes-head";
-    var h = document.createElement("h3"); h.textContent = "Submission notes";
-    var eb = document.createElement("button");
-    eb.type = "button"; eb.className = "small-btn"; eb.textContent = "Edit";
-    eb.addEventListener("click", editNotes);
-    head.appendChild(h); head.appendChild(eb);
-    card.appendChild(head);
-    var body = document.createElement("div"); body.className = "ops__notes-body";
-    var v = (current.notes || "").trim();
-    if (v) { body.textContent = v; }
-    else { body.className += " is-muted"; body.textContent = "No notes yet — click Edit to add triage notes for other admins."; }
-    card.appendChild(body);
+  // Initials for a small avatar, from a display name.
+  function initials(name) {
+    var parts = (name || "?").trim().split(/\s+/);
+    return ((parts[0] || "?")[0] + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
+  }
+  function avatar(name, cls) {
+    var a = document.createElement("span"); a.className = "av" + (cls ? " " + cls : "");
+    a.textContent = initials(name); a.title = name || ""; return a;
   }
 
-  function editNotes() {
-    var card = $("notesCard"); card.innerHTML = "";
-    var head = document.createElement("div"); head.className = "ops__notes-head";
-    var h = document.createElement("h3"); h.textContent = "Submission notes";
-    head.appendChild(h); card.appendChild(head);
-    var ta = document.createElement("textarea");
-    ta.value = current.notes || "";
-    card.appendChild(ta);
-    var err = document.createElement("p"); err.className = "ops__notice is-error"; err.hidden = true;
-    card.appendChild(err);
-    var actions = document.createElement("div"); actions.className = "ops__notes-actions";
-    var cancel = document.createElement("button");
-    cancel.type = "button"; cancel.className = "cbm-button cbm-button--secondary"; cancel.textContent = "Cancel";
-    var cancelArmed = false;
-    cancel.addEventListener("click", function () {
-      if (ta.value !== (current.notes || "") && !cancelArmed) {
-        cancelArmed = true; cancel.textContent = "Discard changes?"; return;
-      }
-      renderNotes();
+  // --- presence line: who else is looking at this right now ------------------
+  function renderPresence() {
+    var box = $("presence"); box.innerHTML = "";
+    var live = document.createElement("span"); live.className = "presence__live";
+    live.textContent = "You're viewing this";
+    box.appendChild(live);
+    var viewers = current.viewers || [];
+    viewers.slice(0, 6).forEach(function (v) {
+      var span = document.createElement("span"); span.className = "presence__who";
+      span.appendChild(avatar(v.display_name || v.user_name, "p"));
+      var t = document.createElement("span");
+      t.textContent = (v.display_name || v.user_name) + " · viewed " + relTime(v.viewed_at);
+      span.appendChild(t); box.appendChild(span);
     });
-    var save = document.createElement("button");
-    save.type = "button"; save.className = "cbm-button"; save.textContent = "Save";
-    save.addEventListener("click", async function () {
-      save.disabled = true; err.hidden = true;
+    show(box);
+  }
+
+  // --- discussion: attributed internal comments among admins -----------------
+  function renderDiscussion() {
+    var col = $("discussionCol"); col.innerHTML = "";
+    col.className = "ops__col";
+    var head = document.createElement("div"); head.className = "ops__col-head";
+    var h = document.createElement("h3"); h.textContent = "Discussion";
+    var hint = document.createElement("span"); hint.className = "ops__col-hint"; hint.textContent = "internal · staff only";
+    head.appendChild(h); head.appendChild(hint); col.appendChild(head);
+
+    var body = document.createElement("div"); body.className = "ops__col-body";
+    var comments = current.comments || [];
+    if (!comments.length) {
+      var empty = document.createElement("p"); empty.className = "is-muted";
+      empty.textContent = "No comments yet — start the thread for other admins.";
+      body.appendChild(empty);
+    } else {
+      comments.forEach(function (c) {
+        var row = document.createElement("div"); row.className = "comment";
+        row.appendChild(avatar(c.author_name || c.author, "g"));
+        var b = document.createElement("div"); b.className = "comment__body";
+        var meta = document.createElement("div"); meta.className = "comment__meta";
+        var who = document.createElement("b"); who.textContent = c.author_name || c.author;
+        var when = document.createElement("time"); when.textContent = relTime(c.created_at);
+        when.title = fmtDate(c.created_at);
+        meta.appendChild(who); meta.appendChild(when);
+        var p = document.createElement("p"); p.textContent = c.body;
+        b.appendChild(meta); b.appendChild(p); row.appendChild(b); body.appendChild(row);
+      });
+    }
+    // add box, pinned to the bottom
+    var addbox = document.createElement("div"); addbox.className = "comment__add";
+    var ta = document.createElement("textarea"); ta.placeholder = "Add a comment for the team…";
+    var r = document.createElement("div"); r.className = "comment__add-row";
+    var btn = document.createElement("button"); btn.type = "button";
+    btn.className = "cbm-button"; btn.textContent = "Comment";
+    btn.addEventListener("click", async function () {
+      var text = ta.value.trim();
+      if (!text) { ta.focus(); return; }
+      btn.disabled = true;
       try {
-        await api("/submissions/" + encodeURIComponent(current.id) + "/notes",
-          { method: "PUT", body: JSON.stringify({ notes: ta.value }) });
-        current.notes = ta.value;
-        var row = rows.filter(function (r) { return r.id === current.id; })[0];
-        if (row) row.notes = ta.value;
-        renderNotes();
-        notice("detailNotice", "Notes saved.", "success");
+        var res = await api("/submissions/" + encodeURIComponent(current.id) + "/comments",
+          { method: "POST", body: JSON.stringify({ body: text }) });
+        current.comments = (current.comments || []).concat(res.comment);
+        // reflect the touch: this row is now "in progress" + last-activity is us
+        current.baseState = "in_progress";
+        current.last_activity_at = res.comment.created_at;
+        current.last_activity_by = (config && (config.name || config.userName)) || current.last_activity_by;
+        renderDiscussion(); loadActivity(); syncListRow();
       } catch (e) {
         if (e.status === 401) { showLogin(); return; }
-        save.disabled = false;
-        err.textContent = "Couldn't save: " + e.message; err.hidden = false;
+        btn.disabled = false;
+        notice("detailNotice", e.message, "error");
       }
     });
-    actions.appendChild(cancel); actions.appendChild(save);
-    card.appendChild(actions);
-    ta.focus();
+    r.appendChild(btn); addbox.appendChild(ta); addbox.appendChild(r);
+    body.appendChild(addbox);
+    col.appendChild(body);
+  }
+
+  // --- activity feed: the automatic, ordered log -----------------------------
+  var ACT_ICON = {
+    submitted: "✦", delivered: "✓", inbound_received: "↓", comment_added: "💬",
+    reply_sent: "↑", status_changed: "•", resolved: "✓", reopened: "↺",
+    closed: "✓", redriven: "↻", discarded: "✕",
+  };
+  var ACT_TONE = { reply_sent: "send", closed: "close", resolved: "close",
+                   inbound_received: "in", discarded: "crit" };
+  function renderActivity() {
+    var col = $("activityCol"); col.innerHTML = "";
+    col.className = "ops__col";
+    var head = document.createElement("div"); head.className = "ops__col-head";
+    var h = document.createElement("h3"); h.textContent = "Activity";
+    var hint = document.createElement("span"); hint.className = "ops__col-hint"; hint.textContent = "automatic";
+    head.appendChild(h); head.appendChild(hint); col.appendChild(head);
+    var body = document.createElement("div"); body.className = "ops__col-body";
+    var feed = document.createElement("div"); feed.className = "feed";
+    var events = current.activity || [];
+    if (!events.length) {
+      var e = document.createElement("p"); e.className = "is-muted"; e.textContent = "No activity yet.";
+      body.appendChild(e);
+    } else {
+      events.forEach(function (ev) {
+        var row = document.createElement("div"); row.className = "ev";
+        var ic = document.createElement("span"); ic.className = "ev__ic" + (ACT_TONE[ev.kind] ? " ev__ic--" + ACT_TONE[ev.kind] : "");
+        ic.textContent = ACT_ICON[ev.kind] || "•"; row.appendChild(ic);
+        var txt = document.createElement("div"); txt.className = "ev__txt";
+        var line = document.createElement("span");
+        var who = ev.actor_name || ev.actor || "system";
+        line.innerHTML = "<b></b> ";
+        line.querySelector("b").textContent = who === "system" ? "System" : who;
+        line.appendChild(document.createTextNode(" " + ev.summary));
+        var t = document.createElement("time"); t.textContent = relTime(ev.created_at); t.title = fmtDate(ev.created_at);
+        txt.appendChild(line); txt.appendChild(t); row.appendChild(txt); feed.appendChild(row);
+      });
+    }
+    body.appendChild(feed); col.appendChild(body);
+  }
+
+  // Re-fetch just the activity feed (after posting a comment / action).
+  async function loadActivity() {
+    try {
+      var d = await api("/submissions/" + encodeURIComponent(current.id));
+      current.activity = d.activity || current.activity;
+      current.viewers = d.viewers || current.viewers;
+      renderActivity(); renderPresence();
+    } catch (e) { /* keep the current feed */ }
   }
 
   // --- details tab (raw payload / progress / error + CRM record links) ------
@@ -786,7 +933,7 @@
     if (m.bounce) card.className += " msg--bounce";
     var head = document.createElement("div"); head.className = "msg__head";
     var who = document.createElement("span"); who.className = "msg__who";
-    who.textContent = m.direction === "sent" ? "You → " + (m.to || "") : (m.fromName || m.fromAddress);
+    who.textContent = m.direction === "sent" ? (m.fromName || "We") + " → " + (m.to || "") : (m.fromName || m.fromAddress);
     var dir = document.createElement("span"); dir.className = "msg__dir";
     dir.textContent = m.direction === "sent" ? "sent" : "received";
     if (m.bounce) {
@@ -875,6 +1022,7 @@
   (async function init() {
     try {
       config = await api("/session");
+      closeReasons = config.closeReasons || [];
       $("whoName").textContent = config.name || config.userName;
       show($("userCorner"));
       hide($("msgView")); show($("dashView"));
