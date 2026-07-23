@@ -31,6 +31,18 @@ already knows, and a submission's conversation shows **only the email threads
 that belong to it** (the thread the submitter started, plus any thread you
 started from the submission page — never their unrelated mail).
 
+## What's in the queue (and what closes itself)
+
+Only submissions that need a **reply from this team** stay open: **information
+requests** (the web info-request form, and emails to info@). A **client intake,
+volunteer, partner, or sponsor** submission creates its CRM records and is then
+handled by the downstream admin team (Client / Partner / Funder Administration)
+— there's nothing for Submission Admin to do with it, so once it delivers
+successfully it **closes itself automatically** with the reason **"Process
+completed"** and drops out of the open queue. You'll still find those under
+**Resolved / All** (their State reads "Process completed"); if one shows as
+*needs attention* instead, its delivery failed and it's worth a Re-drive.
+
 ## The front page (the work queue)
 
 - The grid fills the window and scrolls under a sticky header. Every column

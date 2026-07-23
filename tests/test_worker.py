@@ -31,8 +31,11 @@ class FakeWorkerStore:
     async def save_progress(self, submission_id, progress):
         self.progress[submission_id] = dict(progress)
 
-    async def mark_completed(self, submission_id, result):
+    async def mark_completed(self, submission_id, result, *, auto_close_reason=None):
         self.completed.append((submission_id, result))
+        self.autoclosed = getattr(self, "autoclosed", [])
+        if auto_close_reason:
+            self.autoclosed.append((submission_id, auto_close_reason))
 
     async def mark_retry(self, submission_id, *, attempt_count, next_attempt_at, error):
         self.retried.append((submission_id, attempt_count, error))
@@ -222,3 +225,45 @@ async def test_sigterm_stops_mid_batch_after_current_item():
     claimed = await worker.run_once(store, _settings(), stop)
     assert claimed == 2  # both were claimed…
     assert len(store.completed) == 1  # …but only the in-flight item delivered
+
+
+# --- auto-close of record-creating submissions (Doug's ruling 2026-07-22) ----
+
+
+def test_autoclose_reason_helper():
+    from core.store import autoclose_reason
+    assert autoclose_reason("info-request") is None   # needs an admin reply
+    assert autoclose_reason("info-email") is None
+    for slug in ("client-intake", "volunteer", "partner", "sponsor"):
+        assert autoclose_reason(slug) == "Process completed"
+
+
+async def test_info_request_is_not_autoclosed():
+    """An info-request delivers but stays OPEN — it needs a human response."""
+    store = FakeWorkerStore()
+    await worker.process_one(store, _settings(), _claimed(slug="info-request"))
+    assert len(store.completed) == 1
+    assert getattr(store, "autoclosed", []) == []
+
+
+def _volunteer_claimed():
+    return Claimed(
+        id="vol-1", form_slug="volunteer", submission_token="tok-vol-1",
+        payload={
+            "first_name": "Ada", "last_name": "Lovelace", "email": "ada@example.com",
+            "confirm_email": "ada@example.com", "zip_code": "44114",
+            "phone": "2165550100", "why_volunteer": "Help founders.",
+            "areas_of_expertise": ["Marketing"], "terms_accepted": True,
+            "submission_token": "tok-vol-1",
+        },
+        progress=None, attempt_count=0,
+    )
+
+
+async def test_record_creating_form_autocloses_on_delivery():
+    """A volunteer submission delivers its CRM records and is auto-closed with
+    'Process completed' — nothing for the Submission Admin team to do."""
+    store = FakeWorkerStore()
+    await worker.process_one(store, _settings(), _volunteer_claimed())
+    assert len(store.completed) == 1
+    assert store.autoclosed == [("vol-1", "Process completed")]

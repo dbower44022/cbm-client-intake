@@ -231,7 +231,11 @@ def _make_handler(
         )
 
         if captured is not None:
-            await store.mark_completed(captured.id, ids)
+            # Record-creating forms auto-close on delivery (Doug's ruling): the
+            # downstream admin team handles them — nothing for /ops to do.
+            await store.mark_completed(
+                captured.id, ids, auto_close_reason=store_mod.autoclose_reason(spec.slug)
+            )
         else:
             processed[key] = ids
         log.info("%s ok token=%s ids=%s", spec.slug, submission.submission_token, ids)

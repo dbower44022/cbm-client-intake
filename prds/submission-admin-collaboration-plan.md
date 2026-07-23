@@ -216,6 +216,18 @@ attribution.
 5. **Auto-reopen scope** — ✅ **reply on the linked (anchored) thread only**;
    new unrelated threads stay separate items.
 
+## 7a. Follow-up ruling — auto-close record-creating submissions (v0.138.0)
+
+Doug, 2026-07-22: a **client-intake / volunteer / partner / sponsor** submission
+that delivers its CRM records needs no Submission-Admin action — the downstream
+admin team owns it. On successful delivery those **auto-close** with the system
+reason **"Process completed"** (atomically inside `mark_completed`, both the
+worker and sync paths; `core/store.ADMIN_REVIEW_FORMS` = the forms that stay
+open = info-request / info-email; `autoclose_reason`). "Process completed" is
+NOT a manual Close option; the grid State cell now shows a closed row's reason.
+Migration 0019 back-closes the already-delivered rows. So the open queue is only
+the requests that need a human reply.
+
 ## 8. Phasing
 
 - **Phase 1 — collaboration core:** comment table + activity table + the two

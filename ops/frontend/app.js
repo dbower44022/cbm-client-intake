@@ -221,7 +221,9 @@
   // The derived conversational state: closed wins, then the live reply state
   // (owed / bounced / waiting) overlays an otherwise in-progress/new base.
   function stateInfo(r) {
-    if (r.baseState === "closed") return { cls: "closed", text: "Closed", reason: r.close_reason };
+    // A closed row shows its disposition reason (e.g. "Process completed" for an
+    // auto-closed intake) rather than a bare "Closed".
+    if (r.baseState === "closed") return { cls: "closed", text: r.close_reason || "Closed", reason: r.close_reason };
     var rs = r._replyState;
     if (rs === "owed") return { cls: "owed", text: "Reply owed" };
     if (rs === "bounced") return { cls: "bounced", text: "Delivery failed" };

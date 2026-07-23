@@ -26,7 +26,7 @@ from core.config import Settings, get_settings
 from core.espo import DryRunEspoClient, EspoApi, EspoClient, EspoError, EspoTransportError
 from core.logging_setup import setup_logging
 from core.resumable import ResumableClient
-from core.store import Claimed, SubmissionStore
+from core.store import Claimed, SubmissionStore, autoclose_reason
 from core.submission_log import (
     REASON_NORMAL,
     REASON_ORCHESTRATOR_ERROR,
@@ -131,10 +131,14 @@ async def process_one(store: SubmissionStore, settings: Settings, claimed: Claim
         reason=REASON_NORMAL, status=STATUS_PROCESSED, contact_id=ids.get("contactId"),
         payload_stored_durably=True,
     )
-    await store.mark_completed(claimed.id, ids)
+    # Record-creating forms (client-intake/volunteer/partner/sponsor) auto-close
+    # on delivery — the downstream admin team owns them, /ops has no action.
+    reason = autoclose_reason(claimed.form_slug)
+    await store.mark_completed(claimed.id, ids, auto_close_reason=reason)
     log.info(
-        "delivered %s (%s token=%s) -> %s",
+        "delivered %s (%s token=%s) -> %s%s",
         claimed.id, claimed.form_slug, claimed.submission_token, ids,
+        " [auto-closed: process completed]" if reason else "",
     )
 
 

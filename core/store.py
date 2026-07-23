@@ -217,6 +217,24 @@ CLOSE_REASONS = (
     "Spam / not legitimate",
 )
 
+# Forms whose submissions actually need a Submission-Admin response — an
+# information request, whether it arrived via the web form or the info@ inbox.
+# Everything else (client-intake / volunteer / partner / sponsor) delivers its
+# CRM records and is then handled by the downstream admin team, so there is
+# nothing for /ops to do: on successful delivery those are AUTO-CLOSED with the
+# system reason below (Doug's ruling 2026-07-22), keeping the queue to the
+# items that need a human reply.
+ADMIN_REVIEW_FORMS = frozenset({"info-request", "info-email"})
+# The system close reason for an auto-closed record-creating submission. Kept
+# out of CLOSE_REASONS deliberately — it is never a manual staff disposition.
+AUTO_CLOSE_REASON = "Process completed"
+
+
+def autoclose_reason(form_slug: str) -> Optional[str]:
+    """The reason to auto-close a submission of this form on successful
+    delivery, or None for the forms that need an admin response."""
+    return None if form_slug in ADMIN_REVIEW_FORMS else AUTO_CLOSE_REASON
+
 
 @dataclass
 class Captured:
@@ -262,7 +280,10 @@ class SubmissionStore(Protocol):
     async def capture(
         self, form_slug: str, submission_token: str, payload: dict[str, Any], *, status: str
     ) -> Captured: ...
-    async def mark_completed(self, submission_id: str, result: dict[str, Any]) -> None: ...
+    async def mark_completed(
+        self, submission_id: str, result: dict[str, Any], *,
+        auto_close_reason: Optional[str] = None,
+    ) -> None: ...
     async def mark_failed(self, submission_id: str, *, status: str, error: str) -> None: ...
     # Phase 1 (worker) operations:
     async def claim_batch(self, limit: int, *, lease_seconds: int = 900) -> list[Claimed]: ...
@@ -415,14 +436,36 @@ class PostgresStore:
             ).first()
             return Captured(id=existing[0], is_new=False, status=existing[1], result=existing[2])
 
-    async def mark_completed(self, submission_id: str, result: dict[str, Any]) -> None:
+    async def mark_completed(
+        self, submission_id: str, result: dict[str, Any], *,
+        auto_close_reason: Optional[str] = None,
+    ) -> None:
+        """Mark a submission delivered. When ``auto_close_reason`` is given (a
+        record-creating form that needs no admin follow-up), the same write also
+        CLOSES it (resolved + closed, actor "system") so it leaves the open
+        queue — atomically, so it is never briefly completed-but-open."""
         now = _now()
+        values: dict[str, Any] = dict(
+            status=STATUS_COMPLETED, result=result, processed_at=now, updated_at=now
+        )
+        if auto_close_reason:
+            values.update(
+                closed_at=now, closed_by="system", close_reason=auto_close_reason,
+                resolved_at=now, resolved_by="system", request_status="Closed",
+            )
         async with self._engine.begin() as conn:
             await conn.execute(
-                update(submission)
-                .where(submission.c.id == submission_id)
-                .values(status=STATUS_COMPLETED, result=result, processed_at=now, updated_at=now)
+                update(submission).where(submission.c.id == submission_id).values(**values)
             )
+            if auto_close_reason:
+                await conn.execute(
+                    submission_activity.insert().values(
+                        id=str(uuid.uuid4()), submission_id=submission_id,
+                        kind=ACT_CLOSED, actor="system", actor_name="System",
+                        summary=f"Closed automatically — {auto_close_reason}",
+                        created_at=now,
+                    )
+                )
 
     async def mark_failed(self, submission_id: str, *, status: str, error: str) -> None:
         async with self._engine.begin() as conn:

@@ -36,7 +36,7 @@ class FakeStore:
     def __init__(self) -> None:
         self.rows: dict[tuple[str, str], dict] = {}
         self.captures: list[tuple[str, str, str, dict]] = []
-        self.completed: list[tuple[str, dict]] = []
+        self.completed: list[tuple] = []
         self.failed: list[tuple[str, str, str]] = []
         self.progress: dict[str, dict] = {}
         self._n = 0
@@ -65,12 +65,14 @@ class FakeStore:
         self.captures.append((form_slug, submission_token, status, payload))
         return Captured(rid, True, status, None)
 
-    async def mark_completed(self, submission_id, result) -> None:
+    async def mark_completed(self, submission_id, result, *, auto_close_reason=None) -> None:
         for r in self.rows.values():
             if r["id"] == submission_id:
                 r["status"] = STATUS_COMPLETED
                 r["result"] = result
-        self.completed.append((submission_id, result))
+                if auto_close_reason:
+                    r["closed_at"] = "now"; r["close_reason"] = auto_close_reason
+        self.completed.append((submission_id, result, auto_close_reason))
 
     async def mark_failed(self, submission_id, *, status, error) -> None:
         for r in self.rows.values():
@@ -105,7 +107,7 @@ def test_capture_first_then_complete():
     assert store.captures[0][2] == STATUS_PENDING
     assert store.captures[0][3]["company_url"] == ""  # honeypot never persisted
     assert len(store.completed) == 1
-    _, result = store.completed[0]
+    _, result, _reason = store.completed[0]
     assert "contactId" in result
 
 

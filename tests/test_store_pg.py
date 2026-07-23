@@ -334,11 +334,41 @@ async def test_collaboration_roundtrip():
     assert any(a["kind"] == "closed" for a in await store.list_activity(sid))
 
     # thread anchor + lookup (feeds auto-reopen), then reopen
-    await store.add_thread_id(sid, "t-123")
-    found = await store.submissions_for_threads(["t-123"])
-    assert found and found[0]["id"] == sid and found[0]["closed_at"] is not None
+    tid = f"t-{uuid.uuid4()}"  # unique so repeated runs on a persistent DB don't collide
+    await store.add_thread_id(sid, tid)
+    found = await store.submissions_for_threads([tid])
+    mine = [f for f in found if f["id"] == sid]
+    assert mine and mine[0]["closed_at"] is not None
     assert await store.reopen_submission(sid, acted_by=None)
     row = await store.get_submission(sid)
     assert row["closed_at"] is None and row["resolved_at"] is None
     assert base_state(row) == "in_progress"  # last_activity still set
+    await store.dispose()
+
+
+async def test_mark_completed_autocloses_record_forms():
+    """A record-creating form completes AND closes atomically ('Process
+    completed'); an info-request completes but stays open."""
+    from core.store import base_state
+
+    store = PostgresStore(_URL)
+    await store.create_all()
+
+    t1 = f"ac-{uuid.uuid4()}"
+    c1 = await store.capture("volunteer", t1, {"email": "v@x.com"}, status=STATUS_PENDING)
+    await store.mark_completed(c1.id, {"contactId": "x"},
+                               auto_close_reason="Process completed")
+    row = await store.get_submission(c1.id)
+    assert row["status"] == STATUS_COMPLETED
+    assert row["closed_at"] and row["close_reason"] == "Process completed"
+    assert row["resolved_at"] and row["closed_by"] == "system"
+    assert base_state(row) == "closed"
+    assert any(a["kind"] == "closed" for a in await store.list_activity(c1.id))
+
+    t2 = f"ir-{uuid.uuid4()}"
+    c2 = await store.capture("info-request", t2, {"email": "i@x.com"}, status=STATUS_PENDING)
+    await store.mark_completed(c2.id, {"contactId": "y"})  # no auto_close_reason
+    row2 = await store.get_submission(c2.id)
+    assert row2["status"] == STATUS_COMPLETED and row2["closed_at"] is None
+    assert base_state(row2) == "new"
     await store.dispose()

@@ -4,6 +4,30 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.138.0] — 2026-07-22
+
+**feat(ops): record-creating submissions auto-close as "Process completed".**
+Doug's ruling: a client-intake / volunteer / partner / sponsor submission that
+delivers its CRM records needs no Submission-Admin action — the downstream
+admin team (Client / Partner / Funder Administration) owns it from there. So on
+successful delivery those are now **closed automatically** with the system
+reason **"Process completed"**, dropping out of the open queue and leaving it to
+the info-request / info-email items that actually need a reply
+(`core/store.ADMIN_REVIEW_FORMS` = the only forms that stay open;
+`autoclose_reason`). The close is written **atomically inside `mark_completed`**
+(completed + closed + resolved + `requestStatus="Closed"` + a `closed` activity,
+actor "system") on both delivery paths — the async worker and the sync
+store path. "Process completed" is deliberately NOT in the manual Close menu
+(never a staff disposition); a closed row now shows its **reason** in the grid
+State cell (so these read "Process completed", manual ones read their
+disposition). **Migration 0019** back-closes the already-delivered
+record-creating submissions sitting "completed but open" in the queue (leaves
+info-request/info-email and any already-closed row untouched; preserves an
+existing resolved stamp). Verified: full suite green (1020; new worker +
+pg-store tests) + the atomic auto-close and the 0019 backfill exercised against
+live Postgres (volunteer → closed "Process completed", info-request → stays
+open). Pre-deploy migrate runs 0019.
+
 ## [0.137.0] — 2026-07-22
 
 **feat(ops): Submission Admin becomes a multi-admin review-and-respond

@@ -1513,9 +1513,21 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-22)
 
-**Working tree at v0.137.0** (2026-07-22, full suite green + pg round-trip,
-NOT committed) — **Submission Admin becomes a multi-admin review-and-respond
-workspace** (Doug's design, elicited this session; plan + approved rulings:
+**Main at v0.138.0** (2026-07-22, 1020 tests green) — **record-creating
+submissions auto-close as "Process completed"** (Doug's ruling): a
+client-intake / volunteer / partner / sponsor submission delivers its CRM
+records and is then owned by the downstream admin team, so on successful
+delivery it's closed automatically (system reason "Process completed",
+atomically inside `mark_completed` on both the worker and sync paths) and
+leaves the open queue — which is now only the info-request / info-email items
+that need a reply (`core/store.ADMIN_REVIEW_FORMS` / `autoclose_reason`). The
+grid State cell shows a closed row's reason; **migration 0019** back-closes the
+already-delivered record-creating rows. CHANGELOG 0.138.0. (0.137.0 below is the
+multi-admin workspace this builds on.)
+
+**v0.137.0** (2026-07-22, deployed) — **Submission Admin becomes a multi-admin
+review-and-respond workspace** (Doug's design, elicited this session; plan +
+approved rulings:
 `prds/submission-admin-collaboration-plan.md`; mechanics: CHANGELOG 0.137.0;
 mockup published as an artifact). No owner — coordination by **visibility**:
 (1) the single `notes` blob → an attributed **comment stream**
