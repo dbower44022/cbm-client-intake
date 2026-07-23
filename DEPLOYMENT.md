@@ -182,7 +182,13 @@ Google Calendar event (with a Meet link written to `videoMeetingLink`) on the
 manager's own calendar, inviting the attendees. CBM members on the attendee
 list are invited at their **`cbmEmail` only** (v0.122.0/v0.123.1 — never the
 personal email on their Contact record; the organizer is never self-invited).
-Reuses
+The same flag also powers the session editor's **time-picker conflict
+shading** (v0.141.0): with a date chosen, the Time selector reads the
+signed-in manager's own calendar and tints slots that overlap an existing
+meeting light red (tooltip names the busy event). Advisory only — a shaded
+slot stays selectable and the save is never blocked; any lookup failure just
+means no shading. Read-only, covered by the same `calendar.events` scope —
+no extra Google work. Reuses
 `GOOGLE_SERVICE_ACCOUNT_JSON` (or the Email-Setup config) — no new secret.
 Activation order (the app is inert until ALL are done): enable the **Google
 Calendar API** in the GCP project; add

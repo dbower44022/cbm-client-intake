@@ -71,7 +71,9 @@ This is a multi-form app: a shared core hosts any number of intake forms.
     `/sponsorsessions/`): one configurable engine, three team-gated routes. Each
     manager reviews the records they own (engagements / managed partners / managed
     sponsors) and records `CSession` **meetings** against them (notes, next steps,
-    attendees, status; mentors can add co-mentors). The **Communications** tab
+    attendees, status; mentors can add co-mentors). The session editor's time
+    picker checks the manager's own Google calendar and shades conflicting
+    slots light red (advisory — still selectable; gated by `GCAL_EVENTS`). The **Communications** tab
     shows the email conversations with each record's contacts — synced from the
     manager's `@cbmentors.org` Gmail, cleaned to just the new text per message,
     with reply/compose from the tool (gated by `GMAIL_SYNC`); see

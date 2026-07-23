@@ -89,6 +89,10 @@ anything.
 - **No per-user setup** — delegation covers every `@cbmentors.org` user; the
   app only ever impersonates the signed-in manager's own mailbox
   (their `CMentorProfile.cbmEmail`).
+- **No extra scope for the time picker's conflict shading (v0.141.0)** —
+  the session editor's busy-slot lookup reads the manager's own calendar via
+  `events.list`, which the same `calendar.events` scope covers. It activates
+  with the same `GCAL_EVENTS` flag; nothing separate to authorize.
 - **No Meet-specific API or scope** — Meet links are created through the
   Calendar API (`conferenceData.createRequest`), covered by
   `calendar.events`. Only prerequisite: the **Google Meet service is ON** for
@@ -115,7 +119,11 @@ Then verify live in `/mentorsessions`: create a Scheduled session with a
 start time → the event appears on the manager's Google calendar, the
 attendees receive invitations, and the session's `videoMeetingLink` gains a
 `meet.google.com` URL; edit the time → the event moves; set status Cancelled
-→ the event is cancelled.
+→ the event is cancelled. Also (v0.141.0): pick a date on a day with an
+existing meeting and open the **Time** selector → the overlapping half-hour
+slots render with a light-red background and a tooltip naming the meeting;
+they remain selectable (double-booking is allowed — the user deconflicts
+manually), and editing an existing session never flags its own event.
 
 **How attendees are addressed (v0.122.0/v0.123.1, verified live on prod
 2026-07-21):** client contacts are invited at their Contact record's email.
