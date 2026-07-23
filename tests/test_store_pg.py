@@ -98,6 +98,31 @@ async def test_discard_resolves_stuck_but_not_completed():
     await store.dispose()
 
 
+async def test_record_comment_round_trip():
+    """The Partner/Funder Discussion store (migration 0020): append-only,
+    ordered, scoped by (parent_type, parent_id)."""
+    store = PostgresStore(_URL)
+    await store.create_all()
+
+    pid = f"P-{uuid.uuid4()}"
+    a = await store.add_record_comment(
+        "CPartnerProfile", pid, author="jane", author_name="Jane Staff", body="first",
+    )
+    assert a["id"] and a["body"] == "first" and a["author_name"] == "Jane Staff"
+    await store.add_record_comment(
+        "CPartnerProfile", pid, author="bob", author_name="Bob Admin", body="second",
+    )
+
+    got = await store.list_record_comments("CPartnerProfile", pid)
+    assert [c["body"] for c in got] == ["first", "second"]  # append-only, ordered
+
+    # Scoped: a different parent (and a different type sharing the id) is separate.
+    assert await store.list_record_comments("CPartnerProfile", f"other-{uuid.uuid4()}") == []
+    assert await store.list_record_comments("CSponsorProfile", pid) == []
+
+    await store.dispose()
+
+
 async def test_claim_leases_and_reclaims_stranded_processing():
     """A claimed row is leased (not re-claimable while the lease holds); once the
     lease expires it is reclaimed — the crash-recovery guarantee."""

@@ -16,38 +16,55 @@ Discussion UI specifically. **Partner + Sponsor domains only** (not the mentor
 / client domain) — but implement it as a per-domain flag so mentor could be
 switched on later.
 
-## Confirm with Doug BEFORE building (this repo elicits first)
+## Decisions (settled with Doug 2026-07-23 — build to these)
 
-1. **Where the comments live — the one real decision.** The Submission-Admin
-   Discussion is backed by a Postgres table (`submission_comment`). Partner /
-   sponsor records are CRM entities, so their comments need a home. **Recommended:
-   a generalized Postgres `record_comment` table keyed by `(parent_type,
-   parent_id)`** (e.g. `CPartnerProfile` / `CSponsorProfile` + the record id),
-   reusing the exact `submission_comment` pattern — the session tools already
-   run in the same FastAPI app, which exposes the durable store at
-   `request.app.state.submission_store`. (Alternative considered and NOT
-   recommended: CRM Stream notes — not an editable, uniformly-attributed comment
-   stream, and it'd surface in the CRM record's history, which these deliberately
-   should not.) **Get Doug's yes on the Postgres table before coding.**
-2. **Gating / visibility.** Comments are **staff-internal**: gated by the
-   domain's existing team gate (Partner Management Team / Sponsor Management
-   Team), attributed to the signed-in user, and **never written to the CRM or
-   shown to the partner/funder**. Confirm that's the intent (it mirrors
-   submissions).
-3. **Placement / layout.** Doug's words: "a pane to the left of the Partner
-   Notes and Session Notes." Today the Overview is **facts rail (left) |
-   splitter | notes column** (`sx__ov-notes` = overall notes + session-notes
-   feed). Propose the exact new arrangement (e.g. facts rail | Discussion pane |
-   notes column, or Discussion as a left sub-column of the notes area) and get
-   Doug's ok — no page-width cap ([[no-page-width-caps-density-by-packing]]).
+1. **Where the comments live — DECIDED: Postgres `record_comment` table.**
+   The Submission-Admin Discussion is backed by a Postgres table
+   (`submission_comment`); this feature uses a generalized Postgres
+   `record_comment` table keyed by `(parent_type, parent_id)` (e.g.
+   `CPartnerProfile` / `CSponsorProfile` + the record id), reusing the exact
+   `submission_comment` pattern — the session tools already run in the same
+   FastAPI app, which exposes the durable store at
+   `request.app.state.submission_store`. **The discussion is app-only** — it is
+   deliberately NOT mirrored into the CRM (a private staff back-channel,
+   separate from the record's official Notes; it won't appear in the EspoCRM
+   record view, which is intended). (Rejected: CRM Stream notes — not an
+   editable, uniformly-attributed comment stream, and it'd surface in the CRM
+   record's history, which this deliberately should not.)
+2. **Gating / visibility — DECIDED: team-level gating.** Comments are
+   **staff-internal**: gated by the domain's existing per-request team gate
+   (Partner Management Team / Sponsor Management Team; admins pass), attributed
+   to the signed-in user, and **never written to the CRM or shown to the
+   partner/funder**. Visibility is **team-wide**, not per-record — any member of
+   the domain's team can read and post on any record's discussion (matches how
+   the partner/funder grids already list all records to the whole team). Mirrors
+   Submission Admin.
+3. **Placement / layout — DECIDED: `facts rail | notes | Discussion`, Discussion
+   on the far right.** Today the Overview is **facts rail (left) | splitter |
+   notes column** (`sx__ov-notes` = overall notes + session-notes feed). Add the
+   Discussion pane as a third column to the **right of the notes column**, so the
+   order left-to-right is: facts rail, then Session/Partner Notes in the middle,
+   then Discussion on the far right. Keep the existing splitter between the rail
+   and the content group. No page-width cap
+   ([[no-page-width-caps-density-by-packing]]); give the Discussion pane a
+   **min-width + wrap** so it drops below the notes column on a narrower window
+   instead of crushing the layout. Default widths ~25% rail / ~40% notes / ~35%
+   Discussion, tuned by eye in the harness.
 
 ## Source to copy (Submission Admin Discussion)
 
 - **Store:** `core/store.py` — the `submission_comment` table (migration 0016)
-  + `add_comment` / `list_comments`. Generalize to `record_comment`
-  `(id, parent_type, parent_id, author, author_name, body, created_at)` with an
-  index on `(parent_type, parent_id, created_at)`. New **Alembic migration 0020**
-  (next free number; runs in the pre-deploy migrate job).
+  + `add_comment` / `list_comments`. Add a **new** generalized `record_comment`
+  table `(id, parent_type, parent_id, author, author_name, body, created_at)`
+  with an index on `(parent_type, parent_id, created_at)`, plus **new** methods
+  (`add_record_comment` / `list_record_comments`). **Leave the existing
+  `submission_comment` table + `add_comment`/`list_comments` and the `/ops` code
+  paths untouched** — do NOT migrate 0016's data or refactor Submission Admin to
+  ride the new table; blast radius on the live queue must be zero. New **Alembic
+  migration 0020** (next free number; runs in the pre-deploy migrate job).
+  **Attribution mapping:** store `author = user["userName"]` (login) and
+  `author_name = user["name"]` (display name) — the ported `initials`/`avatar`
+  helpers render from `author_name`, so the display name must land there.
 - **Endpoint:** `ops/router.py` — `add_comment` (`POST …/comments`, `CommentIn`),
   and the detail GET returning `comments`. The 503-when-no-store pattern is in
   `ops/router.py:_store`.
@@ -64,22 +81,33 @@ switched on later.
   the endpoint registration on it exactly like `contributions_link` gates the
   contributions routes in `sessions/router.py` (so the mentor router never
   registers it).
-- **Backend:** `sessions/service.py` — `get_detail` already returns
-  `overallNotes` (see `_overview_items` / the `overall_notes_*` block); add a
-  `comments` list (read via the store, best-effort, only when
-  `discussion_enabled`). `sessions/router.py` — register
+- **Backend:** `get_detail(cfg, client, parent_id)` has **no store access** (it
+  takes only cfg + client; the router calls it at `sessions/router.py:319`).
+  **Read comments in the ROUTER, not the service** — after `get_detail` returns,
+  fetch the store from `request.app.state.submission_store` and merge a
+  `comments` list into the detail dict (best-effort, only when
+  `discussion_enabled`). This keeps `get_detail` pure and avoids threading a
+  store param through the service layer. `sessions/router.py` — register
   `GET/POST /{slug}/api/records/{parent_id}/comments` inside `make_router`, gated
   by the flag; parent read AS THE USER first (the ACL gate), comments read/written
   via the store keyed by `(cfg.parent_entity, parent_id)`; attribute to
-  `user["userName"]` / `user["name"]`; 503 if the store isn't configured.
+  `user["userName"]` / `user["name"]` (see the mapping above); 503 if the store
+  isn't configured. **Store-off UX:** `DATABASE_URL` is set on both prod and
+  crm-test so the store is normally present — but if a `comments` GET 503s, the
+  frontend **hides the Discussion pane entirely** (consistent with how the
+  comms/docs tabs vanish when their integration is off), not a read-only stub.
 - **Frontend:** `sessions/frontend/index.html` — the Overview panel is the
   `sx__ov` / `sx__ov-notes` block (facts rail + `#overallNotes` + Session-notes
-  feed). Add a Discussion pane container to the left of `sx__ov-notes`.
+  feed). Add a Discussion pane container to the **right** of `sx__ov-notes` (see
+  the placement decision above: facts rail | notes | Discussion).
   `sessions/frontend/app.js` — `renderOverview` / `renderOverallNotes` (~L668–L760)
   is where to hook a `renderDiscussion(d)` that reads `d.comments` and posts to
-  the new endpoint (mirror the ops add-comment flow: append on success, clear the
-  box, refresh). The shared frontend derives its domain from the first URL
-  segment, so one implementation serves both partner and sponsor.
+  the new endpoint (mirror the ops add-comment flow: on success **append the new
+  comment and clear the box** — no full refetch, matching `/ops`). The stream is
+  **append-only, mirroring `/ops`: no edit or delete**. The Add button's press
+  feedback is already handled by `frontend/shared/busy.js` (it wraps `fetch`) —
+  do NOT add a manual spinner. The shared frontend derives its domain from the
+  first URL segment, so one implementation serves both partner and sponsor.
 
 ## Conventions (from CLAUDE.md — follow them)
 
@@ -101,8 +129,11 @@ switched on later.
 
 ## Definition of done
 
-Partner and Funder Overview pages show a Discussion pane (attributed comments +
-add box) to the left of the record's Notes, backed by the store, gated to the
-domain team, staff-internal; the mentor domain is unchanged; tests + pg
-round-trip green; stub-harness verified; docs + version bumped; committed for
-Doug's review.
+Partner and Funder Overview pages show a Discussion pane (attributed,
+append-only comments + add box — no edit/delete) to the left of the record's
+Notes, backed by the new `record_comment` store keyed by
+`(parent_type, parent_id)`, gated to the domain team, staff-internal; the pane
+hides itself if the store is unavailable (503); the existing Submission-Admin
+`submission_comment` path is untouched; the mentor domain is unchanged; tests +
+pg round-trip green (migration 0020 up + down); stub-harness verified; docs +
+version bumped; committed for Doug's review.

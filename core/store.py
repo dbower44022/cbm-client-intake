@@ -195,6 +195,26 @@ submission_presence = Table(
     Column("viewed_at", DateTime(timezone=True), nullable=False),
 )
 
+# --- Record discussion (2026-07-23) ----------------------------------------
+# A generalized sibling of ``submission_comment``: an attributed, timestamped,
+# staff-internal comment stream keyed to ANY record by ``(parent_type,
+# parent_id)`` — e.g. a CPartnerProfile / CSponsorProfile in the session tools.
+# App-only (never mirrored to the CRM); append-only (a correction is a new
+# comment). Deliberately separate from ``submission_comment`` so the Submission
+# Admin queue is untouched. (Migration 0020.)
+record_comment = Table(
+    "record_comment",
+    metadata,
+    Column("id", String(36), primary_key=True),
+    Column("parent_type", String(64), nullable=False),  # e.g. "CPartnerProfile"
+    Column("parent_id", String(64), nullable=False),     # the CRM record id
+    Column("author", String(128), nullable=False),       # userName
+    Column("author_name", String(255)),                  # display name when written
+    Column("body", Text, nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Index("ix_record_comment_parent", "parent_type", "parent_id", "created_at"),
+)
+
 # Activity feed kinds — the vocabulary the summary lines are grouped by.
 ACT_SUBMITTED = "submitted"
 ACT_DELIVERED = "delivered"
@@ -313,6 +333,15 @@ class SubmissionStore(Protocol):
         self, submission_id: str, *, author: str, author_name: str, body: str
     ) -> Optional[dict[str, Any]]: ...
     async def list_comments(self, submission_id: str) -> list[dict[str, Any]]: ...
+    # Generalized record discussion (2026-07-23) — keyed by (parent_type,
+    # parent_id); used by the session tools' Partner/Funder Discussion pane.
+    async def add_record_comment(
+        self, parent_type: str, parent_id: str, *,
+        author: str, author_name: str, body: str,
+    ) -> dict[str, Any]: ...
+    async def list_record_comments(
+        self, parent_type: str, parent_id: str
+    ) -> list[dict[str, Any]]: ...
     async def add_activity(
         self, submission_id: str, *, kind: str, actor: Optional[str],
         actor_name: Optional[str], summary: str, bump: bool = True,
@@ -745,6 +774,43 @@ class PostgresStore:
                     select(submission_comment)
                     .where(submission_comment.c.submission_id == submission_id)
                     .order_by(submission_comment.c.created_at)
+                )
+            ).mappings().all()
+        return [dict(r) for r in rows]
+
+    async def add_record_comment(
+        self, parent_type: str, parent_id: str, *,
+        author: str, author_name: str, body: str,
+    ) -> dict[str, Any]:
+        """Append an attributed comment to a record's staff-internal discussion.
+        Unlike ``add_comment`` there is no parent row to check (the parent lives
+        in the CRM, not here) — the caller has already read it AS THE USER, which
+        is the ACL gate — so this always inserts and returns the new comment."""
+        now = _now()
+        cid = str(uuid.uuid4())
+        async with self._engine.begin() as conn:
+            await conn.execute(
+                record_comment.insert().values(
+                    id=cid, parent_type=parent_type, parent_id=parent_id,
+                    author=author, author_name=author_name, body=body,
+                    created_at=now,
+                )
+            )
+        return {
+            "id": cid, "author": author, "author_name": author_name,
+            "body": body, "created_at": now,
+        }
+
+    async def list_record_comments(
+        self, parent_type: str, parent_id: str
+    ) -> list[dict[str, Any]]:
+        async with self._engine.begin() as conn:
+            rows = (
+                await conn.execute(
+                    select(record_comment)
+                    .where(record_comment.c.parent_type == parent_type)
+                    .where(record_comment.c.parent_id == parent_id)
+                    .order_by(record_comment.c.created_at)
                 )
             ).mappings().all()
         return [dict(r) for r in rows]
