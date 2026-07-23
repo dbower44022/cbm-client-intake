@@ -928,6 +928,23 @@ segment of its own URL). Mounted only when `assignments_active` (needs
     (soonest upcoming session, derived) with a **Start / Open Session** button:
     launches `videoMeetingLink` in a new tab when present, then opens the session
     for editing.
+  - **Discussion pane (v0.142.0, partner + sponsor only —
+    `DomainConfig.discussion_enabled`).** A fourth Overview column to the RIGHT
+    of the notes (facts rail | Session Notes | Discussion): a staff-internal,
+    attributed, timestamped, **append-only** comment stream where a record's
+    managers leave running notes to each other, SEPARATE from the record's own
+    Notes field. Backed by the durable store's generalized **`record_comment`**
+    table keyed by `(parent_entity, record id)` (Alembic 0020) — **app-only,
+    NEVER written to the CRM or shown to the partner/funder**. The flag gates
+    both the endpoint registration and the pane (the `contributions_link`
+    precedent — the mentor router never registers it); endpoints
+    `GET/POST /{slug}/api/records/{parent_id}/comments` read the parent AS THE
+    USER first (the ACL gate) then the store, and the detail GET merges
+    `comments` best-effort at the ROUTER (service `get_detail` stays pure). The
+    frontend hides the pane when the flag is off or the detail carries no
+    `comments` (no store) → 3-column fallback. Ported from Submission Admin's
+    Discussion (`ops/frontend`), sx__-namespaced. Store methods
+    `add_record_comment`/`list_record_comments`.
   - **Details** (`sessions/details.py`, `DomainConfig.details_entities`;
     **rebuilt to the approved mockup v4, v0.33.0** — design target:
     `prds/Details Screen files2/engagement-details-mockup-v4.html`, prompt
@@ -1511,7 +1528,99 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   Note: crm-test seed sessions carry out-of-enum `sessionType` values (harmless; a
   data-hygiene cleanup). **UI polish is the next work item** (a follow-up session).
 
-## Current status (updated 2026-07-22)
+## Current status (updated 2026-07-23)
+
+**v0.142.0** (2026-07-23, committed NOT pushed) — **Discussion pane on the
+Partner & Funder Overview** (Doug's request; decisions settled this session in
+`prompts/record-discussion-pane-prompt.md`). The Submission-Admin Discussion UI
+is ported onto the Overview of Partner Management (`/partnersessions`) and Funder
+Management (`/sponsorsessions`) as a **fourth column — facts rail | Session Notes
+| Discussion (far right)**: a staff-internal, attributed, timestamped,
+**append-only** comment stream (no edit/delete) for a record's managers to leave
+running notes to each other, separate from the record's own Notes field.
+Mechanics: a NEW generalized `record_comment` Postgres table keyed by
+`(parent_type, parent_id)` (Alembic **0020** — pre-deploy migrate; sibling of
+`submission_comment`, which is untouched), **app-only** (NEVER written to the CRM
+or shown to the partner/funder); a per-domain `DomainConfig.discussion_enabled`
+flag (True on partner+sponsor; mentor switchable later) gating BOTH the endpoint
+registration and the pane (the `contributions_link` precedent — the mentor router
+never registers it); `GET/POST /{slug}/api/records/{parent_id}/comments` with the
+parent read AS THE USER first as the ACL gate + the detail GET merging `comments`
+best-effort at the ROUTER (service `get_detail` stays pure); frontend
+`renderDiscussion` appends-on-success (the /ops pattern), hides the pane when
+disabled / no store (3-column fallback). Verified: 9 new router/config tests + a
+live-Postgres round-trip; migration 0020 up+down; the pane driven in the sessions
+stub-harness with **real computed styles** (4 grid tracks, facts→notes→Discussion
+order, add-comment POST recorded/appended/trimmed) — which caught a
+`display:flex`-beats-`[hidden]` pane bug, fixed
+(`.sx__ov-discussion[hidden]{display:none!important}`). Full suite green. **CRM
+prereq: none** (app-only). **After deploy** (the PRE_DEPLOY migrate runs 0020),
+live-check: open a real partner and a real funder → post a comment → it persists
+and a second team member sees it. **Version-race note:** a parallel session took
+0.141.0 (session-editor time-picker conflict shading) — its files
+(`core/gcalendar.py`, `sessions/gcal.py`, the two calendar tests, `uv.lock`) are
+NOT part of this commit; pyproject/CHANGELOG carry both. Functional reference:
+CHANGELOG 0.142.0.
+
+**v0.141.0** (2026-07-23, 1046 tests green, committed NOT pushed) —
+**the session editor's time picker shades calendar conflicts** (Doug's
+request): with a date chosen, opening the Time selector checks the
+signed-in user's OWN Google calendar and renders each half-hour slot that
+overlaps an existing meeting with a light-red background + a tooltip
+naming the busy event(s) and a one-line note in the popover. **Advisory
+only (the ruling):** a shaded slot stays fully selectable — picking it
+schedules a conflicting event and deconflicting is the user's
+responsibility. One shared frontend = every Create/Edit Session surface
+(all three domains + the record page); both session-editor datetime
+fields (Start, Next session) shade, Details-tab datetime fields stay
+plain. Backend: `GET /{slug}/api/calendar/busy` →
+`sessions.gcal.calendar_busy` → new `CalendarClient.list_events`
+(Calendar `events.list` — covered by the ALREADY-authorized
+`calendar.events` DWD scope, no Google-side work) →
+`core.gcalendar.busy_intervals` (skips cancelled / transparent-"free" /
+all-day / user-declined events; the edited session's own event excluded
+via its stored `googleCalendarEventId`). Rides the existing `GCAL_EVENTS`
+gate; best-effort end-to-end — ANY failure degrades to
+`{available:false}` = no shading, never an error, never blocks a save.
+Frontend: per-day busy cache (cleared per editor open), marks on popover
+open + date change, stale responses discarded; `.conflict` declared
+before `.sel` so a selected conflicting slot still renders navy.
+Verified: 13 new tests + the full flow in the stub harness (shading,
+tooltip, note, conflicting-slot select, cache = 1 fetch per day, date
+change refetch, computed styles; no console errors). Mechanics:
+CHANGELOG 0.141.0. **Live check after deploy:** open a session editor on
+crm-test as a mentor with a real busy calendar → slots shade; both envs
+already run GCAL_EVENTS=true so no overlay work.
+
+**The email/ops infrastructure arc CLOSED 2026-07-23 (v0.139.0 + v0.140.0
+committed; 0.139.0 RUN on prod):**
+- **Internal-conversation cleanup EXECUTED on prod** (Doug approved):
+  `list_internal_conversations.py --delete --delete-shells` as the admin
+  provisioning account — **373 conversations + 798 messages + 48 shells
+  deleted, zero failures**; re-scan clean (313 conversations / 720 messages
+  remain, all genuine correspondence). Run it from the **WEB** console —
+  the worker env lacks ESPO_PROVISION_*. Also: `repair_outbound_bodies.py
+  --write` run on prod (1 truncated row healed; the rest were already
+  correct). Both scripts + the `EspoClient.delete` method are in v0.139.0.
+- **D4 DONE for prod (2026-07-23):** `cbm-db-prod` converted dev-DB →
+  managed cluster (`db-s-1vcpu-1gb`, nyc1, ~$15/mo) via the DO console's
+  in-place "Convert to a Managed Database" (console-only — no API/doctl);
+  zero downtime, data verified intact, **daily backups + PITR now live**.
+  crm-test's `cbm-db` deliberately left dev-tier. Record + restore runbook:
+  DEPLOYMENT.md "Database backups".
+- **v0.140.0 — worker-liveness alerting** (committed NOT pushed): the WEB
+  process watches the worker heartbeat (`run_worker_liveness_check`,
+  `WORKER_LIVENESS_CHECK_SECONDS`/`WORKER_HEARTBEAT_ALERT_SECONDS`,
+  cooldown + recovery all-clear + fresh-boot grace); ALERT_EMAIL_TO/FROM
+  added to both WEB components (overlays applied via doctl). External half
+  LIVE: DO Uptime check `cbm-intake-prod-healthz` + 2-min down alert →
+  admin@cbmentors.org. Post-deploy drill (optional): worker to 0 → stale
+  email → back up → recovery email.
+- **espo@ RETIRED** (Doug, CRM-side): CRM-native sends deliver as info@.
+- **The email executive summary is PUBLISHED:**
+  https://docs.clevelandbusinessmentors.org/books/email-guide/page/how-email-works
+  (Staff & Administration shelf → new "Email Guide" book; source
+  `email-executive-summary.md` records the URL — keep in sync).
 
 **Main at v0.138.1 — PUSHED + DEPLOYED to BOTH envs (crm-test + prod
 `/healthz` verified 0.138.1, 2026-07-22, 1020 tests green).** The **Submission
