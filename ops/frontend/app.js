@@ -399,9 +399,11 @@
     renderTable();
   }
 
-  function actionBtn(label, armedText, fn) {
+  // `big` = full-size (detail header, to match the Close button); default is the
+  // compact `row-btn` used inside the grid.
+  function actionBtn(label, armedText, fn, big) {
     var btn = document.createElement("button");
-    btn.type = "button"; btn.className = "cbm-button cbm-button--secondary row-btn";
+    btn.type = "button"; btn.className = "cbm-button cbm-button--secondary" + (big ? "" : " row-btn");
     btn.textContent = label;
     twoStep(btn, armedText, fn);
     return btn;
@@ -410,12 +412,13 @@
   // Re-drive, labelled for what it means on this row: approving a held
   // inbound email DELIVERS it (creates the CRM records) — same endpoint,
   // honest words.
-  function redriveBtn(r, noticeEl) {
+  function redriveBtn(r, noticeEl, big) {
     var approve = r.form_slug === "info-email" && r.status === "held_review";
     return actionBtn(
       approve ? "Approve" : "Re-drive",
       approve ? "Create CRM records?" : "Re-drive?",
-      function () { redrive(r, noticeEl); }
+      function () { redrive(r, noticeEl); },
+      big
     );
   }
 
@@ -531,8 +534,9 @@
     } else {
       box.appendChild(closeControl());  // the single terminal action
     }
-    if (REDRIVABLE[current.status]) box.appendChild(redriveBtn(current, "detailNotice"));
-    if (DISCARDABLE[current.status]) box.appendChild(actionBtn("Discard", "Really discard?", function () { discard(current, "detailNotice"); }));
+    // Full-size (big=true) so Re-drive / Approve / Discard match the Close button.
+    if (REDRIVABLE[current.status]) box.appendChild(redriveBtn(current, "detailNotice", true));
+    if (DISCARDABLE[current.status]) box.appendChild(actionBtn("Discard", "Really discard?", function () { discard(current, "detailNotice"); }, true));
   }
 
   // Close ▾ — one deliberate action with a disposition reason (+ optional note).

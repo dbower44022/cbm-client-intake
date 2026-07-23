@@ -4,6 +4,16 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.138.1] — 2026-07-22
+
+**fix(ops): the detail-header action buttons are all the same height.** On the
+submission detail page, Re-drive / Approve / Discard used the compact grid
+`row-btn` size and a squeezed header wrapped the wider labels, so they didn't
+match the Close button. They now render full-size (`big` flag, no `row-btn`) and
+the detail-action buttons never wrap (`.ops__detail-actions .cbm-button {
+white-space: nowrap }`), so Close / Re-drive / Approve / Discard / Reopen are a
+uniform height (verified in the harness — all 46px). Frontend only.
+
 ## [0.138.0] — 2026-07-22
 
 **feat(ops): record-creating submissions auto-close as "Process completed".**

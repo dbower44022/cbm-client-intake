@@ -92,6 +92,9 @@ body { margin: 0; display: flex; flex-direction: column; }
 .ops__detail-heading { display: flex; align-items: baseline; gap: 0.6rem; }
 .ops__detail-heading h2 { color: var(--cbm-navy); font-family: var(--cbm-font-serif); margin: 0; }
 .ops__detail-actions { margin-left: auto; display: flex; gap: 0.5rem; align-items: center; }
+/* Keep every action button on one line so Close / Re-drive / Approve / Discard
+   are the same height (a squeezed header was wrapping the wider labels). */
+.ops__detail-actions .cbm-button { white-space: nowrap; }
 /* Request status editor in the detail header (New/In Progress/Responded/Closed). */
 .req-status { display: inline-flex; align-items: center; gap: 0.4rem;
   font-size: var(--cbm-text-sm); color: var(--cbm-slate-700); white-space: nowrap; }
