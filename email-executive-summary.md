@@ -2,6 +2,11 @@
 
 *Cleveland Business Mentors application suite · current as of July 21, 2026*
 
+> Published to the docs site 2026-07-23:
+> https://docs.clevelandbusinessmentors.org/books/email-guide/page/how-email-works
+> (Staff & Administration shelf → Email Guide). Keep the two in sync when
+> this file changes.
+
 Every email the system sends or receives goes through CBM's own Google
 Workspace (Gmail). The application never runs its own mail server, so
 deliverability, security, and retention are Google's — and every message,
