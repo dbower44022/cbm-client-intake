@@ -1613,6 +1613,20 @@ real info-request's status → GET-verify the CRM record + stream note.
 Full mechanics: CHANGELOG 0.134.0; staff reference updated in
 `submission-admin.md`.
 
+Before that: **v0.133.0** (2026-07-22, 997 tests green, pushed) —
+**Referring partner visible + settable on engagements** (Doug's regression
+report — investigation found NO regression: the Overview fact drops when
+empty by design, and the app never had a partner selector; existing links
+were set in the EspoCRM UI). Two changes: the mentor rail's Referring-partner
+fact is `always=True` (renders "—" when unlinked), and the Details engagement
+edit gains the app's FIRST curated link picker
+(`sessions/details.py:_ENTITY_LINK_FIELDS` → `linkselect` fields; select over
+readable CPartnerProfiles via `linkOptions`, blank clears to null, writes
+through the normal whitelisted details PUT). Mechanics: the "Curated
+link-field pickers" bullet in the Session Management section + CHANGELOG
+0.133.0. 8 new tests; harness-verified end-to-end. **Live check open:** one
+real partner pick on crm-test (rides the existing CEngagement edit grant).
+
 Before that: **Main was at v0.132.0** (2026-07-22, 982 tests green, committed NOT pushed) —
 **Email Quality Phase 1 ("never lose information") is BUILT** — §3 of
 `prds/email-quality-improvement-plan.md`, all four pieces (CHANGELOG
