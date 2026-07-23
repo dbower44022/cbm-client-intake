@@ -211,21 +211,33 @@ that activate the shared mailbox) is
 
 ### The queue, not just a log
 
-The Submission Admin grid is a work queue. Each submission row shows its
-delivery status (was it written into the CRM?), a **Resolved** workflow
-that's independent of delivery — **Mark resolved** when the human process
-is finished, **Reopen** if it isn't; the grid defaults to showing **Open**
-items — and a **Reply** column showing where the conversation stands with
-each open submitter:
+The Submission Admin grid is a shared work queue with **no owner** — the
+team coordinates by *visibility*. Each row shows a single derived **State**
+worked out from the emails and what staff have done — **Reply owed** (their
+message is newest), **Waiting on them** (CBM spoke last), **In progress**,
+**New**, or **Closed** — plus a **Last activity** column (who did the last
+thing, and when) so anyone about to reply can see a colleague is already on
+it. The grid defaults to **Open**.
 
-- **↳ reply owed** — their message is newest; the ball is in CBM's court.
-- **waiting on them** — CBM spoke last.
-- **—** — no conversation yet.
+Only submissions that need a **reply** stay open: information requests (the
+web form and emails to info@). A client-intake / volunteer / partner /
+sponsor submission creates its CRM records and is then handled by the
+downstream admin team, so once it delivers it **closes itself as "Process
+completed"** and drops out of the queue.
+
+**Close, when it's done** — one action with a **reason** (Responded —
+resolved / Referred / Duplicate / No response needed / Spam). Closing marks
+it resolved and, on an information request, sets the CRM record's Request
+Status to Closed too. If the submitter replies on the thread afterward, it
+**reopens automatically**.
 
 ### Talking to submitters — as Cleveland Business Mentors
 
-Opening a submission shows the submitter's details, staff triage notes, and
-the **email conversation with that submitter**. "Email the submitter" (or
+Opening a submission shows the submitter's details, an internal
+**Discussion** (attributed, timestamped comments among admins) beside an
+automatic **Activity** feed (every event — including which admin sent each
+reply), and the **email conversation with that submitter**. A **presence
+line** shows who else is viewing it right now. "Email the submitter" (or
 **"↩ Reply to the submitter"** once a conversation exists) opens the
 standard compose — but it sends as **info@cbmentors.org / "Cleveland Business Mentors"**, with
 no personal name or signature. Replies stay on the same Gmail thread, so

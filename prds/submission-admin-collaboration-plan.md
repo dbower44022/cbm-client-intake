@@ -1,7 +1,10 @@
 # Submission Admin — multi-admin review & respond workflow
 
-**Status: BUILT (v0.137.0, 2026-07-22) — NOT yet driven live.** All three
-phases shipped in one pass (collaboration core + lifecycle + presence).
+**Status: BUILT + DEPLOYED (v0.137.0–0.138.1, 2026-07-22; crm-test + prod at
+0.138.1) — live two-admin verification pass still pending.** All three phases
+shipped in one pass (collaboration core + lifecycle + presence), plus two
+follow-ups: **auto-close of record-creating submissions** as "Process
+completed" (§7a; v0.138.0) and uniform-height detail action buttons (v0.138.1).
 Authored from Doug's rulings in the design discussion this session (recorded
 verbatim in §2; §7 resolved). Mockup: the artifact published this session.
 Verified: full test suite green + a Postgres round-trip of the new store

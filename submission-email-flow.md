@@ -35,7 +35,7 @@ records are created for everything staff approve.
    - **Yes** → it's a reply in an existing conversation (perhaps to a
      message staff sent from a form submission's page). It is **not**
      captured again — it simply appears in that submission's conversation,
-     and flips the grid's Reply column to "↳ reply owed".
+     and flips the grid's State column to "↳ reply owed".
    - **No** → it's a **new request**. The app captures it durably as an
      **info-email submission**: sender name + address (parsed from the
      From header), subject, and the cleaned message text (signatures and
@@ -54,10 +54,11 @@ records are created for everything staff approve.
    - **Discard** removes it with **zero CRM residue**. (Undoable —
      Re-drive brings it back.)
 4. **The conversation continues** on the same thread (section 3), and when
-   the request is done staff **Mark resolved**. If the same person emails
-   again later on a *new* thread, that is a *new* queue item — by design: a
-   resolved request stays resolved, and new contact means someone is
-   waiting again.
+   the request is done staff **Close** it with a reason (Responded —
+   resolved / Referred / Duplicate / …). A reply on the same thread
+   afterward **reopens** it automatically; the same person emailing later on
+   a genuinely *new* thread is a *new* queue item — by design: a closed
+   request stays closed, and new contact means someone is waiting again.
 
 **What is deliberately ignored:** delivery bounces (mailer-daemon /
 postmaster), threads the mailbox itself started (staff writing from the
@@ -88,7 +89,7 @@ every poll re-derives its picture from the inbox + the database.
 primary case):
 
 1. A form submission arrives and is delivered to the CRM as usual. It sits
-   **open** in the Submission Admin queue with **"—"** in the Reply column
+   **open** in the Submission Admin queue with **"—"** in the State column
    (no conversation yet).
 2. Staff open it and click **✉ Email the submitter**. The standard compose
    opens with the submitter's address pre-filled; on a fresh info-request
@@ -100,16 +101,17 @@ primary case):
    Send is logged internally, and the send is also written back as a native
    EspoCRM **Email** on the matching Contact's History panel.)
 4. **The sent thread is anchored to the submission.** That anchor is the
-   whole trick: the conversation view and the Reply column read *only
+   whole trick: the conversation view and the State column read *only
    anchored threads*, so the submission shows this exchange and nothing
    else — a volunteer who also corresponds with CBM about ten other things
    never pollutes the submission again.
 5. **The submitter replies** — their reply lands on the same Gmail thread
    in the info@ inbox. The poller recognizes the anchored thread (no new
-   queue item), the conversation shows it to every admin, and the Reply
-   column flips to **↳ reply owed**. Later sends from the submission page
+   queue item), the conversation shows it to every admin, and the
+   submission's **State** flips to **↳ reply owed**. Later sends from the submission page
    are proper replies ("Re:" subject, same thread in both inboxes).
-6. When the exchange is finished: **Mark resolved.**
+6. When the exchange is finished: **Close** it with a reason (it leaves the
+   open queue; a later reply on the thread reopens it automatically).
 
 **Notes:**
 - For an **email-originated** submission, approve before replying if you
@@ -191,7 +193,7 @@ no inbound capture) — activation is a config change, not a deploy.
    <info@cbmentors.org>"; the conversation shows it; a second admin opens
    the same submission and sees the identical conversation.
 4. Reply from the personal account → no new queue item; the message joins
-   the conversation; the Reply column reads "↳ reply owed".
+   the conversation; the State column reads "↳ reply owed".
 5. Send a **Discard** case: a junk email → Discard → confirm nothing was
    created in the CRM.
 6. Fill the website info-request form, then "Email the submitter" from its

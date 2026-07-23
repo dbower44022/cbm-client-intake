@@ -1513,17 +1513,29 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-22)
 
-**Main at v0.138.0** (2026-07-22, 1020 tests green) — **record-creating
-submissions auto-close as "Process completed"** (Doug's ruling): a
-client-intake / volunteer / partner / sponsor submission delivers its CRM
-records and is then owned by the downstream admin team, so on successful
-delivery it's closed automatically (system reason "Process completed",
-atomically inside `mark_completed` on both the worker and sync paths) and
-leaves the open queue — which is now only the info-request / info-email items
-that need a reply (`core/store.ADMIN_REVIEW_FORMS` / `autoclose_reason`). The
-grid State cell shows a closed row's reason; **migration 0019** back-closes the
-already-delivered record-creating rows. CHANGELOG 0.138.0. (0.137.0 below is the
-multi-admin workspace this builds on.)
+**Main at v0.138.1 — PUSHED + DEPLOYED to BOTH envs (crm-test + prod
+`/healthz` verified 0.138.1, 2026-07-22, 1020 tests green).** The **Submission
+Admin multi-admin review-and-respond workspace** (0.137.0, below) plus two
+follow-ups are LIVE; migrations 0016–0019 ran on both managed DBs via the
+pre-deploy job.
+- **v0.138.0 — record-creating submissions auto-close as "Process completed"**
+  (Doug's ruling): a client-intake / volunteer / partner / sponsor submission
+  delivers its CRM records and is then owned by the downstream admin team, so on
+  successful delivery it's closed automatically (system reason "Process
+  completed", atomically inside `mark_completed` on both the worker and sync
+  paths) and leaves the open queue — which is now only the info-request /
+  info-email items that need a reply (`core/store.ADMIN_REVIEW_FORMS` /
+  `autoclose_reason`). The grid State cell shows a closed row's reason;
+  **migration 0019** back-closed the already-delivered rows on both DBs at
+  deploy. CHANGELOG 0.138.0.
+- **v0.138.1 — detail-header action buttons are uniform height** (Doug's
+  report): Re-drive / Approve / Discard render full-size (not the compact grid
+  `row-btn`) and never wrap, matching Close (46px, harness-verified). Frontend
+  only; CHANGELOG 0.138.1.
+
+**Still to drive live** (the one open item): a two-admin pass on crm-test —
+comment, presence, reply attribution, Close-with-reason → CRM `requestStatus`,
+and an auto-reopen from a real submitter reply on an anchored thread.
 
 **v0.137.0** (2026-07-22, deployed) — **Submission Admin becomes a multi-admin
 review-and-respond workspace** (Doug's design, elicited this session; plan +
@@ -1550,10 +1562,9 @@ message arriving after the close). New endpoints: `/comments`, `/close`,
 (pre-deploy migrate). Verified: full suite green + a Postgres round-trip of the
 new store methods + migration up/down + the notes→comment fold + a stub-harness
 browser pass (grid State column, presence, Discussion+Activity, add-comment,
-Close popover — no console errors). **NOT committed, NOT deployed, NOT driven
-live.** Live pass after deploy (migrations run): two admins — comment, presence,
-reply attribution, Close→CRM `requestStatus`, auto-reopen on an anchored reply.
-Staff reference updated in `submission-admin.md`.
+Close popover — no console errors). **DEPLOYED (see the v0.138.1 header above);
+the live two-admin pass is the remaining verification.** Staff reference:
+`submission-admin.md`; plan: `prds/submission-admin-collaboration-plan.md`.
 
 **Main is at v0.136.0** (2026-07-22, 1009 tests green, committed NOT pushed) —
 **closing a session books the agreed next session + the grid stops trusting

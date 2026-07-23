@@ -136,7 +136,7 @@ Messages send from **the shared info@cbmentors.org mailbox as "Cleveland Busines
 deliberately not your personal name or address (no personal signature is
 added either). Who actually clicked Send is still recorded internally. Every
 send ties its email thread to the submission, which is exactly what the
-conversation view (and the Reply column) reads.
+conversation view (and the State column) reads.
 
 ## Why don't I see…
 
