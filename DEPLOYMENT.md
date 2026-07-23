@@ -441,19 +441,25 @@ Two viable shapes — pick one:
 
 ## Reliability operations (added with the 2026-07-18 hardening, v0.94.0)
 
-### Database backups — DECISION NEEDED (P1-7, ruled: tier upgrade — Doug 2026-07-18)
+### Database backups — ✅ PROD DONE 2026-07-23 (P1-7 / decision D4)
 
 `pending` / `retry` / `needs_attention` submissions exist **only** in the two
-managed databases (`cbm-db` on crm-test, `cbm-db-prod` on prod). Both were
-created on the **dev tier**, which has **no automated backups or point-in-time
-recovery** — losing the database during a CRM outage backlog loses those
-submissions unrecoverably. Doug's ruling (decision D4): **upgrade both to a
-production tier** (DO then takes daily backups + PITR automatically; no
-scheduled-dump machinery to build or monitor).
+app databases (`cbm-db` on crm-test, `cbm-db-prod` on prod). Both were
+created as App Platform **dev databases**, which have **no user-accessible
+backups or point-in-time recovery** — losing the database during a CRM
+outage backlog loses those submissions unrecoverably. Doug's ruling
+(decision D4): upgrade to a production tier.
 
-**To do (console, one time each):** DO console → Databases → `cbm-db` /
-`cbm-db-prod` → Settings → **Upgrade** to the smallest production tier.
-No app change; the connection string is unchanged.
+**PROD converted 2026-07-23:** app Settings → `cbm-db-prod` component →
+Database Type & Scale → **Convert to a Managed Database** → smallest node
+plan (`db-s-1vcpu-1gb`, 1 node, no standby, ~$15/mo) → Convert. DO
+migrated in place with no downtime (the underlying cluster is promoted;
+connection string unchanged; the app auto-redeployed). Verified after:
+`/healthz` database ok + fresh worker heartbeat; row counts intact
+(105 submissions); **daily backups visible** via
+`doctl databases backups <cluster-id>` (7-day retention) + PITR/fork
+available. **crm-test (`cbm-db`) deliberately left on the dev tier** —
+test data; convert the same way if ever wanted.
 
 **Restore runbook** (once on a production tier): DO console → the database →
 Backups → restore creates a NEW cluster → update `DATABASE_URL` on the app's
