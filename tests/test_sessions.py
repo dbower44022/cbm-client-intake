@@ -1429,6 +1429,28 @@ async def test_upload_inline_image_creates_inline_attachment():
     assert att["role"] == "Inline Attachment"     # EspoCRM's wysiwyg role
     assert att["relatedType"] == "CSession"
     assert att["field"] == "sessionNotes"
+    assert att["filename"] == "shot.png"          # correct extension kept
+
+
+@pytest.mark.asyncio
+async def test_upload_inline_image_filename_gets_the_type_extension():
+    # EspoCRM validates inline attachments by deriving the mime FROM THE
+    # FILENAME EXTENSION and requiring it to match the declared type — an
+    # extensionless "pasted-image" was 403'd live ("Not allowed file type.",
+    # 2026-07-24), so the name must always carry the right extension.
+    fake = Fake()
+    cases = [
+        ("pasted-image", "image/png", "pasted-image.png"),   # no extension
+        ("shot.png", "image/jpeg", "shot.jpg"),              # wrong extension
+        ("photo.jpeg", "image/jpeg", "photo.jpeg"),          # .jpeg also valid
+        ("", "image/webp", "pasted-image.webp"),             # empty name
+    ]
+    for given, ctype, expected in cases:
+        await service.upload_inline_image(
+            fake, filename=given, content_type=ctype,
+            data_base64="aGk=", field="sessionNotes",
+        )
+        assert fake.attachments[-1]["filename"] == expected, (given, ctype)
 
 
 @pytest.mark.asyncio

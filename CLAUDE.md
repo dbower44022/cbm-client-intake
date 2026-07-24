@@ -1571,7 +1571,17 @@ footer version reads `/healthz` (server), not the JS — a stale cached
 `app.js` shows the new version but old behavior; hard-refresh after deploy**
 ([[footer-version-stale-js]]). Full detail: CHANGELOG 0.147.0/0.147.1/0.149.0.
 
-**v0.150.0** (2026-07-24, 1084 tests green, committed NOT pushed) —
+**v0.150.1** (2026-07-24, 1085 tests green, committed NOT pushed) — **fix on
+top of 0.150.0, from Doug's live test:** every paste 403'd with the CRM's
+"Not allowed file type." — EspoCRM derives an inline attachment's mime FROM
+THE FILENAME EXTENSION and requires it to equal the declared type
+(`Tools/Attachment/Checker.php`, read from the prod source), and the upload
+named the file extensionless `pasted-image`. `upload_inline_image` now always
+stores the canonical extension for the content type. The 0.150.0 live check
+still stands. (0.150.0 itself deployed to BOTH envs — Doug pushed —
+`/healthz` verified 0.150.0.)
+
+Base feature: **v0.150.0** (2026-07-24, 1084 tests green, deployed) —
 **inline images in session notes — pasted images now actually store**
 (Doug's follow-up to 0.148.0: he wants inline-image support, session notes
 first). Rides the CRM-native mechanism, verified against the EspoCRM 9.x

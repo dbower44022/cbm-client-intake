@@ -4,6 +4,20 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.150.1] — 2026-07-24
+
+**fix(sessions): pasted-image upload was 403'd by the CRM — "Not allowed file
+type."** (Doug's live report an hour after 0.150.0 deployed.) EspoCRM
+validates an inline attachment by deriving the mime type **from the filename
+extension** and requiring it to equal the declared type
+(`Tools/Attachment/Checker.php` `checkTypeImage`, read from the prod source) —
+and the upload named the file `pasted-image` with no extension, so every paste
+failed. `service.upload_inline_image` now always stores the canonical
+extension for the content type (`pasted-image` → `pasted-image.png`; a wrong
+extension is rebuilt on the stem; `.jpeg` accepted for image/jpeg). 1085 tests
+green (1 new covering the four filename cases). The live check from 0.150.0
+still stands — this was its first blocker.
+
 ## [0.150.0] — 2026-07-24
 
 **feat(sessions): inline images in session notes — pasted images now actually
