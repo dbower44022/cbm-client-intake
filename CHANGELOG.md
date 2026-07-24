@@ -4,6 +4,60 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.150.0] — 2026-07-24
+
+**feat(sessions): inline images in session notes — pasted images now actually
+store** (Doug's follow-up to 0.148.0: "I use tons of products that support
+inline images"). Those products upload the image behind the scenes and insert a
+reference — never the raw bytes in the text — and EspoCRM's own editor works
+exactly that way, so this rides the CRM-native mechanism end-to-end:
+
+- **Paste → CRM attachment.** The shared CBMRichText editor gains an
+  `opts.uploadImage(dataUri) → Promise<displayUrl|null>` hook: a pasted/dropped
+  image (dimmed while in flight) is uploaded and its base64 swapped for the
+  returned URL; no hook / a failed or declined upload = the 0.148.0
+  remove-with-notice fallback. `getValue()` never returns a base64 image even
+  mid-upload (final guard). The session editors (sessionNotes / nextSteps)
+  supply the hook.
+- **Stored the EspoCRM-native way.** New `POST /{slug}/api/inlineimages`
+  (session tools) creates an EspoCRM Attachment with **`role="Inline
+  Attachment"`** bound to `CSession.<field>`
+  (`service.upload_inline_image` — image types only, 5 MB cap
+  (`INLINE_IMAGE_MAX_MB`), wysiwyg-field whitelist; `EspoClient
+  .upload_attachment` gained the `role` param), and the saved HTML carries
+  `<img src="?entryPoint=attachment&amp;id=X">` — the exact form EspoCRM's own
+  wysiwyg stores. Verified against the EspoCRM 9.x source
+  (`FieldProcessing/Wysiwyg/Saver.php`): on record save the CRM scans for that
+  pattern and binds each attachment to the session (`relatedId`), so the
+  nightly cleanup never collects it, its ACL follows the session, **and the
+  image renders in the EspoCRM UI too**.
+- **Display via an ACL-gated proxy.** The browser can't reach the CRM, so
+  `GET /{slug}/api/attachments/{id}` streams the bytes AS THE SIGNED-IN USER
+  (EspoCRM checks access against the related session — a co-mentor sees the
+  image iff they can read the session); responses are
+  `private, max-age=31536000, immutable` (attachment content is immutable by
+  id). The sessions frontend rewrites stored references to the proxy at its
+  display choke point (`sanitizeHtml`) — editor, Overview notes feed, session
+  view, details — and rewrites back to the stored form on save
+  (`inlineImgToDisplay`/`inlineImgToStored`/`storedFormChanges`).
+- The 0.148.0 base64 strip + oversize guard stay as the server-side fallback
+  for anything that bypasses the hook (legacy editor, stale cached frontend);
+  the tiny `?entryPoint` references pass it untouched.
+
+Verified: 1084 tests green (7 new — inline-attachment role/field/size/type
+validation, entryPoint refs pass the save strip untouched, upload + fetch
+endpoints incl. cache header and readable 400); the editor hook driven in a
+real browser harness (no-hook strip, paste → dimmed → swapped to attachment
+URL, pre-existing image untouched, in-flight `getValue()` clean, failed upload
+removed with its own notice; no console errors). **Live check after deploy
+(crm-test as a mentor):** paste an image into session notes → save → image
+renders on the Overview feed + session view + in the EspoCRM UI; open the
+same session as a co-mentor (image loads) and as a user with no access to the
+session (image 403s); confirm the Attachment record shows `relatedId` = the
+session after save. Scope note (Doug's ruling): session notes first — the
+other wysiwyg surfaces (record notes, mentor bio, details forms) keep the
+remove-with-notice behavior until this is proven live.
+
 ## [0.149.0] — 2026-07-24
 
 **fix(myemail): "Open … reply there" / record-chip links were 404ing**

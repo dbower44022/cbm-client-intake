@@ -83,10 +83,13 @@
     host.addEventListener("keydown", function () { gestured = true; }, true);
     // A pasted/dropped image lands as a base64 data: URI — megabytes of text
     // that the CRM's text columns cannot store (a session-notes save 500'd on
-    // exactly this, 2026-07-24). Remove it the moment it appears and tell the
-    // user, instead of letting the save fail later with a server error.
+    // exactly this, 2026-07-24). When the host app supplies opts.uploadImage
+    // (dataUri -> Promise<displayUrl|null>), the image is uploaded as a proper
+    // attachment and the base64 swapped for the returned URL; without the
+    // hook — or when the upload fails/declines — the image is removed with an
+    // inline notice, instead of letting the save fail later.
     var imgNote = null;
-    function blockedImageNotice() {
+    function imageNotice(text) {
       if (!imgNote) {
         imgNote = document.createElement("div");
         imgNote.className = "cbm-richtext-note";
@@ -94,27 +97,61 @@
           "color:#5b4708;padding:6px 10px;font-size:13px;border-radius:4px;margin:0 0 4px;";
         host.insertBefore(imgNote, host.firstChild);
       }
-      imgNote.textContent = opts.imageBlockedMessage ||
-        "Pasted images can't be stored in this text and were removed — " +
-        "attach the image as a file instead (e.g. on the Documents tab).";
+      imgNote.textContent = text;
       imgNote.hidden = false;
       clearTimeout(imgNote._t);
       imgNote._t = setTimeout(function () { imgNote.hidden = true; }, 10000);
     }
-    function stripEmbeddedImages() {
-      var html = editor.value;
-      if (!/src\s*=\s*["']data:/i.test(html)) return false;
-      var tmp = document.createElement("div");
-      tmp.innerHTML = html;
-      var imgs = tmp.querySelectorAll('img[src^="data:"]');
+    function blockedImageNotice(failed) {
+      imageNotice(failed
+        ? (opts.imageFailedMessage ||
+           "The pasted image could not be uploaded and was removed — " +
+           "attach it as a file instead (e.g. on the Documents tab).")
+        : (opts.imageBlockedMessage ||
+           "Pasted images can't be stored in this text and were removed — " +
+           "attach the image as a file instead (e.g. on the Documents tab)."));
+    }
+    function handleEmbeddedImages() {
+      // Operates on the live editable DOM so an in-flight upload can keep its
+      // placeholder; [data-cbm-upload] marks an image already being handled.
+      var root = editor.editor;
+      if (!root) return false;
+      var imgs = root.querySelectorAll('img[src^="data:"]:not([data-cbm-upload])');
       if (!imgs.length) return false;
-      Array.prototype.forEach.call(imgs, function (n) { n.remove(); });
-      editor.value = tmp.innerHTML;  // re-fires change; next pass finds nothing
-      blockedImageNotice();
+      Array.prototype.forEach.call(imgs, function (img) {
+        if (typeof opts.uploadImage !== "function") {
+          img.remove();
+          blockedImageNotice(false);
+          return;
+        }
+        img.setAttribute("data-cbm-upload", "1");
+        img.style.opacity = "0.4";
+        Promise.resolve(opts.uploadImage(img.getAttribute("src")))
+          .then(function (url) {
+            if (url) {
+              img.setAttribute("src", url);
+              img.removeAttribute("data-cbm-upload");
+              img.style.opacity = "";
+            } else {
+              img.remove();
+              blockedImageNotice(true);
+            }
+          })
+          .catch(function (e) {
+            img.remove();
+            imageNotice((e && e.message) ||
+              "The pasted image could not be uploaded and was removed.");
+          })
+          .then(function () {
+            if (editor.synchronizeValues) editor.synchronizeValues();
+            if (typeof opts.onInput === "function") opts.onInput();
+          });
+      });
+      if (editor.synchronizeValues) editor.synchronizeValues();
       return true;
     }
     editor.events.on("change", function () {
-      if (gestured && stripEmbeddedImages()) return;
+      if (gestured) handleEmbeddedImages();
       if (gestured) touched = true;
       if (touched && typeof opts.onInput === "function") opts.onInput();
     });
@@ -122,7 +159,21 @@
       getValue: function () {
         if (!touched) return initial;
         var html = editor.value;
-        return isEmptyHtml(html) ? "" : sanitizeHtml(html);
+        if (isEmptyHtml(html)) return "";
+        html = sanitizeHtml(html);
+        // Final guard: a base64 image must never reach a save (an upload may
+        // still be in flight, or the strip above may not have run yet) — the
+        // CRM's text columns cannot hold one.
+        if (/src\s*=\s*["']data:/i.test(html)) {
+          var tmp = document.createElement("div");
+          tmp.innerHTML = html;
+          Array.prototype.forEach.call(
+            tmp.querySelectorAll('img[src^="data:"]'),
+            function (n) { n.remove(); }
+          );
+          html = tmp.innerHTML;
+        }
+        return html;
       },
       setValue: function (html) {
         initial = sanitizeHtml(html == null ? "" : String(html));

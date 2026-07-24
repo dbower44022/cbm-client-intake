@@ -128,6 +128,11 @@ class SessionClient(Protocol):
     async def unrelate(self, entity: str, record_id: str, link: str, related_id: str) -> None: ...
     async def metadata(self, key: str) -> Any: ...
     async def app_user(self) -> dict[str, Any]: ...
+    async def upload_attachment(
+        self, *, filename: str, content_type: str, data_base64: str,
+        related_type: str, field: str, role: str = "Attachment",
+    ) -> str: ...
+    async def download_attachment(self, attachment_id: str) -> tuple[bytes, str]: ...
 
 
 class SessionError(Exception):
@@ -936,6 +941,69 @@ def _embedded_image_warning(stripped: list[str]) -> str:
         "— images can't be saved inside notes. Everything else was saved. To "
         "keep the image, upload it on the Documents tab instead."
     )
+
+
+# --- inline images (pasted into the notes editors) --------------------------
+#
+# The RIGHT way to keep a pasted image: an EspoCRM Attachment (role "Inline
+# Attachment") referenced from the wysiwyg HTML as
+# ``<img src="?entryPoint=attachment&amp;id=…">`` — EspoCRM's own editor stores
+# exactly this, its Wysiwyg saver binds the attachment to the record on save
+# (so cleanup never collects it, its ACL follows the record, and the CRM UI
+# renders it too), and the app proxies the bytes for display (the browser
+# can't reach the CRM). The base64 strip above remains the fallback for
+# anything that skips this path.
+INLINE_IMAGE_MAX_MB = 5
+_INLINE_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+_INLINE_IMAGE_FIELDS = {
+    f["name"] for f in SESSION_FIELDS if f.get("type") == "wysiwyg"
+}
+
+
+async def upload_inline_image(
+    client: SessionClient,
+    *,
+    filename: str,
+    content_type: str,
+    data_base64: str,
+    field: str,
+) -> dict[str, str]:
+    """Store a pasted image as an EspoCRM Inline Attachment on ``CSession`` and
+    return its id. Validation errors are :class:`SessionError` (readable 400)."""
+    if field not in _INLINE_IMAGE_FIELDS:
+        raise SessionError("Images can only be pasted into the notes fields.")
+    if content_type not in _INLINE_IMAGE_TYPES:
+        raise SessionError(
+            "Only JPEG, PNG, WebP, or GIF images can be pasted into notes."
+        )
+    # base64 is ~4/3 of the decoded size; cap before any decode/transfer.
+    if len(data_base64) * 3 // 4 > INLINE_IMAGE_MAX_MB * 1024 * 1024:
+        raise SessionError(
+            f"The pasted image is too large (limit {INLINE_IMAGE_MAX_MB} MB). "
+            "Upload it on the Documents tab instead."
+        )
+    attachment_id = await client.upload_attachment(
+        filename=filename or "pasted-image",
+        content_type=content_type,
+        data_base64=data_base64,
+        related_type=SESSION,
+        field=field,
+        role="Inline Attachment",
+    )
+    log.info(
+        "inline image stored as Attachment/%s (%s, ~%d KB, field %s)",
+        attachment_id, content_type, len(data_base64) * 3 // 4 // 1024, field,
+    )
+    return {"id": attachment_id}
+
+
+async def fetch_inline_image(
+    client: SessionClient, attachment_id: str
+) -> tuple[bytes, str]:
+    """The attachment's bytes + content type, read AS THE USER — EspoCRM checks
+    access against the related session, so a viewer sees an image iff they can
+    read the session it belongs to."""
+    return await client.download_attachment(attachment_id)
 
 
 async def _sync_attendees(

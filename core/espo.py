@@ -181,6 +181,7 @@ class EspoApi(Protocol):
         data_base64: str,
         related_type: str,
         field: str,
+        role: str = "Attachment",
     ) -> str: ...
 
     async def metadata_enum_options(
@@ -504,13 +505,17 @@ class EspoClient:
         data_base64: str,
         related_type: str,
         field: str,
+        role: str = "Attachment",
     ) -> str:
         # EspoCRM expects the file as a data URL; the attachment is bound to the
-        # target entity/field so it links when the record is created.
+        # target entity/field so it links when the record is created. Role
+        # "Inline Attachment" = an image referenced from inside a wysiwyg
+        # field's HTML (?entryPoint=attachment&id=…) — EspoCRM's Wysiwyg saver
+        # relates it to the record on the record save.
         body = {
             "name": filename,
             "type": content_type,
-            "role": "Attachment",
+            "role": role,
             "relatedType": related_type,
             "field": field,
             "file": f"data:{content_type};base64,{data_base64}",
@@ -622,6 +627,7 @@ class DryRunEspoClient:
         data_base64: str,
         related_type: str,
         field: str,
+        role: str = "Attachment",
     ) -> str:
         self._counter += 1
         fake_id = f"dryrun-attachment-{self._counter:04d}"

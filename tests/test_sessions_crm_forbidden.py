@@ -106,6 +106,45 @@ def test_crm_500_on_session_save_returns_readable_502(monkeypatch):
     assert "Nothing you typed has been lost" in detail
 
 
+def test_inline_image_upload_and_fetch_endpoints(monkeypatch):
+    _as(monkeypatch, _USER)
+
+    async def fake_upload(client, *, filename, content_type, data_base64, field):
+        assert field == "sessionNotes"
+        return {"id": "a77"}
+
+    async def fake_fetch(client, attachment_id):
+        assert attachment_id == "a77"
+        return b"png-bytes", "image/png"
+
+    monkeypatch.setattr("sessions.service.upload_inline_image", fake_upload)
+    monkeypatch.setattr("sessions.service.fetch_inline_image", fake_fetch)
+    with TestClient(_app(monkeypatch)) as c:
+        up = c.post("/mentorsessions/api/inlineimages",
+                    json={"contentType": "image/png", "dataBase64": "aGk="})
+        assert up.status_code == 200 and up.json()["id"] == "a77"
+        got = c.get("/mentorsessions/api/attachments/a77")
+        assert got.status_code == 200
+        assert got.content == b"png-bytes"
+        assert got.headers["content-type"].startswith("image/png")
+        assert "immutable" in got.headers["cache-control"]
+
+
+def test_inline_image_upload_validation_is_a_readable_400(monkeypatch):
+    _as(monkeypatch, _USER)
+    from sessions import service as sessions_service
+
+    async def rejected(client, **kw):
+        raise sessions_service.SessionError("The pasted image is too large (limit 5 MB).")
+
+    monkeypatch.setattr("sessions.service.upload_inline_image", rejected)
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.post("/mentorsessions/api/inlineimages",
+                   json={"contentType": "image/png", "dataBase64": "aGk="})
+    assert r.status_code == 400
+    assert "too large" in r.json()["detail"]
+
+
 def test_session_error_on_save_returns_readable_400(monkeypatch):
     # A SessionError raised by the save path (e.g. the oversized-content guard)
     # is the caller's data, not a server fault — a readable 400.

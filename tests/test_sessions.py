@@ -85,6 +85,21 @@ class Fake:
     async def app_user(self):
         return {"acl": {"table": self.acl}}
 
+    async def upload_attachment(self, *, filename, content_type, data_base64,
+                                related_type, field, role="Attachment"):
+        self._seq += 1
+        aid = f"att-{self._seq}"
+        self.attachments = getattr(self, "attachments", [])
+        self.attachments.append({
+            "id": aid, "filename": filename, "type": content_type,
+            "relatedType": related_type, "field": field, "role": role,
+            "size_b64": len(data_base64),
+        })
+        return aid
+
+    async def download_attachment(self, attachment_id):
+        return b"img-bytes-" + attachment_id.encode(), "image/png"
+
 
 # --- config ----------------------------------------------------------------
 
@@ -1399,6 +1414,56 @@ async def test_text_without_data_images_passes_untouched_no_warning():
     )
     _, _, payload = fake.updates[0]
     assert payload["sessionNotes"] == '<p>see data: sheet</p><img src="https://x.test/a.png">'
+    assert "warning" not in session
+
+
+@pytest.mark.asyncio
+async def test_upload_inline_image_creates_inline_attachment():
+    fake = Fake()
+    res = await service.upload_inline_image(
+        fake, filename="shot.png", content_type="image/png",
+        data_base64="aGVsbG8=", field="sessionNotes",
+    )
+    att = fake.attachments[0]
+    assert res["id"] == att["id"]
+    assert att["role"] == "Inline Attachment"     # EspoCRM's wysiwyg role
+    assert att["relatedType"] == "CSession"
+    assert att["field"] == "sessionNotes"
+
+
+@pytest.mark.asyncio
+async def test_upload_inline_image_validates_field_type_and_size():
+    fake = Fake()
+    with pytest.raises(service.SessionError):     # not a wysiwyg session field
+        await service.upload_inline_image(
+            fake, filename="x", content_type="image/png",
+            data_base64="aGVsbG8=", field="status",
+        )
+    with pytest.raises(service.SessionError):     # not an image type
+        await service.upload_inline_image(
+            fake, filename="x", content_type="application/pdf",
+            data_base64="aGVsbG8=", field="sessionNotes",
+        )
+    huge = "A" * (service.INLINE_IMAGE_MAX_MB * 1024 * 1024 * 4 // 3 + 8)
+    with pytest.raises(service.SessionError) as exc:  # over the size cap
+        await service.upload_inline_image(
+            fake, filename="x", content_type="image/png",
+            data_base64=huge, field="sessionNotes",
+        )
+    assert "too large" in str(exc.value)
+    assert not getattr(fake, "attachments", [])   # nothing reached the CRM
+
+
+@pytest.mark.asyncio
+async def test_entrypoint_image_reference_passes_the_save_untouched():
+    # The stored inline-image form (?entryPoint=attachment&amp;id=X) is tiny
+    # text, not base64 — the strip guard must leave it alone so EspoCRM can
+    # bind + render it.
+    notes = '<p>hi</p><img src="?entryPoint=attachment&amp;id=att-9">'
+    fake = Fake(records={("CSession", "s1"): {"name": "s"}})
+    session = await service.update_session(MENTOR, fake, "s1", {"sessionNotes": notes}, None)
+    _, _, payload = fake.updates[0]
+    assert payload["sessionNotes"] == notes
     assert "warning" not in session
 
 

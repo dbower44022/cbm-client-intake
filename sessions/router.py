@@ -103,6 +103,16 @@ class CoMentorIn(BaseModel):
     mentorProfileId: str
 
 
+class InlineImageIn(BaseModel):
+    """An image pasted into a notes editor, uploaded as an EspoCRM Inline
+    Attachment (the base64-JSON photo-upload pattern — small images only, the
+    service caps the size)."""
+    filename: str = "pasted-image"
+    contentType: str
+    dataBase64: str
+    field: str = "sessionNotes"
+
+
 class ContributionIn(BaseModel):
     changes: dict = {}
 
@@ -628,6 +638,50 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             return await service.get_session(client, session_id)
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not load session")
+
+    @router.post("/inlineimages")
+    async def upload_inline_image(body: InlineImageIn, request: Request) -> dict:
+        """Store an image pasted into a session notes editor as an EspoCRM
+        Inline Attachment; the editor swaps the pasted base64 for a reference
+        to it. Runs as the user (their CSession edit ACL is the gate)."""
+        user = _require_user(request)
+        client = client_for(get_settings(), user)
+        try:
+            result = await service.upload_inline_image(
+                client,
+                filename=body.filename,
+                content_type=body.contentType,
+                data_base64=body.dataBase64,
+                field=body.field,
+            )
+        except service.SessionError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not store the pasted image")
+        log.info(
+            "inline image uploaded by %s (%s, Attachment/%s)",
+            user["userName"], body.contentType, result["id"],
+        )
+        return result
+
+    @router.get("/attachments/{attachment_id}")
+    async def inline_attachment(attachment_id: str, request: Request) -> Response:
+        """Stream an inline-image attachment for display — read AS THE USER, so
+        EspoCRM's ACL on the related session gates who sees it. Attachment
+        content is immutable by id, so the browser may cache it forever."""
+        user = _require_user(request)
+        client = client_for(get_settings(), user)
+        try:
+            content, content_type = await service.fetch_inline_image(
+                client, attachment_id
+            )
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not load the image")
+        return Response(
+            content=content,
+            media_type=content_type,
+            headers={"Cache-Control": "private, max-age=31536000, immutable"},
+        )
 
     @router.post("/records/{parent_id}/sessions")
     async def create_session(parent_id: str, body: SessionIn, request: Request) -> dict:

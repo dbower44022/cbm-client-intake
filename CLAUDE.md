@@ -1539,7 +1539,33 @@ migration, which copied/enriched the 7 real crm-test partners into prod —
 3 created, 4 enriched, GET-verified; the 7 obvious test records were not
 copied).
 
-**v0.148.0** (2026-07-24, 1079 tests green, committed NOT pushed) —
+**v0.150.0** (2026-07-24, 1084 tests green, committed NOT pushed) —
+**inline images in session notes — pasted images now actually store**
+(Doug's follow-up to 0.148.0: he wants inline-image support, session notes
+first). Rides the CRM-native mechanism, verified against the EspoCRM 9.x
+source (`FieldProcessing/Wysiwyg/Saver.php`): a pasted image is uploaded as
+an EspoCRM Attachment `role="Inline Attachment"` (new
+`POST /{slug}/api/inlineimages`, image types only, 5 MB cap, wysiwyg-field
+whitelist; `EspoClient.upload_attachment` gained `role`), the saved HTML
+carries `<img src="?entryPoint=attachment&amp;id=X">` — the exact form the
+CRM's own editor stores, so EspoCRM binds the attachment to the session on
+save (cleanup-safe, ACL follows the session, renders in the CRM UI too) —
+and display goes through the ACL-gated streaming proxy
+`GET /{slug}/api/attachments/{id}` (read AS THE USER; immutable-cached).
+CBMRichText gained the `opts.uploadImage` hook (dim while uploading, swap
+base64 → URL; no hook / failure = the 0.148.0 remove-with-notice fallback;
+`getValue()` never leaks base64 even mid-upload); the sessions frontend
+rewrites stored ↔ proxy forms at its `sanitizeHtml` display choke point and
+in `saveSession` (`inlineImgToDisplay`/`inlineImgToStored`). The 0.148.0
+strip/oversize guards stay as the server fallback; tiny `?entryPoint` refs
+pass untouched. Verified: 7 new tests + the full editor loop in a real
+browser harness (CHANGELOG 0.150.0 has both lists). **Live check after
+deploy (crm-test as a mentor):** paste → save → image renders in Overview
+feed/session view/EspoCRM UI; co-mentor sees it, an unentitled user 403s;
+Attachment gains `relatedId` after save. Scope (Doug's ruling): session
+notes first — other wysiwyg surfaces keep remove-with-notice until proven.
+
+Before that: **v0.148.0** (2026-07-24, 1079 tests green, committed NOT pushed) —
 **pasted image in session notes no longer breaks the save + save failures
 explain themselves** (Doug's report: a session save with an image pasted into
 the notes died as a bare 504). Diagnosed from the prod run logs + the prod CRM

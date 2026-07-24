@@ -6426,8 +6426,13 @@
     } else if (f.type === "wysiwyg") {
       // Standard editor (shared CBMRichText/Jodit); legacy contenteditable
       // only if the vendored script failed to load. minHeight is inline in
-      // Jodit, so the big-editor height rides the option, not CSS.
-      el = (window.CBMRichText && window.CBMRichText.create(value, { minHeight: f.big ? 360 : 160 })) || makeWysiwyg(value);
+      // Jodit, so the big-editor height rides the option, not CSS. Stored
+      // inline-image references open in display (proxy) form; a pasted image
+      // is uploaded as a CRM attachment via the hook (save rewrites back).
+      el = (window.CBMRichText && window.CBMRichText.create(inlineImgToDisplay(value), {
+        minHeight: f.big ? 360 : 160,
+        uploadImage: function (dataUri) { return uploadInlineImage(dataUri, f.name); },
+      })) || makeWysiwyg(value);
     } else if (f.type === "text") {
       el = document.createElement("textarea"); el.rows = 3; el.value = value == null ? "" : value;
     } else {
@@ -6479,8 +6484,52 @@
     { title: "Remove formatting", label: "Clear", cmd: "removeFormat" },
   ];
 
+  // --- inline images (pasted into notes) ---
+  // Stored HTML references a pasted image the EspoCRM-native way —
+  // <img src="?entryPoint=attachment&amp;id=X"> — so the CRM UI renders it and
+  // EspoCRM's saver binds the attachment to the session. The browser can't
+  // reach the CRM, so display rewrites the reference to the app's streaming
+  // proxy; saves rewrite it back to the stored form.
+  function inlineImgToDisplay(html) {
+    return String(html == null ? "" : html).replace(
+      /\?entryPoint=attachment&(?:amp;)?id=([A-Za-z0-9_-]+)/g,
+      API + "/attachments/$1"
+    );
+  }
+  var _PROXY_RE = new RegExp(
+    (API + "/attachments/").replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "([A-Za-z0-9_-]+)", "g"
+  );
+  function inlineImgToStored(html) {
+    return String(html == null ? "" : html).replace(
+      _PROXY_RE, "?entryPoint=attachment&amp;id=$1"
+    );
+  }
+  // Applied to an outgoing changes payload just before a save: any string
+  // field carrying proxy image URLs goes back to the CRM-native form.
+  function storedFormChanges(changes) {
+    Object.keys(changes || {}).forEach(function (k) {
+      if (typeof changes[k] === "string") changes[k] = inlineImgToStored(changes[k]);
+    });
+    return changes;
+  }
+  async function uploadInlineImage(dataUri, field) {
+    var m = /^data:([^;,]+);base64,(.+)$/.exec(dataUri || "");
+    if (!m) return null;
+    var r = await api("/inlineimages", {
+      method: "POST",
+      body: JSON.stringify({
+        filename: "pasted-image", contentType: m[1], dataBase64: m[2],
+        field: field || "sessionNotes",
+      }),
+    });
+    return API + "/attachments/" + r.id;
+  }
+
   function sanitizeHtml(html) {
-    var tmp = document.createElement("div"); tmp.innerHTML = html || "";
+    var tmp = document.createElement("div");
+    // Display choke point: every notes render goes through here, so stored
+    // inline-image references become viewable proxy URLs everywhere at once.
+    tmp.innerHTML = inlineImgToDisplay(html || "");
     Array.prototype.forEach.call(tmp.querySelectorAll("script,style,iframe,object,embed,link,meta"), function (n) { n.remove(); });
     Array.prototype.forEach.call(tmp.querySelectorAll("*"), function (n) {
       Array.prototype.slice.call(n.attributes).forEach(function (a) {
@@ -6675,6 +6724,9 @@
       if (ds && dur) changes.dateEnd = stampPlusSeconds(ds, dur);
     }
     delete changes.duration;
+    // Pasted-image references go back to the CRM-native stored form
+    // (?entryPoint=attachment&amp;id=…) so EspoCRM binds + renders them.
+    storedFormChanges(changes);
     var attendees = chosenAttendees();
     var dkey = sessionDraftKey();  // captured now — a create's "new" key is gone after
     savingSession = true;
