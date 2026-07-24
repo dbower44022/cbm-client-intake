@@ -21,6 +21,11 @@ The business-level definition of the Client Intake process is **not** owned
 here. It lives in the Mentoring Domain Client Intake process document
 (MN-INTAKE) in the Cleveland Business Mentoring repository.
 
+[`intake-processing-overview.md`](intake-processing-overview.md) is the
+plain-language end-to-end overview of submission processing: the
+capture → worker → CRM pipeline, the records and starting statuses each form
+creates, and where staff work each kind of intake.
+
 Change history: [`CHANGELOG.md`](CHANGELOG.md) (per-version) and
 [`RELEASE_NOTES.md`](RELEASE_NOTES.md) (narrative summaries of release cycles).
 

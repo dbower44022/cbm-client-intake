@@ -1528,7 +1528,16 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   Note: crm-test seed sessions carry out-of-enum `sessionType` values (harmless; a
   data-hygiene cleanup). **UI polish is the next work item** (a follow-up session).
 
-## Current status (updated 2026-07-23)
+## Current status (updated 2026-07-24)
+
+**Cross-cutting open items now live in `OPEN-ITEMS.md`** (started 2026-07-24;
+keep it current — add findings there, move fixed ones to Resolved). Headline
+item: **prod Account schema drift — `cAccountType` no longer exists on prod
+(prod uses `cCompanyType`), so the intake orchestrators' Account type stamp
+is a silent no-op on prod** (found during the 2026-07-24 partner data
+migration, which copied/enriched the 7 real crm-test partners into prod —
+3 created, 4 enriched, GET-verified; the 7 obvious test records were not
+copied).
 
 **v0.145.0** (2026-07-23, 1071 tests green, committed NOT pushed) —
 **internal CBM↔CBM email syncs again — to member Contacts, never records**
@@ -4560,6 +4569,14 @@ the synced lists were verified identical on crm-test and prod.
 - `DEPLOYMENT.md` — engineer deploy runbook (App Platform), incl. the staff-tool
   + mentor-provisioning env vars. `STAFF-DEPLOYMENT-GUIDE.md` — plain-language
   console-only companion for CBM staff.
+- `intake-processing-overview.md` — plain-language end-to-end overview of
+  submission processing (added 2026-07-24, Doug's request): the
+  capture → worker → CRM pipeline, the records + starting statuses each of
+  the five forms creates (incl. that an info-request creates BOTH a
+  CIntakeSubmission audit record AND a CInformationRequest), the
+  three-status-layers explanation, and where each intake kind gets worked —
+  recording the ruling that the Partner/Funder Management grids ARE the
+  long-term partner/sponsor review path (no dedicated approval queue).
 - `mentor-administration.md` — functional reference for the `/mentoradmin` tool:
   overall functionality + the **complete-record requirements** (the completeness
   rules, in plain language).
