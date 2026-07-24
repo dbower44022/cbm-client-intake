@@ -4,6 +4,40 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.146.0] — 2026-07-23
+
+**feat(sessions): no calendar event for past-dated sessions + the grid's
+"+ New session" button is now "+ Add session"** (Doug's request). A session
+recorded after the fact must not create a Google Calendar event or email
+invitations for a meeting that already happened:
+
+- **Server guard** (`sessions/gcal.py`): the event-CREATE branch (new
+  session, and the missing-event backfill on update) skips when
+  `dateStart` is more than 5 minutes in the past (the grace keeps a
+  "starting right now" session eligible), returning
+  `calendar: {ok, skipped, past}` — the save itself is untouched. A
+  session saved with status **Completed** already never created an event
+  (the existing only-Scheduled rule); the docstring now names both rules.
+  An EXISTING event still patches/cancels as usual (fixing the real time
+  on an already-invited meeting stays possible).
+- **Frontend mirror** (`sessions/frontend/app.js`): the pre-save
+  "create & send invite?" prompt no longer pops for a new Scheduled
+  session whose start is in the past — the server wouldn't create the
+  event, so asking about invitations was misleading. New `startsInPast`
+  helper next to `parseNaive` (same 5-minute grace).
+- **Button rename**: the record detail's "+ New session" button reads
+  "+ Add session" (`sessions/frontend/index.html`); the follow-up-failure
+  notice's "add it from New Session" reference updated to match.
+- Tests: `tests/test_sessions_calendar.py` fixtures now use DYNAMIC
+  future stamps (the old fixed 2026-07-20 dates had aged into the past —
+  they'd have tripped the new guard, and would rot again); two new tests
+  cover the past-date skip on create and on the update backfill. 35
+  calendar tests green; full suite 1073 passed.
+- Version-race note: the parallel shared-conversation-component session's
+  uncommitted hunks in `sessions/frontend/{app.js,index.html}` (the
+  CBMConversation swap + conversation.css/js tags) are NOT in this
+  commit — staged selectively via `git apply --cached`.
+
 ## [0.145.1] — 2026-07-23
 
 **fix(comms): the worker's gmail sync cycle died on the latent circular

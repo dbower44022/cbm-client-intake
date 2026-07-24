@@ -6,7 +6,9 @@ Google Meet conference on the signed-in manager's OWN calendar (delegated as
 their ``cbmEmail``); the attendee contacts are invited (Google emails the
 invitations); the Meet URL is written back to ``videoMeetingLink`` and the
 event id to ``googleCalendarEventId`` so later edits patch the same event and
-a Cancelled session cancels it.
+a Cancelled session cancels it. No NEW event is ever created for a session
+whose start is already in the past (recorded after the fact) or whose status
+is not Scheduled (e.g. Completed — the meeting already took place).
 
 Attendee addressing (Doug's ruling 2026-07-20, v0.122.0): a CBM member on the
 attendee list is invited at their ``cbmEmail`` ONLY — never their Contact
@@ -32,7 +34,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 from core.gcalendar import (
@@ -59,6 +61,23 @@ log = logging.getLogger("cbm_intake.sessions.gcal")
 # changed — a notes-only edit on an old Scheduled session must not suddenly
 # create an event and email invitations.
 _RELEVANT = {"name", "dateStart", "dateEnd", "status"}
+
+# A session recorded after the fact never gets a NEW event — inviting people
+# to a meeting that already happened only confuses their calendars. The grace
+# keeps a "starting right now" session (or minor clock skew) eligible.
+_PAST_GRACE = timedelta(minutes=5)
+
+
+def _starts_in_past(date_start: Any) -> bool:
+    """True when the CRM UTC stamp is more than the grace window in the past.
+    Unparseable/missing values are NOT past (the caller already requires a
+    dateStart before creating anything)."""
+    try:
+        start = datetime.strptime(str(date_start), "%Y-%m-%d %H:%M:%S")
+    except (TypeError, ValueError):
+        return False
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    return start < now - _PAST_GRACE
 
 
 async def sync_session_calendar(
@@ -150,6 +169,11 @@ async def _sync(
     if not event_id:
         if not (session.get("dateStart") and relevant):
             return {"ok": True, "skipped": True}
+        if _starts_in_past(session.get("dateStart")):
+            # Recorded after the fact (a past-dated Scheduled session): never
+            # create an event or email invitations for a meeting that already
+            # took place. An EXISTING event still patches/cancels as usual.
+            return {"ok": True, "skipped": True, "past": True}
         cal = calendar or await _client_for_user(settings, client, user_id, sa_info)
         if isinstance(cal, dict):
             return cal

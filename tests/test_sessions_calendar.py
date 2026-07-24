@@ -8,6 +8,7 @@ CMentorProfile.cbmEmail is exercised too)."""
 from __future__ import annotations
 
 import types
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -95,7 +96,24 @@ def _fake_crm(**kw):
     return fake
 
 
-NEW_CHANGES = {"name": "Kickoff", "dateStart": "2026-07-20 19:30:00", "dateEnd": "2026-07-20 20:30:00"}
+# Dynamic stamps: a past dateStart never creates an event (the past guard),
+# so the fixtures must stay in the future no matter when the suite runs.
+def _stamp(days, hour, minute):
+    d = datetime.now(timezone.utc).replace(
+        hour=hour, minute=minute, second=0, microsecond=0
+    ) + timedelta(days=days)
+    return d.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _iso(stamp):
+    return stamp.replace(" ", "T") + "Z"
+
+
+START, END = _stamp(7, 19, 30), _stamp(7, 20, 30)
+MOVED = _stamp(8, 18, 0)
+PAST_START, PAST_END = _stamp(-7, 19, 30), _stamp(-7, 20, 30)
+
+NEW_CHANGES = {"name": "Kickoff", "dateStart": START, "dateEnd": END}
 
 
 # --- create -------------------------------------------------------------------
@@ -110,7 +128,7 @@ async def test_create_scheduled_creates_event_and_stores_link(monkeypatch):
     body, send = cal.created[0]
     assert body["summary"] == "Kickoff"
     assert "Agape W8 Loss" in body["description"]
-    assert body["start"] == {"dateTime": "2026-07-20T19:30:00Z"}
+    assert body["start"] == {"dateTime": _iso(START)}
     # Id-before-invite: the create is QUIET (no attendees, sendUpdates=none);
     # the invitations go out via a patch AFTER the event id is stored.
     assert send == "none"
@@ -175,6 +193,35 @@ async def test_completed_session_never_creates_event(monkeypatch):
         owner_user_id="u1", settings=SETTINGS_ON)
     assert session["calendar"] == {"ok": True, "skipped": True}
     assert cal.created == []
+
+
+async def test_create_past_dated_scheduled_skips_event(monkeypatch):
+    """A session recorded after the fact (past dateStart, still Scheduled)
+    never creates an event or emails invitations — the meeting already
+    happened."""
+    crm, cal = _fake_crm(), FakeCalendar()
+    _wire(monkeypatch, cal)
+    session = await service.create_session(
+        MENTOR, crm, "E1",
+        dict(NEW_CHANGES, dateStart=PAST_START, dateEnd=PAST_END), ["c1"],
+        owner_user_id="u1", settings=SETTINGS_ON)
+    assert session["calendar"] == {"ok": True, "skipped": True, "past": True}
+    assert cal.created == [] and cal.patched == []
+    assert session["id"]  # the session itself still saved
+
+
+async def test_update_backfill_never_creates_event_for_past_session(monkeypatch):
+    """The missing-event backfill respects the past guard too — a relevant
+    edit to an old Scheduled session must not invite anyone to a meeting
+    that already took place."""
+    crm, cal = _fake_crm(), FakeCalendar()
+    _seed_session(crm, dateStart=PAST_START, dateEnd=PAST_END)  # no eventId
+    _wire(monkeypatch, cal)
+    session = await service.update_session(
+        MENTOR, crm, "s1", {"name": "Renamed"},
+        user_id="u1", settings=SETTINGS_ON)
+    assert session["calendar"] == {"ok": True, "skipped": True, "past": True}
+    assert cal.created == [] and cal.patched == []
 
 
 async def test_hand_typed_link_no_meet_and_not_overwritten(monkeypatch):
@@ -282,7 +329,7 @@ async def test_calendar_failure_never_fails_save(monkeypatch):
 def _seed_session(crm, **fields):
     crm.records[("CSession", "s1")] = dict({
         "id": "s1", "name": "Kickoff", "status": "Scheduled",
-        "dateStart": "2026-07-20 19:30:00", "dateEnd": "2026-07-20 20:30:00",
+        "dateStart": START, "dateEnd": END,
     }, **fields)
 
 
@@ -291,12 +338,12 @@ async def test_update_time_change_patches_event(monkeypatch):
     _seed_session(crm, googleCalendarEventId="ev1", videoMeetingLink=MEET)
     _wire(monkeypatch, cal)
     session = await service.update_session(
-        MENTOR, crm, "s1", {"dateStart": "2026-07-21 18:00:00"},
+        MENTOR, crm, "s1", {"dateStart": MOVED},
         user_id="u1", settings=SETTINGS_ON)
     assert session["calendar"] == {"ok": True, "eventId": "ev1", "updated": True}
     (event_id, body, _send), = cal.patched
     assert event_id == "ev1"
-    assert body["start"] == {"dateTime": "2026-07-21T18:00:00Z"}
+    assert body["start"] == {"dateTime": _iso(MOVED)}
     assert body["attendees"] == [{"email": "pat@x.com"}]
     assert cal.created == []
 
@@ -329,7 +376,7 @@ async def test_update_backfills_event_when_missing(monkeypatch):
     _seed_session(crm)  # no eventId
     _wire(monkeypatch, cal)
     session = await service.update_session(
-        MENTOR, crm, "s1", {"dateStart": "2026-07-21 18:00:00"},
+        MENTOR, crm, "s1", {"dateStart": MOVED},
         user_id="u1", settings=SETTINGS_ON)
     assert session["calendar"]["ok"] is True and session["calendar"]["eventId"] == "ev1"
     assert len(cal.created) == 1
@@ -432,7 +479,7 @@ async def test_update_patch_substitutes_member_emails(monkeypatch):
     _seed_session(crm, googleCalendarEventId="ev1", engagementId="E1")
     _wire(monkeypatch, cal)
     await service.update_session(
-        MENTOR, crm, "s1", {"dateStart": "2026-07-21 18:00:00"},
+        MENTOR, crm, "s1", {"dateStart": MOVED},
         user_id="u1", settings=SETTINGS_ON)
     (_eid, body, _send), = cal.patched
     # Without the substitution, mgr.personal@gmail.com would be re-invited here.

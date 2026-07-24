@@ -1305,6 +1305,13 @@
     if (m[4] == null) return new Date(+m[1], +m[2] - 1, +m[3]);
     return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]));
   }
+  // Mirrors the server's past-date guard (sessions/gcal.py): a session
+  // recorded after the fact never creates a calendar event, so the pre-save
+  // invite prompt must not ask about invitations that won't be sent.
+  function startsInPast(stamp) {
+    var d = parseNaive(stamp);
+    return d != null && d.getTime() < Date.now() - 5 * 60000;
+  }
   function isFutureSession(s) {
     if (statusClass(s.status) !== "scheduled") return false;
     var d = parseNaive(s.dateStart);
@@ -6659,7 +6666,8 @@
     // re-enters saveSession with the decision; Keep editing just closes.
     if (isNew && calendarDecision === undefined && config && config.gcalEnabled
         && (editorFieldValue("status") || "Scheduled") === "Scheduled"
-        && editorFieldValue("dateStart")) {
+        && editorFieldValue("dateStart")
+        && !startsInPast(editorFieldValue("dateStart"))) {
       show($("gcalModal"));
       $("gcalCreate").focus();
       return;
@@ -6753,7 +6761,7 @@
         if (fu.warning) warnExtra += " " + fu.warning;
       } else if (fu && fu.created === false) {
         warnExtra += " The agreed next session could not be created automatically (" +
-          (fu.error || "unknown error") + ") — add it from New Session.";
+          (fu.error || "unknown error") + ") — add it with the Add Session button.";
       }
       var msg, style = warnExtra ? "error" : "success";
       if (cal && cal.ok === false && !cal.disabled) {
