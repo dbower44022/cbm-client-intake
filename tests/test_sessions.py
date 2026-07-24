@@ -148,6 +148,66 @@ async def test_resolve_manager_profile_none_when_unlinked():
     assert await service.resolve_manager_profile(fake, "u1") is None
 
 
+# --- default meeting link (Zoom PMI preference) -----------------------------
+
+_PMI_META = {
+    "preferredMeetingProvider": {
+        "type": "enum", "options": ["Google Meet", "Zoom Personal Meeting"],
+    },
+    "zoomPersonalLink": {"type": "url"},
+}
+
+
+@pytest.mark.asyncio
+async def test_default_meeting_link_none_until_crm_has_the_fields():
+    fake = Fake(mentors=[{"id": "p9", "assignedUserId": "u1"}])
+    assert await service.default_meeting_link(fake, "u1") is None
+
+
+@pytest.mark.asyncio
+async def test_default_meeting_link_returns_the_pmi_link():
+    fake = Fake(
+        mentors=[{"id": "p9", "assignedUserId": "u1"}],
+        records={("CMentorProfile", "p9"): {
+            "preferredMeetingProvider": "Zoom Personal Meeting",
+            "zoomPersonalLink": "  https://us05web.zoom.us/j/123?pwd=x  ",
+        }},
+        meta_fields=_PMI_META,
+    )
+    link = await service.default_meeting_link(fake, "u1")
+    assert link == "https://us05web.zoom.us/j/123?pwd=x"
+
+
+@pytest.mark.asyncio
+async def test_default_meeting_link_none_for_meet_preference_or_blank_link():
+    # Google Meet preference (or unset) => None, even with a stored link.
+    fake = Fake(
+        mentors=[{"id": "p9", "assignedUserId": "u1"}],
+        records={("CMentorProfile", "p9"): {
+            "preferredMeetingProvider": "Google Meet",
+            "zoomPersonalLink": "https://us05web.zoom.us/j/123",
+        }},
+        meta_fields=_PMI_META,
+    )
+    assert await service.default_meeting_link(fake, "u1") is None
+    # Zoom preference but no stored link => None (falls back to Meet).
+    fake.records[("CMentorProfile", "p9")] = {
+        "preferredMeetingProvider": "Zoom Personal Meeting", "zoomPersonalLink": "",
+    }
+    assert await service.default_meeting_link(fake, "u1") is None
+
+
+@pytest.mark.asyncio
+async def test_default_meeting_link_none_without_profile_and_on_failure():
+    assert await service.default_meeting_link(Fake(meta_fields=_PMI_META), "u1") is None
+
+    class Boom(Fake):
+        async def metadata(self, key):
+            raise EspoError("metadata down")
+
+    assert await service.default_meeting_link(Boom(), "u1") is None
+
+
 @pytest.mark.asyncio
 async def test_resolve_manager_profile_membership_not_first_entry():
     """P2 (reliability review 2026-07-17): on the collaborators shape a profile
@@ -1242,6 +1302,55 @@ async def test_accept_engagement_only_on_domains_that_declare_it():
     with pytest.raises(service.SessionError):
         await service.accept_engagement(PARTNER, fake, "P1")
     assert fake.updates == []
+
+
+# --- Overview status picker -------------------------------------------------
+_STATUS_META = {"engagementStatus": {"options": ["Assigned", "Active", "On-Hold", "Completed"]}}
+
+
+@pytest.mark.asyncio
+async def test_set_status_changes_and_posts_note():
+    fake = Fake(records={("CEngagement", "E1"): {"engagementStatus": "Assigned"}},
+                meta_fields=_STATUS_META)
+    res = await service.set_status(MENTOR, fake, "E1", "Active", actor="The Boss")
+    assert res["from"] == "Assigned" and res["to"] == "Active" and res["changed"] is True
+    assert ("CEngagement", "E1", {"engagementStatus": "Active"}) in fake.updates
+    notes = [p for e, p in fake.created if e == "Note"]
+    assert len(notes) == 1 and "by The Boss" in notes[0]["post"]
+    assert "Assigned" in notes[0]["post"] and "Active" in notes[0]["post"]
+
+
+@pytest.mark.asyncio
+async def test_set_status_rejects_invalid_option():
+    fake = Fake(records={("CEngagement", "E1"): {"engagementStatus": "Assigned"}},
+                meta_fields=_STATUS_META)
+    with pytest.raises(service.SessionError, match="valid status"):
+        await service.set_status(MENTOR, fake, "E1", "Bogus")
+    assert fake.updates == [] and fake.created == []
+
+
+@pytest.mark.asyncio
+async def test_set_status_noop_when_unchanged():
+    fake = Fake(records={("CEngagement", "E1"): {"engagementStatus": "Active"}},
+                meta_fields=_STATUS_META)
+    res = await service.set_status(MENTOR, fake, "E1", "Active")
+    assert res["changed"] is False
+    assert fake.updates == [] and fake.created == []
+
+
+@pytest.mark.asyncio
+async def test_set_status_only_on_domains_that_declare_it():
+    fake = Fake(records={("CPartnerProfile", "P1"): {"partnershipStatus": "Active"}})
+    with pytest.raises(service.SessionError):
+        await service.set_status(PARTNER, fake, "P1", "Candidate")
+    assert fake.updates == []
+
+
+@pytest.mark.asyncio
+async def test_status_edit_options_reads_live_metadata():
+    fake = Fake(meta_fields=_STATUS_META)
+    assert await service.status_edit_options(MENTOR, fake) == ["Assigned", "Active", "On-Hold", "Completed"]
+    assert await service.status_edit_options(PARTNER, fake) == []  # not enabled
 
 
 # --- first completed session activates the engagement -----------------------

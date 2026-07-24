@@ -266,6 +266,52 @@ async def test_summary_field_activates_when_crm_has_it():
     assert payload == {"mentorSummary": "Short intro."}
 
 
+# --- feature-gated meeting-preference fields (Zoom PMI) ---
+
+_MEETING_META = {
+    "preferredMeetingProvider": {
+        "type": "enum", "options": ["Google Meet", "Zoom Personal Meeting"],
+    },
+    "zoomPersonalLink": {"type": "url"},
+}
+
+
+@pytest.mark.asyncio
+async def test_meeting_fields_gated_off_until_crm_has_them():
+    client = FakeClient()  # metadata without the meeting fields
+    spec = await service.field_spec_live(client)
+    names = [f["name"] for f in spec]
+    assert "preferredMeetingProvider" not in names
+    assert "zoomPersonalLink" not in names
+    # a smuggled change is dropped, not written
+    await service.update_own_profile(
+        client, "u1",
+        {"preferredMeetingProvider": "Zoom Personal Meeting", "mentorTitle": "X"},
+    )
+    _, _, payload = client.updates[0]
+    assert payload == {"mentorTitle": "X"}
+
+
+@pytest.mark.asyncio
+async def test_meeting_fields_activate_when_crm_has_them():
+    client = FakeClient(metadata=_MEETING_META)
+    spec = await service.field_spec_live(client)
+    names = [f["name"] for f in spec]
+    assert "preferredMeetingProvider" in names and "zoomPersonalLink" in names
+    options = await service.field_options(client)
+    assert options["preferredMeetingProvider"] == ["Google Meet", "Zoom Personal Meeting"]
+    await service.update_own_profile(
+        client, "u1",
+        {"preferredMeetingProvider": "Zoom Personal Meeting",
+         "zoomPersonalLink": "https://us05web.zoom.us/j/123"},
+    )
+    _, _, payload = client.updates[0]
+    assert payload == {
+        "preferredMeetingProvider": "Zoom Personal Meeting",
+        "zoomPersonalLink": "https://us05web.zoom.us/j/123",
+    }
+
+
 # --- photo ---
 
 @pytest.mark.asyncio

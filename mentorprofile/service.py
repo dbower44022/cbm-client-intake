@@ -20,7 +20,11 @@ import logging
 from typing import Any, Optional, Protocol
 
 from core.phone import to_e164
-from sessions.service import resolve_manager_profile
+from sessions.service import (
+    MEETING_LINK_FIELD,
+    MEETING_PROVIDER_FIELD,
+    resolve_manager_profile,
+)
 
 log = logging.getLogger("cbm_intake.mentorprofile.service")
 
@@ -33,11 +37,18 @@ CONTACT_ENTITY = "Contact"
 # whitelist below.
 PHOTO_FIELD = "profilePhoto"
 
-# The website's short summary paragraph. NOT built in the CRM yet — the app
-# feature-detects it from metadata (editor field + reads/writes activate on
-# their own once the CRM team builds it; spec: cmentorprofile-summary-field.md).
+# Feature-gated fields — NOT necessarily built in the CRM yet; the app
+# feature-detects each from metadata (editor field + reads/writes activate on
+# their own once the CRM team builds it, no deploy needed):
+# - mentorSummary: the website's short summary paragraph
+#   (spec: cmentorprofile-summary-field.md);
+# - preferredMeetingProvider + zoomPersonalLink: the mentor's meeting-service
+#   preference — "Zoom Personal Meeting" + a stored PMI link makes new sessions
+#   pre-fill that link instead of minting a Google Meet
+#   (spec: cmentorprofile-meeting-fields.md; consumed by
+#   sessions.service.default_meeting_link).
 SUMMARY_FIELD = "mentorSummary"
-FEATURE_GATED_FIELDS = {SUMMARY_FIELD}
+FEATURE_GATED_FIELDS = {SUMMARY_FIELD, MEETING_PROVIDER_FIELD, MEETING_LINK_FIELD}
 
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 # ~5 MB of raw image, as base64 (volunteer-resume cap style).
@@ -105,6 +116,11 @@ PROFILE_FIELDS: list[dict[str, Any]] = [
     {"name": "mentorPauseEndDate", "label": "Pause end", "type": "date", "group": "Mentoring preferences", "row": "pause"},
     {"name": "mentorBusinessStagePref", "label": "Preferred business stages", "type": "multiEnum", "group": "Mentoring preferences"},
     {"name": "fluentLanguages", "label": "Fluent languages", "type": "multiEnum", "group": "Mentoring preferences"},
+    # Feature-gated meeting-service preference (see FEATURE_GATED_FIELDS above):
+    # choosing "Zoom Personal Meeting" + a link makes new sessions use the
+    # mentor's own Zoom room instead of a generated Google Meet.
+    {"name": MEETING_PROVIDER_FIELD, "label": "Preferred meeting service", "type": "enum", "group": "Mentoring preferences", "row": "meeting"},
+    {"name": MEETING_LINK_FIELD, "label": "Zoom personal meeting link", "type": "url", "group": "Mentoring preferences", "row": "meeting", "placeholder": "https://us05web.zoom.us/j/…"},
     # --- More about you (internal, not on the website) ---
     {"name": "mentorProfessionalBio", "label": "Professional bio", "type": "wysiwyg", "group": "More about you"},
     {"name": "mentoringWhyInterested", "label": "Why you mentor", "type": "wysiwyg", "group": "More about you"},

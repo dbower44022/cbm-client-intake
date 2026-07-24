@@ -57,6 +57,17 @@ _PAGE = 200
 _COMENTOR_LINK = "additionalMentors"
 _ATTENDEE_LINK = "sessionAttendees"
 
+# Preferred meeting service (mentor-supplied Zoom, 2026-07-24): a mentor whose
+# profile prefers their own Zoom Personal Meeting room gets its link pre-filled
+# into NEW sessions' videoMeetingLink, and the calendar hook already treats a
+# present link as external (no Meet is minted). Both fields are feature-detected
+# from CRM metadata (the mentorSummary precedent; build spec:
+# cmentorprofile-meeting-fields.md), so this is inert until the CRM builds them.
+# The provider value must match the CRM enum option verbatim.
+MEETING_PROVIDER_FIELD = "preferredMeetingProvider"
+MEETING_LINK_FIELD = "zoomPersonalLink"
+ZOOM_PMI_PROVIDER = "Zoom Personal Meeting"
+
 # Pop-up "peek" detail: the record types a contact/company/client link can open,
 # with the curated field set each shows. An allowlist so the endpoint can't be
 # used to read arbitrary entities (reads still run as the user, ACL-enforced).
@@ -197,6 +208,39 @@ async def resolve_user_mailbox(client: SessionClient, user_id: str) -> Optional[
         return None
     profile = await client.get(MENTOR_PROFILE, profile_id, select="cbmEmail")
     return (profile.get("cbmEmail") or "").strip().lower() or None
+
+
+async def default_meeting_link(client: SessionClient, user_id: str) -> Optional[str]:
+    """The acting user's preferred meeting link for NEW sessions, or None for
+    the default (a blank link makes the calendar hook create a Google Meet).
+
+    Reads the signed-in user's own ``CMentorProfile``: when the feature-detected
+    ``preferredMeetingProvider`` is "Zoom Personal Meeting" AND a
+    ``zoomPersonalLink`` is stored, that link is returned so the session editor
+    pre-fills it — the user sees exactly what will be used and can clear it to
+    get a Meet instead. Entirely best-effort: fields not built in the CRM, no
+    linked profile, or any read failure just means None, never an error.
+    """
+    try:
+        fields = await client.metadata(f"entityDefs.{MENTOR_PROFILE}.fields")
+        if not (
+            isinstance(fields.get(MEETING_PROVIDER_FIELD), dict)
+            and isinstance(fields.get(MEETING_LINK_FIELD), dict)
+        ):
+            return None
+        profile_id = await resolve_manager_profile(client, user_id)
+        if not profile_id:
+            return None
+        profile = await client.get(
+            MENTOR_PROFILE, profile_id,
+            select=f"{MEETING_PROVIDER_FIELD},{MEETING_LINK_FIELD}",
+        )
+        if (profile.get(MEETING_PROVIDER_FIELD) or "") != ZOOM_PMI_PROVIDER:
+            return None
+        return (profile.get(MEETING_LINK_FIELD) or "").strip() or None
+    except Exception as exc:  # noqa: BLE001 — a preference must never block the editor
+        log.warning("meeting preference unavailable for user %s: %s", user_id, exc)
+        return None
 
 
 def _grid_row(cfg: DomainConfig, r: dict[str, Any]) -> dict[str, Any]:
@@ -486,6 +530,9 @@ def _overview_items(cfg: DomainConfig, parent: dict[str, Any]) -> list[dict[str,
             entry["link"] = {"entity": it.link_entity, "id": parent[it.id_attr]}
         if it.type == "currency":
             entry["currency"] = parent.get(it.attr + "Currency")
+        # The status fact becomes a clickable picker when the domain enables it.
+        if cfg.status_edit_attr and it.attr == cfg.status_edit_attr:
+            entry["statusEdit"] = True
         items.append(entry)
     return items
 
@@ -1314,6 +1361,49 @@ async def accept_engagement(
         f"status {from_status} → {to_status}.",
     )
     return {"status": "ok", "from": from_status, "to": to_status}
+
+
+async def status_edit_options(cfg: DomainConfig, client: SessionClient) -> list[str]:
+    """Live enum options for the domain's editable status field (CRM = truth),
+    for the Overview status picker. Empty when the domain doesn't enable it."""
+    if not cfg.status_edit_attr:
+        return []
+    fields = await client.metadata(f"entityDefs.{cfg.parent_entity}.fields")
+    opts = (fields.get(cfg.status_edit_attr) or {}).get("options")
+    return [o for o in opts if o] if isinstance(opts, list) else []
+
+
+async def set_status(
+    cfg: DomainConfig,
+    client: SessionClient,
+    parent_id: str,
+    new_status: str,
+    actor: Optional[str] = None,
+) -> dict[str, Any]:
+    """Change the parent record's status to any live enum value from the Overview
+    picker, written as the signed-in user so EspoCRM enforces their ACL.
+
+    The value is validated against the live options (a stale/invalid pick raises
+    :class:`SessionError` → 400, nothing written); an unchanged pick is a no-op.
+    A best-effort stream note stamps the change into history naming the actor
+    (the v0.74.0 audit-trail convention)."""
+    if not cfg.status_edit_attr:
+        raise SessionError("This record's status cannot be changed here.")
+    options = await status_edit_options(cfg, client)
+    if options and new_status not in options:
+        raise SessionError(f'"{new_status}" is not a valid status.')
+    rec = await client.get(cfg.parent_entity, parent_id, select=cfg.status_edit_attr)
+    current = rec.get(cfg.status_edit_attr)
+    if current == new_status:
+        return {"status": "ok", "from": current, "to": new_status, "changed": False}
+    await client.update(cfg.parent_entity, parent_id, {cfg.status_edit_attr: new_status})
+    log.info("%s %s status %s -> %s", cfg.parent_entity, parent_id, current, new_status)
+    await post_stream_note(
+        client, cfg.parent_entity, parent_id,
+        f"Status changed from {current or '—'} to {new_status} "
+        f"via the session tools{_by(actor)}.",
+    )
+    return {"status": "ok", "from": current, "to": new_status, "changed": True}
 
 
 async def create_session(

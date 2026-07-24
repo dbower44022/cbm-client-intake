@@ -16,6 +16,7 @@
   var fieldSpec = [];       // CSession editable-field spec
   var fieldOptions = {};    // {fieldName: [options]}
   var fieldRequired = [];   // field names the CRM marks required (e.g. dateStart)
+  var defaultMeetingLink = ""; // acting user's Zoom PMI link ("" = Meet default)
   var records = [];         // owned parents (grid)
   var currentDetail = null; // the open parent detail (has contacts/sessions)
   var currentSession = null;// the session being edited (null attendees only for new)
@@ -391,6 +392,7 @@
         try {
           var rf = await api("/fields");
           fieldSpec = rf.fields || []; fieldOptions = rf.options || {}; fieldRequired = rf.required || [];
+          defaultMeetingLink = rf.defaultMeetingLink || "";
         } catch (e) { if (e.status === 401) { showLogin(); return; } }
         await openDetail(RECORD_ID);
       } else {
@@ -404,6 +406,7 @@
     var fieldsError = null;
     try {
       var f = await api("/fields"); fieldSpec = f.fields || []; fieldOptions = f.options || {}; fieldRequired = f.required || [];
+      defaultMeetingLink = f.defaultMeetingLink || "";
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }
       fieldsError = e.message;
@@ -1159,7 +1162,12 @@
       }
       el.appendChild(b); return;
     }
-    if (t === "badge") { el.appendChild(badge(v)); return; }
+    if (t === "badge") {
+      var b = badge(v);
+      // Click the status badge to change it (mentor domain: config.statusEdit).
+      if (item.statusEdit && config && config.statusEdit) makeStatusEditable(b, v);
+      el.appendChild(b); return;
+    }
     if (t === "multiEnum" && Array.isArray(v)) {
       v.forEach(function (o) { var c = document.createElement("span"); c.className = "sx__chip"; c.textContent = o; el.appendChild(c); });
       return;
@@ -1174,6 +1182,85 @@
     var s = document.createElement("span"); s.className = "sx__badge";
     s.classList.add("sx__badge--" + String(v || "").toLowerCase().replace(/[^a-z0-9]+/g, "-"));
     s.textContent = v || "—"; return s;
+  }
+
+  // --- Overview status picker (mentor domain: click the status badge) ---------
+  var statusOptionsCache = null;   // live options, fetched once per page
+
+  // Turn a status badge into a click-to-change control: a caret is appended and
+  // clicking opens a small picker menu of the live statuses.
+  function makeStatusEditable(badgeEl, current) {
+    badgeEl.classList.add("sx__badge--editable");
+    badgeEl.title = "Change status";
+    var caret = document.createElement("span"); caret.className = "sx__badge-caret"; caret.textContent = "▾";
+    badgeEl.appendChild(caret);
+    badgeEl.addEventListener("click", function (e) {
+      e.stopPropagation();
+      openStatusMenu(badgeEl, current);
+    });
+  }
+
+  function closeStatusMenu() {
+    var m = document.getElementById("sxStatusMenu");
+    if (m) m.parentNode.removeChild(m);
+    document.removeEventListener("click", closeStatusMenu);
+  }
+
+  async function openStatusMenu(anchor, current) {
+    closeStatusMenu();
+    var menu = document.createElement("div"); menu.className = "sx__statusmenu"; menu.id = "sxStatusMenu";
+    menu.appendChild(loadingRow("Loading…"));
+    document.body.appendChild(menu);
+    positionMenu(menu, anchor);
+    // Close when clicking elsewhere (next tick so this click doesn't self-close).
+    setTimeout(function () { document.addEventListener("click", closeStatusMenu); }, 0);
+
+    var options;
+    try {
+      if (!statusOptionsCache) {
+        var res = await api("/statusoptions");
+        statusOptionsCache = res.options || [];
+      }
+      options = statusOptionsCache;
+    } catch (e) {
+      menu.innerHTML = ""; menu.appendChild(loadingRow(e.message || "Could not load statuses."));
+      return;
+    }
+    menu.innerHTML = "";
+    if (!options.length) { menu.appendChild(loadingRow("No statuses available.")); return; }
+    options.forEach(function (opt) {
+      var b = document.createElement("button"); b.type = "button"; b.className = "sx__statusmenu-item";
+      if (opt === current) b.className += " is-current";
+      b.textContent = opt;
+      b.addEventListener("click", function (e) { e.stopPropagation(); changeStatus(opt, current); });
+      menu.appendChild(b);
+    });
+  }
+
+  function loadingRow(text) {
+    var p = document.createElement("div"); p.className = "sx__statusmenu-note"; p.textContent = text; return p;
+  }
+
+  function positionMenu(menu, anchor) {
+    var r = anchor.getBoundingClientRect();
+    menu.style.top = (window.scrollY + r.bottom + 4) + "px";
+    menu.style.left = (window.scrollX + r.left) + "px";
+  }
+
+  async function changeStatus(newStatus, current) {
+    closeStatusMenu();
+    if (!currentDetail || newStatus === current) return;
+    try {
+      var res = await api("/records/" + encodeURIComponent(currentDetail.id) + "/status",
+        { method: "POST", body: JSON.stringify({ status: newStatus }) });
+      await openDetail(currentDetail.id);   // refresh the badge + everything derived from status
+      notice("detailNotice", res && res.changed === false
+        ? "Status is already " + newStatus + "."
+        : "Status changed to " + newStatus + ".", "success");
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      notice("detailNotice", e.message || "Could not change the status.", "error");
+    }
   }
 
   function fmtMoney(v, cur) {
@@ -6036,6 +6123,10 @@
         sessionType: (config && config.defaultSessionType) || "",
         name: defaultSessionName(),
         duration: 3600,  // the CRM duration field's default (1 hour)
+        // The mentor's preferred meeting link (Zoom PMI, from their profile).
+        // A present link means the calendar hook uses it instead of creating
+        // a Google Meet; clearing the field opts back into a Meet.
+        videoMeetingLink: defaultMeetingLink || "",
       };
       $("editorTitle").textContent = "New session";
     }

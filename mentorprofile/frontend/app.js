@@ -341,7 +341,7 @@
       el = document.createElement("textarea"); el.rows = f.rows || 2; el.value = value == null ? "" : value;
     } else if (f.type === "url") {
       el = document.createElement("input"); el.type = "url"; el.value = value == null ? "" : value;
-      el.placeholder = "https://www.linkedin.com/in/…";
+      el.placeholder = f.placeholder || "https://www.linkedin.com/in/…";
     } else {
       el = document.createElement("input"); el.type = "text"; el.value = value == null ? "" : value;
     }

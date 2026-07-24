@@ -4,6 +4,46 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.151.0] — 2026-07-24
+
+**feat(sessions/mentorprofile): mentor-supplied Zoom — a profile preference
+uses the mentor's Zoom Personal Meeting room instead of a generated Google
+Meet** (Doug's ruling: support the tool the mentor already has; no CBM Zoom
+account, no Zoom API). Two NEW feature-detected `CMentorProfile` fields —
+`preferredMeetingProvider` (enum `Google Meet` / `Zoom Personal Meeting`,
+default Google Meet) + `zoomPersonalLink` (url) — **NOT built in the CRM
+yet**; build spec `cmentorprofile-meeting-fields.md` (the `mentorSummary`
+precedent: everything below activates on its own once both fields exist, no
+deploy needed).
+
+- `/mentorprofile` → Mentoring preferences gains "Preferred meeting service"
+  + "Zoom personal meeting link" side by side (both in
+  `FEATURE_GATED_FIELDS`; enum options read live from metadata; `makeInput`'s
+  url renderer now honors a per-field `placeholder`).
+- `sessions/service.default_meeting_link(client, user_id)`: feature-detects
+  both fields, resolves the acting user's own profile, and returns the PMI
+  link only when the preference is `Zoom Personal Meeting` (verbatim —
+  `ZOOM_PMI_PROVIDER`) AND a link is stored; best-effort, any failure = None.
+  Served as `defaultMeetingLink` on every session router's `GET /fields`.
+- The session editor pre-fills a NEW session's "Video meeting link" with it —
+  the user sees exactly what will be used and can clear it to opt back into a
+  generated Meet for that one session. No calendar-hook change: a present
+  link already means "external link, no Meet" (`gcal._create` `wants_meet`),
+  the event carries the Zoom URL, and Fathom's URL-normalized +
+  invitee-overlap matching (v0.126.0) already handles reused personal rooms.
+- 7 new tests (1091 green): PMI link returned/trimmed, gated off until the
+  CRM has the fields, Meet-preference/blank-link/no-profile/failure → None,
+  profile-editor gating + smuggle-drop + live options.
+- Also this session: `prds/transcription-services-overview.md` — the
+  executive overview of note-taker vendor options (Fireflies/Otter/Read/
+  tl;dv/Zoom AI Companion/Recall.ai, integration models, tiered-support
+  proposal) for Doug's discussion of what CBM should support.
+
+**Live check after the CRM build (crm-test):** set the preference + link in
+`/mentorprofile` → New session pre-fills it → save Scheduled → calendar event
+carries the Zoom link, no Meet minted; clear-the-link path still creates a
+Meet.
+
 ## [0.150.2] — 2026-07-24
 
 **fix(sessions): upcoming sessions read distinct from past on the Overview

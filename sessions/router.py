@@ -294,6 +294,9 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 if cfg.list_status_accept
                 else None
             ),
+            # Overview status picker: click the Status badge to change it to any
+            # value (mentor domain). None => the badge is read-only.
+            "statusEdit": ({"attr": cfg.status_edit_attr} if cfg.status_edit_attr else None),
             "contactKey": cfg.list_contact_key,
             "companyKey": cfg.list_company_key,
             "emptyMessage": cfg.empty_message,
@@ -359,6 +362,11 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 "fields": await service.field_spec_live(client),
                 "options": await service.field_options(client),
                 "required": await service.field_required(client),
+                # The acting user's preferred meeting link (Zoom PMI) for new
+                # sessions, or None => blank link => the Meet default.
+                "defaultMeetingLink": await service.default_meeting_link(
+                    client, user["userId"]
+                ),
             }
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not load field options")
@@ -512,6 +520,50 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 summary=f"Engagement accepted: {result.get('from')} → {result.get('to')}.",
                 actor_id=user["userId"], actor_name=user["name"], details=result,
             )
+            return result
+
+    if cfg.status_edit_attr:
+        # The Overview status picker (mentor domain): the accept-endpoint
+        # precedent — registered ONLY on a domain with an editable status.
+
+        @router.get("/statusoptions")
+        async def status_options(request: Request) -> dict:
+            """Live status enum options for the Overview picker (CRM = truth)."""
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            try:
+                options = await service.status_edit_options(cfg, client)
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not load the status list")
+            return {"attr": cfg.status_edit_attr, "options": options}
+
+        @router.post("/records/{parent_id}/status")
+        async def set_status(parent_id: str, request: Request) -> dict:
+            """Change the record's status from the Overview picker, as the
+            signed-in user. 400 on an invalid pick (nothing written)."""
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            body = await request.json()
+            new_status = (body or {}).get("status")
+            if not new_status:
+                raise HTTPException(status_code=400, detail="No status was chosen.")
+            try:
+                result = await service.set_status(
+                    cfg, client, parent_id, new_status,
+                    actor=user.get("name") or user.get("userName"),
+                )
+            except service.SessionError as exc:
+                raise HTTPException(status_code=400, detail=str(exc))
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not change the status")
+            if result.get("changed"):
+                await action_log.log_action(
+                    app=cfg.title, category=action_log.CAT_STATUS,
+                    action=action_log.ACT_STATUS_CHANGED,
+                    parent_type=cfg.parent_entity, parent_id=parent_id,
+                    summary=f"Status changed: {result.get('from')} → {result.get('to')}.",
+                    actor_id=user["userId"], actor_name=user["name"], details=result,
+                )
             return result
 
     if cfg.contributions_link:

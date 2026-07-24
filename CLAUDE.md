@@ -1539,6 +1539,34 @@ migration, which copied/enriched the 7 real crm-test partners into prod —
 3 created, 4 enriched, GET-verified; the 7 obvious test records were not
 copied).
 
+**v0.151.0** (2026-07-24, 1091 tests green, committed NOT pushed) —
+**mentor-supplied Zoom: a profile preference uses the mentor's Zoom Personal
+Meeting room instead of a generated Google Meet** (Doug's ruling this
+session: user-supplied Zoom ONLY — no CBM Zoom account, no Zoom API ever;
+settled after vendor research). Two NEW feature-detected `CMentorProfile`
+fields — `preferredMeetingProvider` (enum `Google Meet`/`Zoom Personal
+Meeting`) + `zoomPersonalLink` (url) — **NOT built in the CRM yet** (build
+spec `cmentorprofile-meeting-fields.md`; the mentorSummary precedent, so the
+feature activates with no deploy once the fields exist). Mechanics:
+`/mentorprofile` Mentoring preferences gains both fields (in
+`FEATURE_GATED_FIELDS`); `sessions/service.default_meeting_link`
+(best-effort, verbatim provider match `ZOOM_PMI_PROVIDER`) rides every
+session router's `GET /fields` as `defaultMeetingLink`; the session editor
+pre-fills a NEW session's Video meeting link with it — the existing
+hand-typed-link rule in `gcal._create` then carries the Zoom URL into the
+calendar event and mints no Meet; clearing the field opts that session back
+into a Meet. Zero calendar-hook changes; Fathom's URL-normalize +
+invitee-overlap matching (v0.126.0) already covers reused PMI rooms.
+CHANGELOG 0.151.0. **Live check after the CRM build (crm-test):** set
+preference + link in /mentorprofile → New session pre-fills it → Scheduled
+save → event carries the Zoom link, no Meet; cleared-link path still mints a
+Meet. Also this session: **`prds/transcription-services-overview.md`** — the
+executive overview of note-taker vendor options for Doug's CBM discussion
+(Fireflies free-tier API = best add candidate; Otter + Zoom AI Companion NOT
+directly integrable — personal accounts have no API; an email-ingestion
+fallback proposed as the universal tier; tiered support policy + a mentor
+survey recommended before any build).
+
 **v0.147.0–0.149.0 — email-conversation window redesigned + a My Email
 link fix — PUSHED + LIVE on prod (0.149.0 verified 2026-07-24).** Doug's
 request: make a thread easy to read at a glance and show who initiated each
