@@ -203,7 +203,7 @@
       (r.records || []).forEach(function (rec) {
         var a = document.createElement("a");
         a.className = "me__rec";
-        a.href = "/" + rec.slug + "/record/" + encodeURIComponent(rec.id) + "/";
+        a.href = "/" + rec.slug + "/record/" + encodeURIComponent(rec.id);
         a.target = "_blank"; a.rel = "noopener";
         a.title = "Open " + (rec.name || "the record");
         a.textContent = rec.name || rec.id;
@@ -279,7 +279,7 @@
       if (!rec.slug) return;
       var a = document.createElement("a");
       a.className = "cbm-button";
-      a.href = "/" + rec.slug + "/record/" + encodeURIComponent(rec.id) + "/";
+      a.href = "/" + rec.slug + "/record/" + encodeURIComponent(rec.id);
       a.target = "_blank"; a.rel = "noopener";
       a.textContent = "Open " + (rec.name || "record") + " — reply there";
       recWrap.appendChild(a);

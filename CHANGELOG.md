@@ -4,6 +4,19 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.149.0] — 2026-07-24
+
+**fix(myemail): "Open … reply there" / record-chip links were 404ing**
+(Doug's report — the engagement link at the bottom-left of a My Email thread
+showed a raw `{"detail":"Not Found"}`). My Email built its record deep links
+with a trailing slash (`/{slug}/record/{id}/`), but the record-page route is
+registered without one (`/{slug}/record/{record_id}`), and the `/{slug}`
+StaticFiles mount swallowed the trailing-slash path into a 404 before the
+slash-redirect could fire. Dropped the trailing slash so the links match the
+route — the same no-trailing-slash form the sessions grid and the directory
+already use. Frontend-only, `myemail/frontend/app.js` (both the inbox row chip
+and the thread-modal footer button). Pre-existing since v0.105.0.
+
 ## [0.148.0] — 2026-07-24
 
 **fix(sessions): a pasted image no longer breaks the session save — and save
