@@ -144,6 +144,12 @@ class DomainConfig:
     # accept button that moves it to ``to`` (the mentor accepting an assigned
     # engagement). The server re-checks ``from`` before writing (stale guard).
     list_status_accept: Optional[tuple[str, str]] = None
+    # Overview status picker: when set, the Overview "Status" fact becomes a
+    # clickable picker that writes ``status_edit_attr`` (the parent's status enum)
+    # to any live option, as the signed-in user (ACL enforced). The option list is
+    # read live from CRM metadata; the write is validated against it. Mentor domain
+    # only today (engagementStatus). None => the status badge stays read-only.
+    status_edit_attr: Optional[str] = None
     # Grid column key that is the COMPANY — rendered as a link opening the
     # standard aggregated company/client pop-up (same peek the Overview uses).
     # ``list_company_aggregate`` = (entity, id attr on the raw record; "id" =
@@ -376,6 +382,8 @@ MENTOR = DomainConfig(
     list_manager_id_attr="mentorProfileId",
     # A mentor accepts a newly-assigned engagement straight from the grid.
     list_status_accept=("Pending Acceptance", "Assigned"),
+    # Click the Overview status badge to change engagementStatus to any value.
+    status_edit_attr="engagementStatus",
     list_company_key="company",
     list_company_aggregate=(("Account", "clientOrganizationId"),
                             ("CClientProfile", "engagementClientId")),

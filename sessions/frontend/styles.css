@@ -440,6 +440,24 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
 .sx__badge--active, .sx__badge--mou-contract-signed { background: #e9f7ef; color: #1e6b3f; border-color: #bfe3cd; }
 .sx__badge--on-hold, .sx__badge--pending-acceptance, .sx__badge--proposal-sent, .sx__badge--mou-contract-sent { background: #fff6e5; color: #8a5a00; border-color: #f3dfab; }
 .sx__badge--declined, .sx__badge--assignment-declined, .sx__badge--inactive { background: #fdecea; color: #a12; border-color: #f5c6c2; }
+/* Editable status badge — click to open the picker. */
+.sx__badge--editable { cursor: pointer; }
+.sx__badge--editable:hover { filter: brightness(0.97); box-shadow: 0 0 0 2px rgba(4, 107, 210, 0.18); }
+.sx__badge-caret { margin-left: 4px; font-size: 0.72em; opacity: 0.7; }
+.sx__statusmenu {
+  position: absolute; z-index: 80; min-width: 12rem; max-height: 60vh; overflow: auto;
+  background: #fff; border: 1px solid var(--cbm-border, #dbe2ec); border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(31, 58, 95, 0.18); padding: 4px;
+}
+.sx__statusmenu-item {
+  display: block; width: 100%; text-align: left; font: inherit; font-size: 0.85rem;
+  padding: 6px 10px; border: none; background: none; border-radius: 5px; cursor: pointer;
+  color: var(--cbm-slate-900, #1E293B);
+}
+.sx__statusmenu-item:hover { background: #eef4fb; }
+.sx__statusmenu-item.is-current { font-weight: 700; color: var(--cbm-navy, #173B60); }
+.sx__statusmenu-item.is-current::before { content: "✓ "; color: var(--cbm-blue, #046BD2); }
+.sx__statusmenu-note { padding: 8px 10px; font-size: 0.85rem; color: var(--cbm-slate-700, #556); }
 .sx__chip {
   display: inline-block; padding: 0.1rem 0.45rem; border-radius: 4px;
   background: #eef2f7; color: #37485c; font-size: 0.78rem; border: 1px solid #e0e6ee;

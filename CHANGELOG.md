@@ -4,6 +4,34 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.152.0] — 2026-07-24
+
+**feat(sessions): click the Overview status badge to change engagement status**
+(Doug's request — previously only "Pending Acceptance" could be changed, from
+the grid). The Overview "Status" fact (mentor domain) is now a clickable picker:
+click the badge → a menu of the live `engagementStatus` options (read from CRM
+metadata, so no drift) → pick one → it's written as the signed-in user (ACL
+enforced), a stream note stamps the change into history naming the actor, the
+badge + everything derived from status refresh, and a success notice shows.
+An invalid/stale pick 400s (nothing written); an unchanged pick is a no-op.
+Buttons-never-disabled: the picker is always available and reports on click
+(a CRM 403 surfaces the readable "ask CBM staff" message).
+
+Backend: `DomainConfig.status_edit_attr` (set to `engagementStatus` on the
+mentor domain); `service.status_edit_options` + `service.set_status`;
+`GET /{slug}/api/statusoptions` + `POST /{slug}/api/records/{id}/status`;
+`/session` carries `statusEdit`; the Overview status item is marked
+`statusEdit`. Frontend: `renderValue` makes the marked badge a picker
+(`makeStatusEditable` / `openStatusMenu` / `changeStatus`). Registered ONLY
+where a domain declares `status_edit_attr` (the accept-endpoint precedent —
+partner/sponsor never register it). 5 new tests (154 sessions green); the full
+picker loop verified in the stub-browser harness (menu of 8 options, current
+marked, pick → POST → badge refresh → notice; no console errors).
+
+Note: the service/router/frontend/test halves shipped in the v0.151.0 commit
+(a parallel-session index sweep); this release adds the `config.py` +
+`styles.css` halves that activate the feature.
+
 ## [0.151.0] — 2026-07-24
 
 **feat(sessions/mentorprofile): mentor-supplied Zoom — a profile preference
