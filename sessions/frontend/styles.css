@@ -461,7 +461,9 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
 /* Semantic tokens bound to the existing palette. */
 :root {
   --session-header-past-bg: #f4f6f9;         /* light neutral, one step below white */
-  --session-header-future-bg: #d8e8fc;       /* clearly-blue (Doug 2026-07-16: future must read distinct from past at a glance) */
+  --session-header-future-bg: #cfe2fb;       /* clearly-blue header band (Doug 2026-07-16: future must read distinct from past at a glance) */
+  --session-card-future-bg: #eaf3fe;         /* whole-card blue wash so an upcoming session reads distinct top-to-bottom, not just the header */
+  --session-future-rail: var(--cbm-blue, #046BD2);  /* full-height accent rail on upcoming cards */
   --session-header-today-bg: #b3251d;        /* session TODAY: red band, bold white text */
   --session-accent-text: var(--cbm-navy, #173B60);
   --session-callout-bg: #fffdf7;             /* gold callout family (Engagement Notes) */
@@ -473,9 +475,14 @@ body.sx--resizing { cursor: col-resize; user-select: none; }
 .sx__feed-none { font-size: 13px; padding: 2px 2px 6px; }
 
 .sx__scard { background: #fff; border: 1px solid var(--session-border); border-radius: 8px; overflow: hidden; }
+/* Temporal state is carried by the WHOLE card, not just the header band, so an
+   upcoming session stays recognisable even where you read (the notes body):
+   a full-height accent rail + a light wash across the card. Past = neutral. */
+.sx__scard--future { border-color: #b3d1f4; border-left: 5px solid var(--session-future-rail); background: var(--session-card-future-bg); }
+.sx__scard--today { border-color: #e6b0ac; border-left: 5px solid var(--session-header-today-bg); }
 /* Header band — the card-boundary + temporal-state signal. */
 .sx__scard-head { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; padding: 8px 14px; }
-.sx__scard-head.is-future { background: var(--session-header-future-bg); border-left: 4px solid var(--cbm-navy, #173B60); }
+.sx__scard-head.is-future { background: var(--session-header-future-bg); }
 .sx__scard-head.is-past { background: var(--session-header-past-bg); border-bottom: 1px solid var(--session-border); }
 /* Session scheduled TODAY: red header band, bold white text. */
 .sx__scard-head.is-today { background: var(--session-header-today-bg); }

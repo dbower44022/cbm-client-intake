@@ -1219,7 +1219,11 @@
   function sessionCard(s) {
     var scls = statusClass(s.status);
     var future = isFutureSession(s);
-    var card = document.createElement("div"); card.className = "sx__scard";
+    var card = document.createElement("div");
+    // Temporal state on the whole card (not just the header band) so an
+    // upcoming session reads as distinct top-to-bottom — the header tint alone
+    // left the notes body identical to a past card.
+    card.className = "sx__scard " + (isTodaySession(s) ? "sx__scard--today" : future ? "sx__scard--future" : "sx__scard--past");
 
     var head = document.createElement("div");
     head.className = "sx__scard-head " + (isTodaySession(s) ? "is-today" : future ? "is-future" : "is-past");

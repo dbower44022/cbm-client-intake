@@ -4,6 +4,21 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.150.2] — 2026-07-24
+
+**fix(sessions): upcoming sessions read distinct from past on the Overview
+feed** (Doug's request — future and past session cards weren't distinct
+enough). The temporal state was carried only by the card's HEADER band, so
+once you were reading the notes body a future card looked identical to a past
+one. Moved the signal to the WHOLE card: an upcoming session now gets a
+full-height blue accent rail (`--session-future-rail`, 5px) plus a light-blue
+wash across the entire card (`--session-card-future-bg` `#eaf3fe`, body
+included); past cards stay neutral white with a gray border; a session TODAY
+keeps its red band and gains a matching red rail. The card element carries a
+`sx__scard--future/--today/--past` class (was header-only). Frontend-only
+(`sessions/frontend/app.js` + `styles.css`); verified in a browser harness
+(future card blue top-to-bottom, past neutral, today red).
+
 ## [0.150.1] — 2026-07-24
 
 **fix(sessions): pasted-image upload was 403'd by the CRM — "Not allowed file
