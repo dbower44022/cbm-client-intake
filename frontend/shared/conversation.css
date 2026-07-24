@@ -20,14 +20,19 @@
 
 .cbmc-msg {
   display: flex; gap: 0.65rem; align-items: flex-start;
-  margin: 0 0 0.7rem; padding: 0.6rem 0.85rem;
+  /* small left inset so a received card never touches the page/panel edge,
+     and a little right room so it never touches the far edge either */
+  margin: 0 0.5rem 0.7rem 0.6rem; padding: 0.6rem 0.85rem;
   border: 1px solid var(--cbm-border); border-left-width: 4px;
   border-radius: 0 var(--cbm-radius) var(--cbm-radius) 0;
   background: #fff;
 }
 .cbmc-msg--in  { border-left-color: var(--cbm-blue); }
-.cbmc-msg--out { border-left-color: var(--cbm-gold); background: var(--cbm-surface); margin-left: 2rem; }
-.cbmc-msg--bounce { border-left-color: #c0392b !important; background: #fdf5f4 !important; margin-left: 0 !important; }
+/* sent = warm gold-tinted card that stands out against a white OR a
+   surface-coloured (#F0F5FA) page — --cbm-surface matched the page and blended;
+   the extra left margin puts outbound in its own indented lane */
+.cbmc-msg--out { border-left-color: var(--cbm-gold); background: #FBF1D9; border-color: #EAD8AC; margin-left: 2.6rem; }
+.cbmc-msg--bounce { border-left-color: #c0392b !important; background: #fdf5f4 !important; border-color: #e3b7b1 !important; margin-left: 0.6rem !important; }
 
 .cbmc-avatar {
   flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%;
@@ -65,5 +70,5 @@
 .cbmc-attach { margin-top: 0.45rem; }
 
 @media (max-width: 640px) {
-  .cbmc-msg--out { margin-left: 0.8rem; }
+  .cbmc-msg--out { margin-left: 1.4rem; }
 }

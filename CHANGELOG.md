@@ -4,6 +4,18 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.147.1] — 2026-07-24
+
+**fix(comms): conversation-card spacing + sent-card contrast** (Doug's review of
+0.147.0). Received cards sat flush against the page/panel edge — added a 0.6rem
+left inset (plus a little right room) so they never touch the edge. Sent cards
+used `--cbm-surface`, which is the same colour as the conversation page
+background, so they blended in — switched to a warm gold-tinted fill (`#FBF1D9`
+with a matching border) that stands out against both a white and a
+surface-coloured page and reinforces the gold "sent" rail. Applied in the shared
+`conversation.css` (all four viewers) and mirrored in `ops/frontend/styles.css`.
+Frontend-only; verified in-browser against a surface-coloured page.
+
 ## [0.147.0] — 2026-07-24
 
 **feat(comms): redesigned email-conversation window — one visual language
