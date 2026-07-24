@@ -76,6 +76,17 @@ user sent each message, whichever identity it went out under.)
 
 ## 3. Where you read email
 
+Every place you read a conversation — My Email, a record's Communications
+tab, the View Contact page, and Submission Admin — opens the **same thread
+window**, so a conversation reads the same everywhere. Each message shows a
+colored left bar (**blue = received**, **gold = sent**, with sent messages
+in an indented gold-tinted lane), a **per-person initials avatar** (a mentor
+and co-mentor on one thread stay visually distinct), a **Received / Sent /
+Delivery-failed** pill, the recipient on sent messages, and a "who started
+this conversation" line at the top. Bounces are shown in red. (Full detail:
+[`communications-tab.md`](communications-tab.md) → "Reading a thread at a
+glance".)
+
 ### My Email — your unified inbox (`/myemail/`)
 
 The portal's **My Email** tile opens one inbox covering **every record you

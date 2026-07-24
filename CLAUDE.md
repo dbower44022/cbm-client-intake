@@ -1539,6 +1539,38 @@ migration, which copied/enriched the 7 real crm-test partners into prod —
 3 created, 4 enriched, GET-verified; the 7 obvious test records were not
 copied).
 
+**v0.147.0–0.149.0 — email-conversation window redesigned + a My Email
+link fix — PUSHED + LIVE on prod (0.149.0 verified 2026-07-24).** Doug's
+request: make a thread easy to read at a glance and show who initiated each
+part. New **shared** thread renderer — `frontend/shared/conversation.js`
+(`window.CBMConversation.messageCard`/`badge`/`startedDivider`) +
+`conversation.css` — used by ALL FOUR conversation windows (directory View
+Contact `directory/frontend/record.js`, the session tools' Communications
+tab `sessions/frontend/app.js`, My Email `myemail/frontend/app.js`, and
+Submission Admin `ops/frontend/app.js` — each page now loads the two
+`/shared/conversation.*` assets). Each message shows: a **colored direction
+rail** (blue = received/inbound, gold = sent/outbound, outbound in an
+indented warm-gold-tinted lane), a **per-person initials avatar** (stable
+hash of the email, so a mentor + co-mentor on one thread stay distinct), a
+**"▼ Received / ▲ Sent / Delivery failed" pill**, the recipient on sent
+messages, and a **"X started this conversation"** divider. Bounce keeps the
+red treatment; View original / Open in Gmail / attachment chips preserved;
+ops keeps its subject + expandable-snippet behavior, restyled to match.
+Ops uses `sent`/`received`; the other three use `Inbound`/`Outbound` — the
+shared `normDir` handles both. **0.147.1** was Doug's follow-up polish
+(received-card left inset so it doesn't touch the edge; sent-card fill
+changed from `--cbm-surface`, which matched the page bg and blended, to
+`#FBF1D9` warm gold). **0.149.0** fixed an unrelated pre-existing My Email
+bug (since v0.105.0): the "Open … reply there" button + inbox record chips
+hrefed `/{slug}/record/{id}/` **with a trailing slash**, but the record-page
+route has none and the `/{slug}` StaticFiles mount swallowed it into a 404
+`{"detail":"Not Found"}` — dropped the slash to match the working
+sessions/directory form (prod-verified: no-slash → 200, slash → 404).
+Frontend-only throughout; verified in a real browser harness. **Note the
+footer version reads `/healthz` (server), not the JS — a stale cached
+`app.js` shows the new version but old behavior; hard-refresh after deploy**
+([[footer-version-stale-js]]). Full detail: CHANGELOG 0.147.0/0.147.1/0.149.0.
+
 **v0.150.0** (2026-07-24, 1084 tests green, committed NOT pushed) —
 **inline images in session notes — pasted images now actually store**
 (Doug's follow-up to 0.148.0: he wants inline-image support, session notes

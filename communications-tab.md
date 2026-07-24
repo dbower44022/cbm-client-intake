@@ -44,6 +44,28 @@ New contact or record? Matching is **retroactive** — when a record becomes
 active or a contact gains an address, that person's past mail history is
 pulled in on the next cycle, not just future messages.
 
+## Reading a thread at a glance
+
+Every conversation window in the apps (this tab, the View Contact page, My
+Email, and Submission Admin) uses the same layout so you can tell **who wrote
+each message and which direction it went** without reading a word:
+
+- **A colored bar down the left of each message** — **blue = received** (it
+  came in from the contact), **gold = sent** (it went out from CBM). Sent
+  messages also sit slightly indented in their own gold-tinted lane, so the
+  two sides read as separate columns.
+- **A round avatar** with the sender's initials, colored per person — so if a
+  mentor and a co-mentor are both emailing the same client, you can see at a
+  glance which of them said what.
+- **A small pill** on each message — "▼ Received", "▲ Sent", or "Delivery
+  failed" (red) — and, on sent messages, who it went *to*.
+- **A "… started this conversation" line** at the very top, naming who kicked
+  it off and when.
+
+A failed delivery (a bounce) is always shown in **red** with a plain "the
+address rejected this — it was not delivered" note, so a bounce is never
+mistaken for a normal reply.
+
 ## What a message looks like (and why it's short)
 
 Each stored message is **only the new text that person wrote**. Quoted
