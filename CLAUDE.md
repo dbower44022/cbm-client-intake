@@ -1544,15 +1544,23 @@ on it, linking every mapped participant's Contact via the `contacts`
 many-to-many (no-counterpart mail — notes-to-self, unmapped info@ — still
 skips; explicit-action scopes unchanged); `link_records` gained
 `member_contact_ids` (honors per-contact excludes, so a contact-page Remove
-survives the sweep). CHANGELOG 0.145.0. **After deploy (Doug): one-shot
-`GMAIL_RESYNC=true` per env on the WORKER, removed right after the pass** —
-re-ingests history incl. the 373 internal conversations purged from prod
-2026-07-23 (they return linked to member Contacts, not engagements). Live
-check: open a fellow mentor's View Contact page → your correspondence with
-them lists; an engagement's Communications tab stays free of internal
-threads. (A parallel session is extracting a shared conversation component
-— `frontend/shared/conversation.{js,css}` + record.html/record.js edits are
-ITS work, not part of this commit.)
+survives the sweep). CHANGELOG 0.145.0. **The backfill RAN 2026-07-24
+(v0.145.1 deployed): one-shot GMAIL_RESYNC applied to both workers via
+doctl, passes completed clean — crm-test 5 mailboxes 26/26 stored (3
+errors = the standing fake-mailbox invalid_grants), prod 18 mailboxes
+353 fetched / 344 stored / 0 errors — and the flag was REMOVED from both
+overlays the same night (live specs re-verified flag-free; follow-up
+incremental passes clean).** Activating the flag surfaced that the
+deployed workers' gmail cycles were DYING on the latent circular import —
+fixed at root in **v0.145.1** (`comms/crm.py`'s assignments import is now
+LAZY inside `build_scopes`; the CHANGELOG-0.127.0 single-file
+test-collection quirk is gone with it — that workaround note is obsolete).
+Live check remaining (Doug): open a fellow mentor's View Contact page →
+your correspondence with them lists (incl. restored internal threads); an
+engagement's Communications tab stays free of internal mail. (A parallel
+session is extracting a shared conversation component —
+`frontend/shared/conversation.{js,css}` + record.html/record.js edits are
+ITS work.)
 
 Before that: **v0.144.0** (2026-07-23, 1066 tests green, committed NOT pushed) —
 **View Contact page on the directory apps** (Doug's request; his rulings
