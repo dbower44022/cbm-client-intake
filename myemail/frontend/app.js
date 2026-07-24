@@ -258,28 +258,15 @@
     renderRows();
 
     var body = $("threadBody"); body.innerHTML = "";
-    (c.messages || []).forEach(function (m) {
-      var card = document.createElement("div");
-      card.className = "me__msg-card" + (m.bounce ? " me__msg-card--bounce" : "");
-      var head = document.createElement("div"); head.className = "me__msg-head";
-      var who = document.createElement("span"); who.className = "me__msg-who";
-      who.textContent = (m.from || m.fromAddress || "") +
-        (m.direction === "Outbound" && m.to ? " → " + m.to : "");
-      var when = document.createElement("span"); when.className = "me__msg-when";
-      when.textContent = fmtWhen(m.sentAt);
-      head.appendChild(who); head.appendChild(when);
-      card.appendChild(head);
-      if (m.bounce) {
-        var warn = document.createElement("div"); warn.className = "me__msg-bounce-note";
-        warn.textContent = "✕ Delivery failed — the address rejected the message. The email was not delivered.";
-        card.appendChild(warn);
-      }
-      var mb = document.createElement("div"); mb.className = "me__msg-html";
-      mb.innerHTML = sanitizeHtml(m.bodyHtml || "");
-      card.appendChild(mb);
-      body.appendChild(card);
+    var msgs = c.messages || [];
+    msgs.forEach(function (m, i) {
+      if (i === 0) body.appendChild(CBMConversation.startedDivider(m, { fmtWhen: fmtWhen }));
+      body.appendChild(CBMConversation.messageCard(m, {
+        sanitizeHtml: sanitizeHtml,
+        fmtWhen: fmtWhen,
+      }));
     });
-    if (!(c.messages || []).length) {
+    if (!msgs.length) {
       var none = document.createElement("p"); none.className = "me__muted";
       none.style.padding = "0 1rem";
       none.textContent = "No messages stored for this conversation.";

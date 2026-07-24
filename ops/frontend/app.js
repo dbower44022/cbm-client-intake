@@ -934,43 +934,61 @@
   }
 
   function msgCard(m, expandable) {
+    var isSent = m.direction === "sent";
+    var dir = m.bounce ? "bounce" : (isSent ? "out" : "in");
     var card = document.createElement("div");
-    card.className = "msg " + (m.direction === "sent" ? "msg--sent" : "msg--received");
+    card.className = "msg msg--" + (isSent ? "sent" : "received");
     if (m.bounce) card.className += " msg--bounce";
+
+    var senderName = m.bounce ? "Delivery failed"
+      : (isSent ? (m.fromName ? CBMConversation.partyName(m.fromName) : "We")
+                : CBMConversation.partyName(m.fromName || m.fromAddress));
+    var avatar = document.createElement("div"); avatar.className = "msg__avatar";
+    avatar.textContent = m.bounce ? "!" : CBMConversation.initials(senderName);
+    avatar.style.background = m.bounce ? "#b3261e"
+      : CBMConversation.avatarColor(m.fromAddress || m.fromName || senderName);
+    card.appendChild(avatar);
+
+    var main = document.createElement("div"); main.className = "msg__main";
+
     var head = document.createElement("div"); head.className = "msg__head";
-    var who = document.createElement("span"); who.className = "msg__who";
-    who.textContent = m.direction === "sent" ? (m.fromName || "We") + " → " + (m.to || "") : (m.fromName || m.fromAddress);
-    var dir = document.createElement("span"); dir.className = "msg__dir";
-    dir.textContent = m.direction === "sent" ? "sent" : "received";
+    var who = document.createElement("span"); who.className = "msg__who"; who.textContent = senderName;
+    head.appendChild(who);
+    head.appendChild(CBMConversation.badge(dir));
+    if (isSent && m.to && !m.bounce) {
+      head.appendChild(CBMConversation.el("span", "msg__to", "to " + CBMConversation.partyName(m.to)));
+    }
+    var date = document.createElement("span"); date.className = "msg__date"; date.textContent = fmtDate(m.date);
+    head.appendChild(date);
+    var subj = document.createElement("span"); subj.className = "msg__subject"; subj.textContent = m.subject;
+    head.appendChild(subj);
+    main.appendChild(head);
+
     if (m.bounce) {
-      who.textContent = "Delivery failed";
-      dir.textContent = "bounce";
       var warn = document.createElement("div"); warn.className = "msg__bounce-note";
       warn.textContent = "Your reply could NOT be delivered — the address rejected it. " +
         "Check the address for typos (open this notice for the mail system's reason).";
-      card.appendChild(warn);
+      main.appendChild(warn);
     }
-    var date = document.createElement("span"); date.className = "msg__date"; date.textContent = fmtDate(m.date);
-    var subj = document.createElement("span"); subj.className = "msg__subject"; subj.textContent = m.subject;
-    head.appendChild(who); head.appendChild(dir); head.appendChild(date); head.appendChild(subj);
-    card.appendChild(head);
+
     if (expandable) {
       var snip = document.createElement("div"); snip.className = "msg__snippet"; snip.textContent = m.snippet || "";
-      card.appendChild(snip);
+      main.appendChild(snip);
       var bodyEl = null;
       head.addEventListener("click", function () {
         if (bodyEl) { bodyEl.remove(); bodyEl = null; snip.hidden = false; return; }
         snip.hidden = true;
         bodyEl = document.createElement("div"); bodyEl.className = "msg__body";
         bodyEl.innerHTML = sanitizeHtml(m.bodyHtml || "") || "<p class='is-muted'>(no content)</p>";
-        card.appendChild(bodyEl);
+        main.appendChild(bodyEl);
       });
     } else {
       var s = document.createElement("div"); s.className = "msg__snippet"; s.textContent = m.snippet || "";
-      card.appendChild(s);
+      main.appendChild(s);
       card.style.cursor = "pointer";
       card.addEventListener("click", function () { activateTab("communications"); });
     }
+    card.appendChild(main);
     return card;
   }
 

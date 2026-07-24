@@ -4,6 +4,38 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.147.0] — 2026-07-24
+
+**feat(comms): redesigned email-conversation window — one visual language
+everywhere** (Doug's request: make a thread easy to read at a glance and show
+who initiated each part). Every message used to render as an identical card, so
+inbound and outbound were indistinguishable. New shared component
+`frontend/shared/conversation.js` (`window.CBMConversation`) +
+`conversation.css`, used by all four conversation viewers — directory View
+Contact (`directory/frontend/record.js`), the session tools' Communications tab
+(`sessions/frontend/app.js`), My Email (`myemail/frontend/app.js`), and
+Submission Admin (`ops/frontend/app.js`):
+
+- **Colored direction rail** — blue = received (inbound), gold = sent
+  (outbound); outbound messages sit in an indented, subtly tinted right-hand
+  lane, so the two directions read as distinct lanes.
+- **Initials avatar, colored per person** (stable hash of the email) — a mentor
+  and a co-mentor writing on the same thread get different avatar colors,
+  fixing the "which of us was talking?" ambiguity the old `from → to` line hid.
+- **Labelled pill** — "▼ Received" / "▲ Sent" / "Delivery failed" — so direction
+  never relies on color alone (accessible).
+- **Recipient on sent messages** ("to X") and a **"X started this conversation"**
+  divider above the first message, making who-initiated explicit.
+- Bounces keep the distinct red treatment; "View original" / "Open in Gmail"
+  links and attachment chips are preserved. Ops keeps its subject +
+  expandable-snippet behavior, restyled to the same rail/avatar/badge language.
+
+Frontend-only. Verified against the real shared component in a browser (no
+console errors; computed styles confirm the rails, tints, per-person avatar
+colors, and outbound indent). Each app's page now loads `/shared/conversation.css`
++ `/shared/conversation.js`. NOT yet driven live — worth one eyeball on a real
+thread after deploy.
+
 ## [0.146.0] — 2026-07-23
 
 **feat(sessions): no calendar event for past-dated sessions + the grid's

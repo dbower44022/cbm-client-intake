@@ -1,0 +1,69 @@
+/* Shared email-conversation thread styling — one visual language for every
+   conversation window in the product (directory View Contact, session tools'
+   Communications tab, My Email, Submission Admin). Paired with
+   conversation.js (window.CBMConversation). Load AFTER tokens.css.
+
+   The goal: read a thread at a glance — WHO wrote each message and WHICH
+   DIRECTION it went. Cues are layered so none stands alone:
+     • a colored left rail   (blue = received / inbound, gold = sent / outbound)
+     • a labelled pill        ("Received" / "Sent" / "Delivery failed")
+     • an initials avatar     (per-person colour, so a mentor and co-mentor
+                               writing on the same thread stay distinct)
+     • outbound messages sit in an indented lane on the right. */
+
+.cbmc-thread { display: flex; flex-direction: column; }
+
+/* "who started this" divider above the first message */
+.cbmc-started { display: flex; align-items: center; gap: 0.6rem; margin: 0.1rem 0 1rem; }
+.cbmc-started .cbmc-started-line { flex: 1 1 auto; height: 1px; background: var(--cbm-border); }
+.cbmc-started .cbmc-started-txt { flex: 0 0 auto; font-size: 0.78rem; color: var(--cbm-slate-700); white-space: nowrap; }
+
+.cbmc-msg {
+  display: flex; gap: 0.65rem; align-items: flex-start;
+  margin: 0 0 0.7rem; padding: 0.6rem 0.85rem;
+  border: 1px solid var(--cbm-border); border-left-width: 4px;
+  border-radius: 0 var(--cbm-radius) var(--cbm-radius) 0;
+  background: #fff;
+}
+.cbmc-msg--in  { border-left-color: var(--cbm-blue); }
+.cbmc-msg--out { border-left-color: var(--cbm-gold); background: var(--cbm-surface); margin-left: 2rem; }
+.cbmc-msg--bounce { border-left-color: #c0392b !important; background: #fdf5f4 !important; margin-left: 0 !important; }
+
+.cbmc-avatar {
+  flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 700; font-size: 0.8rem; line-height: 1;
+  text-transform: uppercase;
+}
+
+.cbmc-main { flex: 1 1 auto; min-width: 0; }
+
+.cbmc-head { display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; }
+.cbmc-name { font-weight: 700; color: var(--cbm-navy); }
+.cbmc-badge {
+  flex: 0 0 auto; font-size: 0.68rem; font-weight: 600; line-height: 1.4;
+  padding: 0 0.5rem; border-radius: 999px; white-space: nowrap;
+}
+.cbmc-badge .cbmc-arrow { font-size: 0.62em; vertical-align: 1px; margin-right: 2px; }
+.cbmc-badge--in  { color: #0C447C; background: #E6F1FB; }
+.cbmc-badge--out { color: #7a5410; background: #FBEFD8; }
+.cbmc-badge--bounce { color: #fff; background: #c0392b; }
+.cbmc-to { font-size: 0.8rem; color: var(--cbm-slate-700); overflow-wrap: anywhere; }
+.cbmc-when { margin-left: auto; font-size: 0.8rem; color: var(--cbm-slate-700); white-space: nowrap; }
+.cbmc-actions { flex: 0 0 auto; display: flex; gap: 0.6rem; }
+.cbmc-actions a { font-size: 0.8rem; color: var(--cbm-blue); cursor: pointer; }
+
+.cbmc-bounce-note { color: #8f1f1f; font-weight: 600; margin: 0.35rem 0 0; font-size: 0.85rem; }
+
+.cbmc-html { font-size: 0.93rem; line-height: 1.5; margin-top: 0.35rem; overflow-wrap: anywhere; }
+.cbmc-html img { max-width: 100%; }
+.cbmc-html blockquote.quoted-reply {
+  border-left: 3px solid var(--cbm-border); margin: 0.6rem 0 0;
+  padding: 0.2rem 0 0.2rem 0.8rem; color: var(--cbm-slate-700);
+}
+
+.cbmc-attach { margin-top: 0.45rem; }
+
+@media (max-width: 640px) {
+  .cbmc-msg--out { margin-left: 0.8rem; }
+}

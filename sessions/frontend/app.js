@@ -2028,57 +2028,27 @@
     }
 
     var lastInbound = null;
-    (c.messages || []).forEach(function (m) {
+    var msgs = c.messages || [];
+    msgs.forEach(function (m, i) {
       if (m.direction === "Inbound" && !m.bounce) lastInbound = m;
-      var card = document.createElement("div");
-      // A delivery-status bounce reads as "your send did NOT arrive" — the
-      // red treatment (the /ops card), never an ordinary received message.
-      card.className = "sx__msg-card" + (m.bounce ? " sx__msg-card--bounce" : "");
-      var head = document.createElement("div"); head.className = "sx__msg-head";
-      var who = document.createElement("span"); who.className = "sx__msg-who";
-      // Always lead with WHO WROTE IT (a mentor and co-mentor can both send on
-      // the same engagement — "To: client" hid which of them was talking);
-      // outbound keeps the recipient after an arrow.
-      who.textContent = (m.from || m.fromAddress || "") +
-        (m.direction === "Outbound" && m.to ? " → " + m.to : "");
-      var when = document.createElement("span"); when.className = "sx__msg-when";
-      when.textContent = fmtSessionDate(m.sentAt, "short");
-      head.appendChild(who); head.appendChild(when);
-      if (m.id && m.gmailMessageId && m.sourceMailbox) {
-        var orig = document.createElement("a");
-        orig.href = "#"; orig.className = "sx__msg-gmail"; orig.textContent = "View original";
-        orig.title = "The complete message as it arrived — real formatting, inline images.";
-        orig.addEventListener("click", function (e) { e.preventDefault(); viewOriginal(m, c, convId); });
-        head.appendChild(orig);
-      }
-      if (m.rfcMessageId) {
-        // The RFC Message-ID is identical in EVERY mailbox, so the link
-        // searches the VIEWER'S own Gmail (Gmail message ids are
-        // mailbox-specific — the old sourceMailbox link was refused for
-        // anyone but that mailbox's owner).
-        var a = document.createElement("a");
-        a.href = "https://mail.google.com/mail/u/" +
-          (senderMailbox ? encodeURIComponent(senderMailbox) : "0") +
-          "/#search/rfc822msgid:" + encodeURIComponent(m.rfcMessageId);
-        a.target = "_blank"; a.rel = "noopener"; a.className = "sx__msg-gmail"; a.textContent = "Open in Gmail";
-        a.title = "Opens your own Gmail. If the message isn't in your mailbox, use View original instead.";
-        head.appendChild(a);
-      }
-      card.appendChild(head);
-      if (m.bounce) {
-        var warn = document.createElement("div"); warn.className = "sx__msg-bounce-note";
-        warn.textContent = "✕ Delivery failed — the address rejected the message. The email was not delivered.";
-        card.appendChild(warn);
-      }
-      var mb = document.createElement("div"); mb.className = "sx__msg-html";
-      mb.innerHTML = sanitizeHtml(m.bodyHtml || "");
-      card.appendChild(mb);
-      if ((m.attachments || []).length) {
-        card.appendChild(attachmentChips(m, c, convId));
-      }
-      body.appendChild(card);
+      if (i === 0) body.appendChild(CBMConversation.startedDivider(m, {
+        fmtWhen: function (v) { return fmtSessionDate(v, "short"); },
+      }));
+      // A delivery-status bounce reads as "your send did NOT arrive" — the red
+      // treatment, never an ordinary received message. Leading with WHO wrote
+      // it (a mentor and co-mentor can both send on the same engagement) is now
+      // the shared card's job — see conversation.js.
+      body.appendChild(CBMConversation.messageCard(m, {
+        sanitizeHtml: sanitizeHtml,
+        fmtWhen: function (v) { return fmtSessionDate(v, "short"); },
+        gmailMailbox: senderMailbox || null,
+        onViewOriginal: function (mm) { viewOriginal(mm, c, convId); },
+        attachmentsNode: function (mm) {
+          return (mm.attachments || []).length ? attachmentChips(mm, c, convId) : null;
+        },
+      }));
     });
-    if (!(c.messages || []).length) {
+    if (!msgs.length) {
       var none = document.createElement("p"); none.className = "sx__muted";
       none.textContent = "No messages stored for this conversation."; body.appendChild(none);
     }

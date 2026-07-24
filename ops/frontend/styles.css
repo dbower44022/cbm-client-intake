@@ -137,16 +137,20 @@ body { margin: 0; display: flex; flex-direction: column; }
 .ops__conv-head { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.5rem; }
 .ops__conv-head h3 { margin: 0; color: var(--cbm-navy); font-size: 1.02rem; }
 .ops__conv-actions, #commActions { margin-left: auto; display: flex; gap: 0.5rem; }
-.msg { border: 1px solid var(--cbm-border); border-radius: var(--cbm-radius);
+.msg { display: flex; gap: 0.65rem; align-items: flex-start;
+  border: 1px solid var(--cbm-border); border-left-width: 4px; border-radius: 0 var(--cbm-radius) var(--cbm-radius) 0;
   background: var(--cbm-white); padding: 0.55rem 0.8rem; margin-bottom: 0.55rem; }
-.msg--received { border-left: 4px solid var(--cbm-blue, #1c6cb5); }
-.msg--sent { border-left: 4px solid var(--cbm-gold, #CB963B); }
-.msg--bounce { border-left: 4px solid #b3261e; background: #fdf3f2; }
-.msg__bounce-note { color: #b3261e; font-weight: 700; font-size: var(--cbm-text-sm); padding: 6px 10px 0; }
-.msg__head { display: flex; gap: 0.6rem; align-items: baseline; flex-wrap: wrap; cursor: pointer; }
+.msg--received { border-left-color: var(--cbm-blue, #1c6cb5); }
+.msg--sent { border-left-color: var(--cbm-gold, #CB963B); background: var(--cbm-surface); margin-left: 2rem; }
+.msg--bounce { border-left-color: #b3261e; background: #fdf3f2; margin-left: 0; }
+.msg__avatar { flex: 0 0 auto; width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 700; font-size: 12px; line-height: 1; text-transform: uppercase; }
+.msg__main { flex: 1 1 auto; min-width: 0; }
+.msg__bounce-note { color: #b3261e; font-weight: 700; font-size: var(--cbm-text-sm); padding: 6px 0 0; }
+.msg__head { display: flex; gap: 0.5rem; align-items: baseline; flex-wrap: wrap; cursor: pointer; }
 .msg__who { font-weight: 600; color: var(--cbm-navy); }
-.msg__dir { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em;
-  color: var(--cbm-slate-700); }
+.msg__to { font-size: 12px; color: var(--cbm-slate-700); overflow-wrap: anywhere; }
 .msg__date { margin-left: auto; color: var(--cbm-slate-700); font-size: 12px; white-space: nowrap; }
 .msg__subject { width: 100%; font-size: var(--cbm-text-sm); color: var(--cbm-text); }
 .msg__snippet { color: var(--cbm-slate-700); font-size: var(--cbm-text-sm); margin-top: 0.15rem; }

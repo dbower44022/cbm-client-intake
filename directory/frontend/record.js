@@ -551,41 +551,18 @@
     }
 
     var lastInbound = null;
-    (c.messages || []).forEach(function (m) {
+    var msgs = c.messages || [];
+    msgs.forEach(function (m, i) {
       if (m.direction === "Inbound" && !m.bounce) lastInbound = m;
-      var card = el("div", "cr__msg-card" + (m.bounce ? " cr__msg-card--bounce" : ""));
-      var head = el("div", "cr__msg-head");
-      var who = el("span", "cr__msg-who",
-        (m.from || m.fromAddress || "") + (m.direction === "Outbound" && m.to ? " → " + m.to : ""));
-      var when = el("span", "cr__msg-when", fmtWhen(m.sentAt));
-      head.appendChild(who); head.appendChild(when);
-      if (m.id && m.gmailMessageId && m.sourceMailbox) {
-        var orig = el("a", "cr__msg-gmail", "View original");
-        orig.href = "#";
-        orig.title = "The complete message as it arrived — real formatting, inline images.";
-        orig.addEventListener("click", function (e) { e.preventDefault(); viewOriginal(m, c, convId); });
-        head.appendChild(orig);
-      }
-      if (m.rfcMessageId) {
-        var a = el("a", "cr__msg-gmail", "Open in Gmail");
-        a.href = "https://mail.google.com/mail/u/" +
-          (senderMailbox ? encodeURIComponent(senderMailbox) : "0") +
-          "/#search/rfc822msgid:" + encodeURIComponent(m.rfcMessageId);
-        a.target = "_blank"; a.rel = "noopener";
-        a.title = "Opens your own Gmail. If the message isn't in your mailbox, use View original instead.";
-        head.appendChild(a);
-      }
-      card.appendChild(head);
-      if (m.bounce) {
-        card.appendChild(el("div", "cr__msg-bounce-note",
-          "✕ Delivery failed — the address rejected the message. The email was not delivered."));
-      }
-      var mb = el("div", "cr__msg-html");
-      mb.innerHTML = sanitizeHtml(m.bodyHtml || "");
-      card.appendChild(mb);
-      body.appendChild(card);
+      if (i === 0) body.appendChild(CBMConversation.startedDivider(m, { fmtWhen: fmtWhen }));
+      body.appendChild(CBMConversation.messageCard(m, {
+        sanitizeHtml: sanitizeHtml,
+        fmtWhen: fmtWhen,
+        gmailMailbox: senderMailbox || null,
+        onViewOriginal: function (mm) { viewOriginal(mm, c, convId); },
+      }));
     });
-    if (!(c.messages || []).length) {
+    if (!msgs.length) {
       body.appendChild(el("p", "dir__restricted", "No messages stored for this conversation."));
     }
 
