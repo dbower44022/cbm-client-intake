@@ -41,6 +41,17 @@ found; move resolved items to the bottom with the resolution date.
    (`cuyahoga-fatherhood-initiative@jfs.ohio.gov`, copied as-is from
    crm-test) — fix in the CRM UI if wanted.
 
+## Other follow-ups
+
+6. **Re-save the session whose notes were lost to the pasted-image failure**
+   (found 2026-07-24, fixed in v0.148.0). Prod CSession `6a604b7b26efd8e3f`:
+   the 04:37 UTC save 500'd in the CRM ("Data too long for column
+   'session_notes'" — a pasted image as base64), so those notes never stored.
+   After the v0.148.0 deploy, re-enter/re-save the notes (the editor now
+   removes pasted images with a notice) and upload the image on the record's
+   Documents tab. Live check while there: paste an image into notes → it is
+   removed with the amber notice and the save succeeds.
+
 ## Resolved
 
 (nothing yet)

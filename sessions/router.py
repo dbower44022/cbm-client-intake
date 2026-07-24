@@ -243,6 +243,20 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                     "in the CRM — ask CBM staff if you need it."
                 ),
             )
+        # A CRM 5xx is EspoCRM's own server-side failure (e.g. a database
+        # rejection — a bare "HTTP 500" reached users as an unexplained 504 on
+        # 2026-07-24 when oversized notes tripped MySQL's column limit). Say
+        # what is known, what is NOT lost, and where the detail lives.
+        if service._is_crm_server_error(exc):
+            return HTTPException(
+                status_code=502,
+                detail=(
+                    f"{message}: the CRM reported an internal error while "
+                    "processing this request. Nothing you typed has been lost — "
+                    "it is still in this editor. Please try again; if it keeps "
+                    "failing, tell CBM staff (the CRM server log has the detail)."
+                ),
+            )
         return HTTPException(status_code=502, detail=f"{message}: {exc}")
 
     @router.get("/session")
@@ -659,6 +673,8 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 skip_calendar=body.skipCalendar,
                 skip_follow_up_invite=body.skipFollowUpInvite,
             )
+        except service.SessionError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not create session")
         log.info(
@@ -719,6 +735,8 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 user_id=user["userId"], settings=get_settings(),
                 skip_follow_up_invite=body.skipFollowUpInvite,
             )
+        except service.SessionError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not save session")
         log.info(

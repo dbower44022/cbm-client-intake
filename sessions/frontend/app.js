@@ -6751,7 +6751,18 @@
       notice("detailNotice", msg + engExtra + warnExtra, style);
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }
-      notice("editorNotice", e.message, "error");
+      // A bare "Request failed (NNN)" means the server (or the platform edge —
+      // e.g. a 504) answered without a readable detail. Say what the user
+      // actually needs to know: nothing typed is lost, and what to do next.
+      var m = e.message || "The save failed.";
+      var bare = /^Request failed \((\d+)\)$/.exec(m);
+      if (bare) {
+        m = "The save failed (server error " + bare[1] + "). Nothing you typed "
+          + "has been lost — it is still in this editor and auto-saved as a "
+          + "draft. Please try again; if it keeps failing, tell CBM staff "
+          + "which record and the time it happened.";
+      }
+      notice("editorNotice", m, "error");
     } finally { savingSession = false; $("saveSessionBtn").disabled = false; }
   }
 })();

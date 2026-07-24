@@ -81,7 +81,40 @@
     var gestured = false, touched = false;
     host.addEventListener("pointerdown", function () { gestured = true; }, true);
     host.addEventListener("keydown", function () { gestured = true; }, true);
+    // A pasted/dropped image lands as a base64 data: URI — megabytes of text
+    // that the CRM's text columns cannot store (a session-notes save 500'd on
+    // exactly this, 2026-07-24). Remove it the moment it appears and tell the
+    // user, instead of letting the save fail later with a server error.
+    var imgNote = null;
+    function blockedImageNotice() {
+      if (!imgNote) {
+        imgNote = document.createElement("div");
+        imgNote.className = "cbm-richtext-note";
+        imgNote.style.cssText = "background:#fdf3dc;border:1px solid #b58113;" +
+          "color:#5b4708;padding:6px 10px;font-size:13px;border-radius:4px;margin:0 0 4px;";
+        host.insertBefore(imgNote, host.firstChild);
+      }
+      imgNote.textContent = opts.imageBlockedMessage ||
+        "Pasted images can't be stored in this text and were removed — " +
+        "attach the image as a file instead (e.g. on the Documents tab).";
+      imgNote.hidden = false;
+      clearTimeout(imgNote._t);
+      imgNote._t = setTimeout(function () { imgNote.hidden = true; }, 10000);
+    }
+    function stripEmbeddedImages() {
+      var html = editor.value;
+      if (!/src\s*=\s*["']data:/i.test(html)) return false;
+      var tmp = document.createElement("div");
+      tmp.innerHTML = html;
+      var imgs = tmp.querySelectorAll('img[src^="data:"]');
+      if (!imgs.length) return false;
+      Array.prototype.forEach.call(imgs, function (n) { n.remove(); });
+      editor.value = tmp.innerHTML;  // re-fires change; next pass finds nothing
+      blockedImageNotice();
+      return true;
+    }
     editor.events.on("change", function () {
+      if (gestured && stripEmbeddedImages()) return;
       if (gestured) touched = true;
       if (touched && typeof opts.onInput === "function") opts.onInput();
     });

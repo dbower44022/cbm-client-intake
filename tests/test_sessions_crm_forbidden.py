@@ -80,3 +80,44 @@ def test_crm_5xx_still_maps_to_502(monkeypatch):
     with TestClient(_app(monkeypatch)) as c:
         r = c.post("/mentorsessions/api/records/E1/contacts", json={"contactId": "C9"})
     assert r.status_code == 502
+    # A CRM 5xx is EspoCRM's own failure — the detail must be readable advice,
+    # not the raw "HTTP 500" echo (which reached a user as an unexplained 504
+    # on 2026-07-24 when oversized session notes tripped the database).
+    assert "internal error" in r.json()["detail"]
+    assert "Nothing you typed has been lost" in r.json()["detail"]
+
+
+def test_crm_500_on_session_save_returns_readable_502(monkeypatch):
+    # The exact live failure 2026-07-24: EspoCRM 500'd on a session update
+    # (MySQL "Data too long for column 'session_notes'" — a pasted base64
+    # image) and the user saw a bare 504. The mapped 502 must explain itself.
+    _as(monkeypatch, _USER)
+
+    async def broken_update(cfg, client, session_id, changes, attendees, **kw):
+        raise EspoError("update CSession/s1 failed: HTTP 500 ")
+
+    monkeypatch.setattr("sessions.service.update_session", broken_update)
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.put("/mentorsessions/api/sessions/s1",
+                  json={"changes": {"sessionNotes": "<p>x</p>"}})
+    assert r.status_code == 502
+    detail = r.json()["detail"]
+    assert detail.startswith("Could not save session")
+    assert "Nothing you typed has been lost" in detail
+
+
+def test_session_error_on_save_returns_readable_400(monkeypatch):
+    # A SessionError raised by the save path (e.g. the oversized-content guard)
+    # is the caller's data, not a server fault — a readable 400.
+    _as(monkeypatch, _USER)
+    from sessions import service as sessions_service
+
+    async def too_big(cfg, client, session_id, changes, attendees, **kw):
+        raise sessions_service.SessionError("The Session notes content is too large to store.")
+
+    monkeypatch.setattr("sessions.service.update_session", too_big)
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.put("/mentorsessions/api/sessions/s1",
+                  json={"changes": {"sessionNotes": "<p>x</p>"}})
+    assert r.status_code == 400
+    assert "too large" in r.json()["detail"]

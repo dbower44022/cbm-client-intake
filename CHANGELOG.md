@@ -4,6 +4,49 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.148.0] — 2026-07-24
+
+**fix(sessions): a pasted image no longer breaks the session save — and save
+failures explain themselves** (Doug's report: saving a session with an image
+pasted into the notes returned a bare 504). Root cause, diagnosed from the prod
+run logs + the prod CRM server log: the Jodit editor embeds a pasted image as a
+base64 `data:` URI inside the notes HTML; the resulting text exceeded the CRM's
+`session_notes` column (MEDIUMTEXT, 16 MB — MySQL 1406 "Data too long"), EspoCRM
+answered a bare HTTP 500, the app relayed it as a raw 502, and the user saw an
+unexplained 504. Four layers:
+
+- **Editor (product-wide, `frontend/shared/richtext.js`):** a base64 `data:`
+  image appearing in any CBMRichText editor after a user gesture (paste/drop)
+  is removed on the spot, with an inline amber notice — "Pasted images can't be
+  stored in this text and were removed — attach the image as a file instead
+  (e.g. on the Documents tab)." (`opts.imageBlockedMessage` overrides the
+  wording.) Insertion-time only: stored content is never altered on load, and
+  surrounding pasted text is kept. Covers every app using the shared editor.
+- **Server (`sessions/service.py`):** `_strip_embedded_images` removes
+  `data:`-URI `<img>` tags from session create/update payloads before the CRM
+  call and reports it via the existing save-response `warning` (shown in the
+  save notice, naming the field + the Documents tab). After stripping, any text
+  field still over `_MAX_TEXT_FIELD_CHARS` (4 M chars — far beyond typed
+  content, safely under the column's worst-case byte capacity) raises
+  `SessionError` → a readable 400 naming the field, instead of the CRM 500.
+- **Router (`sessions/router.py`):** the session create/update endpoints catch
+  `SessionError` → 400; and `_crm_failure` maps any CRM **5xx** to a 502 whose
+  detail says what's known and what is NOT lost ("the CRM reported an internal
+  error… Nothing you typed has been lost — it is still in this editor…"),
+  instead of echoing the raw `HTTP 500`.
+- **Frontend (`sessions/frontend/app.js`):** a save failure with no readable
+  detail (e.g. an edge 504) no longer shows bare "Request failed (NNN)" — the
+  message now says the text is kept in the editor + auto-saved as a draft, retry
+  is safe, and what to tell CBM staff.
+
+Verified: 1079 tests green (7 new — image strip on create/update with warning,
+non-data images untouched, oversize → readable 400, CRM-500 → readable 502,
+SessionError → 400); the editor-side strip driven in a real browser harness
+(image paste removed + notice; mixed text+image paste keeps the text; no
+console errors). The failed prod save (CSession `6a604b7b26efd8e3f`, 04:37 UTC
+2026-07-24) was never stored — after deploy, re-save those notes without the
+embedded image and upload the image on the Documents tab.
+
 ## [0.147.1] — 2026-07-24
 
 **fix(comms): conversation-card spacing + sent-card contrast** (Doug's review of

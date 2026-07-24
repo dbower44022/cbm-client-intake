@@ -147,6 +147,14 @@ def _is_forbidden(exc: EspoError) -> bool:
     return bool(m) and m.group(1) == "403"
 
 
+def _is_crm_server_error(exc: EspoError) -> bool:
+    """True when the CRM itself failed with a 5xx — its own server-side error
+    (e.g. a database rejection), not the caller's data or ACL. Same first-status
+    matching rule as :func:`_is_forbidden`."""
+    m = _HTTP_STATUS_RE.search(str(exc))
+    return bool(m) and m.group(1).startswith("5")
+
+
 async def resolve_manager_profile(client: SessionClient, user_id: str) -> Optional[str]:
     """The ``CMentorProfile`` id whose assigned login User is ``user_id``.
 
@@ -881,6 +889,55 @@ def _session_payload(changes: dict[str, Any]) -> dict[str, Any]:
     return {k: v for k, v in changes.items() if k in SESSION_EDIT_NAMES}
 
 
+# A pasted image lands in the rich-text HTML as a base64 ``data:`` URI — one
+# screenshot can exceed the CRM column (MEDIUMTEXT, 16 MB), which MySQL rejects
+# with "Data too long" and EspoCRM surfaces as a bare HTTP 500 (live failure
+# 2026-07-24, CSession.sessionNotes). Images belong on the Documents tab, so
+# they are stripped here (and blocked at paste time in the shared editor).
+_EMBEDDED_IMG_RE = re.compile(
+    r"<img\b[^>]*\bsrc\s*=\s*[\"']data:[^\"']*[\"'][^>]*/?>", re.IGNORECASE
+)
+# Generous ceiling well under the column's worst-case byte capacity — typed or
+# pasted TEXT never approaches this; only binary blobs smuggled as text can.
+_MAX_TEXT_FIELD_CHARS = 4_000_000
+
+_FIELD_LABELS = {f["name"]: f["label"] for f in SESSION_FIELDS}
+
+
+def _strip_embedded_images(payload: dict[str, Any]) -> list[str]:
+    """Remove base64 ``data:`` images from string fields, in place; returns the
+    labels of the fields that had any. After stripping, a field still larger
+    than the CRM column can hold raises :class:`SessionError` (readable 400)
+    instead of letting the CRM 500 on it."""
+    stripped: list[str] = []
+    for key, value in payload.items():
+        if not isinstance(value, str) or "data:" not in value:
+            continue
+        cleaned, count = _EMBEDDED_IMG_RE.subn("", value)
+        if count:
+            payload[key] = cleaned
+            stripped.append(_FIELD_LABELS.get(key, key))
+    for key, value in payload.items():
+        if isinstance(value, str) and len(value) > _MAX_TEXT_FIELD_CHARS:
+            label = _FIELD_LABELS.get(key, key)
+            raise SessionError(
+                f"The {label} content is too large to store "
+                f"(over {_MAX_TEXT_FIELD_CHARS // 1_000_000} million characters). "
+                "Nothing you typed has been lost — it is still in the editor. "
+                "Remove pasted files or very large pasted content and save again."
+            )
+    return stripped
+
+
+def _embedded_image_warning(stripped: list[str]) -> str:
+    fields = " and ".join(stripped)
+    return (
+        f"The pasted image(s) in {fields} could not be stored and were removed "
+        "— images can't be saved inside notes. Everything else was saved. To "
+        "keep the image, upload it on the Documents tab instead."
+    )
+
+
 async def _sync_attendees(
     client: SessionClient, session_id: str, attendees: list[str]
 ) -> int:
@@ -1204,6 +1261,7 @@ async def create_session(
     every mentor on the engagement must see every session on it (read=own).
     """
     payload = _session_payload(changes)
+    stripped_images = _strip_embedded_images(payload)
     payload[cfg.session_parent_fk] = parent_id
     payload.setdefault("sessionType", cfg.default_session_type)
     payload.setdefault("status", "Scheduled")  # CRM status vocabulary: Scheduled/Completed/Cancelled/No Show
@@ -1221,6 +1279,8 @@ async def create_session(
     # create session" (which invites a retry that duplicates it). P2,
     # reliability review 2026-07-17; the create_contact pattern.
     attendee_warning = None
+    if stripped_images:
+        attendee_warning = _embedded_image_warning(stripped_images)
     if attendees:  # new record => relate all chosen attendees
         failed: list[str] = []
         for cid in attendees:
@@ -1233,7 +1293,7 @@ async def create_session(
                     created.get("id"), cid, exc,
                 )
         if failed:
-            attendee_warning = (
+            attendee_warning = ((attendee_warning + " ") if attendee_warning else "") + (
                 f"The session was created, but {len(failed)} of "
                 f"{len(attendees)} attendee(s) could not be attached — open the "
                 "session and re-save its attendees. Do not create it again."
@@ -1303,6 +1363,7 @@ async def update_session(
     ``attendees=None`` leaves the attendee set untouched; a list (incl. ``[]``)
     replaces it via the relationship endpoints (see :func:`_sync_attendees`)."""
     payload = _session_payload(changes)
+    stripped_images = _strip_embedded_images(payload)
     await _sanitize_enum_payload(client, payload)
     if payload:
         await client.update(SESSION, session_id, payload)
@@ -1310,13 +1371,18 @@ async def update_session(
     if attendees is not None:
         attendee_failures = await _sync_attendees(client, session_id, attendees)
     session = await get_session(client, session_id)
+    warnings: list[str] = []
+    if stripped_images:
+        warnings.append(_embedded_image_warning(stripped_images))
     if attendee_failures:
-        session["warning"] = (
+        warnings.append(
             f"The session was saved, but {attendee_failures} attendee "
             f"change(s) could not be applied — you may not have permission to "
             f"those contact records. Ask CBM staff to check the contact's "
             f"assigned users, then re-save the attendees."
         )
+    if warnings:
+        session["warning"] = " ".join(warnings)
     # The status / next-date payload triggers below are diff-driven (the
     # frontend sends only changed fields), so a notes-only edit to an
     # already-completed session can neither re-activate a parked engagement

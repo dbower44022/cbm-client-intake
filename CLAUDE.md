@@ -1539,7 +1539,33 @@ migration, which copied/enriched the 7 real crm-test partners into prod —
 3 created, 4 enriched, GET-verified; the 7 obvious test records were not
 copied).
 
-**v0.145.0** (2026-07-23, 1071 tests green, committed NOT pushed) —
+**v0.148.0** (2026-07-24, 1079 tests green, committed NOT pushed) —
+**pasted image in session notes no longer breaks the save + save failures
+explain themselves** (Doug's report: a session save with an image pasted into
+the notes died as a bare 504). Diagnosed from the prod run logs + the prod CRM
+server log (`ssh root@147.182.135.50`, espo daily log): Jodit embeds a pasted
+image as base64 `data:` HTML → the notes exceeded the CRM `session_notes`
+column (MEDIUMTEXT 16 MB; MySQL 1406 "Data too long") → EspoCRM bare 500 →
+app raw 502 → edge/browser showed 504. Four layers (CHANGELOG 0.148.0): the
+shared CBMRichText editor removes a `data:` image at paste time with an
+inline amber notice (product-wide, insertion-time only — stored content never
+altered on load; `opts.imageBlockedMessage` overrides the wording); the
+session save path strips `data:` `<img>`s server-side too and reports it via
+the save-response `warning` (names the field + points at the Documents tab),
+with a 4 M-char per-field cap → readable 400 (`SessionError`, now caught on
+both save endpoints); `_crm_failure` maps any CRM **5xx** to a self-explaining
+502 ("the CRM reported an internal error… Nothing you typed has been lost —
+it is still in this editor…"); and the sessions frontend replaces a bare
+"Request failed (NNN)" on save with the kept-in-editor/auto-saved-draft
+message. Editor strip verified in a real browser harness (image paste removed
++ notice shown; mixed text+image paste keeps the text; no console errors).
+**Cleanup for Doug:** the failed prod save (CSession `6a604b7b26efd8e3f`,
+04:37 UTC 2026-07-24) never stored — after deploy, re-save those notes
+without the image and upload the image on the Documents tab. Live check after
+deploy: paste an image into session notes → removed with the notice, save
+succeeds.
+
+Before that: **v0.145.0** (2026-07-23, 1071 tests green, committed NOT pushed) —
 **internal CBM↔CBM email syncs again — to member Contacts, never records**
 (Doug's follow-up after driving the View Contact page: internal mail now has
 a home, so the v0.127.0 never-ingest rule is superseded — but its

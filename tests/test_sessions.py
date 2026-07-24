@@ -1356,6 +1356,67 @@ async def test_update_drops_drifted_enum_but_keeps_valid_fields():
 
 
 @pytest.mark.asyncio
+async def test_update_strips_embedded_data_images_and_warns():
+    # A pasted image arrives as a base64 data: URI inside the notes HTML —
+    # megabytes of text that blew past the CRM column and made EspoCRM 500
+    # (live, 2026-07-24). It must be stripped before the CRM call, with the
+    # rest of the edit saved and a warning pointing at the Documents tab.
+    notes = '<p>before</p><img src="data:image/png;base64,iVBORw0KGgo=" alt="s"><p>after</p>'
+    fake = Fake(records={("CSession", "s1"): {"name": "s"}})
+    session = await service.update_session(
+        MENTOR, fake, "s1", {"sessionNotes": notes, "name": "Kickoff"}, None
+    )
+    _, _, payload = fake.updates[0]
+    assert "data:" not in payload["sessionNotes"]
+    assert "<p>before</p>" in payload["sessionNotes"]
+    assert "<p>after</p>" in payload["sessionNotes"]
+    assert payload["name"] == "Kickoff"
+    assert "Session notes" in session["warning"]
+    assert "Documents tab" in session["warning"]
+
+
+@pytest.mark.asyncio
+async def test_create_strips_embedded_data_images_and_warns():
+    fake = Fake()
+    session = await service.create_session(
+        PARTNER, fake, "P1",
+        {"name": "S", "nextSteps": "<img src='data:image/jpeg;base64,AAAA'/>do it"},
+        None,
+    )
+    _, payload = fake.created[0]
+    assert "data:" not in payload["nextSteps"]
+    assert "do it" in payload["nextSteps"]
+    assert "Action items / next steps" in session["warning"]
+
+
+@pytest.mark.asyncio
+async def test_text_without_data_images_passes_untouched_no_warning():
+    fake = Fake(records={("CSession", "s1"): {"name": "s"}})
+    session = await service.update_session(
+        MENTOR, fake, "s1",
+        {"sessionNotes": '<p>see data: sheet</p><img src="https://x.test/a.png">'},
+        None,
+    )
+    _, _, payload = fake.updates[0]
+    assert payload["sessionNotes"] == '<p>see data: sheet</p><img src="https://x.test/a.png">'
+    assert "warning" not in session
+
+
+@pytest.mark.asyncio
+async def test_oversized_text_field_is_a_readable_error_not_a_crm_500():
+    # Even after image stripping, a text field the CRM column can't hold must
+    # fail BEFORE the CRM call with a readable message (the CRM's own answer
+    # is a bare HTTP 500).
+    fake = Fake(records={("CSession", "s1"): {"name": "s"}})
+    huge = "x" * (service._MAX_TEXT_FIELD_CHARS + 1)
+    with pytest.raises(service.SessionError) as exc:
+        await service.update_session(MENTOR, fake, "s1", {"sessionNotes": huge}, None)
+    assert "Session notes" in str(exc.value)
+    assert "too large" in str(exc.value)
+    assert fake.updates == []  # nothing reached the CRM
+
+
+@pytest.mark.asyncio
 async def test_multienum_keeps_only_valid_values():
     meta = {"meetingType": {"options": ["Virtual", "Phone"]}}
     fake = Fake(records={("CSession", "s1"): {}}, meta_fields=meta)
