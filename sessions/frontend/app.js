@@ -4916,7 +4916,20 @@
     var name = isClient
       ? ([vals.firstName, vals.lastName].filter(Boolean).join(" ") || sec.name || "(unnamed)")
       : (item.name || (sec && sec.name) || "(unnamed)");
-    td.appendChild(document.createTextNode(name));
+    // The name opens the read-only contact pop-up (Doug's request 2026-07-25) —
+    // a peek link whenever we have a resolvable Contact id (client rows carry
+    // it on the section; CBM rows only when the profile's contact resolved).
+    var contactId = sec && sec.id;
+    if (contactId) {
+      var link = document.createElement("button");
+      link.type = "button"; link.className = "sxd__cnamelink";
+      link.textContent = name;
+      link.title = "View contact";
+      link.addEventListener("click", function () { openPeek("Contact", contactId, name); });
+      td.appendChild(link);
+    } else {
+      td.appendChild(document.createTextNode(name));
+    }
     // The record's primary contact is marked in the table (it was previously
     // only visible on the Overview rail).
     if (isClient && sec && sec.id && sec.id === currentDetails.primaryContactId) {
@@ -4968,7 +4981,7 @@
   }
   function tdText(t) { var td = document.createElement("td"); td.textContent = t; return td; }
   function emailCell(email) {
-    var td = document.createElement("td");
+    var td = document.createElement("td"); td.className = "sxd__cemail";
     if (email) td.appendChild(emailComposeLink(email));
     return td;
   }

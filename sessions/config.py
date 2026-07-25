@@ -494,11 +494,15 @@ PARTNER = DomainConfig(
         "name,partnershipStatus,partnerCompanyName,partnerCompanyId,"
         "primaryPartnercontactName,primaryPartnercontactId,"
         "partnerManagerName,partnerManagerId,"
-        "partnershipStartDate,createdAt"
+        "lastContacted,partnershipStartDate,createdAt"
     ),
     list_columns=(
         Column("name", "Partner", "name"),
         Column("status", "Partnership status", "partnershipStatus"),
+        # Last contact date sits between the status and company columns
+        # (Doug's request 2026-07-25) so staff can see follow-up staleness
+        # at a glance without opening the record.
+        Column("lastContact", "Last Contacted", "lastContacted", type="date"),
         Column("company", "Company", "partnerCompanyName"),
         Column("contact", "Primary contact", "primaryPartnercontactName"),
         # Links to the manager's CMentorProfile pop-up (CBM/personal email
@@ -601,10 +605,15 @@ SPONSOR = DomainConfig(
     list_all=True,
     list_select=(
         "name,sponsorCompanyName,sponsorCompanyId,sponsorContactName,"
-        "sponsorContactId,cBMSponsorManagerName,cBMSponsorManagerId,createdAt"
+        "sponsorContactId,cBMSponsorManagerName,cBMSponsorManagerId,"
+        "lastContacted,createdAt"
     ),
     list_columns=(
         Column("name", "Funder", "name"),
+        # Last contact date sits just before the company column (Doug's request
+        # 2026-07-25 — the funder grid has no status column, so this mirrors the
+        # partner grid's status→lastContact→company position).
+        Column("lastContact", "Last Contacted", "lastContacted", type="date"),
         Column("company", "Company", "sponsorCompanyName"),
         Column("contact", "Primary contact", "sponsorContactName"),
         # Links to the manager's CMentorProfile pop-up (CBM/personal email

@@ -236,10 +236,20 @@ table.sxd__contacts tbody tr:hover td { background: #fafbfc; }
 table.sxd__contacts tr.sxd__editrow:hover td, table.sxd__contacts tr.sxd__editrow td { background: #fafbfd; }
 td.sxd__cname { font-weight: 700; color: var(--cbm-navy, #173B60); white-space: nowrap; }
 td.sxd__cname .sxd__sal { font-weight: 400; color: #77828f; }
+/* The contact name is a button that opens the read-only contact pop-up. Keep
+   the current bold-navy look but signal clickability (pointer + hover underline). */
+button.sxd__cnamelink {
+  background: none; border: none; padding: 0; font: inherit; font-weight: 700;
+  color: var(--cbm-navy, #173B60); cursor: pointer; text-align: left;
+}
+button.sxd__cnamelink:hover { text-decoration: underline; }
 td.sxd__roles { display: table-cell; }
 td.sxd__roles .sxd__badge-role { margin-right: 4px; }
 td.sxd__roles .sx__muted { font-size: 12px; }
 table.sxd__contacts a { color: var(--cbm-navy, #173B60); }
+/* Email is a clickable compose link — highlight it (link-blue + underline) so
+   staff know it opens an email (Doug's request 2026-07-25). */
+td.sxd__cemail a { color: var(--cbm-blue, #1a5fb4); text-decoration: underline; }
 td.sxd__actions { text-align: right; white-space: nowrap; }
 .sxd__rowedit { font-size: 12.5px; color: var(--cbm-navy, #173B60); font-weight: 600; cursor: pointer; background: none; border: none; padding: 0; font-family: inherit; }
 .sxd__rowedit:hover { text-decoration: underline; }

@@ -4,6 +4,31 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.154.0] — 2026-07-25
+
+**feat(sessions): Last Contacted grid column + clickable contact name/email on
+Partner & Funder Management** — Doug's three follow-up requests, all in the two
+non-mentor domains.
+
+1. **Last Contacted column on the partner and funder grids.** A new
+   `date`-typed column reads `CPartnerProfile`/`CSponsorProfile.lastContacted`
+   (already on both `detail_select`s; added to each `list_select`). On the
+   partner grid it sits **between the Partnership status and Company columns**;
+   the funder grid has no status column, so it sits **just before Company** (the
+   analogous position). Empty on a record → the grid's usual "—". Config-only
+   (`sessions/config.py`) — the grid already renders `type="date"` columns.
+2. **Contact name is a link to the contact pop-up.** In the Details-tab contacts
+   table, each contact's name is now a button that opens the read-only Contact
+   peek (`openPeek("Contact", …)`) whenever a Contact id resolves — client rows
+   always, CBM rows when the profile's contact resolved. Styled to keep the
+   existing bold-navy look with a pointer + hover underline
+   (`button.sxd__cnamelink`). Applies to every domain's contacts table (the
+   directory-grid convention), which covers the requested partner/funder pages.
+3. **Email highlighted as a link.** The contacts-table email cell (already a
+   click-to-compose link) is now visibly a link — link-blue + underlined
+   (`td.sxd__cemail a`) — so staff know it opens an email. Behavior unchanged
+   (record-scoped compose, mailto fallback); frontend/CSS only.
+
 ## [0.153.0] — 2026-07-25
 
 **feat(sessions): Partner & Funder Management review pass** — eight items from
