@@ -514,8 +514,10 @@ delegation — no new infrastructure. On the **worker** component set:
 - `ALERT_EMAIL_TO` — comma-separated recipients (any addresses, personal
   Gmail included).
 - `ALERT_EMAIL_FROM` — the `@cbmentors.org` mailbox to send AS. Must be a
-  real licensed Workspace mailbox (delegation can't send as a group/alias);
-  falls back to `OPS_MAILBOX` when unset.
+  real licensed Workspace mailbox (delegation can't send as a group/alias —
+  verified live 2026-07-22: `admin@cbmentors.org` is a GROUP and fails with
+  `unauthorized_client`, which is why both workers now use
+  `info@cbmentors.org`); falls back to `OPS_MAILBOX` when unset.
 
 The webhook (`ALERT_WEBHOOK_URL`) still works, alone or alongside email; with
 no channel configured (or all deliveries failing) alerts log at WARNING, as
