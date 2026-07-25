@@ -109,6 +109,11 @@ def _apps_for(user: dict[str, Any], settings: Settings) -> list[dict[str, str]]:
         )
     ):
         apps.append({"title": "My Email", "url": "/myemail/", "target": "cbm-myemail"})
+    # Analytics — dashboards over the CRM + operational data. Shown only where
+    # the app is enabled and the user may view it (per-panel visibility is
+    # applied inside the app on top of this).
+    if settings.analytics_active and is_member(user, settings.analytics_view_allowed_teams_list):
+        apps.append({"title": "Analytics", "url": "/analytics/", "target": "cbm-analytics"})
     return apps
 
 

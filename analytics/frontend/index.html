@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cleveland Business Mentors — Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/tokens.css" />
+  <link rel="stylesheet" href="/shared/charts.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="an">
+    <header class="an__topbar">
+      <div class="an__title">
+        <h1>Analytics</h1>
+        <p class="an__sub" id="pageSubtitle"></p>
+      </div>
+      <div class="an__usercorner" id="userCorner" hidden>
+        <span class="an__who">Signed in as <strong id="whoName"></strong></span>
+        <button type="button" class="cbm-button cbm-button--secondary" id="logoutBtn">Sign out</button>
+      </div>
+    </header>
+
+    <!-- Sign-in happens at the portal (/); this shows access/server errors. -->
+    <section class="an__msg" id="msgView" hidden>
+      <p class="form-error" id="msgText" role="alert"></p>
+      <p><a href="/">Return to the sign-in page</a></p>
+    </section>
+
+    <section class="an__dash" id="dashView" hidden>
+      <nav class="an__tabs" id="pageTabs" role="tablist" hidden></nav>
+
+      <div class="an__controls">
+        <label class="an__rangelabel" for="rangeSelect">Time range</label>
+        <select id="rangeSelect" aria-label="Time range"></select>
+        <span class="an__spacer"></span>
+        <button type="button" class="cbm-button cbm-button--secondary" id="refreshBtn">Refresh</button>
+      </div>
+
+      <p class="an__notice" id="notice" role="status" hidden></p>
+      <p class="an__loading" id="loadingState">Loading…</p>
+
+      <div class="an__grid" id="panelGrid"></div>
+    </section>
+
+    <footer class="cbm-footer">
+      <p>&copy; <span data-cbm-year>2026</span> Cleveland Business Mentors. All rights reserved.<span class="cbm-footer__version" data-cbm-version></span></p>
+    </footer>
+  </main>
+
+  <!-- busy.js first: it wraps fetch/XHR, so it must precede any script that
+       can start a request. -->
+  <script src="/shared/busy.js"></script>
+  <script src="/shared/charts.js"></script>
+  <script src="app.js"></script>
+  <script src="/shared/footer.js"></script>
+</body>
+</html>

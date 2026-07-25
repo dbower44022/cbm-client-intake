@@ -1612,6 +1612,58 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-25)
 
+**v0.160.0** (2026-07-25, 1182 tests green, committed NOT pushed) — **Analytics
+platform — Phase A** (the flagship system dashboard). PRD:
+`prds/analytics-app-plan.md` (authored + interviewed this session; all 16
+decisions locked, five open questions resolved). A NEW standalone **`/analytics`**
+app (`analytics/` package): a **metric library → panels → pages** engine, with
+the result-shape taxonomy (`scalar`/`series`/`breakdown`/`rows`) tying each metric
+to one of four panel renderers.
+- **Engine** (`analytics/registry.py` `@metric` + `analytics/service.py`): metrics
+  are code-registered in Phase A (Phase B adds a DB-backed builder); resolved with
+  a **hybrid cache** — cheap counts run LIVE (the EspoCRM list `total` envelope),
+  sweeps are cached. A metric error degrades to an "unavailable" panel, never a
+  500. `render_page` resolves panels concurrently, applying per-panel visibility.
+- **Seeded dashboard** (`analytics/dashboard.py`, page key `system-overview`):
+  **Total Active Mentors** + **Active Client Engagements** [stat, live counts],
+  New engagements/month [series, cached], Engagements by status [breakdown,
+  cached], Oldest unassigned engagements [rows, cached] — all EspoCRM, computed
+  under the **org-wide API key** (system aggregates; the team gate + per-panel
+  visibility are the boundary, not per-row ACL). The record-scoped tabs (Phase C,
+  Mentor first) inject the record id and run AS THE USER.
+- **App/wiring**: mounted at `/analytics` under `settings.analytics_active`
+  (`analytics_enabled and assignments_active`); portal tile "Analytics" + alias.
+  Per-request gate on `ANALYTICS_VIEW_ALLOWED_TEAMS` (default `Analytics Admin
+  Team`; admins pass); authoring endpoints (Phase B) will gate on
+  `ANALYTICS_ADMIN_ALLOWED_TEAMS`. Endpoints `GET /analytics/api/{session,pages,
+  pages/{key}}` + `POST …/pages/{key}/refresh`; global time-range selector
+  (7d/30d/90d/quarter/YTD/12mo/all) + per-page Refresh.
+- **Frontend** (`analytics/frontend/`, vanilla JS): panel grid + the four
+  **hand-rolled SVG/HTML renderers** in shared `frontend/shared/charts.{js,css}`
+  (Doug's §11 decision A — NO charting library). Verified in a stub-browser
+  harness (all four shapes + pie variant; edge-label clip fixed; no console
+  errors).
+- **Storage**: `analytics_cache` table (Alembic **0021** — pre-deploy migrate);
+  `analytics/store.py` (`AnalyticsStore` + `MemoryAnalyticsStore`; own MetaData/
+  engine, the comms/docs pattern). Without `DATABASE_URL` the app runs LIVE-ONLY.
+  **Deviation from the PRD table plan** (repo "migrations ship with the code that
+  uses them" rule): 0021 is the CACHE table only — the metric/panel/page
+  DEFINITION tables ship in Phase B with the authoring UI that fills them (Phase
+  A pages/metrics are code-seeded, so those tables would be dead schema now).
+- **Worker**: `analytics/refresh.py` warms the system dashboard's cached metrics
+  on `ANALYTICS_REFRESH_SECONDS` (default 3600; 0 disables). Inert without a store
+  or a real CRM client.
+- Config: `analytics_enabled` (master, default FALSE — inert on deploy),
+  `analytics_refresh_seconds`, `analytics_default_cache_ttl_seconds`,
+  `analytics_admin_allowed_teams`, `analytics_view_allowed_teams`. 14 new tests
+  (`tests/test_analytics.py`); full suite green (1182). **NOT yet driven live** —
+  activation: create the **`Analytics Admin Team`** in the CRM (both envs), set
+  `ANALYTICS_ENABLED=true` on web + worker + run the pre-deploy migrate (0021),
+  then open `/analytics` as a member and confirm the five panels against real CRM
+  data. Locked decisions: charting = hand-rolled SVG; view team = Analytics Admin
+  Team; Phase C first record type = Mentor; portal dashboard = full page; v1 stat
+  metrics = active mentors + active engagements.
+
 **v0.159.0** (2026-07-25, 1154 tests green, committed NOT pushed) — **Email
 Quality Phase 3 — info@ poller window + Other correspondence** (§5 of
 `prds/email-quality-improvement-plan.md`; the plan is now FEATURE-COMPLETE,

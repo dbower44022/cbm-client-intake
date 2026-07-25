@@ -273,6 +273,10 @@ async def main() -> None:
     # on; also feature-gated per cycle on the CRM's sessionTranscription field.
     next_transcripts = datetime.now(timezone.utc)
 
+    # Analytics: warm the seeded system dashboard's cached metrics on a cadence
+    # (prds/analytics-app-plan.md). Inert unless ANALYTICS_ENABLED + a store.
+    next_analytics = datetime.now(timezone.utc)
+
     # Assignment-stamp reconciliation (stamp-drift layer 3, 2026-07-20):
     # nightly merge-only self-heal of mentor/co-mentor assignedUsers stamps on
     # engagement client records. Inert in dry-run / without an API key.
@@ -382,6 +386,18 @@ async def main() -> None:
             except Exception as exc:  # noqa: BLE001 — never crashes delivery
                 log.warning("docs grant reconciliation failed: %s", exc)
             next_docs = now + timedelta(seconds=settings.gdrive_reconcile_seconds)
+        if (
+            settings.analytics_enabled
+            and settings.analytics_refresh_seconds > 0
+            and now >= next_analytics
+        ):
+            try:
+                from analytics.refresh import refresh_system_metrics
+
+                await refresh_system_metrics(settings)
+            except Exception as exc:  # noqa: BLE001 — never crashes delivery
+                log.warning("analytics metric refresh failed: %s", exc)
+            next_analytics = now + timedelta(seconds=settings.analytics_refresh_seconds)
         if settings.assignment_reconcile_seconds > 0 and now >= next_stamps:
             try:
                 from assignments.stamps import run_stamp_reconciliation

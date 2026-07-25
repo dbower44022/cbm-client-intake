@@ -338,6 +338,26 @@ class Settings(BaseSettings):
     # (GDRIVE_IDENTITY=service). 0 disables the job.
     gdrive_reconcile_seconds: int = 86400
 
+    # --- Analytics (prds/analytics-app-plan.md) — the /analytics app + the
+    # embedded record tabs + the portal dashboard. Master flag; the app is
+    # absent (not mounted, no portal tile) until enabled. Metric definitions +
+    # panels + pages are code-seeded in Phase A; cached-metric results live in
+    # the analytics_cache table (needs DATABASE_URL — without it the app runs
+    # live-only, recomputing each view). System pages compute under the org-wide
+    # API key, so the team gates below (plus per-panel visibility) are the
+    # access boundary.
+    analytics_enabled: bool = False
+    # How often the worker recomputes the seeded system dashboard's cached
+    # metrics (0 disables the warm job; a cache miss still recomputes on view).
+    analytics_refresh_seconds: int = 3600
+    # Default TTL for a cached metric that doesn't set its own refresh_seconds.
+    analytics_default_cache_ttl_seconds: int = 3600
+    # Team(s) allowed to AUTHOR metrics/panels/pages (Phase B). CSV; admins pass.
+    analytics_admin_allowed_teams: str = "Analytics Admin Team"
+    # Team(s) allowed to VIEW analytics pages (per-panel visibility layers on
+    # top). Defaults to the same team as authoring — widen per deploy if desired.
+    analytics_view_allowed_teams: str = "Analytics Admin Team"
+
     # --- Encrypted runtime config (core/app_config.py) ---
     # Fernet key (urlsafe base64, 32 bytes) used to encrypt secrets stored in the
     # app_config table — currently the Google service-account credentials set via
@@ -424,6 +444,20 @@ class Settings(BaseSettings):
     def assignments_active(self) -> bool:
         """The tool needs a session secret to sign cookies; off without one."""
         return self.assignments_enabled and bool(self.session_secret)
+
+    @property
+    def analytics_admin_allowed_teams_list(self) -> list[str]:
+        return [t.strip() for t in self.analytics_admin_allowed_teams.split(",") if t.strip()]
+
+    @property
+    def analytics_view_allowed_teams_list(self) -> list[str]:
+        return [t.strip() for t in self.analytics_view_allowed_teams.split(",") if t.strip()]
+
+    @property
+    def analytics_active(self) -> bool:
+        """The Analytics app is mounted only when enabled AND the staff stack is
+        on (it uses the shared session)."""
+        return self.analytics_enabled and self.assignments_active
 
     @property
     def store_enabled(self) -> bool:

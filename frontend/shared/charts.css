@@ -1,0 +1,68 @@
+/* CBMCharts styles (Analytics Phase A). Shared so embedded record-tab panels
+ * (Phase C) reuse them. All classes are anc-* (analytics-chart). */
+
+.anc-empty, .anc-err {
+  color: var(--cbm-slate-700, #556);
+  font-size: var(--cbm-text-sm, 0.9rem);
+  margin: 0.5rem 0;
+}
+.anc-err { color: var(--cbm-danger, #b3261e); }
+
+/* --- stat ------------------------------------------------------------------ */
+.anc-stat { display: flex; flex-direction: column; gap: 0.15rem; padding: 0.35rem 0; }
+.anc-stat__value {
+  font-family: var(--cbm-font-serif, "Roboto Slab", serif);
+  font-size: 2.9rem; font-weight: 700; line-height: 1.05;
+  color: var(--cbm-navy, #00205B);
+}
+.anc-stat__unit {
+  font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--cbm-slate-700, #556);
+}
+.anc-stat__delta {
+  margin-top: 0.35rem; align-self: flex-start;
+  font-size: 0.85rem; font-weight: 600; padding: 0.1rem 0.5rem; border-radius: 999px;
+}
+.anc-stat__delta.is-up { color: #1a7a3a; background: #e6f4ea; }
+.anc-stat__delta.is-down { color: #b3261e; background: #fbe9e7; }
+
+/* --- svg (series + pie) ---------------------------------------------------- */
+.anc-svg { width: 100%; height: auto; display: block; }
+.anc-svg--pie { max-width: 200px; }
+.anc-grid { stroke: var(--cbm-line, #e2e6ec); stroke-width: 1; }
+.anc-axis { fill: var(--cbm-slate-700, #667); font-size: 11px; }
+.anc-axis--y { text-anchor: end; }
+.anc-axis--x { text-anchor: middle; }
+.anc-line { fill: none; stroke: var(--cbm-navy, #00205B); stroke-width: 2.5;
+  stroke-linejoin: round; stroke-linecap: round; }
+.anc-area { fill: rgba(0, 32, 91, 0.10); stroke: none; }
+.anc-dot { fill: var(--cbm-gold, #B58113); }
+
+.anc-pie { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+.anc-legend { display: flex; flex-direction: column; gap: 0.3rem; min-width: 9rem; }
+.anc-legend__item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; }
+.anc-legend__dot { width: 0.8rem; height: 0.8rem; border-radius: 3px; flex: 0 0 auto; }
+.anc-legend__label { flex: 1 1 auto; color: var(--cbm-ink, #1c2530); }
+.anc-legend__val { font-weight: 600; color: var(--cbm-navy, #00205B); }
+
+/* --- breakdown bars -------------------------------------------------------- */
+.anc-bars { display: flex; flex-direction: column; gap: 0.55rem; padding: 0.25rem 0; }
+.anc-bar { display: grid; grid-template-columns: minmax(6rem, 34%) 1fr auto;
+  align-items: center; gap: 0.6rem; }
+.anc-bar__label { font-size: 0.88rem; color: var(--cbm-ink, #1c2530);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.anc-bar__track { background: var(--cbm-line, #eef1f5); border-radius: 4px; height: 0.85rem; overflow: hidden; }
+.anc-bar__fill { display: block; height: 100%; border-radius: 4px; min-width: 2px; }
+.anc-bar__val { font-size: 0.85rem; font-weight: 600; color: var(--cbm-navy, #00205B); }
+
+/* --- table ----------------------------------------------------------------- */
+.anc-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.anc-table th, .anc-table td {
+  text-align: left; padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--cbm-line, #eef1f5);
+}
+.anc-table th { color: var(--cbm-slate-700, #556); font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.03em; font-size: 0.75rem; }
+.anc-table .is-right { text-align: right; }
+.anc-link { color: var(--cbm-blue, #1b6ec2); text-decoration: none; }
+.anc-link:hover { text-decoration: underline; }

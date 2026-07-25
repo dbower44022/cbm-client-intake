@@ -1,0 +1,83 @@
+/* Analytics app chrome (Analytics Phase A). Panel grid + top bar; the chart
+ * internals live in /shared/charts.css. */
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--cbm-font-body, "Roboto", system-ui, sans-serif);
+  color: var(--cbm-ink, #1c2530);
+  background: var(--cbm-surface, #f4f6f9);
+}
+
+.an { min-height: 100vh; display: flex; flex-direction: column; padding: 1.25rem clamp(1rem, 3vw, 2.5rem); }
+
+/* --- top bar --------------------------------------------------------------- */
+.an__topbar {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;
+}
+.an__title h1 {
+  margin: 0; font-family: var(--cbm-font-serif, "Roboto Slab", serif);
+  color: var(--cbm-navy, #00205B); font-size: 1.9rem;
+}
+.an__sub { margin: 0.15rem 0 0; color: var(--cbm-slate-700, #556); font-size: 0.95rem; }
+.an__usercorner { display: flex; align-items: center; gap: 0.75rem; font-size: 0.88rem; }
+.an__who { color: var(--cbm-slate-700, #556); }
+
+/* --- message / errors ------------------------------------------------------ */
+.an__msg { background: #fff; border: 1px solid var(--cbm-border, #d8dee6);
+  border-radius: var(--cbm-radius, 10px); padding: 1.5rem; max-width: 34rem; }
+.form-error { color: var(--cbm-danger, #b3261e); font-weight: 600; }
+
+/* --- tabs + controls ------------------------------------------------------- */
+.an__tabs { display: flex; gap: 0.35rem; margin-bottom: 0.85rem; flex-wrap: wrap; }
+.an__tab {
+  border: 1px solid var(--cbm-border, #d8dee6); background: #fff;
+  border-radius: 999px; padding: 0.35rem 0.9rem; cursor: pointer; font-size: 0.9rem;
+  color: var(--cbm-ink, #1c2530);
+}
+.an__tab.is-active { background: var(--cbm-navy, #00205B); color: #fff; border-color: var(--cbm-navy, #00205B); }
+
+.an__controls { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.an__rangelabel { font-size: 0.85rem; color: var(--cbm-slate-700, #556); }
+.an__controls select {
+  padding: 0.4rem 0.6rem; border: 1px solid var(--cbm-border, #d8dee6);
+  border-radius: 8px; background: #fff; font: inherit; min-height: 2.4rem;
+}
+.an__spacer { flex: 1 1 auto; }
+
+.an__notice { background: #fff7e6; border: 1px solid #f0d9a8; color: #7a5a12;
+  padding: 0.5rem 0.75rem; border-radius: 8px; margin: 0 0 0.75rem; }
+.an__loading { color: var(--cbm-slate-700, #556); }
+.an__empty { color: var(--cbm-slate-700, #556); grid-column: 1 / -1; }
+
+/* --- panel grid ------------------------------------------------------------ */
+.an__grid {
+  display: grid; grid-template-columns: repeat(12, 1fr); gap: 1rem;
+  align-items: start;
+}
+.an-panel {
+  grid-column: span var(--span, 4);
+  background: #fff; border: 1px solid var(--cbm-border, #d8dee6);
+  border-radius: var(--cbm-radius, 12px); padding: 1rem 1.1rem;
+  box-shadow: 0 1px 2px rgba(16, 32, 64, 0.04);
+  min-width: 0;
+}
+.an-panel__head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.6rem; }
+.an-panel__head h3 { margin: 0; font-size: 1rem; color: var(--cbm-navy, #00205B); font-weight: 600; }
+.an-panel__meta { font-size: 0.75rem; color: var(--cbm-slate-700, #889); white-space: nowrap; }
+.an-panel__body { min-height: 2rem; }
+
+@media (max-width: 900px) {
+  .an__grid { grid-template-columns: repeat(6, 1fr); }
+  .an-panel { grid-column: span min(var(--span, 4), 6); }
+}
+@media (max-width: 560px) {
+  .an__grid { grid-template-columns: 1fr; }
+  .an-panel { grid-column: 1 / -1; }
+}
+
+/* footer parity with the other apps (styles.css owns it — no wizard.css here) */
+.cbm-footer { margin-top: auto; padding-top: 1.5rem; color: var(--cbm-slate-700, #667); font-size: 0.8rem; text-align: center; }
+.cbm-footer__version::before { content: " · "; }

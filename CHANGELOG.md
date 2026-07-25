@@ -4,6 +4,50 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.160.0] — 2026-07-25
+
+**feat(analytics): Analytics platform — Phase A (flagship system dashboard)**
+(prds/analytics-app-plan.md). A new standalone `/analytics` app: a metric
+library → panels → pages engine, code-seeded in Phase A with the **System
+Analytics** dashboard. Gated OFF by `ANALYTICS_ENABLED` (default false) — inert
+on deploy until enabled per env + the `Analytics Admin Team` exists in the CRM.
+
+- **Engine** (`analytics/`): the result-shape taxonomy (`scalar` / `series` /
+  `breakdown` / `rows`) ties each metric to one of four panel renderers. Metrics
+  are code-registered (`analytics/registry.py` `@metric`), resolved by
+  `analytics/service.py` with a hybrid cache — cheap counts run **live** (the
+  EspoCRM list `total` envelope), sweeps are **cached**. A metric error degrades
+  to an "unavailable" panel, never a 500.
+- **Seeded dashboard** (`analytics/dashboard.py`): Total Active Mentors [stat],
+  Active Client Engagements [stat], New client engagements per month [series],
+  Engagements by status [breakdown], Oldest unassigned engagements [rows] — all
+  from EspoCRM under the org-wide API key (system aggregates; the team gate +
+  per-panel visibility are the access boundary).
+- **App**: mounted at `/analytics` (portal tile "Analytics", alias `/analytics`)
+  under `analytics_active`; per-request gate on `ANALYTICS_VIEW_ALLOWED_TEAMS`
+  (default `Analytics Admin Team`; admins pass). Endpoints
+  `GET /analytics/api/{session,pages,pages/{key}}` + `POST …/pages/{key}/refresh`;
+  global time-range selector (last 7d/30d/90d/quarter/YTD/12mo/all) + per-page
+  Refresh.
+- **Frontend** (`analytics/frontend/`, vanilla JS): the panel grid + the four
+  **hand-rolled SVG/HTML renderers** in the shared `frontend/shared/charts.{js,css}`
+  (no charting library — §11 decision A). Verified in a stub-browser harness
+  (all four shapes + the pie variant, edge-label fix, no console errors).
+- **Storage**: `analytics_cache` table (Alembic **0021** — pre-deploy migrate);
+  `analytics/store.py` (`AnalyticsStore` + `MemoryAnalyticsStore`). Without
+  `DATABASE_URL` the app runs live-only (recompute each view). The metric/panel/
+  page **definition** tables are deferred to Phase B (they ship with the
+  authoring UI that fills them — Phase A pages/metrics are code-seeded).
+- **Worker**: `analytics/refresh.py` warms the system dashboard's cached metrics
+  on `ANALYTICS_REFRESH_SECONDS` (default 3600; 0 disables). Inert without a
+  store or a real CRM client.
+- Config: `analytics_enabled`, `analytics_refresh_seconds`,
+  `analytics_default_cache_ttl_seconds`, `analytics_admin_allowed_teams`,
+  `analytics_view_allowed_teams`. 14 new tests; full suite green (1182).
+  **NOT yet driven live** — after deploy: create `Analytics Admin Team`, set
+  `ANALYTICS_ENABLED=true` (web + worker) + run the pre-deploy migrate, then open
+  `/analytics` as a member and confirm the five panels against real CRM data.
+
 ## [0.159.0] — 2026-07-25
 
 **feat(ops): Email Quality Phase 3 — info@ poller window + Other

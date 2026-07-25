@@ -530,8 +530,18 @@ first, footer/version parity):
 
 Each phase is independently shippable and gated OFF until activated (`analytics_enabled`).
 
+> **BUILT 2026-07-25 (v0.160.0).** See CHANGELOG 0.160.0. One deviation from the
+> table plan below, by the repo's "migrations ship with the code that uses them"
+> rule: **migration `0021` creates the `analytics_cache` table only** — the
+> metric/panel/page **definition** tables are deferred to Phase B, where the
+> authoring UI that fills them lands (Phase A's pages/metrics are code-seeded, so
+> those tables would be dead schema now). Everything else in Phase A shipped:
+> engine, seeded dashboard, `/analytics` app + gate + portal tile, the four SVG/
+> HTML renderers, the worker warm job, and the config flags (all gated OFF by
+> `ANALYTICS_ENABLED`).
+
 ### Phase A — Flagship system dashboard (code-seeded), engine + storage
-- Alembic `0021`: the five tables. Store methods (metric/panel/page/cache CRUD + due-metrics).
+- Alembic `0021`: the cache table (definition tables → Phase B). Store methods (cache get/put/due/invalidate).
 - Engine (`service.py`, `builder.py`, `registry.py`, `cache.py`): result-shape model,
   crm/store/computed resolvers, live vs cached, the `total`-envelope cheap-count path.
 - Config flags + the worker refresh timer.

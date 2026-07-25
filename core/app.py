@@ -64,6 +64,9 @@ SESSIONS_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "sessions" / "f
 # (/directory/{companies,contacts,mentors}); the JS reads the kind from its URL.
 DIRECTORY_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "directory" / "frontend"
 MYEMAIL_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "myemail" / "frontend"
+ANALYTICS_FRONTEND_DIR = (
+    Path(__file__).resolve().parent.parent / "analytics" / "frontend"
+)
 
 
 def _make_client(settings: Settings) -> EspoApi:
@@ -382,6 +385,14 @@ def create_app(
     app = FastAPI(title="CBM Intake Forms", version=__version__, lifespan=lifespan)
     # Exposed to the ops console router (V2 Phase 2).
     app.state.submission_store = store
+    # Exposed to the analytics router — the cached-metric store (None => the app
+    # runs live-only, recomputing each view). Independent of the submission store.
+    if settings.analytics_active:
+        from analytics import make_analytics_store
+
+        app.state.analytics_store = make_analytics_store(settings)
+    else:
+        app.state.analytics_store = None
     # Exposed to the portal router (the public-form links on the home page).
     app.state.form_specs = forms
     app.add_middleware(
@@ -596,6 +607,11 @@ def create_app(
         app.include_router(mentoradmin_router)
         app.include_router(mentorprofile_router)
         app.include_router(portal_router)
+        # Analytics app (prds/analytics-app-plan.md) — mounted only when enabled.
+        if settings.analytics_active:
+            from analytics import api_router as analytics_router
+
+            app.include_router(analytics_router)
         # Session Management: one router per domain, all from the same engine.
         for _cfg in SESSION_DOMAINS.values():
             app.include_router(make_sessions_router(_cfg))
@@ -641,6 +657,8 @@ def create_app(
                 "email": "/myemail/",
             }
         )
+        if settings.analytics_active:
+            alias_targets["analytics"] = "/analytics/"
         from sessions import DOMAINS as _SESSION_DOMAINS
 
         alias_targets.update(
@@ -696,6 +714,12 @@ def create_app(
             "/myemail",
             StaticFiles(directory=str(MYEMAIL_FRONTEND_DIR), html=True),
             name="myemail-frontend",
+        )
+    if settings.analytics_active and ANALYTICS_FRONTEND_DIR.is_dir():
+        app.mount(
+            "/analytics",
+            StaticFiles(directory=str(ANALYTICS_FRONTEND_DIR), html=True),
+            name="analytics-frontend",
         )
     if settings.assignments_active and PORTAL_FRONTEND_DIR.is_dir():
         # The portal's assets (its index.html is served at "/" above).

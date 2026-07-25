@@ -98,6 +98,16 @@ This is a multi-form app: a shared core hosts any number of intake forms.
     `SESSION_{MENTOR,PARTNER,SPONSOR}_ALLOWED_TEAMS`. Phase 1 (CRUD + review UI); see
     CLAUDE.md for the CRM prerequisites (CSession `assignedUsers` + name formula) and
     the later Calendar/Meet phases.
+  - `analytics/` — **Analytics** (`/analytics/`): a configurable dashboards app
+    (prds/analytics-app-plan.md). A metric library → panels → pages engine, with
+    the code-seeded **System Analytics** page (active mentors/engagements, new
+    engagements per month, engagements by status, oldest unassigned) rendered by
+    hand-rolled SVG/HTML charts (`frontend/shared/charts.js`). Cheap counts run
+    live against the CRM; sweeps cache to `analytics_cache` (refreshed by the
+    worker). Gated OFF by `ANALYTICS_ENABLED`; viewing gated by
+    `ANALYTICS_VIEW_ALLOWED_TEAMS` (default "Analytics Admin Team"). Phase A;
+    Phase B adds an in-app metric builder + admin-curated pages, Phase C the
+    record-embedded Analytics tabs.
 - **V2 reliability platform** (`prds/v2/`): optional durable capture
   (`core/store.py`) + an async delivery `worker.py`, gated by `DATABASE_URL` /
   `ASYNC_DELIVERY` so behavior is unchanged until a Postgres DB is attached.
