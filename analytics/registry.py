@@ -105,14 +105,14 @@ def scalar(value, *, prior=None, unit=None, fmt: str = "number") -> MetricResult
     return MetricResult(SHAPE_SCALAR, {"value": value, "prior": prior, "unit": unit, "format": fmt})
 
 
-def series(points: list[dict[str, Any]], *, unit=None) -> MetricResult:
+def series(points: list[dict[str, Any]], *, unit=None, fmt: str = "number") -> MetricResult:
     """points: [{"bucket": "2026-01", "label": "Jan 2026", "value": n}, ...]"""
-    return MetricResult(SHAPE_SERIES, {"points": points, "unit": unit})
+    return MetricResult(SHAPE_SERIES, {"points": points, "unit": unit, "format": fmt})
 
 
-def breakdown(items: list[dict[str, Any]]) -> MetricResult:
+def breakdown(items: list[dict[str, Any]], *, fmt: str = "number") -> MetricResult:
     """items: [{"label": ..., "value": ...}, ...] (author-sorted)."""
-    return MetricResult(SHAPE_BREAKDOWN, {"items": items})
+    return MetricResult(SHAPE_BREAKDOWN, {"items": items, "format": fmt})
 
 
 def rows(columns: list[dict[str, Any]], rows_: list[dict[str, Any]]) -> MetricResult:

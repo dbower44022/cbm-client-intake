@@ -242,6 +242,7 @@ async def render_page(
     record: Optional[RecordRef] = None,
     force: bool = False,
     metric_lookup: Optional[Callable[[str], Optional[MetricSpec]]] = None,
+    submission_store=None,
 ) -> dict[str, Any]:
     """Resolve every panel the viewer may see; panels compute concurrently."""
     lookup = metric_lookup or get_metric
@@ -271,6 +272,7 @@ async def render_page(
             settings=settings,
             espo=espo,
             store=store,
+            submission_store=submission_store,
             time_range=time_range,
             record=record,
         )

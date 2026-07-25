@@ -4,6 +4,35 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.163.0] — 2026-07-25
+
+**feat(analytics): Analytics platform — Phase D (portal dashboard + computed
+metrics + polish) — COMPLETES the plan** (prds/analytics-app-plan.md, Phases
+A–D all built). No migration.
+
+- **Portal dashboard**: the system page flagged **portal_dashboard** renders on
+  the **portal home** (Doug: full page, not a summary). New self-gating
+  `GET /analytics/api/portal` (renders the flagged page the user may view, else
+  `available:false`); the portal home fetches it and shows the panels above the
+  app tiles (charts assets added to the portal). The page composer gains a "Show
+  this dashboard on the portal home" checkbox (system pages).
+- **Operational + computed metrics** (`analytics/computed.py`, the app's OWN data,
+  not just the CRM): **Submissions received per month** + **Submission queue by
+  status** (the durable submission store — new `PostgresStore.submissions_by_month`),
+  and **Contributions received per month** (a currency CRM rollup, Received only).
+  The engine now threads the submission store into `MetricContext`
+  (`render_page(submission_store=…)`, the worker warm-job too).
+- **Currency formatting**: `CBMCharts` formats `format:"currency"` values as `$…`
+  on stats, series axes/tooltips, and breakdown bars/pie (verified: axis `$0`/
+  `$23,900`, stat `$128,500`; non-currency series stay plain).
+- 7 new tests (`tests/test_analytics_portal.py`); suite green (1195). **NOT yet
+  driven live** — after deploy, the portal home shows the dashboard for analytics
+  viewers; the operational metrics need `DATABASE_URL` (the durable store).
+- **Remaining (explicitly deferred)**: drill-through (§9), CSV export,
+  user-personalized dashboards, scheduled report delivery; deeper cross-source
+  blends (intake→first-session latency, email volume per mentor) pending a
+  data-model decision on how a submission links to its engagement/sessions.
+
 ## [0.162.0] — 2026-07-25
 
 **feat(analytics): Analytics platform — Phase C (record-scoped analytics +

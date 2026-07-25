@@ -594,6 +594,18 @@ Each phase is independently shippable and gated OFF until activated (`analytics_
   `DomainConfig.analytics_enabled`, and the equivalent hook on the mentor/directory surfaces.
 - Per-record cache keying; record-scoped drill-through.
 
+> **BUILT 2026-07-25 (v0.163.0) — COMPLETES the plan (Phases A–D).** See
+> CHANGELOG 0.163.0. The portal dashboard (`GET /analytics/api/portal`, self-gating,
+> rendered on the portal home + a composer "show on portal home" checkbox); an
+> operational/computed metric library (`analytics/computed.py`: submissions per
+> month + submission queue from the durable store; contributions per month as a
+> currency CRM rollup; the submission store threaded through the engine); and the
+> polish (currency formatting in `CBMCharts`; the existing per-page Refresh IS
+> refresh-all; empty/permission/freshness states already in place). **Remaining,
+> explicitly deferred**: drill-through (§9), CSV export, personalized dashboards,
+> scheduled delivery, and deeper cross-source blends (intake→first-session latency,
+> email volume) pending a data-model decision on submission↔engagement↔session links.
+
 ### Phase D — Portal dashboard + computed-metric expansion + polish
 - The **full** `portal_dashboard` page surfaced on portal home (Doug: full page, not a
   compact summary).

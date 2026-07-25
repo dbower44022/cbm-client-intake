@@ -128,6 +128,42 @@
       data.docsUrl ? [{ title: "CBM Documentation", url: data.docsUrl }] : [], true);
     fillList("formsSection", "formsList", data.forms || [], true);
     show($("homeView"));
+    if (data.analyticsEnabled) loadPortalDashboard();
+  }
+
+  // Analytics dashboard on the home page (Phase D). Self-gating endpoint: a
+  // user without analytics access gets available:false and the section stays
+  // hidden. Best-effort — never blocks the home render.
+  function anFmtWhen(iso) {
+    if (!iso) return "";
+    var d = new Date(iso);
+    return isNaN(d) ? "" : d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  }
+  function loadPortalDashboard() {
+    var sec = $("analyticsSection"), grid = $("portalDash");
+    if (!grid || typeof CBMCharts === "undefined") return;
+    fetch("/analytics/api/portal")
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (body) {
+        if (!body || !body.available || !(body.panels || []).length) return;
+        grid.innerHTML = "";
+        body.panels.forEach(function (p) {
+          var span = Math.max(3, Math.min(12, p.width || 4));
+          var art = document.createElement("article"); art.className = "an-panel"; art.style.setProperty("--span", span);
+          var head = document.createElement("header"); head.className = "an-panel__head";
+          var h3 = document.createElement("h3"); h3.textContent = p.title; head.appendChild(h3);
+          var meta = document.createElement("span"); meta.className = "an-panel__meta";
+          var res = p.result || {};
+          if (!res.error) meta.textContent = res.cached ? "as of " + anFmtWhen(res.computedAt) : "live";
+          head.appendChild(meta);
+          var bd = document.createElement("div"); bd.className = "an-panel__body";
+          art.appendChild(head); art.appendChild(bd); grid.appendChild(art);
+          try { CBMCharts.renderPanel(bd, p, { crmUrl: body.crmUrl }); }
+          catch (e) { bd.innerHTML = '<p class="anc-err">Could not render this panel.</p>'; }
+        });
+        show(sec);
+      })
+      .catch(function () { /* home renders fine without the dashboard */ });
   }
 
   // ?next= deep-link: staff apps send users here to sign in, then we forward

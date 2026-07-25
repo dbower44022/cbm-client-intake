@@ -1612,6 +1612,40 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-25)
 
+**v0.163.0** (2026-07-25, 1195 tests green, committed NOT pushed) — **Analytics
+platform — Phase D (portal dashboard + computed metrics + polish) — COMPLETES
+the plan** (`prds/analytics-app-plan.md`, Phases A–D all built). No migration.
+- **Portal dashboard**: the system page flagged `portal_dashboard` renders on the
+  **portal home** (Doug: full page). New self-gating `GET /analytics/api/portal`
+  (renders the flagged page the user may view, else `available:false`); the portal
+  home fetches it and shows the panels above the app tiles (charts assets +
+  `analyticsEnabled` flag added to the portal). The page composer gains a "Show on
+  portal home" checkbox (system pages; `PageIn.portal_dashboard` was already wired
+  server-side in Phase B).
+- **Operational + computed metrics** (`analytics/computed.py`, the app's OWN data):
+  **Submissions received per month** + **Submission queue by status** (the durable
+  submission store — new `core/store.PostgresStore.submissions_by_month`), and
+  **Contributions received per month** (a currency CRM rollup, Received only). The
+  engine threads the submission store into `MetricContext`
+  (`render_page(submission_store=…)` from the router's `app.state.submission_store`;
+  the worker warm-job builds `make_store(settings)` too). `MetricContext.submission_store`
+  was reserved since Phase A. A store metric returns "unavailable" without a DB.
+- **Currency formatting**: `CBMCharts` formats `format:"currency"` as `$…` on stats,
+  series axes/tooltips, and breakdown bars/pie (`registry.series`/`breakdown` gained
+  `fmt`). Harness-verified (axis `$0`/`$23,900`, stat `$128,500`; non-currency series
+  stay plain; no console errors). The existing per-page **Refresh** IS refresh-all
+  (recomputes all the page's cached metrics); empty/permission/freshness states were
+  already in place.
+- 7 new tests (`tests/test_analytics_portal.py`); suite green (1195). **NOT yet
+  driven live** — after deploy: the portal home shows the dashboard for analytics
+  viewers; the operational metrics need `DATABASE_URL`. **Remaining, explicitly
+  deferred**: drill-through (§9), CSV export, personalized dashboards, scheduled
+  delivery; deeper cross-source blends (intake→first-session latency, email volume
+  per mentor) pending a data-model decision on submission↔engagement↔session links.
+  **The analytics arc (Phases A–D) is complete** — activation is unchanged: create
+  `Analytics Admin Team`, set `ANALYTICS_ENABLED=true` (web + worker) + a
+  `DATABASE_URL`, run the pre-deploy migrate (through 0022).
+
 **v0.162.0** (2026-07-25, 1188 tests green, committed NOT pushed) — **Analytics
 platform — Phase C** (record-scoped analytics + the embedded Mentor tab; Mentor
 surface first per the PRD). Analytics attach to a CRM record.

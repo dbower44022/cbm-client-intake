@@ -133,6 +133,10 @@ def _home_payload(user: dict[str, Any], request: Request, settings: Settings) ->
         # The documentation site — every signed-in user gets it (the app user
         # guides live there). Empty setting => no link.
         "docsUrl": settings.docs_site_url or None,
+        # True => the home page tries to render the analytics portal dashboard
+        # (GET /analytics/api/portal; it self-gates, so non-analytics users just
+        # get available:false and no dashboard shows). Phase D.
+        "analyticsEnabled": settings.analytics_active,
         "forms": _forms(request),
     }
 

@@ -111,7 +111,10 @@ This is a multi-form app: a shared core hosts any number of intake forms.
     aggregation, with a live preview) and a page composer (Phase B). Record-scoped
     metrics + pages render as an **Analytics tab** on a record — the mentor record
     in `/mentoradmin` first (Phase C), scoped to that record and run as the user
-    (its ACL is the gate).
+    (its ACL is the gate). A flagged dashboard also renders on the **portal home**,
+    and metrics can draw from the app's own operational data (submissions, the queue)
+    and currency CRM rollups, not just the CRM (Phase D — the plan's four phases are
+    complete).
 - **V2 reliability platform** (`prds/v2/`): optional durable capture
   (`core/store.py`) + an async delivery `worker.py`, gated by `DATABASE_URL` /
   `ASYNC_DELIVERY` so behavior is unchanged until a Postgres DB is attached.

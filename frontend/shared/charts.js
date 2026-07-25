@@ -31,6 +31,11 @@
     if (n == null || isNaN(n)) return "—";
     return Number(n).toLocaleString();
   }
+  function fmtVal(n, format) {
+    if (n == null || isNaN(n)) return "—";
+    if (format === "currency") return "$" + Number(n).toLocaleString(undefined, { maximumFractionDigits: 0 });
+    return fmtNum(n);
+  }
   function clear(node) {
     while (node.firstChild) node.removeChild(node.firstChild);
   }
@@ -39,7 +44,7 @@
   function renderStat(host, data) {
     var wrap = el("div", "anc-stat");
     var v = data && data.value != null ? data.value : null;
-    wrap.appendChild(el("div", "anc-stat__value", fmtNum(v)));
+    wrap.appendChild(el("div", "anc-stat__value", fmtVal(v, data && data.format)));
     if (data && data.unit) wrap.appendChild(el("div", "anc-stat__unit", data.unit));
     if (data && data.prior != null && v != null) {
       var delta = v - data.prior;
@@ -76,7 +81,7 @@
       }));
       svg.appendChild(svgEl("text", {
         x: padL - 8, y: y(val) + 4, class: "anc-axis anc-axis--y",
-      })).textContent = fmtNum(val);
+      })).textContent = fmtVal(val, data.format);
     });
 
     var coords = pts.map(function (p, i) { return x(i) + "," + y(p.value); });
@@ -89,7 +94,7 @@
     pts.forEach(function (p, i) {
       var dot = svgEl("circle", { cx: x(i), cy: y(p.value), r: 3, class: "anc-dot" });
       var t = svgEl("title", {});
-      t.textContent = p.label + ": " + fmtNum(p.value);
+      t.textContent = p.label + ": " + fmtVal(p.value, data.format);
       dot.appendChild(t);
       svg.appendChild(dot);
     });
@@ -111,7 +116,7 @@
   }
 
   // --- breakdown (bar / pie) -------------------------------------------------
-  function renderBars(host, items) {
+  function renderBars(host, items, format) {
     var max = Math.max.apply(null, items.map(function (i) { return i.value; }));
     max = max <= 0 ? 1 : max;
     var list = el("div", "anc-bars");
@@ -124,13 +129,13 @@
       fill.style.background = PALETTE[i % PALETTE.length];
       track.appendChild(fill);
       row.appendChild(track);
-      row.appendChild(el("span", "anc-bar__val", fmtNum(it.value)));
+      row.appendChild(el("span", "anc-bar__val", fmtVal(it.value, format)));
       list.appendChild(row);
     });
     host.appendChild(list);
   }
 
-  function renderPie(host, items) {
+  function renderPie(host, items, format) {
     var total = items.reduce(function (s, i) { return s + (i.value || 0); }, 0);
     if (total <= 0) { host.appendChild(el("p", "anc-empty", "No data.")); return; }
     var R = 80, C = 100, sw = 34, circ = 2 * Math.PI * R;
@@ -149,7 +154,7 @@
         transform: "rotate(-90 " + C + " " + C + ")",
       });
       var t = svgEl("title", {});
-      t.textContent = it.label + ": " + fmtNum(it.value) +
+      t.textContent = it.label + ": " + fmtVal(it.value, format) +
         " (" + Math.round(frac * 100) + "%)";
       seg.appendChild(t);
       svg.appendChild(seg);
@@ -164,7 +169,7 @@
       dot.style.background = PALETTE[i % PALETTE.length];
       li.appendChild(dot);
       li.appendChild(el("span", "anc-legend__label", it.label));
-      li.appendChild(el("span", "anc-legend__val", fmtNum(it.value)));
+      li.appendChild(el("span", "anc-legend__val", fmtVal(it.value, format)));
       legend.appendChild(li);
     });
     wrap.appendChild(legend);
@@ -174,8 +179,8 @@
   function renderBreakdown(host, data, viz) {
     var items = (data && data.items) || [];
     if (!items.length) { host.appendChild(el("p", "anc-empty", "No data.")); return; }
-    if (viz === "pie") renderPie(host, items);
-    else renderBars(host, items);
+    if (viz === "pie") renderPie(host, items, data.format);
+    else renderBars(host, items, data.format);
   }
 
   // --- rows (table) ----------------------------------------------------------

@@ -317,6 +317,7 @@ class SubmissionStore(Protocol):
     ) -> list[dict[str, Any]]: ...
     async def get_submission(self, submission_id: str) -> Optional[dict[str, Any]]: ...
     async def counts_by_status(self) -> dict[str, int]: ...
+    async def submissions_by_month(self) -> list[dict[str, Any]]: ...
     async def redrive(self, submission_id: str, *, acted_by: Optional[str] = None) -> bool: ...
     async def discard(self, submission_id: str, *, acted_by: Optional[str] = None) -> bool: ...
     async def set_notes(
@@ -649,6 +650,18 @@ class PostgresStore:
                 )
             ).all()
         return {r[0]: r[1] for r in rows}
+
+    async def submissions_by_month(self) -> list[dict[str, Any]]:
+        """Submission counts grouped by received-at month (``YYYY-MM``), for the
+        analytics 'submissions per month' trend (Phase D). Postgres date format."""
+        month = func.to_char(submission.c.received_at, "YYYY-MM")
+        async with self._engine.begin() as conn:
+            rows = (
+                await conn.execute(
+                    select(month.label("m"), func.count().label("n")).group_by(month)
+                )
+            ).all()
+        return [{"month": r.m, "count": r.n} for r in rows if r.m]
 
     async def redrive(self, submission_id: str, *, acted_by: Optional[str] = None) -> bool:
         """Re-queue a submission: back to pending, due now, fresh attempt budget.

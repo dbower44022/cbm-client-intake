@@ -417,6 +417,11 @@
     var curRange = (page && page.default_range) || "last12mo";
     ["last7d", "last30d", "last90d", "quarter", "ytd", "last12mo", "all"].forEach(function (k) { rangeSel.appendChild(opt(k, RANGE_LABELS[k], curRange === k)); });
     var teamInput = h("input", { type: "text", value: (page && (page.team_gate || []).join(", ")) || "", placeholder: "Teams (comma) — blank = default view team" });
+    var portalBox = h("input", { type: "checkbox" });
+    if (page && page.portal_dashboard) portalBox.checked = true;
+    var portalWrap = h("label", { class: "an__chk" }, portalBox, h("span", {}, "Show this dashboard on the portal home page"));
+    function syncPortalOption() { show(portalWrap, scopeSel.value === "system"); }
+    scopeSel.addEventListener("change", syncPortalOption);
     var panelsHost = h("div", { class: "an__panels" });
 
     function panelRow(p) {
@@ -450,7 +455,7 @@
         });
       });
       return { title: titleInput.value.trim(), subtitle: subInput.value.trim(),
-        scope: scopeSel.value,
+        scope: scopeSel.value, portal_dashboard: portalBox.checked,
         default_range: rangeSel.value, team_gate: teamInput.value.split(",").map(function (s) { return s.trim(); }).filter(Boolean),
         panels: panels };
     }
@@ -469,6 +474,8 @@
     form.appendChild(labeled("Where it appears", scopeSel));
     form.appendChild(labeled("Default time range", rangeSel));
     form.appendChild(labeled("Who can view", teamInput));
+    form.appendChild(portalWrap);
+    syncPortalOption();
     form.appendChild(h("div", { class: "an__form-label" }, "Panels"));
     form.appendChild(panelsHost);
     form.appendChild(h("button", { class: "an__link-btn", onClick: function () { if (!state.allMetrics.length) { notice("Create a metric first."); return; } panelsHost.appendChild(panelRow()); } }, "+ Add panel"));

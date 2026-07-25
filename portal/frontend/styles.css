@@ -73,6 +73,10 @@
 
 /* Launcher tiles (Directories + Applications) — the "windows" you open. */
 .portal__hint { color: var(--cbm-slate-700); font-size: var(--cbm-text-sm); margin: 0 0 0.75rem; }
+.portal__anahead { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+.portal__analink { font-size: var(--cbm-text-sm); color: var(--cbm-blue, #1b6ec2); text-decoration: none; white-space: nowrap; }
+.portal__analink:hover { text-decoration: underline; }
+#portalDash { margin-bottom: 1.5rem; }
 .portal__tiles {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));

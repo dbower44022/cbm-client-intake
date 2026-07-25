@@ -24,6 +24,7 @@ from core import action_log
 from core.config import Settings, get_settings
 from core.espo import EspoClient, EspoError, forbidden_hint, is_forbidden
 
+from . import computed  # noqa: F401 — registers operational/computed metrics
 from . import dashboard  # noqa: F401 — importing registers the metrics + seeded page
 from .builder import (
     AGG_KINDS,
@@ -113,6 +114,11 @@ def _system_client(settings: Settings) -> Optional[EspoClient]:
 
 def _store(request: Request):
     return getattr(request.app.state, "analytics_store", None)
+
+
+def _sub_store(request: Request):
+    """The durable submission store — feeds store/computed metrics (Phase D)."""
+    return getattr(request.app.state, "submission_store", None)
 
 
 async def _db_metric_specs(store) -> dict[str, MetricSpec]:
@@ -258,10 +264,41 @@ async def _render(
             time_range=time_range,
             force=force,
             metric_lookup=lookup,
+            submission_store=_sub_store(request),
         )
     except Exception as exc:  # noqa: BLE001 — per-metric errors are already handled inside
         log.warning("analytics render failed for %s: %s", key, exc)
         raise HTTPException(status_code=502, detail="Could not load analytics — try again.")
+
+
+@router.get("/portal")
+async def portal_dashboard(request: Request) -> dict:
+    """The dashboard shown on the portal home (Phase D). Renders the system page
+    flagged ``portal_dashboard`` that the signed-in user may view — gated by that
+    page's team gate (or the analytics view team), so non-analytics staff simply
+    get ``available: false`` and the portal shows no dashboard."""
+    user = current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    settings = get_settings()
+    store = _store(request)
+    candidates = [
+        p for p in await _all_page_specs(store)
+        if p.scope == "system" and p.portal_dashboard and _can_view_page(user, p, settings)
+    ]
+    if not candidates:
+        return {"available": False}
+    page = candidates[0]
+    time_range = build_time_range(page.default_range)
+    lookup = _make_lookup(await _db_metric_specs(store))
+    body = await render_page(
+        page, user=user, settings=settings, espo=_system_client(settings),
+        store=store, time_range=time_range, metric_lookup=lookup,
+        submission_store=_sub_store(request),
+    )
+    body["available"] = True
+    body["crmUrl"] = settings.espo_base_url
+    return body
 
 
 # =============================================================================
@@ -328,6 +365,7 @@ async def record_view(
     body = await render_page(
         selected, user=user, settings=settings, espo=client, store=store,
         time_range=time_range, record=ref, metric_lookup=lookup,
+        submission_store=_sub_store(request),
     )
     body["available"] = True
     body["record"] = record

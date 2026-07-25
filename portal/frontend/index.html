@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/shared/tokens.css" />
+  <link rel="stylesheet" href="/shared/charts.css" />
   <link rel="stylesheet" href="/portal/styles.css" />
 </head>
 <body>
@@ -64,6 +65,14 @@
         <button type="button" class="cbm-button cbm-button--secondary" id="logoutBtn">Sign out</button>
       </div>
 
+      <section id="analyticsSection" hidden>
+        <div class="portal__anahead">
+          <h2>Analytics</h2>
+          <a class="portal__analink" id="analyticsOpen" href="/analytics/" target="cbm-analytics">Open Analytics →</a>
+        </div>
+        <div class="an__grid" id="portalDash"></div>
+      </section>
+
       <section id="directoriesSection" hidden>
         <h2>Directories</h2>
         <p class="portal__hint">Open a directory to browse, preview, and edit records. Each opens in its own tab — clicking again brings you back to it.</p>
@@ -100,6 +109,7 @@
   <!-- busy.js first: it wraps fetch/XHR, so it must be in place before any
        other script can start a request. -->
   <script src="/shared/busy.js"></script>
+  <script src="/shared/charts.js"></script>
   <script src="/portal/app.js"></script>
   <script src="/shared/footer.js"></script>
 </body>

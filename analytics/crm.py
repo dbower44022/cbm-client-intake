@@ -96,31 +96,33 @@ def fmt_date(value: Optional[str]) -> str:
     return dt.strftime("%b %-d, %Y") if dt else ""
 
 
-def bucket_by_month(records: list[dict[str, Any]], field: str, time_range) -> list[dict[str, Any]]:
-    """Count records per calendar month over the time range's window, filling
-    empty months with 0. ``time_range`` may be None (all time)."""
+def fill_month_series(counts: dict[str, float], time_range) -> list[dict[str, Any]]:
+    """Render a month → value map as an ordered point list over the time range's
+    window, filling empty months with 0. Keys are ``"YYYY-MM"``. When the range
+    is unbounded (start None), the axis starts at the earliest key present.
+    Months outside [axis_start, end] are naturally windowed out."""
     start = getattr(time_range, "start", None)
     end = getattr(time_range, "end", None) or datetime.now(timezone.utc)
-
-    counts: dict[str, int] = {}
-    earliest: Optional[datetime] = None
-    for r in records:
-        dt = parse_crm_dt(r.get(field))
-        if dt is None:
-            continue
-        if start and dt < start:
-            continue
-        if dt > end:
-            continue
-        counts[month_key(dt)] = counts.get(month_key(dt), 0) + 1
-        if earliest is None or dt < earliest:
-            earliest = dt
-
-    axis_start = start or earliest
+    axis_start = start
     if axis_start is None:
-        return []
+        keys = sorted(k for k in counts if k)
+        if not keys:
+            return []
+        axis_start = datetime(int(keys[0][:4]), int(keys[0][5:7]), 1, tzinfo=timezone.utc)
     points = []
     for (y, m) in months_between(axis_start, end):
         key = f"{y:04d}-{m:02d}"
         points.append({"bucket": key, "label": month_label(y, m), "value": counts.get(key, 0)})
     return points
+
+
+def bucket_by_month(records: list[dict[str, Any]], field: str, time_range) -> list[dict[str, Any]]:
+    """Count records per calendar month over the time range's window, filling
+    empty months with 0. ``time_range`` may be None (all time)."""
+    counts: dict[str, float] = {}
+    for r in records:
+        dt = parse_crm_dt(r.get(field))
+        if dt is None:
+            continue
+        counts[month_key(dt)] = counts.get(month_key(dt), 0) + 1
+    return fill_month_series(counts, time_range)

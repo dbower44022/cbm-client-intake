@@ -39,6 +39,10 @@ async def refresh_system_metrics(settings: Settings) -> dict[str, Any]:
     if espo is None:
         await store.dispose()
         return {"refreshed": 0, "reason": "no crm client"}
+    # The durable submission store feeds store/computed metrics (Phase D).
+    from core.store import make_store
+
+    sub_store = make_store(settings)
 
     # Metric lookup spanning code-registered + authored (DB) metrics.
     db_specs: dict = {}
@@ -73,7 +77,8 @@ async def refresh_system_metrics(settings: Settings) -> dict[str, Any]:
                 if spec is None or spec.cache_mode != "cached":
                     continue
                 ctx = MetricContext(
-                    settings=settings, espo=espo, store=store, time_range=tr
+                    settings=settings, espo=espo, store=store,
+                    submission_store=sub_store, time_range=tr,
                 )
                 payload = await resolve_metric(spec, ctx, force=True)
                 if payload.get("error"):
@@ -82,5 +87,7 @@ async def refresh_system_metrics(settings: Settings) -> dict[str, Any]:
                     refreshed += 1
     finally:
         await store.dispose()
+        if sub_store is not None:
+            await sub_store.dispose()
     log.info("analytics warm: %s refreshed, %s errors", refreshed, errors)
     return {"refreshed": refreshed, "errors": errors}
