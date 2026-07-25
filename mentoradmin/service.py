@@ -65,6 +65,13 @@ CBM_EMAIL_DOMAIN = "cbmentors.org"
 DEFAULT_MENTOR_TEAM = "Mentor Team"
 USER_TYPE = "regular"
 
+# Shown when someone tries to assign teams to a mentor with no login User yet
+# (Permission Teams live on the login User; a mentor without one has nothing to
+# assign them to). Doug's exact wording.
+NO_LOGIN_TEAM_MESSAGE = (
+    "The Mentor is not Active yet, and so cannot be assigned teams."
+)
+
 
 class MentorAdminError(Exception):
     """A mentor-admin operation could not be completed (e.g. team not found)."""
@@ -935,3 +942,95 @@ async def field_options(client: MentorClient) -> dict[str, list[str]]:
         if isinstance(opts, list):
             options[name] = opts
     return options
+
+
+# --- Permission-team assignment ---------------------------------------------
+# EspoCRM Permission Teams live on the login **User** record (they are the
+# access-control unit). Assigning a mentor to teams means editing their linked
+# login User's team membership. Listing all Teams and reading/writing a User's
+# teams require an ADMIN client — regular staff tokens can't — so these run
+# under the provisioning admin service account, exactly like User provisioning.
+
+
+async def list_permission_teams(admin_client: MentorClient) -> list[dict[str, str]]:
+    """Every EspoCRM Permission Team as ``{"id", "name"}`` (for the multi-select).
+
+    Requires an admin client (staff tokens can't list ``Team``)."""
+    data = await admin_client.list("Team", select="name", max_size=200, order_by="name")
+    return [
+        {"id": t["id"], "name": t.get("name") or t["id"]}
+        for t in data.get("list", [])
+        if t.get("id")
+    ]
+
+
+async def _mentor_login_user_id(client: MentorClient, mentor_id: str) -> Optional[str]:
+    """The mentor's linked login User id (``assignedUser`` on crm-test, the
+    ``assignedUsers`` collaborators list on prod — resolved via
+    :func:`assigned_user_id`), or None when no login has been provisioned yet."""
+    prof = await client.get(
+        MENTOR_PROFILE, mentor_id,
+        select="assignedUserId,assignedUsersIds,assignedUsersNames",
+    )
+    return assigned_user_id(prof)
+
+
+async def get_mentor_teams(
+    client: MentorClient, admin_client: MentorClient, mentor_id: str
+) -> dict[str, Any]:
+    """Team-assignment state for a mentor's Status tab: every Permission Team,
+    whether the mentor has a login User yet, and which teams that User currently
+    belongs to.
+
+    The login-User link is read as the staff ``client``; the Team list and the
+    User's own teams are read with ``admin_client`` (staff tokens can read
+    neither). A mentor with no login returns ``provisioned=False`` and no
+    assigned teams — the control still renders (Doug's ruling: always active),
+    it just can't be saved until a login exists.
+    """
+    user_id = await _mentor_login_user_id(client, mentor_id)
+    teams = await list_permission_teams(admin_client)
+    assigned: list[str] = []
+    if user_id:
+        try:
+            u = await admin_client.get("User", user_id, select="teamsIds,teamsNames")
+            assigned = list(u.get("teamsIds") or [])
+        except Exception as exc:  # noqa: BLE001 — best-effort; empty on a hiccup
+            log.warning("could not read teams for User %s: %s", user_id, exc)
+    return {
+        "teams": teams,
+        "assignedTeamIds": assigned,
+        "provisioned": bool(user_id),
+    }
+
+
+async def set_mentor_teams(
+    client: MentorClient,
+    admin_client: MentorClient,
+    mentor_id: str,
+    team_ids: list[str],
+) -> dict[str, Any]:
+    """Set the mentor's login User's Permission-Team membership to ``team_ids``.
+
+    Raises :class:`MentorAdminError` (Doug's message) when the mentor has no
+    login User yet — there is nothing to assign teams to. Unknown ids (not in
+    the live Team list) are dropped. Writes ``User.teamsIds`` with the admin
+    client, keeping the User's ``defaultTeam`` consistent (re-pointed to the
+    first selected team when the old default is no longer a member; cleared
+    when no teams remain) so an edit can't leave a dangling default-team FK.
+    """
+    user_id = await _mentor_login_user_id(client, mentor_id)
+    if not user_id:
+        raise MentorAdminError(NO_LOGIN_TEAM_MESSAGE)
+    valid = {t["id"] for t in await list_permission_teams(admin_client)}
+    chosen = [tid for tid in team_ids if tid in valid]
+
+    current = await admin_client.get("User", user_id, select="teamsIds,defaultTeamId")
+    payload: dict[str, Any] = {"teamsIds": chosen}
+    default_team = current.get("defaultTeamId")
+    if chosen and default_team not in chosen:
+        payload["defaultTeamId"] = chosen[0]
+    elif not chosen:
+        payload["defaultTeamId"] = None
+    await admin_client.update("User", user_id, payload)
+    return {"assignedTeamIds": chosen}

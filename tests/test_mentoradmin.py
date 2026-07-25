@@ -1376,3 +1376,159 @@ async def test_provisioning_contact_stamp_failure_is_not_fatal():
     # The provisioning still succeeded — the stamp failure is a note, not an error.
     assert result["provision"]["ok"] is True
     assert result["provision"]["userId"] == "user-new"
+
+
+# --- permission-team assignment (Status tab) ---
+
+class TeamClient:
+    """Fake staff+admin client for permission-team tests: a mentor profile with
+    a linked login User, that User's teams, and the full Team list."""
+
+    def __init__(self, *, profile=None, user=None, teams=None):
+        self.profile = profile or {"id": "m1", "assignedUserId": "u9"}
+        self.user = user or {
+            "id": "u9", "teamsIds": ["t1"],
+            "teamsNames": {"t1": "Mentor Team"}, "defaultTeamId": "t1",
+        }
+        self.teams = teams if teams is not None else [
+            {"id": "t1", "name": "Mentor Team"},
+            {"id": "t2", "name": "Client Administration Team"},
+            {"id": "t3", "name": "Marketing Admin Team"},
+        ]
+        self.updates = []
+
+    async def get(self, entity, record_id, select=None):
+        if entity == "User":
+            return dict(self.user)
+        return dict(self.profile, id=record_id)
+
+    async def update(self, entity, record_id, payload):
+        self.updates.append((entity, record_id, payload))
+        return {"id": record_id}
+
+    async def list(self, entity, **kwargs):
+        if entity == "Team":
+            return {"list": [dict(t) for t in self.teams]}
+        return {"list": []}
+
+
+@pytest.mark.asyncio
+async def test_get_mentor_teams_lists_and_marks_assigned():
+    c = TeamClient()
+    data = await service.get_mentor_teams(c, c, "m1")
+    assert data["provisioned"] is True
+    assert data["teams"][0]["name"] == "Mentor Team"
+    assert data["assignedTeamIds"] == ["t1"]
+
+
+@pytest.mark.asyncio
+async def test_get_mentor_teams_no_login_still_lists_teams():
+    c = TeamClient(profile={"id": "m1", "assignedUserId": None, "assignedUsersIds": []})
+    data = await service.get_mentor_teams(c, c, "m1")
+    assert data["provisioned"] is False
+    assert data["assignedTeamIds"] == []
+    assert len(data["teams"]) == 3  # control still renders every team
+
+
+@pytest.mark.asyncio
+async def test_set_mentor_teams_writes_user_teams_and_repoints_default():
+    c = TeamClient()
+    result = await service.set_mentor_teams(c, c, "m1", ["t2", "t3"])
+    assert result["assignedTeamIds"] == ["t2", "t3"]
+    entity, rid, payload = next(u for u in c.updates if u[0] == "User")
+    assert entity == "User" and rid == "u9"
+    assert payload["teamsIds"] == ["t2", "t3"]
+    # old default t1 is no longer a member -> re-pointed to the first chosen
+    assert payload["defaultTeamId"] == "t2"
+
+
+@pytest.mark.asyncio
+async def test_set_mentor_teams_keeps_default_when_still_a_member():
+    c = TeamClient()
+    await service.set_mentor_teams(c, c, "m1", ["t1", "t2"])
+    payload = next(u[2] for u in c.updates if u[0] == "User")
+    assert payload["teamsIds"] == ["t1", "t2"]
+    assert "defaultTeamId" not in payload  # t1 still a member -> left alone
+
+
+@pytest.mark.asyncio
+async def test_set_mentor_teams_drops_unknown_ids():
+    c = TeamClient()
+    result = await service.set_mentor_teams(c, c, "m1", ["t2", "bogus"])
+    assert result["assignedTeamIds"] == ["t2"]
+
+
+@pytest.mark.asyncio
+async def test_set_mentor_teams_empty_clears_default():
+    c = TeamClient()
+    await service.set_mentor_teams(c, c, "m1", [])
+    payload = next(u[2] for u in c.updates if u[0] == "User")
+    assert payload["teamsIds"] == []
+    assert payload["defaultTeamId"] is None
+
+
+@pytest.mark.asyncio
+async def test_set_mentor_teams_no_login_raises_with_message():
+    c = TeamClient(profile={"id": "m1", "assignedUserId": None, "assignedUsersIds": []})
+    with pytest.raises(service.MentorAdminError) as ei:
+        await service.set_mentor_teams(c, c, "m1", ["t1"])
+    assert ei.value.args[0] == service.NO_LOGIN_TEAM_MESSAGE
+    assert not c.updates  # nothing written
+
+
+def _team_factory(monkeypatch):
+    """Wire _provision_factory to return an admin-client factory (router tests)."""
+    async def _call():
+        return object()
+    monkeypatch.setattr("mentoradmin.router._provision_factory", lambda settings: _call)
+
+
+def test_teams_endpoint_unavailable_without_admin(monkeypatch):
+    _authed(monkeypatch)
+    monkeypatch.setattr("mentoradmin.router._provision_factory", lambda settings: None)
+    with TestClient(_app(monkeypatch)) as c:
+        data = c.get("/mentoradmin/api/mentors/m1/teams").json()
+    assert data["available"] is False
+
+
+def test_teams_get_returns_state(monkeypatch):
+    _authed(monkeypatch)
+    _team_factory(monkeypatch)
+
+    async def fake_get(client, admin_client, mentor_id):
+        return {"teams": [{"id": "t1", "name": "Mentor Team"}],
+                "assignedTeamIds": ["t1"], "provisioned": True}
+
+    monkeypatch.setattr("mentoradmin.router.service.get_mentor_teams", fake_get)
+    with TestClient(_app(monkeypatch)) as c:
+        data = c.get("/mentoradmin/api/mentors/m1/teams").json()
+    assert data["available"] is True
+    assert data["assignedTeamIds"] == ["t1"]
+
+
+def test_teams_put_saves(monkeypatch):
+    _authed(monkeypatch)
+    _team_factory(monkeypatch)
+
+    async def fake_set(client, admin_client, mentor_id, team_ids):
+        return {"assignedTeamIds": team_ids}
+
+    monkeypatch.setattr("mentoradmin.router.service.set_mentor_teams", fake_set)
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.put("/mentoradmin/api/mentors/m1/teams", json={"teamIds": ["t1", "t2"]})
+    assert r.status_code == 200
+    assert r.json()["assignedTeamIds"] == ["t1", "t2"]
+
+
+def test_teams_put_no_login_returns_400(monkeypatch):
+    _authed(monkeypatch)
+    _team_factory(monkeypatch)
+
+    async def fake_set(client, admin_client, mentor_id, team_ids):
+        raise service.MentorAdminError(service.NO_LOGIN_TEAM_MESSAGE)
+
+    monkeypatch.setattr("mentoradmin.router.service.set_mentor_teams", fake_set)
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.put("/mentoradmin/api/mentors/m1/teams", json={"teamIds": ["t1"]})
+    assert r.status_code == 400
+    assert r.json()["detail"] == service.NO_LOGIN_TEAM_MESSAGE

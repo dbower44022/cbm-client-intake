@@ -230,6 +230,8 @@ detail screen that reviews all info (read-only computed totals on top) and
 - **Endpoints** (`/mentoradmin/api`): `login`/`logout`/`session`; `GET /mentors`
   (roster); `GET /fields` (EDITABLE_FIELDS + live options); `GET /mentors/{id}`
   (full record); `PUT /mentors/{id}` `{changes:{...}}` (whitelisted update);
+  `GET /mentors/{id}/teams` + `PUT /mentors/{id}/teams` `{teamIds:[...]}` (the
+  Status-tab **Permission teams** control, v0.155.0 — see below);
   `POST /mentors/status-check` (the "Update Mentor Status" sweep, v0.26.0 —
   see the Current-status bullet: verifies each mentor's login User exists/is
   active + the `@cbmentors.org` mailbox exists, and bulk re-syncs
@@ -284,6 +286,26 @@ detail screen that reviews all info (read-only computed totals on top) and
   it changed. The **roster grid** shows a **Record** column + filter (read from the
   stored field) to spot who needs work without recomputing per row. `recordStatus`
   is in the shared `assignments` mentor row.
+- **Permission-team assignment on the Status tab (v0.155.0, 2026-07-25 —
+  Doug's request).** The detail Status tab has a **Permission teams**
+  checkbox-grid multi-select (every EspoCRM `Team`, the mentor's current teams
+  checked) + its own **Save teams** button, injected at the bottom of the Status
+  panel and loaded lazily on first open. **Permission Teams live on the mentor's
+  linked login `User`** (the access-control unit), so listing teams and
+  reading/writing the User's `teamsIds` all run under the **provisioning admin
+  service account** (staff tokens can touch neither `User` nor `Team`) — via the
+  new `_team_admin_client` over the existing `_provision_factory`. Available only
+  where `MENTOR_PROVISION_USERS` + `ESPO_PROVISION_*` are configured (prod +
+  crm-test); otherwise the endpoint returns `{available:false}` and the control
+  shows a note. Service (`mentoradmin/service.py`): `list_permission_teams`,
+  `get_mentor_teams`, `set_mentor_teams` (drops unknown ids, keeps `defaultTeam`
+  consistent). Endpoints `GET|PUT /mentoradmin/api/mentors/{id}/teams`. The
+  control is **always active even without a login** (Doug's ruling,
+  [[buttons-never-disabled-validate-on-click]]): clicking a team on a
+  login-less mentor reverts and shows *"The Mentor is not Active yet, and so
+  cannot be assigned teams."* (the `PUT` guards the same way with a readable
+  400). NOT yet driven live — verify: an Active mentor's teams round-trip to
+  `User.teamsIds`; a Candidate with no login shows the message and saves nothing.
 - **Approval → user provisioning (added 2026-06-22; privilege model fixed
   2026-06-22).** When a save leaves `mentorStatus` at **`Approved` or `Active`**
   (a mentor set straight to Active skips Approved but still needs a login) with

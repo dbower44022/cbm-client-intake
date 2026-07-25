@@ -4,6 +4,51 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.155.0] — 2026-07-25
+
+**feat(mentoradmin): assign a mentor to Permission Teams from the Status tab** —
+Doug's request. The mentor-detail Status tab gains a **Permission teams**
+multi-select (a checkbox grid of every EspoCRM `Team`, the mentor's current
+teams checked) with its own **Save teams** button.
+
+Permission Teams live on the mentor's linked **login `User`** (they are the
+access-control unit), so the whole feature runs under the **provisioning admin
+service account** — regular Mentor-Admin staff tokens can read/write neither
+`User` nor `Team`. It is therefore available only where mentor-login
+provisioning is configured (`MENTOR_PROVISION_USERS` + `ESPO_PROVISION_*`, on
+both prod and crm-test); elsewhere the control shows a note.
+
+- **Backend** (`mentoradmin/service.py`): `list_permission_teams` (admin client;
+  `Team` list), `get_mentor_teams` (all teams + the login User's current
+  `teamsIds` + `provisioned` flag; the login-User link is read as the staff
+  user, teams via the admin client), and `set_mentor_teams` (writes
+  `User.teamsIds`, dropping ids not in the live Team list and keeping
+  `defaultTeam` consistent — re-pointed to the first selection when the old
+  default is no longer a member, cleared when no teams remain). A mentor with no
+  login User raises `MentorAdminError` with Doug's exact message,
+  *"The Mentor is not Active yet, and so cannot be assigned teams."*
+- **Endpoints** (`mentoradmin/router.py`): `GET /mentoradmin/api/mentors/{id}/teams`
+  (state for the control; `{available:false}` when provisioning isn't
+  configured) and `PUT …/teams` `{teamIds:[…]}` (→ readable 400 when the mentor
+  has no login yet). Both use the shared `_provision_factory` admin client via a
+  new `_team_admin_client` helper.
+- **Frontend** (`mentoradmin/frontend/`): the control is injected at the bottom
+  of the Status panel, loaded lazily when the Status tab is first opened. It is
+  **always active** even without a login (Doug's ruling, per
+  [[buttons-never-disabled-validate-on-click]]) — clicking a team then reverts
+  the check and shows the message; **Save teams** does the same. Unsaved team
+  changes join the detail view's discard-changes warning. Verified end-to-end in
+  a stub-browser harness (control renders with current teams checked, Save sends
+  the PUT, no-login revert + message on both toggle and Save; no console
+  errors). 13 new tests.
+
+**CRM prerequisite:** none — it uses the existing provisioning admin service
+account and the standard `User`/`Team` entities. **Live check after deploy**
+(crm-test, then prod): open an Active mentor → Status tab → the mentor's current
+teams are checked; toggle + Save teams → GET-verify the login User's
+`teamsIds`; open a Candidate mentor with no login → clicking a team shows the
+"not Active yet" message and saves nothing.
+
 ## [0.154.0] — 2026-07-25
 
 **feat(sessions): Last Contacted grid column + clickable contact name/email on

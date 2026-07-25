@@ -50,6 +50,10 @@ class UpdateIn(BaseModel):
     provision: bool = True
 
 
+class TeamsIn(BaseModel):
+    teamIds: list[str] = []
+
+
 class GoogleSetupIn(BaseModel):
     # Blank service_account_json on an update keeps the stored key (lets an admin
     # toggle flags / change the delegated admin without re-pasting the secret).
@@ -216,6 +220,74 @@ async def mentor_detail(mentor_id: str, request: Request) -> dict:
         return rec
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not load mentor")
+
+
+# --- Permission-team assignment (Status tab) ---------------------------------
+# Permission Teams live on the mentor's linked login User, so listing teams and
+# reading/writing the User's membership run under the provisioning admin service
+# account (staff tokens can't touch User/Team). Unavailable when that account
+# isn't configured (mentor_provision_users off) — the frontend shows a note.
+
+
+async def _team_admin_client(request: Request, settings: Settings):
+    """The provisioning admin client for User/Team operations, or an HTTP error.
+
+    Returns None (with the caller deciding how to report it) when team
+    assignment isn't configured on this server."""
+    factory = _provision_factory(settings)
+    if factory is None:
+        return None
+    try:
+        return await factory()
+    except Exception as exc:  # noqa: BLE001 — admin service-account login failed
+        log.warning("team assignment: provisioning admin login failed: %s", exc)
+        raise HTTPException(
+            status_code=502,
+            detail="Could not sign in the service account that manages team membership.",
+        )
+
+
+@router.get("/mentors/{mentor_id}/teams")
+async def mentor_teams_get(mentor_id: str, request: Request) -> dict:
+    """The mentor's Status-tab team state: all Permission Teams, which the
+    mentor's login User belongs to, and whether a login exists yet."""
+    settings = get_settings()
+    user = _require_user(request)
+    client = client_for(settings, user)
+    admin_client = await _team_admin_client(request, settings)
+    if admin_client is None:
+        return {"available": False, "reason": "Team assignment isn't configured on this server."}
+    try:
+        data = await service.get_mentor_teams(client, admin_client, mentor_id)
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not load teams")
+    data["available"] = True
+    return data
+
+
+@router.put("/mentors/{mentor_id}/teams")
+async def mentor_teams_put(mentor_id: str, body: TeamsIn, request: Request) -> dict:
+    """Set the mentor's login User's Permission-Team membership."""
+    settings = get_settings()
+    user = _require_user(request)
+    client = client_for(settings, user)
+    admin_client = await _team_admin_client(request, settings)
+    if admin_client is None:
+        raise HTTPException(
+            status_code=503, detail="Team assignment isn't configured on this server."
+        )
+    try:
+        result = await service.set_mentor_teams(client, admin_client, mentor_id, body.teamIds)
+        log.info(
+            "mentor CMentorProfile/%s teams set by %s (%d team(s))",
+            mentor_id, user["userName"], len(result.get("assignedTeamIds") or []),
+        )
+        return {"status": "ok", **result}
+    except service.MentorAdminError as exc:
+        # No login User yet — nothing to assign teams to (Doug's message).
+        raise HTTPException(status_code=400, detail=str(exc))
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not save teams")
 
 
 # --- Documents (Google Drive, DOC-MGMT — mentor documents) --------------------

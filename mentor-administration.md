@@ -107,9 +107,20 @@ checkbox grids, and a rich-text editor for the biography fields).
   message saying so, and nothing else is written; link a Contact in the CRM
   first (this is also a Data-completeness issue).
 
+- The **Status** tab also has a **Permission teams** control at the bottom: a
+  checkbox grid of every EspoCRM Permission Team, with the mentor's current
+  teams checked. Tick/untick teams and click **Save teams** to update which
+  teams the mentor's login belongs to (this is what grants their access in the
+  CRM). It has its own Save button, separate from **Save changes**. Because
+  Permission Teams belong to a mentor's **login account**, a mentor who does not
+  yet have a login (i.e. isn't Active/approved with a provisioned user) can't be
+  assigned teams — clicking a team then shows *"The Mentor is not Active yet,
+  and so cannot be assigned teams."* Assign teams once the mentor has a login.
+
 **Saving.** Only fields you actually changed are sent. Before saving, the app
 runs the completeness check and — if the record will still be incomplete —
-shows a confirmation popup (see [Saving](#saving-a-record)).
+shows a confirmation popup (see [Saving](#saving-a-record)). (The **Permission
+teams** control has its own **Save teams** button and is saved separately.)
 
 ---
 

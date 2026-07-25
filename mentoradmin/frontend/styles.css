@@ -196,6 +196,14 @@
   font-size: var(--cbm-text-sm); color: var(--cbm-text); cursor: pointer; padding: 0.15rem 0; }
 .checkgrid__opt input { width: auto; margin: 0; flex: none; }
 
+/* Permission-team assignment (bottom of the Status tab) */
+.ma__teams { grid-column: 1 / -1; margin-top: 1rem; padding-top: 1rem;
+  border-top: 1px solid var(--cbm-border); }
+.ma__teams-title { margin: 0 0 0.15rem; font-size: var(--cbm-text-sm); font-weight: 700; color: var(--cbm-navy); }
+.ma__teams-hint { margin: 0 0 0.6rem; font-size: var(--cbm-text-sm); color: var(--cbm-slate-700); }
+.ma__teams-body { margin-bottom: 0.6rem; }
+.ma__teams-actions { display: flex; }
+
 /* "Update Mentor Status" verification results */
 .modal-card--wide { max-width: 960px; max-height: 88vh; display: flex; flex-direction: column; }
 .verify-tablewrap { overflow: auto; margin: 0.4rem 0 0.8rem; border: 1px solid var(--cbm-border);

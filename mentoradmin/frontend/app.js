@@ -13,6 +13,15 @@
   var docsEnabled = false; // GDRIVE_DOCS server-side: shows the Documents tab
   var filter = { q: "", status: "", record: "", type: "", sortKey: "name", sortDir: 1 };
 
+  // Permission-team assignment (Status tab). teamState = the current mentor's
+  // {teams, assignedTeamIds, provisioned, available}; loaded lazily when the
+  // Status tab is first opened. teamBaseline = the assigned set at load/save,
+  // for unsaved-changes detection.
+  var teamState = null;
+  var teamsLoadedFor = null;
+  var teamBaseline = "";
+  var NO_LOGIN_TEAM_MSG = "The Mentor is not Active yet, and so cannot be assigned teams.";
+
   function $(id) { return document.getElementById(id); }
   function show(el) { el.hidden = false; }
   function hide(el) { el.hidden = true; }
@@ -253,6 +262,9 @@
     if (row && current.recordStatus && row.recordStatus !== current.recordStatus) listDirty = true;
     $("detailName").textContent = current.name || "(unnamed mentor)";
     hide($("detailNotice"));
+    // Team state is per-mentor and loaded lazily on the Status tab — clear it
+    // so the newly opened mentor's teams are (re)fetched.
+    teamState = null; teamsLoadedFor = null; teamBaseline = "";
     renderReadonly(current);
     renderForm(current);
     showDetail();
@@ -498,6 +510,11 @@
       });
       form.appendChild(panel);
     });
+    // Permission-team assignment lives at the bottom of the Status tab (it's a
+    // control over the mentor's login User, not a CMentorProfile field, so it
+    // has its own load + Save and is not part of the field-diff save).
+    var statusPanel = form.querySelector('[data-panel="Status"]');
+    if (statusPanel) statusPanel.appendChild(buildTeamControl());
     // Documents (Google Drive, DOC-MGMT) — a non-field tab anchored to the
     // mentor's linked Contact; only when the integration is on server-side.
     if (docsEnabled) {
@@ -910,6 +927,121 @@
       var on = b.dataset.tab === group; b.classList.toggle("is-active", on); b.setAttribute("aria-selected", on);
     });
     Array.prototype.forEach.call($("editForm").children, function (p) { p.hidden = p.dataset.panel !== group; });
+    if (group === "Status") ensureTeamsLoaded();
+  }
+
+  // --- Permission-team assignment (Status tab) ------------------------------
+  // The control renders a checkbox grid of all EspoCRM Permission Teams with the
+  // mentor's current teams checked, plus its own Save. Teams live on the login
+  // User, so this saves via a dedicated endpoint (not the field-diff save).
+
+  function buildTeamControl() {
+    var box = document.createElement("div"); box.className = "ma__teams";
+    var h = document.createElement("h4"); h.className = "ma__teams-title"; h.textContent = "Permission teams";
+    var hint = document.createElement("p"); hint.className = "ma__teams-hint";
+    hint.textContent = "Assign this mentor's login to one or more EspoCRM Permission Teams.";
+    var body = document.createElement("div"); body.id = "teamBody"; body.className = "ma__teams-body";
+    body.textContent = "Loading teams…";
+    var noticeEl = document.createElement("div"); noticeEl.id = "teamNotice"; noticeEl.className = "ma__notice"; noticeEl.hidden = true;
+    var actions = document.createElement("div"); actions.className = "ma__teams-actions";
+    var save = document.createElement("button");
+    save.type = "button"; save.id = "saveTeamsBtn"; save.className = "cbm-button ma__sm"; save.textContent = "Save teams"; save.hidden = true;
+    save.addEventListener("click", saveTeams);
+    actions.appendChild(save);
+    box.appendChild(h); box.appendChild(hint); box.appendChild(body); box.appendChild(noticeEl); box.appendChild(actions);
+    return box;
+  }
+
+  async function ensureTeamsLoaded() {
+    if (!current) return;
+    if (teamsLoadedFor === current.id) return;  // loaded (or in flight)
+    teamsLoadedFor = current.id;
+    var forId = current.id;
+    var body = $("teamBody"); if (body) body.textContent = "Loading teams…";
+    try {
+      var res = await api("/mentors/" + encodeURIComponent(forId) + "/teams");
+      if (!current || current.id !== forId) return;  // user moved on
+      teamState = res;
+      renderTeamControl();
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      teamsLoadedFor = null;  // allow a retry on the next Status open
+      if (body) body.textContent = "";
+      notice("teamNotice", e.message, "error");
+    }
+  }
+
+  function renderTeamControl() {
+    var body = $("teamBody"); if (!body) return;
+    body.innerHTML = "";
+    var save = $("saveTeamsBtn");
+    if (!teamState || teamState.available === false) {
+      var p = document.createElement("p"); p.className = "ma__muted";
+      p.textContent = (teamState && teamState.reason) || "Team assignment isn't available on this server.";
+      body.appendChild(p);
+      if (save) save.hidden = true;
+      return;
+    }
+    var grid = document.createElement("div"); grid.className = "checkgrid";
+    var assigned = teamState.assignedTeamIds || [];
+    (teamState.teams || []).forEach(function (t) {
+      var lab = document.createElement("label"); lab.className = "checkgrid__opt";
+      var cb = document.createElement("input"); cb.type = "checkbox"; cb.value = t.id;
+      cb.checked = assigned.indexOf(t.id) >= 0; cb.dataset.teamCb = "1";
+      cb.addEventListener("change", onTeamToggle);
+      lab.appendChild(cb); lab.appendChild(document.createTextNode(" " + t.name));
+      grid.appendChild(lab);
+    });
+    if (!(teamState.teams || []).length) {
+      var none = document.createElement("p"); none.className = "ma__muted";
+      none.textContent = "No Permission Teams are defined in EspoCRM.";
+      body.appendChild(none);
+    } else {
+      body.appendChild(grid);
+    }
+    if (save) save.hidden = false;
+    teamBaseline = assigned.slice().sort().join(",");
+  }
+
+  // The control stays active even without a login (Doug's ruling); clicking a
+  // team then explains why it can't be assigned yet and reverts the check.
+  function onTeamToggle(ev) {
+    if (teamState && teamState.provisioned === false) {
+      ev.target.checked = false;
+      notice("teamNotice", NO_LOGIN_TEAM_MSG, "warn");
+    } else {
+      hide($("teamNotice"));
+    }
+  }
+
+  function checkedTeamIds() {
+    return Array.prototype.map.call(
+      document.querySelectorAll('#teamBody input[data-team-cb]:checked'),
+      function (c) { return c.value; }
+    );
+  }
+
+  function teamsDirty() {
+    if (!teamState || teamState.available === false || teamState.provisioned === false) return false;
+    return checkedTeamIds().slice().sort().join(",") !== teamBaseline;
+  }
+
+  async function saveTeams() {
+    if (!current || !teamState) return;
+    if (teamState.provisioned === false) { notice("teamNotice", NO_LOGIN_TEAM_MSG, "warn"); return; }
+    var ids = checkedTeamIds();
+    var btn = $("saveTeamsBtn"), orig = btn.textContent;
+    btn.disabled = true; btn.textContent = "Saving…"; hide($("teamNotice"));
+    try {
+      var res = await api("/mentors/" + encodeURIComponent(current.id) + "/teams",
+        { method: "PUT", body: JSON.stringify({ teamIds: ids }) });
+      teamState.assignedTeamIds = res.assignedTeamIds || ids;
+      teamBaseline = (teamState.assignedTeamIds).slice().sort().join(",");
+      notice("teamNotice", "Teams updated.", "success");
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      notice("teamNotice", e.message, "error");
+    } finally { btn.disabled = false; btn.textContent = orig; }
   }
 
   function buildField(f, value) {
@@ -1125,6 +1257,7 @@
         labels.push(spec ? spec.label : el.dataset.field);
       }
     });
+    if (teamsDirty()) labels.push("Permission teams");
     return labels;
   }
 
