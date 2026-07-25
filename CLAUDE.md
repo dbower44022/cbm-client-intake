@@ -1366,7 +1366,13 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   time/title/status/attendee change → **patch** (notes-only edits never
   touch the calendar); status → Cancelled → **cancel** (clears the event id
   + a generated Meet link, never a hand-typed one); Completed/No Show →
-  skipped (Doug: only Scheduled sessions get events). Attendee contacts are
+  skipped (Doug: only Scheduled sessions get events); **past-dated → no NEW
+  event (v0.146.0, Doug's rule):** the create branch (new session AND the
+  missing-event backfill on edit) skips when `dateStart` is >5 min in the
+  past (`calendar:{ok,skipped,past}`; an EXISTING event still
+  patches/cancels), and the frontend's pre-save invite prompt mirrors the
+  guard (`startsInPast` in app.js) so it never asks about invitations that
+  won't be sent. Attendee contacts are
   invited (`sendUpdates=all` — Google emails invitations; organizer
   excluded, blanks skipped). **CBM members are invited at their `cbmEmail`
   ONLY (v0.122.0, Doug's ruling 2026-07-20 — see the Current-status block):**
@@ -1660,6 +1666,25 @@ message. Editor strip verified in a real browser harness (image paste removed
 without the image and upload the image on the Documents tab. Live check after
 deploy: paste an image into session notes → removed with the notice, save
 succeeds.
+
+Before that: **v0.146.0** (2026-07-23, 1073 tests green, committed) —
+**past-dated sessions never create a calendar event + "+ Add session" button
+rename** (Doug's request). The gcal hook's event-CREATE branch (new session
+and the missing-event backfill on update) skips when `dateStart` is more
+than 5 minutes in the past — no event, no emailed invitations for a meeting
+that already happened (`calendar:{ok,skipped,past}`; the save itself
+untouched; an EXISTING event still patches/cancels so correcting the time on
+an already-invited meeting works). A status **Completed** save already never
+created an event (the pre-existing only-Scheduled rule — confirmed, now
+named in the gcal docstring). The frontend mirrors the guard: the pre-save
+"create & send invite?" prompt doesn't pop for a past start (`startsInPast`
+next to `parseNaive`, same 5-min grace), and the record detail's
+"+ New session" button reads **"+ Add session"** (the follow-up-failure
+notice's wording updated to match). Test note: the calendar fixtures now use
+DYNAMIC future stamps — the old fixed 2026-07-20 dates had aged into the
+past and would have tripped the guard. Mechanics: CHANGELOG 0.146.0 (incl.
+the selective-staging version-race note — the parallel conversation-component
+hunks in the two shared frontend files were deliberately not swept).
 
 Before that: **v0.145.0** (2026-07-23, 1071 tests green, committed NOT pushed) —
 **internal CBM↔CBM email syncs again — to member Contacts, never records**
