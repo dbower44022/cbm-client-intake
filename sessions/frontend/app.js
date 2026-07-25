@@ -294,6 +294,7 @@
     });
     if (tab === "details") ensureDetails();
     if (tab === "contributions") renderContributions();
+    if (tab === "referredClients") renderReferredClients();
     if (tab === "communications") renderComms();
     if (tab === "documents") renderDocuments();
   }
@@ -5336,6 +5337,132 @@
     });
   }
   makeColumnsResizable($("sessionsTable"));
+
+  // --- Referred Clients tab (partner domain only) ---------------------------
+  // The client engagements that name this partner as their referring partner
+  // (CEngagement.referringPartner). Panel + endpoint exist only when the domain
+  // declared the tab (the server registers nothing elsewhere). Read-only: a
+  // status filter (left) + search (middle); clicking an engagement name opens
+  // it in the MENTOR domain's own record page — a stable per-record window, so
+  // re-clicking reuses the tab and that page's own single-tab guard blocks a
+  // genuine duplicate ("duplicate tab control").
+  var rcl = { forId: null, rows: [], status: "", search: "", sort: { key: null, dir: 1 } };
+
+  function rclSortVal(r, k) {
+    if (k === "totalSessions") return Number(r.totalSessions) || 0;
+    return (r[k] || "").toString().toLowerCase();
+  }
+
+  function updateRclSortIndicators() {
+    Array.prototype.forEach.call(document.querySelectorAll("#rclTable th[data-sort]"), function (th) {
+      var active = th.getAttribute("data-sort") === rcl.sort.key;
+      th.setAttribute("aria-sort", active ? (rcl.sort.dir === 1 ? "ascending" : "descending") : "none");
+      th.dataset.dir = active ? (rcl.sort.dir === 1 ? "asc" : "desc") : "";
+    });
+  }
+
+  // A cell whose value opens a read-only pop-up (the mentor / primary contact);
+  // plain text when there's no linked record to peek.
+  function rclPeekCell(name, entity, id) {
+    var cell = document.createElement("td");
+    if (name && id) {
+      var b = document.createElement("button"); b.type = "button"; b.className = "sx__link";
+      b.textContent = name;
+      b.addEventListener("click", function () { openPeek(entity, id, name); });
+      cell.appendChild(b);
+    } else { cell.textContent = name || "—"; }
+    return cell;
+  }
+
+  function refreshRclStatusFilter() {
+    var seen = {}, vals = [];
+    rcl.rows.forEach(function (r) { var v = r.status; if (v && !seen[v]) { seen[v] = 1; vals.push(v); } });
+    vals.sort();
+    var sel = $("rclStatus"); sel.innerHTML = "";
+    sel.appendChild(new Option("All", ""));
+    vals.forEach(function (v) { sel.appendChild(new Option(v, v)); });
+    if (vals.indexOf(rcl.status) < 0) rcl.status = "";
+    sel.value = rcl.status;
+  }
+
+  function paintRcl() {
+    var q = rcl.search.trim().toLowerCase();
+    var list = rcl.rows.filter(function (r) {
+      if (rcl.status && (r.status || "") !== rcl.status) return false;
+      if (!q) return true;
+      var hay = [r.name, r.status, r.mentorName, r.contactName, r.startDate, r.lastContact]
+        .map(function (v) { return v == null ? "" : String(v); }).join(" ").toLowerCase();
+      return hay.indexOf(q) >= 0;
+    });
+    if (rcl.sort.key) {
+      var k = rcl.sort.key, dir = rcl.sort.dir;
+      list.sort(function (a, b) {
+        var va = rclSortVal(a, k), vb = rclSortVal(b, k);
+        return (va < vb ? -1 : va > vb ? 1 : 0) * dir;
+      });
+    }
+    updateRclSortIndicators();
+    $("rclCount").textContent = rcl.rows.length
+      ? "Showing " + list.length + " of " + rcl.rows.length : "";
+    var tb = $("rclBody"); tb.innerHTML = "";
+    $("rclTable").hidden = list.length === 0;
+    $("noRcl").hidden = list.length > 0;
+    list.forEach(function (r) {
+      var tr = document.createElement("tr");
+      var nameCell = document.createElement("td");
+      var link = document.createElement("a"); link.className = "sx__link";
+      var href = "/mentorsessions/record/" + encodeURIComponent(r.id);
+      link.href = href; link.textContent = r.name || "(unnamed)";
+      (function (recId, h) {
+        link.addEventListener("click", function (ev) {
+          if (ev.defaultPrevented || ev.button !== 0 || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
+          ev.preventDefault();
+          window.open(h, "cbm-rec-mentorsessions-" + recId);
+        });
+      })(r.id, href);
+      nameCell.appendChild(link); tr.appendChild(nameCell);
+      tr.appendChild(td(fmtDate(r.startDate)));
+      tr.appendChild(td(fmtDate(r.lastContact)));
+      tr.appendChild(rclPeekCell(r.mentorName, "CMentorProfile", r.mentorId));
+      tr.appendChild(rclPeekCell(r.contactName, "Contact", r.contactId));
+      tr.appendChild(td(r.totalSessions == null ? "—" : String(r.totalSessions)));
+      tb.appendChild(tr);
+    });
+  }
+
+  async function renderReferredClients() {
+    if (!currentDetail) return;
+    if (rcl.forId === currentDetail.id) { paintRcl(); return; }
+    rcl.forId = currentDetail.id;
+    rcl.rows = [];
+    hide($("rclNotice")); hide($("rclTable")); hide($("noRcl"));
+    show($("rclLoading"));
+    try {
+      var res = await api("/records/" + encodeURIComponent(currentDetail.id) + "/referredclients");
+      rcl.rows = res.records || [];
+      refreshRclStatusFilter();
+      paintRcl();
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      notice("rclNotice", e.message, "error");
+    } finally { hide($("rclLoading")); }
+  }
+
+  Array.prototype.forEach.call(
+    document.querySelectorAll("#rclTable th[data-sort]"),
+    function (th) {
+      th.classList.add("sx__th-sort");
+      th.addEventListener("click", function () {
+        var key = th.getAttribute("data-sort");
+        if (rcl.sort.key === key) rcl.sort.dir = -rcl.sort.dir;
+        else { rcl.sort.key = key; rcl.sort.dir = (key === "startDate" || key === "lastContact" || key === "totalSessions") ? -1 : 1; }
+        paintRcl();
+      });
+    }
+  );
+  if ($("rclTable")) makeColumnsResizable($("rclTable"));
+  if ($("rclStatus")) $("rclStatus").addEventListener("change", function () { rcl.status = this.value; paintRcl(); });
+  if ($("rclSearch")) $("rclSearch").addEventListener("input", function () { rcl.search = this.value; paintRcl(); });
 
   // --- Contributions tab (the funder ledger — sponsor domain only) ----------
   // prds/funder-contributions-plan.md. Panel + endpoints exist only when the

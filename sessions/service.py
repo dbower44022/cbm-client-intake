@@ -402,6 +402,60 @@ async def list_records(
     return {"records": records, "profileFound": True}
 
 
+# The client engagements referred by a partner (the Referred Clients tab). One
+# read of CPartnerProfile.engagements; "last contact" = the engagement's last
+# session date (CEngagement has no dedicated last-contacted field — its most
+# recent session IS the last client contact).
+REFERRED_CLIENT_SELECT = (
+    "name,engagementStatus,engagementStartDate,lastSessionDate,"
+    "mentorProfileName,mentorProfileId,"
+    "primaryEngagementContactName,primaryEngagementContactId,"
+    "totalSessions,createdAt"
+)
+
+
+def _referred_row(r: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": r["id"],
+        "name": r.get("name") or "(unnamed)",
+        "status": r.get("engagementStatus"),
+        "startDate": r.get("engagementStartDate"),
+        "lastContact": r.get("lastSessionDate"),
+        "mentorName": r.get("mentorProfileName"),
+        "mentorId": r.get("mentorProfileId"),
+        "contactName": r.get("primaryEngagementContactName"),
+        "contactId": r.get("primaryEngagementContactId"),
+        "totalSessions": r.get("totalSessions"),
+        "createdAt": r.get("createdAt"),
+    }
+
+
+async def list_referred_clients(
+    cfg: DomainConfig, client: SessionClient, parent_id: str
+) -> dict[str, Any]:
+    """Client engagements that name this partner as their referring partner
+    (``CEngagement.referringPartner`` → this ``CPartnerProfile``), read through
+    the parent's reverse link AS THE SIGNED-IN USER — the related read requires
+    read access to the parent, so it is the ACL gate, and the engagements are
+    ACL-filtered too. Sorted newest-first. Returns ``{"records": [...]}``.
+
+    Only the partner domain sets ``referred_clients_link``; the endpoint isn't
+    registered elsewhere, but guard anyway so a misconfig can't read the wrong
+    link."""
+    if not cfg.referred_clients_link:
+        return {"records": []}
+    data = await client.list_related(
+        cfg.parent_entity,
+        parent_id,
+        cfg.referred_clients_link,
+        select=REFERRED_CLIENT_SELECT,
+        max_size=_PAGE,
+    )
+    records = [_referred_row(r) for r in data.get("list", [])]
+    records.sort(key=lambda x: (x.get("createdAt") or ""), reverse=True)
+    return {"records": records}
+
+
 async def _attach_sessions_near_now(
     cfg: DomainConfig, client: SessionClient, records: list[dict[str, Any]]
 ) -> None:

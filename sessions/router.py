@@ -200,12 +200,16 @@ NO_PROFILE_MESSAGE = (
 
 
 def _detail_tabs(cfg: DomainConfig) -> list[dict]:
-    """The domain's tab bar: the common tabs, plus Contributions (inserted
-    right after Sessions) on a domain with a contributions link (sponsor)."""
+    """The domain's tab bar: the common tabs, plus Contributions (sponsor) or
+    Referred Clients (partner) inserted right after Sessions on a domain that
+    enables them. The two are on different domains, so the ordering never
+    collides."""
     tabs = list(COMMON_DETAIL_TABS)
+    idx = next((i for i, t in enumerate(tabs) if t["key"] == "sessions"), len(tabs) - 1)
     if cfg.contributions_link:
-        idx = next((i for i, t in enumerate(tabs) if t["key"] == "sessions"), len(tabs) - 1)
         tabs.insert(idx + 1, {"key": "contributions", "label": "Contributions"})
+    if cfg.referred_clients_link:
+        tabs.insert(idx + 1, {"key": "referredClients", "label": "Referred Clients"})
     return tabs
 
 
@@ -611,6 +615,21 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                     actor_id=user["userId"], actor_name=user["name"], details=result,
                 )
             return result
+
+    if cfg.referred_clients_link:
+        # The Referred Clients tab (partner domain) — registered ONLY on a
+        # domain with a referred-clients link (the contributions-endpoint
+        # precedent), so the mentor/sponsor routers never have it. Read-only:
+        # the client engagements that name this partner as referringPartner.
+
+        @router.get("/records/{parent_id}/referredclients")
+        async def referred_clients(parent_id: str, request: Request) -> dict:
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            try:
+                return await service.list_referred_clients(cfg, client, parent_id)
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not load referred clients")
 
     if cfg.contributions_link:
         # The funder ledger (prds/funder-contributions-plan.md) — registered

@@ -989,6 +989,12 @@ textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
 .sx__docview-fallback p { margin: 0 0 1rem; }
 
 /* --- Contributions tab (the funder ledger — sponsor domain) --- */
+/* Referred Clients tab (partner) — a status filter + search bar over a grid
+   (reuses .sx__table / .sx__statusfilter / .sx__search for the rest). */
+.rcl__bar { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin: 0.25rem 0 0.75rem; }
+.rcl__bar .sx__search { max-width: 22rem; }
+.rcl__count { margin-left: auto; font-size: var(--cbm-text-sm, 0.9rem); color: var(--cbm-slate-700, #556); }
+
 .ctb__tiles {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
   gap: 0.75rem; margin: 0.5rem 0 0.75rem;

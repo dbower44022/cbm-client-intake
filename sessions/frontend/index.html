@@ -134,6 +134,38 @@
         <p class="sx__muted" id="noSessions" hidden>No sessions recorded yet.</p>
       </div>
 
+      <!-- Referred Clients: the client engagements that name this partner as
+           their referring partner (partner domain only). Status filter (left)
+           + search (middle); clicking the engagement name opens the engagement
+           in the mentor domain's own record page (a stable, single-tab-guarded
+           window). Read-only. -->
+      <div class="sx__dpanel" data-dpanel="referredClients" hidden>
+        <div class="sx__comm-head">
+          <h3>Referred Clients</h3>
+        </div>
+        <div class="rcl__bar">
+          <label class="sx__statusfilter">Status
+            <select id="rclStatus"></select>
+          </label>
+          <input type="search" id="rclSearch" class="sx__search" placeholder="Search referred clients…">
+          <span class="rcl__count" id="rclCount"></span>
+        </div>
+        <p class="sx__notice" id="rclNotice" role="status" hidden></p>
+        <p class="sx__loading" id="rclLoading" hidden>Loading…</p>
+        <table class="sx__table" id="rclTable" hidden>
+          <thead><tr>
+            <th data-sort="name" scope="col">Client Engagement</th>
+            <th data-sort="startDate" scope="col">Date Started</th>
+            <th data-sort="lastContact" scope="col">Last Contact</th>
+            <th data-sort="mentorName" scope="col">Assigned Mentor</th>
+            <th data-sort="contactName" scope="col">Primary Contact</th>
+            <th data-sort="totalSessions" scope="col">Sessions</th>
+          </tr></thead>
+          <tbody id="rclBody"></tbody>
+        </table>
+        <p class="sx__muted" id="noRcl" hidden>No referred clients.</p>
+      </div>
+
       <!-- Contributions: the funder ledger (sponsor domain only —
            prds/funder-contributions-plan.md). Four Received-only tiles +
            recency callout + rolling-window rollup + grid. Soft delete = the

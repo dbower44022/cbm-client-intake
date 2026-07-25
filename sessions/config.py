@@ -229,6 +229,16 @@ class DomainConfig:
     contributions_donor_account_attr: Optional[str] = None
     contributions_donor_contact_attr: Optional[str] = None
 
+    # --- Referred Clients tab (partner domain only; Doug's request 2026-07-25).
+    # The hasMany reverse link on the parent (CPartnerProfile) to the client
+    # engagements that name it as their referring partner (reverse of
+    # ``CEngagement.referringPartner`` — the CRM link is ``engagements``, verified
+    # live 2026-07-25). Setting it enables BOTH the Referred Clients detail tab
+    # and the ``/records/{id}/referredclients`` endpoint (the contributions_link
+    # gating precedent). Each row is a referred engagement; clicking its name
+    # opens the engagement in the mentor domain's own record page.
+    referred_clients_link: Optional[str] = None
+
     # --- Discussion pane (2026-07-23; prompts/record-discussion-pane-prompt.md).
     # Enables the Overview's staff-internal, attributed comment stream (the
     # Submission-Admin Discussion, ported). Set on partner + sponsor; a per-domain
@@ -572,6 +582,9 @@ PARTNER = DomainConfig(
     contacts_show_agreements=False,
     primary_contact_settable=True,
     company_industry_fact=True,
+    # Client engagements that name this partner as their referring partner
+    # (reverse of CEngagement.referringPartner) — the Referred Clients tab.
+    referred_clients_link="engagements",
     discussion_enabled=True,
 )
 

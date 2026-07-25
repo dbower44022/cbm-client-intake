@@ -299,6 +299,83 @@ def test_primary_contact_endpoint_not_registered_on_the_mentor_domain(monkeypatc
         ).status_code in (404, 405)
 
 
+# --- Referred Clients tab (partner domain only) -----------------------------
+
+class _ReferredClient:
+    """Returns the partner's referred engagements via the reverse link."""
+
+    def __init__(self, engagements):
+        self._engagements = engagements
+        self.calls: list[tuple] = []
+
+    async def list_related(self, entity, record_id, link, **kw):
+        self.calls.append((entity, record_id, link))
+        return {"list": list(self._engagements)}
+
+
+_ENG_ROWS = [
+    {"id": "E1", "name": "Acme Weight Loss", "engagementStatus": "Active",
+     "engagementStartDate": "2026-01-05", "lastSessionDate": "2026-07-01",
+     "mentorProfileName": "Milt Sierra", "mentorProfileId": "M9",
+     "primaryEngagementContactName": "Ann Client", "primaryEngagementContactId": "C1",
+     "totalSessions": 4, "createdAt": "2026-01-05 10:00:00"},
+    {"id": "E2", "name": "Beta Foods", "engagementStatus": "Submitted",
+     "engagementStartDate": None, "lastSessionDate": None,
+     "mentorProfileName": None, "mentorProfileId": None,
+     "primaryEngagementContactName": None, "primaryEngagementContactId": None,
+     "totalSessions": 0, "createdAt": "2026-02-10 10:00:00"},
+]
+
+
+@pytest.mark.asyncio
+async def test_list_referred_clients_reads_the_reverse_link():
+    client = _ReferredClient(_ENG_ROWS)
+    res = await service.list_referred_clients(PARTNER, client, "P1")
+    # reads CPartnerProfile.engagements (reverse of CEngagement.referringPartner)
+    assert client.calls == [("CPartnerProfile", "P1", "engagements")]
+    rows = res["records"]
+    assert [r["id"] for r in rows] == ["E2", "E1"]  # newest createdAt first
+    e1 = next(r for r in rows if r["id"] == "E1")
+    assert e1["name"] == "Acme Weight Loss" and e1["status"] == "Active"
+    assert e1["startDate"] == "2026-01-05"
+    assert e1["lastContact"] == "2026-07-01"  # = the engagement's last session date
+    assert e1["mentorName"] == "Milt Sierra" and e1["mentorId"] == "M9"
+    assert e1["contactName"] == "Ann Client" and e1["contactId"] == "C1"
+    assert e1["totalSessions"] == 4
+
+
+@pytest.mark.asyncio
+async def test_list_referred_clients_empty_without_the_link():
+    # the mentor/sponsor domains don't set referred_clients_link → never reads
+    client = _ReferredClient(_ENG_ROWS)
+    assert await service.list_referred_clients(MENTOR, client, "E1") == {"records": []}
+    assert client.calls == []
+
+
+def test_referred_clients_tab_is_partner_only():
+    from sessions.router import _detail_tabs
+    assert "referredClients" in [t["key"] for t in _detail_tabs(PARTNER)]
+    assert "referredClients" not in [t["key"] for t in _detail_tabs(MENTOR)]
+    assert "referredClients" not in [t["key"] for t in _detail_tabs(SPONSOR)]
+
+
+def test_referred_clients_endpoint(monkeypatch):
+    _as(monkeypatch, _USER, client=_ReferredClient(_ENG_ROWS))
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.get("/partnersessions/api/records/P1/referredclients")
+        assert r.status_code == 200
+        assert [row["id"] for row in r.json()["records"]] == ["E2", "E1"]
+
+
+def test_referred_clients_endpoint_not_registered_on_the_mentor_domain(monkeypatch):
+    _as(monkeypatch, _USER, client=_ReferredClient(_ENG_ROWS))
+    with TestClient(_app(monkeypatch)) as c:
+        # falls through to the static mount — never a handled endpoint
+        assert c.get(
+            "/mentorsessions/api/records/E1/referredclients"
+        ).status_code in (404, 405)
+
+
 def test_primary_contact_endpoint_rejects_a_stranger(monkeypatch):
     _as(monkeypatch, _USER)
     with TestClient(_app(monkeypatch)) as c:

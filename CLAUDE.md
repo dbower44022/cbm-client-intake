@@ -1612,6 +1612,36 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-25)
 
+**v0.156.0** (2026-07-25, full suite green, committed NOT pushed) — **Referred
+Clients tab on the Partner View** (Doug's request). The partner record detail
+gains a **Referred Clients** tab (after Sessions, partner domain only) listing
+the client engagements that name this partner as their referring partner
+(`CEngagement.referringPartner`, read via the reverse link
+`CPartnerProfile.engagements` — verified live 2026-07-25). Main-grid look: a
+**status filter** (left) + full-text **search** (middle) over a
+sortable/resizable grid with the columns Doug asked for — Client Engagement ·
+Date Started · Last Contact · Assigned Mentor · Primary Contact · Sessions.
+"Last Contact" = the engagement's `lastSessionDate` (CEngagement has no
+dedicated last-contacted field; its most recent session is the last client
+contact — a mapping worth confirming with Doug). Assigned-mentor + primary-contact
+cells open the standard read-only pop-ups; clicking the **engagement name** opens
+`/mentorsessions/record/{id}` in a stable per-record window (the same single-tab
+"duplicate tab control" the grids use). Gating = the contributions/discussion
+precedent: `DomainConfig.referred_clients_link` (`"engagements"` on partner)
+drives BOTH the `_detail_tabs` insertion and the
+`GET /{slug}/api/records/{id}/referredclients` endpoint registration (mentor/
+sponsor routers never carry either). New `service.list_referred_clients`;
+read-only, no CRM change, no migration. Verified: 5 new tests + the full flow
+(render/filter/search/sort/link target) in a real browser harness. **NOT yet
+driven live** — after deploy, open a real partner with referred engagements and
+confirm the list + filter/search + engagement-name → mentor record page.
+**Version-race note:** four of this feature's files
+(`sessions/router.py`, `sessions/frontend/{app.js,index.html,styles.css}`) are
+also being edited by a PARALLEL email-quality session (unread chips / forward
+attachments / digest); the commit stages ONLY this feature's hunks in those
+shared files (index-only `git apply --cached`), leaving the parallel work
+untouched and uncommitted. Mechanics: CHANGELOG 0.156.0.
+
 **v0.154.0** (2026-07-25, 1130 tests green, committed NOT pushed) — **Partner &
 Funder Management: Last Contacted grid column + clickable contact name/email**
 (Doug's three follow-up requests after the v0.153.0 review). (1) A new

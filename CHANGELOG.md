@@ -4,6 +4,40 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.156.0] — 2026-07-25
+
+**feat(partnersessions): Referred Clients tab on the Partner View** — Doug's
+request. The partner record detail gains a **Referred Clients** tab (inserted
+right after Sessions, partner domain only) listing the client engagements that
+name this partner as their **referring partner**
+(`CEngagement.referringPartner` → this `CPartnerProfile`, read through the
+reverse link `CPartnerProfile.engagements`, verified live 2026-07-25).
+
+The tab mirrors the main-grid look: a **status filter** on the left, a
+full-text **search** box in the middle, and a sortable/resizable grid with the
+columns Doug specified — **Client Engagement · Date Started · Last Contact ·
+Assigned Mentor · Primary Contact · Sessions**. "Last Contact" reads the
+engagement's `lastSessionDate` (CEngagement has no dedicated last-contacted
+field — its most recent session *is* the last client contact). The assigned
+mentor and primary contact cells open the standard read-only pop-ups; an empty
+value renders "—". Clicking the **engagement name** opens the engagement in the
+**mentor domain's own record page** (`/mentorsessions/record/{id}`) in a stable
+per-record window, so re-clicking reuses the tab and that page's single-tab
+guard blocks a genuine duplicate ("duplicate tab control").
+
+Gating follows the contributions/discussion precedent: a new
+`DomainConfig.referred_clients_link` (`"engagements"` on the partner domain)
+drives BOTH the tab insertion in `_detail_tabs` and the
+`GET /{slug}/api/records/{id}/referredclients` endpoint registration, so the
+mentor/sponsor routers never carry either. Read-only; no CRM changes, no new
+migration. New service function `service.list_referred_clients`. Verified: 5 new
+tests + the full flow (tab render, filter, search, numeric-aware sort, engagement
+link target) in a real browser harness.
+
+**NOT yet driven live** — after deploy, open a real partner with referred
+engagements on crm-test/prod and confirm the tab lists them, the filter/search
+work, and an engagement name opens the mentor record page.
+
 ## [0.155.0] — 2026-07-25
 
 **feat(mentoradmin): assign a mentor to Permission Teams from the Status tab** —
