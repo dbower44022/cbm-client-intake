@@ -190,6 +190,15 @@ with an **"Add to this record" checkbox** (checked by default):
 One **Send** click does it all: checked rows are linked/created first, then
 the email goes out.
 
+**Sending updates the record's Last Contact date.** When you send an email from
+a record's Communications tab, the record's **Last Contact** date is
+automatically advanced to today (client engagements use the *Last Contact Date*
+field; partners and funders use *Last Contacted*). Recording a session does the
+same, using the session's date. The date only ever moves forward — it never goes
+backward — so it always reflects your most recent contact. (Quick-compose from a
+grid, My Email, and the shared info@ mailbox aren't tied to one of these records,
+so they don't change it.)
+
 ## Email addresses anywhere in the apps are compose links
 
 Wherever an email address appears in the staff tools — a contact table, a
