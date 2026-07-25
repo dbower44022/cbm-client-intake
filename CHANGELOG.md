@@ -4,6 +4,48 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.159.0] — 2026-07-25
+
+**feat(ops): Email Quality Phase 3 — info@ poller window + Other
+correspondence** (§5 of `prds/email-quality-improvement-plan.md`; the plan is
+now feature-complete). No migration. NOT yet driven live.
+
+### Fixed
+- **The inbound info@ poll no longer misses a burst.** It swept only the
+  newest ~100 inbox messages; a busier interval could scroll a new request
+  off the page. It now reads a time-bounded window (Gmail `newer_than:Nd`,
+  `OPS_INBOUND_WINDOW_DAYS` default 2) and paginates the WHOLE window (25-page
+  safety cap, logged if hit). Dedup is unchanged, so re-listing the window
+  each cycle stays cheap.
+
+### Added
+- **Other correspondence** in Submission Admin (F15): a list of inbound
+  info@ threads NOT tied to a submission — replies to notices staff sent as
+  info@ (from a record's Communications tab or the quick-compose links),
+  which the poller ignores by design so they never became visible in-app.
+  A live Gmail read of the shared mailbox: `GET /ops/api/correspondence`
+  (non-anchored threads where info@ has both sent and received, newest first,
+  a "Reply owed" flag when they spoke last) + `GET /ops/api/correspondence/
+  {threadId}` (the cleaned thread). Read + **Reply** in-app — the reply goes
+  as info@ and stays on the same Gmail thread (the quick-compose reply path,
+  no submission anchor). Nothing stored; shared-mailbox mode only; the button
+  appears only when OPS_MAILBOX is configured. Marketing Admin no longer has
+  to watch raw Gmail for these. Reused: the conversation message-cleaner
+  (factored to `_clean_shared_messages`) and the `msgCard` renderer.
+
+### Config
+- `ops_inbound_window_days` (default 2) — the inbound poll's lookback window.
+
+### Verified
+- 1154 tests green (new: poller pagination; correspondence list/thread/
+  shared-mailbox-required). The Other correspondence view (list → reader →
+  reply on the thread, no submissionId) driven in the stub harness with no
+  console errors. Also fixed a test-isolation leak the new digest tests
+  introduced (get_settings lru_cache not cleared → a later file saw a stray
+  DATABASE_URL). **NOT yet driven live** — after deploy to the shared-mailbox
+  env, reply to an info@ notice from an external address and confirm it
+  appears under Other correspondence, reads, and replies on the same thread.
+
 ## [0.158.0] — 2026-07-25
 
 **feat(sessions): auto-maintained "Last Contact Date"** — Doug's follow-up to

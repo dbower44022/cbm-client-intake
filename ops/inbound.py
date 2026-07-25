@@ -42,6 +42,10 @@ log = logging.getLogger("cbm_intake.ops.inbound")
 FORM_SLUG = "info-email"
 INBOX_QUERY = "in:inbox"
 LIST_LIMIT = 100
+# Pagination safety cap: at info@ volumes the window fits in a handful of
+# pages; this stops a pathological inbox from spinning the poll. Hitting it is
+# logged (never silent), and the next cycle continues from the newest anyway.
+_MAX_PAGES = 25
 _TOKEN_PREFIX = "gmail-thread-"
 # Delivery-status/bounce senders: replies to our own sends that would only
 # clutter the queue. Everything else — including noreply@ marketing — is
@@ -206,8 +210,28 @@ async def run_inbound_cycle(settings: Settings, store: SubmissionStore) -> dict[
         log.warning("inbound poll skipped: %s", exc)
         return stats
     try:
-        listing = await gmail.list_messages(INBOX_QUERY, max_results=LIST_LIMIT)
-        msgs = listing.get("messages") or []
+        # Time-bounded, fully paginated sweep (Phase 3): every inbound message
+        # in the last N days, not just the newest 100 — so a burst between
+        # polls can't scroll a new request off the page. Dedup below skips
+        # threads already tracked, so re-listing the window each cycle is cheap.
+        window = max(1, settings.ops_inbound_window_days)
+        query = f"{INBOX_QUERY} newer_than:{window}d"
+        msgs: list[dict[str, Any]] = []
+        page_token = None
+        for page in range(_MAX_PAGES):
+            listing = await gmail.list_messages(
+                query, page_token=page_token, max_results=LIST_LIMIT
+            )
+            msgs.extend(listing.get("messages") or [])
+            page_token = listing.get("nextPageToken")
+            if not page_token:
+                break
+            if page == _MAX_PAGES - 1:
+                log.warning(
+                    "inbound poll hit the %s-page cap for %s (window=%sd) — "
+                    "older messages in this window wait for the next cycle",
+                    _MAX_PAGES, gmail.mailbox, window,
+                )
         stats["listed"] = len(msgs)
         thread_ids: list[str] = []
         for m in msgs:

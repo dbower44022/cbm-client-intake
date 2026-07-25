@@ -47,6 +47,13 @@ class FakeOpsStore:
     async def get_submission(self, submission_id):
         return self.rows.get(submission_id)
 
+    async def known_gmail_threads(self, thread_ids):
+        wanted = set(thread_ids)
+        known = set()
+        for row in self.rows.values():
+            known.update(t for t in (row.get("thread_ids") or []) if t in wanted)
+        return known
+
     async def counts_by_status(self):
         return {"needs_attention": 1}
 
@@ -743,3 +750,82 @@ def test_list_carries_base_state(monkeypatch):
     with TestClient(_app(monkeypatch, store)) as c:
         rows = c.get("/ops/api/submissions").json()["submissions"]
     assert rows[0]["baseState"] == "in_progress"
+
+
+# --- Other correspondence (Phase 3, F15) ------------------------------------
+
+
+class FakeCorrGmail(FakeSharedGmail):
+    """FakeSharedGmail + a list_messages for the correspondence sweep."""
+
+    def __init__(self, threads, listing):
+        super().__init__(threads)
+        self._listing = listing
+
+    async def list_messages(self, query, page_token=None, max_results=100):
+        return {"messages": self._listing}
+
+
+def test_correspondence_lists_non_submission_reply_threads(monkeypatch):
+    """The list shows a reply to a staff notice (info@ sent + a real inbound
+    reply) but NOT a thread anchored to a submission, and NOT a brand-new
+    inbound-only thread the poller will capture."""
+    store = FakeOpsStore()
+    store.rows["abc12345"]["thread_ids"] = ["t-sub"]  # anchored to a submission
+    gmail = FakeCorrGmail(
+        threads={
+            # A staff notice reply: info@ sent, the recipient replied.
+            "t-corr": {"messages": [
+                _raw_msg("s1", "t-corr", f"CBM Info <{_MAILBOX}>", internal="1753000000000"),
+                _raw_msg("r1", "t-corr", "Pat Vendor <pat@vendor.test>", internal="1753000600000"),
+            ]},
+            # An anchored submission thread (must be excluded).
+            "t-sub": {"messages": [_raw_msg("m1", "t-sub", "Sub <sub@x.test>")]},
+            # A brand-new inbound-only thread (no info@ send) — not correspondence.
+            "t-new": {"messages": [_raw_msg("n1", "t-new", "New <new@x.test>")]},
+        },
+        listing=[
+            {"id": "r1", "threadId": "t-corr"},
+            {"id": "m1", "threadId": "t-sub"},
+            {"id": "n1", "threadId": "t-new"},
+        ],
+    )
+    _shared_env(monkeypatch, gmail)
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, store)) as c:
+        data = c.get("/ops/api/correspondence").json()
+    assert data["mailbox"] == _MAILBOX
+    assert [t["threadId"] for t in data["threads"]] == ["t-corr"]
+    t = data["threads"][0]
+    assert t["withAddress"] == "pat@vendor.test"
+    assert t["awaitingReply"] is True   # the reply is the newest message
+
+
+def test_correspondence_requires_shared_mailbox(monkeypatch):
+    monkeypatch.setenv("GMAIL_SYNC", "true")
+    monkeypatch.delenv("OPS_MAILBOX", raising=False)
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, FakeOpsStore())) as c:
+        data = c.get("/ops/api/correspondence").json()
+    assert data["threads"] == []
+    assert "OPS_MAILBOX" in data["reason"]
+
+
+def test_correspondence_thread_returns_cleaned_messages(monkeypatch):
+    gmail = FakeCorrGmail(
+        threads={"t-corr": {"messages": [
+            _raw_msg("s1", "t-corr", f"CBM Info <{_MAILBOX}>", internal="1753000000000"),
+            _raw_msg("r1", "t-corr", "Pat <pat@vendor.test>", internal="1753000600000"),
+        ]}},
+        listing=[],
+    )
+    _shared_env(monkeypatch, gmail)
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, FakeOpsStore())) as c:
+        data = c.get("/ops/api/correspondence/t-corr").json()
+    ids = [m["id"] for m in data["messages"]]
+    assert ids == ["r1", "s1"]  # newest first
+    by_id = {m["id"]: m for m in data["messages"]}
+    assert by_id["s1"]["direction"] == "sent"
+    assert by_id["r1"]["direction"] == "received"
+    assert by_id["r1"]["rfcMessageId"]  # reply-threading field present

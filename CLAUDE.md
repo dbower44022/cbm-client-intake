@@ -1612,7 +1612,35 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-25)
 
-**v0.158.0** (2026-07-25, 1154 tests green, committed NOT pushed) —
+**v0.159.0** (2026-07-25, 1154 tests green, committed NOT pushed) — **Email
+Quality Phase 3 — info@ poller window + Other correspondence** (§5 of
+`prds/email-quality-improvement-plan.md`; the plan is now FEATURE-COMPLETE,
+Phases 1–3 all built). No migration.
+- **info@ poller window**: the inbound sweep (`ops/inbound.py`) is now
+  time-bounded (`newer_than:{ops_inbound_window_days}d`, default 2) and FULLY
+  paginated (25-page cap, logged if hit) instead of newest-100 — a burst can
+  no longer scroll a new request off the page. Dedup unchanged.
+- **Other correspondence** (F15, Doug ruled "build the list"): a new **Other
+  correspondence** view in `/ops` surfacing inbound info@ threads NOT tied to
+  a submission (replies to notices staff sent as info@, which the poller
+  ignores by design). Live Gmail read of the shared mailbox —
+  `GET /ops/api/correspondence` (non-anchored threads where info@ both sent
+  and received; "Reply owed" when they spoke last) +
+  `/correspondence/{threadId}` (cleaned thread). Read + Reply in-app (reply as
+  info@, stays on the thread via the quick-compose reply path, no submission
+  anchor). Nothing stored; shown only when OPS_MAILBOX is set. Reused the
+  message-cleaner (factored to `_clean_shared_messages`) + `msgCard`.
+  Verified: 1154 tests green (poller pagination + correspondence
+  list/thread/gate; also fixed a get_settings-cache test-isolation leak from
+  the Phase 2 digest tests). Full correspondence flow (list → reader → reply
+  on the thread) driven in the stub harness, no console errors. **NOT yet
+  driven live** — after deploy to the shared-mailbox env: reply to an info@
+  notice from an external address → it appears under Other correspondence,
+  reads, and replies on the same thread. **Parallel-session note:** built
+  alongside 0.158.0 (Last Contact Date); that committed first, so this is a
+  clean delta (ops/* + core/config.py, no shared code files).
+
+Before that: **v0.158.0** (2026-07-25, 1154 tests green, committed NOT pushed) —
 **auto-maintained "Last Contact Date"** (Doug's follow-up to the Referred
 Clients tab: "Last Contact" should read a real, auto-updated field, not the
 session-date proxy). Fields (already built on the CRM, verified crm-test):

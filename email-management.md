@@ -311,6 +311,16 @@ Replies from a submitter to an **existing** submission conversation join
 that conversation — they never become a duplicate queue item. Bounce
 messages and mail the process itself sent are ignored.
 
+### Other correspondence
+
+Not every reply to info@ belongs to a submission. When staff send a message
+as info@ (from a record's Communications tab, or an address compose link) and
+the recipient replies, that reply lands in the info@ inbox but never becomes a
+queue item. Submission Admin's **Other correspondence** list surfaces exactly
+those threads — read and reply in-app (the reply goes as info@ and stays on
+the thread), so Marketing Admin never has to watch raw Gmail. It's a live
+window on the shared inbox; nothing is stored.
+
 ### The audit trail
 
 Every submission — form or email, delivered, held, or discarded — is also

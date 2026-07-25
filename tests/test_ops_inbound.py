@@ -270,3 +270,37 @@ async def test_orchestrator_without_subject_keeps_plain_message():
     await submit_email(_email_submission(subject=None), client)
     req = client.creates[1][1]
     assert req["message"] == "Do you help retail startups?"
+
+
+class PagingFakeGmail(FakeGmail):
+    """A FakeGmail whose list_messages returns two pages, so the poller must
+    paginate to see the second page's thread."""
+
+    async def list_messages(self, query, page_token=None, max_results=100):
+        # Sanity: the Phase-3 sweep is time-bounded.
+        assert "newer_than:" in query
+        if page_token is None:
+            return {"messages": [{"id": "m1", "threadId": "t1"}], "nextPageToken": "P2"}
+        return {"messages": [{"id": "m2", "threadId": "t2"}]}
+
+
+@pytest.mark.asyncio
+async def test_poll_paginates_the_window(monkeypatch):
+    """A thread only on the SECOND page is still captured (Phase 3: the sweep
+    is time-bounded and fully paginated, not just the newest page)."""
+    gmail = PagingFakeGmail(
+        listing=[],
+        threads={
+            "t1": {"messages": [_raw("m1", "t1", "Ann One <ann@example.com>")]},
+            "t2": {"messages": [_raw("m2", "t2", "Bob Two <bob@example.com>")]},
+        },
+    )
+    _patch_gmail(monkeypatch, gmail)
+    store = FakeInboundStore()
+
+    stats = await run_inbound_cycle(_settings(), store)
+
+    assert stats["listed"] == 2 and stats["threads"] == 2
+    assert stats["captured"] == 2
+    emails = {r["payload"]["email"] for r in store.rows.values()}
+    assert emails == {"ann@example.com", "bob@example.com"}

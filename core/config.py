@@ -146,6 +146,12 @@ class Settings(BaseSettings):
     ops_mailbox: str = ""
     ops_mailbox_name: str = "Cleveland Business Mentors"  # From display name on shared sends
     ops_inbound_seconds: int = 300          # inbound info@ poll cadence (0 = off)
+    # How far back the inbound poll sweeps each cycle (Gmail `newer_than:Nd`).
+    # The poll paginates the WHOLE window (not just the newest 100) so a burst
+    # can't scroll a new request past the page; dedup skips already-tracked
+    # threads. 2 days is ~576× the 5-min cadence — ample margin for worker
+    # downtime, while bounding the repeated listing.
+    ops_inbound_window_days: int = 2
     # Session Management tools — one engine, three team-gated routes
     # (/mentorsessions, /partnersessions, /sponsorsessions). Each lets its users
     # record CSession meetings against the records they own.

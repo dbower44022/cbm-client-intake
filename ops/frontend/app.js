@@ -145,6 +145,14 @@
   $("formFilter").addEventListener("change", function () { state.form = this.value; loadData(); });
   $("searchBox").addEventListener("input", function () { state.search = this.value.trim().toLowerCase(); renderTable(); });
   $("backBtn").addEventListener("click", function () { stopPresencePoll(); hide($("detailView")); show($("dashView")); loadData(); });
+  $("corrBtn").addEventListener("click", showCorrespondence);
+  $("corrBackBtn").addEventListener("click", function () { hide($("corrView")); show($("dashView")); loadData(); });
+  $("corrRefreshBtn").addEventListener("click", loadCorrespondence);
+  $("corrModalClose").addEventListener("click", closeCorrModal);
+  $("corrModalBackdrop").addEventListener("click", closeCorrModal);
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !$("corrModal").hidden) closeCorrModal();
+  });
 
   function fillSelect(sel, values, placeholder) {
     sel.innerHTML = "";
@@ -1040,6 +1048,116 @@
     messages.forEach(function (m) { box.appendChild(msgCard(m, true)); });
   }
 
+  // --- Other correspondence (Phase 3) --------------------------------------
+  var corrThreads = [];
+
+  function corrAvailable() {
+    return !!(config && config.commsEnabled && config.opsMailbox);
+  }
+
+  function showCorrespondence() {
+    hide($("dashView")); hide($("detailView")); show($("corrView"));
+    $("corrMailbox").textContent = (config && config.opsMailbox) || "the shared mailbox";
+    loadCorrespondence();
+  }
+
+  async function loadCorrespondence() {
+    clearNotice("corrNotice");
+    show($("corrLoading")); hide($("corrTable")); hide($("corrEmpty"));
+    try {
+      var res = await api("/correspondence");
+      corrThreads = res.threads || [];
+      if (res.reason) { notice("corrNotice", res.reason, "warn"); }
+    } catch (e) {
+      hide($("corrLoading"));
+      if (e.status === 401) { showLogin(); return; }
+      notice("corrNotice", e.message, "error");
+      return;
+    }
+    hide($("corrLoading"));
+    renderCorrespondence();
+  }
+
+  function renderCorrespondence() {
+    var body = $("corrBody"); body.innerHTML = "";
+    if (!corrThreads.length) { show($("corrEmpty")); hide($("corrTable")); return; }
+    hide($("corrEmpty")); show($("corrTable"));
+    corrThreads.forEach(function (t) {
+      var tr = document.createElement("tr");
+      tr.className = "ops__row"; tr.tabIndex = 0; tr.setAttribute("role", "button");
+
+      var c0 = document.createElement("td");
+      if (t.awaitingReply) {
+        var chip = document.createElement("span");
+        chip.className = "ops__chip ops__chip--owed"; chip.textContent = "Reply owed";
+        c0.appendChild(chip);
+      }
+      var c1 = document.createElement("td");
+      c1.textContent = CBMConversation.partyName(t.withName || t.withAddress);
+      var c2 = document.createElement("td");
+      var subj = document.createElement("div"); subj.textContent = t.subject || "(no subject)";
+      var snip = document.createElement("div"); snip.className = "ops__snip";
+      snip.textContent = t.snippet || "";
+      c2.appendChild(subj); c2.appendChild(snip);
+      var c3 = document.createElement("td"); c3.className = "ops__nowrap";
+      c3.textContent = fmtDate(t.lastAt);
+
+      tr.appendChild(c0); tr.appendChild(c1); tr.appendChild(c2); tr.appendChild(c3);
+      tr.addEventListener("click", function () { openCorrThread(t); });
+      tr.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openCorrThread(t); }
+      });
+      body.appendChild(tr);
+    });
+  }
+
+  async function openCorrThread(t) {
+    $("corrModalTitle").textContent = t.subject || "(no subject)";
+    $("corrModalBody").innerHTML = "<p class='is-muted'>Loading conversation…</p>";
+    $("corrModalReply").innerHTML = "";
+    show($("corrModal"));
+    var msgs;
+    try {
+      var res = await api("/correspondence/" + encodeURIComponent(t.threadId));
+      msgs = res.messages || [];
+    } catch (e) {
+      if (e.status === 401) { closeCorrModal(); showLogin(); return; }
+      $("corrModalBody").innerHTML = "";
+      var p = document.createElement("p"); p.className = "form-error"; p.textContent = e.message;
+      $("corrModalBody").appendChild(p); return;
+    }
+    var box = $("corrModalBody"); box.innerHTML = "";
+    if (!msgs.length) {
+      box.innerHTML = "<p class='is-muted'>No readable messages in this conversation.</p>";
+    } else {
+      msgs.forEach(function (m) { box.appendChild(msgCard(m, true)); });
+    }
+    // Reply: send as the shared identity, staying on this Gmail thread. The
+    // newest message (msgs[0]) carries the threading fields; reply TO the last
+    // party who isn't us.
+    if (config && config.commsEnabled && window.CBMQuickMail) {
+      var last = msgs.length ? msgs[0] : null;
+      var replyBtn = document.createElement("button");
+      replyBtn.type = "button"; replyBtn.className = "small-btn";
+      replyBtn.textContent = "↩ Reply";
+      replyBtn.addEventListener("click", function () {
+        var subj = t.subject || "";
+        if (subj && !/^re:/i.test(subj)) subj = "Re: " + subj;
+        CBMQuickMail.composeIfEnabled(t.withAddress, {
+          subject: subj,
+          reply: last ? {
+            threadId: last.threadId || t.threadId,
+            inReplyTo: last.rfcMessageId || "",
+            references: last.references || "",
+          } : { threadId: t.threadId },
+        });
+      });
+      $("corrModalReply").appendChild(replyBtn);
+    }
+  }
+
+  function closeCorrModal() { hide($("corrModal")); }
+
   // --- boot -----------------------------------------------------------------
   fillSelect($("statusFilter"), STATUSES, "All statuses");
   fillSelect($("formFilter"), FORMS, "All forms");
@@ -1049,6 +1167,7 @@
       closeReasons = config.closeReasons || [];
       $("whoName").textContent = config.name || config.userName;
       show($("userCorner"));
+      if (corrAvailable()) show($("corrBtn"));
       hide($("msgView")); show($("dashView"));
       loadData();
     } catch (e) { bootFail(e); }

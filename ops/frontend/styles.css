@@ -274,3 +274,21 @@ body { margin: 0; display: flex; flex-direction: column; }
   .ops__ov { grid-template-columns: 1fr; }
   .ops__duo { grid-template-columns: 1fr; }
 }
+
+/* --- Other correspondence (Phase 3) --- */
+.ops__corr-intro { color: var(--cbm-text); max-width: 70ch; margin: 0.4rem 0 0.8rem; font-size: var(--cbm-text-sm, 0.9rem); }
+.ops__chip { display: inline-block; padding: 0.05rem 0.5rem; border-radius: 999px; font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
+.ops__chip--owed { background: #fdecea; border: 1px solid #e3a5a5; color: #a23b38; }
+.ops__snip { color: var(--cbm-muted, #667); font-size: 0.82rem; margin-top: 0.1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60ch; }
+.ops__nowrap { white-space: nowrap; }
+/* Correspondence thread reader (overlay). */
+.ops__modal { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 3vh 1.5rem; }
+.ops__modal[hidden] { display: none !important; }
+.ops__modal-backdrop { position: fixed; inset: 0; background: rgba(18, 28, 42, 0.45); }
+.ops__modal-card { position: relative; z-index: 1; width: min(60rem, 94vw); height: 84vh; max-height: 90vh; display: flex; flex-direction: column; background: var(--cbm-surface, #fff); border-radius: 10px; box-shadow: 0 12px 40px rgba(18, 28, 42, 0.25); overflow: hidden; }
+.ops__modal-head { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.8rem 1rem; border-bottom: 1px solid var(--cbm-border, #eef1f4); }
+.ops__modal-name { margin: 0; font-size: 1.05rem; }
+.ops__modal-actions { display: inline-flex; align-items: center; gap: 0.6rem; }
+.ops__modal-close { background: none; border: none; font-size: 1.5rem; line-height: 1; cursor: pointer; color: var(--cbm-muted, #667); padding: 0 0.2rem; }
+.ops__modal-close:hover { color: var(--cbm-navy, #123); }
+.ops__modal-body { flex: 1 1 auto; overflow: auto; padding: 0.6rem 1rem 1rem; }

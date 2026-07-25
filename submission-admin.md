@@ -138,6 +138,25 @@ added either). Who actually clicked Send is still recorded internally. Every
 send ties its email thread to the submission, which is exactly what the
 conversation view (and the State column) reads.
 
+## Other correspondence
+
+The **Other correspondence** button (top of the queue, shown when the shared
+info@ mailbox is configured) opens a separate list: inbound email on
+info@cbmentors.org that **isn't tied to a submission**. In practice this is
+someone replying to a message staff sent as info@ — from a record's
+Communications tab, or the quick-compose "email this address" links. Those
+replies land in the info@ inbox but never become queue items (the poller only
+turns genuinely new inbound requests into submissions), so without this list
+they'd sit unseen in Gmail.
+
+Each row shows who it's with, the subject, when the last message arrived, and
+a **Reply owed** chip when they spoke last. Click a thread to read it, then
+**Reply** — the reply goes out as info@ (Cleveland Business Mentors) and stays
+on the same email thread, exactly like a submission reply. Nothing here is
+stored or tracked as a work item; it's a live window on the shared inbox so
+you don't have to open Gmail. Threads that ARE submissions never appear here —
+they're in the queue.
+
 ## Why don't I see…
 
 - **…the conversation / the reply-owed State?** The email-derived parts of

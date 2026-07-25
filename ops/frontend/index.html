@@ -47,6 +47,7 @@
         <select id="formFilter" aria-label="Filter by form"></select>
         <div class="ops__counts" id="counts"></div>
         <span class="ops__metrics" id="metrics"></span>
+        <button type="button" class="cbm-button cbm-button--secondary" id="corrBtn" hidden>Other correspondence</button>
         <button type="button" class="cbm-button cbm-button--secondary" id="refreshBtn">Refresh</button>
       </div>
 
@@ -61,6 +62,47 @@
         <p class="ops__loading" id="loadingState">Loading…</p>
       </div>
     </section>
+
+    <!-- Other correspondence (Phase 3): non-submission inbound info@ threads
+         — replies to notices staff sent as info@. Read + reply in-app. -->
+    <section class="ops__corr" id="corrView" hidden>
+      <div class="ops__detail-head">
+        <button type="button" class="cbm-button cbm-button--secondary" id="corrBackBtn">← Back</button>
+        <span class="ops__detail-heading">
+          <h2>Other correspondence</h2>
+        </span>
+        <span class="ops__detail-actions">
+          <button type="button" class="cbm-button cbm-button--secondary" id="corrRefreshBtn">Refresh</button>
+        </span>
+      </div>
+      <p class="ops__corr-intro">Inbound email on the shared <strong id="corrMailbox">info@</strong>
+        mailbox that isn't tied to a submission — usually a reply to a message staff sent from a
+        record or the quick-compose. Read and reply here; these never enter the submissions queue.</p>
+      <p class="ops__notice" id="corrNotice" role="status" hidden></p>
+      <div class="ops__gridwrap">
+        <table class="ops__table" id="corrTable" hidden>
+          <thead><tr><th></th><th>With</th><th>Subject</th><th>Last message</th></tr></thead>
+          <tbody id="corrBody"></tbody>
+        </table>
+        <p class="ops__empty" id="corrEmpty" hidden>No other correspondence right now.</p>
+        <p class="ops__loading" id="corrLoading">Loading…</p>
+      </div>
+    </section>
+
+    <!-- Correspondence thread reader (overlay) -->
+    <div class="ops__modal" id="corrModal" hidden role="dialog" aria-modal="true" aria-labelledby="corrModalTitle">
+      <div class="ops__modal-backdrop" id="corrModalBackdrop"></div>
+      <div class="ops__modal-card" role="document">
+        <div class="ops__modal-head">
+          <h3 class="ops__modal-name" id="corrModalTitle"></h3>
+          <span class="ops__modal-actions">
+            <span id="corrModalReply"></span>
+            <button type="button" class="ops__modal-close" id="corrModalClose" aria-label="Close">×</button>
+          </span>
+        </div>
+        <div class="ops__modal-body" id="corrModalBody"></div>
+      </div>
+    </div>
 
     <!-- Detail view (replaces the old modal): Overview / Details / Communications -->
     <section class="ops__detail" id="detailView" hidden>

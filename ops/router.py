@@ -454,6 +454,43 @@ async def save_notes(submission_id: str, body: NotesIn, request: Request) -> dic
 _MESSAGES_LIMIT = 25
 
 
+def _clean_shared_messages(raw: list, mailbox: str) -> list[dict]:
+    """Turn raw Gmail messages from the SHARED mailbox into the conversation
+    view's message dicts (shared by the submission conversation + the Other
+    correspondence reader). ``sent`` = written by the shared mailbox; a
+    delivery bounce on a received message is flagged. Newest first, clamped."""
+    from core.email_clean import clean_email
+    from core.gmail import looks_like_bounce, parse_message
+
+    out: list[dict] = []
+    for r in raw:
+        p = parse_message(r)
+        if {"DRAFT", "SPAM", "TRASH"} & set(p.label_ids):
+            continue
+        sent = p.from_address == mailbox
+        cleaned = clean_email(p.body_text, p.body_html or None, outbound=sent)
+        bounce = (not sent) and looks_like_bounce(p.from_address, p.subject or "")
+        out.append({
+            "bounce": bounce,
+            "id": p.gmail_id,
+            "threadId": p.thread_id,
+            # Reply threading: the frontend passes these back so the next send
+            # stays on this Gmail thread + RFC References chain.
+            "rfcMessageId": p.rfc_message_id,
+            "references": p.references,
+            "direction": "sent" if sent else "received",
+            "fromName": p.from_name or p.from_address,
+            "fromAddress": p.from_address,
+            "to": ", ".join(p.to_addresses),
+            "subject": p.subject or "(no subject)",
+            "date": p.sent_at,
+            "snippet": cleaned.snippet or p.snippet,
+            "bodyHtml": cleaned.html,
+        })
+    out.sort(key=lambda m: m["date"] or "", reverse=True)
+    return out[:_MESSAGES_LIMIT]
+
+
 def submission_thread_ids(row: dict) -> list[str]:
     """The Gmail threads anchored to a submission: the inbound origin thread
     (email-originated submissions carry it in the payload) + every thread a
@@ -568,40 +605,33 @@ async def submission_messages(submission_id: str, request: Request) -> dict:
                 status_code=502, detail="Couldn't read your mailbox — try again."
             )
 
-    from core.email_clean import clean_email
+    if shared:
+        messages = _clean_shared_messages(raw, gmail.mailbox)
+    else:
+        # Legacy per-admin mode: "sent" = not the submitter (no shared identity).
+        from core.email_clean import clean_email
 
-    messages = []
-    for r in raw:
-        p = parse_message(r)
-        if {"DRAFT", "SPAM", "TRASH"} & set(p.label_ids):
-            continue
-        # Shared mode: "sent" = written by the shared mailbox; legacy mode
-        # keeps the old submitter comparison.
-        sent = (p.from_address == gmail.mailbox) if shared else (p.from_address != address)
-        cleaned = clean_email(p.body_text, p.body_html or None, outbound=sent)
-        # Delivery failures thread with the original send — mark them so the
-        # UI shows "delivery failed" instead of an ordinary received message.
-        bounce = (not sent) and looks_like_bounce(p.from_address, p.subject or "")
-        messages.append({
-            "bounce": bounce,
-            "id": p.gmail_id,
-            "threadId": p.thread_id,
-            # For reply threading: the frontend passes these back so the next
-            # send stays on this Gmail thread + RFC References chain.
-            "rfcMessageId": p.rfc_message_id,
-            "references": p.references,
-            "direction": "sent" if sent else "received",
-            "fromName": p.from_name or p.from_address,
-            "fromAddress": p.from_address,
-            "to": ", ".join(p.to_addresses),
-            "subject": p.subject or "(no subject)",
-            "date": p.sent_at,
-            "snippet": cleaned.snippet or p.snippet,
-            "bodyHtml": cleaned.html,
-        })
-    messages.sort(key=lambda m: m["date"] or "", reverse=True)
+        messages = []
+        for r in raw:
+            p = parse_message(r)
+            if {"DRAFT", "SPAM", "TRASH"} & set(p.label_ids):
+                continue
+            sent = p.from_address != address
+            cleaned = clean_email(p.body_text, p.body_html or None, outbound=sent)
+            bounce = (not sent) and looks_like_bounce(p.from_address, p.subject or "")
+            messages.append({
+                "bounce": bounce, "id": p.gmail_id, "threadId": p.thread_id,
+                "rfcMessageId": p.rfc_message_id, "references": p.references,
+                "direction": "sent" if sent else "received",
+                "fromName": p.from_name or p.from_address,
+                "fromAddress": p.from_address, "to": ", ".join(p.to_addresses),
+                "subject": p.subject or "(no subject)", "date": p.sent_at,
+                "snippet": cleaned.snippet or p.snippet, "bodyHtml": cleaned.html,
+            })
+        messages.sort(key=lambda m: m["date"] or "", reverse=True)
+        messages = messages[:_MESSAGES_LIMIT]
     return {
-        "messages": messages[:_MESSAGES_LIMIT],
+        "messages": messages,
         "address": address,
         "mailbox": gmail.mailbox,
     }
@@ -711,6 +741,140 @@ async def reply_states(body: ReplyStatesIn, request: Request) -> dict:
     ids = body.ids[:_REPLY_STATE_LIMIT]
     results = await asyncio.gather(*(one(s) for s in ids))
     return {"states": dict(results)}
+
+
+# --- Other correspondence (Phase 3, F15) -------------------------------------
+# Inbound info@ threads that are NOT tied to a submission — replies to notices
+# staff sent as info@ (the poller ignores info@-initiated threads by design, so
+# they never enter the work queue). Read + reply live, so Marketing Admin never
+# has to watch raw Gmail. Shared-mailbox mode only; nothing stored.
+
+_CORR_LIST_QUERY = "in:inbox"
+_CORR_LIST_LIMIT = 80        # newest inbound messages scanned per view
+_CORR_THREAD_CAP = 40        # candidate threads fetched to classify
+
+
+def _corr_ready(settings) -> str | None:
+    """The shared mailbox is required — correspondence has no per-admin
+    meaning. Returns a readable reason string when unavailable, else None."""
+    if not settings.gmail_sync:
+        return "Email isn't enabled on this deployment."
+    if not settings.ops_mailbox:
+        return (
+            "Other correspondence needs the shared info@ mailbox "
+            "(OPS_MAILBOX) — it isn't configured on this deployment."
+        )
+    return None
+
+
+@router.get("/correspondence")
+async def correspondence(request: Request) -> dict:
+    """Non-submission inbound info@ threads — a reply to a notice staff sent as
+    info@, or other mail we've corresponded on that never became a work item.
+    Live Gmail read of the shared mailbox: the newest inbound messages, minus
+    threads anchored to a submission, keeping those where info@ has both sent
+    and received (so it's a conversation, not a brand-new request the poller
+    will capture)."""
+    _require_user(request)
+    store = _store(request)
+    settings = get_settings()
+    reason = _corr_ready(settings)
+    if reason:
+        return {"threads": [], "reason": reason}
+
+    from comms import service as comms_service
+    from core.gmail import GmailError, looks_like_bounce, parse_message
+
+    try:
+        gmail = await comms_service.gmail_for_shared_mailbox(settings, settings.ops_mailbox)
+    except comms_service.CommsError as exc:
+        return {"threads": [], "reason": str(exc)}
+    try:
+        listing = await gmail.list_messages(_CORR_LIST_QUERY, max_results=_CORR_LIST_LIMIT)
+        thread_ids: list[str] = []
+        for m in listing.get("messages") or []:
+            tid = m.get("threadId")
+            if tid and tid not in thread_ids:
+                thread_ids.append(tid)
+        anchored = await store.known_gmail_threads(thread_ids)
+        candidates = [t for t in thread_ids if t not in anchored]
+        capped = len(candidates) > _CORR_THREAD_CAP
+        candidates = candidates[:_CORR_THREAD_CAP]
+        fetched = await asyncio.gather(
+            *(gmail.get_thread(t) for t in candidates), return_exceptions=True
+        )
+        threads = []
+        for tid, t in zip(candidates, fetched):
+            if isinstance(t, Exception):
+                log.warning("correspondence thread fetch failed (%s): %s", tid, t)
+                continue
+            parts = [parse_message(m) for m in (t.get("messages") or [])]
+            parts = [p for p in parts if not ({"DRAFT", "SPAM", "TRASH"} & set(p.label_ids))]
+            if not parts:
+                continue
+            we_sent = any(p.from_address == gmail.mailbox for p in parts)
+            inbound = [p for p in parts if p.from_address != gmail.mailbox]
+            # A conversation we took part in (info@ sent AND received), not a
+            # brand-new inbound request (the poller captures those). Bounces
+            # to our sends never count as the "other party".
+            real_inbound = [
+                p for p in inbound
+                if not looks_like_bounce(p.from_address, p.subject or "")
+            ]
+            if not (we_sent and real_inbound):
+                continue
+            newest = max(parts, key=lambda p: p.sent_at or "")
+            other = max(real_inbound, key=lambda p: p.sent_at or "")
+            threads.append({
+                "threadId": tid,
+                "subject": newest.subject or "(no subject)",
+                "withName": other.from_name or other.from_address,
+                "withAddress": other.from_address,
+                "lastAt": newest.sent_at,
+                # The ball is in our court when the newest message isn't ours.
+                "awaitingReply": newest.from_address != gmail.mailbox,
+                "messageCount": len(parts),
+                "snippet": newest.snippet,
+            })
+        threads.sort(key=lambda r: r["lastAt"] or "", reverse=True)
+        result = {"threads": threads, "mailbox": gmail.mailbox}
+        if capped:
+            result["capped"] = True
+            log.info("correspondence view capped at %s candidate threads", _CORR_THREAD_CAP)
+        return result
+    except GmailError as exc:
+        log.warning("correspondence list failed: %s", exc)
+        raise HTTPException(status_code=502, detail="Couldn't read the shared mailbox — try again.")
+    finally:
+        await gmail.aclose()
+
+
+@router.get("/correspondence/{thread_id}")
+async def correspondence_thread(thread_id: str, request: Request) -> dict:
+    """One correspondence thread's messages (cleaned), newest first, with the
+    reply-threading fields the compose passes back to stay on the thread."""
+    _require_user(request)
+    settings = get_settings()
+    reason = _corr_ready(settings)
+    if reason:
+        raise HTTPException(status_code=503, detail=reason)
+
+    from comms import service as comms_service
+    from core.gmail import GmailError
+
+    try:
+        gmail = await comms_service.gmail_for_shared_mailbox(settings, settings.ops_mailbox)
+    except comms_service.CommsError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    try:
+        thread = await gmail.get_thread(thread_id)
+    except GmailError as exc:
+        log.warning("correspondence thread read failed (%s): %s", thread_id, exc)
+        raise HTTPException(status_code=502, detail="Couldn't read that conversation — try again.")
+    finally:
+        await gmail.aclose()
+    messages = _clean_shared_messages(thread.get("messages") or [], gmail.mailbox)
+    return {"messages": messages, "mailbox": gmail.mailbox}
 
 
 @router.post("/submissions/{submission_id}/redrive")

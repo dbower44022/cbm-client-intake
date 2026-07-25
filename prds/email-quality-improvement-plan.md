@@ -1,7 +1,26 @@
 # Email Quality Improvement Plan — closing the gaps between the app and Gmail
 
-**Status: Phase 2 BUILT (v0.157.0, 2026-07-25) — not yet driven live. Phase 1
-BUILT (v0.132.0) + crm-test live verification IN PROGRESS (2026-07-22).**
+**Status: Phase 3 BUILT (v0.158.0, 2026-07-25) — the plan is now
+feature-complete. Phase 2 BUILT (v0.157.0). Phase 1 BUILT (v0.132.0) +
+crm-test live verification IN PROGRESS (2026-07-22). Not yet driven live:
+Phase 2 + Phase 3.**
+
+Phase 3 (§5) shipped in v0.158.0, both loose ends:
+- **info@ poller window** — the inbound sweep is now time-bounded (Gmail
+  `newer_than:Nd`, `OPS_INBOUND_WINDOW_DAYS` default 2) and FULLY paginated
+  (up to a 25-page cap, logged if hit), so a burst between polls can't scroll
+  a new request past the newest 100. Dedup unchanged.
+- **Other correspondence (F15)** — Doug's ruling: build the list. A new
+  **Other correspondence** view in Submission Admin surfaces inbound info@
+  threads NOT tied to a submission (replies to notices staff sent as info@,
+  which the poller ignores by design). Live Gmail read of the shared mailbox
+  (`GET /ops/api/correspondence` + `/correspondence/{threadId}`), reusing the
+  conversation cleaner and the quick-compose (reply stays on the thread, as
+  info@, no submission anchor). Nothing stored. Marketing Admin no longer has
+  to watch raw Gmail for these. NOT yet driven live — after deploy, on the
+  shared-mailbox deploy: reply to an info@ notice from an external address and
+  confirm the thread appears under Other correspondence, reads, and replies on
+  the same thread.
 
 Phase 2 (§4) shipped in v0.157.0, all four unread-awareness surfaces plus
 server-side forward and the References chain: forward now carries the

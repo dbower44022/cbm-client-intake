@@ -4,11 +4,24 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
 from comms import digest
 from comms import service as comms_service
 from comms.store import MemoryCommsStore
 from core.config import get_settings
 from tests.test_comms_sync import FakeEspo
+
+
+@pytest.fixture(autouse=True)
+def _clear_settings_cache():
+    # These tests set OPS_MAILBOX / DATABASE_URL etc. via monkeypatch; clear the
+    # get_settings lru_cache on BOTH sides so a cached polluted Settings can't
+    # leak into a later test file (it did — test_partner_management then saw a
+    # DATABASE_URL and diverged).
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
 
 
 def _stamp(dt):
