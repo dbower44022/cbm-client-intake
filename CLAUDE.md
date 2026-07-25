@@ -1590,6 +1590,27 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-25)
 
+**v0.154.0** (2026-07-25, 1130 tests green, committed NOT pushed) — **Partner &
+Funder Management: Last Contacted grid column + clickable contact name/email**
+(Doug's three follow-up requests after the v0.153.0 review). (1) A new
+`date`-typed **Last Contacted** grid column reads
+`CPartnerProfile`/`CSponsorProfile.lastContacted` (already on both
+`detail_select`s; added to each `list_select`) — on the partner grid it sits
+**between the Partnership status and Company columns**; the funder grid has no
+status column, so it sits **just before Company** (the analogous position);
+empty renders "—". (2) In the Details-tab contacts table, each contact **name is
+now a link** opening the read-only Contact peek (`openPeek("Contact", …)`)
+whenever a Contact id resolves (client rows always, CBM rows when the profile's
+contact resolved) — styled `button.sxd__cnamelink` (keeps the bold-navy look,
+adds pointer + hover underline); applies to every domain's contacts table (the
+directory-grid convention). (3) The contacts-table **email is highlighted as a
+link** (link-blue + underline, `td.sxd__cemail a`) so staff know it opens an
+email — behavior unchanged (record-scoped compose, mailto fallback). Config +
+frontend/CSS only; no CRM changes, no new endpoints. CHANGELOG 0.154.0. **NOT
+driven in a browser** — after deploy, eyeball on a real partner/funder: the
+Last Contacted column position, name-click → contact pop-up, and the underlined
+email.
+
 **v0.153.0** (2026-07-25, 1119 tests green, committed NOT pushed) — **Partner &
 Funder Management review pass**: eight items from Doug's walkthrough of the
 partner app, each applied to the funder domain too. Full mechanics: the
