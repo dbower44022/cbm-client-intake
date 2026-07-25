@@ -558,11 +558,22 @@ Each phase is independently shippable and gated OFF until activated (`analytics_
 - **Proves the engine end-to-end** (Doug's flagship) without the authoring UI or record
   context. CRM prereq: create `Analytics Admin Team` (+ a view team) in both CRMs.
 
-### Phase B — Authoring UI (self-serve metrics/panels/pages)
-- Metric builder (CRM entity+filter+aggregation), panel composer, page composer.
+> **BUILT 2026-07-25 (v0.161.0).** See CHANGELOG 0.161.0. Deviations from the
+> plan, both noted where they occur: **panels are stored INLINE on the page**
+> (JSON), not in a separate reusable-panel table — metrics remain the reusable
+> unit, panels are cheap to recreate (§3.3/§3.6 revised in spirit); and
+> **drill-through (§9) is deferred to a follow-up** to keep Phase B focused —
+> `rows` panels already deep-link to records, but click-through from a stat/bar
+> to the underlying rows is not yet built. Everything else shipped: the metric
+> builder (entity+filter+aggregation), the page composer, per-panel visibility +
+> page `team_gate`, live previews, metric-usage delete safety, and action-log on
+> writes.
+
+### Phase B — Authoring UI (self-serve metrics/pages)
+- Metric builder (CRM entity+filter+aggregation), page composer with inline panels.
 - Per-panel visibility rules; page `team_gate`; action-log on authoring writes.
-- Live previews; metric-usage safety (§7.3). Drill-through (§9).
-- After B, admins create metrics/panels/pages in-app without a deploy.
+- Live previews; metric-usage safety (§7.3). (Drill-through §9 → follow-up.)
+- After B, admins create metrics/pages in-app without a deploy.
 
 ### Phase C — Record-scoped analytics + embedded tabs
 - Record context model (`context_param` injection); `applies_to` gating in the composer.

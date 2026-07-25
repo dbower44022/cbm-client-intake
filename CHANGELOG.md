@@ -4,6 +4,45 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.161.0] — 2026-07-25
+
+**feat(analytics): Analytics platform — Phase B (self-serve authoring)**
+(prds/analytics-app-plan.md). Admins/authors build metrics and pages in-app —
+no deploy. Gated on `ANALYTICS_ADMIN_ALLOWED_TEAMS` (default `Analytics Admin
+Team`); needs the analytics database (definitions live there).
+
+- **Definition tables** (Alembic **0022** — pre-deploy migrate):
+  `analytics_metric` (the reusable metric library) + `analytics_page` (panels
+  stored INLINE as JSON — a deliberate simplification over a separate
+  reusable-panel table; metrics are the reusable unit). Store CRUD +
+  `metric_key_in_use` (delete guard) on `AnalyticsStore` + `MemoryAnalyticsStore`.
+- **Builder metrics** (`analytics/builder.py`): a stored entity + filters +
+  aggregation is wrapped as a `MetricSpec` (`builder_spec`) so panels reference
+  it by key exactly like a code metric. Aggregations: `count` (cheap list total),
+  `sum`/`avg` (numeric field), `group_by` (breakdown), `bucket` (monthly series),
+  `list` (rows); the kind derives the result shape. Shared CRM sweep/count + date
+  helpers extracted to `analytics/crm.py` (dashboard + builder both use them).
+- **Unified resolution**: the viewer merges code-seeded + authored pages and
+  code + DB metrics (`render_page` takes a `metric_lookup`); the worker warm-job
+  now keeps authored pages' cached metrics fresh too.
+- **Authoring endpoints** (`/analytics/api/admin/*`, admin-gated): `entities` +
+  metadata-driven `fields` (types/labels/enum options), metric CRUD (server
+  derives shape/viz/time-aware; unique-key + code-collision guards; delete
+  blocked while a page uses it), `preview` (compute a draft live, no save), page
+  CRUD (validates each panel's metric exists + viz compatibility). Every write is
+  action-logged (`core/action_log.py` `APP_ANALYTICS`, feature-gated CActionLog).
+- **Authoring UI** (`analytics/frontend/`): a **Manage** view (shown to authors)
+  with a **metric library** (custom + read-only built-ins, usage counts), a
+  **metric builder** modal (record type → measure → field → filters → viz →
+  live Preview) and a **page composer** (title/range/team-gate + inline panels
+  with per-panel metric/viz/width/visibility, reorderable). Verified in a
+  stub-browser harness (builder dynamic fields + live preview render, page
+  composer panel rows; fixed a `display:flex`-beats-`[hidden]` field-row bug).
+- 12 new tests (`tests/test_analytics_authoring.py`); full suite green (1180).
+  **NOT yet driven live** — after deploy (migrate runs 0022): as an Analytics
+  Admin Team member, build a `count` metric with Preview, save, compose a page
+  with it, and confirm it renders in the viewer against real CRM data.
+
 ## [0.160.0] — 2026-07-25
 
 **feat(analytics): Analytics platform — Phase A (flagship system dashboard)**

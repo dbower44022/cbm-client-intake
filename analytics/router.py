@@ -15,18 +15,62 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
+from pydantic import BaseModel, Field
 
 from assignments.auth import clear_session, current_user, is_member
+from core import action_log
 from core.config import Settings, get_settings
-from core.espo import EspoClient
+from core.espo import EspoClient, EspoError
 
 from . import dashboard  # noqa: F401 — importing registers the metrics + seeded page
-from .registry import PAGE_REGISTRY, PageSpec, get_page
-from .service import build_time_range, invalidate_page_cache, render_page
+from .builder import (
+    AGG_KINDS,
+    builder_spec,
+    default_viz_for_shape,
+    shape_for_kind,
+)
+from .registry import (
+    COMPATIBLE_VIZ,
+    METRIC_REGISTRY,
+    PAGE_REGISTRY,
+    MetricSpec,
+    PageSpec,
+    get_metric,
+    get_page,
+)
+from .service import (
+    build_time_range,
+    invalidate_page_cache,
+    page_spec_from_row,
+    render_page,
+)
 
 log = logging.getLogger("cbm_intake.analytics")
 
 router = APIRouter(prefix="/analytics/api", tags=["analytics"])
+
+# CRM entities offered in the builder (entity, display label). Curated so the
+# picker shows the domain records, not every EspoCRM scope.
+BUILDER_ENTITIES = [
+    ("CEngagement", "Client Engagements"),
+    ("CMentorProfile", "Mentors"),
+    ("Account", "Companies"),
+    ("Contact", "Contacts"),
+    ("CPartnerProfile", "Partners"),
+    ("CSponsorProfile", "Funders"),
+    ("CSession", "Sessions"),
+    ("CContribution", "Contributions"),
+    ("CInformationRequest", "Information Requests"),
+]
+_BUILDER_ENTITY_SET = {e for e, _ in BUILDER_ENTITIES}
+
+# Field types the builder surfaces, tagged by role.
+_NUMERIC_TYPES = {"int", "float", "currency", "currencyConverted"}
+_DATE_TYPES = {"date", "datetime", "datetimeOptional"}
+_ENUM_TYPES = {"enum", "multiEnum"}
+_FIELD_TYPES = _NUMERIC_TYPES | _DATE_TYPES | _ENUM_TYPES | {
+    "varchar", "text", "bool", "url", "phone", "email",
+}
 
 
 def _require_user(request: Request, *, admin: bool = False) -> dict:
@@ -68,10 +112,58 @@ def _store(request: Request):
     return getattr(request.app.state, "analytics_store", None)
 
 
-def _page_summaries(user: dict, settings: Settings) -> list[dict]:
+async def _db_metric_specs(store) -> dict[str, MetricSpec]:
+    """All DB (builder) metrics as {key: MetricSpec}. Empty without a store."""
+    if store is None:
+        return {}
+    try:
+        rows = await store.list_metrics()
+    except Exception as exc:  # noqa: BLE001 — a store hiccup falls back to code metrics
+        log.warning("analytics: list_metrics failed: %s", exc)
+        return {}
+    return {r["key"]: builder_spec(r) for r in rows}
+
+
+def _make_lookup(db_specs: dict[str, MetricSpec]):
+    """DB metrics take precedence, falling back to the code registry."""
+
+    def lookup(key: str) -> Optional[MetricSpec]:
+        return db_specs.get(key) or get_metric(key)
+
+    return lookup
+
+
+async def _all_page_specs(store) -> list[PageSpec]:
+    """Code-seeded pages + authored DB pages (code key wins on collision)."""
+    pages = list(PAGE_REGISTRY.values())
+    if store is not None:
+        try:
+            rows = await store.list_pages()
+        except Exception as exc:  # noqa: BLE001
+            log.warning("analytics: list_pages failed: %s", exc)
+            rows = []
+        code_keys = set(PAGE_REGISTRY)
+        for r in rows:
+            if r.get("key") not in code_keys:
+                pages.append(page_spec_from_row(r))
+    return pages
+
+
+async def _resolve_page(key: str, store) -> Optional[PageSpec]:
+    code = get_page(key)
+    if code is not None:
+        return code
+    if store is not None:
+        row = await store.get_page_by_key(key)
+        if row is not None:
+            return page_spec_from_row(row)
+    return None
+
+
+async def _page_summaries(user: dict, settings: Settings, store) -> list[dict]:
     return [
         {"key": p.key, "title": p.title, "scope": p.scope, "subtitle": p.subtitle}
-        for p in PAGE_REGISTRY.values()
+        for p in await _all_page_specs(store)
         if p.scope == "system" and _can_view_page(user, p, settings)
     ]
 
@@ -82,23 +174,32 @@ async def logout(request: Request) -> dict:
     return {"status": "ok"}
 
 
+def _can_author(user: dict, settings: Settings) -> bool:
+    return is_member(user, settings.analytics_admin_allowed_teams_list)
+
+
 @router.get("/session")
 async def session(request: Request) -> dict:
     user = _require_user(request)
     settings = get_settings()
+    store = _store(request)
     return {
         "userName": user["userName"],
         "name": user["name"],
         "isAdmin": user["isAdmin"],
         "crmUrl": settings.espo_base_url,
-        "pages": _page_summaries(user, settings),
+        "pages": await _page_summaries(user, settings, store),
+        # Whether to show the authoring UI (member of the admin team / admin).
+        "canAuthor": _can_author(user, settings),
+        # Authoring needs the durable store (definitions live there).
+        "authoringAvailable": store is not None,
     }
 
 
 @router.get("/pages")
 async def pages(request: Request) -> dict:
     user = _require_user(request)
-    return {"pages": _page_summaries(user, get_settings())}
+    return {"pages": await _page_summaries(user, get_settings(), _store(request))}
 
 
 @router.get("/pages/{key}")
@@ -129,7 +230,8 @@ async def _render(
 ) -> dict:
     user = _require_user(request)
     settings = get_settings()
-    page = get_page(key)
+    store = _store(request)
+    page = await _resolve_page(key, store)
     if page is None or page.scope != "system":
         raise HTTPException(status_code=404, detail="Analytics page not found.")
     if not _can_view_page(user, page, settings):
@@ -138,10 +240,12 @@ async def _render(
         range_key or page.default_range, custom_from=frm, custom_to=to
     )
     espo = _system_client(settings)
-    store = _store(request)
+    lookup = _make_lookup(await _db_metric_specs(store))
     try:
         if force and store is not None:
-            await invalidate_page_cache(page, store=store, time_range=time_range)
+            await invalidate_page_cache(
+                page, store=store, time_range=time_range, metric_lookup=lookup
+            )
         return await render_page(
             page,
             user=user,
@@ -150,7 +254,357 @@ async def _render(
             store=store,
             time_range=time_range,
             force=force,
+            metric_lookup=lookup,
         )
     except Exception as exc:  # noqa: BLE001 — per-metric errors are already handled inside
         log.warning("analytics render failed for %s: %s", key, exc)
         raise HTTPException(status_code=502, detail="Could not load analytics — try again.")
+
+
+# =============================================================================
+# Authoring (Phase B) — gated on ANALYTICS_ADMIN_ALLOWED_TEAMS; needs the store.
+# =============================================================================
+def _admin(request: Request) -> dict:
+    return _require_user(request, admin=True)
+
+
+def _admin_store(request: Request):
+    store = _store(request)
+    if store is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Authoring needs the analytics database (DATABASE_URL) — not configured.",
+        )
+    return store
+
+
+def _slug(text: str) -> str:
+    import re
+
+    return re.sub(r"[^a-z0-9]+", "_", (text or "").strip().lower()).strip("_")
+
+
+def _humanize(name: str) -> str:
+    import re
+
+    s = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", name)
+    s = s.replace("_", " ").strip()
+    return s[:1].upper() + s[1:] if s else name
+
+
+async def _log_authoring(user: dict, action: str, key: str, summary: str) -> None:
+    try:
+        await action_log.log_action(
+            app=action_log.APP_ANALYTICS,
+            category=action_log.CAT_CONFIG,
+            action=action,
+            parent_type="Analytics",
+            parent_id=key,
+            summary=summary,
+            actor_name=user.get("name") or user["userName"],
+        )
+    except Exception as exc:  # noqa: BLE001 — reporting side channel
+        log.warning("analytics action-log failed (%s %s): %s", action, key, exc)
+
+
+@router.get("/admin/entities")
+async def admin_entities(request: Request) -> dict:
+    _admin(request)
+    return {"entities": [{"entity": e, "label": lbl} for e, lbl in BUILDER_ENTITIES]}
+
+
+@router.get("/admin/fields")
+async def admin_fields(request: Request, entity: str = Query(...)) -> dict:
+    """Metadata-driven field list for the builder (types, labels, enum options)."""
+    _admin(request)
+    if entity not in _BUILDER_ENTITY_SET:
+        raise HTTPException(status_code=400, detail=f"Unsupported entity {entity!r}.")
+    settings = get_settings()
+    espo = _system_client(settings)
+    if espo is None:
+        return {"fields": [], "reason": "CRM metadata isn't available on this deployment."}
+    try:
+        defs = await espo.metadata(f"entityDefs.{entity}.fields")
+    except EspoError as exc:
+        log.warning("analytics fields metadata failed for %s: %s", entity, exc)
+        raise HTTPException(status_code=502, detail="Could not read CRM field metadata.")
+    fields = []
+    for name, spec in (defs or {}).items():
+        ftype = (spec or {}).get("type")
+        if ftype not in _FIELD_TYPES:
+            continue
+        fields.append({
+            "name": name,
+            "type": ftype,
+            "label": _humanize(name),
+            "numeric": ftype in _NUMERIC_TYPES,
+            "date": ftype in _DATE_TYPES,
+            "enum": ftype in _ENUM_TYPES,
+            "options": (spec or {}).get("options") if ftype in _ENUM_TYPES else None,
+        })
+    fields.sort(key=lambda f: f["label"])
+    return {"entity": entity, "fields": fields}
+
+
+class MetricIn(BaseModel):
+    name: str = Field(min_length=1)
+    description: str = ""
+    entity: str
+    definition: dict = Field(default_factory=dict)  # {filters, aggregation, time_field}
+    default_viz: Optional[str] = None
+    cache_mode: str = "cached"
+    applies_to: list[str] = Field(default_factory=lambda: ["system"])
+    context_param: Optional[str] = None
+
+
+def _metric_values_from(body: MetricIn) -> dict:
+    """Validate + normalize a MetricIn into a stored metric row's values.
+    Server derives result_shape + time_aware from the aggregation kind."""
+    if body.entity not in _BUILDER_ENTITY_SET:
+        raise HTTPException(status_code=422, detail=f"Unsupported entity {body.entity!r}.")
+    agg = (body.definition or {}).get("aggregation") or {}
+    kind = agg.get("kind")
+    if kind not in AGG_KINDS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Aggregation kind must be one of: {', '.join(AGG_KINDS)}.",
+        )
+    if kind in ("sum", "avg", "group_by") and not agg.get("field"):
+        raise HTTPException(status_code=422, detail=f"A {kind} metric needs a field.")
+    shape = shape_for_kind(kind)
+    viz = body.default_viz or default_viz_for_shape(shape)
+    if viz not in COMPATIBLE_VIZ.get(shape, ()):
+        viz = default_viz_for_shape(shape)
+    if body.cache_mode not in ("live", "cached"):
+        raise HTTPException(status_code=422, detail="cache_mode must be 'live' or 'cached'.")
+    return {
+        "name": body.name.strip(),
+        "description": body.description or "",
+        "source": "crm",
+        "result_shape": shape,
+        "default_viz": viz,
+        "entity": body.entity,
+        "definition": body.definition or {},
+        "applies_to": body.applies_to or ["system"],
+        "context_param": body.context_param or None,
+        "cache_mode": body.cache_mode,
+        "refresh_seconds": 0,
+        "time_aware": kind == "bucket",
+    }
+
+
+@router.get("/admin/metrics")
+async def admin_list_metrics(request: Request) -> dict:
+    _admin(request)
+    store = _admin_store(request)
+    metrics = await store.list_metrics()
+    # Annotate each with how many pages use it (delete-safety + reuse insight).
+    for m in metrics:
+        m["usedBy"] = await store.metric_key_in_use(m["key"])
+    # Code-registered metrics are read-only but shown so authors can reuse them.
+    code = [
+        {"key": s.key, "name": s.name, "result_shape": s.shape,
+         "default_viz": s.default_viz, "source": "code", "builtin": True}
+        for s in METRIC_REGISTRY.values()
+    ]
+    return {"metrics": metrics, "builtins": code}
+
+
+@router.post("/admin/metrics")
+async def admin_create_metric(body: MetricIn, request: Request) -> dict:
+    user = _admin(request)
+    store = _admin_store(request)
+    values = _metric_values_from(body)
+    key = _slug(values["name"])
+    if not key:
+        raise HTTPException(status_code=422, detail="A metric needs a name.")
+    if key in METRIC_REGISTRY or await store.get_metric_by_key(key):
+        raise HTTPException(status_code=409, detail=f"A metric with key {key!r} already exists.")
+    values["key"] = key
+    values["created_by"] = user["userName"]
+    values["updated_by"] = user["userName"]
+    row = await store.create_metric(values)
+    await _log_authoring(user, action_log.ACT_ANALYTICS_METRIC_SAVED, key, f"Created metric “{values['name']}”")
+    return {"metric": row}
+
+
+@router.put("/admin/metrics/{metric_id}")
+async def admin_update_metric(metric_id: str, body: MetricIn, request: Request) -> dict:
+    user = _admin(request)
+    store = _admin_store(request)
+    existing = await store.get_metric(metric_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Metric not found.")
+    values = _metric_values_from(body)  # key is immutable
+    values["updated_by"] = user["userName"]
+    row = await store.update_metric(metric_id, values)
+    await _log_authoring(user, action_log.ACT_ANALYTICS_METRIC_SAVED, existing["key"], f"Updated metric “{values['name']}”")
+    return {"metric": row}
+
+
+@router.delete("/admin/metrics/{metric_id}")
+async def admin_delete_metric(metric_id: str, request: Request) -> dict:
+    user = _admin(request)
+    store = _admin_store(request)
+    existing = await store.get_metric(metric_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Metric not found.")
+    used = await store.metric_key_in_use(existing["key"])
+    if used:
+        raise HTTPException(
+            status_code=409,
+            detail=f"This metric is used by page(s): {', '.join(used)}. Remove it there first.",
+        )
+    await store.delete_metric(metric_id)
+    await _log_authoring(user, action_log.ACT_ANALYTICS_METRIC_DELETED, existing["key"], f"Deleted metric “{existing.get('name')}”")
+    return {"status": "deleted"}
+
+
+class PreviewIn(BaseModel):
+    entity: str
+    definition: dict = Field(default_factory=dict)
+    context_param: Optional[str] = None
+    range_key: Optional[str] = Field(None, alias="range")
+
+    model_config = {"populate_by_name": True}
+
+
+@router.post("/admin/preview")
+async def admin_preview(body: PreviewIn, request: Request) -> dict:
+    """Compute a draft metric live (no save) so the builder can show a preview."""
+    _admin(request)
+    if body.entity not in _BUILDER_ENTITY_SET:
+        raise HTTPException(status_code=422, detail=f"Unsupported entity {body.entity!r}.")
+    agg = (body.definition or {}).get("aggregation") or {}
+    kind = agg.get("kind")
+    if kind not in AGG_KINDS:
+        raise HTTPException(status_code=422, detail=f"Aggregation kind must be one of: {', '.join(AGG_KINDS)}.")
+    shape = shape_for_kind(kind)
+    settings = get_settings()
+    row = {
+        "key": "__preview__", "name": "Preview", "entity": body.entity,
+        "definition": body.definition or {}, "result_shape": shape,
+        "default_viz": default_viz_for_shape(shape), "source": "crm",
+        "applies_to": ["system"], "context_param": body.context_param,
+        "cache_mode": "live", "refresh_seconds": 0, "time_aware": kind == "bucket",
+    }
+    spec = builder_spec(row)
+    espo = _system_client(settings)
+    if espo is None:
+        raise HTTPException(status_code=503, detail="No CRM data source on this deployment.")
+    from .registry import MetricContext
+
+    tr = build_time_range(body.range_key or "last12mo")
+    ctx = MetricContext(settings=settings, espo=espo, store=None, time_range=tr)
+    result = await spec.compute(ctx)
+    from datetime import datetime, timezone
+
+    return {
+        "shape": result.shape, "viz": row["default_viz"],
+        "result": result.as_payload(computed_at=datetime.now(timezone.utc), cached=False),
+    }
+
+
+class PanelIn(BaseModel):
+    title: str = ""
+    metric_key: str
+    viz: Optional[str] = None
+    width: int = 4
+    visibility: list[str] = Field(default_factory=list)
+    config: dict = Field(default_factory=dict)
+
+
+class PageIn(BaseModel):
+    title: str = Field(min_length=1)
+    subtitle: str = ""
+    default_range: str = "last12mo"
+    team_gate: list[str] = Field(default_factory=list)
+    portal_dashboard: bool = False
+    panels: list[PanelIn] = Field(default_factory=list)
+
+
+async def _page_values_from(body: PageIn, store) -> dict:
+    db_specs = await _db_metric_specs(store)
+    lookup = _make_lookup(db_specs)
+    panels = []
+    for p in body.panels:
+        spec = lookup(p.metric_key)
+        if spec is None:
+            raise HTTPException(status_code=422, detail=f"Unknown metric {p.metric_key!r}.")
+        viz = p.viz if p.viz in COMPATIBLE_VIZ.get(spec.shape, ()) else spec.default_viz
+        panels.append({
+            "key": _slug(p.title) or p.metric_key,
+            "title": p.title or spec.name,
+            "metric_key": p.metric_key,
+            "viz": viz,
+            "width": max(3, min(12, int(p.width or 4))),
+            "visibility": p.visibility or None,
+            "config": p.config or {},
+        })
+    return {
+        "scope": "system",
+        "title": body.title.strip(),
+        "subtitle": body.subtitle or "",
+        "default_range": body.default_range or "last12mo",
+        "team_gate": body.team_gate or [],
+        "portal_dashboard": bool(body.portal_dashboard),
+        "panels": panels,
+    }
+
+
+@router.get("/admin/pages")
+async def admin_list_pages(request: Request) -> dict:
+    _admin(request)
+    store = _admin_store(request)
+    return {
+        "pages": await store.list_pages(),
+        # Code pages are shown (read-only) so an author sees the whole set.
+        "builtins": [
+            {"key": p.key, "title": p.title, "scope": p.scope, "builtin": True}
+            for p in PAGE_REGISTRY.values()
+        ],
+    }
+
+
+@router.post("/admin/pages")
+async def admin_create_page(body: PageIn, request: Request) -> dict:
+    user = _admin(request)
+    store = _admin_store(request)
+    values = await _page_values_from(body, store)
+    key = _slug(values["title"])
+    if not key:
+        raise HTTPException(status_code=422, detail="A page needs a title.")
+    if key in PAGE_REGISTRY or await store.get_page_by_key(key):
+        raise HTTPException(status_code=409, detail=f"A page with key {key!r} already exists.")
+    values["key"] = key
+    values["created_by"] = user["userName"]
+    values["updated_by"] = user["userName"]
+    row = await store.create_page(values)
+    await _log_authoring(user, action_log.ACT_ANALYTICS_PAGE_SAVED, key, f"Created page “{values['title']}”")
+    return {"page": row}
+
+
+@router.put("/admin/pages/{page_id}")
+async def admin_update_page(page_id: str, body: PageIn, request: Request) -> dict:
+    user = _admin(request)
+    store = _admin_store(request)
+    existing = await store.get_page(page_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Page not found.")
+    values = await _page_values_from(body, store)  # key immutable
+    values["updated_by"] = user["userName"]
+    row = await store.update_page(page_id, values)
+    await _log_authoring(user, action_log.ACT_ANALYTICS_PAGE_SAVED, existing["key"], f"Updated page “{values['title']}”")
+    return {"page": row}
+
+
+@router.delete("/admin/pages/{page_id}")
+async def admin_delete_page(page_id: str, request: Request) -> dict:
+    user = _admin(request)
+    store = _admin_store(request)
+    existing = await store.get_page(page_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Page not found.")
+    await store.delete_page(page_id)
+    await _log_authoring(user, action_log.ACT_ANALYTICS_PAGE_DELETED, existing["key"], f"Deleted page “{existing.get('title')}”")
+    return {"status": "deleted"}

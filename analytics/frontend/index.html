@@ -18,6 +18,7 @@
         <p class="an__sub" id="pageSubtitle"></p>
       </div>
       <div class="an__usercorner" id="userCorner" hidden>
+        <button type="button" class="cbm-button cbm-button--secondary" id="manageBtn" hidden>Manage</button>
         <span class="an__who">Signed in as <strong id="whoName"></strong></span>
         <button type="button" class="cbm-button cbm-button--secondary" id="logoutBtn">Sign out</button>
       </div>
@@ -44,6 +45,46 @@
 
       <div class="an__grid" id="panelGrid"></div>
     </section>
+
+    <!-- Manage (Phase B authoring): metrics + pages -->
+    <section class="an__manage" id="manageView" hidden>
+      <div class="an__manage-head">
+        <button type="button" class="cbm-button cbm-button--secondary" id="backToView">← Back to dashboards</button>
+        <nav class="an__mtabs" role="tablist">
+          <button type="button" class="an__mtab is-active" data-mtab="metrics">Metrics</button>
+          <button type="button" class="an__mtab" data-mtab="pages">Pages</button>
+        </nav>
+      </div>
+
+      <div id="mPanelMetrics">
+        <div class="an__mtoolbar">
+          <h2>Metric library</h2>
+          <button type="button" class="cbm-button" id="newMetricBtn">+ New metric</button>
+        </div>
+        <div id="metricList"></div>
+      </div>
+
+      <div id="mPanelPages" hidden>
+        <div class="an__mtoolbar">
+          <h2>Pages</h2>
+          <button type="button" class="cbm-button" id="newPageBtn">+ New page</button>
+        </div>
+        <div id="pageList"></div>
+      </div>
+    </section>
+
+    <!-- Editor modal (metric builder / page composer) -->
+    <div class="an__modal" id="editorModal" hidden role="dialog" aria-modal="true" aria-labelledby="editorTitle">
+      <div class="an__modal-backdrop" id="editorBackdrop"></div>
+      <div class="an__modal-card" role="document">
+        <div class="an__modal-head">
+          <h3 id="editorTitle">Editor</h3>
+          <button type="button" class="an__modal-close" id="editorClose" aria-label="Close">×</button>
+        </div>
+        <div class="an__modal-body" id="editorBody"></div>
+        <div class="an__modal-actions" id="editorActions"></div>
+      </div>
+    </div>
 
     <footer class="cbm-footer">
       <p>&copy; <span data-cbm-year>2026</span> Cleveland Business Mentors. All rights reserved.<span class="cbm-footer__version" data-cbm-version></span></p>

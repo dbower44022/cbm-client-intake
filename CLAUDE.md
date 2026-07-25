@@ -1612,6 +1612,45 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-25)
 
+**v0.161.0** (2026-07-25, 1180 tests green, committed NOT pushed) — **Analytics
+platform — Phase B** (self-serve authoring). Admins/authors build metrics + pages
+in-app, no deploy. Gated on `ANALYTICS_ADMIN_ALLOWED_TEAMS` (default `Analytics
+Admin Team`); needs the analytics DB.
+- **Definition tables** (Alembic **0022** — pre-deploy migrate): `analytics_metric`
+  (the reusable metric library) + `analytics_page` (**panels stored INLINE as
+  JSON** — a deliberate simplification over a separate reusable-panel table;
+  metrics are the reusable unit). CRUD + `metric_key_in_use` on `AnalyticsStore` +
+  `MemoryAnalyticsStore`.
+- **Builder metrics** (`analytics/builder.py`): a stored entity + filters +
+  aggregation → a `MetricSpec` (`builder_spec`), so panels reference builder and
+  code metrics uniformly by key. Kinds: `count` (cheap list `total`), `sum`/`avg`,
+  `group_by` (breakdown), `bucket` (monthly series), `list` (rows); the kind
+  derives the result shape. CRM sweep/count + date helpers factored to
+  `analytics/crm.py` (dashboard + builder share them).
+- **Unified resolution**: viewer merges code + DB pages, and code + DB metrics
+  (`service.render_page` takes a `metric_lookup`; `page_spec_from_row`); the worker
+  warm-job now warms authored pages too.
+- **Authoring endpoints** `/analytics/api/admin/*` (admin-gated, 503 without a
+  store): `entities`, metadata-driven `fields` (types/labels/enum options), metric
+  CRUD (server derives shape/viz/time_aware; unique-key + code-collision guards;
+  delete blocked while a page uses the metric), `preview` (compute a draft live, no
+  save), page CRUD (validates each panel's metric + viz compatibility). Every write
+  action-logged (`core/action_log.APP_ANALYTICS`, feature-gated CActionLog).
+- **Authoring UI** (`analytics/frontend/`): a **Manage** view (shown to authors)
+  — metric library (custom + read-only built-ins + usage counts), a metric-builder
+  modal (record type → measure → field → filters → viz → **live Preview**), and a
+  page composer (title/range/team-gate + inline panels: per-panel metric/viz/width/
+  visibility, reorderable). Harness-verified end-to-end (builder dynamic-field +
+  live preview, page composer); fixed a `display:flex`-beats-`[hidden]` field-row
+  bug with a global `[hidden]{display:none!important}` guard.
+- 12 new tests (`tests/test_analytics_authoring.py`); suite green (1180).
+  **Deviations from the PRD, flagged**: panels inline (above); **drill-through
+  (§9) deferred to a follow-up** (rows panels already deep-link; stat/bar
+  click-through to underlying rows not built). **NOT yet driven live** — after
+  deploy (migrate runs 0022), as an Analytics Admin Team member: build a `count`
+  metric with Preview → save → compose a page → confirm it renders in the viewer
+  against real CRM data.
+
 **v0.160.0** (2026-07-25, 1182 tests green, committed NOT pushed) — **Analytics
 platform — Phase A** (the flagship system dashboard). PRD:
 `prds/analytics-app-plan.md` (authored + interviewed this session; all 16

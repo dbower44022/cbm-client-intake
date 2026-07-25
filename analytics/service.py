@@ -19,10 +19,13 @@ from typing import Any, Optional
 
 from assignments.auth import is_member
 
+from typing import Callable
+
 from .registry import (
     MetricContext,
     MetricSpec,
     PageSpec,
+    PanelSpec,
     RecordRef,
     TimeRange,
     get_metric,
@@ -179,18 +182,48 @@ async def invalidate_page_cache(
     store,
     time_range: TimeRange,
     record: Optional[RecordRef] = None,
+    metric_lookup: Optional[Callable[[str], Optional[MetricSpec]]] = None,
 ) -> None:
     """Drop cached results for a page's metrics (manual Refresh) so the next
     render recomputes them."""
     if store is None:
         return
+    lookup = metric_lookup or get_metric
     context_key = "system" if record is None else f"{record.entity}:{record.record_id}"
     for panel in page.panels:
-        spec = get_metric(panel.metric_key)
+        spec = lookup(panel.metric_key)
         if spec is None or spec.cache_mode != "cached":
             continue
         rk = time_range.key if spec.time_aware else "all"
         await store.invalidate(spec.key, context_key, rk)
+
+
+def page_spec_from_row(row: dict) -> PageSpec:
+    """Build a PageSpec from a stored ``analytics_page`` row (inline panels)."""
+    panels = []
+    for p in row.get("panels") or []:
+        vis = p.get("visibility")
+        panels.append(
+            PanelSpec(
+                key=p.get("key") or p.get("metric_key") or "panel",
+                title=p.get("title") or "",
+                metric_key=p.get("metric_key") or "",
+                viz=p.get("viz") or "stat",
+                width=int(p.get("width") or 4),
+                config=p.get("config") or {},
+                visibility=tuple(vis) if vis else None,
+            )
+        )
+    return PageSpec(
+        key=row["key"],
+        title=row.get("title") or row["key"],
+        scope=row.get("scope") or "system",
+        subtitle=row.get("subtitle") or "",
+        team_gate=tuple(row.get("team_gate") or ()),
+        portal_dashboard=bool(row.get("portal_dashboard")),
+        default_range=row.get("default_range") or "last12mo",
+        panels=panels,
+    )
 
 
 async def render_page(
@@ -203,8 +236,10 @@ async def render_page(
     time_range: TimeRange,
     record: Optional[RecordRef] = None,
     force: bool = False,
+    metric_lookup: Optional[Callable[[str], Optional[MetricSpec]]] = None,
 ) -> dict[str, Any]:
     """Resolve every panel the viewer may see; panels compute concurrently."""
+    lookup = metric_lookup or get_metric
     visible = [
         p
         for p in page.panels
@@ -212,7 +247,7 @@ async def render_page(
     ]
 
     async def _one(panel):
-        spec = get_metric(panel.metric_key)
+        spec = lookup(panel.metric_key)
         if spec is None:
             return {
                 "key": panel.key,

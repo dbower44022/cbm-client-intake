@@ -2,6 +2,9 @@
  * internals live in /shared/charts.css. */
 
 * { box-sizing: border-box; }
+/* The [hidden] attribute must beat any display rule below (flex/grid rows toggle
+ * their own visibility via JS). Without this, a display:flex row ignores hidden. */
+[hidden] { display: none !important; }
 
 body {
   margin: 0;
@@ -77,6 +80,58 @@ body {
   .an__grid { grid-template-columns: 1fr; }
   .an-panel { grid-column: 1 / -1; }
 }
+
+/* --- Manage (Phase B authoring) -------------------------------------------- */
+.an__manage-head { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.an__mtabs { display: flex; gap: 0.35rem; }
+.an__mtab { border: 1px solid var(--cbm-border, #d8dee6); background: #fff; border-radius: 999px;
+  padding: 0.35rem 0.9rem; cursor: pointer; font-size: 0.9rem; }
+.an__mtab.is-active { background: var(--cbm-navy, #00205B); color: #fff; border-color: var(--cbm-navy, #00205B); }
+.an__mtoolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; }
+.an__mtoolbar h2 { margin: 0; font-size: 1.1rem; color: var(--cbm-navy, #00205B); }
+.an__hint { color: var(--cbm-slate-700, #667); font-size: 0.9rem; }
+
+.an__mtable { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--cbm-border, #d8dee6);
+  border-radius: var(--cbm-radius, 10px); overflow: hidden; font-size: 0.9rem; }
+.an__mtable th, .an__mtable td { text-align: left; padding: 0.5rem 0.7rem; border-bottom: 1px solid var(--cbm-line, #eef1f5); }
+.an__mtable th { background: #f7f9fb; color: var(--cbm-slate-700, #556); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; }
+.an__mtable tr.an__builtin td { color: var(--cbm-slate-700, #778); background: #fbfcfd; }
+.an__mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.82rem; color: var(--cbm-slate-700, #556); }
+.an__row-actions { display: flex; gap: 0.75rem; white-space: nowrap; }
+.an__tag { font-size: 0.72rem; background: #eef1f5; color: var(--cbm-slate-700, #556); padding: 0.05rem 0.4rem; border-radius: 4px; }
+.an__link-btn { background: none; border: none; color: var(--cbm-blue, #1b6ec2); cursor: pointer; font: inherit; padding: 0; }
+.an__link-btn:hover { text-decoration: underline; }
+.an__link-btn.an__danger { color: var(--cbm-danger, #b3261e); }
+
+/* --- editor modal ---------------------------------------------------------- */
+.an__modal { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-start; justify-content: center; padding: 3vh 1rem; }
+.an__modal[hidden] { display: none !important; }
+.an__modal-backdrop { position: absolute; inset: 0; background: rgba(16, 32, 64, 0.45); }
+.an__modal-card { position: relative; background: #fff; border-radius: 12px; width: min(720px, 96vw);
+  max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(16, 32, 64, 0.25); }
+.an__modal-head { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid var(--cbm-line, #eef1f5); }
+.an__modal-head h3 { margin: 0; color: var(--cbm-navy, #00205B); }
+.an__modal-close { background: none; border: none; font-size: 1.5rem; line-height: 1; cursor: pointer; color: var(--cbm-slate-700, #667); }
+.an__modal-body { padding: 1.25rem; overflow-y: auto; }
+.an__modal-actions { display: flex; justify-content: flex-end; gap: 0.6rem; padding: 0.9rem 1.25rem; border-top: 1px solid var(--cbm-line, #eef1f5); }
+
+/* --- forms ----------------------------------------------------------------- */
+.an__form { display: flex; flex-direction: column; gap: 0.85rem; }
+.an__lbl { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.85rem; color: var(--cbm-slate-700, #556); }
+.an__lbl > span { font-weight: 600; }
+.an__form input, .an__form select { padding: 0.45rem 0.6rem; border: 1px solid var(--cbm-border, #d8dee6); border-radius: 8px; font: inherit; min-height: 2.4rem; }
+.an__form-label { font-weight: 600; font-size: 0.85rem; color: var(--cbm-slate-700, #556); }
+.an__field-row { display: flex; flex-direction: column; gap: 0.25rem; }
+.an__field-label { font-weight: 600; font-size: 0.85rem; color: var(--cbm-slate-700, #556); }
+.an__filters { display: flex; flex-direction: column; gap: 0.4rem; margin: 0.35rem 0; }
+.an__filter { display: grid; grid-template-columns: 1.4fr 1fr 1.4fr auto; gap: 0.4rem; align-items: center; }
+.an__preview { border: 1px dashed var(--cbm-border, #d8dee6); border-radius: 8px; padding: 0.85rem; min-height: 4rem; background: #fbfcfd; }
+
+.an__panels { display: flex; flex-direction: column; gap: 0.6rem; margin: 0.35rem 0; }
+.an__panel-row { border: 1px solid var(--cbm-border, #d8dee6); border-radius: 8px; padding: 0.6rem; display: flex; gap: 0.6rem; align-items: flex-start; }
+.an__panel-grid { display: grid; grid-template-columns: 1.4fr 1.4fr 1fr 0.6fr 1.4fr; gap: 0.5rem; flex: 1 1 auto; }
+.an__panel-ops { display: flex; flex-direction: column; gap: 0.3rem; }
+@media (max-width: 640px) { .an__panel-grid { grid-template-columns: 1fr 1fr; } .an__filter { grid-template-columns: 1fr 1fr; } }
 
 /* footer parity with the other apps (styles.css owns it — no wizard.css here) */
 .cbm-footer { margin-top: auto; padding-top: 1.5rem; color: var(--cbm-slate-700, #667); font-size: 0.8rem; text-align: center; }

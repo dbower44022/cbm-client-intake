@@ -50,6 +50,7 @@ APP_DIRECTORIES = "Directories"
 APP_SUBMISSION_ADMIN = "Submission Admin"
 APP_COMMUNICATIONS = "Communications"
 APP_INTAKE = "Intake"
+APP_ANALYTICS = "Analytics"
 
 # --- categories (the `category` enum — small + stable) ----------------------
 CAT_ASSIGNMENT = "Assignment"
@@ -104,6 +105,10 @@ ACT_DOCUMENT_RESTORED = "Document Restored"
 ACT_ACCESS_GRANTED = "Drive Access Granted"
 ACT_ACCESS_REVOKED = "Drive Access Revoked"
 ACT_INTEGRATION_CONFIG = "Integration Config Changed"
+ACT_ANALYTICS_METRIC_SAVED = "Analytics Metric Saved"
+ACT_ANALYTICS_METRIC_DELETED = "Analytics Metric Deleted"
+ACT_ANALYTICS_PAGE_SAVED = "Analytics Page Saved"
+ACT_ANALYTICS_PAGE_DELETED = "Analytics Page Deleted"
 
 _NAME_MAX = 250  # CActionLog.name is a varchar — keep the one-liner within it.
 

@@ -105,9 +105,11 @@ This is a multi-form app: a shared core hosts any number of intake forms.
     hand-rolled SVG/HTML charts (`frontend/shared/charts.js`). Cheap counts run
     live against the CRM; sweeps cache to `analytics_cache` (refreshed by the
     worker). Gated OFF by `ANALYTICS_ENABLED`; viewing gated by
-    `ANALYTICS_VIEW_ALLOWED_TEAMS` (default "Analytics Admin Team"). Phase A;
-    Phase B adds an in-app metric builder + admin-curated pages, Phase C the
-    record-embedded Analytics tabs.
+    `ANALYTICS_VIEW_ALLOWED_TEAMS` (default "Analytics Admin Team"). Authors
+    (gated by `ANALYTICS_ADMIN_ALLOWED_TEAMS`) build their own metrics + pages
+    in-app via the **Manage** view — a metric builder (record type + filters +
+    aggregation, with a live preview) and a page composer (Phase B). Phase C adds
+    the record-embedded Analytics tabs.
 - **V2 reliability platform** (`prds/v2/`): optional durable capture
   (`core/store.py`) + an async delivery `worker.py`, gated by `DATABASE_URL` /
   `ASYNC_DELIVERY` so behavior is unchanged until a Postgres DB is attached.

@@ -14,8 +14,9 @@ from typing import Any, Optional
 from core.config import Settings
 from core.espo import EspoClient
 
+from .builder import builder_spec
 from .registry import PAGE_REGISTRY, MetricContext, get_metric
-from .service import build_time_range, resolve_metric
+from .service import build_time_range, page_spec_from_row, resolve_metric
 from .store import make_analytics_store
 
 log = logging.getLogger("cbm_intake.analytics")
@@ -39,15 +40,36 @@ async def refresh_system_metrics(settings: Settings) -> dict[str, Any]:
         await store.dispose()
         return {"refreshed": 0, "reason": "no crm client"}
 
+    # Metric lookup spanning code-registered + authored (DB) metrics.
+    db_specs: dict = {}
+    try:
+        for row in await store.list_metrics():
+            db_specs[row["key"]] = builder_spec(row)
+    except Exception as exc:  # noqa: BLE001 — fall back to code metrics only
+        log.warning("analytics warm: list_metrics failed: %s", exc)
+
+    def lookup(key):
+        return db_specs.get(key) or get_metric(key)
+
+    # System pages = code-seeded + authored.
+    pages = list(PAGE_REGISTRY.values())
+    try:
+        code_keys = set(PAGE_REGISTRY)
+        for row in await store.list_pages():
+            if row.get("key") not in code_keys:
+                pages.append(page_spec_from_row(row))
+    except Exception as exc:  # noqa: BLE001
+        log.warning("analytics warm: list_pages failed: %s", exc)
+
     refreshed = 0
     errors = 0
     try:
-        for page in PAGE_REGISTRY.values():
+        for page in pages:
             if page.scope != "system":
                 continue
             tr = build_time_range(page.default_range)
             for panel in page.panels:
-                spec = get_metric(panel.metric_key)
+                spec = lookup(panel.metric_key)
                 if spec is None or spec.cache_mode != "cached":
                     continue
                 ctx = MetricContext(
