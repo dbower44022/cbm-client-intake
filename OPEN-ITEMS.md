@@ -41,6 +41,17 @@ found; move resolved items to the bottom with the resolution date.
    (`cuyahoga-fatherhood-initiative@jfs.ohio.gov`, copied as-is from
    crm-test) — fix in the CRM UI if wanted.
 
+## Data cleanup
+
+7. **Partner Accounts carry a bogus industry sector** (found 2026-07-25).
+   `Account.cIndustrySector` used to default to "Agriculture, Forestry, Fishing
+   and Hunting", and it stuck on 7 of 8 crm-test partner Accounts — including
+   Key Bank and Global Cleveland. The **default is now cleared on both CRMs**
+   (verified `default=None` 2026-07-25), so new records are fine, but the
+   already-stored values are wrong and now **visible**: v0.153.0 shows the
+   company's industry on the partner/funder Overview rail. Doug is correcting
+   these by hand in the CRM.
+
 ## Other follow-ups
 
 6. **Re-save the session whose notes were lost to the pasted-image failure**
@@ -54,4 +65,14 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Resolved
 
-(nothing yet)
+- **Account-level partner fields duplicated (and contradicted) the partnership
+  record** — found 2026-07-24 during Doug's partner review; `cPartnerStatus`,
+  `cPartnerContactCadence`, `cPartnerType`, `cPartnershipStartDate` and
+  `cPartnershipAgreementDate` were editable on the Company card while the grid
+  and Overview read the `CPartnerProfile` twins, and live data had already
+  drifted apart (Glide: Account "Monthly" vs partnership "As-Needed"; every
+  Account "Prospect" regardless of real status). **Resolved 2026-07-25:** Doug
+  deleted all five CRM-side, verified MISSING on crm-test AND prod, and
+  v0.153.0 removed the app's references (the Company group is now organization
+  type + announcements). The `cIndustrySector` stamped default was cleared in
+  the same pass — see item 7 for the stored values it left behind.

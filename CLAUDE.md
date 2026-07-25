@@ -685,6 +685,50 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   ACL scopes `CMentorProfile`/the parents to "own" simply gets their own rows.
   `list_records` returns `{"records":[...], "profileFound": bool}` —
   `profileFound=false` means the user has no linked profile.
+- **Partner & Funder review pass (v0.153.0, 2026-07-25 — Doug's walkthrough).**
+  Eight items, all in the two non-mentor domains (mechanics: CHANGELOG 0.153.0):
+  (1) the assigned manager is on the **Overview rail** (Partner Manager / Funder
+  Manager, linked to the CMentorProfile peek) — it was a grid-only column, and
+  the attrs weren't even in `detail_select`; (2) **Sponsor → Funder** in every
+  label this app authors (grid columns, `parent_label`, empty state, "Funder
+  Notes", the Details strip title "Funding", the profile edit group + notes
+  field, the peek label) — the CRM entities, the `/sponsorsessions` route, the
+  `Sponsor Session` type value, the public "Become a Sponsor" form, Submission
+  Admin's `sponsor` slug, and CRM-derived field labels deliberately keep the old
+  word; (3) **every scalar rail fact is `always`** so an empty slot renders "—"
+  (agreement date + last contacted were empty on nearly every real partner and
+  vanished, reading as missing features — the v0.133.0 lesson); (4) a **second
+  Overview splitter** for the notes/Discussion boundary (`--ov-right`, measured
+  from the grid's right edge; hidden with the pane so a 3-column domain is
+  unaffected); (5) **`partnerEmail` explains itself** — an EspoCRM *foreign*
+  field (`readOnly`) mirroring `primaryPartnercontact.emailAddress`, so it shows
+  on Details but can never appear in Edit Partnership; relabelled "Primary
+  contact email" (`details._FIELD_LABELS`) and rendered as a compose link on the
+  strip AND the card rows (`display: "email"`, set for any read-only email
+  mirror); (6) **company industry on the rail** (`company_industry_fact` →
+  `service._fill_company_industry` composes the Account's
+  industry/sector/subsector, deduped, best-effort) — the profiles carry no
+  industry of their own and it belongs to the company (Doug's ruling); (7) the
+  **Account partner twins are purged from the app** (see the next bullet); and
+  (8) the **contacts-table rework** (see the Details bullet in this section).
+  1119 tests green; the partner domain was driven end-to-end in the stub
+  harness. **NOT yet driven live**; the funder domain was verified through
+  config/tests, not its own harness pass.
+- **Account-level partner twins are GONE (CRM, 2026-07-24; app, v0.153.0).**
+  `cPartnerStatus`, `cPartnerContactCadence`, `cPartnerType`,
+  `cPartnershipStartDate` and `cPartnershipAgreementDate` duplicated
+  `CPartnerProfile` fields and had drifted apart from them in live data (Glide's
+  Account said Monthly, its partnership said As-Needed; every Account said
+  `cPartnerStatus=Prospect` regardless of the real status — the `cPartnerNotes`
+  trap of v0.91.0, five times over). Doug deleted them; **verified MISSING on
+  BOTH crm-test and prod 2026-07-25**. The app's partner Company group is now
+  organization type + announcements only, and the "Cadence … partner contact"
+  view row is gone. What survives on Account: `cPartnerOrganizationType` (no
+  twin), `cPartnerNotes` (retired, hidden), `cPublicAnnouncementAllowed`. Also
+  cleared the same day: `Account.cIndustrySector`'s stamped default (it was
+  putting "Agriculture, Forestry, Fishing and Hunting" on 7 of 8 partner
+  Accounts) — `default=None` on both CRMs now; the already-stored wrong values
+  are a manual CRM cleanup (OPEN-ITEMS).
 - **Partner grid: Partner Manager column (v0.89.0).** The partner list's
   far-right column links the assigned `partnerManager` to the standard
   CMentorProfile pop-up (CBM + personal email rows are compose links → the
@@ -957,10 +1001,20 @@ segment of its own URL). Mounted only when `assignments_active` (needs
     rows, Account / Cadence / Announcements-"Not allowed" badge right; profile:
     Entity / Revenue / Sells / On-file rows + Certifications / Funding chips +
     the quoted Client goal; uncurated informative fields still render as generic
-    labeled rows (columns balanced); (3) **Client Contacts** — ALL related
-    contacts in one table (Name / Role chips / Phone / Email / City / Contact via
-    / **one Agreements badge** — green "Complete" or red "N pending" across the
-    three acceptance bools); (4) **CBM Contacts** table (mentor domain) — the
+    labeled rows (columns balanced); (3) the **contacts table** — ALL related
+    contacts in one table, **per-domain since v0.153.0**
+    (`DomainConfig.contacts_label` / `contacts_show_role` /
+    `contacts_show_agreements` / `primary_contact_settable`, surfaced on
+    `/session` as a `contacts` block): mentor = "Client Contacts" with Name /
+    Role chips / Phone / Email / City / Contact via / **one Agreements badge**
+    (green "Complete" or red "N pending" across the three acceptance bools);
+    partner + funder = "Partner Contacts" / "Funder Contacts" **without Role or
+    Agreements** (every contact has the same relationship to CBM, and the
+    consent bools are a client-intake concept — Doug's ruling 2026-07-24), with
+    the record's primary contact carrying a gold **Primary** chip, sorted first,
+    and every other row offering **Make primary**
+    (`POST /{slug}/api/records/{id}/primarycontact` → `service.set_primary_contact`,
+    registered only where the domain owns that link); (4) **CBM Contacts** table (mentor domain) — the
     assigned mentor (`CEngagement.mentorProfile`) + co-mentors
     (`additionalMentors`), each resolved through the profile's `contactRecord`
     Contact for phone/email (schema verified live 2026-07-10: no other
@@ -1534,7 +1588,37 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   Note: crm-test seed sessions carry out-of-enum `sessionType` values (harmless; a
   data-hygiene cleanup). **UI polish is the next work item** (a follow-up session).
 
-## Current status (updated 2026-07-24)
+## Current status (updated 2026-07-25)
+
+**v0.153.0** (2026-07-25, 1119 tests green, committed NOT pushed) — **Partner &
+Funder Management review pass**: eight items from Doug's walkthrough of the
+partner app, each applied to the funder domain too. Full mechanics: the
+"Partner & Funder review pass (v0.153.0)" bullet in the Session Management
+section + CHANGELOG 0.153.0. Headlines: the assigned manager is on the Overview
+rail (it was grid-only); Sponsor → Funder in every label this app authors;
+empty rail facts render "—" instead of vanishing; a second Overview splitter
+between Session notes and Discussion; `partnerEmail` relabelled "Primary contact
+email" + compose link (it is a read-only foreign mirror of the primary contact's
+address — that's why it was never editable); the company's industry composed
+onto the rail; the deleted Account partner twins purged from the app; and the
+contacts table reworked for partners/funders (domain title, no Role/Agreements
+columns, a **Primary** chip sorted first, and a **Make primary** row action
+writing the parent's primary-contact link). New `DomainConfig` fields:
+`contacts_label`, `contacts_show_role`, `contacts_show_agreements`,
+`primary_contact_settable`, `company_industry_fact`; new endpoint
+`POST /{slug}/api/records/{id}/primarycontact` (partner + funder only);
+`details._company_id_attr` moved to `service.company_id_attr`. **Live checks
+after deploy** (crm-test, then prod): open a real partner → the rail shows its
+manager + industry and "—" for the empty dates; drag the notes/Discussion
+splitter; on Details, Make primary on a second contact → GET-verify
+`primaryPartnercontact` on the record + the stream note; confirm the funder app
+reads "Funder" throughout. **CRM state: nothing pending** — the five duplicate
+Account fields and the `cIndustrySector` default were removed by Doug and
+**verified gone on BOTH crm-test and prod 2026-07-25** (probe run inside the
+prod container; the same probe re-confirmed prod's `cAccountType` is still
+missing — the standing OPEN-ITEMS drift, unrelated).
+
+## Current status (before 2026-07-25)
 
 **Cross-cutting open items now live in `OPEN-ITEMS.md`** (started 2026-07-24;
 keep it current — add findings there, move fixed ones to Resolved). Headline
