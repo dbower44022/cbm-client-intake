@@ -5149,6 +5149,11 @@ the synced lists were verified identical on crm-test and prod.
 - `submission-admin.md` — plain-language functional reference for the rebuilt
   `/ops` Submission Admin (the work-queue grid, resolution workflow, notes,
   the submitter email conversation, and the intended info-request flow).
+- `analytics-guide.md` — end-user guide for the **Analytics** app (`/analytics`):
+  viewing dashboards, building metrics + pages, the Mentor Analytics tab, the
+  portal-home dashboard, who-sees-what. `ANALYTICS-SETUP.md` — the engineer
+  activation runbook (env vars, the Analytics Admin Team, migrations 0021/0022,
+  verification, rollback). Design/build record: `prds/analytics-app-plan.md`.
 - `prds/v2/` — the V2 reliability platform specs (durable capture + async worker
   + ops + alerting).
 

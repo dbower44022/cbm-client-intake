@@ -35,6 +35,8 @@ Change history: [`CHANGELOG.md`](CHANGELOG.md) (per-version) and
   App Platform): deploy, go live, custom domain, rollback, troubleshooting.
 - [`STAFF-DEPLOYMENT-GUIDE.md`](STAFF-DEPLOYMENT-GUIDE.md) — a plain-language,
   web-console-only companion for CBM staff.
+- [`analytics-guide.md`](analytics-guide.md) — end-user guide for the Analytics
+  app; [`ANALYTICS-SETUP.md`](ANALYTICS-SETUP.md) — its activation runbook.
 
 ## Application
 
