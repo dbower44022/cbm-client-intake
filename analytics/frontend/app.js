@@ -149,8 +149,9 @@
     var data;
     try { data = await api("/admin/metrics"); } catch (e) { host.innerHTML = ""; host.appendChild(h("p", { class: "an__empty" }, e.message)); return; }
     state.metricShapes = {}; state.allMetrics = [];
-    (data.builtins || []).forEach(function (m) { state.metricShapes[m.key] = m.result_shape; state.allMetrics.push({ key: m.key, name: m.name, builtin: true }); });
-    (data.metrics || []).forEach(function (m) { state.metricShapes[m.key] = m.result_shape; state.allMetrics.push({ key: m.key, name: m.name }); });
+    (data.builtins || []).forEach(function (m) { state.metricShapes[m.key] = m.result_shape; state.allMetrics.push({ key: m.key, name: m.name, builtin: true, applies_to: m.applies_to || ["system"] }); });
+    (data.metrics || []).forEach(function (m) { state.metricShapes[m.key] = m.result_shape; state.allMetrics.push({ key: m.key, name: m.name, applies_to: m.applies_to || ["system"] }); });
+    state.recordTypes = data.recordTypes || [];
     host.innerHTML = "";
     var table = h("table", { class: "an__mtable" }, h("thead", {}, h("tr", {},
       h("th", {}, "Name"), h("th", {}, "Key"), h("th", {}, "Shape"), h("th", {}, "Used by"), h("th", {}, ""))));
@@ -195,7 +196,20 @@
     var filtersHost = h("div", { class: "an__filters" });
     var vizSel = h("select", {});
     var cacheSel = h("select", {}, opt("cached", "Cached (refreshed hourly)", (metric && metric.cache_mode) !== "live"), opt("live", "Live (every view)", (metric && metric.cache_mode) === "live"));
+    var linksCache = {};
+    var appliesHost = h("div", { class: "an__applies" });
+    var ctxInput = h("input", { type: "text", list: "anCtxList", value: (metric && metric.context_param) || "", placeholder: "e.g. mentorProfileId" });
+    var ctxList = h("datalist", { id: "anCtxList" });
+    var ctxWrap = h("div", { class: "an__field-row" }, h("label", { class: "an__field-label" }, "Record link field"),
+      h("span", { class: "an__hint" }, "The field that equals the record's id (for record-scoped metrics)."), ctxInput, ctxList);
     var previewHost = h("div", { class: "an__preview" });
+
+    function chosenApplies() {
+      var out = [];
+      appliesHost.querySelectorAll("input[type=checkbox]:checked").forEach(function (cb) { out.push(cb.value); });
+      return out.length ? out : ["system"];
+    }
+    function syncCtx() { show(ctxWrap, chosenApplies().some(function (a) { return a !== "system"; })); }
 
     function fieldOptions(kind) {
       var flds = fieldsCache[entitySel.value] || [];
@@ -221,10 +235,15 @@
     async function loadFields() {
       var ent = entitySel.value;
       if (!fieldsCache[ent]) {
-        try { fieldsCache[ent] = (await api("/admin/fields?entity=" + encodeURIComponent(ent))).fields || []; }
-        catch (e) { fieldsCache[ent] = []; notice(e.message); }
+        try {
+          var resp = await api("/admin/fields?entity=" + encodeURIComponent(ent));
+          fieldsCache[ent] = resp.fields || []; linksCache[ent] = resp.links || [];
+        } catch (e) { fieldsCache[ent] = []; linksCache[ent] = []; notice(e.message); }
       }
       refreshFieldSel();
+      // context-param datalist (belongsTo link ids)
+      ctxList.innerHTML = "";
+      (linksCache[ent] || []).forEach(function (ln) { ctxList.appendChild(opt(ln.param, ln.label + " → " + ln.foreign)); });
       // rebuild filter field selects
       filtersHost.querySelectorAll("select.an__f-field").forEach(function (sel) {
         var cur = sel.value; sel.innerHTML = "";
@@ -265,7 +284,8 @@
     }
     function payload() {
       return { name: nameInput.value.trim(), entity: entitySel.value, definition: collectDefinition(),
-        default_viz: vizSel.value, cache_mode: cacheSel.value };
+        default_viz: vizSel.value, cache_mode: cacheSel.value,
+        applies_to: chosenApplies(), context_param: ctxInput.value.trim() || null };
     }
 
     async function preview() {
@@ -297,16 +317,28 @@
     form.appendChild(filtersBox);
     form.appendChild(labeled("Show as", vizSel));
     form.appendChild(labeled("Data freshness", cacheSel));
+    form.appendChild(h("div", { class: "an__form-label" }, "Applies to"));
+    form.appendChild(appliesHost);
+    form.appendChild(ctxWrap);
     form.appendChild(h("div", { class: "an__form-label" }, "Preview"));
     form.appendChild(previewHost);
 
     kindSel.onchange = function () { refreshFieldSel(); refreshViz(); };
     entitySel.onchange = loadFields;
 
-    // load entities, then fields, then existing filters
+    // load entities, build the applies-to checkboxes, then fields + filters
     api("/admin/entities").then(function (d) {
       (d.entities || []).forEach(function (e) { entitySel.appendChild(opt(e.entity, e.label, metric && metric.entity === e.entity)); });
       if (!metric) entitySel.value = (d.entities[0] || {}).entity;
+      var applies = [{ v: "system", l: "System (org-wide)" }].concat((d.entities || []).map(function (e) { return { v: e.entity, l: e.label }; }));
+      var cur = (metric && metric.applies_to) || ["system"];
+      applies.forEach(function (o) {
+        var cb = h("input", { type: "checkbox", value: o.v });
+        if (cur.indexOf(o.v) >= 0) cb.checked = true;
+        cb.onchange = syncCtx;
+        appliesHost.appendChild(h("label", { class: "an__chk" }, cb, h("span", {}, o.l)));
+      });
+      syncCtx();
       return loadFields();
     }).then(function () {
       (def.filters || []).forEach(function (cl) { filtersHost.appendChild(filterRow(cl)); });
@@ -346,8 +378,10 @@
     var data = await api("/admin/metrics");
     state.metricShapes = {}; state.allMetrics = [];
     (data.builtins || []).concat(data.metrics || []).forEach(function (m) {
-      state.metricShapes[m.key] = m.result_shape; state.allMetrics.push({ key: m.key, name: m.name });
+      state.metricShapes[m.key] = m.result_shape;
+      state.allMetrics.push({ key: m.key, name: m.name, applies_to: m.applies_to || ["system"] });
     });
+    state.recordTypes = data.recordTypes || [];
   }
   async function deletePage(p) {
     if (!confirm('Delete page "' + p.title + '"?')) return;
@@ -360,6 +394,25 @@
     var form = h("div", { class: "an__form" });
     var titleInput = h("input", { type: "text", value: (page && page.title) || "", placeholder: "e.g. Fundraising" });
     var subInput = h("input", { type: "text", value: (page && page.subtitle) || "", placeholder: "Optional subtitle" });
+    var scopeSel = h("select", {});
+    var curScope = (page && page.scope) || "system";
+    scopeSel.appendChild(opt("system", "System (org-wide dashboard)", curScope === "system"));
+    (state.recordTypes || []).forEach(function (rt) { scopeSel.appendChild(opt(rt.entity, "Record tab: " + rt.label, curScope === rt.entity)); });
+    function metricsForScope() {
+      var s = scopeSel.value;
+      return state.allMetrics.filter(function (m) {
+        var a = m.applies_to || ["system"];
+        return s === "system" ? a.indexOf("system") >= 0 : a.indexOf(s) >= 0;
+      });
+    }
+    function rebuildPanelMetrics() {
+      panelsHost.querySelectorAll(".an__p-metric").forEach(function (sel) {
+        var cur = sel.value; sel.innerHTML = "";
+        metricsForScope().forEach(function (m) { sel.appendChild(opt(m.key, m.name, m.key === cur)); });
+        sel.dispatchEvent(new Event("change"));
+      });
+    }
+    scopeSel.onchange = rebuildPanelMetrics;
     var rangeSel = h("select", {});
     var curRange = (page && page.default_range) || "last12mo";
     ["last7d", "last30d", "last90d", "quarter", "ytd", "last12mo", "all"].forEach(function (k) { rangeSel.appendChild(opt(k, RANGE_LABELS[k], curRange === k)); });
@@ -369,7 +422,7 @@
     function panelRow(p) {
       p = p || {};
       var msel = h("select", { class: "an__p-metric" });
-      state.allMetrics.forEach(function (m) { msel.appendChild(opt(m.key, m.name, m.key === p.metric_key)); });
+      metricsForScope().forEach(function (m) { msel.appendChild(opt(m.key, m.name, m.key === p.metric_key)); });
       var title = h("input", { type: "text", class: "an__p-title", value: p.title || "", placeholder: "Panel title" });
       var vsel = h("select", { class: "an__p-viz" });
       function fillViz() { var shape = state.metricShapes[msel.value] || "scalar"; vsel.innerHTML = ""; (VIZ_BY_SHAPE[shape] || [["stat", "Number"]]).forEach(function (v) { vsel.appendChild(opt(v[0], v[1], v[0] === p.viz)); }); }
@@ -397,6 +450,7 @@
         });
       });
       return { title: titleInput.value.trim(), subtitle: subInput.value.trim(),
+        scope: scopeSel.value,
         default_range: rangeSel.value, team_gate: teamInput.value.split(",").map(function (s) { return s.trim(); }).filter(Boolean),
         panels: panels };
     }
@@ -412,6 +466,7 @@
 
     form.appendChild(labeled("Title", titleInput));
     form.appendChild(labeled("Subtitle", subInput));
+    form.appendChild(labeled("Where it appears", scopeSel));
     form.appendChild(labeled("Default time range", rangeSel));
     form.appendChild(labeled("Who can view", teamInput));
     form.appendChild(h("div", { class: "an__form-label" }, "Panels"));

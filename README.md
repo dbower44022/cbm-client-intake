@@ -108,8 +108,10 @@ This is a multi-form app: a shared core hosts any number of intake forms.
     `ANALYTICS_VIEW_ALLOWED_TEAMS` (default "Analytics Admin Team"). Authors
     (gated by `ANALYTICS_ADMIN_ALLOWED_TEAMS`) build their own metrics + pages
     in-app via the **Manage** view — a metric builder (record type + filters +
-    aggregation, with a live preview) and a page composer (Phase B). Phase C adds
-    the record-embedded Analytics tabs.
+    aggregation, with a live preview) and a page composer (Phase B). Record-scoped
+    metrics + pages render as an **Analytics tab** on a record — the mentor record
+    in `/mentoradmin` first (Phase C), scoped to that record and run as the user
+    (its ACL is the gate).
 - **V2 reliability platform** (`prds/v2/`): optional durable capture
   (`core/store.py`) + an async delivery `worker.py`, gated by `DATABASE_URL` /
   `ASYNC_DELIVERY` so behavior is unchanged until a Postgres DB is attached.

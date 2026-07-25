@@ -17,10 +17,12 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
+from assignments import auth
 from assignments.auth import clear_session, current_user, is_member
+from assignments.espo_user import client_for
 from core import action_log
 from core.config import Settings, get_settings
-from core.espo import EspoClient, EspoError
+from core.espo import EspoClient, EspoError, forbidden_hint, is_forbidden
 
 from . import dashboard  # noqa: F401 — importing registers the metrics + seeded page
 from .builder import (
@@ -35,6 +37,7 @@ from .registry import (
     PAGE_REGISTRY,
     MetricSpec,
     PageSpec,
+    RecordRef,
     get_metric,
     get_page,
 )
@@ -262,6 +265,78 @@ async def _render(
 
 
 # =============================================================================
+# Record-scoped analytics (Phase C) — embedded on a record's detail tab.
+# =============================================================================
+def _signed_in(request: Request) -> dict:
+    user = current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    return user
+
+
+def _can_view_record_page(user: dict, page: PageSpec, settings: Settings) -> bool:
+    # For a record page the RECORD's ACL is the gate (checked by the parent read);
+    # an author may still add an explicit team gate on top.
+    return is_member(user, list(page.team_gate)) if page.team_gate else True
+
+
+def _record_crm_failure(request: Request, exc: EspoError) -> HTTPException:
+    if auth.session_expired(exc):
+        clear_session(request)
+        return HTTPException(status_code=401, detail="Your session has expired — please sign in again.")
+    if is_forbidden(exc):
+        return HTTPException(status_code=403, detail="You don't have permission to view this record.")
+    log.warning("analytics record read failed: %s", exc)
+    return HTTPException(status_code=502, detail="Could not load this record's analytics — try again.")
+
+
+@router.get("/record/{entity}/{record_id}")
+async def record_view(
+    entity: str,
+    record_id: str,
+    request: Request,
+    page_key: Optional[str] = Query(None, alias="page"),
+    range_key: Optional[str] = Query(None, alias="range"),
+) -> dict:
+    """Record-scoped analytics for one CRM record — embedded on that record's
+    detail (e.g. the Mentor Administration Analytics tab). Runs AS THE USER: the
+    parent record is read as them first (the ACL gate), and every metric query is
+    ACL-bounded. The gate is the record ACL + per-panel visibility — NOT the
+    analytics view team, so any staffer who can open the record sees its
+    analytics."""
+    user = _signed_in(request)
+    settings = get_settings()
+    if entity not in _BUILDER_ENTITY_SET:
+        raise HTTPException(status_code=404, detail="Unknown record type.")
+    client = client_for(settings, user)
+    try:
+        rec = await client.get(entity, record_id, select="id,name")
+    except EspoError as exc:
+        raise _record_crm_failure(request, exc)
+    store = _store(request)
+    pages = [
+        p for p in await _all_page_specs(store)
+        if p.scope == entity and _can_view_record_page(user, p, settings)
+    ]
+    record = {"entity": entity, "id": record_id, "name": rec.get("name")}
+    if not pages:
+        return {"available": False, "record": record, "pages": []}
+    selected = next((p for p in pages if p.key == page_key), pages[0])
+    time_range = build_time_range(range_key or selected.default_range)
+    lookup = _make_lookup(await _db_metric_specs(store))
+    ref = RecordRef(entity=entity, record_id=record_id, value=record_id)
+    body = await render_page(
+        selected, user=user, settings=settings, espo=client, store=store,
+        time_range=time_range, record=ref, metric_lookup=lookup,
+    )
+    body["available"] = True
+    body["record"] = record
+    body["crmUrl"] = settings.espo_base_url
+    body["pages"] = [{"key": p.key, "title": p.title} for p in pages]
+    return body
+
+
+# =============================================================================
 # Authoring (Phase B) — gated on ANALYTICS_ADMIN_ALLOWED_TEAMS; needs the store.
 # =============================================================================
 def _admin(request: Request) -> dict:
@@ -343,7 +418,19 @@ async def admin_fields(request: Request, entity: str = Query(...)) -> dict:
             "options": (spec or {}).get("options") if ftype in _ENUM_TYPES else None,
         })
     fields.sort(key=lambda f: f["label"])
-    return {"entity": entity, "fields": fields}
+    # belongsTo links → candidate context params ({link}Id) for record-scoped
+    # metrics (the field that equals a parent record's id). Best-effort.
+    links = []
+    try:
+        link_defs = await espo.metadata(f"entityDefs.{entity}.links")
+        for name, spec in (link_defs or {}).items():
+            if (spec or {}).get("type") == "belongsTo":
+                links.append({"param": name + "Id", "label": _humanize(name),
+                              "foreign": (spec or {}).get("entity")})
+    except EspoError:
+        pass
+    links.sort(key=lambda ln: ln["label"])
+    return {"entity": entity, "fields": fields, "links": links}
 
 
 class MetricIn(BaseModel):
@@ -377,6 +464,18 @@ def _metric_values_from(body: MetricIn) -> dict:
         viz = default_viz_for_shape(shape)
     if body.cache_mode not in ("live", "cached"):
         raise HTTPException(status_code=422, detail="cache_mode must be 'live' or 'cached'.")
+    applies = [a for a in (body.applies_to or ["system"]) if a] or ["system"]
+    for a in applies:
+        if a != "system" and a not in _BUILDER_ENTITY_SET:
+            raise HTTPException(status_code=422, detail=f"Unknown record type {a!r} in applies-to.")
+    record_scoped = any(a != "system" for a in applies)
+    ctx_param = (body.context_param or "").strip()
+    if record_scoped and not ctx_param:
+        raise HTTPException(
+            status_code=422,
+            detail="A record-scoped metric needs a record link field "
+                   "(e.g. mentorProfileId — the field that equals the record's id).",
+        )
     return {
         "name": body.name.strip(),
         "description": body.description or "",
@@ -385,8 +484,8 @@ def _metric_values_from(body: MetricIn) -> dict:
         "default_viz": viz,
         "entity": body.entity,
         "definition": body.definition or {},
-        "applies_to": body.applies_to or ["system"],
-        "context_param": body.context_param or None,
+        "applies_to": applies,
+        "context_param": ctx_param or None,
         "cache_mode": body.cache_mode,
         "refresh_seconds": 0,
         "time_aware": kind == "bucket",
@@ -404,10 +503,12 @@ async def admin_list_metrics(request: Request) -> dict:
     # Code-registered metrics are read-only but shown so authors can reuse them.
     code = [
         {"key": s.key, "name": s.name, "result_shape": s.shape,
-         "default_viz": s.default_viz, "source": "code", "builtin": True}
+         "default_viz": s.default_viz, "applies_to": list(s.applies_to),
+         "source": "code", "builtin": True}
         for s in METRIC_REGISTRY.values()
     ]
-    return {"metrics": metrics, "builtins": code}
+    return {"metrics": metrics, "builtins": code, "recordTypes": [
+        {"entity": e, "label": lbl} for e, lbl in BUILDER_ENTITIES]}
 
 
 @router.post("/admin/metrics")
@@ -517,6 +618,7 @@ class PanelIn(BaseModel):
 class PageIn(BaseModel):
     title: str = Field(min_length=1)
     subtitle: str = ""
+    scope: str = "system"                 # 'system' or a record entity type (Phase C)
     default_range: str = "last12mo"
     team_gate: list[str] = Field(default_factory=list)
     portal_dashboard: bool = False
@@ -524,6 +626,9 @@ class PageIn(BaseModel):
 
 
 async def _page_values_from(body: PageIn, store) -> dict:
+    scope = body.scope or "system"
+    if scope != "system" and scope not in _BUILDER_ENTITY_SET:
+        raise HTTPException(status_code=422, detail=f"Unknown page scope {scope!r}.")
     db_specs = await _db_metric_specs(store)
     lookup = _make_lookup(db_specs)
     panels = []
@@ -531,6 +636,11 @@ async def _page_values_from(body: PageIn, store) -> dict:
         spec = lookup(p.metric_key)
         if spec is None:
             raise HTTPException(status_code=422, detail=f"Unknown metric {p.metric_key!r}.")
+        if scope != "system" and scope not in spec.applies_to:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Metric {p.metric_key!r} isn't available on a {scope} page.",
+            )
         viz = p.viz if p.viz in COMPATIBLE_VIZ.get(spec.shape, ()) else spec.default_viz
         panels.append({
             "key": _slug(p.title) or p.metric_key,
@@ -542,7 +652,7 @@ async def _page_values_from(body: PageIn, store) -> dict:
             "config": p.config or {},
         })
     return {
-        "scope": "system",
+        "scope": scope,
         "title": body.title.strip(),
         "subtitle": body.subtitle or "",
         "default_range": body.default_range or "last12mo",

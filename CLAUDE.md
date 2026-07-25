@@ -1612,6 +1612,43 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-25)
 
+**v0.162.0** (2026-07-25, 1188 tests green, committed NOT pushed) — **Analytics
+platform — Phase C** (record-scoped analytics + the embedded Mentor tab; Mentor
+surface first per the PRD). Analytics attach to a CRM record.
+- **Record context**: a metric declares `applies_to` (record types) + a
+  `context_param` (the field on the metric's entity that equals the record's id,
+  e.g. `mentorProfileId`); the record view injects the current record's id as that
+  filter (the engine's `RecordRef`, wired since Phase A). **Record-scoped metrics
+  always run LIVE, never cached** (`service.resolve_metric` skips the cache when
+  `ctx.record` is set) — they run AS THE USER, ACL-bounded, so a shared per-record
+  cache can't leak one viewer's scope to another.
+- **Record-render endpoint** `GET /analytics/api/record/{entity}/{id}`: reads the
+  parent record **as the user first** (the ACL gate — 403/hide if denied), then
+  renders the record-scoped page(s) for that entity with the record injected + as
+  the user (`client_for`). Gate = record ACL + per-panel visibility, **NOT** the
+  analytics view team (any staffer who can open the record sees its analytics).
+  Returns `available`/`record`/`crmUrl`/`pages` + the rendered panels.
+- **Authoring**: metric builder gains "Applies to" (System + record types) + a
+  record-link-field picker (belongsTo links from metadata, `/admin/fields` now
+  returns `links`); context_param required when a record type is chosen. Page
+  composer gains a **Scope** selector (System / a record type) that filters the
+  panel metric list to metrics whose `applies_to` includes the scope. Server
+  validates both (`_metric_values_from`, `_page_values_from`).
+- **Embedded Mentor tab**: `/mentoradmin` shows an **Analytics** tab (gated on the
+  new `analyticsEnabled` = `settings.analytics_active` in its `/session`) that
+  fetches the record endpoint and renders panels with the shared `CBMCharts`. The
+  **panel grid/card styles moved to `frontend/shared/charts.css`** (from the
+  analytics app's styles.css) so any embedding host renders identically —
+  verified standalone.
+- 8 new tests (`tests/test_analytics_record.py`); suite green (1188). Authoring
+  UI + embedded render harness-verified (applies-to reveal, scope→metric filter,
+  standalone panel styling). **NOT yet driven live** — after deploy: build a
+  mentor-scoped metric (engagements by `mentorProfileId`) → a CMentorProfile page
+  → open a mentor in `/mentoradmin` → the Analytics tab shows that mentor's
+  numbers; a staffer who can't read the mentor is denied. **Follow-ups**: extend
+  the embed to CEngagement/Account/Contact/partner/sponsor; drill-through (§9,
+  deferred since Phase B).
+
 **v0.161.0** (2026-07-25, 1180 tests green, committed NOT pushed) — **Analytics
 platform — Phase B** (self-serve authoring). Admins/authors build metrics + pages
 in-app, no deploy. Gated on `ANALYTICS_ADMIN_ALLOWED_TEAMS` (default `Analytics

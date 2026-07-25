@@ -4,6 +4,40 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.162.0] — 2026-07-25
+
+**feat(analytics): Analytics platform — Phase C (record-scoped analytics +
+embedded Mentor tab)** (prds/analytics-app-plan.md). Analytics attach to a CRM
+record: an author builds a record-scoped metric + page, and it renders as an
+**Analytics tab on the mentor record** (`/mentoradmin`), scoped to that mentor.
+
+- **Record context**: a metric declares `applies_to` (record types) + a
+  `context_param` (the field that equals the record's id, e.g. `mentorProfileId`);
+  the record view injects the current record's id as that filter (the engine's
+  `RecordRef` was already wired in Phase A). Record-scoped metrics **always run
+  live** (never cached) — they run AS THE USER, ACL-bounded, so a shared
+  per-record cache can't leak one viewer's scope to another.
+- **Record-render endpoint** `GET /analytics/api/record/{entity}/{id}`: reads the
+  parent record **as the user first** (the ACL gate — 403/hide if they can't),
+  then renders the record-scoped page(s) for that entity with the record injected.
+  Gate is the record ACL + per-panel visibility — **not** the analytics view team,
+  so any staffer who can open the record sees its analytics.
+- **Authoring**: the metric builder gains an "Applies to" multi-select + a
+  record-link-field picker (belongsTo links from metadata); the page composer
+  gains a **Scope** selector (System / a record type) that filters the panel
+  metric list to metrics valid for that scope. Server validates both.
+- **Embedded Mentor tab**: `/mentoradmin` shows an **Analytics** tab (gated on
+  `analytics_active`) that fetches the record endpoint and renders panels with the
+  shared `CBMCharts`. The panel grid/card styles moved to `frontend/shared/charts.css`
+  so any host renders identically (verified standalone).
+- 8 new tests (`tests/test_analytics_record.py`); suite green (1188). New
+  action-log verbs already in place. **NOT yet driven live** — after deploy: as an
+  author, build a mentor-scoped `count` metric (e.g. engagements by `mentorProfileId`)
+  → a CMentorProfile page → open a mentor in `/mentoradmin` → the Analytics tab
+  shows that mentor's numbers; a staffer who can't read the mentor is denied.
+  Follow-ups: extend to CEngagement/Account/Contact/partner/sponsor surfaces;
+  drill-through (§9).
+
 ## [0.161.0] — 2026-07-25
 
 **feat(analytics): Analytics platform — Phase B (self-serve authoring)**

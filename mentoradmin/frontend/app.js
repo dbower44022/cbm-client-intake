@@ -11,6 +11,7 @@
   var listDirty = false;   // reload list after an edit
   var isAdmin = false;     // gates the Email Setup screen
   var docsEnabled = false; // GDRIVE_DOCS server-side: shows the Documents tab
+  var analyticsEnabled = false; // ANALYTICS_ENABLED: shows the Analytics tab
   var filter = { q: "", status: "", record: "", type: "", sortKey: "name", sortDir: 1 };
 
   // Permission-team assignment (Status tab). teamState = the current mentor's
@@ -71,6 +72,7 @@
     $("whoName").textContent = user.name || user.userName;
     isAdmin = !!user.isAdmin;
     docsEnabled = !!user.docsEnabled;
+    analyticsEnabled = !!user.analyticsEnabled;
     $("setupBtn").hidden = !isAdmin;
   }
 
@@ -525,7 +527,63 @@
       tabs.appendChild(dbtn);
       form.appendChild(buildDocsPanel());
     }
+    // Analytics (record-scoped, served by the analytics app) — a non-field tab.
+    if (analyticsEnabled) {
+      var abtn = document.createElement("button");
+      abtn.type = "button"; abtn.className = "ma__tab"; abtn.textContent = "Analytics";
+      abtn.dataset.tab = "__analytics"; abtn.setAttribute("role", "tab");
+      abtn.addEventListener("click", function () { activateTab("__analytics"); loadMentorAnalytics(); });
+      tabs.appendChild(abtn);
+      form.appendChild(buildAnalyticsPanel());
+    }
     if (order.length) activateTab(order[0]);
+  }
+
+  // --- Analytics tab (record-scoped analytics for this mentor) ---------------
+  function buildAnalyticsPanel() {
+    var panel = document.createElement("div");
+    panel.className = "tab-panel"; panel.dataset.panel = "__analytics";
+    var msg = document.createElement("p"); msg.className = "ma__muted"; msg.id = "manaMsg";
+    msg.textContent = "Loading…";
+    var grid = document.createElement("div"); grid.className = "an__grid"; grid.id = "manaGrid";
+    panel.appendChild(msg); panel.appendChild(grid);
+    return panel;
+  }
+
+  var manaLoadedFor = null;
+  async function loadMentorAnalytics() {
+    if (!current) return;
+    var grid = $("manaGrid"), msg = $("manaMsg");
+    if (manaLoadedFor === current.id) return;  // one load per open mentor
+    manaLoadedFor = current.id;
+    grid.innerHTML = ""; msg.hidden = false; msg.textContent = "Loading…";
+    try {
+      var url = "/analytics/api/record/CMentorProfile/" + encodeURIComponent(current.id);
+      var r = await (window.CBMBusy ? CBMBusy.fetch(url) : fetch(url));
+      var body = await r.json();
+      if (!r.ok) throw new Error((body && body.detail) || ("Request failed (" + r.status + ")"));
+      if (!body.available) {
+        msg.textContent = "No analytics have been set up for mentors yet. An analytics author can add a Mentor page in the Analytics app.";
+        return;
+      }
+      msg.hidden = true;
+      (body.panels || []).forEach(function (p) {
+        var span = Math.max(3, Math.min(12, p.width || 4));
+        var head = document.createElement("header"); head.className = "an-panel__head";
+        var hh = document.createElement("h3"); hh.textContent = p.title; head.appendChild(hh);
+        var bodyEl = document.createElement("div"); bodyEl.className = "an-panel__body";
+        var art = document.createElement("article"); art.className = "an-panel";
+        art.style.setProperty("--span", span);
+        art.appendChild(head); art.appendChild(bodyEl);
+        try { CBMCharts.renderPanel(bodyEl, p, { crmUrl: body.crmUrl }); }
+        catch (e) { bodyEl.innerHTML = '<p class="anc-err">Could not render this panel.</p>'; }
+        grid.appendChild(art);
+      });
+      if (!(body.panels || []).length) msg.hidden = false, msg.textContent = "No panels to show.";
+    } catch (e) {
+      manaLoadedFor = null;
+      msg.hidden = false; msg.textContent = e.message;
+    }
   }
 
   // --- Documents tab (mentor documents on the linked Contact) ---------------

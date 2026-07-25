@@ -135,6 +135,9 @@ async def session(request: Request) -> dict:
         # True => the detail screen shows the Documents tab (DOC-MGMT: mentor
         # documents anchored to the mentor's linked Contact record).
         "docsEnabled": get_settings().gdrive_docs,
+        # True => show the Analytics tab (record-scoped analytics for this mentor,
+        # served by the analytics app; Phase C). Only when analytics is enabled.
+        "analyticsEnabled": get_settings().analytics_active,
     }
 
 

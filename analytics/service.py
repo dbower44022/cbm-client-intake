@@ -153,7 +153,12 @@ async def resolve_metric(
     """Compute (or serve from cache) one metric; returns the panel payload."""
     context_key = _context_key(ctx)
     range_key = _range_key(spec, ctx)
-    cached_ok = spec.cache_mode == "cached" and ctx.store is not None
+    # Record-scoped metrics run AS THE USER (ACL-bounded), so they are NEVER
+    # cached — a shared per-record cache could leak one viewer's ACL scope to
+    # another. They're bounded to one record's related set, so live is cheap.
+    cached_ok = (
+        spec.cache_mode == "cached" and ctx.store is not None and ctx.record is None
+    )
 
     if cached_ok and not force:
         hit = await ctx.store.get_cached(spec.key, context_key, range_key)

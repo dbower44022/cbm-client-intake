@@ -55,31 +55,8 @@ body {
 .an__loading { color: var(--cbm-slate-700, #556); }
 .an__empty { color: var(--cbm-slate-700, #556); grid-column: 1 / -1; }
 
-/* --- panel grid ------------------------------------------------------------ */
-.an__grid {
-  display: grid; grid-template-columns: repeat(12, 1fr); gap: 1rem;
-  align-items: start;
-}
-.an-panel {
-  grid-column: span var(--span, 4);
-  background: #fff; border: 1px solid var(--cbm-border, #d8dee6);
-  border-radius: var(--cbm-radius, 12px); padding: 1rem 1.1rem;
-  box-shadow: 0 1px 2px rgba(16, 32, 64, 0.04);
-  min-width: 0;
-}
-.an-panel__head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.6rem; }
-.an-panel__head h3 { margin: 0; font-size: 1rem; color: var(--cbm-navy, #00205B); font-weight: 600; }
-.an-panel__meta { font-size: 0.75rem; color: var(--cbm-slate-700, #889); white-space: nowrap; }
-.an-panel__body { min-height: 2rem; }
-
-@media (max-width: 900px) {
-  .an__grid { grid-template-columns: repeat(6, 1fr); }
-  .an-panel { grid-column: span min(var(--span, 4), 6); }
-}
-@media (max-width: 560px) {
-  .an__grid { grid-template-columns: 1fr; }
-  .an-panel { grid-column: 1 / -1; }
-}
+/* Panel grid + card styles now live in /shared/charts.css (shared with embedded
+ * hosts like /mentoradmin's Analytics tab). */
 
 /* --- Manage (Phase B authoring) -------------------------------------------- */
 .an__manage-head { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
@@ -126,6 +103,9 @@ body {
 .an__filters { display: flex; flex-direction: column; gap: 0.4rem; margin: 0.35rem 0; }
 .an__filter { display: grid; grid-template-columns: 1.4fr 1fr 1.4fr auto; gap: 0.4rem; align-items: center; }
 .an__preview { border: 1px dashed var(--cbm-border, #d8dee6); border-radius: 8px; padding: 0.85rem; min-height: 4rem; background: #fbfcfd; }
+.an__applies { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; }
+.an__chk { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.88rem; color: var(--cbm-ink, #1c2530); }
+.an__chk input { min-height: auto; }
 
 .an__panels { display: flex; flex-direction: column; gap: 0.6rem; margin: 0.35rem 0; }
 .an__panel-row { border: 1px solid var(--cbm-border, #d8dee6); border-radius: 8px; padding: 0.6rem; display: flex; gap: 0.6rem; align-items: flex-start; }

@@ -575,6 +575,16 @@ Each phase is independently shippable and gated OFF until activated (`analytics_
 - Live previews; metric-usage safety (§7.3). (Drill-through §9 → follow-up.)
 - After B, admins create metrics/pages in-app without a deploy.
 
+> **BUILT 2026-07-25 (v0.162.0), Mentor surface first.** See CHANGELOG 0.162.0.
+> Record-scoped metrics (`applies_to` + `context_param`) + a record-render
+> endpoint (`GET /analytics/api/record/{entity}/{id}`, parent-read-as-user ACL
+> gate, record injected, always live/never cached) + the authoring controls
+> (metric "Applies to" + record-link field; page Scope selector filtering
+> metrics) + the embedded **Analytics tab on `/mentoradmin`**. The panel/card
+> styles moved to the shared `charts.css` so any host renders identically.
+> Remaining: extend the embed to CEngagement/Account/Contact/partner/sponsor
+> surfaces; drill-through (§9).
+
 ### Phase C — Record-scoped analytics + embedded tabs
 - Record context model (`context_param` injection); `applies_to` gating in the composer.
 - **First record type: Mentor** (`CMentorProfile`, Doug 2026-07-25) — prove record-scoping
