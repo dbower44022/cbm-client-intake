@@ -4,7 +4,9 @@ Companion to `CBM_Events_PRD.md`. This is the build order, the file-level
 design, and the verification gates. Requirement ids (`EV-nn`) and decision ids
 (`D-nn`) refer to the PRD.
 
-**Status:** DRAFT for approval. Nothing built.
+**Status:** Phase 0 complete (all decisions settled, crm-test schema applied).
+**Phase 1 BUILT and live-verified on crm-test, 2026-07-25 (v0.164.0)** — gated
+off by `EVENTS_ENABLED` + `EVENTS_PUBLIC_API`. Phases 2-6 remain.
 
 ---
 
@@ -85,7 +87,7 @@ list — the same read-only probe used for this review
 
 ---
 
-## Phase 1 — CRM layer and read-only public API
+## Phase 1 — CRM layer and read-only public API  ✅ DONE (v0.164.0)
 
 **Goal:** events exist as CRM records and our API can serve the page's data.
 Nothing public changes yet.
@@ -109,8 +111,11 @@ Nothing public changes yet.
 all cancelled, capacity zero/unlimited), slug collisions, public payload shape
 matches the documented contract exactly, timezone round-trip (EV-85).
 
-**Verify live (crm-test):** create an event in the EspoCRM UI → it appears in
-`GET /api/events/upcoming` with correct local time strings.
+**Verify live (crm-test): ✅ PASSED 2026-07-25.** Three real `CEvent` records
+(published upcoming, past-with-recording, unpublished internal) read back through
+the app: correct Cleveland-local time strings (`2:00 PM - 3:30 PM | WEBINAR`),
+the internal meeting absent from the calendar and 404 on its own slug, recording
+search + derived thumbnail, per-event detail. Test records deleted, no residue.
 
 ---
 

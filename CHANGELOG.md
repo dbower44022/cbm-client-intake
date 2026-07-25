@@ -4,6 +4,63 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.164.0] — 2026-07-25
+
+**feat(events): Events & Webinars — Phase 1 (CRM read layer + public read API)**
+(prds/events/CBM_Events_PRD.md, CBM_Events_Implementation_Plan.md). Gated OFF by
+`EVENTS_ENABLED` + `EVENTS_PUBLIC_API`; no migration; nothing deploys behaviour
+until both flags are set.
+
+The public `/webinars/` page runs today on a Google Apps Script plus a
+browser-side YouTube Data API call (key visible in the page source), with
+EspoCRM involved at no point — so every registrant is an invisible lead. This
+phase puts the data behind our own API, sourced from the CRM.
+
+- **`events/config.py`** — entity/field names, the enum values the code branches
+  on, and `EVENT_FIELDS` (one spec = the future editor layout AND the
+  server-side write whitelist, the `SESSION_FIELDS`/`CONTRIBUTION_FIELDS`
+  pattern). Records the **vocabulary trap**: the website's existing payload uses
+  Zoom's language where `topic` means the event TITLE, while `CEvent.topic` is
+  the 10-value subject category — so the public payload keeps `topic` = title
+  and exposes the category as `category`. Aligning those names would blank every
+  title on the live site.
+- **`events/service.py`** — the read/derive layer. Every public read goes through
+  `_public_where` (`publishToWebsite` true AND not cancelled): `CEvent` doubles
+  as the org calendar and holds 92 internal team meetings and session mirrors,
+  so that flag is the only thing keeping them off the website. Counts
+  (registered/attended/show-rate/seats remaining) are **computed on every read,
+  never stored** (the funder-contributions ruling), so they cannot drift.
+  Datetimes are parsed as UTC and rendered in America/New_York — the v0.39.2
+  lesson, which is what makes the time band read `2:00 PM - 3:30 PM | WEBINAR`
+  rather than 4-5 hours out. Slugs with collision suffixes for the per-event
+  pages.
+- **`events/public.py`** — `GET /api/events/upcoming`, `/recordings?q=&limit=`,
+  `/{slug}`. Deliberately shaped to the keys the page already consumes so the
+  rendering code ports across with near-zero change. No registrant PII ever
+  (EV-82); in-process TTL cache + `Cache-Control` so a traffic burst costs the
+  CRM one query; a CRM outage returns a plain 502 that leaks nothing (the
+  WordPress plugin serves its cached copy). Router mounted only when both flags
+  are on, so an unconfigured deploy exposes nothing.
+- **`core/youtube.py`** — video-id parsing and thumbnail URLs derived with **no
+  API key and no network call** (`i.ytimg.com` by id), which is what gets the key
+  out of the browser (EV-05); plus a small playlist client used only by the
+  Phase 6 backfill.
+- Settings: `events_enabled`, `events_public_api`, `events_allowed_teams`,
+  `events_cache_seconds`, `events_public_base_url`, `youtube_api_key`,
+  `youtube_playlist_id`, with `events_active` / `events_public_active`.
+
+**Verified:** 60 new tests (full suite 1255 green), and driven **LIVE against
+crm-test** — three real `CEvent` records created via the API (a published
+upcoming workshop, a past one with a recording, and an unpublished internal
+meeting), then read back through the app: correct Cleveland-local time strings,
+the internal meeting absent from the calendar AND 404 on its own slug, recording
+search + derived thumbnail working, per-event detail correct. All three test
+records deleted afterwards — no residue.
+
+**Phase 2 (Zoom client) is next and needs no new decisions.** The Zoom
+Server-to-Server OAuth app is still outstanding, but only the Phase 2 *live*
+verification depends on it.
+
 ## [0.163.0] — 2026-07-25
 
 **feat(analytics): Analytics platform — Phase D (portal dashboard + computed

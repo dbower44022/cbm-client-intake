@@ -393,6 +393,10 @@ def create_app(
         app.state.analytics_store = make_analytics_store(settings)
     else:
         app.state.analytics_store = None
+    # Exposed to the public Events API — the API-key CRM client (no session).
+    # A factory rather than a client so tests can substitute a fake, and so the
+    # client is built per request like the intake handlers do.
+    app.state.events_client_factory = lambda: _make_client(settings)
     # Exposed to the portal router (the public-form links on the home page).
     app.state.form_specs = forms
     app.add_middleware(
@@ -618,6 +622,14 @@ def create_app(
         # Workspace Directories: one router per kind, all from the same engine.
         for _dcfg in DIRECTORY_KINDS.values():
             app.include_router(make_directory_router(_dcfg))
+
+    # Events & Webinars: the public read API for the website. Mounted only when
+    # switched on, so an unconfigured deploy exposes nothing. Deliberately
+    # outside the staff-stack block — it is unauthenticated by design.
+    if settings.events_public_active:
+        from events import api_router as events_public_router
+
+        app.include_router(events_public_router)
 
     @app.get("/", response_class=HTMLResponse)
     async def index() -> HTMLResponse:

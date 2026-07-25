@@ -338,6 +338,28 @@ class Settings(BaseSettings):
     # (GDRIVE_IDENTITY=service). 0 disables the job.
     gdrive_reconcile_seconds: int = 86400
 
+    # --- Events & Webinars (prds/events/) — the public /webinars/ data layer,
+    # registration into the CRM, Zoom webinar sync, attendance, and the /events
+    # staff app. Master flag; nothing is mounted and no CRM write happens until
+    # it is on. The public read API has its OWN flag so the website cutover is a
+    # separate, instantly reversible switch from turning the feature on for
+    # staff.
+    events_enabled: bool = False
+    events_public_api: bool = False
+    # Team gate for the /events staff app (Phase 5).
+    events_allowed_teams: str = "Marketing Admin Team"
+    # In-process cache for the public read endpoints. The WordPress plugin
+    # caches too, so a normal page load makes no live call to us at all.
+    events_cache_seconds: int = 60
+    # Where per-event pages live, for the `url` in the public payload. The
+    # WordPress plugin owns these URLs so they stay on the marketing domain.
+    events_public_base_url: str = "https://clevelandbusinessmentors.org/webinars"
+    # YouTube: needed ONLY by the playlist backfill (EV-42). Rendering the
+    # recorded library derives thumbnails from the video id with no key and no
+    # API call - which is what gets the key out of the browser (EV-05).
+    youtube_api_key: str = ""
+    youtube_playlist_id: str = ""
+
     # --- Analytics (prds/analytics-app-plan.md) — the /analytics app + the
     # embedded record tabs + the portal dashboard. Master flag; the app is
     # absent (not mounted, no portal tile) until enabled. Metric definitions +
@@ -452,6 +474,25 @@ class Settings(BaseSettings):
     @property
     def analytics_view_allowed_teams_list(self) -> list[str]:
         return [t.strip() for t in self.analytics_view_allowed_teams.split(",") if t.strip()]
+
+    @property
+    def events_allowed_teams_list(self) -> list[str]:
+        return [t.strip() for t in self.events_allowed_teams.split(",") if t.strip()]
+
+    @property
+    def events_active(self) -> bool:
+        """The Events feature as a whole (staff app + CRM writes)."""
+        return self.events_enabled and self.assignments_active
+
+    @property
+    def events_public_active(self) -> bool:
+        """The public read API. Needs the feature on AND its own flag, and a
+        real CRM to read from - there is nothing to serve in dry-run."""
+        return (
+            self.events_enabled
+            and self.events_public_api
+            and not self.espo_dry_run
+        )
 
     @property
     def analytics_active(self) -> bool:
