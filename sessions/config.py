@@ -84,7 +84,7 @@ class DomainConfig:
     allowed_teams_attr: str
 
     parent_entity: str
-    parent_label: str  # "Engagement" / "Partner" / "Sponsor"
+    parent_label: str  # "Engagement" / "Partner" / "Funder"
 
     # belongsTo link on CSession that points at this parent. The FK we write on a
     # new session is ``<session_parent_link>Id``.
@@ -168,6 +168,27 @@ class DomainConfig:
     # id_attr on the parent). id_attr "id" means the parent record itself.
     # Related contacts are added as their own sections automatically.
     details_entities: tuple[tuple[str, str, str], ...] = ()
+
+    # --- Details tab contacts card (Doug's ruling 2026-07-24) -----------------
+    # The card title, and which columns that domain's contacts actually use.
+    # "Role" is noise where every contact has the same relationship to CBM (a
+    # partner's contacts are all partner contacts), and "Agreements" — the three
+    # consent bools — is a client-intake concept CBM doesn't collect for
+    # partners/funders.
+    contacts_label: str = "Client Contacts"
+    contacts_show_role: bool = True
+    contacts_show_agreements: bool = True
+    # Whether the contacts table offers a "Make primary" row action, writing
+    # ``primary_contact_id_attr`` on the parent. The mentor domain leaves this
+    # off — an engagement's primary contact comes from intake.
+    primary_contact_settable: bool = False
+
+    # Compose an "Industry" Overview fact from the record's company Account
+    # (industry / sector / subsector). The partner + funder profiles carry no
+    # industry of their own — it belongs to the company (Doug's ruling
+    # 2026-07-24) — so the rail reads it from there. Best-effort: an unreadable
+    # or company-less record simply shows "—".
+    company_industry_fact: bool = False
 
     # Overview tab: the curated "most important" facts (top of the detail view).
     overview_items: tuple[OverviewItem, ...] = ()
@@ -496,6 +517,7 @@ PARTNER = DomainConfig(
         "name,partnershipStatus,partnershipType,"
         "partnerCompanyName,partnerCompanyId,"
         "primaryPartnercontactName,primaryPartnercontactId,"
+        "partnerManagerName,partnerManagerId,"
         "partnerContactCadence,partnershipStartDate,partnershipAgreementDate,"
         "lastContacted,partnershipValue,cBMValueProvided,partnerNotes,createdAt"
     ),
@@ -505,22 +527,34 @@ PARTNER = DomainConfig(
         Column("company", "Company", "partnerCompanyName"),
         Column("primaryContact", "Primary contact", "primaryPartnercontactName"),
     ),
+    # Every scalar fact is ``always`` (Doug's 2026-07-24 report: the agreement
+    # date and last-contacted slots were configured but empty on nearly every
+    # partner, so they vanished and read as missing features). The rail is now a
+    # stable shape — an empty fact renders "—".
     overview_items=(
-        OverviewItem("Partnership status", "partnershipStatus", "badge", section="key"),
-        OverviewItem("Partnership type", "partnershipType", section="key"),
+        OverviewItem("Partnership status", "partnershipStatus", "badge", section="key", always=True),
+        OverviewItem("Partnership type", "partnershipType", section="key", always=True),
         # single "Company" link — the partner profile + the company Account are
         # one org; the pop-up aggregates both.
         OverviewItem("Company", "partnerCompanyName", "text", section="key",
                      aggregate=(("Account", "partnerCompanyId"),
                                 ("CPartnerProfile", "id"))),
+        # Composed from the company Account (see ``company_industry_fact``) —
+        # the partnership record carries no industry of its own.
+        OverviewItem("Industry", "_companyIndustry", "text", section="key", always=True),
         OverviewItem("Primary contact", "primaryPartnercontactName", "text", section="key",
-                     link_entity="Contact", id_attr="primaryPartnercontactId"),
-        OverviewItem("Contact cadence", "partnerContactCadence", section="activity"),
-        OverviewItem("Partnership start", "partnershipStartDate", "date", section="activity"),
-        OverviewItem("Agreement date", "partnershipAgreementDate", "date", section="activity"),
-        OverviewItem("Last contacted", "lastContacted", "date", section="activity"),
-        OverviewItem("Partnership value", "partnershipValue", "multiEnum", section="activity"),
-        OverviewItem("CBM value provided", "cBMValueProvided", "multiEnum", section="activity"),
+                     link_entity="Contact", id_attr="primaryPartnercontactId", always=True),
+        # The assigned manager — on the grid since v0.89.0 but missing from the
+        # rail until now (Doug's 2026-07-24 report). Links to the same
+        # CMentorProfile pop-up, whose email rows are compose links.
+        OverviewItem("Partner Manager", "partnerManagerName", "text", section="key",
+                     link_entity="CMentorProfile", id_attr="partnerManagerId", always=True),
+        OverviewItem("Contact cadence", "partnerContactCadence", section="activity", always=True),
+        OverviewItem("Partnership start", "partnershipStartDate", "date", section="activity", always=True),
+        OverviewItem("Agreement date", "partnershipAgreementDate", "date", section="activity", always=True),
+        OverviewItem("Last contacted", "lastContacted", "date", section="activity", always=True),
+        OverviewItem("Partnership value", "partnershipValue", "multiEnum", section="activity", always=True),
+        OverviewItem("CBM value provided", "cBMValueProvided", "multiEnum", section="activity", always=True),
     ),
     overall_notes_attr="partnerNotes",
     overall_notes_label="Partner Notes",
@@ -529,6 +563,11 @@ PARTNER = DomainConfig(
         ("Partnership", "CPartnerProfile", "id"),  # the partnership record itself, first
         ("Company", "Account", "partnerCompanyId"),
     ),
+    contacts_label="Partner Contacts",
+    contacts_show_role=False,
+    contacts_show_agreements=False,
+    primary_contact_settable=True,
+    company_industry_fact=True,
     discussion_enabled=True,
 )
 
@@ -540,8 +579,13 @@ SPONSOR = DomainConfig(
     subtitle="Review the funders you manage and record sessions.",
     allowed_teams_attr="session_sponsor_allowed_teams_list",
     parent_entity=SPONSOR_PROFILE,
-    parent_label="Sponsor",
-    empty_message="No sponsors found.",
+    # "Funder" is the internal word CBM favours (Doug's ruling 2026-07-24 — the
+    # terms are interchangeable, funder wins for internal communication). Every
+    # label this app authors reads Funder; the CRM entities, the route, the
+    # ``Sponsor Session`` type value, the public "Become a Sponsor" form, and
+    # Submission Admin's ``sponsor`` form slug deliberately keep the old word.
+    parent_label="Funder",
+    empty_message="No funders found.",
     session_parent_link="sponsorProfile",
     manager_owned_link="managedSponsors",  # reverse of CSponsorProfile.cBMSponsorManager
     parent_manager_link="cBMSponsorManager",
@@ -560,12 +604,12 @@ SPONSOR = DomainConfig(
         "sponsorContactId,cBMSponsorManagerName,cBMSponsorManagerId,createdAt"
     ),
     list_columns=(
-        Column("name", "Sponsor", "name"),
+        Column("name", "Funder", "name"),
         Column("company", "Company", "sponsorCompanyName"),
         Column("contact", "Primary contact", "sponsorContactName"),
         # Links to the manager's CMentorProfile pop-up (CBM/personal email
         # compose links there — the quick-email path); "—" when unmanaged.
-        Column("mentor", "Sponsor Manager", "cBMSponsorManagerName"),
+        Column("mentor", "Funder Manager", "cBMSponsorManagerName"),
     ),
     list_contact_key="contact",
     list_contact_id_attr="sponsorContactId",
@@ -576,6 +620,7 @@ SPONSOR = DomainConfig(
     detail_select=(
         "name,sponsorCompanyName,sponsorCompanyId,"
         "sponsorContactName,sponsorContactId,"
+        "cBMSponsorManagerName,cBMSponsorManagerId,"
         "totalContribution,totalContributionCurrency,"
         "lastContribution,lastContacted,description,createdAt"
     ),
@@ -583,25 +628,35 @@ SPONSOR = DomainConfig(
         Column("company", "Company", "sponsorCompanyName"),
         Column("primaryContact", "Primary contact", "sponsorContactName"),
     ),
+    # Persistent facts, same ruling as the partner rail (an empty slot renders
+    # "—" rather than vanishing).
     overview_items=(
-        # single "Company" link — the sponsor profile + the company Account are
+        # single "Company" link — the funder profile + the company Account are
         # one org; the pop-up aggregates both.
         OverviewItem("Company", "sponsorCompanyName", "text", section="key",
                      aggregate=(("Account", "sponsorCompanyId"),
                                 ("CSponsorProfile", "id"))),
+        OverviewItem("Industry", "_companyIndustry", "text", section="key", always=True),
         OverviewItem("Primary contact", "sponsorContactName", "text", section="key",
-                     link_entity="Contact", id_attr="sponsorContactId"),
-        OverviewItem("Total contribution", "totalContribution", "currency", section="activity"),
-        OverviewItem("Last contribution", "lastContribution", "date", section="activity"),
-        OverviewItem("Last contacted", "lastContacted", "date", section="activity"),
+                     link_entity="Contact", id_attr="sponsorContactId", always=True),
+        OverviewItem("Funder Manager", "cBMSponsorManagerName", "text", section="key",
+                     link_entity="CMentorProfile", id_attr="cBMSponsorManagerId", always=True),
+        OverviewItem("Total contribution", "totalContribution", "currency", section="activity", always=True),
+        OverviewItem("Last contribution", "lastContribution", "date", section="activity", always=True),
+        OverviewItem("Last contacted", "lastContacted", "date", section="activity", always=True),
     ),
     overall_notes_attr="description",
-    overall_notes_label="Sponsor Notes",
+    overall_notes_label="Funder Notes",
     overall_notes_type="longtext",
     details_entities=(
-        ("Sponsorship", "CSponsorProfile", "id"),  # the sponsor record itself, first
+        ("Funding", "CSponsorProfile", "id"),  # the funder record itself, first
         ("Company", "Account", "sponsorCompanyId"),
     ),
+    contacts_label="Funder Contacts",
+    contacts_show_role=False,
+    contacts_show_agreements=False,
+    primary_contact_settable=True,
+    company_industry_fact=True,
     # The funder ledger (prds/funder-contributions-plan.md): the Contributions
     # tab + endpoints, reading the CRM-built CContribution entity through the
     # parent's sponsorContributions link. Donor links on a new contribution

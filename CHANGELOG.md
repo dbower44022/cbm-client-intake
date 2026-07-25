@@ -4,6 +4,88 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.153.0] — 2026-07-25
+
+**feat(sessions): Partner & Funder Management review pass** — eight items from
+Doug's 2026-07-24 walkthrough of the partner app, plus the funder parity each
+one implies.
+
+1. **The assigned manager is on the Overview rail.** The grid had a Partner
+   Manager column since v0.89.0 but the rail never showed it — the item wasn't
+   configured and `partnerManagerName`/`Id` weren't even in the domain's
+   `detail_select`. Both domains now carry the fact (Partner Manager / Funder
+   Manager), linked to the same `CMentorProfile` pop-up the grid column opens
+   (its CBM + personal email rows are compose links).
+2. **Sponsor → Funder in this app's own labels** (Doug: the terms are
+   interchangeable, funder wins for internal communication). Grid columns
+   ("Funder", "Funder Manager"), `parent_label`, the empty state, the notes
+   panel ("Funder Notes"), the Details strip title ("Funding"), the profile
+   edit group + notes field, and the peek label. **Deliberately unchanged:** the
+   CRM entities, the `/sponsorsessions` route, the `Sponsor Session` CSession
+   type value, the public "Become a Sponsor" form, Submission Admin's `sponsor`
+   form slug, and CRM-derived field labels (they mirror what staff see in
+   EspoCRM).
+3. **Rail facts no longer vanish when empty.** Agreement date and Last contacted
+   were configured but empty on nearly every real partner, so they dropped out
+   and read as missing features (the v0.133.0 Referring-partner lesson). Every
+   scalar fact on the partner + funder rails is now `always` — an empty slot
+   renders "—".
+4. **A splitter between Session notes and Discussion.** The Discussion pane
+   (v0.142.0) had a fixed track; the Overview grid now has a second draggable,
+   keyboard-adjustable handle setting `--ov-right` (measured from the grid's
+   right edge). Hidden with the pane, so a domain without Discussion keeps its
+   3-column grid.
+5. **`partnerEmail` explains itself.** It is an EspoCRM *foreign* field
+   (`readOnly: true`) mirroring `primaryPartnercontact.emailAddress`, which is
+   why it appears on the Details tab but nowhere in Edit Partnership — it's
+   changed by editing the contact. Relabelled "Primary contact email" (per-entity
+   `details._FIELD_LABELS`) and rendered as a compose link on both the summary
+   strip and the card rows (`display: "email"`, set for any read-only mirror of
+   an email address).
+6. **Company industry on the rail.** The partner/funder profiles carry no
+   industry of their own (Doug's ruling: it belongs to the company), so the rail
+   composes an Industry fact from the linked Account's
+   industry/sector/subsector, deduped (`DomainConfig.company_industry_fact`,
+   `service._fill_company_industry`). Best-effort: no company, an unreadable
+   Account, or a failed read just shows "—".
+7. **The Account's partner twins are gone from the app.** `cPartnerStatus`,
+   `cPartnerContactCadence`, `cPartnerType`, `cPartnershipStartDate` and
+   `cPartnershipAgreementDate` duplicated `CPartnerProfile` fields and had
+   drifted apart from them in live data (Glide's Account said Monthly, its
+   partnership said As-Needed; every Account said `cPartnerStatus=Prospect`
+   regardless of the real status). Doug deleted them CRM-side 2026-07-24; the
+   Company card's Partnership group is rebuilt down to organization type +
+   announcements and the "Cadence … partner contact" view row is removed.
+8. **The contacts table fits partners/funders.** Card title from the domain
+   ("Partner Contacts" / "Funder Contacts"); the **Role** column (every contact
+   has the same relationship to CBM) and the **Agreements** badge (a
+   client-intake concept) are dropped on those domains and kept on mentor; the
+   record's primary contact carries a gold **Primary** chip and sorts to the
+   top; and a **Make primary** row action designates any related contact —
+   `POST /{slug}/api/records/{id}/primarycontact` → `service.set_primary_contact`
+   (writes the parent's primary-contact FK as the signed-in user, rejects a
+   contact that isn't on the record, no-ops when unchanged, stream note +
+   `CActionLog` via the new `ACT_PRIMARY_CONTACT_SET`). Registered ONLY where
+   the domain owns that link (the contributions/accept precedent — the mentor
+   domain's primary contact comes from intake, so the route doesn't exist
+   there). One click, no arming: it's non-destructive and instantly reversible.
+
+New `DomainConfig` fields: `contacts_label`, `contacts_show_role`,
+`contacts_show_agreements`, `primary_contact_settable`,
+`company_industry_fact`; `/session` carries a `contacts` block and
+`build_details` carries `primaryContactId`. `details._company_id_attr` moved to
+`service.company_id_attr` (one definition, used by both).
+
+23 new tests (1119 green). Verified in the stub-browser harness on the partner
+domain: rail (manager, industry, "—" facts), both splitters dragging
+independently, the 3-column fallback with Discussion off, the contacts table
+(headers, Primary chip + sort, Make primary → POST → chip moves → the Overview's
+Primary contact fact follows), the strip's compose link, and the Company card
+without the retired cadence row — no console errors. **Not yet driven live**;
+the funder domain was verified through config/tests rather than its own harness
+pass. **CRM note:** the five Account fields are deleted on crm-test — do the
+same on prod (the app change is safe either way, it simply stops showing them).
+
 ## [0.152.0] — 2026-07-24
 
 **feat(sessions): click the Overview status badge to change engagement status**

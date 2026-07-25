@@ -94,6 +94,10 @@
             <div class="sx__feed" id="noteFeed"></div>
             <p class="sx__muted" id="noNotes" hidden>No sessions recorded yet.</p>
           </div>
+          <!-- Second splitter: the notes/Discussion boundary. Shown only with
+               the Discussion pane (else the grid stays 3 columns). -->
+          <div class="sx__splitter" id="ovSplitter2" role="separator" aria-orientation="vertical"
+               tabindex="0" aria-label="Resize the Discussion pane" title="Drag to resize" hidden></div>
           <!-- Discussion pane (partner + sponsor only): a staff-internal,
                attributed comment stream. Shown when config.discussionEnabled;
                hidden otherwise (and the grid stays 3 columns). -->

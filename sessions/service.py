@@ -300,6 +300,49 @@ async def fill_company_fallback(
             r[own_name] = via.get(comp_name)
 
 
+def company_id_attr(cfg: DomainConfig) -> Optional[str]:
+    """The parent attribute holding the org's company Account id, from the
+    domain's details entities (``clientOrganizationId`` / ``partnerCompanyId`` /
+    ``sponsorCompanyId``). None when the domain has no company card."""
+    for _, entity, id_attr in cfg.details_entities:
+        if entity == ACCOUNT and id_attr != "id":
+            return id_attr
+    return None
+
+
+# Account attributes that together describe "what business is this" — shown as
+# one composed Overview fact (the Details Company card renders the same trio).
+_INDUSTRY_ATTRS = ("industry", "cIndustrySector", "cIndustrySubsector")
+
+
+async def _fill_company_industry(
+    cfg: DomainConfig, client: SessionClient, parent: dict[str, Any]
+) -> None:
+    """Merge an ``_companyIndustry`` display value into the parent record, read
+    from its company Account (Doug's ruling 2026-07-24: a partner's/funder's
+    industry belongs to the company, so the rail reads it from there rather than
+    the CRM growing a duplicate field on the profile).
+
+    Best-effort in every direction — no company link, an Account the user's ACL
+    can't read, or a failed call all leave the fact empty (rendered "—").
+    """
+    if not cfg.company_industry_fact:
+        return
+    attr = company_id_attr(cfg)
+    company_id = parent.get(attr) if attr else None
+    if not company_id:
+        return
+    try:
+        acct = await client.get(ACCOUNT, company_id, select=",".join(_INDUSTRY_ATTRS))
+    except EspoError as exc:
+        log.warning("company industry unavailable for %s: %s", company_id, exc)
+        return
+    # Deduped so a company whose general industry equals its sector reads once.
+    parts = dict.fromkeys(v for v in (acct.get(a) for a in _INDUSTRY_ATTRS) if v)
+    if parts:
+        parent["_companyIndustry"] = " / ".join(parts)
+
+
 async def list_records(
     cfg: DomainConfig, client: SessionClient, user: dict[str, Any]
 ) -> dict[str, Any]:
@@ -545,6 +588,7 @@ async def get_detail(
     co-mentors, mentor domain). All reads are as the user."""
     parent = await client.get(cfg.parent_entity, parent_id, select=cfg.detail_select)
     await fill_company_fallback(cfg, client, [parent])
+    await _fill_company_industry(cfg, client, parent)
     overview = _overview_items(cfg, parent)
 
     contacts_data = await client.list_related(
@@ -1404,6 +1448,52 @@ async def set_status(
         f"via the session tools{_by(actor)}.",
     )
     return {"status": "ok", "from": current, "to": new_status, "changed": True}
+
+
+async def set_primary_contact(
+    cfg: DomainConfig,
+    client: SessionClient,
+    parent_id: str,
+    contact_id: str,
+    actor: Optional[str] = None,
+) -> dict[str, Any]:
+    """Designate one of the record's related contacts as its PRIMARY contact —
+    the Details contacts table's "Make primary" action (Doug's ruling
+    2026-07-24: there must be an easy way to change it).
+
+    Writes the parent's primary-contact FK (``primaryPartnercontact`` /
+    ``sponsorContact``) as the signed-in user, so EspoCRM enforces their ACL.
+    The contact must already be linked to this record — the picker is the table
+    of its own contacts, and setting a primary who isn't on the record would
+    leave the Overview pointing at a stranger. An unchanged pick is a no-op.
+    A best-effort stream note stamps the change (v0.74.0 audit convention).
+    """
+    if not cfg.primary_contact_settable:
+        raise SessionError("This record's primary contact cannot be changed here.")
+    attr = cfg.primary_contact_id_attr
+    related = await client.list_related(
+        cfg.parent_entity, parent_id, cfg.parent_contacts_link,
+        select="name", max_size=_PAGE,
+    )
+    match = next((c for c in related.get("list", []) if c.get("id") == contact_id), None)
+    if match is None:
+        raise SessionError(
+            "That contact isn't on this record — add it to the contacts list first."
+        )
+    rec = await client.get(cfg.parent_entity, parent_id, select=attr)
+    current = rec.get(attr)
+    name = match.get("name") or "the contact"
+    if current == contact_id:
+        return {"status": "ok", "contactId": contact_id, "contactName": name, "changed": False}
+    await client.update(cfg.parent_entity, parent_id, {attr: contact_id})
+    log.info(
+        "%s %s primary contact %s -> %s", cfg.parent_entity, parent_id, current, contact_id
+    )
+    await post_stream_note(
+        client, cfg.parent_entity, parent_id,
+        f"{name} set as the primary contact via the session tools{_by(actor)}.",
+    )
+    return {"status": "ok", "contactId": contact_id, "contactName": name, "changed": True}
 
 
 async def create_session(

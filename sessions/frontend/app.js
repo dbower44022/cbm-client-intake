@@ -298,34 +298,50 @@
     if (tab === "documents") renderDocuments();
   }
 
-  // Draggable splitter: resize the facts rail (wider = more room for the
-  // mentoring need). Sets --ov-left on the Overview grid; clamped to sane bounds.
-  (function setupSplitter() {
-    var sp = $("ovSplitter"), grid = $("ovGrid");
-    if (!sp || !grid) return;
-    var dragging = false;
-    function clampedWidth(clientX) {
-      var rect = grid.getBoundingClientRect();
-      var min = 260, max = Math.max(min, rect.width * 0.72);
-      return Math.min(max, Math.max(min, clientX - rect.left));
+  // Draggable splitters on the Overview grid: the facts rail (--ov-left, wider
+  // = more room for the mentoring need) and, where the Discussion pane exists,
+  // the notes/Discussion boundary (--ov-right, measured from the grid's RIGHT
+  // edge). Both clamped to sane bounds and keyboard-adjustable.
+  (function setupSplitters() {
+    var grid = $("ovGrid");
+    if (!grid) return;
+
+    function setup(sp, cssVar, fromRight, fallback) {
+      if (!sp) return;
+      var dragging = false;
+      function clamped(clientX) {
+        var rect = grid.getBoundingClientRect();
+        var raw = fromRight ? rect.right - clientX : clientX - rect.left;
+        var min = fromRight ? 240 : 260;
+        var max = Math.max(min, rect.width * 0.72);
+        return Math.min(max, Math.max(min, raw));
+      }
+      function onMove(e) {
+        if (!dragging) return;
+        grid.style.setProperty(cssVar, clamped(e.clientX) + "px");
+        e.preventDefault();
+      }
+      function stop() { dragging = false; document.body.classList.remove("sx--resizing"); }
+      sp.addEventListener("pointerdown", function (e) {
+        dragging = true; document.body.classList.add("sx--resizing"); e.preventDefault();
+      });
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", stop);
+      window.addEventListener("pointercancel", stop);
+      sp.addEventListener("keydown", function (e) {
+        var cur = parseInt(getComputedStyle(grid).getPropertyValue(cssVar), 10) || fallback;
+        // Arrow keys always grow/shrink the pane the handle belongs to.
+        var grow = fromRight ? "ArrowLeft" : "ArrowRight";
+        if (e.key === grow) { grid.style.setProperty(cssVar, (cur + 24) + "px"); e.preventDefault(); }
+        else if (e.key === (fromRight ? "ArrowRight" : "ArrowLeft")) {
+          grid.style.setProperty(cssVar, Math.max(fromRight ? 240 : 260, cur - 24) + "px");
+          e.preventDefault();
+        }
+      });
     }
-    function onMove(e) {
-      if (!dragging) return;
-      grid.style.setProperty("--ov-left", clampedWidth(e.clientX) + "px");
-      e.preventDefault();
-    }
-    function stop() { dragging = false; document.body.classList.remove("sx--resizing"); }
-    sp.addEventListener("pointerdown", function (e) {
-      dragging = true; document.body.classList.add("sx--resizing"); e.preventDefault();
-    });
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", stop);
-    window.addEventListener("pointercancel", stop);
-    sp.addEventListener("keydown", function (e) {
-      var cur = parseInt(getComputedStyle(grid).getPropertyValue("--ov-left"), 10) || 340;
-      if (e.key === "ArrowLeft") { grid.style.setProperty("--ov-left", Math.max(260, cur - 24) + "px"); e.preventDefault(); }
-      else if (e.key === "ArrowRight") { grid.style.setProperty("--ov-left", (cur + 24) + "px"); e.preventDefault(); }
-    });
+
+    setup($("ovSplitter"), "--ov-left", false, 340);
+    setup($("ovSplitter2"), "--ov-right", true, 360);
   })();
 
   // --- boot ---
@@ -724,8 +740,10 @@
   function renderDiscussion(d) {
     var grid = $("ovGrid");
     var pane = $("discussionPane");
+    var split = $("ovSplitter2");  // the notes/Discussion handle rides with the pane
     if (!discussionOn()) {
       if (pane) hide(pane);
+      if (split) hide(split);
       if (grid) grid.classList.remove("sx__ov--discuss");
       return;
     }
@@ -733,11 +751,13 @@
     // isn't configured — hide the pane in that case (mirrors comms/docs).
     if (d && !("comments" in d)) {
       if (pane) hide(pane);
+      if (split) hide(split);
       if (grid) grid.classList.remove("sx__ov--discuss");
       return;
     }
     if (grid) grid.classList.add("sx__ov--discuss");
     if (pane) show(pane);
+    if (split) show(split);
 
     var box = $("discussion"); box.innerHTML = "";
     var head = document.createElement("div"); head.className = "sx__disc-head";
@@ -3679,7 +3699,7 @@
     if (entity === "Account") return "Company";
     if (entity === "CClientProfile") return "Client business profile";
     if (entity === "CPartnerProfile") return "Partnership profile";
-    if (entity === "CSponsorProfile") return "Sponsor profile";
+    if (entity === "CSponsorProfile") return "Funder profile";
     if (entity === "CMentorProfile") return "Mentor profile";
     return entity;
   }
@@ -3889,18 +3909,18 @@
         [{ name: "partnerNotes", span: 12 }],
       ] },
     ] },
-    // Sponsorship profile (same pass as partner, Doug's 2026-07-18 ruling):
-    // curated form, no generic dump. Here `description` IS the sponsor-notes
-    // field (it feeds the Overview's Sponsor Notes panel), so it stays —
-    // labeled "Sponsor notes". Total contribution is CRM-computed (read-only
-    // on the strip); its currency companion is excluded like the client
-    // profile's revenue companions.
+    // Funder profile (same pass as partner, Doug's 2026-07-18 ruling): curated
+    // form, no generic dump. Here `description` IS the funder-notes field (it
+    // feeds the Overview's Funder Notes panel), so it stays — labeled "Funder
+    // notes" since v0.153.0. Total contribution is CRM-computed (read-only on
+    // the strip); its currency companion is excluded like the client profile's
+    // revenue companions.
     CSponsorProfile: { noExtras: true, groups: [
-      { label: "Sponsorship", grow: 1, basis: 32, rows: [
+      { label: "Funding", grow: 1, basis: 32, rows: [
         [{ name: "lastContribution", span: 6 }, { name: "lastContacted", span: 6 }],
       ] },
-      { label: "Sponsor notes", grow: 3, basis: 52, rows: [
-        [{ name: "description", span: 12, label: "Sponsor notes" }],
+      { label: "Funder notes", grow: 3, basis: 52, rows: [
+        [{ name: "description", span: 12, label: "Funder notes" }],
       ] },
     ] },
     // Contact form — curated for a FAST add/edit (Doug's 2026-07-23 ruling:
@@ -3962,8 +3982,13 @@
     // total-contribution figure (the figure itself stays on the strip).
     CSponsorProfile: ["name", "totalContributionCurrency"],
   };
-  var ACCOUNT_PARTNER_FIELDS = ["cPartnerStatus", "cPartnerOrganizationType", "cPartnerContactCadence",
-    "cPartnerType", "cPartnershipStartDate", "cPartnershipAgreementDate", "cPartnerNotes"];
+  // Account-level partner fields. The five that DUPLICATED CPartnerProfile
+  // (status / type / cadence / start date / agreement date) were deleted from
+  // the CRM 2026-07-24 after they drifted apart from the partnership record
+  // that the grid and Overview actually read — the cPartnerNotes lesson
+  // (v0.91.0) repeated across five fields. What remains: the organization type
+  // (no twin on CPartnerProfile) and the retired notes twin.
+  var ACCOUNT_PARTNER_FIELDS = ["cPartnerOrganizationType", "cPartnerNotes"];
   var ACCOUNT_SPONSOR_FIELDS = ["cSponsorshipLevel", "cSponsorshipStartDate", "cSponsorshipRenewalDate", "cSponsorNotes"];
   // The other domains keep a curated group of their own relationship fields.
   var ACCOUNT_DOMAIN_GROUPS = {
@@ -3971,10 +3996,12 @@
     // the ONE Partner Notes field is CPartnerProfile.partnerNotes (it feeds
     // the Overview panel), edited on the Partnership strip (Doug's
     // 2026-07-18 report: notes typed here never showed on the Overview).
+    // Status / type / cadence / dates used to live here too; those Account
+    // fields were deleted CRM-side (see ACCOUNT_PARTNER_FIELDS) — the
+    // partnership record is the single source. What's left is genuinely
+    // company-level.
     partnersessions: { label: "Partnership", rows: [
-      [{ name: "cPartnerStatus", span: 4 }, { name: "cPartnerOrganizationType", span: 4 }, { name: "cPartnerContactCadence", span: 4 }],
-      [{ name: "cPartnerType", span: 12 }],
-      [{ name: "cPartnershipStartDate", span: 4 }, { name: "cPartnershipAgreementDate", span: 4 }],
+      [{ name: "cPartnerOrganizationType", span: 6 }],
       [{ checks: ["cPublicAnnouncementAllowed"] }],
     ] },
     // No cSponsorNotes row (same fix as partner): the Account-level notes
@@ -4438,6 +4465,10 @@
     else if (t === "datetime") { v.textContent = fmtWhen(val); }
     else if (t === "wysiwyg") { v.innerHTML = sanitizeHtml(String(val)); }
     else if (t === "text") { v.className += " sx__pre"; v.textContent = String(val); }
+    // A read-only mirror of an email address (EspoCRM "foreign" field, e.g. the
+    // partnership's Primary contact email) still opens the compose dialog — no
+    // bare address anywhere in the staff UIs.
+    else if (f.display === "email") { v.appendChild(emailComposeLink(String(val))); }
     else { v.textContent = String(val); }
     row.appendChild(l); row.appendChild(v); return row;
   }
@@ -4585,6 +4616,9 @@
       if (f.type === "enum" && /status$/i.test(f.name)) {
         add(label, badgeEl("sxd__pill", String(v))); return;
       }
+      // An email address is always click-to-compose, here too (the partnership's
+      // read-only Primary contact email).
+      if (f.display === "email") { add(label, emailComposeLink(String(v))); return; }
       add(label, f.type === "bool" ? "Yes"
         : f.type === "date" ? fmtLongDate(v)
         : f.type === "datetime" ? fmtSessionDate(v, "short")
@@ -4640,7 +4674,7 @@
      "cOrganizationType", "cBusinessStage", "industry", "cIndustrySector", "cIndustrySubsector",
      "shippingAddressStreet", "shippingAddressCity", "shippingAddressState",
      "shippingAddressPostalCode", "shippingAddressCountry",
-     "cPartnerContactCadence", "cPublicAnnouncementAllowed",
+     "cPublicAnnouncementAllowed",
     ].forEach(function (n) { used[n] = 1; });
     // The view must not display fields the edit form doesn't manage — the
     // domain's excluded Account fields (partnership/account group on the mentor
@@ -4689,8 +4723,10 @@
     }
     if (bizRow) left.push(bizRow);
     if (shipRow) left.push(shipRow);
-    // Right (partner/sponsor domains): cadence, announcements (meaningful negative).
-    if (dvs(sec, "cPartnerContactCadence")) right.push(drow("Cadence", bold(dvs(sec, "cPartnerContactCadence")) + " partner contact"));
+    // Right (partner/funder domains): announcements (a meaningful negative).
+    // The old "Cadence … partner contact" row read the Account's own cadence
+    // twin, which contradicted the partnership record's Contact cadence shown
+    // on the Overview — that field is gone from the CRM (2026-07-24).
     if (dv(sec, "cPublicAnnouncementAllowed") === false) right.push(drow("Announcements", badgeEl("sxd__badge-warn", "Not allowed")));
     return { left: left, right: right };
   }
@@ -4751,10 +4787,21 @@
   // === 4/5. Contact tables (Client Contacts / CBM Contacts) ==================
   var CONTACT_AGREEMENTS = ["cPrivacyPolicyAccepted", "cTermsOfUseAccepted", "cCodeOfConductAccepted"];
 
+  // Which columns/actions this domain's contacts card uses (server config —
+  // partner/funder drop Role + Agreements and gain "Make primary").
+  function contactsCfg() { return (config && config.contacts) || {}; }
+
   function clientContactsCard() {
-    var contacts = currentDetails.contacts || [];
+    var contacts = (currentDetails.contacts || []).slice();
+    // The primary contact leads the table (it's the one staff look for).
+    var primaryId = currentDetails.primaryContactId;
+    if (primaryId) {
+      contacts.sort(function (a, b) {
+        return (b.id === primaryId ? 1 : 0) - (a.id === primaryId ? 1 : 0);
+      });
+    }
     var card = document.createElement("div"); card.className = "sxd__card"; card.dataset.dkey = "clientContacts";
-    var head = cardHeadEl("Client Contacts", "(" + contacts.length + ")");
+    var head = cardHeadEl(contactsCfg().label || "Client Contacts", "(" + contacts.length + ")");
     if (currentDetails.contactsRestricted) {
       card.appendChild(head);
       var p = document.createElement("p"); p.className = "sx__muted sxd__none";
@@ -4793,8 +4840,14 @@
     }
     var table = document.createElement("table"); table.className = "sxd__contacts";
     var thead = document.createElement("thead"); var htr = document.createElement("tr");
+    // Role and Agreements are per-domain: a partner's/funder's contacts all have
+    // the same relationship to CBM, and the consent bools behind "Agreements"
+    // are a client-intake concept (Doug's ruling 2026-07-24).
+    var showRole = contactsCfg().showRole !== false;
+    var showAgreements = contactsCfg().showAgreements !== false;
     var cols = isClient
-      ? ["Name", "Role", "Phone", "Email", "City", "Contact via", "Agreements", ""]
+      ? ["Name"].concat(showRole ? ["Role"] : [], ["Phone", "Email", "City", "Contact via"],
+                        showAgreements ? ["Agreements"] : [], [""])
       : ["Name", "Role", "Phone", "Email", "Contact via", ""];
     cols.forEach(function (c) { var th = document.createElement("th"); th.textContent = c; htr.appendChild(th); });
     thead.appendChild(htr); table.appendChild(thead);
@@ -4805,12 +4858,12 @@
       var editKey = (isClient ? "c" : "b") + i;
       var tr = document.createElement("tr");
       tr.appendChild(nameCell(item, sec, isClient));
-      tr.appendChild(roleCell(item, vals, isClient));
+      if (!isClient || showRole) tr.appendChild(roleCell(item, vals, isClient));
       tr.appendChild(tdText(fmtPhone(vals.phoneNumber)));
       tr.appendChild(emailCell(vals.emailAddress));
       if (isClient) tr.appendChild(tdText(vals.addressCity || ""));
       tr.appendChild(tdText(vals.cPreferredContactMethod || ""));
-      if (isClient) tr.appendChild(agreementsCell(vals));
+      if (isClient && showAgreements) tr.appendChild(agreementsCell(vals));
       var act = document.createElement("td"); act.className = "sxd__actions";
       if (sec && !detailsEditSet[editKey]) {
         var e = document.createElement("button"); e.type = "button"; e.className = "sxd__rowedit"; e.textContent = "Edit";
@@ -4824,6 +4877,14 @@
           detailsEditSet[editKey] = true; repaintDetails(editKey);
         });
         act.appendChild(e);
+      }
+      // "Make primary" — the easy way to designate/change the record's primary
+      // contact (Doug's 2026-07-24 ask). Only where the domain owns that link
+      // (partner/funder), and never on the row that already IS primary — that
+      // row carries the chip instead.
+      if (isClient && contactsCfg().primarySettable && sec && sec.id &&
+          !detailsEditSet[editKey] && sec.id !== currentDetails.primaryContactId) {
+        act.appendChild(makePrimaryBtn(sec));
       }
       // Remove = an unrelate on the PARENT record. The assigned Mentor row is
       // never removable here (that link is managed in Client Administration —
@@ -4856,7 +4917,42 @@
       ? ([vals.firstName, vals.lastName].filter(Boolean).join(" ") || sec.name || "(unnamed)")
       : (item.name || (sec && sec.name) || "(unnamed)");
     td.appendChild(document.createTextNode(name));
+    // The record's primary contact is marked in the table (it was previously
+    // only visible on the Overview rail).
+    if (isClient && sec && sec.id && sec.id === currentDetails.primaryContactId) {
+      td.appendChild(badgeEl("sxd__badge-primary", "Primary"));
+    }
     return td;
+  }
+
+  // One-click primary designation. Non-destructive and instantly reversible by
+  // clicking another row, so it needs no two-step arming; the button is never
+  // hidden for permissions — a user without edit on the parent gets the reason
+  // on click ([[buttons-never-disabled-validate-on-click]]).
+  function makePrimaryBtn(sec) {
+    var btn = document.createElement("button"); btn.type = "button";
+    btn.className = "sxd__rowedit sxd__rowprimary"; btn.textContent = "Make primary";
+    btn.addEventListener("click", async function () {
+      if (!parentEditable()) {
+        notice("detailsNotice", "You don't have permission to change this record's primary contact — " +
+          "ask CBM staff if you need it.", "error");
+        return;
+      }
+      btn.disabled = true;
+      try {
+        var res = await api("/records/" + encodeURIComponent(currentDetail.id) + "/primarycontact",
+          { method: "POST", body: JSON.stringify({ contactId: sec.id }) });
+        await loadDetails(currentDetail.id);
+        refreshRecordViews();  // the Overview's Primary contact fact follows
+        notice("detailsNotice",
+          (res.contactName || "That contact") + " is now the primary contact.", "success");
+      } catch (e) {
+        if (e.status === 401) { showLogin(); return; }
+        btn.disabled = false;
+        notice("detailsNotice", e.message, "error");
+      }
+    });
+    return btn;
   }
   function roleCell(item, vals, isClient) {
     var td = document.createElement("td"); td.className = "sxd__roles";

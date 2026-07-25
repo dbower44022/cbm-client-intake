@@ -168,6 +168,12 @@ class ContactAddIn(BaseModel):
     newCompanyName: Optional[str] = None
 
 
+class PrimaryContactIn(BaseModel):
+    """Designate an already-linked contact as the record's primary contact."""
+
+    contactId: str
+
+
 # Phase-one detail tabs, common to all three domains. Overview + Sessions +
 # Details (full company/contact/profile fields, editable) are built. The
 # Communications tab renders an email-inbox grid (UI only — no CRM email data is
@@ -299,6 +305,15 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             "statusEdit": ({"attr": cfg.status_edit_attr} if cfg.status_edit_attr else None),
             "contactKey": cfg.list_contact_key,
             "companyKey": cfg.list_company_key,
+            # Details contacts card: its title and which columns/actions this
+            # domain uses (partner/funder drop Role + Agreements and gain
+            # "Make primary" — Doug's ruling 2026-07-24).
+            "contacts": {
+                "label": cfg.contacts_label,
+                "showRole": cfg.contacts_show_role,
+                "showAgreements": cfg.contacts_show_agreements,
+                "primarySettable": cfg.primary_contact_settable,
+            },
             "emptyMessage": cfg.empty_message,
             "noProfileMessage": NO_PROFILE_MESSAGE,
             "detailTabs": _detail_tabs(cfg),
@@ -482,6 +497,37 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             return {"status": "ok"}
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not remove the contact")
+
+    if cfg.primary_contact_settable:
+        # Registered only where the domain owns its primary contact (partner +
+        # funder) — the mentor domain's comes from intake, so the route doesn't
+        # exist there at all (the contributions/accept precedent).
+
+        @router.post("/records/{parent_id}/primarycontact")
+        async def set_primary_contact(
+            parent_id: str, body: PrimaryContactIn, request: Request
+        ) -> dict:
+            """Designate a related contact as this record's primary contact."""
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            try:
+                result = await service.set_primary_contact(
+                    cfg, client, parent_id, body.contactId,
+                    actor=user.get("name") or user.get("userName"),
+                )
+            except service.SessionError as exc:
+                raise HTTPException(status_code=400, detail=str(exc))
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not set the primary contact")
+            if result.get("changed"):
+                await action_log.log_action(
+                    app=cfg.title, category=action_log.CAT_CONTACT,
+                    action=action_log.ACT_PRIMARY_CONTACT_SET,
+                    parent_type=cfg.parent_entity, parent_id=parent_id,
+                    summary=f"Primary contact set to {result.get('contactName')}.",
+                    actor_id=user["userId"], actor_name=user["name"], details=result,
+                )
+            return result
 
     @router.get("/peek/{entity}/{record_id}")
     async def peek(entity: str, record_id: str, request: Request) -> dict:

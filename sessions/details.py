@@ -18,7 +18,13 @@ from core.espo import EspoError
 from core.phone import to_e164
 
 from .config import CONTACT, MENTOR_PROFILE, DomainConfig
-from .service import SessionClient, SessionError, _is_forbidden, fill_company_fallback
+from .service import (
+    SessionClient,
+    SessionError,
+    _is_forbidden,
+    company_id_attr,
+    fill_company_fallback,
+)
 
 log = logging.getLogger("cbm_intake.sessions.details")
 
@@ -68,6 +74,15 @@ _ENTITY_LINK_FIELDS: dict[str, tuple[tuple[str, str, str], ...]] = {
     "CEngagement": (("referringPartner", "Referring partner", "CPartnerProfile"),),
 }
 
+# Label overrides where the humanized CRM field name misleads. ``partnerEmail``
+# is an EspoCRM *foreign* field (read-only by definition) mirroring
+# ``primaryPartnercontact.emailAddress`` — it reads like an editable partnership
+# field that mysteriously can't be edited (Doug's 2026-07-24 question), so name
+# what it actually is. It's changed by editing the contact.
+_FIELD_LABELS: dict[str, dict[str, str]] = {
+    "CPartnerProfile": {"partnerEmail": "Primary contact email"},
+}
+
 
 def _label(name: str) -> str:
     """A human label from a CRM field name (camelCase → Title Case, custom-field
@@ -87,6 +102,7 @@ def _label(name: str) -> str:
 def _field_spec(meta_fields: dict[str, Any], entity: str = "") -> list[dict[str, Any]]:
     """Editable/readonly field descriptors for an entity, from its metadata."""
     excluded = _ENTITY_EXCLUDED.get(entity, frozenset())
+    labels = _FIELD_LABELS.get(entity, {})
     spec: list[dict[str, Any]] = []
     for name, fdef in meta_fields.items():
         if name in _SYSTEM_FIELDS or name in excluded or name.endswith(_SKIP_SUFFIX):
@@ -94,8 +110,9 @@ def _field_spec(meta_fields: dict[str, Any], entity: str = "") -> list[dict[str,
         if not isinstance(fdef, dict):
             continue
         ctype = fdef.get("type")
+        label = labels.get(name) or _label(name)
         if ctype in _TYPE_MAP:
-            item = {"name": name, "label": _label(name), "type": _TYPE_MAP[ctype], "editable": True}
+            item = {"name": name, "label": label, "type": _TYPE_MAP[ctype], "editable": True}
             if ctype == "phone":
                 item["phone"] = True  # EspoCRM only accepts E.164 — normalized on save
             opts = fdef.get("options")
@@ -103,7 +120,13 @@ def _field_spec(meta_fields: dict[str, Any], entity: str = "") -> list[dict[str,
                 item["options"] = [o for o in opts if o != ""]
             spec.append(item)
         elif ctype in _READONLY_TYPES:
-            spec.append({"name": name, "label": _label(name), "type": "readonly", "editable": False})
+            item = {"name": name, "label": label, "type": "readonly", "editable": False}
+            # A read-only mirror of an email address still gets the product-wide
+            # click-to-compose treatment (no bare mailto anywhere in the staff
+            # UIs) — flagged for the frontend renderer.
+            if fdef.get("field") == "emailAddress" or "email" in str(fdef.get("view") or ""):
+                item["display"] = "email"
+            spec.append(item)
     # Curated link pickers (present only when the CRM really has the link).
     for link_name, label, foreign in _ENTITY_LINK_FIELDS.get(entity, ()):
         fdef = meta_fields.get(link_name)
@@ -298,6 +321,9 @@ async def build_details(
     result: dict[str, Any] = {
         "id": parent_id, "sections": sections, "contacts": contacts,
         "contactSpec": contact_spec,
+        # Which related contact is THIS record's primary — the contacts table
+        # marks that row and omits "Make primary" on it.
+        "primaryContactId": parent.get(cfg.primary_contact_id_attr),
     }
     # Option lists for the curated link pickers (id+name of every foreign
     # record the USER can read, alphabetical). Best-effort: a forbidden or
@@ -403,15 +429,6 @@ async def _cbm_contacts(
     return out
 
 
-def _company_id_attr(cfg: DomainConfig) -> Optional[str]:
-    """The parent attribute holding the org's company Account id (from the
-    domain's details entities), e.g. ``clientOrganizationId`` / ``partnerCompanyId``."""
-    for _, entity, id_attr in cfg.details_entities:
-        if entity == "Account" and id_attr != "id":
-            return id_attr
-    return None
-
-
 async def search_contacts(client: SessionClient, query: str) -> list[dict[str, Any]]:
     """Contact picker search for the add-existing-contact flow (name contains),
     running as the user so EspoCRM scopes the results to their ACL."""
@@ -434,7 +451,7 @@ async def search_contacts(client: SessionClient, query: str) -> list[dict[str, A
 async def _resolve_company_id(cfg: DomainConfig, client: SessionClient, parent_id: str) -> Optional[str]:
     """The record's company Account id: the parent's own link, or resolved
     through the client profile for legacy engagements (``fill_company_fallback``)."""
-    attr = _company_id_attr(cfg)
+    attr = company_id_attr(cfg)
     if not attr:
         return None
     select = attr
