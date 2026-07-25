@@ -1645,6 +1645,15 @@ the plan** (`prds/analytics-app-plan.md`, Phases A–D all built). No migration.
   **The analytics arc (Phases A–D) is complete** — activation is unchanged: create
   `Analytics Admin Team`, set `ANALYTICS_ENABLED=true` (web + worker) + a
   `DATABASE_URL`, run the pre-deploy migrate (through 0022).
+  **ACTIVATED ON crm-test 2026-07-25** — `ANALYTICS_ENABLED=true` added to the web
+  + worker of the crm-test overlay (`.do/app.prod.yaml`) and applied via doctl; the
+  PRE_DEPLOY migrate created the three analytics tables. Verified live:
+  `/analytics/` serves 200, `/analytics/api/session` + `/analytics/api/portal` are
+  mounted and return 401 (gated, not 404). **Usable by CRM admins immediately**
+  (admins pass the gate); to hand it to non-admin staff, **create the
+  `Analytics Admin Team` in crm-test** and add them. Full user walkthrough:
+  `analytics-guide.md`; activation runbook: `ANALYTICS-SETUP.md`. **Prod NOT yet
+  activated** (same steps against `.do/app.prod-crm.yaml`).
 
 **v0.162.0** (2026-07-25, 1188 tests green, committed NOT pushed) — **Analytics
 platform — Phase C** (record-scoped analytics + the embedded Mentor tab; Mentor
