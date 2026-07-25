@@ -256,3 +256,103 @@ def test_send_blocks_when_document_integration_off(monkeypatch):
         )
     assert r.status_code == 400
     assert "document" in r.json()["detail"].lower()
+
+
+def test_send_resolves_forward_attachments(monkeypatch):
+    """A {forwardCommunicationId, partIndex} chip becomes the original's bytes
+    (fetched from the source mailbox at send time), in the local-upload shape."""
+    monkeypatch.setenv("SESSION_SECRET", "test-secret")
+    monkeypatch.setenv("GMAIL_SYNC", "true")
+    get_settings.cache_clear()
+    monkeypatch.setattr("sessions.router.current_user", lambda request, key=None: _USER)
+    monkeypatch.setattr("sessions.router.client_for", lambda settings, u: FakeEspo())
+    monkeypatch.setattr(comms_service, "get_store", lambda settings: MemoryCommsStore())
+
+    fetched = []
+
+    async def fake_fetch_forward(settings, client, comm_id, part_index, acting_user=""):
+        fetched.append((comm_id, part_index, acting_user))
+        return ("report.pdf", "application/pdf", b"FWDBYTES")
+
+    monkeypatch.setattr(comms_service, "fetch_forward_attachment", fake_fetch_forward)
+
+    sent = {}
+
+    async def fake_send(**kwargs):
+        sent.update(kwargs)
+        return {"gmailMessageId": "g1", "writeBack": {"ok": True}}
+
+    async def fake_gmail(settings, client, user):
+        return object()
+
+    monkeypatch.setattr(comms_service, "send_message", fake_send)
+    monkeypatch.setattr(comms_service, "gmail_for_user", fake_gmail)
+
+    with TestClient(create_app([info_request.SPEC])) as c:
+        r = c.post(
+            "/mentorsessions/api/records/E1/messages",
+            json={
+                "to": ["james@acme.test"], "subject": "Fwd: Plan", "body": "<p>fyi</p>",
+                "attachments": [
+                    {"forwardCommunicationId": "m7", "partIndex": 2, "filename": "report.pdf"},
+                ],
+            },
+        )
+    assert r.status_code == 200, r.text
+    assert fetched == [("m7", 2, "matt.mentor")]
+    resolved = sent["attachments"]
+    assert resolved[0]["filename"] == "report.pdf"
+    assert base64.b64decode(resolved[0]["dataBase64"]) == b"FWDBYTES"
+
+
+def test_forward_attachment_fetch_failure_blocks_the_send(monkeypatch):
+    monkeypatch.setenv("SESSION_SECRET", "test-secret")
+    monkeypatch.setenv("GMAIL_SYNC", "true")
+    get_settings.cache_clear()
+    monkeypatch.setattr("sessions.router.current_user", lambda request, key=None: _USER)
+    monkeypatch.setattr("sessions.router.client_for", lambda settings, u: FakeEspo())
+    monkeypatch.setattr(comms_service, "get_store", lambda settings: MemoryCommsStore())
+
+    async def boom(settings, client, comm_id, part_index, acting_user=""):
+        raise comms_service.OriginalGoneError("gone")
+
+    sent = {"called": False}
+
+    async def fake_send(**kwargs):
+        sent["called"] = True
+        return {}
+
+    monkeypatch.setattr(comms_service, "fetch_forward_attachment", boom)
+    monkeypatch.setattr(comms_service, "send_message", fake_send)
+
+    with TestClient(create_app([info_request.SPEC])) as c:
+        r = c.post(
+            "/mentorsessions/api/records/E1/messages",
+            json={"to": ["james@acme.test"], "body": "x",
+                  "attachments": [{"forwardCommunicationId": "m7", "partIndex": 1,
+                                   "filename": "report.pdf"}]},
+        )
+    assert r.status_code == 400
+    assert "no longer exists" in r.json()["detail"]
+    assert sent["called"] is False   # ET-131: blocked before send
+
+
+def test_forward_attachments_endpoint_lists_real_parts(monkeypatch):
+    monkeypatch.setenv("SESSION_SECRET", "test-secret")
+    monkeypatch.setenv("GMAIL_SYNC", "true")
+    get_settings.cache_clear()
+    monkeypatch.setattr("sessions.router.current_user", lambda request, key=None: _USER)
+    monkeypatch.setattr("sessions.router.client_for", lambda settings, u: FakeEspo())
+    monkeypatch.setattr(comms_service, "get_store", lambda settings: MemoryCommsStore())
+
+    async def fake_list(settings, client, comm_id, acting_user=""):
+        assert comm_id == "m7"
+        return [{"filename": "report.pdf", "mimeType": "application/pdf",
+                 "size": 1234, "partIndex": 2}]
+
+    monkeypatch.setattr(comms_service, "list_forward_attachments", fake_list)
+
+    with TestClient(create_app([info_request.SPEC])) as c:
+        r = c.get("/mentorsessions/api/records/E1/communications/m7/attachments")
+    assert r.status_code == 200
+    assert r.json()["attachments"][0]["partIndex"] == 2

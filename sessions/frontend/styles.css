@@ -29,6 +29,11 @@
 }
 .sx__statusfilter { display: inline-flex; align-items: center; gap: 0.4rem; font-size: var(--cbm-text-sm, 0.9rem); color: var(--cbm-slate-700, #556); }
 .sx__statusfilter select { padding: 0.45rem 0.5rem; border: 1px solid var(--cbm-border, #d7dce2); border-radius: var(--cbm-radius, 6px); font: inherit; }
+.sx__unreadfilter { display: inline-flex; align-items: center; gap: 0.35rem; font-size: var(--cbm-text-sm, 0.9rem); color: var(--cbm-slate-700, #556); white-space: nowrap; }
+/* Grid unread/awaiting chip in the record name cell (§4.2). */
+.sx__unreadchip { margin-left: 0.5rem; display: inline-flex; gap: 0.3rem; vertical-align: middle; }
+.sx__unreadchip-n { padding: 0.05rem 0.45rem; border-radius: 999px; background: #e7f0fb; border: 1px solid #9cc2ee; color: #1a5fb4; font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
+.sx__unreadchip-aw { padding: 0.05rem 0.45rem; border-radius: 999px; background: #fdf6e7; border: 1px solid #ecc94b; color: #744210; font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
 .sx__filters #refreshBtn { margin-left: auto; }
 .sx__count { color: var(--cbm-slate-700, #556); font-size: var(--cbm-text-sm, 0.9rem); margin: 0.25rem 0 0.5rem; }
 

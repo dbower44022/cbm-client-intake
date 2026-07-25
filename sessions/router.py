@@ -129,6 +129,13 @@ class IncludeIn(BaseModel):
     gmailThreadId: str
 
 
+class UnreadIn(BaseModel):
+    # The record ids currently on the grid — the frontend posts exactly what's
+    # visible, so the unread map matches the page (works for list_all domains
+    # whose grid isn't profile-scoped). Capped server-side.
+    recordIds: list[str] = []
+
+
 class SendIn(BaseModel):
     to: list[str] = []
     cc: list[str] = []
@@ -1039,6 +1046,22 @@ def make_router(cfg: DomainConfig) -> APIRouter:
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not load conversations")
 
+    @router.post("/records/unread")
+    async def records_unread(body: UnreadIn, request: Request) -> dict:
+        """Per-record unread/awaiting counts for the grid's blue "● N" chips
+        (§4.2). The frontend calls this AFTER the grid renders and posts the
+        visible record ids, so it never blocks the grid and matches the page.
+        Pure decoration — 503/empty when email is off; a read failure yields an
+        empty map (no chips), never an error the grid must handle."""
+        user = _require_user(request)
+        _, store = _comms_ready()
+        client = client_for(get_settings(), user)
+        pairs = [(cfg.parent_entity, rid) for rid in body.recordIds[:200] if rid]
+        records = await comms_service.record_unread_map(
+            client, store, user["userName"], pairs
+        )
+        return {"records": records}
+
     @router.get("/conversations/{conversation_id}")
     async def conversation_detail(
         conversation_id: str, request: Request, parentId: str = ""
@@ -1209,6 +1232,79 @@ def make_router(cfg: DomainConfig) -> APIRouter:
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not add the conversation")
 
+    @router.get("/records/{parent_id}/communications/{communication_id}/attachments")
+    async def forward_attachments(
+        parent_id: str, communication_id: str, request: Request
+    ) -> dict:
+        """The forwardable (real, non-inline) attachments of a stored message —
+        the chips the forward compose pre-fills (§4.1). The CCommunication row
+        is read AS THE USER (their CRM ACL is the gate, like View original);
+        the bytes are fetched at SEND time, not here."""
+        user = _require_user(request)
+        settings, _ = _comms_ready()
+        client = client_for(settings, user)
+        try:
+            items = await comms_service.list_forward_attachments(
+                settings, client, communication_id,
+                acting_user=user.get("userName", ""),
+            )
+            return {"attachments": items}
+        except comms_service.OriginalGoneError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+        except comms_service.CommsError as exc:
+            raise _comms_error(exc)
+        except GmailError as exc:
+            log.warning("forward attachment list failed (%s): %s", cfg.slug, exc)
+            raise HTTPException(
+                status_code=502,
+                detail="Couldn't read the message's attachments — try again.",
+            )
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not read the message's attachments")
+
+    async def _resolve_forward_attachments(
+        settings, client, user, attachments: list[dict]
+    ) -> list[dict]:
+        """Turn ``{"forwardCommunicationId", "partIndex"}`` chips into the
+        local-upload shape at send time — the original's bytes fetched live
+        from the source mailbox (service delegation, provenance-logged). Any
+        failure BLOCKS the send (ET-131): a forward never silently drops the
+        attachment that was the reason to forward."""
+        if not any(a.get("forwardCommunicationId") for a in attachments):
+            return attachments
+        import base64 as b64
+
+        out: list[dict] = []
+        for a in attachments:
+            comm_id = (a.get("forwardCommunicationId") or "").strip()
+            if not comm_id:
+                out.append(a)
+                continue
+            name = a.get("filename") or "attachment"
+            try:
+                fname, ctype, data = await comms_service.fetch_forward_attachment(
+                    settings, client, comm_id, a.get("partIndex"),
+                    acting_user=user.get("userName", ""),
+                )
+            except comms_service.OriginalGoneError:
+                raise comms_service.CommsError(
+                    f"The message being forwarded (with \"{name}\") no longer exists "
+                    "in Gmail — remove the attachment and send again."
+                )
+            except comms_service.CommsError:
+                raise
+            except GmailError as exc:
+                log.warning("forward attachment fetch failed (%s): %s", cfg.slug, exc)
+                raise comms_service.CommsError(
+                    f"Couldn't fetch the forwarded attachment \"{name}\" — the "
+                    "message was NOT sent. Remove the attachment or try again."
+                )
+            out.append({
+                "filename": fname, "contentType": ctype,
+                "dataBase64": b64.b64encode(data).decode("ascii"),
+            })
+        return out
+
     async def _resolve_document_attachments(
         settings, client, user, parent_id: str, attachments: list[dict]
     ) -> list[dict]:
@@ -1271,6 +1367,9 @@ def make_router(cfg: DomainConfig) -> APIRouter:
         try:
             attachments = await _resolve_document_attachments(
                 settings, client, user, parent_id, body.attachments
+            )
+            attachments = await _resolve_forward_attachments(
+                settings, client, user, attachments
             )
             gmail = await comms_service.gmail_for_user(settings, client, user)
             result = await comms_service.send_message(

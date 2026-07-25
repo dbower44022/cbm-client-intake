@@ -50,6 +50,28 @@ def _client(settings: Settings) -> EspoApi:
     )
 
 
+def _next_digest_time(settings: Settings, after: datetime) -> datetime:
+    """The next UTC instant at ``comms_digest_hour`` in ``comms_digest_tz``,
+    strictly after ``after`` — so the digest lands each morning and a worker
+    restart past today's hour schedules tomorrow (never an immediate re-fire).
+    Falls back to a plain +24h if the timezone name is bad."""
+    try:
+        from zoneinfo import ZoneInfo
+
+        tz = ZoneInfo(settings.comms_digest_tz)
+    except Exception:  # noqa: BLE001 — bad tz name: degrade to a daily cadence
+        log.warning("digest: bad timezone %r — using +24h cadence", settings.comms_digest_tz)
+        return after + timedelta(days=1)
+    local = after.astimezone(tz)
+    target = local.replace(
+        hour=max(0, min(23, settings.comms_digest_hour)),
+        minute=0, second=0, microsecond=0,
+    )
+    if target <= local:
+        target = target + timedelta(days=1)
+    return target.astimezone(timezone.utc)
+
+
 def _is_transient(exc: Exception) -> bool:
     """Retry network blips and CRM 5xx/408/429; treat 4xx (bad data) as permanent."""
     if isinstance(exc, (httpx.TransportError, httpx.TimeoutException)):
@@ -286,6 +308,19 @@ async def main() -> None:
                             "re-runs the initial backfill; unset the flag after")
             log.info("gmail sync enabled (every %ss)", settings.gmail_sync_seconds)
 
+    # Daily email digest (§4.2.4): anchored to comms_digest_hour in
+    # comms_digest_tz so it lands each morning. Seeded to the NEXT future
+    # occurrence, so a worker restart past the hour doesn't re-fire today.
+    from comms.digest import digest_enabled
+
+    digest_on = digest_enabled(settings) and comms_store is not None
+    next_digest = _next_digest_time(settings, datetime.now(timezone.utc))
+    if digest_on:
+        log.info(
+            "daily email digest enabled (%02d:00 %s; next %s UTC)",
+            settings.comms_digest_hour, settings.comms_digest_tz, next_digest,
+        )
+
     while not stop.is_set():
         claimed = await run_cycle(store, settings, stop)
 
@@ -355,6 +390,14 @@ async def main() -> None:
             except Exception as exc:  # noqa: BLE001 — never crashes delivery
                 log.warning("assignment stamp reconciliation failed: %s", exc)
             next_stamps = now + timedelta(seconds=settings.assignment_reconcile_seconds)
+        if digest_on and now >= next_digest:
+            try:
+                from comms.digest import run_digest_cycle
+
+                await run_digest_cycle(settings, _client(settings), comms_store)
+            except Exception as exc:  # noqa: BLE001 — never crashes delivery
+                log.warning("daily digest cycle failed: %s", exc)
+            next_digest = _next_digest_time(settings, datetime.now(timezone.utc))
 
         if claimed == 0 and not stop.is_set():
             # Sleep until the poll interval elapses OR SIGTERM arrives, so a

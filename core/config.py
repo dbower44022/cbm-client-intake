@@ -35,6 +35,11 @@ class Settings(BaseSettings):
     # The CBM documentation site (BookStack), linked from the portal home page
     # so signed-in users can find the app user guides. Empty hides the link.
     docs_site_url: str = "https://docs.clevelandbusinessmentors.org"
+    # This app's own public base URL (no trailing slash) — used to build
+    # absolute record deep links in the daily email digest (§4.2.4). Empty =>
+    # the digest lists records without hyperlinks (still useful). Prod:
+    # https://apps.clevelandbusinessmentors.org
+    app_base_url: str = ""
 
     # Logging level for both processes (web + worker) — e.g. "DEBUG" exposes
     # the comms triage decisions without a redeploy. See core/logging_setup.py.
@@ -232,6 +237,18 @@ class Settings(BaseSettings):
     comms_ai_summary: bool = False
     anthropic_api_key: str = ""
     summary_model: str = "claude-opus-4-8"
+    # Daily email digest (email-quality plan §4.2.4): a once-a-day worker job
+    # that emails each manager a summary of their records with unread /
+    # awaiting-reply conversations, each a deep link to the record page. Sent
+    # from the shared identity (ops_mailbox / ops_mailbox_name) to the
+    # manager's cbmEmail; nothing pending => no email (no empty digests).
+    # Off by default; needs GMAIL_SYNC + OPS_MAILBOX (the send identity) + the
+    # database (unread state). Anchored to comms_digest_hour in
+    # comms_digest_tz so it lands each morning, not at a worker-restart offset.
+    comms_digest: bool = False
+    comms_digest_seconds: int = 86400       # re-check cadence (the hour gate does the timing)
+    comms_digest_hour: int = 7              # local hour to send (0–23)
+    comms_digest_tz: str = "America/New_York"
 
     # --- Google Calendar events for sessions (sessions/gcal.py). When on, saving
     # a Scheduled session in the session tools creates/updates a Google Calendar

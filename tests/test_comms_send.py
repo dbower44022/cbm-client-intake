@@ -162,3 +162,34 @@ async def test_lookup_resolves_profile_via_contact_for_personal_address():
     res = await comms_service.lookup_contact_by_email(espo, "doug@dougbower.com")
     assert res["contact"]["isCbmMember"] is True
     assert res["contact"]["mentorProfileId"] == "p9"
+
+
+async def test_reply_sets_in_reply_to_and_references_chain():
+    """A reply threads for non-Gmail clients too: In-Reply-To = the parent's
+    RFC id, References = the whole prior chain (oldest first), parent last."""
+    espo = espo_with_contacts()
+    # Three messages in the same conversation; reply to the newest (m3).
+    espo.records[("CCommunication", "m1")] = {
+        "conversationId": "CV1", "rfcMessageId": "id-1", "sentAt": "2026-07-01 10:00:00",
+    }
+    espo.records[("CCommunication", "m2")] = {
+        "conversationId": "CV1", "rfcMessageId": "id-2", "sentAt": "2026-07-02 10:00:00",
+    }
+    espo.records[("CCommunication", "m3")] = {
+        "conversationId": "CV1", "rfcMessageId": "id-3",
+        "sentAt": "2026-07-03 10:00:00", "gmailThreadId": "T1",
+        "sourceMailbox": "bob.mentor@cbmentors.org", "name": "Re: Plan",
+    }
+    gmail = FakeGmailSend()
+    await comms_service.send_message(
+        settings=None, api_client=espo, store=MemoryCommsStore(),
+        gmail=gmail, cfg=CFG, parent_id="E1", user=USER,
+        to=["james@acme.test"], subject="", body_html="hi",
+        reply_to_communication_id="m3",
+    )
+    mime, thread_id = gmail.sent[0]
+    assert mime["In-Reply-To"] == "<id-3>"
+    # Chain excludes the parent (build_mime appends it) → oldest..parent.
+    assert mime["References"] == "<id-1> <id-2> <id-3>"
+    assert thread_id == "T1"                 # same-mailbox thread continues
+    assert mime["Subject"] == "Re: Plan"     # inherited from the parent

@@ -1612,7 +1612,41 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-25)
 
-**v0.156.0** (2026-07-25, full suite green, committed NOT pushed) — **Referred
+**v0.157.0** (2026-07-25, 1143 tests green, committed NOT pushed) — **Email
+Quality Phase 2 — forward with attachments + unread awareness** (§4 of
+`prds/email-quality-improvement-plan.md`; plan status header now says Phase 2
+BUILT). Five pieces, no migration:
+- **Forward carries the original's attachments**: the compose pre-fills the
+  message's real (non-inline) attachments as removable chips; the server
+  fetches each from the source mailbox at send time (service delegation,
+  provenance-logged); a fetch failure BLOCKS the send (ET-131). New
+  `comms.service.list_forward_attachments`/`fetch_forward_attachment` (keyed
+  by stable `part_index`), `GET …/communications/{cid}/attachments`, the
+  `_resolve_forward_attachments` send pre-pass, `{forwardCommunicationId,
+  partIndex}` chip (draft-persisted).
+- **References chain** on replies (`_reference_chain`) so non-Gmail clients
+  thread too.
+- **Grid unread/awaiting chips** on the three management grids (blue "● N
+  unread" / amber "● awaiting reply" + Unread-only filter) via
+  `POST /{slug}/api/records/unread` (posts visible ids, post-render,
+  decoration) + the shared `comms.service.record_unread_map`.
+- **Portal My Email tile unread badge** (`GET /myemail/api/unread-count` →
+  `myemail.service.total_unread`).
+- **Daily digest** (`comms/digest.py`, worker, `COMMS_DIGEST` default off):
+  per-manager morning summary of records with pending mail, sent from the
+  shared identity to their cbmEmail, no empty digests, anchored to
+  `COMMS_DIGEST_HOUR`/`COMMS_DIGEST_TZ` (restart-safe). New config
+  `comms_digest*` + `app_base_url` (digest deep links).
+  Verified: 1143 tests green (new: references/forward/record_unread_map/
+  digest); grid chips + forward-with-attachments flow driven in the stub
+  harness, no console errors. **NOT yet driven live** — forward a real PDF;
+  grid chips + tile badge as a real mentor; enable `COMMS_DIGEST` +
+  `APP_BASE_URL` on the worker and confirm a morning digest with working
+  links. **Parallel-session note:** built alongside 0.156.0 (Referred
+  Clients), which committed first on the shared `sessions/frontend/*` +
+  `sessions/router.py`; this commit carries only the Phase 2 delta there.
+
+Before that: **v0.156.0** (2026-07-25, full suite green) — **Referred
 Clients tab on the Partner View** (Doug's request). The partner record detail
 gains a **Referred Clients** tab (after Sessions, partner domain only) listing
 the client engagements that name this partner as their referring partner

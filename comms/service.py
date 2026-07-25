@@ -271,6 +271,51 @@ async def enrich_conversation_rows(
         log.warning("unread enrichment failed: %s", exc)
 
 
+async def record_unread_map(
+    user_client: Any,
+    store: Any,
+    username: str,
+    pairs: list[tuple[str, str]],
+) -> dict[str, dict[str, Any]]:
+    """Per-record unread/awaiting counts for a set of records (§4.2 — the grid
+    chips, the portal badge, the daily digest).
+
+    ``pairs`` = ``[(parent_entity, record_id), ...]``. Returns
+    ``{record_id: {"unread": N, "awaiting": bool, "conversations": M}}``. Each
+    record's conversations are read concurrently, then the WHOLE set is enriched
+    in one pass (the batched last-direction + seen-map read) and aggregated
+    back per record. Pure decoration: a record whose read fails contributes
+    zeroes; an enrichment failure leaves everything at zero. Never raises."""
+    import asyncio
+
+    if not pairs:
+        return {}
+
+    async def _one(entity: str, rid: str) -> tuple[str, list[dict[str, Any]]]:
+        try:
+            rows = await list_conversations(user_client, entity, rid)
+        except Exception as exc:  # noqa: BLE001 — one record never sinks the map
+            log.warning("record_unread_map: %s/%s read failed: %s", entity, rid, exc)
+            return rid, []
+        return rid, rows
+
+    results = await asyncio.gather(*(_one(e, r) for e, r in pairs))
+    conv_by_id: dict[str, dict[str, Any]] = {}
+    rec_conv_ids: dict[str, set[str]] = {}
+    for rid, rows in results:
+        ids = rec_conv_ids.setdefault(rid, set())
+        for row in rows:
+            conv_by_id.setdefault(row["id"], row)
+            ids.add(row["id"])
+    await enrich_conversation_rows(user_client, store, username, list(conv_by_id.values()))
+    out: dict[str, dict[str, Any]] = {}
+    for rid, cids in rec_conv_ids.items():
+        unread = sum(1 for cid in cids if conv_by_id.get(cid, {}).get("unread"))
+        awaiting = any(conv_by_id.get(cid, {}).get("awaitingReply") for cid in cids)
+        out[rid] = {"unread": unread, "awaiting": awaiting, "conversations": len(cids)}
+    return out
+
+
 _MSG_SELECT = (
     "name,direction,sentAt,fromAddress,fromName,toAddresses,ccAddresses,"
     "snippet,bodyCleaned,gmailThreadId,gmailMessageId,sourceMailbox,rfcMessageId"
@@ -469,6 +514,88 @@ async def get_original_part(
     finally:
         await gmail.aclose()
     return {"data": data, "mime_type": part.mime_type or "application/octet-stream"}
+
+
+# --- Forward with attachments (§4.1) -----------------------------------------
+
+
+async def list_forward_attachments(
+    settings: Settings, user_client: Any, communication_id: str, *, acting_user: str = "",
+) -> list[dict[str, Any]]:
+    """The REAL (non-inline) attachments of a stored message — the chips the
+    forward compose pre-fills. Each: ``{filename, mimeType, size, partIndex}``.
+    ``partIndex`` is the durable per-attachment key (stable for a stored
+    message, unlike Gmail's regenerable attachmentId). Same ACL gate +
+    provenance logging as View original."""
+    from core.gmail import MessageGoneError, parse_message
+
+    comm, gmail = await _original_comm(settings, user_client, communication_id)
+    try:
+        try:
+            raw = await gmail.get_message(comm["gmailMessageId"])
+        except MessageGoneError:
+            raise OriginalGoneError(
+                "The message being forwarded no longer exists in the source mailbox."
+            )
+        parsed = parse_message(raw)
+    finally:
+        await gmail.aclose()
+    log.info(
+        "forward attachments listed: %s/%s for %s (communication %s)",
+        gmail.mailbox, comm.get("gmailMessageId"), acting_user or "?", communication_id,
+    )
+    return [
+        {
+            "filename": a.filename or "attachment",
+            "mimeType": a.mime_type,
+            "size": a.size,
+            "partIndex": a.part_index,
+        }
+        for a in parsed.real_attachments
+    ]
+
+
+async def fetch_forward_attachment(
+    settings: Settings,
+    user_client: Any,
+    communication_id: str,
+    part_index: int,
+    *,
+    acting_user: str = "",
+) -> tuple[str, str, bytes]:
+    """One forwarded attachment's ``(filename, content_type, bytes)`` fetched
+    live from the source mailbox at send time (service delegation). Keyed by
+    ``part_index`` so a regenerated Gmail attachmentId can't misresolve. Raises
+    :class:`CommsError`/:class:`OriginalGoneError` so the send BLOCKS rather
+    than dropping an attachment (ET-131)."""
+    from core.gmail import MessageGoneError, parse_message
+
+    comm, gmail = await _original_comm(settings, user_client, communication_id)
+    try:
+        try:
+            raw = await gmail.get_message(comm["gmailMessageId"])
+        except MessageGoneError:
+            raise OriginalGoneError(
+                "The message being forwarded no longer exists in the source mailbox."
+            )
+        parsed = parse_message(raw)
+        part = next(
+            (a for a in parsed.real_attachments if a.part_index == part_index), None
+        )
+        if part is None:
+            raise CommsError("That attachment is no longer part of the forwarded message.")
+        data = await gmail.get_attachment(parsed.gmail_id, part.attachment_id)
+    finally:
+        await gmail.aclose()
+    log.info(
+        "forward attachment fetched: %s/%s part %s for %s",
+        gmail.mailbox, comm.get("gmailMessageId"), part_index, acting_user or "?",
+    )
+    return (
+        part.filename or "attachment",
+        part.mime_type or "application/octet-stream",
+        data,
+    )
 
 
 # --- curation ---------------------------------------------------------------
@@ -750,6 +877,38 @@ def _write_back_result(
     return {"ok": False, "error": error, "retryPayload": retry_payload or {}}
 
 
+async def _reference_chain(
+    api_client: Any, conversation_id: str, *, exclude: str = ""
+) -> str:
+    """The ``References`` header value for a reply: the conversation's message
+    RFC ids in chronological order, angle-bracketed and space-joined, minus
+    ``exclude`` (the immediate parent, which build_mime appends). Best-effort —
+    any failure yields ``""`` (the pre-Phase-2 behavior)."""
+    if not conversation_id:
+        return ""
+    try:
+        rows = await api_client.list(
+            crm.COMMUNICATION,
+            where=[{"type": "equals", "attribute": crm.CONVERSATION_FK, "value": conversation_id}],
+            select="rfcMessageId,sentAt",
+            order_by="sentAt",
+            max_size=_PAGE,
+        )
+    except Exception as exc:  # noqa: BLE001 — threading hint only
+        log.warning("reference-chain lookup failed: %s", exc)
+        return ""
+    excl = (exclude or "").strip().strip("<>")
+    seen: set[str] = set()
+    ids: list[str] = []
+    for m in rows.get("list", []):
+        rid = (m.get("rfcMessageId") or "").strip().strip("<>")
+        if not rid or rid == excl or rid in seen:
+            continue
+        seen.add(rid)
+        ids.append(f"<{rid}>")
+    return " ".join(ids)
+
+
 async def send_message(
     *,
     settings: Settings,
@@ -811,7 +970,7 @@ async def send_message(
         try:
             prev = await api_client.get(
                 crm.COMMUNICATION, reply_to_communication_id,
-                select="rfcMessageId,gmailThreadId,sourceMailbox,name",
+                select="rfcMessageId,gmailThreadId,sourceMailbox,name,conversationId",
             )
             in_reply_to = prev.get("rfcMessageId") or ""
             if prev.get("sourceMailbox") == gmail.mailbox:
@@ -819,6 +978,13 @@ async def send_message(
             if not subject:
                 base = prev.get("name") or ""
                 subject = base if base.lower().startswith("re:") else f"Re: {base}"
+            # References chain (Phase 2 hardening): the prior thread messages'
+            # RFC ids, oldest first, so non-Gmail clients thread the reply
+            # (Gmail itself relies on thread_id). build_mime appends
+            # in_reply_to, so exclude it here to avoid a duplicate tail.
+            references = await _reference_chain(
+                api_client, prev.get("conversationId") or "", exclude=in_reply_to
+            )
         except EspoError as exc:
             log.warning("reply lookup failed: %s", exc)
 

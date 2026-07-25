@@ -4,6 +4,65 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.157.0] — 2026-07-25
+
+**feat(comms): Email Quality Phase 2 — forward with attachments + unread
+awareness** (§4 of `prds/email-quality-improvement-plan.md`; the plan's four
+unread surfaces plus server-side forward and the References chain). No
+migration. NOT yet driven live.
+
+### Added
+- **Forward carries the original's attachments.** The thread's ↪ Forward
+  pre-fills the message's real (non-inline) attachments as removable chips
+  (with sizes, against the 20 MB total); the SERVER fetches each file's bytes
+  from the source mailbox at send time (service delegation, provenance-logged
+  — the View-original path). A chip that can't be fetched **blocks the send**
+  (ET-131 — a forward never silently drops the file that was the reason to
+  forward). New: `comms.service.list_forward_attachments` /
+  `fetch_forward_attachment` (keyed by the stable `part_index`),
+  `GET /{slug}/api/records/{id}/communications/{cid}/attachments`, the
+  `_resolve_forward_attachments` send pre-pass, and the compose's
+  `{forwardCommunicationId, partIndex}` chip (draft-persisted).
+- **References header on replies/forwards.** `send_message` builds the
+  conversation's RFC-id chain (`_reference_chain`) so non-Gmail clients thread
+  the reply too (Gmail already rode In-Reply-To + threadId).
+- **Grid unread/awaiting chips** (Client / Partner / Funder Management): a
+  per-row blue **"● N unread"** / amber **"● awaiting reply"** chip and an
+  **Unread only** filter. `POST /{slug}/api/records/unread` (the frontend
+  posts the visible ids, called AFTER render — never blocks the grid; pure
+  decoration). New shared primitive `comms.service.record_unread_map`.
+- **Portal My Email tile badge**: the tile shows the signed-in user's total
+  unread conversation count (`GET /myemail/api/unread-count` →
+  `myemail.service.total_unread`; deduped across shared records; fetched after
+  the tiles render, absent on any failure).
+- **Daily email digest** (worker, `COMMS_DIGEST`, default off): each morning,
+  every manager with pending mail gets a summary of their records with unread
+  / awaiting-reply conversations, each a deep link. Sent from the shared
+  identity (`OPS_MAILBOX` / `OPS_MAILBOX_NAME`) to their `cbmEmail`; **no empty
+  digests**. Anchored to `COMMS_DIGEST_HOUR` (default 7) in `COMMS_DIGEST_TZ`
+  (default America/New_York), restart-safe (a restart past the hour schedules
+  tomorrow). New `comms/digest.py`; needs `APP_BASE_URL` for the deep links.
+
+### Config
+- `comms_digest` / `comms_digest_seconds` / `comms_digest_hour` /
+  `comms_digest_tz`, and `app_base_url` (the app's public base URL, for digest
+  record links — empty renders the digest without hyperlinks).
+
+### Verified
+- 1143 tests green (incl. new tests for the References chain, forward-attachment
+  resolve/block/list, `record_unread_map`, and the digest send/no-empty/gate).
+  Grid chips + Unread-only filter and the full forward-with-attachments flow
+  (prefill → remove one → send payload shape) driven in the stub harness with
+  no console errors. **NOT yet driven live** — see the plan status header for
+  the live checklist (forward a real PDF; grid chips + tile badge as a real
+  mentor; turn `COMMS_DIGEST` on + `APP_BASE_URL` and confirm a morning digest).
+
+### Note
+- Built alongside the parallel 0.156.0 (Referred Clients tab) release; the two
+  touched the same `sessions/frontend/*` + `sessions/router.py` files. HEAD is
+  coherent — 0.156.0 committed first, this commit carries only the Phase 2
+  delta on those shared files.
+
 ## [0.156.0] — 2026-07-25
 
 **feat(partnersessions): Referred Clients tab on the Partner View** — Doug's

@@ -81,12 +81,33 @@
     var a = document.createElement("a");
     a.className = "portal__tile";
     a.href = entry.url;
+    a.dataset.url = entry.url;
     a.appendChild(function () { var s = document.createElement("span"); s.className = "portal__tile-title"; s.textContent = entry.title; return s; }());
     a.addEventListener("click", function (ev) {
       ev.preventDefault();
       openWindow(entry.url, entry.target || null);
     });
     return a;
+  }
+
+  // My Email tile unread badge (§4.2.2): fetched after the tiles render so a
+  // slow count never delays the portal. Best-effort — no badge on any failure
+  // or a zero count.
+  function badgeMyEmailTile() {
+    var tile = document.querySelector('.portal__tile[data-url="/myemail/"]');
+    if (!tile) return;
+    fetch("/myemail/api/unread-count", { credentials: "same-origin" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        var n = d && d.total;
+        if (!n) return;
+        var b = document.createElement("span");
+        b.className = "portal__tile-badge";
+        b.textContent = n > 99 ? "99+" : String(n);
+        b.title = n + " unread conversation" + (n === 1 ? "" : "s");
+        tile.appendChild(b);
+      })
+      .catch(function () {});
   }
 
   function fillTiles(sectionId, listId, entries) {
@@ -100,6 +121,7 @@
     $("whoName").textContent = data.user.name || data.user.userName;
     fillTiles("directoriesSection", "directoriesList", data.directories || []);
     fillTiles("appsSection", "appsList", data.apps || []);
+    badgeMyEmailTile();
     fillList("crmSection", "crmList",
       data.crmUrl ? [{ title: "CBM CRM", url: data.crmUrl }] : [], true);
     fillList("docsSection", "docsList",

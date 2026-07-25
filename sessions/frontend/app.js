@@ -84,6 +84,8 @@
   var statusFilter = "";        // selected status value ("" = all)
   var sortKey = null;           // grid column key to sort by (null = default order)
   var sortDir = 1;              // 1 asc, -1 desc
+  var recordUnread = {};        // id -> {unread:N, awaiting:bool} (async, §4.2)
+  var unreadOnly = false;       // grid filter: only rows with unread mail
 
   function $(id) { return document.getElementById(id); }
   function show(el) { el.hidden = false; }
@@ -168,6 +170,7 @@
   $("refreshBtn").addEventListener("click", function () { loadRecords(); });
   $("search").addEventListener("input", function () { search = this.value; renderTable(); });
   $("statusFilter").addEventListener("change", function () { statusFilter = this.value; renderTable(); });
+  if ($("unreadOnly")) $("unreadOnly").addEventListener("change", function () { unreadOnly = this.checked; renderTable(); });
   $("newSessionBtn").addEventListener("click", function () { openEditor(null); });
   $("editorBackBtn").addEventListener("click", function () { leaveEditor(); });
   // Session-editor draft autosave: any interaction inside the editor view
@@ -465,10 +468,55 @@
         : (config.emptyMessage || "No records found.");
       refreshStatusFilter();
       renderTable();
+      loadUnreadChips();
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }
       notice("listNotice", e.message, "error");
     } finally { hide($("loadingState")); }
+  }
+
+  // Grid unread/awaiting chips (§4.2): fetched AFTER the grid renders so a
+  // slow conversation read never blocks the page. Best-effort decoration —
+  // any failure just leaves the grid chip-less. Re-renders once the counts
+  // arrive; toggles the "Unread only" control's visibility.
+  async function loadUnreadChips() {
+    if (!commsOn() || !records.length) return;
+    try {
+      var res = await api("/records/unread", {
+        method: "POST",
+        body: JSON.stringify({ recordIds: records.map(function (r) { return r.id; }) }),
+      });
+      recordUnread = (res && res.records) || {};
+    } catch (e) {
+      recordUnread = {};   // decoration failed — no chips, no error surfaced
+      return;
+    }
+    var anyUnread = Object.keys(recordUnread).some(function (id) {
+      return (recordUnread[id] || {}).unread > 0;
+    });
+    var wrap = $("unreadFilterWrap");
+    if (wrap) wrap.hidden = !anyUnread;
+    if (!anyUnread && unreadOnly) { unreadOnly = false; if ($("unreadOnly")) $("unreadOnly").checked = false; }
+    renderTable();
+  }
+
+  // The blue "● N unread" / amber "● awaiting" chip for a record's name cell.
+  function unreadChip(recId) {
+    var u = recordUnread[recId];
+    if (!u || (!u.unread && !u.awaiting)) return null;
+    var span = document.createElement("span"); span.className = "sx__unreadchip";
+    if (u.unread) {
+      var b = document.createElement("span"); b.className = "sx__unreadchip-n";
+      b.textContent = "● " + u.unread + " unread";
+      b.title = u.unread + " unread conversation" + (u.unread === 1 ? "" : "s");
+      span.appendChild(b);
+    } else if (u.awaiting) {
+      var a = document.createElement("span"); a.className = "sx__unreadchip-aw";
+      a.textContent = "● awaiting reply";
+      a.title = "The newest message is from them — a reply is owed";
+      span.appendChild(a);
+    }
+    return span;
   }
 
   function columns() { return (config && config.columns) || []; }
@@ -481,6 +529,7 @@
 
   function matches(r) {
     if (statusFilter && config && config.statusKey && (r[config.statusKey] || "") !== statusFilter) return false;
+    if (unreadOnly && !((recordUnread[r.id] || {}).unread > 0)) return false;
     if (!search.trim()) return true;
     var hay = columns().map(function (c) { return r[c.key] || ""; }).join(" ").toLowerCase();
     return hay.indexOf(search.trim().toLowerCase()) >= 0;
@@ -567,6 +616,8 @@
             link.title = "Session scheduled today";
           }
           td.appendChild(link);
+          var chip = unreadChip(r.id);
+          if (chip) td.appendChild(chip);
         } else if (c.key === companyKey && r.companyPeek && r[c.key]) {
           // Company link -> the standard company/client pop-up (sections the
           // user's ACL can't read are omitted, so an unassigned user sees
@@ -2235,6 +2286,9 @@
             to: lastMsg.to || "",
             subject: c.subject || "",
           },
+          // The original's real attachments ride along — fetched by the
+          // server at send time (§4.1); prefilled as chips on open.
+          forwardCommunicationId: lastMsg.id,
           backToConv: convId,
         });
       });
@@ -2877,7 +2931,8 @@
       return !!($("commSubject").value.trim() !== initialSubject.trim() && $("commSubject").value.trim()) ||
         !bodyPristine() ||
         localAttachments.length > 0 ||
-        docAttachments.length > 0;
+        docAttachments.length > 0 ||
+        fwdAttachments.length > 0;
     }
     function setCommBody(html) {
       var el = $("commBody");
@@ -3010,6 +3065,10 @@
     // SERVER fetches the original bytes at send time through the same
     // record-scoped path as the Download action.
     var docAttachments = [];   // {documentId, filename}
+    // Forwarded attachments (§4.1): {communicationId, partIndex, filename,
+    // size} — the SERVER fetches the original's bytes from the source mailbox
+    // at send time. Pre-filled below when opening a forward.
+    var fwdAttachments = [];
     var docPickWrap = null, docPickList = null, docsCache = null;
     if (docsOn() && currentDetail) {
       docPickWrap = document.createElement("div"); docPickWrap.className = "sx__combo";
@@ -3072,7 +3131,8 @@
     body.appendChild(attachWrap);
     var MAX_ATTACH_TOTAL = 20 * 1024 * 1024;  // matches the server cap
     function attachTotal() {
-      return localAttachments.reduce(function (n, f) { return n + (f.size || 0); }, 0);
+      return localAttachments.reduce(function (n, f) { return n + (f.size || 0); }, 0) +
+        fwdAttachments.reduce(function (n, f) { return n + (f.size || 0); }, 0);
     }
     function renderAttachChips() {
       chipsEl.innerHTML = "";
@@ -3104,8 +3164,13 @@
           docAttachments.splice(i, 1); renderAttachChips(); markEdited();
         });
       });
+      fwdAttachments.forEach(function (f, i) {
+        chip("↪ " + f.filename, f.size || 0, function () {
+          fwdAttachments.splice(i, 1); renderAttachChips(); markEdited();
+        });
+      });
       var total = attachTotal();
-      attachTotalEl.hidden = !localAttachments.length;
+      attachTotalEl.hidden = !(localAttachments.length || fwdAttachments.length);
       attachTotalEl.textContent = "Total " + fmtBytes(total) + " of 20 MB";
     }
     fileInput.addEventListener("change", function () {
@@ -3137,6 +3202,8 @@
         return { filename: f.filename, contentType: f.contentType, dataBase64: f.dataBase64 };
       })).concat(docAttachments.map(function (d) {
         return { documentId: d.documentId, filename: d.filename };
+      })).concat(fwdAttachments.map(function (f) {
+        return { forwardCommunicationId: f.communicationId, partIndex: f.partIndex, filename: f.filename };
       }));
     }
 
@@ -3217,6 +3284,7 @@
           .map(function (r) { return r.email.toLowerCase(); }),
         tplAttach: templateAttachments,
         docAttach: docAttachments,
+        fwdAttach: fwdAttachments,
       };
     }
     function flushDraft() {
@@ -3246,6 +3314,7 @@
       }
       templateAttachments = (savedDraft.tplAttach || []).slice();
       docAttachments = (savedDraft.docAttach || []).slice();
+      fwdAttachments = (savedDraft.fwdAttach || []).slice();
       renderAttachChips();
       updateSummary();
       var note = document.createElement("div"); note.className = "sx__notice sx__draft-note";
@@ -3268,10 +3337,41 @@
             : (pre.to ? preKeys.indexOf(r.email.toLowerCase()) !== -1 : true);
         });
         templateAttachments = []; localAttachments = []; docAttachments = [];
+        fwdAttachments = pre.forward ? fwdAttachments : [];
         renderAttachChips(); updateSummary(); clearFootMsg();
       });
       note.appendChild(fresh);
       body.insertBefore(note, body.firstChild);
+    }
+
+    // Forwarding: pull the original's real attachments as pre-selected chips
+    // (unless a restored draft already carried them). The bytes stay in the
+    // source mailbox until send — the server fetches them then (§4.1).
+    if (pre.forward && pre.forwardCommunicationId && !fwdAttachments.length &&
+        currentDetail && commsOn()) {
+      api("/records/" + encodeURIComponent(currentDetail.id) +
+          "/communications/" + encodeURIComponent(pre.forwardCommunicationId) + "/attachments")
+        .then(function (r) {
+          var items = (r && r.attachments) || [];
+          if (!items.length) return;
+          fwdAttachments = items.map(function (a) {
+            return {
+              communicationId: pre.forwardCommunicationId,
+              partIndex: a.partIndex,
+              filename: a.filename,
+              size: a.size,
+            };
+          });
+          renderAttachChips();
+        })
+        .catch(function (e) {
+          if (e && e.status === 401) { flushDraft(); closeComm(); showLogin(); return; }
+          // Non-fatal: the message body still forwards; the user just doesn't
+          // get the attachment chips (rare — a deleted original).
+          footWarn("Couldn't attach the forwarded files (" +
+            (e && e.message ? e.message : "the original may be gone") +
+            ") — the message text will still forward.");
+        });
     }
 
     // The close-guard: Escape / × / backdrop / Cancel confirm before

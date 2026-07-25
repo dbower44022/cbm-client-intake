@@ -98,3 +98,15 @@
   transform: translateY(-1px);
 }
 .portal__tile-title { font-size: 1.05rem; }
+/* My Email tile unread badge (§4.2.2). */
+.portal__tile-badge {
+  margin-left: auto;
+  min-width: 1.5rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: var(--cbm-blue, #1a5fb4);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: center;
+}

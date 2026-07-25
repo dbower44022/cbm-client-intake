@@ -1,7 +1,28 @@
 # Email Quality Improvement Plan — closing the gaps between the app and Gmail
 
-**Status: Phase 1 BUILT (v0.132.0) + crm-test live verification IN
-PROGRESS (2026-07-22).** Verified live on crm-test at 0.132.0: migration
+**Status: Phase 2 BUILT (v0.157.0, 2026-07-25) — not yet driven live. Phase 1
+BUILT (v0.132.0) + crm-test live verification IN PROGRESS (2026-07-22).**
+
+Phase 2 (§4) shipped in v0.157.0, all four unread-awareness surfaces plus
+server-side forward and the References chain: forward now carries the
+original's real attachments (fetched from the source mailbox at send time,
+ET-131 block on failure) as pre-selected removable chips; replies/forwards
+populate the `References` header; the record grids show per-row blue
+"● N unread" / amber "● awaiting reply" chips with an Unread-only filter
+(`POST /{slug}/api/records/unread`, best-effort, post-render); the portal My
+Email tile shows a total-unread badge (`GET /myemail/api/unread-count`); and
+a daily worker digest (`COMMS_DIGEST`, anchored to `COMMS_DIGEST_HOUR` in
+`COMMS_DIGEST_TZ`, sent from the shared identity to each manager's cbmEmail,
+no empty digests) summarizes each manager's records with pending mail. New
+config: `comms_digest*`, `app_base_url` (digest deep links). Shared
+aggregation primitive: `comms.service.record_unread_map`. NOT yet driven
+live — after deploy: forward a real message with a PDF (arrives with the
+attachment); confirm grid chips + portal badge as a real mentor; set
+`COMMS_DIGEST=true` + `APP_BASE_URL` on the worker and confirm a morning
+digest with working deep links. The activation note in §7 gains
+`COMMS_DIGEST`/`APP_BASE_URL`.
+
+**Phase 1 status below.** Verified live on crm-test at 0.132.0: migration
 0014 on the managed DB; **View original** as a non-admin mentor (real
 service-delegation fetch of Mindy's message, formatting + quoted chain
 intact, provenance-logged); **Open in Gmail** hrefs = viewer mailbox +

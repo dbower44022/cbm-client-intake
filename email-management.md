@@ -107,6 +107,24 @@ on the thread, the subject, and when the last message arrived.
   there"** — replies happen on the record page, where the full compose
   (contact linking, templates, documents) lives.
 
+### Unread mail follows you to where you work
+
+You don't have to open My Email to know a record has mail waiting:
+
+- **On the management grids** (Client / Partner / Funder Management), a record
+  with unread conversations shows a blue **"● N unread"** chip next to its
+  name; one with the ball in your court (their message is newest) shows an
+  amber **"● awaiting reply"** chip. An **Unread only** filter appears when
+  anything is unread. (The chips load a moment after the grid, so a slow
+  read never delays the page.)
+- **On the portal home page**, the **My Email** tile carries a badge with
+  your total unread count.
+- **Each morning**, if your deployment has the digest turned on, you get a
+  short email listing exactly the records with unread or awaiting-reply
+  conversations, each a link straight to that record. Nothing waiting means
+  no email — the digest never lands empty. It comes from the shared CBM
+  address, not a person.
+
 ### The record's Communications tab
 
 Every engagement / partner / funder record has a Communications tab with
@@ -153,7 +171,12 @@ sender; **Reply all** appears when the thread has several participants
 "Fwd:" subject, and the message in a forwarded block — forwarding without
 adding a comment is fine. Replies and forwards carry the original message
 as a quoted block so you write with the context in front of you, and
-Cancel returns you to the thread, not to a closed dialog.
+Cancel returns you to the thread, not to a closed dialog. **A forward
+brings the original's attachments** — they appear as pre-selected chips
+you can remove; the app fetches each file when you send (a file it can't
+fetch blocks the send rather than dropping it silently). Replies also keep
+the whole thread properly linked so the recipient's mail program groups
+the conversation, even outside Gmail.
 
 **Attachments.**
 - **Attach files…** uploads from your computer; chips show each file's size
@@ -322,8 +345,9 @@ compose link falling back to your desktop mail program).
 | Everything email | `GMAIL_SYNC=true` (web + worker) + the Google service-account/DWD setup (`GMAIL-INTEGRATION-GUIDE.md`) |
 | A person sending/reading as themselves | Their CRM profile has a `cbmEmail` and a linked login user |
 | My Email tile | Member of any management-tool team; Gmail integration on |
-| Unread badges | The database (they ride the durable store; migration 0010) |
-| Attach from documents | `GDRIVE_DOCS` on (the document integration) |
+| Unread badges (grid chips, tile badge) | The database (they ride the durable store; migration 0010) |
+| Daily unread digest | `COMMS_DIGEST=true` + `OPS_MAILBOX` (the send identity) + `APP_BASE_URL` (for record deep links), all on the worker; `COMMS_DIGEST_HOUR`/`COMMS_DIGEST_TZ` set the send time (default 7am America/New_York) |
+| Attach from documents / forward attachments | `GDRIVE_DOCS` on for documents; forward attachments need only Gmail on |
 | Templates | Authored in EspoCRM; the user's role can read EmailTemplate |
 | Signatures | The user's EspoCRM Preferences signature (mentors: My Mentor Profile) |
 | Submission Admin shared identity | info@cbmentors.org as a real licensed Workspace mailbox + `OPS_MAILBOX=info@cbmentors.org` (web + worker); `OPS_MAILBOX_NAME` overrides the display name |

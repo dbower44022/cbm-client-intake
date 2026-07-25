@@ -113,6 +113,22 @@ async def inbox(request: Request) -> dict:
         raise _crm_failure(request, exc, "Could not load your email")
 
 
+@router.get("/unread-count")
+async def unread_count(request: Request) -> dict:
+    """The signed-in user's total unread conversation count — the portal My
+    Email tile badge (§4.2.2). Best-effort: any read failure returns 0 (the
+    tile just shows no badge), never an error the portal must handle."""
+    user = _require_user(request)
+    settings, store = _comms_ready()
+    client = client_for(settings, user)
+    try:
+        total = await service.total_unread(settings, client, store, user)
+    except Exception as exc:  # noqa: BLE001 — a badge never breaks the portal
+        log.warning("unread-count failed for %s: %s", user.get("userName"), exc)
+        total = 0
+    return {"total": total}
+
+
 @router.get("/conversations/{conversation_id}")
 async def conversation(conversation_id: str, request: Request) -> dict:
     """The thread — and the read stamp: opening it marks it seen."""

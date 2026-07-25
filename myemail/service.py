@@ -124,6 +124,18 @@ async def build_inbox(
     return {"conversations": conversations, "profileFound": True}
 
 
+async def total_unread(
+    settings: Any, client: Any, store: Any, user: dict[str, Any]
+) -> int:
+    """The signed-in user's total unread conversation count across all the
+    records they manage — the My Email portal-tile badge (§4.2.2). Counts
+    DISTINCT conversations (build_inbox already dedupes one shared across
+    records), so a co-mentored thread is not double-counted. Best-effort:
+    on any failure the caller shows no badge."""
+    data = await build_inbox(settings, client, store, user)
+    return sum(1 for c in data.get("conversations", []) if c.get("unread"))
+
+
 async def conversation_records(
     client: Any, conversation_id: str
 ) -> list[dict[str, Any]]:
