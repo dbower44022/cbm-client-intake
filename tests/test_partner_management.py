@@ -315,12 +315,12 @@ class _ReferredClient:
 
 _ENG_ROWS = [
     {"id": "E1", "name": "Acme Weight Loss", "engagementStatus": "Active",
-     "engagementStartDate": "2026-01-05", "lastSessionDate": "2026-07-01",
+     "engagementStartDate": "2026-01-05", "lastContactDate": "2026-07-01 09:00:00",
      "mentorProfileName": "Milt Sierra", "mentorProfileId": "M9",
      "primaryEngagementContactName": "Ann Client", "primaryEngagementContactId": "C1",
      "totalSessions": 4, "createdAt": "2026-01-05 10:00:00"},
     {"id": "E2", "name": "Beta Foods", "engagementStatus": "Submitted",
-     "engagementStartDate": None, "lastSessionDate": None,
+     "engagementStartDate": None, "lastContactDate": None,
      "mentorProfileName": None, "mentorProfileId": None,
      "primaryEngagementContactName": None, "primaryEngagementContactId": None,
      "totalSessions": 0, "createdAt": "2026-02-10 10:00:00"},
@@ -338,7 +338,7 @@ async def test_list_referred_clients_reads_the_reverse_link():
     e1 = next(r for r in rows if r["id"] == "E1")
     assert e1["name"] == "Acme Weight Loss" and e1["status"] == "Active"
     assert e1["startDate"] == "2026-01-05"
-    assert e1["lastContact"] == "2026-07-01"  # = the engagement's last session date
+    assert e1["lastContact"] == "2026-07-01 09:00:00"  # the dedicated lastContactDate field
     assert e1["mentorName"] == "Milt Sierra" and e1["mentorId"] == "M9"
     assert e1["contactName"] == "Ann Client" and e1["contactId"] == "C1"
     assert e1["totalSessions"] == 4
@@ -381,3 +381,84 @@ def test_primary_contact_endpoint_rejects_a_stranger(monkeypatch):
     with TestClient(_app(monkeypatch)) as c:
         r = c.post("/partnersessions/api/records/P1/primarycontact", json={"contactId": "NOPE"})
         assert r.status_code == 400 and "isn't on this record" in r.json()["detail"]
+
+
+# --- Last Contact Date auto-update (touch_last_contact) ----------------------
+
+from datetime import datetime, timedelta, timezone  # noqa: E402
+
+
+class _TouchClient:
+    """Reads one field back and records updates — enough for touch_last_contact."""
+
+    def __init__(self, current=None):
+        self._current = current
+        self.updates: list[tuple] = []
+
+    async def get(self, entity, record_id, select=None):
+        return {"id": record_id, select: self._current}
+
+    async def update(self, entity, record_id, payload):
+        self.updates.append((entity, record_id, payload))
+        return {"id": record_id}
+
+
+def _dt(s):
+    return datetime.strptime(s, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+
+
+@pytest.mark.asyncio
+async def test_touch_last_contact_datetime_field_advances_from_empty():
+    c = _TouchClient(current=None)
+    await service.touch_last_contact(MENTOR, c, "E1", _dt("2026-07-20 14:00:00"))
+    # engagement's datetime field keeps the full stamp
+    assert c.updates == [("CEngagement", "E1", {"lastContactDate": "2026-07-20 14:00:00"})]
+
+
+@pytest.mark.asyncio
+async def test_touch_last_contact_partner_uses_the_date_field():
+    c = _TouchClient(current=None)
+    await service.touch_last_contact(PARTNER, c, "P1", _dt("2026-07-20 14:00:00"))
+    # partner reuses `lastContacted`, a DATE field — truncated to the day
+    assert c.updates == [("CPartnerProfile", "P1", {"lastContacted": "2026-07-20"})]
+
+
+@pytest.mark.asyncio
+async def test_touch_last_contact_is_advance_only():
+    c = _TouchClient(current="2026-07-25 09:00:00")
+    await service.touch_last_contact(MENTOR, c, "E1", _dt("2026-07-20 14:00:00"))  # older
+    assert c.updates == []  # never regresses to an earlier contact
+
+
+@pytest.mark.asyncio
+async def test_touch_last_contact_same_day_is_noop_for_date_field():
+    c = _TouchClient(current="2026-07-20")
+    await service.touch_last_contact(PARTNER, c, "P1", _dt("2026-07-20 14:00:00"))
+    assert c.updates == []  # same calendar day already recorded
+
+
+@pytest.mark.asyncio
+async def test_touch_last_contact_skips_a_future_date():
+    future = datetime.now(timezone.utc) + timedelta(days=365)
+    c = _TouchClient(current=None)
+    await service.touch_last_contact(MENTOR, c, "E1", future)
+    assert c.updates == []  # a future scheduled session is not a contact
+
+
+@pytest.mark.asyncio
+async def test_touch_last_contact_noop_without_parent_or_when():
+    c = _TouchClient()
+    await service.touch_last_contact(MENTOR, c, None, _dt("2026-07-20 14:00:00"))
+    await service.touch_last_contact(MENTOR, c, "E1", None)
+    assert c.updates == []
+
+
+@pytest.mark.asyncio
+async def test_touch_last_contact_swallows_crm_errors():
+    class _Boom:
+        async def get(self, *a, **k):
+            raise EspoError("HTTP 403 forbidden")
+        async def update(self, *a, **k):  # pragma: no cover - never reached
+            raise AssertionError("should not update after a failed read")
+    # best-effort: never raises
+    await service.touch_last_contact(MENTOR, _Boom(), "E1", _dt("2026-07-20 14:00:00"))

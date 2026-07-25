@@ -58,7 +58,10 @@ _SKIP_SUFFIX = ("IsInvalid", "IsOptedOut", "IsInactive", "AnyId", "Map")
 # holds the partner intake form's enum-drift triage note (Doug's 2026-07-18
 # ruling: not shown when editing a partner — `partnerNotes` is THE notes field).
 _ENTITY_EXCLUDED: dict[str, frozenset[str]] = {
-    "CEngagement": frozenset({"description"}),
+    # lastContactDate is auto-maintained (advanced on outbound email / recorded
+    # session — service.touch_last_contact), so it is not hand-editable here; it
+    # still shows on the Overview rail and the grids.
+    "CEngagement": frozenset({"description", "lastContactDate"}),
     "CPartnerProfile": frozenset({"description"}),
 }
 _PREFIX_C = re.compile(r"^c(?=[A-Z])")

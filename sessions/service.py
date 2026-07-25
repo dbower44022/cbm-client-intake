@@ -403,11 +403,11 @@ async def list_records(
 
 
 # The client engagements referred by a partner (the Referred Clients tab). One
-# read of CPartnerProfile.engagements; "last contact" = the engagement's last
-# session date (CEngagement has no dedicated last-contacted field — its most
-# recent session IS the last client contact).
+# read of CPartnerProfile.engagements; "Last Contact" reads the dedicated
+# ``lastContactDate`` field, advanced whenever an outbound email is sent or a
+# session is recorded on the engagement (see ``touch_last_contact``).
 REFERRED_CLIENT_SELECT = (
-    "name,engagementStatus,engagementStartDate,lastSessionDate,"
+    "name,engagementStatus,engagementStartDate,lastContactDate,"
     "mentorProfileName,mentorProfileId,"
     "primaryEngagementContactName,primaryEngagementContactId,"
     "totalSessions,createdAt"
@@ -420,7 +420,7 @@ def _referred_row(r: dict[str, Any]) -> dict[str, Any]:
         "name": r.get("name") or "(unnamed)",
         "status": r.get("engagementStatus"),
         "startDate": r.get("engagementStartDate"),
-        "lastContact": r.get("lastSessionDate"),
+        "lastContact": r.get("lastContactDate"),
         "mentorName": r.get("mentorProfileName"),
         "mentorId": r.get("mentorProfileId"),
         "contactName": r.get("primaryEngagementContactName"),
@@ -1276,6 +1276,55 @@ def _parse_stamp(value: Any) -> Optional[datetime]:
     return None
 
 
+def _fmt_last_contact(cfg: DomainConfig, when: datetime) -> str:
+    """The last-contact value formatted for the domain's field type."""
+    if cfg.last_contact_type == "datetime":
+        return when.strftime("%Y-%m-%d %H:%M:%S")
+    return when.strftime("%Y-%m-%d")
+
+
+async def touch_last_contact(
+    cfg: DomainConfig,
+    client: SessionClient,
+    parent_id: Optional[str],
+    when: Optional[datetime],
+) -> None:
+    """Advance the parent record's last-contact field to ``when`` — written only
+    when it is more recent than the stored value and NOT in the future (a
+    future-scheduled session is not a contact yet). Called when an outbound email
+    is sent from the record or a session is recorded on it (Doug's request
+    2026-07-25; ``DomainConfig.last_contact_attr``).
+
+    Best-effort by contract: any failure (no field configured, the caller's ACL
+    can't edit the parent, a CRM error, the field absent on this CRM) is logged
+    and swallowed — it never fails the email/session it rode in on. Runs as the
+    passed client (normally the signed-in user, so their ACL applies)."""
+    attr = cfg.last_contact_attr
+    if not attr or not parent_id or when is None:
+        return
+    if when > datetime.now(timezone.utc):
+        return  # a future date is not a contact
+    new_val = _fmt_last_contact(cfg, when)
+    try:
+        rec = await client.get(cfg.parent_entity, parent_id, select=attr)
+        current = rec.get(attr)
+        # Advance-only: ISO date/datetime strings sort lexicographically. Compare
+        # on the shorter granularity so a stored date ("2026-07-25") vs a new
+        # datetime ("2026-07-25 14:00:00") is a same-day no-op, never a regress.
+        if current:
+            cur_s, new_s = str(current), new_val
+            n = min(len(cur_s), len(new_s))
+            if cur_s[:n] >= new_s[:n]:
+                return
+        await client.update(cfg.parent_entity, parent_id, {attr: new_val})
+        log.info("advanced last contact on %s/%s to %s", cfg.parent_entity, parent_id, new_val)
+    except Exception as exc:  # noqa: BLE001 — best-effort decoration, never fatal
+        log.warning(
+            "could not advance last contact on %s/%s: %s",
+            cfg.parent_entity, parent_id, exc,
+        )
+
+
 async def _activate_engagement_on_completed(
     cfg: DomainConfig,
     client: SessionClient,
@@ -1664,6 +1713,12 @@ async def create_session(
         )
         if follow_up is not None:
             session["followUp"] = follow_up
+    # Recording a session is a contact: advance the parent's last-contact date to
+    # the meeting date (advance-only; a future scheduled session is skipped).
+    await touch_last_contact(
+        cfg, client, parent_id,
+        _parse_stamp(session.get("dateStart") or changes.get("dateStart")),
+    )
     return session
 
 
@@ -1742,6 +1797,25 @@ async def update_session(
         )
         if follow_up is not None:
             session["followUp"] = follow_up
+    # Recording/updating a session is a contact: advance the parent's last-contact
+    # date (advance-only; a future-dated session is skipped inside the helper).
+    # Resolve the parent only if a trigger above didn't already.
+    if cfg.last_contact_attr:
+        if parent_id is None:
+            try:
+                parent = await client.get(
+                    SESSION, session_id, select=cfg.session_parent_fk
+                )
+                parent_id = parent.get(cfg.session_parent_fk)
+            except EspoError as exc:
+                log.warning(
+                    "could not resolve parent for last-contact on session %s: %s",
+                    session_id, exc,
+                )
+        await touch_last_contact(
+            cfg, client, parent_id,
+            _parse_stamp(session.get("dateStart") or changes.get("dateStart")),
+        )
     return session
 
 

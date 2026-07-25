@@ -4,6 +4,43 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.158.0] — 2026-07-25
+
+**feat(sessions): auto-maintained "Last Contact Date"** — Doug's follow-up to
+the Referred Clients tab. "Last Contact" now reads a dedicated, auto-updated
+field instead of the session-date proxy.
+
+- **Fields (already built on the CRM).** `CEngagement` gains a new datetime
+  **`lastContactDate`**; partners & funders **reuse** their existing date
+  `lastContacted` (no new field there — Doug's ruling). Reference +
+  prod-parity checklist: `clastcontactdate-field.md`. New
+  `DomainConfig.last_contact_attr` / `last_contact_type` per domain.
+- **Auto-update — `service.touch_last_contact`** (advance-only; never moves the
+  date backward, never sets a future date; best-effort — a failure never fails
+  the operation it rode in on). Two triggers:
+  - **Session recorded** — `create_session` / `update_session` advance the field
+    to the session's `dateStart` (a future scheduled session is skipped;
+    marking it Completed later advances it then).
+  - **Outbound email** — a record's Communications-tab send advances the field
+    to now after a successful send. Quick-compose / My Email / info@ replies
+    aren't tied to one of these records and don't touch it.
+- **Shown everywhere (config-driven, no per-field UI code).** Referred Clients
+  tab "Last Contact" column now reads `lastContactDate`; the mentor **Client
+  Management** grid gains a "Last Contact" column; the engagement **Overview**
+  gains a "Last contact" fact (renders "—" when empty). Partner/funder grids +
+  Overview already showed "Last Contacted" (v0.154.0). The engagement field is
+  **read-only in the app** (excluded from the Details edit form — it's
+  auto-maintained); correct it in the EspoCRM UI if ever needed.
+- Verified: 7 new `touch_last_contact` tests (advance-only, future-skip, date
+  vs datetime, no-op, error-swallow) + the Referred Clients tab test repointed
+  at the new field; full suite green (1154).
+
+**NOT yet driven live** — after deploy, on crm-test: record a session on an
+engagement and confirm its Last Contact advances; send an email from a partner's
+Communications tab and confirm the partner's Last Contacted advances; confirm a
+future-scheduled session doesn't advance it. Prod must carry
+`CEngagement.lastContactDate`.
+
 ## [0.157.0] — 2026-07-25
 
 **feat(comms): Email Quality Phase 2 — forward with attachments + unread

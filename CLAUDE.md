@@ -1612,6 +1612,28 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-25)
 
+**v0.158.0** (2026-07-25, 1154 tests green, committed NOT pushed) —
+**auto-maintained "Last Contact Date"** (Doug's follow-up to the Referred
+Clients tab: "Last Contact" should read a real, auto-updated field, not the
+session-date proxy). Fields (already built on the CRM, verified crm-test):
+`CEngagement` gains a NEW datetime **`lastContactDate`**; partners & funders
+**reuse** their existing date `lastContacted` (Doug's ruling — no new field
+there). New `DomainConfig.last_contact_attr`/`last_contact_type` per domain.
+Engine `service.touch_last_contact` advances the field **advance-only** (never
+backward, never a future date; best-effort — never fails the caller), on two
+triggers: a **session recorded** (`create_session`/`update_session`, to the
+session's `dateStart`) and an **outbound email** from a record's Communications
+tab (to now). Quick-compose/My Email/info@ don't touch it (not tied to one of
+these records). Shown config-driven (no per-field UI): the Referred Clients
+"Last Contact" column now reads `lastContactDate`, the mentor **Client
+Management** grid gains a "Last Contact" column, and the engagement **Overview**
+a "Last contact" fact; the field is read-only in the app (excluded from the
+engagement Details edit — auto-maintained). Reference + prod-parity checklist:
+`clastcontactdate-field.md`. 7 new tests. **NOT yet driven live** — after
+deploy: record a session → engagement Last Contact advances; send a partner
+email → partner Last Contacted advances; a future session doesn't advance it;
+**prod must carry `CEngagement.lastContactDate`.**
+
 **v0.157.0** (2026-07-25, 1143 tests green, committed NOT pushed) — **Email
 Quality Phase 2 — forward with attachments + unread awareness** (§4 of
 `prds/email-quality-improvement-plan.md`; plan status header now says Phase 2

@@ -1381,6 +1381,13 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 allow_unknown_recipients=body.allowUnknownRecipients,
                 user_client=client, attachments=attachments,
             )
+            # An outbound email from this record is a contact — advance the
+            # record's last-contact date (best-effort; the helper swallows any
+            # failure, so it never affects the send that already succeeded).
+            from datetime import datetime, timezone
+            await service.touch_last_contact(
+                cfg, client, parent_id, datetime.now(timezone.utc)
+            )
             return {"status": "ok", **result}
         except comms_service.CommsError as exc:
             raise _comms_error(exc)

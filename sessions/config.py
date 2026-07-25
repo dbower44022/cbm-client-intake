@@ -239,6 +239,17 @@ class DomainConfig:
     # opens the engagement in the mentor domain's own record page.
     referred_clients_link: Optional[str] = None
 
+    # --- Last contact date (Doug's request 2026-07-25). The record field that is
+    # advanced to the contact date whenever an outbound email is sent from the
+    # record OR a session is recorded on it (advance-only — never moved backward,
+    # never set to a future session date). CEngagement uses the NEW datetime
+    # ``lastContactDate``; partners & funders REUSE their existing date
+    # ``lastContacted``. None => no auto-update for this domain. The value is
+    # formatted per ``last_contact_type`` ("date" => YYYY-MM-DD, "datetime" =>
+    # YYYY-MM-DD HH:MM:SS).
+    last_contact_attr: Optional[str] = None
+    last_contact_type: str = "date"
+
     # --- Discussion pane (2026-07-23; prompts/record-discussion-pane-prompt.md).
     # Enables the Overview's staff-internal, attributed comment stream (the
     # Submission-Admin Discussion, ported). Set on partner + sponsor; a per-domain
@@ -386,7 +397,8 @@ MENTOR = DomainConfig(
         "name,engagementStatus,engagementClientName,clientOrganizationName,"
         "clientOrganizationId,engagementClientId,"
         "primaryEngagementContactName,primaryEngagementContactId,"
-        "nextSessionDateTime,engagementStartDate,mentorProfileName,mentorProfileId,createdAt"
+        "nextSessionDateTime,engagementStartDate,lastContactDate,"
+        "mentorProfileName,mentorProfileId,createdAt"
     ),
     # Order: Engagement, Status, Primary contact, Next session, Start date,
     # Company, Client, Assigned Mentor (far right — so a co-mentor can see
@@ -402,6 +414,7 @@ MENTOR = DomainConfig(
         Column("contact", "Primary contact", "primaryEngagementContactName"),
         Column("nextSession", "Next Session", "nextSessionDateTime", type="datetime"),
         Column("startDate", "Start Date", "engagementStartDate", type="date"),
+        Column("lastContact", "Last Contact", "lastContactDate", type="date"),
         Column("company", "Company", "clientOrganizationName"),
         Column("client", "Client", "engagementClientName"),
         Column("mentor", "Assigned Mentor", "mentorProfileName"),
@@ -427,7 +440,7 @@ MENTOR = DomainConfig(
         "clientOrganizationName,clientOrganizationId,"
         "primaryEngagementContactName,primaryEngagementContactId,"
         "mentorProfileId,mentorProfileName,"
-        "engagementStartDate,lastSessionDate,nextSessionDateTime,"
+        "engagementStartDate,lastSessionDate,lastContactDate,nextSessionDateTime,"
         "totalSessions,totalSessionHours,totalSessionsLast30Days,"
         "referringPartnerName,referringPartnerId,"
         "mentoringFocusAreas,mentoringNeedsDescription,engagementNotes,createdAt"
@@ -458,6 +471,7 @@ MENTOR = DomainConfig(
                      always=True),
         # session activity
         OverviewItem("Start date", "engagementStartDate", "date", section="activity"),
+        OverviewItem("Last contact", "lastContactDate", "date", section="activity", always=True),
         OverviewItem("Total sessions", "totalSessions", "int", section="activity"),
         OverviewItem("Session hours", "totalSessionHours", "int", section="activity"),
         OverviewItem("Last session", "lastSessionDate", "date", section="activity"),
@@ -474,6 +488,10 @@ MENTOR = DomainConfig(
         ("Company", "Account", "clientOrganizationId"),
         ("Client Business Profile", "CClientProfile", "engagementClientId"),
     ),
+    # Advanced whenever an outbound email is sent from the engagement or a
+    # session is recorded on it (the new datetime CEngagement field).
+    last_contact_attr="lastContactDate",
+    last_contact_type="datetime",
     supports_comentor=True,
     manager_comentor_link="engagements",  # reverse of CEngagement.additionalMentors
     parent_manager_link="mentorProfile",
@@ -585,6 +603,9 @@ PARTNER = DomainConfig(
     # Client engagements that name this partner as their referring partner
     # (reverse of CEngagement.referringPartner) — the Referred Clients tab.
     referred_clients_link="engagements",
+    # Reuse the existing date field — advanced on outbound email / recorded session.
+    last_contact_attr="lastContacted",
+    last_contact_type="date",
     discussion_enabled=True,
 )
 
@@ -687,6 +708,9 @@ SPONSOR = DomainConfig(
     contributions_parent_fk="sponsorProfileId",
     contributions_donor_account_attr="sponsorCompanyId",
     contributions_donor_contact_attr="sponsorContactId",
+    # Reuse the existing date field — advanced on outbound email / recorded session.
+    last_contact_attr="lastContacted",
+    last_contact_type="date",
     discussion_enabled=True,
 )
 
