@@ -59,8 +59,8 @@ confirm rather than assume.
    Blocking sub-items:
    - ☑ **Handoff §1 DECIDED** — the public programme shares the existing
      `CEvent`, gated by `publishToWebsite` (D-24).
-   - ☐ **Decide handoff §5** — topic vocabulary (the existing curated 10-value
-     list vs the 31-value `areaOfExpertise` list).
+   - ☑ **Handoff §5 DECIDED** — keep the existing 10-value `topic` list; no
+     schema change required.
    - ☑ `readOnly` flags cleared and the whole change list applied to crm-test
      (2026-07-25) — verified by a real API-user write of all 17 fields.
    - ☐ Verify prod parity (handoff §7) — prod was not probed.
@@ -72,11 +72,9 @@ confirm rather than assume.
    backing sheet so parity is measured against reality, not inference.
 6. **Email templates.** Decide the five template names; they can be authored in
    EspoCRM at any point before Phase 6.
-7. **Topic vocabulary — ☐ OPEN.** D-18 ruled `CMentorProfile.areaOfExpertise`
-   (31 skills), but the schema review then found `CEvent.topic` already carries
-   a curated 10-value public-facing list. Handoff §5 lays out the choice; the
-   31-value list is reproduced there for pasting if that's the call. **The only
-   Phase 0 item still needing a decision.**
+7. **Topic vocabulary.** ✅ **Settled 2026-07-25 — keep the existing curated
+   10-value `CEvent.topic` list** (supersedes D-18's `areaOfExpertise` choice).
+   **No CRM change needed.** Handoff §5.
 
 **Gate:** ✅ the entity modifications are applied on crm-test (Phase 1 unblocked) · Zoom probe green (blocks *only* the Phase 2 live
 verification, not the Phase 2 build).

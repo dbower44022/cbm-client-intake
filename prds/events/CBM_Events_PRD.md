@@ -76,7 +76,7 @@ These are settled. They are recorded here so the build never re-litigates them.
 | D-15 | **Access** | Administered by the **Marketing Admin Team** (the team that already owns info@ and the Submission Admin queue). |
 | D-16 | **Registration rules** | Capacity + waitlist · registration closes at start time · one registration per email · self-service cancel link. |
 | D-17 | **In-person attendance** | A **staff check-in screen** in the app: searchable roster, tap to mark arrived, plus "add walk-in" that creates the Contact on the spot. |
-| D-18 | **Topics** | Ruled 2026-07-25: reuse the **`CMentorProfile.areaOfExpertise`** 31-value skills list, *not* `mentoringFocusAreas`. **⚠️ Reopened the same day** — the schema review found `CEvent.topic` already carries a curated, public-facing 10-value list built for this page. Decision pending in handoff §5; nothing else depends on it. |
+| D-18 | **Topics** | **Use the existing curated 10-value `CEvent.topic` list** — *Business Fundamentals · Marketing & Sales · Finance & Accounting · Legal & Compliance · Operations · Technology & Digital · Leadership & People · Industry-Specific · Networking · Other* (Doug, 2026-07-25). This **supersedes** the earlier same-day ruling for `CMentorProfile.areaOfExpertise`, which was made before the schema review found a purpose-built list already on the entity. Needs no CRM change. Event topics and mentor expertise are therefore separate vocabularies. |
 | D-19 | **Consent** | The registration checkbox records **marketing opt-in plus the terms/privacy acceptances** the other four public forms capture, with policy links in the modal. |
 | D-20 | **WordPress code** | A **small purpose-built CBM WordPress plugin**, version-controlled in this repo, providing shortcodes — not unversioned JS pasted into Elementor widgets. |
 | D-21 | **Migration** | Backfill the **YouTube playlist** into past event records. Zoom history and the Google Sheet are **not** imported. |
@@ -234,7 +234,7 @@ Numbered `EV-nn` so the plan, tests, and verification can cite them.
 - **EV-40** After an event completes, the admin app prompts for the recording:
   staff paste the YouTube URL, and the app derives the video id and thumbnail.
 - **EV-41** A past event with a recording appears in the public recorded library
-  with its CRM-owned title, summary, date, and topics.
+  with its CRM-owned title, summary, date, and topic.
 - **EV-42** A one-time migration imports the existing YouTube playlist as past
   event records, preserving title, description, publish date, and video id, and
   flagging each as needing a staff date/topic review (the video publish date is
@@ -337,7 +337,8 @@ Already built: title, `description` (the calendar-card blurb), `eventOverview`
 and `eventSyllabus` (full content), `format` (In-Person / Virtual / Hybrid — the
 field the Zoom logic keys on), `eventType` (Online Webinar / In Person Event /
 Online Course), `status`, start/end/duration, `location`, `venueCapacity`,
-`topic`, `eventGraphic`, `recordingUrl`, `virtualMeetingUrl`, `registrationUrl`,
+`topic` (the curated 10-value public list, D-18), `eventGraphic`,
+`recordingUrl`, `virtualMeetingUrl`, `registrationUrl`,
 `eventFee`, plus links to `presenters` (Contacts), `sponsorProfiles`,
 `resources`, and `registrations`.
 
@@ -391,7 +392,7 @@ required).
 | Endpoint | Purpose |
 |---|---|
 | `GET /api/events/upcoming` | Published, future, non-cancelled events. **Deliberately returns today's Apps Script keys** (`topic`, `summary`, `date`, `month`, `monthShort`, `day`, `time`, `durationHrs`, `webinarId`) **plus** `slug`, `url`, `eventType`, `location`, `seatsRemaining`, `registrationOpen`, `startsAtUtc` — so the existing rendering logic ports with near-zero change and new capability is additive. |
-| `GET /api/events/recordings?q=&limit=` | Past events with recordings: `title`, `date`, `summary`, `videoId`, `thumbnailUrl`, `url`, `topics`. Server-side search over title/summary/topics. |
+| `GET /api/events/recordings?q=&limit=` | Past events with recordings: `title`, `date`, `summary`, `videoId`, `thumbnailUrl`, `url`, `topic` (a single value, not an array). Server-side search over title/summary/topic. |
 | `GET /api/events/{slug}` | One event, full detail, for the per-event page (EV-06). |
 | `POST /api/events/{slug}/register` | Register. Returns `{status:"received", reference}` immediately (EV-11). Honeypot + rate-limited. |
 | `GET/POST /api/events/registrations/{token}/cancel` | Self-service cancel (EV-16). |

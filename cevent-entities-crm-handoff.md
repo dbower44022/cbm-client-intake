@@ -22,8 +22,8 @@ PRD: `prds/events/CBM_Events_PRD.md` · Plan:
 > is back to 0 records, no residue). `scripts/probe_events_schema.py` reports
 > *"No blocking schema problems found."*
 >
-> **NOT applied:** §5 (the `topic` vocabulary — your open decision), and
-> **production** (untouched; see §7).
+> **NOT applied:** **production** (untouched; see §7). §5 (the `topic`
+> vocabulary) needs no change at all — the existing list is the chosen one.
 >
 > Two API contract facts learned, now encoded in the migration script:
 > `Admin/fieldManager` **PUT requires the complete field definition** (a partial
@@ -55,8 +55,8 @@ Relationships tab you are on.
 4. **⚠️ Several fields are `readOnly` and/or `required` in a combination that
    will break API writes** — including two that are *required AND readOnly*.
    See §4. This would have failed the first live registration.
-5. **The topic vocabulary question is reopened by the facts** — a curated
-   10-value public-facing list already exists. See §5.
+5. **Topic vocabulary settled with no change needed** — the curated 10-value
+   public-facing `topic` list already on `CEvent` is the one being used. §5.
 6. **Prod parity is unverified** (no prod credentials locally). See §7.
 
 ---
@@ -223,29 +223,35 @@ will confirm.
 
 ---
 
-## 5. Topic vocabulary — reopening the decision (facts changed)
+## 5. ✅ DECIDED — keep the existing 10-value `topic` list
 
-D-18 settled on the `CMentorProfile.areaOfExpertise` 31-value skills list. That
-ruling was made **before** we knew the schema already had:
+**Doug's ruling, 2026-07-25: "use the existing 10-value topic list".** This
+**supersedes D-18** (which had chosen the 31-value `CMentorProfile.areaOfExpertise`
+skills list — a ruling made before we knew a purpose-built list already existed).
 
-> **`CEvent.topic`** — a *single* enum with a curated, public-facing 10-value
-> list: *Business Fundamentals · Marketing & Sales · Finance & Accounting ·
-> Legal & Compliance · Operations · Technology & Digital · Leadership & People ·
-> Industry-Specific · Networking · Other*
+`CEvent.topic` stays exactly as built:
 
-That list is arguably **better for the website** than 31 mentor skills: it is
-browse-sized, audience-worded, and someone deliberately designed it for this
-page. The 31-value list is better for **matching a viewer to a mentor**.
+> single enum · *Business Fundamentals · Marketing & Sales · Finance &
+> Accounting · Legal & Compliance · Operations · Technology & Digital ·
+> Leadership & People · Industry-Specific · Networking · Other*
 
-| Option | Change required |
-|---|---|
-| **A. Keep `topic` as built** (recommended for the public UI) | None. Possibly widen to multiEnum so an event can carry two topics. |
-| **B. Honour D-18** | Convert `topic` → **multiEnum** and replace its options with the 31 `areaOfExpertise` values. |
-| **C. Both** | Keep `topic` for public browsing; add a separate multiEnum for mentor-matching. Two vocabularies to maintain — only worth it if mentor matching is a near-term goal. |
+**No CRM change required** — this was the last open item in the change list, and
+it turns out to need nothing. The list is browse-sized, audience-worded, and
+designed for this page, which is what a public filter needs; 31 mentor skills
+would have made an unusable facet.
 
-**Doug's call.** Nothing else in the design depends on which way this goes.
-*(Note: the current 92 records all have `topic = null`, so there is no data to
-migrate either way.)*
+Consequences for the build:
+- The recorded-library search (EV-04) filters on this 10-value list, and the
+  public API returns `topic` as a single value, not an array.
+- Event topics and mentor expertise are now **separate vocabularies**. A future
+  "mentors who cover what you watched" feature would need a mapping table
+  between the two — noted, not built, and not a reason to revisit this.
+- If an event ever genuinely needs two topics, widening `topic` to a multiEnum
+  is a one-line change to `scripts/migrate_event_schema.py` (the options stay
+  the same). Deliberately not done now.
+
+*(All 92 existing records have `topic = null`, so there was no data at stake
+either way.)*
 
 ---
 
