@@ -4,6 +4,17 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.169.0] — 2026-07-26
+
+**fix(analytics): the page editor's panel Remove is now always visible** (Doug:
+"each page should be able to remove a metric that was previously added"). Each
+panel's ↑ Up / ↓ Down / **✕ Remove** controls moved into an always-visible panel
+header (they previously sat in a right-hand column that the wide field grid pushed
+off-screen, so Remove needed a horizontal scroll to reach); the fields below now
+wrap responsively (`auto-fit` grid). Removing a panel then Save drops that metric
+from the page. Frontend-only; harness-verified (3 panels → Remove → 2, correct
+one dropped, no console errors).
+
 ## [0.168.0] — 2026-07-25
 
 **feat(analytics): built-in dashboards & metrics are now editable — the main

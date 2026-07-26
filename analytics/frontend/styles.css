@@ -111,10 +111,12 @@ body {
 .an__chk input { min-height: auto; }
 
 .an__panels { display: flex; flex-direction: column; gap: 0.6rem; margin: 0.35rem 0; }
-.an__panel-row { border: 1px solid var(--cbm-border, #d8dee6); border-radius: 8px; padding: 0.6rem; display: flex; gap: 0.6rem; align-items: flex-start; }
-.an__panel-grid { display: grid; grid-template-columns: 1.4fr 1.4fr 1fr 0.6fr 1.4fr; gap: 0.5rem; flex: 1 1 auto; }
-.an__panel-ops { display: flex; flex-direction: column; gap: 0.3rem; }
-@media (max-width: 640px) { .an__panel-grid { grid-template-columns: 1fr 1fr; } .an__filter { grid-template-columns: 1fr 1fr; } }
+.an__panel-row { border: 1px solid var(--cbm-border, #d8dee6); border-radius: 8px; padding: 0.6rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.an__panel-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.an__panel-h { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--cbm-slate-700, #667); }
+.an__panel-ops { display: flex; gap: 0.9rem; flex: 0 0 auto; }
+.an__panel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 0.5rem; }
+@media (max-width: 640px) { .an__filter { grid-template-columns: 1fr 1fr; } }
 
 /* footer parity with the other apps (styles.css owns it — no wizard.css here) */
 .cbm-footer { margin-top: auto; padding-top: 1.5rem; color: var(--cbm-slate-700, #667); font-size: 0.8rem; text-align: center; }

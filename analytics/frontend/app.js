@@ -489,13 +489,20 @@
       msel.onchange = fillViz; fillViz();
       var width = h("input", { type: "number", class: "an__p-width", min: "3", max: "12", value: p.width || 4, title: "Width (3–12)" });
       var vis = h("input", { type: "text", class: "an__p-vis", value: (p.visibility || []).join(", "), placeholder: "Visible to teams (comma) — blank = all" });
-      var row = h("div", { class: "an__panel-row" },
-        h("div", { class: "an__panel-grid" },
-          labeled("Metric", msel), labeled("Title", title), labeled("Show as", vsel), labeled("Width", width), labeled("Visible to", vis)),
-        h("div", { class: "an__panel-ops" },
-          h("button", { class: "an__link-btn", title: "Move up", onClick: function () { if (row.previousElementSibling) panelsHost.insertBefore(row, row.previousElementSibling); } }, "↑"),
-          h("button", { class: "an__link-btn", title: "Move down", onClick: function () { if (row.nextElementSibling) panelsHost.insertBefore(row.nextElementSibling, row); } }, "↓"),
-          h("button", { class: "an__link-btn an__danger", onClick: function () { row.remove(); } }, "Remove")));
+      // Row first, so the ↑/↓/Remove handlers can reference it. Controls live in
+      // an always-visible header (they used to sit in a right column that the
+      // wide field grid pushed off-screen).
+      var row = h("div", { class: "an__panel-row" });
+      var head = h("div", { class: "an__panel-head" },
+        h("span", { class: "an__panel-h" }, "Panel"),
+        h("span", { class: "an__panel-ops" },
+          h("button", { type: "button", class: "an__link-btn", title: "Move up", onClick: function () { if (row.previousElementSibling) panelsHost.insertBefore(row, row.previousElementSibling); } }, "↑ Up"),
+          h("button", { type: "button", class: "an__link-btn", title: "Move down", onClick: function () { if (row.nextElementSibling) panelsHost.insertBefore(row.nextElementSibling, row); } }, "↓ Down"),
+          h("button", { type: "button", class: "an__link-btn an__danger", onClick: function () { row.remove(); } }, "✕ Remove")));
+      var grid = h("div", { class: "an__panel-grid" },
+        labeled("Metric", msel), labeled("Title", title), labeled("Show as", vsel), labeled("Width", width), labeled("Visible to", vis));
+      row.appendChild(head);
+      row.appendChild(grid);
       return row;
     }
     function collect() {
