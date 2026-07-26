@@ -397,3 +397,30 @@ async def test_mark_completed_autocloses_record_forms():
     assert row2["status"] == STATUS_COMPLETED and row2["closed_at"] is None
     assert base_state(row2) == "new"
     await store.dispose()
+
+
+async def test_metrics_needs_attention_open_excludes_closed():
+    """A failed delivery an admin has CLOSED (with a reason) has had its
+    decision made — it must drop out of the alerting count, or the alert can
+    never clear: the machine status stays needs_attention forever. Prod ran a
+    month of hourly emails for one closed spam submission (2026-07-26)."""
+    store = PostgresStore(_URL)
+    await store.create_all()
+
+    before = (await store.metrics())["needsAttentionOpen"]
+    stuck = await store.capture(
+        "sponsor", f"open-{uuid.uuid4()}", {"email": "stuck@example.com"},
+        status="needs_attention",
+    )
+    assert (await store.metrics())["needsAttentionOpen"] == before + 1
+
+    await store.close_submission(
+        stuck.id, reason="No response needed",
+        closed_by="staff", closed_by_name="Staff",
+    )
+    m = await store.metrics()
+    assert m["needsAttentionOpen"] == before          # no longer nagging
+    assert m["counts"].get("needs_attention", 0) >= 1  # status itself unchanged
+    assert (await store.get_submission(stuck.id))["status"] == "needs_attention"
+
+    await store.dispose()

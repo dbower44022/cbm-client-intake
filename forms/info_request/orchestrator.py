@@ -32,6 +32,7 @@ import json
 import logging
 from datetime import datetime, timezone
 
+from core.crm_upsert import create_dropping_invalid
 from core.espo import EspoApi
 from core.phone import e164_or_none
 from core.resumable import run_step_once
@@ -140,7 +141,7 @@ async def _create_information_request(
     if account_id:
         payload["infoRequestCompanyId"] = account_id  # belongsTo Account link
     try:
-        created = await client.create(INFO_REQUEST, payload)
+        created = await create_dropping_invalid(client, INFO_REQUEST, payload)
         log.info("created %s %s for contact %s", INFO_REQUEST, created["id"], contact_id)
         return created["id"]
     except Exception as exc:  # noqa: BLE001 — best-effort; never break the submission
@@ -197,7 +198,7 @@ async def submit_request(
             payload["phoneNumber"] = phone
         if account_id:
             payload["accountId"] = account_id
-        created = await client.create(CONTACT, payload)
+        created = await create_dropping_invalid(client, CONTACT, payload)
         contact_id = created["id"]
 
     ids = {"contactId": contact_id}

@@ -184,11 +184,14 @@
   }
 
   function renderMetrics(m) {
-    var bits = ["backlog: " + (m.backlog || 0), "needs attention: " + (m.needsAttention || 0)];
+    // The OPEN failures are the actionable ones (a closed row has had its
+    // decision made) — and they are what alerts count, so the two agree.
+    var open = m.needsAttentionOpen != null ? m.needsAttentionOpen : (m.needsAttention || 0);
+    var bits = ["backlog: " + (m.backlog || 0), "needs attention: " + open];
     if (m.oldestPendingAgeSeconds != null) bits.push("oldest pending: " + Math.round(m.oldestPendingAgeSeconds / 60) + " min");
     if (m.avgLatencySeconds != null) bits.push("avg delivery: " + Math.round(m.avgLatencySeconds) + "s");
     $("metrics").textContent = bits.join("  ·  ");
-    $("metrics").className = "ops__metrics" + (m.needsAttention ? " is-alert" : "");
+    $("metrics").className = "ops__metrics" + (open ? " is-alert" : "");
   }
 
   function renderCounts(counts) {
@@ -1169,7 +1172,13 @@
       show($("userCorner"));
       if (corrAvailable()) show($("corrBtn"));
       hide($("msgView")); show($("dashView"));
-      loadData();
+      await loadData();
+      // Deep link: alert emails (and any other pointer at one submission) link
+      // to ?submission=<id>, which opens that submission's detail directly.
+      // openDetail fetches by id, so it works even when the row is filtered
+      // out of the grid — a closed one, say, under the default Open filter.
+      var deepLink = new URLSearchParams(location.search).get("submission");
+      if (deepLink) openDetail(deepLink);
     } catch (e) { bootFail(e); }
   })();
 })();

@@ -4,6 +4,67 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.173.0] — 2026-07-26
+
+**fix(alerting): a closed failure stops alerting, and the alert says what
+failed and links to it** (Doug's report: admin@ kept receiving *"1
+submission(s) need attention — delivery to the CRM failed. Review them in the
+operations console (/ops)."*).
+
+**Diagnosis (prod, live).** ONE submission was stuck: a **sponsor** application
+received 2026-06-30 whose Contact create was rejected by EspoCRM with
+`validationFailure {"field":"phoneNumber","type":"valid"}` — the applicant had
+typed the junk phone `123123213332`, which passes `core.phone.e164_or_none`
+(10–15 digits) but not the CRM's own phone validation. Anita **closed** it in
+Submission Admin on 2026-07-25 ("No response needed") — the decision the alert
+was asking for — but a submission's machine `status` is deliberately not
+human-editable, so it stayed `needs_attention`, the hourly alert never cleared,
+and the console's default **Open** filter meant the admin who followed the link
+saw nothing to act on. crm-test has no stuck rows; every email came from prod.
+
+Four changes:
+
+- **Alerts count only OPEN failures.** New `metrics()["needsAttentionOpen"]`
+  (`needs_attention` rows with no `closed_at`); `run_alert_check` uses it and
+  falls back to the raw count on a store that doesn't report it. Closing a
+  failed submission now genuinely ends the alert. The `/ops` summary line reads
+  the same number, so console and inbox agree.
+- **The alert says what needs doing.** Instead of a bare count it now names each
+  submission (up to 5): the **form title**, the submitter's email, when it
+  arrived ("2026-06-30 17:39 UTC (25 days ago)"), the attempt count, **why it
+  failed in plain language** (`validation_message` — "The CRM did not accept the
+  save: “Phone Number” has a value the CRM does not accept"), and a **direct
+  link** to that submission. It closes with what to do (Re-drive or Close with a
+  reason) and the console link. The backlog / stranded / worker-liveness /
+  schema-drift alerts gained the environment name and the console link too.
+  Detail lookup is best-effort — an alert never fails over its own detail.
+- **`?submission=<id>` deep link in Submission Admin.** The alert's link opens
+  that submission's detail directly; it fetches by id, so it works even when
+  the row is filtered out of the grid (a closed one under the default Open
+  filter — exactly the trap above). Needs **`APP_BASE_URL`**, now set on web +
+  worker in both overlays (prod → `https://apps.clevelandbusinessmentors.org`)
+  and documented in `.env.example`; without it the alert degrades to ids and a
+  named page rather than going silent.
+- **A CRM-rejected phone no longer sinks the whole submission.** New
+  `core.crm_upsert.create_dropping_invalid`: when a create is rejected with
+  `validationFailure` `valid`/`pattern` on a **droppable** field
+  (`phoneNumber`/`phone` — never the match key, a link, or a discriminator),
+  the field is dropped and the create retried once, logging a WARNING; the raw
+  value survives in the `CIntakeSubmission` audit log. Wired into
+  `find_create_or_fill` (every form's Contact step) and the info-request
+  orchestrator's direct Contact / CInformationRequest creates. A `required`
+  failure or any other error still raises unchanged. Also new:
+  `core.espo.validation_field` (the `(field, rule)` pair `validation_message`
+  already parsed).
+
+Verified: 1368 tests green (13 new — alert body/link/closed-row/fallback,
+drop-and-retry incl. the identity-field and `required` negatives); the new
+`needsAttentionOpen` metric round-tripped against a real local Postgres
+(close → count drops, status unchanged); the deep link driven in a browser
+harness (closed row opens from `?submission=`, no param = normal dashboard, no
+console errors). **Not yet deployed** — the prod alert repeats until this ships
+(or the stuck row is discarded).
+
 ## [0.172.0] — 2026-07-26
 
 **feat(directory): rich, read-only Mentor Profile page — "get to know your

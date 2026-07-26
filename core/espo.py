@@ -67,18 +67,16 @@ def _humanize_field(name: str) -> str:
     return spaced[:1].upper() + spaced[1:]
 
 
-def validation_message(exc: Exception) -> Optional[str]:
-    """A plain-language message when ``exc`` is an EspoCRM 400 validation
-    rejection, else ``None``.
+def validation_field(exc: Exception) -> Optional[tuple[Optional[str], Optional[str]]]:
+    """``(field, rule)`` when ``exc`` is an EspoCRM 400 validation rejection.
 
     :class:`EspoError` messages embed ``HTTP <status> <body>``; a
     ``validationFailure`` body names the field and the failed rule
     (``{"messageTranslation": {"label": "validationFailure", "data":
-    {"field": ..., "type": ...}}}``). Routers use this to answer with a
-    readable 400 ("the CRM did not accept field X") instead of surfacing the
-    raw error as a 502/504 — a bad value is the caller's data, not a server
-    fault. Returns ``None`` (→ keep the generic handling) for anything that
-    isn't provably a validation failure.
+    {"field": ..., "type": ...}}}``). Returns ``None`` for anything that isn't
+    provably a validation failure. :func:`validation_message` renders this for
+    humans; ``core.crm_upsert`` uses the raw pair to decide whether a single
+    offending value can be dropped and the write retried.
     """
     text = str(exc)
     m = _HTTP_STATUS_RE.search(text)
@@ -95,8 +93,21 @@ def validation_message(exc: Exception) -> Optional[str]:
     if info.get("label") != "validationFailure":
         return None
     data = info.get("data") or {}
-    field = data.get("field")
-    rule = data.get("type")
+    return data.get("field"), data.get("type")
+
+
+def validation_message(exc: Exception) -> Optional[str]:
+    """A plain-language message when ``exc`` is an EspoCRM 400 validation
+    rejection, else ``None``.
+
+    Routers use this to answer with a readable 400 ("the CRM did not accept
+    field X") instead of surfacing the raw error as a 502/504 — a bad value is
+    the caller's data, not a server fault.
+    """
+    parsed = validation_field(exc)
+    if parsed is None:
+        return None
+    field, rule = parsed
     label = f"“{_humanize_field(field)}”" if field else "one of the fields"
     reasons = {
         "valid": "has a value the CRM does not accept",

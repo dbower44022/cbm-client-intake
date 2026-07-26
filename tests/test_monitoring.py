@@ -21,11 +21,17 @@ def _settings(**over):
 
 
 class FakeMetricsStore:
-    def __init__(self, metrics):
+    def __init__(self, metrics, rows=None):
         self._metrics = metrics
+        self._rows = rows
 
     async def metrics(self):
         return self._metrics
+
+    async def list_submissions(self, *, status=None, form=None, limit=200):
+        if self._rows is None:  # a store too old/limited to offer detail
+            raise AttributeError("list_submissions")
+        return [r for r in self._rows if status is None or r["status"] == status]
 
 
 def _collector():
@@ -39,11 +45,83 @@ def _collector():
 
 # --- alerting ---------------------------------------------------------------
 
+def _failed_row(**over):
+    row = {
+        "id": "sub-1",
+        "form_slug": "sponsor",
+        "status": "needs_attention",
+        "attempt_count": 3,
+        "email": "applicant@example.test",
+        "received_at": datetime(2026, 6, 20, 9, 0, tzinfo=timezone.utc),
+        "closed_at": None,
+        "last_error": (
+            'create Contact failed: HTTP 400 {"messageTranslation":'
+            '{"label":"validationFailure","data":{"field":"phoneNumber",'
+            '"type":"valid"}}}'
+        ),
+    }
+    row.update(over)
+    return row
+
+
 async def test_alerts_on_needs_attention():
     sent, send = _collector()
-    store = FakeMetricsStore({"needsAttention": 3, "oldestPendingAgeSeconds": None})
+    store = FakeMetricsStore({"needsAttentionOpen": 3, "oldestPendingAgeSeconds": None})
     await run_alert_check(store, _settings(), {}, now=_NOW, send=send)
-    assert any("need attention" in t for t in sent)
+    assert any("NOT delivered to the CRM" in t for t in sent)
+
+
+async def test_needs_attention_alert_names_the_submissions_and_links_to_them():
+    """The alert must say WHAT failed, for whom, WHY, and where to fix it —
+    a bare count sent the reader hunting through the console."""
+    sent, send = _collector()
+    store = FakeMetricsStore(
+        {"needsAttentionOpen": 1, "oldestPendingAgeSeconds": None},
+        rows=[_failed_row()],
+    )
+    settings = _settings(app_base_url="https://apps.example.org")
+    await run_alert_check(store, settings, {}, now=_NOW, send=send)
+    body = sent[0]
+    assert "Become a Sponsor" in body  # the form's title, not its slug
+    assert "applicant@example.test" in body
+    assert "2026-06-20" in body and "days ago" in body
+    assert "Phone Number" in body  # the CRM rejection, in plain language
+    assert "https://apps.example.org/ops/?submission=sub-1" in body
+    assert "Re-drive" in body and "Close it with a reason" in body
+
+
+async def test_needs_attention_alert_without_base_url_still_sends():
+    """No APP_BASE_URL configured: the alert degrades to ids + a named page,
+    it never fails or goes silent."""
+    sent, send = _collector()
+    store = FakeMetricsStore(
+        {"needsAttentionOpen": 1, "oldestPendingAgeSeconds": None},
+        rows=[_failed_row()],
+    )
+    await run_alert_check(store, _settings(), {}, now=_NOW, send=send)
+    assert "Submission id: sub-1" in sent[0]
+    assert "http" not in sent[0]
+
+
+async def test_closed_failures_do_not_alert():
+    """The bug behind a month of hourly emails: an admin closed the failed
+    submission (the decision the alert asks for), but its machine status stays
+    needs_attention forever — so the alert must count only OPEN ones."""
+    sent, send = _collector()
+    store = FakeMetricsStore(
+        {"needsAttention": 1, "needsAttentionOpen": 0, "oldestPendingAgeSeconds": None},
+        rows=[_failed_row(closed_at=_NOW)],
+    )
+    await run_alert_check(store, _settings(), {}, now=_NOW, send=send)
+    assert sent == []
+
+
+async def test_falls_back_to_raw_count_without_open_metric():
+    """A store that doesn't report the open count (older deploy) still alerts."""
+    sent, send = _collector()
+    store = FakeMetricsStore({"needsAttention": 2, "oldestPendingAgeSeconds": None})
+    await run_alert_check(store, _settings(), {}, now=_NOW, send=send)
+    assert len(sent) == 1 and "2 intake submissions" in sent[0]
 
 
 async def test_alerts_on_backlog_age():

@@ -1612,7 +1612,40 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-26)
 
-**v0.172.0** (2026-07-26, 1360 tests green, committed NOT pushed) — **rich,
+**v0.173.0** (2026-07-26, 1368 tests green, committed NOT pushed) — **fix: the
+recurring "1 submission(s) need attention" emails to admin@, and a far more
+useful alert.** Diagnosed live: ONE prod row was stuck — a **sponsor**
+submission (2026-06-30) whose Contact create EspoCRM rejected with
+`validationFailure phoneNumber/valid` (the applicant typed `123123213332`,
+which passes `e164_or_none`'s 10–15-digit gate but not the CRM's). Anita
+**closed** it in Submission Admin 2026-07-25 ("No response needed"), but a
+submission's machine `status` is deliberately not human-editable, so it stayed
+`needs_attention` — the hourly alert could never clear, and the console's
+default **Open** filter meant the link led to an apparently empty queue.
+crm-test is clean; every email came from prod. Four changes (mechanics:
+CHANGELOG 0.173.0): (1) alerts count only OPEN failures
+(`metrics()["needsAttentionOpen"]` = `needs_attention` AND `closed_at IS NULL`;
+`/ops`'s summary line reads the same number, so inbox and console agree);
+(2) the alert now names each submission — form title, submitter email, age,
+attempts, the CRM rejection in plain language, a **direct link** — and tells
+the reader to Re-drive or Close with a reason; env + console link added to the
+backlog/stranded/liveness/drift alerts too; (3) **`?submission=<id>` deep link**
+in Submission Admin (fetches by id, so a filtered-out row still opens), riding
+the new **`APP_BASE_URL`** now set on web + worker in BOTH overlays
+(prod = the custom domain) — unset degrades to ids, never silence; (4)
+`core.crm_upsert.create_dropping_invalid` — a `valid`/`pattern` rejection of a
+**droppable** field (phone only; never the match key/link/discriminator) drops
+that field and retries once instead of losing the lead (wired into
+`find_create_or_fill` = every form's Contact step, plus the info-request
+direct creates); the raw value stays in the audit log. Verified: 1368 tests
+(13 new), the new metric round-tripped on live local Postgres, deep link driven
+in a browser harness. **After push/deploy:** apply both overlays via doctl (they
+now carry `APP_BASE_URL`) and confirm the emails stop. **Immediate lever if
+Doug wants them stopped before deploy:** Discard that one prod row
+(`53129e4d-7ab8-4742-b9cd-0bc490852170`) in `/ops` — discard sets a terminal
+status, which clears the count on today's code.
+
+Before that: **v0.172.0** (2026-07-26, 1360 tests green, committed NOT pushed) — **rich,
 read-only Mentor Profile page on the Workspace Directory** (Doug's request:
 significantly improve the mentor directory so a new mentor can get to know the
 other mentors and locate co-mentors). Clicking a mentor's **name** in

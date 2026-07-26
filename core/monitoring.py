@@ -21,10 +21,13 @@ from typing import Awaitable, Callable, Optional
 import httpx
 
 from .config import Settings
-from .espo import EspoClient, EspoError
+from .espo import EspoClient, EspoError, validation_message
 from .schema_contract import EXPECTED_ENUMS
 
 log = logging.getLogger("cbm_intake.monitoring")
+
+# How many failed submissions an alert names individually before summarizing.
+_ALERT_DETAIL_LIMIT = 5
 
 Send = Callable[[str], Awaitable[None]]
 FetchOptions = Callable[[str, str], Awaitable[Optional[list[str]]]]
@@ -90,6 +93,123 @@ async def _email_alert(settings: Settings, text: str) -> None:
         await gmail.aclose()
 
 
+def console_url(settings: Settings, submission_id: Optional[str] = None) -> str:
+    """A clickable Submission Admin URL, or ``""`` when ``APP_BASE_URL`` is unset.
+
+    An alert that only says "review them in /ops" makes the reader hunt for the
+    site and then for the row; with a base URL configured, every alert carries a
+    direct link (``?submission=<id>`` opens that submission's detail).
+    """
+    base = (settings.app_base_url or "").strip().rstrip("/")
+    if not base:
+        return ""
+    return f"{base}/ops/?submission={submission_id}" if submission_id else f"{base}/ops/"
+
+
+def _console_line(settings: Settings) -> str:
+    """The closing "where to look" line every alert ends with."""
+    console = console_url(settings)
+    return (
+        f"Submission Admin: {console}" if console
+        else "Submission Admin: the /ops page of the intake app."
+    )
+
+
+def _age(now: datetime, when) -> str:
+    """``2026-06-30 17:39 UTC (26 days ago)`` — when the submission came in."""
+    if when is None:
+        return "unknown"
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    hours = max(0, int((now - when).total_seconds() // 3600))
+    if hours < 48:
+        ago = "less than an hour ago" if hours < 1 else (
+            "1 hour ago" if hours == 1 else f"{hours} hours ago"
+        )
+    else:
+        ago = f"{hours // 24} days ago"
+    return f"{when:%Y-%m-%d %H:%M} UTC ({ago})"
+
+
+def _why(last_error: Optional[str]) -> str:
+    """The failure in plain language where the CRM's error can be parsed
+    (a validation rejection names the field), else the raw error, trimmed."""
+    if not last_error:
+        return "no error was recorded"
+    readable = validation_message(Exception(last_error))
+    if readable:
+        # Drop the router's "Correct that field and try again." tail — the
+        # reader of an alert isn't the person who typed the value.
+        return readable.replace(" Correct that field and try again.", "")
+    return last_error.strip().splitlines()[0][:300]
+
+
+def _form_label(slug: Optional[str]) -> str:
+    """The form's human title ("Become a Sponsor") rather than its slug."""
+    if not slug:
+        return "submission"
+    try:
+        from forms import SPECS_BY_SLUG
+
+        spec = SPECS_BY_SLUG.get(slug)
+        if spec is not None:
+            return spec.title
+    except Exception:  # noqa: BLE001 — a label is never worth failing an alert
+        pass
+    return slug
+
+
+async def _failed_rows(store) -> list[dict]:
+    """The OPEN needs-attention submissions, newest first — best-effort, since
+    an alert must never fail over its own detail lookup."""
+    try:
+        rows = await store.list_submissions(status="needs_attention", limit=50)
+    except Exception as exc:  # noqa: BLE001 — detail is a nicety, the alert is not
+        log.warning("could not load needs-attention detail for the alert: %s", exc)
+        return []
+    return [r for r in rows if not r.get("closed_at")]
+
+
+def _needs_attention_report(
+    settings: Settings, rows: list[dict], count: int, now: datetime
+) -> str:
+    """The needs-attention alert body: what failed, for whom, why, and where to
+    fix it. Degrades to the bare count when the row detail isn't available."""
+    one = count == 1
+    lines = [
+        f"{count} intake {'submission was' if one else 'submissions were'} NOT "
+        f"delivered to the CRM and {'needs' if one else 'need'} a decision.",
+        f"Environment: {settings.environment}.",
+        "",
+    ]
+    for i, row in enumerate(rows[:_ALERT_DETAIL_LIMIT], start=1):
+        email = row.get("email") or "no email captured"
+        lines.append(f"{i}. {_form_label(row.get('form_slug'))} — {email}")
+        lines.append(
+            f"   Received: {_age(now, row.get('received_at'))}"
+            f" · delivery attempts: {row.get('attempt_count') or 0}"
+        )
+        lines.append(f"   Why it failed: {_why(row.get('last_error'))}")
+        link = console_url(settings, row.get("id"))
+        if link:
+            lines.append(f"   Open it: {link}")
+        else:
+            lines.append(f"   Submission id: {row.get('id')}")
+        lines.append("")
+    if count > len(rows[:_ALERT_DETAIL_LIMIT]):
+        lines.append(
+            f"…and {count - len(rows[:_ALERT_DETAIL_LIMIT])} more — see the console."
+        )
+        lines.append("")
+    lines.append(
+        "What to do: open each one in Submission Admin and either fix the cause "
+        "and Re-drive it, or Close it with a reason. A closed submission stops "
+        "alerting; leaving one open repeats this message every hour."
+    )
+    lines.append(_console_line(settings))
+    return "\n".join(lines)
+
+
 def _due(state: dict, key: str, now: datetime, cooldown: int) -> bool:
     """True if this alert key hasn't fired within the cooldown; records the time."""
     last = state.get(key)
@@ -111,14 +231,18 @@ async def run_alert_check(
     send = send or (lambda text: send_alert(settings, text))
     metrics = await store.metrics()
 
-    needs = metrics.get("needsAttention", 0)
+    # Only OPEN failures are actionable: an admin who closed one in the console
+    # has made the decision the alert is asking for, and the machine status
+    # stays ``needs_attention`` forever (it is not human-editable), so counting
+    # closed rows makes the alert impossible to clear. Older stores that don't
+    # report the open count fall back to the raw status count.
+    needs = metrics.get("needsAttentionOpen")
+    if needs is None:
+        needs = metrics.get("needsAttention", 0)
     if needs >= settings.alert_needs_attention_threshold and _due(
         state, "needs_attention", now, settings.alert_cooldown_seconds
     ):
-        await send(
-            f"{needs} submission(s) need attention — delivery to the CRM failed. "
-            f"Review them in the operations console (/ops)."
-        )
+        await send(_needs_attention_report(settings, await _failed_rows(store), needs, now))
 
     age = metrics.get("oldestPendingAgeSeconds")
     if (
@@ -126,9 +250,14 @@ async def run_alert_check(
         and age >= settings.alert_pending_age_minutes * 60
         and _due(state, "backlog", now, settings.alert_cooldown_seconds)
     ):
+        backlog = metrics.get("backlog") or 0
         await send(
             f"Delivery backlog: the oldest undelivered submission is "
-            f"{int(age // 60)} minutes old. The CRM may be slow or unavailable."
+            f"{int(age // 60)} minutes old ({backlog} waiting). The CRM may be "
+            f"slow or unavailable — submissions are safely stored and will "
+            f"deliver automatically once it recovers.\n"
+            f"Environment: {settings.environment}.\n"
+            f"{_console_line(settings)}"
         )
 
     # A lease-expired ``processing`` row means a worker died mid-delivery
@@ -141,7 +270,9 @@ async def run_alert_check(
             f"{stranded} submission(s) are stranded mid-delivery (their worker "
             f"lease expired) — a delivery worker likely crashed. They will be "
             f"reclaimed automatically if a worker is running; check the worker "
-            f"component if this persists."
+            f"component if this persists.\n"
+            f"Environment: {settings.environment}.\n"
+            f"{_console_line(settings)}"
         )
 
 
@@ -186,7 +317,9 @@ async def run_worker_liveness_check(
                 f"The delivery worker's heartbeat is stale (last beat: {last}; "
                 f"threshold {threshold}s) — the worker may be down or "
                 f"crash-looping. Submissions will queue safely until it "
-                f"recovers; check the delivery-worker component."
+                f"recovers; check the delivery-worker component's logs in the "
+                f"DigitalOcean console.\n"
+                f"Environment: {settings.environment}."
             )
     elif state.get("liveness_alerted"):
         state["liveness_alerted"] = False
@@ -235,5 +368,7 @@ async def run_schema_drift_check(
             await send(
                 f"CRM schema drift: {entity}.{field} no longer offers expected "
                 f"value(s) {missing}. Forms/tools that send them will fail — "
-                f"reconcile the form options with the CRM."
+                f"reconcile the form options with the CRM "
+                f"(scripts/sync_form_options.py).\n"
+                f"Environment: {settings.environment}."
             )

@@ -1123,6 +1123,22 @@ class PostgresStore:
                     .where(submission.c.locked_until < now)
                 )
             ).scalar()
+            # The ACTIONABLE failures: a failed delivery an admin has already
+            # closed in the console (with a reason) is triaged — its machine
+            # status stays ``needs_attention`` by design (delivery really did
+            # fail and the status is not human-editable), so counting closed
+            # rows made the alert un-clearable: one spam submission closed as
+            # "No response needed" kept emailing admin@ every hour, pointing
+            # them at a console whose default Open filter did not show it
+            # (prod, 2026-06-30 → 2026-07-26). Alerting uses this number.
+            needs_open = (
+                await conn.execute(
+                    select(func.count())
+                    .select_from(submission)
+                    .where(submission.c.status == STATUS_NEEDS_ATTENTION)
+                    .where(submission.c.closed_at.is_(None))
+                )
+            ).scalar()
             beat = (
                 await conn.execute(
                     select(worker_heartbeat.c.beat_at).where(
@@ -1134,6 +1150,7 @@ class PostgresStore:
         return {
             "counts": counts,
             "needsAttention": counts.get(STATUS_NEEDS_ATTENTION, 0),
+            "needsAttentionOpen": int(needs_open or 0),
             "backlog": counts.get(STATUS_PENDING, 0) + counts.get(STATUS_RETRY, 0),
             "oldestPendingAgeSeconds": oldest_age,
             "avgLatencySeconds": float(avg_latency) if avg_latency is not None else None,
