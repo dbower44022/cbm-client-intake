@@ -498,12 +498,12 @@ _MENTOR_PROFILE_SELECT = ",".join([
     "name", "mentorTitle", "mentorStatus", "mentorType", "acceptingNewClients",
     "areaOfExpertise", "industryExperience", "fluentLanguages",
     "mentorBusinessStagePref", "yearsOfExperience", "mentorStartDate",
-    "aboutMentor", "mentorProfessionalBio", "description", "cbmEmail",
-    "profilePhotoId", "contactRecordId",
+    "maximumClientCapacity", "aboutMentor", "mentorProfessionalBio",
+    "description", "cbmEmail", "profilePhotoId", "contactRecordId",
 ])
 _MENTOR_CONTACT_SELECT = ",".join([
     "firstName", "lastName", "emailAddress", "phoneNumber",
-    "cLinkedInProfile", "cBirthday", "cSpouseName",
+    "cLinkedInProfile", "cBirthday", "cSpouseName", "addressCity",
 ])
 
 
@@ -565,6 +565,7 @@ async def mentor_profile(client: DirClient, mentor_id: str) -> dict[str, Any]:
             "mentoringSince": start,
             "yearsMentoring": _years_since(start),
             "yearsExperience": rec.get("yearsOfExperience"),
+            "maxCapacity": rec.get("maximumClientCapacity"),
             "about": rec.get("aboutMentor") or "",
             "bio": rec.get("mentorProfessionalBio") or "",
         },
@@ -574,7 +575,11 @@ async def mentor_profile(client: DirClient, mentor_id: str) -> dict[str, Any]:
             "interests": rec.get("description") or "",
             "birthday": contact.get("cBirthday"),
             "spouse": contact.get("cSpouseName") or "",
+            "city": contact.get("addressCity") or "",
         },
+        # Availability (openings) is attached by the router under the org-wide
+        # API key — a peer mentor can't read others' engagements as themselves.
+        "availability": None,
         "contact": {
             "cbmEmail": rec.get("cbmEmail") or "",
             "personalEmail": contact.get("emailAddress") or "",
@@ -593,3 +598,43 @@ async def mentor_photo(
     if not attachment_id:
         return None
     return await client.download_attachment(attachment_id)
+
+
+async def mentor_availability(
+    system_client: Any, mentor_id: str, max_capacity: Any
+) -> Optional[dict[str, Any]]:
+    """A mentor's current mentoring openings (max capacity − active clients).
+
+    Must run under the ORG-WIDE API key: a peer mentor can't read another
+    mentor's engagements as themselves, but the whole point is that everyone
+    browsing the directory can see whether a mentor is fully committed. The
+    number is a non-sensitive aggregate (no client identities). Active clients
+    are counted through the CMentorProfile's ``engagements1`` reverse link (the
+    assigned engagements) rather than a ``where`` on the link attribute (which
+    prod's ACL can reject). Best-effort — any failure returns None (the panel
+    then just shows the stated capacity / accepting status).
+    """
+    from assignments.service import ACTIVE_CLIENT_STATUSES
+
+    try:
+        data = await system_client.list_related(
+            MENTOR_ENTITY, mentor_id, "engagements1",
+            select="engagementStatus", max_size=200,
+        )
+    except EspoError as exc:
+        log.debug("mentor %s availability unavailable: %s", mentor_id, exc)
+        return None
+    rows = data.get("list", [])
+    active = sum(1 for r in rows if r.get("engagementStatus") in ACTIVE_CLIENT_STATUSES)
+    try:
+        cap = int(max_capacity)
+    except (TypeError, ValueError):
+        cap = None
+    unlimited = cap is None or cap < 0
+    available = None if unlimited else max(0, cap - active)
+    return {
+        "active": active,
+        "max": None if unlimited else cap,
+        "available": available,
+        "unlimited": unlimited,
+    }

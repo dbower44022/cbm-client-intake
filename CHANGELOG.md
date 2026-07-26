@@ -4,6 +4,39 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.175.0] — 2026-07-26
+
+**feat(directory): Mentor Profile page — full-width layout, richer "Get to know
+them", + mentoring availability** (Doug's follow-up to v0.172.0). Four changes
+to the read-only mentor profile page (`/directory/mentors/record/{id}`):
+
+- **Uses the whole screen.** The page-width cap is gone (per the product rule —
+  CBM runs on large monitors); the body is a two-lane grid that widens with the
+  window, with a firm ~460px side lane on ≥1500px screens and long-form text
+  (about / bio / interests) capped at a readable measure so wide ≠ unreadable.
+- **"Get to know them" is easier to read** — the personal facts are now a
+  spacious labeled grid (bigger values, real breathing room) instead of the
+  cramped right-column rows.
+- **City added** to the personal facts, alongside spouse name and birthday
+  (month + day only). City = `Contact.addressCity`.
+- **Mentoring availability** — a new card shows current openings
+  (`maximumClientCapacity` − active clients) with a slot bar, so a browser can
+  see whether a mentor is **fully committed** even when still marked
+  "accepting". Computed under the **org-wide API key** (a peer mentor can't read
+  another's engagements as themselves; the number is a non-sensitive aggregate)
+  via the `CMentorProfile.engagements1` reverse link, best-effort — falls back
+  to the stated capacity, or hides, when it can't be computed. New
+  `directory.service.mentor_availability` + `directory.router._system_client`;
+  the profile read now also returns `professional.maxCapacity`, `personal.city`,
+  and a router-attached `availability`.
+
+4 new tests; full suite green (1375). Verified in the stub-browser harness at
+1920px (full-width grid, availability card + slot bar, personal grid with
+city), 1500px (side lane caps), and mobile (single column, no h-overflow).
+**NOT yet driven live** — after deploy, confirm the availability number against
+a real mentor with active engagements (needs the intake API key's CEngagement
+read, which it has).
+
 ## [0.174.0] — 2026-07-26
 
 **fix(sessions): adding a CBM contact (co-mentor) to an engagement no longer

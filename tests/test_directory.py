@@ -381,10 +381,11 @@ class _MentorFake:
     """Minimal fake for the mentor-profile reads: records by (entity, id),
     with selected ids configured to raise (a forbidden Contact)."""
 
-    def __init__(self, records, *, forbid=()):
+    def __init__(self, records, *, forbid=(), related=None):
         self.records = records          # {(entity, id): {...}}
         self.forbid = set(forbid)       # {(entity, id)} -> raise EspoError
         self.photos = {}                # {attachment_id: (bytes, ct)}
+        self.related = related or {}    # {(entity, id, link): [rows]}
 
     async def get(self, entity, record_id, select=None):
         if (entity, record_id) in self.forbid:
@@ -396,6 +397,12 @@ class _MentorFake:
 
     async def download_attachment(self, attachment_id):
         return self.photos[attachment_id]
+
+    async def list_related(self, entity, record_id, link, *, select=None, max_size=200):
+        key = (entity, record_id, link)
+        if key in self.forbid:
+            raise EspoError("forbidden relationship read")
+        return {"list": list(self.related.get(key, []))}
 
 
 def _mentor_profile_fake():
@@ -409,6 +416,7 @@ def _mentor_profile_fake():
             "fluentLanguages": ["English", "Spanish"],
             "mentorBusinessStagePref": ["Growth"],
             "yearsOfExperience": 30, "mentorStartDate": "2019-01-01",
+            "maximumClientCapacity": 5,
             "aboutMentor": "<p>Loves a good spreadsheet.</p>",
             "mentorProfessionalBio": "<p>Ran three companies.</p>",
             "description": "Sailing, jazz, and grandkids.",
@@ -420,7 +428,13 @@ def _mentor_profile_fake():
             "emailAddress": "pat@home.test", "phoneNumber": "+12160001234",
             "cLinkedInProfile": "linkedin.com/in/pat",
             "cBirthday": "1965-05-04", "cSpouseName": "Jamie",
+            "addressCity": "Cleveland",
         },
+    }, related={
+        ("CMentorProfile", "m1", "engagements1"): [
+            {"engagementStatus": "Active"}, {"engagementStatus": "Assigned"},
+            {"engagementStatus": "Completed"},  # not an active client
+        ],
     })
 
 
@@ -437,6 +451,7 @@ async def test_mentor_profile_is_a_curated_payload():
     assert pr["industries"] == ["Manufacturing"]
     assert pr["languages"] == ["English", "Spanish"]
     assert pr["yearsExperience"] == 30
+    assert pr["maxCapacity"] == 5
     # yearsMentoring is computed from mentorStartDate to today.
     expected = date.today().year - 2019 - ((date.today().month, date.today().day) < (1, 1))
     assert pr["yearsMentoring"] == expected
@@ -445,6 +460,9 @@ async def test_mentor_profile_is_a_curated_payload():
     assert per["interests"] == "Sailing, jazz, and grandkids."
     assert per["birthday"] == "1965-05-04"
     assert per["spouse"] == "Jamie"
+    assert per["city"] == "Cleveland"
+    # Availability is attached by the router, not the base service payload.
+    assert p["availability"] is None
     ct = p["contact"]
     assert ct["cbmEmail"] == "pat@cbmentors.org"
     assert ct["personalEmail"] == "pat@home.test"
@@ -467,6 +485,28 @@ async def test_mentor_profile_best_effort_when_contact_forbidden():
     assert p["professional"]["yearsMentoring"] is None
     assert p["personal"]["birthday"] is None
     assert p["contact"]["personalEmail"] == ""
+
+
+@pytest.mark.asyncio
+async def test_mentor_availability_counts_active_openings():
+    fake = _mentor_profile_fake()
+    # 2 active (Active + Assigned), Completed ignored; capacity 5 -> 3 open.
+    av = await service.mentor_availability(fake, "m1", 5)
+    assert av == {"active": 2, "max": 5, "available": 3, "unlimited": False}
+
+    # Unlimited capacity (-1) -> no cap, no openings number.
+    av2 = await service.mentor_availability(fake, "m1", -1)
+    assert av2["unlimited"] is True and av2["available"] is None
+
+    # Fully committed: capacity 2, 2 active -> 0 open (never negative).
+    av3 = await service.mentor_availability(fake, "m1", 2)
+    assert av3["available"] == 0
+
+
+@pytest.mark.asyncio
+async def test_mentor_availability_is_best_effort():
+    fake = _MentorFake({}, forbid=[("CMentorProfile", "m9", "engagements1")])
+    assert await service.mentor_availability(fake, "m9", 5) is None
 
 
 @pytest.mark.asyncio

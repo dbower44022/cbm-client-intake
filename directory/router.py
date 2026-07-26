@@ -12,19 +12,32 @@ from __future__ import annotations
 
 import json
 import logging
+from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel
 
 from assignments.auth import clear_session, current_user, is_member, session_expired
 from assignments.espo_user import client_for
-from core.config import get_settings
-from core.espo import EspoError, forbidden_hint, is_forbidden, validation_message
+from core.config import Settings, get_settings
+from core.espo import EspoClient, EspoError, forbidden_hint, is_forbidden, validation_message
 
 from . import service
 from .config import DirectoryConfig
 
 log = logging.getLogger("cbm_intake.directory")
+
+
+def _system_client(settings: Settings) -> Optional[EspoClient]:
+    """The org-wide API-key CRM client (None in dry-run / keyless deploys).
+
+    Used only for the mentor-availability aggregate, which must not vary with
+    the viewing mentor's ACL (they can't read peers' engagements)."""
+    if settings.espo_dry_run or not settings.espo_api_key:
+        return None
+    return EspoClient(
+        settings.espo_base_url, settings.espo_api_key, settings.request_timeout_seconds
+    )
 
 
 class SaveIn(BaseModel):
@@ -162,11 +175,24 @@ def make_router(cfg: DirectoryConfig) -> APIRouter:
         @router.get("/profile/{record_id}")
         async def mentor_profile_detail(record_id: str, request: Request) -> dict:
             user = _require_user(request)
-            client = client_for(get_settings(), user)
+            settings = get_settings()
+            client = client_for(settings, user)
             try:
-                return await service.mentor_profile(client, record_id)
+                payload = await service.mentor_profile(client, record_id)
             except EspoError as exc:
                 raise _crm_failure(request, exc, "Could not load the mentor profile")
+            # Availability (openings) under the org-wide API key so a peer
+            # mentor sees it too — best-effort, never fatal.
+            sys_client = _system_client(settings)
+            if sys_client is not None:
+                try:
+                    payload["availability"] = await service.mentor_availability(
+                        sys_client, record_id,
+                        (payload.get("professional") or {}).get("maxCapacity"),
+                    )
+                except EspoError as exc:
+                    log.debug("availability skipped for %s: %s", record_id, exc)
+            return payload
 
         @router.get("/photo/{record_id}")
         async def mentor_photo(record_id: str, request: Request) -> Response:

@@ -5,9 +5,12 @@
    directory styles.css (header/buttons) + tokens.css. */
 
 .mp2 {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 0 1.5rem 3rem;
+  /* No page-width cap — use the whole screen (CBM runs on large monitors).
+     Readability is protected per-element (text columns cap below), not by
+     starving the page of width. */
+  width: 100%;
+  margin: 0;
+  padding: 0 clamp(1.25rem, 3.5vw, 4rem) 3rem;
 }
 
 /* ---- hero ---------------------------------------------------------------- */
@@ -72,11 +75,19 @@
 /* ---- two-column body ----------------------------------------------------- */
 .mp2__cols {
   display: grid;
-  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
-  gap: 1.25rem;
+  grid-template-columns: minmax(0, 2fr) minmax(360px, 0.85fr);
+  gap: 1.5rem;
   align-items: start;
 }
-.mp2__main, .mp2__side { display: flex; flex-direction: column; gap: 1.25rem; }
+/* On very wide screens the side lane gets a firm width so the personal /
+   availability cards stay comfortably readable rather than stretching. */
+@media (min-width: 1500px) {
+  .mp2__cols { grid-template-columns: minmax(0, 1fr) 460px; }
+}
+.mp2__main, .mp2__side { display: flex; flex-direction: column; gap: 1.5rem; }
+/* Long-form reading (about / bio / interests) stays a comfortable measure even
+   when its card is very wide. */
+.mp2__rich, .mp2__interests { max-width: 78ch; }
 
 .mp2__card {
   background: #fff;
@@ -143,8 +154,43 @@
 .mp2__rich ul, .mp2__rich ol { margin: 0 0 0.7rem 1.2rem; }
 .mp2__rich a { color: var(--cbm-blue); }
 
+/* ---- availability card --------------------------------------------------- */
+.mp2__card--avail { background: #f2f7fc; border-color: #cfe0f0; }
+.mp2__avail { display: flex; align-items: baseline; gap: 0.55rem; }
+.mp2__avail-n {
+  font-family: var(--cbm-font-serif);
+  font-size: 48px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--cbm-navy);
+}
+.mp2__avail-s { font-size: 14px; color: var(--cbm-text); }
+.mp2__slots { display: flex; flex-wrap: wrap; gap: 6px; margin: 0.9rem 0 0.2rem; }
+.mp2__slot {
+  width: 22px; height: 10px; border-radius: 3px;
+  background: #d5e2ef; border: 1px solid #b9cee1;
+}
+.mp2__slot--on { background: var(--cbm-navy); border-color: var(--cbm-navy); }
+.mp2__avail-note { margin: 0.7rem 0 0; font-size: 14px; font-weight: 600; }
+.mp2__avail-note--go { color: var(--cbm-success); }
+.mp2__avail-note--full { color: var(--cbm-warning); }
+
+/* ---- personal grid (birthday / spouse / city) ---------------------------- */
+.mp2__pgrid {
+  margin: 1.1rem 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.9rem 1.2rem;
+}
+.mp2__pg { margin: 0; }
+.mp2__pg dt {
+  font-size: 11.5px; font-weight: 700; letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--cbm-text); margin-bottom: 0.15rem;
+}
+.mp2__pg dd { margin: 0; font-size: 16px; color: var(--cbm-slate-900); }
+
 /* ---- facts (personal / contact) ------------------------------------------ */
-.mp2__interests { margin: 0; white-space: pre-wrap; line-height: 1.6; color: var(--cbm-slate-900); font-size: 15px; }
+.mp2__interests { margin: 0.4rem 0 0; white-space: pre-wrap; line-height: 1.65; color: var(--cbm-slate-900); font-size: 15.5px; }
 .mp2__fact {
   display: flex;
   justify-content: space-between;

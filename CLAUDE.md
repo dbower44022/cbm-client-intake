@@ -1612,6 +1612,27 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-26)
 
+**v0.175.0** (2026-07-26, 1375 tests green, committed NOT pushed) — **Mentor
+Profile page follow-up (Doug's review of v0.172.0): full-width layout, richer
+"Get to know them", + mentoring availability.** On the read-only mentor profile
+page (`/directory/mentors/record/{id}`): (1) the page-width cap is removed (uses
+the whole screen, two-lane grid, side lane firms to ~460px on ≥1500px, long-form
+text capped at a readable measure — the [[no-page-width-caps-density-by-packing]]
+rule); (2) "Get to know them" is now a spacious labeled grid instead of cramped
+rows; (3) **City** added to the personal facts (with spouse + birthday
+month/day); (4) a **Mentoring availability** card shows current openings
+(`maximumClientCapacity` − active clients) with a slot bar, so a browser sees if
+a mentor is fully committed even when still marked "accepting". Availability is
+computed under the **org-wide API key** (a peer mentor can't read another's
+engagements as themselves — non-sensitive aggregate) via the
+`CMentorProfile.engagements1` reverse link, best-effort (falls back to stated
+capacity, or hides). New `directory.service.mentor_availability` +
+`directory.router._system_client`; profile read gains `professional.maxCapacity`
++ `personal.city` + router-attached `availability`. 4 new tests; suite green
+(1375); harness-verified at 1920/1500/mobile. **NOT yet driven live** — after
+deploy confirm the availability number against a real mentor with active
+engagements (rides the intake API key's CEngagement read).
+
 **v0.174.0** (2026-07-26, 1373 tests green, committed NOT pushed) — **fix:
 "+ Add CBM contact" (co-mentor) 403'd for every non-admin mentor on prod.**
 Caught in the prod run logs: `POST /CEngagement/…/additionalMentors` → 403

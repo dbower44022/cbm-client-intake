@@ -165,18 +165,22 @@
     if (String(pr.about || "").trim()) { richInto($("mpAbout"), pr.about); show($("mpAboutCard")); }
     if (String(pr.bio || "").trim()) { richInto($("mpBio"), pr.bio); show($("mpBioCard")); }
 
-    // Personal lane
+    // Mentoring availability (openings) — computed under the org-wide key.
+    renderAvailability(p.availability, pr);
+
+    // Personal lane ("Get to know them")
     var per = p.personal || {};
     var perBody = $("mpPersonalBody");
     if (String(per.interests || "").trim()) {
-      var ib = el("div", "mp2__tagblock");
-      ib.appendChild(el("h3", "mp2__sub", "Personal interests"));
+      perBody.appendChild(el("h3", "mp2__sub", "Personal interests"));
       var pText = el("p", "mp2__interests"); pText.textContent = per.interests;
-      ib.appendChild(pText);
-      perBody.appendChild(ib);
+      perBody.appendChild(pText);
     }
-    factRow(perBody, "Birthday", fmtBirthday(per.birthday));
-    factRow(perBody, "Spouse", per.spouse);
+    var pg = el("dl", "mp2__pgrid");
+    pgItem(pg, "Birthday", fmtBirthday(per.birthday));
+    pgItem(pg, "Spouse", per.spouse);
+    pgItem(pg, "City", per.city);
+    if (pg.children.length) perBody.appendChild(pg);
     if (perBody.children.length) show($("mpPersonalCard"));
 
     // Contact lane
@@ -206,6 +210,60 @@
     t.appendChild(el("div", "mp2__stat-n", big));
     t.appendChild(el("div", "mp2__stat-s", sub));
     return t;
+  }
+
+  // One labeled item in the personal grid (dt/dd), skipped when empty.
+  function pgItem(dl, label, value) {
+    if (value == null || value === "") return;
+    var d = el("div", "mp2__pg");
+    d.appendChild(el("dt", null, label));
+    d.appendChild(el("dd", null, String(value)));
+    dl.appendChild(d);
+  }
+
+  // The availability card: how many mentoring openings this mentor has now, so
+  // a browser can see whether they're fully committed even when still marked
+  // "accepting". Falls back to the stated capacity when the openings number
+  // couldn't be computed (av == null), and is hidden entirely when there's no
+  // capacity information at all.
+  function renderAvailability(av, pr) {
+    var body = $("mpAvailBody");
+    var maxCap = pr && pr.maxCapacity;
+    if (av && av.unlimited) {
+      body.appendChild(bigAvail("∞", "No set client limit"));
+      body.appendChild(el("p", "mp2__avail-note mp2__avail-note--go", "Open to new clients"));
+    } else if (av && av.available != null) {
+      var full = av.available === 0;
+      body.appendChild(bigAvail(String(av.available), "of " + av.max + " openings open"));
+      body.appendChild(availBar(av.active, av.max));
+      body.appendChild(el("p",
+        "mp2__avail-note " + (full ? "mp2__avail-note--full" : "mp2__avail-note--go"),
+        full ? "Fully committed" : (av.available + " opening" + (av.available === 1 ? "" : "s") + " available")));
+    } else if (maxCap != null && maxCap !== "" && Number(maxCap) >= 0) {
+      // Openings couldn't be computed — show the stated capacity only.
+      body.appendChild(bigAvail(String(maxCap), "client capacity"));
+      body.appendChild(el("p", "mp2__avail-note", "Current openings unavailable"));
+    } else {
+      return;  // nothing meaningful to show
+    }
+    show($("mpAvailCard"));
+  }
+
+  function bigAvail(n, sub) {
+    var w = el("div", "mp2__avail");
+    w.appendChild(el("div", "mp2__avail-n", n));
+    w.appendChild(el("div", "mp2__avail-s", sub));
+    return w;
+  }
+
+  // A small filled/empty slot bar (active clients filled, openings empty).
+  function availBar(active, max) {
+    var bar = el("div", "mp2__slots");
+    var total = Math.max(0, Number(max) || 0);
+    for (var i = 0; i < total; i++) {
+      bar.appendChild(el("span", "mp2__slot" + (i < active ? " mp2__slot--on" : "")));
+    }
+    return bar;
   }
 
   // ---- boot ----------------------------------------------------------------
