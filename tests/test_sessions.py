@@ -1681,6 +1681,101 @@ async def test_add_comentor_skips_stamp_when_already_assigned():
     assert "warning" not in res
 
 
+# --- the foreign-record 403 on co-mentor linking -----------------------------
+#
+# EspoCRM checks edit on BOTH sides of a link, so attaching a co-mentor needs
+# edit on the OTHER mentor's CMentorProfile. Prod's Mentor Role had edit:own
+# (crm-test had edit:all — they drifted apart 2026-07-16), so every non-admin
+# mentor's "+ Add CBM contact" 403'd. The user's token must still be the gate
+# for the ENGAGEMENT; only the foreign half escalates.
+
+_FOREIGN_403 = EspoError(
+    "relate CEngagement/E1/additionalMentors failed: HTTP 403 "
+    '[No foreign record access for link operation (CEngagement:additionalMentors).] '
+    '{"messageTranslation":{"label":"noAccessToForeignRecord","scope":null,'
+    '"data":{"action":"edit"}}}'
+)
+
+
+class ForeignDenied(Fake):
+    """Refuses relate/unrelate the way EspoCRM refuses the foreign record."""
+
+    async def relate(self, entity, record_id, link, related_id):
+        raise _FOREIGN_403
+
+    async def unrelate(self, entity, record_id, link, related_id):
+        raise _FOREIGN_403
+
+
+@pytest.mark.asyncio
+async def test_add_comentor_retries_the_link_as_the_admin_on_a_foreign_403():
+    denied = ForeignDenied(records={
+        ("CMentorProfile", "m2"): {"assignedUserId": "u9"},
+        ("CEngagement", "E1"): {"assignedUsersIds": ["u1"]},
+    })
+    admin = Fake()
+
+    async def factory():
+        return admin
+
+    res = await service.add_comentor(denied, "E1", "m2", admin_factory=factory)
+    # The link was made by the admin; everything else still ran as the user.
+    assert admin.relates == [("CEngagement", "E1", "additionalMentors", "m2")]
+    assert ("CEngagement", "E1", {"assignedUsersIds": ["u1", "u9"]}) in denied.updates
+    assert "warning" not in res
+
+
+@pytest.mark.asyncio
+async def test_remove_comentor_escalates_the_same_way():
+    denied = ForeignDenied(records={("CMentorProfile", "m2"): {}})
+    admin = Fake()
+
+    async def factory():
+        return admin
+
+    await service.remove_comentor(denied, "E1", "m2", admin_factory=factory)
+    assert admin.unrelates == [("CEngagement", "E1", "additionalMentors", "m2")]
+
+
+@pytest.mark.asyncio
+async def test_no_admin_configured_surfaces_the_original_403():
+    denied = ForeignDenied(records={("CMentorProfile", "m2"): {}})
+    with pytest.raises(EspoError) as err:
+        await service.add_comentor(denied, "E1", "m2")
+    assert "noAccessToForeignRecord" in str(err.value)
+
+
+@pytest.mark.asyncio
+async def test_a_denial_on_the_engagement_is_never_escalated():
+    """Only the FOREIGN half escalates — a user who may not edit the engagement
+    must still be refused, admin credentials or not."""
+    class EngagementDenied(Fake):
+        async def relate(self, entity, record_id, link, related_id):
+            raise EspoError("relate CEngagement/E1/additionalMentors failed: HTTP 403 No access")
+
+    admin = Fake()
+
+    async def factory():
+        return admin
+
+    with pytest.raises(EspoError):
+        await service.add_comentor(EngagementDenied(), "E1", "m2", admin_factory=factory)
+    assert admin.relates == []
+
+
+@pytest.mark.asyncio
+async def test_admin_fallback_failure_reports_the_users_error():
+    denied = ForeignDenied(records={("CMentorProfile", "m2"): {}})
+
+    async def factory():
+        raise RuntimeError("admin login rejected")
+
+    with pytest.raises(EspoError) as err:
+        await service.add_comentor(denied, "E1", "m2", admin_factory=factory)
+    # The actionable fact is the missing grant, not our login trouble.
+    assert "noAccessToForeignRecord" in str(err.value)
+
+
 @pytest.mark.asyncio
 async def test_add_comentor_warns_when_profile_has_no_user():
     fake = Fake(records={("CMentorProfile", "m2"): {}})
@@ -2148,7 +2243,7 @@ def test_remove_contact_and_comentor_endpoints(monkeypatch):
     async def fake_unlink(cfg, client, parent_id, contact_id):
         unlinked.append((cfg.slug, parent_id, contact_id))
 
-    async def fake_remove(client, engagement_id, mentor_profile_id, actor=None):
+    async def fake_remove(client, engagement_id, mentor_profile_id, actor=None, admin_factory=None):
         removed.append((engagement_id, mentor_profile_id))
         return {"status": "ok"}
 

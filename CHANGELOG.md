@@ -4,6 +4,57 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.174.0] — 2026-07-26
+
+**fix(sessions): adding a CBM contact (co-mentor) to an engagement no longer
+403s for non-admin mentors** (Doug's report; caught live in the prod run logs
+minutes later).
+
+**Diagnosis.** `POST /CEngagement/6a64edad3c2ef2094/additionalMentors` → **403
+`noAccessToForeignRecord`** for `sharon.test@cbmentors.org`. EspoCRM checks
+edit on **both** sides of a link, so attaching a co-mentor needs edit on the
+OTHER mentor's `CMentorProfile` — and prod's **Mentor Role has
+`CMentorProfile.edit = own`** while crm-test has `all`. The two roles were last
+modified 2½ minutes apart on **2026-07-16 19:45 / 19:47**: the exception Doug
+ruled on 2026-07-15 ("Mentor Role keeps `CMentorProfile` edit=all — required for
+co-mentor linking") was applied to crm-test and not to prod. It stayed invisible
+because the accounts testing until now (`sharon.rose`, `doug.bower`) are CRM
+**admins**, which bypass ACL; the first `type=regular` mentor to try it hit the
+wall. Doug's call: fix the CRM now **and** make the app immune to the drift.
+
+- **Narrow, audited escalation** — `sessions.service._link_or_escalate`: the
+  co-mentor relate/unrelate runs as the signed-in user **first**, so EspoCRM's
+  check on the ENGAGEMENT is still the real authorization gate; **only** a
+  `noAccessToForeignRecord` denial (which by definition means the engagement
+  half already passed) is retried under the provisioning admin. A denial on the
+  engagement itself, or any other error, raises unchanged; with no admin
+  credentials configured the original readable 403 is what the user gets, and if
+  the admin login fails the USER's error is re-raised (the missing grant is the
+  actionable fact). Deliberate trade, stated plainly: this lets a mentor link
+  any mentor profile to an engagement they may edit — exactly what `edit=all`
+  would allow, but reachable only through this one operation instead of granting
+  every mentor edit on every mentor profile.
+- **`core/admin_client.py`** — the provisioning-admin login (token cache,
+  re-login on expiry, "not configured" answer) extracted from
+  `mentoradmin/router.py` and shared. Mentor Admin keeps its own
+  `mentor_provision_users` gate on top; the session tools gate on the
+  credentials alone.
+- **The permission message names what the user picked.** `forbidden_hint` had
+  been answering "edit access to the record being linked (the
+  “additionalMentors” link)" — developer-speak in a mentor's face. Known links
+  now read as their subject: *"your CRM role is missing edit access to the CBM
+  member you selected (their mentor profile) — not to the CEngagement"*
+  (`_LINK_SUBJECT`, also covering the session-attendee and contact links).
+  Unknown links keep the generic wording.
+
+Verified: 1373 tests green (7 new — escalation on a foreign 403 for both
+add and remove, no-admin-configured surfaces the original 403, an
+engagement-side denial is NEVER escalated, an admin-login failure reports the
+user's error, plus the reworded hints). **Not yet deployed.** CRM action
+(Doug, in parallel): set prod's Mentor Role `CMentorProfile` edit to **all** to
+match crm-test — that unblocks mentors immediately, without waiting for this
+deploy.
+
 ## [0.173.0] — 2026-07-26
 
 **fix(alerting): a closed failure stops alerting, and the alert says what

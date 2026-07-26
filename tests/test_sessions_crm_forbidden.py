@@ -67,7 +67,7 @@ def test_crm_403_on_contact_link_returns_readable_403(monkeypatch):
     assert r.status_code == 403
     # noAccessToForeignRecord = the denial is on the record BEING LINKED (the
     # contact), not the engagement — the hint must say so (2026-07-20 fix).
-    assert "record being linked" in r.json()["detail"]
+    assert "the contact you selected" in r.json()["detail"]
 
 
 def test_crm_5xx_still_maps_to_502(monkeypatch):

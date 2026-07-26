@@ -21,10 +21,10 @@ from assignments.auth import (
     clear_session,
     current_user,
     is_member,
-    login_token,
     session_expired,
 )
 from assignments.espo_user import client_for
+from core.admin_client import admin_client_factory
 from core.app_config import make_app_config_store
 from core.config import Settings, get_settings
 from core.espo import EspoClient, EspoError, forbidden_hint, is_forbidden, validation_message
@@ -36,10 +36,6 @@ from . import service
 
 router = APIRouter(prefix="/mentoradmin/api", tags=["mentoradmin"])
 log = logging.getLogger("cbm_intake.mentoradmin")
-
-# Provisioning-admin auth tokens, cached per (base URL, username) for the life
-# of the process — see _provision_factory.
-_PROVISION_TOKEN_CACHE: dict[str, tuple[str, str]] = {}
 
 class UpdateIn(BaseModel):
     changes: dict
@@ -536,52 +532,15 @@ def _provision_factory(settings: Settings):
     """A lazy login factory for the provisioning admin, or None when disabled.
 
     EspoCRM only lets admins create Users (API keys can't), so provisioning acts
-    as a dedicated admin service account via the App/user token flow — never the
-    staff user's token. The returned async callable logs that account in (once,
-    when a provisioning transition actually happens) and yields a privileged
-    client. Gated on ``mentor_provision_users`` + configured credentials + a real
-    (non-dry-run) base.
+    as a dedicated admin service account — never the staff user's token. THIS
+    app additionally gates on ``mentor_provision_users``: with the flag off,
+    approving a mentor just saves the status. The login itself (token cache,
+    re-login on expiry) lives in :mod:`core.admin_client`, shared with the
+    session tools' co-mentor escalation.
     """
-    if (
-        not settings.mentor_provision_users
-        or settings.espo_dry_run
-        or not (settings.espo_provision_username and settings.espo_provision_password)
-    ):
+    if not settings.mentor_provision_users:
         return None
-
-    async def factory():
-        # Reuse the cached auth token across calls (P2, reliability review
-        # 2026-07-17): logging in with the password on EVERY provisioning /
-        # sweep call meant a rotated password turned each sweep into a run of
-        # failed admin logins — enough to trip EspoCRM's brute-force lockout
-        # on the service account. The cached token is validated with one cheap
-        # read; only a dead token triggers a fresh password login.
-        cache_key = f"{settings.espo_base_url}:{settings.espo_provision_username}"
-        cached = _PROVISION_TOKEN_CACHE.get(cache_key)
-        if cached:
-            client = EspoClient.for_user_token(
-                settings.espo_base_url, cached[0], cached[1],
-                settings.request_timeout_seconds,
-            )
-            try:
-                await client.app_user()
-                return client
-            except EspoError as exc:
-                if not session_expired(exc):
-                    raise
-                _PROVISION_TOKEN_CACHE.pop(cache_key, None)
-        user_name, token = await login_token(
-            settings.espo_base_url,
-            settings.espo_provision_username,
-            settings.espo_provision_password,
-            settings.request_timeout_seconds,
-        )
-        _PROVISION_TOKEN_CACHE[cache_key] = (user_name, token)
-        return EspoClient.for_user_token(
-            settings.espo_base_url, user_name, token, settings.request_timeout_seconds
-        )
-
-    return factory
+    return admin_client_factory(settings)
 
 
 async def _resolve_google(settings: Settings) -> ResolvedGoogle:

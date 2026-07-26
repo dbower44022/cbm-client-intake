@@ -27,7 +27,7 @@ from assignments.service import (
     assigned_user_id,
     is_assigned_to,
 )
-from core.espo import EspoError
+from core.espo import EspoError, is_forbidden
 from core.phone import format_us
 from core.stream import post_stream_note
 
@@ -1971,9 +1971,59 @@ def _by(actor: Optional[str]) -> str:
     return f" by {actor}" if actor else ""
 
 
+async def _link_or_escalate(
+    client: SessionClient,
+    admin_factory,
+    op: str,
+    engagement_id: str,
+    link: str,
+    related_id: str,
+) -> None:
+    """relate/unrelate as the signed-in user, falling back to the provisioning
+    admin ONLY for a foreign-record denial.
+
+    EspoCRM checks edit on BOTH sides of a link. Attaching a co-mentor therefore
+    needs edit on the OTHER mentor's ``CMentorProfile`` — which a Mentor Role
+    scoped to ``edit: own`` does not grant, so the whole feature 403s for every
+    non-admin mentor (live on prod 2026-07-26; crm-test had ``edit: all`` and
+    prod did not — the two drifted apart on 2026-07-16). Granting every mentor
+    edit on every mentor profile just to make the link possible is a poor trade,
+    so the narrow escalation is:
+
+    * the user's own token attempts the link FIRST — EspoCRM's check on the
+      ENGAGEMENT is the real authorization gate and it must pass on its own;
+    * only ``noAccessToForeignRecord`` (the foreign half, which by definition
+      means the engagement half already passed) is retried as the admin.
+
+    Anything else — including a denial on the engagement — raises unchanged. If
+    no admin credentials are configured, so does the original error, so the user
+    still gets the readable "missing grant" 403.
+    """
+    try:
+        await getattr(client, op)(ENGAGEMENT, engagement_id, link, related_id)
+        return
+    except EspoError as exc:
+        escalatable = is_forbidden(exc) and "noAccessToForeignRecord" in str(exc)
+        if not escalatable or admin_factory is None:
+            raise
+        log.info(
+            "%s %s/%s/%s denied on the linked record — retrying as the "
+            "provisioning admin (the user's edit access to the engagement "
+            "already passed)", op, ENGAGEMENT, engagement_id, link,
+        )
+        try:
+            admin = await admin_factory()
+            await getattr(admin, op)(ENGAGEMENT, engagement_id, link, related_id)
+        except Exception as admin_exc:  # noqa: BLE001
+            # Surface the USER's error — it names the missing grant, which is
+            # the actionable fact; the admin fallback failing is our problem.
+            log.warning("admin fallback for %s also failed: %s", op, admin_exc)
+            raise exc from None
+
+
 async def add_comentor(
     client: SessionClient, engagement_id: str, mentor_profile_id: str,
-    actor: Optional[str] = None,
+    actor: Optional[str] = None, admin_factory=None,
 ) -> dict[str, Any]:
     """Attach a co-mentor (CMentorProfile) to an engagement (additionalMentors).
     ``actor`` (the signed-in user's display name) is woven into the stream note
@@ -1989,8 +2039,13 @@ async def add_comentor(
     truth); a failure returns a ``warning`` the UI shows instead of silently
     leaving the co-mentor blind. A stream note on the engagement records what
     was done (and via which app).
+
+    The link itself goes through :func:`_link_or_escalate` — see there for why a
+    foreign-record denial is retried under the provisioning admin.
     """
-    await client.relate(ENGAGEMENT, engagement_id, _COMENTOR_LINK, mentor_profile_id)
+    await _link_or_escalate(
+        client, admin_factory, "relate", engagement_id, _COMENTOR_LINK, mentor_profile_id
+    )
     name = await _profile_display_name(client, mentor_profile_id)
     try:
         user_id = await _profile_user_id(client, mentor_profile_id)
@@ -2070,7 +2125,7 @@ async def add_comentor(
 
 async def remove_comentor(
     client: SessionClient, engagement_id: str, mentor_profile_id: str,
-    actor: Optional[str] = None,
+    actor: Optional[str] = None, admin_factory=None,
 ) -> dict[str, Any]:
     """Detach a co-mentor from an engagement — the reverse of :func:`add_comentor`.
     ``actor`` names the signed-in user in the stream note, like the add.
@@ -2084,7 +2139,9 @@ async def remove_comentor(
     a failure here leaves harmless extra visibility, never a broken remove. A
     stream note on the engagement records what was done.
     """
-    await client.unrelate(ENGAGEMENT, engagement_id, _COMENTOR_LINK, mentor_profile_id)
+    await _link_or_escalate(
+        client, admin_factory, "unrelate", engagement_id, _COMENTOR_LINK, mentor_profile_id
+    )
     name = await _profile_display_name(client, mentor_profile_id)
     note = f"Removed co-mentor {name} via the session tools{_by(actor)}."
     try:

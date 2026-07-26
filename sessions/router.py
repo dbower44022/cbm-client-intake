@@ -21,6 +21,7 @@ from pydantic import BaseModel
 from assignments.auth import clear_session, current_user, is_member, session_expired
 from assignments.espo_user import client_for
 from core import action_log
+from core.admin_client import admin_client_factory
 from comms import service as comms_service
 from comms import templates as comms_templates
 from core.config import get_settings
@@ -954,6 +955,10 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 result = await service.add_comentor(
                     client, parent_id, body.mentorProfileId,
                     actor=user.get("name") or user.get("userName"),
+                    # A foreign-record denial (the OTHER mentor's profile) is
+                    # retried under the provisioning admin — see
+                    # service._link_or_escalate.
+                    admin_factory=admin_client_factory(get_settings()),
                 )
             except EspoError as exc:
                 raise _crm_failure(request, exc, "Could not add co-mentor")
@@ -985,6 +990,7 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 result = await service.remove_comentor(
                     client, parent_id, mentor_profile_id,
                     actor=user.get("name") or user.get("userName"),
+                    admin_factory=admin_client_factory(get_settings()),
                 )
             except EspoError as exc:
                 raise _crm_failure(request, exc, "Could not remove the co-mentor")

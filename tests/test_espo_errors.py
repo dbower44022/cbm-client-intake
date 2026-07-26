@@ -91,15 +91,29 @@ def test_forbidden_hint_names_the_linked_record_on_foreign_denial():
         'relate CSession/s1/sessionAttendees failed: HTTP 403 '
         '{"messageTranslation":{"label":"noAccessToForeignRecord","data":{"action":"edit"}}}'
     ))
-    assert "record being linked" in hint
-    assert "sessionAttendees" in hint
-    assert "not the CSession" in hint
+    # For a link the user acts on by name, say what they PICKED rather than
+    # quoting the CRM's link identifier at them (2026-07-26).
+    assert "the contact you selected" in hint
+    assert "not to the CSession" in hint
     # unrelate gets the same treatment (its op prefix carries the related id).
     hint2 = forbidden_hint(EspoError(
         'unrelate CEngagement/E1/engagementContacts (C9) failed: HTTP 403 '
         '{"messageTranslation":{"label":"noAccessToForeignRecord"}}'
     ))
-    assert "record being linked" in hint2 and "engagementContacts" in hint2
+    assert "the contact you selected" in hint2 and "not to the CEngagement" in hint2
+    # Co-mentor linking — the case that 403'd on prod for every non-admin
+    # mentor when Mentor Role's CMentorProfile edit was scoped to "own".
+    hint3 = forbidden_hint(EspoError(
+        'relate CEngagement/E1/additionalMentors failed: HTTP 403 '
+        '{"messageTranslation":{"label":"noAccessToForeignRecord"}}'
+    ))
+    assert "the CBM member you selected" in hint3
+    # An unknown link still gets the generic (but honest) wording.
+    hint4 = forbidden_hint(EspoError(
+        'relate CFoo/1/someLink failed: HTTP 403 '
+        '{"messageTranslation":{"label":"noAccessToForeignRecord"}}'
+    ))
+    assert "record being linked" in hint4 and "someLink" in hint4
 
 
 def test_forbidden_hint_none_for_unrecognized_message():

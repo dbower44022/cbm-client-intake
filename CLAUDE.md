@@ -1612,7 +1612,37 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-26)
 
-**v0.173.0** (2026-07-26, 1368 tests green, committed NOT pushed) — **fix: the
+**v0.174.0** (2026-07-26, 1373 tests green, committed NOT pushed) — **fix:
+"+ Add CBM contact" (co-mentor) 403'd for every non-admin mentor on prod.**
+Caught in the prod run logs: `POST /CEngagement/…/additionalMentors` → 403
+`noAccessToForeignRecord` for `sharon.test@cbmentors.org`. EspoCRM checks edit
+on **both** sides of a link, so adding a co-mentor needs edit on the OTHER
+mentor's `CMentorProfile` — **prod's Mentor Role has `CMentorProfile.edit=own`,
+crm-test has `all`** (roles last modified 2½ min apart on 2026-07-16 19:45/19:47
+— the 2026-07-15 "keep edit=all, it's required for co-mentor linking" exception
+reached crm-test but not prod). Invisible until now because every account that
+had tried it (`sharon.rose`, `doug.bower`) is a CRM **admin**, which bypasses
+ACL. **Doug's ruling: fix both sides.** (a) CRM — set prod's Mentor Role
+`CMentorProfile` edit to `all` (unblocks mentors immediately, no deploy);
+(b) app — `sessions.service._link_or_escalate`: the relate/unrelate runs as the
+signed-in user FIRST (EspoCRM's check on the ENGAGEMENT stays the real gate),
+and **only** a `noAccessToForeignRecord` denial — which means the engagement
+half already passed — is retried under the provisioning admin; an
+engagement-side denial is never escalated, and with no admin creds (or a failed
+admin login) the user's readable 403 is what surfaces. Trade-off, stated: a
+mentor can link any mentor profile to an engagement they may edit — what
+`edit=all` allows anyway, but only through this one operation. Also:
+**`core/admin_client.py`** (the provisioning-admin login + token cache,
+extracted from `mentoradmin/router.py` and shared; Mentor Admin keeps its
+`mentor_provision_users` gate, sessions gates on the credentials alone), and
+**`forbidden_hint` now names what the user picked** — "edit access to the CBM
+member you selected (their mentor profile)" instead of quoting the
+`additionalMentors` link identifier (`_LINK_SUBJECT`, also covering the
+attendee/contact links). 7 new tests. **NOT yet driven live** — after deploy,
+as a real non-admin mentor (`sharon.test`), add a co-mentor to an engagement
+and confirm it succeeds and the stream note posts.
+
+Before that: **v0.173.0** (2026-07-26, 1368 tests green, committed NOT pushed) — **fix: the
 recurring "1 submission(s) need attention" emails to admin@, and a far more
 useful alert.** Diagnosed live: ONE prod row was stuck — a **sponsor**
 submission (2026-06-30) whose Contact create EspoCRM rejected with
