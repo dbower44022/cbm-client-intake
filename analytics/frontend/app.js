@@ -21,8 +21,11 @@
     series: [["line", "Line"], ["area", "Area"], ["bar", "Bars"]],
     breakdown: [["bar", "Bars"], ["pie", "Pie"]], rows: [["table", "Table"]] };
   var OPERATORS = [["equals", "="], ["notEquals", "≠"], ["in", "in (comma list)"],
-    ["greaterThan", ">"], ["lessThan", "<"], ["isNull", "is empty"],
-    ["isNotNull", "is not empty"]];
+    ["greaterThan", ">"], ["lessThan", "<"],
+    ["relativeAfter", "in the last…"], ["relativeBefore", "older than…"],
+    ["isNull", "is empty"], ["isNotNull", "is not empty"]];
+  var REL_OPS = { relativeAfter: 1, relativeBefore: 1 };
+  var DATE_UNITS = [["day", "days"], ["week", "weeks"], ["month", "months"]];
 
   var $ = function (id) { return document.getElementById(id); };
   var state = { crmUrl: null, pages: [], pageKey: null, range: null,
@@ -258,9 +261,20 @@
       var osel = h("select", { class: "an__f-op" });
       OPERATORS.forEach(function (o) { osel.appendChild(opt(o[0], o[1], o[0] === clause.type)); });
       var val = h("input", { type: "text", class: "an__f-val", value: Array.isArray(clause.value) ? clause.value.join(", ") : (clause.value != null ? clause.value : "") });
-      function syncVal() { var noVal = osel.value === "isNull" || osel.value === "isNotNull"; val.style.visibility = noVal ? "hidden" : "visible"; }
+      var usel = h("select", { class: "an__f-unit" });
+      DATE_UNITS.forEach(function (u) { usel.appendChild(opt(u[0], u[1], u[0] === clause.unit)); });
+      var valWrap = h("span", { class: "an__f-valwrap" }, val, usel);
+      function syncVal() {
+        var op = osel.value;
+        var rel = !!REL_OPS[op];
+        var noVal = op === "isNull" || op === "isNotNull";
+        valWrap.style.visibility = noVal ? "hidden" : "visible";
+        usel.style.display = rel ? "" : "none";
+        val.type = rel ? "number" : "text";
+        if (rel && !val.value) val.value = "30";
+      }
       osel.onchange = syncVal; syncVal();
-      var row = h("div", { class: "an__filter" }, fsel, osel, val, h("button", { class: "an__link-btn an__danger", onClick: function () { row.remove(); } }, "×"));
+      var row = h("div", { class: "an__filter" }, fsel, osel, valWrap, h("button", { class: "an__link-btn an__danger", onClick: function () { row.remove(); } }, "×"));
       return row;
     }
 
@@ -273,6 +287,10 @@
         var raw = row.querySelector(".an__f-val").value;
         var clause = { type: type, attribute: attr };
         if (type === "in") clause.value = raw.split(",").map(function (s) { return s.trim(); }).filter(Boolean);
+        else if (REL_OPS[type]) {
+          clause.value = parseInt(raw, 10) || 0;
+          clause.unit = row.querySelector(".an__f-unit").value;
+        }
         else if (type !== "isNull" && type !== "isNotNull") clause.value = raw;
         filters.push(clause);
       });

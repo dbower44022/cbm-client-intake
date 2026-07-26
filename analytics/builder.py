@@ -15,6 +15,8 @@ The aggregation ``kind`` determines the result shape (validated on save).
 
 from __future__ import annotations
 
+import calendar
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 from . import crm
@@ -49,6 +51,49 @@ _DEFAULT_VIZ = {
 }
 
 
+# Relative-date filter operators (resolved to a concrete datetime bound at
+# compute time, so a count stays a cheap server-side query — e.g. "sessions
+# created in the last 30 days"). `unit` ∈ {day, week, month}.
+REL_FILTER_TYPES = ("relativeAfter", "relativeBefore")
+
+
+def _shift_back(now: datetime, n: int, unit: str) -> datetime:
+    if unit == "week":
+        return now - timedelta(weeks=n)
+    if unit == "month":
+        y, m = now.year, now.month - n
+        while m <= 0:
+            m += 12
+            y -= 1
+        day = min(now.day, calendar.monthrange(y, m)[1])
+        return now.replace(year=y, month=m, day=day)
+    return now - timedelta(days=n)  # default: days
+
+
+def resolve_filters(
+    filters: list[dict[str, Any]], *, now: Optional[datetime] = None
+) -> list[dict[str, Any]]:
+    """Turn any relative-date clauses into concrete EspoCRM ``after`` / ``before``
+    date filters (evaluated at compute time), leaving other clauses untouched."""
+    now = now or datetime.now(timezone.utc)
+    out: list[dict[str, Any]] = []
+    for f in filters or []:
+        if f.get("type") in REL_FILTER_TYPES:
+            try:
+                n = int(f.get("value") or 0)
+            except (TypeError, ValueError):
+                n = 0
+            cutoff = _shift_back(now, n, f.get("unit", "day"))
+            out.append({
+                "type": "after" if f["type"] == "relativeAfter" else "before",
+                "attribute": f.get("attribute"),
+                "value": cutoff.strftime("%Y-%m-%d %H:%M:%S"),
+            })
+        else:
+            out.append(f)
+    return out
+
+
 def shape_for_kind(kind: str) -> Optional[str]:
     return _SHAPE_FOR_KIND.get(kind)
 
@@ -71,6 +116,10 @@ async def execute(row: dict[str, Any], ctx: MetricContext) -> MetricResult:
     cp = row.get("context_param")
     if ctx.record and cp:
         filters.append({"type": "equals", "attribute": cp, "value": ctx.record.record_id})
+
+    # Resolve relative-date filters ("in the last N days") into concrete date
+    # bounds now, so they stay a server-side filter (a count never sweeps).
+    filters = resolve_filters(filters)
 
     if kind == "count":
         n = await crm.count(ctx.espo, entity, filters)

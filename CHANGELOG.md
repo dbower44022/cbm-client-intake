@@ -4,6 +4,19 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.166.0] — 2026-07-25
+
+**feat(analytics): relative-date filters in the metric builder** (Doug's
+request — "Count of all sessions created in last 30 days"). The metric
+builder's filter operators gain **"in the last…"** and **"older than…"**; the
+value becomes a number + a **days / weeks / months** unit. At compute time
+`analytics/builder.resolve_filters` turns each into a concrete EspoCRM
+`after` / `before` date clause (evaluated then, so a *count* stays a cheap
+server-side query and a cached metric's window rolls forward each refresh).
+Applies to any date field on a builder metric, all aggregation kinds. The
+`after` date filter was verified live against crm-test (30 of 61 CSessions
+created after a cutoff, no error). 2 new tests; analytics suite green (43).
+
 ## [0.165.0] — 2026-07-25
 
 **feat(events): Events & Webinars — Phase 2 (Zoom client + webinar

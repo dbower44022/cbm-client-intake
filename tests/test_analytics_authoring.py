@@ -249,3 +249,49 @@ async def test_builder_execute_shapes():
         {"key": "k", "entity": "CMentorProfile", "result_shape": "scalar",
          "definition": {"aggregation": {"kind": "avg", "field": "yearsOfExperience"}}}, ment_ctx)
     assert r_avg.data["value"] == 10  # (10+20+0)/3
+
+
+def test_resolve_relative_filters():
+    from datetime import datetime, timezone
+
+    from analytics.builder import resolve_filters
+    now = datetime(2026, 7, 25, 12, 0, 0, tzinfo=timezone.utc)
+    out = resolve_filters([
+        {"type": "relativeAfter", "attribute": "createdAt", "value": 30, "unit": "day"},
+        {"type": "equals", "attribute": "status", "value": "Active"},
+    ], now=now)
+    assert out[0] == {"type": "after", "attribute": "createdAt", "value": "2026-06-25 12:00:00"}
+    assert out[1]["type"] == "equals"  # non-relative clause untouched
+    older = resolve_filters(
+        [{"type": "relativeBefore", "attribute": "createdAt", "value": 2, "unit": "month"}], now=now)
+    assert older[0] == {"type": "before", "attribute": "createdAt", "value": "2026-05-25 12:00:00"}
+
+
+@pytest.mark.asyncio
+async def test_relative_date_filter_count():
+    """A count with a relative-date filter queries a server-side date bound."""
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    recent = (now - timedelta(days=5)).strftime("%Y-%m-%d %H:%M:%S")
+    old = (now - timedelta(days=100)).strftime("%Y-%m-%d %H:%M:%S")
+
+    class DateEspo:
+        async def list(self, entity, *, where=None, select=None, max_size=50,
+                       offset=0, order_by=None, order=None):
+            rows = [{"id": "1", "createdAt": recent}, {"id": "2", "createdAt": old}]
+            for c in where or []:
+                if c["type"] == "after":
+                    rows = [r for r in rows if (r.get(c["attribute"]) or "") >= c["value"]]
+                elif c["type"] == "before":
+                    rows = [r for r in rows if (r.get(c["attribute"]) or "") < c["value"]]
+            return {"total": len(rows), "list": rows[offset:offset + max_size]}
+
+    ctx = MetricContext(settings=get_settings(), espo=DateEspo(), store=None,
+                        time_range=build_time_range("all"))
+    row = {"key": "k", "entity": "CSession", "result_shape": "scalar",
+           "definition": {"aggregation": {"kind": "count"},
+                          "filters": [{"type": "relativeAfter", "attribute": "createdAt",
+                                       "value": 30, "unit": "day"}]}}
+    r = await execute(row, ctx)
+    assert r.data["value"] == 1  # only the record from 5 days ago, not 100

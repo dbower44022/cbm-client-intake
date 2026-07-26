@@ -118,9 +118,15 @@ Click **Metrics → + New metric**. Fill in:
    - **Group by a field** → a breakdown (bars or pie).
    - **Over time (monthly)** → a trend line, bucketed by month.
    - **List of records** → a table.
-4. **Filters** (optional) — narrow the records: pick a field, an operator
-   (`=`, `≠`, `in`, `>`, `<`, is empty, is not empty), and a value. "in" takes a
-   comma-separated list.
+4. **Filters** (optional) — narrow the records: pick a field, an operator, and a
+   value. Operators: `=`, `≠`, `in` (comma-separated list), `>`, `<`, is empty,
+   is not empty, and two **relative-date** operators — **"in the last…"** and
+   **"older than…"**. Pick one of those on a date field (e.g. *Created At*) and
+   the value becomes a number plus a **days / weeks / months** unit — so "Count
+   of sessions created **in the last 30 days**" is: record type *Sessions*,
+   measure *Count of records*, filter *Created At · in the last · 30 · days*. The
+   window is relative to when the metric runs (a cached metric rolls it forward
+   on each refresh), so you never have to edit dates.
 5. **Show as** — the visualization (offered options match the measure you chose).
 6. **Data freshness** — **Cached** (recalculated in the background about hourly —
    best for anything that scans a lot of records) or **Live** (recalculated every

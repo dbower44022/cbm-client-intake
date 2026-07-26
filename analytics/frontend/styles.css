@@ -102,6 +102,9 @@ body {
 .an__field-label { font-weight: 600; font-size: 0.85rem; color: var(--cbm-slate-700, #556); }
 .an__filters { display: flex; flex-direction: column; gap: 0.4rem; margin: 0.35rem 0; }
 .an__filter { display: grid; grid-template-columns: 1.4fr 1fr 1.4fr auto; gap: 0.4rem; align-items: center; }
+.an__f-valwrap { display: flex; gap: 0.3rem; align-items: center; min-width: 0; }
+.an__f-valwrap .an__f-val { flex: 1 1 auto; min-width: 0; }
+.an__f-valwrap .an__f-unit { flex: 0 0 auto; }
 .an__preview { border: 1px dashed var(--cbm-border, #d8dee6); border-radius: 8px; padding: 0.85rem; min-height: 4rem; background: #fbfcfd; }
 .an__applies { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; }
 .an__chk { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.88rem; color: var(--cbm-ink, #1c2530); }
