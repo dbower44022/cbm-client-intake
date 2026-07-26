@@ -1664,6 +1664,36 @@ the plan** (`prds/analytics-app-plan.md`, Phases A–D all built). No migration.
   (`analytics/builder.resolve_filters`); the `after` filter was live-probed on
   crm-test (30/61 CSessions after a cutoff). CHANGELOG 0.166.0.
 
+  **Post-Phase-D enhancements — ALL PUSHED + LIVE on BOTH envs (currently
+  v0.171.0):**
+  - **v0.168.0 — the seeded dashboards + built-in metrics are editable.** Built-ins
+    are DEFAULTS; a DB page/metric with the same key OVERRIDES the built-in
+    (`_all_page_specs`/`_resolve_page` DB-wins; metric lookup DB-wins). The **System
+    Analytics** page can be edited (add/remove/reorder panels incl. custom metrics)
+    via Manage → Pages → Edit/customize; the 5 CRM built-in metrics carry
+    `builder_definition`s so they materialize into editable builder metrics.
+  - **v0.169.0 — page-editor panel Remove made visible** (was pushed off-screen by
+    a wide field grid; now each panel has ↑/↓/✕ Remove in an always-visible header).
+  - **v0.171.0 — built-in metrics are Edit/Delete like user metrics** (Doug's
+    ruling: no two-tier UX). **Delete** hides a built-in everywhere via a
+    `source='suppressed'` marker row (no migration — reuses the `source` column);
+    deleted built-ins list at the bottom with **Restore**. The metric resolver is
+    unified in `router._metric_lookup` (honors suppression; viewer + worker); a
+    page panel whose metric was deleted is **dropped cleanly**
+    (`service.render_page` returns None → filtered). Endpoints
+    `POST /admin/metrics/{key}/{suppress,restore}`. The 3 **operational** built-ins
+    (submissions/queue/contributions) read the app's own data → not builder-editable
+    (show "reads app data"), but deletable/restorable. Extending the builder with an
+    operational-data source (to make those editable too) is an OPEN option if Doug
+    wants it. CHANGELOG 0.168.0/0.169.0/0.171.0.
+
+  **The analytics arc is DONE and in production.** Recovery: user guide
+  `analytics-guide.md`, activation runbook `ANALYTICS-SETUP.md`, design/build
+  `prds/analytics-app-plan.md`. Only remaining OPEN item (deferred, Doug-optional):
+  drill-through (§9), CSV export, personalized dashboards, an operational-data
+  builder source. To hand analytics to non-admin staff: create the
+  `Analytics Admin Team` in each CRM (admins already have full access).
+
 **v0.162.0** (2026-07-25, 1188 tests green, committed NOT pushed) — **Analytics
 platform — Phase C** (record-scoped analytics + the embedded Mentor tab; Mentor
 surface first per the PRD). Analytics attach to a CRM record.

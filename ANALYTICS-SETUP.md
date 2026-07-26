@@ -5,6 +5,13 @@ code ships **gated OFF** (`ANALYTICS_ENABLED` defaults `false`), so pushing/depl
 it changes nothing until you activate it. Plan/design: `prds/analytics-app-plan.md`.
 End-user guide: `analytics-guide.md`.
 
+> **STATUS (2026-07-26): ACTIVATED + LIVE on both crm-test and production**
+> (`ANALYTICS_ENABLED=true` on the web + worker of both overlays; the analytics
+> tables exist on both managed DBs). This runbook is the record of how, and the
+> reference for a fresh environment. On the live envs it's **usable by CRM admins
+> now**; the one outstanding step is creating the **`Analytics Admin Team`** in
+> each CRM to hand it to non-admin staff (§2).
+
 ---
 
 ## 0. TL;DR
