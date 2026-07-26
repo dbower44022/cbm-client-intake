@@ -4,6 +4,52 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.176.0] — 2026-07-26
+
+**feat(portal+analytics): awaiting-processing badges on the portal tiles + an
+"Items awaiting processing" analytics panel** (Doug's request — see what needs
+attention right from the dashboard). No migration; no CRM changes.
+
+- **One home for the definitions — `core/attention.py`** (shared by both
+  surfaces): Client Administration = engagements `engagementStatus=Submitted`;
+  Mentor Administration = mentor profiles `mentorStatus=Candidate`; Partner
+  Management = partner profiles `partnershipStatus=Candidate`; Funder
+  Management = funder profiles with **no Funder Manager assigned**
+  (CSponsorProfile has no candidate status — the unmanaged set is the signal);
+  Submission Admin = the open admin queue. The store side is the new
+  `core/store.OPEN_REVIEW_STATUSES` (open = `closed_at IS NULL` AND status in
+  `held_review` / `needs_attention` / `completed` — in-flight worker statuses
+  and held_honeypot deliberately excluded) with new `open_review_count()` +
+  `list_open_review()` on the submission store (verified against live local
+  Postgres: pending doesn't count, completed-but-open does, Close drops it).
+- **Portal tile badges**: new `GET /api/portal/attention` computes the counts
+  **as the signed-in user** (their CRM ACL = what each app will show them),
+  only for the apps their teams entitle them to (admins: all; the ops count
+  needs the durable store), concurrently and best-effort — a failing count is
+  omitted (no badge), never an error. The portal home badges each app tile
+  with its count (shared `badgeTile` helper; the My Email unread badge now
+  rides it too; count in the tooltip).
+- **Analytics panel**: new built-in **rows** metric `attention_queue` ("Items
+  awaiting processing", live, system scope, `analytics/computed.py`) blending
+  the four CRM categories with the store's open submissions — oldest waiting
+  first across categories, each row **linked to the item**: engagements/
+  mentors deep-link their CRM record, partners/funders their app record page
+  (`/partnersessions|/sponsorsessions/record/{id}`), submissions the
+  `/ops/?submission=` deep link (open-submission rows carry a plain-language
+  reason: awaiting approval / delivery failed / reply owed). Each source is
+  best-effort (a failing one is logged + skipped; all failing = an
+  "unavailable" panel). Not placed on the seeded System Analytics page — add
+  it to any page via Manage → Pages (the metric library lists it). The shared
+  rows renderer (`frontend/shared/charts.js`) now honors a per-row `href`.
+- 11 new tests (`tests/test_attention.py`); full suite green. **Version-race
+  note:** a parallel session (portal birthday greeting) shares
+  `portal/router.py` + `portal/frontend/app.js` + `CHANGELOG.md` — this
+  release stages only its own hunks in those files.
+- **Live check after deploy:** sign in to the portal as an admin on crm-test —
+  the four tiles show counts matching the apps' own grids; in `/analytics`,
+  add "Items awaiting processing" to a page and confirm the links open the
+  right item (CRM records, partner/funder record pages, `/ops` deep link).
+
 ## [0.175.0] — 2026-07-26
 
 **feat(directory): Mentor Profile page — full-width layout, richer "Get to know

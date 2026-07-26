@@ -207,7 +207,10 @@
       cols.forEach(function (c) {
         var td = el("td", c.align === "right" ? "is-right" : null);
         var val = r[c.key];
-        var href = c.link === "record" ? recordHref(ctx, r.entity, r.recordId) : null;
+        // A row may carry its own app link (r.href — e.g. a record page or
+        // /ops deep link); otherwise a "record"-linked column deep-links the
+        // row's CRM record.
+        var href = c.link === "record" ? (r.href || recordHref(ctx, r.entity, r.recordId)) : null;
         if (href) {
           var a = el("a", "anc-link", val == null ? "" : String(val));
           a.href = href; a.target = "_blank"; a.rel = "noopener";

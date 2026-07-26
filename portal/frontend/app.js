@@ -90,22 +90,44 @@
     return a;
   }
 
+  // Tile count badge — no badge for a zero count, and never a second badge on
+  // a tile that already has one.
+  function badgeTile(url, n, title) {
+    if (!n) return;
+    var tile = document.querySelector('.portal__tile[data-url="' + url + '"]');
+    if (!tile || tile.querySelector(".portal__tile-badge")) return;
+    var b = document.createElement("span");
+    b.className = "portal__tile-badge";
+    b.textContent = n > 99 ? "99+" : String(n);
+    if (title) b.title = title;
+    tile.appendChild(b);
+  }
+
   // My Email tile unread badge (§4.2.2): fetched after the tiles render so a
   // slow count never delays the portal. Best-effort — no badge on any failure
   // or a zero count.
   function badgeMyEmailTile() {
-    var tile = document.querySelector('.portal__tile[data-url="/myemail/"]');
-    if (!tile) return;
     fetch("/myemail/api/unread-count", { credentials: "same-origin" })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
         var n = d && d.total;
-        if (!n) return;
-        var b = document.createElement("span");
-        b.className = "portal__tile-badge";
-        b.textContent = n > 99 ? "99+" : String(n);
-        b.title = n + " unread conversation" + (n === 1 ? "" : "s");
-        tile.appendChild(b);
+        if (n) badgeTile("/myemail/", n, n + " unread conversation" + (n === 1 ? "" : "s"));
+      })
+      .catch(function () {});
+  }
+
+  // Awaiting-processing badges (Doug, 2026-07-26): per-app counts of new items
+  // needing attention — unassigned clients, mentor/partner applications,
+  // unmanaged funders, open submissions. The API returns only the apps this
+  // user's teams entitle them to, so every badge lands on a rendered tile.
+  // Best-effort like the My Email badge.
+  function badgeAttentionTiles() {
+    fetch(API + "/attention", { credentials: "same-origin" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        ((d && d.items) || []).forEach(function (it) {
+          badgeTile(it.url, it.count, (it.label || "Items awaiting processing") + ": " + it.count);
+        });
       })
       .catch(function () {});
   }
@@ -122,6 +144,7 @@
     fillTiles("directoriesSection", "directoriesList", data.directories || []);
     fillTiles("appsSection", "appsList", data.apps || []);
     badgeMyEmailTile();
+    badgeAttentionTiles();
     fillList("crmSection", "crmList",
       data.crmUrl ? [{ title: "CBM CRM", url: data.crmUrl }] : [], true);
     fillList("docsSection", "docsList",

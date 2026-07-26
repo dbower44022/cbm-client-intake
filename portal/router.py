@@ -18,6 +18,7 @@ Entitlements (team names come from settings, so they match the app gates):
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any
 
@@ -34,6 +35,8 @@ from assignments.auth import (
     request_password_reset,
     set_session,
 )
+from assignments.espo_user import client_for
+from core import attention as attn
 from core.config import Settings, get_settings
 
 log = logging.getLogger("cbm_intake.portal")
@@ -204,6 +207,56 @@ async def session(request: Request) -> dict:
         raise HTTPException(status_code=401, detail=str(exc))
     set_session(request, user)
     return _home_payload(user, request, settings)
+
+
+@router.get("/attention")
+async def attention(request: Request) -> dict:
+    """Per-app counts of items awaiting processing — the portal tile badges
+    (Doug's request 2026-07-26). Definitions live in :mod:`core.attention`;
+    CRM counts run AS THE SIGNED-IN USER (their ACL = what each app will show
+    them) and only for the apps their teams entitle them to, so the badge set
+    mirrors the tile set. Best-effort throughout: a failing count is omitted
+    (no badge), never an error the home page must handle."""
+    user = current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    settings = get_settings()
+
+    wanted: list[attn.AttentionType] = []
+    if is_member(user, settings.assign_allowed_teams_list, settings.assign_allowed_roles_list):
+        wanted.append(attn.ENGAGEMENTS)
+    if is_member(user, settings.mentor_admin_allowed_teams_list):
+        wanted.append(attn.MENTORS)
+    if is_member(user, settings.session_partner_allowed_teams_list):
+        wanted.append(attn.PARTNERS)
+    if is_member(user, settings.session_sponsor_allowed_teams_list):
+        wanted.append(attn.FUNDERS)
+
+    items: list[dict[str, Any]] = []
+    if wanted:
+        client = client_for(settings, user)
+
+        async def one(t: attn.AttentionType) -> dict[str, Any] | None:
+            try:
+                return {"url": t.app_url, "count": await attn.crm_count(client, t),
+                        "label": t.label}
+            except Exception as exc:  # noqa: BLE001 — a badge never breaks the portal
+                log.warning("attention count failed (%s) for %s: %s",
+                            t.key, user.get("userName"), exc)
+                return None
+
+        items.extend(r for r in await asyncio.gather(*(one(t) for t in wanted)) if r)
+
+    store = getattr(request.app.state, "submission_store", None)
+    if store is not None and is_member(user, settings.ops_allowed_teams_list):
+        try:
+            items.append({"url": attn.OPS_APP_URL,
+                          "count": await store.open_review_count(),
+                          "label": attn.OPS_LABEL})
+        except Exception as exc:  # noqa: BLE001
+            log.warning("attention count failed (ops) for %s: %s",
+                        user.get("userName"), exc)
+    return {"items": items}
 
 
 @router.post("/logout")

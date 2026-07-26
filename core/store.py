@@ -61,6 +61,16 @@ STATUS_DISCARDED = "discarded"
 # Statuses the worker is allowed to claim and deliver.
 CLAIMABLE = (STATUS_PENDING, STATUS_RETRY)
 
+# The Submission-Admin work queue: OPEN (closed_at IS NULL) rows in one of these
+# statuses are "awaiting processing" (the portal /ops badge + the analytics
+# attention metric). held_review = an inbound info@ email awaiting triage;
+# needs_attention = a failed delivery awaiting an admin; completed-but-open = a
+# delivered info request still owing a reply (record-creating forms auto-close
+# on delivery, so completed+open is the admin-review set). pending/retry/
+# processing are in-flight and worker-owned, and held_honeypot is suspected
+# spam — neither is a new item for a human, so they don't count.
+OPEN_REVIEW_STATUSES = (STATUS_HELD_REVIEW, STATUS_NEEDS_ATTENTION, STATUS_COMPLETED)
+
 # How many of the most recent completions feed metrics()'s windowed latency.
 RECENT_LATENCY_WINDOW = 50
 
@@ -318,6 +328,8 @@ class SubmissionStore(Protocol):
     async def get_submission(self, submission_id: str) -> Optional[dict[str, Any]]: ...
     async def counts_by_status(self) -> dict[str, int]: ...
     async def submissions_by_month(self) -> list[dict[str, Any]]: ...
+    async def open_review_count(self) -> int: ...
+    async def list_open_review(self, *, limit: int = 25) -> list[dict[str, Any]]: ...
     async def redrive(self, submission_id: str, *, acted_by: Optional[str] = None) -> bool: ...
     async def discard(self, submission_id: str, *, acted_by: Optional[str] = None) -> bool: ...
     async def set_notes(
@@ -662,6 +674,40 @@ class PostgresStore:
                 )
             ).all()
         return [{"month": r.m, "count": r.n} for r in rows if r.m]
+
+    async def open_review_count(self) -> int:
+        """How many submissions are awaiting processing (see
+        ``OPEN_REVIEW_STATUSES``) — the portal Submission-Admin tile badge."""
+        async with self._engine.begin() as conn:
+            n = (
+                await conn.execute(
+                    select(func.count())
+                    .select_from(submission)
+                    .where(submission.c.closed_at.is_(None))
+                    .where(submission.c.status.in_(OPEN_REVIEW_STATUSES))
+                )
+            ).scalar()
+        return int(n or 0)
+
+    async def list_open_review(self, *, limit: int = 25) -> list[dict[str, Any]]:
+        """The oldest open awaiting-processing submissions (the analytics
+        attention metric's row list)."""
+        query = (
+            select(
+                submission.c.id,
+                submission.c.form_slug,
+                submission.c.status,
+                submission.c.received_at,
+                submission.c.payload["email"].astext.label("email"),
+            )
+            .where(submission.c.closed_at.is_(None))
+            .where(submission.c.status.in_(OPEN_REVIEW_STATUSES))
+            .order_by(submission.c.received_at.asc())
+            .limit(limit)
+        )
+        async with self._engine.begin() as conn:
+            rows = (await conn.execute(query)).mappings().all()
+        return [dict(r) for r in rows]
 
     async def redrive(self, submission_id: str, *, acted_by: Optional[str] = None) -> bool:
         """Re-queue a submission: back to pending, due now, fresh attempt budget.
