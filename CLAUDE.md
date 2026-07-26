@@ -1652,8 +1652,17 @@ the plan** (`prds/analytics-app-plan.md`, Phases A–D all built). No migration.
   mounted and return 401 (gated, not 404). **Usable by CRM admins immediately**
   (admins pass the gate); to hand it to non-admin staff, **create the
   `Analytics Admin Team` in crm-test** and add them. Full user walkthrough:
-  `analytics-guide.md`; activation runbook: `ANALYTICS-SETUP.md`. **Prod NOT yet
-  activated** (same steps against `.do/app.prod-crm.yaml`).
+  `analytics-guide.md`; activation runbook: `ANALYTICS-SETUP.md`.
+  **ACTIVATED ON PROD 2026-07-25** — `ANALYTICS_ENABLED=true` on the prod overlay
+  (`.do/app.prod-crm.yaml`) web + worker, applied via doctl; the PRE_DEPLOY migrate
+  created the analytics tables on `cbm-db-prod`. Verified live on BOTH envs
+  (v0.167.0): `/analytics/` 200, `/analytics/api/session` 401 (gated). Usable by CRM
+  admins on prod immediately; create the `Analytics Admin Team` in the prod CRM to
+  hand it to non-admin staff. **v0.166.0 (relative-date filters)** shipped in the
+  same push — the metric builder's "in the last…" / "older than…" operators
+  (number + days/weeks/months) resolve to EspoCRM `after`/`before` at compute time
+  (`analytics/builder.resolve_filters`); the `after` filter was live-probed on
+  crm-test (30/61 CSessions after a cutoff). CHANGELOG 0.166.0.
 
 **v0.162.0** (2026-07-25, 1188 tests green, committed NOT pushed) — **Analytics
 platform — Phase C** (record-scoped analytics + the embedded Mentor tab; Mentor
