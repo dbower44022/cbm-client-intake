@@ -199,11 +199,27 @@ them from Zoom.
   with title/meta/OG tags (EV-06).
 - One settings screen: API base URL, cache TTL, on/off switch.
 
+**Preview done ahead of the build (2026-07-25).** The renderer
+(`wp-plugin/cbm-events/assets/cbm-events.js`) was driven **inside the real live
+page**, client-side in a browser only — no plugin installed, nothing deployed,
+production untouched — with real CRM data from a locally-run app against
+crm-test. Both panels rendered correctly under the site's own Elementor CSS,
+confirming the class contract in EV-01. Preview events were seeded on crm-test
+and deleted afterwards (back to 92 events / 0 registrations).
+
+**Finding that changed the design:** hotlinked `i.ytimg.com` thumbnails returned
+**HTTP 503** on that page, while the site's own proxied thumbnails loaded — which
+is why the current page already ships a `/wp-json/cbm-yt/v1/thumbnails`
+endpoint. The renderer now takes a **same-origin thumbnail proxy**
+(`CBMEvents.config.thumbnailProxy`) instead of hotlinking; the plugin must
+provide that endpoint. This would have shipped as a wall of black boxes.
+
 **Cutover procedure (reversible):**
 1. Install the plugin on the site with rendering **off**; verify the proxy
    returns correct data.
 2. Stand up a staging/preview page using the shortcodes; compare **side by side**
-   with the live page — screenshots at desktop and mobile widths.
+   with the live page — screenshots at desktop and mobile widths. *(The
+   desktop comparison is already done — see the preview note above.)*
 3. Freeze new events in the Apps Script; create the same events in the app.
 4. Swap the page's widgets to the shortcodes. Watch for one event cycle.
 5. Keep the Apps Script deployed but idle for a rollback window, then retire it
