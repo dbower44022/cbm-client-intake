@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cleveland Business Mentors — Mentor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/tokens.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="mentor.css" />
+</head>
+<body>
+  <main class="dir mp2">
+    <header class="dir__header">
+      <div class="dir__header-main">
+        <a class="dir__home" href="/directory/mentors/">&#8592; Mentor directory</a>
+      </div>
+      <div class="dir__header-user">
+        <a class="dir__home" href="/" title="Workspace home">&#9632; Workspace</a>
+        <span class="dir__who">Signed in as <strong id="mpWhoName"></strong></span>
+        <button type="button" class="cbm-button cbm-button--secondary dir__sm" id="mpLogoutBtn">Sign out</button>
+      </div>
+    </header>
+
+    <!-- Access/server errors (sign-in happens at the portal). -->
+    <section id="mpMsgView" hidden>
+      <p class="form-error" id="mpMsgText" role="alert"></p>
+      <p><a href="/">Return to the sign-in page</a></p>
+    </section>
+
+    <section id="mpMainView" hidden>
+      <!-- Hero: photo + name + headline + status chips -->
+      <section class="mp2__hero">
+        <div class="mp2__photo-wrap">
+          <img class="mp2__photo" id="mpPhoto" alt="" hidden />
+          <div class="mp2__photo-ph" id="mpPhotoPh" aria-hidden="true"></div>
+        </div>
+        <div class="mp2__hero-body">
+          <h1 class="mp2__name" id="mpName"></h1>
+          <p class="mp2__headline" id="mpHeadline" hidden></p>
+          <div class="mp2__chips" id="mpStatusChips"></div>
+        </div>
+      </section>
+
+      <div class="mp2__cols">
+        <!-- Professional lane -->
+        <div class="mp2__main">
+          <section class="mp2__card" id="mpStatCard" hidden>
+            <div class="mp2__stats" id="mpStats"></div>
+          </section>
+
+          <section class="mp2__card" id="mpExpertiseCard" hidden>
+            <h2 class="mp2__card-h">Expertise &amp; focus</h2>
+            <div id="mpExpertiseBody"></div>
+          </section>
+
+          <section class="mp2__card" id="mpAboutCard" hidden>
+            <h2 class="mp2__card-h">About</h2>
+            <div class="mp2__rich" id="mpAbout"></div>
+          </section>
+
+          <section class="mp2__card" id="mpBioCard" hidden>
+            <h2 class="mp2__card-h">Professional background</h2>
+            <div class="mp2__rich" id="mpBio"></div>
+          </section>
+        </div>
+
+        <!-- Personal + contact lane -->
+        <aside class="mp2__side">
+          <section class="mp2__card mp2__card--warm" id="mpPersonalCard" hidden>
+            <h2 class="mp2__card-h">Get to know them</h2>
+            <div id="mpPersonalBody"></div>
+          </section>
+
+          <section class="mp2__card" id="mpContactCard" hidden>
+            <h2 class="mp2__card-h">Reach out</h2>
+            <div id="mpContactBody"></div>
+          </section>
+        </aside>
+      </div>
+    </section>
+
+    <footer class="cbm-footer">
+      <p>&copy; <span data-cbm-year>2026</span> Cleveland Business Mentors. All rights reserved.<span class="cbm-footer__version" data-cbm-version></span></p>
+    </footer>
+  </main>
+
+  <!-- busy.js first: it wraps fetch/XHR, so it must be in place before any
+       other script can start a request. -->
+  <script src="/shared/busy.js"></script>
+  <script src="/shared/richtext.js"></script>
+  <script src="/shared/phone-format.js"></script>
+  <script src="/shared/quickmail.js"></script>
+  <script src="detail-render.js"></script>
+  <script src="mentor.js"></script>
+  <script src="/shared/footer.js"></script>
+</body>
+</html>

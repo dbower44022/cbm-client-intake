@@ -4,6 +4,49 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.172.0] — 2026-07-26
+
+**feat(directory): rich, read-only Mentor Profile page — "get to know your
+colleagues"** (Doug's request 2026-07-26: significantly improve the mentor
+directory so a new mentor can get to know the other mentors). Clicking a
+mentor's **name** in the Mentors directory (`/directory/mentors`) now opens a
+new dedicated profile page (`/directory/mentors/record/{id}`, stable named tab
+`cbm-mentor-<id>`) instead of jumping to the linked Contact's View Contact page
+— which fixes the inconsistency Doug noticed (the row-select preview showed more
+than the name-click did, because the name went to the *Contact* record, not the
+*mentor*). The new page is a warm, internal, **read-only** view — deliberately
+NOT the CRM-layout pop-up and NOT the external public-website look:
+
+- **Hero** — circular photo (or an initials placeholder when none), name,
+  headline (`mentorTitle`), and status chips (accepting-new-clients / status /
+  type).
+- **Professional lane** — a stat strip showing **both** years of service
+  ("N years mentoring (since YYYY)" from `mentorStartDate` **and** "N years in
+  their field" from `yearsOfExperience`), expertise / industries / preferred
+  business stages / languages chips, and the About + professional-background
+  narratives (sanitized wysiwyg).
+- **Personal lane** ("Get to know them") — **Personal interests**, birthday
+  (month + day only), and spouse name.
+- **Reach out** — CBM email, personal email, phone, LinkedIn (emails are
+  compose links via the shared quick-compose, mailto fallback).
+
+Data comes from `CMentorProfile` + its linked `Contact`; every read runs as the
+signed-in user (ACL-enforced), and the Contact read is best-effort (a mentor may
+be readable while their Contact is not). **No new CRM field** — the "Personal
+interests" text is the existing `CMentorProfile.description` ("Internal CBM
+Description"), repurposed per Doug's ruling; **My Profile is where mentors edit
+everything** (that field is relabelled "Personal interests" there, with a hint
+that it's shown to fellow CBM members). Backend: `directory.config` gains
+`mentor_page`; `directory.service.mentor_profile`/`mentor_photo`; the mentors
+router gains `GET /profile/{id}` + `GET /photo/{id}`; `core/app.py` serves the
+new `mentor.html`. Frontend: new `directory/frontend/mentor.{html,js,css}`; the
+grid name-click rewired. 4 new tests; full suite green (1360). Verified in the
+stub-browser harness (hero/placeholder, both year stats, chips, sanitized
+about/bio, personal card, reach-out with formatted phone; no console errors, no
+horizontal overflow). **NOT yet driven live** — after deploy, open a real
+mentor from the directory as a Mentor Team member and confirm the photo,
+personal fields, and compose links.
+
 ## [0.171.0] — 2026-07-26
 
 **feat(analytics): built-in metrics are now Edit/Delete like user metrics**

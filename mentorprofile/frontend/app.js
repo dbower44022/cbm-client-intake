@@ -149,6 +149,10 @@
 
   // Groups rendered side by side as one two-panel row (left, right).
   var GROUP_PAIRS = { "Contact information": "Personal details" };
+  // Optional guidance shown under a group heading (a muted line).
+  var GROUP_HINTS = {
+    "Personal interests": "Hobbies, family, what you enjoy outside work — this is shown to fellow CBM members on the mentor directory, so they can get to know you.",
+  };
 
   // --- form (stacked groups; `row` packs fields on one line, full width;
   //     the photo + `toggle` fields form the prominent TOP BAR) ---
@@ -192,6 +196,10 @@
       var sec = document.createElement("section"); sec.className = "mp__group";
       var h = document.createElement("h2"); h.className = "mp__group-h"; h.textContent = group;
       sec.appendChild(h);
+      if (GROUP_HINTS[group]) {
+        var gh = document.createElement("p"); gh.className = "mp__hint"; gh.textContent = GROUP_HINTS[group];
+        sec.appendChild(gh);
+      }
       var rows = {}, rowOrder = [];
       groups[group].forEach(function (f) {
         var r = f.row || "_" + f.name;   // no row => its own line

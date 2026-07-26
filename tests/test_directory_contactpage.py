@@ -210,14 +210,30 @@ def test_contact_record_page_served_with_base_and_no_store(monkeypatch):
     assert "record.js" in r.text
 
 
-def test_only_the_contact_page_kind_gets_the_record_route(monkeypatch):
+def test_record_routes_only_for_page_kinds(monkeypatch):
     app = _app(monkeypatch)
     paths = {r.path for r in app.routes if isinstance(getattr(r, "path", None), str)}
+    # Contacts (View Contact page) and Mentors (rich profile page) each get a
+    # record route; companies/partners do not.
     assert "/directory/contacts/record/{record_id}" in paths
-    assert "/directory/mentors/record/{record_id}" not in paths
+    assert "/directory/mentors/record/{record_id}" in paths
+    assert "/directory/companies/record/{record_id}" not in paths
     # The contact-scoped comms endpoints register only on the contacts kind.
     assert "/directory/contacts/api/records/{contact_id}/conversations" in paths
     assert "/directory/mentors/api/records/{contact_id}/conversations" not in paths
+    # The mentor profile + photo endpoints register only on the mentors kind.
+    assert "/directory/mentors/api/profile/{record_id}" in paths
+    assert "/directory/mentors/api/photo/{record_id}" in paths
+    assert "/directory/contacts/api/profile/{record_id}" not in paths
+
+
+def test_mentor_record_page_serves_the_profile_frontend(monkeypatch):
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.get("/directory/mentors/record/m123")
+    assert r.status_code == 200
+    assert '<base href="/directory/mentors/">' in r.text
+    assert r.headers["cache-control"] == "no-store"
+    assert "mentor.js" in r.text
 
 
 def test_session_reports_contact_page_and_comms_flags(monkeypatch):

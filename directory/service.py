@@ -10,6 +10,7 @@ user owns; only editable scalar fields; drifted enum values dropped).
 from __future__ import annotations
 
 import logging
+from datetime import date
 from typing import Any, Optional, Protocol
 
 from core.espo import EspoError
@@ -41,6 +42,7 @@ class DirClient(Protocol):
     async def layout(self, entity: str, name: str = ...) -> Any: ...
     async def i18n(self, scope: str) -> dict[str, Any]: ...
     async def app_user(self) -> dict[str, Any]: ...
+    async def download_attachment(self, attachment_id: str) -> tuple[bytes, str]: ...
 
 
 # EspoCRM field type -> how the frontend renders the cell / value.
@@ -478,3 +480,116 @@ async def save(
     from sessions.details import save_details
 
     return await save_details(client, cfg.entity, record_id, changes)
+
+
+# --- the rich mentor profile page -------------------------------------------
+#
+# A curated, read-only "get to know this colleague" view (directory.config
+# mentor_page). Unlike the CRM-layout pop-up, the shape here is hand-composed:
+# a header, a Professional lane, a Personal lane, and a Contact block. All
+# reads run as the signed-in user, so EspoCRM enforces their ACL; the linked
+# Contact read is best-effort (a mentor may be readable while their Contact is
+# not). Editing lives in My Profile — nothing here writes.
+
+MENTOR_ENTITY = "CMentorProfile"
+_MENTOR_CONTACT_ENTITY = "Contact"
+
+_MENTOR_PROFILE_SELECT = ",".join([
+    "name", "mentorTitle", "mentorStatus", "mentorType", "acceptingNewClients",
+    "areaOfExpertise", "industryExperience", "fluentLanguages",
+    "mentorBusinessStagePref", "yearsOfExperience", "mentorStartDate",
+    "aboutMentor", "mentorProfessionalBio", "description", "cbmEmail",
+    "profilePhotoId", "contactRecordId",
+])
+_MENTOR_CONTACT_SELECT = ",".join([
+    "firstName", "lastName", "emailAddress", "phoneNumber",
+    "cLinkedInProfile", "cBirthday", "cSpouseName",
+])
+
+
+def _as_list(value: Any) -> list[str]:
+    """A multiEnum stored value as a clean list of strings."""
+    if isinstance(value, (list, tuple)):
+        return [str(v) for v in value if str(v).strip()]
+    if value is None or str(value).strip() == "":
+        return []
+    return [str(value)]
+
+
+def _years_since(iso: Any) -> Optional[int]:
+    """Whole years from an ISO ``YYYY-MM-DD`` date to today; None if unparseable."""
+    if not iso:
+        return None
+    try:
+        y, m, d = (int(x) for x in str(iso)[:10].split("-"))
+        start = date(y, m, d)
+    except (ValueError, TypeError):
+        return None
+    today = date.today()
+    years = today.year - start.year - ((today.month, today.day) < (start.month, start.day))
+    return years if years >= 0 else None
+
+
+async def mentor_profile(client: DirClient, mentor_id: str) -> dict[str, Any]:
+    """The rich read-only profile payload for ONE mentor (CMentorProfile id)."""
+    rec = await client.get(MENTOR_ENTITY, mentor_id, select=_MENTOR_PROFILE_SELECT)
+    contact: dict[str, Any] = {}
+    contact_id = rec.get("contactRecordId")
+    if contact_id:
+        try:
+            contact = await client.get(
+                _MENTOR_CONTACT_ENTITY, contact_id, select=_MENTOR_CONTACT_SELECT
+            )
+        except EspoError as exc:  # readable to us, their Contact may not be
+            log.debug("mentor %s contact %s unreadable: %s", mentor_id, contact_id, exc)
+            contact = {}
+
+    first = str(contact.get("firstName") or "").strip()
+    last = str(contact.get("lastName") or "").strip()
+    name = (first + " " + last).strip() or rec.get("name") or "(no name)"
+    start = rec.get("mentorStartDate")
+
+    return {
+        "id": mentor_id,
+        "name": name,
+        "headline": rec.get("mentorTitle") or "",
+        "status": rec.get("mentorStatus") or "",
+        "mentorType": rec.get("mentorType") or "",
+        "acceptingNewClients": bool(rec.get("acceptingNewClients")),
+        "hasPhoto": bool(rec.get("profilePhotoId")),
+        "professional": {
+            "expertise": _as_list(rec.get("areaOfExpertise")),
+            "industries": _as_list(rec.get("industryExperience")),
+            "languages": _as_list(rec.get("fluentLanguages")),
+            "businessStages": _as_list(rec.get("mentorBusinessStagePref")),
+            "mentoringSince": start,
+            "yearsMentoring": _years_since(start),
+            "yearsExperience": rec.get("yearsOfExperience"),
+            "about": rec.get("aboutMentor") or "",
+            "bio": rec.get("mentorProfessionalBio") or "",
+        },
+        "personal": {
+            # description is repurposed as "Personal interests" (Doug's ruling
+            # 2026-07-26) — see mentorprofile PROFILE_FIELDS.
+            "interests": rec.get("description") or "",
+            "birthday": contact.get("cBirthday"),
+            "spouse": contact.get("cSpouseName") or "",
+        },
+        "contact": {
+            "cbmEmail": rec.get("cbmEmail") or "",
+            "personalEmail": contact.get("emailAddress") or "",
+            "phone": contact.get("phoneNumber") or "",
+            "linkedIn": contact.get("cLinkedInProfile") or "",
+        },
+    }
+
+
+async def mentor_photo(
+    client: DirClient, mentor_id: str
+) -> Optional[tuple[bytes, str]]:
+    """A mentor's profile photo bytes + content type, or None when none set."""
+    rec = await client.get(MENTOR_ENTITY, mentor_id, select="profilePhotoId")
+    attachment_id = rec.get("profilePhotoId")
+    if not attachment_id:
+        return None
+    return await client.download_attachment(attachment_id)

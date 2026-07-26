@@ -1610,7 +1610,40 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   Note: crm-test seed sessions carry out-of-enum `sessionType` values (harmless; a
   data-hygiene cleanup). **UI polish is the next work item** (a follow-up session).
 
-## Current status (updated 2026-07-25)
+## Current status (updated 2026-07-26)
+
+**v0.172.0** (2026-07-26, 1360 tests green, committed NOT pushed) — **rich,
+read-only Mentor Profile page on the Workspace Directory** (Doug's request:
+significantly improve the mentor directory so a new mentor can get to know the
+other mentors and locate co-mentors). Clicking a mentor's **name** in
+`/directory/mentors` now opens a NEW dedicated profile page
+(`/directory/mentors/record/{id}`, stable named tab `cbm-mentor-<id>`) instead
+of the linked Contact's View Contact page — fixing the inconsistency Doug
+flagged (row-select preview was richer than the name-click, because the name
+opened the *Contact*, not the *mentor*). The page is a warm, internal,
+**read-only** "get to know your colleague" view — deliberately NOT the
+CRM-layout pop-up and NOT the external public-website look: hero (photo /
+initials placeholder + headline + status chips); a Professional lane with a
+stat strip showing **both** years of service ("N years mentoring (since YYYY)"
+from `mentorStartDate` + "N years in their field" from `yearsOfExperience`),
+expertise/industries/business-stages/languages chips, and sanitized About +
+bio; a Personal lane ("Get to know them") with **Personal interests** +
+birthday (month+day only) + spouse; and a Reach-out block (CBM/personal email
+as compose links, phone, LinkedIn). Reads `CMentorProfile` + linked `Contact`
+as the signed-in user (Contact read best-effort). **No new CRM field** — the
+"Personal interests" text IS `CMentorProfile.description` (the "Internal CBM
+Description"), repurposed per Doug's ruling; **My Profile stays the single edit
+surface** (that field relabelled "Personal interests" there, with a hint that
+it's shown to fellow CBM members). Backend: `directory.config.mentor_page`;
+`directory.service.mentor_profile`/`mentor_photo`; mentors router
+`GET /profile/{id}` + `GET /photo/{id}`; `core/app.py` serves `mentor.html`.
+Frontend: new `directory/frontend/mentor.{html,js,css}`; grid name-click
+rewired. 4 new tests; full suite green (1360); stub-harness verified (no console
+errors, no h-overflow). **NOT yet driven live** — after deploy, open a real
+mentor from the directory as a Mentor Team member and confirm the photo,
+personal fields, and compose links. Next candidate (Doug's other stated goal,
+NOT yet built): upgrade the session-tools **co-mentor picker** (today a
+name-only dropdown) to a searchable/rich picker reusing this profile data.
 
 **v0.163.0** (2026-07-25, 1195 tests green, committed NOT pushed) — **Analytics
 platform — Phase D (portal dashboard + computed metrics + polish) — COMPLETES

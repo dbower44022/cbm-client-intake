@@ -368,3 +368,114 @@ def test_directory_403_for_non_workspace_team(monkeypatch):
         r = c.get("/directory/companies/api/session")
         assert r.status_code == 403
         assert "not authorized" in r.json()["detail"].lower()
+
+
+# --- the rich mentor profile page -------------------------------------------
+
+from datetime import date
+
+from core.espo import EspoError
+
+
+class _MentorFake:
+    """Minimal fake for the mentor-profile reads: records by (entity, id),
+    with selected ids configured to raise (a forbidden Contact)."""
+
+    def __init__(self, records, *, forbid=()):
+        self.records = records          # {(entity, id): {...}}
+        self.forbid = set(forbid)       # {(entity, id)} -> raise EspoError
+        self.photos = {}                # {attachment_id: (bytes, ct)}
+
+    async def get(self, entity, record_id, select=None):
+        if (entity, record_id) in self.forbid:
+            raise EspoError(f"get {entity}/{record_id} failed: 403 Forbidden")
+        rec = self.records.get((entity, record_id))
+        if rec is None:
+            raise EspoError("not found")
+        return dict(rec)
+
+    async def download_attachment(self, attachment_id):
+        return self.photos[attachment_id]
+
+
+def _mentor_profile_fake():
+    return _MentorFake({
+        ("CMentorProfile", "m1"): {
+            "id": "m1", "name": "Pat Mentor", "mentorTitle": "Turnaround CFO",
+            "mentorStatus": "Active", "mentorType": "Mentor",
+            "acceptingNewClients": True,
+            "areaOfExpertise": ["Finance", "Operations"],
+            "industryExperience": ["Manufacturing"],
+            "fluentLanguages": ["English", "Spanish"],
+            "mentorBusinessStagePref": ["Growth"],
+            "yearsOfExperience": 30, "mentorStartDate": "2019-01-01",
+            "aboutMentor": "<p>Loves a good spreadsheet.</p>",
+            "mentorProfessionalBio": "<p>Ran three companies.</p>",
+            "description": "Sailing, jazz, and grandkids.",
+            "cbmEmail": "pat@cbmentors.org",
+            "profilePhotoId": "att1", "contactRecordId": "c1",
+        },
+        ("Contact", "c1"): {
+            "id": "c1", "firstName": "Patricia", "lastName": "Mentor",
+            "emailAddress": "pat@home.test", "phoneNumber": "+12160001234",
+            "cLinkedInProfile": "linkedin.com/in/pat",
+            "cBirthday": "1965-05-04", "cSpouseName": "Jamie",
+        },
+    })
+
+
+@pytest.mark.asyncio
+async def test_mentor_profile_is_a_curated_payload():
+    p = await service.mentor_profile(_mentor_profile_fake(), "m1")
+    # Name comes from the linked Contact's first+last.
+    assert p["name"] == "Patricia Mentor"
+    assert p["headline"] == "Turnaround CFO"
+    assert p["acceptingNewClients"] is True
+    assert p["hasPhoto"] is True
+    pr = p["professional"]
+    assert pr["expertise"] == ["Finance", "Operations"]
+    assert pr["industries"] == ["Manufacturing"]
+    assert pr["languages"] == ["English", "Spanish"]
+    assert pr["yearsExperience"] == 30
+    # yearsMentoring is computed from mentorStartDate to today.
+    expected = date.today().year - 2019 - ((date.today().month, date.today().day) < (1, 1))
+    assert pr["yearsMentoring"] == expected
+    assert "spreadsheet" in pr["about"]
+    per = p["personal"]
+    assert per["interests"] == "Sailing, jazz, and grandkids."
+    assert per["birthday"] == "1965-05-04"
+    assert per["spouse"] == "Jamie"
+    ct = p["contact"]
+    assert ct["cbmEmail"] == "pat@cbmentors.org"
+    assert ct["personalEmail"] == "pat@home.test"
+    assert ct["linkedIn"] == "linkedin.com/in/pat"
+
+
+@pytest.mark.asyncio
+async def test_mentor_profile_best_effort_when_contact_forbidden():
+    fake = _MentorFake({
+        ("CMentorProfile", "m2"): {
+            "id": "m2", "name": "Sam Solo", "mentorStartDate": None,
+            "areaOfExpertise": [], "description": "",
+            "profilePhotoId": None, "contactRecordId": "cX",
+        },
+    }, forbid=[("Contact", "cX")])
+    p = await service.mentor_profile(fake, "m2")
+    # Falls back to the profile name; personal/contact fields stay blank; no raise.
+    assert p["name"] == "Sam Solo"
+    assert p["hasPhoto"] is False
+    assert p["professional"]["yearsMentoring"] is None
+    assert p["personal"]["birthday"] is None
+    assert p["contact"]["personalEmail"] == ""
+
+
+@pytest.mark.asyncio
+async def test_mentor_photo_returns_bytes_or_none():
+    fake = _mentor_profile_fake()
+    fake.photos["att1"] = (b"JPEGDATA", "image/jpeg")
+    data, ct = await service.mentor_photo(fake, "m1")
+    assert data == b"JPEGDATA" and ct == "image/jpeg"
+
+    # A mentor with no photo -> None (the endpoint turns this into a 404).
+    fake.records[("CMentorProfile", "m3")] = {"id": "m3", "profilePhotoId": None}
+    assert await service.mentor_photo(fake, "m3") is None

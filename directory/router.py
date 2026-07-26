@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 import logging
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel
 
 from assignments.auth import clear_session, current_user, is_member, session_expired
@@ -154,6 +154,36 @@ def make_router(cfg: DirectoryConfig) -> APIRouter:
             return await service.detail(client, DIRECTORIES["contacts"], contact_id, user.get("userId"))
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not load the contact")
+
+    if cfg.mentor_page:
+        # The rich read-only mentor profile page (its own browser tab). The
+        # curated profile payload + a photo proxy (the browser can't reach the
+        # CRM attachment directly). Both run as the signed-in user.
+        @router.get("/profile/{record_id}")
+        async def mentor_profile_detail(record_id: str, request: Request) -> dict:
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            try:
+                return await service.mentor_profile(client, record_id)
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not load the mentor profile")
+
+        @router.get("/photo/{record_id}")
+        async def mentor_photo(record_id: str, request: Request) -> Response:
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            try:
+                result = await service.mentor_photo(client, record_id)
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not load the photo")
+            if result is None:
+                raise HTTPException(status_code=404, detail="No profile photo.")
+            data, content_type = result
+            return Response(
+                content=data,
+                media_type=content_type,
+                headers={"Cache-Control": "private, no-store"},
+            )
 
     @router.put("/records/{record_id}")
     async def save_record(record_id: str, body: SaveIn, request: Request) -> dict:

@@ -833,20 +833,27 @@ def create_app(
         # (/directory/{kind}/…).
         from directory import DIRECTORIES as _DIRECTORY_KINDS
 
-        def _directory_record_page(kind: str) -> HTMLResponse:
-            """The View Contact page (/directory/{kind}/record/{id}) — its own
-            dedicated frontend booted straight into one contact (the JS reads
-            the id from the path). A <base> tag makes relative assets resolve
-            against /directory/{kind}/ from the nested path."""
-            html = (DIRECTORY_FRONTEND_DIR / "record.html").read_text(encoding="utf-8")
+        def _directory_record_page(kind: str, html_file: str) -> HTMLResponse:
+            """A dedicated /directory/{kind}/record/{id} page — the View Contact
+            page (record.html) for contact kinds, or the rich mentor profile
+            page (mentor.html) for the Mentors kind — booted straight into one
+            record (the JS reads the id from the path). A <base> tag makes
+            relative assets resolve against /directory/{kind}/ from the nested
+            path."""
+            html = (DIRECTORY_FRONTEND_DIR / html_file).read_text(encoding="utf-8")
             html = html.replace("<head>", f'<head><base href="/directory/{kind}/">', 1)
             return HTMLResponse(html, headers={"Cache-Control": "no-store"})
 
         for _kind, _dcfg in _DIRECTORY_KINDS.items():
-            if getattr(_dcfg, "contact_page", False):
+            _record_html = (
+                "record.html" if getattr(_dcfg, "contact_page", False)
+                else "mentor.html" if getattr(_dcfg, "mentor_page", False)
+                else None
+            )
+            if _record_html:
                 app.add_api_route(
                     f"/directory/{_kind}/record/{{record_id}}",
-                    (lambda _k: (lambda record_id: _directory_record_page(_k)))(_kind),
+                    (lambda _k, _h: (lambda record_id: _directory_record_page(_k, _h)))(_kind, _record_html),
                     methods=["GET"],
                     response_class=HTMLResponse,
                     include_in_schema=False,

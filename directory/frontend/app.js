@@ -102,14 +102,26 @@
       if (r.id === state.selectedId) row.classList.add("is-selected");
       state.columns.forEach(function (c, i) {
         var td = el("td");
-        if (i === 0) {  // name column: link opens the View Contact page / View
+        if (i === 0) {  // name column: link opens the rich profile / View Contact page / View
           var a = el("a", null, r[c.key] || "(no name)");
           var contactId = contactPageId(r);
-          if (contactId) {
-            // Contacts (and mentor rows with a linked contact): the name opens
-            // the full View Contact page in its own STABLE named tab —
-            // re-clicking reuses the tab. Modifier/middle clicks fall through
-            // to the real href. The View button / pop-up stay as they were.
+          if (KIND === "mentors") {
+            // Mentors open the rich, read-only mentor PROFILE page in a stable
+            // named tab (re-clicking reuses it). Every mentor row has a profile
+            // (the row IS the CMentorProfile), so this is always available —
+            // no linked-contact gymnastics.
+            a.href = "/directory/mentors/record/" + encodeURIComponent(r.id);
+            a.addEventListener("click", function (ev) {
+              if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey || ev.button !== 0) return;
+              ev.preventDefault(); ev.stopPropagation();
+              selectRow(r.id);
+              openWindow(a.href, "cbm-mentor-" + r.id);
+            });
+          } else if (contactId) {
+            // Contacts: the name opens the full View Contact page in its own
+            // STABLE named tab — re-clicking reuses the tab. Modifier/middle
+            // clicks fall through to the real href. The View button / pop-up
+            // stay as they were.
             a.href = "/directory/contacts/record/" + encodeURIComponent(contactId);
             a.addEventListener("click", function (ev) {
               if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey || ev.button !== 0) return;
@@ -122,13 +134,7 @@
             a.addEventListener("click", function (ev) {
               ev.preventDefault(); ev.stopPropagation();
               selectRow(r.id);
-              if (KIND === "mentors") {
-                // A mentor row without a linked Contact has no contact page to
-                // open (never a dead/hidden control — say why).
-                notify("This mentor has no linked contact record yet, so there is no contact page to open. Ask CBM staff to link one in the CRM.");
-              } else {
-                openView(r.id);
-              }
+              openView(r.id);
             });
           }
           td.appendChild(a);
@@ -167,12 +173,11 @@
     });
   }
 
-  // The Contact id a row's name click opens the View Contact page for:
-  // the row itself on the contacts kind, the linked contact (contactId,
-  // from DirectoryConfig.contact_ref_attr) on mentors; null = no page.
+  // The Contact id a row's name click opens the View Contact page for: the row
+  // itself on the contacts kind; null = no contact page (mentors get the rich
+  // mentor profile page instead, handled inline in renderGrid).
   function contactPageId(r) {
     if (state.session && state.session.contactPage) return r.id;
-    if (KIND === "mentors") return r.contactId || null;
     return null;
   }
 

@@ -1,0 +1,166 @@
+/* Rich mentor profile page (/directory/mentors/record/{id}).
+   A warm, read-only "get to know this colleague" view — its own visual
+   language (navy hero, gold accents, soft cards), distinct from the CRM-grid
+   pop-up and from the external public-website page. Loads on top of the
+   directory styles.css (header/buttons) + tokens.css. */
+
+.mp2 {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 1.5rem 3rem;
+}
+
+/* ---- hero ---------------------------------------------------------------- */
+.mp2__hero {
+  display: flex;
+  gap: 1.75rem;
+  align-items: center;
+  margin: 1.25rem 0 1.5rem;
+  padding: 1.75rem;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--cbm-navy) 0%, #0f2b47 100%);
+  color: #fff;
+  box-shadow: 0 10px 28px rgba(23, 59, 96, 0.22);
+}
+.mp2__photo-wrap { flex: 0 0 auto; }
+.mp2__photo,
+.mp2__photo-ph {
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+.mp2__photo-ph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--cbm-font-serif);
+  font-size: 44px;
+  font-weight: 600;
+  color: var(--cbm-navy);
+  background: linear-gradient(135deg, #f5d99a 0%, var(--cbm-gold) 100%);
+}
+.mp2__hero-body { min-width: 0; }
+.mp2__name {
+  margin: 0;
+  font-family: var(--cbm-font-serif);
+  font-size: 34px;
+  line-height: 1.15;
+  color: #fff;
+}
+.mp2__headline {
+  margin: 0.35rem 0 0;
+  font-size: 18px;
+  color: var(--cbm-gold);
+  font-weight: 500;
+}
+.mp2__chips { margin-top: 0.9rem; display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.mp2__chip {
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 0.22rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+.mp2__chip--go { background: var(--cbm-success); border-color: transparent; }
+.mp2__chip--off { background: rgba(255, 255, 255, 0.08); color: #e6c9c9; }
+
+/* ---- two-column body ----------------------------------------------------- */
+.mp2__cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+.mp2__main, .mp2__side { display: flex; flex-direction: column; gap: 1.25rem; }
+
+.mp2__card {
+  background: #fff;
+  border: 1px solid var(--cbm-border);
+  border-radius: 12px;
+  padding: 1.25rem 1.4rem;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
+}
+.mp2__card--warm {
+  background: #fffaf0;
+  border-color: #f0e2c4;
+}
+.mp2__card-h {
+  margin: 0 0 0.9rem;
+  font-family: var(--cbm-font-serif);
+  font-size: 19px;
+  color: var(--cbm-navy);
+  border-bottom: 2px solid var(--cbm-gold);
+  padding-bottom: 0.4rem;
+  display: inline-block;
+}
+
+/* ---- stats strip --------------------------------------------------------- */
+.mp2__stats { display: flex; flex-wrap: wrap; gap: 1rem; }
+.mp2__stat {
+  flex: 1 1 140px;
+  text-align: center;
+  padding: 0.9rem 0.5rem;
+  border-radius: 10px;
+  background: var(--cbm-surface);
+}
+.mp2__stat-n {
+  font-family: var(--cbm-font-serif);
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--cbm-navy);
+  line-height: 1;
+}
+.mp2__stat-s { margin-top: 0.35rem; font-size: 13px; color: var(--cbm-text); }
+
+/* ---- tag blocks (expertise / industries / etc.) -------------------------- */
+.mp2__tagblock + .mp2__tagblock { margin-top: 1.1rem; }
+.mp2__sub {
+  margin: 0 0 0.5rem;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--cbm-text);
+}
+.mp2__tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.mp2__tag {
+  font-size: 13px;
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  background: var(--cbm-surface);
+  border: 1px solid var(--cbm-border);
+  color: var(--cbm-slate-700);
+}
+
+/* ---- rich text (about / bio) --------------------------------------------- */
+.mp2__rich { color: var(--cbm-slate-900); line-height: 1.65; font-size: 15px; }
+.mp2__rich p { margin: 0 0 0.7rem; }
+.mp2__rich ul, .mp2__rich ol { margin: 0 0 0.7rem 1.2rem; }
+.mp2__rich a { color: var(--cbm-blue); }
+
+/* ---- facts (personal / contact) ------------------------------------------ */
+.mp2__interests { margin: 0; white-space: pre-wrap; line-height: 1.6; color: var(--cbm-slate-900); font-size: 15px; }
+.mp2__fact {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  font-size: 14.5px;
+}
+.mp2__fact:last-child { border-bottom: 0; }
+.mp2__fact-l { color: var(--cbm-text); font-weight: 600; flex: 0 0 auto; }
+.mp2__fact-v, .mp2__fact a { text-align: right; color: var(--cbm-slate-900); word-break: break-word; }
+.mp2__fact a { color: var(--cbm-blue); }
+.mp2__tagblock + .mp2__fact { margin-top: 0.6rem; }
+
+@media (max-width: 820px) {
+  .mp2__cols { grid-template-columns: 1fr; }
+  .mp2__hero { flex-direction: column; text-align: center; }
+  .mp2__chips { justify-content: center; }
+}

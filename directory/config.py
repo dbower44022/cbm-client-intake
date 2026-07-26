@@ -50,6 +50,12 @@ class DirectoryConfig:
     # tab: Overview + Communications) and its router carries the
     # contact-scoped comms endpoints (directory.comms_router).
     contact_page: bool = False
+    # This kind's records open the rich, read-only MENTOR PROFILE page (its own
+    # browser tab): a warm "get to know this colleague" view built from the
+    # CMentorProfile + its linked Contact — NOT the CRM-layout pop-up and NOT
+    # the external public-website look. Its router carries /profile/{id} +
+    # /photo/{id}. Mentors only.
+    mentor_page: bool = False
     # A belongsTo id attribute on this kind's rows naming the record's linked
     # Contact (e.g. CMentorProfile -> "contactRecordId"). When set, grid rows
     # carry it as ``contactId`` so a row can open the View Contact page for
@@ -82,6 +88,7 @@ MENTORS = DirectoryConfig(
     edit_handoff="/mentorprofile/",
     filters=("mentorStatus", "mentorType", "acceptingNewClients"),
     contact_ref_attr="contactRecordId",
+    mentor_page=True,
 )
 
 PARTNERS = DirectoryConfig(

@@ -124,10 +124,12 @@ PROFILE_FIELDS: list[dict[str, Any]] = [
     # --- More about you (internal, not on the website) ---
     {"name": "mentorProfessionalBio", "label": "Professional bio", "type": "wysiwyg", "group": "More about you"},
     {"name": "mentoringWhyInterested", "label": "Why you mentor", "type": "wysiwyg", "group": "More about you"},
-    # --- Internal CRM description (the very bottom; plain text in the CRM,
-    #     so it renders as a large text box — rich-text markup saved into a
-    #     text field would show as raw HTML tags in the CRM UI) ---
-    {"name": "description", "label": "Internal CRM description", "type": "text", "group": "Internal CRM description", "rows": 6},
+    # --- Personal interests (the CMentorProfile.description field, repurposed
+    #     per Doug's ruling 2026-07-26 as the home for a mentor's personal
+    #     interests — hobbies, family, what they enjoy outside work — shown to
+    #     fellow CBM members on the rich Mentor Directory profile page). Plain
+    #     text in the CRM, so it renders as a large text box. ---
+    {"name": "description", "label": "Personal interests", "type": "text", "group": "Personal interests", "rows": 6},
 ]
 
 # Read-only context served with the record (never in the update whitelist):
