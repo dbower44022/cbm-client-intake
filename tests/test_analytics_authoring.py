@@ -295,3 +295,59 @@ async def test_relative_date_filter_count():
                                        "value": 30, "unit": "day"}]}}
     r = await execute(row, ctx)
     assert r.data["value"] == 1  # only the record from 5 days ago, not 100
+
+
+# --- customizing built-ins (make the seeded page + metrics editable) --------
+def test_customize_page_makes_it_editable(monkeypatch):
+    _authed(monkeypatch)
+    store = MemoryAnalyticsStore()
+    with TestClient(_app(monkeypatch, store=store, fake=FakeEspo())) as c:
+        bi = [p for p in c.get("/analytics/api/admin/pages").json()["builtins"]
+              if p["key"] == "system-overview"][0]
+        assert bi["customizable"] and not bi["customized"]
+        # customize -> a DB page (same key) with the built-in's panels copied
+        page = c.post("/analytics/api/admin/pages/customize/system-overview").json()["page"]
+        assert page["key"] == "system-overview" and len(page["panels"]) >= 1
+        listed = c.get("/analytics/api/admin/pages").json()
+        assert any(p["key"] == "system-overview" and p.get("overridesBuiltin") for p in listed["pages"])
+        assert [p for p in listed["builtins"] if p["key"] == "system-overview"][0]["customized"] is True
+        # idempotent
+        again = c.post("/analytics/api/admin/pages/customize/system-overview").json()
+        assert again.get("alreadyCustomized")
+        # the DB override now drives the viewer (edit: keep one panel), then reset
+        one = dict(page); one["panels"] = page["panels"][:1]
+        c.put("/analytics/api/admin/pages/" + page["id"], json={
+            "title": page["title"], "scope": "system",
+            "panels": [{"title": one["panels"][0]["title"],
+                        "metric_key": one["panels"][0]["metric_key"],
+                        "viz": one["panels"][0]["viz"]}]})
+        body = c.get("/analytics/api/pages/system-overview").json()
+        assert len(body["panels"]) == 1  # the customized (trimmed) page rendered
+        c.delete("/analytics/api/admin/pages/" + page["id"])  # reset to default
+        assert not [p for p in c.get("/analytics/api/admin/pages").json()["pages"]
+                    if p["key"] == "system-overview"]
+
+
+def test_customize_metric(monkeypatch):
+    _authed(monkeypatch)
+    store = MemoryAnalyticsStore()
+    with TestClient(_app(monkeypatch, store=store, fake=FakeEspo())) as c:
+        m = c.post("/analytics/api/admin/metrics/customize/active_mentors").json()["metric"]
+        assert m["key"] == "active_mentors" and m["entity"] == "CMentorProfile"
+        assert m["definition"]["aggregation"]["kind"] == "count"
+        # a store/computed built-in isn't builder-expressible => 400
+        assert c.post("/analytics/api/admin/metrics/customize/submissions_per_month").status_code == 400
+        ml = c.get("/analytics/api/admin/metrics").json()
+        assert any(x["key"] == "active_mentors" and x.get("overridesBuiltin") for x in ml["metrics"])
+        assert [b for b in ml["builtins"] if b["key"] == "active_mentors"][0]["customized"] is True
+
+
+def test_reset_customized_metric_even_when_used(monkeypatch):
+    _authed(monkeypatch)
+    store = MemoryAnalyticsStore()
+    with TestClient(_app(monkeypatch, store=store, fake=FakeEspo())) as c:
+        m = c.post("/analytics/api/admin/metrics/customize/active_mentors").json()["metric"]
+        c.post("/analytics/api/admin/pages", json={
+            "title": "P", "panels": [{"title": "x", "metric_key": "active_mentors", "viz": "stat"}]})
+        # reset is allowed even in use (the built-in takes over)
+        assert c.delete("/analytics/api/admin/metrics/" + m["id"]).status_code == 200

@@ -140,6 +140,10 @@ class MetricSpec:
     refresh_seconds: int = 0          # 0 => inherit analytics_default_cache_ttl_seconds
     time_aware: bool = False          # honors the page time range (else caches under 'all')
     description: str = ""
+    # When set, this built-in can be "customized" — materialized into an editable
+    # builder DB metric (entity + filters + aggregation). Code metrics whose logic
+    # can't be expressed by the builder (store/computed) leave this None.
+    builder_definition: Optional[dict] = None
 
 
 METRIC_REGISTRY: dict[str, MetricSpec] = {}

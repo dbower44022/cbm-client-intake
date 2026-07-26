@@ -4,6 +4,31 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.168.0] — 2026-07-25
+
+**feat(analytics): built-in dashboards & metrics are now editable — the main
+page can be customized** (Doug's request: edit the seeded analytics, add/remove
+panels on the first page, and put a new metric on the main page). Built-ins act
+as **defaults** that a **Customize** action materializes into an editable DB copy
+which **overrides** the built-in (same key); **Reset to default** deletes the copy
+to revert.
+
+- **Pages**: a DB page now overrides the built-in of the same key
+  (`_all_page_specs` / `_resolve_page` flipped to DB-wins). Composer → Pages shows
+  each built-in with **Edit / customize** (`POST /admin/pages/customize/{key}`
+  copies its panels into a DB row, idempotent) → opens the page editor pre-loaded,
+  so the **System Analytics** dashboard's panels can be added/removed/reordered
+  (incl. your own metrics) and the portal-home flag toggled.
+- **Metrics**: the 5 CRM built-ins gained `builder_definition`s, so **Customize**
+  (`POST /admin/metrics/customize/{key}`) materializes them into editable builder
+  metrics. Store/computed built-ins have no builder form → no Customize (still
+  placeable). A customized built-in can be **Reset** even while a page uses it (the
+  built-in takes over — the delete guard exempts built-in keys).
+- List endpoints flag `customizable` / `customized` / `overridesBuiltin`; the
+  composer de-dups (a customized built-in shows once, as its DB row).
+- `analytics-guide.md` §5.3 documents editing the main dashboard + adding a metric
+  to it. 6 new tests; analytics suite green (46).
+
 ## [0.167.0] — 2026-07-25
 
 **feat(events): Events & Webinars — Phase 3 (public registration into the CRM)**.

@@ -159,27 +159,44 @@
     var table = h("table", { class: "an__mtable" }, h("thead", {}, h("tr", {},
       h("th", {}, "Name"), h("th", {}, "Key"), h("th", {}, "Shape"), h("th", {}, "Used by"), h("th", {}, ""))));
     var tb = h("tbody");
+    var customKeys = {};
+    (data.metrics || []).forEach(function (m) { customKeys[m.key] = 1; });
     (data.metrics || []).forEach(function (m) {
+      var name = m.overridesBuiltin ? h("span", {}, m.name, h("span", { class: "an__tag" }, "customized")) : m.name;
+      var actions = [h("button", { class: "an__link-btn", onClick: function () { openMetricEditor(m); } }, "Edit")];
+      if (m.overridesBuiltin) actions.push(h("button", { class: "an__link-btn an__danger", onClick: function () { resetMetric(m); } }, "Reset to default"));
+      else actions.push(h("button", { class: "an__link-btn an__danger", onClick: function () { deleteMetric(m); } }, "Delete"));
       tb.appendChild(h("tr", {},
-        h("td", {}, m.name), h("td", { class: "an__mono" }, m.key), h("td", {}, m.result_shape),
+        h("td", {}, name), h("td", { class: "an__mono" }, m.key), h("td", {}, m.result_shape),
         h("td", {}, (m.usedBy || []).join(", ") || "—"),
-        h("td", { class: "an__row-actions" },
-          h("button", { class: "an__link-btn", onClick: function () { openMetricEditor(m); } }, "Edit"),
-          h("button", { class: "an__link-btn an__danger", onClick: function () { deleteMetric(m); } }, "Delete"))));
+        h("td", { class: "an__row-actions" }, actions)));
     });
     (data.builtins || []).forEach(function (m) {
+      if (customKeys[m.key]) return;  // represented by its customized DB row above
+      var actions = [h("span", { class: "an__tag" }, "built-in")];
+      if (m.customizable) actions.push(h("button", { class: "an__link-btn", onClick: function () { customizeMetric(m); } }, "Customize"));
       tb.appendChild(h("tr", { class: "an__builtin" },
         h("td", {}, m.name), h("td", { class: "an__mono" }, m.key), h("td", {}, m.result_shape),
-        h("td", {}, "—"), h("td", {}, h("span", { class: "an__tag" }, "built-in"))));
+        h("td", {}, "—"), h("td", { class: "an__row-actions" }, actions)));
     });
     table.appendChild(tb); host.appendChild(table);
-    if (!(data.metrics || []).length) host.appendChild(h("p", { class: "an__hint" }, "No custom metrics yet — create one to build a panel."));
   }
 
   async function deleteMetric(m) {
     if (!confirm('Delete metric "' + m.name + '"?')) return;
     try { await api("/admin/metrics/" + m.id, { method: "DELETE" }); loadMetrics(); }
     catch (e) { alert(e.message); }
+  }
+  async function resetMetric(m) {
+    if (!confirm('Reset “' + m.name + '” to its built-in default? Your customizations will be discarded.')) return;
+    try { await api("/admin/metrics/" + m.id, { method: "DELETE" }); loadMetrics(); }
+    catch (e) { alert(e.message); }
+  }
+  async function customizeMetric(m) {
+    try {
+      var r = await api("/admin/metrics/customize/" + encodeURIComponent(m.key), { method: "POST" });
+      openMetricEditor(r.metric);
+    } catch (e) { alert(e.message); }
   }
 
   // --- metric editor ---
@@ -379,18 +396,38 @@
     host.innerHTML = "";
     var table = h("table", { class: "an__mtable" }, h("thead", {}, h("tr", {}, h("th", {}, "Title"), h("th", {}, "Key"), h("th", {}, "Panels"), h("th", {}, ""))));
     var tb = h("tbody");
+    var customKeys = {};
+    (data.pages || []).forEach(function (p) { customKeys[p.key] = 1; });
     (data.pages || []).forEach(function (p) {
+      var title = p.overridesBuiltin ? h("span", {}, p.title, h("span", { class: "an__tag" }, "customized")) : p.title;
+      var actions = [h("button", { class: "an__link-btn", onClick: function () { openPageEditor(p); } }, "Edit")];
+      if (p.overridesBuiltin) actions.push(h("button", { class: "an__link-btn an__danger", onClick: function () { resetPage(p); } }, "Reset to default"));
+      else actions.push(h("button", { class: "an__link-btn an__danger", onClick: function () { deletePage(p); } }, "Delete"));
       tb.appendChild(h("tr", {},
-        h("td", {}, p.title), h("td", { class: "an__mono" }, p.key), h("td", {}, String((p.panels || []).length)),
-        h("td", { class: "an__row-actions" },
-          h("button", { class: "an__link-btn", onClick: function () { openPageEditor(p); } }, "Edit"),
-          h("button", { class: "an__link-btn an__danger", onClick: function () { deletePage(p); } }, "Delete"))));
+        h("td", {}, title), h("td", { class: "an__mono" }, p.key), h("td", {}, String((p.panels || []).length)),
+        h("td", { class: "an__row-actions" }, actions)));
     });
     (data.builtins || []).forEach(function (p) {
-      tb.appendChild(h("tr", { class: "an__builtin" }, h("td", {}, p.title), h("td", { class: "an__mono" }, p.key), h("td", {}, "—"), h("td", {}, h("span", { class: "an__tag" }, "built-in"))));
+      if (customKeys[p.key]) return;  // represented by its customized DB row above
+      tb.appendChild(h("tr", { class: "an__builtin" },
+        h("td", {}, p.title), h("td", { class: "an__mono" }, p.key), h("td", {}, "—"),
+        h("td", { class: "an__row-actions" },
+          h("span", { class: "an__tag" }, "built-in"),
+          h("button", { class: "an__link-btn", onClick: function () { customizePage(p); } }, "Edit / customize"))));
     });
     table.appendChild(tb); host.appendChild(table);
-    if (!(data.pages || []).length) host.appendChild(h("p", { class: "an__hint" }, "No custom pages yet — create one and add panels."));
+    host.appendChild(h("p", { class: "an__hint" }, "Tip: “Edit / customize” a built-in page (e.g. System Analytics) to add, remove, or reorder its panels — including your own metrics."));
+  }
+  async function resetPage(p) {
+    if (!confirm('Reset “' + p.title + '” to its built-in default? Your customizations will be discarded.')) return;
+    try { await api("/admin/pages/" + p.id, { method: "DELETE" }); loadPagesAdmin(); }
+    catch (e) { alert(e.message); }
+  }
+  async function customizePage(p) {
+    try {
+      var r = await api("/admin/pages/customize/" + encodeURIComponent(p.key), { method: "POST" });
+      openPageEditor(r.page);
+    } catch (e) { alert(e.message); }
   }
   async function primeMetrics() {
     var data = await api("/admin/metrics");

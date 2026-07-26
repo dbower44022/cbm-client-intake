@@ -50,6 +50,11 @@ ACTIVE_ENGAGEMENT_STATUSES = ("Active", "Assigned", "Pending Acceptance", "On-Ho
     default_viz=VIZ_STAT,
     cache_mode="live",
     description="Mentors whose profile status is Active.",
+    builder_definition={
+        "entity": "CMentorProfile",
+        "filters": [{"type": "equals", "attribute": "mentorStatus", "value": "Active"}],
+        "aggregation": {"kind": "count"},
+    },
 )
 async def _active_mentors(ctx: MetricContext):
     n = await crm.count(
@@ -67,6 +72,12 @@ async def _active_mentors(ctx: MetricContext):
     default_viz=VIZ_STAT,
     cache_mode="live",
     description="Client engagements in an active status.",
+    builder_definition={
+        "entity": "CEngagement",
+        "filters": [{"type": "in", "attribute": "engagementStatus",
+                     "value": list(ACTIVE_ENGAGEMENT_STATUSES)}],
+        "aggregation": {"kind": "count"},
+    },
 )
 async def _active_engagements(ctx: MetricContext):
     n = await crm.count(
@@ -86,6 +97,10 @@ async def _active_engagements(ctx: MetricContext):
     refresh_seconds=3600,
     time_aware=True,
     description="Count of engagements created each month, over the selected range.",
+    builder_definition={
+        "entity": "CEngagement", "filters": [],
+        "aggregation": {"kind": "bucket"}, "time_field": "createdAt",
+    },
 )
 async def _engagements_per_month(ctx: MetricContext):
     records = await crm.sweep(
@@ -102,6 +117,10 @@ async def _engagements_per_month(ctx: MetricContext):
     cache_mode="cached",
     refresh_seconds=3600,
     description="Current count of engagements grouped by status.",
+    builder_definition={
+        "entity": "CEngagement", "filters": [],
+        "aggregation": {"kind": "group_by", "field": "engagementStatus"},
+    },
 )
 async def _engagements_by_status(ctx: MetricContext):
     records = await crm.sweep(ctx.espo, "CEngagement", "engagementStatus")
@@ -124,6 +143,16 @@ async def _engagements_by_status(ctx: MetricContext):
     cache_mode="cached",
     refresh_seconds=1800,
     description="Submitted engagements awaiting a mentor, oldest first.",
+    builder_definition={
+        "entity": "CEngagement",
+        "filters": [{"type": "equals", "attribute": "engagementStatus", "value": "Submitted"}],
+        "aggregation": {
+            "kind": "list", "orderBy": "createdAt", "order": "asc", "limit": 10,
+            "select": ["name", "createdAt"],
+            "columns": [{"key": "name", "label": "Engagement", "link": "record"},
+                        {"key": "createdAt", "label": "Created"}],
+        },
+    },
 )
 async def _oldest_unassigned(ctx: MetricContext):
     records = await crm.sweep(

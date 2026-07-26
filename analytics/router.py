@@ -143,30 +143,32 @@ def _make_lookup(db_specs: dict[str, MetricSpec]):
 
 
 async def _all_page_specs(store) -> list[PageSpec]:
-    """Code-seeded pages + authored DB pages (code key wins on collision)."""
-    pages = list(PAGE_REGISTRY.values())
+    """Authored DB pages + code-seeded pages. A DB page OVERRIDES a built-in of
+    the same key (a "customized" built-in), so the seeded pages are editable."""
+    out: list[PageSpec] = []
+    seen: set = set()
     if store is not None:
         try:
             rows = await store.list_pages()
         except Exception as exc:  # noqa: BLE001
             log.warning("analytics: list_pages failed: %s", exc)
             rows = []
-        code_keys = set(PAGE_REGISTRY)
         for r in rows:
-            if r.get("key") not in code_keys:
-                pages.append(page_spec_from_row(r))
-    return pages
+            out.append(page_spec_from_row(r))
+            seen.add(r.get("key"))
+    for p in PAGE_REGISTRY.values():
+        if p.key not in seen:
+            out.append(p)
+    return out
 
 
 async def _resolve_page(key: str, store) -> Optional[PageSpec]:
-    code = get_page(key)
-    if code is not None:
-        return code
+    # DB override wins over the built-in of the same key.
     if store is not None:
         row = await store.get_page_by_key(key)
         if row is not None:
             return page_spec_from_row(row)
-    return None
+    return get_page(key)
 
 
 async def _page_summaries(user: dict, settings: Settings, store) -> list[dict]:
@@ -535,14 +537,21 @@ async def admin_list_metrics(request: Request) -> dict:
     _admin(request)
     store = _admin_store(request)
     metrics = await store.list_metrics()
-    # Annotate each with how many pages use it (delete-safety + reuse insight).
+    db_keys = {m["key"] for m in metrics}
+    # Annotate each with how many pages use it, and whether it customizes a
+    # built-in (so the UI shows "Reset to default" rather than "Delete").
     for m in metrics:
         m["usedBy"] = await store.metric_key_in_use(m["key"])
-    # Code-registered metrics are read-only but shown so authors can reuse them.
+        m["overridesBuiltin"] = m["key"] in METRIC_REGISTRY
+    # Built-in metrics are shown so authors can place/customize them. A built-in
+    # is `customizable` when it has a builder definition (its logic fits the
+    # builder); `customized` means a DB override already exists.
     code = [
         {"key": s.key, "name": s.name, "result_shape": s.shape,
          "default_viz": s.default_viz, "applies_to": list(s.applies_to),
-         "source": "code", "builtin": True}
+         "source": "code", "builtin": True,
+         "customizable": s.builder_definition is not None,
+         "customized": s.key in db_keys}
         for s in METRIC_REGISTRY.values()
     ]
     return {"metrics": metrics, "builtins": code, "recordTypes": [
@@ -589,7 +598,9 @@ async def admin_delete_metric(metric_id: str, request: Request) -> dict:
     if existing is None:
         raise HTTPException(status_code=404, detail="Metric not found.")
     used = await store.metric_key_in_use(existing["key"])
-    if used:
+    # A customized built-in can always be reset (the built-in takes over); a
+    # purely custom metric that's in use must be removed from its page(s) first.
+    if used and existing["key"] not in METRIC_REGISTRY:
         raise HTTPException(
             status_code=409,
             detail=f"This metric is used by page(s): {', '.join(used)}. Remove it there first.",
@@ -704,11 +715,17 @@ async def _page_values_from(body: PageIn, store) -> dict:
 async def admin_list_pages(request: Request) -> dict:
     _admin(request)
     store = _admin_store(request)
+    db_pages = await store.list_pages()
+    db_keys = {p["key"] for p in db_pages}
+    for p in db_pages:
+        p["overridesBuiltin"] = p["key"] in PAGE_REGISTRY
     return {
-        "pages": await store.list_pages(),
-        # Code pages are shown (read-only) so an author sees the whole set.
+        "pages": db_pages,
+        # Built-in pages are always customizable (materialized to a DB copy on
+        # first Edit); `customized` means an override already exists.
         "builtins": [
-            {"key": p.key, "title": p.title, "scope": p.scope, "builtin": True}
+            {"key": p.key, "title": p.title, "scope": p.scope, "builtin": True,
+             "customizable": True, "customized": p.key in db_keys}
             for p in PAGE_REGISTRY.values()
         ],
     }
@@ -756,3 +773,72 @@ async def admin_delete_page(page_id: str, request: Request) -> dict:
     await store.delete_page(page_id)
     await _log_authoring(user, action_log.ACT_ANALYTICS_PAGE_DELETED, existing["key"], f"Deleted page “{existing.get('title')}”")
     return {"status": "deleted"}
+
+
+# --- customize a built-in (materialize an editable DB copy that overrides it) ---
+@router.post("/admin/pages/customize/{key}")
+async def customize_page(key: str, request: Request) -> dict:
+    """Copy a built-in page into an editable DB row (same key, which overrides
+    the built-in). Idempotent: if already customized, returns the existing row.
+    This is how a seeded dashboard (e.g. the System page) becomes editable —
+    add/remove/reorder panels, place your own metrics."""
+    user = _admin(request)
+    store = _admin_store(request)
+    existing = await store.get_page_by_key(key)
+    if existing is not None:
+        return {"page": existing, "alreadyCustomized": True}
+    code = get_page(key)
+    if code is None:
+        raise HTTPException(status_code=404, detail="Built-in page not found.")
+    values = {
+        "key": code.key, "scope": code.scope, "title": code.title,
+        "subtitle": code.subtitle, "team_gate": list(code.team_gate),
+        "portal_dashboard": bool(code.portal_dashboard), "default_range": code.default_range,
+        "panels": [
+            {"key": p.key, "title": p.title, "metric_key": p.metric_key, "viz": p.viz,
+             "width": p.width, "visibility": list(p.visibility) if p.visibility else None,
+             "config": p.config}
+            for p in code.panels
+        ],
+        "created_by": user["userName"], "updated_by": user["userName"],
+    }
+    row = await store.create_page(values)
+    await _log_authoring(user, action_log.ACT_ANALYTICS_PAGE_SAVED, key, f"Customized built-in page “{code.title}”")
+    return {"page": row}
+
+
+@router.post("/admin/metrics/customize/{key}")
+async def customize_metric(key: str, request: Request) -> dict:
+    """Copy a built-in metric into an editable builder DB metric (same key,
+    which overrides the built-in). Only built-ins with a builder definition can
+    be customized (store/computed built-ins can't be expressed by the builder)."""
+    user = _admin(request)
+    store = _admin_store(request)
+    existing = await store.get_metric_by_key(key)
+    if existing is not None:
+        return {"metric": existing, "alreadyCustomized": True}
+    spec = get_metric(key)
+    if spec is None:
+        raise HTTPException(status_code=404, detail="Built-in metric not found.")
+    defn = spec.builder_definition
+    if not defn:
+        raise HTTPException(
+            status_code=400,
+            detail="This built-in metric can't be edited — its data isn't a simple "
+                   "entity + filter + aggregation. You can still place it on a page.",
+        )
+    values = {
+        "key": spec.key, "name": spec.name, "description": spec.description,
+        "source": "crm", "result_shape": spec.shape, "default_viz": spec.default_viz,
+        "entity": defn.get("entity"),
+        "definition": {"filters": defn.get("filters", []),
+                       "aggregation": defn.get("aggregation", {}),
+                       "time_field": defn.get("time_field")},
+        "applies_to": list(spec.applies_to), "context_param": None,
+        "cache_mode": spec.cache_mode, "refresh_seconds": spec.refresh_seconds,
+        "time_aware": spec.time_aware,
+        "created_by": user["userName"], "updated_by": user["userName"],
+    }
+    row = await store.create_metric(values)
+    await _log_authoring(user, action_log.ACT_ANALYTICS_METRIC_SAVED, key, f"Customized built-in metric “{spec.name}”")
+    return {"metric": row}

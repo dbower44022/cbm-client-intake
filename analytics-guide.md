@@ -144,8 +144,13 @@ pages.
 
 **Editing / deleting:** use the **Edit** / **Delete** links in the metric list. A
 metric that's used by a page can't be deleted until you remove it from that page
-(the app tells you which page). **Built-in metrics** (the ones that ship with the
-app) are shown for reference but can't be edited.
+(the app tells you which page).
+
+**Built-in metrics** ship with the app and are shown with a **built-in** tag. Most
+carry a **Customize** link — clicking it makes an editable copy you can change like
+any metric; a **Reset to default** link then appears to revert it. (A few built-ins
+read the app's own operational data and can't be edited in the builder; those have
+no Customize link, but you can still place them on pages.)
 
 ### 5.2 Composing a page
 
@@ -166,6 +171,30 @@ Click **Pages → + New page**. Fill in:
 
 Click **Save page**. System pages appear as tabs in the viewer; a record-tab page
 shows up on that record type's Analytics tab.
+
+### 5.3 Editing the main dashboard (and putting a metric on it)
+
+The **System Analytics** dashboard (the one you see first) ships built-in, but you
+can edit it — add, remove, or reorder its panels, including your own metrics:
+
+1. Go to **Manage → Pages**. You'll see **System Analytics** with a **built-in**
+   tag and an **Edit / customize** link.
+2. Click **Edit / customize**. The page opens in the editor with all of its current
+   panels already loaded (it makes an editable copy the first time).
+3. To **add your metric to the main page**: click **+ Add panel**, pick your metric,
+   set its title / chart type / width, and (optionally) which teams can see it.
+4. To **remove** a built-in panel, click its **Remove**; to **reorder**, use ↑ / ↓.
+5. Leave **"Show this dashboard on the portal home page"** ticked if you want it on
+   everyone's landing page. Click **Save page**.
+
+Your edits take over from the built-in version immediately. Changed your mind? The
+page now shows a **Reset to default** link that restores the original built-in
+dashboard. (Built-in **metrics** work the same way — **Customize** to edit,
+**Reset to default** to revert.)
+
+> **So the short answer to "how do I show a new metric on the main page":** build
+> the metric (§5.1), then **Edit / customize** the System Analytics page and **+ Add
+> panel** with it.
 
 ---
 
