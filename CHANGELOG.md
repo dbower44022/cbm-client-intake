@@ -4,6 +4,58 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.179.0] — 2026-07-26
+
+**feat(portal): birthdays are a CBM-wide moment — every member is greeted, and
+everyone else is asked to wish them well** (Doug's follow-up to 0.177.0). Two
+changes on top of that release: the greeting is no longer Mentor-Team-only, and
+a member signing in on a colleague's birthday now sees
+**"Wish &lt;Name&gt; a Happy Birthday!"** with the same fireworks. No CRM
+changes, no migration, no new setting.
+
+- **CBM member = their `CMentorProfile`**, whatever team they're on (mentors,
+  partner and funder managers, staff) — so the own-birthday greeting now
+  reaches all of them. A signed-in user with no member record simply has no own
+  greeting; they still see the announcement.
+- **One read serves the whole organization.** `portal/birthday.py` was rebuilt
+  around a **roster** — all member profiles + their Contacts' `cBirthday`, in
+  two CRM calls (`CMentorProfile` list, then ONE batched Contact `in` query) —
+  fetched **once per process per hour under the org-wide API key** and cached
+  (the directory mentor-availability precedent). Consequences worth stating:
+  a portal request now costs **no CRM call at all** (0.177.0 spent up to three
+  per sign-in), the answer can't vary with the viewer's ACL, and the per-session
+  cache + its `_BIRTHDAY_KEY` are gone. A failed read caches "nobody" for 60s
+  rather than the hour, so a CRM blip self-heals quickly.
+- **Who is announced vs. who is greeted** — deliberately different: the
+  announcement is limited to CURRENT members (`ANNOUNCED_STATUSES` = Active /
+  Approved / Provisional / Accepted-Provisional / Paused), so applicants
+  (Prospect, Candidate, Under Review) and former members (Resigned, Retired,
+  Terminated, Declined, Inactive, Dormant) are never announced as though they
+  were still here; but ANY member who can sign in gets their **own** greeting,
+  status notwithstanding. You are never asked to wish yourself well — your own
+  entry is removed from the announcement list.
+- **Only names are exposed** — no birth date, no year, no age — and the roster
+  read is metadata-cheap (six attributes per profile, five per contact).
+- **The overlay gained a second mode** (`CBMBirthday.celebrate({own, others})`):
+  own → "Happy Birthday, Ada!"; announcement → "Wish **Grace Hopper** a Happy
+  Birthday!" with the name in gold inside the sentence (built from DOM nodes,
+  never markup — names are data). Several people share a day gracefully
+  ("Wish A, B and C…"), and when it's your birthday AND a colleague's you get
+  your own greeting plus an "Also celebrating today: …" line. Payload key
+  changed from `birthday` to **`birthdays` = `{date, own, others}`** (or null).
+- 33 tests (13 new; `tests/test_portal_birthday.py` rewritten): the date rule,
+  self-exclusion, own-plus-colleague, every non-current status excluded from the
+  announcement but still greeted personally, collaborators-shaped assignment,
+  members with no linked Contact, the swallowed CRM failure, the keyless deploy,
+  and the cache (one read for many viewers; a new day re-reads). Full suite
+  green (1419). Both modes driven in a real browser — one, two and three names,
+  the also-celebrating line, live sign-in → overlay → home, the once-per-day
+  gate, no console errors.
+- **NOT yet driven live.** After deploy the check is: a member whose Contact
+  `cBirthday` is today signs in (own greeting), and a second member signs in
+  (announcement naming the first). Note the roster is cached for up to an hour,
+  so a birthday corrected in the CRM shows within the hour, not instantly.
+
 ## [0.178.0] — 2026-07-26
 
 **feat(analytics): "Items awaiting processing" ships on the System Analytics

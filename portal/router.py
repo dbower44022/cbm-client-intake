@@ -43,10 +43,6 @@ from . import birthday as birthday_check
 
 log = logging.getLogger("cbm_intake.portal")
 
-# Session key holding the day's birthday answer, so a portal refresh doesn't
-# re-read the CRM: {"date": "YYYY-MM-DD", "greeting": {...} | None}.
-_BIRTHDAY_KEY = "birthday_check"
-
 router = APIRouter(prefix="/api/portal", tags=["portal"])
 
 
@@ -153,23 +149,16 @@ def _home_payload(user: dict[str, Any], request: Request, settings: Settings) ->
     }
 
 
-async def _birthday(request: Request, user: dict[str, Any], settings: Settings) -> Any:
-    """The birthday greeting for this sign-in, or None.
+async def _birthdays(user: dict[str, Any], settings: Settings) -> Any:
+    """What this sign-in should celebrate: the viewer's OWN birthday and/or
+    today's other CBM members, for the "wish them a happy birthday" notice.
 
-    Mentors only (the greeting is for CBM's mentors, and the answer lives on
-    their mentor profile's Contact). The day's answer is cached in the session,
-    so refreshing the portal re-reads nothing; the cache is keyed on the
-    Cleveland date, so it lapses on its own at midnight there.
-    """
-    if not is_member(user, [settings.mentor_team_name]):
-        return None
-    today = birthday_check.today_local().isoformat()
-    cached = request.session.get(_BIRTHDAY_KEY)
-    if isinstance(cached, dict) and cached.get("date") == today:
-        return cached.get("greeting")
-    greeting = await birthday_check.mentor_birthday(settings, user)
-    request.session[_BIRTHDAY_KEY] = {"date": today, "greeting": greeting}
-    return greeting
+    Every signed-in member is in scope (CBM member = their ``CMentorProfile``,
+    whatever team they're on) — a user with no member record simply has no own
+    greeting, but still sees the announcement. The roster read is cached
+    process-wide for the day, so this costs no CRM call per request; it never
+    raises."""
+    return await birthday_check.greetings_for(settings, user)
 
 
 @router.post("/login")
@@ -187,7 +176,7 @@ async def login(body: LoginIn, request: Request) -> dict:
     set_session(request, user)
     log.info("portal login ok: %s (admin=%s)", user["userName"], user.get("isAdmin"))
     payload = _home_payload(user, request, settings)
-    payload["birthday"] = await _birthday(request, user, settings)
+    payload["birthdays"] = await _birthdays(user, settings)
     return payload
 
 
@@ -234,7 +223,7 @@ async def session(request: Request) -> dict:
         raise HTTPException(status_code=401, detail=str(exc))
     set_session(request, user)
     payload = _home_payload(user, request, settings)
-    payload["birthday"] = await _birthday(request, user, settings)
+    payload["birthdays"] = await _birthdays(user, settings)
     return payload
 
 

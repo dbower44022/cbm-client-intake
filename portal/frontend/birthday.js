@@ -1,10 +1,13 @@
-/* Birthday celebration overlay — shown on the portal when a mentor signs in on
-   their birthday, before their screen.
+/* Birthday celebration overlay — shown on the portal before the user's screen,
+   in one of two modes:
 
-   Self-contained: `CBMBirthday.celebrate({ name, onDone })` builds the overlay,
-   runs a canvas fireworks display, and calls `onDone` exactly once when the
-   user (or the auto-dismiss) closes it. The caller carries on from there, so a
-   failure here can never strand someone at sign-in.
+     own          it's YOUR birthday      -> "Happy Birthday, Ada!"
+     announcement it's a colleague's      -> "Wish Ada Lovelace a Happy Birthday!"
+
+   Self-contained: `CBMBirthday.celebrate({ own, others, onDone })` builds the
+   overlay, runs a canvas fireworks display, and calls `onDone` exactly once
+   when the user (or the auto-dismiss) closes it. The caller carries on from
+   there, so a failure here can never strand someone at sign-in.
 
    Respects `prefers-reduced-motion`: the same greeting, no animation. */
 (function () {
@@ -146,54 +149,68 @@
   }
 
   /* --- the overlay -------------------------------------------------------- */
-  function build(name) {
-    var el = document.createElement("div");
-    el.className = "bday";
-    el.setAttribute("role", "dialog");
-    el.setAttribute("aria-modal", "true");
-    el.setAttribute("aria-label", "Happy birthday");
 
-    var canvas = document.createElement("canvas");
-    canvas.className = "bday__sky";
+  // "Ada" / "Ada and Grace" / "Ada, Grace and Alan"
+  function nameList(names) {
+    if (names.length === 1) return names[0];
+    return names.slice(0, -1).join(", ") + " and " + names[names.length - 1];
+  }
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined) n.textContent = text;   // never innerHTML: names are data
+    return n;
+  }
+
+  function build(own, others) {
+    var root = document.createElement("div");
+    root.className = "bday";
+    root.setAttribute("role", "dialog");
+    root.setAttribute("aria-modal", "true");
+
+    var canvas = el("canvas", "bday__sky");
     canvas.setAttribute("aria-hidden", "true");
 
-    var card = document.createElement("div");
-    card.className = "bday__card";
+    var card = el("div", "bday__card");
+    card.appendChild(el("p", "bday__eyebrow", "Cleveland Business Mentors"));
 
-    var eyebrow = document.createElement("p");
-    eyebrow.className = "bday__eyebrow";
-    eyebrow.textContent = "Cleveland Business Mentors";
+    if (own) {
+      root.setAttribute("aria-label", "Happy birthday");
+      card.appendChild(el("h2", "bday__title", "Happy Birthday"));
+      card.appendChild(el("p", "bday__name", own + "!"));
+      card.appendChild(el("p", "bday__msg",
+        "Thank you for all you do for our clients and mentors. Have a wonderful day."));
+      if (others.length) {
+        card.appendChild(el("p", "bday__also",
+          "Also celebrating today: " + nameList(others) + "."));
+      }
+    } else {
+      // Announcement: the name sits inside the sentence, so the line is built
+      // from nodes rather than markup.
+      root.setAttribute("aria-label", "A colleague's birthday");
+      var title = el("h2", "bday__title bday__title--wish");
+      title.appendChild(document.createTextNode("Wish "));
+      title.appendChild(el("span", "bday__name-inline", nameList(others)));
+      title.appendChild(document.createTextNode(" a Happy Birthday!"));
+      card.appendChild(title);
+      card.appendChild(el("p", "bday__msg",
+        (others.length > 1 ? "It's their birthdays today" : "It's their birthday today")
+        + " — take a moment to send your best wishes."));
+    }
 
-    var title = document.createElement("h2");
-    title.className = "bday__title";
-    title.textContent = "Happy Birthday";
-
-    var who = document.createElement("p");
-    who.className = "bday__name";
-    who.textContent = name ? name + "!" : "!";
-
-    var msg = document.createElement("p");
-    msg.className = "bday__msg";
-    msg.textContent =
-      "Thank you for all you do for our clients and mentors. Have a wonderful day.";
-
-    var go = document.createElement("button");
+    var go = el("button", "bday__go", "Continue →");
     go.type = "button";
-    go.className = "bday__go";
-    go.textContent = "Continue →";
-
-    card.appendChild(eyebrow);
-    card.appendChild(title);
-    card.appendChild(who);
-    card.appendChild(msg);
     card.appendChild(go);
-    el.appendChild(canvas);
-    el.appendChild(card);
-    return { el: el, canvas: canvas, button: go };
+    root.appendChild(canvas);
+    root.appendChild(card);
+    return { el: root, canvas: canvas, button: go };
   }
 
   function celebrate(opts) {
     opts = opts || {};
+    var own = opts.own || null;                       // your first name, or null
+    var others = (opts.others || []).filter(Boolean); // colleagues' full names
     var finished = false;
     function done() {
       if (finished) return;
@@ -201,9 +218,11 @@
       try { if (typeof opts.onDone === "function") opts.onDone(); } catch (e) {}
     }
 
+    if (!own && !others.length) { done(); return; }    // nothing to celebrate
+
     var parts, show, timer = null, fw = null;
     try {
-      parts = build(opts.name);
+      parts = build(own, others);
       document.body.appendChild(parts.el);
     } catch (e) {
       done();                       // the greeting is never worth a broken login

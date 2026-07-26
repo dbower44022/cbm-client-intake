@@ -201,22 +201,25 @@
     return ok ? next : null;
   }
 
-  // Birthday greeting (payload `birthday`, mentors only): fireworks + "Happy
-  // Birthday" over the whole window before the user's screen. Shown once per
-  // birthday per browser — the portal is also re-entered on every refresh and
-  // on every ?next= sign-in, and nobody wants the overlay each time. The date
-  // comes from the server (Cleveland's calendar day), so a traveller's clock
-  // can't re-trigger it.
+  // Birthdays (payload `birthdays` = {date, own, others}): fireworks over the
+  // whole window before the user's screen — "Happy Birthday, <you>!" on your
+  // own, otherwise "Wish <colleague> a Happy Birthday!" so the whole of CBM
+  // knows. Shown once per day per browser: the portal is re-entered on every
+  // refresh and every ?next= sign-in, and nobody wants the overlay each time.
+  // The date comes from the server (Cleveland's calendar day), so a traveller's
+  // clock can't re-trigger it.
   function birthdaySeenKey(data) {
     return "cbmBirthday:" + ((data.user && data.user.userName) || "");
   }
   function shouldCelebrate(data) {
-    if (!data.birthday || !data.birthday.date || !window.CBMBirthday) return false;
-    try { return localStorage.getItem(birthdaySeenKey(data)) !== data.birthday.date; }
+    var b = data.birthdays;
+    if (!b || !b.date || !window.CBMBirthday) return false;
+    if (!b.own && !(b.others || []).length) return false;
+    try { return localStorage.getItem(birthdaySeenKey(data)) !== b.date; }
     catch (e) { return true; }   // no localStorage: greet rather than stay silent
   }
   function markCelebrated(data) {
-    try { localStorage.setItem(birthdaySeenKey(data), data.birthday.date); } catch (e) {}
+    try { localStorage.setItem(birthdaySeenKey(data), data.birthdays.date); } catch (e) {}
   }
 
   function enter(data) {
@@ -228,7 +231,11 @@
     if (!shouldCelebrate(data)) { go(); return; }
     markCelebrated(data);
     hide($("loginView"));          // don't leave the sign-in form behind the overlay
-    CBMBirthday.celebrate({ name: data.birthday.firstName, onDone: go });
+    CBMBirthday.celebrate({
+      own: data.birthdays.own ? data.birthdays.own.firstName : null,
+      others: (data.birthdays.others || []).map(function (p) { return p.name; }),
+      onDone: go,
+    });
   }
 
   $("loginForm").addEventListener("submit", async function (ev) {

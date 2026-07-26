@@ -1612,33 +1612,51 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-26)
 
-**v0.177.0** (2026-07-26, 1405 tests green, committed NOT pushed) — **a mentor
-signing in on their birthday gets an animated fireworks overlay + "Happy
-Birthday" before their screen** (Doug's request). The date is the mentor's own
-`Contact.cBirthday` (the field they maintain in `/mentorprofile` → Personal
-details) — **no new CRM field, no migration, no new setting**. New
-`portal/birthday.py` resolves it server-side from the session's user id (own
-`CMentorProfile` → `contactRecordId` → Contact, read AS THE USER) and compares
-month/day against **Cleveland's** calendar day (a 29 Feb birthday is greeted on
-28 Feb in common years). Mentor Team only; the day's answer is cached in the
-session (portal refreshes cost no CRM read, cache lapses at midnight);
-**best-effort end-to-end** — no profile / no Contact / empty birthday / any CRM
-failure = an ordinary sign-in, never a blocked front door. Frontend: the
-self-contained `portal/frontend/birthday.js`
-(`CBMBirthday.celebrate({name,onDone})`) — canvas fireworks (shell launch speed
-DERIVED from the target burst height, burst size scaled to the window, so it
-fills a 4K screen), dismissed by the Continue button / any click / Escape /
-9-second auto-dismiss, `onDone` exactly once; `prefers-reduced-motion` gets the
-same greeting without animation. Hooked into `enter()` so it precedes BOTH the
-home render AND a `?next=` redirect, and shown **once per birthday per browser**
-(localStorage stamped with the server's date). 20 new tests
-(`tests/test_portal_birthday.py`); overlay driven in a real browser (fireworks
-paint, all dismissal paths, once-per-day gate, reduced-motion variant, no
-console errors). **NOT yet driven live** — after deploy, sign in as a mentor
-whose `cBirthday` is today. Mechanics: CHANGELOG 0.177.0. **Version-race note:**
-built alongside the parallel 0.176.0 (portal attention badges), which shares
-`portal/router.py` + `portal/frontend/app.js`; this commit stages ONLY the
-birthday hunks in those two files.
+**v0.179.0** (2026-07-26, 1419 tests green, committed NOT pushed) — **birthdays
+are a CBM-wide moment** (Doug's follow-up to 0.177.0, below): the greeting is no
+longer Mentor-Team-only — **every CBM member** (= anyone with a
+`CMentorProfile`, whatever team) is greeted on their birthday — and every OTHER
+member signing in that day sees the same fireworks announcing **"Wish &lt;Full
+Name&gt; a Happy Birthday!"** so the organization knows. Rebuilt
+`portal/birthday.py` around a **roster**: all member profiles + their Contacts'
+`cBirthday` in two CRM calls (profile list, then ONE batched Contact `in`
+query), read **under the org-wide API key** and cached **process-wide for an
+hour** (directory mentor-availability precedent) — so a portal request now
+costs **no CRM call at all**, the answer can't vary by viewer ACL, and the
+0.177.0 per-session cache is gone. **Announced ≠ greeted, deliberately:**
+`ANNOUNCED_STATUSES` (Active/Approved/Provisional/Accepted-Provisional/Paused)
+keeps applicants and former members out of the org-wide announcement, while ANY
+member who can sign in still gets their own greeting; you are never asked to
+wish yourself well. Only NAMES are exposed — no date, year, or age. The overlay
+gained the announcement mode (`celebrate({own, others})`, name in gold inside
+the sentence, built from DOM nodes not markup), handles several people on one
+day ("Wish A, B and C…"), and adds an "Also celebrating today: …" line when it's
+your birthday AND a colleague's. Payload key `birthday` → **`birthdays` =
+`{date, own, others}`**. 33 tests; both modes driven in a real browser.
+**NOT yet driven live** — after deploy: a member whose `cBirthday` is today
+signs in (own greeting), then a second member (announcement naming the first);
+remember the roster caches for up to an hour. Mechanics: CHANGELOG 0.179.0.
+
+Before that: **v0.177.0** (2026-07-26, committed NOT pushed) — the first cut of
+the above: **a mentor signing in on their birthday gets an animated fireworks
+overlay + "Happy Birthday" before their screen** (Doug's request). The date is
+the member's own `Contact.cBirthday` (the field they maintain in
+`/mentorprofile` → Personal details) — **no new CRM field, no migration, no new
+setting** — matched month/day against **Cleveland's** calendar day (a 29 Feb
+birthday is greeted on 28 Feb in common years). **Best-effort end-to-end** — no
+profile / no Contact / empty birthday / any CRM failure = an ordinary sign-in,
+never a blocked front door. Frontend: the self-contained
+`portal/frontend/birthday.js` — canvas fireworks (shell launch speed DERIVED
+from the target burst height, burst size scaled to the window, so it fills a 4K
+screen), dismissed by the Continue button / any click / Escape / 9-second
+auto-dismiss, `onDone` exactly once; `prefers-reduced-motion` gets the same
+greeting without animation. Hooked into `enter()` so it precedes BOTH the home
+render AND a `?next=` redirect, and shown **once per day per browser**
+(localStorage stamped with the server's date). Mechanics: CHANGELOG 0.177.0.
+**Version-race note:** built alongside the parallel 0.176.0/0.178.0 (portal
+attention badges + the analytics panel), which share `portal/router.py` +
+`portal/frontend/app.js` + `CHANGELOG.md`; these commits stage ONLY the birthday
+hunks in the shared files.
 
 Before that: **v0.175.0** (2026-07-26, 1375 tests green, committed NOT pushed; a later
 frontend-only follow-up adds the splitter — see below) — **Mentor Profile page

@@ -159,6 +159,25 @@
   font-weight: 600;
   color: var(--cbm-gold);
 }
+/* Announcement mode ("Wish <name> a Happy Birthday!"): the whole sentence is
+   the headline, so it sets a little smaller than the own-birthday title and the
+   name carries the gold. */
+.bday__title--wish {
+  font-size: clamp(1.9rem, 4.6vw, 3.1rem);
+  line-height: 1.15;
+  max-width: 22ch;
+  margin: 0 auto;
+}
+.bday__name-inline { color: var(--cbm-gold); }
+
+/* "Also celebrating today: …" — the secondary line when it is your birthday
+   AND a colleague's. */
+.bday__also {
+  margin: -0.6rem 0 1.5rem;
+  font-size: var(--cbm-text-sm);
+  color: rgba(255, 255, 255, 0.7);
+}
+
 .bday__msg {
   margin: 1.1rem auto 1.6rem;
   max-width: 30rem;
