@@ -338,8 +338,43 @@ def test_customize_metric(monkeypatch):
         # a store/computed built-in isn't builder-expressible => 400
         assert c.post("/analytics/api/admin/metrics/customize/submissions_per_month").status_code == 400
         ml = c.get("/analytics/api/admin/metrics").json()
+        # a customized built-in moves into `metrics` (overridesBuiltin) and is no
+        # longer listed under `builtins`
         assert any(x["key"] == "active_mentors" and x.get("overridesBuiltin") for x in ml["metrics"])
-        assert [b for b in ml["builtins"] if b["key"] == "active_mentors"][0]["customized"] is True
+        assert not any(b["key"] == "active_mentors" for b in ml["builtins"])
+
+
+def test_delete_and_restore_builtin_metric(monkeypatch):
+    _authed(monkeypatch)
+    store = MemoryAnalyticsStore()
+    with TestClient(_app(monkeypatch, store=store, fake=FakeEspo())) as c:
+        # delete (suppress) a built-in => hidden from builtins + shows in hiddenBuiltins
+        assert c.post("/analytics/api/admin/metrics/active_mentors/suppress").json()["status"] == "deleted"
+        ml = c.get("/analytics/api/admin/metrics").json()
+        assert not any(b["key"] == "active_mentors" for b in ml["builtins"])
+        assert any(h["key"] == "active_mentors" for h in ml["hiddenBuiltins"])
+        # a deleted built-in no longer resolves on a page (panel is dropped)
+        c.post("/analytics/api/admin/pages/customize/system-overview")
+        body = c.get("/analytics/api/pages/system-overview").json()
+        assert not any(p["key"] == "active_mentors" for p in body["panels"])
+        # restore brings it back
+        assert c.post("/analytics/api/admin/metrics/active_mentors/restore").json()["status"] == "restored"
+        ml2 = c.get("/analytics/api/admin/metrics").json()
+        assert any(b["key"] == "active_mentors" for b in ml2["builtins"])
+        assert not ml2["hiddenBuiltins"]
+
+
+def test_delete_operational_builtin(monkeypatch):
+    """A built-in that reads app data isn't builder-editable, but is deletable."""
+    _authed(monkeypatch)
+    store = MemoryAnalyticsStore()
+    with TestClient(_app(monkeypatch, store=store, fake=FakeEspo())) as c:
+        ml = c.get("/analytics/api/admin/metrics").json()
+        op = [b for b in ml["builtins"] if b["key"] == "submissions_per_month"][0]
+        assert op["editable"] is False
+        assert c.post("/analytics/api/admin/metrics/submissions_per_month/suppress").status_code == 200
+        assert not any(b["key"] == "submissions_per_month"
+                       for b in c.get("/analytics/api/admin/metrics").json()["builtins"])
 
 
 def test_reset_customized_metric_even_when_used(monkeypatch):

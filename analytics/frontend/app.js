@@ -159,27 +159,45 @@
     var table = h("table", { class: "an__mtable" }, h("thead", {}, h("tr", {},
       h("th", {}, "Name"), h("th", {}, "Key"), h("th", {}, "Shape"), h("th", {}, "Used by"), h("th", {}, ""))));
     var tb = h("tbody");
-    var customKeys = {};
-    (data.metrics || []).forEach(function (m) { customKeys[m.key] = 1; });
+    // Authored + customized-built-in metrics: Edit + Delete (a customized
+    // built-in also offers "Reset to default").
     (data.metrics || []).forEach(function (m) {
-      var name = m.overridesBuiltin ? h("span", {}, m.name, h("span", { class: "an__tag" }, "customized")) : m.name;
+      var name = m.overridesBuiltin ? h("span", {}, m.name, h("span", { class: "an__tag" }, "built-in")) : m.name;
       var actions = [h("button", { class: "an__link-btn", onClick: function () { openMetricEditor(m); } }, "Edit")];
-      if (m.overridesBuiltin) actions.push(h("button", { class: "an__link-btn an__danger", onClick: function () { resetMetric(m); } }, "Reset to default"));
-      else actions.push(h("button", { class: "an__link-btn an__danger", onClick: function () { deleteMetric(m); } }, "Delete"));
+      if (m.overridesBuiltin) {
+        actions.push(h("button", { class: "an__link-btn", onClick: function () { resetMetric(m); } }, "Reset to default"));
+        actions.push(h("button", { class: "an__link-btn an__danger", onClick: function () { suppressBuiltin(m.key, m.name); } }, "Delete"));
+      } else {
+        actions.push(h("button", { class: "an__link-btn an__danger", onClick: function () { deleteMetric(m); } }, "Delete"));
+      }
       tb.appendChild(h("tr", {},
         h("td", {}, name), h("td", { class: "an__mono" }, m.key), h("td", {}, m.result_shape),
         h("td", {}, (m.usedBy || []).join(", ") || "—"),
         h("td", { class: "an__row-actions" }, actions)));
     });
+    // Built-in metrics behave like the rest: Edit (if it fits the builder) +
+    // Delete. A built-in that reads the app's operational data can't be redefined
+    // in the builder — it shows a note and can still be deleted.
     (data.builtins || []).forEach(function (m) {
-      if (customKeys[m.key]) return;  // represented by its customized DB row above
-      var actions = [h("span", { class: "an__tag" }, "built-in")];
-      if (m.customizable) actions.push(h("button", { class: "an__link-btn", onClick: function () { customizeMetric(m); } }, "Customize"));
-      tb.appendChild(h("tr", { class: "an__builtin" },
-        h("td", {}, m.name), h("td", { class: "an__mono" }, m.key), h("td", {}, m.result_shape),
+      var actions = [];
+      if (m.editable) actions.push(h("button", { class: "an__link-btn", onClick: function () { customizeMetric(m); } }, "Edit"));
+      else actions.push(h("span", { class: "an__hint" }, "reads app data"));
+      actions.push(h("button", { class: "an__link-btn an__danger", onClick: function () { suppressBuiltin(m.key, m.name); } }, "Delete"));
+      tb.appendChild(h("tr", {},
+        h("td", {}, h("span", {}, m.name, h("span", { class: "an__tag" }, "built-in"))),
+        h("td", { class: "an__mono" }, m.key), h("td", {}, m.result_shape),
         h("td", {}, "—"), h("td", { class: "an__row-actions" }, actions)));
     });
     table.appendChild(tb); host.appendChild(table);
+    // Restore deleted built-ins.
+    var hidden = data.hiddenBuiltins || [];
+    if (hidden.length) {
+      var box = h("div", { class: "an__hidden" }, h("span", { class: "an__hint" }, "Deleted built-ins:"));
+      hidden.forEach(function (m) {
+        box.appendChild(h("button", { class: "an__link-btn", onClick: function () { restoreBuiltin(m.key); } }, "Restore " + m.name));
+      });
+      host.appendChild(box);
+    }
   }
 
   async function deleteMetric(m) {
@@ -188,7 +206,7 @@
     catch (e) { alert(e.message); }
   }
   async function resetMetric(m) {
-    if (!confirm('Reset “' + m.name + '” to its built-in default? Your customizations will be discarded.')) return;
+    if (!confirm('Reset “' + m.name + '” to its built-in default? Your changes will be discarded.')) return;
     try { await api("/admin/metrics/" + m.id, { method: "DELETE" }); loadMetrics(); }
     catch (e) { alert(e.message); }
   }
@@ -197,6 +215,15 @@
       var r = await api("/admin/metrics/customize/" + encodeURIComponent(m.key), { method: "POST" });
       openMetricEditor(r.metric);
     } catch (e) { alert(e.message); }
+  }
+  async function suppressBuiltin(key, name) {
+    if (!confirm('Delete the built-in metric “' + name + '”? It will be hidden from the library and any dashboards (you can restore it later).')) return;
+    try { await api("/admin/metrics/" + encodeURIComponent(key) + "/suppress", { method: "POST" }); loadMetrics(); }
+    catch (e) { alert(e.message); }
+  }
+  async function restoreBuiltin(key) {
+    try { await api("/admin/metrics/" + encodeURIComponent(key) + "/restore", { method: "POST" }); loadMetrics(); }
+    catch (e) { alert(e.message); }
   }
 
   // --- metric editor ---

@@ -44,15 +44,22 @@ async def refresh_system_metrics(settings: Settings) -> dict[str, Any]:
 
     sub_store = make_store(settings)
 
-    # Metric lookup spanning code-registered + authored (DB) metrics.
+    # Metric lookup spanning code-registered + authored (DB) metrics; a
+    # source='suppressed' row hides a deleted built-in.
     db_specs: dict = {}
+    suppressed: set = set()
     try:
         for row in await store.list_metrics():
-            db_specs[row["key"]] = builder_spec(row)
+            if row.get("source") == "suppressed":
+                suppressed.add(row["key"])
+            else:
+                db_specs[row["key"]] = builder_spec(row)
     except Exception as exc:  # noqa: BLE001 — fall back to code metrics only
         log.warning("analytics warm: list_metrics failed: %s", exc)
 
     def lookup(key):
+        if key in suppressed:
+            return None
         return db_specs.get(key) or get_metric(key)
 
     # System pages = code-seeded + authored.

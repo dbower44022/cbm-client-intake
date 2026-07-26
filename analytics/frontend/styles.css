@@ -67,6 +67,7 @@ body {
 .an__mtoolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; }
 .an__mtoolbar h2 { margin: 0; font-size: 1.1rem; color: var(--cbm-navy, #00205B); }
 .an__hint { color: var(--cbm-slate-700, #667); font-size: 0.9rem; }
+.an__hidden { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin-top: 0.75rem; }
 
 .an__mtable { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--cbm-border, #d8dee6);
   border-radius: var(--cbm-radius, 10px); overflow: hidden; font-size: 0.9rem; }

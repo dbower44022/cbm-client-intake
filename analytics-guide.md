@@ -146,11 +146,15 @@ pages.
 metric that's used by a page can't be deleted until you remove it from that page
 (the app tells you which page).
 
-**Built-in metrics** ship with the app and are shown with a **built-in** tag. Most
-carry a **Customize** link — clicking it makes an editable copy you can change like
-any metric; a **Reset to default** link then appears to revert it. (A few built-ins
-read the app's own operational data and can't be edited in the builder; those have
-no Customize link, but you can still place them on pages.)
+**Built-in metrics** ship with the app (marked with a small **built-in** tag) but
+behave like any other metric: they have the same **Edit** and **Delete** links.
+Editing one makes an editable copy under the hood, so a **Reset to default** link
+also appears to restore the shipped version. **Deleting** a built-in hides it from
+the library and every dashboard; deleted built-ins are listed under **"Deleted
+built-ins"** at the bottom with a **Restore** link, so nothing is lost. (The few
+built-ins that read the app's own operational data — submissions per month, the
+submission queue, contributions per month — can be deleted/restored but can't be
+re-defined in the visual builder, so they show "reads app data" instead of Edit.)
 
 ### 5.2 Composing a page
 

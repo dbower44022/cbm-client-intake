@@ -4,6 +4,28 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.171.0] — 2026-07-26
+
+**feat(analytics): built-in metrics are now Edit/Delete like user metrics**
+(Doug: "the admin should be able to edit or delete built-in metrics — they should
+not be any different"). The two-tier "Customize / built-in" UX is gone: every
+built-in shows plain **Edit** and **Delete**.
+
+- **Edit** a built-in → materializes an editable copy that overrides it (same
+  key), opening the normal editor. A **Reset to default** link then reverts it.
+- **Delete** a built-in → hidden everywhere (library, pickers, dashboards) via a
+  ``source='suppressed'`` marker row (built-ins can't be removed from code; no
+  migration — reuses the existing column). **Deleted built-ins list at the bottom
+  with a Restore link.** The metric resolver (`_metric_lookup`, viewer + worker)
+  and the metric list honor suppression; a page panel whose metric was deleted is
+  now **dropped cleanly** instead of showing a broken tile
+  (`service.render_page`). New endpoints
+  `POST /admin/metrics/{key}/{suppress,restore}`.
+- The 3 **operational** built-ins (submissions/queue/contributions) read the app's
+  own data and can't be redefined in the visual builder — they show "reads app
+  data" instead of Edit, but are still deletable/restorable.
+- 3 new tests; full suite green (1356). Guide §5.1 updated.
+
 ## [0.170.0] — 2026-07-26
 
 **feat(events): Events & Webinars — Phase 5 (the `/events` staff app)**. Gated

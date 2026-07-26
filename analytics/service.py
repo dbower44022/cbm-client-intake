@@ -255,19 +255,9 @@ async def render_page(
     async def _one(panel):
         spec = lookup(panel.metric_key)
         if spec is None:
-            return {
-                "key": panel.key,
-                "title": panel.title,
-                "viz": panel.viz,
-                "width": panel.width,
-                "config": panel.config,
-                "result": {
-                    "shape": panel.viz,
-                    "data": None,
-                    "error": f"Unknown metric {panel.metric_key!r}.",
-                    "cached": False,
-                },
-            }
+            # The metric was deleted/hidden (or never existed) — drop the panel
+            # cleanly rather than showing a broken tile.
+            return None
         ctx = MetricContext(
             settings=settings,
             espo=espo,
@@ -286,7 +276,7 @@ async def render_page(
             "result": result,
         }
 
-    panels = await asyncio.gather(*(_one(p) for p in visible))
+    panels = [p for p in await asyncio.gather(*(_one(p) for p in visible)) if p is not None]
     return {
         "page": {
             "key": page.key,

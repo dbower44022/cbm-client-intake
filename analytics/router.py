@@ -121,22 +121,31 @@ def _sub_store(request: Request):
     return getattr(request.app.state, "submission_store", None)
 
 
-async def _db_metric_specs(store) -> dict[str, MetricSpec]:
-    """All DB (builder) metrics as {key: MetricSpec}. Empty without a store."""
-    if store is None:
-        return {}
-    try:
-        rows = await store.list_metrics()
-    except Exception as exc:  # noqa: BLE001 — a store hiccup falls back to code metrics
-        log.warning("analytics: list_metrics failed: %s", exc)
-        return {}
-    return {r["key"]: builder_spec(r) for r in rows}
+SUPPRESSED = "suppressed"  # a DB metric row with source=SUPPRESSED hides a built-in
 
 
-def _make_lookup(db_specs: dict[str, MetricSpec]):
-    """DB metrics take precedence, falling back to the code registry."""
+async def _metric_lookup(store):
+    """A ``key -> MetricSpec`` resolver spanning authored (DB) + built-in (code)
+    metrics. A DB metric OVERRIDES a built-in of the same key (edit); a DB row
+    with ``source='suppressed'`` HIDES a built-in (delete). Falls back to the
+    code registry. Built without a store => code registry only."""
+    db_specs: dict[str, MetricSpec] = {}
+    suppressed: set = set()
+    if store is not None:
+        try:
+            rows = await store.list_metrics()
+        except Exception as exc:  # noqa: BLE001 — a store hiccup falls back to code metrics
+            log.warning("analytics: list_metrics failed: %s", exc)
+            rows = []
+        for r in rows:
+            if r.get("source") == SUPPRESSED:
+                suppressed.add(r["key"])
+            else:
+                db_specs[r["key"]] = builder_spec(r)
 
     def lookup(key: str) -> Optional[MetricSpec]:
+        if key in suppressed:
+            return None
         return db_specs.get(key) or get_metric(key)
 
     return lookup
@@ -251,7 +260,7 @@ async def _render(
         range_key or page.default_range, custom_from=frm, custom_to=to
     )
     espo = _system_client(settings)
-    lookup = _make_lookup(await _db_metric_specs(store))
+    lookup = await _metric_lookup(store)
     try:
         if force and store is not None:
             await invalidate_page_cache(
@@ -292,7 +301,7 @@ async def portal_dashboard(request: Request) -> dict:
         return {"available": False}
     page = candidates[0]
     time_range = build_time_range(page.default_range)
-    lookup = _make_lookup(await _db_metric_specs(store))
+    lookup = await _metric_lookup(store)
     body = await render_page(
         page, user=user, settings=settings, espo=_system_client(settings),
         store=store, time_range=time_range, metric_lookup=lookup,
@@ -362,7 +371,7 @@ async def record_view(
         return {"available": False, "record": record, "pages": []}
     selected = next((p for p in pages if p.key == page_key), pages[0])
     time_range = build_time_range(range_key or selected.default_range)
-    lookup = _make_lookup(await _db_metric_specs(store))
+    lookup = await _metric_lookup(store)
     ref = RecordRef(entity=entity, record_id=record_id, value=record_id)
     body = await render_page(
         selected, user=user, settings=settings, espo=client, store=store,
@@ -536,26 +545,34 @@ def _metric_values_from(body: MetricIn) -> dict:
 async def admin_list_metrics(request: Request) -> dict:
     _admin(request)
     store = _admin_store(request)
-    metrics = await store.list_metrics()
+    rows = await store.list_metrics()
+    suppressed = {r["key"] for r in rows if r.get("source") == SUPPRESSED}
+    metrics = [r for r in rows if r.get("source") != SUPPRESSED]
     db_keys = {m["key"] for m in metrics}
-    # Annotate each with how many pages use it, and whether it customizes a
-    # built-in (so the UI shows "Reset to default" rather than "Delete").
+    # Annotate each with how many pages use it, and whether it overrides a
+    # built-in (so the UI can offer a "Reset to default" alongside Edit/Delete).
     for m in metrics:
         m["usedBy"] = await store.metric_key_in_use(m["key"])
         m["overridesBuiltin"] = m["key"] in METRIC_REGISTRY
-    # Built-in metrics are shown so authors can place/customize them. A built-in
-    # is `customizable` when it has a builder definition (its logic fits the
-    # builder); `customized` means a DB override already exists.
+    # Built-in metrics behave like user metrics: `editable` (fits the builder)
+    # and always deletable. A `customized`/suppressed built-in is represented by
+    # its DB row / hidden here.
     code = [
         {"key": s.key, "name": s.name, "result_shape": s.shape,
          "default_viz": s.default_viz, "applies_to": list(s.applies_to),
          "source": "code", "builtin": True,
-         "customizable": s.builder_definition is not None,
+         "editable": s.builder_definition is not None,
          "customized": s.key in db_keys}
         for s in METRIC_REGISTRY.values()
+        if s.key not in db_keys and s.key not in suppressed
     ]
-    return {"metrics": metrics, "builtins": code, "recordTypes": [
-        {"entity": e, "label": lbl} for e, lbl in BUILDER_ENTITIES]}
+    # Deleted (hidden) built-ins, so an admin can restore one.
+    hidden = [
+        {"key": k, "name": (get_metric(k).name if get_metric(k) else k)}
+        for k in sorted(suppressed) if get_metric(k) is not None
+    ]
+    return {"metrics": metrics, "builtins": code, "hiddenBuiltins": hidden,
+            "recordTypes": [{"entity": e, "label": lbl} for e, lbl in BUILDER_ENTITIES]}
 
 
 @router.post("/admin/metrics")
@@ -678,8 +695,7 @@ async def _page_values_from(body: PageIn, store) -> dict:
     scope = body.scope or "system"
     if scope != "system" and scope not in _BUILDER_ENTITY_SET:
         raise HTTPException(status_code=422, detail=f"Unknown page scope {scope!r}.")
-    db_specs = await _db_metric_specs(store)
-    lookup = _make_lookup(db_specs)
+    lookup = await _metric_lookup(store)
     panels = []
     for p in body.panels:
         spec = lookup(p.metric_key)
@@ -842,3 +858,43 @@ async def customize_metric(key: str, request: Request) -> dict:
     row = await store.create_metric(values)
     await _log_authoring(user, action_log.ACT_ANALYTICS_METRIC_SAVED, key, f"Customized built-in metric “{spec.name}”")
     return {"metric": row}
+
+
+@router.post("/admin/metrics/{key}/suppress")
+async def suppress_metric(key: str, request: Request) -> dict:
+    """Delete (hide) a built-in metric. It can't be removed from code, so a
+    ``source='suppressed'`` marker row hides it everywhere (library, pickers,
+    dashboards) and drops any customized override. Restorable."""
+    user = _admin(request)
+    store = _admin_store(request)
+    spec = get_metric(key)
+    if spec is None:
+        raise HTTPException(status_code=404, detail="Built-in metric not found.")
+    existing = await store.get_metric_by_key(key)
+    if existing is not None:
+        if existing.get("source") == SUPPRESSED:
+            return {"status": "deleted"}
+        await store.delete_metric(existing["id"])  # drop the override first
+    await store.create_metric({
+        "key": key, "name": (existing or {}).get("name") or spec.name,
+        "source": SUPPRESSED, "result_shape": "scalar", "default_viz": "stat",
+        "entity": None, "definition": {}, "applies_to": ["system"],
+        "context_param": None, "cache_mode": "cached", "refresh_seconds": 0,
+        "time_aware": False,
+        "created_by": user["userName"], "updated_by": user["userName"],
+    })
+    await _log_authoring(user, action_log.ACT_ANALYTICS_METRIC_DELETED, key, f"Deleted built-in metric “{spec.name}”")
+    return {"status": "deleted"}
+
+
+@router.post("/admin/metrics/{key}/restore")
+async def restore_metric(key: str, request: Request) -> dict:
+    """Un-hide a deleted built-in metric (removes the suppression marker)."""
+    user = _admin(request)
+    store = _admin_store(request)
+    row = await store.get_metric_by_key(key)
+    if row is None or row.get("source") != SUPPRESSED:
+        raise HTTPException(status_code=404, detail="No hidden built-in with that key.")
+    await store.delete_metric(row["id"])
+    await _log_authoring(user, action_log.ACT_ANALYTICS_METRIC_SAVED, key, f"Restored built-in metric “{key}”")
+    return {"status": "restored"}
