@@ -4,6 +4,18 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.178.0] — 2026-07-26
+
+**feat(analytics): "Items awaiting processing" ships on the System Analytics
+page out of the box** (Doug's ruling — follow-up to 0.176.0, which registered
+the metric in the library only). The seeded `system-overview` page gains the
+panel (table, width 6, next to "Oldest unassigned engagements";
+`analytics/dashboard.py`). Since that page is also the portal-home dashboard,
+analytics viewers see the work queue right on the portal too. Note: a
+CUSTOMIZED System Analytics page (a DB override created via Manage → Pages →
+Edit/customize) keeps its own panel list and won't pick this up — add the
+panel there by hand, or Reset the page to default. One new test.
+
 ## [0.177.0] — 2026-07-26
 
 **feat(portal): a mentor signing in on their birthday gets fireworks and

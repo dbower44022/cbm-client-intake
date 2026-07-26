@@ -196,6 +196,9 @@ register_page(
             PanelSpec("engagements_per_month", "New client engagements per month", "engagements_per_month", VIZ_LINE, width=6),
             PanelSpec("engagements_by_status", "Engagements by status", "engagements_by_status", VIZ_BAR, width=6),
             PanelSpec("oldest_unassigned", "Oldest unassigned engagements", "oldest_unassigned_engagements", VIZ_TABLE, width=6),
+            # The cross-app work queue (metric registered in analytics.computed;
+            # seeded here out of the box — Doug's ruling 2026-07-26).
+            PanelSpec("attention_queue", "Items awaiting processing", "attention_queue", VIZ_TABLE, width=6),
         ],
     )
 )

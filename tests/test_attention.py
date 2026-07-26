@@ -234,6 +234,18 @@ async def test_attention_queue_metric_survives_a_failing_source():
     assert "Client awaiting mentor" in types  # the rest still render
 
 
+def test_attention_queue_seeded_on_system_page():
+    """The panel ships on the System Analytics page out of the box (Doug's
+    ruling 2026-07-26) — no Manage-→-Pages step needed to see it."""
+    import analytics  # noqa: F401 — registers metrics + the seeded page
+    from analytics.registry import get_metric, get_page
+
+    page = get_page("system-overview")
+    seeded = [p for p in page.panels if p.metric_key == "attention_queue"]
+    assert seeded and seeded[0].viz == "table"
+    assert get_metric("attention_queue") is not None
+
+
 @pytest.mark.anyio
 async def test_attention_queue_metric_unavailable_when_everything_fails():
     from analytics.computed import _attention_queue
