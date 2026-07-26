@@ -5145,6 +5145,16 @@ the synced lists were verified identical on crm-test and prod.
   three-status-layers explanation, and where each intake kind gets worked —
   recording the ruling that the Partner/Funder Management grids ARE the
   long-term partner/sponsor review path (no dedicated approval queue).
+- `event-administration.md` — plain-language user guide for the `/events`
+  Event Administration tool (the workshop/webinar programme): the event list,
+  creating events, the **Publish to website** gate that separates a public
+  workshop from an internal calendar entry, Zoom provisioning, registrations,
+  capacity/waitlist, door check-in, recordings, and an honest list of what
+  isn't built yet.
+- `EVENTS-SETUP.md` — activation + testing runbook for Events: the flags, the
+  CRM role grants, a step-by-step **20-minute test script** for crm-test, the
+  Zoom Server-to-Server setup, the production sequence (schema migration
+  first), troubleshooting, and known gaps.
 - `mentor-administration.md` — functional reference for the `/mentoradmin` tool:
   overall functionality + the **complete-record requirements** (the completeness
   rules, in plain language).
