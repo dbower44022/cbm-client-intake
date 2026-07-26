@@ -45,16 +45,22 @@ digest with working deep links. The activation note in §7 gains
 0014 on the managed DB; **View original** as a non-admin mentor (real
 service-delegation fetch of Mindy's message, formatting + quoted chain
 intact, provenance-logged); **Open in Gmail** hrefs = viewer mailbox +
-`rfc822msgid:`; outbound-body **repair applied on crm-test** (4 rows;
-PROD run pending). Two fixes came out of the verification (v0.132.1,
+`rfc822msgid:`; outbound-body **repair applied on crm-test** (4 rows) and
+**PROD dry-run ran clean 2026-07-25** — 378/379 outbound bodies already
+correct, the 1 "error" was the leftover `ZZTEST-GMAILPROD` probe
+CCommunication `6a568a35e8e563564` (no gmailMessageId → correctly skipped;
+already on the prod cleanup list), so **no prod repair was needed**. The
+**bounce send → red card/chip leg also passed live on crm-test** (DSN
+ingested onto the Tester Tommy engagement, red "delivery failed" chip +
+card confirmed). Two fixes came out of the verification (v0.132.1,
 committed): bounces were triage-junked before storage (§3.4 could never
 fire — the §3.4 premise here was wrong), and the awaiting/unread
 enrichment 403'd on EspoCRM's 200-row page cap (the awaiting chip had
-NEVER worked live). **Remaining §3.5 legs (after 0.132.1 deploys):** the
-inbound PDF + inline-logo email (needs an external send, e.g. from
-james@agapew8loss.com → doug.bower@cbmentors.org; ZZTEST contacts are
-staged on the Tester Tommy engagement), the same-PDF duplicate re-send,
-and the bounce send → red card/chip. Phases 2–3 not started.**
+NEVER worked live). **Remaining §3.5 leg:** the inbound PDF + inline-logo
+email (needs an external send, e.g. from james@agapew8loss.com →
+doug.bower@cbmentors.org; ZZTEST contacts are staged on the Tester Tommy
+engagement) and the same-PDF duplicate re-send. Phases 2–3 built
+(v0.157.0 / v0.158.0), not yet driven live.**
 Originally authored 2026-07-21 from Doug's
 priority rulings this session (recorded in §2) after a full review of the
 email system (docs + code sweep of `core/gmail.py`, `core/email_clean.py`,
