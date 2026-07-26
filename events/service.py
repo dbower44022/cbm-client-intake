@@ -455,3 +455,113 @@ async def upcoming_payload(
             public_event(event, base_url=base_url, seats_left=seats_left, now=now)
         )
     return payload
+
+
+# --- cancellation + waitlist promotion (Phase 3) ---------------------------
+
+
+async def cancel_registration(
+    client: EspoApi, registration_id: str, *, settings: Any = None
+) -> dict[str, Any]:
+    """Cancel one registration from its self-service link (EV-16).
+
+    Frees the seat, removes the person from Zoom, and promotes the
+    longest-waiting person off the waitlist. Every downstream step is
+    best-effort: the cancellation itself must succeed even if Zoom is down,
+    because the registrant has been told it worked.
+    """
+    try:
+        registration = await client.get(cfg.REGISTRATION, registration_id)
+    except EspoError:
+        return {"ok": False, "reason": "not found"}
+    if not registration:
+        return {"ok": False, "reason": "not found"}
+
+    if registration.get("attendanceStatus") == cfg.REG_CANCELLED:
+        # Clicking the link twice is not an error.
+        return {"ok": True, "alreadyCancelled": True,
+                "message": "Your registration was already cancelled."}
+
+    await client.update(cfg.REGISTRATION, registration_id, {
+        "attendanceStatus": cfg.REG_CANCELLED,
+        "cancellationDate": to_crm_datetime(datetime.now(timezone.utc)),
+        "cancellationReason": "Cancelled by the registrant",
+    })
+
+    await _remove_from_zoom(client, registration, settings)
+
+    promoted = None
+    event_id = registration.get("eventId")
+    if event_id:
+        promoted = await _promote_from_waitlist(client, event_id, settings)
+
+    return {
+        "ok": True,
+        "message": "Your registration has been cancelled.",
+        "promoted": bool(promoted),
+    }
+
+
+async def _remove_from_zoom(
+    client: EspoApi, registration: dict[str, Any], settings: Any
+) -> None:
+    """Free the Zoom seat too. Best-effort — a stale Zoom registrant is far
+    less harmful than a failed cancellation the user was told had worked."""
+    registrant_id = (registration.get("zoomRegistrantId") or "").strip()
+    if not registrant_id or settings is None:
+        return
+    try:
+        from core.zoom import make_client
+
+        api = make_client(settings)
+        if api is None:
+            return
+        # The webinar id lives on the EVENT — a registration only knows its own
+        # id, so it has to be fetched (reading it off the registration returns
+        # nothing and the Zoom seat would silently never be freed).
+        event = await client.get(cfg.EVENT, registration.get("eventId") or "")
+        webinar_id = ((event or {}).get("zoomWebinarId") or "").strip()
+        if not webinar_id:
+            return
+        await api.cancel_registrant(
+            webinar_id, registrant_id=registrant_id,
+            email=registration.get("email") or "",
+        )
+    except Exception as exc:  # noqa: BLE001
+        log.warning("registration %s: could not cancel the Zoom registrant: %s",
+                    registration.get("id"), exc)
+
+
+async def _promote_from_waitlist(
+    client: EspoApi, event_id: str, settings: Any
+) -> Optional[dict[str, Any]]:
+    """Move the longest-waiting person into the freed seat (EV-15).
+
+    Returns the promoted row, or None when there is no waitlist or no room.
+    Best-effort: a failure leaves the waitlist intact for the next attempt
+    rather than half-promoting someone.
+    """
+    try:
+        event = await client.get(cfg.EVENT, event_id)
+        capacity = (event or {}).get("venueCapacity")
+        if not capacity or capacity <= 0:
+            return None  # unlimited: nobody is ever waitlisted
+        rows = await list_registrations(client, event_id)
+        taken = sum(1 for r in rows if r.get("attendanceStatus") in cfg.SEAT_TAKING)
+        if taken >= capacity:
+            return None
+        waiting = sorted(
+            (r for r in rows if r.get("attendanceStatus") == cfg.REG_WAITLISTED),
+            key=lambda r: r.get("registrationDate") or r.get("createdAt") or "",
+        )
+        if not waiting:
+            return None
+        winner = waiting[0]
+        await client.update(cfg.REGISTRATION, winner["id"],
+                            {"attendanceStatus": cfg.REG_REGISTERED})
+        log.info("event %s: promoted registration %s off the waitlist",
+                 event_id, winner["id"])
+        return winner
+    except Exception as exc:  # noqa: BLE001
+        log.warning("event %s: waitlist promotion failed: %s", event_id, exc)
+        return None

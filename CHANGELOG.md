@@ -4,6 +4,68 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.167.0] — 2026-07-25
+
+**feat(events): Events & Webinars — Phase 3 (public registration into the CRM)**.
+Gated OFF by `EVENTS_ENABLED` + `EVENTS_PUBLIC_API`; no migration. **This is the
+phase that ends the lead leak** — today every registrant lands in Zoom and a
+Google Sheet and the CRM never hears about them.
+
+- **`forms/event_registration/`** registered as a form kind, so registration
+  inherits the whole V2 pipeline for free: durable capture BEFORE any external
+  call, idempotency by submission token, retries with backoff, resumable
+  delivery, and Submission Admin visibility when something goes wrong.
+  Registered as **delivery-only** — the public entry point is
+  `POST /api/events/{slug}/register`, which needs the event slug from the URL.
+- **`_process_submission`** extracted from `_make_handler` in `core/app.py` so
+  the Events register route reuses that machinery instead of reimplementing
+  capture, the honeypot, async hand-off and the audit log. Behaviour of the five
+  existing forms is unchanged.
+- **Pre-flight refusals (EV-14)**: the register endpoint checks the event BEFORE
+  capture and returns a readable 409 for unknown/unpublished/cancelled/closed.
+  This has to happen up front — with async delivery on, the HTTP response is
+  sent long before the orchestrator runs, so a refusal raised at delivery time
+  would never reach the visitor. Being **full** is deliberately not a refusal:
+  it means waitlisted.
+- **The orchestrator's data rules**, each tested: an **existing Contact keeps its
+  type** (D-09 — a client or mentor who attends a webinar is never relabelled
+  "Prospect"; `cContactType` is excluded from the null-fill); **consent is only
+  ever written true** (EV-12 — the opt-in keys are omitted entirely when the box
+  is unticked, so a prior opt-out can't be flipped); **one registration per email
+  per event** (EV-13 — a repeat submit updates and re-issues rather than
+  duplicating); attendance history is never overwritten by a repeat submit.
+- **Capacity evaluated at delivery, not accept** (EV-15) — the last seat may have
+  gone while the submission sat in the queue. Over capacity ⇒ Waitlisted, and a
+  waitlisted person is **never** pushed to Zoom (a join link they can't use would
+  be a lie).
+- **Self-service cancel (EV-16)** via `POST /api/events/registrations/{token}/cancel`:
+  the token is an **HMAC of the registration id** keyed by the app secret
+  (`events/tokens.py`) — derived, not stored, so there is no table and no
+  expiry to manage, and rotating the secret invalidates every outstanding link.
+  Constant-time compare, and every failure mode returns the same message so the
+  endpoint can't be used to probe which ids exist. Cancelling frees the seat,
+  removes the Zoom registrant, and **promotes the longest-waiting person** off
+  the waitlist.
+- The dynamic register path is covered by the body cap and per-IP rate limit —
+  it would otherwise have been the one public POST with neither.
+- `ResumableClient` gained `list`/`get` pass-throughs (naturally idempotent
+  reads, like the existing `find_one`).
+
+**Verified:** 34 new tests (full suite 1332 green) and driven **LIVE against
+crm-test** end to end: register → Contact created as Prospect with consent, zip
+and E.164 phone, plus a linked registration; same email again → updated, same
+id, no duplicate; capacity 2 → third person Waitlisted; cancel → seat freed and
+the waitlisted person **auto-promoted to Registered**; forged token → 404;
+unknown and cancelled events → readable 409s. All test records deleted, no
+residue.
+
+**A bug only the live run could find:** `registrationSource` was being written
+as `"Website"`, which is not in the CRM enum (the public-channel value is
+`"Online"`) — EspoCRM 400s the whole create. Fixed, the real values are now
+named in `events/config.py`, and the handoff records it so nobody re-invents
+the value. Unit tests with a fake CRM cannot catch enum mismatches; this is
+what live verification is for.
+
 ## [0.166.0] — 2026-07-25
 
 **feat(analytics): relative-date filters in the metric builder** (Doug's

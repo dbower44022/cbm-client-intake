@@ -9,7 +9,9 @@ design, and the verification gates. Requirement ids (`EV-nn`) and decision ids
 off by `EVENTS_ENABLED` + `EVENTS_PUBLIC_API`.
 **Phase 2 BUILT 2026-07-25 (v0.165.0)** — gated off by `ZOOM_EVENTS`; unit-tested
 against a stubbed Zoom, NOT yet driven against the real account (the OAuth app
-does not exist yet). Phases 3-6 remain.
+does not exist yet).
+**Phase 3 BUILT and live-verified on crm-test, 2026-07-25 (v0.166.0)** — the
+lead leak is closed. Phases 4-6 remain.
 
 ---
 
@@ -151,7 +153,7 @@ a registrant receives exactly ONE confirmation and no Zoom reminder.
 
 ---
 
-## Phase 3 — Public registration write path
+## Phase 3 — Public registration write path  ✅ DONE (v0.166.0)
 
 **Build**
 - `forms/event_registration/` — schemas + orchestrator, registered in the form
@@ -173,9 +175,14 @@ a registrant receives exactly ONE confirmation and no Zoom reminder.
 consent never flipped false, existing-Contact type preserved (D-09), honeypot
 and rate limit, resumability (half-delivered → converges to one clean set).
 
-**Verify live (crm-test):** register via the API → Contact + registration in the
-CRM, registrant in Zoom, Zoom confirmation email received; register again with
-the same email → updated, not duplicated; cancel via the link → gone from Zoom.
+**Verify live (crm-test): ✅ PASSED 2026-07-25** for everything not needing Zoom
+— register → Contact (Prospect, consent, zip, E.164 phone) + linked
+registration; same email again → updated, same id; capacity 2 → third person
+Waitlisted; cancel → seat freed and the waitlisted person auto-promoted; forged
+token → 404; unknown/cancelled event → readable 409. Records cleaned up.
+☐ **Still to verify when Zoom credentials exist:** registrant appears in Zoom,
+the confirmation email arrives with a working join link, and a cancel removes
+them from Zoom.
 
 ---
 

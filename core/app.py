@@ -92,159 +92,176 @@ def _make_handler(
                 status_code=422,
                 content={"detail": "The request body is not valid JSON."},
             )
-        try:
-            submission = spec.submission_model.model_validate(body)
-        except ValidationError as exc:
-            # exc.errors() can carry a raw exception in ctx (non-serializable);
-            # project to a JSON-safe shape.
-            errors = [
-                {"loc": list(e["loc"]), "msg": e["msg"], "type": e["type"]}
-                for e in exc.errors()
-            ]
-            # ``detail`` is a human-readable string naming each failing field
-            # and why — the frontends display it verbatim, so the user (and
-            # whoever they screenshot it to) sees the exact reason, never a
-            # generic "check your entries". The structured list rides along
-            # as ``errors`` for programmatic clients.
-            detail = "; ".join(
-                f"{'.'.join(str(p) for p in e['loc']) or 'submission'}: {e['msg']}"
-                for e in errors
-            )
-            # Log it too — otherwise a validation failure (e.g. a form/schema
-            # mismatch after CRM enum drift) is invisible in the run logs.
-            log.warning("%s validation failed: %s", spec.slug, detail)
-            return JSONResponse(
-                status_code=422, content={"detail": detail, "errors": errors}
-            )
-
-        client = _make_client(settings)
-        is_honeypot = bool(submission.company_url.strip())
-
-        # V2 Phase 0: durably capture the submission BEFORE any CRM work. This is
-        # also the durable idempotency check (replacing the in-memory dict). A
-        # repeat token short-circuits here without touching the CRM again.
-        captured = None
-        if store is not None:
-            payload = json.loads(submission.model_dump_json())
-            payload["company_url"] = ""  # never persist the honeypot value
-            try:
-                captured = await store.capture(
-                    spec.slug, submission.submission_token, payload,
-                    status=store_mod.STATUS_HELD if is_honeypot else store_mod.STATUS_PENDING,
-                )
-            except Exception as exc:  # noqa: BLE001 — DB outage at accept (P2)
-                # The log line is the submission's ONLY copy right now
-                # (storeless-style dump), and the user gets a controlled
-                # please-retry instead of a raw 500.
-                log.error(
-                    "durable capture FAILED for %s token=%s (%s); payload=%s",
-                    spec.slug, submission.submission_token, exc, payload,
-                )
-                raise HTTPException(
-                    status_code=503,
-                    detail=(
-                        "We couldn't record your submission just now — please "
-                        "try again in a moment. Nothing was saved."
-                    ),
-                )
-            if not captured.is_new:
-                if captured.result is not None:
-                    return {"status": "ok", "idempotent": True, **captured.result}
-                return {"status": "received", "idempotent": True}
-
-        # Honeypot: acknowledge generically, do not tell a bot it was caught.
-        # The submission is held for admin review (written to the CRM as a
-        # CIntakeSubmission record, reason=Honeypot, status=New) rather than
-        # dropped, so a false positive (e.g. browser autofill, seen 2026-06-12)
-        # is recoverable without contacting the submitter.
-        if is_honeypot:
-            logged = await log_submission(
-                client, spec.slug, submission,
-                reason=REASON_HONEYPOT, status=STATUS_NEW,
-                payload_stored_durably=captured is not None,
-            )
-            log.warning(
-                "honeypot %s token=%s email=%s logged=%s",
-                spec.slug,
-                submission.submission_token,
-                getattr(submission, "email", "?"),
-                logged,
-            )
-            return {"status": "received"}
-
-        # V2 Phase 1: with async delivery on, return as soon as the submission is
-        # durably captured — the background worker delivers it into the CRM. The
-        # CIntakeSubmission "Normal" log moves to the worker (on success).
-        if captured is not None and settings.async_delivery:
-            # The accept-side end of the trace: the worker logs the same slug +
-            # token on claim/delivered/retry, so one submission is followable
-            # across both processes by token (reliability review, correlation).
-            log.info(
-                "%s received token=%s reference=%s (async)",
-                spec.slug, submission.submission_token, captured.id,
-            )
-            return {"status": "received", "reference": captured.id}
-
-        # In-memory idempotency only when there is no durable store.
-        key = f"{spec.slug}:{submission.submission_token}"
-        if store is None and key in processed:
-            return {"status": "ok", "idempotent": True, **processed[key]}
-
-        # P1-8: with a store, the sync path records per-record progress like
-        # the worker does — a partial failure marked needs_attention then
-        # carries its progress, so an /ops redrive RESUMES instead of
-        # re-running the whole chain and duplicating the plain creates.
-        delivery_client: EspoApi = client
-        if captured is not None:
-
-            async def _save_progress(progress: dict) -> None:
-                await store.save_progress(captured.id, progress)
-
-            delivery_client = ResumableClient(client, None, _save_progress)
-
-        try:
-            ids = await spec.orchestrator(submission, delivery_client)
-        except EspoError as exc:
-            # Capture the raw submission for recovery (some records may have been
-            # created before the failure). Best-effort, then surface the 502.
-            await log_submission(
-                client, spec.slug, submission,
-                reason=REASON_ORCHESTRATOR_ERROR, status=STATUS_NEW,
-                payload_stored_durably=captured is not None,
-            )
-            if captured is not None:
-                await store.mark_failed(
-                    captured.id, status=store_mod.STATUS_NEEDS_ATTENTION, error=str(exc)
-                )
-            log.error("%s failed token=%s: %s", spec.slug, submission.submission_token, exc)
-            raise HTTPException(
-                status_code=502,
-                detail=(
-                    "Your request was received but could not be fully completed in "
-                    "the system of record. It has been recorded for completion."
-                ),
-            )
-
-        # Log the processed submission for audit/analytics, linked to its Contact.
-        await log_submission(
-            client, spec.slug, submission,
-            reason=REASON_NORMAL, status=STATUS_PROCESSED,
-            contact_id=ids.get("contactId"),
-            payload_stored_durably=captured is not None,
-        )
-
-        if captured is not None:
-            # Record-creating forms auto-close on delivery (Doug's ruling): the
-            # downstream admin team handles them — nothing for /ops to do.
-            await store.mark_completed(
-                captured.id, ids, auto_close_reason=store_mod.autoclose_reason(spec.slug)
-            )
-        else:
-            processed[key] = ids
-        log.info("%s ok token=%s ids=%s", spec.slug, submission.submission_token, ids)
-        return {"status": "ok", **ids}
+        return await _process_submission(spec, settings, processed, store, body)
 
     return handler
+
+
+async def _process_submission(
+    spec: FormSpec,
+    settings: Settings,
+    processed: dict[str, dict],
+    store: Optional[SubmissionStore],
+    body: Any,
+):
+    """Validate, capture and deliver one submission.
+
+    Split out of :func:`_make_handler` so a form can also be reached through a
+    purpose-built route — the Events register endpoint takes the event slug from
+    the URL path and merges it into the body — WITHOUT reimplementing durable
+    capture, idempotency, the honeypot, async hand-off, or the audit log.
+    """
+    try:
+        submission = spec.submission_model.model_validate(body)
+    except ValidationError as exc:
+        # exc.errors() can carry a raw exception in ctx (non-serializable);
+        # project to a JSON-safe shape.
+        errors = [
+            {"loc": list(e["loc"]), "msg": e["msg"], "type": e["type"]}
+            for e in exc.errors()
+        ]
+        # ``detail`` is a human-readable string naming each failing field
+        # and why — the frontends display it verbatim, so the user (and
+        # whoever they screenshot it to) sees the exact reason, never a
+        # generic "check your entries". The structured list rides along
+        # as ``errors`` for programmatic clients.
+        detail = "; ".join(
+            f"{'.'.join(str(p) for p in e['loc']) or 'submission'}: {e['msg']}"
+            for e in errors
+        )
+        # Log it too — otherwise a validation failure (e.g. a form/schema
+        # mismatch after CRM enum drift) is invisible in the run logs.
+        log.warning("%s validation failed: %s", spec.slug, detail)
+        return JSONResponse(
+            status_code=422, content={"detail": detail, "errors": errors}
+        )
+
+    client = _make_client(settings)
+    is_honeypot = bool(submission.company_url.strip())
+
+    # V2 Phase 0: durably capture the submission BEFORE any CRM work. This is
+    # also the durable idempotency check (replacing the in-memory dict). A
+    # repeat token short-circuits here without touching the CRM again.
+    captured = None
+    if store is not None:
+        payload = json.loads(submission.model_dump_json())
+        payload["company_url"] = ""  # never persist the honeypot value
+        try:
+            captured = await store.capture(
+                spec.slug, submission.submission_token, payload,
+                status=store_mod.STATUS_HELD if is_honeypot else store_mod.STATUS_PENDING,
+            )
+        except Exception as exc:  # noqa: BLE001 — DB outage at accept (P2)
+            # The log line is the submission's ONLY copy right now
+            # (storeless-style dump), and the user gets a controlled
+            # please-retry instead of a raw 500.
+            log.error(
+                "durable capture FAILED for %s token=%s (%s); payload=%s",
+                spec.slug, submission.submission_token, exc, payload,
+            )
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "We couldn't record your submission just now — please "
+                    "try again in a moment. Nothing was saved."
+                ),
+            )
+        if not captured.is_new:
+            if captured.result is not None:
+                return {"status": "ok", "idempotent": True, **captured.result}
+            return {"status": "received", "idempotent": True}
+
+    # Honeypot: acknowledge generically, do not tell a bot it was caught.
+    # The submission is held for admin review (written to the CRM as a
+    # CIntakeSubmission record, reason=Honeypot, status=New) rather than
+    # dropped, so a false positive (e.g. browser autofill, seen 2026-06-12)
+    # is recoverable without contacting the submitter.
+    if is_honeypot:
+        logged = await log_submission(
+            client, spec.slug, submission,
+            reason=REASON_HONEYPOT, status=STATUS_NEW,
+            payload_stored_durably=captured is not None,
+        )
+        log.warning(
+            "honeypot %s token=%s email=%s logged=%s",
+            spec.slug,
+            submission.submission_token,
+            getattr(submission, "email", "?"),
+            logged,
+        )
+        return {"status": "received"}
+
+    # V2 Phase 1: with async delivery on, return as soon as the submission is
+    # durably captured — the background worker delivers it into the CRM. The
+    # CIntakeSubmission "Normal" log moves to the worker (on success).
+    if captured is not None and settings.async_delivery:
+        # The accept-side end of the trace: the worker logs the same slug +
+        # token on claim/delivered/retry, so one submission is followable
+        # across both processes by token (reliability review, correlation).
+        log.info(
+            "%s received token=%s reference=%s (async)",
+            spec.slug, submission.submission_token, captured.id,
+        )
+        return {"status": "received", "reference": captured.id}
+
+    # In-memory idempotency only when there is no durable store.
+    key = f"{spec.slug}:{submission.submission_token}"
+    if store is None and key in processed:
+        return {"status": "ok", "idempotent": True, **processed[key]}
+
+    # P1-8: with a store, the sync path records per-record progress like
+    # the worker does — a partial failure marked needs_attention then
+    # carries its progress, so an /ops redrive RESUMES instead of
+    # re-running the whole chain and duplicating the plain creates.
+    delivery_client: EspoApi = client
+    if captured is not None:
+
+        async def _save_progress(progress: dict) -> None:
+            await store.save_progress(captured.id, progress)
+
+        delivery_client = ResumableClient(client, None, _save_progress)
+
+    try:
+        ids = await spec.orchestrator(submission, delivery_client)
+    except EspoError as exc:
+        # Capture the raw submission for recovery (some records may have been
+        # created before the failure). Best-effort, then surface the 502.
+        await log_submission(
+            client, spec.slug, submission,
+            reason=REASON_ORCHESTRATOR_ERROR, status=STATUS_NEW,
+            payload_stored_durably=captured is not None,
+        )
+        if captured is not None:
+            await store.mark_failed(
+                captured.id, status=store_mod.STATUS_NEEDS_ATTENTION, error=str(exc)
+            )
+        log.error("%s failed token=%s: %s", spec.slug, submission.submission_token, exc)
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                "Your request was received but could not be fully completed in "
+                "the system of record. It has been recorded for completion."
+            ),
+        )
+
+    # Log the processed submission for audit/analytics, linked to its Contact.
+    await log_submission(
+        client, spec.slug, submission,
+        reason=REASON_NORMAL, status=STATUS_PROCESSED,
+        contact_id=ids.get("contactId"),
+        payload_stored_durably=captured is not None,
+    )
+
+    if captured is not None:
+        # Record-creating forms auto-close on delivery (Doug's ruling): the
+        # downstream admin team handles them — nothing for /ops to do.
+        await store.mark_completed(
+            captured.id, ids, auto_close_reason=store_mod.autoclose_reason(spec.slug)
+        )
+    else:
+        processed[key] = ids
+    log.info("%s ok token=%s ids=%s", spec.slug, submission.submission_token, ids)
+    return {"status": "ok", **ids}
 
 
 # Canonical environment key -> display name shown after the version in the footer
@@ -431,9 +448,25 @@ def create_app(
             return forwarded.split(",")[0].strip()
         return request.client.host if request.client else "?"
 
+    def _body_cap(path: str) -> Optional[int]:
+        """The body cap for a public write path, or None if it isn't one.
+
+        Event registration lives at a DYNAMIC path (the event slug is in the
+        URL), so it can't be looked up in the exact-match table — without this
+        it would be the one public POST with no size cap and no rate limit.
+        """
+        cap = _intake_caps.get(path)
+        if cap is not None:
+            return cap
+        if path.startswith("/api/events/") and path.endswith(
+            ("/register", "/cancel")
+        ):
+            return settings.intake_max_body_mb * _mb
+        return None
+
     @app.middleware("http")
     async def _intake_limits(request: Request, call_next):
-        cap = _intake_caps.get(request.url.path)
+        cap = _body_cap(request.url.path)
         if cap is not None and request.method == "POST":
             length = request.headers.get("content-length", "")
             if length.isdigit() and int(length) > cap:
@@ -628,8 +661,20 @@ def create_app(
     # outside the staff-stack block — it is unauthenticated by design.
     if settings.events_public_active:
         from events import api_router as events_public_router
+        from events.public import make_registration_routes
+        from forms import event_registration as _event_registration
 
         app.include_router(events_public_router)
+        # Registration rides the SAME durable pipeline as the intake forms —
+        # capture before any external call, idempotency, retries, /ops
+        # visibility — with the event slug taken from the URL.
+        app.include_router(
+            make_registration_routes(
+                lambda body: _process_submission(
+                    _event_registration.SPEC, settings, processed, store, body
+                )
+            )
+        )
 
     @app.get("/", response_class=HTMLResponse)
     async def index() -> HTMLResponse:

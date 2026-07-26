@@ -356,7 +356,7 @@ query must filter on it.
 Already built: `event` and `contact` links (the `contact` reverse link is
 exactly what delivers per-person attendance history), a single
 `attendanceStatus` (Registered / Attended / No-Show / Cancelled),
-`registrationSource`, `registrationDate`, `remindersSent`, `confirmationSentAt`,
+`registrationSource` (Online / Walk-In / Staff / Import), `registrationDate`, `remindersSent`, `confirmationSentAt`,
 `postEventFollowUpSentAt`, `cancellationDate`/`Reason`, `specialRequests`,
 `lastCommunicationBouncedAt`.
 

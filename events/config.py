@@ -53,6 +53,14 @@ REG_WAITLISTED = "Waitlisted"
 REG_CANCELLED = "Cancelled"
 REG_ATTENDED = "Attended"
 REG_NO_SHOW = "No-Show"
+# CEventRegistration.registrationSource — the LIVE CRM options. "Website" is
+# NOT one of them (the public channel is "Online"); inventing a value makes
+# EspoCRM 400 the whole create, which is how this was found.
+SOURCE_ONLINE = "Online"
+SOURCE_WALK_IN = "Walk-In"
+SOURCE_STAFF = "Staff"
+SOURCE_IMPORT = "Import"
+
 #: Statuses that occupy a seat.
 SEAT_TAKING = (REG_REGISTERED, REG_ATTENDED, REG_NO_SHOW)
 #: Statuses that count as "did not attend but was expected".

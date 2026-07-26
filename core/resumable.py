@@ -78,6 +78,12 @@ class ResumableClient:
     async def find_one(self, *args: Any, **kwargs: Any):
         return await self._inner.find_one(*args, **kwargs)
 
+    async def list(self, *args: Any, **kwargs: Any):
+        return await self._inner.list(*args, **kwargs)
+
+    async def get(self, *args: Any, **kwargs: Any):
+        return await self._inner.get(*args, **kwargs)
+
     async def update(self, *args: Any, **kwargs: Any):
         return await self._inner.update(*args, **kwargs)
 

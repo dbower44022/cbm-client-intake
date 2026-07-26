@@ -30,8 +30,10 @@ from fastapi import APIRouter, HTTPException, Request, Response
 
 from core.config import get_settings
 from core.espo import EspoApi, EspoError
+from forms.event_registration import orchestrator as registration_orchestrator
 
 from . import service
+from .tokens import TokenError, read_cancel_token
 
 log = logging.getLogger("cbm_intake.events")
 
@@ -159,3 +161,67 @@ async def event_detail(slug: str, request: Request, response: Response) -> dict[
         _cache.put(key, cached)
     _cacheable(response, ttl)
     return {"success": True, "event": cached}
+
+
+# --- registration (Phase 3) ------------------------------------------------
+
+
+def make_registration_routes(process) -> APIRouter:
+    """Register + self-service cancel.
+
+    ``process`` is the core pipeline entry point, injected by the app factory so
+    this module never reaches back into ``core.app``. Registration therefore
+    rides the SAME machinery as the five intake forms — durable capture before
+    any external call, idempotency by submission token, retries, resumable
+    delivery, and Submission Admin visibility — with the event slug taken from
+    the URL.
+    """
+    router = APIRouter(prefix="/api/events", tags=["events"])
+
+    @router.post("/{slug}/register")
+    async def register(slug: str, request: Request) -> Any:
+        try:
+            body = await request.json()
+        except Exception:  # noqa: BLE001 — caller data
+            raise HTTPException(
+                status_code=422, detail="The request body is not valid JSON."
+            )
+        if not isinstance(body, dict):
+            raise HTTPException(
+                status_code=422, detail="The request body must be a JSON object."
+            )
+
+        # Pre-flight BEFORE capture. With async delivery on, the HTTP response
+        # is sent long before the orchestrator runs, so a refusal raised at
+        # delivery time would never reach the visitor (EV-14).
+        try:
+            await registration_orchestrator.check_open(_client(request), slug)
+        except registration_orchestrator.RegistrationRefused as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except EspoError as exc:
+            raise _crm_failure(exc, f"register {slug}") from exc
+
+        body["event_slug"] = slug
+        return await process(body)
+
+    @router.post("/registrations/{token}/cancel")
+    async def cancel(token: str, request: Request) -> dict[str, Any]:
+        settings = get_settings()
+        try:
+            registration_id = read_cancel_token(token, settings.session_secret)
+        except TokenError as exc:
+            # Every failure mode returns the SAME message, so the endpoint
+            # cannot be used to probe which registration ids exist.
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        try:
+            result = await service.cancel_registration(
+                _client(request), registration_id, settings=settings
+            )
+        except EspoError as exc:
+            raise _crm_failure(exc, "cancel registration") from exc
+        if not result.get("ok"):
+            raise HTTPException(status_code=404,
+                                detail="This cancellation link is not valid.")
+        return result
+
+    return router

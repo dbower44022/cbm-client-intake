@@ -187,7 +187,7 @@ and phone to `Contact.phoneNumber`, where they're actually useful.
 | Field | Now | Change to | Why |
 |---|---|---|---|
 | `attendanceStatus` | enum `Registered`, `Attended`, `No-Show`, `Cancelled` (required, default `Registered`) | **add `Waitlisted`** | Capacity + waitlist is a requirement (EV-15). **Keep it as one field** — this matches the ruling already made for the Submission Admin request status: one field where each state is a value, not parallel status fields. |
-| `registrationSource` | enum `Online`, `Walk-In` (required, **readOnly**) | **add `Staff` and `Import`; clear readOnly** | Staff register people by phone (EV-18) and the YouTube/historic import needs a value. readOnly blocks the API from setting it at all. |
+| `registrationSource` | enum `Online`, `Walk-In` (required, **readOnly**) | **add `Staff` and `Import`; clear readOnly**. Note the public-website value is the existing **`Online`** — do not add a "Website" option, and do not write one (EspoCRM 400s the whole create). | Staff register people by phone (EV-18) and the YouTube/historic import needs a value. readOnly blocks the API from setting it at all. |
 | `registrationDate` | datetime, **required AND readOnly** | **clear readOnly** (or give it a "now" default) | ⚠️ Required + readOnly is the dangerous combination — see §4. |
 | `cancellationDate` | datetime, **readOnly** | **clear readOnly** | The app sets it when a registrant cancels via their self-service link (EV-16). |
 
