@@ -266,6 +266,46 @@
     return bar;
   }
 
+  // ---- splitter (resize the side lane) -------------------------------------
+  // Mirrors the sessions Overview --ov-right handle: the side width is measured
+  // from the grid's RIGHT edge, clamped, keyboard-adjustable, and persisted.
+  var SIDE_KEY = "cbmMentorSideW";
+
+  function setupSplitter() {
+    var grid = document.querySelector(".mp2__cols");
+    var sp = $("mpSplit");
+    if (!grid || !sp) return;
+
+    function clampPx(px, rect) {
+      var min = 340;
+      var max = Math.max(min, (rect || grid.getBoundingClientRect()).width - 320);
+      return Math.min(max, Math.max(min, px));
+    }
+    function apply(px) { grid.style.setProperty("--mp-side", Math.round(px) + "px"); }
+    function save() {
+      try { localStorage.setItem(SIDE_KEY, getComputedStyle(grid).getPropertyValue("--mp-side").trim()); } catch (e) {}
+    }
+
+    // Restore a saved width (clamped to the current viewport so it can't overflow).
+    try {
+      var saved = parseInt(localStorage.getItem(SIDE_KEY), 10);
+      if (saved) apply(clampPx(saved));
+    } catch (e) {}
+
+    var dragging = false;
+    function onMove(e) { if (dragging) { apply(clampPx(grid.getBoundingClientRect().right - e.clientX)); e.preventDefault(); } }
+    function stop() { if (dragging) { dragging = false; document.body.classList.remove("mp2--resizing"); save(); } }
+    sp.addEventListener("pointerdown", function (e) { dragging = true; document.body.classList.add("mp2--resizing"); e.preventDefault(); });
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
+    sp.addEventListener("keydown", function (e) {
+      var cur = parseInt(getComputedStyle(grid).getPropertyValue("--mp-side"), 10) || 544;
+      if (e.key === "ArrowLeft") { apply(clampPx(cur + 24)); e.preventDefault(); save(); }   // grow the side
+      else if (e.key === "ArrowRight") { apply(clampPx(cur - 24)); e.preventDefault(); save(); }
+    });
+  }
+
   // ---- boot ----------------------------------------------------------------
 
   async function boot() {
@@ -283,6 +323,9 @@
     try {
       var p = await api("/profile/" + encodeURIComponent(RECORD_ID));
       render(p);
+      // After the view is shown (the grid now has real width, so a restored
+      // width clamps correctly).
+      setupSplitter();
     } catch (e) { fail(e); }
   }
 

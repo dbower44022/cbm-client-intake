@@ -1612,13 +1612,17 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-26)
 
-**v0.175.0** (2026-07-26, 1375 tests green, committed NOT pushed) — **Mentor
-Profile page follow-up (Doug's review of v0.172.0): full-width layout, richer
-"Get to know them", + mentoring availability.** On the read-only mentor profile
-page (`/directory/mentors/record/{id}`): (1) the page-width cap is removed (uses
-the whole screen, two-lane grid, side lane firms to ~460px on ≥1500px, long-form
-text capped at a readable measure — the [[no-page-width-caps-density-by-packing]]
-rule); (2) "Get to know them" is now a spacious labeled grid instead of cramped
+**v0.175.0** (2026-07-26, 1375 tests green, committed NOT pushed; a later
+frontend-only follow-up adds the splitter — see below) — **Mentor Profile page
+follow-up (Doug's review of v0.172.0): full-width layout, richer "Get to know
+them", + mentoring availability.** On the read-only mentor profile page
+(`/directory/mentors/record/{id}`): (1) the page-width cap is removed (uses the
+whole screen, main | **drag splitter** | side lane; the side lane
+("Get to know them"/availability/contact) defaults to a generous ~38rem and is
+**user-resizable via a draggable splitter** — `--mp-side`, pointer + arrow-key
+adjustable, persisted to `localStorage` `cbmMentorSideW`, clamped so it can't
+overflow, hidden below 820px; long-form text still capped at a readable measure
+— the [[no-page-width-caps-density-by-packing]] rule); (2) "Get to know them" is now a spacious labeled grid instead of cramped
 rows; (3) **City** added to the personal facts (with spouse + birthday
 month/day); (4) a **Mentoring availability** card shows current openings
 (`maximumClientCapacity` − active clients) with a slot bar, so a browser sees if
