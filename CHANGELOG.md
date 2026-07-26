@@ -4,6 +4,55 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.170.0] — 2026-07-26
+
+**feat(events): Events & Webinars — Phase 5 (the `/events` staff app)**. Gated
+OFF by `EVENTS_ENABLED`; team-gated on `EVENTS_ALLOWED_TEAMS` (Marketing Admin
+Team by default, admins pass). No migration.
+
+Before this, creating an event meant hand-editing a `CEvent` in EspoCRM and
+remembering to tick `publishToWebsite`. Now it is a workflow.
+
+- **`events/router.py`** — 14 endpoints under `/events/api`, all running **as the
+  signed-in user** so EspoCRM enforces their ACL and records them as modifier.
+  A CRM 403 is translated by `forbidden_hint` into the exact missing grant
+  rather than an opaque 502. Every mutation goes through the standard
+  action-log path.
+- **Service writes** — `create_event` (with a unique slug), `update_event`
+  (whitelisted; backfills a missing slug but **never moves an existing one**, so
+  a typo fix can't break links already shared), `set_recording` (validates it
+  looks like YouTube), `set_attendance`, `check_in`, `add_registrant`, and
+  `field_options` read live from CRM metadata.
+- **The field spec IS the whitelist** — a smuggled `zoomWebinarId` or an
+  invented attribute never reaches the CRM (tested).
+- **Staff-added registrants reuse the public path's Contact rules**, so a
+  walk-in at the door becomes a Prospect Contact with a linked registration —
+  a lead, not a name on a list. Someone who gives no email is still recorded.
+- **Manual attendance stamps `attendanceSource="Manual"`**, which is what will
+  stop the automatic Zoom pull (Phase 6) from overwriting a human's correction.
+- **Frontend** (`events/frontend/`, vanilla JS, no build step): sortable
+  searchable grid with a scope filter (defaults to published, so the grid opens
+  on the workshop programme rather than 92 internal calendar rows), detail with
+  Overview / Registrants / Check-in tabs, a grouped modal editor driven by the
+  field spec, and a check-in view sized for a phone at the door. Buttons are
+  never disabled — Zoom-not-configured explains itself on click.
+- Portal tile + `/events` alias; `busy.js` loaded first per convention.
+
+**Verified:** 20 new tests (full suite 1354 green) and the whole UI driven in a
+browser against crm-test — grid, filter, detail, tabs, and a real walk-in that
+was GET-verified in the CRM as a Prospect Contact + Attended registration. All
+test records deleted afterwards (back to 92 events / 0 registrations).
+
+**Three defects the browser pass caught that tests did not:**
+1. **N+1 on the grid** — it ran one registration query PER EVENT: 98 sequential
+   CRM round-trips and a blank page for several seconds. `summaries_for` now
+   batches with an `in` filter: **1 query, 0.46s**.
+2. **`display:flex` beat the `[hidden]` attribute** on `.ev__panel`, so the
+   detail panel rendered on top of the list. Guarded — the third time this
+   exact trap has hit this codebase.
+3. **The check-in tab reset to Overview after every save**, meaning a re-click
+   per person in the queue. `refreshDetail` now preserves the active tab.
+
 ## [0.169.0] — 2026-07-26
 
 **fix(analytics): the page editor's panel Remove is now always visible** (Doug:

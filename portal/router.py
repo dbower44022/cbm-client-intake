@@ -12,7 +12,7 @@ Entitlements (team names come from settings, so they match the app gates):
 - Mentor Team: a link to the CRM itself + ``/mentorprofile/`` (My Mentor Profile)
 - Client Administration Team: ``/assignments/``
 - Mentor Administration Team: ``/mentoradmin/``
-- Marketing Admin Team: ``/ops/`` (Submission Admin)
+- Marketing Admin Team: ``/ops/`` (Submission Admin) + ``/events/`` (Event Administration)
 - CRM admins: everything.
 """
 
@@ -86,6 +86,9 @@ def _apps_for(user: dict[str, Any], settings: Settings) -> list[dict[str, str]]:
         apps.append({"title": "Mentor Administration", "url": "/mentoradmin/", "target": "cbm-mentoradmin"})
     if is_member(user, settings.ops_allowed_teams_list):
         apps.append({"title": "Submission Admin", "url": "/ops/", "target": "cbm-ops"})
+    # Event Administration — the public workshop/webinar programme.
+    if settings.events_active and is_member(user, settings.events_allowed_teams_list):
+        apps.append({"title": "Event Administration", "url": "/events/", "target": "cbm-events"})
     # A mentor's self-service profile editor (own record + website preview).
     if is_member(user, settings.mentor_profile_allowed_teams_list):
         apps.append({"title": "My Mentor Profile", "url": "/mentorprofile/", "target": "cbm-mentorprofile"})

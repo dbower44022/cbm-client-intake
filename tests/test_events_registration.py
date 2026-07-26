@@ -42,7 +42,10 @@ class FakeCrm:
     """Enough EspoCRM to exercise the orchestrator, recording every write."""
 
     def __init__(self, *, events=None, contacts=None, registrations=None):
-        self.events = list(events or [make_event()])
+        # `is None`, not truthiness: passing events=[] must mean "no events",
+        # not "give me the default one" — otherwise a test that believes it has
+        # an empty CRM quietly has a record in it.
+        self.events = list([make_event()] if events is None else events)
         self.contacts = list(contacts or [])
         self.registrations = list(registrations or [])
         self.created: list[tuple[str, dict]] = []
@@ -74,6 +77,8 @@ class FakeCrm:
             self.contacts.append(record)
         elif entity == cfg.REGISTRATION:
             self.registrations.append(record)
+        elif entity == cfg.EVENT:
+            self.events.append(record)
         return record
 
     async def update(self, entity, record_id, payload):

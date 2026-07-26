@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cleveland Business Mentors — Event Administration</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/tokens.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <!-- busy.js must load FIRST: it wraps fetch/XHR to give every button press
+       immediate feedback (product-wide convention). -->
+  <script src="/shared/busy.js"></script>
+</head>
+<body>
+  <main class="ev">
+    <header class="ev__topbar">
+      <div class="ev__title">
+        <h1>Event Administration</h1>
+        <p class="ev__sub">Workshops, webinars, registrations and attendance.</p>
+      </div>
+      <div class="ev__search">
+        <input type="search" id="searchBox" placeholder="Search events…"
+               aria-label="Search events" autocomplete="off" />
+      </div>
+      <div class="ev__usercorner" id="userCorner" hidden>
+        <span class="ev__who">Signed in as <strong id="whoName"></strong></span>
+        <a class="cbm-button cbm-button--secondary" href="/">Portal</a>
+      </div>
+    </header>
+
+    <div class="ev__notice" id="notice" hidden></div>
+
+    <!-- ============================ LIST ============================ -->
+    <section class="ev__panel" id="listPanel">
+      <div class="ev__controls">
+        <label class="ev__filter">
+          Show
+          <select id="scopeFilter">
+            <option value="published">Published to the website</option>
+            <option value="upcoming">Upcoming</option>
+            <option value="past">Past</option>
+            <option value="all">All events</option>
+          </select>
+        </label>
+        <span class="ev__count" id="listCount"></span>
+        <div class="ev__actions">
+          <button type="button" class="cbm-button" id="newEventBtn">+ New event</button>
+          <button type="button" class="cbm-button cbm-button--secondary" id="refreshBtn">Refresh</button>
+        </div>
+      </div>
+
+      <div class="ev__gridwrap">
+        <table class="ev__grid" id="eventGrid">
+          <thead>
+            <tr>
+              <th data-sort="name">Event</th>
+              <th data-sort="startsAtUtc">When</th>
+              <th data-sort="format">Format</th>
+              <th data-sort="status">Status</th>
+              <th data-sort="registered" class="num">Registered</th>
+              <th data-sort="attended" class="num">Attended</th>
+              <th data-sort="showRate" class="num">Show rate</th>
+              <th data-sort="published">Website</th>
+              <th data-sort="recording">Recording</th>
+            </tr>
+          </thead>
+          <tbody id="eventRows"></tbody>
+        </table>
+        <p class="ev__empty" id="listEmpty" hidden>No events match.</p>
+      </div>
+    </section>
+
+    <!-- =========================== DETAIL =========================== -->
+    <section class="ev__panel" id="detailPanel" hidden>
+      <div class="ev__detailhead">
+        <button type="button" class="cbm-button cbm-button--secondary" id="backBtn">← All events</button>
+        <h2 id="detailTitle"></h2>
+        <div class="ev__detailactions">
+          <button type="button" class="cbm-button cbm-button--secondary" id="editBtn">Edit</button>
+          <button type="button" class="cbm-button cbm-button--secondary" id="zoomBtn">Create / sync Zoom webinar</button>
+          <button type="button" class="cbm-button cbm-button--secondary" id="recordingBtn">Add recording</button>
+        </div>
+      </div>
+
+      <nav class="ev__tabs" id="detailTabs">
+        <button type="button" class="ev__tab is-active" data-tab="overview">Overview</button>
+        <button type="button" class="ev__tab" data-tab="registrants">Registrants</button>
+        <button type="button" class="ev__tab" data-tab="checkin">Check-in</button>
+      </nav>
+
+      <div class="ev__tabpanel" data-panel="overview">
+        <div class="ev__tiles" id="overviewTiles"></div>
+        <div class="ev__facts" id="overviewFacts"></div>
+      </div>
+
+      <div class="ev__tabpanel" data-panel="registrants" hidden>
+        <div class="ev__controls">
+          <input type="search" id="regSearch" placeholder="Search registrants…"
+                 aria-label="Search registrants" autocomplete="off" />
+          <div class="ev__actions">
+            <button type="button" class="cbm-button cbm-button--secondary" id="addRegBtn">+ Add registrant</button>
+          </div>
+        </div>
+        <table class="ev__grid">
+          <thead>
+            <tr>
+              <th>Name</th><th>Email</th><th>Status</th><th>Source</th>
+              <th class="num">Minutes</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="regRows"></tbody>
+        </table>
+        <p class="ev__empty" id="regEmpty" hidden>Nobody has registered yet.</p>
+      </div>
+
+      <!-- Check-in is sized for a phone at the door. -->
+      <div class="ev__tabpanel ev__checkin" data-panel="checkin" hidden>
+        <input type="search" id="checkinSearch" placeholder="Find a name…"
+               aria-label="Find a registrant" autocomplete="off" />
+        <button type="button" class="cbm-button" id="walkInBtn">+ Add walk-in</button>
+        <ul class="ev__roster" id="roster"></ul>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============================ MODALS ============================ -->
+  <div class="ev__modal-overlay" id="modal" hidden>
+    <div class="ev__modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button type="button" class="ev__modal-close" id="modalClose" aria-label="Close">×</button>
+      <h3 id="modalTitle"></h3>
+      <div class="ev__modal-body" id="modalBody"></div>
+      <div class="ev__modal-foot">
+        <span class="ev__modal-msg" id="modalMsg"></span>
+        <button type="button" class="cbm-button cbm-button--secondary" id="modalCancel">Cancel</button>
+        <button type="button" class="cbm-button" id="modalSave">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="ev__footer">
+    <p>&copy; <span data-cbm-year></span> Cleveland Business Mentors. All rights reserved.
+      <span data-cbm-version></span></p>
+  </footer>
+
+  <script src="/shared/footer.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

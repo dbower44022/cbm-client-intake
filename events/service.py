@@ -39,6 +39,8 @@ from . import config as cfg
 log = logging.getLogger("cbm_intake.events")
 
 _PAGE = 200
+#: How many event ids to put in one `in` filter.
+_ID_CHUNK = 100
 _LOCAL = ZoneInfo(cfg.PUBLIC_TIMEZONE)
 
 #: CRM datetime wire format.
@@ -314,6 +316,41 @@ async def event_summary(
     return summarise(registrations, event.get("venueCapacity"))
 
 
+async def summaries_for(
+    client: EspoApi, events: list[dict[str, Any]]
+) -> dict[str, dict[str, Any]]:
+    """Counts for MANY events in a couple of queries, not one per event.
+
+    The obvious loop (``event_summary`` per row) is an N+1: the staff grid
+    lists every event, so on a real CRM that was ~100 sequential round-trips
+    and several seconds of blank page. Here the registrations are fetched in
+    batches with an ``in`` filter and grouped in Python.
+    """
+    ids = [e["id"] for e in events if e.get("id")]
+    by_event: dict[str, list[dict[str, Any]]] = {i: [] for i in ids}
+    for chunk_start in range(0, len(ids), _ID_CHUNK):
+        chunk = ids[chunk_start: chunk_start + _ID_CHUNK]
+        offset = 0
+        while True:
+            data = await client.list(
+                cfg.REGISTRATION,
+                select=cfg.REGISTRATION_SELECT,
+                where=[{"type": "in", "attribute": "eventId", "value": chunk}],
+                max_size=_PAGE,
+                offset=offset,
+            )
+            rows = data.get("list", [])
+            for row in rows:
+                by_event.setdefault(row.get("eventId"), []).append(row)
+            offset += len(rows)
+            if len(rows) < _PAGE or offset >= int(data.get("total") or 0):
+                break
+    return {
+        e["id"]: summarise(by_event.get(e["id"], []), e.get("venueCapacity"))
+        for e in events if e.get("id")
+    }
+
+
 # --- public payload --------------------------------------------------------
 
 
@@ -565,3 +602,191 @@ async def _promote_from_waitlist(
     except Exception as exc:  # noqa: BLE001
         log.warning("event %s: waitlist promotion failed: %s", event_id, exc)
         return None
+
+
+# --- staff writes (Phase 5) ------------------------------------------------
+
+
+async def list_events(
+    client: EspoApi, *, status: Optional[str] = None, limit: int = 500
+) -> list[dict[str, Any]]:
+    """The staff grid: EVERY event the user can read, newest first.
+
+    Deliberately NOT filtered by ``publishToWebsite`` — staff need to see the
+    internal calendar entries too, if only to notice one wrongly published.
+    The frontend defaults its filter to published so the grid opens on the
+    workshop programme rather than on 92 team meetings.
+    """
+    where = None
+    if status:
+        where = [{"type": "equals", "attribute": "status", "value": status}]
+    return await _all_events(
+        client, select=cfg.PUBLIC_SELECT, where=where,
+        order_by="dateStart", order="desc", limit=limit,
+    )
+
+
+async def field_options(client: EspoApi) -> dict[str, list[str]]:
+    """Live enum options for the editor, straight from CRM metadata.
+
+    Read live rather than hard-coded so the CRM stays the source of truth — the
+    same reason the mentor and session editors do it. A missing field yields an
+    empty list rather than failing the form.
+    """
+    options: dict[str, list[str]] = {}
+    for name in ("eventType", "format", "status", "topic"):
+        try:
+            values = await client.metadata_enum_options(cfg.EVENT, name)
+        except EspoError:
+            values = None
+        options[name] = [v for v in (values or []) if v]
+    return options
+
+
+def _writable(changes: dict[str, Any], *, allow_managed: bool = False) -> dict[str, Any]:
+    """Drop anything not in the field spec.
+
+    The spec is the whitelist (the SESSION_FIELDS convention): a smuggled
+    ``zoomWebinarId`` or an invented attribute never reaches the CRM.
+    """
+    allowed = cfg.EVENT_WRITABLE_NAMES if allow_managed else cfg.EVENT_EDIT_NAMES
+    return {k: v for k, v in changes.items() if k in allowed}
+
+
+async def create_event(client: EspoApi, changes: dict[str, Any]) -> dict[str, Any]:
+    """Create an event, giving it a unique URL slug."""
+    payload = _writable(changes)
+    name = (payload.get("name") or "").strip()
+    if not name:
+        raise EventError("An event needs a title.")
+    payload["name"] = name
+    payload["slug"] = unique_slug(name, await existing_slugs(client))
+    payload.setdefault("status", cfg.STATUS_PLANNED)
+    payload.setdefault("publishToWebsite", False)
+    created = await client.create(cfg.EVENT, payload)
+    return await client.get(cfg.EVENT, created["id"], select=cfg.PUBLIC_SELECT)
+
+
+async def update_event(
+    client: EspoApi, event_id: str, changes: dict[str, Any]
+) -> dict[str, Any]:
+    """Apply whitelisted changes; give the event a slug if it never had one."""
+    payload = _writable(changes)
+    if "name" in payload and not (payload["name"] or "").strip():
+        raise EventError("An event needs a title.")
+    current = await client.get(cfg.EVENT, event_id, select=cfg.PUBLIC_SELECT)
+    if not current.get("slug"):
+        source = payload.get("name") or current.get("name") or ""
+        if source:
+            taken = await existing_slugs(client)
+            payload["slug"] = unique_slug(source, taken)
+    if payload:
+        await client.update(cfg.EVENT, event_id, payload)
+    return await client.get(cfg.EVENT, event_id, select=cfg.PUBLIC_SELECT)
+
+
+async def set_recording(
+    client: EspoApi, event_id: str, url: str
+) -> dict[str, Any]:
+    """Attach the published recording (D-07 — staff upload to YouTube, then
+    paste the link). Blank clears it."""
+    url = (url or "").strip()
+    if url and not video_id_from_url(url):
+        raise EventError(
+            "That does not look like a YouTube link. Paste the watch URL, "
+            "e.g. https://www.youtube.com/watch?v=…"
+        )
+    await client.update(cfg.EVENT, event_id, {"recordingUrl": url})
+    return await client.get(cfg.EVENT, event_id, select=cfg.PUBLIC_SELECT)
+
+
+async def set_attendance(
+    client: EspoApi, registration_id: str, status: str,
+    *, minutes: Optional[int] = None,
+) -> dict[str, Any]:
+    """Mark someone attended / no-show / registered by hand.
+
+    Stamps ``attendanceSource='Manual'`` so the automatic Zoom pull (Phase 6)
+    never overwrites a human's correction (EV-34).
+    """
+    allowed = (cfg.REG_REGISTERED, cfg.REG_ATTENDED, cfg.REG_NO_SHOW,
+               cfg.REG_WAITLISTED, cfg.REG_CANCELLED)
+    if status not in allowed:
+        raise EventError(f"{status!r} is not a registration status.")
+    payload: dict[str, Any] = {
+        "attendanceStatus": status,
+        "attendanceSource": "Manual",
+    }
+    if status == cfg.REG_ATTENDED and minutes is not None:
+        payload["minutesAttended"] = int(minutes)
+    await client.update(cfg.REGISTRATION, registration_id, payload)
+    return await client.get(cfg.REGISTRATION, registration_id)
+
+
+async def check_in(client: EspoApi, registration_id: str) -> dict[str, Any]:
+    """Door check-in for an in-person event (EV-33): attended, stamped now."""
+    now = to_crm_datetime(datetime.now(timezone.utc))
+    await client.update(cfg.REGISTRATION, registration_id, {
+        "attendanceStatus": cfg.REG_ATTENDED,
+        "attendanceSource": "Check-in",
+        "joinTime": now,
+    })
+    return await client.get(cfg.REGISTRATION, registration_id)
+
+
+async def add_registrant(
+    client: EspoApi, event_id: str, *, first_name: str, last_name: str = "",
+    email: str = "", phone: str = "", source: str = cfg.SOURCE_STAFF,
+    status: str = cfg.REG_REGISTERED,
+) -> dict[str, Any]:
+    """Register someone by hand — a phone booking, or a walk-in at the door.
+
+    Reuses the public path's Contact rules so a walk-in is a first-class lead
+    rather than a name on a list: find-or-create by email, never relabel an
+    existing Contact.
+    """
+    from core.crm_upsert import find_create_or_fill
+    from core.phone import e164_or_none
+    from forms.event_registration.orchestrator import (
+        C_CONTACT_TYPE, CONTACT, PROSPECT, _CONTACT_FILL_KEYS,
+    )
+
+    first_name = (first_name or "").strip()
+    if not first_name:
+        raise EventError("A name is required.")
+    event = await client.get(cfg.EVENT, event_id, select=cfg.PUBLIC_SELECT)
+    if not event:
+        raise EventError("That event could not be found.")
+
+    contact_id = None
+    email = (email or "").strip()
+    if email:
+        existing = await client.find_one(CONTACT, "emailAddress", email, select="id")
+        payload: dict[str, Any] = {
+            "firstName": first_name, "lastName": last_name or "",
+            "emailAddress": email,
+        }
+        if existing is None:
+            payload[C_CONTACT_TYPE] = [PROSPECT]
+        normalised = e164_or_none(phone)
+        if normalised:
+            payload["phoneNumber"] = normalised
+        contact_id, _ = await find_create_or_fill(
+            client, CONTACT, match_attr="emailAddress", match_value=email,
+            create_payload=payload, fill_keys=_CONTACT_FILL_KEYS,
+        )
+
+    registration = {
+        "name": f"{event.get('name') or 'Event'} — {first_name} {last_name}".strip()[:255],
+        "eventId": event_id,
+        "email": email,
+        "firstName": first_name,
+        "lastName": last_name or "",
+        "attendanceStatus": status,
+        "registrationSource": source,
+        "registrationDate": to_crm_datetime(datetime.now(timezone.utc)),
+    }
+    if contact_id:
+        registration["contactId"] = contact_id
+    created = await client.create(cfg.REGISTRATION, registration)
+    return await client.get(cfg.REGISTRATION, created["id"])

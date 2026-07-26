@@ -64,6 +64,7 @@ SESSIONS_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "sessions" / "f
 # (/directory/{companies,contacts,mentors}); the JS reads the kind from its URL.
 DIRECTORY_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "directory" / "frontend"
 MYEMAIL_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "myemail" / "frontend"
+EVENTS_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "events" / "frontend"
 ANALYTICS_FRONTEND_DIR = (
     Path(__file__).resolve().parent.parent / "analytics" / "frontend"
 )
@@ -649,6 +650,11 @@ def create_app(
             from analytics import api_router as analytics_router
 
             app.include_router(analytics_router)
+        # Event Administration — the staff app; team-gated like the others.
+        if settings.events_active:
+            from events.router import api_router as events_admin_router
+
+            app.include_router(events_admin_router)
         # Session Management: one router per domain, all from the same engine.
         for _cfg in SESSION_DOMAINS.values():
             app.include_router(make_sessions_router(_cfg))
@@ -716,6 +722,9 @@ def create_app(
         )
         if settings.analytics_active:
             alias_targets["analytics"] = "/analytics/"
+        if settings.events_active:
+            alias_targets["events"] = "/events/"
+            alias_targets["eventadmin"] = "/events/"
         from sessions import DOMAINS as _SESSION_DOMAINS
 
         alias_targets.update(
@@ -747,6 +756,12 @@ def create_app(
             "/assignments",
             StaticFiles(directory=str(ASSIGNMENTS_FRONTEND_DIR), html=True),
             name="assignments-frontend",
+        )
+    if settings.events_active and EVENTS_FRONTEND_DIR.is_dir():
+        app.mount(
+            "/events",
+            StaticFiles(directory=str(EVENTS_FRONTEND_DIR), html=True),
+            name="events-frontend",
         )
     if settings.assignments_active and OPS_FRONTEND_DIR.is_dir():
         app.mount(

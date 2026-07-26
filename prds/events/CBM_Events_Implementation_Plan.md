@@ -11,7 +11,9 @@ off by `EVENTS_ENABLED` + `EVENTS_PUBLIC_API`.
 against a stubbed Zoom, NOT yet driven against the real account (the OAuth app
 does not exist yet).
 **Phase 3 BUILT and live-verified on crm-test, 2026-07-25 (v0.166.0)** — the
-lead leak is closed. Phases 4-6 remain.
+lead leak is closed.
+**Phase 5 BUILT and browser-verified against crm-test, 2026-07-26 (v0.168.0).**
+Phases 4 (plugin + cutover) and 6 remain.
 
 ---
 
@@ -230,7 +232,7 @@ renders identically; API down → cached content still renders.
 
 ---
 
-## Phase 5 — Staff app `/events`
+## Phase 5 — Staff app `/events`  ✅ DONE (v0.168.0)
 
 **Build**
 - `events/router.py` — team-gated (`EVENTS_ALLOWED_TEAMS`, default
@@ -246,8 +248,13 @@ renders identically; API down → cached content still renders.
   - `frontend/shared/busy.js` loaded first, per the standing convention.
 - Action logging on every mutation (EV-56).
 
-**Verify:** stub-browser harness pass on every flow, then a live pass on
-crm-test as a real Marketing Admin (non-admin) user.
+**Verify: ✅ browser pass against crm-test 2026-07-26** — grid/filter/detail/
+tabs, and a real walk-in GET-verified in the CRM as a Prospect Contact +
+Attended registration; records cleaned up. Caught three defects tests could not
+(grid N+1, `display:flex` beating `[hidden]`, check-in tab resetting).
+☐ **Still to do:** a pass signed in as a REAL non-admin Marketing Admin user
+(the harness stubbed the session), which is what exercises the team gate and
+the CRM ACL for a non-admin.
 
 ---
 
