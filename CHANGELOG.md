@@ -4,6 +4,58 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.177.0] — 2026-07-26
+
+**feat(portal): a mentor signing in on their birthday gets fireworks and
+"Happy Birthday" before their screen.** No CRM changes, no migration, no new
+setting.
+
+- **The date comes from the CRM the mentor already maintains**: their linked
+  Contact's **`cBirthday`** — the field they edit themselves in
+  `/mentorprofile` under "Personal details". A mentor who has never filled it
+  in simply never gets a greeting.
+- **`portal/birthday.py`** resolves it entirely server-side from the session's
+  user id: own `CMentorProfile` (`resolve_manager_profile` — the Python-side
+  `assignedUser` match, never a `where` on `assignedUserId`) → its
+  `contactRecordId` → the Contact. Read **as the signed-in user**, so EspoCRM's
+  own ACL applies and no record id is ever taken from the client. The day is
+  Cleveland's calendar day (`America/New_York`), not the server's UTC day —
+  otherwise the greeting would start and end five hours early. A **29 February**
+  birthday is greeted on 28 February in common years (the alternative is once
+  every four years).
+- **Best-effort throughout, by design**: no linked profile, no linked Contact,
+  an empty birthday, or ANY CRM failure means "no greeting" and a normal
+  sign-in — a birthday must never be able to block the front door. Mentor Team
+  only (admins who aren't mentors aren't greeted), and the answer is cached in
+  the session under the day's date, so refreshing the portal costs no CRM read
+  and the cache lapses on its own at midnight.
+- **`portal/frontend/birthday.js`** — a self-contained overlay:
+  `CBMBirthday.celebrate({name, onDone})` paints a canvas fireworks display
+  (rising shells that burst into drifting, twinkling embers; additive
+  compositing, comet trails, the CBM gold in the palette) behind
+  "Happy Birthday, {first name}!". Launch speed is DERIVED from each shell's
+  target height (`v² = 2·g·rise`) and burst size scales with the window, so the
+  display fills a 4K screen instead of fizzling near the taskbar. Dismisses on
+  the Continue button, any click, Escape/Enter/Space, or after 9 seconds —
+  whichever comes first; `onDone` fires exactly once and the caller continues,
+  so a failure here can never strand someone at sign-in.
+  **`prefers-reduced-motion`: the same greeting, no animation.**
+- **Placed in `enter()`** (`portal/frontend/app.js`) so it precedes BOTH the
+  home render and a `?next=` redirect — a mentor signing in on the way to
+  Client Management still sees it. Shown **once per birthday per browser**
+  (`localStorage`, stamped with the server's Cleveland date, so a refresh, a
+  second sign-in, or a traveller's clock can't re-trigger it).
+- 20 new tests (`tests/test_portal_birthday.py`): the date rule incl. leap day
+  and unusable values, the resolution chain (no profile / no contact /
+  collaborators-shaped assignment), the swallowed-CRM-failure contract, the
+  mentor-only gate (a non-mentor costs zero CRM calls), and the session cache.
+  Full suite green. The overlay was driven in a real browser (fireworks paint,
+  dismissal paths, once-per-day gate, reduced-motion variant, no console
+  errors).
+- **NOT yet driven live** — after deploy, the check is a real mentor whose
+  Contact `cBirthday` is today (or temporarily set to today in the CRM) signing
+  in at the portal.
+
 ## [0.176.0] — 2026-07-26
 
 **feat(portal+analytics): awaiting-processing badges on the portal tiles + an

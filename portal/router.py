@@ -39,7 +39,13 @@ from assignments.espo_user import client_for
 from core import attention as attn
 from core.config import Settings, get_settings
 
+from . import birthday as birthday_check
+
 log = logging.getLogger("cbm_intake.portal")
+
+# Session key holding the day's birthday answer, so a portal refresh doesn't
+# re-read the CRM: {"date": "YYYY-MM-DD", "greeting": {...} | None}.
+_BIRTHDAY_KEY = "birthday_check"
 
 router = APIRouter(prefix="/api/portal", tags=["portal"])
 
@@ -147,6 +153,25 @@ def _home_payload(user: dict[str, Any], request: Request, settings: Settings) ->
     }
 
 
+async def _birthday(request: Request, user: dict[str, Any], settings: Settings) -> Any:
+    """The birthday greeting for this sign-in, or None.
+
+    Mentors only (the greeting is for CBM's mentors, and the answer lives on
+    their mentor profile's Contact). The day's answer is cached in the session,
+    so refreshing the portal re-reads nothing; the cache is keyed on the
+    Cleveland date, so it lapses on its own at midnight there.
+    """
+    if not is_member(user, [settings.mentor_team_name]):
+        return None
+    today = birthday_check.today_local().isoformat()
+    cached = request.session.get(_BIRTHDAY_KEY)
+    if isinstance(cached, dict) and cached.get("date") == today:
+        return cached.get("greeting")
+    greeting = await birthday_check.mentor_birthday(settings, user)
+    request.session[_BIRTHDAY_KEY] = {"date": today, "greeting": greeting}
+    return greeting
+
+
 @router.post("/login")
 async def login(body: LoginIn, request: Request) -> dict:
     settings = get_settings()
@@ -161,7 +186,9 @@ async def login(body: LoginIn, request: Request) -> dict:
         raise HTTPException(status_code=401, detail=str(exc))
     set_session(request, user)
     log.info("portal login ok: %s (admin=%s)", user["userName"], user.get("isAdmin"))
-    return _home_payload(user, request, settings)
+    payload = _home_payload(user, request, settings)
+    payload["birthday"] = await _birthday(request, user, settings)
+    return payload
 
 
 @router.post("/forgot-password")
@@ -206,7 +233,9 @@ async def session(request: Request) -> dict:
         clear_session(request)
         raise HTTPException(status_code=401, detail=str(exc))
     set_session(request, user)
-    return _home_payload(user, request, settings)
+    payload = _home_payload(user, request, settings)
+    payload["birthday"] = await _birthday(request, user, settings)
+    return payload
 
 
 @router.get("/attention")

@@ -1612,7 +1612,35 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-26)
 
-**v0.175.0** (2026-07-26, 1375 tests green, committed NOT pushed; a later
+**v0.177.0** (2026-07-26, 1405 tests green, committed NOT pushed) — **a mentor
+signing in on their birthday gets an animated fireworks overlay + "Happy
+Birthday" before their screen** (Doug's request). The date is the mentor's own
+`Contact.cBirthday` (the field they maintain in `/mentorprofile` → Personal
+details) — **no new CRM field, no migration, no new setting**. New
+`portal/birthday.py` resolves it server-side from the session's user id (own
+`CMentorProfile` → `contactRecordId` → Contact, read AS THE USER) and compares
+month/day against **Cleveland's** calendar day (a 29 Feb birthday is greeted on
+28 Feb in common years). Mentor Team only; the day's answer is cached in the
+session (portal refreshes cost no CRM read, cache lapses at midnight);
+**best-effort end-to-end** — no profile / no Contact / empty birthday / any CRM
+failure = an ordinary sign-in, never a blocked front door. Frontend: the
+self-contained `portal/frontend/birthday.js`
+(`CBMBirthday.celebrate({name,onDone})`) — canvas fireworks (shell launch speed
+DERIVED from the target burst height, burst size scaled to the window, so it
+fills a 4K screen), dismissed by the Continue button / any click / Escape /
+9-second auto-dismiss, `onDone` exactly once; `prefers-reduced-motion` gets the
+same greeting without animation. Hooked into `enter()` so it precedes BOTH the
+home render AND a `?next=` redirect, and shown **once per birthday per browser**
+(localStorage stamped with the server's date). 20 new tests
+(`tests/test_portal_birthday.py`); overlay driven in a real browser (fireworks
+paint, all dismissal paths, once-per-day gate, reduced-motion variant, no
+console errors). **NOT yet driven live** — after deploy, sign in as a mentor
+whose `cBirthday` is today. Mechanics: CHANGELOG 0.177.0. **Version-race note:**
+built alongside the parallel 0.176.0 (portal attention badges), which shares
+`portal/router.py` + `portal/frontend/app.js`; this commit stages ONLY the
+birthday hunks in those two files.
+
+Before that: **v0.175.0** (2026-07-26, 1375 tests green, committed NOT pushed; a later
 frontend-only follow-up adds the splitter — see below) — **Mentor Profile page
 follow-up (Doug's review of v0.172.0): full-width layout, richer "Get to know
 them", + mentoring availability.** On the read-only mentor profile page

@@ -102,6 +102,90 @@
   transform: translateY(-1px);
 }
 .portal__tile-title { font-size: 1.05rem; }
+/* Birthday celebration overlay (portal/birthday.js) — a mentor signing in on
+   their birthday sees this over the whole window before their screen. */
+.bday {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background:
+    radial-gradient(120% 90% at 50% 105%, rgba(23, 59, 96, 0.55) 0%, rgba(6, 14, 28, 0.97) 60%),
+    #060e1c;
+  opacity: 0;
+  transition: opacity 0.45s ease;
+  cursor: pointer;
+}
+.bday--in { opacity: 1; }
+.bday--out { opacity: 0; }
+
+.bday__sky { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+.bday__card {
+  position: relative;           /* above the canvas */
+  text-align: center;
+  color: #fff;
+  max-width: 34rem;
+  padding: 1rem;
+  transform: translateY(10px) scale(0.98);
+  opacity: 0;
+  transition: transform 0.5s cubic-bezier(0.2, 0.9, 0.3, 1), opacity 0.5s ease;
+}
+.bday--in .bday__card { transform: none; opacity: 1; }
+
+.bday__eyebrow {
+  margin: 0 0 0.75rem;
+  font-size: var(--cbm-text-sm);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--cbm-gold);
+}
+.bday__title {
+  margin: 0;
+  font-family: var(--cbm-font-serif);
+  font-size: clamp(2.4rem, 7vw, 4rem);
+  line-height: 1.05;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 0 28px rgba(203, 150, 59, 0.55);
+}
+.bday__name {
+  margin: 0.25rem 0 0;
+  font-family: var(--cbm-font-serif);
+  font-size: clamp(1.6rem, 4.5vw, 2.4rem);
+  font-weight: 600;
+  color: var(--cbm-gold);
+}
+.bday__msg {
+  margin: 1.1rem auto 1.6rem;
+  max-width: 30rem;
+  font-size: 1.05rem;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.86);
+}
+.bday__go {
+  font: inherit;
+  font-weight: 600;
+  color: #10203a;
+  background: var(--cbm-gold);
+  border: 0;
+  border-radius: var(--cbm-radius);
+  padding: 0.8rem 1.9rem;
+  cursor: pointer;
+  transition: background 0.12s ease, transform 0.12s ease;
+}
+.bday__go:hover { background: #e0aa4c; transform: translateY(-1px); }
+.bday__go:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bday, .bday__card { transition: none; }
+  .bday, .bday--in .bday__card { opacity: 1; }
+  .bday__card { transform: none; }
+}
+
 /* My Email tile unread badge (§4.2.2). */
 .portal__tile-badge {
   margin-left: auto;

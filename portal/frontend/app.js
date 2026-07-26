@@ -201,10 +201,34 @@
     return ok ? next : null;
   }
 
+  // Birthday greeting (payload `birthday`, mentors only): fireworks + "Happy
+  // Birthday" over the whole window before the user's screen. Shown once per
+  // birthday per browser — the portal is also re-entered on every refresh and
+  // on every ?next= sign-in, and nobody wants the overlay each time. The date
+  // comes from the server (Cleveland's calendar day), so a traveller's clock
+  // can't re-trigger it.
+  function birthdaySeenKey(data) {
+    return "cbmBirthday:" + ((data.user && data.user.userName) || "");
+  }
+  function shouldCelebrate(data) {
+    if (!data.birthday || !data.birthday.date || !window.CBMBirthday) return false;
+    try { return localStorage.getItem(birthdaySeenKey(data)) !== data.birthday.date; }
+    catch (e) { return true; }   // no localStorage: greet rather than stay silent
+  }
+  function markCelebrated(data) {
+    try { localStorage.setItem(birthdaySeenKey(data), data.birthday.date); } catch (e) {}
+  }
+
   function enter(data) {
-    var next = nextTarget(data);
-    if (next) { location.replace(next); return; }
-    renderHome(data);
+    var go = function () {
+      var next = nextTarget(data);
+      if (next) { location.replace(next); return; }
+      renderHome(data);
+    };
+    if (!shouldCelebrate(data)) { go(); return; }
+    markCelebrated(data);
+    hide($("loginView"));          // don't leave the sign-in form behind the overlay
+    CBMBirthday.celebrate({ name: data.birthday.firstName, onDone: go });
   }
 
   $("loginForm").addEventListener("submit", async function (ev) {
