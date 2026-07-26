@@ -346,6 +346,18 @@ class Settings(BaseSettings):
     # staff.
     events_enabled: bool = False
     events_public_api: bool = False
+    # Zoom (PRD D-03/D-04) — the CBM webinar account, via a Server-to-Server
+    # OAuth app. Off by default; with it off the feature still runs for
+    # in-person events and simply provisions no webinars. NOTE this is the
+    # public-webinar programme only — mentor 1:1 sessions keep using the
+    # mentor's own personal meeting link and never touch this account.
+    zoom_events: bool = False
+    zoom_account_id: str = ""
+    zoom_client_id: str = ""
+    zoom_client_secret: str = ""      # SECRET (web + worker)
+    # The single licensed host every webinar runs under.
+    zoom_host_email: str = "zweb@cbmentors.org"
+    zoom_base_url: str = "https://api.zoom.us/v2"
     # Team gate for the /events staff app (Phase 5).
     events_allowed_teams: str = "Marketing Admin Team"
     # In-process cache for the public read endpoints. The WordPress plugin
@@ -474,6 +486,17 @@ class Settings(BaseSettings):
     @property
     def analytics_view_allowed_teams_list(self) -> list[str]:
         return [t.strip() for t in self.analytics_view_allowed_teams.split(",") if t.strip()]
+
+    @property
+    def zoom_active(self) -> bool:
+        """Zoom calls are possible: enabled, credentialed, and a host set."""
+        return bool(
+            self.zoom_events
+            and self.zoom_account_id
+            and self.zoom_client_id
+            and self.zoom_client_secret
+            and self.zoom_host_email
+        )
 
     @property
     def events_allowed_teams_list(self) -> list[str]:

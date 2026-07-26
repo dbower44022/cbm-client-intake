@@ -4,6 +4,58 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.165.0] — 2026-07-25
+
+**feat(events): Events & Webinars — Phase 2 (Zoom client + webinar
+provisioning)**. Gated OFF by `ZOOM_EVENTS`; no migration. With it off the
+feature still works for in-person events and simply provisions no webinars.
+
+- **`core/zoom.py`** — `ZoomClient` over Server-to-Server OAuth: token cache +
+  refresh (and one forced re-auth on a mid-life 401, since a token can be
+  revoked server-side), create/patch/cancel webinar, add/cancel registrant, and
+  the paged participant report. 429/5xx retried with backoff honouring
+  `Retry-After`. The module docstring is the **verified integration contract**
+  (the `comms/templates.py` convention) and records the traps: `duration` is
+  MINUTES while the CRM stores seconds; `PATCH` answers 204 with no body; the
+  `id` in an add-registrant response is the WEBINAR id, not the registrant's;
+  and an empty participant report means "not ready yet", never "nobody came".
+  Auth errors deliberately never echo the response body, which can carry the
+  client id.
+- **Zoom's own emails (EV-24)** — confirmation stays **on** (the join link is
+  per-registrant, so only Zoom can send it, D-13); reminders and follow-ups are
+  turned **off**, because CBM sends branded ones. Leaving both on would send
+  every registrant two of everything.
+- **`events/zoom_sync.py`** — the decision layer, with the matrix as a **pure
+  function** (`decide`) so it is fully testable without a Zoom account: publish →
+  create, material edit → patch, cancel → cancel, in-person → skip, unpublished →
+  skip unless a staff action forces it, and an existing webinar can be adopted
+  by id (EV-23). Only title/time/duration/description count as material —
+  patching for a capacity or category tweak is pointless traffic and can make
+  Zoom mail every registrant about an "update". Switching an online event to
+  in-person **cancels** its webinar, so registrants aren't left holding a link
+  to a room nobody will host.
+- **Persist-before-anything-else** (the v0.86.0 calendar lesson): the webinar id
+  is written to the CRM immediately after creation; if that write fails the
+  webinar is deleted rather than orphaned, and if the delete ALSO fails the id
+  is reported so it can be cancelled by hand. An unrecorded webinar is invisible
+  to the app forever.
+- **Best-effort throughout**: the module never raises, so Zoom being down cannot
+  undo an event save. Results ride back as `{"ok": …, "action": …}` for the UI.
+- **`scripts/probe_zoom.py`** — read-only Phase 0 gate: authenticates, reads the
+  host account and its webinar licence/capacity, lists webinars, and reads a
+  past participant report — the check most likely to fail, since attendance
+  needs a paid plan and the report scope. Exits non-zero with named blockers.
+- Settings: `zoom_events`, `zoom_account_id`, `zoom_client_id`,
+  `zoom_client_secret` (SECRET), `zoom_host_email` (`zweb@cbmentors.org`),
+  `zoom_base_url`, plus `zoom_active`.
+
+**Verified:** 41 new tests (full suite 1296 green) covering the transport
+(token caching, forced re-auth, rate-limit and 5xx backoff, transport failure),
+the request shapes, the reminder-suppression settings, and the whole decision
+matrix including the orphan-prevention paths. **NOT driven against a real Zoom
+account** — by design: the Server-to-Server OAuth app does not exist yet. Run
+`scripts/probe_zoom.py` first when it does.
+
 ## [0.164.0] — 2026-07-25
 
 **feat(events): Events & Webinars — Phase 1 (CRM read layer + public read API)**

@@ -6,7 +6,10 @@ design, and the verification gates. Requirement ids (`EV-nn`) and decision ids
 
 **Status:** Phase 0 complete (all decisions settled, crm-test schema applied).
 **Phase 1 BUILT and live-verified on crm-test, 2026-07-25 (v0.164.0)** — gated
-off by `EVENTS_ENABLED` + `EVENTS_PUBLIC_API`. Phases 2-6 remain.
+off by `EVENTS_ENABLED` + `EVENTS_PUBLIC_API`.
+**Phase 2 BUILT 2026-07-25 (v0.165.0)** — gated off by `ZOOM_EVENTS`; unit-tested
+against a stubbed Zoom, NOT yet driven against the real account (the OAuth app
+does not exist yet). Phases 3-6 remain.
 
 ---
 
@@ -119,7 +122,7 @@ search + derived thumbnail, per-event detail. Test records deleted, no residue.
 
 ---
 
-## Phase 2 — Zoom client and webinar provisioning
+## Phase 2 — Zoom client and webinar provisioning  ✅ BUILT (v0.165.0)
 
 **Build**
 - `core/zoom.py` — `ZoomClient`:
@@ -139,9 +142,12 @@ search + derived thumbnail, per-event detail. Test records deleted, no residue.
 **Tests:** the decision matrix, token refresh, backoff, and "Zoom is down" —
 every path degrades to a warning.
 
-**Verify live (crm-test):** publish a test event → webinar appears in Zoom with
-registration enabled and reminders off; edit the time → patched; cancel →
-cancelled.
+**Verify live — ☐ BLOCKED on the OAuth app.** When it exists: run
+`scripts/probe_zoom.py` (authenticates, checks the webinar licence, lists
+webinars, reads a past participant report — the check most likely to fail).
+Then: publish a test event → webinar appears in Zoom with registration enabled
+and **reminders off**; edit the time → patched; cancel → cancelled; and confirm
+a registrant receives exactly ONE confirmation and no Zoom reminder.
 
 ---
 
