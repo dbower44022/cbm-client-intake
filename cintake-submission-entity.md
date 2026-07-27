@@ -1,5 +1,15 @@
 # CIntakeSubmission — CRM log of every intake submission
 
+> **⚠ SUPERSEDED IN PART (2026-07-27).** Doug approved a redesign of this
+> entity's status model: the `reason` + `status` pair is replaced by ONE
+> `intakeStatus` field (+ `intakeMessage`, `payload`, `emailLink`, and
+> disposition fields), receipts are written for **every** arrival including
+> held/discarded info@ emails, and the app updates receipts instead of
+> writing once. Design: `prds/intake-receipt-redesign-plan.md`. CRM build
+> handoff: `cintake-submission-redesign.md`. The `reason`/`status` sections
+> below describe the CURRENT live behavior until that build ships; the
+> entity/`form`/`submitterEmail`/`source`/`contact` sections remain accurate.
+
 The intake app writes a **`CIntakeSubmission`** record for **every** web
 submission (all three forms), so admins have an audit trail of exactly what was
 submitted — the processed Account/Contact/profile records are transformed
