@@ -56,11 +56,20 @@ card confirmed). Two fixes came out of the verification (v0.132.1,
 committed): bounces were triage-junked before storage (§3.4 could never
 fire — the §3.4 premise here was wrong), and the awaiting/unread
 enrichment 403'd on EspoCRM's 200-row page cap (the awaiting chip had
-NEVER worked live). **Remaining §3.5 leg:** the inbound PDF + inline-logo
-email (needs an external send, e.g. from james@agapew8loss.com →
-doug.bower@cbmentors.org; ZZTEST contacts are staged on the Tester Tommy
-engagement) and the same-PDF duplicate re-send. Phases 2–3 built
-(v0.157.0 / v0.158.0), not yet driven live.**
+NEVER worked live). **§3.1 attachment auto-file + dedup VERIFIED LIVE on
+crm-test 2026-07-27 — on REAL client mail, no test email needed:** the
+`comm_attachment` ledger shows 5 filings across two engagements — a real
+"Solon Brochure (1).pdf" and a JPEG filed to the Sam Smith engagement's
+Documents (docType "Email attachment"), plus an `invite.ics` filed once
+and its re-sent copy correctly marked `duplicate` (per-record SHA-256
+dedup working). 4 `app_document` email-attachment rows created; all under
+`GDRIVE_IDENTITY=service`. **Phase 1 is now fully verified on crm-test.**
+The only §3.5 sub-check not separately exercised is that an *inline*
+signature/body image is NOT filed (the ruling's inline-exclusion) — the
+code enforces it and it's unit-tested, but hasn't been eyeballed on a live
+message carrying one. **PROD not yet driven live** (prod carries the code;
+its own §3.5 pass is open). Phases 2–3 built (v0.157.0 / v0.158.0), not
+yet driven live.**
 Originally authored 2026-07-21 from Doug's
 priority rulings this session (recorded in §2) after a full review of the
 email system (docs + code sweep of `core/gmail.py`, `core/email_clean.py`,
