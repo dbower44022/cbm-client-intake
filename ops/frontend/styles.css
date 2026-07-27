@@ -37,6 +37,10 @@ body { margin: 0; display: flex; flex-direction: column; }
 .ops__counts { display: flex; flex-wrap: wrap; gap: 0.35rem; }
 .count-chip { padding: 0.15rem 0.6rem; border-radius: 999px; font-size: 12px;
   background: var(--cbm-surface); border: 1px solid var(--cbm-border); color: var(--cbm-slate-700); }
+/* Count chips double as one-click filters. */
+.count-chip.is-clickable { cursor: pointer; }
+.count-chip.is-clickable:hover { filter: brightness(0.96); text-decoration: underline; }
+.count-chip.is-active { outline: 2px solid var(--cbm-blue); outline-offset: 1px; font-weight: 600; }
 
 .ops__notice { padding: 0.6rem 1rem; border-radius: var(--cbm-radius); margin: 0 0 0.6rem; }
 .ops__notice.is-success { background: #eafaef; color: #2f7a3f; border: 1px solid var(--cbm-success); }
@@ -179,6 +183,15 @@ body { margin: 0; display: flex; flex-direction: column; }
 .state-prog { color: #8a5a00; }
 .state-new { color: var(--cbm-slate-700); }
 .state-closed { color: #2f7a3f; }
+.state-review { color: #8a5a00; }           /* Held-Email: awaiting triage */
+.state-none { color: #94a3b8; }             /* "—": no reply conversation */
+/* Intake-status cell colors (the receipt vocabulary). */
+.state-received { color: var(--cbm-slate-700); }
+.state-completed { color: #2f7a3f; }
+.state-heldspam { color: #8a5a00; }
+.state-heldemail { color: #1f4e8c; }
+.state-error { color: #b3261e; }
+.state-discarded { color: #64748b; }
 .state-sub { margin-left: 0.45rem; font-size: 10.5px; text-transform: uppercase;
   letter-spacing: 0.03em; font-weight: 700; padding: 1px 6px; border-radius: 4px; }
 .state-sub.tone-crit { background: #fdeaea; color: #a23b38; }

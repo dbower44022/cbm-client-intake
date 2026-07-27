@@ -72,23 +72,27 @@ that reconciliation on demand (safe to press any time).
   the right edge of a header). Rows alternate colors; clicking anywhere on a
   row opens it.
 - The **search box at the top center** filters live across reference, form,
-  status, submitter, error text, notes, and dates.
-- The **Open / Resolved / All** select defaults to **Open** — the grid shows
-  the requests still waiting on someone. The count chips include `open` /
-  `resolved` totals.
-- The **State** column is one at-a-glance answer to "where does this stand?",
-  worked out for you from the emails and what staff have done:
-  - **↳ Reply owed** (red) — the submitter's email is newest; we owe them a reply.
-  - **Waiting on them** — our email is newest.
-  - **In progress** — someone has commented / replied, no reply currently owed.
-  - **New** — nobody has touched it yet.
-  - **Closed** (green) — it's been closed with a reason.
-  - **Delivery failed** — a reply bounced.
-
-  If the machine had trouble *delivering* the submission to the CRM (rare),
-  that shows as a small sub-badge next to the state (e.g. `needs attention`,
-  or `held review` on an inbound email awaiting Approve). Sorting by State
-  surfaces the reply-owed items first.
+  intake status, response status, submitter, error text, notes, and dates.
+- Two plainly-separate status columns replace the old blended "State":
+  - **Intake status** — *what happened to this arrival?* — straight from the
+    CRM receipt: **Received / Completed / Held-Spam / Held-Email / Error /
+    Discarded**.
+  - **Response status** — *where does the reply conversation stand?* —
+    **New → In progress → Reply owed / Waiting on them → Responded → Closed**
+    (**Delivery failed** if a reply bounced). It's worked out for you from the
+    stored request status and the live emails. Sorting by it surfaces the
+    reply-owed items first. The reply lifecycle only applies once an item is a
+    **live request** (a delivered form, or an *approved* email): a Held-Email
+    that nobody has triaged yet reads **Awaiting review** (never a reply
+    direction), and a Held-Spam / Error / Discarded arrival — which has no
+    conversation — reads **—**.
+- **Three filters** (Intake status / Response status / Form), each offering
+  **every** value, plus a live search. The Response-status filter also has an
+  **Open (not closed)** shortcut for the work-queue view.
+- **The count chips are clickable filters.** Each chip at the top —
+  `Completed`, `Held-Email`, `Error`, … and `open` / `resolved` — applies the
+  filter that produced its count when you click it (click again to clear); the
+  matching filter dropdown stays in step. `total` clears all filters.
 - The **Last activity** column shows **who did the last thing and when** —
   the signal that a colleague is already on an item (there's no formal
   "owner"; visibility is how the team avoids two people answering the same

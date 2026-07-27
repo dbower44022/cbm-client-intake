@@ -22,35 +22,43 @@
     held_honeypot: "Held-Spam", held_review: "Held-Email", discarded: "Discarded",
   };
   function statusLabel(s) { return STATUS_LABELS[s] || (s || "").replace(/_/g, " "); }
-  // The filter keeps one option per machine state (the API filters by it) but
-  // labelled in the shared vocabulary; the "Received" qualifiers are plain
-  // English, not system words.
-  var STATUS_FILTER_OPTIONS = [
-    ["pending", "Received — waiting"],
-    ["processing", "Received — delivering"],
-    ["retry", "Received — retrying"],
-    ["completed", "Completed"],
-    ["needs_attention", "Error"],
-    ["held_honeypot", "Held-Spam"],
-    ["held_review", "Held-Email"],
-    ["discarded", "Discarded"],
-  ];
+  // INTAKE STATUS — "what happened to this arrival?" — is its own grid column
+  // and filter, straight from the receipt vocabulary. Each label carries a cell
+  // color class (.state-<cell>) and a count-chip class (existing .status-*).
+  var INTAKE = {
+    "Received":   { cell: "received",  chip: "status-pending" },
+    "Completed":  { cell: "completed", chip: "status-completed" },
+    "Held-Spam":  { cell: "heldspam",  chip: "status-held_honeypot" },
+    "Held-Email": { cell: "heldemail", chip: "status-held_review" },
+    "Error":      { cell: "error",     chip: "status-needs_attention" },
+    "Discarded":  { cell: "discarded", chip: "status-discarded" },
+  };
+  var INTAKE_LABELS = ["Received", "Completed", "Held-Spam", "Held-Email", "Error", "Discarded"];
+  var INTAKE_RANK = { "Error": 0, "Held-Email": 1, "Held-Spam": 2, "Received": 3, "Completed": 4, "Discarded": 5 };
+  // RESPONSE STATUS — "where does the reply conversation stand?" — its own
+  // column and filter. The reply lifecycle (owed / waiting / responded) only
+  // applies once the item is a LIVE REQUEST — a delivered form or an APPROVED
+  // email. Before that a held email is "Awaiting review", and spam / errored /
+  // discarded arrivals have no conversation at all ("—"). This is why a
+  // Held-Email can never read "Waiting on them".
+  var LIVE_REQUEST = { pending: 1, processing: 1, retry: 1, completed: 1 };
+  var RESPONSE_LABELS = ["Awaiting review", "New", "In progress", "Reply owed", "Waiting on them", "Responded", "Delivery failed", "Closed"];
+  var RESPONSE_RANK = { "Reply owed": 0, "Delivery failed": 1, "Awaiting review": 2, "In progress": 3, "New": 4, "Waiting on them": 5, "Responded": 6, "Closed": 7, "—": 8 };
   // info-email = an inbound email to the shared info@ mailbox, captured by the
   // worker's poller (held_review until staff Approve or Discard it).
   var FORMS = ["client-intake", "volunteer", "info-request", "partner", "sponsor", "info-email"];
-  // Delivery statuses that are "an exception worth showing" next to the derived
-  // conversational state (everything else reads plainly "completed").
-  var DELIVERY_EXCEPTIONS = { pending: 1, processing: 1, retry: 1,
-                              needs_attention: 1, held_honeypot: 1, discarded: 1 };
   // Re-drive includes discarded so a mistaken discard can be undone (re-queued).
   var REDRIVABLE = { held_honeypot: 1, held_review: 1, needs_attention: 1, retry: 1, discarded: 1 };
   // Discard resolves a stuck row that can't be re-driven (e.g. a bad payload).
   var DISCARDABLE = { held_honeypot: 1, held_review: 1, needs_attention: 1, retry: 1 };
 
-  // resolution defaults to "open": the grid is a work queue ("is anyone
-  // still waiting on us?"), resolved rows are one select away.
-  var state = { status: "", form: "", search: "", resolution: "open" };
+  // All filters default to "" (show everything) and run client-side over the
+  // loaded rows, so the count chips can double as one-click filters.
+  //   intake   — an INTAKE_LABELS value ("Received", "Error", …)
+  //   response — a RESPONSE_LABELS value, or "open" (everything not Closed)
+  var state = { intake: "", response: "", form: "", search: "" };
   var rows = [];                 // the loaded submissions
+  var countsCache = {};          // last /submissions counts, so chips redraw on filter
   var sortKey = null, sortDir = 1;
   var colWidths = null;          // frozen column widths after the first grip drag
   var config = null;             // /session payload (crmUrl, commsEnabled)
@@ -174,12 +182,15 @@
       notice("notice", e.message, "error");
     }
   });
-  // Null-guarded: a browser holding yesterday's cached index.html (no
-  // resolvedFilter element) must not die on boot with the new app.js.
-  var _rf = $("resolvedFilter");
-  if (_rf) _rf.addEventListener("change", function () { state.resolution = this.value; renderTable(); });
-  $("statusFilter").addEventListener("change", function () { state.status = this.value; loadData(); });
-  $("formFilter").addEventListener("change", function () { state.form = this.value; loadData(); });
+  // All three filters run client-side over the loaded rows (null-guarded so a
+  // browser holding a stale cached index.html can't die on boot).
+  bindFilter("intakeFilter", "intake");
+  bindFilter("responseFilter", "response");
+  bindFilter("formFilter", "form");
+  function bindFilter(id, key) {
+    var el = $(id);
+    if (el) el.addEventListener("change", function () { state[key] = this.value; renderTable(); });
+  }
   $("searchBox").addEventListener("input", function () { state.search = this.value.trim().toLowerCase(); renderTable(); });
   $("backBtn").addEventListener("click", function () { stopPresencePoll(); hide($("detailView")); show($("dashView")); loadData(); });
   $("corrBtn").addEventListener("click", showCorrespondence);
@@ -201,14 +212,13 @@
   async function loadData() {
     clearNotice("notice");
     show($("loadingState")); hide($("subTable")); hide($("emptyState"));
-    var qs = [];
-    if (state.status) qs.push("status=" + encodeURIComponent(state.status));
-    if (state.form) qs.push("form=" + encodeURIComponent(state.form));
     try {
-      var data = await api("/submissions" + (qs.length ? "?" + qs.join("&") : ""));
+      // Load everything; intake / response / form / search all filter client-side
+      // (so the count chips can apply the same filters with one click).
+      var data = await api("/submissions");
       rows = data.submissions || [];
-      renderCounts(data.counts || {});
-      renderTable();
+      countsCache = data.counts || {};
+      renderTable();   // renders the grid AND the count chips (renderCounts)
       loadReplyStates();
       api("/metrics").then(renderMetrics).catch(function () {
         $("metrics").textContent = "metrics unavailable";
@@ -231,80 +241,115 @@
     $("metrics").className = "ops__metrics" + (open ? " is-alert" : "");
   }
 
+  // A count chip that doubles as a filter: clicking it applies the same filter
+  // that produced the count (click again to clear). Keyboard-operable.
+  function countChip(text, cls, onClick, active) {
+    var chip = document.createElement("span");
+    chip.className = "count-chip" + (cls ? " " + cls : "") + (onClick ? " is-clickable" : "") + (active ? " is-active" : "");
+    chip.textContent = text;
+    if (onClick) {
+      chip.setAttribute("role", "button"); chip.tabIndex = 0;
+      chip.addEventListener("click", onClick);
+      chip.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); }
+      });
+    }
+    return chip;
+  }
+
   function renderCounts(counts) {
+    counts = counts || countsCache;
     var box = $("counts"); box.innerHTML = "";
     var total = 0;
-    // Chips grouped by the DISPLAY vocabulary (pending/processing/retry all
-    // read "Received", so they merge into one chip).
-    var byLabel = {}, labelClass = {};
+    // Intake-status chips (the receipt vocabulary; pending/processing/retry all
+    // read "Received", so they merge). Clicking one filters to that status.
+    var byLabel = {};
     STATUSES.forEach(function (s) {
       var n = counts[s] || 0; total += n;
       if (!n) return;
-      var lbl = statusLabel(s);
-      byLabel[lbl] = (byLabel[lbl] || 0) + n;
-      labelClass[lbl] = labelClass[lbl] || s;
+      byLabel[statusLabel(s)] = (byLabel[statusLabel(s)] || 0) + n;
     });
-    Object.keys(byLabel).forEach(function (lbl) {
-      var chip = document.createElement("span");
-      chip.className = "count-chip status-" + labelClass[lbl];
-      chip.textContent = lbl + ": " + byLabel[lbl];
-      box.appendChild(chip);
+    INTAKE_LABELS.forEach(function (lbl) {
+      if (!byLabel[lbl]) return;
+      box.appendChild(countChip(lbl + ": " + byLabel[lbl], (INTAKE[lbl] || {}).chip,
+        function () { applyFilter("intake", lbl); }, state.intake === lbl));
     });
-    var t = document.createElement("span"); t.className = "count-chip"; t.textContent = "total: " + total;
-    box.appendChild(t);
-    // Open vs resolved (the staff workflow split), from the loaded rows.
-    var resolved = rows.filter(function (r) { return r.resolved_at; }).length;
-    var o = document.createElement("span"); o.className = "count-chip chip-open";
-    o.textContent = "open: " + (rows.length - resolved); box.appendChild(o);
+    box.appendChild(countChip("total: " + total, "", clearFilters));
+    // Open vs resolved (the work-queue split), from the loaded rows. These
+    // filter on response status: open = not Closed, resolved = Closed.
+    var resolved = rows.filter(function (r) { return r.closed_at; }).length;
+    box.appendChild(countChip("open: " + (rows.length - resolved), "chip-open",
+      function () { applyFilter("response", "open"); }, state.response === "open"));
     if (resolved) {
-      var rc = document.createElement("span"); rc.className = "count-chip chip-resolved";
-      rc.textContent = "resolved: " + resolved; box.appendChild(rc);
+      box.appendChild(countChip("resolved: " + resolved, "chip-resolved",
+        function () { applyFilter("response", "Closed"); }, state.response === "Closed"));
     }
   }
 
-  // The grid collapses the old Status / Request / Reply columns into ONE derived
-  // "State" (see stateInfo) + a "Last activity" collision signal.
+  // Apply a chip's filter (toggle off if it's already the active one), keeping
+  // the matching <select> in sync so the two controls never disagree.
+  function applyFilter(key, value) {
+    state[key] = (state[key] === value) ? "" : value;
+    syncFilterSelects();
+    renderTable();
+  }
+  function clearFilters() {
+    state.intake = ""; state.response = ""; state.form = "";
+    syncFilterSelects();
+    renderTable();
+  }
+  function syncFilterSelects() {
+    var i = $("intakeFilter"); if (i) i.value = INTAKE_LABELS.indexOf(state.intake) >= 0 ? state.intake : "";
+    var r = $("responseFilter"); if (r) r.value = state.response;
+    var f = $("formFilter"); if (f) f.value = state.form;
+  }
+
+  // Two plainly-separate columns: INTAKE STATUS (what happened to the arrival)
+  // and RESPONSE STATUS (where the reply conversation stands) — no blended
+  // "State". Plus a "Last activity" collision signal.
   var COLUMNS = [
     { key: "id", label: "Reference", get: function (r) { return (r.id || "").slice(0, 8); } },
     { key: "form_slug", label: "Form" },
-    { key: "_state", label: "State", sortKey: "_stateSort" },
+    { key: "_intake", label: "Intake status", sortKey: "_intakeSort" },
+    { key: "_response", label: "Response status", sortKey: "_responseSort" },
     { key: "email", label: "Submitter" },
     { key: "_lastact", label: "Last activity", sortKey: "last_activity_at" },
     { key: "received_at", label: "Received", fmt: fmtDate },
     { key: "_actions", label: "", sort: false },
   ];
 
-  // The derived conversational state: closed wins, then the live reply state
-  // (owed / bounced / waiting) overlays an otherwise in-progress/new base.
-  function stateInfo(r) {
-    // A closed row shows its disposition reason (e.g. "Process completed" for an
-    // auto-closed intake) rather than a bare "Closed".
-    if (r.baseState === "closed") return { cls: "closed", text: r.close_reason || "Closed", reason: r.close_reason };
+  // Intake status: straight from the receipt vocabulary.
+  function intakeInfo(r) {
+    var label = statusLabel(r.status);
+    return { label: label, cls: (INTAKE[label] || {}).cell || "received" };
+  }
+  // Response status. Closed always wins. A NON-live-request arrival has no
+  // reply conversation: a held email is "Awaiting review" (it needs triage, not
+  // a reply), and spam / errored / discarded show "—". Only a live request runs
+  // the reply lifecycle — so "Held-Email + Waiting on them" is impossible.
+  function responseInfo(r) {
+    if (r.closed_at) return { label: "Closed", cls: "closed", reason: r.close_reason };
+    if (!LIVE_REQUEST[r.status]) {
+      if (r.status === "held_review") return { label: "Awaiting review", cls: "review" };
+      return { label: "—", cls: "none" };
+    }
     var rs = r._replyState;
-    if (rs === "owed") return { cls: "owed", text: "Reply owed" };
-    if (rs === "bounced") return { cls: "bounced", text: "Delivery failed" };
-    if (rs === "waiting") return { cls: "wait", text: "Waiting on them" };
-    if (r.baseState === "in_progress") return { cls: "prog", text: "In progress" };
-    return { cls: "new", text: "New" };
+    if (rs === "owed") return { label: "Reply owed", cls: "owed" };
+    if (rs === "bounced") return { label: "Delivery failed", cls: "bounced" };
+    if (rs === "waiting") return { label: "Waiting on them", cls: "wait" };
+    if (r.request_status === "Responded") return { label: "Responded", cls: "prog" };
+    if (r.request_status === "In Progress" || r.baseState === "in_progress") return { label: "In progress", cls: "prog" };
+    return { label: "New", cls: "new" };
   }
-  var STATE_RANK = { owed: 0, bounced: 1, prog: 2, new: 3, wait: 4, closed: 5 };
-  function stateRank(r) { return STATE_RANK[stateInfo(r).cls]; }
 
-  function subBadge(text, tone) {
-    var b = document.createElement("span");
-    b.className = "state-sub tone-" + tone; b.textContent = text; return b;
-  }
-  function stateCell(r) {
-    var info = stateInfo(r);
+  // A pill for either derived status: colored dot + label (+ optional tooltip).
+  function statusPill(info) {
     var wrap = document.createElement("span"); wrap.className = "state state-" + info.cls;
-    var dot = document.createElement("span"); dot.className = "state-dot"; wrap.appendChild(dot);
-    var t = document.createElement("span"); t.textContent = info.text; wrap.appendChild(t);
+    if (info.cls !== "none") {   // "—" (no conversation) carries no status dot
+      var dot = document.createElement("span"); dot.className = "state-dot"; wrap.appendChild(dot);
+    }
+    var t = document.createElement("span"); t.textContent = info.label; wrap.appendChild(t);
     if (info.reason) wrap.title = "Closed — " + info.reason;
-    // A delivery problem (or an inbound email awaiting Approve) stays visible.
-    if (r.status === "held_review") wrap.appendChild(subBadge("Held-Email", "warn"));
-    else if (r.status === "held_honeypot") wrap.appendChild(subBadge("Held-Spam", "warn"));
-    else if (r.status === "discarded") wrap.appendChild(subBadge("Discarded", "muted"));
-    else if (DELIVERY_EXCEPTIONS[r.status]) wrap.appendChild(subBadge(statusLabel(r.status), "crit"));
     return wrap;
   }
   function lastActCell(r) {
@@ -317,10 +362,14 @@
   }
 
   function rowMatches(r) {
-    if (state.resolution === "open" && r.resolved_at) return false;
-    if (state.resolution === "resolved" && !r.resolved_at) return false;
+    if (state.intake && intakeInfo(r).label !== state.intake) return false;
+    if (state.response) {
+      if (state.response === "open") { if (r.closed_at) return false; }
+      else if (responseInfo(r).label !== state.response) return false;
+    }
+    if (state.form && r.form_slug !== state.form) return false;
     if (!state.search) return true;
-    var hay = [r.id, r.form_slug, r.status, stateInfo(r).text, r.close_reason,
+    var hay = [r.id, r.form_slug, intakeInfo(r).label, responseInfo(r).label, r.close_reason,
                r.email, r.last_error, r.last_activity_by, fmtDate(r.received_at)]
       .filter(Boolean).join(" ").toLowerCase();
     return hay.indexOf(state.search) >= 0;
@@ -338,6 +387,7 @@
   }
 
   function renderTable() {
+    renderCounts();   // keep the count chips (and their active-filter highlight) in step
     var head = $("subHead"); head.innerHTML = "";
     var htr = document.createElement("tr");
     COLUMNS.forEach(function (c, i) {
@@ -390,7 +440,10 @@
     });
     head.appendChild(htr);
 
-    rows.forEach(function (r) { r._stateSort = stateRank(r); });  // for the State sort
+    rows.forEach(function (r) {   // sort keys for the two status columns
+      r._intakeSort = INTAKE_RANK[intakeInfo(r).label];
+      r._responseSort = RESPONSE_RANK[responseInfo(r).label];
+    });
     var list = sortedRows(rows.filter(rowMatches));
     var body = $("subBody"); body.innerHTML = "";
     if (!list.length) {
@@ -417,8 +470,10 @@
         link.textContent = (r.id || "").slice(0, 8);
         link.addEventListener("click", function (ev) { ev.stopPropagation(); openDetail(r.id); });
         td.appendChild(link);
-      } else if (c.key === "_state") {
-        td.appendChild(stateCell(r));
+      } else if (c.key === "_intake") {
+        td.appendChild(statusPill(intakeInfo(r)));
+      } else if (c.key === "_response") {
+        td.appendChild(statusPill(responseInfo(r)));
       } else if (c.key === "_lastact") {
         td.appendChild(lastActCell(r));
       } else if (c.key === "_actions") {
@@ -437,7 +492,9 @@
 
   async function loadReplyStates() {
     if (!config || config.commsEnabled === false) return;
-    var open = rows.filter(function (r) { return !r.resolved_at && r.email; }).slice(0, 30);
+    // Only live requests have a reply lifecycle (held / spam / errored rows show
+    // "Awaiting review" / "—"), so we don't probe their threads.
+    var open = rows.filter(function (r) { return !r.closed_at && r.email && LIVE_REQUEST[r.status]; }).slice(0, 30);
     if (!open.length) return;
     open.forEach(function (r) { if (!r._replyState) r._replyState = "pending"; });
     renderTable();
@@ -1251,10 +1308,19 @@
 
   // --- boot -----------------------------------------------------------------
   (function () {
-    var sel = $("statusFilter");
-    sel.innerHTML = "";
-    sel.appendChild(new Option("All statuses", ""));
-    STATUS_FILTER_OPTIONS.forEach(function (o) { sel.appendChild(new Option(o[1], o[0])); });
+    var intake = $("intakeFilter");
+    if (intake) {
+      intake.innerHTML = "";
+      intake.appendChild(new Option("All intake statuses", ""));
+      INTAKE_LABELS.forEach(function (l) { intake.appendChild(new Option(l, l)); });
+    }
+    var resp = $("responseFilter");
+    if (resp) {
+      resp.innerHTML = "";
+      resp.appendChild(new Option("All response statuses", ""));
+      resp.appendChild(new Option("Open (not closed)", "open"));
+      RESPONSE_LABELS.forEach(function (l) { resp.appendChild(new Option(l, l)); });
+    }
   })();
   fillSelect($("formFilter"), FORMS, "All forms");
   (async function init() {

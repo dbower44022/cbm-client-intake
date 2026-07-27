@@ -4,6 +4,41 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.184.0] — 2026-07-27
+
+**feat(ops): split Submission Admin's blended "State" into Intake status +
+Response status, with all-value filters and clickable count chips** (Doug's
+review of the intake-receipt redesign). The grid's single derived **State**
+column — which mashed together the CRM processing status, the live email reply
+state, and a delivery sub-badge — is replaced by **two plainly-separate
+columns**:
+- **Intake status** — the receipt vocabulary (Received / Completed / Held-Spam /
+  Held-Email / Error / Discarded): *what happened to this arrival?*
+- **Response status** — *where does the reply conversation stand?* (New → In
+  progress → Reply owed / Waiting on them → Responded → Closed; Delivery failed
+  on a bounce), derived from the stored `request_status` + `closed_at`, sharpened
+  by the live Gmail reply signal (`comms` `_replyState`). **The reply lifecycle
+  only applies to a live request** (`LIVE_REQUEST` = a delivered form or an
+  *approved* email): a not-yet-triaged **Held-Email** reads **"Awaiting review"**
+  (never a reply direction — so the nonsensical "Held-Email + Waiting on them"
+  can't occur), and a Held-Spam / Error / Discarded arrival reads **"—"** (no
+  conversation). Reply-state probing is likewise skipped for those rows.
+
+The old **Open / Resolved / All** select is gone; the **Response status** filter
+carries every value plus an **Open (not closed)** shortcut, and a new **Intake
+status** filter carries all six receipt words. All filtering now runs
+**client-side** over the loaded rows, so the top-of-page **count chips are
+themselves one-click filters** — clicking `Error`, `Held-Email`, `open`,
+`resolved`, … applies the filter that produced the count (click again to clear;
+`total` clears all), and the matching dropdown stays in step. Frontend-only
+(`ops/frontend/app.js` / `index.html` / `styles.css`); no schema, endpoint, or
+backend change — the underlying stored fields (`status`, `request_status`,
+`resolved_at`/`closed_at`) are unchanged, just presented as two clear axes
+instead of one blended one. Verified in the stub-browser harness (both columns'
+derivations across held/completed/error/closed rows, all three filters, and
+every count-chip filter incl. toggle-off, active-highlight, and select sync; no
+console errors). Staff reference updated in `submission-admin.md`.
+
 ## [0.183.0] — 2026-07-27
 
 **fix(directory): the all-fields Mentors search returned nothing (0.180.0
