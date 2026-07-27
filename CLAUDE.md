@@ -1610,7 +1610,45 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   Note: crm-test seed sessions carry out-of-enum `sessionType` values (harmless; a
   data-hygiene cleanup). **UI polish is the next work item** (a follow-up session).
 
-## Current status (updated 2026-07-26)
+## Current status (updated 2026-07-27)
+
+**v0.181.0 + v0.182.1** (2026-07-27, 1433 tests green — **DEPLOYED AND
+CONVERGED on BOTH environments; the intake-receipt redesign arc is
+COMPLETE**). Doug's ruling (elicited 2026-07-27, design record
+`prds/intake-receipt-redesign-plan.md`, CRM handoff
+`cintake-submission-redesign.md`): **the CRM is the single source of truth
+for every arrival** — the old confusing `CIntakeSubmission` `reason`+`status`
+pair is replaced outright, not bandaided.
+- **One status vocabulary everywhere**: `Received / Completed / Held-Spam /
+  Held-Email / Error / Discarded` — the CRM receipt's `intakeStatus` AND every
+  Submission Admin screen (grid chips, state badges, detail, filter — machine
+  words like `pending`/`needs_attention` never render again). New fields:
+  `intakeMessage` (spam-trap wording / "All emails need review" / a long
+  what-failed-and-how-to-fix text), `payload` (the raw input; for emails the
+  email content itself + `emailLink`), `dispositionedBy/At/Reason`.
+- **Every arrival gets a receipt, updated as it changes**
+  (`core/receipts.py`, the row-driven engine; `core/submission_log.py`
+  RETIRED): created at capture — **info@ emails as Held-Email BEFORE any
+  human decision** — updated on outcome/disposition. `crm_receipt_id` links
+  row↔receipt (Alembic **0023**); creates ADOPT an existing receipt by token
+  (never duplicate). **Discard requires a reason** (popover UI; 422 without)
+  and stamps who/when/why on the receipt; only humans produce `Discarded`.
+- **The guarantee**: hourly `run_receipt_sweep` in the worker
+  (`RECEIPT_RECONCILE_SECONDS`) + a **"Sync receipts"** button in /ops
+  (`POST /ops/api/receipts/sync`) + drift alerting. Proven immediately: the
+  first deployed sweeps self-converged BOTH CRMs (the console migration
+  dry-runs found nothing left — crm-test 63 receipts, prod 102; prod
+  GET-verified 96 Completed / 4 Held-Email / 1 Discarded / 1 Error), and
+  surfaced a real bug — a row whose delivered Contact was later DELETED
+  failed its whole receipt write (EspoCRM rejects dangling links) — fixed in
+  **v0.182.1** (`_prune_dangling_contact`); post-fix sweeps: **0 failed**.
+- `scripts/migrate_intake_receipts.py` (dry-run default) remains the manual
+  migration/back-link tool; both edit grants proven live. **Remaining
+  (Doug, in OPEN-ITEMS.md #9):** delete `reason`/`status` in Entity Manager
+  (both CRMs), the handoff §7 live pass, delete ZZTEST receipt
+  `6a66f5b4bbe3805ee` (crm-test). Also from this arc: the flow diagram
+  `intake-processing-flow.drawio` (one tab per input source + the vocabulary
+  table) and refreshed `submission-admin.md` / `intake-processing-overview.md`.
 
 **v0.179.0** (2026-07-26, 1419 tests green, committed NOT pushed) — **birthdays
 are a CBM-wide moment** (Doug's follow-up to 0.177.0, below): the greeting is no

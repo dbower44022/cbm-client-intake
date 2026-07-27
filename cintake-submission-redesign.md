@@ -16,14 +16,16 @@ Build on **crm-test first**, verify with the app, then **prod**. All work is
 in **Administration → Entity Manager → Intake Submission → Fields** unless
 stated otherwise.
 
-> **STATUS 2026-07-27:** fields built on BOTH CRMs (Doug); app v0.180.0 built
-> (all three phases). On **crm-test** the migration ran clean (57 records,
-> GET-verified — which also proves the API user's edit grant there) and a live
-> probe verified the create + disposition paths end-to-end (ZZTEST receipt
-> `6a66f5b4bbe3805ee` left to delete in the UI). **Remaining:** deploy; run
-> the migration in each deployed console (crm-test again for the back-link
-> half, prod for everything — §5); verify prod's edit grant (§3); the §7 live
-> pass; then delete `reason`/`status` (§6).
+> **STATUS 2026-07-27: DEPLOYED AND CONVERGED ON BOTH ENVIRONMENTS**
+> (v0.181.0 + the v0.182.1 dangling-contact fix). Fields built on both CRMs
+> (Doug); both environments' edit grants proven live. The reconciliation
+> sweep converged everything on its own at first boot (the console migration
+> dry-runs then found **nothing left to do** — crm-test 63 receipts current,
+> prod 102); post-fix sweeps report **0 failed** on both (crm-test 38 rows,
+> prod 112 — prod: 96 Completed / 4 Held-Email / 1 Discarded / 1 Error,
+> GET-verified). **Remaining (Doug, tracked in OPEN-ITEMS.md):** delete
+> `reason`/`status` in Entity Manager (§6, both CRMs); the §7 live pass;
+> delete the ZZTEST probe receipt `6a66f5b4bbe3805ee` (crm-test).
 
 ---
 

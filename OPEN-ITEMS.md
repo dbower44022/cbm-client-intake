@@ -43,6 +43,19 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Data cleanup
 
+9. **Intake-receipt redesign — CRM-side finish** (2026-07-27; app arc
+   COMPLETE and converged — see the CLAUDE.md Current-status block). Three
+   Doug-side items, both CRMs unless noted:
+   - **Delete the old `reason` and `status` fields** on Intake Submission in
+     Entity Manager (`cintake-submission-redesign.md` §6) — the migration is
+     verified on both environments, nothing writes or reads them anymore.
+   - The **§7 live pass** when convenient: a test form submission (watch it go
+     Received → Completed in Submission Admin AND on the CRM receipt), an
+     outside email to info@ (a Held-Email receipt exists in the CRM before
+     anyone touches it), and a Discard-with-reason (who/when/why on the
+     receipt).
+   - Delete the live-probe receipt **ZZTEST `6a66f5b4bbe3805ee`** (crm-test).
+
 7. **Partner Accounts carry a bogus industry sector** (found 2026-07-25).
    `Account.cIndustrySector` used to default to "Agriculture, Forestry, Fishing
    and Hunting", and it stuck on 7 of 8 crm-test partner Accounts — including
