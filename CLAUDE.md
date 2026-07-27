@@ -1699,7 +1699,17 @@ your birthday AND a colleague's. Payload key `birthday` → **`birthdays` =
 `{date, own, others}`**. 33 tests; both modes driven in a real browser.
 **NOT yet driven live** — after deploy: a member whose `cBirthday` is today
 signs in (own greeting), then a second member (announcement naming the first);
-remember the roster caches for up to an hour. Mechanics: CHANGELOG 0.179.0.
+remember the roster caches for up to an hour. Mechanics: CHANGELOG 0.179.0;
+staff/testing reference: **`birthday-greetings.md`** — incl.
+**`scripts/preview_birthday.py`**, which serves the real app locally with a
+SHIFTED "today" (`--date 11-07`) so the greeting can be seen against real
+records without editing anyone's Contact. **Data caveat (probed live
+2026-07-27): only ONE of 43 crm-test member profiles has a birthday recorded**
+(Douglas Bower, 11-07; 36 have a linked Contact), so the feature will rarely
+fire until members fill in My Mentor Profile → Personal details → Birthday —
+worth raising with Doug before expecting to see it in the wild. The BACKEND was
+verified live against crm-test (roster read under the API key, own-greeting vs.
+announcement both correct); the browser half was verified in the stub harness.
 
 Before that: **v0.177.0** (2026-07-26, committed NOT pushed) — the first cut of
 the above: **a mentor signing in on their birthday gets an animated fireworks
@@ -5433,6 +5443,14 @@ the synced lists were verified identical on crm-test and prod.
 - `mentor-administration.md` — functional reference for the `/mentoradmin` tool:
   overall functionality + the **complete-record requirements** (the completeness
   rules, in plain language).
+- `birthday-greetings.md` — the portal birthday celebration (v0.177.0/0.179.0):
+  what a member sees on their own birthday vs. what everyone else sees
+  ("Wish X a Happy Birthday!"), the rules (Cleveland's day, leap day, greeted
+  vs. announced statuses, once per day per browser), **how to test it without
+  changing any data** (`scripts/preview_birthday.py` → http://localhost:8010/),
+  the hourly roster cache, and the honest data caveat — as of 2026-07-27 only
+  ONE member in crm-test has a birthday recorded, so it will rarely fire until
+  members fill the field in.
 - `mentor-directory.md` — user guide for the **Mentors directory** (`/directory/
   mentors`) and the rich, read-only **mentor profile page** it opens
   (`/directory/mentors/record/{id}`): what's on the page (photo, headline,
