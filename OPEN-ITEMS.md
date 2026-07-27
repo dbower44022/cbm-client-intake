@@ -6,6 +6,20 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+0. **Analytics on the record views — two surfaces have nowhere to live**
+   (2026-07-27; decisions + full context in `prds/analytics-app-plan.md` §17).
+   Doug ruled that a dashboard can be attached to every record view (Mentor,
+   Company, Contact, Engagement, Client, Partner, Funder), one dashboard per
+   record type. Five of the seven have a host screen already. Two need a call
+   before they can be built:
+   - **Company** — there is no full `Account` page, only the Companies grid,
+     its preview strip and a View pop-up. Dashboard inside the pop-up, or build
+     a Company record page like the Contact page (v0.144.0)? Recommendation:
+     the real page.
+   - **Client** — `CClientProfile` has no screen anywhere (only a card on the
+     engagement's Details tab and a peek pop-up). Does "client analytics" mean
+     the engagement view, the company view, or a new client page?
+
 1. **Prod Account schema drift: `cAccountType` no longer exists** (found
    2026-07-24 during the partner data migration). Prod's `Account` entity has
    no `cAccountType` field — a where clause on it 400s ("Not existing

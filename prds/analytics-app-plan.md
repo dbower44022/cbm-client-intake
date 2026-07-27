@@ -615,6 +615,11 @@ Each phase is independently shippable and gated OFF until activated (`analytics_
 - (Future / explicitly deferred: CSV export, personalized dashboards, scheduled report
   delivery.)
 
+### Phase E — Dashboards on the record views (PLANNED, not built)
+
+Attach a dashboard to each of the remaining record views so analytics sit where the work
+is done. Scope, rulings, surface readiness and the two open questions: **§17**.
+
 ---
 
 ## 14. CRM prerequisites
@@ -684,3 +689,72 @@ Each phase is independently shippable and gated OFF until activated (`analytics_
   hourly refresh once prod entity sizes are known.
 - Whether to add the optional DB-overlay row for tuning a code metric's cache/visibility
   without a deploy (§3.2 note) — deferred unless needed.
+
+---
+
+## 17. Placement — where a dashboard appears (Doug, 2026-07-27)
+
+### 17.1 The problem this addresses
+
+A dashboard has never had a **location**. It has a `scope` (`system`, or a record entity
+type) and a `portal_dashboard` boolean, and those two properties *imply* where it shows up.
+The seeded `system-overview` page is scoped `system` **and** flagged `portal_dashboard`, so
+the portal home and the `/analytics` viewer render the same page object — which reads as a
+bug ("the main page and the analytics page always show the same metrics") but is a poor
+default, not a limitation: authoring a second system page and moving the flag already
+separates them, no code needed.
+
+### 17.2 Rulings
+
+| # | Decision | Choice |
+|---|---|---|
+| P1 | What gets placed | **The dashboard**, not the individual chart. Chart-level placement was considered and rejected as too many moving parts for the gain. |
+| P2 | Where | **Every record view**: Mentor, Company, Contact, Engagement, Client, Partner, Funder — "so the user can review analytics in the locations where they go to perform the work." |
+| P3 | How many per record type | **Exactly one, for now.** No dashboard picker on the tab, nothing to explain. |
+| P4 | Deferred | App-home surfaces (Client Administration, Submission Admin, the grids), one dashboard in several places at once, chart-level placement. |
+
+Placement therefore stays the existing model — a dashboard's `scope` **is** its location —
+and the work is to give the remaining record views a tab that renders it.
+
+### 17.3 Surface inventory + readiness
+
+| Record view | Entity | Host screen | State |
+|---|---|---|---|
+| Mentor | `CMentorProfile` | Mentor Administration detail | **BUILT** (v0.162.0) |
+| Engagement | `CEngagement` | Client Management record page | Ready — tabbed detail exists |
+| Partner | `CPartnerProfile` | Partner Management record page | Ready — tabbed detail exists |
+| Funder | `CSponsorProfile` | Funder Management record page | Ready — tabbed detail exists |
+| Contact | `Contact` | directory View Contact page (`contact_page`) | Ready — own frontend, has tabs |
+| Company | `Account` | directory Companies — **no record page** | **OPEN (§17.5)** |
+| Client | `CClientProfile` | **no view anywhere** | **OPEN (§17.5)** |
+
+### 17.4 Implementation sketch (no new render path)
+
+- Every host calls the **existing** `GET /analytics/api/record/{entity}/{id}` — the endpoint
+  `/mentoradmin` already uses. It reads the parent **as the user first** (that read IS the
+  permission gate), injects the record id via the metric's `context_param`, and runs the
+  metrics live (record-scoped results are never served from cache — §10).
+- **Session domains** (engagement / partner / funder): a `DomainConfig.analytics_enabled`
+  flag gating both the tab and, where needed, registration — the `contributions_link` /
+  `discussion_enabled` precedent, so a domain that shouldn't carry the tab never gets it.
+- **Contact**: the same fetch in the View Contact page's own frontend.
+- **Authoring is unchanged.** The page composer's Scope selector already lists the record
+  types; P3 means a second page for a scope already covered should be refused (or clearly
+  flagged) at save rather than silently ignored — the record endpoint today just takes the
+  first matching page.
+- **Recommended, not yet ruled:** pre-load the sensible `context_param` per record type
+  (e.g. Company → `clientOrganizationId` on `CEngagement`) so the author picks the record
+  link from a dropdown instead of typing a CRM attribute name from memory.
+
+### 17.5 Open questions (blocking those two surfaces only)
+
+1. **Company** — there is no full Account page, only the Companies grid, its preview strip
+   and a View pop-up. Put the dashboard **inside the pop-up** (cramped), or **build a
+   Company record page** the way the Contact page was built in v0.144.0? Recommendation:
+   the real page.
+2. **Client** — `CClientProfile` has no screen of its own; it appears only as a card inside
+   an engagement's Details tab and in a peek pop-up. Does "client analytics" mean the
+   **engagement** view (where the mentor works the client), the **company** view, or a new
+   **client page** that doesn't exist yet?
+
+The five ready surfaces do not depend on either answer.

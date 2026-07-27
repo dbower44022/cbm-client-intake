@@ -1850,6 +1850,20 @@ the plan** (`prds/analytics-app-plan.md`, Phases A–D all built). No migration.
   **The analytics arc (Phases A–D) is complete** — activation is unchanged: create
   `Analytics Admin Team`, set `ANALYTICS_ENABLED=true` (web + worker) + a
   `DATABASE_URL`, run the pre-deploy migrate (through 0022).
+  **Phase E — dashboards on the record views — is PLANNED, not built** (Doug,
+  2026-07-27; rulings + surface inventory + implementation sketch in
+  `prds/analytics-app-plan.md` §17). A dashboard's `scope` IS its location — the
+  work is giving the remaining record views an Analytics tab calling the existing
+  `GET /analytics/api/record/{entity}/{id}`. Ruled: placement is per DASHBOARD
+  (not per chart), **one dashboard per record type**, app-home surfaces deferred.
+  Ready to build: Engagement / Partner / Funder (the session-tool record pages,
+  via a `DomainConfig` flag on the contributions/discussion precedent) + Contact
+  (the directory View Contact page). Blocked on a Doug decision: **Company** (no
+  `Account` record page exists — pop-up vs. build the page) and **Client**
+  (`CClientProfile` has no view at all) — both in OPEN-ITEMS.md item 0. Note the
+  portal home and `/analytics` show the same panels only because the seeded
+  `system-overview` is flagged `portal_dashboard` — authoring a second system
+  page and moving the flag separates them today, no code.
   **ACTIVATED ON crm-test 2026-07-25** — `ANALYTICS_ENABLED=true` added to the web
   + worker of the crm-test overlay (`.do/app.prod.yaml`) and applied via doctl; the
   PRE_DEPLOY migrate created the three analytics tables. Verified live:
