@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import pytest
 
+from core.espo import EspoError
 from forms.client_intake.orchestrator import (
     ACCOUNT,
     CLIENT_PROFILE,
     CONTACT,
     ENGAGEMENT,
+    MENTOR_PROFILE,
     submit_intake,
 )
 from forms.client_intake.schemas import IntakeSubmission
@@ -17,12 +19,16 @@ from forms.client_intake.schemas import IntakeSubmission
 class CapturingClient:
     """Fake EspoApi that records create calls and returns sequential ids."""
 
-    def __init__(self, existing_contact=None, existing_account=None, enum_options=None):
+    def __init__(self, existing_contact=None, existing_account=None, enum_options=None,
+                 existing_profile=None, known_mentors=()):
         self.creates: list[tuple[str, dict]] = []
         self.updates: list[tuple[str, str, dict]] = []
         self.relates: list[tuple[str, str, str, str]] = []
+        self.gets: list[tuple[str, str]] = []
         self._existing_contact = existing_contact
         self._existing_account = existing_account
+        self._existing_profile = existing_profile
+        self._known_mentors = set(known_mentors)
         # {(entity, field): [valid options]}; absent => None ("keep all").
         self._enum_options = enum_options or {}
         self._n = 0
@@ -46,7 +52,17 @@ class CapturingClient:
             return {"id": self._existing_contact}
         if entity == ACCOUNT and self._existing_account:
             return {"id": self._existing_account}
+        if entity == CLIENT_PROFILE and self._existing_profile:
+            return {"id": self._existing_profile}
         return None
+
+    async def get(self, entity, record_id, select=None):
+        self.gets.append((entity, record_id))
+        if entity == MENTOR_PROFILE:
+            if record_id in self._known_mentors:
+                return {"id": record_id}
+            raise EspoError(f"GET {entity}/{record_id} -> 404 Not Found")
+        return {"id": record_id}
 
     async def relate(self, entity, record_id, link, related_id):
         self.relates.append((entity, record_id, link, related_id))
@@ -252,3 +268,100 @@ async def test_email_mismatch_rejected():
 )
 def test_website_normalized_or_dropped(entered, stored):
     assert _submission(business_website=entered).business_website == stored
+
+
+# --- one client, one profile hub (2026-07-27) -------------------------------
+# CClientProfile.linkedCompany is a hasOne link, so creating a SECOND profile
+# for an Account silently moves the company + contact off the first one. Two
+# production incidents (2026-07-17, 2026-07-27) left a live engagement pointing
+# at an orphaned hub with no company and no contact.
+
+
+@pytest.mark.anyio
+async def test_existing_client_profile_is_reused_not_duplicated():
+    client = CapturingClient(existing_account="acct-1", existing_profile="prof-1")
+    ids = await submit_intake(_submission(), client)
+
+    assert ids["clientProfileId"] == "prof-1"
+    profile_creates = [c for c in client.creates if c[0] == CLIENT_PROFILE]
+    assert profile_creates == [], "a second profile would orphan the first"
+
+
+@pytest.mark.anyio
+async def test_reused_profile_still_gets_a_new_engagement():
+    """A returning client is a genuine NEW request on their EXISTING hub."""
+    client = CapturingClient(existing_account="acct-1", existing_profile="prof-1")
+    ids = await submit_intake(_submission(), client)
+
+    engagements = [c for c in client.creates if c[0] == ENGAGEMENT]
+    assert len(engagements) == 1
+    assert engagements[0][1]["engagementClientId"] == "prof-1"
+    assert ids["engagementId"]
+
+
+@pytest.mark.anyio
+async def test_profile_is_created_when_the_client_is_new():
+    client = CapturingClient()
+    await submit_intake(_submission(), client)
+    assert [c for c in client.creates if c[0] == CLIENT_PROFILE]
+
+
+@pytest.mark.anyio
+async def test_reused_profile_backfills_only_empty_fields():
+    """Null-fill, never overwrite: a matched profile reports only an id, so
+    every other field reads empty and is backfilled."""
+    client = CapturingClient(existing_account="acct-1", existing_profile="prof-1")
+    await submit_intake(_submission(number_of_employees=7), client)
+
+    profile_updates = [u for u in client.updates if u[0] == CLIENT_PROFILE]
+    assert profile_updates, "empty fields should be filled in"
+    filled = profile_updates[0][2]
+    assert filled["numberOfEmployees"] == 7
+    # The record's name is never re-written on a match (a staffer may have
+    # curated it), so it must not appear in the fill payload.
+    assert "name" not in filled
+
+
+# --- the optional mentor request --------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_requested_mentor_is_written_to_the_engagement():
+    client = CapturingClient(known_mentors={"mentor-42"})
+    await submit_intake(_submission(requested_mentor_id="mentor-42"), client)
+
+    engagement = next(c for c in client.creates if c[0] == ENGAGEMENT)[1]
+    assert engagement["requestedMentorId"] == "mentor-42"
+
+
+@pytest.mark.anyio
+async def test_no_mentor_request_writes_no_link():
+    client = CapturingClient()
+    await submit_intake(_submission(), client)
+
+    engagement = next(c for c in client.creates if c[0] == ENGAGEMENT)[1]
+    assert "requestedMentorId" not in engagement
+
+
+@pytest.mark.anyio
+async def test_unknown_mentor_id_is_dropped_not_fatal():
+    """The id arrives from a public form. An unknown one would make EspoCRM
+    reject the WHOLE engagement create — drop the request, keep the lead."""
+    client = CapturingClient(known_mentors={"mentor-42"})
+    ids = await submit_intake(_submission(requested_mentor_id="not-a-real-id"), client)
+
+    engagement = next(c for c in client.creates if c[0] == ENGAGEMENT)[1]
+    assert "requestedMentorId" not in engagement
+    assert ids["engagementId"], "the submission must still be captured"
+
+
+@pytest.mark.anyio
+async def test_requested_mentor_does_not_assign_the_engagement():
+    """A request is not an assignment — Client Administration still owns that,
+    with its whole side-effect chain (re-homing, stream note, status change)."""
+    client = CapturingClient(known_mentors={"mentor-42"})
+    await submit_intake(_submission(requested_mentor_id="mentor-42"), client)
+
+    engagement = next(c for c in client.creates if c[0] == ENGAGEMENT)[1]
+    assert "mentorProfileId" not in engagement
+    assert engagement["engagementStatus"] == "Submitted"

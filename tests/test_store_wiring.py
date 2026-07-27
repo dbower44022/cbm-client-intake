@@ -54,14 +54,23 @@ class FakeStore:
     async def dispose(self) -> None:
         pass
 
-    async def capture(self, form_slug, submission_token, payload, *, status) -> Captured:
+    async def find_recent_duplicate(self, form_slug, email, *, within_seconds):
+        """No prior submission by default; tests that exercise the duplicate
+        hold set ``self.duplicate`` to the row to return."""
+        return getattr(self, "duplicate", None)
+
+    async def capture(
+        self, form_slug, submission_token, payload, *, status, duplicate_of=None
+    ) -> Captured:
         key = (form_slug, submission_token)
         if key in self.rows:
             r = self.rows[key]
             return Captured(r["id"], False, r["status"], r["result"])
         self._n += 1
         rid = f"sub-{self._n}"
-        self.rows[key] = {"id": rid, "status": status, "result": None}
+        self.rows[key] = {
+            "id": rid, "status": status, "result": None, "duplicate_of": duplicate_of,
+        }
         self.captures.append((form_slug, submission_token, status, payload))
         return Captured(rid, True, status, None)
 

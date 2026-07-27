@@ -11,7 +11,7 @@
   "use strict";
 
   var API = "/ops/api";
-  var STATUSES = ["pending", "processing", "retry", "completed", "needs_attention", "held_honeypot", "held_review", "discarded"];
+  var STATUSES = ["pending", "processing", "retry", "completed", "needs_attention", "held_honeypot", "held_review", "held_duplicate", "discarded"];
   // ONE vocabulary (the intake-receipt redesign, 2026-07-27): every screen
   // speaks Received / Completed / Held-Spam / Held-Email / Error / Discarded —
   // the same words the CRM receipt's Intake Status uses. The machine words
@@ -19,7 +19,8 @@
   var STATUS_LABELS = {
     pending: "Received", processing: "Received", retry: "Received",
     completed: "Completed", needs_attention: "Error",
-    held_honeypot: "Held-Spam", held_review: "Held-Email", discarded: "Discarded",
+    held_honeypot: "Held-Spam", held_review: "Held-Email",
+    held_duplicate: "Held-Duplicate", discarded: "Discarded",
   };
   function statusLabel(s) { return STATUS_LABELS[s] || (s || "").replace(/_/g, " "); }
   // INTAKE STATUS — "what happened to this arrival?" — is its own grid column
@@ -30,11 +31,12 @@
     "Completed":  { cell: "completed", chip: "status-completed" },
     "Held-Spam":  { cell: "heldspam",  chip: "status-held_honeypot" },
     "Held-Email": { cell: "heldemail", chip: "status-held_review" },
+    "Held-Duplicate": { cell: "heldduplicate", chip: "status-held_duplicate" },
     "Error":      { cell: "error",     chip: "status-needs_attention" },
     "Discarded":  { cell: "discarded", chip: "status-discarded" },
   };
-  var INTAKE_LABELS = ["Received", "Completed", "Held-Spam", "Held-Email", "Error", "Discarded"];
-  var INTAKE_RANK = { "Error": 0, "Held-Email": 1, "Held-Spam": 2, "Received": 3, "Completed": 4, "Discarded": 5 };
+  var INTAKE_LABELS = ["Received", "Completed", "Held-Spam", "Held-Email", "Held-Duplicate", "Error", "Discarded"];
+  var INTAKE_RANK = { "Error": 0, "Held-Duplicate": 1, "Held-Email": 2, "Held-Spam": 3, "Received": 4, "Completed": 5, "Discarded": 6 };
   // RESPONSE STATUS — "where does the reply conversation stand?" — its own
   // column and filter. The reply lifecycle (owed / waiting / responded) only
   // applies once the item is a LIVE REQUEST — a delivered form or an APPROVED
@@ -48,9 +50,9 @@
   // worker's poller (held_review until staff Approve or Discard it).
   var FORMS = ["client-intake", "volunteer", "info-request", "partner", "sponsor", "info-email"];
   // Re-drive includes discarded so a mistaken discard can be undone (re-queued).
-  var REDRIVABLE = { held_honeypot: 1, held_review: 1, needs_attention: 1, retry: 1, discarded: 1 };
+  var REDRIVABLE = { held_honeypot: 1, held_review: 1, held_duplicate: 1, needs_attention: 1, retry: 1, discarded: 1 };
   // Discard resolves a stuck row that can't be re-driven (e.g. a bad payload).
-  var DISCARDABLE = { held_honeypot: 1, held_review: 1, needs_attention: 1, retry: 1 };
+  var DISCARDABLE = { held_honeypot: 1, held_review: 1, held_duplicate: 1, needs_attention: 1, retry: 1 };
 
   // All filters default to "" (show everything) and run client-side over the
   // loaded rows, so the count chips can double as one-click filters.
@@ -330,7 +332,8 @@
   function responseInfo(r) {
     if (r.closed_at) return { label: "Closed", cls: "closed", reason: r.close_reason };
     if (!LIVE_REQUEST[r.status]) {
-      if (r.status === "held_review") return { label: "Awaiting review", cls: "review" };
+      if (r.status === "held_review" || r.status === "held_duplicate")
+        return { label: "Awaiting review", cls: "review" };
       return { label: "—", cls: "none" };
     }
     var rs = r._replyState;
@@ -527,7 +530,11 @@
   // inbound email DELIVERS it (creates the CRM records) — same endpoint,
   // honest words.
   function redriveBtn(r, noticeEl, big) {
-    var approve = r.form_slug === "info-email" && r.status === "held_review";
+    // A held DUPLICATE approves the same way: the reviewer judged it a
+    // genuine separate request, so delivering it creates its own records.
+    var approve =
+      (r.form_slug === "info-email" && r.status === "held_review") ||
+      r.status === "held_duplicate";
     return actionBtn(
       approve ? "Approve" : "Re-drive",
       approve ? "Create CRM records?" : "Re-drive?",

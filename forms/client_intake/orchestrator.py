@@ -44,6 +44,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
+from typing import Optional
 
 from core.crm_upsert import find_create_or_fill
 from core.enum_filter import EnumSanitizer
@@ -59,6 +60,7 @@ ACCOUNT = "Account"
 CONTACT = "Contact"
 CLIENT_PROFILE = "CClientProfile"
 ENGAGEMENT = "CEngagement"
+MENTOR_PROFILE = "CMentorProfile"
 
 # --- Attribute names (reconciled against the deployed instance) ---
 A_ACCOUNT_TYPE = "cAccountType"      # multiEnum on Account — REQUIRED (added crm-test 2026-06)
@@ -183,23 +185,44 @@ async def _find_or_create_contact(
     return contact_id
 
 
-async def _create_client_profile(
+async def _find_or_create_client_profile(
     sub: IntakeSubmission, client: EspoApi, account_id: str, contact_id: str
 ) -> str:
-    """Create the CClientProfile hub linked to the Account and Contact."""
+    """Find-or-create the CClientProfile hub linked to the Account and Contact.
+
+    ONE client = one profile hub, so an existing profile for this Account is
+    reused (and its empty fields backfilled) rather than duplicated. A second
+    profile is not merely redundant: ``linkedCompany`` is a **hasOne** link, so
+    creating one silently MOVES the Account (and contact) off the existing
+    profile, orphaning it. That happened twice in production — 2026-07-17 and
+    2026-07-27 — each time leaving a live engagement pointing at a hub with no
+    company and no contact.
+
+    Matching is by ``linkedCompanyId``: the Account is itself find-or-create by
+    name, so it is the stable identity for "this client". A returning client
+    correctly gets a NEW engagement on their EXISTING profile.
+    """
     name = sub.business_name or f"{sub.first_name} {sub.last_name}"
     payload = {
         "name": name,
         "clientcontactId": contact_id,   # belongsTo Contact
-        "linkedCompanyId": account_id,   # hasOne Account
+        "linkedCompanyId": account_id,   # hasOne Account — see docstring
     }
     if sub.number_of_employees is not None:
         payload["numberOfEmployees"] = sub.number_of_employees
     if sub.year_formed is not None:
         # formationDate is a date; the form collects a year -> Jan 1 of that year.
         payload["formationDate"] = f"{sub.year_formed:04d}-01-01"
-    created = await client.create(CLIENT_PROFILE, payload)
-    return created["id"]
+    profile_id, action = await find_create_or_fill(
+        client, CLIENT_PROFILE,
+        match_attr="linkedCompanyId", match_value=account_id,
+        create_payload=payload,
+        # Backfill only what an earlier submission may have left empty; never
+        # rewrite the name or re-point the links of a curated profile.
+        fill_keys=("numberOfEmployees", "formationDate", "clientcontactId"),
+    )
+    log.info("CClientProfile %s (%s) for Account %s", profile_id, action, account_id)
+    return profile_id
 
 
 async def _create_engagement(
@@ -223,11 +246,33 @@ async def _create_engagement(
         "clientOrganizationId": account_id,           # belongsTo Account — the
         # session tools' grid/Overview/Details read the company off this link
     }
+    # The applicant's optional mentor request (2026-07-27). Verified against the
+    # live roster before writing: the id arrives from a public form, and an
+    # unknown/stale one would make EspoCRM reject the WHOLE engagement create
+    # ("Can't relate with non-existing record"). A failed check drops the
+    # request rather than the submission — the same never-block-on-an-optional-
+    # field rule the enum sanitizer follows.
+    requested = await _valid_requested_mentor(client, sub.requested_mentor_id)
+    if requested:
+        payload["requestedMentorId"] = requested
+
     note = san.note()
     if note:
         payload["description"] = note
     created = await client.create(ENGAGEMENT, payload)
     return created["id"]
+
+
+async def _valid_requested_mentor(client: EspoApi, mentor_id: Optional[str]) -> Optional[str]:
+    """Return ``mentor_id`` if it names a real CMentorProfile, else None."""
+    if not mentor_id:
+        return None
+    try:
+        found = await client.get(MENTOR_PROFILE, mentor_id, select="id")
+    except Exception as exc:  # noqa: BLE001 — an optional request never blocks
+        log.warning("requested mentor %r not usable (%s) — dropped", mentor_id, exc)
+        return None
+    return found.get("id") if found else None
 
 
 async def submit_intake(sub: IntakeSubmission, client: EspoApi) -> dict[str, str]:
@@ -240,7 +285,9 @@ async def submit_intake(sub: IntakeSubmission, client: EspoApi) -> dict[str, str
     san = EnumSanitizer(client)
     account_id = await _find_or_create_account(sub, client, san)
     contact_id = await _find_or_create_contact(sub, client, account_id, san)
-    client_profile_id = await _create_client_profile(sub, client, account_id, contact_id)
+    client_profile_id = await _find_or_create_client_profile(
+        sub, client, account_id, contact_id
+    )
     engagement_id = await _create_engagement(
         sub, client, client_profile_id, contact_id, account_id, san
     )

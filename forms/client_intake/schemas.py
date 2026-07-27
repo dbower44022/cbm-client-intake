@@ -40,6 +40,14 @@ class IntakeSubmission(BaseSubmission):
     mentoring_needs_description: str = Field(min_length=1)
     meeting_preference: Optional[str] = Field(default=None, max_length=100)
     notification_preference: Optional[str] = Field(default=None, max_length=100)
+    # An optional mentor the applicant would like to work with, chosen from the
+    # form's dropdown (a CMentorProfile id). Added 2026-07-27: clients were
+    # re-submitting the ENTIRE form just to name a mentor in the free-text
+    # description, which created duplicate records. A request, not an
+    # assignment — Client Administration still makes the actual assignment.
+    # Free string, not a Literal: the roster is live data (see the
+    # non-required-enums-never-block policy).
+    requested_mentor_id: Optional[str] = Field(default=None, max_length=32)
 
     # --- Step 3: Your Business (-> Account). All optional even when shown,
     # per Requirements Specification §5.2; business_stage is the branch trigger. ---

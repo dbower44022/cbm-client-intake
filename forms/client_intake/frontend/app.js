@@ -64,6 +64,30 @@
   fillSelect("business_stage", OPT.businessStage, { placeholder: "Please select…" });
   fillSelect("industry_sector", OPT.industrySector, { placeholder: "Please select…", sort: true });
 
+  // The optional "preferred mentor" dropdown is filled from the live roster
+  // (mentors already listed publicly on the website who are currently taking
+  // clients). It stays HIDDEN unless the roster loads and is non-empty: an
+  // empty or broken dropdown is worse than no dropdown, and the applicant can
+  // always name someone in the description as before.
+  fetch("/api/client-intake/mentors", { headers: { Accept: "application/json" } })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((body) => {
+      const mentors = (body && body.mentors) || [];
+      const sel = document.getElementById("requested_mentor_id");
+      const field = document.getElementById("requested_mentor_field");
+      if (!sel || !field || !mentors.length) return;
+      mentors.forEach((m) => {
+        const o = document.createElement("option");
+        o.value = m.id;
+        o.textContent = m.name;
+        sel.appendChild(o);
+      });
+      field.hidden = false;
+    })
+    .catch(() => {
+      /* roster unavailable — the field stays hidden, the form works as before */
+    });
+
   // Multi-select focus areas as checkboxes
   const focusWrap = document.getElementById("mentoring_focus_areas");
   const focusLabels = [];
@@ -286,6 +310,7 @@
       mentoring_needs_description: document
         .getElementById("mentoring_needs_description")
         .value.trim(),
+      requested_mentor_id: strOrNull("requested_mentor_id"),
       meeting_preference: strOrNull("meeting_preference"),
       notification_preference: strOrNull("notification_preference"),
       business_stage: stageSel.value,

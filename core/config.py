@@ -72,6 +72,16 @@ class Settings(BaseSettings):
     # double-claim re-runs the same chain and skips already-created records.
     worker_lease_seconds: int = 900
 
+    # --- Near-duplicate hold (2026-07-27) ---
+    # A second submission of the SAME form from the SAME email within this window
+    # is captured but NOT delivered: it is held for staff review in Submission
+    # Admin, where Approve delivers it and Discard drops it. Prevents the
+    # duplicate CClientProfile/CEngagement pairs that a client re-filling the
+    # form produces (both observed cases were ~2 minutes apart; the window is
+    # deliberately wider to also catch same-day second thoughts).
+    # 0 disables the check entirely — every submission delivers as before.
+    duplicate_hold_seconds: int = 86400
+
     # --- V2 Phase 3: monitoring + alerting (run as periodic worker tasks) ---
     # Where to send alerts (a Slack-compatible {"text": ...} webhook). Empty =>
     # webhook delivery is off.

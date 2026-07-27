@@ -4,6 +4,79 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.185.0] — 2026-07-27
+
+**feat: duplicate submissions are held for review, and a client can name the
+mentor they want.** Driven by two production incidents in which a client
+re-filled the whole intake form a couple of minutes after submitting it.
+
+**What actually happened** (both cases; diagnosed from the durable store):
+they were NOT double-clicks. Each was a fresh page load (different
+`submission_token`) with *edited* content, and in both the substantive change
+was naming a mentor — `vpolunas@flowingrivercs.com` 2026-07-27 ("Requesting to
+work with Brad Swimmer…", 2m15s later) and `chris@redhousestudio.net`
+2026-07-17 ("Requesting Tony Sacco.", 2m21s later). The form had nowhere to say
+that, so people re-submitted to say it in the description. Every existing guard
+(in-flight submit lock, disabled button, token idempotency) worked correctly and
+none of them could have caught this.
+
+**The damage was worse than redundancy.** Account and Contact deduped fine
+(find-or-create), but `CClientProfile` and `CEngagement` were unconditional
+creates — and `CClientProfile.linkedCompany` is a **hasOne** link, so the second
+profile silently MOVED the company and contact off the first one. On the Maurer
+case the engagement staff assigned to Anthony Sacco is the one hanging off the
+stripped hub (no company, no contact), while the duplicate they Declined kept
+the good links.
+
+Four changes:
+
+- **Near-duplicate hold.** A second submission of the same form from the same
+  email within `DUPLICATE_HOLD_SECONDS` (default 86400 — 24h, all five forms) is
+  captured durably but NOT delivered: new store status `held_duplicate`, new
+  `submission.duplicate_of` column (**Alembic 0024** — pre-deploy migrate)
+  recording which earlier submission it appears to duplicate. It waits in
+  Submission Admin, where **Approve** delivers it normally (it is a redrive) and
+  **Discard** drops it. The visitor is acknowledged exactly as before — from
+  their side nothing is wrong. Spam still wins over duplicate; an already-held
+  duplicate is not itself a "prior submission", so a third submission is measured
+  against the original. Matching is form + email only, deliberately: both real
+  cases differed in their free-text answers, so comparing payloads would have
+  missed both. **Fails open** — any store error logs a warning and delivers, since
+  this guard exists to save cleanup work and must never cost a lead.
+  `DUPLICATE_HOLD_SECONDS=0` disables it.
+- **One client, one profile hub.** `CClientProfile` is now find-or-create
+  (matched on `linkedCompanyId`, null-filling empty fields) instead of an
+  unconditional create, so it can never orphan an existing profile again — a real
+  bug independent of duplicates, which would also have fired for any returning
+  client. A returning client correctly gets a NEW engagement on their EXISTING
+  profile. (The hasOne filterability was probe-verified live before relying on it.)
+- **Optional "preferred mentor" on the intake form.** A dropdown of mentors who
+  are Active + accepting new clients + already listed publicly on the website
+  (Doug's ruling), written to the **existing** `CEngagement.requestedMentor` link
+  — no CRM build needed. A request, not an assignment: Client Administration
+  still makes the actual assignment with its whole side-effect chain. The id is
+  verified against the live roster before writing (a spoofed/stale id would make
+  EspoCRM reject the whole engagement create), and an unusable one is dropped
+  rather than losing the submission. Served by a new public
+  `GET /api/client-intake/mentors` — names and ids only, 5-minute in-process
+  cache, stale-on-outage, and the field stays HIDDEN unless the roster loads
+  non-empty (so the form degrades to exactly its old behavior).
+- **Submission Admin** speaks the new word: `Held-Duplicate` in the Intake-status
+  column/filter/chips, "Awaiting review" as its Response status, and the
+  **Approve** button (rather than "Re-drive") on a held duplicate.
+
+**CRM prerequisite (one enum option, both CRMs):** add `Held-Duplicate` to
+`CIntakeSubmission.intakeStatus` — handoff
+`cintake-submission-duplicate-status.md`. **Not blocking:** the receipt engine
+feature-detects the option and falls back to `Received` (with the full
+explanation in `intakeMessage`) until it exists, then activates with no deploy.
+
+Verified: 1463 tests green (30 new); migration 0024 up+down and the whole
+duplicate sequence — including the exact Polunas shape — round-tripped against
+live local Postgres; the form driven in a real browser (dropdown populates and
+submits the id, "No preference" sends null, roster-unavailable leaves the field
+hidden with `display:none`, no console errors). **NOT yet driven live.**
+
 ## [0.184.2] — 2026-07-27
 
 **fix(ops): the Submission Admin control bar orphaned the "Refresh" button.**

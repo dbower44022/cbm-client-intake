@@ -53,6 +53,12 @@ STATUS_HELD = "held_honeypot"
 # delivers it through the info-email orchestrator, creating the CRM records);
 # Discard = spam, no CRM residue. Never claimed by the worker while held.
 STATUS_HELD_REVIEW = "held_review"
+# A second submission of the same form from the same email inside
+# ``duplicate_hold_seconds`` (2026-07-27). Captured durably but NOT delivered,
+# so it can never create the duplicate CClientProfile/CEngagement pair a client
+# re-filling the form used to produce. Staff decide in /ops: Approve = redrive
+# (the worker delivers it normally), Discard = drop it. Never claimed while held.
+STATUS_HELD_DUPLICATE = "held_duplicate"
 # Terminal, staff-set: a stuck submission resolved manually in /ops (e.g. a bad
 # payload that can't be re-driven). Kept in the table for audit; excluded from
 # the backlog / needs-attention alerting and never claimed by the worker.
@@ -68,8 +74,16 @@ CLAIMABLE = (STATUS_PENDING, STATUS_RETRY)
 # delivered info request still owing a reply (record-creating forms auto-close
 # on delivery, so completed+open is the admin-review set). pending/retry/
 # processing are in-flight and worker-owned, and held_honeypot is suspected
-# spam — neither is a new item for a human, so they don't count.
-OPEN_REVIEW_STATUSES = (STATUS_HELD_REVIEW, STATUS_NEEDS_ATTENTION, STATUS_COMPLETED)
+# spam — neither is a new item for a human, so they don't count. held_duplicate
+# is a real new item: a submission nobody has decided about yet.
+OPEN_REVIEW_STATUSES = (
+    STATUS_HELD_REVIEW, STATUS_HELD_DUPLICATE, STATUS_NEEDS_ATTENTION, STATUS_COMPLETED,
+)
+
+# Statuses that do NOT count as a prior submission when looking for a near
+# duplicate: spam, an already-held duplicate (so a third submission is compared
+# against the original, not its own held sibling), and anything staff discarded.
+_NOT_A_PRIOR_SUBMISSION = (STATUS_HELD, STATUS_HELD_DUPLICATE, STATUS_DISCARDED)
 
 # How many of the most recent completions feed metrics()'s windowed latency.
 RECENT_LATENCY_WINDOW = 50
@@ -142,6 +156,10 @@ submission = Table(
     # trying to adopt an existing receipt by token, so replays/migrations never
     # duplicate).
     Column("crm_receipt_id", String(64)),
+    # For a held_duplicate row: the id of the earlier submission it appears to
+    # duplicate (migration 0024). Lets Submission Admin link the reviewer to the
+    # original for side-by-side comparison. NULL on every other row.
+    Column("duplicate_of", String(36)),
     Column("received_at", DateTime(timezone=True), nullable=False),
     Column("processed_at", DateTime(timezone=True)),
     Column("updated_at", DateTime(timezone=True), nullable=False),
@@ -315,8 +333,12 @@ def base_state(row: dict[str, Any]) -> str:
 class SubmissionStore(Protocol):
     async def create_all(self) -> None: ...
     async def capture(
-        self, form_slug: str, submission_token: str, payload: dict[str, Any], *, status: str
+        self, form_slug: str, submission_token: str, payload: dict[str, Any], *, status: str,
+        duplicate_of: Optional[str] = None,
     ) -> Captured: ...
+    async def find_recent_duplicate(
+        self, form_slug: str, email: str, *, within_seconds: int,
+    ) -> Optional[dict[str, Any]]: ...
     async def mark_completed(
         self, submission_id: str, result: dict[str, Any], *,
         auto_close_reason: Optional[str] = None,
@@ -464,7 +486,8 @@ class PostgresStore:
             await conn.run_sync(metadata.create_all)
 
     async def capture(
-        self, form_slug: str, submission_token: str, payload: dict[str, Any], *, status: str
+        self, form_slug: str, submission_token: str, payload: dict[str, Any], *, status: str,
+        duplicate_of: Optional[str] = None,
     ) -> Captured:
         now = _now()
         stmt = (
@@ -475,6 +498,7 @@ class PostgresStore:
                 submission_token=submission_token,
                 payload=payload,
                 status=status,
+                duplicate_of=duplicate_of,
                 received_at=now,
                 updated_at=now,
             )
@@ -495,6 +519,46 @@ class PostgresStore:
                 )
             ).first()
             return Captured(id=existing[0], is_new=False, status=existing[1], result=existing[2])
+
+    async def find_recent_duplicate(
+        self, form_slug: str, email: str, *, within_seconds: int,
+    ) -> Optional[dict[str, Any]]:
+        """The most recent PRIOR submission of this form from this email inside
+        the window, or None.
+
+        Matching is form + email only: the two real cases (2026-07-17 and
+        2026-07-27) differed in their free-text answers, so comparing payloads
+        would have missed both — a client re-filling the form is *editing*, not
+        repeating. The token idempotency check already covers a literal re-send
+        of one form session; this catches a fresh one.
+
+        Spam, already-held duplicates and staff-discarded rows don't count as a
+        prior submission (see ``_NOT_A_PRIOR_SUBMISSION``), so a third
+        submission is measured against the original rather than its own sibling.
+        """
+        if not email or within_seconds <= 0:
+            return None
+        cutoff = _now() - timedelta(seconds=within_seconds)
+        async with self._engine.connect() as conn:
+            row = (
+                await conn.execute(
+                    select(
+                        submission.c.id,
+                        submission.c.received_at,
+                        submission.c.status,
+                        submission.c.payload,
+                    )
+                    .where(
+                        submission.c.form_slug == form_slug,
+                        func.lower(submission.c.payload["email"].astext) == email.lower(),
+                        submission.c.received_at >= cutoff,
+                        submission.c.status.notin_(_NOT_A_PRIOR_SUBMISSION),
+                    )
+                    .order_by(submission.c.received_at.desc())
+                    .limit(1)
+                )
+            ).first()
+        return dict(row._mapping) if row is not None else None
 
     async def mark_completed(
         self, submission_id: str, result: dict[str, Any], *,
@@ -732,10 +796,12 @@ class PostgresStore:
         The worker re-runs it from saved ``progress`` (no duplication).
 
         Guarded (P1-11): only ``needs_attention`` / ``retry`` /
-        ``held_honeypot`` / ``held_review`` / ``discarded`` rows may be
+        ``held_honeypot`` / ``held_review`` / ``held_duplicate`` /
+        ``discarded`` rows may be
         re-driven (held_honeypot = the honeypot false-positive recovery;
         held_review = staff APPROVING an inbound info@ email — delivery
-        creates the CRM records; discarded = undoing a mistaken discard,
+        creates the CRM records; held_duplicate = staff judging a near-duplicate
+        to be a genuine second request; discarded = undoing a mistaken discard,
         which the /ops UI has offered since v0.106.0 but this guard used to
         refuse). Redriving a ``completed`` row would re-deliver (duplicate
         Normal audit record + re-run side effects); redriving a
@@ -749,7 +815,7 @@ class PostgresStore:
                 .where(
                     submission.c.status.in_(
                         (STATUS_NEEDS_ATTENTION, STATUS_RETRY, STATUS_HELD,
-                         STATUS_HELD_REVIEW, STATUS_DISCARDED)
+                         STATUS_HELD_REVIEW, STATUS_HELD_DUPLICATE, STATUS_DISCARDED)
                     )
                 )
                 .values(

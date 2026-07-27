@@ -86,6 +86,16 @@
           <label for="mentoring_needs_description">Describe Your Mentoring Needs <span class="cbm-required">*</span></label>
           <textarea id="mentoring_needs_description" name="mentoring_needs_description" required></textarea>
         </div>
+        <div class="cbm-field" id="requested_mentor_field" hidden>
+          <label for="requested_mentor_id">Is there a particular mentor you'd like to work with?</label>
+          <select id="requested_mentor_id" name="requested_mentor_id">
+            <option value="">No preference</option>
+          </select>
+          <p class="cbm-help">
+            Optional. We'll do our best to honor your request, but the mentor
+            we match you with depends on availability and fit.
+          </p>
+        </div>
         <div class="grid-2">
           <div class="cbm-field">
             <label for="meeting_preference">Meeting Preference</label>

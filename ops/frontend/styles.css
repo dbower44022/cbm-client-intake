@@ -90,6 +90,9 @@ body { margin: 0; display: flex; flex-direction: column; }
 .status-retry, .status-held_honeypot { background: #fff6e6; color: #8a5a00; border-color: var(--cbm-warning); }
 /* An inbound info@ email awaiting staff triage (Approve / Discard). */
 .status-held_review { background: #e8f0fb; color: #1f4e8c; border-color: #9dbce4; }
+/* Held-Duplicate: amber like the other "held, needs a decision" states, but
+   distinct from Held-Spam so the two never read as the same thing. */
+.status-held_duplicate { background: #f3ecfb; color: #5b3a8c; border-color: #c3a8e4; }
 .status-pending, .status-processing, .status-discarded { background: var(--cbm-surface); color: var(--cbm-slate-700); }
 
 /* --- detail view --- */
@@ -201,6 +204,7 @@ body { margin: 0; display: flex; flex-direction: column; }
 .state-completed { color: #2f7a3f; }
 .state-heldspam { color: #8a5a00; }
 .state-heldemail { color: #1f4e8c; }
+.state-heldduplicate { color: #5b3a8c; }
 .state-error { color: #b3261e; }
 .state-discarded { color: #64748b; }
 .state-sub { margin-left: 0.45rem; font-size: 10.5px; text-transform: uppercase;

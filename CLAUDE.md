@@ -1612,7 +1612,56 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-27)
 
-**v0.184.0** (2026-07-27, 1433 tests green, committed NOT pushed) —
+**v0.185.0** (2026-07-27, 1463 tests green, committed NOT pushed) —
+**duplicate submissions are held for review + clients can name the mentor they
+want.** Doug reported two near-identical client-intake submissions from
+`vpolunas@flowingrivercs.com`. Diagnosed from the durable store: **not a
+double-click** — two fresh page loads (different `submission_token`) 2m15s
+apart with *edited* content, the substantive change being "Requesting to work
+with **Brad Swimmer**". The same shape had happened before:
+`chris@redhousestudio.net` 2026-07-17, 2m21s apart, only change "Requesting
+**Tony Sacco**." Clients were re-filling the whole form because it had nowhere
+to name a mentor. Every existing guard (in-flight lock, disabled button, token
+idempotency) worked and none could catch this.
+**Damage was worse than redundancy:** Account/Contact deduped fine, but
+CClientProfile + CEngagement were unconditional creates and
+`CClientProfile.linkedCompany` is a **hasOne** — so the second profile silently
+MOVED the company + contact off the first. On the Maurer case the engagement
+staff assigned to **Anthony Sacco** hangs off the stripped hub (no company, no
+contact) while the Declined duplicate kept the good links — a plausible
+contributor to the v0.116.0 Sacco assignment-stamp incident.
+Four changes (mechanics: CHANGELOG 0.185.0): (1) **near-duplicate hold** —
+same form + same email within `DUPLICATE_HOLD_SECONDS` (default 24h, all five
+forms) is captured but NOT delivered (new status `held_duplicate`, new
+`submission.duplicate_of`, **Alembic 0024**); Submission Admin shows it as
+**Held-Duplicate / Awaiting review** with **Approve** (= redrive, delivers) or
+Discard; fails OPEN, `=0` disables; (2) **CClientProfile is now find-or-create**
+(matched on `linkedCompanyId`) so it can never orphan a profile again — a real
+bug independent of duplicates that would also fire for any returning client;
+(3) **optional "preferred mentor" dropdown** on the intake form → the EXISTING
+`CEngagement.requestedMentor` link (no CRM build); roster = Active + accepting +
+already-public (Doug's ruling: ~15 on prod, names only) via a new public cached
+`GET /api/client-intake/mentors`; a request, NOT an assignment; the id is
+verified against the live roster before writing and dropped if unusable; the
+field hides entirely if the roster can't load; (4) Submission Admin speaks
+`Held-Duplicate`.
+**CRM prereq (one enum option, both CRMs):** add `Held-Duplicate` to
+`CIntakeSubmission.intakeStatus` — handoff
+**`cintake-submission-duplicate-status.md`**. NOT blocking: the receipt engine
+feature-detects it and falls back to `Received` (explanation still in
+`intakeMessage`) until built, then activates with no deploy.
+Verified: 1463 tests (30 new); migration 0024 up+down + the exact Polunas
+sequence round-tripped on live local Postgres; the form driven in a real browser.
+**NOT yet driven live.** **Doug-side cleanup still open:** the Polunas duplicate
+(engagement `6a67b925bf93ab219` + profile `6a67b9257f66200df` — keep the newer
+`6a67b9aecb6fd8180`, which has the mentor request AND the intact links), and the
+Maurer orphan (re-link profile `6a5a2c6a8749c1ec1` to its Account
+`6a5a2c69df75c8cb7` + contact so the live Sacco engagement stops pointing at an
+empty hub). **crm-test note:** its roster has only 2 public mentors, neither
+Active+accepting, so the dropdown correctly stays HIDDEN there — flip
+`publicProfile` on a couple of Active+accepting crm-test mentors to test it.
+
+Before that: **v0.184.0** (2026-07-27, 1433 tests green, committed NOT pushed) —
 **Submission Admin: the blended "State" column is split into two clear axes**
 (Doug's review of the intake-receipt redesign). The grid's single derived
 State — which mashed the CRM processing status, the live email reply state,

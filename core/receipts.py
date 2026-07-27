@@ -42,8 +42,16 @@ R_RECEIVED = "Received"
 R_COMPLETED = "Completed"
 R_HELD_SPAM = "Held-Spam"
 R_HELD_EMAIL = "Held-Email"
+R_HELD_DUPLICATE = "Held-Duplicate"
 R_ERROR = "Error"
 R_DISCARDED = "Discarded"
+
+# Words added after the original six-word vocabulary shipped. Each is written
+# only once the CRM's intakeStatus enum actually offers it (feature-detected in
+# ``_gate_status``); until then the receipt falls back to the mapped value below
+# and the explanation still rides in intakeMessage, so the app can deploy ahead
+# of the CRM build. Handoff: cintake-submission-duplicate-status.md
+_GATED_STATUSES = {R_HELD_DUPLICATE: R_RECEIVED}
 
 # App-store machine status -> receipt status. pending/processing/retry are all
 # "Received" — the visitor's submission is in hand and being worked; the
@@ -56,6 +64,7 @@ _STATUS_MAP = {
     "needs_attention": R_ERROR,
     "held_honeypot": R_HELD_SPAM,
     "held_review": R_HELD_EMAIL,
+    "held_duplicate": R_HELD_DUPLICATE,
     "discarded": R_DISCARDED,
 }
 
@@ -214,12 +223,42 @@ def error_message(row: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def duplicate_message(row: dict[str, Any]) -> str:
+    """Why this arrival was held, and what the reviewer is deciding."""
+    original = row.get("duplicate_of")
+    lines = [
+        "Possible duplicate — held for review, not yet delivered to the CRM.",
+        "",
+        "The same person already submitted this form a short time earlier, and "
+        "that submission was processed normally. Delivering this one as well "
+        "would create a second client profile and a second engagement for the "
+        "same person.",
+    ]
+    if original:
+        lines.append(f"Earlier submission reference: {original}")
+    lines += [
+        "",
+        "Clients most often re-submit to change or add something — in both "
+        "cases seen so far it was to name the mentor they wanted. Compare this "
+        "submission's answers with the earlier one before deciding.",
+        "",
+        "In Submission Admin:",
+        "  - Approve — if this really is a separate, genuine request. It is "
+        "delivered normally and creates its own records.",
+        "  - Discard (with a reason) — if it restates the earlier submission. "
+        "Copy anything new from it onto the existing engagement first.",
+    ]
+    return "\n".join(lines)
+
+
 def intake_message(row: dict[str, Any]) -> str:
     status = receipt_status(row.get("status") or "")
     if status == R_HELD_SPAM:
         return spam_message(row)
     if status == R_HELD_EMAIL:
         return "All emails need review"
+    if status == R_HELD_DUPLICATE:
+        return duplicate_message(row)
     if status == R_ERROR:
         return error_message(row)
     # Received / Completed / Discarded carry no processing message (the
@@ -299,6 +338,44 @@ async def _prune_dangling_contact(client, fields: dict[str, Any]) -> dict[str, A
         return {k: v for k, v in fields.items() if k != "contactId"}
 
 
+_status_options_cache: dict[str, Any] = {"options": None}
+
+
+async def _gate_status(client, fields: dict[str, Any]) -> dict[str, Any]:
+    """Downgrade an intakeStatus the CRM's enum doesn't offer yet.
+
+    ``Held-Duplicate`` was added after the six-word vocabulary shipped, so a CRM
+    that hasn't had the option built would reject the WHOLE write (EspoCRM 400s
+    an out-of-enum value) and the receipt would fail every sweep forever. Until
+    the option exists the receipt reads ``Received`` — truthful, since the
+    submission IS in hand and undelivered — and ``intakeMessage`` still carries
+    the full explanation. Once built, it activates with no deploy.
+
+    Fails OPEN: if the options can't be read, the value is left alone.
+    """
+    status = fields.get("intakeStatus")
+    fallback = _GATED_STATUSES.get(status)
+    if fallback is None:
+        return fields
+    options = _status_options_cache["options"]
+    if options is None:
+        if not hasattr(client, "metadata_enum_options"):
+            return fields
+        try:
+            options = await client.metadata_enum_options(RECEIPT_ENTITY, "intakeStatus")
+        except Exception:  # noqa: BLE001 — unreadable metadata: write as-is
+            return fields
+        _status_options_cache["options"] = options or []
+        options = _status_options_cache["options"]
+    if not options or status in options:
+        return fields
+    log.info(
+        "receipt intakeStatus %r not yet a CRM option — writing %r "
+        "(build the option to activate it)", status, fallback,
+    )
+    return {**fields, "intakeStatus": fallback}
+
+
 async def _find_by_token(client, token: str) -> Optional[str]:
     """Adopt an existing receipt whose stored payload carries this token —
     the dedup guard that makes create idempotent across replays, the
@@ -359,6 +436,7 @@ async def sync_row(
                 if not changes:
                     return "ok"
                 changes = await _prune_dangling_contact(client, changes)
+                changes = await _gate_status(client, changes)
                 if not changes:
                     return "ok"
                 await client.update(RECEIPT_ENTITY, receipt_id, changes)
@@ -373,6 +451,7 @@ async def sync_row(
             if extra:
                 changes.update(extra)
             changes = await _prune_dangling_contact(client, changes)
+            changes = await _gate_status(client, changes)
             await client.update(RECEIPT_ENTITY, adopted, changes)
             if store is not None and row.get("id"):
                 await store.set_receipt_id(row["id"], adopted)
@@ -382,6 +461,7 @@ async def sync_row(
         if extra:
             payload.update(extra)
         payload = await _prune_dangling_contact(client, payload)
+        payload = await _gate_status(client, payload)
         created = await client.create(RECEIPT_ENTITY, payload)
         if store is not None and row.get("id") and created.get("id"):
             await store.set_receipt_id(row["id"], created["id"])

@@ -28,7 +28,7 @@ from . import receipts
 from . import store as store_mod
 from .config import Settings, get_settings
 from .espo import DryRunEspoClient, EspoApi, EspoClient, EspoError
-from .forms import FormSpec
+from .forms import BaseSubmission, FormSpec
 from .logging_setup import setup_logging
 from .resumable import ResumableClient
 from .store import SubmissionStore
@@ -112,6 +112,38 @@ def _receipt_row_like(
     }
 
 
+async def _recent_duplicate_id(
+    store: SubmissionStore,
+    settings: Settings,
+    spec: FormSpec,
+    submission: BaseSubmission,
+) -> Optional[str]:
+    """The id of a recent prior submission of this form from this email, or None.
+
+    Best-effort by design: this guard exists to save staff cleanup work, so a
+    store hiccup must never cost us the submission. On any failure we log and
+    return None — the submission delivers exactly as it did before the guard
+    existed.
+    """
+    window = settings.duplicate_hold_seconds
+    email = str(getattr(submission, "email", "") or "").strip()
+    if window <= 0 or not email:
+        return None
+    try:
+        prior = await store.find_recent_duplicate(spec.slug, email, within_seconds=window)
+    except Exception as exc:  # noqa: BLE001 — never block a submission over this
+        log.warning("duplicate check failed for %s (%s) — delivering: %s",
+                    spec.slug, email, exc)
+        return None
+    if not prior:
+        return None
+    log.info(
+        "%s duplicate hold: %s re-submitted (prior=%s received %s)",
+        spec.slug, email, prior.get("id"), prior.get("received_at"),
+    )
+    return prior.get("id")
+
+
 async def _process_submission(
     spec: FormSpec,
     settings: Settings,
@@ -158,13 +190,27 @@ async def _process_submission(
     # also the durable idempotency check (replacing the in-memory dict). A
     # repeat token short-circuits here without touching the CRM again.
     captured = None
+    duplicate_of = None
     if store is not None:
         payload = json.loads(submission.model_dump_json())
         payload["company_url"] = ""  # never persist the honeypot value
+        # Near-duplicate hold: a client who re-fills the whole form (to add a
+        # mentor request, fix a typo) would otherwise create a SECOND client
+        # profile + engagement — and, because CClientProfile.linkedCompany is a
+        # hasOne, silently strip those links off the first one. Held for staff
+        # review instead. Spam wins over duplicate: a honeypot hit stays spam.
+        if not is_honeypot:
+            duplicate_of = await _recent_duplicate_id(store, settings, spec, submission)
+        if is_honeypot:
+            capture_status = store_mod.STATUS_HELD
+        elif duplicate_of:
+            capture_status = store_mod.STATUS_HELD_DUPLICATE
+        else:
+            capture_status = store_mod.STATUS_PENDING
         try:
             captured = await store.capture(
                 spec.slug, submission.submission_token, payload,
-                status=store_mod.STATUS_HELD if is_honeypot else store_mod.STATUS_PENDING,
+                status=capture_status, duplicate_of=duplicate_of,
             )
         except Exception as exc:  # noqa: BLE001 — DB outage at accept (P2)
             # The log line is the submission's ONLY copy right now
@@ -206,6 +252,19 @@ async def _process_submission(
             written,
         )
         return {"status": "received"}
+
+    # Near-duplicate: captured, acknowledged to the visitor exactly like any
+    # other submission (from their side nothing is wrong — they submitted a
+    # form and we have it), and NOT delivered. It waits in Submission Admin
+    # for a human to Approve or Discard. Deliberately placed before the
+    # async/sync delivery split so it holds in BOTH modes.
+    if duplicate_of and captured is not None:
+        await receipts.touch_safe(client, store, captured.id)
+        log.info(
+            "%s held as possible duplicate token=%s reference=%s (of %s)",
+            spec.slug, submission.submission_token, captured.id, duplicate_of,
+        )
+        return {"status": "received", "reference": captured.id}
 
     # V2 Phase 1: with async delivery on, return as soon as the submission is
     # durably captured — the background worker delivers it into the CRM. The
@@ -645,6 +704,13 @@ def create_app(
             methods=["POST"],
             name=f"intake-{spec.slug}",
         )
+        # The client-intake form's optional "preferred mentor" dropdown needs a
+        # live roster (2026-07-27). Registered per-form so no other deploy —
+        # and no other form — exposes it.
+        if spec.slug == "client-intake":
+            from forms.client_intake.router import make_router as make_roster_router
+
+            app.include_router(make_roster_router(lambda: _make_client(settings)))
 
     # Assignment tool + ops console API routes (registered before the static
     # mounts below so /assignments/api/* and /ops/api/* resolve to the routers).
