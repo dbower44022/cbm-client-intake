@@ -1612,7 +1612,33 @@ segment of its own URL). Mounted only when `assignments_active` (needs
 
 ## Current status (updated 2026-07-27)
 
-**v0.181.0 + v0.182.1** (2026-07-27, 1433 tests green — **DEPLOYED AND
+**v0.184.0** (2026-07-27, 1433 tests green, committed NOT pushed) —
+**Submission Admin: the blended "State" column is split into two clear axes**
+(Doug's review of the intake-receipt redesign). The grid's single derived
+State — which mashed the CRM processing status, the live email reply state,
+and a delivery sub-badge together — becomes **Intake status** (*what happened
+to this arrival?* — the receipt vocabulary Received / Completed / Held-Spam /
+Held-Email / Error / Discarded) + **Response status** (*where does the reply
+conversation stand?* — New → In progress → Reply owed / Waiting on them →
+Responded → Closed; Delivery failed on a bounce). The reply lifecycle only
+applies to a **live request** (a delivered form or an *approved* email): a
+not-yet-triaged Held-Email reads "Awaiting review", and Held-Spam / Error /
+Discarded read "—" (no conversation; reply-probing skipped). The old
+Open/Resolved/All select is gone — the Response-status filter carries every
+value plus an "Open (not closed)" shortcut, a new Intake-status filter carries
+all six words, and filtering runs **client-side** so the top **count chips are
+one-click filters** (click to apply the filter that made the count, again to
+clear; `total` clears all; the matching dropdown stays in step).
+**Frontend-only** (`ops/frontend/app.js` / `index.html` / `styles.css`) — no
+schema/endpoint/backend change; the stored `status`/`request_status`/
+`resolved_at`/`closed_at` are unchanged, just presented as two axes. Verified
+in the stub-browser harness (both derivations across held/completed/error/
+closed rows, all three filters, every count-chip filter incl. toggle-off +
+active-highlight + select sync; no console errors); ops backend tests green.
+Staff reference: `submission-admin.md`. (v0.183.0, committed: directory search
+now covers all mentor fields + encodes OR where-groups.)
+
+Before that: **v0.181.0 + v0.182.1** (2026-07-27, 1433 tests green — **DEPLOYED AND
 CONVERGED on BOTH environments; the intake-receipt redesign arc is
 COMPLETE**). Doug's ruling (elicited 2026-07-27, design record
 `prds/intake-receipt-redesign-plan.md`, CRM handoff
