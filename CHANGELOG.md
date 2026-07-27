@@ -4,6 +4,48 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.183.0] — 2026-07-27
+
+**fix(directory): the all-fields Mentors search returned nothing (0.180.0
+regression) — the CRM `where` serializer couldn't encode an OR group.** Doug
+reported that on 0.181 searching any term in the Mentors directory found no
+results. Root cause: `EspoClient.list` serialized each `where` clause by reading
+`clause["attribute"]` unconditionally, but the all-fields search builds an
+`{"type": "or", "value": [<contains>, ...]}` **group** clause, which has no
+`attribute` — so every search raised `KeyError` before the request left the
+app. (The 0.180.0 service tests used a fake client that receives the `where`
+list directly, so they never exercised the query-param serialization where the
+bug lived.)
+
+- **`core.espo._encode_where_clause`** (new): recursively serializes a `where`
+  clause into EspoCRM's bracketed query-param form, so nested `and`/`or` groups
+  encode their sub-clauses (`where[i][value][j][type]`, `…[attribute]`, `…
+  [value]`). Flat clauses (`contains`/`in`/…) produce byte-for-byte the same
+  params as before, so existing filters are unaffected. `EspoClient.list` now
+  uses it.
+- **Verified live against crm-test**: `contains` works on every field type the
+  search includes — varchar, text, enum, AND multiEnum (`areaOfExpertise`
+  "Market" matched 3 mentors) — and the full `list_records` path now unions
+  correctly ("Market" → expertise/industry, "Bower" → name, "Active" →
+  mentorStatus).
+- 4 new tests locking in the serialization (flat clause unchanged, indexed
+  array value, OR-group recursion, and `EspoClient.list` not raising on a group
+  clause). Version-race note: `CHANGELOG.md` is shared with a parallel
+  intake-receipt session (0.181.0/0.182.1) — only this fix's hunks are staged.
+
+## [0.182.1] — 2026-07-27
+
+**fix(intake): a deleted Contact no longer blocks a submission's receipt.**
+Live-found in the FIRST deployed receipt sweeps (both envs, minutes after the
+v0.181.0 deploy): a Completed row whose Contact was later deleted in the CRM
+(ZZTEST cleanups, mostly) failed its whole receipt write — EspoCRM rejects any
+write carrying a dangling link ("Can't relate with non-existing record") — and
+would have re-failed every hourly sweep and tripped the drift alert forever
+(crm-test: 2 rows, prod: 11). `core/receipts._prune_dangling_contact` now
+verifies the Contact exists (one GET, only on writes that carry one) and
+drops the link when it doesn't; the receipt stores with everything else and
+subsequent sweeps settle as no-drift. New regression test; 1433 green.
+
 ## [0.181.0] — 2026-07-27
 
 **feat(intake): the intake-receipt redesign — the CRM as the single source of
@@ -56,6 +98,34 @@ truth for every arrival** (Doug's approved design,
   reopens). Version-race note: parallel sessions share `CHANGELOG.md`,
   `ops/frontend/*`, and `submission-admin.md` — only this feature's hunks
   are staged.
+
+## [0.180.0] — 2026-07-27
+
+**feat(directory): the Mentors directory search matches the whole mentor
+record, not just the name** (Doug's request). Typing in the Mentors grid's
+search box now finds a mentor by any of their stored text-ish fields — title,
+about, areas of expertise, industry experience, CBM email, status, etc. — so a
+new mentor can locate colleagues by what they know, not only who they are.
+
+- **`DirectoryConfig.search_all_fields`** (new, `True` for MENTORS only): when
+  set, the top-center search box matches ANY stored text-ish field on the
+  entity (varchar/text/enum/multiEnum/email/phone/url) instead of just
+  `search_attr`. The other directories (Companies/Contacts/Partners) are
+  unchanged — still a name search.
+- **Searchable fields resolved live from metadata**
+  (`directory.service._search_fields`): every field of a searchable type that
+  is actually STORED. Non-stored computed/foreign fields (e.g. an
+  `availableCapacity` formula) are excluded — a `contains` on one would error
+  CRM-side and break the whole search. multiEnum/array fields are stored as
+  JSON text, so a `contains` matches a value within them (e.g. "Marketing"
+  finds a mentor whose `areaOfExpertise` includes it).
+- **`_where`** builds a single `contains` for one field (unchanged fast path)
+  or an `or` group of `contains` across all searchable fields otherwise. All
+  reads stay ACL-scoped as the signed-in user.
+- 3 new tests (mentor multi-field search, non-stored-field exclusion, and that
+  Companies still search only the name); full suite green (1422). **NOT yet
+  driven live** — after deploy, open `/directory/mentors` and search for an
+  expertise/title term and confirm it matches.
 
 ## [0.179.0] — 2026-07-26
 
@@ -218,6 +288,17 @@ attention right from the dashboard). No migration; no CRM changes.
   the four tiles show counts matching the apps' own grids; in `/analytics`,
   add "Items awaiting processing" to a page and confirm the links open the
   right item (CRM records, partner/funder record pages, `/ops` deep link).
+
+## [0.175.1] — 2026-07-26
+
+**change(ops): Submission Admin's resolution filter defaults to All** (Doug's
+request). The Open / Resolved / All select on the Submission Admin grid opened
+on **Open** (the work-queue view), which hid every resolved submission until
+you changed the filter — including rows reached from an alert deep link. The
+select now lists **All** first and the grid state starts unfiltered; Open and
+Resolved remain one click away. Frontend only (`ops/frontend/app.js` initial
+`state.resolution`, `ops/frontend/index.html` option order); the staff
+reference `submission-admin.md` updated to match.
 
 ## [0.175.0] — 2026-07-26
 

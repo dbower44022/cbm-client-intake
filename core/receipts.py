@@ -282,6 +282,23 @@ _SYNC_KEYS = (
 )
 
 
+async def _prune_dangling_contact(client, fields: dict[str, Any]) -> dict[str, Any]:
+    """Drop a ``contactId`` that points at a Contact the CRM no longer has
+    (ZZTEST cleanups, hand-deleted records): EspoCRM rejects the WHOLE write
+    over a dangling link ("Can't relate with non-existing record"), which
+    would leave the receipt permanently failing every sweep. Checking costs
+    one GET, and only for writes that carry a contact."""
+    contact_id = fields.get("contactId")
+    if not contact_id or not hasattr(client, "get"):
+        return fields
+    try:
+        await client.get("Contact", contact_id, select="id")
+        return fields
+    except Exception:  # noqa: BLE001 — missing OR unreadable: write without the link
+        log.info("receipt contact link dropped (Contact %s no longer exists)", contact_id)
+        return {k: v for k, v in fields.items() if k != "contactId"}
+
+
 async def _find_by_token(client, token: str) -> Optional[str]:
     """Adopt an existing receipt whose stored payload carries this token —
     the dedup guard that makes create idempotent across replays, the
@@ -341,6 +358,9 @@ async def sync_row(
                     changes.update(extra)
                 if not changes:
                     return "ok"
+                changes = await _prune_dangling_contact(client, changes)
+                if not changes:
+                    return "ok"
                 await client.update(RECEIPT_ENTITY, receipt_id, changes)
                 return "updated"
             receipt_id = None  # fall through: the linked receipt is gone
@@ -352,6 +372,7 @@ async def sync_row(
                        if k in _SYNC_KEYS and v is not None}
             if extra:
                 changes.update(extra)
+            changes = await _prune_dangling_contact(client, changes)
             await client.update(RECEIPT_ENTITY, adopted, changes)
             if store is not None and row.get("id"):
                 await store.set_receipt_id(row["id"], adopted)
@@ -360,6 +381,7 @@ async def sync_row(
         payload = {k: v for k, v in expected.items() if v is not None}
         if extra:
             payload.update(extra)
+        payload = await _prune_dangling_contact(client, payload)
         created = await client.create(RECEIPT_ENTITY, payload)
         if store is not None and row.get("id") and created.get("id"):
             await store.set_receipt_id(row["id"], created["id"])

@@ -38,6 +38,7 @@ class FakeEspo:
 
     def __init__(self):
         self.records: dict[str, dict] = {}
+        self.contacts = {"c1", "c9"}  # Contacts that EXIST in the fake CRM
         self._n = 0
 
     async def create(self, entity, payload):
@@ -51,6 +52,10 @@ class FakeEspo:
         return {"id": rid}
 
     async def get(self, entity, rid, select=None):
+        if entity == "Contact":
+            if rid in self.contacts:
+                return {"id": rid}
+            raise RuntimeError("404 no such contact")
         if rid not in self.records:
             raise RuntimeError("404")
         return {"id": rid, **self.records[rid]}
@@ -224,6 +229,23 @@ async def test_sync_extra_carries_action_time_disposition():
         extra={"dispositionedBy": "Jane Staff", "dispositionedAt": "2026-07-27 12:00:00"},
     )
     assert espo.records["r1"]["dispositionedBy"] == "Jane Staff"
+
+
+@pytest.mark.anyio
+async def test_sync_drops_a_dangling_contact_link():
+    """A Completed row whose Contact was later deleted (ZZTEST cleanups) must
+    still get its receipt — EspoCRM rejects the whole write over a dangling
+    link, which used to leave these rows failing every sweep (live-found on
+    both envs, first deployed sweep 2026-07-27)."""
+    espo = FakeEspo()
+    row = _row(status="completed", result={"contactId": "gone-contact"})
+    store = FakeStore([row])
+    assert await receipts.sync_row(espo, store, row) == "created"
+    rec = espo.records["r1"]
+    assert rec["intakeStatus"] == "Completed" and "contactId" not in rec
+    # The next sweep sees the (unlinkable) contact as the only drift and
+    # settles as ok — no failure, no repeated write, no alert.
+    assert await receipts.sync_row(espo, store, row) == "ok"
 
 
 @pytest.mark.anyio
