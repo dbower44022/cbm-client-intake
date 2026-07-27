@@ -7,11 +7,11 @@ the orchestrator code. Plain language; per-tool detail lives in the
 functional references this links to.*
 
 *Prefer a picture? **`intake-processing-flow.drawio`** (repo root; open in
-draw.io / diagrams.net) diagrams the same material — one tab per input source
-(the five forms + inbound info@ email), the shared capture→worker→CRM
-pipeline, and a "Read me" tab untangling the three status vocabularies
-(delivery status vs. the CRM CIntakeSubmission audit enum vs. request
-status).*
+draw.io / diagrams.net) diagrams the same material in plain language — one
+tab per input source (the five forms + inbound info@ email), the shared
+journey every form takes, and a "Start here" tab with a one-page table of
+what each screen calls the same moment (e.g. Submission Admin's "completed"
+= the CRM audit's "Processed").*
 
 ## The pipeline every submission goes through
 
