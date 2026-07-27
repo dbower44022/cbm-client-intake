@@ -810,7 +810,7 @@
     var p = current.payload || {};
     box.appendChild(fact("Reference", (current.id || "").slice(0, 8)));
     box.appendChild(fact("Form", current.form_slug));
-    box.appendChild(fact("Status", badgeEl(current.status)));
+    box.appendChild(fact("Intake status", badgeEl(current.status)));
     box.appendChild(fact("Request status", current.request_status || "New"));
     box.appendChild(fact("Received", fmtDate(current.received_at)));
     if (current.processed_at) box.appendChild(fact("Processed", fmtDate(current.processed_at)));
@@ -995,7 +995,7 @@
 
   function renderDetailsTab() {
     var body = $("detailBody"); body.innerHTML = "";
-    body.appendChild(field("Status", statusLabel(current.status) + "  (attempts: " + (current.attempt_count || 0) + ")"));
+    body.appendChild(field("Intake status", statusLabel(current.status) + "  (attempts: " + (current.attempt_count || 0) + ")"));
     if (current.last_error) body.appendChild(field("Last error", current.last_error));
     body.appendChild(field("Payload", JSON.stringify(current.payload, null, 2)));
     if (current.progress) body.appendChild(field("Progress (created so far)", JSON.stringify(current.progress, null, 2)));
@@ -1049,6 +1049,57 @@
     return opts;
   }
 
+  // A reply to a Held-Email approves it first (Option A): tell the user the
+  // status change and WHY before anything is sent, then approve + open compose.
+  function confirmApproveReply(openCompose) {
+    confirmDialog(
+      "Approve and reply?",
+      "<p>This email is still <strong>Awaiting review</strong> — nothing has been " +
+      "created in the CRM yet.</p>" +
+      "<p>Sending a reply <strong>approves it</strong>: the Intake status changes from " +
+      "<strong>Held-Email</strong> to <strong>Received</strong>, and the CRM records " +
+      "(a Contact and an Information Request) are created — because replying to a " +
+      "submitter is a real request.</p>",
+      "Approve & write reply",
+      async function () {
+        try {
+          await api("/submissions/" + encodeURIComponent(current.id) + "/redrive", { method: "POST" });
+          current.status = "pending";   // reflect "Received" immediately
+          notice("detailNotice", "Approved " + current.id.slice(0, 8) +
+            " — the CRM records are being created.", "success");
+          renderDetailActions(); renderOverview(); refreshDetailRow();
+        } catch (e) {
+          if (e.status === 401) { showLogin(); return; }
+          notice("detailNotice", e.message, "error");
+          return;   // approval failed — don't open the compose
+        }
+        openCompose();
+      }
+    );
+  }
+
+  // Lightweight OK/Cancel modal (Escape / backdrop / Cancel dismiss). bodyHtml
+  // is trusted static copy — never user input.
+  function confirmDialog(title, bodyHtml, okLabel, onOk) {
+    var back = document.createElement("div"); back.className = "ops__confirm-backdrop";
+    var card = document.createElement("div"); card.className = "ops__confirm-card"; card.setAttribute("role", "dialog");
+    var h = document.createElement("h4"); h.textContent = title; card.appendChild(h);
+    var body = document.createElement("div"); body.innerHTML = bodyHtml; card.appendChild(body);
+    var acts = document.createElement("div"); acts.className = "ops__confirm-actions";
+    var cancel = document.createElement("button"); cancel.type = "button";
+    cancel.className = "cbm-button cbm-button--secondary"; cancel.textContent = "Cancel";
+    var ok = document.createElement("button"); ok.type = "button";
+    ok.className = "cbm-button"; ok.textContent = okLabel;
+    function close() { back.remove(); document.removeEventListener("keydown", onKey); }
+    function onKey(e) { if (e.key === "Escape") close(); }
+    cancel.addEventListener("click", close);
+    ok.addEventListener("click", function () { close(); onOk(); });
+    back.addEventListener("click", function (e) { if (e.target === back) close(); });
+    document.addEventListener("keydown", onKey);
+    acts.appendChild(cancel); acts.appendChild(ok); card.appendChild(acts);
+    back.appendChild(card); document.body.appendChild(back); ok.focus();
+  }
+
   function emailButton() {
     var addr = (current.payload || {}).email;
     if (!addr) return null;
@@ -1058,7 +1109,15 @@
       var b = document.createElement("button");
       b.type = "button"; b.className = "small-btn"; b.textContent = label;
       b.addEventListener("click", function () {
-        CBMQuickMail.composeIfEnabled(String(addr), composeOpts());
+        var openCompose = function () { CBMQuickMail.composeIfEnabled(String(addr), composeOpts()); };
+        // Replying to a not-yet-triaged inbound email IS approving it — a reply
+        // is a real request, so it must exist in the CRM first. Confirm the
+        // status change before opening the compose.
+        if (current.form_slug === "info-email" && current.status === "held_review") {
+          confirmApproveReply(openCompose);
+        } else {
+          openCompose();
+        }
       });
       return b;
     }

@@ -211,7 +211,11 @@ they're in the queue.
 3. **If it arrived by email** (form "info-email"): first decide — **Approve**
    (a real request; the CRM records are created) or **Discard** (spam; gone,
    no CRM residue). Form submissions skip this step — they delivered on
-   arrival.
+   arrival. *(You don't have to Approve separately before replying: clicking
+   **Reply to the submitter** on a not-yet-approved email will offer to approve
+   it for you — a reply is a real request, so it confirms first that the Intake
+   status will move Held-Email → Received and the CRM records will be created,
+   then opens the compose.)*
 4. **Email the submitter** — the canned reply is pre-filled on first
    contact; later rounds are proper replies on the same thread. Everything
    sends as **Cleveland Business Mentors <info@cbmentors.org>**, and the

@@ -185,6 +185,15 @@ body { margin: 0; display: flex; flex-direction: column; }
 .state-closed { color: #2f7a3f; }
 .state-review { color: #8a5a00; }           /* Held-Email: awaiting triage */
 .state-none { color: #94a3b8; }             /* "—": no reply conversation */
+
+/* Confirm dialog (e.g. "reply approves this email"). */
+.ops__confirm-backdrop { position: fixed; inset: 0; z-index: 1000;
+  background: rgba(15, 23, 42, 0.4); display: flex; align-items: center; justify-content: center; }
+.ops__confirm-card { background: #fff; max-width: 34rem; width: calc(100% - 2rem);
+  border-radius: var(--cbm-radius); padding: 1.2rem 1.4rem; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28); }
+.ops__confirm-card h4 { margin: 0 0 0.6rem; }
+.ops__confirm-card p { margin: 0 0 0.6rem; line-height: 1.5; }
+.ops__confirm-actions { display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1rem; }
 /* Intake-status cell colors (the receipt vocabulary). */
 .state-received { color: var(--cbm-slate-700); }
 .state-completed { color: #2f7a3f; }

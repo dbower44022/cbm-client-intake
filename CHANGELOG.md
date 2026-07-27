@@ -4,6 +4,33 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.184.1] — 2026-07-27
+
+**feat(ops): replying to a Held-Email approves it first (with a confirmation),
++ "Intake status" labels on the detail.** Two follow-ups to 0.184.0:
+- **Reply-approves-held-email (Option A).** A submission that arrived by email
+  (`info-email`, `held_review`) has no CRM records until it's Approved — but the
+  detail's "Reply to the submitter" button let staff email the person while the
+  submission stayed **Held-Email** forever (no Contact, no Information Request),
+  which breaks the "every business transaction is auditable from the CRM" rule.
+  Now, clicking Reply on a Held-Email first shows a **confirmation modal** that
+  states the status change and why — *"Sending a reply approves it: the Intake
+  status changes from Held-Email to Received, and the CRM records (a Contact and
+  an Information Request) are created — because replying to a submitter is a real
+  request."* On confirm it **approves (re-drives) the submission, then opens the
+  compose**; on Cancel nothing is sent and nothing changes. Approval failure
+  keeps the compose closed with a readable notice. (Non-held submissions open the
+  compose directly, unchanged.) New lightweight `confirmDialog` helper +
+  `.ops__confirm-*` styles.
+- **"Intake status" labels.** The detail **Overview** facts rail and the
+  **Details** tab now label the processing status **"Intake status"** (was just
+  "Status"), matching the new grid column.
+
+Frontend-only; no schema/endpoint change. Verified in the stub-browser harness
+(the confirm modal fires only for Held-Email, names the status change, holds the
+send until OK, then re-drives once and opens the compose; header badge flips to
+Received and the action bar drops Approve/Discard for Close; console clean).
+
 ## [0.184.0] — 2026-07-27
 
 **feat(ops): split Submission Admin's blended "State" into Intake status +
