@@ -37,6 +37,9 @@ Change history: [`CHANGELOG.md`](CHANGELOG.md) (per-version) and
   web-console-only companion for CBM staff.
 - [`analytics-guide.md`](analytics-guide.md) — end-user guide for the Analytics
   app; [`ANALYTICS-SETUP.md`](ANALYTICS-SETUP.md) — its activation runbook.
+- [`mentor-directory.md`](mentor-directory.md) — user guide for the Mentors
+  directory and the rich mentor profile page (get to know colleagues, find
+  co-mentors, see availability).
 
 ## Application
 

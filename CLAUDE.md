@@ -5355,6 +5355,12 @@ the synced lists were verified identical on crm-test and prod.
 - `mentor-administration.md` — functional reference for the `/mentoradmin` tool:
   overall functionality + the **complete-record requirements** (the completeness
   rules, in plain language).
+- `mentor-directory.md` — user guide for the **Mentors directory** (`/directory/
+  mentors`) and the rich, read-only **mentor profile page** it opens
+  (`/directory/mentors/record/{id}`): what's on the page (photo, headline,
+  mentoring-availability, expertise, about, "Get to know them" = interests/
+  birthday/spouse/city, reach-out), the resizable side lane, that editing lives
+  in My Profile, and who can see it.
 - `email-management.md` — the UMBRELLA email reference (plain language): the
   whole system end-to-end — sync, the two sending identities (personal
   @cbmentors.org vs the shared info@/"CBM Info"), My Email, the compose

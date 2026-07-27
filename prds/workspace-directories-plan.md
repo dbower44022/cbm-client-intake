@@ -1,8 +1,15 @@
 # CBM Workspace + Directories — Plan (v0.1)
 
-_Planning/handoff doc. Status: DESIGN — not yet built. Author-reviewed with
-Doug 2026-07-19; the "Decisions (locked)" section records his rulings from the
-planning session. Build proceeds in the phases at the end._
+_Planning/handoff doc. Status: BUILT (v0.100.0, 2026-07-19) — this records the
+original design; author-reviewed with Doug 2026-07-19 (the "Decisions (locked)"
+section records his rulings). **Update (2026-07-26, v0.172.0/0.175.0):** the
+Mentors kind gained a dedicated rich, read-only **mentor profile page**
+(`/directory/mentors/record/{id}`) — clicking a mentor's name opens it instead
+of the linked Contact page. It shows the photo, headline, mentoring-availability
+(openings), expertise, about/bio, a "Get to know them" card (personal interests,
+birthday, spouse, city), and reach-out links, in a full-width layout with a
+user-resizable side lane. Editing still hands off to My Profile. User guide:
+`mentor-directory.md`._
 
 ## 1. Goal
 
