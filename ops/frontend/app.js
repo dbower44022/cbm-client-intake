@@ -12,6 +12,29 @@
 
   var API = "/ops/api";
   var STATUSES = ["pending", "processing", "retry", "completed", "needs_attention", "held_honeypot", "held_review", "discarded"];
+  // ONE vocabulary (the intake-receipt redesign, 2026-07-27): every screen
+  // speaks Received / Completed / Held-Spam / Held-Email / Error / Discarded —
+  // the same words the CRM receipt's Intake Status uses. The machine words
+  // above are internal and never rendered.
+  var STATUS_LABELS = {
+    pending: "Received", processing: "Received", retry: "Received",
+    completed: "Completed", needs_attention: "Error",
+    held_honeypot: "Held-Spam", held_review: "Held-Email", discarded: "Discarded",
+  };
+  function statusLabel(s) { return STATUS_LABELS[s] || (s || "").replace(/_/g, " "); }
+  // The filter keeps one option per machine state (the API filters by it) but
+  // labelled in the shared vocabulary; the "Received" qualifiers are plain
+  // English, not system words.
+  var STATUS_FILTER_OPTIONS = [
+    ["pending", "Received — waiting"],
+    ["processing", "Received — delivering"],
+    ["retry", "Received — retrying"],
+    ["completed", "Completed"],
+    ["needs_attention", "Error"],
+    ["held_honeypot", "Held-Spam"],
+    ["held_review", "Held-Email"],
+    ["discarded", "Discarded"],
+  ];
   // info-email = an inbound email to the shared info@ mailbox, captured by the
   // worker's poller (held_review until staff Approve or Discard it).
   var FORMS = ["client-intake", "volunteer", "info-request", "partner", "sponsor", "info-email"];
@@ -114,7 +137,7 @@
   function badgeEl(status) {
     var b = document.createElement("span");
     b.className = "status-badge status-" + status;
-    b.textContent = (status || "").replace(/_/g, " ");
+    b.textContent = statusLabel(status);
     return b;
   }
 
@@ -137,6 +160,20 @@
     location.href = "/";
   });
   $("refreshBtn").addEventListener("click", loadData);
+  $("syncReceiptsBtn").addEventListener("click", async function () {
+    clearNotice("notice");
+    try {
+      var s = await api("/receipts/sync", { method: "POST" });
+      notice("notice",
+        "Receipts synced to the CRM: " + s.checked + " checked, " + s.created +
+        " created, " + s.updated + " updated" +
+        (s.failed ? ", " + s.failed + " FAILED (see the error log)" : "") + ".",
+        s.failed ? "error" : "success");
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      notice("notice", e.message, "error");
+    }
+  });
   // Null-guarded: a browser holding yesterday's cached index.html (no
   // resolvedFilter element) must not die on boot with the new app.js.
   var _rf = $("resolvedFilter");
@@ -197,12 +234,20 @@
   function renderCounts(counts) {
     var box = $("counts"); box.innerHTML = "";
     var total = 0;
+    // Chips grouped by the DISPLAY vocabulary (pending/processing/retry all
+    // read "Received", so they merge into one chip).
+    var byLabel = {}, labelClass = {};
     STATUSES.forEach(function (s) {
       var n = counts[s] || 0; total += n;
       if (!n) return;
+      var lbl = statusLabel(s);
+      byLabel[lbl] = (byLabel[lbl] || 0) + n;
+      labelClass[lbl] = labelClass[lbl] || s;
+    });
+    Object.keys(byLabel).forEach(function (lbl) {
       var chip = document.createElement("span");
-      chip.className = "count-chip status-" + s;
-      chip.textContent = s.replace(/_/g, " ") + ": " + n;
+      chip.className = "count-chip status-" + labelClass[lbl];
+      chip.textContent = lbl + ": " + byLabel[lbl];
       box.appendChild(chip);
     });
     var t = document.createElement("span"); t.className = "count-chip"; t.textContent = "total: " + total;
@@ -256,9 +301,10 @@
     var t = document.createElement("span"); t.textContent = info.text; wrap.appendChild(t);
     if (info.reason) wrap.title = "Closed — " + info.reason;
     // A delivery problem (or an inbound email awaiting Approve) stays visible.
-    if (r.status === "held_review") wrap.appendChild(subBadge("held review", "warn"));
-    else if (r.status === "discarded") wrap.appendChild(subBadge("discarded", "muted"));
-    else if (DELIVERY_EXCEPTIONS[r.status]) wrap.appendChild(subBadge(r.status.replace(/_/g, " "), "crit"));
+    if (r.status === "held_review") wrap.appendChild(subBadge("Held-Email", "warn"));
+    else if (r.status === "held_honeypot") wrap.appendChild(subBadge("Held-Spam", "warn"));
+    else if (r.status === "discarded") wrap.appendChild(subBadge("Discarded", "muted"));
+    else if (DELIVERY_EXCEPTIONS[r.status]) wrap.appendChild(subBadge(statusLabel(r.status), "crit"));
     return wrap;
   }
   function lastActCell(r) {
@@ -378,7 +424,7 @@
       } else if (c.key === "_actions") {
         td.className = "actions";
         if (REDRIVABLE[r.status]) td.appendChild(redriveBtn(r, "notice"));
-        if (DISCARDABLE[r.status]) td.appendChild(actionBtn("Discard", "Really discard?", function () { discard(r, "notice"); }));
+        if (DISCARDABLE[r.status]) td.appendChild(discardControl(r, "notice"));
       } else {
         var v = c.get ? c.get(r) : r[c.key];
         if (c.fmt) v = c.fmt(v);
@@ -444,15 +490,57 @@
     }
   }
 
-  async function discard(r, noticeEl) {
+  async function discard(r, noticeEl, reason, note) {
     try {
-      await api("/submissions/" + encodeURIComponent(r.id) + "/discard", { method: "POST" });
-      notice(noticeEl, "Discarded " + r.id.slice(0, 8) + ".", "success");
+      await api("/submissions/" + encodeURIComponent(r.id) + "/discard",
+        { method: "POST", body: JSON.stringify({ reason: reason, note: note || "" }) });
+      notice(noticeEl, "Discarded " + r.id.slice(0, 8) + " — " + reason + ".", "success");
       if (noticeEl === "notice") loadData(); else refreshDetailRow();
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }
       notice(noticeEl, e.message, "error");
     }
+  }
+
+  // Discard ▾ — a BUSINESS DECISION, so it always carries a reason (recorded
+  // on the row, the activity feed, AND the CRM receipt). Mirrors closeControl.
+  var DISCARD_REASONS = ["Spam", "Junk / solicitation", "Duplicate", "Not actionable", "Other"];
+  function discardControl(r, noticeEl, big) {
+    var wrap = document.createElement("span"); wrap.className = "closewrap";
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "cbm-button cbm-button--secondary" + (big ? "" : " row-btn");
+    btn.textContent = "Discard ▾";
+    var menu = document.createElement("div"); menu.className = "closemenu"; menu.hidden = true;
+    var h = document.createElement("h5"); h.textContent = "Discard — why?"; menu.appendChild(h);
+    var note = document.createElement("input");
+    note.type = "text"; note.className = "closemenu__note";
+    note.placeholder = "Optional note (required for Other)…";
+    note.addEventListener("click", function (e) { e.stopPropagation(); });
+    menu.appendChild(note);
+    DISCARD_REASONS.forEach(function (reason) {
+      var b = document.createElement("button"); b.type = "button"; b.className = "closemenu__opt";
+      b.textContent = reason;
+      b.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var extra = note.value.trim();
+        if (reason === "Other" && !extra) {
+          note.placeholder = "A reason is required — type it here…";
+          note.focus();
+          return;
+        }
+        menu.hidden = true;
+        discard(r, noticeEl, reason === "Other" ? extra : reason,
+                reason === "Other" ? "" : extra);
+      });
+      menu.appendChild(b);
+    });
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation(); menu.hidden = !menu.hidden; if (!menu.hidden) note.focus();
+    });
+    document.addEventListener("click", function (ev) { if (!wrap.contains(ev.target)) menu.hidden = true; });
+    wrap.appendChild(btn); wrap.appendChild(menu);
+    return wrap;
   }
 
   // --- detail view ----------------------------------------------------------
@@ -547,7 +635,7 @@
     }
     // Full-size (big=true) so Re-drive / Approve / Discard match the Close button.
     if (REDRIVABLE[current.status]) box.appendChild(redriveBtn(current, "detailNotice", true));
-    if (DISCARDABLE[current.status]) box.appendChild(actionBtn("Discard", "Really discard?", function () { discard(current, "detailNotice"); }, true));
+    if (DISCARDABLE[current.status]) box.appendChild(discardControl(current, "detailNotice", true));
   }
 
   // Close ▾ — one deliberate action with a disposition reason (+ optional note).
@@ -850,7 +938,7 @@
 
   function renderDetailsTab() {
     var body = $("detailBody"); body.innerHTML = "";
-    body.appendChild(field("Status", current.status + "  (attempts: " + (current.attempt_count || 0) + ")"));
+    body.appendChild(field("Status", statusLabel(current.status) + "  (attempts: " + (current.attempt_count || 0) + ")"));
     if (current.last_error) body.appendChild(field("Last error", current.last_error));
     body.appendChild(field("Payload", JSON.stringify(current.payload, null, 2)));
     if (current.progress) body.appendChild(field("Progress (created so far)", JSON.stringify(current.progress, null, 2)));
@@ -1162,7 +1250,12 @@
   function closeCorrModal() { hide($("corrModal")); }
 
   // --- boot -----------------------------------------------------------------
-  fillSelect($("statusFilter"), STATUSES, "All statuses");
+  (function () {
+    var sel = $("statusFilter");
+    sel.innerHTML = "";
+    sel.appendChild(new Option("All statuses", ""));
+    STATUS_FILTER_OPTIONS.forEach(function (o) { sel.appendChild(new Option(o[1], o[0])); });
+  })();
   fillSelect($("formFilter"), FORMS, "All forms");
   (async function init() {
     try {

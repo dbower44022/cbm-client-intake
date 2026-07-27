@@ -152,6 +152,12 @@ class Settings(BaseSettings):
     # threads. 2 days is ~576× the 5-min cadence — ample margin for worker
     # downtime, while bounding the repeated listing.
     ops_inbound_window_days: int = 2
+    # Intake-receipt reconciliation (the CRM-as-source-of-truth sweep, Doug's
+    # 2026-07-27 redesign): every app-store submission row is compared against
+    # its CIntakeSubmission receipt in the CRM — missing receipts created,
+    # stale ones updated. 0 disables the timer (the manual /ops trigger and
+    # the per-action writes still work).
+    receipt_reconcile_seconds: int = 3600
     # Session Management tools — one engine, three team-gated routes
     # (/mentorsessions, /partnersessions, /sponsorsessions). Each lets its users
     # record CSession meetings against the records they own.

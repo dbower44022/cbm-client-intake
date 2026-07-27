@@ -135,6 +135,13 @@ submission = Table(
     # as gmail_thread_id AND mirrored here at capture). The conversation view
     # shows exactly these threads, never an address search.
     Column("thread_ids", JSONB),
+    # The CRM CIntakeSubmission receipt for this row (intake-receipt redesign,
+    # 2026-07-27): every arrival gets a receipt in the CRM, created at capture
+    # and updated as the status/disposition changes. NULL = the receipt write
+    # hasn't succeeded yet — the reconciliation sweep creates it (after first
+    # trying to adopt an existing receipt by token, so replays/migrations never
+    # duplicate).
+    Column("crm_receipt_id", String(64)),
     Column("received_at", DateTime(timezone=True), nullable=False),
     Column("processed_at", DateTime(timezone=True)),
     Column("updated_at", DateTime(timezone=True), nullable=False),
@@ -331,7 +338,18 @@ class SubmissionStore(Protocol):
     async def open_review_count(self) -> int: ...
     async def list_open_review(self, *, limit: int = 25) -> list[dict[str, Any]]: ...
     async def redrive(self, submission_id: str, *, acted_by: Optional[str] = None) -> bool: ...
-    async def discard(self, submission_id: str, *, acted_by: Optional[str] = None) -> bool: ...
+    async def discard(
+        self, submission_id: str, *, acted_by: Optional[str] = None,
+        reason: Optional[str] = None,
+    ) -> bool: ...
+    # Intake-receipt redesign (2026-07-27):
+    async def set_receipt_id(self, submission_id: str, receipt_id: str) -> None: ...
+    async def list_all_for_receipts(
+        self, *, limit: int = 500, offset: int = 0
+    ) -> list[dict[str, Any]]: ...
+    async def find_ids_by_tokens(
+        self, tokens: list[str]
+    ) -> dict[str, dict[str, Any]]: ...
     async def set_notes(
         self, submission_id: str, notes: str, *, acted_by: Optional[str] = None
     ) -> bool: ...
@@ -739,6 +757,11 @@ class PostgresStore:
                     next_attempt_at=None,
                     attempt_count=0,
                     acted_by=acted_by,
+                    # Re-driving returns the row to the ACTIVE queue: an
+                    # undo-discard (or re-driving a closed failure) must also
+                    # reopen it, or it would deliver while reading "closed".
+                    closed_at=None, closed_by=None, close_reason=None, close_note=None,
+                    resolved_at=None, resolved_by=None,
                     updated_at=_now(),
                 )
             )
@@ -1088,25 +1111,102 @@ class PostgresStore:
             ).mappings().all()
         return [dict(r) for r in rows]
 
-    async def discard(self, submission_id: str, *, acted_by: Optional[str] = None) -> bool:
+    async def discard(
+        self, submission_id: str, *, acted_by: Optional[str] = None,
+        reason: Optional[str] = None,
+    ) -> bool:
         """Resolve a stuck submission manually: move it to the terminal
         ``discarded`` status so it leaves the worker queue and stops counting
         toward the needs-attention alert. Never touches a completed delivery.
-        The row (payload, error, progress) is kept for audit."""
+        The row (payload, error, progress) is kept for audit.
+
+        Intake-receipt redesign (2026-07-27): a discard is a BUSINESS
+        DECISION, so it carries a required reason (the router enforces
+        non-empty) and closes the row (closed_* + resolved_*) — the same
+        fields the receipt engine reads to stamp who/when/why onto the CRM
+        receipt."""
+        now = _now()
+        values: dict[str, Any] = dict(
+            status=STATUS_DISCARDED,
+            next_attempt_at=None,
+            locked_until=None,
+            acted_by=acted_by,
+            updated_at=now,
+        )
+        if reason:
+            values.update(
+                closed_at=now, closed_by=acted_by, close_reason=reason,
+                resolved_at=now, resolved_by=acted_by,
+            )
         async with self._engine.begin() as conn:
             result = await conn.execute(
                 update(submission)
                 .where(submission.c.id == submission_id)
                 .where(submission.c.status != STATUS_COMPLETED)
-                .values(
-                    status=STATUS_DISCARDED,
-                    next_attempt_at=None,
-                    locked_until=None,
-                    acted_by=acted_by,
-                    updated_at=_now(),
-                )
+                .values(**values)
             )
         return result.rowcount > 0
+
+    async def set_receipt_id(self, submission_id: str, receipt_id: str) -> None:
+        async with self._engine.begin() as conn:
+            await conn.execute(
+                update(submission)
+                .where(submission.c.id == submission_id)
+                .values(crm_receipt_id=receipt_id)
+            )
+
+    async def list_all_for_receipts(
+        self, *, limit: int = 500, offset: int = 0
+    ) -> list[dict[str, Any]]:
+        """A page of rows carrying everything the receipt engine needs (the
+        reconciliation sweep iterates these oldest-first)."""
+        query = (
+            select(
+                submission.c.id,
+                submission.c.form_slug,
+                submission.c.submission_token,
+                submission.c.status,
+                submission.c.payload,
+                submission.c.result,
+                submission.c.last_error,
+                submission.c.attempt_count,
+                submission.c.progress,
+                submission.c.acted_by,
+                submission.c.closed_at,
+                submission.c.closed_by,
+                submission.c.close_reason,
+                submission.c.close_note,
+                submission.c.crm_receipt_id,
+                submission.c.received_at,
+            )
+            .order_by(submission.c.received_at.asc(), submission.c.id.asc())
+            .limit(limit)
+            .offset(offset)
+        )
+        async with self._engine.begin() as conn:
+            rows = (await conn.execute(query)).mappings().all()
+        return [dict(r) for r in rows]
+
+    async def find_ids_by_tokens(self, tokens: list[str]) -> dict[str, dict[str, Any]]:
+        """token -> {id, form_slug, crm_receipt_id}, for the migration
+        back-link (matching historical CRM receipts to app rows)."""
+        if not tokens:
+            return {}
+        query = select(
+            submission.c.submission_token,
+            submission.c.id,
+            submission.c.form_slug,
+            submission.c.crm_receipt_id,
+        ).where(submission.c.submission_token.in_(tokens))
+        async with self._engine.begin() as conn:
+            rows = (await conn.execute(query)).mappings().all()
+        return {
+            r["submission_token"]: {
+                "id": r["id"], "form_slug": r["form_slug"],
+                "crm_receipt_id": r["crm_receipt_id"],
+            }
+            for r in rows
+        }
 
     async def metrics(self) -> dict[str, Any]:
         """Delivery health: counts, backlog, oldest-pending age, avg latency,

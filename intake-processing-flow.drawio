@@ -1,11 +1,11 @@
 <mxfile host="Claude" modified="2026-07-27T00:00:00.000Z" agent="Claude Code" version="1.1">
-  <diagram id="legend" name="0 · Start here — what each screen calls it">
+  <diagram id="legend" name="0 · Start here — the status vocabulary">
     <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="950">
       <root>
         <mxCell id="0"/>
         <mxCell id="1" parent="0"/>
-        <mxCell id="lg_title" value="One journey, three screens — the SAME moment gets a different word on each screen. That&#39;s all the &quot;status confusion&quot; is." style="text;html=1;fontSize=15;fontStyle=1;align=left;" vertex="1" parent="1">
-          <mxGeometry x="40" y="20" width="1060" height="30" as="geometry"/>
+        <mxCell id="lg_title" value="One journey, ONE vocabulary — Submission Admin and the CRM&#39;s Intake Submission receipt use the same six words. Every arrival (forms AND info@ emails) has a receipt in the CRM from the moment it arrives." style="text;html=1;fontSize=15;fontStyle=1;align=left;" vertex="1" parent="1">
+          <mxGeometry x="40" y="10" width="1060" height="50" as="geometry"/>
         </mxCell>
         <mxCell id="lg_h1" value="Stage" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#333333;fontColor=#FFFFFF;strokeColor=#333333;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="40" y="70" width="150" height="40" as="geometry"/>
@@ -13,45 +13,45 @@
         <mxCell id="lg_h2" value="What is actually happening" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#333333;fontColor=#FFFFFF;strokeColor=#333333;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="190" y="70" width="360" height="40" as="geometry"/>
         </mxCell>
-        <mxCell id="lg_h3" value="Submission Admin &quot;Status&quot; column says" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#333333;fontColor=#FFFFFF;strokeColor=#333333;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="lg_h3" value="STATUS — the same word everywhere" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#333333;fontColor=#FFFFFF;strokeColor=#333333;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="550" y="70" width="250" height="40" as="geometry"/>
         </mxCell>
-        <mxCell id="lg_h4" value="Inside the CRM you see" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#333333;fontColor=#FFFFFF;strokeColor=#333333;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="lg_h4" value="The CRM receipt additionally shows" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#333333;fontColor=#FFFFFF;strokeColor=#333333;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="800" y="70" width="300" height="40" as="geometry"/>
         </mxCell>
         <mxCell id="lg_r1a" value="Just submitted" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="40" y="110" width="150" height="55" as="geometry"/></mxCell>
-        <mxCell id="lg_r1b" value="Saved instantly to the app&#39;s own database; the visitor sees &quot;received&quot;. Waiting its turn (usually seconds)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#999999;align=left;spacingLeft=8;" vertex="1" parent="1"><mxGeometry x="190" y="110" width="360" height="55" as="geometry"/></mxCell>
-        <mxCell id="lg_r1c" value="pending" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="550" y="110" width="250" height="55" as="geometry"/></mxCell>
-        <mxCell id="lg_r1d" value="nothing yet" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="800" y="110" width="300" height="55" as="geometry"/></mxCell>
+        <mxCell id="lg_r1b" value="Saved instantly; the visitor sees &quot;received&quot;. A receipt is written to the CRM at arrival. Waiting its turn (usually seconds)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#999999;align=left;spacingLeft=8;" vertex="1" parent="1"><mxGeometry x="190" y="110" width="360" height="55" as="geometry"/></mxCell>
+        <mxCell id="lg_r1c" value="Received" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="550" y="110" width="250" height="55" as="geometry"/></mxCell>
+        <mxCell id="lg_r1d" value="the submitted content (the payload)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="800" y="110" width="300" height="55" as="geometry"/></mxCell>
         <mxCell id="lg_r2a" value="Being delivered" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="40" y="165" width="150" height="55" as="geometry"/></mxCell>
         <mxCell id="lg_r2b" value="The background worker is creating this form&#39;s CRM records" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#999999;align=left;spacingLeft=8;" vertex="1" parent="1"><mxGeometry x="190" y="165" width="360" height="55" as="geometry"/></mxCell>
-        <mxCell id="lg_r2c" value="processing" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="550" y="165" width="250" height="55" as="geometry"/></mxCell>
-        <mxCell id="lg_r2d" value="the records appearing" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="800" y="165" width="300" height="55" as="geometry"/></mxCell>
+        <mxCell id="lg_r2c" value="Received" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="550" y="165" width="250" height="55" as="geometry"/></mxCell>
+        <mxCell id="lg_r2d" value="the business records appearing alongside" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="800" y="165" width="300" height="55" as="geometry"/></mxCell>
         <mxCell id="lg_r3a" value="Delivered ✓" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="40" y="220" width="150" height="55" as="geometry"/></mxCell>
         <mxCell id="lg_r3b" value="Every record was created successfully. This is the normal happy ending" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#999999;align=left;spacingLeft=8;" vertex="1" parent="1"><mxGeometry x="190" y="220" width="360" height="55" as="geometry"/></mxCell>
-        <mxCell id="lg_r3c" value="completed" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#999999;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="550" y="220" width="250" height="55" as="geometry"/></mxCell>
-        <mxCell id="lg_r3d" value="the records, plus an audit entry marked &quot;Processed&quot; — &quot;completed&quot; and &quot;Processed&quot; are the SAME event" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#999999;align=left;spacingLeft=8;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="800" y="220" width="300" height="55" as="geometry"/></mxCell>
+        <mxCell id="lg_r3c" value="Completed" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#999999;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="550" y="220" width="250" height="55" as="geometry"/></mxCell>
+        <mxCell id="lg_r3d" value="a link to the Contact the submission produced" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#999999;align=left;spacingLeft=8;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="800" y="220" width="300" height="55" as="geometry"/></mxCell>
         <mxCell id="lg_r4a" value="Hiccup" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="40" y="275" width="150" height="55" as="geometry"/></mxCell>
         <mxCell id="lg_r4b" value="A temporary problem (CRM briefly unreachable). The app retries by itself — no one needs to do anything" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#999999;align=left;spacingLeft=8;" vertex="1" parent="1"><mxGeometry x="190" y="275" width="360" height="55" as="geometry"/></mxCell>
-        <mxCell id="lg_r4c" value="retry" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="550" y="275" width="250" height="55" as="geometry"/></mxCell>
-        <mxCell id="lg_r4d" value="nothing yet" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="800" y="275" width="300" height="55" as="geometry"/></mxCell>
+        <mxCell id="lg_r4c" value="Received (retrying)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="550" y="275" width="250" height="55" as="geometry"/></mxCell>
+        <mxCell id="lg_r4d" value="nothing new yet" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="800" y="275" width="300" height="55" as="geometry"/></mxCell>
         <mxCell id="lg_r5a" value="Stuck — needs a person" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FF6B6B;fontColor=#FFFFFF;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="40" y="330" width="150" height="55" as="geometry"/></mxCell>
         <mxCell id="lg_r5b" value="Delivery failed for good (bad data, or retries ran out). Admins get an email naming it, with a link" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#999999;align=left;spacingLeft=8;" vertex="1" parent="1"><mxGeometry x="190" y="330" width="360" height="55" as="geometry"/></mxCell>
-        <mxCell id="lg_r5c" value="needs attention" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="550" y="330" width="250" height="55" as="geometry"/></mxCell>
-        <mxCell id="lg_r5d" value="an audit entry marked &quot;New&quot; (= look at this)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#999999;align=left;spacingLeft=8;" vertex="1" parent="1"><mxGeometry x="800" y="330" width="300" height="55" as="geometry"/></mxCell>
+        <mxCell id="lg_r5c" value="Error" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="550" y="330" width="250" height="55" as="geometry"/></mxCell>
+        <mxCell id="lg_r5d" value="a long, specific message: exactly what failed, what was already created, and how to fix it" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#999999;align=left;spacingLeft=8;" vertex="1" parent="1"><mxGeometry x="800" y="330" width="300" height="55" as="geometry"/></mxCell>
         <mxCell id="lg_r6a" value="Spam trap" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="40" y="385" width="150" height="55" as="geometry"/></mxCell>
         <mxCell id="lg_r6b" value="A bot filled the hidden trap field. Parked — the CRM records are never created" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#999999;align=left;spacingLeft=8;" vertex="1" parent="1"><mxGeometry x="190" y="385" width="360" height="55" as="geometry"/></mxCell>
-        <mxCell id="lg_r6c" value="held (honeypot)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="550" y="385" width="250" height="55" as="geometry"/></mxCell>
-        <mxCell id="lg_r6d" value="an audit entry marked &quot;New&quot;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#999999;align=left;spacingLeft=8;" vertex="1" parent="1"><mxGeometry x="800" y="385" width="300" height="55" as="geometry"/></mxCell>
+        <mxCell id="lg_r6c" value="Held-Spam" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="550" y="385" width="250" height="55" as="geometry"/></mxCell>
+        <mxCell id="lg_r6d" value="&quot;The &lt;form&gt; spam trap was triggered&quot; — the receipt only, no other records" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#999999;align=left;spacingLeft=8;" vertex="1" parent="1"><mxGeometry x="800" y="385" width="300" height="55" as="geometry"/></mxCell>
         <mxCell id="lg_r7a" value="Email waiting for triage" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="40" y="440" width="150" height="55" as="geometry"/></mxCell>
         <mxCell id="lg_r7b" value="A new email to info@ is waiting for a staff Approve or Discard" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#999999;align=left;spacingLeft=8;" vertex="1" parent="1"><mxGeometry x="190" y="440" width="360" height="55" as="geometry"/></mxCell>
-        <mxCell id="lg_r7c" value="held for review" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="550" y="440" width="250" height="55" as="geometry"/></mxCell>
-        <mxCell id="lg_r7d" value="nothing yet" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="800" y="440" width="300" height="55" as="geometry"/></mxCell>
+        <mxCell id="lg_r7c" value="Held-Email" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="550" y="440" width="250" height="55" as="geometry"/></mxCell>
+        <mxCell id="lg_r7d" value="the email itself (from / subject / body) + a Gmail link — written BEFORE any human decision" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="800" y="440" width="300" height="55" as="geometry"/></mxCell>
         <mxCell id="lg_r8a" value="Thrown out" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="40" y="495" width="150" height="55" as="geometry"/></mxCell>
         <mxCell id="lg_r8b" value="Staff decided it&#39;s junk. Kept only as a record of what arrived" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#999999;align=left;spacingLeft=8;" vertex="1" parent="1"><mxGeometry x="190" y="495" width="360" height="55" as="geometry"/></mxCell>
-        <mxCell id="lg_r8c" value="discarded" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="550" y="495" width="250" height="55" as="geometry"/></mxCell>
-        <mxCell id="lg_r8d" value="nothing" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="800" y="495" width="300" height="55" as="geometry"/></mxCell>
-        <mxCell id="lg_note1" value="Two footnotes, then you can forget this tab:&lt;br&gt;&lt;br&gt;• The CRM audit field also offers &quot;Approved&quot; and &quot;Rejected&quot;. The app NEVER sets those — they exist for staff working inside the CRM. Ignore them.&lt;br&gt;&lt;br&gt;• Separate from everything above is the question &quot;is it still on the Submission Admin to-do list?&quot; A delivered form submission takes itself off the list (its records are worked in Client / Mentor / Partner / Funder Administration instead — see each form&#39;s tab). An information request or info@ email stays on the list until staff reply and close it." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;align=left;spacingLeft=10;spacingRight=10;verticalAlign=middle;" vertex="1" parent="1">
+        <mxCell id="lg_r8c" value="Discarded" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="550" y="495" width="250" height="55" as="geometry"/></mxCell>
+        <mxCell id="lg_r8d" value="the business decision: WHO discarded it, WHEN, and WHY (the reason is required)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="800" y="495" width="300" height="55" as="geometry"/></mxCell>
+        <mxCell id="lg_note1" value="Two footnotes, then you can forget this tab:&lt;br&gt;&lt;br&gt;• Separate from the status is the question &quot;is it still on the Submission Admin to-do list?&quot; A delivered form submission takes itself off the list (its records are worked in Client / Mentor / Partner / Funder Administration instead — see each form&#39;s tab). An information request or info@ email stays on the list until staff reply and close it.&lt;br&gt;&lt;br&gt;• Discarding ALWAYS requires a reason — the who/when/why lands on the CRM receipt, so a discarded item is a recorded business decision, never a mystery. An hourly reconciliation (and the &quot;Sync receipts&quot; button) guarantees the receipts match reality even when a write failed at the time." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;align=left;spacingLeft=10;spacingRight=10;verticalAlign=middle;" vertex="1" parent="1">
           <mxGeometry x="40" y="580" width="1060" height="140" as="geometry"/>
         </mxCell>
       </root>
@@ -71,13 +71,13 @@
         <mxCell id="sp_hp" value="Was it a bot? (a hidden trap field only bots fill in)" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
           <mxGeometry x="210" y="210" width="200" height="90" as="geometry"/>
         </mxCell>
-        <mxCell id="sp_spam" value="Parked as suspected spam. The CRM is never touched" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FF6B6B;fontColor=#FFFFFF;strokeColor=#C0392B;" vertex="1" parent="1">
+        <mxCell id="sp_spam" value="Parked as suspected spam — status Held-Spam. A receipt is written to the CRM; no OTHER records are created" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FF6B6B;fontColor=#FFFFFF;strokeColor=#C0392B;" vertex="1" parent="1">
           <mxGeometry x="540" y="225" width="240" height="60" as="geometry"/>
         </mxCell>
         <mxCell id="sp_spamend" value="The bot still sees &quot;received&quot;, so it learns nothing. A false alarm can be rescued from Submission Admin" style="rounded=1;whiteSpace=wrap;html=1;arcSize=40;fillColor=#F5F5F5;strokeColor=#666666;" vertex="1" parent="1">
           <mxGeometry x="540" y="325" width="240" height="70" as="geometry"/>
         </mxCell>
-        <mxCell id="sp_capture" value="Saved instantly to the app&#39;s own database. From this moment it CANNOT be lost — even if the CRM is down. (Pressing submit twice never creates a duplicate)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+        <mxCell id="sp_capture" value="Saved instantly to the app&#39;s own database (loss-proof even if the CRM is down) AND a Received receipt goes to the CRM. Pressing submit twice never creates a duplicate" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
           <mxGeometry x="170" y="340" width="280" height="80" as="geometry"/>
         </mxCell>
         <mxCell id="sp_ack" value="The visitor immediately sees &quot;received&quot; with a reference number. Everything after this happens behind the scenes" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
@@ -89,7 +89,7 @@
         <mxCell id="sp_ok" value="Did everything succeed?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
           <mxGeometry x="230" y="680" width="160" height="80" as="geometry"/>
         </mxCell>
-        <mxCell id="sp_done" value="Delivered ✓  (this is the moment Submission Admin labels &quot;completed&quot; and the CRM audit labels &quot;Processed&quot; — tab 0)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+        <mxCell id="sp_done" value="Delivered ✓ — status &quot;Completed&quot; everywhere: the app, Submission Admin, and the CRM receipt (which now links the Contact)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
           <mxGeometry x="170" y="800" width="280" height="70" as="geometry"/>
         </mxCell>
         <mxCell id="sp_needreply" value="Does someone owe the sender a reply? (only info requests + info@ emails)" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
@@ -344,7 +344,7 @@
         <mxCell id="ie_thread" value="It simply joins that conversation — nothing new to triage. If that item had been closed, the reply automatically puts it back on the list" style="rounded=1;whiteSpace=wrap;html=1;arcSize=30;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
           <mxGeometry x="560" y="210" width="280" height="80" as="geometry"/>
         </mxCell>
-        <mxCell id="ie_capture" value="Held as a NEW item for a human to look at first. The CRM is not touched yet" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+        <mxCell id="ie_capture" value="Held as a NEW item for a human to look at first — status Held-Email. Its CRM receipt (with the email content) is written immediately" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
           <mxGeometry x="180" y="350" width="280" height="60" as="geometry"/>
         </mxCell>
         <mxCell id="ie_queue" value="Shows on the Submission Admin list for a decision (that&#39;s part of the /ops badge number)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;" vertex="1" parent="1">
@@ -359,7 +359,7 @@
         <mxCell id="ie_open" value="Someone owes them an answer: staff reply as info@ on the same email thread, then close it with a reason and it drops off the list" style="rounded=1;whiteSpace=wrap;html=1;arcSize=30;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
           <mxGeometry x="180" y="800" width="280" height="80" as="geometry"/>
         </mxCell>
-        <mxCell id="ie_discard" value="DISCARD: junk. Thrown out — the CRM never sees it (the row is kept only as a record of what arrived)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FF6B6B;fontColor=#FFFFFF;strokeColor=#C0392B;" vertex="1" parent="1">
+        <mxCell id="ie_discard" value="DISCARD (reason required): junk. Status Discarded — the CRM receipt records who, when, and why; no business records are ever created" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FF6B6B;fontColor=#FFFFFF;strokeColor=#C0392B;" vertex="1" parent="1">
           <mxGeometry x="560" y="680" width="280" height="80" as="geometry"/>
         </mxCell>
         <mxCell id="ie_e1" style="endArrow=classic;" edge="1" source="ie_start" target="ie_poll" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>

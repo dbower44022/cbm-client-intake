@@ -63,12 +63,13 @@ class FakeOpsStore:
             return True
         return False
 
-    async def discard(self, submission_id, *, acted_by=None):
+    async def discard(self, submission_id, *, acted_by=None, reason=None):
         row = self.rows.get(submission_id)
         if row is None or row["status"] == "completed":
             return False
         row["status"] = "discarded"
         row["acted_by"] = acted_by
+        row["close_reason"] = reason
         return True
 
     async def set_notes(self, submission_id, notes, *, acted_by=None):
@@ -218,14 +219,29 @@ def test_redrive(monkeypatch):
     assert missing.status_code == 404
 
 
+def test_discard_requires_a_reason(monkeypatch):
+    """A discard is a business decision — no reason, no discard (the receipt
+    redesign's audit requirement)."""
+    store = FakeOpsStore()
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, store)) as c:
+        bare = c.post("/ops/api/submissions/abc12345/discard", json={})
+        blank = c.post("/ops/api/submissions/abc12345/discard", json={"reason": "  "})
+    assert bare.status_code == 422 and "reason" in bare.json()["detail"].lower()
+    assert blank.status_code == 422
+    assert store.rows["abc12345"]["status"] != "discarded"
+
+
 def test_discard(monkeypatch):
     store = FakeOpsStore()
     _authed(monkeypatch)
     with TestClient(_app(monkeypatch, store)) as c:
-        ok = c.post("/ops/api/submissions/abc12345/discard")
-        missing = c.post("/ops/api/submissions/nope/discard")
+        ok = c.post("/ops/api/submissions/abc12345/discard",
+                    json={"reason": "Spam", "note": "obvious bot"})
+        missing = c.post("/ops/api/submissions/nope/discard", json={"reason": "Spam"})
     assert ok.status_code == 200 and ok.json()["status"] == "discarded"
     assert store.rows["abc12345"]["status"] == "discarded"
+    assert store.rows["abc12345"]["close_reason"] == "Spam — obvious bot"
     assert missing.status_code == 404
 
 

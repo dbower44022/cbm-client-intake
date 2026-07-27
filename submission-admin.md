@@ -43,6 +43,28 @@ completed"** and drops out of the open queue. You'll still find those under
 **Resolved / All** (their State reads "Process completed"); if one shows as
 *needs attention* instead, its delivery failed and it's worth a Re-drive.
 
+## One status vocabulary — and a receipt in the CRM for every arrival
+
+Since the intake-receipt redesign (2026-07-27), the app and the CRM speak the
+**same six words** about a submission's processing state:
+
+| Status | Meaning |
+|---|---|
+| **Received** | In hand and being processed (covers waiting, delivering, and automatic retries — the filter offers "Received — waiting / delivering / retrying" when you need the distinction). |
+| **Completed** | All CRM records were created. |
+| **Held-Spam** | The form's hidden spam trap was triggered; nothing was created. |
+| **Held-Email** | An email to info@ awaiting your Approve/Discard. |
+| **Error** | Delivery failed and a person needs to act (the receipt carries a what-happened-and-how-to-fix explanation). |
+| **Discarded** | A person decided no records should be created — always with a recorded reason. |
+
+Every arrival — including every info@ email, *before* anyone touches it — has
+a matching **Intake Submission receipt in EspoCRM** showing the same status,
+the submitted content (for emails, the message itself plus a Gmail link), and,
+once someone acts, **who dispositioned it, when, and why**. The receipt
+updates automatically as things change; an hourly reconciliation heals any
+write the CRM missed, and the **Sync receipts** button in the toolbar runs
+that reconciliation on demand (safe to press any time).
+
 ## The front page (the work queue)
 
 - The grid fills the window and scrolls under a sticky header. Every column
@@ -71,11 +93,13 @@ completed"** and drops out of the open queue. You'll still find those under
   the signal that a colleague is already on an item (there's no formal
   "owner"; visibility is how the team avoids two people answering the same
   request). Sort by it to find what's gone quiet.
-- **Re-drive** re-queues a stuck submission (needs-attention / retry / held /
-  discarded) for the worker to run again — safe, it resumes from what was
-  already created. **Discard** parks an undeliverable one (undo by
-  re-driving). Both ask for a confirming second click.
-- **Inbound emails** (form "info-email", status "held review") carry
+- **Re-drive** re-queues a stuck submission (Error / Held / Discarded) for
+  the worker to run again — safe, it resumes from what was already created.
+  **Discard ▾** parks one for good and **requires a reason** (Spam / Junk /
+  Duplicate / Not actionable / Other + note): the decision — who, when, why —
+  is recorded on the row, in the Activity feed, and on the CRM receipt. Undo
+  a mistaken discard by re-driving.
+- **Inbound emails** (form "info-email", status **Held-Email**) carry
   **Approve** instead of Re-drive: approving creates the CRM records —
   Contact, plus the Information Request — exactly as if the person had used
   the website form (marked as source "Email"). **Discard** is the spam

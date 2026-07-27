@@ -897,24 +897,84 @@ async def redrive(submission_id: str, request: Request) -> dict:
     log.info("redrive %s by %s", submission_id, user["userName"])
     await _activity(store, submission_id, kind=ACT_REDRIVEN, actor=user["userName"],
                     actor_name=_actor(user), summary="re-queued for delivery")
+    # The CRM receipt: back to Received, stamped with WHO approved/re-drove it
+    # (an action-time-only fact — the sweep can't derive it later). Best-effort.
+    espo = _api_client()
+    if espo is not None:
+        from core import receipts
+        from datetime import datetime, timezone
+
+        await receipts.touch_safe(
+            espo, store, submission_id,
+            extra={
+                "dispositionedBy": _actor(user),
+                "dispositionedAt": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+            },
+        )
     return {"status": "requeued"}
 
 
+class DiscardIn(BaseModel):
+    reason: str = ""
+    note: str = ""
+
+
 @router.post("/submissions/{submission_id}/discard")
-async def discard(submission_id: str, request: Request) -> dict:
+async def discard(submission_id: str, body: DiscardIn, request: Request) -> dict:
     user = _require_user(request)
     store = _store(request)
-    if not await store.discard(submission_id, acted_by=user["userName"]):
+    # A discard is a BUSINESS DECISION (intake-receipt redesign 2026-07-27):
+    # it always carries a reason, recorded on the row AND the CRM receipt.
+    reason = body.reason.strip()
+    if not reason:
+        raise HTTPException(
+            status_code=422,
+            detail="A reason is required to discard a submission.",
+        )
+    if body.note.strip():
+        reason = f"{reason} — {body.note.strip()}"
+    if not await store.discard(
+        submission_id, acted_by=user["userName"], reason=reason
+    ):
         # Either not found, or already completed (which must not be discarded).
         raise HTTPException(
             status_code=404, detail="Submission not found or already completed."
         )
-    # Audit: discard is a terminal staff decision — "who discarded this?"
-    # must be answerable from the run logs.
-    log.info("discard %s by %s", submission_id, user["userName"])
+    # Audit: discard is a terminal staff decision — "who discarded this, and
+    # why?" must be answerable from the row, the feed, AND the CRM receipt.
+    log.info("discard %s by %s (%s)", submission_id, user["userName"], reason)
     await _activity(store, submission_id, kind=ACT_DISCARDED, actor=user["userName"],
-                    actor_name=_actor(user), summary="discarded this submission")
+                    actor_name=_actor(user),
+                    summary=f"discarded this submission — {reason}")
+    espo = _api_client()
+    if espo is not None:
+        from core import receipts
+
+        await receipts.touch_safe(
+            espo, store, submission_id, extra={"dispositionedBy": _actor(user)}
+        )
     return {"status": "discarded"}
+
+
+@router.post("/receipts/sync")
+async def sync_receipts(request: Request) -> dict:
+    """Run the intake-receipt reconciliation NOW (the same sweep the worker
+    runs hourly): every submission's CIntakeSubmission receipt is created or
+    updated to match reality. Idempotent — safe to press twice."""
+    user = _require_user(request)
+    store = _store(request)
+    espo = _api_client()
+    if espo is None:
+        raise HTTPException(
+            status_code=503,
+            detail="No CRM connection on this deployment (dry-run or no API key).",
+        )
+    from core import receipts
+
+    settings = get_settings()
+    stats = await receipts.run_receipt_sweep(espo, store, settings)
+    log.info("manual receipt sweep by %s: %s", user["userName"], stats)
+    return {"status": "ok", **stats}
 
 
 # Quick-send email (compose to the submitter, templates included), behind this

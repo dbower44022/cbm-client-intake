@@ -4,6 +4,59 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.181.0] — 2026-07-27
+
+**feat(intake): the intake-receipt redesign — the CRM as the single source of
+truth for every arrival** (Doug's approved design,
+`prds/intake-receipt-redesign-plan.md`; CRM handoff
+`cintake-submission-redesign.md`; all three phases in one release).
+
+- **One status vocabulary** — `Received / Completed / Held-Spam / Held-Email /
+  Error / Discarded` — spoken identically by the CRM receipt
+  (`CIntakeSubmission.intakeStatus`) and every Submission Admin screen. The
+  old `reason`+`status` pair is no longer written (fields deleted CRM-side
+  after migration); `core/submission_log.py` is retired.
+- **A receipt for every arrival, updated as it changes** (`core/receipts.py`,
+  the row-driven engine): created at capture — web forms as `Received` (or
+  `Held-Spam`, message "The {form} spam trap was triggered"), **info@ emails
+  as `Held-Email` immediately at capture** ("All emails need review", the
+  email content in `payload` + a Gmail `emailLink`) — and updated on outcome:
+  `Completed` links the Contact; `Error` carries a long what-happened-and-
+  how-to-fix message (attempts, the CRM's own rejection, records already
+  created, tailored fix hints). New app column `crm_receipt_id` (**Alembic
+  0023** — pre-deploy migrate) links row ↔ receipt; creates first try to
+  ADOPT an existing receipt by token (replays/migration never duplicate).
+- **Dispositions are recorded business decisions**: `Discard` now REQUIRES a
+  reason (reason-picker popover replaces the two-step button, row + detail;
+  bare POSTs 422) and stamps `dispositionedBy/At/Reason` on the receipt (the
+  app row closes too — `store.discard(reason=…)`; Re-drive reopens);
+  Approve/Re-drive stamp by/at. Only humans ever produce `Discarded`.
+- **The guarantee**: `run_receipt_sweep` reconciles every row's receipt
+  hourly in the worker (`RECEIPT_RECONCILE_SECONDS`, default 3600) —
+  missing → created, stale → updated, matching → untouched; a **"Sync
+  receipts"** button in Submission Admin (`POST /ops/api/receipts/sync`)
+  runs it on demand; persistent write failures alert admins on the existing
+  channel (cooldown-guarded).
+- **Vocabulary everywhere** (Phase C): the /ops grid chips, state sub-badges,
+  detail Status, and the status filter (labelled "Received — waiting /
+  delivering / retrying" etc.) show only the new words; docs updated
+  (`submission-admin.md`, `intake-processing-overview.md`, the flow
+  diagram's tab 0 is now ONE vocabulary).
+- **Migration**: `scripts/migrate_intake_receipts.py` (dry-run default) maps
+  reason→intakeStatus, fills message/payload from the old description, and
+  back-links receipts to app rows by token. **RUN + GET-VERIFIED on crm-test**
+  (57 records, 0 failures — also proving the API user's new edit grant
+  there); a live probe verified create + disposition end-to-end (ZZTEST
+  receipt `6a66f5b4bbe3805ee` to delete in the UI). **Prod: run the script in
+  the deployed console after deploy**, then the handoff §7 live pass, then
+  delete `reason`/`status` in Entity Manager (§6).
+- Verified: 1428 tests green (24 new in `tests/test_receipts.py` +
+  discard-reason coverage); migration 0023 + the new store surface
+  round-tripped on live local Postgres (discard-with-reason closes, re-drive
+  reopens). Version-race note: parallel sessions share `CHANGELOG.md`,
+  `ops/frontend/*`, and `submission-admin.md` — only this feature's hunks
+  are staged.
+
 ## [0.179.0] — 2026-07-26
 
 **feat(portal): birthdays are a CBM-wide moment — every member is greeted, and

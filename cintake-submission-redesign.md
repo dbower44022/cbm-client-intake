@@ -16,6 +16,15 @@ Build on **crm-test first**, verify with the app, then **prod**. All work is
 in **Administration → Entity Manager → Intake Submission → Fields** unless
 stated otherwise.
 
+> **STATUS 2026-07-27:** fields built on BOTH CRMs (Doug); app v0.180.0 built
+> (all three phases). On **crm-test** the migration ran clean (57 records,
+> GET-verified — which also proves the API user's edit grant there) and a live
+> probe verified the create + disposition paths end-to-end (ZZTEST receipt
+> `6a66f5b4bbe3805ee` left to delete in the UI). **Remaining:** deploy; run
+> the migration in each deployed console (crm-test again for the back-link
+> half, prod for everything — §5); verify prod's edit grant (§3); the §7 live
+> pass; then delete `reason`/`status` (§6).
+
 ---
 
 ## 1. Fields to CREATE

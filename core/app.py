@@ -7,6 +7,7 @@ tokens) are served at ``/shared/``. The root lists the available forms.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import re
@@ -23,6 +24,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 from starlette.middleware.sessions import SessionMiddleware
 
+from . import receipts
 from . import store as store_mod
 from .config import Settings, get_settings
 from .espo import DryRunEspoClient, EspoApi, EspoClient, EspoError
@@ -30,14 +32,6 @@ from .forms import FormSpec
 from .logging_setup import setup_logging
 from .resumable import ResumableClient
 from .store import SubmissionStore
-from .submission_log import (
-    REASON_HONEYPOT,
-    REASON_NORMAL,
-    REASON_ORCHESTRATOR_ERROR,
-    STATUS_NEW,
-    STATUS_PROCESSED,
-    log_submission,
-)
 from .version import __version__
 
 # Shared format for both processes (level/name/seconds — see the module doc);
@@ -96,6 +90,26 @@ def _make_handler(
         return await _process_submission(spec, settings, processed, store, body)
 
     return handler
+
+
+def _receipt_row_like(
+    spec: FormSpec, submission: Any, status: str,
+    *, result: Optional[dict] = None, error: Optional[str] = None,
+) -> dict:
+    """A synthesized store-row for the STORELESS (dev/dry-run) receipt write —
+    core.receipts is row-driven, and without a database there is no row."""
+    payload = json.loads(submission.model_dump_json())
+    payload["company_url"] = ""
+    return {
+        "form_slug": spec.slug,
+        "submission_token": submission.submission_token,
+        "status": status,
+        "payload": payload,
+        "result": result,
+        "last_error": error,
+        "attempt_count": 1 if error else 0,
+        "received_at": datetime.now(timezone.utc),
+    }
 
 
 async def _process_submission(
@@ -173,29 +187,33 @@ async def _process_submission(
             return {"status": "received", "idempotent": True}
 
     # Honeypot: acknowledge generically, do not tell a bot it was caught.
-    # The submission is held for admin review (written to the CRM as a
-    # CIntakeSubmission record, reason=Honeypot, status=New) rather than
-    # dropped, so a false positive (e.g. browser autofill, seen 2026-06-12)
-    # is recoverable without contacting the submitter.
+    # The submission is held for admin review — and its CRM receipt is written
+    # immediately (intakeStatus=Held-Spam) so the CRM sees the arrival — so a
+    # false positive (e.g. browser autofill, seen 2026-06-12) is recoverable
+    # without contacting the submitter.
     if is_honeypot:
-        logged = await log_submission(
-            client, spec.slug, submission,
-            reason=REASON_HONEYPOT, status=STATUS_NEW,
-            payload_stored_durably=captured is not None,
-        )
+        if captured is not None:
+            written = await receipts.touch_safe(client, store, captured.id)
+        else:
+            written = await receipts.create_direct(
+                client, _receipt_row_like(spec, submission, store_mod.STATUS_HELD)
+            )
         log.warning(
-            "honeypot %s token=%s email=%s logged=%s",
+            "honeypot %s token=%s email=%s receipt=%s",
             spec.slug,
             submission.submission_token,
             getattr(submission, "email", "?"),
-            logged,
+            written,
         )
         return {"status": "received"}
 
     # V2 Phase 1: with async delivery on, return as soon as the submission is
     # durably captured — the background worker delivers it into the CRM. The
-    # CIntakeSubmission "Normal" log moves to the worker (on success).
+    # CRM receipt (intakeStatus=Received) is written in the background so the
+    # visitor's instant acknowledgment never waits on the CRM; a failed write
+    # is healed by the worker's outcome touch or the reconciliation sweep.
     if captured is not None and settings.async_delivery:
+        asyncio.create_task(receipts.touch_safe(client, store, captured.id))
         # The accept-side end of the trace: the worker logs the same slug +
         # token on claim/delivered/retry, so one submission is followable
         # across both processes by token (reliability review, correlation).
@@ -225,16 +243,19 @@ async def _process_submission(
     try:
         ids = await spec.orchestrator(submission, delivery_client)
     except EspoError as exc:
-        # Capture the raw submission for recovery (some records may have been
-        # created before the failure). Best-effort, then surface the 502.
-        await log_submission(
-            client, spec.slug, submission,
-            reason=REASON_ORCHESTRATOR_ERROR, status=STATUS_NEW,
-            payload_stored_durably=captured is not None,
-        )
+        # Record the failure on the CRM receipt (intakeStatus=Error with the
+        # what-happened-and-how-to-fix message). Best-effort, then the 502.
         if captured is not None:
             await store.mark_failed(
                 captured.id, status=store_mod.STATUS_NEEDS_ATTENTION, error=str(exc)
+            )
+            await receipts.touch_safe(client, store, captured.id)
+        else:
+            await receipts.create_direct(
+                client,
+                _receipt_row_like(
+                    spec, submission, store_mod.STATUS_NEEDS_ATTENTION, error=str(exc)
+                ),
             )
         log.error("%s failed token=%s: %s", spec.slug, submission.submission_token, exc)
         raise HTTPException(
@@ -245,22 +266,23 @@ async def _process_submission(
             ),
         )
 
-    # Log the processed submission for audit/analytics, linked to its Contact.
-    await log_submission(
-        client, spec.slug, submission,
-        reason=REASON_NORMAL, status=STATUS_PROCESSED,
-        contact_id=ids.get("contactId"),
-        payload_stored_durably=captured is not None,
-    )
-
     if captured is not None:
         # Record-creating forms auto-close on delivery (Doug's ruling): the
         # downstream admin team handles them — nothing for /ops to do.
         await store.mark_completed(
             captured.id, ids, auto_close_reason=store_mod.autoclose_reason(spec.slug)
         )
+        # The receipt reaches Completed (+ the Contact link) — the same event
+        # the CRM's intakeStatus and Submission Admin now both call by name.
+        await receipts.touch_safe(client, store, captured.id)
     else:
         processed[key] = ids
+        await receipts.create_direct(
+            client,
+            _receipt_row_like(
+                spec, submission, store_mod.STATUS_COMPLETED, result=ids
+            ),
+        )
     log.info("%s ok token=%s ids=%s", spec.slug, submission.submission_token, ids)
     return {"status": "ok", **ids}
 

@@ -1,7 +1,10 @@
 # Intake Receipt Redesign — the CRM as the single source of truth for every arrival
 
 *Approved by Doug 2026-07-27 (this document records the design elicited and
-ruled in that conversation). Status: **APPROVED, NOT BUILT.** Companion CRM
+ruled in that conversation). Status: **BUILT — all three phases (v0.180.0,
+2026-07-27)**; CRM fields exist on both CRMs (Doug); the historical migration
+ran + was GET-verified on **crm-test** (57 records); **prod's migration runs
+in the deployed console after deploy** (see the handoff §5/§7). Companion CRM
 build handoff: `cintake-submission-redesign.md` (repo root). Supersedes the
 `reason`/`status` model in `cintake-submission-entity.md`.*
 

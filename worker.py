@@ -20,20 +20,13 @@ from typing import Optional
 
 import httpx
 
-from core import monitoring
+from core import monitoring, receipts
 from core import store as store_mod
 from core.config import Settings, get_settings
 from core.espo import DryRunEspoClient, EspoApi, EspoClient, EspoError, EspoTransportError
 from core.logging_setup import setup_logging
 from core.resumable import ResumableClient
 from core.store import Claimed, SubmissionStore, autoclose_reason
-from core.submission_log import (
-    REASON_NORMAL,
-    REASON_ORCHESTRATOR_ERROR,
-    STATUS_NEW,
-    STATUS_PROCESSED,
-    log_submission,
-)
 from forms import SPECS_BY_SLUG
 
 log = logging.getLogger("cbm_intake.worker")
@@ -136,27 +129,22 @@ async def process_one(store: SubmissionStore, settings: Settings, claimed: Claim
                 claimed.id, status=store_mod.STATUS_NEEDS_ATTENTION,
                 error=f"{str(exc)[:800]}\n--- traceback (tail) ---\n{tail}",
             )
-            if submission is not None:
-                await log_submission(
-                    base, spec.slug, submission,
-                    reason=REASON_ORCHESTRATOR_ERROR, status=STATUS_NEW,
-                    payload_stored_durably=True,
-                )
+            # The CRM receipt flips to Error with the full what-happened-and-
+            # how-to-fix message (intake-receipt redesign 2026-07-27).
+            await receipts.touch_safe(base, store, claimed.id)
             log.exception(
                 "needs_attention %s (%s token=%s, attempt %s): %s",
                 claimed.id, claimed.form_slug, claimed.submission_token, attempt, exc,
             )
         return
 
-    await log_submission(
-        base, spec.slug, submission,
-        reason=REASON_NORMAL, status=STATUS_PROCESSED, contact_id=ids.get("contactId"),
-        payload_stored_durably=True,
-    )
     # Record-creating forms (client-intake/volunteer/partner/sponsor) auto-close
     # on delivery — the downstream admin team owns them, /ops has no action.
     reason = autoclose_reason(claimed.form_slug)
     await store.mark_completed(claimed.id, ids, auto_close_reason=reason)
+    # The CRM receipt reaches Completed (+ the Contact link). If the arrival-
+    # time create never landed, this touch creates it (adopt-by-token first).
+    await receipts.touch_safe(base, store, claimed.id)
     log.info(
         "delivered %s (%s token=%s) -> %s%s",
         claimed.id, claimed.form_slug, claimed.submission_token, ids,
@@ -282,6 +270,17 @@ async def main() -> None:
     # engagement client records. Inert in dry-run / without an API key.
     next_stamps = datetime.now(timezone.utc)
 
+    # Intake-receipt reconciliation (Doug's 2026-07-27 redesign): converge
+    # every row's CIntakeSubmission receipt — the guarantee behind "the CRM is
+    # the single source of truth". Inert in dry-run (no real CRM to converge).
+    next_receipts = datetime.now(timezone.utc)
+    receipts_on = settings.receipt_reconcile_seconds > 0 and not settings.espo_dry_run
+    if receipts_on:
+        log.info(
+            "intake-receipt reconciliation enabled (every %ss)",
+            settings.receipt_reconcile_seconds,
+        )
+
     # Inbound info@ poller (v0.110.0): captures new inbound threads on the
     # shared OPS_MAILBOX as held info-email submissions for /ops triage.
     # Inert unless GMAIL_SYNC + OPS_MAILBOX are set.
@@ -366,6 +365,14 @@ async def main() -> None:
             except Exception as exc:  # noqa: BLE001 — comms never crashes delivery
                 log.warning("gmail sync cycle failed: %s", exc)
             next_gmail = now + timedelta(seconds=settings.gmail_sync_seconds)
+        if receipts_on and now >= next_receipts:
+            try:
+                await receipts.run_receipt_sweep(
+                    _client(settings), store, settings, alert_state
+                )
+            except Exception as exc:  # noqa: BLE001 — never crashes delivery
+                log.warning("receipt reconciliation failed: %s", exc)
+            next_receipts = now + timedelta(seconds=settings.receipt_reconcile_seconds)
         if inbound_on and now >= next_inbound:
             try:
                 from ops.inbound import run_inbound_cycle

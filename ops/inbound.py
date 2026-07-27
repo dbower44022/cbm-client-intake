@@ -30,10 +30,12 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 from email.utils import parseaddr
-from typing import Any
+from typing import Any, Optional
 
+from core import receipts
 from core.config import Settings
 from core.email_clean import clean_email
+from core.espo import DryRunEspoClient, EspoApi, EspoClient
 from core.gmail import GmailClient, looks_like_bounce, parse_message
 from core.store import STATUS_HELD_REVIEW, SubmissionStore
 
@@ -73,8 +75,17 @@ def _split_name(display: str, address: str) -> tuple[str, str]:
     return (local or "Unknown"), "(unknown)"
 
 
+def _espo(settings: Settings) -> EspoApi:
+    if settings.espo_dry_run:
+        return DryRunEspoClient()
+    return EspoClient(
+        settings.espo_base_url, settings.espo_api_key, settings.request_timeout_seconds
+    )
+
+
 async def _capture_thread(
-    gmail: GmailClient, store: SubmissionStore, thread_id: str
+    gmail: GmailClient, store: SubmissionStore, thread_id: str,
+    espo: Optional[EspoApi] = None,
 ) -> bool:
     """Capture one thread's originating inbound message as a held submission.
     Returns True when a new row was created."""
@@ -124,6 +135,11 @@ async def _capture_thread(
         # Mirror the origin thread into the anchor column so the conversation
         # view and known_gmail_threads see it uniformly.
         await store.add_thread_id(captured.id, thread_id)
+        # The CRM sees the arrival IMMEDIATELY (intake-receipt redesign,
+        # 2026-07-27): a Held-Email receipt with the email content, before any
+        # human decision. Best-effort — the sweep heals a failed write.
+        if espo is not None:
+            await receipts.touch_safe(espo, store, captured.id)
         log.info(
             "captured inbound email thread %s as submission %s (from %s)",
             thread_id, captured.id, origin.from_address,
@@ -256,9 +272,10 @@ async def run_inbound_cycle(settings: Settings, store: SubmissionStore) -> dict[
             stats["reopened"] = await _reopen_after_close(gmail, store, thread_ids)
         except Exception as exc:  # noqa: BLE001 — never crash the poll
             log.warning("auto-reopen pass failed: %s", exc)
+        espo = _espo(settings)
         for tid in fresh:
             try:
-                if await _capture_thread(gmail, store, tid):
+                if await _capture_thread(gmail, store, tid, espo):
                     stats["captured"] += 1
             except Exception as exc:  # noqa: BLE001 — per-thread best-effort
                 stats["errors"] += 1
