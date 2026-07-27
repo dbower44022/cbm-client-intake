@@ -31,7 +31,9 @@ body { margin: 0; display: flex; flex-direction: column; }
   margin-bottom: 0.6rem; }
 .ops__controls select { padding: 0.45rem 0.5rem; border: 1px solid var(--cbm-border);
   border-radius: var(--cbm-radius); font-family: var(--cbm-font-body); }
-.ops__controls .cbm-button { margin-left: auto; }
+/* The action buttons ride together in one right-aligned group, so a wrapped
+   control bar keeps them side by side instead of orphaning one to its own line. */
+.ops__actions { margin-left: auto; display: flex; gap: 0.6rem; flex-wrap: wrap; }
 .ops__metrics { color: var(--cbm-slate-700); font-size: var(--cbm-text-sm); }
 .ops__metrics.is-alert { color: var(--cbm-danger); font-weight: 600; }
 .ops__counts { display: flex; flex-wrap: wrap; gap: 0.35rem; }

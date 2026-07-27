@@ -4,6 +4,18 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.184.2] — 2026-07-27
+
+**fix(ops): the Submission Admin control bar orphaned the "Refresh" button.**
+When the control bar wrapped to a second line, the per-button
+`.ops__controls .cbm-button { margin-left: auto }` floated *each* action button
+right independently — so "Refresh" dropped to its own second line, alone on the
+far right (widened selects + the count chips pushed the bar past one line). The
+three action buttons (Other correspondence / Sync receipts / Refresh) now ride in
+one `.ops__actions` group that carries the `margin-left: auto`, so they stay side
+by side and wrap together as a unit. Markup + CSS only; harness-verified (all
+three buttons share one row, grouped and right-aligned; console clean).
+
 ## [0.184.1] — 2026-07-27
 
 **feat(ops): replying to a Held-Email approves it first (with a confirmation),
