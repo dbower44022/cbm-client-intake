@@ -1,0 +1,352 @@
+<mxfile host="Claude" modified="2026-07-27T00:00:00.000Z" agent="Claude Code" version="1.0">
+  <diagram id="legend" name="0 · Read me — the status layers">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="lg_title" value="How a submission is tracked — THREE separate status fields (this is the usual source of confusion)" style="text;html=1;fontSize=16;fontStyle=1;align=left;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="900" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="lg_l1" value="&lt;b&gt;1 · DELIVERY STATUS&lt;/b&gt; (the &quot;Status&quot; column in Submission Admin — lives ONLY in the app&#39;s own database, never in the CRM)&lt;br&gt;pending → processing → &lt;b&gt;completed&lt;/b&gt; · retry · needs_attention · held_review · held_honeypot · discarded&lt;br&gt;Machine-owned: it answers &quot;did the CRM records get created?&quot;. &lt;b&gt;completed = delivered to the CRM successfully.&lt;/b&gt; Staff never edit it directly — they act on it (Re-drive / Approve / Discard / Close)." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;spacingRight=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="70" width="900" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="lg_l2" value="&lt;b&gt;2 · CRM AUDIT STATUS&lt;/b&gt; (the CIntakeSubmission record in EspoCRM — the enum you found: New / Approved / Rejected / Processed)&lt;br&gt;The app writes exactly two values: &lt;b&gt;Processed&lt;/b&gt; (reason=Normal) when delivery succeeded, &lt;b&gt;New&lt;/b&gt; (reason=Honeypot or OrchestratorError) when something was held or failed.&lt;br&gt;Approved / Rejected exist for staff use inside the CRM — the app never sets them. So: app &quot;completed&quot; ⇔ CRM audit &quot;Processed&quot;. Same event, two vocabularies." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;align=left;spacingLeft=10;spacingRight=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="180" width="900" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="lg_l3" value="&lt;b&gt;3 · REQUEST STATUS&lt;/b&gt; (info requests only: New / In Progress / Responded / Closed)&lt;br&gt;The human-facing conversational status, set by staff in Submission Admin and mirrored to the CRM CInformationRequest record.&lt;br&gt;Has nothing to do with delivery — a request can be delivered (completed/Processed) and still be &quot;New&quot; conversationally." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;align=left;spacingLeft=10;spacingRight=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="290" width="900" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="lg_open" value="&lt;b&gt;PLUS the Open/Closed flag&lt;/b&gt; — independent of all three. Open = still in the Submission Admin work queue (and counted by the portal badge).&lt;br&gt;Record-creating forms (client-intake, volunteer, partner, sponsor) &lt;b&gt;auto-close&lt;/b&gt; on successful delivery (&quot;Process completed&quot;) — their records are worked in their own admin app instead.&lt;br&gt;Info requests and info@ emails stay OPEN after delivery (= a reply is owed) until staff Close them with a reason." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=10;spacingRight=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="400" width="900" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="lg_queues" value="&lt;b&gt;Where each input source ends up being WORKED:&lt;/b&gt;&lt;br&gt;client-intake → Client Administration (engagement &quot;Submitted&quot; = awaiting a mentor) · volunteer → Mentor Administration (mentor &quot;Candidate&quot;)&lt;br&gt;partner → Partner Management (partnership &quot;Candidate&quot;) · sponsor → Funder Management (funder with no manager)&lt;br&gt;info-request + info@ email → Submission Admin (reply owed until Closed).&lt;br&gt;These five conditions are exactly what the portal tile badges and the &quot;Items awaiting processing&quot; analytics panel count." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;align=left;spacingLeft=10;spacingRight=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="510" width="900" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="lg_colors" value="&lt;b&gt;Diagram legend:&lt;/b&gt; blue rounded = start/end · white = app step · blue double-border = CRM write · yellow diamond = decision · green = success/done · red = failure/spam path · purple = retry loop" style="text;html=1;align=left;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="640" width="900" height="30" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="shared" name="1 · Shared pipeline (every web form)">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1200">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="sp_start" value="Visitor submits a form (POST /api/{form}/intake)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="180" y="20" width="240" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="sp_validate" value="Validate the input (bad input → readable error back to the form; nothing stored)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="180" y="110" width="240" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="sp_hp" value="Hidden honeypot field filled? (only bots fill it)" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="200" y="200" width="200" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="sp_spam" value="Parked as held_honeypot (delivery status) + CRM audit record (reason=Honeypot, status=New). NO other CRM records created" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FF6B6B;fontColor=#FFFFFF;strokeColor=#C0392B;" vertex="1" parent="1">
+          <mxGeometry x="520" y="200" width="260" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="sp_spamend" value="Bot still sees &quot;received&quot;. A false positive can be Re-driven from Submission Admin" style="rounded=1;whiteSpace=wrap;html=1;arcSize=40;fillColor=#F5F5F5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="520" y="320" width="260" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="sp_capture" value="Saved to the app database BEFORE any CRM work — delivery status: pending. (A duplicate resubmit of the same form token returns the same reference — never doubled)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="160" y="320" width="280" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="sp_ack" value="Visitor gets an instant &quot;received&quot; + reference number — the rest happens in the background" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="160" y="440" width="280" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="sp_claim" value="Background worker claims it — delivery status: processing (15-min lease: if a worker dies mid-delivery, the item is picked up again)" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#E1D5E7;strokeColor=#9673A6;" vertex="1" parent="1">
+          <mxGeometry x="150" y="540" width="300" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="sp_orch" value="Create this form&#39;s CRM records (see the form&#39;s own tab). RESUMABLE: each created record is remembered, so a retry finishes the chain — it never duplicates" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="160" y="650" width="280" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="sp_ok" value="All records created?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="220" y="770" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="sp_done" value="Delivery status: completed + CRM audit record written (reason=Normal, status=Processed). ⇒ app &quot;completed&quot; = CRM audit &quot;Processed&quot; — same event" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="160" y="890" width="280" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="sp_needreply" value="Does this form owe the submitter a reply? (info-request / info@ email only)" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="200" y="1010" width="200" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="sp_autoclose" value="AUTO-CLOSED (&quot;Process completed&quot;) — leaves the Submission Admin queue. The created records are worked in their own admin app (see the form tabs)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=40;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="520" y="1010" width="280" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="sp_stayopen" value="Stays OPEN in Submission Admin = reply owed (counted by the /ops badge) until staff Close it with a reason" style="rounded=1;whiteSpace=wrap;html=1;arcSize=40;fillColor=#FFE6CC;strokeColor=#D79B00;" vertex="1" parent="1">
+          <mxGeometry x="160" y="1140" width="280" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="sp_transient" value="Temporary problem? (network blip, CRM 5xx)" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="540" y="770" width="200" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="sp_retry" value="Delivery status: retry — waits 1m / 5m / 30m / 2h / 6h and tries again (up to 8 attempts)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;" vertex="1" parent="1">
+          <mxGeometry x="820" y="650" width="260" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="sp_needsatt" value="Delivery status: needs_attention (bad data / CRM rejected it / attempts used up). Alert email to admins names the submission with a direct link" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FF6B6B;fontColor=#FFFFFF;strokeColor=#C0392B;" vertex="1" parent="1">
+          <mxGeometry x="820" y="890" width="260" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="sp_ops" value="Staff in Submission Admin: Re-drive (→ pending, resumes where it stopped) or Close with a reason (stops the alerts)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=40;fillColor=#FFE6CC;strokeColor=#D79B00;" vertex="1" parent="1">
+          <mxGeometry x="820" y="1030" width="260" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="sp_e1" style="endArrow=classic;" edge="1" source="sp_start" target="sp_validate" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sp_e2" style="endArrow=classic;" edge="1" source="sp_validate" target="sp_hp" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sp_e3" value="Yes (bot)" style="endArrow=classic;strokeColor=#C0392B;" edge="1" source="sp_hp" target="sp_spam" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sp_e4" style="endArrow=classic;" edge="1" source="sp_spam" target="sp_spamend" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sp_e5" value="No" style="endArrow=classic;" edge="1" source="sp_hp" target="sp_capture" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sp_e6" style="endArrow=classic;" edge="1" source="sp_capture" target="sp_ack" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sp_e7" style="endArrow=classic;" edge="1" source="sp_ack" target="sp_claim" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sp_e8" style="endArrow=classic;" edge="1" source="sp_claim" target="sp_orch" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sp_e9" style="endArrow=classic;" edge="1" source="sp_orch" target="sp_ok" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sp_e10" value="Yes" style="endArrow=classic;" edge="1" source="sp_ok" target="sp_done" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sp_e11" style="endArrow=classic;" edge="1" source="sp_done" target="sp_needreply" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sp_e12" value="No — records are the deliverable" style="endArrow=classic;" edge="1" source="sp_needreply" target="sp_autoclose" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sp_e13" value="Yes" style="endArrow=classic;" edge="1" source="sp_needreply" target="sp_stayopen" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sp_e14" value="No — failed" style="endArrow=classic;strokeColor=#C0392B;" edge="1" source="sp_ok" target="sp_transient" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sp_e15" value="Yes, attempts left" style="endArrow=classic;" edge="1" source="sp_transient" target="sp_retry" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sp_e16" value="try again" style="endArrow=classic;curved=1;" edge="1" source="sp_retry" target="sp_claim" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sp_e17" value="No (4xx) / out of attempts" style="endArrow=classic;strokeColor=#C0392B;" edge="1" source="sp_transient" target="sp_needsatt" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sp_e18" style="endArrow=classic;" edge="1" source="sp_needsatt" target="sp_ops" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sp_e19" value="Re-drive → pending" style="endArrow=classic;dashed=1;curved=1;" edge="1" source="sp_ops" target="sp_claim" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="clientintake" name="2 · Client intake form">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="ci_start" value="Client intake form (/client-intake) — a business owner requests a mentor" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="180" y="20" width="280" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="ci_pipe" value="Shared pipeline runs (tab 1): capture → instant &quot;received&quot; → worker delivers" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="180" y="120" width="280" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="ci_acct" value="1 · Company Account — found by name or created" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="180" y="210" width="280" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="ci_contact" value="2 · Contact — found by email or created; a repeat submitter&#39;s BLANK fields are back-filled, existing values never overwritten" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="180" y="300" width="280" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="ci_profile" value="3 · Client Profile (CClientProfile) created, linked to the Account + Contact" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="180" y="410" width="280" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="ci_eng" value="4 · Engagement (CEngagement) created — status &quot;Submitted&quot;, linked to the profile + company" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="180" y="500" width="280" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="ci_close" value="Delivery completed · CRM audit &quot;Processed&quot; · submission AUTO-CLOSED (&quot;Process completed&quot;) — nothing left to do in Submission Admin" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="180" y="600" width="280" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="ci_end" value="Worked in CLIENT ADMINISTRATION: the &quot;Submitted&quot; engagement waits for a mentor assignment (this is what the portal badge counts). Assigning a mentor moves it to &quot;Pending Acceptance&quot;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=30;fillColor=#FFE6CC;strokeColor=#D79B00;" vertex="1" parent="1">
+          <mxGeometry x="180" y="710" width="280" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="ci_e1" style="endArrow=classic;" edge="1" source="ci_start" target="ci_pipe" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ci_e2" style="endArrow=classic;" edge="1" source="ci_pipe" target="ci_acct" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ci_e3" style="endArrow=classic;" edge="1" source="ci_acct" target="ci_contact" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ci_e4" style="endArrow=classic;" edge="1" source="ci_contact" target="ci_profile" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ci_e5" style="endArrow=classic;" edge="1" source="ci_profile" target="ci_eng" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ci_e6" style="endArrow=classic;" edge="1" source="ci_eng" target="ci_close" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ci_e7" style="endArrow=classic;" edge="1" source="ci_close" target="ci_end" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="volunteer" name="3 · Volunteer (become a mentor)">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="vo_start" value="Volunteer form (/volunteer) — someone applies to become a mentor" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="180" y="20" width="280" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="vo_pipe" value="Shared pipeline runs (tab 1): capture → instant &quot;received&quot; → worker delivers" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="180" y="120" width="280" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="vo_contact" value="1 · Contact — found by email or created, typed &quot;Mentor&quot;; resume (if attached) uploaded onto it" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="180" y="210" width="280" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="vo_profile" value="2 · Mentor Profile (CMentorProfile) created — mentorStatus &quot;Candidate&quot;, linked to the Contact; expertise / industries / consents stored" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="180" y="310" width="280" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="vo_close" value="Delivery completed · CRM audit &quot;Processed&quot; · submission AUTO-CLOSED (&quot;Process completed&quot;)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="180" y="420" width="280" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="vo_end" value="Worked in MENTOR ADMINISTRATION: the &quot;Candidate&quot; profile waits for review (the portal badge counts these). Approval later creates their CBM login + mailbox and moves them toward Active" style="rounded=1;whiteSpace=wrap;html=1;arcSize=30;fillColor=#FFE6CC;strokeColor=#D79B00;" vertex="1" parent="1">
+          <mxGeometry x="180" y="520" width="280" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="vo_e1" style="endArrow=classic;" edge="1" source="vo_start" target="vo_pipe" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="vo_e2" style="endArrow=classic;" edge="1" source="vo_pipe" target="vo_contact" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="vo_e3" style="endArrow=classic;" edge="1" source="vo_contact" target="vo_profile" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="vo_e4" style="endArrow=classic;" edge="1" source="vo_profile" target="vo_close" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="vo_e5" style="endArrow=classic;" edge="1" source="vo_close" target="vo_end" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="partner" name="4 · Become a Partner">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="pa_start" value="Partner form (/partner) — an organization applies to partner with CBM" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="180" y="20" width="280" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="pa_pipe" value="Shared pipeline runs (tab 1): capture → instant &quot;received&quot; → worker delivers" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="180" y="120" width="280" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="pa_acct" value="1 · Company Account — found or created, typed &quot;Partner&quot;" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="180" y="210" width="280" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="pa_contact" value="2 · Contact — found or created, typed &quot;Partner&quot;" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="180" y="300" width="280" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="pa_profile" value="3 · Partnership (CPartnerProfile) created — partnershipStatus &quot;Candidate&quot;, linked to company + contact, stamped with the Partner Management Team" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="180" y="390" width="280" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="pa_close" value="Delivery completed · CRM audit &quot;Processed&quot; · submission AUTO-CLOSED (&quot;Process completed&quot;)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="180" y="510" width="280" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="pa_end" value="Worked in PARTNER MANAGEMENT: the &quot;Candidate&quot; partnership is reviewed in the grid (the portal badge counts these) — advancing its status is the approval" style="rounded=1;whiteSpace=wrap;html=1;arcSize=30;fillColor=#FFE6CC;strokeColor=#D79B00;" vertex="1" parent="1">
+          <mxGeometry x="180" y="610" width="280" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="pa_e1" style="endArrow=classic;" edge="1" source="pa_start" target="pa_pipe" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="pa_e2" style="endArrow=classic;" edge="1" source="pa_pipe" target="pa_acct" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="pa_e3" style="endArrow=classic;" edge="1" source="pa_acct" target="pa_contact" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="pa_e4" style="endArrow=classic;" edge="1" source="pa_contact" target="pa_profile" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="pa_e5" style="endArrow=classic;" edge="1" source="pa_profile" target="pa_close" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="pa_e6" style="endArrow=classic;" edge="1" source="pa_close" target="pa_end" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="sponsor" name="5 · Become a Sponsor (funder)">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="sf_start" value="Sponsor form (/sponsor) — an organization offers to fund/sponsor CBM" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="180" y="20" width="280" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="sf_pipe" value="Shared pipeline runs (tab 1): capture → instant &quot;received&quot; → worker delivers" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="180" y="120" width="280" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="sf_acct" value="1 · Company Account — found or created, typed &quot;Donor/Sponsor&quot;" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="180" y="210" width="280" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="sf_contact" value="2 · Contact — found or created, typed &quot;Sponsor&quot;" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="180" y="300" width="280" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="sf_profile" value="3 · Funder record (CSponsorProfile) created — message stored in its notes, linked to company + contact. NO Funder Manager assigned yet" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="180" y="390" width="280" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="sf_close" value="Delivery completed · CRM audit &quot;Processed&quot; · submission AUTO-CLOSED (&quot;Process completed&quot;)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="180" y="510" width="280" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="sf_end" value="Worked in FUNDER MANAGEMENT: it shows in the grid with no manager — that empty &quot;Funder Manager&quot; is what the portal badge counts, until a manager is assigned" style="rounded=1;whiteSpace=wrap;html=1;arcSize=30;fillColor=#FFE6CC;strokeColor=#D79B00;" vertex="1" parent="1">
+          <mxGeometry x="180" y="610" width="280" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="sf_e1" style="endArrow=classic;" edge="1" source="sf_start" target="sf_pipe" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sf_e2" style="endArrow=classic;" edge="1" source="sf_pipe" target="sf_acct" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sf_e3" style="endArrow=classic;" edge="1" source="sf_acct" target="sf_contact" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sf_e4" style="endArrow=classic;" edge="1" source="sf_contact" target="sf_profile" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sf_e5" style="endArrow=classic;" edge="1" source="sf_profile" target="sf_close" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sf_e6" style="endArrow=classic;" edge="1" source="sf_close" target="sf_end" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="inforequest" name="6 · Information request form">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="1000">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="ir_start" value="Info-request form (/info-request) — a general question / request for information" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="180" y="20" width="280" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="ir_pipe" value="Shared pipeline runs (tab 1): capture → instant &quot;received&quot; → worker delivers" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="180" y="120" width="280" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="ir_known" value="Email address already a Contact?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="220" y="210" width="200" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="ir_append" value="1a · Message APPENDED to the existing Contact&#39;s notes (no duplicate Contact)" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="540" y="220" width="260" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="ir_contact" value="1b · Contact created — typed &quot;Prospect&quot;, message in its notes" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="180" y="330" width="280" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="ir_company" value="Company name given?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="220" y="420" width="200" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="ir_acct" value="2 · Account created (status &quot;Prospect&quot;)" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="540" y="435" width="260" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="ir_req" value="3 · Information Request record (CInformationRequest) created — request status &quot;New&quot;, linked to the Contact (+ Account)" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="180" y="540" width="280" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="ir_open" value="Delivery completed · CRM audit &quot;Processed&quot; — but NOT auto-closed: it stays OPEN in SUBMISSION ADMIN = reply owed (the /ops badge counts it)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;" vertex="1" parent="1">
+          <mxGeometry x="180" y="650" width="280" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="ir_reply" value="Staff reply by email from the submission detail (sent as info@cbmentors.org; the conversation stays on that thread). Request status editable: New → In Progress → Responded" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="180" y="770" width="280" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="ir_end" value="Staff CLOSE it with a reason (Responded — resolved / Referred / Duplicate / No response needed / Spam) → leaves the queue; status mirrored to the CRM. A later reply from the submitter auto-REOPENS it" style="rounded=1;whiteSpace=wrap;html=1;arcSize=30;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="180" y="900" width="280" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="ir_e1" style="endArrow=classic;" edge="1" source="ir_start" target="ir_pipe" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ir_e2" style="endArrow=classic;" edge="1" source="ir_pipe" target="ir_known" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ir_e3" value="Yes" style="endArrow=classic;" edge="1" source="ir_known" target="ir_append" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ir_e4" value="No" style="endArrow=classic;" edge="1" source="ir_known" target="ir_contact" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ir_e5" style="endArrow=classic;curved=1;" edge="1" source="ir_append" target="ir_company" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ir_e6" style="endArrow=classic;" edge="1" source="ir_contact" target="ir_company" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ir_e7" value="Yes" style="endArrow=classic;" edge="1" source="ir_company" target="ir_acct" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ir_e8" value="No" style="endArrow=classic;" edge="1" source="ir_company" target="ir_req" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ir_e9" style="endArrow=classic;curved=1;" edge="1" source="ir_acct" target="ir_req" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ir_e10" style="endArrow=classic;" edge="1" source="ir_req" target="ir_open" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ir_e11" style="endArrow=classic;" edge="1" source="ir_open" target="ir_reply" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ir_e12" style="endArrow=classic;" edge="1" source="ir_reply" target="ir_end" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="infoemail" name="7 · Email to info@cbmentors.org">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="1000">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="ie_start" value="An email arrives in the shared info@cbmentors.org mailbox" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="180" y="20" width="280" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="ie_poll" value="The worker polls the inbox every 5 minutes (last 2 days of mail)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="180" y="120" width="280" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="ie_known" value="Part of a conversation the app already knows? (a reply to a submission thread, or to something staff sent as info@)" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="200" y="210" width="240" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="ie_thread" value="NOT captured again — it appears in that submission&#39;s conversation (or under &quot;Other correspondence&quot;). If the submission was Closed, the reply auto-REOPENS it" style="rounded=1;whiteSpace=wrap;html=1;arcSize=30;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="560" y="220" width="280" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="ie_capture" value="Captured as a NEW &quot;info-email&quot; submission — delivery status: held_review. Nothing written to the CRM yet" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="180" y="370" width="280" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="ie_queue" value="Appears OPEN in SUBMISSION ADMIN for triage (counted by the /ops badge)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;" vertex="1" parent="1">
+          <mxGeometry x="180" y="480" width="280" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="ie_decide" value="Staff decision" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="240" y="580" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="ie_approve" value="APPROVE → runs the info-request steps (tab 6): Contact + Information Request created, source &quot;Email&quot;. Delivery status: completed" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="180" y="710" width="280" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="ie_open" value="Still OPEN = reply owed. Staff reply as info@ on the same thread, then CLOSE with a reason → leaves the queue" style="rounded=1;whiteSpace=wrap;html=1;arcSize=30;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="180" y="830" width="280" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="ie_discard" value="DISCARD (spam) → delivery status: discarded. NO CRM records ever created; the row is kept for audit only" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FF6B6B;fontColor=#FFFFFF;strokeColor=#C0392B;" vertex="1" parent="1">
+          <mxGeometry x="560" y="710" width="280" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="ie_e1" style="endArrow=classic;" edge="1" source="ie_start" target="ie_poll" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ie_e2" style="endArrow=classic;" edge="1" source="ie_poll" target="ie_known" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ie_e3" value="Yes" style="endArrow=classic;" edge="1" source="ie_known" target="ie_thread" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ie_e4" value="No — new outside contact" style="endArrow=classic;" edge="1" source="ie_known" target="ie_capture" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ie_e5" style="endArrow=classic;" edge="1" source="ie_capture" target="ie_queue" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ie_e6" style="endArrow=classic;" edge="1" source="ie_queue" target="ie_decide" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ie_e7" value="Approve" style="endArrow=classic;" edge="1" source="ie_decide" target="ie_approve" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ie_e8" style="endArrow=classic;" edge="1" source="ie_approve" target="ie_open" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ie_e9" value="Discard" style="endArrow=classic;strokeColor=#C0392B;" edge="1" source="ie_decide" target="ie_discard" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
