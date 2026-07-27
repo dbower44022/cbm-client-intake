@@ -190,3 +190,85 @@ def test_http_error_detail_includes_x_status_reason():
 
     detail = http_error_detail(RespBody())
     assert detail.startswith("HTTP 400 {")
+
+
+# --- where-clause serialization (the v0.181 "search matched nothing" bug) ----
+# EspoClient.list serializes `where` into bracketed query params. A flat
+# implementation read clause["attribute"] unconditionally, so an OR GROUP clause
+# (no attribute; value = a list of sub-clauses) raised KeyError — every
+# all-fields directory search threw before hitting the network.
+
+
+def test_encode_where_flat_clause_is_unchanged():
+    from core.espo import _encode_where_clause
+
+    assert _encode_where_clause("where[0]", {
+        "type": "contains", "attribute": "name", "value": "acme",
+    }) == [
+        ("where[0][type]", "contains"),
+        ("where[0][attribute]", "name"),
+        ("where[0][value]", "acme"),
+    ]
+
+
+def test_encode_where_array_value_is_indexed():
+    from core.espo import _encode_where_clause
+
+    assert _encode_where_clause("where[0]", {
+        "type": "in", "attribute": "status", "value": ["A", "B"],
+    }) == [
+        ("where[0][type]", "in"),
+        ("where[0][attribute]", "status"),
+        ("where[0][value][0]", "A"),
+        ("where[0][value][1]", "B"),
+    ]
+
+
+def test_encode_where_or_group_recurses_into_subclauses():
+    from core.espo import _encode_where_clause
+
+    params = _encode_where_clause("where[0]", {
+        "type": "or", "value": [
+            {"type": "contains", "attribute": "name", "value": "x"},
+            {"type": "contains", "attribute": "mentorTitle", "value": "x"},
+        ],
+    })
+    assert params == [
+        ("where[0][type]", "or"),
+        ("where[0][value][0][type]", "contains"),
+        ("where[0][value][0][attribute]", "name"),
+        ("where[0][value][0][value]", "x"),
+        ("where[0][value][1][type]", "contains"),
+        ("where[0][value][1][attribute]", "mentorTitle"),
+        ("where[0][value][1][value]", "x"),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_list_serializes_or_group_without_keyerror(monkeypatch):
+    # The full EspoClient.list path must not KeyError on a group clause.
+    client = EspoClient("https://crm.example", "k", 30)
+    captured = {}
+
+    class FakeResp:
+        status_code = 200
+
+        @staticmethod
+        def json():
+            return {"total": 0, "list": []}
+
+    async def fake_request(method, url, *, op, params=None, json_body=None):
+        captured["params"] = params
+        return FakeResp()
+
+    monkeypatch.setattr(client, "_request", fake_request)
+    await client.list("CMentorProfile", where=[{
+        "type": "or", "value": [
+            {"type": "contains", "attribute": "name", "value": "q"},
+            {"type": "contains", "attribute": "cbmEmail", "value": "q"},
+        ],
+    }])
+    keys = [k for k, _ in captured["params"]]
+    assert "where[0][type]" in keys
+    assert "where[0][value][0][attribute]" in keys
+    assert "where[0][value][1][attribute]" in keys

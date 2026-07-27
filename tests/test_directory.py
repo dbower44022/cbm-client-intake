@@ -49,12 +49,20 @@ class FakeClient:
 
     async def list(self, entity, *, where=None, select=None, max_size=50,
                    offset=0, order_by=None, order=None):
+        def _matches(r, cl):
+            t = cl["type"]
+            if t == "or":
+                return any(_matches(r, sub) for sub in cl["value"])
+            attr = cl.get("attribute")
+            if t == "contains":
+                return cl["value"].lower() in str(r.get(attr, "")).lower()
+            return True
+
         rows = list(self.records.get(entity, []))
         for cl in where or []:
             t, attr = cl["type"], cl.get("attribute")
-            if t == "contains":
-                v = cl["value"].lower()
-                rows = [r for r in rows if v in str(r.get(attr, "")).lower()]
+            if t in ("contains", "or"):
+                rows = [r for r in rows if _matches(r, cl)]
             elif t == "in":
                 rows = [r for r in rows if r.get(attr) in cl["value"]]
             elif t == "arrayAnyOf":
@@ -292,9 +300,25 @@ def _mentor_client():
             ],
         },
         i18n={"CMentorProfile": {"fields": {"mentorStatus": "Mentor Status"}}},
-        fields={"CMentorProfile": {"mentorStatus": {"type": "enum", "options": ["Active", "Approved"]}}},
+        fields={"CMentorProfile": {
+            "name": {"type": "varchar"},
+            "mentorStatus": {"type": "enum", "options": ["Active", "Approved"]},
+            "mentorTitle": {"type": "varchar"},
+            "aboutMentor": {"type": "text"},
+            "areaOfExpertise": {"type": "multiEnum"},
+            "cbmEmail": {"type": "varchar"},
+            # A computed/foreign field: must NOT be searched (a contains errors).
+            "availableCapacity": {"type": "int", "notStorable": True},
+        }},
         records={"CMentorProfile": [
-            {"id": "m1", "name": "Pat Mentor", "mentorStatus": "Active", "assignedUsersIds": ["u1"]},
+            {"id": "m1", "name": "Pat Mentor", "mentorStatus": "Active",
+             "mentorTitle": "Retired CFO", "aboutMentor": "Loves spreadsheets",
+             "areaOfExpertise": ["Marketing", "Finance"], "cbmEmail": "pat@cbmentors.org",
+             "assignedUsersIds": ["u1"]},
+            {"id": "m2", "name": "Sam Guide", "mentorStatus": "Approved",
+             "mentorTitle": "Growth advisor", "aboutMentor": "Scaled three startups",
+             "areaOfExpertise": ["Operations"], "cbmEmail": "sam@cbmentors.org",
+             "assignedUsersIds": ["u2"]},
         ]},
         acl={"CMentorProfile": {"edit": "all"}},
     )
@@ -307,6 +331,44 @@ async def test_mentors_are_inline_read_only_with_handoff():
     assert d["editable"] is False
     assert d["editHandoff"] == "/mentorprofile/"
     assert d["isOwn"] is True
+
+
+@pytest.mark.asyncio
+async def test_mentor_search_matches_any_field():
+    client = _mentor_client()
+    # The mentor directory searches ALL stored text-ish fields, not just name.
+    async def _search(q):
+        page = await service.list_records(client, MENTORS, q=q)
+        return {r["name"] for r in page["rows"]}
+
+    assert await _search("Pat") == {"Pat Mentor"}          # name
+    assert await _search("CFO") == {"Pat Mentor"}          # mentorTitle
+    assert await _search("spreadsheets") == {"Pat Mentor"} # aboutMentor (text)
+    assert await _search("Marketing") == {"Pat Mentor"}    # areaOfExpertise (multiEnum)
+    assert await _search("sam@cbm") == {"Sam Guide"}       # cbmEmail
+    assert await _search("advisor") == {"Sam Guide"}       # mentorTitle, other record
+    assert await _search("nobody") == set()
+
+
+@pytest.mark.asyncio
+async def test_mentor_search_excludes_non_stored_fields():
+    # A free-text search must not build a `contains` on a computed/foreign field
+    # (it would error CRM-side and break the whole search).
+    from directory.service import _Meta, _search_fields
+
+    client = _mentor_client()
+    fields = await _search_fields(_Meta(client, "CMentorProfile"), MENTORS)
+    assert "availableCapacity" not in fields  # notStorable
+    assert {"name", "mentorTitle", "aboutMentor", "areaOfExpertise", "cbmEmail"} <= set(fields)
+
+
+@pytest.mark.asyncio
+async def test_company_search_stays_single_field():
+    # Companies are not search_all_fields → only cfg.search_attr (name).
+    from directory.service import _Meta, _search_fields
+
+    fields = await _search_fields(_Meta(_accounts_client(), "Account"), COMPANIES)
+    assert fields == ["name"]
 
 
 @pytest.mark.asyncio

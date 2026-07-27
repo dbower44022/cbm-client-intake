@@ -25,6 +25,11 @@ class DirectoryConfig:
     title: str
     entity: str  # the EspoCRM entity listed
     search_attr: str = "name"  # attribute the top-center search box filters (contains)
+    # When True, the top-center search box matches ANY stored text-ish field on
+    # the entity (varchar/text/enum/multiEnum/email/phone/url), not just
+    # ``search_attr`` — a free-text search across the whole record. Resolved from
+    # live metadata (non-stored computed/foreign fields are excluded).
+    search_all_fields: bool = False
     default_order: str = "name"
     # Inline edit (in the detail pop-up) is offered for records the user owns.
     # Mentors edit through My Mentor Profile instead (edit_handoff), so their
@@ -86,6 +91,7 @@ MENTORS = DirectoryConfig(
     entity="CMentorProfile",
     editable=False,
     edit_handoff="/mentorprofile/",
+    search_all_fields=True,  # search the whole mentor record, not just the name
     filters=("mentorStatus", "mentorType", "acceptingNewClients"),
     contact_ref_attr="contactRecordId",
     mentor_page=True,

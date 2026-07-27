@@ -23,6 +23,33 @@ import httpx
 log = logging.getLogger("cbm_intake.espo")
 
 
+def _encode_where_clause(prefix: str, clause: dict[str, Any]) -> list[tuple[str, str]]:
+    """Serialize one EspoCRM ``where`` clause into bracketed query params.
+
+    Recursive, so it handles nested group clauses (``{"type": "or"|"and",
+    "value": [<sub-clause>, ...]}``) as well as leaf clauses
+    (``{"type": "contains", "attribute": ..., "value": ...}``). A group clause
+    has no ``attribute`` and its ``value`` is a list of sub-clause dicts; a leaf
+    filter's ``value`` is a scalar or a list of scalars (e.g. ``type=in``). The
+    flat-clause output is byte-for-byte the same as before, so existing filters
+    are unaffected.
+    """
+    out: list[tuple[str, str]] = [(f"{prefix}[type]", clause["type"])]
+    if "attribute" in clause:
+        out.append((f"{prefix}[attribute]", clause["attribute"]))
+    if "value" in clause:
+        value = clause["value"]
+        if isinstance(value, (list, tuple)):
+            for j, item in enumerate(value):
+                if isinstance(item, dict):
+                    out.extend(_encode_where_clause(f"{prefix}[value][{j}]", item))
+                else:
+                    out.append((f"{prefix}[value][{j}]", str(item)))
+        else:
+            out.append((f"{prefix}[value]", str(value)))
+    return out
+
+
 class EspoError(Exception):
     """A create/read against EspoCRM failed."""
 
@@ -316,16 +343,7 @@ class EspoClient:
         if order:
             params.append(("order", order))
         for i, clause in enumerate(where or []):
-            params.append((f"where[{i}][type]", clause["type"]))
-            params.append((f"where[{i}][attribute]", clause["attribute"]))
-            if "value" in clause:
-                value = clause["value"]
-                if isinstance(value, (list, tuple)):
-                    # Array filters (e.g. type=in) need indexed value params.
-                    for j, item in enumerate(value):
-                        params.append((f"where[{i}][value][{j}]", str(item)))
-                else:
-                    params.append((f"where[{i}][value]", str(value)))
+            params.extend(_encode_where_clause(f"where[{i}]", clause))
         resp = await self._request(
             "GET", f"{self._base}/{entity}", op=f"list {entity}", params=params
         )

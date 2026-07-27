@@ -11,6 +11,11 @@ portal home. It lists every mentor in a searchable, filterable grid so you can
 find a colleague — for example, to get to know the roster, or to decide who
 might make a good co-mentor on a client.
 
+The **search box** matches the whole mentor record, not just the name: type an
+area of expertise, an industry, a title, part of an email — anything stored on
+the mentor — and the grid narrows to the mentors that mention it. (The other
+Workspace directories search by name only.)
+
 Two ways to look at a mentor:
 
 - **Select a row** → a quick preview appears in the side panel.

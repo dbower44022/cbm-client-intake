@@ -233,14 +233,52 @@ async def filters(client: DirClient, cfg: DirectoryConfig) -> list[dict[str, Any
     return out
 
 
+# EspoCRM field types a free-text ``contains`` can match (all stored as, or
+# alongside, a text column). multiEnum/array are stored as JSON text, so a
+# ``contains`` matches a value within them.
+_SEARCHABLE_TYPES = frozenset({
+    "varchar", "text", "email", "phone", "url", "enum", "multiEnum", "array",
+})
+
+
+async def _search_fields(meta: _Meta, cfg: DirectoryConfig) -> list[str]:
+    """The field name(s) the top-center search box matches. With
+    ``search_all_fields`` set, that's every STORED text-ish scalar on the entity
+    (so a free-text search spans the whole record); otherwise just
+    ``cfg.search_attr``. Non-stored computed/foreign fields are excluded — a
+    ``contains`` on one would error and break the whole search."""
+    if not cfg.search_all_fields:
+        return [cfg.search_attr]
+    fields = await meta.fields()
+    names = [
+        name
+        for name, fdef in fields.items()
+        if isinstance(fdef, dict)
+        and fdef.get("type") in _SEARCHABLE_TYPES
+        and not fdef.get("notStorable")
+        and not fdef.get("disabled")
+    ]
+    return names or [cfg.search_attr]
+
+
 def _where(
     cfg: DirectoryConfig, q: str, applied: dict[str, Any],
-    filter_types: dict[str, str],
+    filter_types: dict[str, str], search_fields: list[str],
 ) -> list[dict[str, Any]]:
     where: list[dict[str, Any]] = []
     q = (q or "").strip()
     if len(q) >= 2:
-        where.append({"type": "contains", "attribute": cfg.search_attr, "value": q})
+        if len(search_fields) == 1:
+            where.append({"type": "contains", "attribute": search_fields[0], "value": q})
+        else:
+            # Match the query in ANY of the searchable fields.
+            where.append({
+                "type": "or",
+                "value": [
+                    {"type": "contains", "attribute": f, "value": q}
+                    for f in search_fields
+                ],
+            })
     for name, value in applied.items():
         ftype = filter_types.get(name)
         if ftype == "bool":
@@ -273,7 +311,8 @@ async def list_records(
     meta = _Meta(client, cfg.entity)
     cols = await columns(client, cfg)
     filter_defs = {f["key"]: f["type"] for f in await filters(client, cfg)}
-    where = _where(cfg, q, applied_filters or {}, filter_defs)
+    search_fields = await _search_fields(meta, cfg)
+    where = _where(cfg, q, applied_filters or {}, filter_defs, search_fields)
 
     page = max(1, page)
     page_size = max(1, min(page_size, 200))
