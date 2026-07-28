@@ -4,6 +4,55 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.188.0] — 2026-07-28
+
+**feat: analytics reach the last two record surfaces** — Company gets a real
+record page, the engagement view stacks a client dashboard section beneath its
+own. Doug's rulings 2026-07-28, `prds/analytics-app-plan.md` §17.5. Closes the
+"two surfaces have nowhere to live" open item from v0.187.0. No migration.
+
+- **`analytics/records.py`** seeds two more starters: `record-client`
+  (`CClientProfile` — total engagements, currently active, sessions across all
+  engagements per month, engagements list) and `record-company` (`Account` —
+  contacts at the company, engagements as client, activity over time, contacts
+  list). Role-agnostic on Company by design — a mixed-role Account (client and
+  partner and funder) shows all four panels without a role check; role-specific
+  metrics stay on the mentor/funder/partner starters.
+- **`analytics/router.py`** adds `CClientProfile` to `BUILDER_ENTITIES` so the
+  record endpoint accepts it as a scope (Company was already there).
+- **`directory/`** — a `company_page` flag on `DirectoryConfig` (sibling of
+  `contact_page` / `mentor_page`) mounts `/directory/companies/record/{id}`
+  and drives the Companies grid's row-name click into the new page. The Company
+  page shares `record.html`/`record.js` with the View Contact page — the
+  Communications tab hides when `session.contactPage` is off, the Analytics tab
+  URL uses `session.entity`, the tab lock is kind-scoped, and the fallback
+  strings are neutral. The View pop-up, dblclick preview, and preview strip stay
+  for quick browsing.
+- **`sessions/`** — the engagement Analytics tab now renders two stacked
+  dashboards when the engagement carries a linked `CClientProfile`: the
+  engagement's own on top, the client's below, each labelled with the page's
+  title. `renderAnalytics` was refactored into `fetchDashboard` /
+  `paintDashboardSection`, and `/records/{id}` gained `clientProfileId`
+  (`engagementClientId` on the parent, `None` otherwise). Non-engagement
+  domains keep the single unlabelled dashboard they had; engagements whose
+  client link is empty render only the engagement dashboard.
+- **`frontend/shared/charts.css`** — `.an__section-head` styles the divider
+  that labels each dashboard inside the shared 12-col grid.
+
+**Verified:** 5 new tests (full suite 1479 green — the pre-existing
+date-sensitive `test_a_full_event_is_NOT_refused` failure is unrelated). The
+seed pages render real values against the same `FakeEspo` used for the
+v0.187.0 starters; the /session endpoint reports `companyPage: true`; the
+record route registers only for the page kinds; the engagement detail carries
+`clientProfileId`.
+
+**Not yet driven live.** After deploy on crm-test: click a Companies row's
+name and confirm the new page has Overview + Analytics (no Communications),
+title = the company name, the Analytics tab renders four panels for that
+company. Open an engagement in Client Management and confirm the Analytics
+tab shows two labelled dashboards — engagement on top, client below — with
+real numbers. Confirm a partner/funder Analytics tab looks unchanged.
+
 ## [0.187.0] — 2026-07-28
 
 **feat(analytics): starter dashboards on the record views — Phase E** (Doug's
