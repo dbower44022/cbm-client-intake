@@ -1610,7 +1610,73 @@ segment of its own URL). Mounted only when `assignments_active` (needs
   Note: crm-test seed sessions carry out-of-enum `sessionType` values (harmless; a
   data-hygiene cleanup). **UI polish is the next work item** (a follow-up session).
 
+## Events & Webinars — `/events` + the public webinar page (added 2026-07-25/26)
+
+Replaces the data layer behind **`clevelandbusinessmentors.org/webinars/`**,
+which today runs on a **Google Apps Script** + a **browser-side YouTube Data
+API call** (key visible in page source) with **EspoCRM involved at no point** —
+so every registrant is an invisible lead. Specs: `prds/events/CBM_Events_PRD.md`
+(24 decisions, ~60 numbered requirements) + `CBM_Events_Implementation_Plan.md`.
+Staff guide: **`event-administration.md`**. Activation + a 20-minute test
+script: **`EVENTS-SETUP.md`**. CRM schema: **`cevent-entities-crm-handoff.md`**.
+Next-phase kickoff: **`prompts/events-phase4-prompt.md`**.
+
+- **CRM entities already existed** and were **modified, not built**
+  (`scripts/migrate_event_schema.py`, idempotent; schema changes are admin-only —
+  the intake API key gets 403 on `Admin/fieldManager`): 16 new fields, 3
+  enum-option additions, **4 `readOnly` flags cleared** (two were *required AND
+  readOnly*, which would have failed every API create), the `partnerHost` link.
+  **APPLIED + VERIFIED on crm-test 2026-07-25; PROD NOT MIGRATED** — the two
+  instances differ by exactly that change list.
+- **⚠️ `CEvent` doubles as CBM's org calendar** — 92 rows are internal team
+  meetings and mentoring-session mirrors (`createdBy = System`, "Scheduled from
+  CBM Client Management"). Doug's ruling (D-24): workshops **share** the entity,
+  gated by a new **`publishToWebsite`** bool defaulting false. **That flag is
+  the entire boundary to the public site**; every public read goes through
+  `events/service._public_where`, and an unpublished event's page 404s rather
+  than merely hiding. See [[events-publish-gate]].
+- **Zoom (D-03/D-04): the public webinar programme DOES use the CBM Zoom
+  account** (Server-to-Server OAuth, shared host `zweb@cbmentors.org`) — the
+  explicit exception to the mentor-sessions "user-supplied links only" ruling,
+  which is untouched. `core/zoom.py` + `events/zoom_sync.py`, gated by
+  `ZOOM_EVENTS`. Zoom's confirmation email stays ON (only Zoom can send the
+  per-registrant join link); its **reminders are OFF** so registrants don't get
+  two of everything. See [[zoom-user-supplied-only]].
+- **Topics (D-18):** the existing curated **10-value `CEvent.topic`** list, not
+  `areaOfExpertise`. **Vocabulary trap:** in the public payload `topic` means
+  the event **TITLE** (Zoom/Apps-Script vocabulary); the category rides as
+  `category`. Aligning the names would blank every title on the live site.
+- **Phases built (v0.164.0–v0.170.0):** 1 (CRM read layer + public API),
+  2 (Zoom client — stub-tested only, **never run against real Zoom**),
+  3 (public registration → Contact + `CEventRegistration`, riding the V2
+  durable-capture pipeline), 5 (the `/events` staff app: grid, detail tabs,
+  field-spec editor, door check-in). **Phase 4 (WordPress plugin + cutover) and
+  Phase 6 (attendance, follow-up email, reporting) remain.**
+- **The renderer is written and was previewed with no cutover:**
+  `wp-plugin/cbm-events/assets/cbm-events.js` was driven **inside the real live
+  page** client-side with real CRM data — nothing installed, nothing deployed.
+  **Finding:** hotlinked `i.ytimg.com` thumbnails return **HTTP 503** there,
+  which is why the current page already ships a `/wp-json/cbm-yt/v1/thumbnails`
+  proxy. The renderer takes a same-origin thumbnail proxy; the plugin must
+  supply it, or the library is a wall of black boxes.
+- **Nothing is switched on**: `EVENTS_ENABLED`, `EVENTS_PUBLIC_API` and
+  `ZOOM_EVENTS` all default off, and the website still runs on the Apps Script.
+- **Live verification caught two bugs green unit tests could not**: a CRM enum
+  mismatch (`registrationSource` written as "Website"; the real value is
+  `"Online"`, so EspoCRM 400'd every create) and an N+1 that made the staff grid
+  issue 98 sequential CRM queries (now 1, 0.46s).
+- **Open, all Doug-side:** the Zoom OAuth app (`scripts/probe_zoom.py` checks
+  it, especially the participant-report scope that attendance depends on); the
+  **Apps Script source + Sheet** (the parity baseline for Phase 4); **WordPress
+  install rights**; the **prod schema migration**; and a Phase 5 pass signed in
+  as a **real non-admin** Marketing Admin user (the browser pass stubbed the
+  session, so the team gate and a non-admin's CRM ACL are untested live).
+
 ## Current status (updated 2026-07-27)
+
+*(A parallel arc — **Events & Webinars**, v0.164.0–v0.170.0 — is documented in
+its own section immediately above; it is gated off and does not affect anything
+below.)*
 
 **v0.185.0** (2026-07-27, 1463 tests green, committed NOT pushed) —
 **duplicate submissions are held for review + clients can name the mentor they
