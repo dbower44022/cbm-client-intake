@@ -1791,7 +1791,8 @@ pair is replaced outright, not bandaided.
   `intake-processing-flow.drawio` (one tab per input source + the vocabulary
   table) and refreshed `submission-admin.md` / `intake-processing-overview.md`.
 
-**v0.179.0** (2026-07-26, 1419 tests green, committed NOT pushed) — **birthdays
+**v0.179.0** (2026-07-26, 1419 tests green; **PUSHED + LIVE on BOTH envs** —
+prod + crm-test `/healthz` verified at 0.185.0 on 2026-07-28) — **birthdays
 are a CBM-wide moment** (Doug's follow-up to 0.177.0, below): the greeting is no
 longer Mentor-Team-only — **every CBM member** (= anyone with a
 `CMentorProfile`, whatever team) is greeted on their birthday — and every OTHER
@@ -3872,9 +3873,21 @@ provider seam, store transcript text + the permanent Google Doc link):
   (2) DWD row: add `meetings.space.created` (edit the existing line — the
   field REPLACES, keep all scopes; client id 109317126943210877831);
   (3) **Meet REST API enabled in GCP `espcrm-498315`** (GCP console, not
-  Admin — easy to miss). **Deliberately do NOT set `MEET_TRANSCRIPTS=true`
+  Admin — easy to miss). **PROBED 2026-07-27 — STILL NOT DONE:** a delegated
+  token mint as doug.bower@cbmentors.org succeeded for `calendar.events` but
+  was REJECTED (`unauthorized_client`) for `meetings.space.created` — the DWD
+  scope isn't on the row yet (and the row itself is intact, since the
+  calendar scope still mints); items (1)/(3) unverifiable until it is. The
+  flag was therefore NOT set. **Re-probe recipe for the next session:** the
+  SA key is local at `~/Downloads/espcrm-498315-4d85dda40f72.json` (the
+  overlays' copies are EV-encrypted) — mint
+  `service_account.Credentials(scopes=[meetings.space.created], subject=
+  doug.bower@cbmentors.org)`, then `GET https://meet.googleapis.com/v2/
+  conferenceRecords` (read-only; 200 = scope + API both good, SERVICE_DISABLED
+  = GCP API still off). DWD edits can take up to ~1h to propagate.
+  **Deliberately do NOT set `MEET_TRANSCRIPTS=true`
   before the DWD scope exists** — every Scheduled-session save would show
-  mentors a "transcription failed" notice. Once Doug confirms Google is done:
+  mentors a "transcription failed" notice. Once the probe passes:
   set the flag on web+worker of the crm-test overlay (doctl), then the live
   verification in the handoff doc §Verification (real short Meet → transcript
   in the tab within a poll cycle, Doc link, give-up path, non-admin mentor

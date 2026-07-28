@@ -6,7 +6,11 @@ CONFIRMED (CBM is on Business Standard — the blocking prerequisite below is
 resolved); CRM fields built + probe-verified on crm-test, API-key CSession
 READ verified; REMAINING: the three Google-side changes (Meet transcription
 admin toggle, `meetings.space.created` on the DWD row, Meet API on in GCP),
-then the flag + live verification.
+then the flag + live verification. **Probed 2026-07-27: the DWD scope is
+still missing** (delegated mint as doug.bower@cbmentors.org works for
+calendar.events, `unauthorized_client` for meetings.space.created), so
+`MEET_TRANSCRIPTS` stays off; re-probe recipe + local SA-key path are in
+CLAUDE.md's v0.83.0 Current-status block.
 EXTENDED 2026-07-21 (v0.124.0–v0.126.0): the provider seam is now an
 ORDERED SOURCE LIST shared with the **Fathom note-taker source** — see
 `prds/fathom-transcript-integration.md` (Fathom first when enabled, this
