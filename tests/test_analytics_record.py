@@ -24,13 +24,17 @@ class FakeEspo:
     def __init__(self):
         self.data = {
             "CMentorProfile": [{"id": "m1", "name": "Mentor One"}, {"id": "m2", "name": "Mentor Two"}],
-            "Account": [{"id": "a1", "name": "Acme"}, {"id": "a2", "name": "Globex"}],
+            # CInformationRequest is used here as an unseeded BUILDER_ENTITIES scope
+            # for the record-endpoint injection tests. Account was used originally
+            # but now carries the record-company starter dashboard.
+            "CInformationRequest": [{"id": "r1", "name": "Info request 1"},
+                                    {"id": "r2", "name": "Info request 2"}],
             "CEngagement": [
-                {"id": "e1", "name": "Alpha", "mentorProfileId": "m1", "accountId": "a1",
+                {"id": "e1", "name": "Alpha", "mentorProfileId": "m1", "informationRequestId": "r1",
                  "engagementStatus": "Active"},
-                {"id": "e2", "name": "Bravo", "mentorProfileId": "m1", "accountId": "a1",
+                {"id": "e2", "name": "Bravo", "mentorProfileId": "m1", "informationRequestId": "r1",
                  "engagementStatus": "Submitted"},
-                {"id": "e3", "name": "Charlie", "mentorProfileId": "m2", "accountId": "a2",
+                {"id": "e3", "name": "Charlie", "mentorProfileId": "m2", "informationRequestId": "r2",
                  "engagementStatus": "Active"},
             ],
         }
@@ -76,9 +80,9 @@ def _app(monkeypatch, store, fake):
 
 def _record_metric():
     return {
-        "name": "Engagements for mentor", "entity": "CEngagement",
+        "name": "Engagements for info request", "entity": "CEngagement",
         "definition": {"aggregation": {"kind": "count"}, "filters": []},
-        "applies_to": ["Account"], "context_param": "accountId",
+        "applies_to": ["CInformationRequest"], "context_param": "informationRequestId",
     }
 
 
@@ -106,7 +110,7 @@ def test_record_page_rejects_system_metric(monkeypatch):
 def _seed_record_page(c):
     m = c.post("/analytics/api/admin/metrics", json=_record_metric()).json()["metric"]
     page = c.post("/analytics/api/admin/pages", json={
-        "title": "Company Analytics", "scope": "Account",
+        "title": "Info Request Analytics", "scope": "CInformationRequest",
         "panels": [{"title": "Engagements", "metric_key": m["key"], "viz": "stat"}],
     }).json()["page"]
     return m, page
@@ -117,10 +121,10 @@ def test_record_view_injects_context(monkeypatch):
     store, fake = MemoryAnalyticsStore(), FakeEspo()
     with TestClient(_app(monkeypatch, store, fake)) as c:
         _seed_record_page(c)
-        body = c.get("/analytics/api/record/Account/a1").json()
+        body = c.get("/analytics/api/record/CInformationRequest/r1").json()
     assert body["available"] is True
-    assert body["record"]["name"] == "Acme"
-    # a1 has 2 engagements (e1, e2); a2's e3 is excluded by the injected filter
+    assert body["record"]["name"] == "Info request 1"
+    # r1 has 2 engagements (e1, e2); r2's e3 is excluded by the injected filter
     assert body["panels"][0]["result"]["data"]["value"] == 2
 
 
@@ -129,15 +133,16 @@ def test_record_view_other_record(monkeypatch):
     store, fake = MemoryAnalyticsStore(), FakeEspo()
     with TestClient(_app(monkeypatch, store, fake)) as c:
         _seed_record_page(c)
-        body = c.get("/analytics/api/record/Account/a2").json()
+        body = c.get("/analytics/api/record/CInformationRequest/r2").json()
     assert body["panels"][0]["result"]["data"]["value"] == 1  # only e3
 
 
 def test_record_view_no_pages(monkeypatch):
     from analytics.store import MemoryAnalyticsStore
     with TestClient(_app(monkeypatch, MemoryAnalyticsStore(), FakeEspo())) as c:
-        # Companies are the one record type with no starter dashboard.
-        body = c.get("/analytics/api/record/Account/a1").json()
+        # CInformationRequest is a BUILDER_ENTITIES record type that intentionally
+        # carries no starter dashboard, so the endpoint returns available=False.
+        body = c.get("/analytics/api/record/CInformationRequest/r1").json()
     assert body["available"] is False and body["pages"] == []
 
 
@@ -163,8 +168,8 @@ def test_record_metric_not_cached(monkeypatch):
     store, fake = MemoryAnalyticsStore(), FakeEspo()
     with TestClient(_app(monkeypatch, store, fake)) as c:
         _seed_record_page(c)
-        c.get("/analytics/api/record/Account/a1")
+        c.get("/analytics/api/record/CInformationRequest/r1")
         first = fake.list_calls
-        c.get("/analytics/api/record/Account/a1")
+        c.get("/analytics/api/record/CInformationRequest/r1")
         second = fake.list_calls
     assert second > first  # re-computed, not served from cache

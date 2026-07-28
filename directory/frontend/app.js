@@ -129,6 +129,18 @@
               selectRow(r.id);
               openWindow(a.href, "cbm-contact-" + contactId);
             });
+          } else if (KIND === "companies" && state.session && state.session.companyPage) {
+            // Companies: the name opens the full Company record page in its
+            // own STABLE named tab. Modifier/middle clicks fall through to
+            // the real href. The View button / pop-up + preview strip stay as
+            // they were for quick browsing.
+            a.href = "/directory/companies/record/" + encodeURIComponent(r.id);
+            a.addEventListener("click", function (ev) {
+              if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey || ev.button !== 0) return;
+              ev.preventDefault(); ev.stopPropagation();
+              selectRow(r.id);
+              openWindow(a.href, "cbm-company-" + r.id);
+            });
           } else {
             a.href = "#";
             a.addEventListener("click", function (ev) {

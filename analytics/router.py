@@ -60,6 +60,7 @@ BUILDER_ENTITIES = [
     ("CMentorProfile", "Mentors"),
     ("Account", "Companies"),
     ("Contact", "Contacts"),
+    ("CClientProfile", "Clients"),
     ("CPartnerProfile", "Partners"),
     ("CSponsorProfile", "Funders"),
     ("CSession", "Sessions"),
