@@ -67,8 +67,17 @@ dedup working). 4 `app_document` email-attachment rows created; all under
 The only §3.5 sub-check not separately exercised is that an *inline*
 signature/body image is NOT filed (the ruling's inline-exclusion) — the
 code enforces it and it's unit-tested, but hasn't been eyeballed on a live
-message carrying one. **PROD not yet driven live** (prod carries the code;
-its own §3.5 pass is open). Phases 2–3 built (v0.157.0 / v0.158.0), not
+message carrying one. **PROD §3.1 VERIFIED LIVE 2026-07-28 — in heavy real
+use:** the prod `comm_attachment` ledger holds 88 rows (73 filed, 15
+`duplicate`) → 73 `app_document` email-attachment rows, spanning BOTH
+`CEngagement` and `CPartnerProfile` (multi-domain coverage proven), with
+real business docs auto-filing (e.g. "Microgreens Business Plan…​.pdf",
+"conflict of interest policy for nonprofits.pdf", "Bylaws Sample.doc",
+"Cleveland Chain Reaction Mentor Overview.docx") and dedup working
+(invite.ics + the Microgreens plan filed once, re-sends marked
+`duplicate`). **Phase 1 is now fully verified on BOTH environments** — the
+only sub-check never separately eyeballed is the inline-image exclusion
+(code-enforced + unit-tested). Phases 2–3 built (v0.157.0 / v0.158.0), not
 yet driven live.**
 Originally authored 2026-07-21 from Doug's
 priority rulings this session (recorded in §2) after a full review of the
