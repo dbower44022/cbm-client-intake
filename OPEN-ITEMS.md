@@ -6,20 +6,19 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
-0. **Analytics on the record views — two surfaces have nowhere to live**
-   (2026-07-27; decisions + full context in `prds/analytics-app-plan.md` §17).
-   Doug ruled that a dashboard can be attached to every record view (Mentor,
-   Company, Contact, Engagement, Client, Partner, Funder), one dashboard per
-   record type. **The five with a host screen shipped in v0.187.0** (Mentor,
-   Engagement, Partner, Funder, Contact — each with a starter dashboard). The
-   remaining two need a call before they can be built:
-   - **Company** — there is no full `Account` page, only the Companies grid,
-     its preview strip and a View pop-up. Dashboard inside the pop-up, or build
-     a Company record page like the Contact page (v0.144.0)? Recommendation:
-     the real page.
-   - **Client** — `CClientProfile` has no screen anywhere (only a card on the
-     engagement's Details tab and a peek pop-up). Does "client analytics" mean
-     the engagement view, the company view, or a new client page?
+0. **Analytics on the record views — the two remaining surfaces, decided
+   2026-07-28** (full context in `prds/analytics-app-plan.md` §17). Doug ruled
+   that a dashboard can be attached to every record view (Mentor, Company,
+   Contact, Engagement, Client, Partner, Funder), one dashboard per record
+   type. **The five with a host screen shipped in v0.187.0** (Mentor,
+   Engagement, Partner, Funder, Contact — each with a starter dashboard).
+   Direction for the remaining two:
+   - **Company — build a real Company record page** like the Contact page
+     (v0.144.0); the dashboard lives there. The Companies grid, preview strip
+     and View pop-up stay, but link through to the new page.
+   - **Client analytics attaches to the engagement view.** `CClientProfile` gets
+     no screen of its own; the client dashboard is a section on the engagement
+     record page.
 
 1. **This repository's `.git` lives inside the Dropbox-synced tree, and Dropbox
    ate two local commits** (2026-07-28 10:38). Mid-session, Dropbox replaced
