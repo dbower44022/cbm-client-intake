@@ -92,6 +92,119 @@ found; move resolved items to the bottom with the resolution date.
    there: the pasted image dims briefly, then the save succeeds and the image
    renders on the Overview feed, the session view, and in the EspoCRM UI.
 
+## CRM prerequisites outstanding
+
+*(Moved here from CLAUDE.md 2026-07-28 during the CLAUDE.md slim-down. Each is a
+CRM-side build/grant the app already feature-detects or degrades around — none
+block a deploy.)*
+
+11. **`Held-Duplicate` option on `CIntakeSubmission.intakeStatus`** (both CRMs) —
+    handoff `cintake-submission-duplicate-status.md`. Until built, the receipt
+    engine falls back to `Received` with the explanation in `intakeMessage`;
+    activates with no deploy.
+12. **prod Mentor Role: `CMentorProfile` edit = `all`** — crm-test has it, prod
+    has `own`, which 403s "+ Add CBM contact" (co-mentor linking) for every
+    non-admin mentor. v0.174.0 added an app-side admin escalation as the second
+    layer, but Doug ruled fix both sides.
+13. **prod sponsor-team role: `CContribution` create / read(All) / edit, NO
+    delete** — done on crm-test 2026-07-21, still TO DO on prod before the
+    Contributions tab is used there. Eyeball enum parity while in the CRM.
+14. **`documentsFolderUrl`** (CEngagement + Contact) — handoff
+    `documentsfolderurl-crm-field.md`. DOC-08 write-back is feature-detected and
+    inert until it exists.
+15. **prod field parity with crm-test** — confirm these exist on production
+    (each is feature-detected, so the feature simply stays dark until then):
+    `CSession.sessionAiSummary` (`csession-ai-summary-field.md`),
+    `CMentorProfile.preferredMeetingProvider` + `zoomPersonalLink`
+    (`cmentorprofile-meeting-fields.md`), `CEngagement.lastContactDate`
+    (`clastcontactdate-field.md`).
+16. **Partner / Funder domains on prod** — the `Partner Management Team` and
+    `Sponsor Management Team` roles need the profile entity readable at **team**
+    scope, existing records backfilled with the team, and the intake API role
+    granted **Team read** (until then the intake team-stamp is skipped with a
+    WARNING). Same list for the session-tool CRM prereqs generally: `CSession`
+    create + read-own/edit-own, `assignedUsers` enabled on `CSession`, and the
+    `CSession` name formula must be **keep-if-present**.
+17. **`Analytics Admin Team`** — create in both CRMs to hand Analytics to
+    non-admin staff (admins already pass the gate).
+18. **Events: prod schema migration not applied** —
+    `scripts/migrate_event_schema.py` ran on crm-test only, so the two instances
+    differ by exactly that change list (16 fields, 3 enum additions, 4 cleared
+    `readOnly` flags, the `partnerHost` link).
+19. **Meet transcripts — three Google-side changes, none done** (re-probed
+    2026-07-27: a delegated token minted fine for `calendar.events` but was
+    rejected `unauthorized_client` for `meetings.space.created`, so the DWD scope
+    is definitely still missing): (a) Admin console → Meet video settings →
+    Transcription ON for the OU; (b) add `meetings.space.created` to the service
+    account's DWD row (the field REPLACES — keep the existing scopes; client id
+    109317126943210877831); (c) enable the **Meet REST API** in GCP project
+    `espcrm-498315`. **Do NOT set `MEET_TRANSCRIPTS=true` before (b) exists** —
+    every Scheduled-session save would show mentors a "transcription failed"
+    notice. Re-probe recipe + the local SA key path are in
+    `csession-transcript-fields.md`.
+
+22. **One prod Gmail message can never be ingested** (gmail id
+    `19f298a147e3ba38`). Its subject trips `CConversation.name`'s
+    `$noBadCharacters` validation pattern, which exists on both CRMs. The
+    field-length half of this class was fixed CRM-side (widened 255→500) and a
+    resync recovered the other 7 messages; this one remains. The fix would be
+    app-side subject sanitizing on conversation create — deliberately not built,
+    since it is a single message. It now surfaces as a dead-letter alert rather
+    than silent loss ([[prod-ccommunication-field-length-drift]]).
+
+## Live verification owed
+
+20. **Everything through v0.187.0 is DEPLOYED to both environments** (verified
+    2026-07-28; only docs commits are unpushed). What is owed is the *live
+    eyeball*, not a deploy. Never driven against the live CRM/Gmail/Drive:
+    - **Analytics record dashboards (v0.187.0)** — open a real Mentor,
+      Engagement, Partner, Funder and Contact on crm-test.
+    - **Duplicate hold + preferred-mentor dropdown (v0.185.0)** — crm-test's
+      roster has only 2 public mentors, neither Active+accepting, so the dropdown
+      correctly stays hidden; flip `publicProfile` on a couple of
+      Active+accepting crm-test mentors to exercise it.
+    - **Co-mentor add as a real non-admin mentor** (`sharon.test`) — v0.174.0.
+    - **Mentor permission-teams round-trip** to `User.teamsIds` — v0.155.0.
+    - **Partner & Funder review pass** — the Overview rail manager + industry,
+      the notes/Discussion splitter, Make primary, the Last Contacted column,
+      contact name → peek (v0.153.0 / v0.154.0).
+    - **Referred Clients tab** on a real partner (v0.156.0).
+    - **Email round two** — forward with a real PDF attachment, grid unread
+      chips, the daily digest (v0.157.0); **Other correspondence** reply
+      (v0.159.0).
+    - **Last Contact auto-advance** on a session save and an outbound email
+      (v0.158.0).
+    - **Zoom PMI preference** — the first real Scheduled save with the
+      preference on (event carries the Zoom link, mints no Meet) (v0.151.0).
+    - **Email templates + signatures (the whole ET arc)** — harness-verified
+      only, never driven against the live CRM/Gmail.
+    - **Google Calendar**: edit→patch, Cancel→cancel-event, and actual
+      attendee-invitation delivery (only the create path is live-proven).
+    - **Documents Phase 3** — the hand-driven checklist in
+      `GDRIVE-DOCS-SETUP.md` Task 6 (assign/unassign grant flow as a mentor,
+      `Mentors/` no-grant check, archive/restore against the real drive,
+      hand-grant-removal alert).
+    - **Reassign Mentor** (v0.81.0) — needs the staff role to carry CSession
+      read+edit for the session re-stamp and Note create for the history stamp.
+    - **Events Phase 5** signed in as a **real non-admin** Marketing Admin user
+      (the browser pass stubbed the session, so the team gate and a non-admin's
+      CRM ACL are untested).
+    - **Birthday greetings** — nobody has yet watched it fire on a real member's
+      birthday. Only 5 of 19 prod members have one recorded, so expect ~5 days a
+      year; use `scripts/preview_birthday.py --date MM-DD` to see it on demand.
+
+21. **Test-record sweep in the CRM UI** — the intake API user is create-only, so
+    these have to be deleted by hand. Known outstanding on **crm-test**: 3
+    `ZZTEST-COMPANYTYPE` Accounts (`6a682c8b3b6038e12`, `6a682c8b788683d2e`,
+    `6a682c8bb25b0f76d`); the Fathom probe CSession `6a5f011bce8e19a19`; the
+    receipt `6a66f5b4bbe3805ee` (also item 9). On **prod**: 4 `ZZTEST-GMAILPROD*`
+    probe records. Older `ZZTEST … GrantCheck` / Stage A/B / provisioning test
+    Users may already be gone — the reliable method is a `contains ZZTEST` sweep
+    across the entities rather than chasing individual ids. Also on crm-test: the
+    duplicate unlinked mentor profile "Doug Bower" (`6a4425f4c82d3f2ec`, alongside
+    the real linked "Douglas Bower") and two "Acme Inc" CPartnerProfiles — records
+    assigned to an unlinked profile are invisible in the session tools.
+
 ## Resolved
 
 - **Account type stamp wrote a field that no longer exists** — found
