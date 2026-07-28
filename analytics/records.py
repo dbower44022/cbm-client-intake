@@ -12,6 +12,8 @@ Pages seeded here (scope = the record's CRM entity):
   * ``record-partner``     CPartnerProfile — referrals + partner meetings
   * ``record-funder``      CSponsorProfile — the contribution ledger, summarised
   * ``record-contact``     Contact         — meetings attended + email threads
+  * ``record-client``      CClientProfile  — this business's engagement history
+  * ``record-company``     Account         — the company's people and activity
 
 Like every built-in, these are **defaults**: an analytics admin can edit them
 (materialising an editable copy), delete them, or reset them (v0.168/0.171).
@@ -25,8 +27,11 @@ are bounded to one record's related set.
 Every attribute filtered on below was verified live against crm-test
 (2026-07-28): ``CSession.engagementId`` / ``partnerSessionId`` /
 ``sponsorProfileId``, ``CEngagement.mentorProfileId`` / ``referringPartnerId`` /
-``lastContactDate``, ``CContribution.sponsorProfileId`` / ``status`` /
-``amount``, and the two ``linkedWith`` reads used for a Contact.
+``lastContactDate`` / ``engagementClientId`` / ``clientOrganizationId``,
+``CContribution.sponsorProfileId`` / ``status`` / ``amount``,
+``Contact.accountId``, and the two ``linkedWith`` reads used for a Contact.
+The engagement→client / engagement→company links are also read live by
+``sessions/config.py`` and ``scripts/repair_duplicate_intake.py``.
 """
 
 from __future__ import annotations
@@ -60,6 +65,8 @@ ENGAGEMENT = "CEngagement"
 PARTNER = "CPartnerProfile"
 FUNDER = "CSponsorProfile"
 CONTACT = "Contact"
+CLIENT = "CClientProfile"
+ACCOUNT = "Account"
 
 # Engagement statuses that count as a live client relationship (the set the
 # session tools treat as active).
@@ -505,6 +512,173 @@ async def _contact_recent_sessions(ctx: MetricContext):
     return _session_rows(recs)
 
 
+# --- Client -------------------------------------------------------------------
+@metric(
+    key="client_engagements_total",
+    name="Total engagements",
+    shape=SHAPE_SCALAR, default_viz=VIZ_STAT, cache_mode="live",
+    applies_to=(CLIENT,),
+    description="Every engagement this client business has ever had.",
+)
+async def _client_engagements_total(ctx: MetricContext):
+    rid = _rid(ctx)
+    if not rid:
+        return _no_record(SHAPE_SCALAR)
+    n = await crm.count(ctx.espo, ENGAGEMENT, [_eq("engagementClientId", rid)])
+    return scalar(n, unit="engagements")
+
+
+@metric(
+    key="client_engagements_active",
+    name="Currently active",
+    shape=SHAPE_SCALAR, default_viz=VIZ_STAT, cache_mode="live",
+    applies_to=(CLIENT,),
+    description="Live mentoring relationships for this client business right now.",
+)
+async def _client_engagements_active(ctx: MetricContext):
+    rid = _rid(ctx)
+    if not rid:
+        return _no_record(SHAPE_SCALAR)
+    n = await crm.count(ctx.espo, ENGAGEMENT, [
+        _eq("engagementClientId", rid),
+        {"type": "in", "attribute": "engagementStatus", "value": list(ACTIVE_ENGAGEMENT_STATUSES)},
+    ])
+    return scalar(n, unit="engagements")
+
+
+@metric(
+    key="client_sessions_per_month",
+    name="Sessions per month",
+    shape=SHAPE_SERIES, default_viz=VIZ_LINE, cache_mode="live", time_aware=True,
+    applies_to=(CLIENT,),
+    description="Completed sessions across all this client's engagements, by month.",
+)
+async def _client_sessions_per_month(ctx: MetricContext):
+    rid = _rid(ctx)
+    if not rid:
+        return _no_record(SHAPE_SERIES)
+    engagements = await crm.sweep(ctx.espo, ENGAGEMENT, "id",
+                                  where=[_eq("engagementClientId", rid)])
+    ids = [e["id"] for e in engagements if e.get("id")]
+    if not ids:
+        return series(crm.bucket_by_month([], "dateStart", ctx.time_range))
+    recs = await crm.sweep(ctx.espo, "CSession", "dateStart,status", where=[
+        {"type": "in", "attribute": "engagementId", "value": ids},
+        _eq("status", COMPLETED),
+    ])
+    return _months(recs, "dateStart", ctx)
+
+
+@metric(
+    key="client_engagements_list",
+    name="Engagements",
+    shape=SHAPE_ROWS, default_viz=VIZ_TABLE, cache_mode="live",
+    applies_to=(CLIENT,),
+    description="This client's engagements, most recently contacted first.",
+)
+async def _client_engagements_list(ctx: MetricContext):
+    rid = _rid(ctx)
+    if not rid:
+        return _no_record(SHAPE_ROWS)
+    recs = await crm.sweep(ctx.espo, ENGAGEMENT, "name,engagementStatus,lastContactDate",
+                           where=[_eq("engagementClientId", rid)])
+    recs = sorted(recs, key=lambda r: str(r.get("lastContactDate") or ""), reverse=True)[:10]
+    columns = [
+        {"key": "name", "label": "Engagement", "link": "record"},
+        {"key": "status", "label": "Status"},
+        {"key": "contact", "label": "Last contact"},
+    ]
+    return rows(columns, [{
+        "name": r.get("name") or "(unnamed engagement)",
+        "status": r.get("engagementStatus") or "",
+        "contact": crm.fmt_date(r.get("lastContactDate")) or "—",
+        "entity": ENGAGEMENT,
+        "recordId": r.get("id"),
+    } for r in recs])
+
+
+# --- Company (Account) --------------------------------------------------------
+@metric(
+    key="company_contacts_count",
+    name="Contacts at this company",
+    shape=SHAPE_SCALAR, default_viz=VIZ_STAT, cache_mode="live",
+    applies_to=(ACCOUNT,),
+    description="People whose Account is this company.",
+)
+async def _company_contacts_count(ctx: MetricContext):
+    rid = _rid(ctx)
+    if not rid:
+        return _no_record(SHAPE_SCALAR)
+    return scalar(await crm.count(ctx.espo, CONTACT, [_eq("accountId", rid)]),
+                  unit="contacts")
+
+
+@metric(
+    key="company_engagements_count",
+    name="Engagements as client",
+    shape=SHAPE_SCALAR, default_viz=VIZ_STAT, cache_mode="live",
+    applies_to=(ACCOUNT,),
+    description="Engagements this company has been the client on.",
+)
+async def _company_engagements_count(ctx: MetricContext):
+    rid = _rid(ctx)
+    if not rid:
+        return _no_record(SHAPE_SCALAR)
+    return scalar(await crm.count(ctx.espo, ENGAGEMENT, [_eq("clientOrganizationId", rid)]),
+                  unit="engagements")
+
+
+@metric(
+    key="company_activity_per_month",
+    name="Activity over time",
+    shape=SHAPE_SERIES, default_viz=VIZ_LINE, cache_mode="live", time_aware=True,
+    applies_to=(ACCOUNT,),
+    description="Completed sessions across this company's engagements, by month.",
+)
+async def _company_activity_per_month(ctx: MetricContext):
+    rid = _rid(ctx)
+    if not rid:
+        return _no_record(SHAPE_SERIES)
+    engagements = await crm.sweep(ctx.espo, ENGAGEMENT, "id",
+                                  where=[_eq("clientOrganizationId", rid)])
+    ids = [e["id"] for e in engagements if e.get("id")]
+    if not ids:
+        return series(crm.bucket_by_month([], "dateStart", ctx.time_range))
+    recs = await crm.sweep(ctx.espo, "CSession", "dateStart,status", where=[
+        {"type": "in", "attribute": "engagementId", "value": ids},
+        _eq("status", COMPLETED),
+    ])
+    return _months(recs, "dateStart", ctx)
+
+
+@metric(
+    key="company_contacts_list",
+    name="Contacts",
+    shape=SHAPE_ROWS, default_viz=VIZ_TABLE, cache_mode="live",
+    applies_to=(ACCOUNT,),
+    description="People at this company, newest first.",
+)
+async def _company_contacts_list(ctx: MetricContext):
+    rid = _rid(ctx)
+    if not rid:
+        return _no_record(SHAPE_ROWS)
+    recs = await crm.sweep(ctx.espo, CONTACT, "name,title,createdAt",
+                           where=[_eq("accountId", rid)])
+    recs = sorted(recs, key=lambda r: str(r.get("createdAt") or ""), reverse=True)[:10]
+    columns = [
+        {"key": "name", "label": "Contact", "link": "record"},
+        {"key": "title", "label": "Title"},
+        {"key": "added", "label": "Added"},
+    ]
+    return rows(columns, [{
+        "name": r.get("name") or "(unnamed contact)",
+        "title": r.get("title") or "",
+        "added": crm.fmt_date(r.get("createdAt")) or "—",
+        "entity": CONTACT,
+        "recordId": r.get("id"),
+    } for r in recs])
+
+
 # --- the seeded record pages --------------------------------------------------
 # One page per record type (Doug 2026-07-27) — the record endpoint takes the
 # page whose scope matches, so exactly one keeps the tab unambiguous.
@@ -565,5 +739,29 @@ register_page(PageSpec(
         PanelSpec("threads", "Email conversations", "contact_email_threads", VIZ_STAT, width=3),
         PanelSpec("meetings_month", "Meetings per month", "contact_sessions_per_month", VIZ_LINE, width=6),
         PanelSpec("recent", "Recent meetings", "contact_recent_sessions", VIZ_TABLE, width=12),
+    ],
+))
+
+register_page(PageSpec(
+    key="record-client", title="Client Analytics", scope=CLIENT,
+    subtitle="This business's engagement history with CBM.",
+    default_range="last12mo",
+    panels=[
+        PanelSpec("total", "Total engagements", "client_engagements_total", VIZ_STAT, width=3),
+        PanelSpec("active", "Currently active", "client_engagements_active", VIZ_STAT, width=3),
+        PanelSpec("sessions_month", "Sessions per month", "client_sessions_per_month", VIZ_LINE, width=6),
+        PanelSpec("engagements", "Engagements", "client_engagements_list", VIZ_TABLE, width=12),
+    ],
+))
+
+register_page(PageSpec(
+    key="record-company", title="Company Analytics", scope=ACCOUNT,
+    subtitle="The company's people and activity with CBM.",
+    default_range="last12mo",
+    panels=[
+        PanelSpec("contacts", "Contacts at this company", "company_contacts_count", VIZ_STAT, width=3),
+        PanelSpec("engagements", "Engagements as client", "company_engagements_count", VIZ_STAT, width=3),
+        PanelSpec("activity_month", "Activity over time", "company_activity_per_month", VIZ_LINE, width=6),
+        PanelSpec("contacts_list", "Contacts", "company_contacts_list", VIZ_TABLE, width=12),
     ],
 ))

@@ -35,14 +35,21 @@ class FakeEspo:
             "CEngagement": [
                 {"id": "e1", "name": "Alpha", "mentorProfileId": "m1",
                  "engagementStatus": "Active", "lastContactDate": "2026-07-01",
-                 "createdAt": "2026-06-01 10:00:00", "referringPartnerId": "p1"},
+                 "createdAt": "2026-06-01 10:00:00", "referringPartnerId": "p1",
+                 "engagementClientId": "cp1", "clientOrganizationId": "a1"},
                 {"id": "e2", "name": "Bravo", "mentorProfileId": "m1",
                  "engagementStatus": "Completed", "lastContactDate": None,
-                 "createdAt": "2026-05-01 10:00:00"},
+                 "createdAt": "2026-05-01 10:00:00",
+                 "engagementClientId": "cp1", "clientOrganizationId": "a1"},
             ],
             "CPartnerProfile": [{"id": "p1", "name": "Partner One"}],
             "CSponsorProfile": [{"id": "s1", "name": "Funder One"}],
-            "Contact": [{"id": "c1", "name": "Cass Contact"}],
+            "CClientProfile": [{"id": "cp1", "name": "Client Business One"}],
+            "Account": [{"id": "a1", "name": "Acme Co."}],
+            "Contact": [
+                {"id": "c1", "name": "Cass Contact", "accountId": "a1",
+                 "title": "CEO", "createdAt": "2026-05-15 10:00:00"},
+            ],
             "CSession": [
                 {"id": "x1", "name": "Session 1", "dateStart": "2026-07-02 15:00:00",
                  "status": "Completed", "engagementId": "e1"},
@@ -107,6 +114,8 @@ def _app(monkeypatch, fake, *, analytics=True):
     ("CPartnerProfile", "p1", "record-partner"),
     ("CSponsorProfile", "s1", "record-funder"),
     ("Contact", "c1", "record-contact"),
+    ("CClientProfile", "cp1", "record-client"),
+    ("Account", "a1", "record-company"),
 ])
 def test_every_record_type_has_a_starter_dashboard(monkeypatch, entity, record_id, page_key):
     with TestClient(_app(monkeypatch, FakeEspo())) as c:
