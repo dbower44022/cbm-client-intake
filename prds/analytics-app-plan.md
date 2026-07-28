@@ -734,8 +734,8 @@ and the work is to give the remaining record views a tab that renders it.
 | Partner | `CPartnerProfile` | Partner Management record page | **BUILT** (v0.187.0) |
 | Funder | `CSponsorProfile` | Funder Management record page | **BUILT** (v0.187.0) |
 | Contact | `Contact` | directory View Contact page (`contact_page`) | **BUILT** (v0.187.0) |
-| Company | `Account` | directory Companies — **no record page** | **OPEN (§17.5)** |
-| Client | `CClientProfile` | **no view anywhere** | **OPEN (§17.5)** |
+| Company | `Account` | **new Company record page** (§17.5) | **DECIDED — needs build (§17.5)** |
+| Client | `CClientProfile` | engagement record page (§17.5) | **DECIDED — needs build (§17.5)** |
 
 ### 17.4 Implementation sketch (no new render path)
 
@@ -755,15 +755,16 @@ and the work is to give the remaining record views a tab that renders it.
   (e.g. Company → `clientOrganizationId` on `CEngagement`) so the author picks the record
   link from a dropdown instead of typing a CRM attribute name from memory.
 
-### 17.5 Open questions (blocking those two surfaces only)
+### 17.5 Rulings for those two surfaces (Doug, 2026-07-28)
 
-1. **Company** — there is no full Account page, only the Companies grid, its preview strip
-   and a View pop-up. Put the dashboard **inside the pop-up** (cramped), or **build a
-   Company record page** the way the Contact page was built in v0.144.0? Recommendation:
-   the real page.
-2. **Client** — `CClientProfile` has no screen of its own; it appears only as a card inside
-   an engagement's Details tab and in a peek pop-up. Does "client analytics" mean the
-   **engagement** view (where the mentor works the client), the **company** view, or a new
-   **client page** that doesn't exist yet?
+1. **Company — build a real Company record page** the way the Contact page was built in
+   v0.144.0; the dashboard lives there. The Companies grid, preview strip and View pop-up
+   stay for browsing; they link through to the new page. Rejected: dashboard inside the
+   pop-up (cramped).
+2. **Client — dashboard attaches to the engagement view.** `CClientProfile` gets no screen
+   of its own; the client dashboard is a section on the engagement record page, alongside
+   the engagement dashboard. Rejected: standalone client page (nowhere for it to live in
+   the mentor workflow) and company view (client ≠ company — one company can host several
+   engagements).
 
-The five ready surfaces do not depend on either answer.
+The five ready surfaces did not depend on either answer and shipped in v0.187.0.
