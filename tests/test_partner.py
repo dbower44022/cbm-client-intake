@@ -103,7 +103,7 @@ async def test_creates_three_linked_records():
 
     _, account = client.creates[0]
     assert account["name"] == "Acme Partners LLC"
-    assert account["cAccountType"] == ["Partner"]
+    assert account["cCompanyType"] == ["Partner"]
 
     _, contact = client.creates[1]
     assert contact["cContactType"] == ["Partner"]

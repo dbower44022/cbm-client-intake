@@ -39,20 +39,20 @@ linked records in EspoCRM (the system of record). Five forms ship today:
   `ClevelandBusinessMentors/programs/MN-InformationRequest.yaml`. Left ZZTEST
   records to clean up in the UI (see commit / chat).
 - **partner** — Become-a-Partner (3-step). Creates Account
-  (`cAccountType=["Partner"]`) → Contact (`cContactType=["Partner"]`) →
+  (`cCompanyType=["Partner"]`) → Contact (`cContactType=["Partner"]`) →
   CPartnerProfile (`partnershipStatus="Candidate"`, with `partnershipType` +
   `partnershipValue` from the form). Profile links: `partnerCompanyId` (Account),
   `primaryPartnercontactId` (Contact), + applicant added to the `contacts`
   hasMany. Added 2026-06-17.
 - **sponsor** — Become-a-Sponsor (3-step). Creates Account
-  (`cAccountType=["Donor/Sponsor"]`) → Contact (`cContactType=["Donor"]` — the
-  enum has no "Sponsor" option) → CSponsorProfile (message in `description`).
+  (`cCompanyType=["Sponsor"]`) → Contact (`cContactType=["Sponsor"]`) →
+  CSponsorProfile (message in `description`).
   Profile links: `sponsorCompanyId`, `sponsorContactId`, + applicant added to
   the `sponsorContacts` hasMany. Added 2026-06-17.
 
 **partner + sponsor status (2026-06-17): VERIFIED LIVE end-to-end against
 crm-test.** Both orchestrators were run live (real `EspoClient`, not dry-run)
-and the created records GET-verified: Account (`cAccountType` `["Partner"]` /
+and the created records GET-verified: Account (type `["Partner"]` /
 `["Donor/Sponsor"]`) → Contact (`cContactType` `["Partner"]` / `["Donor"]`) →
 CPartnerProfile (`partnershipStatus="Candidate"`, `partnershipType` +
 `partnershipValue` set) / CSponsorProfile (message in `description`), all link
@@ -1672,11 +1672,37 @@ Next-phase kickoff: **`prompts/events-phase4-prompt.md`**.
   as a **real non-admin** Marketing Admin user (the browser pass stubbed the
   session, so the team gate and a non-admin's CRM ACL are untested live).
 
-## Current status (updated 2026-07-27)
+## Current status (updated 2026-07-28)
 
 *(A parallel arc — **Events & Webinars**, v0.164.0–v0.170.0 — is documented in
 its own section immediately above; it is gated off and does not affect anything
 below.)*
+
+**v0.186.0** (2026-07-28, 1463 tests green, committed NOT pushed) — **fix: the
+intake Company-type stamp writes `cCompanyType`, the field that actually
+exists** (closes the standing OPEN-ITEMS drift; Doug: "we changed the account
+entity to company and use that field"). The `Account` entity is presented as
+**Company** and its type discriminator is **`cCompanyType`**; `cAccountType`
+is gone from **BOTH** CRMs (probed live 2026-07-28 — prod via `doctl apps
+console`, crm-test directly), and `cCompanyType` is identical on both
+(multiEnum `['', 'Client', 'Sponsor', 'Partner', 'Other']`), so this is a
+straight retarget with **no feature detection**. All four orchestrators now
+write it: client-intake + info-request `["Client"]` (their dead duplicate
+`cAccountType` line dropped — these two already kept `cCompanyType` in sync,
+so their stamp was the one that still worked), partner `["Partner"]` (the
+option the field lacked when that form was built), sponsor **`["Sponsor"]`**.
+**The sponsor value change is load-bearing, not cosmetic:** `"Donor/Sponsor"`
+is not an option and EspoCRM **rejects** an invalid multiEnum outright (the
+create 400s, nothing written — verified live), so retargeting the field name
+alone would have broken sponsor intake. `core/schema_contract.py`'s drift
+watch moved with it (it had been watching a field that exists on neither CRM,
+so it could never have warned). Verified: full suite green with per-form
+payload assertions updated, and a live crm-test probe stored each of the three
+values and refused `"Donor/Sponsor"`. **Cleanup:** delete the 3
+`ZZTEST-COMPANYTYPE …` Accounts in the crm-test UI (`6a682c8b3b6038e12`,
+`6a682c8b788683d2e`, `6a682c8bb25b0f76d`) — the intake API user is
+create-only. **Note for prod:** existing intake-created companies still carry
+no type — this fixes new records only; a backfill is a separate call.
 
 **v0.185.0** (2026-07-27, 1463 tests green, committed NOT pushed) —
 **duplicate submissions are held for review + clients can name the mentor they
@@ -2361,9 +2387,12 @@ missing — the standing OPEN-ITEMS drift, unrelated).
 
 **Cross-cutting open items now live in `OPEN-ITEMS.md`** (started 2026-07-24;
 keep it current — add findings there, move fixed ones to Resolved). Headline
-item: **prod Account schema drift — `cAccountType` no longer exists on prod
-(prod uses `cCompanyType`), so the intake orchestrators' Account type stamp
-is a silent no-op on prod** (found during the 2026-07-24 partner data
+item: ~~prod Account schema drift — `cAccountType`~~ **RESOLVED 2026-07-28
+(v0.186.0): the entity is presented as Company and its type field is
+`cCompanyType`; `cAccountType` is gone from BOTH CRMs, so all four
+orchestrators were retargeted (sponsor's value `"Donor/Sponsor"` → `"Sponsor"`,
+the only valid option) along with the drift monitor** (found during the
+2026-07-24 partner data
 migration, which copied/enriched the 7 real crm-test partners into prod —
 3 created, 4 enriched, GET-verified; the 7 obvious test records were not
 copied).

@@ -7,8 +7,9 @@ the partnership-specific data.
 INSTANCE MAPPING — reconciled against crm-test.clevelandbusinessmentors.org
 (2026-06-17) by reading the deployed EspoCRM metadata:
 
-  * Account.cAccountType (multiEnum, REQUIRED) takes ["Partner"]; the legacy
-    Account.cCompanyType is left unset (it has no "Partner" option).
+  * Account.cCompanyType (multiEnum) takes ["Partner"] — the type discriminator
+    on the entity the CRM presents as "Company". (The former cAccountType was
+    removed from BOTH instances — verified 2026-07-28.)
   * Contact.cContactType (multiEnum) takes ["Partner"].
   * CPartnerProfile links: ``partnerCompany`` (belongsTo Account, set via
     ``partnerCompanyId``) and ``primaryPartnercontact`` (belongsTo Contact, set
@@ -48,7 +49,7 @@ PARTNER_PROFILE = "CPartnerProfile"
 TEAM = "Team"
 
 # --- Discriminator attributes (reconciled against the deployed instance) ---
-A_ACCOUNT_TYPE = "cAccountType"   # multiEnum on Account — REQUIRED
+A_COMPANY_TYPE = "cCompanyType"   # multiEnum on Account/Company — the type discriminator
 C_CONTACT_TYPE = "cContactType"   # multiEnum on Contact
 C_HOW_HEARD = "cHowDidYouHear"    # enum on Contact
 # The single consent checkbox sets all three Contact bools.
@@ -73,7 +74,7 @@ P_DESCRIPTION = "description"                 # text — notes any dropped value
 PARTNER_CONTACTS = "contacts"                # CPartnerProfile hasMany Contact
 
 # --- System-set values ---
-ACCOUNT_TYPE_PARTNER = "Partner"
+COMPANY_TYPE_PARTNER = "Partner"
 CONTACT_TYPE_PARTNER = "Partner"
 PARTNERSHIP_STATUS_NEW = "Candidate"
 
@@ -91,7 +92,7 @@ async def _find_or_create_account(sub: PartnerApplication, client: EspoApi) -> s
 
     payload: dict = {
         "name": sub.company,
-        A_ACCOUNT_TYPE: [ACCOUNT_TYPE_PARTNER],
+        A_COMPANY_TYPE: [COMPANY_TYPE_PARTNER],
     }
     if sub.business_website:
         payload["website"] = sub.business_website

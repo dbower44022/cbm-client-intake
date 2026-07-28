@@ -20,24 +20,6 @@ found; move resolved items to the bottom with the resolution date.
      engagement's Details tab and a peek pop-up). Does "client analytics" mean
      the engagement view, the company view, or a new client page?
 
-1. **Prod Account schema drift: `cAccountType` no longer exists** (found
-   2026-07-24 during the partner data migration). Prod's `Account` entity has
-   no `cAccountType` field — a where clause on it 400s ("Not existing
-   attribute") and the metadata offers only **`cCompanyType`** (multiEnum with
-   a "Partner" option). crm-test still has the cAccountType shape. The intake
-   orchestrators (client-intake, partner, sponsor, info-request) all write
-   `cAccountType=[...]` on Account creates; EspoCRM silently ignores unknown
-   attributes, so **on prod the Account type stamp stores nothing** — even
-   though it verified at go-live 2026-06-24, meaning the field was
-   dropped/renamed CRM-side since. To address:
-   - Confirm with the CRM team whether `cCompanyType` is the intended
-     replacement and whether crm-test should be aligned to match.
-   - Update the orchestrators to write the surviving field (or feature-detect
-     and write whichever exists, as the 2026-07-24 migration script did).
-   - Check anything that reads/filters Accounts by `cAccountType` (directory
-     Company pop-up already uses `cCompanyType`).
-   - Memory: `prod-account-caccounttype-missing`.
-
 ## Smaller follow-ups from the 2026-07-24 partner migration
 
 2. **Fatherhood Initiative – Cuyahoga County has no partner manager on prod**
@@ -91,6 +73,20 @@ found; move resolved items to the bottom with the resolution date.
    renders on the Overview feed, the session view, and in the EspoCRM UI.
 
 ## Resolved
+
+- **Account type stamp wrote a field that no longer exists** — found
+  2026-07-24 on prod, where `Account.cAccountType` had been removed; all four
+  intake orchestrators wrote it, and EspoCRM silently ignores unknown
+  attributes, so the type stamp stored nothing. **Resolved 2026-07-28:** the
+  Account entity is presented as **Company** and its type field is
+  **`cCompanyType`** (Doug). A live probe found `cAccountType` gone from
+  **both** CRMs and `cCompanyType` identical on both — multiEnum
+  `['', 'Client', 'Sponsor', 'Partner', 'Other']` — so the fix is a straight
+  retarget, no feature detection. All four orchestrators now write
+  `cCompanyType`, and the sponsor form's value changed from `"Donor/Sponsor"`
+  (rejected by the CRM — it is not an option) to **`"Sponsor"`**. The drift
+  monitor (`core/schema_contract.py`) was retargeted with it. Verified live on
+  crm-test: Client/Partner/Sponsor each stored, `"Donor/Sponsor"` refused.
 
 - **Account-level partner fields duplicated (and contradicted) the partnership
   record** — found 2026-07-24 during Doug's partner review; `cPartnerStatus`,

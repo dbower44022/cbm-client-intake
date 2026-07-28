@@ -1,7 +1,7 @@
 """Become-a-Sponsor form.
 
 Creates three linked records for an organization interested in sponsoring CBM:
-Account (cAccountType="Donor/Sponsor") + Contact (cContactType="Donor") +
+Company (cCompanyType="Sponsor") + Contact (cContactType="Sponsor") +
 CSponsorProfile (message in description).
 """
 

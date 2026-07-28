@@ -116,7 +116,7 @@ async def test_drifted_enums_dropped_but_records_created():
     _, account_payload = client.creates[0]
     assert account_payload["cBusinessStage"] == "Startup"
     assert "cIndustrySector" not in account_payload      # dropped
-    assert account_payload["cAccountType"] == ["Client"]  # discriminator untouched
+    assert account_payload["cCompanyType"] == ["Client"]  # discriminator untouched
 
     _, eng_payload = client.creates[3]
     # The engagement carries the company link directly (the session tools read it).
@@ -137,8 +137,8 @@ async def test_creates_four_linked_records():
     assert entities == [ACCOUNT, CONTACT, CLIENT_PROFILE, ENGAGEMENT]
 
     _, account_payload = client.creates[0]
-    assert account_payload["cAccountType"] == ["Client"]   # required discriminator
-    assert account_payload["cCompanyType"] == ["Client"]   # legacy, kept in sync
+    assert account_payload["cCompanyType"] == ["Client"]   # type discriminator
+    assert "cAccountType" not in account_payload           # removed from both CRMs
 
     _, contact_payload = client.creates[1]
     assert contact_payload["accountId"] == ids["accountId"]

@@ -1,4 +1,4 @@
-"""Sponsor application -> Account (Donor/Sponsor) + Contact (Sponsor) + CSponsorProfile.
+"""Sponsor application -> Company (Sponsor) + Contact (Sponsor) + CSponsorProfile.
 
 Mirrors the partner/mentor pattern: an Account for the sponsoring organization,
 a Contact for the applicant, and a CSponsorProfile hub linking the two.
@@ -6,7 +6,11 @@ a Contact for the applicant, and a CSponsorProfile hub linking the two.
 INSTANCE MAPPING — reconciled against crm-test.clevelandbusinessmentors.org
 (2026-06-17) by reading the deployed EspoCRM metadata:
 
-  * Account.cAccountType (multiEnum, REQUIRED) takes ["Donor/Sponsor"].
+  * Account.cCompanyType (multiEnum) takes ["Sponsor"] — the type discriminator
+    on the entity the CRM presents as "Company". (The former cAccountType was
+    removed from BOTH instances, and its "Donor/Sponsor" value does not exist
+    in cCompanyType, whose options are Client/Sponsor/Partner/Other —
+    verified 2026-07-28.)
   * Contact.cContactType (multiEnum) takes ["Sponsor"] — option added to the CRM
     2026-06-22 (previously ["Donor"] as the nearest fit). The CRM enum is the
     source of truth; the app writes exactly what it expects.
@@ -40,7 +44,7 @@ SPONSOR_PROFILE = "CSponsorProfile"
 TEAM = "Team"
 
 # --- Discriminator attributes (reconciled against the deployed instance) ---
-A_ACCOUNT_TYPE = "cAccountType"   # multiEnum on Account — REQUIRED
+A_COMPANY_TYPE = "cCompanyType"   # multiEnum on Account/Company — the type discriminator
 C_CONTACT_TYPE = "cContactType"   # multiEnum on Contact
 C_HOW_HEARD = "cHowDidYouHear"    # enum on Contact
 # The single consent checkbox sets all three Contact bools.
@@ -61,7 +65,7 @@ S_CONTACT_LINK = "sponsorContactId"   # belongsTo Contact (FK)
 SPONSOR_CONTACTS = "sponsorContacts"  # CSponsorProfile hasMany Contact
 
 # --- System-set values ---
-ACCOUNT_TYPE_SPONSOR = "Donor/Sponsor"
+COMPANY_TYPE_SPONSOR = "Sponsor"
 CONTACT_TYPE_SPONSOR = "Sponsor"
 
 
@@ -78,7 +82,7 @@ async def _find_or_create_account(sub: SponsorApplication, client: EspoApi) -> s
 
     payload: dict = {
         "name": sub.company,
-        A_ACCOUNT_TYPE: [ACCOUNT_TYPE_SPONSOR],
+        A_COMPANY_TYPE: [COMPANY_TYPE_SPONSOR],
     }
     if sub.business_website:
         payload["website"] = sub.business_website

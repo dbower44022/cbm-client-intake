@@ -1,7 +1,7 @@
 """Become-a-Partner form.
 
 Creates three linked records for an organization applying to partner with CBM:
-Account (cAccountType="Partner") + Contact (cContactType="Partner") +
+Company (cCompanyType="Partner") + Contact (cContactType="Partner") +
 CPartnerProfile (partnershipStatus="Candidate").
 """
 

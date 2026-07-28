@@ -79,7 +79,12 @@ EXPECTED_ENUMS: dict[tuple[str, str], list[str]] = {
         "Website Development", "Wellness, Healthcare, & Home Health",
     ],
     # Discriminators the orchestrators write.
-    ("Account", "cAccountType"): ["Client", "Partner", "Donor/Sponsor"],
+    # Retargeted 2026-07-28: the Account entity is presented as "Company" and its
+    # type field is cCompanyType. cAccountType was removed from BOTH instances
+    # (so the old watch could never have fired a useful alert, and the writes
+    # against it stored nothing); "Donor/Sponsor" is likewise gone — the sponsor
+    # form now writes "Sponsor".
+    ("Account", "cCompanyType"): ["Client", "Partner", "Sponsor"],
     ("Account", "cClientStatus"): ["Prospect"],
     # "Sponsor" added 2026-07-18 (P2, reliability review): the sponsor
     # orchestrator has written cContactType=["Sponsor"] since the CRM gained

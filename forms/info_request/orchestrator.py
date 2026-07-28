@@ -12,7 +12,7 @@ Mapping (reconciled against crm-test.clevelandbusinessmentors.org, 2026-06-12):
   * Account — created/linked only when a company name is given AND the contact
     is new (linking would otherwise risk detaching an existing contact's
     account). Find-or-create by name like client-intake; on create it gets
-    cAccountType=["Client"] (required discriminator; nearest fit) and
+    cCompanyType=["Client"] (the type discriminator; nearest fit) and
     cClientStatus="Prospect" — the staff worklist marker. A matched existing
     Account keeps its current status.
   * No CClientProfile / CEngagement — those represent an actual mentoring
@@ -46,8 +46,7 @@ CONTACT = "Contact"
 INFO_REQUEST = "CInformationRequest"  # dedicated entity (see cinformation-request-entity.md)
 FORM_SLUG = "info-request"  # value written to CInformationRequest.form
 
-A_ACCOUNT_TYPE = "cAccountType"    # multiEnum on Account — REQUIRED
-A_COMPANY_TYPE = "cCompanyType"    # multiEnum on Account (legacy, kept in sync)
+A_COMPANY_TYPE = "cCompanyType"    # multiEnum on Account/Company — the type discriminator
 A_CLIENT_STATUS = "cClientStatus"  # enum on Account
 C_CONTACT_TYPE = "cContactType"    # multiEnum on Contact
 
@@ -79,7 +78,6 @@ async def _find_or_create_account(sub: InfoRequest, client: EspoApi) -> str:
         ACCOUNT,
         {
             "name": sub.company,
-            A_ACCOUNT_TYPE: [CLIENT],
             A_COMPANY_TYPE: [CLIENT],
             A_CLIENT_STATUS: PROSPECT,
         },

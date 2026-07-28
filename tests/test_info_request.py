@@ -81,7 +81,7 @@ async def test_new_contact_with_company_creates_prospect_account():
     assert [e for e, _ in client.creates] == [ACCOUNT, CONTACT, INFO_REQUEST]
     _, account = client.creates[0]
     assert account["name"] == "Ada's Bakery"
-    assert account["cAccountType"] == ["Client"]
+    assert account["cCompanyType"] == ["Client"]
     assert account["cClientStatus"] == PROSPECT
     _, contact = client.creates[1]
     assert contact["accountId"] == ids["accountId"]

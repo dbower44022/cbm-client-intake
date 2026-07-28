@@ -13,9 +13,10 @@ INSTANCE MAPPING — reconciled against crm-test.clevelandbusinessmentors.org
   * The deployed model has a CClientProfile hub; CEngagement.engagementClient is
     a belongsTo CClientProfile (NOT Account). This differs from the original
     three-record assumption — see Requirements Specification §3.
-  * Discriminators are multiEnums taking ["Client"]: Account.cAccountType
-    (REQUIRED, added crm-test 2026-06) and Contact.cContactType. The legacy
-    Account.cCompanyType is still present (now optional) and kept in sync.
+  * Discriminators are multiEnums taking ["Client"]: Account.cCompanyType and
+    Contact.cContactType. (The Account entity is presented as "Company" in the
+    CRM; its type field is cCompanyType. The former cAccountType was removed
+    from BOTH instances — verified 2026-07-28 — so writing it stored nothing.)
   * Link FKs: Contact.accountId (belongsTo Account); CClientProfile.clientcontactId
     (belongsTo Contact) + linkedCompanyId (hasOne Account); CEngagement
     .engagementClientId (belongsTo CClientProfile) + primaryEngagementContactId
@@ -63,8 +64,7 @@ ENGAGEMENT = "CEngagement"
 MENTOR_PROFILE = "CMentorProfile"
 
 # --- Attribute names (reconciled against the deployed instance) ---
-A_ACCOUNT_TYPE = "cAccountType"      # multiEnum on Account — REQUIRED (added crm-test 2026-06)
-A_COMPANY_TYPE = "cCompanyType"      # multiEnum on Account (legacy, now optional)
+A_COMPANY_TYPE = "cCompanyType"      # multiEnum on Account/Company — the type discriminator
 A_BUSINESS_STAGE = "cBusinessStage"  # enum
 A_INDUSTRY_SECTOR = "cIndustrySector"  # enum
 C_CONTACT_TYPE = "cContactType"      # multiEnum on Contact
@@ -123,8 +123,7 @@ async def _find_or_create_account(
 
     payload: dict = {
         "name": name,
-        A_ACCOUNT_TYPE: [CLIENT],   # required discriminator — never sanitized
-        A_COMPANY_TYPE: [CLIENT],   # legacy discriminator, kept in sync
+        A_COMPANY_TYPE: [CLIENT],   # type discriminator — never sanitized
     }
     # User-supplied enums: drop a drifted value rather than 400 the create.
     business_stage = await san.enum(ACCOUNT, A_BUSINESS_STAGE, sub.business_stage)

@@ -50,7 +50,7 @@ on its CRM receipt, same word) + the form's own records (below).
 
 | Form | CRM records created | Starting status | Worked in |
 |---|---|---|---|
-| **client-intake** | Account (`cAccountType=["Client"]`) → Contact → CClientProfile → **CEngagement** | CEngagement `engagementStatus = "Submitted"` | **Client Administration** — the grid's default filter is the action-needed set (Submitted + Assignment Declined + Assignment Dormant); assigning a mentor moves it to Pending Acceptance |
+| **client-intake** | Company (`cCompanyType=["Client"]`) → Contact → CClientProfile → **CEngagement** | CEngagement `engagementStatus = "Submitted"` | **Client Administration** — the grid's default filter is the action-needed set (Submitted + Assignment Declined + Assignment Dormant); assigning a mentor moves it to Pending Acceptance |
 | **volunteer** (mentor) | Contact (`cContactType=["Mentor"]`) → **CMentorProfile** | CMentorProfile `mentorStatus = "Candidate"` | **Mentor Administration** — approval flips the status and provisions the @cbmentors.org login |
 | **info-request** | Contact (`["Prospect"]`), Account (`cClientStatus="Prospect"`) only when a company was given, + **CInformationRequest** | CInformationRequest `requestStatus = "New"` | **Submission Admin** — reply from the shared info@ identity; **Close with a reason** sets the CRM record's `requestStatus` to Closed too |
 | **partner** | Account (`["Partner"]`) → Contact (`["Partner"]`) → **CPartnerProfile** (stamped with the Partner Management Team) | CPartnerProfile `partnershipStatus = "Candidate"` | **Partner Management** — the grid lists all partners; candidates are reviewed there and in the CRM |

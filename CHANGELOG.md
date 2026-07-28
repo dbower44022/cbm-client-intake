@@ -4,6 +4,40 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.186.0] — 2026-07-28
+
+**fix(intake): the Company type stamp writes `cCompanyType` — the field that
+actually exists** (closes the standing OPEN-ITEMS drift). The Account entity is
+presented as **Company** in the CRM and its type discriminator is
+**`cCompanyType`**; the former `cAccountType` has been removed from **both**
+instances (probed live 2026-07-28 — prod via the app console, crm-test
+directly). All four intake orchestrators wrote `cAccountType`, and EspoCRM
+silently ignores unknown attributes, so **every intake-created company has been
+landing with no type at all** on both environments. Now:
+
+- **client-intake** and **info-request** write `cCompanyType=["Client"]` (the
+  duplicate `cAccountType` line is gone — these two already kept `cCompanyType`
+  in sync, so their stamp was the one that still worked).
+- **partner** writes `cCompanyType=["Partner"]` — the option the field lacked
+  when the partner form was built, which is why that form deliberately left
+  `cCompanyType` unset.
+- **sponsor** writes `cCompanyType=["Sponsor"]`. The old value `"Donor/Sponsor"`
+  **is not an option** and the CRM rejects it outright (verified: the create
+  400s, no record made) — so this is a required value change, not a rename.
+- `core/schema_contract.py` retargets the drift watch from
+  `("Account", "cAccountType")` to `("Account", "cCompanyType")` with
+  `["Client", "Partner", "Sponsor"]`. The old entry watched a field that no
+  longer exists on either CRM, so it could never have warned about this.
+
+No feature detection: `cCompanyType` is identical on both instances (multiEnum,
+`['', 'Client', 'Sponsor', 'Partner', 'Other']`), so a single field name is
+correct everywhere. Verified: full suite green (1463 passed), with the
+orchestrator payload assertions updated per form; and a live probe against
+crm-test created a company at each of the three values and read each back
+stored, while `"Donor/Sponsor"` was refused. **Live cleanup:** delete the three
+`ZZTEST-COMPANYTYPE …` Accounts in the crm-test UI (`6a682c8b3b6038e12`,
+`6a682c8b788683d2e`, `6a682c8bb25b0f76d`) — the intake API user is create-only.
+
 ## [0.185.0] — 2026-07-27
 
 **feat: duplicate submissions are held for review, and a client can name the
