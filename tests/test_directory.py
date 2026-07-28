@@ -410,11 +410,53 @@ def test_partners_directory_is_registered():
     assert partners.editable is True and partners.edit_handoff is None
 
 
+def test_companies_have_company_page_flag():
+    """The Company record page is opt-in through DirectoryConfig.company_page,
+    the sibling of contact_page and mentor_page. Doug's §17.5 ruling (real
+    Company record page, not the pop-up)."""
+    from directory.config import DIRECTORIES
+    companies = DIRECTORIES["companies"]
+    assert companies.company_page is True
+    assert companies.contact_page is False  # Companies talk through their people
+
+
 def test_all_directory_kinds_have_routes(monkeypatch):
     app = _app(monkeypatch)
     paths = {r.path for r in app.routes if isinstance(getattr(r, "path", None), str)}
     for kind in ("companies", "contacts", "mentors", "partners"):
         assert f"/directory/{kind}/api/session" in paths
+
+
+def test_record_pages_mount_for_the_kinds_that_have_one(monkeypatch):
+    """contact_page, company_page and mentor_page each add a /record/{id} route
+    that serves the record's HTML shell. Partners intentionally have none."""
+    monkeypatch.setenv("ASSIGNMENTS_ENABLED", "true")
+    app = _app(monkeypatch)
+    paths = {r.path for r in app.routes if isinstance(getattr(r, "path", None), str)}
+    assert "/directory/contacts/record/{record_id}" in paths
+    assert "/directory/companies/record/{record_id}" in paths
+    assert "/directory/mentors/record/{record_id}" in paths
+    assert "/directory/partners/record/{record_id}" not in paths
+
+
+def test_companies_session_reports_company_page(monkeypatch):
+    """/session tells the frontend whether this kind's rows open a full record
+    page and which kind — the switch that drives the tab wiring and the grid's
+    row-click behavior."""
+    _login(monkeypatch, teams=["Workspace"])
+    monkeypatch.setenv("WORKSPACE_ALLOWED_TEAMS", "Workspace")
+
+    async def _no_filters(client, cfg):
+        return []
+
+    monkeypatch.setattr("directory.service.filters", _no_filters)
+    monkeypatch.setattr("directory.router.client_for", lambda settings, user: object())
+    with TestClient(_app(monkeypatch)) as c:
+        c.post("/api/portal/login", json={"username": "x", "password": "y"})
+        body = c.get("/directory/companies/api/session").json()
+    assert body["companyPage"] is True
+    assert body["contactPage"] is False
+    assert body["entity"] == "Account"
 
 
 def test_directory_requires_authentication(monkeypatch):

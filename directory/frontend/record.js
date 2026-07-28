@@ -226,13 +226,14 @@
     grid.innerHTML = "";
     msg.hidden = false; msg.textContent = "Loading…";
     try {
-      var url = "/analytics/api/record/Contact/" + encodeURIComponent(RECORD_ID);
+      var url = "/analytics/api/record/" + encodeURIComponent(session.entity) + "/" + encodeURIComponent(RECORD_ID);
       var r = await (window.CBMBusy ? CBMBusy.fetch(url) : fetch(url));
       var body = await r.json();
       if (!r.ok) throw new Error((body && body.detail) || ("Request failed (" + r.status + ")"));
       if (!body.available) {
-        msg.textContent = "No analytics have been set up for contacts yet. " +
-          "An analytics author can publish a Contact dashboard in the Analytics app.";
+        var kindLabel = (session && session.title) ? session.title.toLowerCase() : "this record type";
+        msg.textContent = "No analytics have been set up for " + kindLabel + " yet. " +
+          "An analytics author can publish a dashboard for this record type in the Analytics app.";
         return;
       }
       var panels = body.panels || [];
@@ -1465,6 +1466,12 @@
     });
     // The Analytics tab only exists where analytics is switched on.
     if (session && session.analyticsEnabled) $("crAnaTab").hidden = false;
+    // Communications is contact-scoped (per-contact conversations). Company
+    // records don't carry it — talk to their people instead.
+    if (!(session && session.contactPage)) {
+      var commsTabBtn = document.querySelector('[data-crtab="communications"]');
+      if (commsTabBtn) commsTabBtn.hidden = true;
+    }
     $("crAnaRefresh").addEventListener("click", function () { renderAnalytics(true); });
     $("crComposeBtn").addEventListener("click", function () {
       if (!commsOn()) { notify("The email integration isn't enabled on this deployment."); return; }
@@ -1499,13 +1506,13 @@
 
   (async function init() {
     try { if (window.CBMQuickMail) window.CBMQuickMail.apiBase = API; } catch (e) {}
-    if (!RECORD_ID) { fail(new Error("No contact id in the address.")); return; }
-    var owner = await acquireRecordLock("contact:" + RECORD_ID);
+    if (!RECORD_ID) { fail(new Error("No record id in the address.")); return; }
+    var owner = await acquireRecordLock(KIND + ":" + RECORD_ID);
     if (!owner) { hide($("crMainView")); show($("crBlockedView")); wire(); return; }
     try {
       session = await api("/session");
       detail = await api("/records/" + encodeURIComponent(RECORD_ID));
-      document.title = "CBM — " + (detail.name || "Contact");
+      document.title = "CBM — " + (detail.name || (session.title || "Record"));
       $("crTitle").textContent = detail.name || "(no name)";
       $("crWhoName").textContent = session.name || session.userName;
       contactEmails = collectContactEmails();

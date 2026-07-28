@@ -55,6 +55,11 @@ class DirectoryConfig:
     # tab: Overview + Communications) and its router carries the
     # contact-scoped comms endpoints (directory.comms_router).
     contact_page: bool = False
+    # This kind's records open the full Company record page (Overview +
+    # Analytics, no Communications — Communications lives on Contact). Shares
+    # record.html with the View Contact page; the frontend hides the
+    # Communications tab when contactPage is off.
+    company_page: bool = False
     # This kind's records open the rich, read-only MENTOR PROFILE page (its own
     # browser tab): a warm "get to know this colleague" view built from the
     # CMentorProfile + its linked Contact — NOT the CRM-layout pop-up and NOT
@@ -75,6 +80,7 @@ COMPANIES = DirectoryConfig(
     filters=("cCompanyType",),
     contacts_link="contacts",
     type_field="cCompanyType",
+    company_page=True,
 )
 
 CONTACTS = DirectoryConfig(

@@ -213,13 +213,16 @@ def test_contact_record_page_served_with_base_and_no_store(monkeypatch):
 def test_record_routes_only_for_page_kinds(monkeypatch):
     app = _app(monkeypatch)
     paths = {r.path for r in app.routes if isinstance(getattr(r, "path", None), str)}
-    # Contacts (View Contact page) and Mentors (rich profile page) each get a
-    # record route; companies/partners do not.
+    # Contacts (View Contact page), Companies (Company record page) and Mentors
+    # (rich profile page) each get a record route; Partners do not.
     assert "/directory/contacts/record/{record_id}" in paths
+    assert "/directory/companies/record/{record_id}" in paths
     assert "/directory/mentors/record/{record_id}" in paths
-    assert "/directory/companies/record/{record_id}" not in paths
-    # The contact-scoped comms endpoints register only on the contacts kind.
+    assert "/directory/partners/record/{record_id}" not in paths
+    # The contact-scoped comms endpoints register only on the contacts kind —
+    # Companies talk through their people, so no comms tab there.
     assert "/directory/contacts/api/records/{contact_id}/conversations" in paths
+    assert "/directory/companies/api/records/{contact_id}/conversations" not in paths
     assert "/directory/mentors/api/records/{contact_id}/conversations" not in paths
     # The mentor profile + photo endpoints register only on the mentors kind.
     assert "/directory/mentors/api/profile/{record_id}" in paths

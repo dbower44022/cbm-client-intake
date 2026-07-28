@@ -935,6 +935,7 @@ def create_app(
         for _kind, _dcfg in _DIRECTORY_KINDS.items():
             _record_html = (
                 "record.html" if getattr(_dcfg, "contact_page", False)
+                or getattr(_dcfg, "company_page", False)
                 else "mentor.html" if getattr(_dcfg, "mentor_page", False)
                 else None
             )

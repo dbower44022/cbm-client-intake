@@ -110,9 +110,12 @@ def make_router(cfg: DirectoryConfig) -> APIRouter:
             # The View Contact page: whether this kind's rows open it, and
             # whether its Communications tab has a live backend (GMAIL_SYNC).
             "contactPage": cfg.contact_page,
+            # The Company record page: shares record.html with View Contact
+            # but hides Communications (Companies talk through their people).
+            "companyPage": cfg.company_page,
             "commsEnabled": get_settings().gmail_sync,
-            # True => the View Contact page shows an Analytics tab rendering
-            # this contact's dashboard from the analytics app (Phase E).
+            # True => the record page shows an Analytics tab rendering this
+            # record's dashboard from the analytics app (Phase E).
             "analyticsEnabled": get_settings().analytics_active,
         }
 
