@@ -41,6 +41,7 @@
     <section id="crMainView" hidden>
       <nav class="cr__tabs" id="crTabs">
         <button type="button" class="cr__tab is-active" data-crtab="overview">Overview</button>
+        <button type="button" class="cr__tab" data-crtab="contacts" id="crContactsTab" hidden>Contacts</button>
         <button type="button" class="cr__tab" data-crtab="communications">Communications</button>
         <button type="button" class="cr__tab" data-crtab="analytics" id="crAnaTab" hidden>Analytics</button>
       </nav>
@@ -49,6 +50,27 @@
 
       <div class="cr__panel" data-crpanel="overview">
         <div id="crOverviewBody"></div>
+      </div>
+
+      <!-- Contacts: the people at this company (name/phone/email). Select a
+           row to preview the contact's full detail on the right; the name is
+           a link to the full View Contact page. Only shown on the Company
+           record page (session.companyPage). -->
+      <div class="cr__panel" data-crpanel="contacts" hidden>
+        <div class="cr__contacts">
+          <div class="cr__contacts-list">
+            <p class="dir__preview-empty" id="crContactsEmpty" hidden>No contacts linked to this company.</p>
+            <table class="dir__table cr__contacts-table" id="crContactsTable" hidden>
+              <thead>
+                <tr><th>Name</th><th>Phone</th><th>Email</th></tr>
+              </thead>
+              <tbody id="crContactsBody"></tbody>
+            </table>
+          </div>
+          <aside class="cr__contacts-preview" id="crContactsPreview">
+            <p class="dir__preview-empty">Select a contact to preview their details here.</p>
+          </aside>
+        </div>
       </div>
 
       <!-- Analytics: this contact's own dashboard, rendered by the analytics

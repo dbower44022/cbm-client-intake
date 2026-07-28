@@ -140,3 +140,23 @@
 #crCommModal .dir__modal-body { display: flex; flex-direction: column; }
 #crCommModal .dir__modal-body > * { flex-shrink: 0; }
 #crCommModal .dir__modal-body > .cr__orig-frame { flex-shrink: 1; }
+
+/* Contacts tab (Company record page): list on the left, preview on the right —
+   the Contacts-directory pattern, embedded in a tab. */
+.cr__contacts { display: flex; gap: 1rem; align-items: stretch; min-height: 20rem; }
+.cr__contacts-list { flex: 1 1 55%; min-width: 0; }
+.cr__contacts-preview {
+  flex: 1 1 45%; min-width: 0; padding: 0.8rem 1rem;
+  background: var(--cbm-surface); border: 1px solid var(--cbm-border);
+  border-radius: var(--cbm-radius); overflow: auto;
+}
+.cr__contacts-preview h2 {
+  color: var(--cbm-navy); font-family: var(--cbm-font-serif);
+  font-size: 1.15rem; margin: 0 0 0.6rem;
+}
+.cr__contacts-table tbody tr { cursor: pointer; }
+.cr__contacts-table tbody tr.is-selected { background: #eef4fb; }
+.cr__contacts-table tbody tr:hover { background: #f5f8fc; }
+@media (max-width: 700px) {
+  .cr__contacts { flex-direction: column; }
+}

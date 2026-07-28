@@ -4,6 +4,42 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.189.0] — 2026-07-28
+
+**feat(directory): Contacts tab on the Company record page.** The people at
+this company on a dedicated tab, with a preview pane on the right that shows
+the selected contact's full CRM-arranged detail — the Contacts-directory
+pattern, embedded in the tab. Frontend-only; no new backend endpoints.
+
+- `directory/frontend/record.html` gains the tab button (hidden by default,
+  `session.companyPage` shows it) and a two-column body: a name / phone /
+  email table on the left, a preview aside on the right.
+- `directory/frontend/record.js` — `renderContacts()` populates the list from
+  `detail.contacts` (already in the /records/{id} payload via
+  `_company_contacts`). Row click auto-selects and previews via
+  `renderContactPreview(id)`; name click opens the full View Contact page in a
+  stable `cbm-contact-{id}` window (mirrors the directory grid's row-name
+  behavior — modifier and middle clicks fall through to the real href).
+- The preview reuses the same `/contactdetail/{id}` endpoint the Companies
+  pop-up already calls, and renders through the shared `CBMDirRender.panelsInto`
+  — so the tab and the pop-up show the same CRM view. Previews are cached
+  per-session to avoid re-fetching.
+- Auto-selects the first row so the preview isn't empty on first open. Guards
+  against a race where a slower fetch would overwrite a newer selection.
+- `directory/frontend/record.css` adds `.cr__contacts` (flex split, min-height,
+  wraps to column below 700px) + selected/hover row styles.
+
+Contact and Mentor record pages are unaffected — the tab stays hidden there.
+
+**Verified.** Full suite 1479 green — no Python changes, the tab is JS/HTML/CSS
+only. Manual driving still owed (see below).
+
+**Not yet driven live.** After deploy: open a Company record page →
+Contacts tab → confirm the list shows the same people as the pop-up did,
+selecting a row previews their details on the right, clicking the name opens
+the full View Contact page in a stable named window (a second click reuses
+the same tab). The tab does not appear on Contact or Mentor record pages.
+
 ## [0.188.0] — 2026-07-28
 
 **feat: analytics reach the last two record surfaces** — Company gets a real

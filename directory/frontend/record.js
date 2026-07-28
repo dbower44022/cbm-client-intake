@@ -211,6 +211,7 @@
       commsLoaded = true;
       renderComms();
     }
+    if (key === "contacts") renderContacts();
     if (key === "analytics") renderAnalytics();
   }
 
@@ -263,6 +264,99 @@
     body.innerHTML = "";
     R.panelsInto(body, detail.panels);
     if (!body.children.length) body.appendChild(el("p", "dir__restricted", "No details to show."));
+  }
+
+  // ---- Contacts tab (Company record page) ---------------------------------
+  // Lists the company's linked contacts (from detail.contacts). Row click ->
+  // preview the contact's full detail on the right. Name click -> open the
+  // full View Contact page in its own stable named tab (same as the
+  // directory grid's row-name behavior).
+  var contactsRendered = false;
+  var contactsPreviewCache = {};
+  var contactsSelectedId = null;
+
+  function openContactWindow(contactId) {
+    var url = "/directory/contacts/record/" + encodeURIComponent(contactId);
+    var w = window.open(url, "cbm-contact-" + contactId);
+    if (w) w.focus();
+  }
+
+  function renderContacts() {
+    if (contactsRendered) return;
+    contactsRendered = true;
+    var list = (detail && detail.contacts) || [];
+    var tbody = $("crContactsBody");
+    var table = $("crContactsTable");
+    var empty = $("crContactsEmpty");
+    tbody.innerHTML = "";
+    if (!list.length) {
+      hide(table); show(empty);
+      return;
+    }
+    show(table); hide(empty);
+    list.forEach(function (c) {
+      var tr = el("tr"); tr.dataset.id = c.id;
+      var nameTd = el("td");
+      var a = el("a", null, c.name || "(no name)");
+      a.href = "/directory/contacts/record/" + encodeURIComponent(c.id);
+      a.addEventListener("click", function (ev) {
+        if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey || ev.button !== 0) return;
+        ev.preventDefault(); ev.stopPropagation();
+        openContactWindow(c.id);
+      });
+      nameTd.appendChild(a); tr.appendChild(nameTd);
+      var phoneTd = el("td"); R.renderValue(phoneTd, "phone", c.phone); tr.appendChild(phoneTd);
+      var emailTd = el("td"); R.renderValue(emailTd, "email", c.email); tr.appendChild(emailTd);
+      tr.addEventListener("click", function () { selectContact(c.id); });
+      tbody.appendChild(tr);
+    });
+    // Auto-select the first row so the preview isn't empty on first open.
+    selectContact(list[0].id);
+  }
+
+  function selectContact(id) {
+    contactsSelectedId = id;
+    document.querySelectorAll("#crContactsBody tr").forEach(function (tr) {
+      tr.classList.toggle("is-selected", tr.dataset.id === id);
+    });
+    renderContactPreview(id);
+  }
+
+  async function renderContactPreview(id) {
+    var pane = $("crContactsPreview");
+    pane.innerHTML = "";
+    if (contactsPreviewCache[id]) {
+      paintContactPreview(pane, contactsPreviewCache[id]);
+      return;
+    }
+    pane.appendChild(el("p", "dir__preview-empty", "Loading…"));
+    try {
+      var d = await api("/contactdetail/" + encodeURIComponent(id));
+      contactsPreviewCache[id] = d;
+      // The user may have clicked a different row while this was in flight.
+      if (contactsSelectedId !== id) return;
+      pane.innerHTML = "";
+      paintContactPreview(pane, d);
+    } catch (e) {
+      pane.innerHTML = "";
+      pane.appendChild(el("p", "dir__restricted", e.message));
+    }
+  }
+
+  function paintContactPreview(pane, d) {
+    var head = el("h2"); head.textContent = d.name || "(no name)";
+    // Clicking the header name opens the full View Contact page too.
+    if (d.id) {
+      var link = el("a", null, d.name || "(no name)");
+      link.href = "/directory/contacts/record/" + encodeURIComponent(d.id);
+      link.addEventListener("click", function (ev) {
+        if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey || ev.button !== 0) return;
+        ev.preventDefault(); openContactWindow(d.id);
+      });
+      head.innerHTML = ""; head.appendChild(link);
+    }
+    pane.appendChild(head);
+    R.panelsInto(pane, d.panels);
   }
 
   // The contact's own email addresses, pulled from the detail panels (fields
@@ -1472,6 +1566,9 @@
       var commsTabBtn = document.querySelector('[data-crtab="communications"]');
       if (commsTabBtn) commsTabBtn.hidden = true;
     }
+    // The Contacts tab lives on the Company record page — the people at this
+    // company, with a preview pane like the Contacts directory.
+    if (session && session.companyPage) $("crContactsTab").hidden = false;
     $("crAnaRefresh").addEventListener("click", function () { renderAnalytics(true); });
     $("crComposeBtn").addEventListener("click", function () {
       if (!commsOn()) { notify("The email integration isn't enabled on this deployment."); return; }
