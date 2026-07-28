@@ -4,6 +4,12 @@ Plain-language reference for the birthday celebration on the portal — what it
 does, who sees what, and how to test it. Built v0.177.0 (own birthday) and
 v0.179.0 (the CBM-wide announcement).
 
+**Status: LIVE on production and crm-test** (deployed 2026-07-28, both apps
+verified at v0.185.0). The CRM half was driven live on crm-test — the roster
+read, the own greeting, and the announcement all returned correctly. Nobody has
+yet *watched* it happen on a real member's birthday; that will take care of
+itself on the next one (see the data note below).
+
 ---
 
 ## What it does
@@ -105,13 +111,21 @@ have just set may take a few minutes to appear.
 
 ## What has to be true for it to fire
 
-**This feature is only as good as the data.** As of 2026-07-27, crm-test held
-43 member profiles, 36 with a linked Contact, and **exactly one with a birthday
-recorded**. Unless production is better populated, the greeting will almost
-never appear.
+**This feature is only as good as the data.** Measured 2026-07-28:
 
-If CBM wants birthdays to actually land, members need to fill in Birthday in
-My Mentor Profile → Personal details, or the CRM team backfills the field.
+| | member profiles | with a linked Contact | **with a birthday recorded** |
+|---|---|---|---|
+| **production** | 21 | 19 | **5** (all current members, so all announceable) |
+| crm-test | 43 | 36 | 1 |
+
+So in production the greeting will fire on roughly **five days a year** — real,
+but rare enough that you should not read "I haven't seen it" as a fault.
+
+Two things raise that number, both outside the app: members filling in
+**My Mentor Profile → Personal details → Birthday**, or the CRM team
+backfilling `Contact.cBirthday` for people whose date is already known. A
+member with no linked Contact (2 in production) can't be greeted at all until
+that link exists — Mentor Administration's completeness badge flags those.
 
 ---
 

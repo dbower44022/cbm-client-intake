@@ -1813,19 +1813,20 @@ the sentence, built from DOM nodes not markup), handles several people on one
 day ("Wish A, B and C…"), and adds an "Also celebrating today: …" line when it's
 your birthday AND a colleague's. Payload key `birthday` → **`birthdays` =
 `{date, own, others}`**. 33 tests; both modes driven in a real browser.
-**NOT yet driven live** — after deploy: a member whose `cBirthday` is today
-signs in (own greeting), then a second member (announcement naming the first);
-remember the roster caches for up to an hour. Mechanics: CHANGELOG 0.179.0;
-staff/testing reference: **`birthday-greetings.md`** — incl.
+**Live state:** the CRM half was driven live on crm-test (roster read under the
+API key, own greeting vs. announcement both correct) and the browser half in
+the stub harness; **nobody has yet watched it fire on a real member's
+birthday** — that will happen on its own (see the data note). Mechanics:
+CHANGELOG 0.179.0; staff/testing reference: **`birthday-greetings.md`** — incl.
 **`scripts/preview_birthday.py`**, which serves the real app locally with a
 SHIFTED "today" (`--date 11-07`) so the greeting can be seen against real
-records without editing anyone's Contact. **Data caveat (probed live
-2026-07-27): only ONE of 43 crm-test member profiles has a birthday recorded**
-(Douglas Bower, 11-07; 36 have a linked Contact), so the feature will rarely
-fire until members fill in My Mentor Profile → Personal details → Birthday —
-worth raising with Doug before expecting to see it in the wild. The BACKEND was
-verified live against crm-test (roster read under the API key, own-greeting vs.
-announcement both correct); the browser half was verified in the stub harness.
+records without editing anyone's Contact. **Data note (both CRMs probed
+read-only 2026-07-28, prod via `doctl apps console`): production has 21 member
+profiles, 19 with a linked Contact and only 5 with a birthday recorded** (all 5
+current, so all announceable) — it will fire ~5 days a year; **crm-test has 1
+of 36**. Do NOT diagnose "I never see it" as a bug before checking the data:
+the lever is members filling in My Mentor Profile → Personal details →
+Birthday, or a CRM-side backfill of `Contact.cBirthday`.
 
 Before that: **v0.177.0** (2026-07-26, committed NOT pushed) — the first cut of
 the above: **a mentor signing in on their birthday gets an animated fireworks
@@ -5576,9 +5577,10 @@ the synced lists were verified identical on crm-test and prod.
   ("Wish X a Happy Birthday!"), the rules (Cleveland's day, leap day, greeted
   vs. announced statuses, once per day per browser), **how to test it without
   changing any data** (`scripts/preview_birthday.py` → http://localhost:8010/),
-  the hourly roster cache, and the honest data caveat — as of 2026-07-27 only
-  ONE member in crm-test has a birthday recorded, so it will rarely fire until
-  members fill the field in.
+  the hourly roster cache, and the honest data caveat — LIVE on both envs since
+  2026-07-28, but only **5 of 19** production members (and 1 of 36 in crm-test)
+  have a birthday recorded, so it fires ~5 days a year until members fill the
+  field in.
 - `mentor-directory.md` — user guide for the **Mentors directory** (`/directory/
   mentors`) and the rich, read-only **mentor profile page** it opens
   (`/directory/mentors/record/{id}`): what's on the page (photo, headline,
