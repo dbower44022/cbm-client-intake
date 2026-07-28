@@ -784,6 +784,7 @@ unresolved: CRM prerequisites, live verification owed, cleanups, decisions).
 | `README.md` | Repo overview; how to run locally / add a form |
 | `DEPLOYMENT.md` | Engineer deploy runbook, env vars, reliability ops, backups |
 | `STAFF-DEPLOYMENT-GUIDE.md` | Console-only companion for CBM staff |
+| `SYSTEM-ADMIN-TROUBLESHOOTING.md` | **Verify + troubleshoot the whole platform without an engineer** — health check, weekly sweep, symptom index, the safe-remediation toolkit and its off-limits list. Audience: EspoCRM Admin + DO console, no CLI |
 | `intake-processing-overview.md` | Plain-language capture → worker → CRM pipeline, per-form records, where each intake kind gets worked |
 | `mentor-administration.md` | `/mentoradmin` functionality + the completeness rules |
 | `mentor-directory.md` | Mentors directory + the read-only mentor profile page |

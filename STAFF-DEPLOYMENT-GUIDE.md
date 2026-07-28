@@ -78,9 +78,14 @@ look for `"dryRun": true` (dry-run) or `"dryRun": false` (live).
 ## 4. Logging in to DigitalOcean
 
 1. Go to https://cloud.digitalocean.com and sign in as `admin@cbmentors.org`.
+   The password (and its two-factor code) is in **Proton Pass**.
 2. Click **Apps** in the left sidebar.
-3. Click **cbm-client-intake**. This is the app's dashboard — everything below
-   happens here.
+3. Click the app you want. This is its dashboard — everything below happens here.
+
+> **⚠️ Pick the right app.** There are three, and the names are a trap:
+> **`cbm-client-intake-prod`** is **PRODUCTION** (apps.clevelandbusinessmentors.org),
+> plain **`cbm-client-intake`** is **TEST**, and **`lobster-app`** is the dry-run
+> dev app. Confirm the name at the top of the page before changing anything.
 
 ## 5. How everyday updates get published
 
@@ -244,6 +249,12 @@ submissions you make through the live forms must be deleted **inside EspoCRM**:
 When in doubt, **don't change settings** — capture what you see (a screenshot of
 the console and the relevant **Runtime Logs** line) and pass it to an engineer.
 
+> **If you hold EspoCRM Admin rights,** the table above is only the summary. See
+> [`SYSTEM-ADMIN-TROUBLESHOOTING.md`](SYSTEM-ADMIN-TROUBLESHOOTING.md) for the
+> full health check, a symptom-by-symptom index covering the CRM, the staff
+> tools, email, documents and calendar, and the list of repairs you may safely
+> carry out yourself when no engineer is available.
+
 ## 13. Things NOT to do
 
 - **Don't delete the app** in the console — that takes the live forms offline.
@@ -275,6 +286,12 @@ the console and the relevant **Runtime Logs** line) and pass it to an engineer.
 
 This guide is one of several. If you need more than the staff-level view:
 
+- [`SYSTEM-ADMIN-TROUBLESHOOTING.md`](SYSTEM-ADMIN-TROUBLESHOOTING.md) — the
+  **System Administrator's verification and troubleshooting guide**: how to
+  confirm the CRM and all the apps are working, a symptom-by-symptom index when
+  they aren't, and the list of repairs you may safely perform yourself when no
+  engineer is available. Section 12 above is the short version; that guide is
+  the full one.
 - [`DEPLOYMENT.md`](DEPLOYMENT.md) — the **engineer-level runbook**: command
   line, deploy script, rollback, production reproduction, full troubleshooting.
 - [`README.md`](README.md) — an **overview of the app** and how it's structured
