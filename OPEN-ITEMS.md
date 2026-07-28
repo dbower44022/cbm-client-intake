@@ -21,12 +21,68 @@ found; move resolved items to the bottom with the resolution date.
      record page.
 
 1. **This repository's `.git` lives inside the Dropbox-synced tree, and Dropbox
-   ate two local commits** (2026-07-28 10:38). Mid-session, Dropbox replaced
-   `.git` with a fresh clone of `origin/main`; the reflog was left with a single
-   `clone` entry and the unpushed commits `e8f3a72` and `4230811` were
-   unrecoverable. The working files survived (Dropbox keeps syncing those), so
-   the content was restored by hand in commit `0451b09` — but nothing guarantees
-   that next time.
+   destroyed it twice in one day** (2026-07-28).
+
+   - **~10:38** — Dropbox replaced `.git` with a fresh clone of `origin/main`.
+     The reflog was left with a single `clone` entry and the unpushed commits
+     `e8f3a72` and `4230811` vanished. Working files survived, so the content
+     was restored by hand in commit `0451b09`.
+   - **~15:19** — worse: `.git` was reduced to a single empty `logs/HEAD`
+     (12 KB total). The directory stopped being a git repository at all — every
+     git command failed with `fatal: not a git repository` — while a parallel
+     session was actively writing a 52 KB document into the working tree with
+     no way to commit it. Rebuilt from `origin/main`; the in-flight work went in
+     as `862f2dc`.
+
+   The same afternoon Dropbox also left a `.venv (renamed)/` beside the real one
+   — 55 MB, 2,583 files, no `bin/`. **The hazard is not confined to `.git`.**
+
+   **Correction to the earlier record:** `e8f3a72` and `4230811` were *not*
+   unrecoverable. Both were found intact in Dropbox's own **local** cache during
+   the 15:19 salvage. The original entry was wrong on the single most important
+   point, which is why the rule below is stated the way it is.
+
+   **What survives and what does not** — established by salvaging the 15:19
+   incident:
+
+   - **Committed work is recoverable.** `~/Dropbox/.dropbox.cache/old_files`
+     held 6 git packfiles and 1,364 loose objects for this repo, yielding **134
+     commits**. 13 of them were absent from GitHub, and every one turned out to
+     be a superseded pre-amend/reword duplicate or an abandoned stash whose
+     final content was already pushed.
+   - **Uncommitted work is recoverable by no means at all.** The 52 KB System
+     Admin guide existed in **zero** git objects — no pack, no loose object, no
+     blob. It had never been `git add`ed, so nothing anywhere had ever hashed
+     it. Only the file on disk existed.
+
+   That asymmetry is the whole lesson: **the danger is never the history — it is
+   whatever has not been committed yet.** Commit early; the remote is a bonus.
+
+   **Salvage procedure**, if it happens again — do this *before* rebuilding,
+   since a `git init` in place is harmless but the cache is not forever:
+
+   ```bash
+   C=~/Dropbox/.dropbox.cache/old_files
+   # packfiles: 4-byte "PACK" magic
+   find $C -type f -size +1k | while read f; do \
+     [ "$(head -c4 "$f")" = PACK ] && echo "$f"; done
+   # index each into a scratch bare repo:
+   #   git init --bare salvage.git
+   #   cp <pack> salvage.git/objects/pack/p.pack && git -C salvage.git index-pack …
+   # loose objects: zlib streams starting 0x78 that decompress to
+   #   "commit|blob|tree|tag <len>\0" — write to salvage.git/objects/ab/cdef…
+   ```
+
+   Then `git cat-file --batch-all-objects` to enumerate, and compare against
+   `git rev-list --all` from a fresh clone to find anything the remote lacks.
+
+   **Do not use Dropbox's cloud Rewind for this.** It restores *folders*, so
+   rewinding rolls the working tree back too — and the working tree is where the
+   only copy of uncommitted work lives, so it can destroy the very thing you are
+   trying to save. A `.git` reassembled from an unordered file-level snapshot is
+   also a prime candidate for silent corruption (refs pointing at objects that
+   did not come back). The local cache above is strictly better: read-only,
+   instant, and verifiable.
 
    **Why it happens:** `.git` is thousands of small files that must change
    together. Dropbox syncs them individually and with no ordering guarantee, so
@@ -46,10 +102,19 @@ found; move resolved items to the bottom with the resolution date.
    - **Move the repo out of Dropbox entirely** (e.g. `~/Projects/`) and rely on
      GitHub for transport. The clean fix.
 
-   Recommendation: the `com.dropbox.ignored` attribute on `.git`, or move the
-   repo out of Dropbox. Until one is done, treat any uncommitted or unpushed
-   work in this repo as at risk, and expect the same hazard in every other
-   Dropbox-hosted repo (`crmbuilder`, `cbm-mentoring-app`, …).
+   **Recommendation: move the repo out of Dropbox.** Two destructions in one
+   day settled this. The `com.dropbox.ignored` attribute is a real fix but has
+   to be re-applied every time `.git` is recreated — including after each of
+   these incidents — and it was absent both times precisely because nobody
+   remembered. Relocation cannot be forgotten. Note the `.venv (renamed)`
+   debris shows the working tree is exposed too, which the ignore attribute
+   would not have helped with at all.
+
+   Until it is done: **commit often, and never let a long editing session
+   accumulate uncommitted work** — that is the only category the salvage
+   procedure cannot rescue. Expect the same hazard in every other
+   Dropbox-hosted repo (`crmbuilder`, `cbm-mentoring-app`, …); their `.git`
+   directories are worth checking.
 
 ## Smaller follow-ups from the 2026-07-24 partner migration
 
