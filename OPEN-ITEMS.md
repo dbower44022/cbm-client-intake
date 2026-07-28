@@ -21,6 +21,37 @@ found; move resolved items to the bottom with the resolution date.
      engagement's Details tab and a peek pop-up). Does "client analytics" mean
      the engagement view, the company view, or a new client page?
 
+1. **This repository's `.git` lives inside the Dropbox-synced tree, and Dropbox
+   ate two local commits** (2026-07-28 10:38). Mid-session, Dropbox replaced
+   `.git` with a fresh clone of `origin/main`; the reflog was left with a single
+   `clone` entry and the unpushed commits `e8f3a72` and `4230811` were
+   unrecoverable. The working files survived (Dropbox keeps syncing those), so
+   the content was restored by hand in commit `0451b09` — but nothing guarantees
+   that next time.
+
+   **Why it happens:** `.git` is thousands of small files that must change
+   together. Dropbox syncs them individually and with no ordering guarantee, so
+   another machine's (or an older) `.git` can overwrite this one. This also
+   risks *corrupting* a repository, not just losing commits.
+
+   **Options, cheapest first:**
+   - **Push early and often** — a pushed commit survives any local `.git` loss.
+     Weakest fix; it only narrows the window, and conflicts with the "Doug
+     reviews and pushes" convention for work-in-progress.
+   - **Add a Dropbox selective-sync / ignore rule for `.git`** (Dropbox supports
+     marking a folder "ignored" via extended attribute:
+     `attr -s com.dropbox.ignored -V 1 .git`). Keeps the working tree synced,
+     stops the history being synced. Note this makes the repo's history
+     machine-local, which is the correct model anyway — git already has a
+     sync mechanism, and it is called a remote.
+   - **Move the repo out of Dropbox entirely** (e.g. `~/Projects/`) and rely on
+     GitHub for transport. The clean fix.
+
+   Recommendation: the `com.dropbox.ignored` attribute on `.git`, or move the
+   repo out of Dropbox. Until one is done, treat any uncommitted or unpushed
+   work in this repo as at risk, and expect the same hazard in every other
+   Dropbox-hosted repo (`crmbuilder`, `cbm-mentoring-app`, …).
+
 ## Smaller follow-ups from the 2026-07-24 partner migration
 
 2. **Fatherhood Initiative – Cuyahoga County has no partner manager on prod**
