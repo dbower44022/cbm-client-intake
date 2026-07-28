@@ -1,12 +1,25 @@
 # `CMentorProfile` meeting-preference fields — CRM build specification
 
-**Status: NOT BUILT — wanted for mentor-supplied Zoom meeting links (My Mentor
-Profile `/mentorprofile` + the session tools' New-session editor).** The app
-side shipped feature-gated (v0.151.0): the two profile-editor fields and the
-session editor's link pre-fill activate on their own once BOTH fields exist
-(metadata feature-detection, the `mentorSummary` / `sessionTranscription`
-precedent), so this build can land before or after any app deploy. Build on
-**crm-test first**; prod follows. Track as a crmbuilder program in
+**Status: BUILT on crm-test + VERIFIED LIVE 2026-07-28.** Both fields
+probe-verified in crm-test metadata (exact enum casing incl. the
+`Zoom Personal Meeting` option, `Google Meet` default), and the whole loop
+driven live in the browser as Doug: the two fields appeared in
+`/mentorprofile` Mentoring preferences with **no app deploy** (feature
+detection worked), a Zoom preference + test link saved and GET-verified on
+the profile (`modifiedBy` = the mentor), and a **New session** editor on a
+real engagement pre-filled its Video meeting link with the PMI URL. The test
+values were then reverted (provider back to Google Meet, link cleared) — set
+your real PMI link whenever you want the feature on. Residual items:
+(1) confirm the fields are also built on **prod** (the app there activates on
+its own the same way); (2) the first real Zoom-preference **Scheduled save**
+should be eyeballed once — event carries the Zoom link, no Meet minted (this
+is the long-standing hand-typed-link path, so low risk).
+
+The app side shipped feature-gated (v0.151.0): the two profile-editor fields
+and the session editor's link pre-fill activate on their own once BOTH fields
+exist (metadata feature-detection, the `mentorSummary` /
+`sessionTranscription` precedent), so this build can land before or after any
+app deploy. Track as a crmbuilder program in
 `ClevelandBusinessMentors/programs/` per that repo's requirement-first process.
 
 ## What this is

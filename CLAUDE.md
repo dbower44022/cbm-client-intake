@@ -2415,10 +2415,16 @@ hand-typed-link rule in `gcal._create` then carries the Zoom URL into the
 calendar event and mints no Meet; clearing the field opts that session back
 into a Meet. Zero calendar-hook changes; Fathom's URL-normalize +
 invitee-overlap matching (v0.126.0) already covers reused PMI rooms.
-CHANGELOG 0.151.0. **Live check after the CRM build (crm-test):** set
-preference + link in /mentorprofile → New session pre-fills it → Scheduled
-save → event carries the Zoom link, no Meet; cleared-link path still mints a
-Meet. Also this session: **`prds/transcription-services-overview.md`** — the
+CHANGELOG 0.151.0. **CRM fields BUILT on crm-test + VERIFIED LIVE
+2026-07-28** (browser-driven as Doug): both fields appeared in
+`/mentorprofile` with no deploy (feature detection), Zoom preference + test
+link saved and GET-verified (`modifiedBy` = the mentor), a New session on a
+real engagement pre-filled the PMI URL into Video meeting link; test values
+then reverted (provider → Google Meet, link cleared) so Doug sets his real
+PMI when wanted. Residual: confirm the fields exist on **prod** (activates
+on its own), and eyeball the first real Zoom-preference Scheduled save
+(event carries the Zoom link, no Meet — the long-standing hand-typed-link
+path). Also this session: **`prds/transcription-services-overview.md`** — the
 executive overview of note-taker vendor options for Doug's CBM discussion
 (Fireflies free-tier API = best add candidate; Otter + Zoom AI Companion NOT
 directly integrable — personal accounts have no API; an email-ingestion
