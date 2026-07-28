@@ -705,6 +705,11 @@ async def get_detail(
         # the primary contact is shown in the key facts; the frontend lists the
         # rest under "Other contacts" on the Overview rail.
         "primaryContactId": parent.get(cfg.primary_contact_id_attr),
+        # The engagement's linked CClientProfile — the Analytics tab uses it to
+        # render the client dashboard section alongside the engagement dashboard
+        # (Doug's §17.5 ruling 2). None on other domains and on engagements
+        # whose profile link is empty; the frontend guards on truthiness.
+        "clientProfileId": parent.get("engagementClientId"),
         "sessions": sessions,
         "supportsComentor": cfg.supports_comentor,
     }

@@ -579,6 +579,26 @@ async def test_get_detail_company_falls_back_to_profile_linked_company():
 
 
 @pytest.mark.asyncio
+async def test_get_detail_carries_client_profile_id_for_analytics():
+    """The Analytics tab renders a second, client-scoped dashboard alongside
+    the engagement dashboard (Doug's §17.5 ruling 2). It needs the linked
+    CClientProfile id — so the detail payload carries it as clientProfileId
+    when the engagement has one, and None when it doesn't."""
+    with_client = Fake(records={("CEngagement", "E1"): {
+        "name": "Agape — Intake", "engagementStatus": "Active",
+        "engagementClientId": "cp1", "engagementClientName": "Agape W8loss",
+    }})
+    d1 = await service.get_detail(MENTOR, with_client, "E1")
+    assert d1["clientProfileId"] == "cp1"
+
+    without_client = Fake(records={("CEngagement", "E2"): {
+        "name": "Bare Engagement", "engagementStatus": "Active",
+    }})
+    d2 = await service.get_detail(MENTOR, without_client, "E2")
+    assert d2["clientProfileId"] is None
+
+
+@pytest.mark.asyncio
 async def test_get_detail_overview_shows_assigned_mentor_above_cadence():
     # The assigned mentor is a key fact on the Overview rail, right above the
     # meeting cadence, linked to a CMentorProfile pop-up (Doug's ruling).

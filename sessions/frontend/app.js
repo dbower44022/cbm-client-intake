@@ -5537,6 +5537,37 @@
   // the permission check and every number is ACL-bounded to this viewer.
   var anaLoadedFor = null;
 
+  async function fetchDashboard(entity, id) {
+    var url = "/analytics/api/record/" + encodeURIComponent(entity) + "/" +
+      encodeURIComponent(id);
+    var r = await (window.CBMBusy ? CBMBusy.fetch(url) : fetch(url));
+    var body = await r.json();
+    if (!r.ok) throw new Error((body && body.detail) || ("Request failed (" + r.status + ")"));
+    return body;
+  }
+
+  function paintDashboardSection(grid, body, headingText) {
+    if (headingText) {
+      var head = document.createElement("h3");
+      head.className = "an__section-head";
+      head.textContent = headingText;
+      grid.appendChild(head);
+    }
+    (body.panels || []).forEach(function (p) {
+      var art = document.createElement("article");
+      art.className = "an-panel";
+      art.style.setProperty("--span", Math.max(3, Math.min(12, p.width || 4)));
+      var h3 = document.createElement("h3"); h3.textContent = p.title;
+      var head2 = document.createElement("header"); head2.className = "an-panel__head";
+      head2.appendChild(h3);
+      var bodyEl = document.createElement("div"); bodyEl.className = "an-panel__body";
+      art.appendChild(head2); art.appendChild(bodyEl);
+      try { CBMCharts.renderPanel(bodyEl, p, { crmUrl: body.crmUrl }); }
+      catch (e) { bodyEl.innerHTML = '<p class="anc-err">Could not render this panel.</p>'; }
+      grid.appendChild(art);
+    });
+  }
+
   async function renderAnalytics(force) {
     if (!currentDetail) return;
     var entity = config && config.parentEntity;
@@ -5547,31 +5578,29 @@
     grid.innerHTML = "";
     msg.hidden = false; msg.textContent = "Loading…";
     try {
-      var url = "/analytics/api/record/" + encodeURIComponent(entity) + "/" +
-        encodeURIComponent(currentDetail.id);
-      var r = await (window.CBMBusy ? CBMBusy.fetch(url) : fetch(url));
-      var body = await r.json();
-      if (!r.ok) throw new Error((body && body.detail) || ("Request failed (" + r.status + ")"));
-      if (!body.available) {
+      // Primary dashboard: this record's own scope.
+      var primary = await fetchDashboard(entity, currentDetail.id);
+      if (primary.available) {
+        // A record page with two dashboards labels each; a page with only its
+        // own leaves it unlabeled to keep the layout compact.
+        var primaryHeading = currentDetail.clientProfileId ? (primary.pages && primary.pages[0] && primary.pages[0].title) || null : null;
+        paintDashboardSection(grid, primary, primaryHeading);
+      }
+      // Extra section — the engagement's linked client (§17.5 ruling 2): a
+      // second dashboard rendered on the same tab so the mentor sees the
+      // engagement's story AND the client business's story on one screen.
+      if (currentDetail.clientProfileId) {
+        var client = await fetchDashboard("CClientProfile", currentDetail.clientProfileId);
+        if (client.available) {
+          paintDashboardSection(grid, client, (client.pages && client.pages[0] && client.pages[0].title) || "Client Analytics");
+        }
+      }
+      if (grid.children.length) {
+        msg.hidden = true;
+      } else {
         msg.textContent = "No analytics have been set up for this record type yet. " +
           "An analytics author can publish a dashboard for it in the Analytics app.";
-        return;
       }
-      var panels = body.panels || [];
-      if (!panels.length) { msg.textContent = "No panels to show."; return; }
-      msg.hidden = true;
-      panels.forEach(function (p) {
-        var art = document.createElement("article");
-        art.className = "an-panel";
-        art.style.setProperty("--span", Math.max(3, Math.min(12, p.width || 4)));
-        var head = document.createElement("header"); head.className = "an-panel__head";
-        var h = document.createElement("h3"); h.textContent = p.title; head.appendChild(h);
-        var bodyEl = document.createElement("div"); bodyEl.className = "an-panel__body";
-        art.appendChild(head); art.appendChild(bodyEl);
-        try { CBMCharts.renderPanel(bodyEl, p, { crmUrl: body.crmUrl }); }
-        catch (e) { bodyEl.innerHTML = '<p class="anc-err">Could not render this panel.</p>'; }
-        grid.appendChild(art);
-      });
     } catch (e) {
       anaLoadedFor = null;                      // let the next open/refresh retry
       if (e.status === 401) { showLogin(); return; }
