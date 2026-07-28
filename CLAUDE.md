@@ -1744,14 +1744,35 @@ feature-detects it and falls back to `Received` (explanation still in
 `intakeMessage`) until built, then activates with no deploy.
 Verified: 1463 tests (30 new); migration 0024 up+down + the exact Polunas
 sequence round-tripped on live local Postgres; the form driven in a real browser.
-**NOT yet driven live.** **Doug-side cleanup still open:** the Polunas duplicate
-(engagement `6a67b925bf93ab219` + profile `6a67b9257f66200df` — keep the newer
-`6a67b9aecb6fd8180`, which has the mentor request AND the intact links), and the
-Maurer orphan (re-link profile `6a5a2c6a8749c1ec1` to its Account
-`6a5a2c69df75c8cb7` + contact so the live Sacco engagement stops pointing at an
-empty hub). **crm-test note:** its roster has only 2 public mentors, neither
-Active+accepting, so the dropdown correctly stays HIDDEN there — flip
-`publicProfile` on a couple of Active+accepting crm-test mentors to test it.
+**NOT yet driven live.** **crm-test note:** its roster has only 2 public
+mentors, neither Active+accepting, so the dropdown correctly stays HIDDEN there
+— flip `publicProfile` on a couple of Active+accepting crm-test mentors to test
+it.
+
+**The historical CRM damage is REPAIRED — DONE ON PROD 2026-07-28**, via the new
+**`scripts/repair_duplicate_intake.py`** (dry-run default, `--write` applies,
+`--scan` sweeps for more, runs as the provisioning admin on the **web**
+component since deletion is admin-only). It handles two shapes, DERIVED from
+live data rather than declared, so a stale id can never cause a destructive
+mistake:
+- **CONSOLIDATE** (polunas, maurer) — keep the profile the Account already
+  points at (zero link writes), null-fill it from the husk, re-point
+  engagements, delete the husk.
+- **RELINK** (lafrance, bower) — one profile and the Account's slot EMPTY:
+  nothing was stolen, nothing deleted, just re-attach. **Found by `--scan`, NOT
+  duplicate damage** (likeliest cause: a hand edit in the CRM cleared the link)
+  — but the symptom staff see is identical, so they were repaired too.
+14 changes applied, 0 failures; **GET-verified**: all 6 engagements now reach a
+company + contact, both husks deleted, all 6 stream notes posted, and a re-scan
+reads **58 profiles / 0 orphaned — clean**. Two findings worth keeping:
+(1) staff had already triaged Polunas before the repair — the good engagement is
+**Pending Acceptance with Brad Swimmer**, the mentor she re-submitted to ask for,
+and the duplicate is **Declined** — so the duplicate engagement was KEPT and
+merely re-pointed (a Declined record is a recorded decision; deletion stays
+opt-in behind `--delete-declined-duplicates`); (2) **EspoCRM soft-deletes and an
+ADMIN's GET still returns the row with `deleted: true`** (ordinary users get a
+404, lists exclude it) — the script must treat that as gone or it re-plans the
+delete forever. Re-running it now plans nothing for all four cases.
 
 Before that: **v0.184.0** (2026-07-27, 1433 tests green, committed NOT pushed) —
 **Submission Admin: the blended "State" column is split into two clear axes**
@@ -2029,17 +2050,23 @@ the plan** (`prds/analytics-app-plan.md`, Phases A–D all built). No migration.
   **The analytics arc (Phases A–D) is complete** — activation is unchanged: create
   `Analytics Admin Team`, set `ANALYTICS_ENABLED=true` (web + worker) + a
   `DATABASE_URL`, run the pre-deploy migrate (through 0022).
-  **Phase E — dashboards on the record views — is PLANNED, not built** (Doug,
-  2026-07-27; rulings + surface inventory + implementation sketch in
-  `prds/analytics-app-plan.md` §17). A dashboard's `scope` IS its location — the
-  work is giving the remaining record views an Analytics tab calling the existing
-  `GET /analytics/api/record/{entity}/{id}`. Ruled: placement is per DASHBOARD
-  (not per chart), **one dashboard per record type**, app-home surfaces deferred.
-  Ready to build: Engagement / Partner / Funder (the session-tool record pages,
-  via a `DomainConfig` flag on the contributions/discussion precedent) + Contact
-  (the directory View Contact page). Blocked on a Doug decision: **Company** (no
-  `Account` record page exists — pop-up vs. build the page) and **Client**
-  (`CClientProfile` has no view at all) — both in OPEN-ITEMS.md item 0. Note the
+  **Phase E — dashboards on the record views — BUILT v0.187.0 (2026-07-28) for
+  five of the seven record types** (Doug's rulings 2026-07-27; §17 of
+  `prds/analytics-app-plan.md`). A dashboard's `scope` IS its location; placement
+  is per DASHBOARD (not per chart) and there is **one dashboard per record type**
+  (enforced at save — a second page for a scope 409s naming the one to edit;
+  system pages stay unlimited). **`analytics/records.py`** seeds a starter
+  dashboard for Mentor / Engagement / Partner / Funder / Contact (4 panels each,
+  all four renderers; every CRM attribute probed live on crm-test first — see the
+  module docstring). Hosts: the three session tools (`_detail_tabs(cfg,
+  analytics=…)`, gated on `analytics_active`, tab last; `/session` now carries
+  `parentEntity`) and the directory View Contact page; Mentor Administration
+  already had its tab. All render the existing
+  `GET /analytics/api/record/{entity}/{id}` through the shared `CBMCharts`
+  (both pages now load `/shared/charts.{js,css}`). Record metrics stay
+  as-the-user and uncached. NOT yet driven live — after deploy, open a real
+  record of each type on crm-test. **Company and Client still have no tab**
+  (neither has a record screen to host one) — OPEN-ITEMS.md item 0. Note the
   portal home and `/analytics` show the same panels only because the seeded
   `system-overview` is flagged `portal_dashboard` — authoring a second system
   page and moving the flag separates them today, no code.
