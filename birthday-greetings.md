@@ -123,9 +123,15 @@ but rare enough that you should not read "I haven't seen it" as a fault.
 
 Two things raise that number, both outside the app: members filling in
 **My Mentor Profile → Personal details → Birthday**, or the CRM team
-backfilling `Contact.cBirthday` for people whose date is already known. A
-member with no linked Contact (2 in production) can't be greeted at all until
-that link exists — Mentor Administration's completeness badge flags those.
+backfilling `Contact.cBirthday` for people whose date is already known.
+
+A member with **no linked Contact** can't be greeted at all until that link
+exists — in production that is **Sharon Rose** and **Anita Khayat** (both have
+logins; Mentor Administration's completeness badge shows them as Incomplete,
+and linking a Contact there fixes it). Anita's mentor status is also empty,
+which would keep her out of the *announcement* even once she has a birthday
+recorded — the announcement is limited to current-member statuses. Tracked in
+`OPEN-ITEMS.md`.
 
 ---
 

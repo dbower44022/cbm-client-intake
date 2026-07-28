@@ -40,6 +40,25 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Data cleanup
 
+10. **Two prod CBM members have no linked Contact — and one has no mentor
+    status** (found 2026-07-28, probing the birthday roster; both CRMs read
+    read-only). On **production**:
+    - **Sharon Rose** (Active, has a login; profile `6a47dc983b1894ec6`)
+    - **Anita Khayat** (**mentorStatus empty**, has a login; profile
+      `6a637b874fcd0e913`)
+
+    The Contact is where a member's personal details live, so an unlinked
+    profile means no email/phone/address on the member record, `/mentorprofile`
+    refuses every Contact-side save (readable 400 before any write), and they
+    can never be greeted on their birthday. Both should already read
+    **Incomplete** on Mentor Administration's completeness badge. Fix in
+    `/mentoradmin`: link their Contact (create one if none exists) — a staff
+    save then runs `reconcile_user_links` and stamps the User on both sides.
+    Anita's empty `mentorStatus` is a second gap: with no status she is greeted
+    on her own birthday but never **announced** to CBM (the announcement is
+    limited to current-member statuses) — set her to Active if that's what she
+    is. Context: `birthday-greetings.md`.
+
 9. **Intake-receipt redesign — CRM-side finish** (2026-07-27; app arc
    COMPLETE and converged — see the CLAUDE.md Current-status block). Three
    Doug-side items, both CRMs unless noted:
