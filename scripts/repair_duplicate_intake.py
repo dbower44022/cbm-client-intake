@@ -101,11 +101,11 @@ _MERGE_FIELDS = ("numberOfEmployees", "formationDate", "description")
 
 # A profile field set that is safe to read on any instance.
 _PROFILE_SELECT = (
-    "id,name,linkedCompanyId,linkedCompanyName,clientcontactId,clientcontactName,"
+    "id,name,deleted,linkedCompanyId,linkedCompanyName,clientcontactId,clientcontactName,"
     "numberOfEmployees,formationDate,description,createdAt"
 )
 _ENGAGEMENT_SELECT = (
-    "id,name,engagementStatus,engagementClientId,clientOrganizationId,"
+    "id,name,deleted,engagementStatus,engagementClientId,clientOrganizationId,"
     "mentorProfileId,mentorProfileName,primaryEngagementContactId,createdAt"
 )
 
@@ -218,10 +218,21 @@ CASES: tuple[Case, ...] = (
 
 
 async def _get(client: EspoClient, entity: str, rid: str, select: str) -> Optional[dict]:
+    """Read a record, treating a SOFT-DELETED one as gone.
+
+    EspoCRM deletes by flag, and an ADMIN's GET still returns the row with
+    ``deleted: true`` (ordinary users get a 404, and lists exclude it). Without
+    this check a second run of the script sees an already-deleted husk as a
+    live orphan and plans the delete all over again — the script has to be
+    re-runnable, since that is how it is verified.
+    """
     try:
-        return await client.get(entity, rid, select=select)
+        rec = await client.get(entity, rid, select=select)
     except EspoError:
         return None
+    if rec and rec.get("deleted"):
+        return None
+    return rec
 
 
 def _empty(value: Any) -> bool:
@@ -230,7 +241,7 @@ def _empty(value: Any) -> bool:
 
 async def _load(client: EspoClient, case: Case) -> Optional[dict]:
     """Read the case's live state and pick the keeper. None => cannot repair."""
-    account = await _get(client, ACCOUNT, case.account_id, "id,name,cClientProfileId")
+    account = await _get(client, ACCOUNT, case.account_id, "id,name,deleted,cClientProfileId")
     if account is None:
         case.warnings.append(f"Account {case.account_id} not found — skipped.")
         return None
@@ -358,6 +369,28 @@ def _plan(case: Case, state: dict) -> list[tuple[str, str, dict]]:
         if eid in state["engagements"]:
             steps.append(("note", f"{ENGAGEMENT}/{eid}", {"text": case.note}))
     return steps
+
+
+async def _note_already_posted(client: EspoClient, eid: str, text: str) -> bool:
+    """True if this engagement already carries this repair note.
+
+    Makes the whole script safely re-runnable: every other step is naturally
+    idempotent (a re-point that is already correct plans nothing, a delete of a
+    gone record plans nothing), but a note would stack up a fresh copy on each
+    run. Notes are only readable by a privileged user, which is what we are.
+    """
+    marker = text[:60]
+    try:
+        env = await client.list(
+            "Note",
+            where=[{"type": "equals", "attribute": "parentId", "value": eid},
+                   {"type": "equals", "attribute": "parentType", "value": ENGAGEMENT},
+                   {"type": "equals", "attribute": "type", "value": "Post"}],
+            select="id,post", max_size=20,
+        )
+    except EspoError:
+        return False  # can't tell: posting a possible duplicate beats losing it
+    return any(marker in (n.get("post") or "") for n in env.get("list", []))
 
 
 async def _guard_orphan_unreferenced(
@@ -501,6 +534,15 @@ async def run(write: bool, do_scan: bool, only: Optional[str],
             continue
 
         steps = _plan(case, state)
+        # Drop notes already posted by an earlier run (keeps --write re-runnable).
+        kept = []
+        for step in steps:
+            if step[0] == "note":
+                eid = step[1].split("/", 1)[1]
+                if await _note_already_posted(client, eid, step[2]["text"]):
+                    continue
+            kept.append(step)
+        steps = kept
         print("\n  Planned changes:")
         if not steps:
             print("    (none — already consolidated)")
