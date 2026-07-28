@@ -15,7 +15,18 @@ Fathom emits TWO next-step lists by design — the structured `action_items`
 "Next Steps" prose section (stays inside the summary); counts will
 disagree, not a bug. Remaining: the team key / team-sharing decision (an
 individual key only sees its own + shared recordings), the worker overlay
-flag, and an in-UI eyeball of the AI SUMMARY zone on a parented session.** App
+flag, and an in-UI eyeball of the AI SUMMARY zone on a parented session.
+STATE RE-CHECKED 2026-07-28 — unchanged: no overlay carries
+`FATHOM_TRANSCRIPTS`/`FATHOM_API_KEY` (Doug's individual key sits only in
+the local gitignored `.env`), and the ZZTEST probe session
+`6a5f011bce8e19a19` is still in crm-test awaiting UI deletion. Note: the
+Meet-native source is ALSO still inactive (the 2026-07-27 probe found the
+`meetings.space.created` DWD scope still missing — see
+`prds/meet-transcript-integration.md`), so **Fathom is currently the
+shortest path to live transcripts**: it needs no Google-side work at all —
+just the flag + a key on the crm-test WORKER overlay (Doug's individual
+key would serve HIS sessions immediately; the team key/sharing ruling
+widens it to everyone).** App
 side: `core/fathom.py`, the multi-source seam + `FathomTranscriptSource` in
 `sessions/transcripts.py`, the AI Summary view zone. One build note: when
 the CRM lacks `sessionAiSummary`, the action-items → empty-`nextSteps` path
