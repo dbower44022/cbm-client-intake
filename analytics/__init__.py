@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from . import computed  # noqa: F401 — registers operational/computed metrics
 from . import dashboard  # noqa: F401 — registers metrics + the seeded system page
+from . import records  # noqa: F401 — registers the per-record starter dashboards
 from .router import router as api_router
 from .store import AnalyticsStore, MemoryAnalyticsStore, make_analytics_store
 

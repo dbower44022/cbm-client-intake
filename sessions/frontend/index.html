@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="/shared/tokens.css" />
   <link rel="stylesheet" href="/shared/vendor/jodit/jodit.min.css" />
   <link rel="stylesheet" href="/shared/conversation.css" />
+  <link rel="stylesheet" href="/shared/charts.css" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -135,6 +136,21 @@
           <tbody id="sessionsBody"></tbody>
         </table>
         <p class="sx__muted" id="noSessions" hidden>No sessions recorded yet.</p>
+      </div>
+
+      <!-- Analytics: this record's own dashboard, rendered by the analytics app
+           (Phase E). The tab only exists when ANALYTICS_ENABLED is on; the
+           panels are whatever dashboard an analytics author has published for
+           this record type. Read-only. -->
+      <div class="sx__dpanel" data-dpanel="analytics" hidden>
+        <div class="sx__comm-head">
+          <h3>Analytics</h3>
+          <span class="sx__comm-acts">
+            <button type="button" class="cbm-button cbm-button--secondary sx__sm" id="anaRefresh">↻ Refresh</button>
+          </span>
+        </div>
+        <p class="sx__muted" id="anaMsg" hidden></p>
+        <div class="an__grid" id="anaGrid"></div>
       </div>
 
       <!-- Referred Clients: the client engagements that name this partner as
@@ -428,6 +444,7 @@
   <script src="/shared/vendor/jodit/jodit.min.js"></script>
   <script src="/shared/richtext.js"></script>
   <script src="/shared/conversation.js"></script>
+  <script src="/shared/charts.js"></script>
   <script src="app.js"></script>
   <script src="/shared/footer.js"></script>
 </body>

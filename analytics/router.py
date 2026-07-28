@@ -747,11 +747,35 @@ async def admin_list_pages(request: Request) -> dict:
     }
 
 
+async def _assert_one_page_per_record_type(
+    scope: str, store, *, exclude_key: Optional[str] = None
+) -> None:
+    """One dashboard per record type (Doug 2026-07-27 — plan §17).
+
+    A record's Analytics tab renders the page whose scope matches, so a second
+    page for the same record type would be silently ignored. Refuse at save
+    time and name the page to edit instead. System pages are unlimited (that is
+    how the portal dashboard is separated from the analytics viewer)."""
+    if scope == "system":
+        return
+    for page in await _all_page_specs(store):
+        if page.scope == scope and page.key != exclude_key:
+            label = dict(BUILDER_ENTITIES).get(scope, scope)
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"{label} already has a dashboard (“{page.title}”), and a record "
+                    f"type can only have one. Edit that dashboard instead."
+                ),
+            )
+
+
 @router.post("/admin/pages")
 async def admin_create_page(body: PageIn, request: Request) -> dict:
     user = _admin(request)
     store = _admin_store(request)
     values = await _page_values_from(body, store)
+    await _assert_one_page_per_record_type(values["scope"], store)
     key = _slug(values["title"])
     if not key:
         raise HTTPException(status_code=422, detail="A page needs a title.")
@@ -773,6 +797,9 @@ async def admin_update_page(page_id: str, body: PageIn, request: Request) -> dic
     if existing is None:
         raise HTTPException(status_code=404, detail="Page not found.")
     values = await _page_values_from(body, store)  # key immutable
+    await _assert_one_page_per_record_type(
+        values["scope"], store, exclude_key=existing["key"]
+    )
     values["updated_by"] = user["userName"]
     row = await store.update_page(page_id, values)
     await _log_authoring(user, action_log.ACT_ANALYTICS_PAGE_SAVED, existing["key"], f"Updated page “{values['title']}”")

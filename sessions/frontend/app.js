@@ -300,6 +300,7 @@
     if (tab === "referredClients") renderReferredClients();
     if (tab === "communications") renderComms();
     if (tab === "documents") renderDocuments();
+    if (tab === "analytics") renderAnalytics();
   }
 
   // Draggable splitters on the Overview grid: the facts rail (--ov-left, wider
@@ -5528,6 +5529,58 @@
       tr.appendChild(td(r.totalSessions == null ? "—" : String(r.totalSessions)));
       tb.appendChild(tr);
     });
+  }
+
+  // --- Analytics tab (this record's dashboard, served by the analytics app) --
+  // The whole panel is a read-only render of /analytics/api/record/{entity}/{id}
+  // — that endpoint reads the record AS THE USER first, so opening the record IS
+  // the permission check and every number is ACL-bounded to this viewer.
+  var anaLoadedFor = null;
+
+  async function renderAnalytics(force) {
+    if (!currentDetail) return;
+    var entity = config && config.parentEntity;
+    if (!entity) return;
+    if (!force && anaLoadedFor === currentDetail.id) return;  // one load per open record
+    anaLoadedFor = currentDetail.id;
+    var grid = $("anaGrid"), msg = $("anaMsg");
+    grid.innerHTML = "";
+    msg.hidden = false; msg.textContent = "Loading…";
+    try {
+      var url = "/analytics/api/record/" + encodeURIComponent(entity) + "/" +
+        encodeURIComponent(currentDetail.id);
+      var r = await (window.CBMBusy ? CBMBusy.fetch(url) : fetch(url));
+      var body = await r.json();
+      if (!r.ok) throw new Error((body && body.detail) || ("Request failed (" + r.status + ")"));
+      if (!body.available) {
+        msg.textContent = "No analytics have been set up for this record type yet. " +
+          "An analytics author can publish a dashboard for it in the Analytics app.";
+        return;
+      }
+      var panels = body.panels || [];
+      if (!panels.length) { msg.textContent = "No panels to show."; return; }
+      msg.hidden = true;
+      panels.forEach(function (p) {
+        var art = document.createElement("article");
+        art.className = "an-panel";
+        art.style.setProperty("--span", Math.max(3, Math.min(12, p.width || 4)));
+        var head = document.createElement("header"); head.className = "an-panel__head";
+        var h = document.createElement("h3"); h.textContent = p.title; head.appendChild(h);
+        var bodyEl = document.createElement("div"); bodyEl.className = "an-panel__body";
+        art.appendChild(head); art.appendChild(bodyEl);
+        try { CBMCharts.renderPanel(bodyEl, p, { crmUrl: body.crmUrl }); }
+        catch (e) { bodyEl.innerHTML = '<p class="anc-err">Could not render this panel.</p>'; }
+        grid.appendChild(art);
+      });
+    } catch (e) {
+      anaLoadedFor = null;                      // let the next open/refresh retry
+      if (e.status === 401) { showLogin(); return; }
+      msg.hidden = false; msg.textContent = e.message;
+    }
+  }
+
+  if ($("anaRefresh")) {
+    $("anaRefresh").addEventListener("click", function () { renderAnalytics(true); });
   }
 
   async function renderReferredClients() {

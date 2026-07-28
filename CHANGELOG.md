@@ -4,6 +4,62 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.187.0] — 2026-07-28
+
+**feat(analytics): starter dashboards on the record views — Phase E** (Doug's
+rulings 2026-07-27, `prds/analytics-app-plan.md` §17: analytics belong where the
+work is done; placement is per **dashboard**, not per chart; **one dashboard per
+record type**). Five record types gain an Analytics tab with a dashboard already
+built, so the tab shows real numbers on day one instead of "nobody has set this
+up yet". No migration.
+
+- **`analytics/records.py`** seeds one page per record type — Mentor,
+  Engagement, Partner, Funder, Contact — each with four panels spanning all four
+  renderers (stat / series / breakdown / table). Highlights: an engagement's
+  sessions completed + days since last contact; a partner's referrals and
+  meetings; a funder's total **Received** and pledged-&-committed money
+  (currency-formatted, the funder ledger's Received-only rule); a contact's
+  meetings attended and email threads.
+- **Every attribute these filter on was probed live against crm-test** before
+  the code was written — `CSession.engagementId` / `partnerSessionId` /
+  `sponsorProfileId`, `CEngagement.mentorProfileId` / `referringPartnerId` /
+  `lastContactDate`, the `CContribution` money fields, and the two `linkedWith`
+  reads a Contact needs. Unit tests with a fake CRM cannot catch a wrong
+  attribute name (EspoCRM 400s on an unknown where-attribute); this is what the
+  probe is for.
+- **Like every built-in, they're defaults** — an analytics admin can edit one
+  (materialising an editable copy), delete it, or reset it (v0.168/0.171).
+- **Hosts**: the three session tools (Client / Partner / Funder Management) get
+  the tab last in the bar via `_detail_tabs(cfg, analytics=…)`, following the
+  app-level `ANALYTICS_ENABLED` flag — the parent entity is a supported record
+  scope on all three, so no per-domain flag was warranted. The directory's View
+  Contact page gets the same tab. Both render through the shared `CBMCharts`,
+  and both pages now load `/shared/charts.{js,css}`. Mentor Administration
+  already had its tab (v0.162.0).
+- **One dashboard per record type is enforced at save**
+  (`_assert_one_page_per_record_type`): a second page for a record type is
+  refused with a 409 naming the existing dashboard to edit instead, because a
+  record's tab renders exactly one and the second would be silently ignored.
+  System pages stay unlimited — that is how the portal dashboard is kept
+  separate from the analytics viewer.
+- **Record metrics remain uncached and as-the-user** (the engine already skips
+  the cache when a record is in context), so ACL scope can never leak between
+  viewers. A record metric placed on a system page degrades to a readable
+  message rather than erroring.
+
+**Verified:** 18 new tests (full suite 1474 green), including value spot-checks
+so a wrong filter can't pass as "it rendered". Both new hosts driven in a real
+browser with a stubbed API: the tab appears, all four renderers draw, the 12-col
+grid honours panel widths with no horizontal overflow, Refresh re-fetches, the
+no-dashboard empty state explains itself, and the console stays clean. Four
+Phase C tests were retargeted to Companies — the record type that (still) has no
+starter dashboard — since their scope now collides with the one-per-type rule.
+
+**Not yet driven live.** After deploy, on crm-test: open a real engagement,
+partner, funder, mentor and contact and confirm each tab's numbers against the
+record. **Company and Client still have no tab** — neither has a record screen to
+host one (OPEN-ITEMS item 0).
+
 ## [0.186.0] — 2026-07-28
 
 **fix(intake): the Company type stamp writes `cCompanyType` — the field that

@@ -207,17 +207,24 @@ NO_PROFILE_MESSAGE = (
 )
 
 
-def _detail_tabs(cfg: DomainConfig) -> list[dict]:
+def _detail_tabs(cfg: DomainConfig, *, analytics: bool = False) -> list[dict]:
     """The domain's tab bar: the common tabs, plus Contributions (sponsor) or
     Referred Clients (partner) inserted right after Sessions on a domain that
     enables them. The two are on different domains, so the ordering never
-    collides."""
+    collides.
+
+    ``analytics`` appends the record's Analytics tab (Phase E) — the domain's
+    parent entity (engagement / partner / funder) is a supported record scope on
+    every domain, so this follows the app-level flag rather than a per-domain
+    one. It goes last: it's a review surface, not part of the working flow."""
     tabs = list(COMMON_DETAIL_TABS)
     idx = next((i for i, t in enumerate(tabs) if t["key"] == "sessions"), len(tabs) - 1)
     if cfg.contributions_link:
         tabs.insert(idx + 1, {"key": "contributions", "label": "Contributions"})
     if cfg.referred_clients_link:
         tabs.insert(idx + 1, {"key": "referredClients", "label": "Referred Clients"})
+    if analytics:
+        tabs.append({"key": "analytics", "label": "Analytics"})
     return tabs
 
 
@@ -298,6 +305,9 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             "title": cfg.title,
             "subtitle": cfg.subtitle,
             "parentLabel": cfg.parent_label,
+            # The record's CRM entity — the Analytics tab asks the analytics app
+            # for this entity's dashboard scoped to the open record.
+            "parentEntity": cfg.parent_entity,
             "columns": [{"key": c.key, "label": c.label, "type": c.type} for c in cfg.list_columns],
             "dateColumn": (
                 {"key": cfg.list_date_column[0], "label": cfg.list_date_column[1]}
@@ -328,7 +338,7 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             },
             "emptyMessage": cfg.empty_message,
             "noProfileMessage": NO_PROFILE_MESSAGE,
-            "detailTabs": _detail_tabs(cfg),
+            "detailTabs": _detail_tabs(cfg, analytics=get_settings().analytics_active),
             "supportsComentor": cfg.supports_comentor,
             "defaultSessionType": cfg.default_session_type,
             # True => the Communications tab talks to the real endpoints below;

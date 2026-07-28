@@ -615,10 +615,19 @@ Each phase is independently shippable and gated OFF until activated (`analytics_
 - (Future / explicitly deferred: CSV export, personalized dashboards, scheduled report
   delivery.)
 
-### Phase E — Dashboards on the record views (PLANNED, not built)
+### Phase E — Dashboards on the record views
 
 Attach a dashboard to each of the remaining record views so analytics sit where the work
 is done. Scope, rulings, surface readiness and the two open questions: **§17**.
+
+> **BUILT 2026-07-28 (v0.187.0) — five of the seven record types.** See CHANGELOG
+> 0.187.0. `analytics/records.py` seeds a starter dashboard per record type (Mentor,
+> Engagement, Partner, Funder, Contact), each with four panels spanning all four
+> renderers and every CRM attribute probed live first; the three session tools and the
+> directory's View Contact page host the tab (Mentor Administration already did); and
+> one-dashboard-per-record-type is enforced at save with a 409 naming the dashboard to
+> edit instead. **Remaining: Company and Client**, both still blocked on §17.5 — neither
+> has a record screen to host a tab.
 
 ---
 
@@ -720,11 +729,11 @@ and the work is to give the remaining record views a tab that renders it.
 
 | Record view | Entity | Host screen | State |
 |---|---|---|---|
-| Mentor | `CMentorProfile` | Mentor Administration detail | **BUILT** (v0.162.0) |
-| Engagement | `CEngagement` | Client Management record page | Ready — tabbed detail exists |
-| Partner | `CPartnerProfile` | Partner Management record page | Ready — tabbed detail exists |
-| Funder | `CSponsorProfile` | Funder Management record page | Ready — tabbed detail exists |
-| Contact | `Contact` | directory View Contact page (`contact_page`) | Ready — own frontend, has tabs |
+| Mentor | `CMentorProfile` | Mentor Administration detail | **BUILT** (tab v0.162.0, dashboard v0.187.0) |
+| Engagement | `CEngagement` | Client Management record page | **BUILT** (v0.187.0) |
+| Partner | `CPartnerProfile` | Partner Management record page | **BUILT** (v0.187.0) |
+| Funder | `CSponsorProfile` | Funder Management record page | **BUILT** (v0.187.0) |
+| Contact | `Contact` | directory View Contact page (`contact_page`) | **BUILT** (v0.187.0) |
 | Company | `Account` | directory Companies — **no record page** | **OPEN (§17.5)** |
 | Client | `CClientProfile` | **no view anywhere** | **OPEN (§17.5)** |
 

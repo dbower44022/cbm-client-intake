@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="/shared/tokens.css" />
   <link rel="stylesheet" href="/shared/vendor/jodit/jodit.min.css" />
   <link rel="stylesheet" href="/shared/conversation.css" />
+  <link rel="stylesheet" href="/shared/charts.css" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="record.css" />
 </head>
@@ -41,12 +42,23 @@
       <nav class="cr__tabs" id="crTabs">
         <button type="button" class="cr__tab is-active" data-crtab="overview">Overview</button>
         <button type="button" class="cr__tab" data-crtab="communications">Communications</button>
+        <button type="button" class="cr__tab" data-crtab="analytics" id="crAnaTab" hidden>Analytics</button>
       </nav>
 
       <p class="dir__notice" id="crNotice" role="status" hidden></p>
 
       <div class="cr__panel" data-crpanel="overview">
         <div id="crOverviewBody"></div>
+      </div>
+
+      <!-- Analytics: this contact's own dashboard, rendered by the analytics
+           app (Phase E). Shown only when ANALYTICS_ENABLED is on. Read-only. -->
+      <div class="cr__panel" data-crpanel="analytics" hidden>
+        <div class="cr__comm-toolbar">
+          <button type="button" class="cbm-button cbm-button--secondary dir__sm" id="crAnaRefresh">↻ Refresh</button>
+        </div>
+        <p class="dir__preview-empty" id="crAnaMsg" hidden></p>
+        <div class="an__grid" id="crAnaGrid"></div>
       </div>
 
       <div class="cr__panel" data-crpanel="communications" hidden>
@@ -108,6 +120,7 @@
   <script src="/shared/phone-format.js"></script>
   <script src="/shared/quickmail.js"></script>
   <script src="/shared/conversation.js"></script>
+  <script src="/shared/charts.js"></script>
   <script src="detail-render.js"></script>
   <script src="record.js"></script>
   <script src="/shared/footer.js"></script>

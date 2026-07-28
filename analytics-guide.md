@@ -61,24 +61,37 @@ app.
 
 ---
 
-## 3. Record analytics — the Mentor Analytics tab
+## 3. Record analytics — the Analytics tab on a record
 
-Analytics can also be scoped to a **single record**. Today this appears as an
-**Analytics** tab inside **Mentor Administration** (`/mentoradmin`): open a mentor,
-click **Analytics**, and you see that mentor's own numbers (for example, their
-engagement counts) — filtered automatically to just that mentor.
+Analytics also live **where you do the work**. Open a record, click its
+**Analytics** tab, and you see that record's own numbers — filtered to it
+automatically, with no set-up on your part.
 
-Two things to know:
+Five record types have one, and each ships with a dashboard already built:
 
-- **It respects permissions.** The tab shows a mentor's analytics only if you can
-  already open that mentor's record. The numbers are calculated as *you*, so you
-  never see data your CRM access wouldn't already allow.
-- **It only appears if someone has built a mentor-scoped page.** If no analytics
-  have been set up for mentors yet, the tab shows a short "ask an analytics author"
-  message. See §5 for how to build one.
+| Record | Where you'll find it | What it shows out of the box |
+|---|---|---|
+| **Mentor** | Mentor Administration | Active clients, engagements by status, sessions per month, their client list |
+| **Client engagement** | Client Management | Sessions completed, days since last contact, sessions per month, recent sessions |
+| **Partner** | Partner Management | Clients referred, meetings held, referrals per month, recent meetings |
+| **Funder** | Funder Management | Total received, pledged & committed, received per month, recent contributions |
+| **Contact** | the Contacts directory, View Contact | Meetings attended, email conversations, meetings per month, recent meetings |
 
-*(More record types — companies, engagements, partners, funders — can be added the
-same way in future; the mentor record is the first.)*
+Three things to know:
+
+- **It respects permissions.** You see a record's analytics only if you can
+  already open that record, and the numbers are calculated as *you* — so nothing
+  appears that your CRM access wouldn't already show you. They're worked out
+  fresh each time you open the tab, never cached.
+- **The starter dashboards are yours to change.** They behave like every other
+  built-in: an analytics author can edit one, add their own metrics to it, or
+  delete it entirely (§5.3).
+- **One dashboard per record type.** A record's tab shows one dashboard, so if
+  you want something different, edit the one that's there rather than creating a
+  second — the app will point you back to it if you try.
+
+Companies and client business profiles don't have a tab yet: neither has a full
+record screen in the app to hang one on.
 
 ---
 
@@ -239,9 +252,15 @@ app's database isn't configured, which authoring needs). Ask a CBM administrator
 operational database, which isn't attached in this environment. It'll work where the
 database is configured (production/test).
 
-**The Mentor Analytics tab says no analytics are set up.** No one has built a
-mentor-scoped page yet — see §5. Build a metric with **Applies to → Mentors** and a
-record link field, then a page with **Where it appears → Record tab: Mentors**.
+**A record's Analytics tab says no analytics are set up.** Its dashboard was
+deleted (built-ins can be), or that record type never had one. Build a metric with
+**Applies to →** that record type and a record link field, then a page scoped to it
+— see §5. If the dashboard was deleted, an author can restore it from the deleted
+list in Manage → Metrics/Pages.
+
+**I tried to add a second dashboard for a record type and got a message.** That's
+deliberate: a record's tab shows one dashboard, so the app points you at the
+existing one to edit instead (§3).
 
 **Numbers look stale.** Cached panels show "as of …". Click **Refresh** to
 recompute the page now.

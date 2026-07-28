@@ -10,8 +10,9 @@ found; move resolved items to the bottom with the resolution date.
    (2026-07-27; decisions + full context in `prds/analytics-app-plan.md` §17).
    Doug ruled that a dashboard can be attached to every record view (Mentor,
    Company, Contact, Engagement, Client, Partner, Funder), one dashboard per
-   record type. Five of the seven have a host screen already. Two need a call
-   before they can be built:
+   record type. **The five with a host screen shipped in v0.187.0** (Mentor,
+   Engagement, Partner, Funder, Contact — each with a starter dashboard). The
+   remaining two need a call before they can be built:
    - **Company** — there is no full `Account` page, only the Companies grid,
      its preview strip and a View pop-up. Dashboard inside the pop-up, or build
      a Company record page like the Contact page (v0.144.0)? Recommendation:

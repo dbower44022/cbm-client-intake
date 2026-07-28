@@ -111,6 +111,9 @@ def make_router(cfg: DirectoryConfig) -> APIRouter:
             # whether its Communications tab has a live backend (GMAIL_SYNC).
             "contactPage": cfg.contact_page,
             "commsEnabled": get_settings().gmail_sync,
+            # True => the View Contact page shows an Analytics tab rendering
+            # this contact's dashboard from the analytics app (Phase E).
+            "analyticsEnabled": get_settings().analytics_active,
         }
 
     @router.post("/logout")

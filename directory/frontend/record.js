@@ -211,6 +211,49 @@
       commsLoaded = true;
       renderComms();
     }
+    if (key === "analytics") renderAnalytics();
+  }
+
+  // ---- analytics tab (this contact's dashboard, from the analytics app) -----
+  // Read-only. The endpoint reads the contact AS THE USER first, so opening
+  // this page is itself the permission check.
+  var anaLoaded = false;
+
+  async function renderAnalytics(force) {
+    if (anaLoaded && !force) return;
+    anaLoaded = true;
+    var grid = $("crAnaGrid"), msg = $("crAnaMsg");
+    grid.innerHTML = "";
+    msg.hidden = false; msg.textContent = "Loading…";
+    try {
+      var url = "/analytics/api/record/Contact/" + encodeURIComponent(RECORD_ID);
+      var r = await (window.CBMBusy ? CBMBusy.fetch(url) : fetch(url));
+      var body = await r.json();
+      if (!r.ok) throw new Error((body && body.detail) || ("Request failed (" + r.status + ")"));
+      if (!body.available) {
+        msg.textContent = "No analytics have been set up for contacts yet. " +
+          "An analytics author can publish a Contact dashboard in the Analytics app.";
+        return;
+      }
+      var panels = body.panels || [];
+      if (!panels.length) { msg.textContent = "No panels to show."; return; }
+      msg.hidden = true;
+      panels.forEach(function (p) {
+        var art = document.createElement("article");
+        art.className = "an-panel";
+        art.style.setProperty("--span", Math.max(3, Math.min(12, p.width || 4)));
+        var head = document.createElement("header"); head.className = "an-panel__head";
+        var h = document.createElement("h3"); h.textContent = p.title; head.appendChild(h);
+        var bodyEl = document.createElement("div"); bodyEl.className = "an-panel__body";
+        art.appendChild(head); art.appendChild(bodyEl);
+        try { CBMCharts.renderPanel(bodyEl, p, { crmUrl: body.crmUrl }); }
+        catch (e) { bodyEl.innerHTML = '<p class="anc-err">Could not render this panel.</p>'; }
+        grid.appendChild(art);
+      });
+    } catch (e) {
+      anaLoaded = false;                         // let a re-click retry
+      msg.hidden = false; msg.textContent = e.message;
+    }
   }
 
   // ---- Overview ------------------------------------------------------------
@@ -1420,6 +1463,9 @@
     document.querySelectorAll("#crTabs .cr__tab").forEach(function (b) {
       b.addEventListener("click", function () { switchTab(b.dataset.crtab); });
     });
+    // The Analytics tab only exists where analytics is switched on.
+    if (session && session.analyticsEnabled) $("crAnaTab").hidden = false;
+    $("crAnaRefresh").addEventListener("click", function () { renderAnalytics(true); });
     $("crComposeBtn").addEventListener("click", function () {
       if (!commsOn()) { notify("The email integration isn't enabled on this deployment."); return; }
       composeMessage({});
