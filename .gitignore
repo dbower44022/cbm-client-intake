@@ -15,5 +15,9 @@ __pycache__/
 .do/app.prod.yaml
 .do/app.prod-crm.yaml
 
+# Claude Code per-machine runtime state (scheduled task locks, local settings,
+# transcripts) — do not commit; each PC that opens the repo generates its own.
+.claude/
+
 # OS
 .DS_Store
