@@ -222,10 +222,6 @@ block a deploy.)*
     `CSession` name formula must be **keep-if-present**.
 17. **`Analytics Admin Team`** — create in both CRMs to hand Analytics to
     non-admin staff (admins already pass the gate).
-18. **Events: prod schema migration not applied** —
-    `scripts/migrate_event_schema.py` ran on crm-test only, so the two instances
-    differ by exactly that change list (16 fields, 3 enum additions, 4 cleared
-    `readOnly` flags, the `partnerHost` link).
 19. **Meet transcripts — three Google-side changes, none done** (re-probed
     2026-07-27: a delegated token minted fine for `calendar.events` but was
     rejected `unauthorized_client` for `meetings.space.created`, so the DWD scope
@@ -301,6 +297,43 @@ block a deploy.)*
     assigned to an unlinked profile are invisible in the session tools.
 
 ## Resolved
+
+- **Events: prod schema migration not applied** (was item 18) — the Events
+  change list had been applied to crm-test only, leaving prod short 16 fields,
+  3 enum additions, 4 `readOnly` flags still set and the `partnerHost` link.
+  **Resolved 2026-08-08:** Doug applied the whole list by hand in Entity
+  Manager. Verified by running `scripts/probe_events_schema.py` inside the prod
+  **web** container and diffing the output against a crm-test run: all 26 items
+  present, and the probe reports "No blocking schema problems found" where it
+  previously reported four fields whose values EspoCRM would silently strip.
+  Only four differences remain and none are on the change list —
+  `CEvent.duration` default 300 (prod) vs 3600, an extra `emails hasChildren →
+  Email` link on prod, and empty-vs-unset defaults on `attendanceSource` /
+  `followUpsSent`.
+
+  **Two traps this exposed, both now recorded in
+  `cevent-entities-crm-handoff.md` §2.4:**
+
+  1. **The probe does not check link naming.** The `partnerHost` relationship
+     was created **reversed** — prod had `CEvent.hostedEvents` → CPartnerProfile
+     with the foreign link named `partnerHost` — and the probe still reported no
+     problems, because it only verifies that the two entities exist and that the
+     must-write fields aren't `readOnly`. Only a field-by-field diff against
+     crm-test caught it. Diff the two instances; don't trust the clean exit.
+  2. **The Create Link dialog inverts what you type.** A panel's Name/Label
+     define the link that *points to* that panel's entity, so the link is stored
+     on the **other** entity. Building from Event with Partner Profile on the
+     right, the LEFT panel Name creates the link on **CPartnerProfile** and the
+     RIGHT panel Name creates the one on **CEvent**. Specifying it the intuitive
+     way round produced the reversed link twice before the labels
+     (`GET /I18n?scope=<Entity>`) settled the mapping.
+
+  **Also settled:** prod's `CEvent` legitimately holds **0 records** — the
+  entity was never connected to Google, so CBM's org calendar exists only on
+  crm-test (94 rows). This is not an ACL blind spot in the intake API key. It
+  also means `publishToWebsite` has nothing to protect on prod yet, and the
+  first published event there will be a real one rather than one hidden among
+  internal meetings.
 
 - **Account type stamp wrote a field that no longer exists** — found
   2026-07-24 on prod, where `Account.cAccountType` had been removed; all four

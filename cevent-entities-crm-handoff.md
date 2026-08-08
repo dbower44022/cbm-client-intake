@@ -139,9 +139,47 @@ through `presenters` → Contact → mentor profile.
 
 ### 2.4 One link to add
 
-| Link name (LEFT = CEvent) | Type | Related | Foreign link (on RIGHT) | Why |
-|---|---|---|---|---|
-| `partnerHost` | **Many-to-One** (CEvent is the Many) | `CPartnerProfile` | `hostedEvents` | D-10 requires partner organisations as hosts/presenters. Sponsors have a link; partners don't. FK `partnerHostId`. |
+**Why:** D-10 requires partner organisations as hosts/presenters. Sponsors have
+a link; partners don't. FK `partnerHostId`.
+
+The Create Link dialog has a field labelled **Name** on the LEFT panel *and*
+another labelled **Name** on the RIGHT panel, and likewise two labelled
+**Label**. Each value below therefore names its panel. Do not compress these
+into a table — putting the two Names in the wrong boxes is how prod ended up
+with the link reversed twice (2026-08-08).
+
+⚠️ **The dialog inverts what you type** — verified on prod 2026-08-08 by
+reading the resulting link labels. A panel's Name/Label define the link that
+**points to that panel's entity**, and that link is therefore **stored on the
+other entity**. So the name typed under the LEFT panel (Event) is the link
+Partner Profile will use to reach its events, and the name typed under the
+RIGHT panel (Partner Profile) is the link that appears **on the Event record**.
+The values below are already in the correct — i.e. inverted-looking — boxes.
+
+1. Administration → Entity Manager → click **Event** → click **Relationships**.
+2. Click **+ Create Link**.
+3. Confirm the dialog's fixed LEFT panel header reads **Event**. If it reads
+   anything else, close the dialog and start again from step 1 — the two Name
+   values must be swapped when you build from the other side.
+4. **Relationship Type:** `Many-to-One` (LEFT is the Many — many events share
+   one partner host).
+5. **RIGHT panel Entity:** `Partner Profile` (= `CPartnerProfile`; custom
+   entities display without the `C` prefix).
+6. **LEFT panel Name:** `hostedEvents`
+7. **LEFT panel Label:** `Hosted Events`
+8. **RIGHT panel Name:** `partnerHost`
+9. **RIGHT panel Label:** `Partner Host`
+10. Save, then Administration → **Clear Cache** → **Rebuild**.
+
+**Verify by outcome, not by field names:** opening an **Event** record shows a
+**Partner Host** field, and opening a **Partner Profile** shows a **Hosted
+Events** panel. In Entity Manager → Event → Relationships the row must read
+Link = `partnerHost`, Foreign Link = `hostedEvents`. If those are the other way
+round, remove the row (▾ at the row's far right → Remove — this deletes both
+sides) and redo steps 1–10.
+
+Note `scripts/probe_events_schema.py` does **not** check link naming, so a
+reversed link still reports "No blocking schema problems found".
 
 ### 2.5 Questions on existing fields
 

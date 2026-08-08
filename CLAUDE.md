@@ -557,7 +557,10 @@ Phases 1, 2, 3 and 5 are built; Phase 4 (WordPress plugin + cutover) and Phase 6
 (attendance, follow-up, reporting) remain.
 
 - **⚠️ `CEvent` doubles as CBM's org calendar** — most rows are internal team
-  meetings and mentoring-session mirrors. Workshops share the entity, gated by
+  meetings and mentoring-session mirrors. That is true **on crm-test (94 rows)**;
+  **prod's `CEvent` is empty** because it was never connected to Google
+  (verified 2026-08-08), so the first published event there will be a real one.
+  Workshops share the entity, gated by
   **`publishToWebsite`** (default false). **That flag is the entire boundary to
   the public site** — every public read goes through
   `events/service._public_where`, and an unpublished event's page 404s rather
