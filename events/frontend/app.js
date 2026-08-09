@@ -421,11 +421,109 @@
     return input;
   }
 
+  /* The website card image. A CRM file field can't ride the generic field PUT,
+     so it gets its own control and its own endpoint — and, since the browser
+     can't reach EspoCRM, the preview is proxied by the app. */
+  function graphicField(host, raw, spec) {
+    var wrap = document.createElement("div");
+    wrap.className = "ev__field ev__field--graphic";
+    var caption = document.createElement("span");
+    caption.textContent = spec.label;
+    wrap.appendChild(caption);
+
+    if (!raw.id) {
+      var later = document.createElement("small");
+      later.textContent = "Save the event first, then add its graphic here.";
+      wrap.appendChild(later);
+      host.appendChild(wrap);
+      return;
+    }
+
+    var preview = document.createElement("img");
+    preview.className = "ev__graphic";
+    preview.alt = "";
+    function showPreview() {
+      if (raw.eventGraphicId) {
+        preview.src = API + "/events/" + encodeURIComponent(raw.id)
+          + "/graphic?v=" + encodeURIComponent(raw.eventGraphicId);
+        preview.hidden = false;
+      } else {
+        preview.removeAttribute("src");
+        preview.hidden = true;
+      }
+    }
+    showPreview();
+    wrap.appendChild(preview);
+
+    var file = document.createElement("input");
+    file.type = "file";
+    file.accept = "image/png,image/jpeg,image/webp,image/gif";
+    wrap.appendChild(file);
+
+    var actions = document.createElement("div");
+    actions.className = "ev__graphicactions";
+    var upload = document.createElement("button");
+    upload.type = "button";
+    upload.className = "cbm-button cbm-button--secondary";
+    upload.textContent = "Upload graphic";
+    var remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "cbm-button cbm-button--secondary";
+    remove.textContent = "Remove graphic";
+    actions.appendChild(upload);
+    actions.appendChild(remove);
+    wrap.appendChild(actions);
+
+    // Never disabled — validate on click and say what is missing.
+    upload.addEventListener("click", function () {
+      var chosen = file.files && file.files[0];
+      if (!chosen) { notice("Choose an image file first.", "warn"); return; }
+      var reader = new FileReader();
+      reader.onload = async function () {
+        var base64 = String(reader.result || "").split(",")[1] || "";
+        try {
+          var result = await api("/events/" + encodeURIComponent(raw.id) + "/graphic", {
+            method: "POST",
+            body: JSON.stringify({
+              filename: chosen.name,
+              contentType: chosen.type,
+              dataBase64: base64,
+            }),
+          });
+          raw.eventGraphicId = (result.raw || {}).eventGraphicId || "";
+          showPreview();
+          notice("Graphic saved.", "ok");
+        } catch (err) { notice(err.message, "error"); }
+      };
+      reader.readAsDataURL(chosen);
+    });
+
+    remove.addEventListener("click", async function () {
+      if (!raw.eventGraphicId) { notice("This event has no graphic.", "warn"); return; }
+      try {
+        await api("/events/" + encodeURIComponent(raw.id) + "/graphic", { method: "DELETE" });
+        raw.eventGraphicId = "";
+        file.value = "";
+        showPreview();
+        notice("Graphic removed.", "ok");
+      } catch (err) { notice(err.message, "error"); }
+    });
+
+    if (spec.help) {
+      var hint = document.createElement("small");
+      hint.textContent = spec.help;
+      wrap.appendChild(hint);
+    }
+    host.appendChild(wrap);
+  }
+
   function eventForm(host, raw) {
     raw = raw || {};
     var groups = {};
     state.fields.forEach(function (spec) {
-      if (spec.appManaged) return;      // slug / Zoom ids are the app's business
+      // App-managed fields (slug, Zoom ids) are the app's business — except the
+      // graphic, which is app-managed only because it uploads separately.
+      if (spec.appManaged && spec.type !== "image") return;
       (groups[spec.group] = groups[spec.group] || []).push(spec);
     });
     Object.keys(groups).forEach(function (groupName) {
@@ -435,6 +533,7 @@
       legend.textContent = groupName;
       section.appendChild(legend);
       groups[groupName].forEach(function (spec) {
+        if (spec.type === "image") { graphicField(section, raw, spec); return; }
         var value = raw[spec.name];
         if (spec.type === "datetime" && value) value = String(value).replace(" ", "T").slice(0, 16);
         if (spec.type === "duration" && value) value = Math.round(value / 60); // minutes

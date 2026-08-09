@@ -36,9 +36,25 @@
    * config.thumbnailProxy is a URL prefix the video id is appended to; leave it
    * null only for local previews where no proxy exists.
    */
-  CBMEvents.config = { thumbnailProxy: null };
+  CBMEvents.config = { thumbnailProxy: null, imageProxy: null };
 
+  /* Card image, in preference order:
+   *
+   *   1. an uploaded event graphic (payload `imageUrl`) — the only image an
+   *      UPCOMING event can have, since there is no recording to derive a
+   *      frame from yet;
+   *   2. the recording's YouTube thumbnail, proxied by video id;
+   *   3. whatever the payload's thumbnailUrl says (local previews only).
+   *
+   * config.imageProxy, when set, is a URL prefix the app's own image URL is
+   * appended to, so the graphic is served same-origin like the thumbnails.
+   */
   function thumbnailSrc(item) {
+    if (item.imageUrl) {
+      return CBMEvents.config.imageProxy
+        ? CBMEvents.config.imageProxy + encodeURIComponent(item.imageUrl)
+        : item.imageUrl;
+    }
     if (CBMEvents.config.thumbnailProxy && item.videoId) {
       return CBMEvents.config.thumbnailProxy + encodeURIComponent(item.videoId);
     }

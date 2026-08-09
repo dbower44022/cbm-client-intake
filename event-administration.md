@@ -155,6 +155,31 @@ when automatic Zoom attendance arrives.
 
 ---
 
+## The event graphic
+
+On the edit form, under **Content**, there is an **Event graphic** control:
+choose an image file, press **Upload graphic**, and it becomes the picture the
+website shows on the calendar card and the event page.
+
+Why it matters: without one, a card falls back to the **recording's YouTube
+thumbnail** — and an upcoming event has no recording yet, so it would have no
+picture at all. If you want an upcoming workshop to look like anything, give it
+a graphic.
+
+- JPEG, PNG, WebP or GIF, up to 5 MB.
+- **Save a new event first.** The graphic attaches to a specific event, so the
+  control asks you to save before it can accept an upload.
+- **Remove graphic** takes it off; the card then falls back to the YouTube
+  thumbnail if there is a recording, or to no image.
+- An uploaded graphic always **wins** over the YouTube thumbnail, including for
+  past events — so you can replace an unflattering auto-generated video frame
+  with a proper card.
+- The image is only reachable publicly while the event is **published**.
+  Unpublish it and the picture becomes as unreachable as the page, which is the
+  same rule that keeps internal calendar entries off the website.
+
+---
+
 ## Publishing the recording
 
 After the event, upload the recording to YouTube yourself, then use **Add

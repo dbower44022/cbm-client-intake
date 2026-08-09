@@ -80,7 +80,20 @@ PUBLIC_SELECT = ",".join([
     "dateStart", "dateEnd", "duration", "status", "format", "eventType",
     "topic", "location", "venueCapacity", "publishToWebsite",
     "registrationCloses", "recordingUrl", "virtualMeetingUrl", "zoomWebinarId",
+    "eventGraphicId",
 ])
+
+# --- event graphic (EV-05b) -------------------------------------------------
+# `CEvent.eventGraphic` is an EspoCRM file field: the value is an Attachment id
+# in `eventGraphicId`. It is uploaded and served through dedicated endpoints
+# rather than the generic field editor, because the browser cannot reach
+# EspoCRM directly — every image is proxied by this app.
+GRAPHIC_FIELD = "eventGraphic"
+ALLOWED_IMAGE_TYPES = frozenset({
+    "image/jpeg", "image/png", "image/webp", "image/gif",
+})
+#: ~5 MB of raw bytes once base64 expansion is accounted for.
+MAX_IMAGE_B64_CHARS = 7_000_000
 
 #: Attributes read when summarising registrations for an event.
 REGISTRATION_SELECT = ",".join([
@@ -140,6 +153,14 @@ EVENT_FIELDS: list[EventField] = [
     # Content
     EventField("eventOverview", "Full description", "wysiwyg", "Content", big=True),
     EventField("eventSyllabus", "Syllabus", "wysiwyg", "Content", big=True),
+    # Uploaded through its own endpoint (a file field can't ride the generic
+    # PUT), so app_managed keeps it out of the update whitelist while still
+    # declaring it to the editor, which renders the upload control.
+    EventField("eventGraphic", "Event graphic", "image", "Content",
+               app_managed=True,
+               help="Shown on the website card and the event page. Without one "
+                    "the card falls back to the recording's YouTube thumbnail, "
+                    "which an upcoming event doesn't have yet."),
 
     # Publishing
     EventField("publishToWebsite", "Publish to website", "bool", "Publishing",

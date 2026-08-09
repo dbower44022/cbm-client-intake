@@ -383,10 +383,30 @@ def _type_label(event: dict[str, Any]) -> str:
     return "Webinar"
 
 
+def public_image_url(event: dict[str, Any], *, base_url: str = "") -> str:
+    """Absolute URL of this event's uploaded graphic, or "" when it has none.
+
+    Points at THIS app's public image proxy, not at EspoCRM — the browser can't
+    reach the CRM. The attachment id rides as ``?v=`` so the response can be
+    cached hard while still changing the URL when the picture is replaced.
+
+    ``base_url`` is the app's own public root (``APP_BASE_URL``). With it unset
+    the URL is site-relative, which still works for a same-origin caller and is
+    what the WordPress proxy will rewrite anyway.
+    """
+    attachment_id = event.get("eventGraphicId") or ""
+    slug = event.get("slug") or ""
+    if not attachment_id or not slug:
+        return ""
+    path = f"/api/events/{slug}/image?v={attachment_id[:12]}"
+    return f"{base_url.rstrip('/')}{path}" if base_url else path
+
+
 def public_event(
     event: dict[str, Any],
     *,
     base_url: str = "",
+    api_base_url: str = "",
     seats_left: Optional[int] = None,
     now: Optional[datetime] = None,
 ) -> dict[str, Any]:
@@ -435,6 +455,10 @@ def public_event(
         "recordingUrl": event.get("recordingUrl") or "",
         "videoId": video_id or "",
         "thumbnailUrl": thumbnail_url(video_id) if video_id else "",
+        # An uploaded graphic WINS over the derived YouTube thumbnail: if
+        # someone took the trouble to make a card image, use it. Blank when
+        # there is none, so the renderer falls back to thumbnailUrl.
+        "imageUrl": public_image_url(event, base_url=api_base_url),
     }
     return payload
 
@@ -448,7 +472,9 @@ def public_event_detail(event: dict[str, Any], **kwargs: Any) -> dict[str, Any]:
     return payload
 
 
-def public_recording(event: dict[str, Any], *, base_url: str = "") -> dict[str, Any]:
+def public_recording(
+    event: dict[str, Any], *, base_url: str = "", api_base_url: str = ""
+) -> dict[str, Any]:
     """One row of the recorded-webinar library."""
     start = parse_crm_datetime(event.get("dateStart"))
     local = to_local(start) if start else None
@@ -466,11 +492,16 @@ def public_recording(event: dict[str, Any], *, base_url: str = "") -> dict[str, 
         "thumbnailUrl": thumbnail_url(video_id) if video_id else "",
         "slug": slug,
         "url": f"{base_url.rstrip('/')}/{slug}" if base_url and slug else "",
+        "imageUrl": public_image_url(event, base_url=api_base_url),
     }
 
 
 async def upcoming_payload(
-    client: EspoApi, *, base_url: str = "", now: Optional[datetime] = None
+    client: EspoApi,
+    *,
+    base_url: str = "",
+    api_base_url: str = "",
+    now: Optional[datetime] = None,
 ) -> list[dict[str, Any]]:
     """The public calendar, with seat counts.
 
@@ -489,7 +520,13 @@ async def upcoming_payload(
                 log.warning("event %s: could not count registrations: %s",
                             event.get("id"), exc)
         payload.append(
-            public_event(event, base_url=base_url, seats_left=seats_left, now=now)
+            public_event(
+                event,
+                base_url=base_url,
+                api_base_url=api_base_url,
+                seats_left=seats_left,
+                now=now,
+            )
         )
     return payload
 
@@ -683,6 +720,78 @@ async def update_event(
     if payload:
         await client.update(cfg.EVENT, event_id, payload)
     return await client.get(cfg.EVENT, event_id, select=cfg.PUBLIC_SELECT)
+
+
+async def set_event_graphic(
+    client: EspoApi,
+    event_id: str,
+    *,
+    filename: str,
+    content_type: str,
+    data_base64: str,
+) -> dict[str, Any]:
+    """Upload the website card image and point the event at it.
+
+    An EspoCRM file field: the Attachment is created bound to
+    ``CEvent.eventGraphic`` and its id stored in ``eventGraphicId``.
+    """
+    if content_type not in cfg.ALLOWED_IMAGE_TYPES:
+        raise EventError(
+            "Please choose a JPEG, PNG, WebP or GIF image for the event graphic."
+        )
+    if len(data_base64) > cfg.MAX_IMAGE_B64_CHARS:
+        raise EventError("That image is too large — please use one under 5 MB.")
+    attachment_id = await client.upload_attachment(
+        filename=filename or "event-graphic",
+        content_type=content_type,
+        data_base64=data_base64,
+        related_type=cfg.EVENT,
+        field=cfg.GRAPHIC_FIELD,
+    )
+    await client.update(
+        cfg.EVENT, event_id, {f"{cfg.GRAPHIC_FIELD}Id": attachment_id}
+    )
+    return await client.get(cfg.EVENT, event_id, select=cfg.PUBLIC_SELECT)
+
+
+async def clear_event_graphic(client: EspoApi, event_id: str) -> dict[str, Any]:
+    """Remove the graphic (clears the link; the Attachment itself stays, like
+    any detached upload)."""
+    await client.update(cfg.EVENT, event_id, {f"{cfg.GRAPHIC_FIELD}Id": None})
+    return await client.get(cfg.EVENT, event_id, select=cfg.PUBLIC_SELECT)
+
+
+async def get_event_graphic(
+    client: EspoApi, event_id: str
+) -> Optional[tuple[bytes, str]]:
+    """The graphic's bytes + content type, or None when the event has none."""
+    record = await client.get(
+        cfg.EVENT, event_id, select=f"id,{cfg.GRAPHIC_FIELD}Id"
+    )
+    attachment_id = (record or {}).get(f"{cfg.GRAPHIC_FIELD}Id")
+    if not attachment_id:
+        return None
+    return await client.download_attachment(attachment_id)
+
+
+async def get_published_graphic(
+    client: EspoApi, slug: str
+) -> Optional[tuple[bytes, str]]:
+    """The graphic for a PUBLISHED event, by slug — the public path.
+
+    Goes through :func:`get_by_slug`, so the ``publishToWebsite`` gate applies:
+    an internal calendar entry's image is no more reachable than its page. This
+    is why the public route is keyed on the slug and not on an attachment id —
+    an id-keyed endpoint would happily serve any attachment in the CRM,
+    resumes included.
+    """
+    event = await get_by_slug(client, slug)
+    if not event:
+        return None
+    attachment_id = event.get(f"{cfg.GRAPHIC_FIELD}Id")
+    if not attachment_id:
+        return None
+    return await client.download_attachment(attachment_id)
 
 
 async def set_recording(

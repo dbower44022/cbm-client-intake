@@ -4,6 +4,58 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.191.0] — 2026-08-09
+
+**feat(events): an event graphic for the website.** Asked for after the first
+walk through the Create Event form: there was no way to give an event a picture.
+
+`CEvent.eventGraphic` already existed on both CRMs — a file field nobody was
+using. Nothing surfaced it: it wasn't in `EVENT_FIELDS`, so the editor couldn't
+show it and the server wouldn't accept it, and the public payload had no image
+key at all. `thumbnailUrl` is *derived* from the YouTube video id in
+`recordingUrl`, which means an **upcoming** event — the case that matters most —
+had no picture available anywhere.
+
+- **Upload + remove** (`events/service.set_event_graphic` / `clear_event_graphic`)
+  — the Attachment is created bound to `CEvent.eventGraphic` and its id stored in
+  `eventGraphicId`, the same shape as the mentor profile photo. JPEG/PNG/WebP/GIF
+  under 5 MB, checked before the upload rather than after.
+- **Two proxies, because the browser cannot reach EspoCRM.** A staff one
+  (`GET /events/api/events/{id}/graphic`, authenticated, works on an unpublished
+  event) and a public one (`GET /api/events/{slug}/image`).
+- **The public route is keyed on the SLUG, never an attachment id**, so it goes
+  through `get_by_slug` and inherits the `publishToWebsite` gate: an internal
+  calendar entry's image is exactly as unreachable as its page. An id-keyed
+  endpoint would have served any attachment in the CRM, mentor resumes included.
+  Unpublished returns 404 without even asking the CRM for the bytes.
+- **`imageUrl` joins the public payload** (calendar and recordings), absolute
+  when `APP_BASE_URL` is set and carrying `?v=<attachment id>` so the response is
+  cacheable-immutable yet changes when the picture does.
+- **The renderer prefers it**: `wp-plugin/cbm-events/assets/cbm-events.js` now
+  tries the graphic, then the proxied YouTube thumbnail, then the raw
+  `thumbnailUrl`. A `config.imageProxy` hook keeps it same-origin like the
+  existing thumbnail proxy.
+- **Editor control** in the Content group — preview, file picker, Upload and
+  Remove, never-disabled buttons that validate on click. A new event is asked to
+  save first, since the graphic attaches to a specific record.
+- Field spec: declared with `type: "image"` and `app_managed`, so the editor
+  renders the control while the key stays out of the generic update whitelist —
+  a file field can't ride the field PUT.
+
+**Design call, stated because it wasn't asked:** an uploaded graphic **wins**
+over the derived YouTube thumbnail, including for past events, so staff can
+replace an unflattering auto-generated video frame. `thumbnailUrl` is untouched
+and remains the fallback.
+
+**Verified:** 18 new tests — the publish gate on the image route (unpublished,
+cancelled, unknown slug, no graphic), cache headers with and without the version,
+the route absent when the public API is off, the attachment bound to the right
+field, non-image and oversized uploads refused, and the graphic beating the
+thumbnail in the payload. Full suite 1537 green (the pre-existing date-sensitive
+`test_a_full_event_is_NOT_refused` failure is unrelated).
+
+**No CRM change needed** — the field is already on crm-test and prod.
+
 ## [0.190.2] — 2026-08-09
 
 **fix(setup): a boot-read flag could be toggled into a tile with no routes.**

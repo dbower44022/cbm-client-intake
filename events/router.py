@@ -20,7 +20,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel
 
 from assignments.auth import current_user, is_member
@@ -93,6 +93,12 @@ class EventIn(BaseModel):
 
 class RecordingIn(BaseModel):
     url: str = ""
+
+
+class GraphicIn(BaseModel):
+    filename: str = ""
+    contentType: str = ""
+    dataBase64: str = ""
 
 
 class WebinarIn(BaseModel):
@@ -315,6 +321,73 @@ async def set_recording(
         actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
     )
     return {"event": service.public_event_detail(event), "raw": event}
+
+
+# --- event graphic ---------------------------------------------------------
+#
+# A file field can't ride the generic field PUT, and the browser can't reach
+# EspoCRM, so upload and display each get their own endpoint. Display proxies
+# the attachment through the app exactly as the mentor photo does.
+
+
+@api_router.post("/events/{event_id}/graphic")
+async def upload_graphic(
+    event_id: str, payload: GraphicIn, request: Request
+) -> dict[str, Any]:
+    user, client = await _actor(request)
+    try:
+        event = await service.set_event_graphic(
+            client, event_id,
+            filename=payload.filename,
+            content_type=payload.contentType,
+            data_base64=payload.dataBase64,
+        )
+    except service.EventError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except EspoError as exc:
+        raise _crm_failure(exc, "save the event graphic") from exc
+    await record_action(
+        client, app=APP_EVENTS, category=CAT_RECORD_EDIT, action="Event Graphic Updated",
+        parent_type=cfg.EVENT, parent_id=event_id,
+        summary="Uploaded the website graphic",
+        actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+    )
+    return {"event": service.public_event_detail(event), "raw": event}
+
+
+@api_router.delete("/events/{event_id}/graphic")
+async def delete_graphic(event_id: str, request: Request) -> dict[str, Any]:
+    user, client = await _actor(request)
+    try:
+        event = await service.clear_event_graphic(client, event_id)
+    except EspoError as exc:
+        raise _crm_failure(exc, "remove the event graphic") from exc
+    await record_action(
+        client, app=APP_EVENTS, category=CAT_RECORD_EDIT, action="Event Graphic Updated",
+        parent_type=cfg.EVENT, parent_id=event_id,
+        summary="Removed the website graphic",
+        actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+    )
+    return {"event": service.public_event_detail(event), "raw": event}
+
+
+@api_router.get("/events/{event_id}/graphic")
+async def get_graphic(event_id: str, request: Request) -> Response:
+    """The staff-side preview. Authenticated, so it works for an unpublished
+    event — unlike the public route, which is behind the publish gate."""
+    _user, client = await _actor(request)
+    try:
+        result = await service.get_event_graphic(client, event_id)
+    except EspoError as exc:
+        raise _crm_failure(exc, "load the event graphic") from exc
+    if result is None:
+        raise HTTPException(status_code=404, detail="This event has no graphic.")
+    data, content_type = result
+    return Response(
+        content=data,
+        media_type=content_type or "application/octet-stream",
+        headers={"Cache-Control": "private, max-age=60"},
+    )
 
 
 # --- registrants -----------------------------------------------------------

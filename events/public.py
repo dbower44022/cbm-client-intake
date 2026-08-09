@@ -101,7 +101,9 @@ async def upcoming(request: Request, response: Response) -> dict[str, Any]:
     if cached is None:
         try:
             cached = await service.upcoming_payload(
-                _client(request), base_url=settings.events_public_base_url
+                _client(request),
+                base_url=settings.events_public_base_url,
+                api_base_url=settings.app_base_url,
             )
         except EspoError as exc:
             raise _crm_failure(exc, "upcoming") from exc
@@ -126,7 +128,11 @@ async def recordings(
         except EspoError as exc:
             raise _crm_failure(exc, "recordings") from exc
         cached = [
-            service.public_recording(r, base_url=settings.events_public_base_url)
+            service.public_recording(
+                r,
+                base_url=settings.events_public_base_url,
+                api_base_url=settings.app_base_url,
+            )
             for r in rows
         ]
         _cache.put(key, cached)
@@ -154,6 +160,7 @@ async def event_detail(slug: str, request: Request, response: Response) -> dict[
             cached = service.public_event_detail(
                 event,
                 base_url=settings.events_public_base_url,
+                api_base_url=settings.app_base_url,
                 seats_left=seats_left,
             )
         except EspoError as exc:
@@ -161,6 +168,40 @@ async def event_detail(slug: str, request: Request, response: Response) -> dict[
         _cache.put(key, cached)
     _cacheable(response, ttl)
     return {"success": True, "event": cached}
+
+
+@api_router.get("/{slug}/image")
+async def event_image(slug: str, request: Request, response: Response) -> Response:
+    """The event's graphic, for the public website.
+
+    Keyed on the **slug**, not an attachment id, so the read goes through
+    ``get_by_slug`` and inherits the ``publishToWebsite`` gate: an internal
+    calendar entry's image is exactly as unreachable as its page. An id-keyed
+    endpoint would have served any attachment in the CRM — mentor resumes
+    included.
+
+    Cached hard when the caller passes the ``?v=`` the payload supplies (the URL
+    changes when the picture does), briefly otherwise.
+    """
+    client = _client(request)
+    try:
+        result = await service.get_published_graphic(client, slug)
+    except EspoError as exc:
+        raise _crm_failure(exc, f"event image {slug}") from exc
+    if result is None:
+        raise HTTPException(status_code=404, detail="Not found.")
+    data, content_type = result
+    versioned = bool(request.query_params.get("v"))
+    return Response(
+        content=data,
+        media_type=content_type or "application/octet-stream",
+        headers={
+            "Cache-Control": (
+                "public, max-age=604800, immutable" if versioned
+                else f"public, max-age={max(60, get_settings().events_cache_seconds)}"
+            )
+        },
+    )
 
 
 # --- registration (Phase 3) ------------------------------------------------
