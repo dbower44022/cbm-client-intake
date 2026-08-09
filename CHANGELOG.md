@@ -4,6 +4,39 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.192.0] — 2026-08-09
+
+**feat(events): a website preview, before the WordPress cutover exists.**
+Asked for directly: how do you see the customer-facing page without integrating
+it into the site first? Until now you couldn't — the renderer had no host page,
+and the only previous preview was a one-off console session driven inside the
+live page.
+
+- **`/events/preview.html`** — served by the app, so it is same-origin and no
+  CORS is involved. Renders the upcoming calendar and the recorded library from
+  this deployment's own public API, with a width switcher (desktop / tablet /
+  phone / full) and a working recordings search.
+- **It loads the real plugin asset**, mounted at `/events-plugin/` straight from
+  `wp-plugin/cbm-events/assets/`. The preview therefore exercises the exact file
+  the plugin will ship rather than a copy that drifts — which was the whole risk
+  of previewing at all.
+- Reads only the **public** endpoints, so it shows precisely what an anonymous
+  visitor gets: published, non-cancelled events and nothing else. An unpublished
+  event is as absent here as it will be on the site.
+- Sign-up and play clicks report where they *would* go instead of navigating, so
+  the preview stays put.
+- Reached from a **Website preview** button in Event Administration's top bar.
+
+⚠️ **Styling is approximate.** `preview.css` styles the EV-01 class contract
+(`month-label`, `event-list`, `event-item`, `video-item`, …) only enough to be
+legible; the website's own Elementor stylesheet is not in this repo. Treat the
+data and structure as accurate and the look as indicative — the definitive check
+is still the side-by-side against the live page at cutover.
+
+**Verified:** 2 new tests — the page and the plugin asset are both served and
+the page really points at `/events-plugin/cbm-events.js`, and both vanish when
+Events is switched off. Full suite 1540 green.
+
 ## [0.191.2] — 2026-08-09
 
 **fix(events): unpublishing an event did not take its image offline.** Doug

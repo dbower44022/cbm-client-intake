@@ -238,3 +238,31 @@ def test_graphic_is_declared_but_not_generically_writable():
     spec = next(f for f in cfg.EVENT_FIELDS if f.name == cfg.GRAPHIC_FIELD)
     assert spec.type == "image" and spec.app_managed
     assert cfg.GRAPHIC_FIELD not in cfg.EVENT_EDIT_NAMES
+
+
+# --- the website preview -----------------------------------------------------
+
+
+def _staff_app(monkeypatch, **kw):
+    """The preview and the plugin asset ride the events STATIC mount, which needs
+    the staff stack (events_active = events_enabled AND assignments_active)."""
+    monkeypatch.setenv("SESSION_SECRET", "s")
+    return build(monkeypatch, events=[make_event()], **kw)
+
+
+def test_preview_page_and_plugin_asset_are_served(monkeypatch):
+    """The preview drives the REAL plugin renderer, so the plugin's own asset
+    has to be reachable — a copy in the app's frontend would drift from the file
+    that actually ships."""
+    client, _ = _staff_app(monkeypatch)
+    page = client.get("/events/preview.html")
+    assert page.status_code == 200
+    assert "/events-plugin/cbm-events.js" in page.text
+    asset = client.get("/events-plugin/cbm-events.js")
+    assert asset.status_code == 200
+    assert "CBMEvents.renderCalendar" in asset.text
+
+
+def test_plugin_asset_absent_when_events_is_off(monkeypatch):
+    client, _ = _staff_app(monkeypatch, enabled=False)
+    assert client.get("/events-plugin/cbm-events.js").status_code == 404

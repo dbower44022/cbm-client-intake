@@ -63,6 +63,12 @@ ANALYTICS_FRONTEND_DIR = (
     Path(__file__).resolve().parent.parent / "analytics" / "frontend"
 )
 SETUP_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "setup" / "frontend"
+# The WordPress plugin's own assets, served so the website preview
+# (/events/preview.html) can exercise the EXACT renderer that will ship rather
+# than a copy of it that can drift.
+EVENTS_PLUGIN_ASSETS_DIR = (
+    Path(__file__).resolve().parent.parent / "wp-plugin" / "cbm-events" / "assets"
+)
 
 
 def _make_client(settings: Settings) -> EspoApi:
@@ -915,6 +921,14 @@ def create_app(
             "/assignments",
             StaticFiles(directory=str(ASSIGNMENTS_FRONTEND_DIR), html=True),
             name="assignments-frontend",
+        )
+    if settings.events_active and EVENTS_PLUGIN_ASSETS_DIR.is_dir():
+        # Its own top-level path, not under /events, so it cannot be shadowed by
+        # the events frontend mount registered below.
+        app.mount(
+            "/events-plugin",
+            StaticFiles(directory=str(EVENTS_PLUGIN_ASSETS_DIR)),
+            name="events-plugin-assets",
         )
     if settings.events_active and EVENTS_FRONTEND_DIR.is_dir():
         app.mount(

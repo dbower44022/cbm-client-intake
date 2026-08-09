@@ -1,0 +1,99 @@
+/* Preview chrome + an APPROXIMATION of the website's card styling.
+ *
+ * The class names below (month-label, event-list, event-item, event-date,
+ * event-info, video-list, video-item, …) are the DOM contract the live site's
+ * Elementor CSS keys on — EV-01. They are styled here only so the preview is
+ * legible; the real page will look different in detail. Do not treat this file
+ * as a spec for the site, and do not copy it into the plugin.
+ */
+
+:root {
+  --pv-ink: #1c1c1c;
+  --pv-muted: #5c5c5c;
+  --pv-line: #e2e2e2;
+  --pv-accent: #00693e;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: Roboto, system-ui, -apple-system, sans-serif;
+  color: var(--pv-ink);
+  background: #f4f5f6;
+}
+
+.pv__bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; flex-wrap: wrap;
+  padding: .6rem 1rem; background: #fff; border-bottom: 1px solid var(--pv-line);
+  position: sticky; top: 0; z-index: 5;
+}
+.pv__env {
+  display: inline-block; margin-left: .5rem; padding: .1rem .5rem;
+  border-radius: 999px; background: #eef2f7; color: #33475b; font-size: .78rem;
+}
+.pv__controls { display: flex; align-items: center; gap: .75rem; font-size: .85rem; }
+.pv__controls select, .pv__controls button, .pv__searchrow input, .pv__searchrow button {
+  font: inherit; padding: .35rem .6rem; border: 1px solid var(--pv-line);
+  border-radius: 4px; background: #fff;
+}
+.pv__controls button, .pv__searchrow button { cursor: pointer; }
+
+.pv__note {
+  margin: 0; padding: .7rem 1rem; background: #fff8e6; border-bottom: 1px solid #ecd9a5;
+  font-size: .85rem; color: #6b4a05;
+}
+.pv__msg { margin: 0; padding: .7rem 1rem; font-size: .9rem; }
+.pv__msg[hidden] { display: none; }
+.pv__msg--error { background: #fbe6e6; color: #8a1f1f; }
+.pv__msg--info { background: #eef2f7; color: #33475b; }
+
+.pv__stage { margin: 1.25rem auto; padding: 0 1rem; }
+.pv__section { background: #fff; border: 1px solid var(--pv-line); border-radius: 6px;
+  padding: 1rem 1.25rem; margin-bottom: 1.25rem; }
+.pv__section h2 { margin: 0 0 .25rem; font-size: 1.15rem; }
+.pv__count { margin: 0 0 .9rem; font-size: .82rem; color: var(--pv-muted); }
+.pv__searchrow { display: flex; gap: .5rem; margin-bottom: .75rem; }
+.pv__searchrow input { flex: 1 1 auto; }
+
+/* --- approximation of the site's calendar --- */
+.month-label {
+  margin: 1.2rem 0 .5rem; font-size: .8rem; letter-spacing: .08em;
+  color: var(--pv-muted); font-weight: 700;
+}
+.event-list, .video-list { list-style: none; margin: 0; padding: 0; }
+.event-item {
+  display: flex; gap: 1rem; align-items: flex-start;
+  padding: .9rem 0; border-top: 1px solid var(--pv-line);
+}
+.event-date {
+  flex: 0 0 3.5rem; text-align: center; background: var(--pv-accent); color: #fff;
+  border-radius: 4px; padding: .4rem 0;
+}
+.event-date__month { display: block; font-size: .7rem; letter-spacing: .06em; }
+.event-date__day { display: block; font-size: 1.4rem; font-weight: 700; line-height: 1; }
+.event-info { flex: 1 1 auto; }
+.event-info__time { font-size: .78rem; color: var(--pv-muted); letter-spacing: .04em; }
+.event-info__title { font-size: 1.05rem; font-weight: 600; margin: .15rem 0; }
+.event-info__summary { font-size: .9rem; color: #444; }
+.event-item img { max-width: 12rem; border-radius: 4px; }
+
+/* --- approximation of the recorded library --- */
+.video-item {
+  display: flex; gap: 1rem; align-items: flex-start;
+  padding: .9rem 0; border-top: 1px solid var(--pv-line);
+}
+.video-thumb-btn {
+  position: relative; flex: 0 0 12rem; padding: 0; border: 0; background: none;
+  cursor: pointer;
+}
+.video-thumb-btn img { width: 100%; border-radius: 4px; display: block; }
+.cbm-play-overlay {
+  position: absolute; inset: 0; display: grid; place-items: center;
+}
+.cbm-play-overlay::before {
+  content: "▶"; color: #fff; font-size: 1.6rem;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, .6);
+}
+.cbm-search-msg { color: var(--pv-muted); font-size: .9rem; }
