@@ -52,10 +52,36 @@ def test_override_applies_and_coerces():
     assert s.gmail_sync is True
 
 
-def test_bad_override_falls_back_to_the_environment_not_the_default():
+def test_a_reference_captured_at_boot_sees_later_overrides():
+    """The 2026-08-09 regression: `create_app` captures a settings object once
+    and its request handlers close over it. If an override produced a NEW object
+    every one of those references would stay frozen at boot — the save would
+    succeed and change nothing."""
+    captured = get_settings()          # what create_app does
+    assert captured.env_label == ""
+    apply_overrides({"env_label": "Test Bench"})
+    assert captured.env_label == "Test Bench"
+    assert captured.environment == "Test Bench"
+    assert captured is get_settings()
+
+
+def test_clearing_an_override_restores_the_deployment_value():
+    captured = get_settings()
+    baseline = captured.worker_batch_size
+    apply_overrides({"worker_batch_size": "25"})
+    assert captured.worker_batch_size == 25
+    apply_overrides({})
+    assert captured.worker_batch_size == baseline
+
+
+def test_bad_override_leaves_the_configuration_unchanged():
     """Ruling 6: a broken override must never silently reconfigure the app."""
     apply_overrides({"worker_batch_size": "twenty"})
     assert get_settings().worker_batch_size == 10
+    # And from a good state it keeps the good state rather than reverting.
+    apply_overrides({"worker_batch_size": "25"})
+    apply_overrides({"worker_batch_size": "twenty"})
+    assert get_settings().worker_batch_size == 25
 
 
 def test_version_bumps_only_on_change():

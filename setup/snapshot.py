@@ -64,7 +64,7 @@ def build_snapshot(
 ) -> dict[str, Any]:
     """This deployment's non-secret settings, as the peer will see them."""
     overrides = overrides or {}
-    env = config_module._env_settings()
+    env = config_module.env_values()
     entries: dict[str, Any] = {}
     for key in compared_keys():
         override = overrides.get(key)
@@ -74,7 +74,7 @@ def build_snapshot(
         entries[key] = {
             "secret": False,
             "value": _as_text(getattr(settings, key, None)),
-            "envValue": _as_text(getattr(env, key, None)),
+            "envValue": _as_text(env.get(key)),
             "overridden": override is not None,
             "temporary": bool(override.temporary) if override else False,
             "scoped": bool(override.scoped) if override else False,

@@ -52,12 +52,12 @@ def _source_of(key: str, env_value: Any, overridden: bool) -> str:
 def _row(
     spec: SettingSpec,
     settings: Settings,
-    env: Settings,
+    env: dict[str, Any],
     override: Optional[Override],
 ) -> dict[str, Any]:
     key = spec.key
     secret = is_secret(key)
-    env_value = getattr(env, key, None)
+    env_value = env.get(key)
     effective = getattr(settings, key, None)
     row: dict[str, Any] = {
         "key": key,
@@ -88,7 +88,7 @@ def _row(
     return row
 
 
-def _readonly_rows(settings: Settings, env: Settings) -> list[dict[str, Any]]:
+def _readonly_rows(settings: Settings, env: dict[str, Any]) -> list[dict[str, Any]]:
     """Every setting NOT curated for editing — visible behind "show all", never
     editable (ruling 3), with secrets masked."""
     curated = {s.key for s in SETTINGS}
@@ -107,10 +107,10 @@ def _readonly_rows(settings: Settings, env: Settings) -> list[dict[str, Any]]:
             "secret": secret,
             "denylisted": key in DENYLIST,
             "value": SECRET_MASK if secret else _as_text(value),
-            "envValue": SECRET_MASK if secret else _as_text(getattr(env, key, None)),
+            "envValue": SECRET_MASK if secret else _as_text(env.get(key)),
             "isSet": bool(value) if secret else None,
             "overridden": False,
-            "source": _source_of(key, getattr(env, key, None), False),
+            "source": _source_of(key, env.get(key), False),
         })
     return out
 
@@ -118,7 +118,7 @@ def _readonly_rows(settings: Settings, env: Settings) -> list[dict[str, Any]]:
 async def page_payload(store: Optional[SettingsStore]) -> dict[str, Any]:
     """Everything the page renders in one call."""
     settings = get_settings()
-    env = config_module._env_settings()
+    env = config_module.env_values()
     overrides = await store.load() if store is not None else {}
 
     groups: dict[str, list[dict[str, Any]]] = {g: [] for g in GROUP_ORDER}

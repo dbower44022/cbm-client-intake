@@ -144,9 +144,8 @@ def validate_value(key: str, value: str) -> None:
         )
     if not is_editable(key):
         raise SettingsError(f"'{key}' is not an editable setting.")
-    base = config_module._env_settings()
     try:
-        Settings(**{**base.model_dump(), key: value})
+        Settings(**{**config_module.env_values(), key: value})
     except Exception as exc:  # noqa: BLE001 — surfaced to the user verbatim
         raise SettingsError(f"'{value}' is not a valid value for {key}: {exc}") from exc
 
@@ -344,8 +343,8 @@ def setting_for_user(key: str, user: Optional[dict[str, Any]], settings: Setting
     override = _scoped.get(key)
     if override is not None and _matches(override, user):
         try:
-            base = config_module._env_settings()
-            return getattr(Settings(**{**base.model_dump(), key: override.value}), key)
+            merged = {**config_module.env_values(), key: override.value}
+            return getattr(Settings(**merged), key)
         except Exception as exc:  # noqa: BLE001 — fall through to the global value
             log.warning("scoped override for %s unusable: %s", key, exc)
     return getattr(settings, key, None)

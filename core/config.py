@@ -614,17 +614,65 @@ def _env_settings() -> Settings:
 
 _overrides: dict[str, object] = {}
 _overrides_version = 0
-_effective: Optional[Settings] = None
-_effective_version = -1
+_pristine: Optional[dict[str, object]] = None
+
+
+def _baseline() -> dict[str, object]:
+    """The environment's own values, captured before any override touched them.
+
+    Taken once, from the singleton's initial state — everything after that is
+    computed against this, so clearing an override restores the deployment value
+    rather than the code default.
+    """
+    global _pristine
+    if _pristine is None:
+        _pristine = _env_settings().model_dump()
+    return _pristine
 
 
 def apply_overrides(values: dict[str, object]) -> None:
-    """Install the current override set (called by the periodic refresher)."""
+    """Install the current override set (called by the periodic refresher).
+
+    Mutates the **one** ``Settings`` instance in place rather than replacing it.
+    That matters: ``create_app`` captures a settings object at boot and its
+    request handlers close over it, as do the intake handlers. Returning a new
+    object from ``get_settings()`` would leave every one of those references
+    frozen at boot — which is exactly the bug that made an override save
+    correctly and change nothing (2026-08-09).
+    """
     global _overrides, _overrides_version
     if values == _overrides:
         return
+    baseline = _baseline()
+    try:
+        validated = Settings(**{**baseline, **values})
+    except Exception as exc:  # noqa: BLE001 — a bad override changes nothing
+        logging.getLogger("cbm_intake.config").warning(
+            "settings overrides rejected, configuration unchanged: %s", exc
+        )
+        return
+    live = _env_settings()
+    for name in Settings.model_fields:
+        new_value = getattr(validated, name)
+        if getattr(live, name) != new_value:
+            setattr(live, name, new_value)
     _overrides = dict(values)
     _overrides_version += 1
+
+
+def env_values() -> dict[str, object]:
+    """The DEPLOYMENT's own values — what each setting would be with no override.
+
+    Since ``apply_overrides`` mutates the live instance in place, the live object
+    can no longer answer "what does the overlay say?". This can, and it is what
+    the page shows beside an overridden value so the overlay never silently lies
+    about what the app is doing (ruling 2).
+    """
+    return dict(_baseline())
+
+
+def env_value(key: str) -> object:
+    return _baseline().get(key)
 
 
 def override_values() -> dict[str, object]:
@@ -639,31 +687,17 @@ def overrides_version() -> int:
 
 
 def get_settings() -> Settings:
-    global _effective, _effective_version
-    base = _env_settings()
-    if not _overrides:
-        return base
-    if _effective is not None and _effective_version == _overrides_version:
-        return _effective
-    try:
-        merged = {**base.model_dump(), **_overrides}
-        _effective = Settings(**merged)
-    except Exception as exc:  # noqa: BLE001 — never let a bad override break config
-        logging.getLogger("cbm_intake.config").warning(
-            "settings overrides rejected, falling back to the environment: %s", exc
-        )
-        _effective = base
-    _effective_version = _overrides_version
-    return _effective
+    """The live configuration. Always the SAME object, so a reference captured
+    at boot keeps reflecting later overrides."""
+    return _env_settings()
 
 
 def _clear_settings_cache() -> None:
     """Reset both layers. Exposed as ``get_settings.cache_clear`` so the many
     tests that call it keep working unchanged."""
-    global _effective, _effective_version, _overrides, _overrides_version
+    global _overrides, _overrides_version, _pristine
     _env_settings.cache_clear()
-    _effective = None
-    _effective_version = -1
+    _pristine = None
     _overrides = {}
     _overrides_version = 0
 

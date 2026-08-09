@@ -4,6 +4,39 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.190.1] — 2026-08-09
+
+**fix(setup): an override saved correctly and changed nothing.** Found within
+minutes of switching the page on for crm-test: setting **Environment label** to
+`Test Bench` stored fine (`/healthz` showed `overrideCount: 3`) but every page
+footer still read `(Test)`.
+
+`create_app` captures a `Settings` object once at boot and its request handlers
+close over that object — `/healthz` and the intake handlers among them. v0.190.0
+implemented overrides by building a NEW `Settings` and returning it from
+`get_settings()`, so every reference captured at boot stayed frozen at its boot
+values. Only code that called `get_settings()` per request ever saw an override,
+which is most of the app but conspicuously not the parts that report what the app
+thinks it is.
+
+- **`apply_overrides` now mutates the single instance in place**, field by field,
+  from a validated merge. `get_settings()` always returns that same object, so a
+  boot-captured reference stays live. No call sites had to change.
+- **`core/config.env_values()`** exposes the deployment's own values, captured
+  once before any override touched the instance. The live object can no longer
+  answer "what does the overlay say?", and ruling 2 depends on being able to show
+  both — without this the page would have displayed the override twice as
+  "overlay says X · override says X". `setup/service.py`, `setup/snapshot.py` and
+  the store's validation now read the baseline from there.
+- **A bad override now leaves the configuration untouched** rather than reverting
+  to the environment mid-flight — the last known-good state is the safer floor,
+  and still never the code defaults (ruling 6).
+
+**Verified:** 2 new regression tests — a reference captured before
+`apply_overrides` sees the change, and clearing an override restores the
+deployment value. Full suite 1517 green (the pre-existing date-sensitive
+`test_a_full_event_is_NOT_refused` failure is unrelated).
+
 ## [0.190.0] — 2026-08-09
 
 **feat(setup): System Settings — the `/setup` admin page.** Gated OFF by
