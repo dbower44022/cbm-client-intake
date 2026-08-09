@@ -203,6 +203,19 @@
       $("overviewTiles").appendChild(box);
     });
 
+    // The website card image. Served through the app's staff proxy, so it also
+    // shows for an unpublished event — the public route is gated on publishing.
+    var graphicId = (event.raw && event.raw.eventGraphicId) || "";
+    var graphicWrap = $("overviewGraphicWrap");
+    if (graphicId && event.raw && event.raw.id) {
+      $("overviewGraphic").src = API + "/events/" + encodeURIComponent(event.raw.id)
+        + "/graphic?v=" + encodeURIComponent(graphicId);
+      graphicWrap.hidden = false;
+    } else {
+      $("overviewGraphic").removeAttribute("src");
+      graphicWrap.hidden = true;
+    }
+
     var facts = [
       ["When", fmtWhen(event)],
       ["Format", event.format || "—"],
@@ -214,6 +227,10 @@
       ["Zoom webinar", event.webinarId || "not created"],
       ["Join URL", event.joinUrl || "—"],
       ["Recording", event.recordingUrl || "not published"],
+      // Named even when absent: a missing row reads as a missing feature, and
+      // "none" is the answer to "why has the website card got no picture?".
+      ["Website graphic", graphicId ? "uploaded" : "none — the card falls back "
+        + "to the recording thumbnail"],
       ["Summary", event.summary || "—"],
     ];
     var host = $("overviewFacts");
@@ -492,6 +509,9 @@
           });
           raw.eventGraphicId = (result.raw || {}).eventGraphicId || "";
           showPreview();
+          // Refresh the record behind the modal so the Overview tab shows the
+          // new picture immediately, whether or not the form is then saved.
+          if (state.current) renderOverview();
           notice("Graphic saved.", "ok");
         } catch (err) { notice(err.message, "error"); }
       };
@@ -505,6 +525,7 @@
         raw.eventGraphicId = "";
         file.value = "";
         showPreview();
+        if (state.current) renderOverview();
         notice("Graphic removed.", "ok");
       } catch (err) { notice(err.message, "error"); }
     });

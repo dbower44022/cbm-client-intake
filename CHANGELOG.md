@@ -4,6 +4,29 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.191.1] — 2026-08-09
+
+**fix(events): the uploaded graphic was invisible on the event view.** Reported
+straight after 0.191.0: the upload worked, but opening the event showed no
+picture anywhere.
+
+The Overview tab renders a tile row and a facts list, and I had added the
+graphic to the **edit form** and the **public payload** only — so the one screen
+staff actually look at to check an event never displayed it. An upload with no
+visible result reads as a failed upload.
+
+- The **Overview tab now shows the graphic**, served through the staff proxy so
+  it appears for unpublished events too (the public route is publish-gated).
+- A **"Website graphic"** row joins the facts list, reading `uploaded` or
+  `none — the card falls back to the recording thumbnail`. Named even when
+  absent, per the house rule that a vanishing row reads as a missing feature —
+  and it is the answer to "why has the website card got no picture?".
+- Uploading or removing **re-renders the Overview immediately**, so the result
+  is visible without saving or reopening the record.
+- `.ev__overviewgraphic[hidden] { display: none }` — `display:flex` beats the
+  `[hidden]` attribute, which would have left an empty frame on every event
+  without a graphic.
+
 ## [0.191.0] — 2026-08-09
 
 **feat(events): an event graphic for the website.** Asked for after the first

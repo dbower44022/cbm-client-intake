@@ -128,6 +128,18 @@ body { margin: 0; background: var(--cbm-bg, #f6f7f9); color: var(--cbm-text, #21
 .ev__field textarea { resize: vertical; }
 .ev__field--check { flex-direction: row; align-items: center; gap: .5rem; flex-basis: 100%; }
 .ev__field--check input { width: auto; }
+.ev__overviewgraphic { margin: 0 0 1rem; display: flex; flex-direction: column; gap: .3rem; }
+/* display:flex would otherwise beat the [hidden] attribute and leave an empty
+   frame on every event without a graphic. */
+.ev__overviewgraphic[hidden] { display: none; }
+.ev__overviewgraphic img {
+  max-width: 26rem; max-height: 14rem; object-fit: contain;
+  border: 1px solid var(--color-border, #d8d8d8); border-radius: 4px; background: #fafafa;
+}
+.ev__overviewgraphic figcaption {
+  font-size: .78rem; text-transform: uppercase; letter-spacing: .04em;
+  color: var(--color-text-muted, #5c5c5c);
+}
 .ev__field--graphic { flex-basis: 100%; display: flex; flex-direction: column; gap: .4rem; }
 .ev__graphic {
   max-width: 22rem; max-height: 12rem; object-fit: contain;
