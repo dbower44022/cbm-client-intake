@@ -571,9 +571,14 @@ gate practical. Gated by `SETUP_ENABLED` + a database. Runbook:
   `ESPO_BASE_URL`/`ESPO_DRY_RUN`, `DATABASE_URL`, `SESSION_SECRET` and the two
   switches guarding this feature. Secrets are never rendered — "set / not set"
   only. `SETTINGS_OVERRIDES=false` is the env-only break-glass.
-- **Mount-time flags cannot take effect live.** `analytics_enabled`,
-  `events_enabled`, `assignments_enabled` and friends are read once in
-  `create_app`, so their rows are badged *takes effect on next deploy*.
+- **Boot-read flags are denylisted, not badged** (`BOOT_READ_KEYS`).
+  `create_app` mounts routers and builds middleware from the ENVIRONMENT and the
+  override layer loads afterwards, so an override for `analytics_enabled`,
+  `events_enabled`, `intake_rate_limit`, `log_level` … never applies — not even
+  after a redeploy, which re-runs mounting first. v0.190.1 offered them with a
+  "takes effect on next deploy" badge and toggling `events_enabled` produced a
+  portal tile whose routes did not exist. **The denylist is filtered on READ as
+  well as write**, so a row that outlives its rule goes inert with no cleanup.
 - **Web and worker refresh independently** (`SETUP_REFRESH_SECONDS`, default 45).
   `/healthz` reports `settingsVersion` per component so you can see the worker
   catch up.

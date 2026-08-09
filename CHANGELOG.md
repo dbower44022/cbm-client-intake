@@ -4,6 +4,38 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.190.2] — 2026-08-09
+
+**fix(setup): a boot-read flag could be toggled into a tile with no routes.**
+Found immediately after 0.190.1 by turning `events_enabled` on from the Settings
+page: the portal grew an **Event Administration** tile, and clicking it produced
+`{"detail":"Not Found"}`.
+
+`create_app` mounts routers, static files and portal aliases from the
+**environment**, and the override layer loads afterwards in the startup hook. So
+an override for a mount-time flag never takes effect — and, unlike what 0.190.0
+claimed on those rows, *not even after a redeploy*, because the redeploy re-runs
+mounting before overrides load. Meanwhile the portal evaluates its tiles per
+request, so it happily advertised an app that did not exist.
+
+- **`BOOT_READ_KEYS` joins the denylist**: `analytics_enabled`,
+  `events_enabled`, `events_public_api`, `assignments_enabled`,
+  `intake_rate_limit`, `intake_rate_window_seconds`, `intake_max_body_mb`,
+  `log_level`. They now appear under *Show all* as **Never editable** and are
+  changed in the deployment overlay, which is the only thing that can change
+  them. The misleading "takes effect on next deploy" badge is gone with them.
+- **The denylist is filtered on READ as well as write** (`global_overrides` and
+  the scoped set). A row can outlive the rule that allowed it, exactly as the
+  stored `events_enabled` override did — filtering on read makes a
+  newly-denylisted key inert with no cleanup migration and no manual delete.
+- Docs corrected in `SYSTEM-SETTINGS-SETUP.md` and `CLAUDE.md`, which both
+  described the badge behaviour that turned out to be wrong.
+
+**Verified:** 2 new tests — every `BOOT_READ_KEY` is refused by
+`validate_value`, and a stored denylisted row is dropped at load. Full suite
+1519 green (the pre-existing date-sensitive `test_a_full_event_is_NOT_refused`
+failure is unrelated).
+
 ## [0.190.1] — 2026-08-09
 
 **fix(setup): an override saved correctly and changed nothing.** Found within

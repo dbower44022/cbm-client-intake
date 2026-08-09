@@ -300,8 +300,18 @@ def global_overrides(rows: dict[str, Override]) -> dict[str, str]:
     Scoped overrides are deliberately excluded — they are per-user decisions
     evaluated at request time, and applying one globally would turn a "just for
     the Mentor Team" rollout into an everyone rollout.
+
+    **Denylisted keys are dropped here too**, not only at the write path. A row
+    can outlive the rule that allowed it — as the boot-read keys did in
+    v0.190.1, where a stored ``events_enabled`` override kept making the portal
+    advertise an app whose routes were never mounted. Filtering on read makes a
+    newly-denylisted key inert immediately, with no cleanup migration.
     """
-    return {k: o.value for k, o in rows.items() if not o.scoped}
+    return {
+        k: o.value
+        for k, o in rows.items()
+        if not o.scoped and k not in DENYLIST
+    }
 
 
 # --- scoped rollout (plan §5, phase 4) --------------------------------------
@@ -369,7 +379,7 @@ async def refresh_into_config(store: Optional[SettingsStore], settings: Settings
         log.warning("settings override refresh failed (keeping current config): %s", exc)
         return False
     global _scoped
-    _scoped = {k: o for k, o in rows.items() if o.scoped}
+    _scoped = {k: o for k, o in rows.items() if o.scoped and k not in DENYLIST}
     config_module.apply_overrides(global_overrides(rows))
     return True
 

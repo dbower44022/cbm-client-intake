@@ -72,15 +72,25 @@ Each row shows where its value came from:
 - **Override** — it was changed here. The row then also shows the overlay's
   value, so the overlay never silently lies about what the app is doing.
 
-Two badges matter:
+The **worker / both** badge tells you which process reads the setting. A
+worker-side change takes up to `SETUP_REFRESH_SECONDS` (default 45s) to reach the
+worker, because it is a separate container on its own timer.
 
-- **Takes effect on next deploy** — router mounting and boot-time configuration
-  are decided when the process starts, so master flags like `ANALYTICS_ENABLED`
-  and `EVENTS_ENABLED` cannot take effect live however this page behaves. Saving
-  one is fine; it just needs a redeploy to bite.
-- **worker / both** — which process reads the setting. A worker-side change
-  takes up to `SETUP_REFRESH_SECONDS` (default 45s) to reach the worker, because
-  it is a separate container on its own timer.
+### What this page cannot switch on
+
+**The master flags that mount an app are not here** — `EVENTS_ENABLED`,
+`ANALYTICS_ENABLED`, `EVENTS_PUBLIC_API`, `ASSIGNMENTS_ENABLED` — nor are the
+intake rate limits, body cap, or `LOG_LEVEL`.
+
+`create_app` decides router mounting and builds the middleware from the
+**environment**, and the override layer only loads afterwards in the startup
+hook. An override for one of those keys can therefore never take effect — not
+even after a redeploy, because the redeploy re-runs mounting first. Offering the
+control would be a lie, so they are denylisted and appear under *Show all* as
+**Never editable**.
+
+**Change them in the deployment overlay** (§2 shows the shape), then apply with
+`doctl` and let the app restart. Everything else on the page is live.
 
 **Reset to deployment value** deletes the override rather than writing the
 default back, so the setting returns to whatever the overlay says.

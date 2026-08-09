@@ -130,6 +130,31 @@ def test_registry_has_no_denylisted_keys():
     assert not ({s.key for s in SETTINGS} & DENYLIST)
 
 
+def test_boot_read_settings_are_not_editable():
+    """v0.190.1 offered these with a "takes effect on next deploy" badge, which
+    was wrong: create_app mounts routers from the ENVIRONMENT and the override
+    layer loads afterwards, so a redeploy re-runs mounting first and the override
+    never applies. Toggling events_enabled produced a portal tile whose routes
+    did not exist."""
+    from core.settings_registry import BOOT_READ_KEYS
+
+    for key in BOOT_READ_KEYS:
+        assert key in DENYLIST
+        assert not is_editable(key)
+        with pytest.raises(SettingsError):
+            validate_value(key, "true")
+
+
+def test_a_stored_denylisted_row_is_ignored_on_load():
+    """A row can outlive the rule that allowed it — filtering only on write
+    would leave the stale events_enabled override live forever."""
+    rows = {
+        "events_enabled": _override("events_enabled", "true"),
+        "worker_batch_size": _override("worker_batch_size", "7"),
+    }
+    assert global_overrides(rows) == {"worker_batch_size": "7"}
+
+
 # --- scoped rollout ----------------------------------------------------------
 
 def _override(key, value, **kw):

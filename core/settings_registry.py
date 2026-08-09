@@ -9,11 +9,15 @@ Three things live here and nowhere else:
 * **:data:`SETTINGS`** — the curated, editable settings, grouped. Ruling 3:
   these are the flags and knobs that actually get tuned; every other field on
   ``Settings`` is still *shown* (read-only) but not editable.
-* **``restart``** — whether a change takes effect immediately or only on the
-  next deploy. Router mounting is decided once in ``create_app``, so the master
-  flags that mount an app (``analytics_enabled``, ``events_enabled``, …) cannot
-  take effect live however the override layer behaves. Saying so on the row is
-  the difference between a working feature and an afternoon of confusion.
+* **Boot-read settings are denylisted, not badged.** ``create_app`` decides
+  router mounting and builds the middleware from the ENVIRONMENT, and the
+  override layer only loads afterwards in the startup hook — so an override for
+  one of those keys never takes effect, not even after a redeploy, because the
+  redeploy re-runs mounting first. v0.190.1 shipped them as editable-with-a-
+  "takes effect on next deploy" badge, which was simply wrong: toggling
+  ``events_enabled`` here made the portal show an Event Administration tile
+  whose routes did not exist. They now live on the denylist and are changed in
+  the deployment overlay, which is the only thing that can change them.
 
 ``component`` records which process actually reads the setting — the worker owns
 delivery, monitoring, Gmail sync, Drive reconciliation, transcripts and receipt
@@ -56,8 +60,24 @@ GROUP_ORDER = [
 #     foundations, read once at boot;
 #   * setup_enabled / settings_overrides — the break-glass pair. If the page
 #     could switch itself (or the whole override layer) off, recovery would
-#     need a redeploy.
-DENYLIST: frozenset[str] = frozenset({
+#     need a redeploy;
+#   * BOOT_READ_KEYS — see below. An override for these is inert by
+#     construction, so offering one would be a lie.
+BOOT_READ_KEYS: frozenset[str] = frozenset({
+    # Decide router mounting / static mounts / portal tiles in create_app.
+    "analytics_enabled",
+    "events_enabled",
+    "events_public_api",
+    "assignments_enabled",
+    # Built into middleware at app construction.
+    "intake_rate_limit",
+    "intake_rate_window_seconds",
+    "intake_max_body_mb",
+    # Applied once by logging_setup at process start.
+    "log_level",
+})
+
+DENYLIST: frozenset[str] = BOOT_READ_KEYS | frozenset({
     "espo_base_url",
     "espo_api_key",
     "espo_dry_run",
@@ -116,17 +136,6 @@ def _s(key: str, group: str, label: str, **kw) -> SettingSpec:
 
 SETTINGS: tuple[SettingSpec, ...] = (
     # --- Features ----------------------------------------------------------
-    _s("analytics_enabled", GROUP_FEATURES, "Analytics", kind="bool", restart=True,
-       component="both",
-       help="Mounts the /analytics app, the record tabs and the portal dashboard. "
-            "Router mounting happens at boot, so this needs a redeploy."),
-    _s("events_enabled", GROUP_FEATURES, "Events & Webinars", kind="bool", restart=True,
-       component="both",
-       help="The /events staff app and every CRM write it makes. Mount-time."),
-    _s("events_public_api", GROUP_FEATURES, "Events public API", kind="bool", restart=True,
-       help="The unauthenticated read + registration endpoints the website calls. "
-            "Deliberately separate from the flag above so the site cutover is its "
-            "own reversible switch. Mount-time."),
     _s("zoom_events", GROUP_FEATURES, "Zoom webinar provisioning", kind="bool",
        component="both",
        help="Public webinars only — mentor 1:1 sessions never use the CBM Zoom account."),
@@ -158,9 +167,6 @@ SETTINGS: tuple[SettingSpec, ...] = (
        component="both",
        help="Capture returns immediately and the worker delivers with retries. "
             "Off = synchronous. Needs a database."),
-    _s("assignments_enabled", GROUP_FEATURES, "Staff tools", kind="bool", restart=True,
-       help="The whole authenticated staff stack. Mount-time, and it also needs "
-            "SESSION_SECRET — turning this off removes the portal, including this page."),
     _s("gmail_resync", GROUP_FEATURES, "Gmail one-shot resync", kind="bool",
        component="worker",
        help="Clears every mailbox cursor on worker start so the next pass re-runs the "
@@ -258,15 +264,6 @@ SETTINGS: tuple[SettingSpec, ...] = (
        unit="s", help="How long a session's cached team membership stays trusted."),
     _s("request_timeout_seconds", GROUP_RELIABILITY, "CRM request timeout", kind="int",
        unit="s", component="both"),
-    _s("intake_rate_limit", GROUP_RELIABILITY, "Intake rate limit", kind="int",
-       restart=True, help="Requests per window. 0 disables. Middleware — built at boot."),
-    _s("intake_rate_window_seconds", GROUP_RELIABILITY, "Intake rate window", kind="int",
-       unit="s", restart=True),
-    _s("intake_max_body_mb", GROUP_RELIABILITY, "Intake max body", kind="int", unit="MB",
-       restart=True),
-    _s("log_level", GROUP_RELIABILITY, "Log level", kind="choice",
-       choices=("DEBUG", "INFO", "WARNING", "ERROR"), restart=True, component="both",
-       help="Configured once at process start."),
 
     # --- Team gates --------------------------------------------------------
     _s("assign_allowed_teams", GROUP_GATES, "Client Administration", kind="csv"),
