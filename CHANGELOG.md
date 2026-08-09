@@ -4,6 +4,34 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.191.2] — 2026-08-09
+
+**fix(events): unpublishing an event did not take its image offline.** Doug
+unticked **Publish to website** and the picture kept loading from its public
+URL.
+
+The gate itself was working — the route re-derives the event through
+`get_by_slug` on every request and 404s for an unpublished one. The leak was the
+**cache header**: v0.191.0 sent `Cache-Control: public, max-age=604800,
+immutable` whenever the payload's `?v=<attachment id>` was present. The
+reasoning was that the URL changes whenever the picture does, so it can be
+cached forever — which is true of the *content* and false of the
+*availability*. This resource is revocable, and an `immutable` response cannot
+be revoked: the browser had been told not to ask again for a week, so it never
+noticed the 404.
+
+- The image now carries `public, max-age=<EVENTS_CACHE_SECONDS>,
+  must-revalidate` — the same bound as the calendar payload, which already
+  limits how long an unpublished event can linger anywhere. `must-revalidate`
+  stops any cache serving it past the TTL while the origin says 404.
+- Two tests replace the one that asserted the old behaviour: the header is never
+  `immutable` on either URL form, and the TTL follows the setting.
+
+⚠️ **A browser that already cached an image under the old header will keep
+showing it for up to a week.** Hard-reload, or open the URL in a private window,
+to confirm the fix. Nothing on the public site was affected — the WordPress
+cutover has not happened.
+
 ## [0.191.1] — 2026-08-09
 
 **fix(events): the uploaded graphic was invisible on the event view.** Reported

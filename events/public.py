@@ -180,8 +180,18 @@ async def event_image(slug: str, request: Request, response: Response) -> Respon
     endpoint would have served any attachment in the CRM — mentor resumes
     included.
 
-    Cached hard when the caller passes the ``?v=`` the payload supplies (the URL
-    changes when the picture does), briefly otherwise.
+    **Cached only briefly, and never ``immutable``.** The obvious optimisation —
+    the payload supplies ``?v=<attachment id>``, so the URL changes whenever the
+    picture does, therefore cache it for a week — is wrong here, and shipped
+    wrong in v0.191.0. The URL tracks the *content*, but this resource's
+    *availability* is revocable: unpublishing an event must take its image
+    offline, and an ``immutable`` response cannot be revoked. Staff unticked
+    "Publish to website" and the browser kept serving the picture for a week
+    without ever asking again.
+
+    So the TTL matches the rest of the public API (``EVENTS_CACHE_SECONDS``),
+    which bounds how long an unpublished event can linger anywhere — the
+    calendar payload itself is cached the same way.
     """
     client = _client(request)
     try:
@@ -191,15 +201,14 @@ async def event_image(slug: str, request: Request, response: Response) -> Respon
     if result is None:
         raise HTTPException(status_code=404, detail="Not found.")
     data, content_type = result
-    versioned = bool(request.query_params.get("v"))
+    ttl = max(0, get_settings().events_cache_seconds)
     return Response(
         content=data,
         media_type=content_type or "application/octet-stream",
         headers={
-            "Cache-Control": (
-                "public, max-age=604800, immutable" if versioned
-                else f"public, max-age={max(60, get_settings().events_cache_seconds)}"
-            )
+            # must-revalidate so a cache cannot serve this past its TTL while
+            # the origin is answering 404 — the whole point of the gate.
+            "Cache-Control": f"public, max-age={ttl}, must-revalidate"
         },
     )
 

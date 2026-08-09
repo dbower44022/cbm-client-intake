@@ -155,13 +155,27 @@ def test_public_image_404s_for_an_unknown_slug(monkeypatch):
     assert client.get("/api/events/nope/image").status_code == 404
 
 
-def test_versioned_image_is_cached_hard(monkeypatch):
+def test_image_is_never_cached_immutably(monkeypatch):
+    """Availability here is REVOCABLE — unpublishing must take the image
+    offline. v0.191.0 sent `max-age=604800, immutable` on the versioned URL, so
+    a browser kept serving the picture for a week after the event was
+    unpublished, never asking the origin again. The `?v=` proves the content is
+    unchanged; it says nothing about whether you are still allowed to see it."""
     events = [make_event(eventGraphicId="att-1")]
-    client, _ = _public_app(monkeypatch, events)
-    versioned = client.get("/api/events/grant-writing-basics/image?v=att-1")
-    assert "immutable" in versioned.headers["cache-control"]
-    plain = client.get("/api/events/grant-writing-basics/image")
-    assert "immutable" not in plain.headers["cache-control"]
+    client, _ = _public_app(monkeypatch, events, cache_seconds=60)
+    for url in ("/api/events/grant-writing-basics/image?v=att-1",
+                "/api/events/grant-writing-basics/image"):
+        cache_control = client.get(url).headers["cache-control"]
+        assert "immutable" not in cache_control
+        assert "must-revalidate" in cache_control
+        assert "max-age=60" in cache_control
+
+
+def test_image_ttl_follows_the_public_cache_setting(monkeypatch):
+    events = [make_event(eventGraphicId="att-1")]
+    client, _ = _public_app(monkeypatch, events, cache_seconds=0)
+    header = client.get("/api/events/grant-writing-basics/image").headers["cache-control"]
+    assert "max-age=0" in header
 
 
 def test_image_route_absent_when_the_public_api_is_off(monkeypatch):
