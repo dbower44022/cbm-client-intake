@@ -266,3 +266,31 @@ def test_preview_page_and_plugin_asset_are_served(monkeypatch):
 def test_plugin_asset_absent_when_events_is_off(monkeypatch):
     client, _ = _staff_app(monkeypatch, enabled=False)
     assert client.get("/events-plugin/cbm-events.js").status_code == 404
+
+
+def test_event_page_preview_is_served(monkeypatch):
+    """The per-event page the calendar links to. Without it, Sign Up pointed at
+    the WordPress URL, which is Phase 4 and does not exist yet."""
+    client, _ = _staff_app(monkeypatch)
+    page = client.get("/events/preview-event.html")
+    assert page.status_code == 200
+    assert "preview-event.js" in page.text
+    assert client.get("/events/preview-event.js").status_code == 200
+
+
+def test_registration_payload_shape_matches_the_schema():
+    """The preview posts submission_token + company_url alongside the visitor
+    fields; every form's base schema requires the token and 422s without it."""
+    from forms.event_registration.schemas import EventRegistration
+
+    record = EventRegistration(
+        event_slug="grant-writing-basics",
+        submission_token="preview-token-1234",
+        company_url="",
+        first_name="Test",
+        last_name="Person",
+        email="test.person@example.org",
+        phone="",
+        consent=False,
+    )
+    assert record.first_name == "Test"

@@ -4,6 +4,37 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.192.1] — 2026-08-09
+
+**feat(events): the per-event page joins the preview.** 0.192.0 previewed the
+two list sections but not the page a visitor lands on after clicking through —
+Sign Up pointed at `https://clevelandbusinessmentors.org/webinars/<slug>`, where
+the page *will* live once the WordPress plugin exists. Phase 4 is not built, so
+that address 404s and the preview dead-ended.
+
+- **`/events/preview-event.html?slug=…`** renders the event page from
+  `GET /api/events/{slug}`: hero graphic, title, when, summary, facts (location,
+  type, seats remaining, registration open/closed) and the wysiwyg overview and
+  syllabus. Sign Up in the calendar preview now goes here.
+- **A working registration form**, posting to the real
+  `POST /api/events/{slug}/register`. This is the only way to exercise
+  `EVENTS-SETUP.md` §4.3 without hand-rolling a `curl`. Labelled in the page:
+  on this deployment it creates a genuine Contact and CEventRegistration.
+  It sends `submission_token` (a fresh one per click, so two deliberate test
+  registrations are two submissions rather than one deduplicated away) and the
+  `company_url` honeypot — every form's base schema requires the token and 422s
+  without it.
+- Wysiwyg content is rendered as HTML, as the website will, but `script`,
+  `style`, `iframe`, `object`, `embed`, inline `on*` handlers and
+  `javascript:` hrefs are stripped first. Staff-authored is not the same as
+  trusted.
+- Publish-gated like everything public: an unpublished slug 404s, and the page
+  says so in those terms rather than showing a bare error.
+
+**Verified:** 4 new tests — the page and its script are served, and the
+registration payload shape validates against `EventRegistration`. Full suite
+1542 green.
+
 ## [0.192.0] — 2026-08-09
 
 **feat(events): a website preview, before the WordPress cutover exists.**

@@ -47,9 +47,14 @@
       items.length + " published upcoming event" + (items.length === 1 ? "" : "s");
     window.CBMEvents.renderCalendar($("calendar"), items, {
       onSignUp: function (item) {
-        // The plugin will navigate to the per-event page; here we just show
-        // where it would go, so a click doesn't leave the preview.
-        message("Sign-up would open: " + (item.url || "(no public URL — the event has no slug)"), "info");
+        // On the live site this goes to the WordPress per-event page. That page
+        // is Phase 4 and does not exist yet, so send the operator to our own
+        // stand-in rather than to a URL that 404s.
+        if (!item.slug) {
+          message("This event has no URL slug yet, so it has no public page.", "error");
+          return;
+        }
+        window.location.href = "preview-event.html?slug=" + encodeURIComponent(item.slug);
       },
     });
   }

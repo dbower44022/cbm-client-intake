@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CBM — Event page preview</title>
+  <link rel="stylesheet" href="preview.css" />
+</head>
+<body>
+  <header class="pv__bar">
+    <div>
+      <strong>Event page preview</strong>
+      <span class="pv__env" id="envBadge">checking…</span>
+    </div>
+    <div class="pv__controls">
+      <label>Width
+        <select id="widthSelect">
+          <option value="1200">Desktop — 1200px</option>
+          <option value="768">Tablet — 768px</option>
+          <option value="390">Phone — 390px</option>
+          <option value="full">Full window</option>
+        </select>
+      </label>
+      <a href="preview.html">← Back to the calendar</a>
+    </div>
+  </header>
+
+  <p class="pv__note">
+    This is the <strong>per-event page</strong> as the website will present it,
+    built from the public API. On the live site this URL will be
+    <code id="realUrl">…</code>, served by the WordPress plugin — which is
+    Phase 4 and not built yet, so that address does not exist today. Styling is
+    approximate for the same reason as the calendar preview.
+  </p>
+
+  <div class="pv__msg" id="msg" hidden></div>
+
+  <main class="pv__stage" id="stage">
+    <article class="pv__section pv__event" id="eventBody" hidden>
+      <img class="pv__hero" id="hero" alt="" hidden />
+      <p class="pv__eyebrow" id="eyebrow"></p>
+      <h1 id="title"></h1>
+      <p class="pv__when" id="when"></p>
+      <p class="pv__summary" id="summary"></p>
+
+      <dl class="pv__facts" id="facts"></dl>
+
+      <section class="pv__prose" id="overview"></section>
+      <section class="pv__prose" id="syllabus"></section>
+
+      <div class="pv__signup" id="signupBox">
+        <h2>Register</h2>
+        <p class="pv__warn">
+          This form posts to the <strong>real</strong> registration endpoint. On
+          this deployment that creates a genuine Contact and
+          CEventRegistration in the CRM — use obvious test data, and remove the
+          records afterwards.
+        </p>
+        <div class="pv__signupgrid">
+          <label>First name <input type="text" id="firstName" /></label>
+          <label>Last name <input type="text" id="lastName" /></label>
+          <label>Email <input type="email" id="email" /></label>
+          <label>Phone <input type="tel" id="phone" /></label>
+        </div>
+        <button type="button" id="registerBtn">Register for this event</button>
+        <p class="pv__result" id="registerResult" hidden></p>
+      </div>
+    </article>
+  </main>
+
+  <script src="preview-event.js"></script>
+</body>
+</html>

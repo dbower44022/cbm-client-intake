@@ -97,3 +97,51 @@ body {
   text-shadow: 0 1px 6px rgba(0, 0, 0, .6);
 }
 .cbm-search-msg { color: var(--pv-muted); font-size: .9rem; }
+
+/* --- per-event page preview --- */
+.pv__event { padding: 1.5rem 1.75rem; }
+.pv__hero {
+  display: block; width: 100%; max-height: 20rem; object-fit: cover;
+  border-radius: 6px; margin-bottom: 1rem;
+}
+.pv__hero[hidden] { display: none; }
+.pv__eyebrow {
+  margin: 0; font-size: .75rem; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--pv-accent); font-weight: 700;
+}
+.pv__event h1 { margin: .2rem 0 .4rem; font-size: 1.9rem; line-height: 1.15; }
+.pv__when { margin: 0 0 .6rem; font-weight: 600; color: var(--pv-muted); }
+.pv__summary { margin: 0 0 1.2rem; font-size: 1.05rem; }
+.pv__facts {
+  display: grid; grid-template-columns: max-content 1fr; gap: .3rem 1rem;
+  margin: 0 0 1.4rem; padding: .8rem 1rem; background: #f7f8f9; border-radius: 4px;
+  font-size: .9rem;
+}
+.pv__facts dt { font-weight: 600; color: var(--pv-muted); margin: 0; }
+.pv__facts dd { margin: 0; }
+.pv__prose { margin-bottom: 1.4rem; line-height: 1.6; }
+.pv__prose[hidden] { display: none; }
+.pv__prose img { max-width: 100%; height: auto; }
+
+.pv__signup { border-top: 1px solid var(--pv-line); padding-top: 1.2rem; }
+.pv__signup h2 { margin: 0 0 .4rem; font-size: 1.2rem; }
+.pv__warn {
+  background: #fff8e6; border: 1px solid #ecd9a5; border-radius: 4px;
+  padding: .6rem .8rem; font-size: .85rem; color: #6b4a05; margin: 0 0 .9rem;
+}
+.pv__signupgrid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: .7rem; margin-bottom: .9rem;
+}
+.pv__signupgrid label { display: flex; flex-direction: column; gap: .25rem; font-size: .85rem; }
+.pv__signupgrid input {
+  font: inherit; padding: .4rem .6rem; border: 1px solid var(--pv-line); border-radius: 4px;
+}
+#registerBtn {
+  font: inherit; padding: .5rem 1.1rem; border: 0; border-radius: 4px;
+  background: var(--pv-accent); color: #fff; cursor: pointer;
+}
+.pv__result { margin: .8rem 0 0; font-size: .88rem; word-break: break-word; }
+.pv__result[hidden] { display: none; }
+.pv__result--ok { color: #14603c; }
+.pv__result--error { color: #8a1f1f; }
