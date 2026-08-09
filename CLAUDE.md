@@ -97,6 +97,13 @@ runbook: `DEPLOYMENT.md`; plain-language console companion:
   sweeps; the web process runs everything user-facing plus worker-liveness
   watching. Getting this wrong is a common cause of "the feature is on but
   nothing happens."
+- **There is no branch-level review gate** — all three apps track `main` with
+  `deploy_on_push: true`, so one push builds dev, crm-test AND prod. The gate is
+  the **feature flag**: build it dark (default off), enable it on crm-test's
+  overlay, review live as a **real non-admin** in the relevant team (admins
+  bypass ACL), then add the var to the prod overlay. Rollback is flipping the
+  flag back, not reverting code. Runbook: `DEPLOYMENT.md` § *Reviewing a change
+  before it reaches production*.
 - To run a script inside a deployed container (the only way to reach prod
   secrets), see [[do-app-console-scripting]]. Admin CRM creds are on **web**
   only.

@@ -445,6 +445,57 @@ Two viable shapes — pick one:
    submission is `ERROR cbm_intake: … create <Entity> failed: HTTP <code> <body>`
    (the browser only shows a generic 502).
 
+## Reviewing a change before it reaches production
+
+**There is no branch-level gate.** All three apps track `main` with
+`deploy_on_push: true`, so one push builds dev, crm-test **and prod** at the
+same time. The review gate is therefore not the deploy — it is the **feature
+flag**. This is how Events, Analytics, Documents and Gmail sync were all rolled
+out, and it is the standing process for anything CRM-backed or otherwise risky.
+
+**1. Build it dark.** The flag defaults **off** in `core/config.py`, so merging
+and deploying the code changes nothing anywhere. Production takes the deploy as
+a no-op. A new CRM-facing feature should also feature-detect its fields from
+metadata, so it stays inert until the CRM side exists rather than needing a
+coordinated deploy.
+
+**2. Turn it on for crm-test only.** Add the env var to `.do/app.prod.yaml`
+(that file is the **crm-test** app, despite the name) and apply it:
+
+```bash
+doctl apps update 509b4370-b9ca-42c7-b251-04d6820fe88e --spec .do/app.prod.yaml
+```
+
+Set the flag on the component that actually runs the work — the **worker** for
+delivery, monitoring, Gmail sync, Drive reconciliation, transcripts and receipt
+sweeps; the **web** component for anything user-facing. Getting this wrong is a
+common cause of "the feature is on but nothing happens."
+
+**3. Review it live** at https://cbm-client-intake-svxs3.ondigitalocean.app/
+against the crm-test CRM, signed in as a **real non-admin user in the relevant
+team** — not an admin. Admin accounts bypass EspoCRM ACL entirely, which is how
+several mentor-only bugs stayed invisible until production.
+
+**4. Promote.** Add the same var to `.do/app.prod-crm.yaml` and apply it to
+`aa1ddf69-f359-4b53-91ba-035cbed7bd53`. Rollback is the reverse — flip the flag
+off and re-apply; no revert, no redeploy of code.
+
+⚠️ Edit the overlays **by hand**. Regenerating one with `doctl apps spec get`
+encrypts every plaintext secret into an `EV[…]` blob and breaks local
+admin-credentialed scripts. See *Overlay recovery* below.
+
+**Before any of that**, review locally: `uv run uvicorn main:app --reload --port
+8000`. With `ESPO_DRY_RUN=true` and no `SESSION_SECRET` you get the public form
+index and no CRM writes; set `ESPO_DRY_RUN=false` plus a `SESSION_SECRET` to get
+the portal and the staff tools against crm-test with a real login. Add
+`docker build -t cbm-intake . && docker run --rm -p 8099:8080 cbm-intake` when
+the change touches dependencies or the Dockerfile.
+
+*(If a true pre-production branch is ever wanted, point the crm-test app's
+three components at a `staging` branch and merge `staging` → `main` to release.
+Deliberately not done — the flag pattern covers it without a second branch to
+keep in sync.)*
+
 ## Reliability operations (added with the 2026-07-18 hardening, v0.94.0)
 
 ### Database backups — ✅ PROD DONE 2026-07-23 (P1-7 / decision D4)
