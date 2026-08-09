@@ -122,6 +122,10 @@ def _apps_for(user: dict[str, Any], settings: Settings) -> list[dict[str, str]]:
     # applied inside the app on top of this).
     if settings.analytics_active and is_member(user, settings.analytics_view_allowed_teams_list):
         apps.append({"title": "Analytics", "url": "/analytics/", "target": "cbm-analytics"})
+    # System Settings — EspoCRM administrators only (ruling 1). Not team-gated:
+    # this page can reconfigure the platform, so the smallest audience wins.
+    if settings.setup_active and user.get("isAdmin"):
+        apps.append({"title": "System Settings", "url": "/setup/", "target": "cbm-setup"})
     return apps
 
 

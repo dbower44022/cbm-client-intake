@@ -51,6 +51,7 @@ APP_SUBMISSION_ADMIN = "Submission Admin"
 APP_COMMUNICATIONS = "Communications"
 APP_INTAKE = "Intake"
 APP_ANALYTICS = "Analytics"
+APP_SETUP = "System Settings"
 
 # --- categories (the `category` enum — small + stable) ----------------------
 CAT_ASSIGNMENT = "Assignment"
@@ -109,6 +110,10 @@ ACT_ANALYTICS_METRIC_SAVED = "Analytics Metric Saved"
 ACT_ANALYTICS_METRIC_DELETED = "Analytics Metric Deleted"
 ACT_ANALYTICS_PAGE_SAVED = "Analytics Page Saved"
 ACT_ANALYTICS_PAGE_DELETED = "Analytics Page Deleted"
+ACT_SETTING_CHANGED = "Setting Changed"
+ACT_SETTING_CLEARED = "Setting Reset to Default"
+ACT_JOB_DRY_RUN = "Maintenance Job Dry Run"
+ACT_JOB_APPLIED = "Maintenance Job Applied"
 
 _NAME_MAX = 250  # CActionLog.name is a varchar — keep the one-liner within it.
 

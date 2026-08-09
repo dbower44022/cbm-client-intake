@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import logging
 from functools import lru_cache
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -416,6 +417,26 @@ class Settings(BaseSettings):
     #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
     app_encryption_key: str = ""
 
+    # --- System Settings page (/setup, prds/system-settings-plan.md) ---
+    # The admin-only page that overrides the settings below from the browser
+    # instead of an overlay edit + `doctl apps update`. Off by default — the
+    # feature ships dark like every other, which is the process it exists to
+    # serve. Needs the staff stack (it uses the shared session) and a database
+    # (overrides live in `app_setting`).
+    setup_enabled: bool = False
+    # BREAK-GLASS. False disables the override layer entirely and the app runs
+    # on pure environment configuration. Env-only and denylisted, so a bad
+    # override can never stop you from turning overrides off.
+    settings_overrides: bool = True
+    # How often each process re-reads the override table. This is the lag
+    # between toggling something on web and the worker acting on it, so it is
+    # also what the "worker picked up" indicator measures.
+    setup_refresh_seconds: int = 45
+    # Phase 3 — the environment diff. The OTHER deployment's base URL and a
+    # shared token authorizing the read-only settings snapshot between them.
+    setup_peer_url: str = ""
+    setup_peer_token: str = ""
+
     @property
     def allowed_origins_list(self) -> list[str]:
         return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
@@ -545,6 +566,18 @@ class Settings(BaseSettings):
         return bool(self.database_url)
 
     @property
+    def setup_active(self) -> bool:
+        """The System Settings page: enabled, on the staff stack, with a database
+        to hold the overrides. Without all three there is nothing to serve."""
+        return self.setup_enabled and self.assignments_active and bool(self.database_url)
+
+    @property
+    def overrides_active(self) -> bool:
+        """Whether the DB override layer is consulted at all (break-glass off =>
+        pure environment configuration, whatever is in the table)."""
+        return self.settings_overrides and bool(self.database_url)
+
+    @property
     def environment(self) -> str:
         """Canonical deploy label for the form badge.
 
@@ -563,5 +596,76 @@ class Settings(BaseSettings):
 
 
 @lru_cache
-def get_settings() -> Settings:
+def _env_settings() -> Settings:
+    """The environment baseline — .env + process environment, no overrides."""
     return Settings()
+
+
+# --- the runtime override layer (prds/system-settings-plan.md §3) -----------
+#
+# `get_settings()` stays the single accessor the whole codebase already calls;
+# it just returns the env baseline with any admin overrides merged on top.
+# Refreshing is out of band (a periodic task in each process calls
+# `apply_overrides`), so reads stay synchronous and free.
+#
+# Ruling 6 — degrade to the OVERLAY, never to the code default: if merging the
+# overrides fails for any reason, this returns the env baseline unchanged and
+# logs. A database incident must not silently reconfigure the application.
+
+_overrides: dict[str, object] = {}
+_overrides_version = 0
+_effective: Optional[Settings] = None
+_effective_version = -1
+
+
+def apply_overrides(values: dict[str, object]) -> None:
+    """Install the current override set (called by the periodic refresher)."""
+    global _overrides, _overrides_version
+    if values == _overrides:
+        return
+    _overrides = dict(values)
+    _overrides_version += 1
+
+
+def override_values() -> dict[str, object]:
+    """The overrides currently in effect in THIS process."""
+    return dict(_overrides)
+
+
+def overrides_version() -> int:
+    """Bumped on every change — surfaced on /healthz so you can see a process
+    pick a change up (the worker is a separate container from web)."""
+    return _overrides_version
+
+
+def get_settings() -> Settings:
+    global _effective, _effective_version
+    base = _env_settings()
+    if not _overrides:
+        return base
+    if _effective is not None and _effective_version == _overrides_version:
+        return _effective
+    try:
+        merged = {**base.model_dump(), **_overrides}
+        _effective = Settings(**merged)
+    except Exception as exc:  # noqa: BLE001 — never let a bad override break config
+        logging.getLogger("cbm_intake.config").warning(
+            "settings overrides rejected, falling back to the environment: %s", exc
+        )
+        _effective = base
+    _effective_version = _overrides_version
+    return _effective
+
+
+def _clear_settings_cache() -> None:
+    """Reset both layers. Exposed as ``get_settings.cache_clear`` so the many
+    tests that call it keep working unchanged."""
+    global _effective, _effective_version, _overrides, _overrides_version
+    _env_settings.cache_clear()
+    _effective = None
+    _effective_version = -1
+    _overrides = {}
+    _overrides_version = 0
+
+
+get_settings.cache_clear = _clear_settings_cache  # type: ignore[attr-defined]

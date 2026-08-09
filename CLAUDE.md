@@ -550,6 +550,44 @@ Live on both environments. User guide: `analytics-guide.md`; activation runbook:
   enforced at save. Starter dashboards exist for Mentor / Engagement / Partner /
   Funder / Contact. Company and Client have no host screen yet (OPEN-ITEMS #0).
 
+### System Settings — `/setup`
+
+**EspoCRM admins only** (not a team gate — this page can reconfigure the
+platform). Changes this deployment's runtime settings from the browser instead
+of an overlay edit plus `doctl`, which is what makes the flag-based promotion
+gate practical. Gated by `SETUP_ENABLED` + a database. Runbook:
+`SYSTEM-SETTINGS-SETUP.md`; rulings: `prds/system-settings-plan.md`.
+
+- **Env is the default, the DB row is the override, and both are shown when they
+  disagree** — `app_setting` holds only overridden keys and
+  `core/settings_store.py` merges them over the env baseline behind the same
+  `get_settings()` every package already calls. An empty table is exactly the
+  old behaviour.
+- **Degrade to the overlay, never to the code default.** If the override lookup
+  fails (no DB, Postgres down, a bad value) the accessor returns the env value
+  and logs. A database incident must not silently reconfigure the app — which is
+  also why the overlays keep their flags permanently.
+- **A server-side denylist** (`core/settings_registry.py`) refuses every secret,
+  `ESPO_BASE_URL`/`ESPO_DRY_RUN`, `DATABASE_URL`, `SESSION_SECRET` and the two
+  switches guarding this feature. Secrets are never rendered — "set / not set"
+  only. `SETTINGS_OVERRIDES=false` is the env-only break-glass.
+- **Mount-time flags cannot take effect live.** `analytics_enabled`,
+  `events_enabled`, `assignments_enabled` and friends are read once in
+  `create_app`, so their rows are badged *takes effect on next deploy*.
+- **Web and worker refresh independently** (`SETUP_REFRESH_SECONDS`, default 45).
+  `/healthz` reports `settingsVersion` per component so you can see the worker
+  catch up.
+- **Overrides never auto-revert**; a change can be marked temporary with a review
+  date, and overdue ones are flagged on the page and logged hourly by the worker.
+- **Scoped rollout is web-only** — a per-team/per-user scope needs a signed-in
+  user to evaluate, so worker-side settings refuse it. A scoped override is
+  deliberately excluded from the process-wide config.
+- Also on the page: a **feature-readiness** panel (flag · required secrets · CRM
+  fields detected · which component · worker heartbeat), an **environment diff**
+  against the peer deployment (token-authorised snapshot, no secret values ever
+  crossing the wire), and an **operations** tab whose mutating jobs are
+  **dry-run → apply that exact plan**, refusing if the plan moved.
+
 ### Events & Webinars — `/events`
 
 Replaces the data layer behind `clevelandbusinessmentors.org/webinars/`, which
@@ -795,6 +833,7 @@ unresolved: CRM prerequisites, live verification owed, cleanups, decisions).
 | `DEPLOYMENT.md` | Engineer deploy runbook, env vars, reliability ops, backups |
 | `STAFF-DEPLOYMENT-GUIDE.md` | Console-only companion for CBM staff |
 | `SYSTEM-ADMIN-TROUBLESHOOTING.md` | **Verify + troubleshoot the whole platform without an engineer** — health check, weekly sweep, symptom index, the safe-remediation toolkit and its off-limits list. Audience: EspoCRM Admin + DO console, no CLI |
+| `SYSTEM-SETTINGS-SETUP.md` | `/setup` activation + use: the override model, the denylist, temporary and scoped changes, the environment diff, the ops jobs, break-glass |
 | `intake-processing-overview.md` | Plain-language capture → worker → CRM pipeline, per-form records, where each intake kind gets worked |
 | `mentor-administration.md` | `/mentoradmin` functionality + the completeness rules |
 | `mentor-directory.md` | Mentors directory + the read-only mentor profile page |

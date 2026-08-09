@@ -324,8 +324,50 @@ async def main() -> None:
             settings.comms_digest_hour, settings.comms_digest_tz, next_digest,
         )
 
+    # System Settings overrides. The worker is a separate container from web, so
+    # it re-reads `app_setting` on its own timer — this is the lag between an
+    # admin toggling a worker-side flag and the worker acting on it. Also the
+    # review sweep for temporary overrides: reported, never auto-reverted
+    # (ruling 5), because a flag flipping itself off unattended is its own
+    # outage.
+    from core.settings_store import make_settings_store, overdue_reviews
+    from core.settings_store import refresh_into_config as _refresh_settings
+
+    settings_store = make_settings_store(settings)
+    next_settings = datetime.now(timezone.utc)
+    next_review = datetime.now(timezone.utc) + timedelta(hours=1)
+    if settings_store is not None and settings.settings_overrides:
+        await _refresh_settings(settings_store, settings)
+        log.info(
+            "settings overrides enabled (refresh every %ss)",
+            settings.setup_refresh_seconds,
+        )
+
     while not stop.is_set():
         claimed = await run_cycle(store, settings, stop)
+
+        now_cfg = datetime.now(timezone.utc)
+        if settings_store is not None and now_cfg >= next_settings:
+            try:
+                await _refresh_settings(settings_store, get_settings())
+            except Exception as exc:  # noqa: BLE001 — config refresh never crashes the worker
+                log.warning("settings override refresh failed: %s", exc)
+            settings = get_settings()
+            next_settings = now_cfg + timedelta(
+                seconds=max(5, settings.setup_refresh_seconds)
+            )
+        if settings_store is not None and now_cfg >= next_review:
+            try:
+                overdue = await overdue_reviews(settings_store)
+                if overdue:
+                    log.warning(
+                        "settings: %d temporary override(s) past review: %s "
+                        "(nothing reverts automatically)",
+                        len(overdue), ", ".join(o.key for o in overdue),
+                    )
+            except Exception as exc:  # noqa: BLE001
+                log.debug("temporary-override review sweep failed: %s", exc)
+            next_review = now_cfg + timedelta(hours=1)
 
         # Liveness heartbeat (P1-6): one upserted row per iteration; /healthz
         # reports its age so an external check can see a dead/wedged worker.

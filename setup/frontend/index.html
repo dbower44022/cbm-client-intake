@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cleveland Business Mentors — System Settings</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/tokens.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="su">
+    <header class="su__topbar">
+      <div class="su__title">
+        <h1>System Settings</h1>
+        <p class="su__sub" id="pageSubtitle">Loading…</p>
+      </div>
+      <div class="su__usercorner" id="userCorner" hidden>
+        <span class="su__who">Signed in as <strong id="whoName"></strong></span>
+        <button type="button" class="cbm-button cbm-button--secondary" id="logoutBtn">Sign out</button>
+      </div>
+    </header>
+
+    <section class="su__msg" id="msgView" hidden>
+      <p class="form-error" id="msgText" role="alert"></p>
+      <p><a href="/">Return to the sign-in page</a></p>
+    </section>
+
+    <!-- Break-glass banner. If SETTINGS_OVERRIDES is off, everything on this
+         page still renders but nothing it saves takes effect — say so loudly
+         rather than letting an admin wonder why a toggle did nothing. -->
+    <div class="su__banner su__banner--warn" id="breakGlass" hidden>
+      <strong>The override layer is switched off.</strong>
+      This deployment is running on pure environment configuration
+      (<code>SETTINGS_OVERRIDES=false</code>). Changes saved here will not take
+      effect until it is switched back on in the deployment overlay.
+    </div>
+
+    <div class="su__banner su__banner--warn" id="overdueBanner" hidden></div>
+
+    <section class="su__body" id="bodyView" hidden>
+      <nav class="su__tabs" role="tablist">
+        <button type="button" class="su__tab is-active" data-tab="settings" role="tab">Settings</button>
+        <button type="button" class="su__tab" data-tab="readiness" role="tab">Feature readiness</button>
+        <button type="button" class="su__tab" data-tab="diff" role="tab">Environment diff</button>
+        <button type="button" class="su__tab" data-tab="jobs" role="tab">Operations</button>
+        <button type="button" class="su__tab" data-tab="history" role="tab">History</button>
+      </nav>
+
+      <!-- Settings -->
+      <div class="su__panel" id="tab-settings">
+        <div class="su__controls">
+          <input type="search" id="filterBox" class="su__search" placeholder="Filter settings…" aria-label="Filter settings" />
+          <label class="su__check"><input type="checkbox" id="onlyOverridden" /> Only overridden</label>
+          <span class="su__spacer"></span>
+          <span class="su__stat" id="overrideStat"></span>
+          <button type="button" class="cbm-button cbm-button--secondary" id="reloadBtn">Reload</button>
+        </div>
+        <div id="groups"></div>
+
+        <details class="su__showall" id="showAll">
+          <summary>Show all settings (read-only)</summary>
+          <p class="su__hint">
+            These are not curated for editing. Secrets are never shown — only whether
+            they are set — and settings on the denylist can never be changed from this
+            page at all.
+          </p>
+          <table class="su__table"><tbody id="otherRows"></tbody></table>
+        </details>
+      </div>
+
+      <!-- Feature readiness -->
+      <div class="su__panel" id="tab-readiness" hidden>
+        <p class="su__hint" id="readinessHint"></p>
+        <div id="readinessRows"></div>
+      </div>
+
+      <!-- Environment diff -->
+      <div class="su__panel" id="tab-diff" hidden>
+        <div class="su__controls">
+          <button type="button" class="cbm-button cbm-button--secondary" id="diffBtn">Compare with the other environment</button>
+          <span class="su__stat" id="diffStat"></span>
+        </div>
+        <div id="diffRows"></div>
+      </div>
+
+      <!-- Operations -->
+      <div class="su__panel" id="tab-jobs" hidden>
+        <p class="su__hint">
+          A job that changes anything runs in two steps: produce a plan, review it,
+          then apply <em>that</em> plan. If the plan has changed by the time you apply,
+          nothing runs and you review the new one.
+        </p>
+        <div id="jobRows"></div>
+        <h2 class="su__h2">Recent runs</h2>
+        <div id="jobHistory"></div>
+      </div>
+
+      <!-- History -->
+      <div class="su__panel" id="tab-history" hidden>
+        <div class="su__controls">
+          <input type="search" id="historyKey" class="su__search" placeholder="Filter by setting key…" aria-label="Filter history by key" />
+          <button type="button" class="cbm-button cbm-button--secondary" id="historyBtn">Load</button>
+        </div>
+        <table class="su__table">
+          <thead><tr><th>When</th><th>Setting</th><th>Change</th><th>Who</th><th>Reason</th></tr></thead>
+          <tbody id="historyRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Edit dialog -->
+    <div class="su__overlay" id="editOverlay" hidden>
+      <div class="su__dialog" role="dialog" aria-modal="true" aria-labelledby="editTitle">
+        <h2 id="editTitle">Change setting</h2>
+        <p class="su__dialogsub" id="editKey"></p>
+        <p class="su__help" id="editHelp"></p>
+
+        <div class="su__field">
+          <label for="editValue" id="editValueLabel">Value</label>
+          <div id="editControl"></div>
+        </div>
+
+        <p class="su__envnote" id="editEnvNote"></p>
+
+        <div class="su__field">
+          <label for="editReason">Reason</label>
+          <input type="text" id="editReason" placeholder="Why this is changing (recorded in the history)" />
+        </div>
+
+        <div class="su__field su__field--inline">
+          <label class="su__check"><input type="checkbox" id="editTemporary" /> Temporary — remind me to review it</label>
+          <input type="date" id="editReviewAt" aria-label="Review date" disabled />
+        </div>
+
+        <div class="su__field" id="scopeField">
+          <label for="editScopeTeams">Roll out to specific teams or people only</label>
+          <input type="text" id="editScopeTeams" placeholder="Teams, comma separated (blank = everyone)" />
+          <input type="text" id="editScopeUsers" placeholder="Usernames, comma separated" />
+          <p class="su__hint" id="scopeHint"></p>
+        </div>
+
+        <p class="form-error" id="editError" role="alert" hidden></p>
+
+        <div class="su__dialogactions">
+          <button type="button" class="cbm-button cbm-button--secondary" id="editCancel">Cancel</button>
+          <button type="button" class="cbm-button cbm-button--secondary" id="editReset">Reset to deployment value</button>
+          <button type="button" class="cbm-button" id="editSave">Save</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- busy.js first: it wraps fetch/XHR, so it must precede any script that
+       can start a request. -->
+  <script src="/shared/busy.js"></script>
+  <script src="app.js"></script>
+  <script src="/shared/footer.js"></script>
+</body>
+</html>

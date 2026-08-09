@@ -1,0 +1,133 @@
+/* System Settings (/setup). No max-width anywhere — density comes from packing
+   the full width (house rule). */
+
+.su {
+  padding: var(--space-4, 1rem) var(--space-5, 1.25rem) 3rem;
+  font-family: var(--font-body, Roboto, system-ui, sans-serif);
+  color: var(--color-text, #1c1c1c);
+}
+
+.su__topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--color-border, #d8d8d8);
+  padding-bottom: 0.75rem;
+  margin-bottom: 1rem;
+}
+.su__title h1 { margin: 0; font-family: var(--font-display, "Roboto Slab", serif); font-size: 1.5rem; }
+.su__sub { margin: 0.2rem 0 0; color: var(--color-text-muted, #5c5c5c); font-size: 0.9rem; }
+.su__usercorner { display: flex; align-items: center; gap: 0.75rem; font-size: 0.9rem; }
+
+.su__banner {
+  border-radius: 6px;
+  padding: 0.7rem 0.9rem;
+  margin-bottom: 0.9rem;
+  font-size: 0.92rem;
+  border: 1px solid transparent;
+}
+.su__banner--warn {
+  background: #fff6e5;
+  border-color: #e8c88a;
+  color: #6b4a05;
+}
+
+.su__tabs { display: flex; gap: 0.25rem; border-bottom: 1px solid var(--color-border, #d8d8d8); margin-bottom: 1rem; }
+.su__tab {
+  appearance: none; background: none; border: none; cursor: pointer;
+  padding: 0.55rem 0.9rem; font: inherit; color: var(--color-text-muted, #5c5c5c);
+  border-bottom: 3px solid transparent;
+}
+.su__tab.is-active { color: var(--color-text, #1c1c1c); font-weight: 600; border-bottom-color: var(--color-primary, #00693e); }
+
+.su__controls { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.9rem; flex-wrap: wrap; }
+.su__spacer { flex: 1 1 auto; }
+.su__search { padding: 0.4rem 0.6rem; border: 1px solid var(--color-border, #d8d8d8); border-radius: 4px; min-width: 18rem; font: inherit; }
+.su__check { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.9rem; }
+.su__stat { font-size: 0.85rem; color: var(--color-text-muted, #5c5c5c); }
+
+.su__h2 { font-family: var(--font-display, "Roboto Slab", serif); font-size: 1.05rem; margin: 1.4rem 0 0.4rem; }
+.su__group:first-child .su__h2 { margin-top: 0; }
+
+.su__table { width: 100%; border-collapse: collapse; }
+.su__table th {
+  text-align: left; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--color-text-muted, #5c5c5c); padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--color-border, #d8d8d8);
+}
+.su__table td { padding: 0.45rem 0.5rem; border-bottom: 1px solid #ececec; vertical-align: top; }
+.su__row.is-overridden { background: #f4f9f6; }
+.su__namecell { width: 46%; }
+.su__valuecell { width: 18%; font-variant-numeric: tabular-nums; }
+.su__metacell { width: 36%; }
+
+.su__linkbtn {
+  appearance: none; background: none; border: none; padding: 0; cursor: pointer;
+  font: inherit; font-weight: 600; color: var(--color-primary, #00693e); text-align: left;
+}
+.su__linkbtn:hover { text-decoration: underline; }
+.su__key { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.75rem; color: var(--color-text-muted, #777); }
+.su__rowhelp { font-size: 0.82rem; color: var(--color-text-muted, #5c5c5c); margin-top: 0.2rem; }
+.su__disagree { font-size: 0.82rem; margin-top: 0.3rem; color: #8a5a00; }
+.su__muted { color: var(--color-text-muted, #777); }
+
+.su__chip {
+  display: inline-block; font-size: 0.72rem; padding: 0.1rem 0.45rem; border-radius: 999px;
+  background: #eef2f7; color: #33475b; margin-right: 0.3rem; white-space: nowrap;
+}
+.su__chip--override { background: #e2f1e8; color: #14603c; }
+.su__chip--muted { background: #f0f0f0; color: #666; }
+.su__chip--warn { background: #fdf0d5; color: #7a5200; }
+.su__chip--scope { background: #e8e6fb; color: #3d3486; }
+.su__chip--ready, .su__chip--done { background: #e2f1e8; color: #14603c; }
+.su__chip--blocked, .su__chip--failed, .su__chip--refused { background: #fbe6e6; color: #8a1f1f; }
+.su__chip--off { background: #f0f0f0; color: #666; }
+.su__chip--unknown, .su__chip--running { background: #eef2f7; color: #33475b; }
+
+.su__showall { margin-top: 1.6rem; }
+.su__showall summary { cursor: pointer; font-weight: 600; }
+.su__hint { font-size: 0.85rem; color: var(--color-text-muted, #5c5c5c); }
+
+.su__feature { border: 1px solid var(--color-border, #e2e2e2); border-radius: 6px; padding: 0.7rem 0.9rem; margin-bottom: 0.7rem; }
+.su__feature h3 { margin: 0 0 0.3rem; font-size: 1rem; }
+.su__feature--blocked { border-color: #e6b8b8; }
+.su__checks { list-style: none; margin: 0.4rem 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.25rem 1.4rem; font-size: 0.85rem; }
+.su__ok { color: #14603c; font-weight: 700; }
+.su__bad { color: #8a1f1f; font-weight: 700; }
+.su__unknown { color: #8a6b00; font-weight: 700; }
+
+.su__job { border: 1px solid var(--color-border, #e2e2e2); border-radius: 6px; padding: 0.7rem 0.9rem; margin-bottom: 0.7rem; }
+.su__job h3 { margin: 0 0 0.3rem; font-size: 1rem; }
+.su__jobactions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-top: 0.5rem; }
+.su__reason { flex: 1 1 20rem; padding: 0.4rem 0.6rem; border: 1px solid var(--color-border, #d8d8d8); border-radius: 4px; font: inherit; }
+.su__pre {
+  background: #f7f7f7; border: 1px solid #e2e2e2; border-radius: 4px; padding: 0.6rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.8rem;
+  white-space: pre-wrap; max-height: 26rem; overflow: auto; margin-top: 0.6rem;
+}
+.su__pre--warn { border-color: #e8c88a; background: #fffaf0; }
+
+/* Dialog */
+.su__overlay {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45);
+  display: flex; align-items: center; justify-content: center; padding: 1rem; z-index: 50;
+}
+/* display:flex would otherwise beat [hidden] and leave an invisible overlay
+   covering the page — a trap this codebase has hit before. */
+.su__overlay[hidden] { display: none; }
+.su__dialog {
+  background: #fff; border-radius: 8px; padding: 1.2rem 1.4rem; width: min(46rem, 100%);
+  max-height: 90vh; overflow: auto; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+.su__dialog h2 { margin: 0; font-family: var(--font-display, "Roboto Slab", serif); font-size: 1.2rem; }
+.su__dialogsub { margin: 0.1rem 0 0.6rem; font-family: ui-monospace, monospace; font-size: 0.8rem; color: #777; }
+.su__help { font-size: 0.87rem; color: #444; margin: 0 0 0.8rem; }
+.su__field { margin-bottom: 0.8rem; display: flex; flex-direction: column; gap: 0.3rem; }
+.su__field label { font-size: 0.85rem; font-weight: 600; }
+.su__field input[type="text"], .su__field input[type="date"], .su__field select {
+  padding: 0.45rem 0.6rem; border: 1px solid var(--color-border, #d8d8d8); border-radius: 4px; font: inherit;
+}
+.su__field--inline { flex-direction: row; align-items: center; gap: 0.8rem; }
+.su__field.is-disabled { opacity: 0.55; }
+.su__envnote { font-size: 0.83rem; color: #5c5c5c; margin: -0.3rem 0 0.8rem; }
+.su__dialogactions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem; }

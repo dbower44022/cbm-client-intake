@@ -1,7 +1,10 @@
 # System Settings — plan
 
-**Status: PLAN ONLY, nothing built.** Doug's four founding rulings are recorded
-in §1; everything after them is proposal for review.
+**Status: ALL FIVE PHASES BUILT (v0.190.0), switched off everywhere.** Gated by
+`SETUP_ENABLED`; nothing is enabled on any deployment and the page has not yet
+been opened against a real database or a real peer. Activation runbook:
+`SYSTEM-SETTINGS-SETUP.md`. Doug's eight rulings are in §1 and were all
+implemented as written; §6 records what each phase shipped.
 
 A `/setup` page on the portal that makes runtime settings — above all the 19
 feature flags — changeable per instance from the browser, instead of by editing
@@ -180,18 +183,34 @@ Plus the standing requirements for a mutating staff action: confirm, a required
 reason, and `core/action_log.py`. Read-only jobs (probes, audits, drift checks)
 run in one step.
 
-## 6. Proposed phasing
+## 6. Phasing — all built in v0.190.0
 
 The feature ships dark behind `SETUP_ENABLED`, dogfooding the process in §2.
 
-- **Phase 1 — the override layer and the page.** Migration, accessor, denylist,
-  break-glass, curated groups, audit + reasons. Delivers two-toggle promotion on
-  its own; everything else is additive.
-- **Phase 2 — readiness panel.** Read-only, no new write paths.
-- **Phase 3 — environment diff.** The peer snapshot endpoint and its token.
-- **Phase 4 — scoped rollout.** Evaluation helper plus the web-only constraint.
-- **Phase 5 — operations tab.** Job registry and worker dispatch — the largest
-  piece and the one with the most blast radius, hence last.
+- **Phase 1 — the override layer and the page.** ✅ `core/settings_store.py`,
+  `core/settings_registry.py` (90 curated settings, 21-key denylist),
+  migration `0025_app_setting`, `setup/service.py` + the frontend, audit through
+  `core/action_log.py`, break-glass. Delivers two-toggle promotion on its own.
+- **Phase 2 — readiness panel.** ✅ `setup/readiness.py`. Read-only.
+- **Phase 3 — environment diff.** ✅ `setup/snapshot.py` + `GET
+  /api/setup/snapshot`, mounted only when `SETUP_PEER_TOKEN` is set.
+- **Phase 4 — scoped rollout.** ✅ `setting_for_user` / `feature_enabled_for` in
+  `core/settings_store.py`, with the web-only constraint refused at the router.
+- **Phase 5 — operations tab.** ✅ `setup/jobs.py` + migration `0026_app_job`,
+  dry-run → apply-that-plan with a fingerprint check.
+
+**Deviation from the plan, deliberate:** phase 5 runs jobs as background tasks
+**in the web process** rather than dispatching to the worker. The registered
+routines take minutes at most and Submission Admin's manual receipt-sweep
+trigger already works this way, so the job table earns its keep for durable,
+shared results without a dispatch mechanism. `run_in_background` marks the seam
+if worker dispatch is ever wanted.
+
+**Also deliberate:** two mutating routines (`receipt_sweep`, `docs_reconcile`)
+are registered but **not runnable**, because they write as they go and have no
+plan-producing pass. Ruling 7 says a mutating job is dry-run first; a button that
+skipped that step would defeat it. Giving them a dry-run mode is the work needed
+to complete the ops tab.
 
 ## 7. Open questions
 

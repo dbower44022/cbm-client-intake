@@ -4,6 +4,74 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.190.0] — 2026-08-09
+
+**feat(setup): System Settings — the `/setup` admin page.** Gated OFF by
+`SETUP_ENABLED`; also needs a database. Plan and Doug's eight rulings:
+`prds/system-settings-plan.md`. Runbook: `SYSTEM-SETTINGS-SETUP.md`.
+
+Changing a feature flag meant editing a gitignored overlay and running
+`doctl apps update` — a redeploy to change one boolean, one step away from the
+`EV[…]` trap, with no record of who turned what on. Since all three apps track
+`main` with `deploy_on_push: true`, that overlay edit *is* the promotion gate.
+This makes it a toggle.
+
+- **The override layer** (`core/settings_store.py`, migration `0025_app_setting`)
+  — `app_setting` holds ONLY overridden keys plus an append-only
+  `app_setting_history`. `get_settings()` stays the single accessor the whole
+  codebase calls; it merges the overrides over the env baseline, and refreshing
+  is out of band so reads stay synchronous. Values are TEXT, coerced and
+  validated by `Settings` on the way in — an unparseable value is refused at
+  write time rather than poisoning every other override at refresh.
+- **Degrade to the overlay, never to the code default.** Any failure of the
+  override lookup returns the env value and logs. `get_settings.cache_clear()`
+  keeps working (many tests call it) and now resets both layers.
+- **`core/settings_registry.py`** — 90 curated settings in six groups, a
+  21-key **denylist** enforced server-side (every secret, `ESPO_BASE_URL`,
+  `ESPO_DRY_RUN`, `DATABASE_URL`, `SESSION_SECRET`, and the two switches
+  guarding this feature), and a `restart` flag for the mount-time settings that
+  cannot take effect live however the override layer behaves. An import-time
+  assertion catches a key that is both curated and denylisted.
+- **The page** (`setup/`) — Settings, Feature readiness, Environment diff,
+  Operations and History tabs. Rows show where the value came from and, when an
+  override disagrees with the overlay, **both values**. Secrets render as
+  "set / not set" and never leave the server.
+- **Temporary changes** (never auto-reverting) with a review date, banner-flagged
+  when overdue and logged hourly by the worker.
+- **Scoped rollout** — per team or per user, web-side settings only, since the
+  worker has no signed-in user to evaluate a scope against. A scoped override is
+  excluded from the process-wide configuration by construction.
+- **Feature readiness** (`setup/readiness.py`) — per feature: flag · required
+  settings present · CRM entities/fields detected · which component reads it ·
+  worker heartbeat age. Targets the two long-standing failure modes: the flag set
+  on the wrong component, and a feature dark because its CRM field doesn't exist.
+- **Environment diff** (`setup/snapshot.py`) — a token-authorised, read-only
+  snapshot each deployment can serve to its peer (`GET /api/setup/snapshot`,
+  mounted only when a token is set, constant-time comparison). Secrets contribute
+  presence only, so the diff can say "prod has no Fathom key" without moving one.
+  Stores nothing: history comes from each side's `app_setting_history` on demand.
+- **Operations** (`setup/jobs.py`, migration `0026_app_job`) — mutating jobs are
+  **dry-run → apply that exact plan**: the apply re-derives the plan, compares
+  fingerprints, and refuses if it moved. Applying needs a reason. Routines with no
+  plan-producing pass are listed as **not runnable** and say why, rather than
+  offering a button that skips the review.
+- **Break-glass** `SETTINGS_OVERRIDES=false` disables the layer entirely; the page
+  still renders and says so.
+- Wiring: portal tile (admins only), `/setup` + `/settings` aliases, static mount,
+  a refresh task in both web and worker, and a `settings` block on `/healthz`
+  carrying `settingsVersion` so you can watch the worker catch up.
+
+**Verified:** 41 new tests (36 unit + 5 Postgres round-trip, skipped without
+`TEST_DATABASE_URL`); full suite 1515 green — the pre-existing date-sensitive
+`test_a_full_event_is_NOT_refused` failure is unrelated. Covered: coercion and
+fail-safe fallback, the denylist refused at the store, scoped overrides excluded
+from global config, secrets absent from both the page payload and the snapshot,
+the admin gate (401/403/404 paths), the peer token closed when unset, and a
+mutating job refusing a plan that moved.
+
+**Not yet driven against a live deployment** — the page has not been opened
+against a real database or a real peer. Switch it on for crm-test first.
+
 ## [0.189.0] — 2026-07-28
 
 **feat(directory): Contacts tab on the Company record page.** The people at

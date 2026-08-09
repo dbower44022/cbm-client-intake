@@ -26,7 +26,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from . import receipts
 from . import store as store_mod
-from .config import Settings, get_settings
+from .config import Settings, get_settings, override_values, overrides_version
 from .espo import DryRunEspoClient, EspoApi, EspoClient, EspoError
 from .forms import BaseSubmission, FormSpec
 from .logging_setup import setup_logging
@@ -62,6 +62,7 @@ EVENTS_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "events" / "front
 ANALYTICS_FRONTEND_DIR = (
     Path(__file__).resolve().parent.parent / "analytics" / "frontend"
 )
+SETUP_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "setup" / "frontend"
 
 
 def _make_client(settings: Settings) -> EspoApi:
@@ -475,11 +476,40 @@ def create_app(
                 settings.worker_liveness_check_seconds,
                 settings.worker_heartbeat_alert_seconds,
             )
+        # System Settings — the runtime override layer. Each process re-reads
+        # `app_setting` on a timer; this is the lag between an admin toggling
+        # something here and the WORKER (a separate container) acting on it, and
+        # it is what /healthz reports as `settingsVersion`. Refreshing here also
+        # means the very first request after boot already sees the overrides.
+        settings_task = None
+        settings_store = getattr(_app.state, "settings_store", None)
+        if settings_store is not None and settings.settings_overrides:
+            import asyncio as _asyncio
+
+            from core.settings_store import refresh_into_config as _refresh
+
+            await _refresh(settings_store, settings)
+
+            async def _settings_loop() -> None:
+                while True:
+                    await _asyncio.sleep(max(5, settings.setup_refresh_seconds))
+                    try:
+                        await _refresh(settings_store, get_settings())
+                    except Exception:  # noqa: BLE001 — must never take the app down
+                        log.exception("settings override refresh failed")
+
+            settings_task = _asyncio.create_task(_settings_loop())
+            log.info(
+                "settings overrides enabled (refresh every %ss)",
+                settings.setup_refresh_seconds,
+            )
         try:
             yield
         finally:
             if liveness_task is not None:
                 liveness_task.cancel()
+            if settings_task is not None:
+                settings_task.cancel()
 
     app = FastAPI(title="CBM Intake Forms", version=__version__, lifespan=lifespan)
     # Exposed to the ops console router (V2 Phase 2).
@@ -498,6 +528,19 @@ def create_app(
     app.state.events_client_factory = lambda: _make_client(settings)
     # Exposed to the portal router (the public-form links on the home page).
     app.state.form_specs = forms
+    # System Settings (prds/system-settings-plan.md). The override store is
+    # created whenever a database is attached — even with the /setup page off —
+    # because the override layer and the page are separate concerns: an existing
+    # override must keep applying if the page is later switched off.
+    from core.settings_store import make_settings_store
+
+    app.state.settings_store = make_settings_store(settings)
+    if settings.setup_active:
+        from setup.jobs import make_job_store
+
+        app.state.job_store = make_job_store(settings)
+    else:
+        app.state.job_store = None
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.allowed_origins_list,
@@ -695,6 +738,16 @@ def create_app(
             "durableStore": store is not None,
             "database": database,
             "worker": worker_info,
+            # The override layer. `settingsVersion` bumps every time a process
+            # picks up a change, so comparing web's number with the worker's is
+            # how you see whether the worker has caught up yet — they are
+            # separate containers on separate refresh timers.
+            "settings": {
+                "page": settings.setup_active,
+                "overridesActive": settings.overrides_active,
+                "overrideCount": len(override_values()),
+                "settingsVersion": overrides_version(),
+            },
         }
 
     for spec in forms:
@@ -738,6 +791,12 @@ def create_app(
             from analytics import api_router as analytics_router
 
             app.include_router(analytics_router)
+        # System Settings — admin-only (not team-gated); mounted only when the
+        # feature is on AND there is a database to hold the overrides.
+        if settings.setup_active:
+            from setup import api_router as setup_router
+
+            app.include_router(setup_router)
         # Event Administration — the staff app; team-gated like the others.
         if settings.events_active:
             from events.router import api_router as events_admin_router
@@ -749,6 +808,15 @@ def create_app(
         # Workspace Directories: one router per kind, all from the same engine.
         for _dcfg in DIRECTORY_KINDS.values():
             app.include_router(make_directory_router(_dcfg))
+
+    # The peer-facing settings snapshot for the environment diff. Outside the
+    # staff-stack block on purpose: the caller is the other deployment, not a
+    # person, and it authenticates with the shared token. Mounted only when a
+    # token is configured, so an unconfigured deploy exposes nothing at all.
+    if settings.setup_peer_token:
+        from setup import peer_router as setup_peer_router
+
+        app.include_router(setup_peer_router)
 
     # Events & Webinars: the public read API for the website. Mounted only when
     # switched on, so an unconfigured deploy exposes nothing. Deliberately
@@ -813,6 +881,9 @@ def create_app(
         if settings.events_active:
             alias_targets["events"] = "/events/"
             alias_targets["eventadmin"] = "/events/"
+        if settings.setup_active:
+            alias_targets["setup"] = "/setup/"
+            alias_targets["settings"] = "/setup/"
         from sessions import DOMAINS as _SESSION_DOMAINS
 
         alias_targets.update(
@@ -880,6 +951,12 @@ def create_app(
             "/analytics",
             StaticFiles(directory=str(ANALYTICS_FRONTEND_DIR), html=True),
             name="analytics-frontend",
+        )
+    if settings.setup_active and SETUP_FRONTEND_DIR.is_dir():
+        app.mount(
+            "/setup",
+            StaticFiles(directory=str(SETUP_FRONTEND_DIR), html=True),
+            name="setup-frontend",
         )
     if settings.assignments_active and PORTAL_FRONTEND_DIR.is_dir():
         # The portal's assets (its index.html is served at "/" above).
