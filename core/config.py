@@ -375,6 +375,17 @@ class Settings(BaseSettings):
     # The single licensed host every webinar runs under.
     zoom_host_email: str = "zweb@cbmentors.org"
     zoom_base_url: str = "https://api.zoom.us/v2"
+    # --- Phase 6a: attendance from the Zoom participant report ---
+    # The worker pulls each finished online event's report and matches
+    # participants to registrations by email. Inert without Zoom. 0 disables.
+    events_attendance_seconds: int = 1800
+    # Zoom does not publish the report the instant a webinar ends, so the pull
+    # waits this long after dateEnd before its first attempt...
+    events_attendance_grace_minutes: int = 20
+    # ...and stops retrying after this, so an event that was never held is not
+    # polled forever (the transcript give-up pattern).
+    events_attendance_give_up_hours: int = 72
+
     # Team gate for the /events staff app (Phase 5).
     events_allowed_teams: str = "Marketing Admin Team"
     # In-process cache for the public read endpoints. The WordPress plugin

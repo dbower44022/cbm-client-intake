@@ -4,6 +4,46 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.193.0] — 2026-08-10
+
+**feat(events): Phase 6a — attendance from the Zoom participant report**
+(EV-30…EV-35). Gated OFF: inert unless `EVENTS_ENABLED` **and** Zoom are both
+configured, so this deploys as a no-op everywhere today.
+
+- **`events/attendance.py`** — the worker pulls each finished online event's
+  Zoom report and matches participants to registrations **by email**
+  (case-insensitive), recording attended / no-show, first join, last leave and
+  total minutes. A participant who dropped and rejoined folds into one row:
+  earliest join, latest leave, summed minutes.
+- **An empty report is "not ready", never "nobody came" (EV-31).** Zoom does not
+  publish the report the instant a webinar ends. An empty result leaves the
+  event unresolved for the next pass; reading it as zero attendance would mark
+  an entire roster No-Show and staff would have to undo it by hand.
+- **A human correction is never overwritten (EV-34).** Any registration whose
+  `attendanceSource` is `Manual` or `Check-in` is skipped by every later
+  automatic pull. A cancelled registration is left alone rather than being
+  counted a no-show.
+- **An unmatched attendee is recorded, not dropped (EV-32)** — a forwarded link
+  or a panelist becomes a registration flagged `unmatchedParticipant`, source
+  `Import`, for staff review. **No Contact is invented**; who that person is, is
+  a decision for a human.
+- **Nothing is denormalised (EV-35)** — no totals are stored; counts and
+  show-rates stay computed from the rows.
+- Worker timer `EVENTS_ATTENDANCE_SECONDS` (default 30 min), bounded by
+  `EVENTS_ATTENDANCE_GRACE_MINUTES` (20) and `EVENTS_ATTENDANCE_GIVE_UP_HOURS`
+  (72) so an event that was never held is not polled forever — the
+  transcript-retrieval pattern. Per-pass totals are logged (EV-86); one bad
+  event never stops the rest.
+
+**Verified:** 12 new tests — email matching, rejoin folding, attended/no-show
+writes, both protected sources, cancelled left alone, unmatched recorded with no
+Contact, an empty report writing nothing, an already-resolved event not re-asked,
+and the cycle inert without Zoom. Full suite 1570 green.
+
+⚠️ **Never driven against real Zoom.** `ZOOM_EVENTS` has not been switched on in
+any environment, so Phase 2 and now 6a are both unexercised against the live
+account. Live verification needs a real webinar with real participants.
+
 ## [0.192.4] — 2026-08-10
 
 **fix(events): Duration could not be saved at all, and now matches the session

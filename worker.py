@@ -324,6 +324,24 @@ async def main() -> None:
             settings.comms_digest_hour, settings.comms_digest_tz, next_digest,
         )
 
+    # Events attendance (Phase 6a): pull the Zoom participant report for each
+    # finished online event. Inert without Zoom, and bounded at both ends by the
+    # grace / give-up windows so a webinar that was never held is not polled
+    # forever.
+    next_attendance = datetime.now(timezone.utc)
+    attendance_on = (
+        settings.events_active
+        and settings.events_attendance_seconds > 0
+        and not settings.espo_dry_run
+    )
+    if attendance_on:
+        log.info(
+            "events attendance pull enabled (every %ss, grace %smin, give up after %sh)",
+            settings.events_attendance_seconds,
+            settings.events_attendance_grace_minutes,
+            settings.events_attendance_give_up_hours,
+        )
+
     # System Settings overrides. The worker is a separate container from web, so
     # it re-reads `app_setting` on its own timer — this is the lag between an
     # admin toggling a worker-side flag and the worker acting on it. Also the
@@ -355,6 +373,16 @@ async def main() -> None:
             settings = get_settings()
             next_settings = now_cfg + timedelta(
                 seconds=max(5, settings.setup_refresh_seconds)
+            )
+        if attendance_on and now_cfg >= next_attendance:
+            try:
+                from events.attendance import run_attendance_cycle
+
+                await run_attendance_cycle(settings)
+            except Exception as exc:  # noqa: BLE001 — never crashes delivery
+                log.warning("events attendance pull failed: %s", exc)
+            next_attendance = now_cfg + timedelta(
+                seconds=settings.events_attendance_seconds
             )
         if settings_store is not None and now_cfg >= next_review:
             try:
