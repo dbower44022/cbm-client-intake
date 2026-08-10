@@ -4,6 +4,49 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.192.4] — 2026-08-10
+
+**fix(events): Duration could not be saved at all, and now matches the session
+editor.** Doug set a duration, saved, and the record still read
+`duration: null, dateEnd: null`. Two faults in one field.
+
+**It was never storable.** EspoCRM's `duration` is **virtual** — it is
+`dateEnd - dateStart`, not a column — so writing it does nothing. The session
+editor has always known this and sends a recomputed `dateEnd` instead; the
+Events editor sent `duration` and EspoCRM discarded it silently. Every event
+created through it has no end time, which also means the public card shows a
+bare start instead of a range, and a Zoom webinar would have no length.
+
+**And the control was wrong.** A raw number box in minutes, against the session
+editor's select of human-labelled presets — the inconsistency Doug asked to
+close.
+
+- **Duration joins the shared control** (`frontend/shared/datetime.js`):
+  `createDuration` / `readDuration` render the preset select ("30 min",
+  "1 hour", "2 hours"), plus `durationBetween` and `endStamp` for the
+  virtual-field arithmetic. A stored length outside the presets is still
+  offered, so an existing value is never lost.
+- **Sessions now uses those helpers too** — its local `DURATION_OPTIONS`,
+  `fmtDuration`, `sessionDurationSeconds` and `stampPlusSeconds` are thin
+  wrappers over the shared ones, so the two editors cannot drift. The option set
+  is byte-identical to what sessions offered; a shared default is not licence to
+  change a live tool's choices.
+- **Events translates Duration into `dateEnd` on save** and drops the virtual
+  field, exactly as sessions does. The initial value is *derived* from the two
+  stamps rather than read from `duration`, which is usually null.
+- **`EventField.hidden`** — a new flag for a field that is writable but not
+  rendered. `dateEnd` needed it: without being in the spec the server dropped
+  it, and with `app_managed` it would have been dropped too. Writable, invisible.
+
+**Verified:** 5 new tests (the helpers are shared, sessions uses them, events
+translates to `dateEnd` and drops `duration`, `dateEnd` is in the update
+whitelist while hidden from the form, and the option set is unchanged) plus a
+Node check of the arithmetic: `16:00:00 + 5400s = 17:30:00`, and
+`16:00 → 17:30` reads back as 5400. Full suite 1558 green.
+
+⚠️ Existing crm-test events still have no end time — re-open each and set
+Duration now that it saves.
+
 ## [0.192.3] — 2026-08-10
 
 **fix(receipts): event registrations were delivering with no receipt at all.**

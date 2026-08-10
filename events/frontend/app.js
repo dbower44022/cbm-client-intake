@@ -420,6 +420,10 @@
       input = document.createElement("textarea");
       input.rows = type === "wysiwyg" ? 6 : 3;
       input.value = value == null ? "" : value;
+    } else if (type === "duration") {
+      // The shared Duration control — human-labelled presets, matching the
+      // session editor. `value` arrives already in seconds (see eventForm).
+      input = window.CBMDateTime.createDuration({ value: value, options: options });
     } else if (type === "datetime") {
       // The shared CBMDateTime control (frontend/shared/datetime.js). It owns
       // the local<->UTC conversion; a raw datetime-local input does not, which
@@ -427,7 +431,7 @@
       input = window.CBMDateTime.create({ value: value });
     } else {
       input = document.createElement("input");
-      input.type = type === "int" || type === "duration" ? "number" : "text";
+      input.type = type === "int" ? "number" : "text";
       input.value = value == null ? "" : value;
     }
     // setAttribute, not `.name =` — the datetime control is a <div>, where the
@@ -550,6 +554,7 @@
     state.fields.forEach(function (spec) {
       // App-managed fields (slug, Zoom ids) are the app's business — except the
       // graphic, which is app-managed only because it uploads separately.
+      if (spec.hidden) return;   // derived, not entered (dateEnd)
       if (spec.appManaged && spec.type !== "image") return;
       (groups[spec.group] = groups[spec.group] || []).push(spec);
     });
@@ -562,7 +567,11 @@
       groups[groupName].forEach(function (spec) {
         if (spec.type === "image") { graphicField(section, raw, spec); return; }
         var value = raw[spec.name];
-        if (spec.type === "duration" && value) value = Math.round(value / 60); // minutes
+        if (spec.type === "duration") {
+          // `duration` is VIRTUAL in EspoCRM (dateEnd - dateStart) and is often
+          // null on the record, so derive it rather than trusting the field.
+          value = window.CBMDateTime.durationBetween(raw.dateStart, raw.dateEnd);
+        }
         field(section, spec.name, spec.label, spec.type, value,
               state.options[spec.name], spec.help);
       });
@@ -577,11 +586,20 @@
       var value;
       if (type === "bool") value = input.checked;
       else if (type === "int") value = input.value === "" ? null : parseInt(input.value, 10);
-      else if (type === "duration") value = input.value === "" ? null : parseInt(input.value, 10) * 60;
+      else if (type === "duration") value = window.CBMDateTime.readDuration(input);
       else if (type === "datetime") value = window.CBMDateTime.read(input);
       else value = input.value;
       changes[input.getAttribute("name")] = value;
     });
+    // `duration` is VIRTUAL in the CRM (dateEnd - dateStart), so sending it
+    // stores nothing — which is why every event kept a null duration AND a null
+    // dateEnd until v0.192.4. Translate it into the recomputed dateEnd, the same
+    // way the session editor does, and drop the virtual field.
+    if (changes.duration != null && changes.dateStart) {
+      var end = window.CBMDateTime.endStamp(changes.dateStart, changes.duration);
+      if (end) changes.dateEnd = end;
+    }
+    delete changes.duration;
     return changes;
   }
 

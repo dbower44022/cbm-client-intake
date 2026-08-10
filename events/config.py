@@ -123,8 +123,14 @@ class EventField:
     group: str = "Event"
     big: bool = False
     help: str = ""
-    #: Fields the app computes/owns; never offered in the editor.
+    #: Fields the app computes/owns; never offered in the editor AND not
+    #: writable through the ordinary update path.
     app_managed: bool = False
+    #: Writable like any other field, but not rendered as a control — the app
+    #: derives it from another input. ``dateEnd`` is the case: EspoCRM's
+    #: ``duration`` is virtual (dateEnd - dateStart), so the editor shows a
+    #: Duration select and sends the recomputed dateEnd.
+    hidden: bool = False
 
 
 EVENT_FIELDS: list[EventField] = [
@@ -143,6 +149,9 @@ EVENT_FIELDS: list[EventField] = [
     EventField("duration", "Duration", "duration", "Schedule"),
     EventField("registrationCloses", "Registration closes", "datetime", "Schedule",
                help="Leave empty to close registration when the event starts."),
+    # Not rendered: the Duration select above is translated into this on save,
+    # because EspoCRM's `duration` is virtual and storing it does nothing.
+    EventField("dateEnd", "Ends", "datetime", "Schedule", hidden=True),
 
     # Place & capacity
     EventField("location", "Location", "text", "Place & capacity",

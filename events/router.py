@@ -147,7 +147,7 @@ async def fields(request: Request) -> dict[str, Any]:
             {
                 "name": f.name, "label": f.label, "type": f.type,
                 "group": f.group, "big": f.big, "help": f.help,
-                "appManaged": f.app_managed,
+                "appManaged": f.app_managed, "hidden": f.hidden,
             }
             for f in cfg.EVENT_FIELDS
         ],

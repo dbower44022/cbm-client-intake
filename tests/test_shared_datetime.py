@@ -76,3 +76,47 @@ def test_the_widget_was_removed_from_sessions_not_shadowed():
         assert gone not in source, f"{gone} survived the extraction"
     css = (ROOT / "sessions" / "frontend" / "styles.css").read_text()
     assert "sx__timepop" not in css
+
+
+# --- duration (EspoCRM's virtual field) --------------------------------------
+
+
+def test_duration_helpers_are_shared():
+    source = (SHARED / "datetime.js").read_text()
+    for symbol in ("createDuration", "readDuration", "durationBetween",
+                   "endStamp", "DURATION_OPTIONS", "formatDuration"):
+        assert symbol in source
+
+
+def test_sessions_uses_the_shared_duration_helpers():
+    """One implementation, so the two editors cannot drift apart."""
+    source = (ROOT / "sessions" / "frontend" / "app.js").read_text()
+    assert "window.CBMDateTime.DURATION_OPTIONS" in source
+    assert "window.CBMDateTime.durationBetween" in source
+    assert "window.CBMDateTime.endStamp" in source
+
+
+def test_events_translates_duration_into_dateend():
+    """`duration` is VIRTUAL in EspoCRM (dateEnd - dateStart). Sending it stores
+    nothing, which is why events kept a null duration AND a null dateEnd. The
+    editor must send the recomputed dateEnd and drop the virtual field."""
+    source = (ROOT / "events" / "frontend" / "app.js").read_text()
+    assert "window.CBMDateTime.endStamp(changes.dateStart, changes.duration)" in source
+    assert "delete changes.duration;" in source
+    assert "window.CBMDateTime.createDuration" in source
+
+
+def test_events_can_actually_write_dateend():
+    """The translation is pointless if the server drops the field: dateEnd has
+    to be in the update whitelist, while staying out of the rendered form."""
+    from events import config as cfg
+
+    assert "dateEnd" in cfg.EVENT_EDIT_NAMES
+    spec = next(f for f in cfg.EVENT_FIELDS if f.name == "dateEnd")
+    assert spec.hidden and not spec.app_managed
+
+
+def test_shared_duration_options_match_what_sessions_offered():
+    """A shared default is not licence to change a live tool's choices."""
+    source = (SHARED / "datetime.js").read_text()
+    assert "[300, 600, 900, 1800, 2700, 3600, 7200, 10800]" in source

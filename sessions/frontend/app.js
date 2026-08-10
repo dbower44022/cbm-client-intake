@@ -1500,28 +1500,18 @@
   // --- duration (CRM-virtual: dateEnd − dateStart, in seconds) ---
   // Preset choices mirroring the CRM duration field's options; used only when
   // the live metadata options aren't available.
-  var DURATION_OPTIONS = [300, 600, 900, 1800, 2700, 3600, 7200, 10800];
+  // Duration helpers now live in the shared control (frontend/shared/datetime.js)
+  // so the session and event editors cannot drift apart. Thin wrappers keep the
+  // call sites below unchanged.
+  var DURATION_OPTIONS = window.CBMDateTime.DURATION_OPTIONS;
   function sessionDurationSeconds(s) {
-    var a = parseNaive(s && s.dateStart), b = parseNaive(s && s.dateEnd);
-    if (!a || !b) return null;
-    var secs = Math.round((b.getTime() - a.getTime()) / 1000);
-    return secs > 0 ? secs : null;
+    return window.CBMDateTime.durationBetween(s && s.dateStart, s && s.dateEnd);
   }
-  function fmtDuration(secs) {
-    if (secs == null || !(secs > 0)) return "";
-    var h = Math.floor(secs / 3600), m = Math.round((secs % 3600) / 60);
-    if (h && m) return h + "h " + m + "m";
-    if (h) return h + (h === 1 ? " hour" : " hours");
-    return m + " min";
-  }
+  function fmtDuration(secs) { return window.CBMDateTime.formatDuration(secs); }
   // "YYYY-MM-DD HH:MM:SS" (UTC) + seconds → same format, still UTC (the result
   // goes back to the CRM as dateEnd).
   function stampPlusSeconds(stamp, secs) {
-    var d = parseNaive(stamp);
-    if (!d) return null;
-    d = new Date(d.getTime() + secs * 1000);
-    return d.getUTCFullYear() + "-" + pad2(d.getUTCMonth() + 1) + "-" + pad2(d.getUTCDate()) +
-           " " + pad2(d.getUTCHours()) + ":" + pad2(d.getUTCMinutes()) + ":00";
+    return window.CBMDateTime.endStamp(stamp, secs);
   }
 
   // "Weekday, Month D — h:mm AM/PM"; year appended only when not the current year.

@@ -250,12 +250,86 @@
     return toCrmStamp(dateEl.value + "T" + pad2(t.h) + ":" + pad2(t.m));
   };
 
+  /* ---- duration -----------------------------------------------------------
+   *
+   * EspoCRM's `duration` is VIRTUAL — it is dateEnd minus dateStart, not a
+   * stored column. Writing it does nothing at all: the Events editor sent a
+   * duration for weeks and every event kept `duration: null, dateEnd: null`,
+   * silently. The only way to store a length is to send a recomputed `dateEnd`,
+   * which is what `endStamp()` is for.
+   *
+   * So the pair below always travel together: render `createDuration`, and on
+   * save translate its value into dateEnd and drop `duration` from the payload.
+   */
+
+  // Exactly the set the session editor has always offered — this is a shared
+  // default, not an opportunity to quietly change a live tool's choices. The
+  // CRM's own metadata options take precedence wherever they exist.
+  var DURATION_OPTIONS = [300, 600, 900, 1800, 2700, 3600, 7200, 10800];
+
+  function formatDuration(secs) {
+    if (secs == null || !(secs > 0)) return "";
+    var h = Math.floor(secs / 3600), m = Math.round((secs % 3600) / 60);
+    if (h && m) return h + "h " + m + "m";
+    if (h) return h + (h === 1 ? " hour" : " hours");
+    return m + " min";
+  }
+
+  /* Seconds between two CRM stamps, or null — how you recover the "duration" of
+     a record that only stores start and end. */
+  function durationBetween(startStamp, endStamp) {
+    var a = parseCrmStamp(startStamp), b = parseCrmStamp(endStamp);
+    if (!a || !b) return null;
+    var secs = Math.round((b.getTime() - a.getTime()) / 1000);
+    return secs > 0 ? secs : null;
+  }
+
+  /* start + N seconds, as a CRM UTC stamp — the value to store as dateEnd. */
+  function endStamp(startStamp, secs) {
+    var d = parseCrmStamp(startStamp);
+    if (!d || !(secs > 0)) return null;
+    d = new Date(d.getTime() + secs * 1000);
+    return d.getUTCFullYear() + "-" + pad2(d.getUTCMonth() + 1) + "-" + pad2(d.getUTCDate()) +
+           " " + pad2(d.getUTCHours()) + ":" + pad2(d.getUTCMinutes()) + ":00";
+  }
+
+  /* The standard Duration control: a select of human-labelled presets, never a
+     raw number box. A stored value outside the presets is offered as-is so an
+     existing length is never silently lost. */
+  CBMDateTime.createDuration = function (options) {
+    var opts = options || {};
+    var choices = (opts.options && opts.options.length ? opts.options : DURATION_OPTIONS).slice();
+    var value = opts.value;
+    if (value != null && choices.indexOf(value) < 0) {
+      choices.push(value);
+      choices.sort(function (a, b) { return a - b; });
+    }
+    var el = document.createElement("select");
+    el.className = "cbm-dt__duration";
+    el.appendChild(new Option(opts.blankLabel || "(not set)", ""));
+    choices.forEach(function (secs) {
+      el.appendChild(new Option(formatDuration(secs), String(secs)));
+    });
+    el.value = value == null ? "" : String(value);
+    return el;
+  };
+
+  CBMDateTime.readDuration = function (el) {
+    if (!el || el.value === "") return null;
+    var n = Number(el.value);
+    return isNaN(n) ? null : n;
+  };
+
   // Exposed because callers legitimately need them outside the control —
   // rendering a stored stamp, or validating typed input.
   CBMDateTime.parseCrmStamp = parseCrmStamp;
   CBMDateTime.toCrmStamp = toCrmStamp;
   CBMDateTime.formatTime = formatTime;
   CBMDateTime.parseTime = parseTime;
+  CBMDateTime.DURATION_OPTIONS = DURATION_OPTIONS;
+  CBMDateTime.formatDuration = formatDuration;
+  CBMDateTime.durationBetween = durationBetween;
+  CBMDateTime.endStamp = endStamp;
 
   window.CBMDateTime = CBMDateTime;
 })(window, document);
