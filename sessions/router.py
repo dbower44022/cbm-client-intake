@@ -223,6 +223,8 @@ def _detail_tabs(cfg: DomainConfig, *, analytics: bool = False) -> list[dict]:
         tabs.insert(idx + 1, {"key": "contributions", "label": "Contributions"})
     if cfg.referred_clients_link:
         tabs.insert(idx + 1, {"key": "referredClients", "label": "Referred Clients"})
+    if cfg.events_tab:
+        tabs.insert(idx + 1, {"key": "events", "label": "Events"})
     if analytics:
         tabs.append({"key": "analytics", "label": "Analytics"})
     return tabs
@@ -648,6 +650,28 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 return await service.list_referred_clients(cfg, client, parent_id)
             except EspoError as exc:
                 raise _crm_failure(request, exc, "Could not load referred clients")
+
+    if cfg.events_tab:
+        # EV-72 — events attended across ALL of this engagement's contacts,
+        # deduplicated by event. Registered ONLY on a domain that owns the
+        # feature (the referred-clients precedent), so the partner and funder
+        # routers never carry it. Read-only.
+
+        @router.get("/records/{parent_id}/events")
+        async def record_events(parent_id: str, request: Request) -> dict:
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            from events.reporting import engagement_rollup
+
+            try:
+                contacts = await client.list_related(
+                    cfg.parent_entity, parent_id, cfg.parent_contacts_link,
+                    select="id,name", max_size=200,
+                )
+                rows = await engagement_rollup(client, contacts.get("list", []))
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not load the events history")
+            return {"events": rows}
 
     if cfg.contributions_link:
         # The funder ledger (prds/funder-contributions-plan.md) — registered

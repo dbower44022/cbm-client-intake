@@ -30,6 +30,7 @@ from core.config import get_settings
 from core.espo import EspoError, forbidden_hint, is_forbidden
 
 from . import config as cfg
+from . import reporting
 from . import service
 from .zoom_sync import adopt_existing_webinar, sync_event_webinar
 
@@ -321,6 +322,43 @@ async def set_recording(
         actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
     )
     return {"event": service.public_event_detail(event), "raw": event}
+
+
+# --- reporting (Phase 6c) --------------------------------------------------
+
+
+@api_router.get("/reports/program")
+async def program_report(
+    request: Request, start: str = "", end: str = ""
+) -> dict[str, Any]:
+    """EV-74 — events held, unique attendees, repeat rate for a period."""
+    _, client = await _actor(request)
+    try:
+        return await reporting.program_totals(client, start=start, end=end)
+    except EspoError as exc:
+        raise _crm_failure(exc, "build the programme report") from exc
+
+
+@api_router.get("/reports/conversion")
+async def conversion_report(
+    request: Request, start: str = "", end: str = ""
+) -> dict[str, Any]:
+    """EV-73 — attendees who became clients AFTER their first attended event."""
+    _, client = await _actor(request)
+    try:
+        return await reporting.conversion_report(client, start=start, end=end)
+    except EspoError as exc:
+        raise _crm_failure(exc, "build the conversion report") from exc
+
+
+@api_router.get("/contacts/{contact_id}/events")
+async def contact_events(contact_id: str, request: Request) -> dict[str, Any]:
+    """EV-71 — one person's event history."""
+    _, client = await _actor(request)
+    try:
+        return {"events": await reporting.contact_history(client, contact_id)}
+    except EspoError as exc:
+        raise _crm_failure(exc, "read the contact's event history") from exc
 
 
 # --- event graphic ---------------------------------------------------------

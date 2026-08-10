@@ -238,6 +238,12 @@ class DomainConfig:
     # gating precedent). Each row is a referred engagement; clicking its name
     # opens the engagement in the mentor domain's own record page.
     referred_clients_link: Optional[str] = None
+    #: EV-72 — the Events tab: which CBM events this record's people have
+    #: attended, rolled up across ALL of its contacts. Mentor domain only:
+    #: a client is a company, so the question is whether the CLIENT engaged
+    #: with the programme, not whether one named person did. Gating it here
+    #: keeps the routes off the partner/funder routers entirely.
+    events_tab: bool = False
 
     # --- Last contact date (Doug's request 2026-07-25). The record field that is
     # advanced to the contact date whenever an outbound email is sent from the
@@ -391,6 +397,8 @@ MENTOR = DomainConfig(
     manager_owned_link="engagements1",  # reverse of CEngagement.mentorProfile
     parent_sessions_link="engagementSessions",
     parent_contacts_link="engagementContacts",
+    # EV-72: the client-side events rollup (Doug's explicit requirement).
+    events_tab=True,
     primary_contact_id_attr="primaryEngagementContactId",
     default_session_type="Client Session",
     list_select=(

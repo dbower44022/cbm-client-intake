@@ -4,6 +4,45 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.194.0] — 2026-08-10
+
+**feat(events): Phase 6c — reporting (EV-71…EV-74).** Four questions the
+programme needs answered, all computed live from the registration rows. Nothing
+is stored, so no total can drift from the records it counts (EV-35, the
+funder-contributions precedent). EV-70 already existed in `service.summarise`
+and was not duplicated.
+
+- **`events/reporting.py`** — one module, four reports, all chunked so a growing
+  archive never becomes one query per row.
+- **EV-72 engagement rollup — the Events tab on a client engagement** (Doug's
+  explicit requirement). Events attended across **all** of the engagement's
+  contacts, **deduplicated by event**, newest first, each row naming who went.
+  Three colleagues at one webinar is one row: the question is whether the
+  *client* engaged with the programme, not how many seats were filled. Gated by
+  a new `DomainConfig.events_tab`, mentor domain only — the partner and funder
+  routers never register the endpoint, following the referred-clients
+  precedent.
+- **EV-71 person history** — every event one Contact registered for, newest
+  first, with status and minutes.
+- **EV-74 programme totals** — events held, unique attendees, repeat rate for a
+  period. "Held" excludes cancelled events. The repeat rate counts only repeats
+  **within the window**, since attendance before it is not evidence about it. An
+  unmatched attendee still counts as a person (identified by email when no
+  Contact is linked).
+- **EV-73 attendee → client conversion** — attendees whose engagement was
+  created **after** their first attended event. The ordering is the whole point:
+  an existing client who happens to attend a webinar is not a conversion, and
+  counting them would flatter the programme.
+- Endpoints: `/events/api/reports/program`, `/events/api/reports/conversion`,
+  `/events/api/contacts/{id}/events`, and `/mentorsessions/api/records/{id}/events`.
+
+**Verified:** 11 new tests — rollup dedup and attendee naming, attendance-only
+counting, newest-first history, repeat-rate arithmetic, cancelled and
+out-of-period events excluded, unmatched attendees counted, conversion requiring
+the engagement to postdate the event, and the tab registered on the mentor
+domain alone. One existing assertion updated: the mentor domain's tab list now
+carries Events. Full suite 1581 green.
+
 ## [0.193.0] — 2026-08-10
 
 **feat(events): Phase 6a — attendance from the Zoom participant report**

@@ -2127,10 +2127,13 @@ def test_session_endpoint_reports_domain(monkeypatch):
     assert data["defaultSessionType"] == "Client Session"
     # distinct empty-state text for profileFound=false (no linked CMentorProfile)
     assert "Assigned User" in data["noProfileMessage"]
-    # phase-one common detail tabs (same for every domain)
+    # The common detail tabs, plus Events — EV-72, mentor domain only: a client
+    # is a company, so the rollup answers "did this CLIENT engage with the
+    # programme?" across all of the engagement's contacts. Partner and funder
+    # don't register the routes at all.
     tabs = data["detailTabs"]
     assert [t["key"] for t in tabs] == [
-        "overview", "details", "sessions", "communications", "documents",
+        "overview", "details", "sessions", "events", "communications", "documents",
     ]
     # All five tabs are built (Documents since DOC-MGMT Phase 1 — it gates on
     # docsEnabled client-side, not on a placeholder flag).
