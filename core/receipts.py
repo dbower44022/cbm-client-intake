@@ -71,7 +71,12 @@ _STATUS_MAP = {
 # CIntakeSubmission.form enum values (the CRM is the source of truth: the
 # original three forms use the lowercase slug; partner/sponsor were added
 # Title-case; approved info@ emails log as "Email").
-_FORM_VALUES = {"partner": "Partner", "sponsor": "Sponsor", "info-email": "Email"}
+_FORM_VALUES = {
+    "partner": "Partner",
+    "sponsor": "Sponsor",
+    "info-email": "Email",
+    "event-registration": "Event Registration",
+}
 
 # Oversized payload strings (base64 resume uploads, mainly) are summarized so
 # the CRM text field stays manageable; the full value is in the app store.
@@ -376,6 +381,49 @@ async def _gate_status(client, fields: dict[str, Any]) -> dict[str, Any]:
     return {**fields, "intakeStatus": fallback}
 
 
+_form_options_cache: dict[str, Any] = {"options": None}
+
+
+async def _gate_form(client, fields: dict[str, Any]) -> dict[str, Any]:
+    """Drop a ``form`` value the CRM's enum doesn't offer, instead of losing the
+    whole receipt.
+
+    Learned the hard way (2026-08-10): Events registration shipped with the slug
+    ``event-registration``, which was not an option on ``CIntakeSubmission.form``.
+    EspoCRM 400s an out-of-enum value, so **every** event registration delivered
+    into the CRM correctly and then silently got no receipt at all — the
+    "a receipt for every arrival" guarantee quietly false for a whole form kind,
+    visible only as a WARNING in the worker log.
+
+    A missing classification is a far smaller loss than a missing receipt, so an
+    unrecognised form is omitted and everything else is still written. The next
+    new form kind therefore gets a receipt before anyone touches the CRM, and
+    gains its label the moment the option is built — no deploy.
+
+    Fails OPEN: unreadable metadata leaves the value alone.
+    """
+    form = fields.get("form")
+    if not form:
+        return fields
+    options = _form_options_cache["options"]
+    if options is None:
+        if not hasattr(client, "metadata_enum_options"):
+            return fields
+        try:
+            options = await client.metadata_enum_options(RECEIPT_ENTITY, "form")
+        except Exception:  # noqa: BLE001 — unreadable metadata: write as-is
+            return fields
+        _form_options_cache["options"] = options or []
+        options = _form_options_cache["options"]
+    if not options or form in options:
+        return fields
+    log.warning(
+        "receipt form %r is not a CRM option — writing the receipt without it "
+        "(add the option to classify these). Receipt is NOT lost.", form,
+    )
+    return {k: v for k, v in fields.items() if k != "form"}
+
+
 async def _find_by_token(client, token: str) -> Optional[str]:
     """Adopt an existing receipt whose stored payload carries this token —
     the dedup guard that makes create idempotent across replays, the
@@ -436,7 +484,7 @@ async def sync_row(
                 if not changes:
                     return "ok"
                 changes = await _prune_dangling_contact(client, changes)
-                changes = await _gate_status(client, changes)
+                changes = await _gate_form(client, await _gate_status(client, changes))
                 if not changes:
                     return "ok"
                 await client.update(RECEIPT_ENTITY, receipt_id, changes)
@@ -451,7 +499,7 @@ async def sync_row(
             if extra:
                 changes.update(extra)
             changes = await _prune_dangling_contact(client, changes)
-            changes = await _gate_status(client, changes)
+            changes = await _gate_form(client, await _gate_status(client, changes))
             await client.update(RECEIPT_ENTITY, adopted, changes)
             if store is not None and row.get("id"):
                 await store.set_receipt_id(row["id"], adopted)
@@ -461,7 +509,7 @@ async def sync_row(
         if extra:
             payload.update(extra)
         payload = await _prune_dangling_contact(client, payload)
-        payload = await _gate_status(client, payload)
+        payload = await _gate_form(client, await _gate_status(client, payload))
         created = await client.create(RECEIPT_ENTITY, payload)
         if store is not None and row.get("id") and created.get("id"):
             await store.set_receipt_id(row["id"], created["id"])

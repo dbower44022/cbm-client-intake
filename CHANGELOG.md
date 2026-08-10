@@ -4,6 +4,38 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.192.3] — 2026-08-10
+
+**fix(receipts): event registrations were delivering with no receipt at all.**
+Found by Doug's first real registration through the preview page. The Contact
+and CEventRegistration were created correctly and the submission auto-closed —
+and the receipt write 400'd, visible only as a WARNING in the worker log:
+
+    POST /api/v1/CIntakeSubmission -> 400
+    Field validation failure; field: form, type: valid
+
+`CIntakeSubmission.form` had no option for the `event-registration` slug, and
+EspoCRM rejects an out-of-enum value outright, so the WHOLE receipt was lost.
+The platform's "a receipt for every arrival" guarantee was quietly false for an
+entire form kind, and would have been equally false on production.
+
+- **`_gate_form` drops an unrecognised `form` instead of losing the receipt**,
+  the sibling of the existing `_gate_status`. A missing classification is a far
+  smaller loss than a missing arrival record. Applied at all three write paths
+  (create, update, sweep). Fails open when metadata is unreadable, and the label
+  activates by itself once the CRM option exists — no deploy.
+- **`event-registration → "Event Registration"`** added to `_FORM_VALUES`. Doug
+  built the enum option on **both** CRMs (verified live on crm-test and prod
+  before shipping this), so registrations now classify correctly.
+
+The hourly reconciliation sweep will backfill the receipt for the registration
+that already went through — missing receipts are created, which is exactly the
+case it exists for.
+
+**Verified:** 4 new tests — an unknown form is dropped while the rest of the
+receipt is written, a known one is kept, the gate fails open on unreadable
+metadata, and the slug maps to the CRM value. Full suite 1553 green.
+
 ## [0.192.2] — 2026-08-10
 
 **fix(events): every event was stored four hours early — and the date/time

@@ -278,3 +278,62 @@ async def test_sweep_converges_everything():
     assert stats2["ok"] == 3 and stats2["created"] == 0 and stats2["updated"] == 0
     statuses = sorted(r["intakeStatus"] for r in espo.records.values())
     assert statuses == ["Completed", "Discarded", "Received"]
+
+
+# --- the form enum gate (2026-08-10) -----------------------------------------
+
+
+class _FormEnumClient:
+    """Metadata-only stub: reports which `form` values the CRM accepts."""
+
+    def __init__(self, options):
+        self.options = options
+
+    async def metadata_enum_options(self, entity, field):
+        return self.options if field == "form" else None
+
+
+async def test_unknown_form_is_dropped_rather_than_losing_the_receipt():
+    """Events registration delivered fine and then got NO receipt, because
+    `event-registration` was not an option on CIntakeSubmission.form and
+    EspoCRM 400s an out-of-enum value. A missing classification beats a missing
+    receipt."""
+    from core import receipts
+
+    receipts._form_options_cache["options"] = None
+    client = _FormEnumClient(["client-intake", "volunteer"])
+    out = await receipts._gate_form(client, {"form": "event-registration", "name": "x"})
+    assert "form" not in out
+    assert out["name"] == "x"          # everything else still written
+
+
+async def test_known_form_is_kept():
+    from core import receipts
+
+    receipts._form_options_cache["options"] = None
+    client = _FormEnumClient(["client-intake", "Event Registration"])
+    out = await receipts._gate_form(client, {"form": "Event Registration"})
+    assert out["form"] == "Event Registration"
+
+
+async def test_form_gate_fails_open_when_metadata_is_unreadable():
+    from core import receipts
+
+    class Broken:
+        async def metadata_enum_options(self, entity, field):
+            raise RuntimeError("no metadata")
+
+    receipts._form_options_cache["options"] = None
+    out = await receipts._gate_form(Broken(), {"form": "whatever"})
+    assert out["form"] == "whatever"
+
+
+def test_event_registration_maps_to_the_crm_value():
+    from core.receipts import expected_fields
+
+    fields = expected_fields({
+        "form_slug": "event-registration",
+        "status": "completed",
+        "payload": {"email": "someone@example.org"},
+    })
+    assert fields["form"] == "Event Registration"
