@@ -1,0 +1,56 @@
+/* CBMDateTime — the standard date + time control (frontend/shared/datetime.js).
+ *
+ * Ported verbatim from the session editor, where the design was settled
+ * (mockup v2), with the sessions `sx__` prefix swapped for a neutral `cbm-dt`
+ * so every app can load it. Colours fall back to literals so the control looks
+ * right on a page that hasn't loaded the CBM tokens.
+ */
+
+.cbm-dt { display: flex; gap: 8px; }
+.cbm-dt .cbm-dt__date { flex: 1 1 55%; min-width: 0; }
+.cbm-dt .cbm-dt__timewrap { flex: 1 1 45%; min-width: 0; }
+.cbm-dt__timewrap { position: relative; }
+.cbm-dt__time { width: 100%; cursor: pointer; background: #fff; }
+
+.cbm-dt__pop {
+  display: none; position: absolute; left: 0; top: calc(100% + 4px); z-index: 30;
+  background: #fff; border: 1px solid #dfe3e8; border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(31, 58, 95, 0.16); padding: 12px; width: 308px;
+}
+.cbm-dt__pop.open { display: block; }
+
+.cbm-dt__label {
+  font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: #77828f;
+  font-weight: 700; margin: 2px 0 7px;
+}
+.cbm-dt__label + .cbm-dt__label,
+.cbm-dt__grid + .cbm-dt__label { margin-top: 10px; }
+
+.cbm-dt__grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.cbm-dt__grid button {
+  border: 1px solid #c9d0d8; background: #fff; border-radius: 4px; padding: 6px 0;
+  font-size: 12.5px; cursor: pointer; font-family: inherit;
+}
+.cbm-dt__grid button:hover { background: #f4f6f8; }
+/* Calendar-conflict shading: the slot overlaps a meeting already on the user's
+   own calendar. Advisory only — still clickable (declared BEFORE .sel so a
+   selected conflicting slot renders navy like any other selection). */
+.cbm-dt__grid button.conflict { background: #fdecea; border-color: #edb4ac; }
+.cbm-dt__grid button.conflict:hover { background: #fadbd7; }
+.cbm-dt__grid button.sel {
+  background: var(--cbm-navy, #173B60); border-color: var(--cbm-navy, #173B60);
+  color: #fff; font-weight: 600;
+}
+
+.cbm-dt__conflictnote {
+  font-size: 11.5px; line-height: 1.35; color: #8a3b31; background: #fdecea;
+  border: 1px solid #f3d0cb; border-radius: 5px; padding: 6px 8px; margin-bottom: 9px;
+}
+
+.cbm-dt__foot {
+  display: flex; align-items: center; gap: 8px; margin-top: 11px;
+  padding-top: 10px; border-top: 1px solid #f0f2f4;
+}
+.cbm-dt__foot span { font-size: 12px; color: #77828f; }
+.cbm-dt__foot input { width: 92px; padding: 5px 7px; font-size: 12.5px; }
+.cbm-dt__foot input.cbm-dt__bad { border-color: #a33c2f; outline: 1px solid #a33c2f; }

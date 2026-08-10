@@ -4,6 +4,52 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.192.2] — 2026-08-10
+
+**fix(events): every event was stored four hours early — and the date/time
+picker is now a project standard.** Doug entered 2:41 PM; the Overview, the
+public payload and the preview all showed 10:41 AM. My first guess — that the
+field had picked up a creation timestamp — was wrong.
+
+The Events editor treated CRM datetimes as **local** in both directions while
+the rest of the system correctly treats them as **UTC**. It read a UTC stamp
+into a `datetime-local` input and wrote the input's local wall time straight
+back, so the form looked self-consistent while `parse_crm_datetime` — and
+therefore every reader — saw an instant four hours off. The session tools had
+always done this correctly (`parseNaive` / `fromLocalInput`), which is what
+prompted the ask: make that picker the standard.
+
+- **`frontend/shared/datetime.js` + `datetime.css`** — the session editor's
+  control extracted as `CBMDateTime`, joining `busy.js`, `richtext.js`,
+  `conversation.js` and the rest of the shared set. A Date input plus a
+  half-hour slot grid ("Morning", "Afternoon & evening", four columns) with an
+  "Other time" escape hatch. `create({value})` takes a CRM UTC stamp and shows
+  local; `read(el)` returns a CRM UTC stamp. **No caller does date arithmetic**,
+  which is the whole point — the bug was a caller doing its own.
+- **Calendar-conflict shading stays injectable** via `busyFetch`, so sessions
+  keeps it and events simply doesn't pass one. Nothing calendar-specific leaked
+  into the shared component. The slot range is an option, defaulting to today's
+  8:00 AM–7:30 PM.
+- **Sessions converted, original removed.** `sessions/frontend/app.js` is one
+  shared IIFE where a later duplicate declaration silently wins, so the 142-line
+  widget and its CSS were deleted rather than shadowed; thin wrappers keep the
+  existing call sites unchanged. A test asserts the old symbols are gone.
+- **Events adopted it**, which is what fixes the shift. Also fixed there:
+  `input.name = name` on the control's `<div>` set a JS property, not the
+  attribute, so `querySelectorAll("[name]")` would never have collected it —
+  now `setAttribute`.
+- Convention recorded in `CLAUDE.md`; a guard test fails on any new quoted
+  `"datetime-local"` in either editor.
+
+⚠️ **Events already created on crm-test carry the old four-hour shift.** They
+are test data; correct or delete them. Nothing on production is affected —
+Events is off there.
+
+**Verified:** 7 new tests (asset served, both pages load it, no raw
+`datetime-local`, the extraction removed rather than shadowed the original) plus
+a Node round-trip check: local 14:41 → `2026-08-20 18:41:00` UTC → back to
+14:41, the 240-minute EDT offset applied. Full suite 1549 green.
+
 ## [0.192.1] — 2026-08-09
 
 **feat(events): the per-event page joins the preview.** 0.192.0 previewed the

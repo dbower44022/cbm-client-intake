@@ -420,13 +420,19 @@
       input = document.createElement("textarea");
       input.rows = type === "wysiwyg" ? 6 : 3;
       input.value = value == null ? "" : value;
+    } else if (type === "datetime") {
+      // The shared CBMDateTime control (frontend/shared/datetime.js). It owns
+      // the local<->UTC conversion; a raw datetime-local input does not, which
+      // is how every event created before v0.192.2 was stored four hours early.
+      input = window.CBMDateTime.create({ value: value });
     } else {
       input = document.createElement("input");
-      input.type = type === "datetime" ? "datetime-local"
-        : type === "int" || type === "duration" ? "number" : "text";
+      input.type = type === "int" || type === "duration" ? "number" : "text";
       input.value = value == null ? "" : value;
     }
-    input.name = name;
+    // setAttribute, not `.name =` — the datetime control is a <div>, where the
+    // property is inert and querySelectorAll("[name]") would never see it.
+    input.setAttribute("name", name);
     input.dataset.type = type;
     wrap.appendChild(input);
     if (help) {
@@ -556,7 +562,6 @@
       groups[groupName].forEach(function (spec) {
         if (spec.type === "image") { graphicField(section, raw, spec); return; }
         var value = raw[spec.name];
-        if (spec.type === "datetime" && value) value = String(value).replace(" ", "T").slice(0, 16);
         if (spec.type === "duration" && value) value = Math.round(value / 60); // minutes
         field(section, spec.name, spec.label, spec.type, value,
               state.options[spec.name], spec.help);
@@ -573,9 +578,9 @@
       if (type === "bool") value = input.checked;
       else if (type === "int") value = input.value === "" ? null : parseInt(input.value, 10);
       else if (type === "duration") value = input.value === "" ? null : parseInt(input.value, 10) * 60;
-      else if (type === "datetime") value = input.value ? input.value.replace("T", " ") + ":00" : null;
+      else if (type === "datetime") value = window.CBMDateTime.read(input);
       else value = input.value;
-      changes[input.name] = value;
+      changes[input.getAttribute("name")] = value;
     });
     return changes;
   }

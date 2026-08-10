@@ -6705,148 +6705,15 @@
            " " + pad2(d.getUTCHours()) + ":" + pad2(d.getUTCMinutes()) + ":00";
   }
 
-  // --- Time picker standard (mockup v2): every time field is a Date input plus
-  // a Start-time popover — a half-hour slot grid ("Morning" 8:00–11:30 AM,
-  // "Afternoon & evening" 12:00–7:30 PM, 4 columns, one click to select) with a
-  // free-entry "Other time" escape hatch. No 60-minute minute-pickers anywhere.
-  function fmtTimeText(h, m) {
-    var mer = h < 12 ? "AM" : "PM";
-    var hh = h % 12; if (hh === 0) hh = 12;
-    return hh + ":" + pad2(m) + " " + mer;
-  }
-  // Accepts "2:45 PM", "2 pm", "14:45", "9:30am"; null when unparseable.
-  function parseTimeText(s) {
-    var m = String(s || "").trim().match(/^(\d{1,2})(?::(\d{2}))?\s*([AaPp])?\.?\s*[Mm]?\.?$/);
-    if (!m) return null;
-    var h = +m[1], mm = m[2] ? +m[2] : 0;
-    if (mm > 59) return null;
-    if (m[3]) {
-      if (h < 1 || h > 12) return null;
-      h = (h % 12) + (/p/i.test(m[3]) ? 12 : 0);
-    } else if (h > 23) return null;
-    return { h: h, m: mm };
-  }
-  function timeSlots(fromH, toH) {
-    var out = [];
-    for (var h = fromH; h < toH; h++) { out.push(fmtTimeText(h, 0)); out.push(fmtTimeText(h, 30)); }
-    return out;
-  }
+  // --- Time picker: the shared CBMDateTime control (frontend/shared/datetime.js).
+  // Extracted from here in v0.192.2 and adopted project-wide; it owns the
+  // local<->UTC conversion, so nothing below does date arithmetic. The thin
+  // wrappers keep the existing call sites unchanged.
+  function fmtTimeText(h, m) { return window.CBMDateTime.formatTime(h, m); }
+  function parseTimeText(s) { return window.CBMDateTime.parseTime(s); }
   function makeDateTimeInput(value, busyFetch) {
-    var wrap = document.createElement("div"); wrap.className = "sx__dtwrap";
-    var d = parseNaive(value);
-    var dateEl = document.createElement("input"); dateEl.type = "date"; dateEl.className = "sx__dtdate";
-    if (d) dateEl.value = d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
-    var tw = document.createElement("div"); tw.className = "sx__twrap";
-    var timeEl = document.createElement("input"); timeEl.type = "text"; timeEl.className = "sx__dttime";
-    timeEl.readOnly = true; timeEl.placeholder = "Time";
-    if (d) timeEl.value = fmtTimeText(d.getHours(), d.getMinutes());
-    var pop = document.createElement("div"); pop.className = "sx__timepop";
-    // Calendar-conflict shading (busyFetch set = the session editor, gcal on):
-    // slots overlapping a meeting already on the user's own calendar get a
-    // light-red tint + a tooltip naming it. Advisory ONLY — the slot stays
-    // clickable; picking it schedules a conflicting event and deconflicting
-    // is the user's responsibility. Best-effort: no busy data = no shading.
-    var conflictNote = null;
-    if (busyFetch) {
-      conflictNote = document.createElement("div");
-      conflictNote.className = "sx__tp-conflictnote";
-      conflictNote.textContent =
-        "Shaded times conflict with your calendar. You can still choose one — " +
-        "you'll need to resolve the overlap yourself.";
-      conflictNote.hidden = true;
-      pop.appendChild(conflictNote);
-    }
-    function markConflicts() {
-      if (!busyFetch) return;
-      var buttons = pop.querySelectorAll(".sx__timegrid button");
-      Array.prototype.forEach.call(buttons, function (b) {
-        b.classList.remove("conflict"); b.removeAttribute("title");
-      });
-      conflictNote.hidden = true;
-      var dm = (dateEl.value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
-      if (!dm) return;
-      var dateAtCall = dateEl.value;
-      busyFetch(dateAtCall).then(function (busy) {
-        // Stale by the time it returns (date changed / popover closed) — skip.
-        if (!busy || !busy.length || dateEl.value !== dateAtCall ||
-            !pop.classList.contains("open")) return;
-        var any = false;
-        Array.prototype.forEach.call(buttons, function (b) {
-          var t = parseTimeText(b.textContent);
-          if (!t) return;
-          var s = new Date(+dm[1], +dm[2] - 1, +dm[3], t.h, t.m).getTime();
-          var e = s + 30 * 60000;  // each slot claims its half-hour block
-          var hits = busy.filter(function (iv) {
-            var bs = parseNaive(iv.start), be = parseNaive(iv.end);
-            return bs && be && bs.getTime() < e && be.getTime() > s;
-          });
-          if (hits.length) {
-            any = true;
-            b.classList.add("conflict");
-            b.title = "Busy: " + hits.map(function (iv) { return iv.summary; }).join("; ");
-          }
-        });
-        conflictNote.hidden = !any;
-      });
-    }
-    function slotGrid(labelText, slots) {
-      var lab = document.createElement("div"); lab.className = "sx__tp-label"; lab.textContent = labelText;
-      pop.appendChild(lab);
-      var grid = document.createElement("div"); grid.className = "sx__timegrid";
-      slots.forEach(function (t) {
-        var b = document.createElement("button"); b.type = "button"; b.textContent = t;
-        b.addEventListener("click", function () {
-          timeEl.value = t; pop.classList.remove("open");
-          timeEl.dispatchEvent(new Event("input", { bubbles: true }));
-        });
-        grid.appendChild(b);
-      });
-      pop.appendChild(grid);
-    }
-    slotGrid("Morning", timeSlots(8, 12));
-    slotGrid("Afternoon & evening", timeSlots(12, 20));
-    var foot = document.createElement("div"); foot.className = "sx__tp-foot";
-    var span = document.createElement("span"); span.textContent = "Other time:";
-    var other = document.createElement("input"); other.type = "text"; other.placeholder = "e.g. 2:45 PM";
-    other.addEventListener("keydown", function (e) {
-      if (e.key !== "Enter") return;
-      e.preventDefault();
-      var t = parseTimeText(other.value);
-      if (!t) { other.classList.add("sx__tp-bad"); return; }
-      other.classList.remove("sx__tp-bad");
-      timeEl.value = fmtTimeText(t.h, t.m); pop.classList.remove("open");
-      timeEl.dispatchEvent(new Event("input", { bubbles: true }));
-    });
-    other.addEventListener("input", function () { other.classList.remove("sx__tp-bad"); });
-    foot.appendChild(span); foot.appendChild(other); pop.appendChild(foot);
-    timeEl.addEventListener("click", function (e) {
-      e.stopPropagation();
-      closeTimePops(pop);
-      var opening = !pop.classList.contains("open");
-      pop.classList.toggle("open", opening);
-      if (opening) {
-        Array.prototype.forEach.call(pop.querySelectorAll(".sx__timegrid button"), function (b) {
-          b.classList.toggle("sel", b.textContent === timeEl.value);
-        });
-        other.value = "";
-        markConflicts();
-      }
-    });
-    // Changing the date while the popover is open re-shades for the new day.
-    dateEl.addEventListener("change", function () {
-      if (pop.classList.contains("open")) markConflicts();
-    });
-    pop.addEventListener("click", function (e) { e.stopPropagation(); });
-    tw.appendChild(timeEl); tw.appendChild(pop);
-    wrap.appendChild(dateEl); wrap.appendChild(tw);
-    return wrap;
+    return window.CBMDateTime.create({ value: value, busyFetch: busyFetch });
   }
-  function closeTimePops(except) {
-    Array.prototype.forEach.call(document.querySelectorAll(".sx__timepop.open"), function (p) {
-      if (p !== except) p.classList.remove("open");
-    });
-  }
-  document.addEventListener("click", function () { closeTimePops(null); });
 
   // Busy blocks on the signed-in user's own calendar for one local day
   // ("YYYY-MM-DD"), for the time picker's conflict shading. Cached per
@@ -6961,13 +6828,10 @@
     if (t === "int") return el.value === "" ? null : Number(el.value);
     if (t === "date") return el.value || null;
     if (t === "datetime") {
-      // Composite Date + time-picker widget: both parts must be set to yield a
-      // value (a UTC "YYYY-MM-DD HH:MM:SS" stamp, same as before).
-      var dv2 = el.querySelector(".sx__dtdate"), tv2 = el.querySelector(".sx__dttime");
-      if (!dv2) return fromLocalInput(el.value);  // (legacy shape)
-      var tm = parseTimeText(tv2.value);
-      if (!dv2.value || !tm) return null;
-      return fromLocalInput(dv2.value + "T" + pad2(tm.h) + ":" + pad2(tm.m));
+      // The shared control returns the CRM's UTC "YYYY-MM-DD HH:MM:SS" stamp,
+      // or null when either half is unset. It owns the local->UTC conversion.
+      if (el.querySelector(".cbm-dt__date")) return window.CBMDateTime.read(el);
+      return fromLocalInput(el.value);            // (legacy shape)
     }
     if (t === "addressStreet") {
       // The postal address block's two street lines rejoin into EspoCRM's single

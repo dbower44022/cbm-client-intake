@@ -897,6 +897,17 @@ Entity Manager vocabulary — [[crm-specs-use-entity-manager-terms]]):
   the **router** layer, which has the actor, app identity and result.
   `actionType` is free text from the module's vocabulary constants. Both writes
   are best-effort and the `CActionLog` half is feature-gated.
+- **Every date/time field uses the shared `CBMDateTime` control**
+  (`frontend/shared/datetime.js` + `datetime.css`) — a Date input plus a
+  half-hour slot grid with an "Other time" escape hatch. **Never a raw
+  `datetime-local`.** The control owns the local↔UTC conversion, and that is the
+  point: EspoCRM stores datetimes as UTC with no offset, a `datetime-local`
+  hands you local wall time, and the Events editor sent one straight to the CRM
+  — every event it created was four hours early. `create({value})` takes a CRM
+  stamp, `read(el)` returns one; no caller does date arithmetic. Optional
+  `busyFetch` shades slots that clash with the user's own calendar (advisory —
+  the slot stays clickable). A guard test fails on any new quoted
+  `"datetime-local"`.
 - **All wysiwyg fields use the shared CBMRichText editor**
   (`frontend/shared/richtext.js`, wrapping vendored Jodit). Never hand-roll a
   contenteditable. Load `jodit.min.css` + `jodit.min.js` + `richtext.js` before
