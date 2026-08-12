@@ -1047,4 +1047,12 @@ textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
   padding: 0.45rem 0.5rem; border: 1px solid var(--cbm-border, #d7dce2);
   border-radius: var(--cbm-radius, 6px); font: inherit; width: 100%; box-sizing: border-box;
 }
-.qadd__form-actions { display: flex; gap: 0.6rem; margin-top: 0.4rem; }
+/* The shared .sx__modal-body is `padding: 0.4rem 0` — no horizontal padding —
+   which ran the hint text and the panels flush against the card edge. Inset
+   the whole body rather than the one paragraph, so every child lines up. */
+#qaddModal .sx__modal-body { padding: 0.6rem 1rem 1rem; }
+#qaddHint { margin: 0.6rem 0 0; }
+/* Actions bottom-right, the usual place to look for the button that commits. */
+.qadd__form-actions {
+  display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 0.8rem;
+}
