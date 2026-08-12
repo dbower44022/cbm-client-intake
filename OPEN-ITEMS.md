@@ -248,6 +248,18 @@ block a deploy.)*
 20. **Everything through v0.187.0 is DEPLOYED to both environments** (verified
     2026-07-28; only docs commits are unpushed). What is owed is the *live
     eyeball*, not a deploy. Never driven against the live CRM/Gmail/Drive:
+    - **Quick add — "+ Add partner" / "+ Add funder" (v0.195.0)** — built dark
+      behind `RECORD_QUICK_ADD`. Enable it on crm-test (overlay or `/setup`)
+      and, **as a real non-admin partner/funder-team member** (admins bypass
+      every ACL this feature depends on), create one of each and confirm: the
+      Account create lands (it runs through the intake API client), the profile
+      is visible in the grid afterwards (team stamp), the contact appears on the
+      Details tab, and the manager picker offered a usable list — the sponsor
+      team's role may not read `CMentorProfile` at all, in which case the picker
+      is legitimately empty and the manager is set later on Details. Then
+      re-enter the SAME company and email to prove the reuse path (no duplicate
+      Account/Contact, `cCompanyType` gains the type). Only then add the var to
+      the prod overlay.
     - **Analytics record dashboards (v0.187.0)** — open a real Mentor,
       Engagement, Partner, Funder and Contact on crm-test.
     - **Duplicate hold + preferred-mentor dropdown (v0.185.0)** — crm-test's

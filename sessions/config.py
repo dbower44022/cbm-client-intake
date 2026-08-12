@@ -76,6 +76,43 @@ class OverviewItem:
 
 
 @dataclass(frozen=True)
+class CreateSpec:
+    """Quick-add: create a whole new partner / funder from the grid.
+
+    The three-record create the public intake forms already run (Account →
+    Contact → profile), driven from a staff screen instead of a wizard. Setting
+    ``DomainConfig.create_spec`` enables BOTH the toolbar button and the
+    ``/createfields`` + ``POST /records`` endpoints (the ``contributions_link``
+    gating precedent), so a domain that doesn't own the feature never registers
+    its routes. The runtime flag ``RECORD_QUICK_ADD`` gates it on top of that.
+
+    The company + contact halves of the form are the same everywhere
+    (:data:`CREATE_COMPANY_FIELDS` / :data:`CREATE_CONTACT_FIELDS`); only
+    ``profile_fields`` — the fields on the domain's own profile entity — differ.
+    Like SESSION_FIELDS and CONTRIBUTION_FIELDS, the spec is BOTH the form
+    layout and the server-side write whitelist, and enum options come live from
+    CRM metadata.
+    """
+
+    button_label: str  # grid toolbar, e.g. "+ Add partner"
+    title: str  # modal heading, e.g. "Add a partner"
+    group_label: str  # the profile fieldset's legend ("Partnership" / "Funding")
+    # Type discriminators stamped on a NEWLY created Account / Contact — the
+    # same values the public intake orchestrators write. An EXISTING record is
+    # never retyped away from what it is; the value is merged in (multiEnum).
+    company_type: str  # Account.cCompanyType value
+    contact_type: str  # Contact.cContactType value
+    # Settings attribute holding the Team name stamped on the new profile, so
+    # team-scoped roles see it in the grid (partner_team_name / sponsor_team_name).
+    team_name_attr: str
+    # The manager picker's label. The field itself is derived from
+    # ``DomainConfig.parent_manager_link`` and defaults to the creating user's
+    # own CMentorProfile.
+    manager_label: str
+    profile_fields: tuple[dict, ...]
+
+
+@dataclass(frozen=True)
 class DomainConfig:
     slug: str  # route segment, e.g. "mentorsessions"
     title: str  # page heading
@@ -265,6 +302,12 @@ class DomainConfig:
     # frontend pane (like ``contributions_link`` gates the contributions routes).
     discussion_enabled: bool = False
 
+    # --- Quick add (Doug's request 2026-08-12). See :class:`CreateSpec`. The
+    # mentor domain deliberately has none: a client engagement arrives through
+    # the intake form and is assigned in Client Administration, so there is no
+    # "type a new one in" step to add here.
+    create_spec: Optional[CreateSpec] = None
+
     @property
     def session_parent_fk(self) -> str:
         return f"{self.session_parent_link}Id"
@@ -371,6 +414,64 @@ CONTRIBUTION_LIST_SELECT = (
     "name,contributionType,status,amount,amountCurrency,applicationDate,"
     "commitmentDate,expectedPaymentDate,receivedDate,acknowledgmentDate,"
     "acknowledgmentSent,nextGrantDeadline,giftType,designation,createdAt"
+)
+
+
+# --- Quick-add field specs ---------------------------------------------------
+# The company + primary-contact halves of the Add form, identical across
+# domains. Every entry carries ``section``, which is how the server routes the
+# value to the right record — never by guessing from the field name (Account,
+# Contact and the profiles all have a ``name`` and a ``description``).
+#
+# The set is deliberately LEAN (Doug's ruling 2026-08-12: "get them in the
+# door"). Everything else is filled in afterwards on the record's Details tab,
+# which already edits every field on all three records.
+CREATE_COMPANY_FIELDS: tuple[dict, ...] = (
+    {"name": "company", "label": "Company name", "type": "varchar",
+     "section": "company", "required": True},
+    {"name": "website", "label": "Website", "type": "varchar", "section": "company"},
+)
+
+# A contact is OPTIONAL — a partner CBM knows only as an organization is a real
+# thing, and a required contact would turn "quickly enter a new partner" into a
+# blocked screen. Leave the whole block empty and no Contact is created; fill
+# any of it and a first or last name becomes required (a nameless contact is
+# unusable in every grid that shows it).
+CREATE_CONTACT_FIELDS: tuple[dict, ...] = (
+    {"name": "firstName", "label": "First name", "type": "varchar",
+     "section": "contact", "row": "who"},
+    {"name": "lastName", "label": "Last name", "type": "varchar",
+     "section": "contact", "row": "who"},
+    {"name": "emailAddress", "label": "Email", "type": "varchar",
+     "section": "contact", "row": "reach"},
+    {"name": "phoneNumber", "label": "Phone", "type": "varchar",
+     "section": "contact", "row": "reach"},
+    {"name": "title", "label": "Job title", "type": "varchar", "section": "contact"},
+)
+
+# The field name the manager picker writes, derived per domain from
+# ``DomainConfig.parent_manager_link`` (partnerManagerId / cBMSponsorManagerId).
+CREATE_MANAGER_FIELD = "_manager"
+
+PARTNER_CREATE_FIELDS: tuple[dict, ...] = (
+    # Defaulted from the company name as it is typed, and overwritable — a
+    # partnership is usually named for the organization, but not always.
+    {"name": "name", "label": "Partner name", "type": "varchar",
+     "section": "profile", "required": True},
+    {"name": "partnershipStatus", "label": "Partnership status", "type": "enum",
+     "section": "profile", "row": "class", "default": "Candidate"},
+    {"name": "partnershipType", "label": "Partnership type", "type": "enum",
+     "section": "profile", "row": "class"},
+    {"name": "partnerNotes", "label": "Notes", "type": "wysiwyg", "section": "profile"},
+)
+
+SPONSOR_CREATE_FIELDS: tuple[dict, ...] = (
+    {"name": "name", "label": "Funder name", "type": "varchar",
+     "section": "profile", "required": True},
+    # CSponsorProfile has no status/type enum of its own — the funder's standing
+    # is its contribution ledger. ``description`` IS the funder notes field
+    # (SPONSOR.overall_notes_attr), and it is a plain longtext, not wysiwyg.
+    {"name": "description", "label": "Notes", "type": "text", "section": "profile"},
 )
 
 
@@ -615,6 +716,16 @@ PARTNER = DomainConfig(
     last_contact_attr="lastContacted",
     last_contact_type="date",
     discussion_enabled=True,
+    create_spec=CreateSpec(
+        button_label="+ Add partner",
+        title="Add a partner",
+        group_label="Partnership",
+        company_type="Partner",
+        contact_type="Partner",
+        team_name_attr="partner_team_name",
+        manager_label="Partner Manager",
+        profile_fields=PARTNER_CREATE_FIELDS,
+    ),
 )
 
 SPONSOR = DomainConfig(
@@ -720,6 +831,18 @@ SPONSOR = DomainConfig(
     last_contact_attr="lastContacted",
     last_contact_type="date",
     discussion_enabled=True,
+    create_spec=CreateSpec(
+        # "Funder" is this app's word; the CRM records stay CSponsorProfile and
+        # the new Account is typed "Sponsor" — the live cCompanyType option.
+        button_label="+ Add funder",
+        title="Add a funder",
+        group_label="Funding",
+        company_type="Sponsor",
+        contact_type="Sponsor",
+        team_name_attr="sponsor_team_name",
+        manager_label="Funder Manager",
+        profile_fields=SPONSOR_CREATE_FIELDS,
+    ),
 )
 
 DOMAINS: dict[str, DomainConfig] = {d.slug: d for d in (MENTOR, PARTNER, SPONSOR)}

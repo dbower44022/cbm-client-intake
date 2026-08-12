@@ -54,6 +54,10 @@
           <input type="checkbox" id="unreadOnly" /> <span>Unread only</span>
         </label>
         <button type="button" class="cbm-button cbm-button--secondary sx__sm" id="refreshBtn">Refresh</button>
+        <!-- Quick add (partner + funder). Absent, not disabled, when the domain
+             or the deployment doesn't have the feature — there'd be nothing the
+             user could do about it. -->
+        <button type="button" class="cbm-button sx__sm sx__addrecord" id="addRecordBtn" hidden>+ Add</button>
       </div>
       <p class="sx__notice" id="listNotice" role="status" hidden></p>
       <p class="sx__count" id="count"></p>
@@ -347,6 +351,37 @@
         <div class="ctb__form-actions">
           <button type="button" class="cbm-button" id="ctbSaveBtn">Save contribution</button>
           <button type="button" class="cbm-button cbm-button--secondary" id="ctbCancelBtn">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick add: a new partner / funder (company + primary contact + profile).
+       Built from the server's create spec — see qadd* in app.js. -->
+  <div class="sx__modal" id="qaddModal" hidden role="dialog" aria-modal="true" aria-labelledby="qaddTitle">
+    <div class="sx__modal-backdrop" id="qaddBackdrop"></div>
+    <div class="sx__modal-card qadd__modal-card" role="document">
+      <div class="sx__modal-head">
+        <div>
+          <p class="sx__modal-kind" id="qaddKind">New record</p>
+          <h3 class="sx__modal-name" id="qaddTitle">Add</h3>
+        </div>
+        <span class="sx__modal-actions">
+          <button type="button" class="sx__modal-close" id="qaddClose" aria-label="Close">×</button>
+        </span>
+      </div>
+      <div class="sx__modal-body">
+        <p class="sx__notice" id="qaddNotice" role="status" hidden></p>
+        <p class="sx__loading" id="qaddLoading" hidden>Loading…</p>
+        <form id="qaddForm" class="qadd__form"></form>
+        <p class="sx__muted" id="qaddHint">
+          An existing company with the same name, or contact with the same email, is
+          reused rather than duplicated. Everything else is filled in on the
+          record's Details tab afterwards.
+        </p>
+        <div class="qadd__form-actions">
+          <button type="button" class="cbm-button" id="qaddSaveBtn">Create</button>
+          <button type="button" class="cbm-button cbm-button--secondary" id="qaddCancelBtn">Cancel</button>
         </div>
       </div>
     </div>

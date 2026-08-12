@@ -136,6 +136,7 @@ in the CRM: `Client Administration Team`, `Mentor Administration Team`,
 | `ASSIGN_ALLOWED_TEAMS` | `Client Administration Team` (gate for `/assignments`) |
 | `MENTOR_ADMIN_ALLOWED_TEAMS` | `Mentor Administration Team` (gate for `/mentoradmin`; default) |
 | `OPS_ALLOWED_TEAMS` | `Marketing Admin Team` (gate for `/ops`; default) |
+| `RECORD_QUICK_ADD` | `true` to show "+ Add partner" / "+ Add funder" on those grids (web; off by default — read per request, so `/setup` can toggle it) |
 | `SESSION_COOKIE_SECURE` | `true` in prod (false only for plain-HTTP local dev) |
 
 **Mentor-login provisioning** — approving a mentor in `/mentoradmin` can

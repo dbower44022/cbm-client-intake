@@ -411,6 +411,14 @@ one shared frontend that derives its domain from the first segment of its URL.
   metadata sweep covers scalars only). Permission-aware down to per-record
   ownership. The PUT is entity-allowlisted (`cfg.details_entities` + Contact,
   else 404).
+- **Partner and Funder can be CREATED here** (`RECORD_QUICK_ADD`, off by
+  default): the grid's "+ Add partner" / "+ Add funder" runs the same
+  Account → Contact → profile sequence the public intake forms do, as the
+  signed-in user. `DomainConfig.create_spec` gates both the button and the
+  routes (mentor has none — engagements arrive through intake), and the spec is
+  BOTH the form layout and the write whitelist. Same dedupe policy as intake:
+  a same-named company / same-email contact is reused and null-filled, never
+  duplicated; a reused company gains the type value merge-only.
 - **Contacts tables are per-domain**: mentor shows Role chips and an Agreements
   badge; partner/funder show neither (every contact has the same relationship to
   CBM, and the consent bools are a client-intake concept) but offer **Make
@@ -928,8 +936,13 @@ deployed and verified; `CHANGELOG.md` is the permanent record, `OPEN-ITEMS.md`
 holds anything still owed.*
 
 **Deployed: v0.187.0 on BOTH environments** (verified 2026-07-28 via `/healthz`).
-Local `main` is at the same version with only documentation commits unpushed.
+Local `main` is ahead of that; the newest work is unpushed.
 
+- **v0.195.0** — quick add on Partner + Funder Management (see that app's
+  section). **Built dark**: `RECORD_QUICK_ADD` is off by default, so the button
+  is absent until it is set on crm-test's overlay (or toggled at `/setup`),
+  reviewed live as a real non-admin partner/funder-team member, then enabled on
+  prod. Live verification owed — `OPEN-ITEMS.md`.
 - **v0.187.0** — Analytics Phase E: starter dashboards on the record views for
   Mentor, Engagement, Partner, Funder and Contact (`analytics/records.py`), one
   dashboard per record type enforced at save. Hosted by the three session tools

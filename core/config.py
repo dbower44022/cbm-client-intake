@@ -185,11 +185,17 @@ class Settings(BaseSettings):
     workspace_allowed_teams: str = "Mentor Team"
     # Team that approved mentors' new login users are placed in.
     mentor_team_name: str = "Mentor Team"
+    # Quick add (Doug's request 2026-08-12): the "+ Add partner" / "+ Add
+    # funder" button on the Partner and Funder Management grids, which runs the
+    # same Account → Contact → profile create the public intake forms do, as
+    # the signed-in user. Off by default — build dark, review on crm-test, then
+    # enable on prod. Read per request (never at boot), so /setup can toggle it.
+    record_quick_add: bool = False
     # Team stamped onto every NEW CPartnerProfile the partner intake form
     # creates, so team-scoped roles (Partner Management Team members) can see
-    # all partners in /partnersessions. Best-effort: an unresolvable team
-    # (e.g. the API role lacks Team read) logs a WARNING and the partner is
-    # created without it. Empty string disables the stamp.
+    # all partners in /partnersessions — also stamped by the quick add above.
+    # Best-effort: an unresolvable team (e.g. the API role lacks Team read) logs
+    # a WARNING and the partner is created without it. Empty disables the stamp.
     partner_team_name: str = "Partner Management Team"
     # Same stamp for every NEW CSponsorProfile the sponsor intake form creates
     # (all funders are visible to every sponsor-team member — /sponsorsessions

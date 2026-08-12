@@ -1024,3 +1024,25 @@ textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
 .ctb__checkline { display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 600; color: var(--cbm-slate-700, #556); }
 .ctb__checkline input { width: auto; }
 .ctb__form-actions { display: flex; gap: 0.6rem; margin-top: 0.4rem; }
+
+/* --- Quick add: a new partner / funder ------------------------------------
+   Same grouped-panel shape as the contribution editor (its own classes, so the
+   two forms can diverge), packed full width — no cap. */
+.sx__addrecord { margin-left: auto; }
+.qadd__modal-card { max-width: min(64rem, 94vw); width: 94vw; }
+.qadd__form { display: block; }
+.qadd__group {
+  border: 1px solid var(--cbm-border, #d7dce2); border-radius: var(--cbm-radius, 6px);
+  padding: 0.6rem 0.8rem 0.8rem; margin: 0 0 0.8rem;
+}
+.qadd__group legend { font-weight: 700; color: var(--cbm-navy, #00205B); padding: 0 0.3rem; }
+.qadd__line { display: flex; flex-wrap: wrap; gap: 0.75rem 1rem; margin-bottom: 0.6rem; }
+.qadd__line:last-child { margin-bottom: 0; }
+.qadd__field { display: flex; flex-direction: column; gap: 0.25rem; flex: 1 1 10rem; min-width: 9rem; }
+.qadd__field--wide { flex: 1 1 100%; }
+.qadd__label { font-size: var(--cbm-text-sm, 0.9rem); color: var(--cbm-slate-700, #556); font-weight: 600; }
+.qadd__input, .qadd__field select, .qadd__field input, .qadd__field textarea {
+  padding: 0.45rem 0.5rem; border: 1px solid var(--cbm-border, #d7dce2);
+  border-radius: var(--cbm-radius, 6px); font: inherit; width: 100%; box-sizing: border-box;
+}
+.qadd__form-actions { display: flex; gap: 0.6rem; margin-top: 0.4rem; }

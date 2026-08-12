@@ -118,6 +118,13 @@ class ContributionIn(BaseModel):
     changes: dict = {}
 
 
+class RecordCreateIn(BaseModel):
+    """The Add-partner / Add-funder form's values, keyed by the field names in
+    ``service.create_field_spec`` (anything else is dropped server-side)."""
+
+    changes: dict = {}
+
+
 class DetailsSaveIn(BaseModel):
     changes: dict = {}
 
@@ -356,6 +363,15 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             # (partner + sponsor). Also requires the durable store to be
             # configured; the frontend hides the pane if a comments read 503s.
             "discussionEnabled": cfg.discussion_enabled,
+            # Quick add: the grid's "+ Add partner" / "+ Add funder" button.
+            # Both the domain's create spec AND the runtime flag are required —
+            # the button is absent (not disabled) when the feature is off, since
+            # there is nothing the user could do to make it work.
+            "createRecord": (
+                {"label": cfg.create_spec.button_label, "title": cfg.create_spec.title}
+                if cfg.create_spec and get_settings().record_quick_add
+                else None
+            ),
         }
 
     @router.post("/logout")
@@ -551,6 +567,65 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                     summary=f"Primary contact set to {result.get('contactName')}.",
                     actor_id=user["userId"], actor_name=user["name"], details=result,
                 )
+            return result
+
+    if cfg.create_spec:
+        # Quick add (Doug's request 2026-08-12) — registered ONLY on a domain
+        # with a create spec (partner + funder), the contributions precedent, so
+        # the mentor router never carries these routes at all. The runtime flag
+        # is checked per request rather than at registration, so /setup can turn
+        # the feature on and off without a redeploy (a boot-read flag can't).
+
+        def _require_quick_add() -> None:
+            if not get_settings().record_quick_add:
+                raise HTTPException(
+                    status_code=503,
+                    detail=f"Adding a new {cfg.parent_label.lower()} isn't enabled yet.",
+                )
+
+        @router.get("/createfields")
+        async def create_fields(request: Request) -> dict:
+            """The Add form: its field spec, live enum options and the manager
+            picker (defaulting to the caller's own mentor profile)."""
+            user = _require_user(request)
+            _require_quick_add()
+            client = client_for(get_settings(), user)
+            try:
+                managers = await service.manager_options(cfg, client, user["userId"])
+                return {
+                    "title": cfg.create_spec.title,
+                    "fields": service.create_field_spec(cfg),
+                    "options": await service.create_field_options(cfg, client),
+                    **managers,
+                }
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not load the form")
+
+        @router.post("/records")
+        async def create_record(body: RecordCreateIn, request: Request) -> dict:
+            """Create a new partner / funder — Account → Contact → profile."""
+            user = _require_user(request)
+            _require_quick_add()
+            settings = get_settings()
+            client = client_for(settings, user)
+            try:
+                result = await service.create_record(
+                    cfg, client, _api_client(settings), body.changes,
+                    user_id=user["userId"],
+                )
+            except service.SessionError as exc:
+                raise HTTPException(status_code=400, detail=str(exc))
+            except EspoError as exc:
+                raise _crm_failure(
+                    request, exc, f"Could not create the {cfg.parent_label.lower()}"
+                )
+            await action_log.record_action(
+                client, app=cfg.title, category=action_log.CAT_RECORD_EDIT,
+                action=action_log.ACT_RECORD_CREATED,
+                parent_type=cfg.parent_entity, parent_id=result["id"],
+                summary=f"{cfg.parent_label} {result['name']} created.",
+                actor_id=user["userId"], actor_name=user["name"], details=result,
+            )
             return result
 
     @router.get("/peek/{entity}/{record_id}")

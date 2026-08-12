@@ -153,6 +153,9 @@ SETTINGS: tuple[SettingSpec, ...] = (
        help="Worker-only: Fathom auto-joins from the mentor's own calendar."),
     _s("gdrive_docs", GROUP_FEATURES, "Google Drive documents", kind="bool",
        component="both", help="The Documents tab. Needs a database and the shared drive."),
+    _s("record_quick_add", GROUP_FEATURES, "Add partners & funders in-app", kind="bool",
+       help="The '+ Add partner' / '+ Add funder' button on those grids. Creates the "
+            "company, primary contact and profile as the signed-in user."),
     _s("comms_ai_summary", GROUP_FEATURES, "AI conversation summaries", kind="bool",
        component="worker", help="Optional. Requires ANTHROPIC_API_KEY."),
     _s("comms_digest", GROUP_FEATURES, "Daily email digest", kind="bool",

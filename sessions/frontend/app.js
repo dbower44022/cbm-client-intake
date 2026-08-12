@@ -424,6 +424,7 @@
 
   async function bootList() {
     showList();
+    initQuickAdd();
     var fieldsError = null;
     try {
       var f = await api("/fields"); fieldSpec = f.fields || []; fieldOptions = f.options || {}; fieldRequired = f.required || [];
@@ -6062,6 +6063,239 @@
   $("ctbBackdrop").addEventListener("click", requestCloseContrib);
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && !$("ctbModal").hidden) requestCloseContrib();
+  });
+
+  // --- quick add: a new partner / funder ------------------------------------
+  // The grid's "+ Add partner" / "+ Add funder" button. The form is built from
+  // the server's create spec (/createfields) exactly like the contribution
+  // editor is built from CONTRIBUTION_FIELDS — one spec, so a field added
+  // server-side appears here with no frontend change. Present only when
+  // config.createRecord is set (the domain owns the feature AND the deployment
+  // has it enabled); otherwise the button stays absent.
+  var qadd = {
+    spec: null,        // [{name,label,type,section,group,row,required,default}]
+    options: {},       // {field: [enum options]}
+    managers: [],      // [{id,name}] for the manager picker
+    defaultManagerId: null,
+    fieldEls: {},
+    nameAuto: "",      // the auto-filled record name, while still untouched
+    loaded: false,
+    saving: false,
+    discardArmed: false,
+  };
+
+  function quickAddOn() { return !!(config && config.createRecord); }
+
+  function initQuickAdd() {
+    var btn = $("addRecordBtn");
+    if (!btn || !quickAddOn()) return;
+    btn.textContent = config.createRecord.label || "+ Add";
+    show(btn);
+  }
+
+  function qaddValue(name) {
+    var el = qadd.fieldEls[name];
+    if (!el) return "";
+    if (el._cbmRichText) return el._cbmRichText.getValue();
+    if (el.type === "checkbox") return el.checked;
+    return el.value;
+  }
+
+  async function openQuickAdd() {
+    if (!quickAddOn()) return;
+    hide($("qaddNotice"));
+    qadd.discardArmed = false;
+    $("qaddCancelBtn").textContent = "Cancel";
+    $("qaddKind").textContent = config.parentLabel || "Record";
+    $("qaddTitle").textContent = (config.createRecord && config.createRecord.title) || "Add";
+    $("qaddForm").innerHTML = "";
+    show($("qaddModal"));
+    if (!qadd.loaded) {
+      show($("qaddLoading"));
+      try {
+        var res = await api("/createfields");
+        qadd.spec = res.fields || [];
+        qadd.options = res.options || {};
+        qadd.managers = res.managers || [];
+        qadd.defaultManagerId = res.defaultManagerId || null;
+        qadd.loaded = true;
+      } catch (e) {
+        hide($("qaddLoading"));
+        if (e.status === 401) { showLogin(); return; }
+        notice("qaddNotice", e.message, "error");
+        return;
+      }
+      hide($("qaddLoading"));
+    }
+    buildQuickAddForm();
+  }
+
+  function closeQuickAdd() {
+    hide($("qaddModal"));
+    qadd.fieldEls = {};
+    qadd.nameAuto = "";
+    qadd.discardArmed = false;
+  }
+
+  function qaddDirty() {
+    return (qadd.spec || []).some(function (f) {
+      // The mirrored record name on an untouched form is a default, not input.
+      if (f.name === "name" && String(qaddValue("name")) === qadd.nameAuto) return false;
+      var v = qaddValue(f.name);
+      if (f.type === "managerselect") return String(v || "") !== String(qadd.defaultManagerId || "");
+      if (f["default"]) return String(v) !== String(f["default"]);
+      return v !== "" && v != null && v !== false;
+    });
+  }
+
+  function requestCloseQuickAdd() {
+    if (qaddDirty() && !qadd.discardArmed) {
+      qadd.discardArmed = true;
+      $("qaddCancelBtn").textContent = "Discard this entry?";
+      notice("qaddNotice", "You've typed something — Cancel again to discard it, or Create.", "error");
+      return;
+    }
+    closeQuickAdd();
+  }
+
+  function buildQuickAddForm() {
+    var form = $("qaddForm"); form.innerHTML = "";
+    qadd.fieldEls = {};
+    var groups = [], byGroup = {};
+    (qadd.spec || []).forEach(function (f) {
+      if (!byGroup[f.group]) { byGroup[f.group] = []; groups.push(f.group); }
+      byGroup[f.group].push(f);
+    });
+    groups.forEach(function (g) {
+      var panel = document.createElement("fieldset"); panel.className = "qadd__group";
+      var legend = document.createElement("legend"); legend.textContent = g;
+      panel.appendChild(legend);
+      var rows = [], byRow = {};
+      byGroup[g].forEach(function (f) {
+        var key = f.row || f.name;
+        if (!byRow[key]) { byRow[key] = []; rows.push(key); }
+        byRow[key].push(f);
+      });
+      rows.forEach(function (rk) {
+        var line = document.createElement("div"); line.className = "qadd__line";
+        byRow[rk].forEach(function (f) { line.appendChild(qaddField(f)); });
+        panel.appendChild(line);
+      });
+      form.appendChild(panel);
+    });
+    // The record name mirrors the company as it's typed, until the user edits
+    // it — a partnership is usually named for the organization, but not always.
+    var companyEl = qadd.fieldEls.company, nameEl = qadd.fieldEls.name;
+    if (companyEl && nameEl) {
+      companyEl.addEventListener("input", function () {
+        if (nameEl.value === qadd.nameAuto) {
+          qadd.nameAuto = companyEl.value;
+          nameEl.value = qadd.nameAuto;
+        }
+      });
+    }
+    if (companyEl) companyEl.focus();
+  }
+
+  function qaddField(f) {
+    var wrap = document.createElement("div");
+    wrap.className = "qadd__field" + (f.type === "wysiwyg" || f.type === "text" ? " qadd__field--wide" : "");
+    var label = document.createElement("label"); label.className = "qadd__label";
+    label.textContent = f.label + (f.required ? " *" : "");
+    wrap.appendChild(label);
+    var el;
+    if (f.type === "enum") {
+      el = document.createElement("select");
+      var blank = document.createElement("option"); blank.value = ""; blank.textContent = "—";
+      el.appendChild(blank);
+      (qadd.options[f.name] || []).forEach(function (o) {
+        var op = document.createElement("option"); op.value = o; op.textContent = o;
+        el.appendChild(op);
+      });
+      el.value = f["default"] || "";
+    } else if (f.type === "managerselect") {
+      el = document.createElement("select");
+      var none = document.createElement("option"); none.value = ""; none.textContent = "— none —";
+      el.appendChild(none);
+      qadd.managers.forEach(function (m) {
+        var op = document.createElement("option"); op.value = m.id; op.textContent = m.name;
+        el.appendChild(op);
+      });
+      el.value = qadd.defaultManagerId || "";
+      if (!qadd.managers.length) {
+        // Never a hidden or disabled control — say why it's empty instead.
+        label.textContent += " (no mentor profiles are readable by your login — set this on the Details tab)";
+      }
+    } else if (f.type === "text") {
+      el = document.createElement("textarea"); el.rows = 3;
+    } else if (f.type === "wysiwyg") {
+      el = window.CBMRichText && window.CBMRichText.create("", { minHeight: 110 });
+      if (!el) { el = document.createElement("textarea"); el.rows = 4; }
+    }
+    if (!el) { el = document.createElement("input"); el.type = "text"; }
+    el.className = (el.className ? el.className + " " : "") + "qadd__input";
+    qadd.fieldEls[f.name] = el;
+    wrap.appendChild(el);
+    return wrap;
+  }
+
+  async function saveQuickAdd() {
+    if (qadd.saving || !qadd.spec) return;
+    hide($("qaddNotice"));
+    var changes = {}, missing = [];
+    (qadd.spec || []).forEach(function (f) {
+      var v = qaddValue(f.name);
+      if (f.required && (v === "" || v == null)) missing.push(f.label);
+      if (v !== "" && v != null && v !== false) changes[f.name] = v;
+    });
+    if (missing.length) {
+      notice("qaddNotice", "Please complete: " + missing.join(", ") + ".", "error");
+      return;
+    }
+    qadd.saving = true; $("qaddSaveBtn").disabled = true;
+    try {
+      var res = await api("/records", { method: "POST", body: JSON.stringify({ changes: changes }) });
+      closeQuickAdd();
+      await loadRecords();
+      quickAddCreatedNotice(res);
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      notice("qaddNotice", e.message, "error");
+    } finally { qadd.saving = false; $("qaddSaveBtn").disabled = false; }
+  }
+
+  function quickAddCreatedNotice(res) {
+    // Says what was CREATED versus REUSED — a staffer typing a company CBM
+    // already knows should see that it was matched, not silently deduped.
+    var parts = [(config.parentLabel || "Record") + " " + (res.name || "") + " created."];
+    if (res.contactId) {
+      parts.push(res.contactCreated ? "New contact added." : "Matched the existing contact.");
+    }
+    if (!res.accountCreated) parts.push("Linked to the existing company.");
+    if (res.contactId && !res.contactLinked) {
+      parts.push("The contact couldn't be added to the Contacts list — add it on the Details tab.");
+    }
+    notice("listNotice", parts.join(" "), "success");
+    var n = $("listNotice");
+    var open = document.createElement("a");
+    open.className = "sx__link"; open.style.marginLeft = "8px";
+    open.href = "/" + SLUG + "/record/" + encodeURIComponent(res.id);
+    open.textContent = "Open it →";
+    open.addEventListener("click", function (ev) {
+      if (ev.defaultPrevented || ev.button !== 0 || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
+      ev.preventDefault();
+      window.open(open.href, "cbm-rec-" + SLUG + "-" + res.id);
+    });
+    n.appendChild(open);
+  }
+
+  if ($("addRecordBtn")) $("addRecordBtn").addEventListener("click", function () { openQuickAdd(); });
+  $("qaddSaveBtn").addEventListener("click", saveQuickAdd);
+  $("qaddCancelBtn").addEventListener("click", requestCloseQuickAdd);
+  $("qaddClose").addEventListener("click", requestCloseQuickAdd);
+  $("qaddBackdrop").addEventListener("click", requestCloseQuickAdd);
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !$("qaddModal").hidden) requestCloseQuickAdd();
   });
 
   // --- read-only session view (with prev/next through the record's sessions) ---

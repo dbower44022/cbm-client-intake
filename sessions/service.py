@@ -27,12 +27,17 @@ from assignments.service import (
     assigned_user_id,
     is_assigned_to,
 )
+from core.config import get_settings
+from core.crm_upsert import create_dropping_invalid, find_create_or_fill
 from core.espo import EspoError, is_forbidden
-from core.phone import format_us
+from core.phone import e164_or_none, format_us
 from core.stream import post_stream_note
 
 from .config import (
     CONTACT,
+    CREATE_COMPANY_FIELDS,
+    CREATE_CONTACT_FIELDS,
+    CREATE_MANAGER_FIELD,
     CONTRIBUTION_EDIT_NAMES,
     CONTRIBUTION_ENUM_FIELDS,
     CONTRIBUTION_FIELDS,
@@ -2603,3 +2608,322 @@ async def update_contribution(
         await client.update(CONTRIBUTION, contribution_id, payload)
         log.info("contribution %s updated (%s)", contribution_id, ", ".join(sorted(payload)))
     return await get_contribution(cfg, client, contribution_id)
+
+
+# --- Quick add: create a new partner / funder -------------------------------
+# One screen runs the same three-record sequence the public intake forms do
+# (Account → Contact → profile, then relate the contact), as the signed-in user
+# so their EspoCRM ACL is the boundary and they are recorded as the creator.
+#
+# Deduping follows the intake policy exactly: a same-named Account and a
+# same-email Contact are REUSED, never duplicated, and an existing record is
+# only null-filled — never overwritten with what was typed here.
+
+
+def manager_fk(cfg: DomainConfig) -> Optional[str]:
+    """The FK attr naming this domain's assigned manager's ``CMentorProfile``
+    (``partnerManagerId`` / ``cBMSponsorManagerId``), or None."""
+    return f"{cfg.parent_manager_link}Id" if cfg.parent_manager_link else None
+
+
+def create_field_spec(cfg: DomainConfig) -> list[dict[str, Any]]:
+    """The Add form's fields: company, primary contact, then the domain's own
+    profile fields with the manager picker appended.
+
+    ONE spec, exactly like SESSION_FIELDS/CONTRIBUTION_FIELDS: the frontend
+    lays the form out from it and the server writes nothing that isn't in it.
+    """
+    spec = cfg.create_spec
+    if not spec:
+        return []
+    fields: list[dict[str, Any]] = [
+        dict(f, group="Company") for f in CREATE_COMPANY_FIELDS
+    ]
+    fields += [dict(f, group="Primary contact") for f in CREATE_CONTACT_FIELDS]
+    # Long-form fields (notes) go LAST, after the manager picker: a full-height
+    # rich-text editor between them pushes the picker and the Create button off
+    # the bottom of the modal, which is the opposite of quick entry.
+    scalars = [f for f in spec.profile_fields if f["type"] not in ("wysiwyg", "text")]
+    longform = [f for f in spec.profile_fields if f["type"] in ("wysiwyg", "text")]
+    fields += [dict(f, group=spec.group_label) for f in scalars]
+    if manager_fk(cfg):
+        fields.append({
+            "name": CREATE_MANAGER_FIELD, "label": spec.manager_label,
+            "type": "managerselect", "section": "profile", "group": spec.group_label,
+            "row": "class",  # shares the line with status / type
+        })
+    fields += [dict(f, group=spec.group_label) for f in longform]
+    return fields
+
+
+async def create_field_options(cfg: DomainConfig, client: SessionClient) -> dict[str, list[str]]:
+    """Live option lists for the Add form's profile enums (CRM = truth), so a
+    CRM enum change shows up here without a deploy."""
+    names = [
+        f["name"] for f in create_field_spec(cfg)
+        if f["type"] in ("enum", "multiEnum") and f["section"] == "profile"
+    ]
+    if not names:
+        return {}
+    fields = await client.metadata(f"entityDefs.{cfg.parent_entity}.fields")
+    options: dict[str, list[str]] = {}
+    for name in names:
+        opts = (fields.get(name) or {}).get("options")
+        if isinstance(opts, list):
+            options[name] = [o for o in opts if o != ""]
+    return options
+
+
+async def manager_options(
+    cfg: DomainConfig, client: SessionClient, user_id: str
+) -> dict[str, Any]:
+    """The manager picker: every ``CMentorProfile`` the caller can read, plus
+    the id of their own (the default selection).
+
+    Best-effort — a role that can't list CMentorProfile (the sponsor team's may
+    not) gets an empty list and a blank picker, never a failed form. The
+    manager is optional on the create, so that degrades to "assign it later on
+    the Details tab" rather than blocking.
+    """
+    if not manager_fk(cfg):
+        return {"managers": [], "defaultManagerId": None}
+    try:
+        data = await client.list(
+            MENTOR_PROFILE,
+            select="name,assignedUserId,assignedUsersIds",
+            order_by="name", order="asc", max_size=_PAGE,
+        )
+    except EspoError as exc:
+        log.warning("manager options unavailable (%s): %s", cfg.slug, exc)
+        return {"managers": [], "defaultManagerId": None}
+    rows = data.get("list", [])
+    mine = next((r["id"] for r in rows if is_assigned_to(r, user_id)), None)
+    return {
+        "managers": [{"id": r["id"], "name": r.get("name") or r["id"]} for r in rows],
+        "defaultManagerId": mine,
+    }
+
+
+async def _find_or_create_company(
+    cfg: DomainConfig, client: SessionClient, api_client: Any,
+    name: str, website: str,
+) -> tuple[str, bool]:
+    """An Account id for ``name`` — reuse a same-named one, else create it.
+
+    Returns ``(id, created)``. Reads run as the user; the CREATE goes through
+    the intake API client, whose role holds Account create where the staff
+    gate roles may not (the ``comms_service.resolve_company`` precedent — a
+    partner manager without the grant would otherwise get a 403 on a brand-new
+    company).
+
+    On a REUSED Account the domain's company type is merged into
+    ``cCompanyType`` when missing — a company CBM already knows as a Client
+    becoming a Partner must gain the type, since that multiEnum is the
+    discriminator the whole CRM filters on. Merge-only and best-effort: an
+    existing type is never removed and a failed merge never fails the create.
+    """
+    spec = cfg.create_spec
+    existing = await client.find_one(ACCOUNT, "name", name, select="name,cCompanyType")
+    if existing:
+        types = list(existing.get("cCompanyType") or [])
+        if spec and spec.company_type not in types:
+            try:
+                await client.update(
+                    ACCOUNT, existing["id"], {"cCompanyType": types + [spec.company_type]}
+                )
+            except EspoError as exc:
+                log.warning("could not add %s to Account/%s cCompanyType: %s",
+                            spec.company_type, existing["id"], exc)
+        return existing["id"], False
+    payload: dict[str, Any] = {"name": name}
+    if spec:
+        payload["cCompanyType"] = [spec.company_type]
+    if website:
+        payload["website"] = website
+    created = await api_client.create(ACCOUNT, payload)
+    return created["id"], True
+
+
+async def _create_quick_contact(
+    cfg: DomainConfig, client: SessionClient, values: dict[str, Any], account_id: str
+) -> tuple[Optional[str], bool]:
+    """Find-or-create the primary contact from the form's contact block.
+
+    Returns ``(id, created)``, or ``(None, False)`` when the block was left
+    empty (a contact is optional). A same-email Contact is reused and only
+    null-filled — the ``find_create_or_fill`` policy the intake forms use, so
+    entering a partner whose contact CBM already knows never duplicates them or
+    overwrites curated data.
+    """
+    first = (values.get("firstName") or "").strip()
+    last = (values.get("lastName") or "").strip()
+    email = (values.get("emailAddress") or "").strip()
+    phone = (values.get("phoneNumber") or "").strip()
+    title = (values.get("title") or "").strip()
+    if not any((first, last, email, phone, title)):
+        return None, False
+    if not (first or last):
+        raise SessionError(
+            "A first or last name is required for the primary contact "
+            "(or clear the contact fields to add the company on its own)."
+        )
+    payload: dict[str, Any] = {"firstName": first, "lastName": last, "accountId": account_id}
+    if cfg.create_spec:
+        payload["cContactType"] = [cfg.create_spec.contact_type]
+    if email:
+        payload["emailAddress"] = email
+    if title:
+        payload["title"] = title
+    normalized = e164_or_none(phone)  # an implausible number is dropped, never fatal
+    if normalized:
+        payload["phoneNumber"] = normalized
+    if not email:
+        # No natural key to match on — create outright.
+        created = await create_dropping_invalid(client, CONTACT, payload)
+        return created["id"], True
+    contact_id, action = await find_create_or_fill(
+        client, CONTACT,
+        match_attr="emailAddress", match_value=email,
+        create_payload=payload,
+        # Never back-write the match key, the company FK or the discriminator
+        # onto a contact that already exists.
+        fill_keys=("firstName", "lastName", "phoneNumber", "title"),
+    )
+    return contact_id, action == "created"
+
+
+async def _quick_add_team_ids(cfg: DomainConfig, client: SessionClient) -> list[str]:
+    """Team ids to stamp on the new profile so team-scoped roles can see it in
+    the grid. Best-effort — an unresolvable team logs and returns [] rather
+    than blocking the create (the intake orchestrators' rule)."""
+    spec = cfg.create_spec
+    if not spec:
+        return []
+    name = (getattr(get_settings(), spec.team_name_attr, "") or "").strip()
+    if not name:
+        return []
+    try:
+        team = await client.find_one("Team", "name", name)
+    except EspoError as exc:
+        log.warning("Team %r lookup failed (%s) — %s created without a team",
+                    name, exc, cfg.parent_entity)
+        return []
+    if not team:
+        log.warning("Team %r not found/readable — %s created without a team",
+                    name, cfg.parent_entity)
+        return []
+    return [team["id"]]
+
+
+async def create_record(
+    cfg: DomainConfig, client: SessionClient, api_client: Any,
+    changes: dict[str, Any], *, user_id: str,
+) -> dict[str, Any]:
+    """Create a new partner / funder: Account → Contact → profile → relate.
+
+    Every id is captured as its step succeeds and reported back, so a
+    later-step failure never leaves the user guessing what was written (the
+    intake orchestrators' contract). Returns the new record's id plus what was
+    created versus reused, which the frontend reports and the action log
+    records.
+    """
+    spec = cfg.create_spec
+    if not spec:
+        raise SessionError("This app can't create records.")
+    allowed = {f["name"]: f for f in create_field_spec(cfg)}
+    values = {k: v for k, v in changes.items() if k in allowed}
+
+    company = (values.get("company") or "").strip()
+    if not company:
+        raise SessionError("A company name is required.")
+    website = (values.get("website") or "").strip()
+    if website and "://" not in website:
+        website = f"https://{website}"  # Account.website is a url field
+
+    account_id, account_created = await _find_or_create_company(
+        cfg, client, api_client, company, website
+    )
+    contact_id, contact_created = await _create_quick_contact(
+        cfg, client, values, account_id
+    )
+
+    payload: dict[str, Any] = {"name": (values.get("name") or "").strip() or company}
+    for f in spec.profile_fields:
+        if f["name"] == "name":
+            continue
+        value = values.get(f["name"])
+        if value not in (None, "", []):
+            payload[f["name"]] = value
+        elif f.get("default"):
+            payload[f["name"]] = f["default"]
+    await _sanitize_create_enums(cfg, client, payload)
+
+    company_attr = company_id_attr(cfg)
+    if company_attr:
+        payload[company_attr] = account_id
+    if contact_id and cfg.primary_contact_id_attr:
+        payload[cfg.primary_contact_id_attr] = contact_id
+    mgr_attr = manager_fk(cfg)
+    if mgr_attr:
+        manager_id = (values.get(CREATE_MANAGER_FIELD) or "").strip()
+        if manager_id:
+            payload[mgr_attr] = manager_id
+    team_ids = await _quick_add_team_ids(cfg, client)
+    if team_ids:
+        payload["teamsIds"] = team_ids
+    # Owner-stamp the creator, so a role scoped to "own" can read back what it
+    # just made (the new-session precedent — without the stamp the CREATE
+    # itself 403s, because EspoCRM ACL-checks the read-back).
+    if user_id:
+        payload["assignedUsersIds"] = [user_id]
+
+    created = await client.create(cfg.parent_entity, payload)
+    record_id = created["id"]
+    log.info("%s created %s/%s (account %s, contact %s) by %s",
+             cfg.slug, cfg.parent_entity, record_id, account_id, contact_id, user_id)
+
+    linked = False
+    if contact_id:
+        # The profile already names the contact as primary; this is the hasMany
+        # the Contacts table lists. Best-effort: the record exists and is usable
+        # without it, and the Details tab can re-link in one click.
+        try:
+            await client.relate(cfg.parent_entity, record_id, cfg.parent_contacts_link, contact_id)
+            linked = True
+        except EspoError as exc:
+            log.warning("could not link Contact/%s to %s/%s: %s",
+                        contact_id, cfg.parent_entity, record_id, exc)
+    return {
+        "id": record_id,
+        "name": payload["name"],
+        "accountId": account_id,
+        "accountCreated": account_created,
+        "contactId": contact_id,
+        "contactCreated": contact_created,
+        "contactLinked": linked,
+        "managerId": payload.get(mgr_attr) if mgr_attr else None,
+    }
+
+
+async def _sanitize_create_enums(
+    cfg: DomainConfig, client: SessionClient, payload: dict[str, Any]
+) -> None:
+    """Drop profile enum values outside the live CRM options, in place — the
+    ``_sanitize_enum_payload`` contract (single enums omitted, fails open), so
+    one drifted option can't 400 a whole new partner."""
+    try:
+        options = await create_field_options(cfg, client)
+    except Exception as exc:  # noqa: BLE001 — fail open, never block the create
+        log.warning("could not fetch %s enum options (%s); keeping values as-is",
+                    cfg.parent_entity, exc)
+        return
+    for key, opts in options.items():
+        if key not in payload:
+            continue
+        value = payload[key]
+        if isinstance(value, list):
+            payload[key] = [v for v in value if v in opts]
+        elif value not in opts:
+            log.warning("%s.%s: dropping unrecognized %r (not in live enum)",
+                        cfg.parent_entity, key, value)
+            payload.pop(key)

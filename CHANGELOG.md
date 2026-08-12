@@ -4,6 +4,54 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.195.0] — 2026-08-12
+
+**feat(sessions): add a partner / funder from the grid.** Partner and Funder
+Management gain a **"+ Add partner" / "+ Add funder"** button that runs the same
+three-record sequence the public intake forms do — Account → Contact →
+profile → relate — from one modal, as the signed-in user (their EspoCRM ACL is
+the boundary and they are recorded as the creator). Until now a partner CBM met
+outside the website had to be built by hand in the CRM.
+
+- **One spec, both jobs** — `CreateSpec` on `DomainConfig` (the
+  `contributions_link` gating precedent) declares the domain's half of the
+  form; `service.create_field_spec` composes it with the shared company and
+  contact fields. That list is BOTH the form layout and the server-side write
+  whitelist, and the enum options come live from CRM metadata. The mentor domain
+  has no spec — a client engagement arrives through intake — so its router
+  never registers the routes at all.
+- **Deduping follows the intake policy exactly**: a same-named Account and a
+  same-email Contact are reused and only null-filled, never duplicated and never
+  overwritten. A reused company gains the domain's `cCompanyType` value
+  (merge-only) — a Client that becomes a Partner must carry both, since that
+  multiEnum is the discriminator the CRM filters on.
+- **Lean by decision** (Doug, 2026-08-12): company + website, contact name /
+  email / phone / title, the profile's own status + type + notes, and a manager
+  picker defaulting to the creator's own `CMentorProfile`. Everything else is
+  filled in afterwards on the Details tab, which already edits every field.
+- The **contact block is optional** — an organization-only partner is a real
+  thing — but a nameless contact is refused before anything is written. A
+  drifted enum is dropped, not fatal; an implausible phone is dropped, not
+  fatal; the new profile is team-stamped and owner-stamped.
+- The Account create goes through the **intake API client** (staff gate roles
+  may not hold Account create — the `resolve_company` precedent); everything
+  else is written as the user.
+- **Flag-gated**: `RECORD_QUICK_ADD`, off by default and read **per request**,
+  so `/setup` can turn it on and off without a redeploy. Off ⇒ the button is
+  absent (not disabled) and the endpoints 503.
+- Result reporting says what was **created versus reused** ("Linked to the
+  existing company", "Matched the existing contact") with an Open-it link to the
+  new record, and the action is recorded via `core/action_log.py`
+  (`Record Created`).
+
+**Verified:** 24 new tests (`tests/test_quick_add.py`) — the create sequence and
+its links, company reuse + type merge, contact null-fill, the optional/nameless
+contact rules, enum drift, the field whitelist, a failed contact link not
+failing the create, the funder variant, and the flag/registration gating. The UI
+was driven end-to-end in the preview harness: validation names the missing
+fields on click (the button is never disabled), the discard guard arms once, and
+the POST carries only what was filled.
+
 ## [0.194.0] — 2026-08-10
 
 **feat(events): Phase 6c — reporting (EV-71…EV-74).** Four questions the
