@@ -1028,7 +1028,9 @@ textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
 /* --- Quick add: a new partner / funder ------------------------------------
    Same grouped-panel shape as the contribution editor (its own classes, so the
    two forms can diverge), packed full width — no cap. */
-.sx__addrecord { margin-left: auto; }
+/* No margin-left:auto here — #refreshBtn already carries it, and a second one
+   splits the free space between the two buttons (it stranded Refresh in the
+   middle of the toolbar). Refresh takes the space; Add sits beside it. */
 .qadd__modal-card { max-width: min(64rem, 94vw); width: 94vw; }
 .qadd__form { display: block; }
 .qadd__group {
