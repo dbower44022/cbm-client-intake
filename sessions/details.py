@@ -75,6 +75,12 @@ _PREFIX_C = re.compile(r"^c(?=[A-Z])")
 # best-effort); the write goes through ``{name}Id`` ("" clears the link).
 _ENTITY_LINK_FIELDS: dict[str, tuple[tuple[str, str, str], ...]] = {
     "CEngagement": (("referringPartner", "Referring partner", "CPartnerProfile"),),
+    # The partner's manager (Doug's 2026-08-13 report: no way to re-assign it in
+    # Partner Management). ``CPartnerProfile.partnerManager`` is the belongsTo
+    # whose reverse is ``CMentorProfile.managedPartners`` — i.e. the very link
+    # that decides whose partner this is, so it was the one relationship the app
+    # showed in the grid but could not change.
+    "CPartnerProfile": (("partnerManager", "Partner manager", MENTOR_PROFILE),),
 }
 
 # Label overrides where the humanized CRM field name misleads. ``partnerEmail``

@@ -30,6 +30,33 @@ def test_field_spec_appends_link_picker_when_crm_has_the_link():
     }]
 
 
+_PARTNER_META = {
+    "name": {"type": "varchar"},
+    "partnershipStatus": {"type": "enum", "options": ["Active", "Prospect"]},
+    "partnerManager": {"type": "link"},
+}
+
+
+def test_field_spec_appends_partner_manager_picker():
+    """Doug's 2026-08-13 report: the partner's manager showed in the grid but
+    could not be changed anywhere in the app."""
+    spec = details._field_spec(_PARTNER_META, "CPartnerProfile")
+    link = [f for f in spec if f["type"] == "linkselect"]
+    assert link == [{
+        "name": "partnerManagerId", "label": "Partner manager",
+        "type": "linkselect", "editable": True,
+        "linkEntity": "CMentorProfile", "nameAttr": "partnerManagerName",
+    }]
+    sel = details._select_for(spec, _PARTNER_META).split(",")
+    assert "partnerManagerId" in sel and "partnerManagerName" in sel
+
+
+def test_partner_manager_write_path():
+    spec = {f["name"]: f for f in details._field_spec(_PARTNER_META, "CPartnerProfile")}
+    assert details._clean_changes(spec, {"partnerManagerId": "M9"}) == {"partnerManagerId": "M9"}
+    assert details._clean_changes(spec, {"partnerManagerId": ""}) == {"partnerManagerId": None}
+
+
 def test_field_spec_omits_link_picker_when_crm_lacks_the_link():
     meta = {k: v for k, v in _ENG_META.items() if k != "referringPartner"}
     spec = details._field_spec(meta, "CEngagement")

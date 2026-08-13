@@ -3989,8 +3989,12 @@
     // panel. The record name mirrors the company (excluded, header shows it).
     CPartnerProfile: { noExtras: true, groups: [
       { label: "Partnership", grow: 2, basis: 46, rows: [
-        [{ name: "partnershipStatus", span: 4 }, { name: "partnershipType", span: 4 },
-         { name: "partnerContactCadence", span: 4, label: "Contact cadence" }],
+        // Partner manager is a curated link picker (CPartnerProfile.partnerManager
+        // → CMentorProfile), which is how the partner gets re-assigned — it rides
+        // in the top row because it decides who owns the relationship.
+        [{ name: "partnershipStatus", span: 3 }, { name: "partnershipType", span: 3 },
+         { name: "partnerManagerId", span: 3, label: "Partner manager" },
+         { name: "partnerContactCadence", span: 3, label: "Contact cadence" }],
         [{ name: "partnershipStartDate", span: 4 }, { name: "partnershipAgreementDate", span: 4 },
          { name: "lastContacted", span: 4 }],
       ] },

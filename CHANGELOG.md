@@ -4,6 +4,29 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.197.0] — 2026-08-13
+
+**feat(partners): the partner manager can be re-assigned in Partner
+Management.** `CPartnerProfile.partnerManager` decides *whose* partner a record
+is — it is the belongsTo behind `CMentorProfile.managedPartners`, the link the
+Partner Management grid shows as its "Partner Manager" column. It was readable
+everywhere and settable nowhere in the app: the only way to move a partner to a
+different manager was the EspoCRM UI. This is the same gap Doug reported on
+2026-07-22 for the engagement's referring partner, and it is fixed the same way.
+
+- `sessions/details.py` — `partnerManager` joins `_ENTITY_LINK_FIELDS` as a
+  curated link picker over `CMentorProfile`. The Details tab now **lists
+  "Partner manager"** in view mode (empty renders "—", never vanishing), and
+  Edit renders a dropdown of every mentor profile the signed-in user can read.
+- The picker sits in the **Partnership panel's top row**, alongside status and
+  type. Selecting "(none)" clears the link; the stored manager stays selected
+  even when they fall outside the option list, so a save can never silently
+  drop them.
+- No new machinery — the metadata feature-detect, the `{name}Id` write path,
+  the ACL-scoped option list and its best-effort 403 degrade were all built for
+  the referring-partner picker and are reused as-is. The field appears only if
+  the CRM really has the link.
+
 ## [0.196.1] — 2026-08-13
 
 **fix(docs): a mentor with no Google account is no longer a nightly "grant
