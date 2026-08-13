@@ -4385,6 +4385,17 @@
       }, 0);
     }
     outer.appendChild(block);
+    // Paste a whole address into line 1 and it splits across this block. One
+    // attach() covers all three blocks the layouts build (the Contact address,
+    // and Company billing + shipping). The shared module writes through
+    // bubbling `input` events, which is what keeps the "Same as billing"
+    // mirror above in step, and it refuses a State the <select> does not offer.
+    if (window.CBMAddress) {
+      window.CBMAddress.attach({
+        line1: a1, line2: a2, city: city, state: state,
+        postalCode: zip, country: country, anchor: block,
+      });
+    }
     return outer;
   }
 

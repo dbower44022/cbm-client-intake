@@ -923,6 +923,16 @@ Entity Manager vocabulary — [[crm-specs-use-entity-manager-terms]]):
   contenteditable. Load `jodit.min.css` + `jodit.min.js` + `richtext.js` before
   the app's own JS. It sanitizes on load and on read, and `getValue()` is
   snapshot-stable for untouched editors so save-diffing keeps working.
+- **Every postal-address form wires the shared paste-parser**
+  (`frontend/shared/address-paste.js` + `.css`): paste a whole address into the
+  first input and it splits across Street / line 2 / City / State / ZIP, with an
+  inline Undo. Hosts pass the input **elements** (`attach`, or `attachByFields`
+  for flat `data-field` forms) and nothing else. Local heuristic only — no
+  network, no Places, no validation. Its writes dispatch **bubbling
+  `input`/`change`** events because host dirty-tracking and the sessions
+  "Same as billing" mirror listen for them. Add new address pages to
+  `ADDRESS_PAGES` in `tests/test_shared_address.py`, which is what catches a
+  form that forgot it. Plan: `prds/address-paste-parsing-plan.md`.
 - **A new CRM-facing feature should feature-detect its field from metadata**
   rather than requiring a coordinated deploy — the established pattern is that
   the feature stays dark until the CRM field exists, then activates with no
@@ -940,6 +950,11 @@ holds anything still owed.*
 **Deployed: v0.187.0 on BOTH environments** (verified 2026-07-28 via `/healthz`).
 Local `main` is ahead of that; the newest work is unpushed.
 
+- **v0.196.0** — address paste-parsing across all six address surfaces (see the
+  Conventions entry). **Not deployed.** No flag: the module is inert unless a
+  page loads it, so per-surface wiring is the rollout control. Owed on review:
+  a live pass on the session tools' Details tab, which is the only surface with
+  a State `<select>`, disabled shipping inputs and the billing mirror in play.
 - **v0.195.0** — quick add on Partner + Funder Management (see that app's
   section), **deployed to both environments** 2026-08-12. `RECORD_QUICK_ADD` is
   off by default, so the button is absent until toggled at `/setup` (now

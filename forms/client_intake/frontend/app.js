@@ -400,5 +400,14 @@
     }
   });
 
+  // ZIP rescue. This form collects no street, so there is nowhere to put the
+  // rest of an address — but the field is maxlength="10", so pasting a full
+  // address here TRUNCATED it to ten characters and submitted the fragment.
+  // Lifting the ZIP out turns that into the right value.
+  if (window.CBMAddress) {
+    var zipEl = document.getElementById("zip_code");
+    if (zipEl) window.CBMAddress.attach({ source: zipEl, postalCode: zipEl });
+  }
+
   showStep(1);
 })();

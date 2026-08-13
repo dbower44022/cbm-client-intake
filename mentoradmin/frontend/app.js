@@ -536,6 +536,10 @@
       tabs.appendChild(abtn);
       form.appendChild(buildAnalyticsPanel());
     }
+    // Paste a whole address into Street and it splits across City/State/ZIP.
+    // These are the linked Contact's fields; `addressStreet` is a textarea, so
+    // a unit ("Suite 200") becomes its second line the way the CRM stores it.
+    if (window.CBMAddress) window.CBMAddress.attachByFields(form, "address");
     if (order.length) activateTab(order[0]);
   }
 

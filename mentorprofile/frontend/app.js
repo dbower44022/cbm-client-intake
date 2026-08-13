@@ -232,6 +232,10 @@
     // text/wysiwyg fire input).
     form.addEventListener("input", refreshPreview);
     form.addEventListener("change", refreshPreview);
+    // Paste a whole address into Street and it splits across City/State/ZIP.
+    // Its writes are bubbling input events, so the preview above refreshes for
+    // a parsed address exactly as it does for a typed one.
+    if (window.CBMAddress) window.CBMAddress.attachByFields(form, "address");
   }
 
   function buildField(f, value) {

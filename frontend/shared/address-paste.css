@@ -1,0 +1,59 @@
+/* Address paste-parsing — the "we filled these fields, Undo" line and the
+   transient highlight on the fields that changed.
+
+   Companion to frontend/shared/address-paste.js; load both, or the parse still
+   works but its feedback is invisible, which is the one thing that must not
+   happen (a silent rewrite of four fields is worse than typing them). */
+
+.cbm-addrpaste {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex-wrap: wrap;
+  margin: .35rem 0 .25rem;
+  padding: .35rem .55rem;
+  border: 1px solid var(--cbm-border, #D1D5DB);
+  border-left: 3px solid var(--cbm-info, #5BC0DE);
+  border-radius: var(--cbm-radius, 5px);
+  background: var(--cbm-surface, #F0F5FA);
+  font-size: var(--cbm-text-sm, 14px);
+  line-height: 1.35;
+}
+
+.cbm-addrpaste__msg { flex: 1 1 auto; color: var(--cbm-slate-700, #334155); }
+
+/* A link-styled button, not a form control — this sits inside intake forms, so
+   it carries type="button" in the JS and must never read as a submit. */
+.cbm-addrpaste__undo {
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--cbm-blue, #046BD2);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.cbm-addrpaste__undo:hover { color: var(--cbm-blue-dark, #045CB4); }
+
+.cbm-addrpaste__x {
+  flex: 0 0 auto;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--cbm-text, #7A7A7A);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.cbm-addrpaste__x:hover { color: var(--cbm-ink, #111); }
+
+/* Shows WHICH fields the parse touched. Fades rather than flashes — the point
+   is that the eye can follow it, not that it demands attention. */
+.cbm-addrpaste-hit {
+  background-color: #FDF3E0;
+  transition: background-color 1.2s ease-out;
+}

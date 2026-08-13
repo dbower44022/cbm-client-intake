@@ -4,6 +4,49 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.196.0] — 2026-08-13
+
+**feat(shared): paste a whole address and it splits itself across the fields.**
+Copy an address off a website — `1234 Main St Suite 200, Cleveland, OH 44113` —
+paste it into the first address input, and Street / line 2 / City / State / ZIP
+fill themselves. Until now every one of those was retyped by hand.
+
+- **One shared control**, `frontend/shared/address-paste.js` (+ `.css`), joining
+  `datetime.js` / `richtext.js` / `phone-format.js`. Hosts pass the input
+  ELEMENTS and nothing else; the module owns the parse, the writes, the undo
+  line and the highlight. Plan and rulings: `prds/address-paste-parsing-plan.md`.
+- **Local heuristic only** (Doug's ruling): no network, no API key, no Google
+  Places, no USPS. It splits a string; it does not validate that the address
+  exists. Anchors on the tail — ZIP, then state, then city — and handles the
+  shapes people actually copy: one-line comma form, multi-line blocks, a leading
+  business name (Google Maps), full state names, ZIP+4, `PO Box`, unit
+  designators, and trailing phone/URL/email noise.
+- **Refusing is half the feature.** No state and no ZIP, a non-US country or
+  postcode, or a single unpunctuated segment ⇒ it does nothing at all. It fires
+  on paste and blur, never per keystroke, and the blur path additionally
+  requires a comma, newline or ZIP-shaped token, so ordinary typing is untouched.
+- **Never silent, never lossy**: an inline *"Filled City, State and ZIP from
+  what you pasted — Undo"* line names the fields it changed, the changed fields
+  highlight briefly, and Undo restores the exact pre-paste values. A component
+  the parse did not find never blanks an existing value.
+- **Six surfaces.** The session tools' Details tab (one hook in `addressBlock`
+  covers the Contact address plus Company billing and shipping, in all three
+  tools), Mentor Administration, My Mentor Profile, the Workspace Directories
+  edit modal, and the volunteer and client-intake forms.
+- **Writes dispatch bubbling `input`/`change` events** — required, not
+  cosmetic: the directory binds dirty-tracking to them and the session tools run
+  the "Same as billing" mirror off a delegated `input` listener.
+- **Public forms differ by necessity.** Neither collects City or State — there
+  is no input, no schema field and no orchestrator mapping — so volunteer folds
+  city and state into the Street text (nothing pasted is lost) and client intake
+  runs **ZIP rescue**: that field is `maxlength="10"`, so a pasted address was
+  silently truncated to a ten-character fragment and submitted. It now yields
+  the ZIP. The paste handler reads the clipboard rather than the field for
+  exactly this reason.
+- `tests/test_shared_address.py` guards the wiring on every page and runs a
+  20-case parse table through the real module under node, skipping where no JS
+  runtime exists.
+
 ## [0.195.0] — 2026-08-12
 
 **feat(sessions): add a partner / funder from the grid.** Partner and Funder

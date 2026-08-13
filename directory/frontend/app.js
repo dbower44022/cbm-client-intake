@@ -369,6 +369,25 @@
       grid.appendChild(ctl.wrap);
       editing.snapshot[f.key] = f.value == null ? (f.type === "array" ? [] : "") : f.value;
       editing.fields.push({ name: f.key, type: f.type, getVal: ctl.getVal, control: ctl });
+      return ctl;
+    }
+    // Paste a whole address into the Street sub-field and it splits across the
+    // rest. Sub-field keys are matched by SUFFIX, never by exact name — the
+    // prefix comes from the CRM layout and varies by entity (address,
+    // billingAddress, shippingAddress).
+    function wireAddressPaste(subFields, ctls) {
+      if (!window.CBMAddress) return;
+      var els = {};
+      subFields.forEach(function (sf, i) {
+        var m = /(Street|City|State|PostalCode|Country)$/.exec(String(sf.key || ""));
+        var input = ctls[i] && ctls[i].wrap.querySelector("input, select, textarea");
+        if (m && input) els[m[1]] = input;
+      });
+      if (!els.Street) return;
+      window.CBMAddress.attach({
+        line1: els.Street, city: els.City, state: els.State,
+        postalCode: els.PostalCode, country: els.Country,
+      });
     }
     d.panels.forEach(function (p) {
       // An address field is editable via its sub-fields (Street/City/…).
@@ -380,7 +399,10 @@
       if (p.title) panel.appendChild(el("h3", null, p.title));
       var grid = el("div", "dir__form-grid");
       editable.forEach(function (f) {
-        if (f.type === "address") { f.subFields.forEach(function (sf) { registerField(grid, sf); }); }
+        if (f.type === "address") {
+          var ctls = f.subFields.map(function (sf) { return registerField(grid, sf); });
+          wireAddressPaste(f.subFields, ctls);
+        }
         else { registerField(grid, f); }
       });
       panel.appendChild(grid); body.appendChild(panel);

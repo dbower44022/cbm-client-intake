@@ -209,6 +209,19 @@
     };
   }
 
+  // Paste a whole address into Street and the ZIP lifts out of it. This form
+  // has no City/State input — and the intake path has no CRM mapping for them
+  // either (the orchestrator writes addressStreet and addressPostalCode only) —
+  // so `foldUnmapped` keeps city and state in the Street text rather than
+  // dropping what the volunteer pasted.
+  if (window.CBMAddress) {
+    window.CBMAddress.attach({
+      line1: document.getElementById("street"),
+      postalCode: document.getElementById("zip_code"),
+      foldUnmapped: true,
+    });
+  }
+
   window.CBMWizard.mount({
     slug: "volunteer",
     validateStep: validateStep,

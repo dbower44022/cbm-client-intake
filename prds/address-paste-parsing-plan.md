@@ -5,7 +5,14 @@ first address input and have the app split it across Street / line 2 / City /
 State / ZIP, instead of the user retyping four fields from a website they
 copied it off.
 
-Status: **planned, not built.** Decisions below are Doug's, recorded 2026-08-13.
+Status: **built and tested locally, v0.196.0 — not yet deployed.** Decisions
+below are Doug's, recorded 2026-08-13.
+
+Two things changed during the build and are recorded in place below: the paste
+handler reads the **clipboard** rather than the field (a `maxlength` input
+truncates before any handler could see the ZIP), and event registration turned
+out to have **no page to wire** — it is API-only, `frontend_dir=None`, with the
+form living on the WordPress site.
 
 ## Decisions
 
@@ -104,6 +111,13 @@ four fields.
 
 ## Interaction
 
+The paste handler reads the **clipboard text** and computes what the field
+*would* hold, rather than letting the paste land and reading the field
+afterwards. That is forced by `maxlength`: the intake ZIP field is
+`maxlength="10"`, so the browser truncates a pasted address to ten characters
+before any handler could see the ZIP in it. A refused parse never calls
+`preventDefault`, so text we don't understand still pastes normally.
+
 On a successful parse:
 
 1. **Snapshot** every target field's current value.
@@ -134,7 +148,8 @@ Rules the writer obeys:
 | 3 | **My Mentor Profile** `/mentorprofile` | same | same |
 | 4 | **Workspace Directories** `/directory` | the `f.type === "address"` branch of `registerField` | sub-fields from the CRM layout |
 | 5 | **Volunteer intake** | `forms/volunteer/frontend/app.js` | `#street`, `#zip_code` |
-| 6 | **Client intake / event registration** | their `app.js` | `#zip_code` only (ZIP-rescue mode) |
+| 6 | **Client intake** | `forms/client_intake/frontend/app.js` | `#zip_code` only (ZIP-rescue mode) |
+| — | ~~Event registration~~ | **no page exists** — `frontend_dir=None`; the form lives on the WordPress site | — |
 
 **1 — Session tools.** The single best hook in the codebase: `addressBlock` is
 invoked from three places in `DETAILS_LAYOUTS` — the **Contact** address, and
@@ -190,6 +205,11 @@ put City and State.
   before adding it ([[sessions-appjs-single-scope-collisions]]).
 - **Don't cap the address block's width** to make the parse preview fit
   ([[no-page-width-caps-density-by-packing]]).
+- **Removing the notice and forgetting the undo snapshot are different things.**
+  Folding them into one helper nulled the snapshot on the way IN — `showNotice`
+  clears any previous line first — so Undo rendered, clicked, and silently did
+  nothing. The parse table could never have caught this; it took a real click in
+  a browser. Guarded by `test_undo_survives_the_notice_being_rebuilt`.
 
 ## Tests
 
@@ -197,12 +217,12 @@ put City and State.
   the asset ships, is served at `/shared/address-paste.js`, exports
   `window.CBMAddress`, and every page owning an address block loads it. This is
   the wiring guard, and it is what stops a new address form shipping without it.
-- **Parser correctness** has no home today — the repo has **no JS test runner**
-  (Python tests only, no `package.json`). Recommendation: keep `parse()` a pure
-  function and exercise a case table through the existing Chrome stub harness
-  ([[sessions-frontend-stub-harness]]) with a fixture page that prints
-  pass/fail — no new dependency, no build step. If CI coverage of the parser is
-  wanted instead, that's a separate decision to add a Node test runner.
+- **Parser correctness** runs as a real test after all. `parse()` is a pure
+  function, and the Python test loads the shipped module into a `vm` context
+  under **node** and asserts a 20-case table. No `package.json`, no dependency,
+  no build step — and it tests the file that actually ships rather than a Python
+  twin that could drift. It **skips** where there is no JS runtime (the deploy
+  image has none), so the wiring guards still run everywhere.
 
 Case table to cover, at minimum:
 
