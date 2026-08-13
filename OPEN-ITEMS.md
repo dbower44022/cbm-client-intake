@@ -120,7 +120,10 @@ found; move resolved items to the bottom with the resolution date.
 
 2. **Fatherhood Initiative – Cuyahoga County has no partner manager on prod**
    — its crm-test manager (Tom Mendelsohn) has no prod CMentorProfile. Assign
-   an owner in Partner Management / the CRM.
+   an owner in Partner Management / the CRM. **Since v0.197.0 this is doable in
+   the app**: Partner Management → the record → Details → Partnership panel →
+   Edit → *Partner manager*. It still needs a prod `CMentorProfile` to point at,
+   so the choice is a different manager or building Tom's prod profile first.
 3. **The 3 new prod partner records carry no Team** — the intake API user
    can't read Teams on prod, so the Partner Management Team stamp was skipped
    (Fatherhood Initiative, Global Cleveland, Sea Change + their Accounts). If

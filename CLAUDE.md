@@ -411,6 +411,18 @@ one shared frontend that derives its domain from the first segment of its URL.
   metadata sweep covers scalars only). Permission-aware down to per-record
   ownership. The PUT is entity-allowlisted (`cfg.details_entities` + Contact,
   else 404).
+- **Re-assigning a record's manager happens on the Details tab**, through those
+  curated link pickers — `CPartnerProfile.partnerManager` on the Partnership
+  panel and `CSponsorProfile.cBMSponsorManager` on the Funding panel (v0.197.x).
+  Each is the belongsTo behind the `manager_owned_link` reverse
+  (`managedPartners` / `managedSponsors`), so it decides **whose** record this
+  is — which is why it went unnoticed for so long that the grid displayed it and
+  nothing could change it. Options are the mentor profiles the signed-in user
+  can read; a forbidden list degrades the picker to read-only rather than
+  breaking the tab, and a stored manager outside the list stays selected so a
+  save can never silently drop them. **Mentor has no equivalent** — an
+  engagement's mentor is re-assigned in Client Administration, deliberately
+  (`DETAILS_LAYOUTS` keeps `mentorProfileName` read-only there).
 - **Partner and Funder can be CREATED here** (`RECORD_QUICK_ADD`, off by
   default): the grid's "+ Add partner" / "+ Add funder" runs the same
   Account → Contact → profile sequence the public intake forms do, as the
@@ -957,14 +969,25 @@ Entity Manager vocabulary — [[crm-specs-use-entity-manager-terms]]):
 deployed and verified; `CHANGELOG.md` is the permanent record, `OPEN-ITEMS.md`
 holds anything still owed.*
 
-**Deployed: v0.187.0 on BOTH environments** (verified 2026-07-28 via `/healthz`).
-Local `main` is ahead of that; the newest work is unpushed.
+**Pushed through v0.197.1 on 2026-08-13**, so all three apps built it. Nothing
+is unpushed. What is *verified* is narrower than what is deployed — see each
+block.
 
+- **v0.197.0 / v0.197.1** — the partner and funder **manager pickers** on the
+  Details tab (see that app's section). v0.197.0 is **verified live** (Doug,
+  2026-08-13); the funder half went out in the same session and its live pass is
+  owed. Both share one code path, so a funder-only failure would be the
+  `CMentorProfile` read grant on the Sponsor Management Team role, not the
+  picker.
+- **v0.196.1** — a Drive grant for a `cbmEmail` with no Google account is no
+  longer counted as a reconciliation failure (it was alerting nightly, forever).
 - **v0.196.0** — address paste-parsing across all six address surfaces (see the
   Conventions entry). **Not deployed.** No flag: the module is inert unless a
   page loads it, so per-surface wiring is the rollout control. Owed on review:
   a live pass on the session tools' Details tab, which is the only surface with
   a State `<select>`, disabled shipping inputs and the billing mirror in play.
+  **Now deployed** (it rode the 2026-08-13 push) — the live pass is still owed,
+  and there is no flag to fall back to, so a revert is the only rollback.
 - **v0.195.0** — quick add on Partner + Funder Management (see that app's
   section), **deployed to both environments** 2026-08-12. `RECORD_QUICK_ADD` is
   off by default, so the button is absent until toggled at `/setup` (now
@@ -977,22 +1000,9 @@ Local `main` is ahead of that; the newest work is unpushed.
   Settings is now live on prod). `APP_BASE_URL` rode along in the same apply —
   it had been sitting in the overlay unapplied — so prod alert emails and the
   daily digest now carry absolute record deep links.
-- **v0.187.0** — Analytics Phase E: starter dashboards on the record views for
-  Mentor, Engagement, Partner, Funder and Contact (`analytics/records.py`), one
-  dashboard per record type enforced at save. Hosted by the three session tools
-  and the directory Contact page. Company and Client have no host screen yet.
-- **v0.186.0** — the intake Company-type stamp writes `cCompanyType` (see *What
-  this is*). The sponsor value change to `"Sponsor"` was load-bearing.
-- **v0.185.0** — near-duplicate submissions are held for review; `CClientProfile`
-  became find-or-create; an optional "preferred mentor" dropdown on the intake
-  form writes the existing `CEngagement.requestedMentor` link. The historical CRM
-  damage was repaired on prod via `scripts/repair_duplicate_intake.py`
-  (14 changes, 0 failures, re-scan clean).
-- **v0.184.0** — Submission Admin's blended State column split into Intake status
-  and Response status (see that app's section).
-- **v0.181.0–v0.182.1** — the intake-receipt redesign: one status vocabulary
-  everywhere, a receipt for every arrival, an hourly reconciliation sweep. Both
-  CRMs self-converged on deploy.
+*(v0.181.0–v0.187.0 blocks removed 2026-08-13 — all deployed and verified in
+July; `CHANGELOG.md` holds them. The v0.187.0 analytics work still has two
+surfaces outstanding, tracked as `OPEN-ITEMS.md` #0, not here.)*
 
 **The open work is all in `OPEN-ITEMS.md`** — chiefly: CRM prerequisites still
 to build (items 11–19, including the three Google-side changes that gate Meet
