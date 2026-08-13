@@ -32,7 +32,7 @@ from typing import Any, Optional
 
 from core.config import Settings
 from core.espo import EspoClient
-from core.gdrive import DriveClient
+from core.gdrive import DriveClient, DriveNoAccountError
 
 log = logging.getLogger("cbm_intake.docs.grants")
 
@@ -137,11 +137,20 @@ async def apply_folder_grants(
     entitles individual people only) — a console-added org-wide share would
     otherwise silently outlive every reconciliation (review docs-F9), so they
     are revoked like any stray grant. Per-grant best-effort: one failure is
-    recorded and the rest still apply."""
+    recorded and the rest still apply.
+
+    An entitled address with **no Google account** lands in ``unfulfillable``
+    rather than ``errors``: Drive can never accept that share, so it is not
+    drift this engine can correct and no amount of retrying changes it (Doug
+    2026-08-12 — the test CRM's people deliberately have no Workspace mailbox,
+    and daily "reconciliation is FAILING" alerts for them are pure noise). The
+    attempt still repeats every pass, which costs one API call and means the
+    grant appears by itself on the first pass after the mailbox exists."""
     desired = {e.lower() for e in desired if e}
     added: list[str] = []
     removed: list[dict[str, str]] = []
     errors: list[str] = []
+    unfulfillable: list[str] = []
     current: dict[str, dict[str, Any]] = {}
     for perm in await drive.list_permissions(folder_id):
         if perm.get("inherited"):
@@ -184,9 +193,16 @@ async def apply_folder_grants(
         try:
             await drive.create_permission(folder_id, email, COMMENTER)
             added.append(email)
+        except DriveNoAccountError:
+            unfulfillable.append(email)
         except Exception as exc:  # noqa: BLE001
             errors.append(f"grant {email}: {exc}")
-    return {"added": added, "removed": removed, "errors": errors}
+    return {
+        "added": added,
+        "removed": removed,
+        "errors": errors,
+        "unfulfillable": unfulfillable,
+    }
 
 
 async def sync_record_grants(
@@ -219,11 +235,13 @@ async def sync_record_grants(
         return None
     desired = await entitled_emails(espo or system_espo(settings), entity_type, record_id)
     result = await apply_folder_grants(drive, folder_id, desired)
-    if result["added"] or result["removed"] or result["errors"]:
+    if any(result[k] for k in ("added", "removed", "errors", "unfulfillable")):
         log.info(
-            "drive grants synced (%s %s, folder %s): +%s -%s errors=%s",
+            "drive grants synced (%s %s, folder %s): +%s -%s errors=%s "
+            "no-google-account=%s",
             entity_type, record_id, folder_id,
             result["added"], result["removed"], result["errors"],
+            result["unfulfillable"],
         )
     return result
 

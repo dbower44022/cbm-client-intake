@@ -255,6 +255,58 @@ async def test_apply_grants_tolerates_per_grant_failures():
     assert len(result["errors"]) == 1 and "bad@example.com" in result["errors"][0]
 
 
+async def test_create_permission_classifies_the_no_google_account_400():
+    """Only Google's "no Google account" 400 becomes DriveNoAccountError —
+    every other 400 stays a hard failure that still alerts."""
+    import httpx
+
+    from core.gdrive import DriveClient, DriveError, DriveNoAccountError
+
+    client = DriveClient.__new__(DriveClient)  # no auth: _send is stubbed
+    client.mailbox = "the application"
+    body = {"text": ""}
+
+    async def fake_send(method, url, **kwargs):
+        return httpx.Response(400, text=body["text"])
+
+    client._send = fake_send
+
+    body["text"] = (
+        '{"error":{"code":400,"message":"Bad Request. User message: \\"You are '
+        'trying to invite cici.caver@cbmentors.org. Since there is no Google '
+        'account associated with this email address, you must check the '
+        '\\"Notify people\\" box to invite this recipient.\\""}}'
+    )
+    with pytest.raises(DriveNoAccountError):
+        await client.create_permission("f1", "cici.caver@cbmentors.org")
+
+    body["text"] = '{"error":{"code":400,"message":"Sharing outside the domain"}}'
+    with pytest.raises(DriveError) as caught:
+        await client.create_permission("f1", "someone@example.com")
+    assert not isinstance(caught.value, DriveNoAccountError)
+
+
+async def test_apply_grants_separates_addresses_with_no_google_account():
+    """An address Google doesn't know can never be shared with (Drive 400s the
+    silent share) — that is not drift this engine can correct, so it is not an
+    error. The rest of the folder still applies."""
+    from core.gdrive import DriveNoAccountError
+
+    class NoAccountDrive(GrantDrive):
+        async def create_permission(self, file_id, email, role="commenter"):
+            if email.startswith("cici"):
+                raise DriveNoAccountError("HTTP 400 … no Google account …")
+            return await super().create_permission(file_id, email, role)
+
+    drive = NoAccountDrive()
+    result = await grants.apply_folder_grants(
+        drive, "f1", {"cici.caver@cbmentors.org", "jane@cbmentors.org"}
+    )
+    assert result["added"] == ["jane@cbmentors.org"]
+    assert result["errors"] == []
+    assert result["unfulfillable"] == ["cici.caver@cbmentors.org"]
+
+
 # --- sync_record_grants ------------------------------------------------------------
 
 
@@ -609,4 +661,41 @@ async def test_reconcile_alerts_on_persistent_folder_errors(monkeypatch):
     # recovery clears the counter
     ok_drive = GrantDrive()
     await rec_mod.run_docs_reconciliation(s, store=store, espo=espo, drive=ok_drive, send=collect)
+    assert rec_mod._error_passes == {}
+
+
+async def test_reconcile_never_alerts_for_addresses_with_no_google_account(monkeypatch):
+    """Doug 2026-08-12: the test CRM's people deliberately have no Workspace
+    mailbox, so this would alert every night forever about a condition no
+    retry can fix. It is counted and logged, never alerted."""
+    from core.gdrive import DriveNoAccountError
+    from docs import reconcile as rec_mod
+
+    monkeypatch.setattr(rec_mod, "_error_passes", {})
+
+    class NoAccountDrive(GrantDrive):
+        async def create_permission(self, file_id, email, role="commenter"):
+            raise DriveNoAccountError("HTTP 400 … no Google account …")
+
+    store = MemoryDocumentStore()
+    await store.insert_document(
+        {"drive_file_id": "a", "entity_type": "CEngagement", "record_id": "E1",
+         "original_filename": "x.pdf", "drive_folder_id": "f1"}
+    )
+    espo = FakeEspo()
+    espo.records[("CEngagement", "E1")] = {"mentorProfileId": "MP1"}
+    espo.records[("CMentorProfile", "MP1")] = {"cbmEmail": "cici.caver@cbmentors.org"}
+    sent: list[str] = []
+
+    async def collect(text):
+        sent.append(text)
+
+    s = _settings()
+    drive = NoAccountDrive()
+    for _ in range(3):  # well past the second-consecutive-pass threshold
+        summary = await rec_mod.run_docs_reconciliation(
+            s, store=store, espo=espo, drive=drive, send=collect
+        )
+    assert sent == []
+    assert summary["errors"] == 0 and summary["noGoogleAccount"] == 1
     assert rec_mod._error_passes == {}

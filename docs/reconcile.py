@@ -11,6 +11,11 @@ surfaced as alerts (they are by definition unexpected — every entitled person
 should already hold exactly a Commenter grant). Mentor personnel (Contact)
 folders derive an EMPTY entitled set, so any grant found on one is stripped.
 
+One thing is explicitly NOT a failure: an entitled address with no Google
+account. Drive refuses that share outright and always will, so it is counted
+and logged but never alerted (Doug 2026-08-12 — crm-test's people deliberately
+have no Workspace mailbox). See :func:`docs.grants.apply_folder_grants`.
+
 It also re-checks the DOC-08 ``documentsFolderUrl`` write-back per folder
 (self-healing best-effort — Doug's ruling 2026-07-17, no retry queue).
 """
@@ -62,7 +67,10 @@ async def run_docs_reconciliation(
         async def send(text: str) -> None:
             await monitoring.send_alert(settings, text)
 
-    summary = {"folders": 0, "granted": 0, "revoked": 0, "errors": 0, "linksWritten": 0}
+    summary = {
+        "folders": 0, "granted": 0, "revoked": 0, "errors": 0,
+        "noGoogleAccount": 0, "linksWritten": 0,
+    }
     removal_lines: list[str] = []
     persistent_error_lines: list[str] = []
 
@@ -95,7 +103,16 @@ async def run_docs_reconciliation(
         summary["granted"] += len(result["added"])
         summary["revoked"] += len(result["removed"])
         summary["errors"] += len(result["errors"])
+        summary["noGoogleAccount"] += len(result["unfulfillable"])
         _track_errors(folder_id, label, bool(result["errors"]))
+        for email in result["unfulfillable"]:
+            # NOT an error and NOT alertable: Drive cannot share with an
+            # address that has no Google account, and retrying never will.
+            log.info(
+                "docs reconciliation: %s has no Google account — no Drive "
+                "grant on %s %s (folder %s)",
+                email, entity_type, record_id, folder_id,
+            )
         for email in result["added"]:
             log.info(
                 "docs reconciliation: granted %s Commenter on %s %s (folder %s)",
@@ -140,8 +157,8 @@ async def run_docs_reconciliation(
         )
     log.info(
         "docs reconciliation done: %s folder(s), +%s grant(s), -%s, "
-        "%s CRM link(s) written, %s error(s)",
+        "%s CRM link(s) written, %s error(s), %s skipped (no Google account)",
         summary["folders"], summary["granted"], summary["revoked"],
-        summary["linksWritten"], summary["errors"],
+        summary["linksWritten"], summary["errors"], summary["noGoogleAccount"],
     )
     return summary

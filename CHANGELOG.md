@@ -4,6 +4,29 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.196.1] — 2026-08-13
+
+**fix(docs): a mentor with no Google account is no longer a nightly "grant
+reconciliation is FAILING" alert.** Drive rejects a *silent* share
+(`sendNotificationEmail=false`, the PRD rule) to an address Google doesn't
+know — HTTP 400, *"Since there is no Google account associated with this email
+address…"*. The nightly reconciliation counted that as an error, so the folder
+failed every pass forever and alerted on the second one. Found on crm-test
+(engagement `6a07783d64f353a92`, co-mentor `cici.caver@cbmentors.org`), where
+people deliberately have no Workspace mailbox and this would recur constantly.
+
+- `core/gdrive.create_permission` now raises **`DriveNoAccountError`** for that
+  one 400, matched on Google's own "no Google account" wording. Every other
+  400 — including the rest of `invalidSharingRequest`, e.g. a domain sharing
+  restriction — stays a hard `DriveError` and still alerts.
+- `docs.grants.apply_folder_grants` returns those addresses in a new
+  **`unfulfillable`** list instead of `errors`, so they neither count as errors
+  nor arm the consecutive-failure alert. The rest of the folder still applies.
+- The attempt still repeats every pass (one API call): the grant appears by
+  itself on the first pass after the mailbox exists — nothing to re-drive.
+- The pass summary gained `noGoogleAccount`, and each address is named in the
+  worker log at INFO, so the condition stays discoverable without alerting.
+
 ## [0.196.0] — 2026-08-13
 
 **feat(shared): paste a whole address and it splits itself across the fields.**

@@ -702,6 +702,16 @@ PRD in `prompts/Google Drive Documents/`.
   actions that end the entitlement, plus a **nightly reconciliation** that
   re-derives grants from the CRM. `Mentors/` personnel folders get **no**
   grants. Commenter means uploads can never bypass the app's index.
+- **A grant needs a real Google account.** The person's address is their
+  `CMentorProfile.cbmEmail`, and mentor provisioning back-fills that
+  (`firstname.lastname@cbmentors.org`) **without creating a Workspace mailbox**
+  — so the address often doesn't exist, which is the norm on crm-test. Drive
+  400s a silent share to an unknown address, so `create_permission` raises
+  `DriveNoAccountError` and the reconciliation counts it as `unfulfillable`,
+  **not** an error: logged and counted, never alerted, retried every pass so it
+  self-heals the day the mailbox appears. In-app document access is unaffected
+  either way (the app reads Drive as the service account); only opening the
+  folder directly in Drive needs the grant.
 - **Rollback rule**: a row-write failure deletes the Drive file; a Drive failure
   never writes a row. Uploads pre-assign ids via `files.generateIds` so a retry
   can't duplicate.

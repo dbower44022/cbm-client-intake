@@ -105,6 +105,27 @@ class DriveError(Exception):
     """Any Drive API / auth failure."""
 
 
+class DriveNoAccountError(DriveError):
+    """A share was refused because the address has no Google account.
+
+    Drive rejects a *silent* share (``sendNotificationEmail=false``) to an
+    address Google doesn't know, with HTTP 400 and the user message "Since
+    there is no Google account associated with this email address, you must
+    check the "Notify people" box to invite this recipient." That is a fact
+    about the recipient, not a fault the caller can retry away, so the grant
+    engine records it separately from real failures — see
+    :func:`docs.grants.apply_folder_grants`.
+    """
+
+
+def _is_no_account(body: str) -> bool:
+    """True for the 400 above. Deliberately narrow: it keys on Google's own
+    "no Google account" wording, so every OTHER 400 (including the rest of
+    ``invalidSharingRequest``, e.g. a domain sharing restriction) stays a hard
+    error rather than being quietly written off."""
+    return "no google account" in body.lower()
+
+
 def _retryable(resp: httpx.Response) -> bool:
     """NFR-02: retry 5xx and 403 *rate-limit* responses (never other 403s)."""
     if resp.status_code >= 500 or resp.status_code == 429:
@@ -588,17 +609,30 @@ class DriveClient:
     ) -> dict[str, Any]:
         """Grant ``email`` the ``role`` on ``file_id`` — folder-level Commenter
         grants mirroring CRM entitlements (DOC-09). Google's sharing
-        notification email is suppressed (the PRD rule)."""
-        data = await self._request(
+        notification email is suppressed (the PRD rule).
+
+        Raises :class:`DriveNoAccountError` when Google refuses precisely
+        because the address has no Google account — the one 400 the suppressed
+        notification causes, and the one a caller may reasonably treat as "not
+        possible" rather than "failed"."""
+        url = f"{_BASE}/files/{file_id}/permissions"
+        resp = await self._send(
             "POST",
-            f"/files/{file_id}/permissions",
+            url,
             params={
                 "supportsAllDrives": "true",
                 "sendNotificationEmail": "false",
                 "fields": "id,role,emailAddress",
             },
             json_body={"type": "user", "role": role, "emailAddress": email},
+            ok_statuses=(400,),
         )
+        if resp.status_code == 400:
+            detail = f"Drive POST {url} for {self.mailbox}: HTTP 400 {resp.text[:300]}"
+            if _is_no_account(resp.text):
+                raise DriveNoAccountError(detail)
+            raise DriveError(detail)
+        data = resp.json() if resp.content else {}
         log.info("drive grant created: %s = %s on %s", email, role, file_id)
         return data
 
