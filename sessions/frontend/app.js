@@ -4014,7 +4014,11 @@
     // revenue companions.
     CSponsorProfile: { noExtras: true, groups: [
       { label: "Funding", grow: 1, basis: 32, rows: [
-        [{ name: "lastContribution", span: 6 }, { name: "lastContacted", span: 6 }],
+        // Funder manager is the curated link picker (CSponsorProfile.cBMSponsorManager
+        // → CMentorProfile) — how a funder gets re-assigned. Leads the row for the
+        // same reason it does on the partner form: it decides who owns the record.
+        [{ name: "cBMSponsorManagerId", span: 4, label: "Funder manager" },
+         { name: "lastContribution", span: 4 }, { name: "lastContacted", span: 4 }],
       ] },
       { label: "Funder notes", grow: 3, basis: 52, rows: [
         [{ name: "description", span: 12, label: "Funder notes" }],

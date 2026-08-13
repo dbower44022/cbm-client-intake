@@ -81,6 +81,11 @@ _ENTITY_LINK_FIELDS: dict[str, tuple[tuple[str, str, str], ...]] = {
     # that decides whose partner this is, so it was the one relationship the app
     # showed in the grid but could not change.
     "CPartnerProfile": (("partnerManager", "Partner manager", MENTOR_PROFILE),),
+    # The funder's manager — the same gap, same fix (Doug, 2026-08-13). The CRM
+    # link is ``cBMSponsorManager`` (reverse: ``CMentorProfile.managedSponsors``);
+    # the label says "Funder" because that is this domain's display wording, the
+    # entity and field names stay CSponsorProfile/sponsor.
+    "CSponsorProfile": (("cBMSponsorManager", "Funder manager", MENTOR_PROFILE),),
 }
 
 # Label overrides where the humanized CRM field name misleads. ``partnerEmail``

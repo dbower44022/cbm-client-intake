@@ -4,6 +4,24 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.197.1] — 2026-08-13
+
+**feat(funders): the funder manager can be re-assigned in Funder Management.**
+The other half of v0.197.0 — `CSponsorProfile.cBMSponsorManager` (reverse of
+`CMentorProfile.managedSponsors`) had exactly the partner gap: shown in the
+grid's "Funder Manager" column, settable only in the EspoCRM UI.
+
+- `sessions/details.py` — `cBMSponsorManager` joins `_ENTITY_LINK_FIELDS` as a
+  curated link picker over `CMentorProfile`, leading the **Funding panel's**
+  row ahead of last contribution and last contacted.
+- The label reads "Funder manager" because that is this domain's display
+  wording; the CRM field and entity names stay `cBMSponsorManager` /
+  `CSponsorProfile`.
+- Behaviour is identical to the partner picker: view mode lists it (empty
+  renders "—"), "(none)" clears the link, a stored manager outside the option
+  list stays selected, and a forbidden option list degrades the picker to
+  read-only rather than breaking the tab.
+
 ## [0.197.0] — 2026-08-13
 
 **feat(partners): the partner manager can be re-assigned in Partner

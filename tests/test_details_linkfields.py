@@ -57,6 +57,33 @@ def test_partner_manager_write_path():
     assert details._clean_changes(spec, {"partnerManagerId": ""}) == {"partnerManagerId": None}
 
 
+_SPONSOR_META = {
+    "name": {"type": "varchar"},
+    "lastContacted": {"type": "date"},
+    "cBMSponsorManager": {"type": "link"},
+}
+
+
+def test_field_spec_appends_funder_manager_picker():
+    """The funder half of the same gap. The CRM field is ``cBMSponsorManager``;
+    the label follows the domain's display wording ("Funder"), not the entity."""
+    spec = details._field_spec(_SPONSOR_META, "CSponsorProfile")
+    link = [f for f in spec if f["type"] == "linkselect"]
+    assert link == [{
+        "name": "cBMSponsorManagerId", "label": "Funder manager",
+        "type": "linkselect", "editable": True,
+        "linkEntity": "CMentorProfile", "nameAttr": "cBMSponsorManagerName",
+    }]
+    sel = details._select_for(spec, _SPONSOR_META).split(",")
+    assert "cBMSponsorManagerId" in sel and "cBMSponsorManagerName" in sel
+
+
+def test_funder_manager_write_path():
+    spec = {f["name"]: f for f in details._field_spec(_SPONSOR_META, "CSponsorProfile")}
+    assert details._clean_changes(spec, {"cBMSponsorManagerId": "M9"}) == {"cBMSponsorManagerId": "M9"}
+    assert details._clean_changes(spec, {"cBMSponsorManagerId": ""}) == {"cBMSponsorManagerId": None}
+
+
 def test_field_spec_omits_link_picker_when_crm_lacks_the_link():
     meta = {k: v for k, v in _ENG_META.items() if k != "referringPartner"}
     spec = details._field_spec(meta, "CEngagement")
