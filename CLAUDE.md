@@ -563,7 +563,9 @@ Live on both environments. User guide: `analytics-guide.md`; activation runbook:
 **EspoCRM admins only** (not a team gate — this page can reconfigure the
 platform). Changes this deployment's runtime settings from the browser instead
 of an overlay edit plus `doctl`, which is what makes the flag-based promotion
-gate practical. Gated by `SETUP_ENABLED` + a database. Runbook:
+gate practical. Gated by `SETUP_ENABLED` + a database. **Live on both
+environments** — prod since 2026-08-12; before that the flag was only ever in
+the crm-test overlay, so every prod flag change needed `doctl`. Runbook:
 `SYSTEM-SETTINGS-SETUP.md`; rulings: `prds/system-settings-plan.md`.
 
 - **Env is the default, the DB row is the override, and both are shown when they
@@ -939,10 +941,17 @@ holds anything still owed.*
 Local `main` is ahead of that; the newest work is unpushed.
 
 - **v0.195.0** — quick add on Partner + Funder Management (see that app's
-  section). **Built dark**: `RECORD_QUICK_ADD` is off by default, so the button
-  is absent until it is set on crm-test's overlay (or toggled at `/setup`),
-  reviewed live as a real non-admin partner/funder-team member, then enabled on
-  prod. Live verification owed — `OPEN-ITEMS.md`.
+  section), **deployed to both environments** 2026-08-12. `RECORD_QUICK_ADD` is
+  off by default, so the button is absent until toggled at `/setup` (now
+  available on prod too). The UI is reviewed; what is still owed is the CRM
+  half — proving a **non-admin** Partner/Sponsor Management Team role actually
+  holds `CPartnerProfile`/`CSponsorProfile` create and `Contact` create
+  (`OPEN-ITEMS.md` #20). An admin account passes those regardless, so an admin
+  test proves nothing.
+- **2026-08-12 config**: `SETUP_ENABLED` added to the prod overlay (System
+  Settings is now live on prod). `APP_BASE_URL` rode along in the same apply —
+  it had been sitting in the overlay unapplied — so prod alert emails and the
+  daily digest now carry absolute record deep links.
 - **v0.187.0** — Analytics Phase E: starter dashboards on the record views for
   Mentor, Engagement, Partner, Funder and Contact (`analytics/records.py`), one
   dashboard per record type enforced at save. Hosted by the three session tools

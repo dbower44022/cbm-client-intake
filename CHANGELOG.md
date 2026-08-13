@@ -44,6 +44,17 @@ outside the website had to be built by hand in the CRM.
   new record, and the action is recorded via `core/action_log.py`
   (`Record Created`).
 
+**UI follow-ups the same day** (all three found by Doug on the deployed page,
+fixed in `40a1700` + `b646feb`): the grid's Refresh button was stranded
+mid-toolbar because `.sx__filters #refreshBtn` already carried
+`margin-left:auto` and the new `.sx__addrecord` rule added a second one —
+two auto margins split the free space. Refresh and Add are now a right-aligned
+pair. In the modal, the shared `.sx__modal-body` is `padding: 0.4rem 0` (no
+horizontal padding), so the hint text and field panels ran flush to the card
+edge; the body is now inset 16px for this modal. The action row moved from
+left-aligned to bottom-right, with **Create rightmost** (the contribution
+editor keeps Save-then-Cancel — its row is still left-aligned).
+
 **Verified:** 24 new tests (`tests/test_quick_add.py`) — the create sequence and
 its links, company reuse + type merge, contact null-fill, the optional/nameless
 contact rules, enum drift, the field whitelist, a failed contact link not

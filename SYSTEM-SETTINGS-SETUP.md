@@ -25,6 +25,12 @@ tripping the `EV[…]` trap that encrypts an overlay's plaintext secrets.
 
 ## 2. Turning it on
 
+**Status: on in BOTH environments.** crm-test since v0.190; **production since
+2026-08-12** — until then `SETUP_ENABLED` had only ever been added to the
+crm-test overlay, so `/setup/` 404'd on prod and every prod flag change still
+needed an overlay edit plus `doctl`. Step 3 above is now done, so the promotion
+gate can be operated entirely from the browser.
+
 Three env vars, all on the **web** component (the page is user-facing; the
 worker only reads the overrides).
 
