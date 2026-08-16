@@ -874,6 +874,7 @@ unresolved: CRM prerequisites, live verification owed, cleanups, decisions).
 | `intake-processing-overview.md` | Plain-language capture → worker → CRM pipeline, per-form records, where each intake kind gets worked |
 | `mentor-administration.md` | `/mentoradmin` functionality + the completeness rules |
 | `mentor-directory.md` | Mentors directory + the read-only mentor profile page |
+| `address-paste.md` | Staff guide to pasting a whole address into one box |
 | `birthday-greetings.md` | The portal birthday celebration, rules, and how to test it without touching data |
 | `email-management.md` | **Umbrella** email reference; links to the deep-dives |
 | `communications-tab.md` | The session tools' Communications tab |
