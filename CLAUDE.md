@@ -443,8 +443,18 @@ one shared frontend that derives its domain from the first segment of its URL.
   organisation as often as with the organisation itself, so one company, many
   partner records. Recreated as many-to-one on prod 2026-08-14 and crm-test
   2026-08-15, verified in both; no application code was involved.
-  **`CSponsorProfile.sponsorCompany` and `CClientProfile.linkedCompany` are
-  still `hasOne`** and still carry the trap — `OPEN-ITEMS.md` #00.
+  **Funders followed on 2026-08-16** — `sponsorCompany` ↔
+  `Account.cSponsorProfiles`, both environments, all links intact, proven by a
+  two-funders-one-company test on crm-test.
+- **Clients are the exception, and it is deliberate.** Doug's ruling
+  (2026-08-16): **a client never has two client business profiles**, so
+  `CClientProfile.linkedCompany` staying `hasOne` is *correct* — do not "fix" it
+  to match partners and funders. The guard that makes the model safe lives in
+  the app: `forms/client_intake/orchestrator._find_or_create_client_profile`
+  find-or-creates the profile **matched on `linkedCompanyId`**, because an
+  unconditional create silently moved the Account and contact off the existing
+  hub (twice in production, 2026-07-17 and 2026-07-27). Verified clean
+  2026-08-16: all 73 prod client profiles have a company and none share one.
 - **Partner and Funder can be CREATED here** (`RECORD_QUICK_ADD`, off by
   default): the grid's "+ Add partner" / "+ Add funder" runs the same
   Account → Contact → profile sequence the public intake forms do, as the

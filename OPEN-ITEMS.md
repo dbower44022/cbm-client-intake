@@ -6,30 +6,6 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
-00. **`CSponsorProfile.sponsorCompany` is still one-to-one, and v0.198.0 made
-    that reachable from the UI** (2026-08-16). `Account.cSponsorProfile` is a
-    `hasOne`, so pointing a funder at a company another funder already holds
-    does not fail — EspoCRM silently **moves** the Account, emptying the other
-    record. That is exactly the bug the partner side just spent three days
-    fixing (see the v0.198.0 changelog entry), and the new Company picker on the
-    funder Details tab is the first thing in the app that can trigger it.
-    Low blast radius today — prod has **one** funder record and it has no
-    company — but the trap is live.
-    - **Fix**: the same Entity Manager change already proven twice — remove
-      `sponsorCompany` and recreate it as **Many-to-One** to `Account`, keeping
-      the link names exactly (`sponsorCompany` on the profile side). Deleting a
-      relationship does not drop the column, so the existing links survive and
-      reappear (verified on crm-test 2026-08-15 —
-      `[[espo-removelink-is-metadata-only]]`). Watch the Name-box inversion:
-      CLAUDE.md → Gotchas → "The Create Link dialog INVERTS the two Name boxes".
-    - **Open question, not yet discussed**: whether one company can be a funder
-      in more than one way, the same question Doug answered "yes" for partners.
-      If the answer is no, the alternative is an app-side guard on the funder
-      picker instead.
-    - `CClientProfile.linkedCompany` has the identical `hasOne` shape and the
-      identical trap (already recorded in CLAUDE.md); no UI in the app can set
-      it, so nothing new was exposed there.
-
 0. **Analytics on the record views — the two remaining surfaces, decided
    2026-07-28** (full context in `prds/analytics-app-plan.md` §17). Doug ruled
    that a dashboard can be attached to every record view (Mentor, Company,
@@ -342,6 +318,23 @@ block a deploy.)*
     assigned to an unlinked profile are invisible in the session tools.
 
 ## Resolved
+
+- **Company links were one-to-one, so a second record silently stole the
+  company** (was item 00) — `Account.cCompanyPartnerProfile` and
+  `Account.cSponsorProfile` were both `hasOne`, so linking a company to a second
+  partner/funder profile *moved* it off the first, emptying that record with no
+  error. Found 2026-08-13 from a live partner whose company had been taken by a
+  duplicate entered nine hours later. **Resolved 2026-08-14 → 2026-08-16:** Doug
+  ruled a company can hold **many** partner and funder records (a partnership is
+  often with a programme inside an organisation), and recreated both
+  relationships as Many-to-One in Entity Manager — partners on prod 2026-08-14
+  and crm-test 2026-08-15, funders on both 2026-08-16. Verified via the API each
+  time: no link lost anywhere (removing a relationship never drops the column),
+  the link names match across environments (`partnerCompany` /
+  `cCompanyPartnerProfiles`, `sponsorCompany` / `cSponsorProfiles`), and a
+  functional test on crm-test confirmed two records now share one company with
+  neither losing it. `CClientProfile.linkedCompany` stays `hasOne`
+  **deliberately** — see the ruling in CLAUDE.md.
 
 - **Events: prod schema migration not applied** (was item 18) — the Events
   change list had been applied to crm-test only, leaving prod short 16 fields,
