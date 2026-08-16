@@ -342,6 +342,16 @@ async def main() -> None:
             settings.events_attendance_give_up_hours,
         )
 
+    # Event reminders (Phase 6b). The only time-driven follow-up; the other
+    # four are staff-triggered. Inert without Gmail + the shared mailbox.
+    next_reminder = datetime.now(timezone.utc)
+    reminders_on = settings.events_reminders and settings.events_reminder_seconds > 0
+    if reminders_on:
+        log.info(
+            "event reminders enabled (every %ss, %sh before the event)",
+            settings.events_reminder_seconds, settings.events_reminder_lead_hours,
+        )
+
     # System Settings overrides. The worker is a separate container from web, so
     # it re-reads `app_setting` on its own timer — this is the lag between an
     # admin toggling a worker-side flag and the worker acting on it. Also the
@@ -384,6 +394,14 @@ async def main() -> None:
             next_attendance = now_cfg + timedelta(
                 seconds=settings.events_attendance_seconds
             )
+        if reminders_on and now_cfg >= next_reminder:
+            try:
+                from events.notify import run_reminder_cycle
+
+                await run_reminder_cycle(settings)
+            except Exception as exc:  # noqa: BLE001 — never crashes delivery
+                log.warning("event reminder pass failed: %s", exc)
+            next_reminder = now_cfg + timedelta(seconds=settings.events_reminder_seconds)
         if settings_store is not None and now_cfg >= next_review:
             try:
                 overdue = await overdue_reviews(settings_store)

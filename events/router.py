@@ -25,11 +25,12 @@ from pydantic import BaseModel
 
 from assignments.auth import current_user, is_member
 from assignments.espo_user import client_for
-from core.action_log import CAT_RECORD_EDIT, CAT_STATUS, record_action
+from core.action_log import CAT_COMMUNICATION, CAT_RECORD_EDIT, CAT_STATUS, record_action
 from core.config import get_settings
 from core.espo import EspoError, forbidden_hint, is_forbidden
 
 from . import config as cfg
+from . import notify
 from . import reporting
 from . import service
 from .zoom_sync import adopt_existing_webinar, sync_event_webinar
@@ -322,6 +323,59 @@ async def set_recording(
         actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
     )
     return {"event": service.public_event_detail(event), "raw": event}
+
+
+# --- follow-up email (Phase 6b, EV-64) -------------------------------------
+
+
+class FollowUpIn(BaseModel):
+    kind: str
+    preview: bool = True
+
+
+@api_router.get("/followups")
+async def followup_catalogue(request: Request) -> dict[str, Any]:
+    """What can be sent, and whether the stack is configured to send it."""
+    _require_user(request)
+    settings = get_settings()
+    return {
+        "kinds": notify.catalogue(),
+        "enabled": notify.notify_active(settings),
+        "remindersAutomatic": settings.events_reminders,
+    }
+
+
+@api_router.post("/events/{event_id}/followups")
+async def send_followup(
+    event_id: str, payload: FollowUpIn, request: Request
+) -> dict[str, Any]:
+    """Preview or send one follow-up for one event.
+
+    Preview is the default: `preview: false` is what actually sends, so a
+    mis-scripted call cannot email the roster by accident.
+    """
+    user, client = await _actor(request)
+    follow_up = notify.BY_KIND.get(payload.kind)
+    if follow_up is None:
+        raise HTTPException(status_code=404, detail=f"Unknown follow-up {payload.kind!r}.")
+    try:
+        event = await client.get(cfg.EVENT, event_id, select=cfg.PUBLIC_SELECT)
+        if not event:
+            raise HTTPException(status_code=404, detail="Event not found.")
+        result = await notify.send_follow_up(
+            get_settings(), client, event, follow_up, dry_run=payload.preview
+        )
+    except EspoError as exc:
+        raise _crm_failure(exc, "send the follow-up") from exc
+    if not payload.preview and result.get("sent"):
+        await record_action(
+            client, app=APP_EVENTS, category=CAT_COMMUNICATION,
+            action="Event Follow-up Sent",
+            parent_type=cfg.EVENT, parent_id=event_id,
+            summary=f"Sent the {follow_up.kind} follow-up to {result['sent']} registrant(s)",
+            actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+        )
+    return result
 
 
 # --- reporting (Phase 6c) --------------------------------------------------

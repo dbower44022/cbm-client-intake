@@ -392,6 +392,14 @@ class Settings(BaseSettings):
     # polled forever (the transcript give-up pattern).
     events_attendance_give_up_hours: int = 72
 
+    # --- Phase 6b: event follow-up email ---
+    # Reminders are the only time-driven send; the rest are triggered by staff
+    # from the Follow-up tab. Needs Gmail sync + OPS_MAILBOX (the shared info@
+    # identity) and the five EspoCRM templates. Off by default.
+    events_reminders: bool = False
+    events_reminder_seconds: int = 3600       # how often the worker looks
+    events_reminder_lead_hours: int = 24      # how far ahead a reminder goes out
+
     # Team gate for the /events staff app (Phase 5).
     events_allowed_teams: str = "Marketing Admin Team"
     # In-process cache for the public read endpoints. The WordPress plugin

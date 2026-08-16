@@ -4,6 +4,52 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.201.0] — 2026-08-16
+
+**feat(events): Phase 6b — follow-up email (EV-60…EV-64).** Off by default and
+inert unless Events, Gmail sync and the shared mailbox are all configured.
+**Phase 6 is now built in full.**
+
+Five sends — **reminder**, **recording available**, **no-show re-engagement**,
+**mentor-connection CTA**, **feedback survey** — all going out as the shared
+info@ identity and rendered from EspoCRM templates, so staff change the wording
+without a deploy.
+
+- **Once per registrant, per event, per kind (EV-62).** The ledger is
+  `CEventRegistration.followUpsSent` on the row itself, so a retry, a redrive, a
+  second click or a worker restart cannot produce a second copy. It is written
+  **after** a successful send: a crash in between risks one duplicate, which is
+  far better than the reverse — a ledger claiming sent when nobody received it.
+- **The ledger write is enum-checked first.** An out-of-enum multiEnum value
+  400s the whole update, which is exactly how every event registration lost its
+  receipt in v0.192.3. If a kind is missing from the CRM's options the send is
+  not recorded and says so loudly, rather than silently corrupting the row.
+- **Cancelled and opted-out are excluded (EV-63).** A cancelled registration
+  gets nothing. The two marketing-flavoured sends additionally require the
+  Contact's opt-in; reminder, recording and no-show do not — they concern
+  something the person signed up for.
+- **No template, no email.** A missing EspoCRM template is a refusal with a
+  clear message, never an improvised email in CBM's name. The lookup matches the
+  name **exactly**, so an "EventReminder (old)" cannot be picked up by a
+  contains-search.
+- **Preview is the default (EV-64).** `POST …/followups` previews unless told
+  otherwise, listing who would receive it and who would be skipped **with the
+  reason** — a silent skip reads as a bug. Sending requires `preview: false`, so
+  a mis-scripted call cannot email a roster.
+- Reminders are the only time-driven send: worker timer `EVENTS_REMINDERS` /
+  `EVENTS_REMINDER_SECONDS`, going out `EVENTS_REMINDER_LEAD_HOURS` ahead (24 by
+  default) and never after an event has started — a worker that was down through
+  the window misses it rather than emailing about something already under way.
+
+**Verified:** 14 new tests — the ledger's append/idempotence/enum guard, every
+skip reason, opt-in required only where it should be, and preview never sending.
+Full suite 1696 green.
+
+⚠️ **Needs five EspoCRM email templates before it can send anything**:
+`EventReminder`, `EventRecordingAvailable`, `EventNoShow`, `EventMentorCTA`,
+`EventSurvey`. Until they exist each send refuses with that name. Never driven
+against real Gmail.
+
 ## [0.200.0] — 2026-08-16
 
 **feat(events): Phase 6d (EV-42) — backfill the YouTube playlist into past
