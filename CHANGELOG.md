@@ -4,6 +4,47 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.202.0] — 2026-08-16
+
+**feat(events): the Add / Edit event screens are a CBM workspace, not a
+760px dialog.** The editor was a fixed-width pop-up that scrolled as one piece —
+on a 4K monitor it used a fifth of the screen, Save and Cancel sat below the
+fold, and the website's own event copy was typed as raw HTML into a six-row
+textarea.
+
+- **Resizable, and sized for the screen it is worked on.** The card opens at
+  80vw × 86vh with no width cap (the no-page-width-caps ruling) and can be
+  dragged to any size from its bottom-right grip. The compact dialogs (Add
+  registrant, Recording, walk-in) keep dialog proportions — `openModal` takes a
+  `wide` flag and clears any size dragged onto the card last time.
+- **Save and Cancel are always on screen.** The card is a flex column: the
+  title and the footer have their own slots and only the body scrolls, so a
+  scrollbar moves content and never the buttons. Same shape as the session
+  tools' compose window.
+- **Full description and Syllabus are the shared rich-text editor**
+  (`CBMRichText`/Jodit, the product-wide convention) at 280px minimum height,
+  each taking the full width of the panel. They fall back to a plain textarea
+  if the vendor bundle doesn't load, and an untouched empty editor still reads
+  back as `""` rather than Jodit's blank paragraph.
+- **Panels gain columns instead of stretching.** Each group is now a grid
+  (`auto-fill`, 18rem floor) rather than a wrapping flex row, so fields line up
+  and a lone Title no longer spans 1900px; it collapses to one clean column when
+  the card is dragged narrow, with no horizontal scrollbar at any width.
+- **The Duration select no longer collides with the Starts control.** Every
+  single-line control is one height, and form controls are `border-box` — the
+  shared date+time control sizes its two inputs in percentages, so under
+  content-box they overflowed their own wrapper into the select beside them.
+- **Buttons match the rest of CBM.** The page had its own `.cbm-button`
+  definition and was the only place where a secondary button was a white
+  outline; it now uses `/shared/tokens.css` like every other staff tool, with
+  only the padding tuned for a dense toolbar. The graphic control's raw file
+  input is hidden behind a real **Choose image…** button, with the chosen
+  filename reported beside Upload / Remove graphic.
+- Guard tests cover the wiring: the page loads the vendor bundle before
+  `richtext.js` before `app.js`, both Content fields stay `wysiwyg` and render
+  and read back through `CBMRichText`, the footer stays outside the scrolling
+  body, and the page does not redefine the shared button.
+
 ## [0.201.2] — 2026-08-16
 
 **fix(docs): the nightly Drive reconciliation stops re-granting the same folders

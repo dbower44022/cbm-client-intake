@@ -102,32 +102,74 @@ body { margin: 0; background: var(--cbm-bg, #f6f7f9); color: var(--cbm-text, #21
 .ev__rostername { font-size: 1.05rem; }
 .ev__rosteritem .cbm-button { min-width: 7rem; }
 
-/* --- modal --- */
+/* --- modal ---------------------------------------------------------------
+   The editor is a WORKSPACE, not a pop-up: the card opens large, has no width
+   cap (the no-page-width-caps ruling) and the user can drag its bottom-right
+   grip to fit their own screen. It is a flex COLUMN so the title and the
+   Save/Cancel footer stay pinned while only the body scrolls — the actions are
+   reachable at every window size, and a scrollbar moves content, never the
+   buttons. Same shape as the session tools' compose window. */
 .ev__modal-overlay { position: fixed; inset: 0; background: rgba(16, 22, 32, .55);
-  display: flex; align-items: center; justify-content: center; padding: 1rem; z-index: 50; }
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 3vh 1rem; z-index: 50; }
 .ev__modal-overlay[hidden] { display: none !important; }
-.ev__modal { background: #fff; border-radius: 10px; width: min(760px, 100%);
-  max-height: 88vh; overflow: auto; padding: 1.25rem 1.4rem; position: relative; }
-.ev__modal h3 { margin: 0 0 .75rem; font-family: "Roboto Slab", Georgia, serif;
+.ev__modal { background: #fff; border-radius: 10px; position: relative;
+  width: min(48rem, 96vw); max-width: 96vw; max-height: 92vh;
+  min-width: 20rem; min-height: 12rem;
+  resize: both; overflow: hidden;
+  display: flex; flex-direction: column;
+  box-shadow: 0 14px 44px rgba(16, 22, 32, .3); }
+/* The event form is a record editor with five panels — open it at the size of
+   the screen it is being worked on, not at dialog size. */
+.ev__modal--wide { width: 80vw; height: 86vh; }
+.ev__modal h3 { flex: 0 0 auto; margin: 0; padding: 1rem 3rem .75rem 1.4rem;
+  border-bottom: 1px solid #eef1f5; font-family: "Roboto Slab", Georgia, serif;
   color: var(--cbm-navy, #00205B); }
-.ev__modal-close { position: absolute; top: .5rem; right: .7rem; border: 0;
+.ev__modal-close { position: absolute; top: .55rem; right: .7rem; border: 0;
   background: none; font-size: 1.5rem; line-height: 1; cursor: pointer; color: #7a828d; }
-.ev__modal-body { display: flex; flex-direction: column; gap: .9rem; }
-.ev__modal-foot { display: flex; align-items: center; gap: .6rem; margin-top: 1rem; }
+.ev__modal-body { flex: 1 1 auto; overflow: auto; padding: 1rem 1.4rem;
+  display: flex; flex-direction: column; gap: .9rem; }
+/* Pinned: it sits outside the scrolling body, so Save and Cancel are on screen
+   however long the form is and however small the window gets. The extra right
+   padding keeps the resize grip off the Save button. */
+.ev__modal-foot { flex: 0 0 auto; display: flex; align-items: center; gap: .6rem;
+  padding: .75rem 1.9rem .75rem 1.4rem; border-top: 1px solid #eef1f5;
+  background: #fff; }
 .ev__modal-msg { flex: 1; color: #b3261e; font-size: .88rem; }
 
-.ev__group { border: 1px solid #e6eaf0; border-radius: 8px; padding: .7rem .9rem;
-  display: flex; flex-wrap: wrap; gap: .8rem; margin: 0; }
-.ev__group legend { font-size: .82rem; text-transform: uppercase; letter-spacing: .04em;
-  color: #6b7480; padding: 0 .3rem; }
-.ev__field { display: flex; flex-direction: column; gap: .25rem; flex: 1 1 15rem;
+/* --- form groups: packed full width, no column cap ------------------------
+   A grid rather than a wrapping flex row, so the panel gains COLUMNS as the
+   window grows instead of stretching one lonely field across a 4K screen, and
+   every control in a row lines up. `auto-fill` with a track floor wide enough
+   for the date+time pair means no field ever needs to span two tracks — so the
+   panel degrades to a single clean column when the card is dragged narrow. */
+.ev__group { border: 1px solid #e6eaf0; border-radius: 8px; padding: .7rem .9rem .9rem;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  align-items: start; gap: .9rem 1.1rem; margin: 0; }
+.ev__group legend { grid-column: 1 / -1; font-size: .82rem; text-transform: uppercase;
+  letter-spacing: .04em; color: #6b7480; padding: 0 .3rem; }
+.ev__field { display: flex; flex-direction: column; gap: .25rem; min-width: 0;
   font-size: .88rem; color: #5b6472; }
+/* border-box is load-bearing, not tidiness: the shared date+time control sizes
+   its two inputs in percentages, so under content-box they overflowed their own
+   wrapper and ran into the Duration select beside them. */
 .ev__field input, .ev__field select, .ev__field textarea {
+  width: 100%; box-sizing: border-box;
   padding: .45rem .6rem; border: 1px solid #ccd3dc; border-radius: 6px;
-  font-size: .95rem; font-family: inherit; color: #21252b; }
-.ev__field textarea { resize: vertical; }
-.ev__field--check { flex-direction: row; align-items: center; gap: .5rem; flex-basis: 100%; }
+  font-size: .95rem; font-family: inherit; line-height: 1.35; color: #21252b; }
+/* One height for every single-line control, so a select never sits a couple of
+   pixels proud of the date box next to it. */
+.ev__field input:not([type="checkbox"]):not([type="file"]),
+.ev__field select { height: 2.35rem; }
+.ev__field textarea { resize: vertical; min-height: 4.5rem; }
+.ev__field--check { flex-direction: row; align-items: center; gap: .5rem; }
 .ev__field--check input { width: auto; }
+/* Fields that want the whole row: the long-form ones the spec marks `big`, the
+   rich-text editors, the checkbox line and the graphic control. */
+.ev__field--wide, .ev__field--wysiwyg,
+.ev__field--check, .ev__field--graphic { grid-column: 1 / -1; }
+.ev__field--wide textarea { min-height: 7rem; }
+.ev__field--wysiwyg .cbm-richtext { width: 100%; }
 .ev__overviewgraphic { margin: 0 0 1rem; display: flex; flex-direction: column; gap: .3rem; }
 /* display:flex would otherwise beat the [hidden] attribute and leave an empty
    frame on every event without a graphic. */
@@ -140,23 +182,28 @@ body { margin: 0; background: var(--cbm-bg, #f6f7f9); color: var(--cbm-text, #21
   font-size: .78rem; text-transform: uppercase; letter-spacing: .04em;
   color: var(--color-text-muted, #5c5c5c);
 }
-.ev__field--graphic { flex-basis: 100%; display: flex; flex-direction: column; gap: .4rem; }
+.ev__field--graphic { display: flex; flex-direction: column; gap: .5rem; }
 .ev__graphic {
   max-width: 22rem; max-height: 12rem; object-fit: contain;
   border: 1px solid var(--color-border, #d8d8d8); border-radius: 4px; background: #fafafa;
 }
 .ev__graphic[hidden] { display: none; }
-.ev__graphicactions { display: flex; gap: .5rem; flex-wrap: wrap; }
+/* The browser's own file input is the one control on this page that cannot be
+   made to look like CBM, so it is driven by a real CBM button instead and the
+   chosen filename is reported beside it. */
+.ev__filepick { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.ev__graphicactions { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.ev__filename { font-size: .85rem; color: #6b7480; }
 .ev__field small { color: #7a828d; font-size: .78rem; }
 
-/* --- buttons (local, so this page needs no wizard.css) --- */
-.cbm-button { background: var(--cbm-gold, #B58113); color: #fff; border: 0;
-  border-radius: 6px; padding: .45rem .9rem; font-size: .92rem; cursor: pointer;
+/* --- buttons ---------------------------------------------------------------
+   The look comes from /shared/tokens.css (gold primary, navy secondary) — the
+   product-wide treatment every other staff tool uses; this page used to
+   redefine both and was the only place where a secondary button was a white
+   outline. Only the SIZE is set here: the token padding (15px/30px) is a
+   marketing-page button, too large for a dense staff toolbar. */
+.cbm-button { padding: .5rem .95rem; font-size: .92rem; line-height: 1.2;
   font-family: inherit; text-decoration: none; display: inline-block; }
-.cbm-button:hover { filter: brightness(1.07); }
-.cbm-button--secondary { background: #fff; color: var(--cbm-navy, #00205B);
-  border: 1px solid #ccd3dc; }
-.cbm-button--secondary:hover { background: #eef4fd; filter: none; }
 
 .ev__footer { padding: 1.25rem 1.5rem; color: #7a828d; font-size: .82rem; text-align: center; }
 

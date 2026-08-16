@@ -381,21 +381,33 @@
 
   var modalSave = null;
 
-  function openModal(title, bodyBuilder, onSave, saveLabel) {
+  function openModal(title, bodyBuilder, onSave, saveLabel, opts) {
+    opts = opts || {};
     $("modalTitle").textContent = title;
     $("modalBody").innerHTML = "";
     $("modalMsg").textContent = "";
+    // A record editor opens as a full workspace; a four-field dialog does not.
+    // Clear any size the user dragged onto the card last time, or the compact
+    // dialog inherits the editor's 80vw.
+    var card = document.querySelector(".ev__modal");
+    card.classList.toggle("ev__modal--wide", !!opts.wide);
+    card.style.width = ""; card.style.height = "";
     bodyBuilder($("modalBody"));
     $("modalSave").textContent = saveLabel || "Save";
     modalSave = onSave;
     $("modal").hidden = false;
+    $("modalBody").scrollTop = 0;
   }
 
   function closeModal() { $("modal").hidden = true; modalSave = null; }
 
-  function field(host, name, label, type, value, options, help) {
+  /* One control per field spec. `opts.big` marks a field the spec wants to give
+     room to; the layout classes carry that through to the stylesheet. */
+  function field(host, name, label, type, value, options, help, opts) {
+    opts = opts || {};
     var wrap = document.createElement("label");
-    wrap.className = "ev__field";
+    wrap.className = "ev__field ev__field--" + type;
+    if (opts.big) wrap.classList.add("ev__field--wide");
     var caption = document.createElement("span");
     caption.textContent = label;
     wrap.appendChild(caption);
@@ -416,9 +428,22 @@
       input.type = "checkbox";
       input.checked = !!value;
       wrap.classList.add("ev__field--check");
-    } else if (type === "text" || type === "wysiwyg") {
+    } else if (type === "wysiwyg") {
+      // The standard rich-text editor product-wide (CBMRichText/Jodit) — these
+      // fields hold the website's own event copy, and staff were typing raw
+      // HTML into a textarea. create() returns null when the vendor bundle
+      // hasn't loaded, so the plain textarea stays as the fallback.
+      input = window.CBMRichText
+        && window.CBMRichText.create(value == null ? "" : String(value), { minHeight: 280 });
+      if (!input) {
+        input = document.createElement("textarea");
+        input.rows = 14;
+        input.value = value == null ? "" : value;
+        type = "text";   // read back as a plain value below
+      }
+    } else if (type === "text") {
       input = document.createElement("textarea");
-      input.rows = type === "wysiwyg" ? 6 : 3;
+      input.rows = opts.big ? 5 : 3;
       input.value = value == null ? "" : value;
     } else if (type === "duration") {
       // The shared Duration control — human-labelled presets, matching the
@@ -482,24 +507,40 @@
     showPreview();
     wrap.appendChild(preview);
 
+    // The browser's own file input is the one control here that can't be made
+    // to look like CBM, so it is hidden and driven by a real CBM button; the
+    // chosen filename is reported beside it so nothing is lost by hiding it.
     var file = document.createElement("input");
     file.type = "file";
+    file.className = "ev__filepick";
     file.accept = "image/png,image/jpeg,image/webp,image/gif";
+    file.tabIndex = -1;
     wrap.appendChild(file);
 
     var actions = document.createElement("div");
     actions.className = "ev__graphicactions";
-    var upload = document.createElement("button");
-    upload.type = "button";
-    upload.className = "cbm-button cbm-button--secondary";
-    upload.textContent = "Upload graphic";
-    var remove = document.createElement("button");
-    remove.type = "button";
-    remove.className = "cbm-button cbm-button--secondary";
-    remove.textContent = "Remove graphic";
-    actions.appendChild(upload);
-    actions.appendChild(remove);
+    function button(label) {
+      var node = document.createElement("button");
+      node.type = "button";
+      node.className = "cbm-button cbm-button--secondary";
+      node.textContent = label;
+      actions.appendChild(node);
+      return node;
+    }
+    var choose = button("Choose image…");
+    var upload = button("Upload graphic");
+    var remove = button("Remove graphic");
+    var chosenName = document.createElement("span");
+    chosenName.className = "ev__filename";
+    chosenName.textContent = "No image chosen";
+    actions.appendChild(chosenName);
     wrap.appendChild(actions);
+
+    choose.addEventListener("click", function () { file.click(); });
+    file.addEventListener("change", function () {
+      var picked = file.files && file.files[0];
+      chosenName.textContent = picked ? picked.name : "No image chosen";
+    });
 
     // Never disabled — validate on click and say what is missing.
     upload.addEventListener("click", function () {
@@ -534,6 +575,7 @@
         await api("/events/" + encodeURIComponent(raw.id) + "/graphic", { method: "DELETE" });
         raw.eventGraphicId = "";
         file.value = "";
+        chosenName.textContent = "No image chosen";
         showPreview();
         if (state.current) renderOverview();
         notice("Graphic removed.", "ok");
@@ -573,7 +615,7 @@
           value = window.CBMDateTime.durationBetween(raw.dateStart, raw.dateEnd);
         }
         field(section, spec.name, spec.label, spec.type, value,
-              state.options[spec.name], spec.help);
+              state.options[spec.name], spec.help, { big: spec.big });
       });
       host.appendChild(section);
     });
@@ -588,6 +630,11 @@
       else if (type === "int") value = input.value === "" ? null : parseInt(input.value, 10);
       else if (type === "duration") value = window.CBMDateTime.readDuration(input);
       else if (type === "datetime") value = window.CBMDateTime.read(input);
+      // The rich-text host is a <div>: its value lives on the control, and
+      // getValue() re-sanitizes and returns "" for an untouched empty editor.
+      else if (type === "wysiwyg") {
+        value = input._cbmRichText ? input._cbmRichText.getValue() : input.value;
+      }
       else value = input.value;
       changes[input.getAttribute("name")] = value;
     });
@@ -695,7 +742,7 @@
       notice("Event created.", "ok");
       await loadEvents();
       await openEvent(result.raw.id);
-    }, "Create event");
+    }, "Create event", { wide: true });
   }
 
   function editEvent() {
@@ -715,7 +762,7 @@
         ? "Saved. Zoom webinar " + zoom.action + "."
         : "Saved.", "ok");
       await refreshDetail();
-    });
+    }, "Save", { wide: true });
   }
 
   function addRegistrant(walkIn) {

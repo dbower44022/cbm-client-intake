@@ -8,6 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/shared/tokens.css" />
   <link rel="stylesheet" href="/shared/datetime.css" />
+  <link rel="stylesheet" href="/shared/vendor/jodit/jodit.min.css" />
   <link rel="stylesheet" href="styles.css" />
   <!-- busy.js must load FIRST: it wraps fetch/XHR to give every button press
        immediate feedback (product-wide convention). -->
@@ -190,6 +191,10 @@
 
   <script src="/shared/footer.js"></script>
   <script src="/shared/datetime.js"></script>
+  <!-- The standard rich-text editor for every wysiwyg field product-wide;
+       must precede app.js, which builds the Content panel from it. -->
+  <script src="/shared/vendor/jodit/jodit.min.js"></script>
+  <script src="/shared/richtext.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
