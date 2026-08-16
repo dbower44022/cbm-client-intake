@@ -158,3 +158,32 @@ def test_the_events_tab_is_mentor_domain_only():
     assert DOMAINS["mentorsessions"].events_tab is True
     assert DOMAINS["partnersessions"].events_tab is False
     assert DOMAINS["sponsorsessions"].events_tab is False
+
+
+# --- frontend wiring ----------------------------------------------------------
+
+
+def test_the_events_tab_panel_and_renderer_exist():
+    """The endpoint and the advertised tab are useless without something that
+    paints them — v0.194.0 shipped the tab with no renderer, so it opened
+    empty."""
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    html = (root / "sessions" / "frontend" / "index.html").read_text()
+    js = (root / "sessions" / "frontend" / "app.js").read_text()
+    assert 'data-dpanel="events"' in html
+    assert 'tab === "events"' in js
+    assert "function renderEvents(" in js
+    assert "/records/" in js and "/events\"" in js
+
+
+def test_the_events_reports_view_exists():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    html = (root / "events" / "frontend" / "index.html").read_text()
+    js = (root / "events" / "frontend" / "app.js").read_text()
+    assert 'id="reportsPanel"' in html
+    assert "/reports/program" in js
+    assert "/reports/conversion" in js

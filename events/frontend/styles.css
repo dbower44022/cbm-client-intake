@@ -166,3 +166,7 @@ body { margin: 0; background: var(--cbm-bg, #f6f7f9); color: var(--cbm-text, #21
   .ev__facts { grid-template-columns: 1fr; }
   .ev__fact-key { font-weight: 600; margin-top: .5rem; }
 }
+
+/* Programme reports (EV-73 / EV-74). */
+.ev__reph { margin: 1.4rem 0 .3rem; font-size: 1.05rem; }
+.ev__rephint { margin: 0 0 .7rem; font-size: .85rem; color: var(--color-text-muted, #5c5c5c); max-width: 60ch; }

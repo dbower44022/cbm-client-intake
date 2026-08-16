@@ -603,6 +603,82 @@
     return changes;
   }
 
+  /* ---------- reports (EV-73 / EV-74) ---------- */
+
+  function tile(host, label, value) {
+    var box = document.createElement("div");
+    box.className = "ev__tile";
+    var v = document.createElement("span");
+    v.className = "ev__tile-value";
+    v.textContent = value;
+    var l = document.createElement("span");
+    l.className = "ev__tile-label";
+    l.textContent = label;
+    box.appendChild(v); box.appendChild(l);
+    host.appendChild(box);
+  }
+
+  function pctOrDash(rate) {
+    return rate == null ? "—" : Math.round(rate * 100) + "%";
+  }
+
+  function showReports() {
+    $("listPanel").hidden = true;
+    $("detailPanel").hidden = true;
+    $("reportsPanel").hidden = false;
+    if (!$("repFrom").value) {
+      // Default to the last twelve months — the period staff actually ask about.
+      var to = new Date();
+      var from = new Date(to.getFullYear() - 1, to.getMonth(), to.getDate());
+      $("repFrom").value = from.toISOString().slice(0, 10);
+      $("repTo").value = to.toISOString().slice(0, 10);
+    }
+    runReports();
+  }
+
+  async function runReports() {
+    var qs = "?start=" + encodeURIComponent($("repFrom").value || "")
+           + "&end=" + encodeURIComponent($("repTo").value || "");
+    $("repStatus").textContent = "Working…";
+    try {
+      var totals = await api("/reports/program" + qs);
+      var host = $("repTotals");
+      host.innerHTML = "";
+      tile(host, "Events held", totals.eventsHeld);
+      tile(host, "Unique attendees", totals.uniqueAttendees);
+      tile(host, "Total attendances", totals.totalAttendances);
+      tile(host, "Came more than once", totals.repeatAttendees);
+      tile(host, "Repeat rate", pctOrDash(totals.repeatRate));
+
+      var conv = await api("/reports/conversion" + qs);
+      var chost = $("repConvTiles");
+      chost.innerHTML = "";
+      tile(chost, "Attendees", conv.attendees);
+      tile(chost, "Became clients", conv.converted);
+      tile(chost, "Conversion rate", pctOrDash(conv.conversionRate));
+
+      var body = $("repConvRows");
+      body.innerHTML = "";
+      (conv.rows || []).forEach(function (r) {
+        var tr = document.createElement("tr");
+        [r.engagement || "(unnamed)", r.status || "—",
+         (r.firstAttendedUtc || "").slice(0, 10),
+         (r.engagementCreatedUtc || "").slice(0, 10)].forEach(function (text) {
+          var td = document.createElement("td");
+          td.textContent = text;
+          tr.appendChild(td);
+        });
+        body.appendChild(tr);
+      });
+      $("repConvTable").hidden = !(conv.rows || []).length;
+      $("repConvEmpty").hidden = !!(conv.rows || []).length;
+      $("repStatus").textContent = "";
+    } catch (e) {
+      $("repStatus").textContent = "";
+      notice(e.message, "error");
+    }
+  }
+
   /* ---------- actions ---------- */
 
   function newEvent() {
@@ -701,6 +777,12 @@
   /* ---------- boot ---------- */
 
   function wire() {
+    $("reportsBtn").addEventListener("click", showReports);
+    $("reportsBack").addEventListener("click", function () {
+      $("reportsPanel").hidden = true;
+      $("listPanel").hidden = false;
+    });
+    $("repRun").addEventListener("click", runReports);
     $("refreshBtn").addEventListener("click", function () {
       loadEvents().then(function () { notice("Refreshed.", "ok"); })
                   .catch(function (e) { notice(e.message, "error"); });

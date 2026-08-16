@@ -50,6 +50,7 @@
         <span class="ev__count" id="listCount"></span>
         <div class="ev__actions">
           <button type="button" class="cbm-button" id="newEventBtn">+ New event</button>
+          <button type="button" class="cbm-button cbm-button--secondary" id="reportsBtn">Reports</button>
           <button type="button" class="cbm-button cbm-button--secondary" id="refreshBtn">Refresh</button>
         </div>
       </div>
@@ -73,6 +74,40 @@
         </table>
         <p class="ev__empty" id="listEmpty" hidden>No events match.</p>
       </div>
+    </section>
+
+    <!-- ========================== REPORTS =========================== -->
+    <!-- EV-73 / EV-74. Both are computed live from the registration rows; no
+         totals are stored, so nothing here can drift from what it counts. -->
+    <section class="ev__panel" id="reportsPanel" hidden>
+      <div class="ev__detailhead">
+        <button type="button" class="cbm-button cbm-button--secondary" id="reportsBack">← All events</button>
+        <h2>Programme reports</h2>
+      </div>
+      <div class="ev__controls">
+        <label class="ev__filter">From <input type="date" id="repFrom" /></label>
+        <label class="ev__filter">To <input type="date" id="repTo" /></label>
+        <button type="button" class="cbm-button" id="repRun">Run</button>
+        <span class="ev__count" id="repStatus"></span>
+      </div>
+
+      <h3 class="ev__reph">Programme totals</h3>
+      <div class="ev__tiles" id="repTotals"></div>
+
+      <h3 class="ev__reph">Attendee → client conversion</h3>
+      <p class="ev__rephint">
+        Counts an attendee as converted only when their engagement was created
+        <em>after</em> their first attended event in the period — an existing
+        client who happens to attend is not a conversion.
+      </p>
+      <div class="ev__tiles" id="repConvTiles"></div>
+      <table class="ev__grid" id="repConvTable" hidden>
+        <thead><tr>
+          <th>Engagement</th><th>Status</th><th>First attended</th><th>Became a client</th>
+        </tr></thead>
+        <tbody id="repConvRows"></tbody>
+      </table>
+      <p class="ev__empty" id="repConvEmpty" hidden>No conversions in this period.</p>
     </section>
 
     <!-- =========================== DETAIL =========================== -->

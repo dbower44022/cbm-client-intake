@@ -191,6 +191,35 @@
         <p class="sx__muted" id="noRcl" hidden>No referred clients.</p>
       </div>
 
+      <!-- Events (EV-72, mentor domain only): CBM events attended across ALL
+           of this engagement's contacts, deduplicated by event and newest
+           first. Three colleagues at one webinar is ONE row — the question is
+           whether the CLIENT engaged with the programme, not how many seats
+           were filled. Read-only. -->
+      <div class="sx__dpanel" data-dpanel="events" hidden>
+        <div class="sx__comm-head">
+          <h3>Events</h3>
+        </div>
+        <div class="evt__bar">
+          <input type="search" id="evtSearch" class="sx__search" placeholder="Search events…">
+          <span class="evt__count" id="evtCount"></span>
+        </div>
+        <p class="sx__notice" id="evtNotice" role="status" hidden></p>
+        <p class="sx__loading" id="evtLoading" hidden>Loading…</p>
+        <table class="sx__table" id="evtTable" hidden>
+          <thead><tr>
+            <th data-sort="startsAtUtc" scope="col">Date</th>
+            <th data-sort="title" scope="col">Event</th>
+            <th data-sort="category" scope="col">Topic</th>
+            <th data-sort="attendees" scope="col">Who attended</th>
+          </tr></thead>
+          <tbody id="evtBody"></tbody>
+        </table>
+        <p class="sx__muted" id="noEvt" hidden>
+          Nobody from this client has attended a CBM event yet.
+        </p>
+      </div>
+
       <!-- Contributions: the funder ledger (sponsor domain only —
            prds/funder-contributions-plan.md). Four Received-only tiles +
            recency callout + rolling-window rollup + grid. Soft delete = the

@@ -5719,6 +5719,10 @@
 
   async function renderEvents() {
     if (!currentDetail) return;
+    // Defensive: the renderer and its markup are in different files, and a
+    // parallel commit once shipped one without the other (2026-08-16). A tab
+    // that quietly does nothing beats one that throws.
+    if (!$("evtBody")) return;
     if (evt.forId === currentDetail.id) { paintEvt(); return; }
     evt.forId = currentDetail.id;
     evt.rows = [];

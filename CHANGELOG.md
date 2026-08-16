@@ -4,6 +4,35 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.199.0] — 2026-08-16
+
+**feat(events): Phase 6c frontend — the Events tab and the programme reports.**
+v0.194.0 shipped the 6c endpoints and advertised the tab but never wrote a
+renderer, so it opened empty. This completes it.
+
+- **Events tab on a client engagement (EV-72)** — events attended across ALL of
+  the engagement's contacts, deduplicated by event, newest first, each row
+  naming who went. Sortable columns, search, and an empty state that says
+  nobody has attended rather than showing a bare table.
+- **Programme reports in `/events`** — a Reports view over the two existing
+  endpoints: totals (events held, unique attendees, total attendances, repeat
+  attendees, repeat rate) and conversion (attendees, became clients, rate, plus
+  the underlying list). Defaults to the last twelve months. The conversion panel
+  states its own rule on screen, since "converted" is a judgement, not a count.
+- **A guard in `renderEvents`** so a missing panel returns quietly instead of
+  throwing — see below for why that is not hypothetical.
+
+⚠️ **Note on history.** The renderer and its CSS were swept into
+**`c798e65`** (`feat(partners, funders)… v0.198.0`) by a parallel session
+running `git add -A` while this work was in the tree. Nothing was lost, but that
+commit's message does not describe half of what it contains, and because it was
+pushed before the matching markup, `main` briefly carried a tab that threw when
+clicked. This release closes that gap. The standing rule applies:
+**stage and commit atomically, then audit with `git show --stat`.**
+
+**Verified:** 2 new wiring tests (the panel, the tab route and the renderer all
+exist; the reports view calls both endpoints). Full suite 1671 green.
+
 ## [0.198.0] — 2026-08-16
 
 **feat(partners, funders): a record's company can be assigned — or created —
