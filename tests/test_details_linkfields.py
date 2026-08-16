@@ -369,3 +369,32 @@ def test_overview_company_still_links_when_a_company_is_linked():
     assert company["link"]["aggregate"] == [
         {"entity": "Account", "id": "A1"}, {"entity": "CPartnerProfile", "id": "P1"},
     ]
+
+
+# --- Details strip: an unset picker must still advertise itself --------------
+# The Details summary strip omits empty fields on purpose (density), but a link
+# picker is the ONLY signpost to the control behind Edit — so an unset one used
+# to vanish, and the partner with no company (exactly the record the picker was
+# built to repair) showed nothing about Company anywhere in view mode. Doug's
+# report, 2026-08-16: "the ability to select or create a company that is related
+# to the partner seems to be missing." Browser code, so the guard is on source.
+
+_APP_JS = (
+    __import__("pathlib").Path(__file__).resolve().parent.parent
+    / "sessions" / "frontend" / "app.js"
+).read_text()
+
+
+def test_strip_renders_a_dash_for_an_unset_link_picker():
+    assert 'add(STRIP_LABELS[f.name] || f.label, f.valueName ? String(f.valueName) : "—");' in _APP_JS
+    # The old guard dropped the cell entirely — it must not come back.
+    assert "if (f.valueName) add(STRIP_LABELS[f.name] || f.label, String(f.valueName));" not in _APP_JS
+
+
+def test_company_leads_the_partner_and_funder_strip():
+    """It identifies the organisation, so it sorts ahead of the dates — the same
+    reason it leads the edit form."""
+    order = _APP_JS.split("var STRIP_ORDER = [", 1)[1].split("];", 1)[0]
+    for name in ("partnerCompanyId", "sponsorCompanyId"):
+        assert name in order, name
+    assert order.index("partnerCompanyId") < order.index("partnershipStatus")

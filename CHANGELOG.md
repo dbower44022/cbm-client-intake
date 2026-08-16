@@ -4,6 +4,31 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.202.1] — 2026-08-16
+
+**fix(sessions): a partner with no company showed nothing about Company, so the
+picker looked like it didn't exist.** Doug's report: "the ability to select or
+create a company that is related to the partner seems to be missing." It was
+there — Details tab → **Edit** on the Partnership panel → the Company picker and
+its "+ New company" (v0.198.0) — but nothing on the screen said so.
+
+- The Details summary strip omits empty fields on purpose (density). For a
+  *link picker* that is wrong: the strip cell is the only signpost to a control
+  that lives behind Edit, so an unset picker vanished — and the record with no
+  company is precisely the one the picker was built to repair. An unset picker
+  now renders "—", the same rule the Overview rail already follows (an empty
+  slot that disappears reads as a missing feature). Applies to Company, Partner
+  manager, Funder manager and Referring partner.
+- Company now leads the partner/funder strip rather than sorting to the end
+  behind the dates — the same reason it leads the edit form: it identifies the
+  organisation the relationship is with.
+- Verified against a stubbed record page: before, the strip read Status · Type ·
+  Started · Partner manager with no Company cell at all; after, it leads with
+  "Company —", and Edit opens the picker (readable Accounts + "(none)") with
+  "+ New company" creating and selecting the Account for the panel's Save.
+- Nothing changed server-side: the field spec already offered the picker with
+  `creatable`, confirmed against live crm-test metadata.
+
 ## [0.202.0] — 2026-08-16
 
 **feat(events): the Add / Edit event screens are a CBM workspace, not a

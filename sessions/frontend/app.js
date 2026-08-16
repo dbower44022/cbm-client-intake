@@ -4686,8 +4686,12 @@
     lastContacted: "Last contacted", lastContribution: "Last contribution",
   };
   // Lead cells in mockup order; "@mentor" is the display-only mentor link.
+  // The company leads the partner/funder strip for the same reason it leads
+  // their edit form: it identifies the organisation the relationship is with.
+  // Without it here the cell sorted to the end, behind the dates.
   var STRIP_ORDER = [
     "engagementStatus", "engagementStartDate", "@mentor", "meetingCadence", "totalSessions",
+    "partnerCompanyId", "sponsorCompanyId",
     "partnershipStatus", "partnershipType", "partnershipStartDate",
   ];
 
@@ -4734,8 +4738,15 @@
     function addField(f) {
       if (done[f.name] || f.name === "name") return; done[f.name] = 1;  // page header shows the name
       if (f.type === "text" || f.type === "wysiwyg") return;
-      if (f.type === "linkselect") {  // link picker: show the linked record's NAME
-        if (f.valueName) add(STRIP_LABELS[f.name] || f.label, String(f.valueName));
+      // Link picker: show the linked record's NAME — and show "—" when there
+      // isn't one. Empty scalars are omitted here on purpose (density), but a
+      // link picker is different: this cell is the ONLY signpost to the picker
+      // behind Edit, so an unset one used to vanish completely — and the record
+      // with no company is exactly the record the picker exists to repair
+      // (Doug's report, 2026-08-16). Same rule the Overview rail already
+      // follows: an empty slot that disappears reads as a missing feature.
+      if (f.type === "linkselect") {
+        add(STRIP_LABELS[f.name] || f.label, f.valueName ? String(f.valueName) : "—");
         return;
       }
       var v = f.value;
