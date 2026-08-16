@@ -6,6 +6,30 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+00. **`CSponsorProfile.sponsorCompany` is still one-to-one, and v0.198.0 made
+    that reachable from the UI** (2026-08-16). `Account.cSponsorProfile` is a
+    `hasOne`, so pointing a funder at a company another funder already holds
+    does not fail — EspoCRM silently **moves** the Account, emptying the other
+    record. That is exactly the bug the partner side just spent three days
+    fixing (see the v0.198.0 changelog entry), and the new Company picker on the
+    funder Details tab is the first thing in the app that can trigger it.
+    Low blast radius today — prod has **one** funder record and it has no
+    company — but the trap is live.
+    - **Fix**: the same Entity Manager change already proven twice — remove
+      `sponsorCompany` and recreate it as **Many-to-One** to `Account`, keeping
+      the link names exactly (`sponsorCompany` on the profile side). Deleting a
+      relationship does not drop the column, so the existing links survive and
+      reappear (verified on crm-test 2026-08-15 —
+      `[[espo-removelink-is-metadata-only]]`). Watch the Name-box inversion:
+      CLAUDE.md → Gotchas → "The Create Link dialog INVERTS the two Name boxes".
+    - **Open question, not yet discussed**: whether one company can be a funder
+      in more than one way, the same question Doug answered "yes" for partners.
+      If the answer is no, the alternative is an app-side guard on the funder
+      picker instead.
+    - `CClientProfile.linkedCompany` has the identical `hasOne` shape and the
+      identical trap (already recorded in CLAUDE.md); no UI in the app can set
+      it, so nothing new was exposed there.
+
 0. **Analytics on the record views — the two remaining surfaces, decided
    2026-07-28** (full context in `prds/analytics-app-plan.md` §17). Doug ruled
    that a dashboard can be attached to every record view (Mentor, Company,

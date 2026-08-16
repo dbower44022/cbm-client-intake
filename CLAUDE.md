@@ -423,6 +423,28 @@ one shared frontend that derives its domain from the first segment of its URL.
   save can never silently drop them. **Mentor has no equivalent** — an
   engagement's mentor is re-assigned in Client Administration, deliberately
   (`DETAILS_LAYOUTS` keeps `mentorProfileName` read-only there).
+- **The record's COMPANY is set on the Details tab too** (v0.198.0), the same
+  way: `partnerCompany` / `sponsorCompany` as curated link pickers leading the
+  Partnership and Funding panels, gated per domain by
+  `DomainConfig.company_link_editable` (mentor has none — an engagement's
+  company resolves through the client profile via `company_fallback`). These
+  pickers also **create** the company, because a partner/funder the CRM holds no
+  Account for cannot be repaired by picking: "+ New company" find-or-creates it
+  (`details.create_company` → `service._find_or_create_company`, so a same-named
+  company is reused and `cCompanyType` merged in), and the panel's **Save**
+  writes the link — creating and linking stay separate so there is exactly one
+  write path to the link. `POST /records/{id}/company` is **not** gated by
+  `RECORD_QUICK_ADD`: it repairs records that already exist.
+- **A company can carry MANY partner profiles.**
+  `Account.cCompanyPartnerProfile` was `hasOne` until 2026-08-14, so linking a
+  company to a second partner profile silently *moved* it off the first — that
+  is how a live partner record lost its company to a duplicate entered nine
+  hours later. Doug's ruling: a partnership is with a programme inside an
+  organisation as often as with the organisation itself, so one company, many
+  partner records. Recreated as many-to-one on prod 2026-08-14 and crm-test
+  2026-08-15, verified in both; no application code was involved.
+  **`CSponsorProfile.sponsorCompany` and `CClientProfile.linkedCompany` are
+  still `hasOne`** and still carry the trap — `OPEN-ITEMS.md` #00.
 - **Partner and Funder can be CREATED here** (`RECORD_QUICK_ADD`, off by
   default): the grid's "+ Add partner" / "+ Add funder" runs the same
   Account → Contact → profile sequence the public intake forms do, as the
@@ -791,6 +813,32 @@ Conventions. Plan: `prds/action-history-plan.md`;
   entirely, which is how several mentor-only bugs stayed invisible.
 - **Custom linkMultiple fields are relationships** — see the Session Management
   notes ([[espo-custom-linkmultiple-is-a-relationship]]).
+- **The Create Link dialog INVERTS the two Name boxes.** Read this before
+  writing a single line of relationship build steps — it has now been got wrong
+  four times (CConversation, CEvent, CPartnerProfile ×2). The dialog has two
+  panels: **LHS** = the entity you opened it from (fixed, shown in the header),
+  **RHS** = the Foreign Entity you pick. Each panel has its own **Name** and
+  **Label** — the phrases "Link Name" and "Foreign Link Name" are NOT on the
+  form, so never use them. A panel's Name defines the link that *points at that
+  panel's entity*, which means it is **stored on the other side**:
+  **LHS Name → the link created on the RHS entity. RHS Name → the link created
+  on the LHS entity.** Work the two link names out first, then write each one
+  under the panel of the entity it POINTS AT. EspoCRM also blindly prepends `c`
+  to a name landing on a non-custom entity (Account, Contact, …), so type those
+  UNPREFIXED — `companyPartnerProfile` is stored as `cCompanyPartnerProfile`,
+  while typing `cCompanyPartnerProfile` yields `cCCompanyPartnerProfile`.
+  **Always verify before moving on**: read `entityDefs.<Entity>.links` from
+  `GET /Metadata` and confirm each link is on the side you intended
+  ([[crm-specs-use-entity-manager-terms]]).
+- **Removing a relationship is metadata-only — the column and its data stay.**
+  Entity Manager cannot change a relationship's *type*, so a type change is
+  delete-then-recreate; that is safe, because `LinkManager::delete()` only
+  strips metadata. Verified on crm-test 2026-08-14: deleting
+  `CPartnerProfile.partnerCompany` left all 14 values in `partner_company_id`
+  through a rebuild, and a recreate under the SAME name re-adopts them with no
+  restore step. A **mis-named** recreate is the trap — it strands the data in
+  the old column and leaves an empty new one behind, which reads exactly like
+  data loss ([[espo-removelink-is-metadata-only]]).
 - **Foreign fields are read-only mirrors** of a linked record's field — "shows
   but can't be edited" is usually this, not a bug
   ([[espo-foreign-fields-are-readonly-mirrors]]).
@@ -970,9 +1018,22 @@ Entity Manager vocabulary — [[crm-specs-use-entity-manager-terms]]):
 deployed and verified; `CHANGELOG.md` is the permanent record, `OPEN-ITEMS.md`
 holds anything still owed.*
 
-**Pushed through v0.197.1 on 2026-08-13**, so all three apps built it. Nothing
-is unpushed. What is *verified* is narrower than what is deployed — see each
-block.
+**Pushed through v0.197.1 on 2026-08-13**, so all three apps built it. What is
+*verified* is narrower than what is deployed — see each block. **v0.198.0 is
+committed but NOT pushed.**
+
+- **v0.198.0** — the Company picker + "+ New company" on the partner and funder
+  Details tabs (see that app's section). **Not deployed.** No flag: the picker
+  is a curated link field, so the rollout control is the code itself — a revert
+  is the only rollback. Owed on review: a live pass as a **non-admin** partner
+  manager, since the create path leans on the intake API client for Account
+  create precisely because gate roles lack it.
+- **CRM, 2026-08-14/15** — `Account.cCompanyPartnerProfile` recreated as
+  many-to-one on prod then crm-test, so a company can hold several partner
+  records. Verified in both: every link survived, and two partner profiles now
+  share one company with neither losing it. The four company-less live records
+  (3 partners, 1 funder) are still to be repaired, and the two Harvard partner
+  duplicates on prod still need a merge decision.
 
 - **v0.197.0 / v0.197.1** — the partner and funder **manager pickers** on the
   Details tab (see that app's section). v0.197.0 is **verified live** (Doug,

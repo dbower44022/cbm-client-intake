@@ -220,6 +220,15 @@ class DomainConfig:
     # off — an engagement's primary contact comes from intake.
     primary_contact_settable: bool = False
 
+    # Details tab: the record's company Account can be re-pointed — and created
+    # when the CRM hasn't got it yet — from the curated Company link picker
+    # (Doug, 2026-08-16). Gates the create endpoint; the picker itself rides in
+    # ``details._ENTITY_LINK_FIELDS``, which is entity-keyed and so already
+    # scoped to the partner/funder profiles. NOT set on mentor: an engagement's
+    # company comes from intake via the client profile, and re-pointing it there
+    # would fight ``company_fallback``.
+    company_link_editable: bool = False
+
     # Compose an "Industry" Overview fact from the record's company Account
     # (industry / sector / subsector). The partner + funder profiles carry no
     # industry of their own — it belongs to the company (Doug's ruling
@@ -677,9 +686,12 @@ PARTNER = DomainConfig(
         OverviewItem("Partnership type", "partnershipType", section="key", always=True),
         # single "Company" link — the partner profile + the company Account are
         # one org; the pop-up aggregates both.
+        # ``always``: a partner with no company must read "—", not vanish — the
+        # gap is the thing staff need to see (it is fixed on the Details tab's
+        # Company picker).
         OverviewItem("Company", "partnerCompanyName", "text", section="key",
                      aggregate=(("Account", "partnerCompanyId"),
-                                ("CPartnerProfile", "id"))),
+                                ("CPartnerProfile", "id")), always=True),
         # Composed from the company Account (see ``company_industry_fact``) —
         # the partnership record carries no industry of its own.
         OverviewItem("Industry", "_companyIndustry", "text", section="key", always=True),
@@ -708,6 +720,7 @@ PARTNER = DomainConfig(
     contacts_show_role=False,
     contacts_show_agreements=False,
     primary_contact_settable=True,
+    company_link_editable=True,
     company_industry_fact=True,
     # Client engagements that name this partner as their referring partner
     # (reverse of CEngagement.referringPartner) — the Referred Clients tab.
@@ -797,7 +810,7 @@ SPONSOR = DomainConfig(
         # one org; the pop-up aggregates both.
         OverviewItem("Company", "sponsorCompanyName", "text", section="key",
                      aggregate=(("Account", "sponsorCompanyId"),
-                                ("CSponsorProfile", "id"))),
+                                ("CSponsorProfile", "id")), always=True),
         OverviewItem("Industry", "_companyIndustry", "text", section="key", always=True),
         OverviewItem("Primary contact", "sponsorContactName", "text", section="key",
                      link_entity="Contact", id_attr="sponsorContactId", always=True),
@@ -818,6 +831,7 @@ SPONSOR = DomainConfig(
     contacts_show_role=False,
     contacts_show_agreements=False,
     primary_contact_settable=True,
+    company_link_editable=True,
     company_industry_fact=True,
     # The funder ledger (prds/funder-contributions-plan.md): the Contributions
     # tab + endpoints, reading the CRM-built CContribution entity through the

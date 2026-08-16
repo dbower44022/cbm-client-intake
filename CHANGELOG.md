@@ -4,6 +4,58 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.198.0] — 2026-08-16
+
+**feat(partners, funders): a record's company can be assigned — or created —
+from the Details tab.** Doug's 2026-08-13 report started here: a partner whose
+Company read "(details)" on the Overview, with no Company section on the Details
+tab and nothing anywhere in the app that could put one back. Four live records
+were in that state (3 partners, and prod's only funder), and three of them had
+no Account in the CRM to point at, so a picker alone would have fixed exactly
+one of them.
+
+- `sessions/details.py` — `partnerCompany` and `sponsorCompany` join
+  `_ENTITY_LINK_FIELDS` as curated link pickers over `Account`, leading the
+  **Partnership** and **Funding** panels because they identify the organisation.
+  Both are marked `creatable`, which is what puts **"+ New company"** beside the
+  dropdown.
+- **Creating and linking are deliberately separate.** `create_company()`
+  find-or-creates the Account and returns it; the picker selects it; the panel's
+  own **Save** writes the link through the same whitelisted PUT as every other
+  field. So one save covers the company alongside any other edit, there is a
+  single write path to the link, and an abandoned create leaves a reusable
+  company rather than a half-changed record.
+- Company creation follows the intake orchestrators' policy
+  (`service._find_or_create_company`): a same-named Account is **reused** with
+  the domain's `cCompanyType` merged in when missing (merge-only — an existing
+  type is never removed), and the CREATE runs through the intake API client
+  because the staff gate roles don't hold Account create.
+- `POST /{slug}/api/records/{id}/company`, registered only where
+  `DomainConfig.company_link_editable` is set (partner + funder). The mentor
+  domain never gets the route: an engagement's company resolves through the
+  client profile, where re-pointing it would fight `company_fallback`. The route
+  is **not** gated by `RECORD_QUICK_ADD` — this is a repair path for records
+  that already exist.
+- A real create is recorded in the action log (`Company Created`) against the
+  record it was created from; reusing a company CBM already knows is a lookup,
+  not a staff action, so it isn't logged.
+- Link-picker option lists now read up to 500 (was 200) and **log a warning when
+  the CRM holds more than they show** — Accounts grow with every intake, and a
+  silently truncated list reads as a missing company. Live counts on the day:
+  97 on prod, 93 on crm-test.
+
+**Context — the CRM change behind it.** `Account.cCompanyPartnerProfile` was
+`hasOne`, so linking a company to a second partner profile silently *moved* it
+off the first; that is how the reported record lost its company (a duplicate
+partner entered nine hours later reused the same Account). Doug's ruling: a
+company can hold **many** partner records — a partnership is with a programme
+inside an organisation as often as with the organisation itself. The
+relationship was recreated as many-to-one on **production 2026-08-14** and
+**crm-test 2026-08-15**, verified in both: no link lost, and two partner records
+now share one company with neither losing it. No application code was needed for
+that half. `CSponsorProfile.sponsorCompany` is still `hasOne` — see
+`OPEN-ITEMS.md`.
+
 ## [0.197.1] — 2026-08-13
 
 **feat(funders): the funder manager can be re-assigned in Funder Management.**

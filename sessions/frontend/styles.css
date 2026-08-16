@@ -879,6 +879,25 @@ textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
 }
 .sx__overall .sxf__draftbar { margin: 0 0 0.5rem; }
 
+/* Company picker that can also create the company (partner + funder Details):
+   the select takes the width, "+ New company" sits beside it, and the create
+   inputs drop underneath only once asked for. */
+.sxf__lcreate-top { display: flex; align-items: center; gap: 8px; }
+.sxf__lcreate-top > select { flex: 1 1 auto; min-width: 0; }
+.sxf__lcreate-top > .sxd__btn { flex: 0 0 auto; }
+.sxf__lcreate-form {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px;
+}
+/* An author `display` beats the [hidden] attribute, so the toggled parts need
+   their own hidden rules — without these the create inputs render permanently
+   open (caught in the preview harness, 2026-08-16). */
+.sxf__lcreate-form[hidden], .sxf__lcreate-msg[hidden] { display: none; }
+.sxf__lcreate-top > .sxd__btn[hidden] { display: none; }
+.sxf__lcreate-form > input { flex: 1 1 12rem; min-width: 0; }
+.sxf__lcreate-form > .sxf__lcreate-name { flex: 2 1 16rem; }
+.sxf__lcreate-msg { margin-top: 6px; font-size: 0.85rem; color: #2f6f3e; }
+.sxf__lcreate-msg--err { color: #b3261e; }
+
 /* Checkbox sets flow into as many columns as fit the width; the row gap
    matches the field-row rhythm so options never touch. */
 .sxf__checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: 8px 24px; }
@@ -966,6 +985,11 @@ textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
 .rcl__bar { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin: 0.25rem 0 0.75rem; }
 .rcl__bar .sx__search { max-width: 22rem; }
 .rcl__count { margin-left: auto; font-size: var(--cbm-text-sm, 0.9rem); color: var(--cbm-slate-700, #556); }
+
+/* Events tab (EV-72) — same toolbar shape as Referred Clients. */
+.evt__bar { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin: 0.25rem 0 0.75rem; }
+.evt__bar .sx__search { max-width: 22rem; }
+.evt__count { margin-left: auto; font-size: var(--cbm-text-sm, 0.9rem); color: var(--cbm-slate-700, #556); }
 
 .ctb__tiles {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));

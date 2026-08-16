@@ -599,6 +599,20 @@ def _company_item(it: Any, parent: dict[str, Any]) -> Optional[dict[str, Any]]:
         for entity, id_attr in it.aggregate
         if parent.get(id_attr)
     ]
+    if not display:
+        # No company NAME. Drop the self-pair first — a pop-up of the record you
+        # are already looking at tells you nothing — and if that leaves nothing
+        # linkable, this is simply an empty fact. It used to render "(details)"
+        # over a link to itself, which is what a partner whose company had been
+        # silently unlinked looked like: a value, not a gap (Doug, 2026-08-13).
+        pairs = [p for p in pairs if p["id"] != parent.get("id")]
+        if not pairs:
+            if not it.always:
+                return None
+            return {
+                "label": it.label, "value": None, "type": "text",
+                "block": it.block, "section": it.section,
+            }
     if not display and not pairs:
         return None
     return {

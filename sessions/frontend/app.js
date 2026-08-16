@@ -298,6 +298,7 @@
     if (tab === "details") ensureDetails();
     if (tab === "contributions") renderContributions();
     if (tab === "referredClients") renderReferredClients();
+    if (tab === "events") renderEvents();
     if (tab === "communications") renderComms();
     if (tab === "documents") renderDocuments();
     if (tab === "analytics") renderAnalytics();
@@ -3989,6 +3990,11 @@
     // panel. The record name mirrors the company (excluded, header shows it).
     CPartnerProfile: { noExtras: true, groups: [
       { label: "Partnership", grow: 2, basis: 46, rows: [
+        // The company the partnership is WITH (curated link picker, Doug
+        // 2026-08-16) — first, because it identifies the organisation, and the
+        // only way in the app to attach a company to a partner that has none.
+        // Its "+ New company" creates the Account when the CRM hasn't got it.
+        [{ name: "partnerCompanyId", span: 6, label: "Company" }],
         // Partner manager is a curated link picker (CPartnerProfile.partnerManager
         // → CMentorProfile), which is how the partner gets re-assigned — it rides
         // in the top row because it decides who owns the relationship.
@@ -4014,6 +4020,11 @@
     // revenue companions.
     CSponsorProfile: { noExtras: true, groups: [
       { label: "Funding", grow: 1, basis: 32, rows: [
+        // The funder's company (curated link picker, Doug 2026-08-16) — same
+        // role as on the partner form, including "+ New company" for a funder
+        // the CRM has no Account for (prod's only funder was in exactly that
+        // state).
+        [{ name: "sponsorCompanyId", span: 6, label: "Company" }],
         // Funder manager is the curated link picker (CSponsorProfile.cBMSponsorManager
         // → CMentorProfile) — how a funder gets re-assigned. Leads the row for the
         // same reason it does on the partner form: it decides who owns the record.
@@ -5656,6 +5667,90 @@
   if ($("rclStatus")) $("rclStatus").addEventListener("change", function () { rcl.status = this.value; paintRcl(); });
   if ($("rclSearch")) $("rclSearch").addEventListener("input", function () { rcl.search = this.value; paintRcl(); });
 
+  // --- Events tab (EV-72 — mentor domain only) ------------------------------
+  // Events attended across ALL of the engagement's contacts, deduplicated by
+  // event, newest first, each row naming who went. The server does the rollup
+  // (events/reporting.engagement_rollup); this paints it.
+  var evt = { forId: null, rows: [], search: "", sort: { key: "startsAtUtc", dir: -1 } };
+
+  function paintEvt() {
+    var rows = evt.rows.slice();
+    var needle = evt.search.trim().toLowerCase();
+    if (needle) {
+      rows = rows.filter(function (r) {
+        return [r.title, r.category, (r.attendees || []).join(" ")]
+          .join(" ").toLowerCase().indexOf(needle) !== -1;
+      });
+    }
+    var key = evt.sort.key, dir = evt.sort.dir;
+    rows.sort(function (a, b) {
+      var av = key === "attendees" ? (a.attendees || []).length : (a[key] || "");
+      var bv = key === "attendees" ? (b.attendees || []).length : (b[key] || "");
+      if (av === bv) return 0;
+      return (av > bv ? 1 : -1) * dir;
+    });
+
+    var body = $("evtBody");
+    body.innerHTML = "";
+    rows.forEach(function (r) {
+      var tr = document.createElement("tr");
+      function cell(text, cls) {
+        var td = document.createElement("td");
+        if (cls) td.className = cls;
+        td.textContent = text == null || text === "" ? "—" : text;
+        tr.appendChild(td);
+        return td;
+      }
+      cell(r.dateLabel || "—");
+      cell(r.title);
+      cell(r.category);
+      // Naming the people is the point: "did this client engage" is answered by
+      // WHO went, not just that somebody did.
+      cell((r.attendees || []).join(", "));
+      body.appendChild(tr);
+    });
+
+    $("evtCount").textContent =
+      rows.length + (rows.length === 1 ? " event" : " events")
+      + (needle && rows.length !== evt.rows.length ? " of " + evt.rows.length : "");
+    if (rows.length) { show($("evtTable")); hide($("noEvt")); }
+    else { hide($("evtTable")); show($("noEvt")); }
+  }
+
+  async function renderEvents() {
+    if (!currentDetail) return;
+    if (evt.forId === currentDetail.id) { paintEvt(); return; }
+    evt.forId = currentDetail.id;
+    evt.rows = [];
+    hide($("evtNotice")); hide($("evtTable")); hide($("noEvt"));
+    show($("evtLoading"));
+    try {
+      var res = await api("/records/" + encodeURIComponent(currentDetail.id) + "/events");
+      evt.rows = res.events || [];
+      paintEvt();
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      notice("evtNotice", e.message, "error");
+    } finally { hide($("evtLoading")); }
+  }
+
+  Array.prototype.forEach.call(
+    document.querySelectorAll("#evtTable th[data-sort]"),
+    function (th) {
+      th.classList.add("sx__th-sort");
+      th.addEventListener("click", function () {
+        var key = th.getAttribute("data-sort");
+        if (evt.sort.key === key) evt.sort.dir = -evt.sort.dir;
+        else { evt.sort.key = key; evt.sort.dir = (key === "startsAtUtc" || key === "attendees") ? -1 : 1; }
+        paintEvt();
+      });
+    }
+  );
+  if ($("evtTable")) makeColumnsResizable($("evtTable"));
+  if ($("evtSearch")) {
+    $("evtSearch").addEventListener("input", function () { evt.search = this.value; paintEvt(); });
+  }
+
   // --- Contributions tab (the funder ledger — sponsor domain only) ----------
   // prds/funder-contributions-plan.md. Panel + endpoints exist only when the
   // domain config declared the tab (the server registers nothing elsewhere).
@@ -7037,6 +7132,9 @@
       el.appendChild(new Option("(none)", ""));
       lopts.forEach(function (o) { el.appendChild(new Option(o.name || o.id, o.id)); });
       el.value = value == null ? "" : value;
+      // Company pickers can also CREATE the foreign record — picking alone is
+      // not enough for a partner/funder whose company the CRM has never held.
+      if (f.creatable) el = linkCreateWrap(f, el);
     } else if (f.type === "duration") {
       // Select of the CRM's preset choices (seconds); a stored duration outside
       // the presets is offered as-is so an existing value is never lost.
@@ -7064,6 +7162,79 @@
     return el;
   }
 
+  // A link picker that can also CREATE its foreign record (today: the partner's
+  // and funder's Company). The <select> stays the value carrier — readField digs
+  // it back out of the wrapper — so the snapshot/diff save machinery is
+  // untouched: creating a company only SELECTS it here, and the panel's own Save
+  // writes the link through the same whitelisted PUT as every other field. That
+  // keeps one write path for the link, and an abandoned create leaves a reusable
+  // company rather than a half-changed record.
+  function linkCreateWrap(f, sel) {
+    var wrap = document.createElement("div"); wrap.className = "sxf__lcreate";
+    var top = document.createElement("div"); top.className = "sxf__lcreate-top";
+    var add = document.createElement("button");
+    add.type = "button"; add.className = "sxd__btn"; add.textContent = "+ New company";
+    top.appendChild(sel); top.appendChild(add);
+
+    var form = document.createElement("div"); form.className = "sxf__lcreate-form"; form.hidden = true;
+    var nameEl = document.createElement("input");
+    nameEl.type = "text"; nameEl.placeholder = "Company name"; nameEl.className = "sxf__lcreate-name";
+    var siteEl = document.createElement("input");
+    siteEl.type = "text"; siteEl.placeholder = "Website (optional)";
+    var go = document.createElement("button");
+    go.type = "button"; go.className = "sxd__btn sxd__btn--primary"; go.textContent = "Create";
+    var cancel = document.createElement("button");
+    cancel.type = "button"; cancel.className = "sxd__btn"; cancel.textContent = "Cancel";
+    form.appendChild(nameEl); form.appendChild(siteEl); form.appendChild(go); form.appendChild(cancel);
+
+    var msg = document.createElement("div"); msg.className = "sxf__lcreate-msg"; msg.hidden = true;
+    wrap.appendChild(top); wrap.appendChild(form); wrap.appendChild(msg);
+
+    function closeForm() {
+      form.hidden = true; add.hidden = false; nameEl.value = ""; siteEl.value = "";
+    }
+    add.addEventListener("click", function () {
+      form.hidden = false; add.hidden = true; msg.hidden = true; nameEl.focus();
+    });
+    cancel.addEventListener("click", function () { closeForm(); msg.hidden = true; });
+    go.addEventListener("click", async function () {
+      // Validate on click; the button is never disabled or hidden.
+      var label = nameEl.value.trim();
+      msg.hidden = true; msg.className = "sxf__lcreate-msg";
+      if (!label) {
+        msg.textContent = "Enter the company name."; msg.hidden = false; nameEl.focus(); return;
+      }
+      var done = window.CBMBusy ? window.CBMBusy.start(go) : function () {};
+      try {
+        var res = await api("/records/" + encodeURIComponent(currentDetail.id) + "/company", {
+          method: "POST",
+          body: JSON.stringify({ name: label, website: siteEl.value.trim() }),
+        });
+        // Keep the payload's option list in step, so a repaint of this panel
+        // (or another section's) still offers the new company.
+        var opts = (currentDetails.linkOptions = currentDetails.linkOptions || {});
+        var list = (opts[f.linkEntity] = opts[f.linkEntity] || []);
+        if (!list.some(function (o) { return o.id === res.id; })) list.push({ id: res.id, name: res.name });
+        if (!Array.prototype.some.call(sel.options, function (o) { return o.value === res.id; })) {
+          sel.appendChild(new Option(res.name, res.id));
+        }
+        sel.value = res.id;
+        closeForm();
+        msg.textContent = (res.created ? "Created " : "Matched the existing company ") +
+          res.name + " — press Save to link it.";
+        msg.hidden = false;
+      } catch (e) {
+        if (e.status === 401) { showLogin(); return; }
+        msg.className = "sxf__lcreate-msg sxf__lcreate-msg--err";
+        msg.textContent = e.status === 403
+          ? "You don't have permission to create a company."
+          : "Couldn't create the company: " + e.message;
+        msg.hidden = false;
+      } finally { done(); }
+    });
+    return wrap;
+  }
+
   function readField(el) {
     var t = el.dataset.type;
     if (t === "multiEnum") return Array.prototype.map.call(el.querySelectorAll(".sx__chipopt.on"), function (c) { return c.dataset.v; });
@@ -7085,7 +7256,12 @@
       return l2 ? l1 + "\n" + l2 : l1;
     }
     if (t === "duration") return el.value === "" ? null : Number(el.value);
-    if (t === "linkselect") return el.value || null;  // "" = clear the link
+    if (t === "linkselect") {
+      // A creatable picker wraps its select (linkCreateWrap); the select is the
+      // value carrier either way. "" = clear the link.
+      var lsel = el.tagName === "SELECT" ? el : el.querySelector("select");
+      return (lsel && lsel.value) || null;
+    }
     if (t === "wysiwyg") {
       if (el._cbmRichText) return el._cbmRichText.getValue();
       var a = el.querySelector(".wysiwyg__area");

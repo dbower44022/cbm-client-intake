@@ -14,6 +14,7 @@ import logging
 import re
 from typing import Any, Optional
 
+from assignments.service import ACCOUNT
 from core.espo import EspoError
 from core.phone import to_e164
 
@@ -21,6 +22,7 @@ from .config import CONTACT, MENTOR_PROFILE, DomainConfig
 from .service import (
     SessionClient,
     SessionError,
+    _find_or_create_company,
     _is_forbidden,
     company_id_attr,
     fill_company_fallback,
@@ -80,12 +82,25 @@ _ENTITY_LINK_FIELDS: dict[str, tuple[tuple[str, str, str], ...]] = {
     # whose reverse is ``CMentorProfile.managedPartners`` — i.e. the very link
     # that decides whose partner this is, so it was the one relationship the app
     # showed in the grid but could not change.
-    "CPartnerProfile": (("partnerManager", "Partner manager", MENTOR_PROFILE),),
+    # The partner's COMPANY, and the funder's below it (Doug, 2026-08-16). Until
+    # now nothing in the app could set ``partnerCompany`` / ``sponsorCompany``:
+    # a record that arrived without one — hand-made in the CRM, or emptied by the
+    # old one-to-one link moving the Account to a duplicate — showed "(details)"
+    # on the Overview, no Company section on this tab, and no way to fix either.
+    # Marked ``creatable`` by :func:`_field_spec` because picking is not enough:
+    # three of the four affected records on prod had no Account to pick.
+    "CPartnerProfile": (
+        ("partnerCompany", "Company", ACCOUNT),
+        ("partnerManager", "Partner manager", MENTOR_PROFILE),
+    ),
     # The funder's manager — the same gap, same fix (Doug, 2026-08-13). The CRM
     # link is ``cBMSponsorManager`` (reverse: ``CMentorProfile.managedSponsors``);
     # the label says "Funder" because that is this domain's display wording, the
     # entity and field names stay CSponsorProfile/sponsor.
-    "CSponsorProfile": (("cBMSponsorManager", "Funder manager", MENTOR_PROFILE),),
+    "CSponsorProfile": (
+        ("sponsorCompany", "Company", ACCOUNT),
+        ("cBMSponsorManager", "Funder manager", MENTOR_PROFILE),
+    ),
 }
 
 # Label overrides where the humanized CRM field name misleads. ``partnerEmail``
@@ -145,10 +160,16 @@ def _field_spec(meta_fields: dict[str, Any], entity: str = "") -> list[dict[str,
     for link_name, label, foreign in _ENTITY_LINK_FIELDS.get(entity, ()):
         fdef = meta_fields.get(link_name)
         if isinstance(fdef, dict) and fdef.get("type") in ("link", "linkParent"):
-            spec.append({
+            item: dict[str, Any] = {
                 "name": link_name + "Id", "label": label, "type": "linkselect",
                 "editable": True, "linkEntity": foreign, "nameAttr": link_name + "Name",
-            })
+            }
+            # A company the CRM doesn't have yet can be created from the picker
+            # (find-or-create — see :func:`create_company`). Only Accounts: every
+            # other picker's foreign records are existing CBM people/records.
+            if foreign == ACCOUNT:
+                item["creatable"] = True
+            spec.append(item)
     return spec
 
 
@@ -351,9 +372,20 @@ async def build_details(
         options: dict[str, list[dict[str, Any]]] = {}
         for entity in sorted(link_entities):
             try:
-                data = await client.list(entity, select="name", order_by="name", max_size=200)
+                data = await client.list(entity, select="name", order_by="name", max_size=500)
+                rows = data.get("list", [])
+                total = data.get("total")
+                # A truncated list silently hides records from the picker, and
+                # Accounts grow with every intake — say so in the log rather than
+                # let it look like a missing company. (Live counts 2026-08-16:
+                # 97 on prod, 93 on crm-test.)
+                if isinstance(total, int) and total > len(rows):
+                    log.warning(
+                        "link-picker options for %s truncated: showing %s of %s",
+                        entity, len(rows), total,
+                    )
                 options[entity] = [
-                    {"id": r["id"], "name": r.get("name")} for r in data.get("list", [])
+                    {"id": r["id"], "name": r.get("name")} for r in rows
                 ]
             except EspoError as exc:
                 log.warning("link-picker options for %s unavailable: %s", entity, exc)
@@ -460,6 +492,39 @@ async def search_contacts(client: SessionClient, query: str) -> list[dict[str, A
          "phone": r.get("phoneNumber"), "company": r.get("accountName")}
         for r in data.get("list", [])
     ]
+
+
+async def create_company(
+    cfg: DomainConfig, client: SessionClient, api_client: Any,
+    name: str, website: str = "",
+) -> dict[str, Any]:
+    """Find-or-create the company Account that the Details tab's Company picker
+    will point at, and return ``{id, name, created}``.
+
+    Creating the company and LINKING it are deliberately separate steps: this
+    returns the Account, the picker selects it, and the panel's own Save writes
+    the link through the same whitelisted PUT every other field uses. So one
+    save covers the company alongside whatever else was edited, an abandoned
+    create leaves a reusable Account rather than a half-changed record, and
+    there is exactly one write path to the link.
+
+    Reuse-by-name follows the intake orchestrators' policy
+    (:func:`sessions.service._find_or_create_company`): a same-named Account is
+    reused with the domain's ``cCompanyType`` merged in when missing, and the
+    CREATE runs through the intake API client because the staff gate roles
+    don't hold Account create.
+    """
+    label = (name or "").strip()
+    if not label:
+        raise SessionError("A company name is required.")
+    url = (website or "").strip()
+    if url and "://" not in url:
+        url = f"https://{url}"  # Account.website is a url field
+    account_id, created = await _find_or_create_company(cfg, client, api_client, label, url)
+    # ``label`` is what the user typed; a reused Account may be stored with
+    # different capitalisation. The save's reload re-reads the record from the
+    # CRM, so the picker corrects itself immediately either way.
+    return {"id": account_id, "name": label, "created": created}
 
 
 async def _resolve_company_id(cfg: DomainConfig, client: SessionClient, parent_id: str) -> Optional[str]:

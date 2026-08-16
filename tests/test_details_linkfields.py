@@ -6,10 +6,14 @@ record had been set in the EspoCRM UI)."""
 from __future__ import annotations
 
 import pytest
+from fastapi.testclient import TestClient
 
+from core.app import create_app
+from core.config import get_settings
 from core.espo import EspoError
+from forms import info_request
 from sessions import details, service
-from sessions.config import MENTOR
+from sessions.config import MENTOR, PARTNER, SPONSOR
 
 # --- _field_spec: the curated link picker ----------------------------------
 
@@ -82,6 +86,52 @@ def test_funder_manager_write_path():
     spec = {f["name"]: f for f in details._field_spec(_SPONSOR_META, "CSponsorProfile")}
     assert details._clean_changes(spec, {"cBMSponsorManagerId": "M9"}) == {"cBMSponsorManagerId": "M9"}
     assert details._clean_changes(spec, {"cBMSponsorManagerId": ""}) == {"cBMSponsorManagerId": None}
+
+
+# --- the Company picker (Doug 2026-08-16) ------------------------------------
+# A partner/funder whose company link is empty had no repair path in the app at
+# all: nothing set it, and the Details tab omits the Company card without an id.
+
+_PARTNER_FULL_META = dict(_PARTNER_META, partnerCompany={"type": "link"})
+_SPONSOR_FULL_META = dict(_SPONSOR_META, sponsorCompany={"type": "link"})
+
+
+def test_field_spec_appends_partner_company_picker_and_marks_it_creatable():
+    spec = details._field_spec(_PARTNER_FULL_META, "CPartnerProfile")
+    link = [f for f in spec if f["type"] == "linkselect"]
+    assert link[0] == {
+        "name": "partnerCompanyId", "label": "Company",
+        "type": "linkselect", "editable": True,
+        "linkEntity": "Account", "nameAttr": "partnerCompanyName",
+        # picking is not enough — a company the CRM has never held is created here
+        "creatable": True,
+    }
+    # the manager picker still rides alongside it, and is NOT creatable
+    assert link[1]["name"] == "partnerManagerId" and "creatable" not in link[1]
+    sel = details._select_for(spec, _PARTNER_FULL_META).split(",")
+    assert "partnerCompanyId" in sel and "partnerCompanyName" in sel
+
+
+def test_field_spec_appends_funder_company_picker():
+    spec = details._field_spec(_SPONSOR_FULL_META, "CSponsorProfile")
+    link = [f for f in spec if f["type"] == "linkselect"]
+    assert link[0] == {
+        "name": "sponsorCompanyId", "label": "Company",
+        "type": "linkselect", "editable": True,
+        "linkEntity": "Account", "nameAttr": "sponsorCompanyName",
+        "creatable": True,
+    }
+    assert link[1]["name"] == "cBMSponsorManagerId"
+
+
+def test_company_write_path():
+    for meta, entity, attr in (
+        (_PARTNER_FULL_META, "CPartnerProfile", "partnerCompanyId"),
+        (_SPONSOR_FULL_META, "CSponsorProfile", "sponsorCompanyId"),
+    ):
+        spec = {f["name"]: f for f in details._field_spec(meta, entity)}
+        assert details._clean_changes(spec, {attr: "A9"}) == {attr: "A9"}
+        assert details._clean_changes(spec, {attr: ""}) == {attr: None}
 
 
 def test_field_spec_omits_link_picker_when_crm_lacks_the_link():
@@ -167,6 +217,116 @@ async def test_build_details_link_options_best_effort_on_403():
     assert "linkOptions" not in res  # picker degrades read-only; tab still loads
 
 
+# --- create_company: the picker's "+ New company" ----------------------------
+# Three of the four company-less records on prod (2026-08-16) had no Account to
+# pick, so the picker has to be able to make one — on the intake orchestrators'
+# find-or-create terms, never a blind create.
+
+
+class _CoFake:
+    """Client for the create-company path: find_one + the type-merge update."""
+
+    def __init__(self, existing=None):
+        self._existing = existing
+        self.updates = []
+
+    async def find_one(self, entity, attribute, value, select="id"):
+        return self._existing
+
+    async def update(self, entity, record_id, payload):
+        self.updates.append((entity, record_id, payload))
+        return {"id": record_id}
+
+
+class _CoApi:
+    """The intake API client — holds Account create where gate roles don't."""
+
+    def __init__(self):
+        self.created = []
+
+    async def create(self, entity, payload):
+        self.created.append((entity, payload))
+        return {"id": "acct-new"}
+
+
+@pytest.mark.asyncio
+async def test_create_company_creates_typed_account_via_api_client():
+    client, api = _CoFake(), _CoApi()
+    res = await details.create_company(PARTNER, client, api, " Buckeye Community Bank ", "buckeye.com")
+    assert res == {"id": "acct-new", "name": "Buckeye Community Bank", "created": True}
+    entity, payload = api.created[0]
+    assert entity == "Account"
+    assert payload["name"] == "Buckeye Community Bank"
+    # the discriminator the whole CRM filters on, and a usable url field
+    assert payload["cCompanyType"] == ["Partner"]
+    assert payload["website"] == "https://buckeye.com"
+
+
+@pytest.mark.asyncio
+async def test_create_company_reuses_a_same_named_account_and_merges_the_type():
+    client = _CoFake(existing={"id": "A1", "name": "Key Bank", "cCompanyType": ["Client"]})
+    api = _CoApi()
+    res = await details.create_company(SPONSOR, client, api, "Key Bank")
+    assert res == {"id": "A1", "name": "Key Bank", "created": False}
+    assert not api.created  # never duplicates a company CBM already knows
+    # merge-only: the existing type survives, the domain's is added
+    assert client.updates == [("Account", "A1", {"cCompanyType": ["Client", "Sponsor"]})]
+
+
+@pytest.mark.asyncio
+async def test_create_company_requires_a_name():
+    with pytest.raises(service.SessionError):
+        await details.create_company(PARTNER, _CoFake(), _CoApi(), "   ")
+
+
+# --- the create-company route ------------------------------------------------
+
+_ROUTE_USER = {
+    "userId": "u1", "userName": "pat.partner", "name": "Pat Partner", "isAdmin": False,
+    "teams": ["Partner Management Team", "Sponsor Management Team", "Mentor Team"],
+    "roles": [], "token": "t",
+}
+
+
+def _route_app(monkeypatch, client):
+    monkeypatch.setenv("SESSION_SECRET", "test-secret")
+    # Deliberately OFF: this is a repair path for records that already exist, so
+    # it must not ride on the quick-add flag the way the Add button does.
+    monkeypatch.setenv("RECORD_QUICK_ADD", "false")
+    get_settings.cache_clear()
+    monkeypatch.setattr("sessions.router.current_user", lambda request, key=None: _ROUTE_USER)
+    monkeypatch.setattr("sessions.router.client_for", lambda settings, user: client)
+    monkeypatch.setattr("sessions.router._api_client", lambda settings: _CoApi(), raising=False)
+    return create_app([info_request.SPEC])
+
+
+@pytest.mark.parametrize("slug", ["partnersessions", "sponsorsessions"])
+def test_create_company_route_creates_and_returns_the_company(monkeypatch, slug):
+    with TestClient(_route_app(monkeypatch, _CoFake())) as c:
+        r = c.post(f"/{slug}/api/records/P1/company", json={"name": "The Villages- Sheffield"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["name"] == "The Villages- Sheffield" and body["created"] is True
+    assert body["id"]  # the picker selects this id; the panel's Save links it
+
+
+def test_create_company_route_rejects_a_blank_name(monkeypatch):
+    with TestClient(_route_app(monkeypatch, _CoFake())) as c:
+        r = c.post("/partnersessions/api/records/P1/company", json={"name": "  "})
+    assert r.status_code == 400
+
+
+def test_the_mentor_router_never_registers_the_company_route(monkeypatch):
+    """Gated at registration by ``company_link_editable`` — an engagement's
+    company is resolved through the client profile, so the route doesn't exist
+    there at all (the contributions / primary-contact precedent). Unregistered
+    POSTs surface as 405, not 404: the path falls through to the domain's static
+    frontend mount, which serves GET (the quick-add precedent)."""
+    with TestClient(_route_app(monkeypatch, _CoFake())) as c:
+        r = c.post("/mentorsessions/api/records/E1/company", json={"name": "X"})
+    assert r.status_code == 405
+
+
 # --- Overview: the always-shown fact ----------------------------------------
 
 def test_overview_referring_partner_always_renders():
@@ -183,3 +343,29 @@ def test_overview_referring_partner_always_renders():
     assert rp2["value"] is None and "link" not in rp2
     # Other empty facts still drop (the always flag is per-item).
     assert "Meeting cadence" not in bare
+
+
+# --- Overview: a missing company reads as a gap, not a value -----------------
+
+def test_overview_company_renders_a_dash_when_nothing_is_linked():
+    """Doug's 2026-08-13 report opened with "the Company value is '(details)'".
+    It was a link to the record itself dressed up as a value; an unlinked
+    company must read as the empty fact it is."""
+    from sessions.config import PARTNER as _P
+    items = {i["label"]: i for i in service._overview_items(
+        _P, {"id": "P1", "partnershipStatus": "Candidate"})}
+    company = items["Company"]           # the slot stays (always=True)
+    assert company["value"] is None      # renders "—"
+    assert "link" not in company         # no pop-up of the record you're on
+
+
+def test_overview_company_still_links_when_a_company_is_linked():
+    from sessions.config import PARTNER as _P
+    items = {i["label"]: i for i in service._overview_items(_P, {
+        "id": "P1", "partnerCompanyId": "A1", "partnerCompanyName": "Global Cleveland",
+    })}
+    company = items["Company"]
+    assert company["value"] == "Global Cleveland"
+    assert company["link"]["aggregate"] == [
+        {"entity": "Account", "id": "A1"}, {"entity": "CPartnerProfile", "id": "P1"},
+    ]

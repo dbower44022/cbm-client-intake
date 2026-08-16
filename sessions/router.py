@@ -183,6 +183,14 @@ class ContactAddIn(BaseModel):
     newCompanyName: Optional[str] = None
 
 
+class CompanyCreateIn(BaseModel):
+    """Create (or reuse) the company Account for the Details tab's Company
+    picker. Creating it does NOT link it — the panel's Save writes the link."""
+
+    name: str
+    website: Optional[str] = None
+
+
 class PrimaryContactIn(BaseModel):
     """Designate an already-linked contact as the record's primary contact."""
 
@@ -537,6 +545,44 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             return {"status": "ok"}
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not remove the contact")
+
+    if cfg.company_link_editable:
+        # Registered only where the domain owns its company link (partner +
+        # funder) — the mentor domain resolves an engagement's company through
+        # the client profile, so the route doesn't exist there at all (the
+        # primary-contact / contributions precedent).
+
+        @router.post("/records/{parent_id}/company")
+        async def create_company(
+            parent_id: str, body: CompanyCreateIn, request: Request
+        ) -> dict:
+            """Find-or-create a company Account for this record's Company picker.
+
+            The link itself is written by the panel's Save, not here — see
+            :func:`sessions.details.create_company`.
+            """
+            user = _require_user(request)
+            settings = get_settings()
+            client = client_for(settings, user)
+            try:
+                result = await details_svc.create_company(
+                    cfg, client, _api_client(settings), body.name, body.website or "",
+                )
+            except service.SessionError as exc:
+                raise HTTPException(status_code=400, detail=str(exc))
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not create the company")
+            if result["created"]:
+                # Only a real create is worth a history entry; reusing a company
+                # CBM already knows is not a staff action, it's a lookup.
+                await action_log.record_action(
+                    client, app=cfg.title, category=action_log.CAT_CONTACT,
+                    action=action_log.ACT_COMPANY_CREATED,
+                    parent_type=cfg.parent_entity, parent_id=parent_id,
+                    summary=f"Company {result['name']} created.",
+                    actor_id=user["userId"], actor_name=user["name"], details=result,
+                )
+            return result
 
     if cfg.primary_contact_settable:
         # Registered only where the domain owns its primary contact (partner +
