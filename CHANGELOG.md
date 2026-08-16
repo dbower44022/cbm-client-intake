@@ -4,6 +4,30 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.201.2] — 2026-08-16
+
+**fix(docs): the nightly Drive reconciliation stops re-granting the same folders
+forever.** Three crm-test folders re-created an identical Commenter grant for
+`doug.bower@cbmentors.org` every night for at least six days (08-10, 08-11,
+08-16). Diagnosed by listing the folder's real permissions from the worker
+container: he is a **member of the shared drive**, which is exactly what the
+access model calls for (PRD v1.5 §3.4 — the two designated administrators are
+the only members), and Drive therefore reports his access on every folder as
+*inherited*, merged into a single permission per person.
+
+- `apply_folder_grants` skipped inherited permissions when building the current
+  state, concluded he had no grant, and issued a create. Drive merged it back
+  into the membership permission, which still reads as inherited — so the next
+  pass did it again. It could never converge.
+- Now: inherited roles are read from `permissionDetails` across **every**
+  permission (including one that carries both a membership and a file grant),
+  and at-least-Commenter inherited access satisfies the entitlement. Those
+  people are reported in **`driveMembers`** — no create, and no delete either,
+  since membership is not this folder's to revoke and Drive refuses the delete.
+- Below Commenter (a member with reader) still gets the file-level grant.
+- The pass summary now ends `… N already covered by drive membership`, and its
+  `granted` count stops being inflated by grants that never took effect.
+
 ## [0.201.1] — 2026-08-16
 
 **fix(sessions): Save on an unchanged Details panel closes it instead of doing

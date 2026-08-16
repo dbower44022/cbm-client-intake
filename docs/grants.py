@@ -38,6 +38,44 @@ log = logging.getLogger("cbm_intake.docs.grants")
 
 COMMENTER = "commenter"
 
+# Drive roles ordered by how much they permit. Used only to answer "does this
+# person already have AT LEAST Commenter here?" — never to grant anything above
+# Commenter, which stays the ceiling the access model issues (D-09).
+_ROLE_RANK = {
+    "reader": 1, "commenter": 2, "writer": 3, "fileOrganizer": 4, "organizer": 5,
+}
+
+
+def _at_least_commenter(role: Optional[str]) -> bool:
+    return _ROLE_RANK.get(role or "", 0) >= _ROLE_RANK[COMMENTER]
+
+
+def _inherited_roles(perms: list[dict[str, Any]]) -> dict[str, str]:
+    """Per person, the strongest role they hold on this folder by INHERITANCE
+    — i.e. shared-drive membership, which Drive reports as a
+    ``permissionDetails`` entry with ``inherited: true``.
+
+    The two designated system administrators are drive members (PRD v1.5 §3.4),
+    so on a folder they are also entitled to they already have access, and
+    Drive merges any file-level grant into that one membership permission. The
+    engine must recognise that, or it re-creates the same grant every night
+    forever without ever converging — which is exactly what it did on three
+    crm-test folders (found 2026-08-16)."""
+    roles: dict[str, str] = {}
+    for perm in perms:
+        if perm.get("type") != "user":
+            continue
+        email = (perm.get("emailAddress") or "").lower()
+        if not email:
+            continue
+        for detail in perm.get("permissionDetails") or []:
+            if not detail.get("inherited"):
+                continue
+            role = detail.get("role") or ""
+            if _ROLE_RANK.get(role, 0) > _ROLE_RANK.get(roles.get(email, ""), 0):
+                roles[email] = role
+    return roles
+
 # Entities whose record folders carry grants, and how the entitled people are
 # derived. Contact (mentor personnel) folders are deliberately ABSENT: they are
 # granted to no one, and the reconciliation strips any grant found on them.
@@ -145,14 +183,25 @@ async def apply_folder_grants(
     2026-08-12 — the test CRM's people deliberately have no Workspace mailbox,
     and daily "reconciliation is FAILING" alerts for them are pure noise). The
     attempt still repeats every pass, which costs one API call and means the
-    grant appears by itself on the first pass after the mailbox exists."""
+    grant appears by itself on the first pass after the mailbox exists.
+
+    Someone who already holds at least Commenter **by shared-drive membership**
+    needs no grant and is reported in ``driveMembers``: their access does not
+    come from this folder, so there is nothing here to create and nothing here
+    to revoke. See :func:`_inherited_roles`."""
     desired = {e.lower() for e in desired if e}
     added: list[str] = []
     removed: list[dict[str, str]] = []
     errors: list[str] = []
     unfulfillable: list[str] = []
+    drive_members: list[str] = []
     current: dict[str, dict[str, Any]] = {}
-    for perm in await drive.list_permissions(folder_id):
+    permissions = await drive.list_permissions(folder_id)
+    # Membership is read from EVERY permission, including ones that also carry
+    # a direct grant — Drive merges both into a single permission per person.
+    inherited = _inherited_roles(permissions)
+    protected = {e for e, role in inherited.items() if _at_least_commenter(role)}
+    for perm in permissions:
         if perm.get("inherited"):
             continue
         if perm.get("type") != "user":
@@ -179,6 +228,12 @@ async def apply_folder_grants(
         role_ok = perm.get("role") == COMMENTER
         if email in desired and role_ok:
             continue
+        if email in protected:
+            # Their access is drive membership, which this folder does not own.
+            # Deleting here removes nothing they actually rely on, and Drive
+            # refuses to delete an inherited permission — it would be a
+            # recurring hard error, not a correction.
+            continue
         try:
             await drive.delete_permission(folder_id, perm["id"])
             removed.append({"email": email, "role": perm.get("role") or "?"})
@@ -189,6 +244,9 @@ async def apply_folder_grants(
     for email in sorted(desired):
         perm = current.get(email)
         if perm is not None and perm.get("role") == COMMENTER:
+            continue
+        if email in protected:
+            drive_members.append(email)
             continue
         try:
             await drive.create_permission(folder_id, email, COMMENTER)
@@ -202,6 +260,7 @@ async def apply_folder_grants(
         "removed": removed,
         "errors": errors,
         "unfulfillable": unfulfillable,
+        "driveMembers": drive_members,
     }
 
 
@@ -238,10 +297,10 @@ async def sync_record_grants(
     if any(result[k] for k in ("added", "removed", "errors", "unfulfillable")):
         log.info(
             "drive grants synced (%s %s, folder %s): +%s -%s errors=%s "
-            "no-google-account=%s",
+            "no-google-account=%s drive-members=%s",
             entity_type, record_id, folder_id,
             result["added"], result["removed"], result["errors"],
-            result["unfulfillable"],
+            result["unfulfillable"], result["driveMembers"],
         )
     return result
 

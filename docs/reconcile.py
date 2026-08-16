@@ -69,7 +69,7 @@ async def run_docs_reconciliation(
 
     summary = {
         "folders": 0, "granted": 0, "revoked": 0, "errors": 0,
-        "noGoogleAccount": 0, "linksWritten": 0,
+        "noGoogleAccount": 0, "driveMembers": 0, "linksWritten": 0,
     }
     removal_lines: list[str] = []
     persistent_error_lines: list[str] = []
@@ -104,6 +104,7 @@ async def run_docs_reconciliation(
         summary["revoked"] += len(result["removed"])
         summary["errors"] += len(result["errors"])
         summary["noGoogleAccount"] += len(result["unfulfillable"])
+        summary["driveMembers"] += len(result["driveMembers"])
         _track_errors(folder_id, label, bool(result["errors"]))
         for email in result["unfulfillable"]:
             # NOT an error and NOT alertable: Drive cannot share with an
@@ -157,8 +158,10 @@ async def run_docs_reconciliation(
         )
     log.info(
         "docs reconciliation done: %s folder(s), +%s grant(s), -%s, "
-        "%s CRM link(s) written, %s error(s), %s skipped (no Google account)",
+        "%s CRM link(s) written, %s error(s), %s skipped (no Google account), "
+        "%s already covered by drive membership",
         summary["folders"], summary["granted"], summary["revoked"],
         summary["linksWritten"], summary["errors"], summary["noGoogleAccount"],
+        summary["driveMembers"],
     )
     return summary

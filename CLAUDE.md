@@ -756,6 +756,14 @@ PRD in `prompts/Google Drive Documents/`.
   self-heals the day the mailbox appears. In-app document access is unaffected
   either way (the app reads Drive as the service account); only opening the
   folder directly in Drive needs the grant.
+- **A drive member needs no grant.** The two designated administrators ARE
+  shared-drive members, so Drive reports their access on every folder as
+  *inherited* (`permissionDetails[].inherited`, `permissionType: member`) and
+  merges any file-level grant into that one permission. The engine treats
+  at-least-Commenter inherited access as satisfying the entitlement —
+  `driveMembers` in the result, never a create and never a delete. Before
+  v0.201.2 it skipped inherited permissions outright, so it re-created the same
+  grant every night forever without converging.
 - **Rollback rule**: a row-write failure deletes the Drive file; a Drive failure
   never writes a row. Uploads pre-assign ids via `files.generateIds` so a retry
   can't duplicate.

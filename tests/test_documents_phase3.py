@@ -114,9 +114,20 @@ class GrantDrive:
         return folder_id
 
 
-def _perm(email, role="commenter", inherited=False, ptype="user", pid=None):
+def _perm(email, role="commenter", inherited=False, ptype="user", pid=None,
+          details=None):
+    """One permission in the real API's shape: inheritance is reported per
+    ``permissionDetails`` entry (``permissionType: member`` = shared-drive
+    membership), which is what ``DriveClient.list_permissions`` folds into the
+    top-level ``inherited`` flag. Pass ``details`` for the mixed case — Drive
+    merges a person's membership AND their file-level grant into ONE
+    permission with two detail entries."""
     return {"id": pid or f"perm-{email}-{role}", "type": ptype, "role": role,
-            "emailAddress": email, "inherited": inherited}
+            "emailAddress": email, "inherited": inherited,
+            "permissionDetails": details if details is not None else [
+                {"permissionType": "member" if inherited else "file",
+                 "role": role, "inherited": inherited}
+            ]}
 
 
 # --- grants_enabled gate -----------------------------------------------------------
@@ -253,6 +264,56 @@ async def test_apply_grants_tolerates_per_grant_failures():
     )
     assert result["added"] == ["jane@cbmentors.org"]
     assert len(result["errors"]) == 1 and "bad@example.com" in result["errors"][0]
+
+
+async def test_apply_grants_does_not_regrant_a_shared_drive_member():
+    """Found 2026-08-16: the two designated system administrators are members
+    of the shared drive, so on a folder they are also entitled to, Drive
+    reports their access as INHERITED. The engine skipped inherited
+    permissions entirely, concluded they had no grant, and re-created one every
+    single night — three crm-test folders looped for at least six days."""
+    drive = GrantDrive()
+    drive.perms["f1"] = [_perm("doug.bower@cbmentors.org", role="organizer",
+                               inherited=True)]
+    result = await grants.apply_folder_grants(
+        drive, "f1", {"doug.bower@cbmentors.org", "jane@cbmentors.org"}
+    )
+    assert drive.grant_calls == [("f1", "jane@cbmentors.org", "commenter")]
+    assert result["added"] == ["jane@cbmentors.org"]
+    assert result["driveMembers"] == ["doug.bower@cbmentors.org"]
+    assert result["removed"] == [] and result["errors"] == []
+
+
+async def test_apply_grants_leaves_a_members_merged_permission_alone():
+    """The mixed shape: one permission carrying BOTH drive membership and a
+    file-level grant. Its effective role is organizer, so the old code saw
+    "entitled person at the wrong role" and tried to delete — a delete Drive
+    refuses, i.e. a nightly hard error. Membership is not this folder's to
+    revoke."""
+    drive = GrantDrive()
+    drive.perms["f1"] = [_perm(
+        "doug.bower@cbmentors.org", role="organizer", details=[
+            {"permissionType": "member", "role": "organizer", "inherited": True},
+            {"permissionType": "file", "role": "commenter", "inherited": False},
+        ],
+    )]
+    result = await grants.apply_folder_grants(
+        drive, "f1", {"doug.bower@cbmentors.org"}
+    )
+    assert drive.revoke_calls == [] and drive.grant_calls == []
+    assert result["removed"] == [] and result["errors"] == []
+    assert result["driveMembers"] == ["doug.bower@cbmentors.org"]
+
+
+async def test_apply_grants_still_grants_when_membership_is_view_only():
+    """Membership below Commenter does not satisfy the entitlement — a drive
+    member with reader still needs the file-level grant."""
+    drive = GrantDrive()
+    drive.perms["f1"] = [_perm("viewer@cbmentors.org", role="reader",
+                               inherited=True)]
+    result = await grants.apply_folder_grants(drive, "f1", {"viewer@cbmentors.org"})
+    assert result["added"] == ["viewer@cbmentors.org"]
+    assert result["driveMembers"] == []
 
 
 async def test_create_permission_classifies_the_no_google_account_400():
