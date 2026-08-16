@@ -4,6 +4,35 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.200.0] — 2026-08-16
+
+**feat(events): Phase 6d (EV-42) — backfill the YouTube playlist into past
+events.** `scripts/import_youtube_events.py`, dry-run by default, `--write` to
+apply. No app change; nothing runs unless someone runs it.
+
+- Each playlist video becomes a **past** `CEvent` carrying the recording link,
+  so the recorded library can be served from the CRM like everything else.
+- **Imported events arrive UNPUBLISHED**, and that is the design, not a
+  precaution. A video's upload date is not the event date (R-6) — often days
+  later, sometimes years if the archive went up in a batch. Importing published
+  would put wrong dates in front of visitors for as long as the review takes;
+  importing dark means a human checks the date and topic, then publishes.
+- **Idempotent**: a video whose id already appears in some event's
+  `recordingUrl` is skipped, so a re-run after a partial failure adds only what
+  is missing. A playlist that lists the same video twice yields one event.
+- **A video id the URL helpers refuse is skipped**, rather than creating an
+  event with no `recordingUrl` — which could never appear in the library and
+  would have to be found and deleted by hand.
+- Slugs are allocated against both the existing events and the ones being
+  created in the same pass, so a batch of same-titled recordings can't collide.
+
+**Verified:** 9 new tests over the pure planning functions — existing links
+recognised, duplicates skipped both ways, slug collisions avoided, nothing
+published, unusable ids ignored, and the payload shape including the required
+`dateEnd`. Full suite 1682 green. **Not run against the real playlist** — it
+needs `YOUTUBE_API_KEY` and `YOUTUBE_PLAYLIST_ID`, neither of which is set on
+any deployment.
+
 ## [0.199.1] — 2026-08-16
 
 **feat(events): EV-71 — a person's event history on the contact record.** The
