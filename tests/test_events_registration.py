@@ -8,6 +8,8 @@ a registration because Zoom had a bad minute.
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 import pytest
 
 from events import config as cfg
@@ -130,8 +132,16 @@ async def test_closed_registration_is_refused_readably():
 
 
 async def test_a_full_event_is_NOT_refused():
-    """Being full means waitlisted, not turned away (EV-15)."""
-    crm = FakeCrm(events=[make_event(venueCapacity=1)])
+    """Being full means waitlisted, not turned away (EV-15).
+
+    The date is relative on purpose: registration closes at ``dateStart``, so
+    the shared fixture's fixed 2026-07-28 made this test start failing the day
+    it passed rather than testing capacity at all.
+    """
+    upcoming = (datetime.now(timezone.utc) + timedelta(days=30)).strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
+    crm = FakeCrm(events=[make_event(venueCapacity=1, dateStart=upcoming)])
     assert await check_open(crm, "grant-writing-basics")  # no raise
 
 

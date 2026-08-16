@@ -181,15 +181,6 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Other follow-ups
 
-7. **`tests/test_events_registration.py::test_a_full_event_is_NOT_refused` fails
-   on a date roll** (found 2026-08-13). The only failing test in the suite, and
-   it is not tied to any recent change — it fails identically against a clean
-   tree. `make_event()` builds a fixture whose date has now passed, so
-   `registration_open()` refuses it and the "full means waitlisted, not turned
-   away" assertion (EV-15) never gets to run. The behaviour under test is fine;
-   the fixture needs a relative future date rather than a fixed one. Until then
-   the suite has a permanent red line, which is how a real failure gets missed.
-
 6. **Re-save the session whose notes were lost to the pasted-image failure**
    (found 2026-07-24, fixed in v0.148.0). Prod CSession `6a604b7b26efd8e3f`:
    the 04:37 UTC save 500'd in the CRM ("Data too long for column
@@ -342,6 +333,16 @@ block a deploy.)*
     assigned to an unlinked profile are invisible in the session tools.
 
 ## Resolved
+
+- **`test_a_full_event_is_NOT_refused` failed on a date roll** (was item 7,
+  found 2026-08-13). The shared `make_event()` fixture hard-codes
+  `dateStart: 2026-07-28`, and registration closes at `dateStart`, so from that
+  date on the event was refused as closed and the EV-15 "full means waitlisted"
+  assertion never ran — the suite's only red line, and a permanent one.
+  **Resolved 2026-08-16:** that test now builds its own event 30 days out
+  rather than inheriting the fixed date, so it tests capacity again and cannot
+  rot. The shared fixture keeps its fixed date, which the date-formatting tests
+  depend on.
 
 - **Company links were one-to-one, so a second record silently stole the
   company** (was item 00) — `Account.cCompanyPartnerProfile` and
