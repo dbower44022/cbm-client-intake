@@ -181,6 +181,15 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Other follow-ups
 
+7. **`tests/test_events_registration.py::test_a_full_event_is_NOT_refused` fails
+   on a date roll** (found 2026-08-13). The only failing test in the suite, and
+   it is not tied to any recent change — it fails identically against a clean
+   tree. `make_event()` builds a fixture whose date has now passed, so
+   `registration_open()` refuses it and the "full means waitlisted, not turned
+   away" assertion (EV-15) never gets to run. The behaviour under test is fine;
+   the fixture needs a relative future date rather than a fixed one. Until then
+   the suite has a permanent red line, which is how a real failure gets missed.
+
 6. **Re-save the session whose notes were lost to the pasted-image failure**
    (found 2026-07-24, fixed in v0.148.0). Prod CSession `6a604b7b26efd8e3f`:
    the 04:37 UTC save 500'd in the CRM ("Data too long for column
@@ -251,6 +260,21 @@ block a deploy.)*
 20. **Everything through v0.187.0 is DEPLOYED to both environments** (verified
     2026-07-28; only docs commits are unpushed). What is owed is the *live
     eyeball*, not a deploy. Never driven against the live CRM/Gmail/Drive:
+    - **Address paste-parsing (v0.196.0)** — built and tested locally
+      (2026-08-13), **not yet deployed**, and there is no flag: the module is
+      inert unless a page loads it, so per-surface wiring is the rollout
+      control. Verified against a faithful replica of each form shape in a
+      browser, NOT against the real pages. What is owed is one live pass on the
+      **session tools' Details tab** — the only surface where a State
+      `<select>`, disabled shipping inputs and the "Same as billing" mirror are
+      all in play at once. Paste a full address into Company **billing** line 1
+      with *Same as billing* ticked and confirm shipping mirrors; paste a
+      spelled-out state (`Ohio`) and confirm the `<select>` takes `OH`; click
+      **Undo** and confirm every box returns, then Save and confirm the CRM
+      stored what the boxes showed. Glance at the other five surfaces
+      (`/mentoradmin`, `/mentorprofile`, `/directory` edit, volunteer,
+      client intake) while you are there. Guide: `address-paste.md`;
+      plan: `prds/address-paste-parsing-plan.md`.
     - **Quick add — "+ Add partner" / "+ Add funder" (v0.195.0)** — deployed to
       both environments; `RECORD_QUICK_ADD` gates it and `/setup` can now toggle
       it on either. **The UI is reviewed and signed off** (2026-08-12); what is
