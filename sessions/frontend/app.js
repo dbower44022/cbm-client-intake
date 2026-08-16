@@ -4477,7 +4477,11 @@
       var cancel = document.createElement("button"); cancel.type = "button"; cancel.className = "cbm-button cbm-button--secondary"; cancel.textContent = "Cancel";
       cancel.addEventListener("click", doCancel);
       var save = document.createElement("button"); save.type = "button"; save.className = "cbm-button"; save.textContent = "Save changes";
-      save.disabled = true;
+      // NEVER disabled on a clean form (the standing rule, and Doug's 2026-08-16
+      // report: opening the Company card and pressing Save did nothing, reading
+      // as an unresponsive app). Save on an unchanged form is a legitimate
+      // action — it means "I'm done here" — and savePanel closes the panel
+      // without a CRM write. Only the in-flight disable below remains.
       save.addEventListener("click", doSave);
       row.appendChild(status); row.appendChild(cancel); row.appendChild(save);
       saveBtns.push(save); statusEls.push(status);
@@ -4501,7 +4505,8 @@
         if (dirty) { n++; dirtyVals[el.dataset.field] = v; }
       });
       var label = n ? n + (n === 1 ? " field" : " fields") + " changed" : "No changes yet";
-      saveBtns.forEach(function (b) { b.disabled = !n; });
+      // The status text carries "how much will be written"; the button stays
+      // clickable either way (see actionsRow).
       statusEls.forEach(function (s) { s.textContent = label; });
       if (n) saveEditDraft(dkey, dirtyVals); else clearEditDraft(dkey);
     }

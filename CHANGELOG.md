@@ -4,6 +4,27 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.201.1] — 2026-08-16
+
+**fix(sessions): Save on an unchanged Details panel closes it instead of doing
+nothing.** Doug's report: open a partner → Details → Edit the Company card →
+press **Save changes**, and nothing happens — the app reads as unresponsive.
+The button was created `disabled` and only enabled once the form was dirty, so
+the click was silently ignored.
+
+- That is the **buttons-are-never-disabled** standing rule, broken in the one
+  place it is most confusing: a form with a visible Save that refuses to
+  respond gives the user no way to tell a no-op from a hang.
+- `panelEditForm` no longer disables Save, and the dirty scan no longer toggles
+  it — the "No changes yet" / "N fields changed" status still narrates what a
+  save would write. The in-flight disable during the request stays (transient
+  disables are explicitly allowed).
+- Saving a clean form was already handled correctly by `savePanel`: it closes
+  the panel and writes nothing. So Save on an unchanged form now means "I'm
+  done here" and costs no CRM call.
+- Applies to every Details panel — the record strip, the Company / profile
+  cards and each contact row — not just the Company card where it was found.
+
 ## [0.201.0] — 2026-08-16
 
 **feat(events): Phase 6b — follow-up email (EV-60…EV-64).** Off by default and
