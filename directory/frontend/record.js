@@ -212,7 +212,49 @@
       renderComms();
     }
     if (key === "contacts") renderContacts();
+    if (key === "events") renderEventHistory();
     if (key === "analytics") renderAnalytics();
+  }
+
+  // ---- events tab (EV-71 — this person's CBM event history) ----------------
+  // Served by the directory's own endpoint, not /events/api: that app is gated
+  // to the Marketing Admin Team while this page is read by the Mentor Team.
+  var evtLoaded = false;
+
+  async function renderEventHistory() {
+    if (evtLoaded) return;
+    evtLoaded = true;
+    hide($("crEvtNotice")); hide($("crEvtTable")); hide($("crEvtEmpty"));
+    show($("crEvtLoading"));
+    try {
+      var res = await api("/records/" + encodeURIComponent(RECORD_ID) + "/events");
+      var rows = res.events || [];
+      var body = $("crEvtBody");
+      body.innerHTML = "";
+      rows.forEach(function (r) {
+        var tr = document.createElement("tr");
+        function cell(text) {
+          var td = document.createElement("td");
+          td.textContent = text == null || text === "" ? "—" : text;
+          tr.appendChild(td);
+        }
+        cell(r.dateLabel);
+        cell(r.title);
+        cell(r.category);
+        // The status IS the outcome — "Registered" on a past event means they
+        // never showed and attendance was never resolved, which is worth seeing.
+        cell(r.status);
+        cell(r.minutesAttended == null ? "" : String(r.minutesAttended));
+        body.appendChild(tr);
+      });
+      if (rows.length) { show($("crEvtTable")); hide($("crEvtEmpty")); }
+      else { hide($("crEvtTable")); show($("crEvtEmpty")); }
+    } catch (e) {
+      evtLoaded = false;      // let a retry happen on the next visit
+      var n = $("crEvtNotice");
+      n.textContent = e.message;
+      show(n);
+    } finally { hide($("crEvtLoading")); }
   }
 
   // ---- analytics tab (this contact's dashboard, from the analytics app) -----
@@ -1560,6 +1602,10 @@
     });
     // The Analytics tab only exists where analytics is switched on.
     if (session && session.analyticsEnabled) $("crAnaTab").hidden = false;
+    // Only a Contact has an event history, and only when Events is on.
+    if (session && session.eventsEnabled && !session.companyPage) {
+      $("crEventsTab").hidden = false;
+    }
     // Communications is contact-scoped (per-contact conversations). Company
     // records don't carry it — talk to their people instead.
     if (!(session && session.contactPage)) {

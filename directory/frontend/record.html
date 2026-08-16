@@ -43,6 +43,7 @@
         <button type="button" class="cr__tab is-active" data-crtab="overview">Overview</button>
         <button type="button" class="cr__tab" data-crtab="contacts" id="crContactsTab" hidden>Contacts</button>
         <button type="button" class="cr__tab" data-crtab="communications">Communications</button>
+        <button type="button" class="cr__tab" data-crtab="events" id="crEventsTab" hidden>Events</button>
         <button type="button" class="cr__tab" data-crtab="analytics" id="crAnaTab" hidden>Analytics</button>
       </nav>
 
@@ -50,6 +51,26 @@
 
       <div class="cr__panel" data-crpanel="overview">
         <div id="crOverviewBody"></div>
+      </div>
+
+      <!-- Events (EV-71): every CBM event this person registered for, newest
+           first, with what actually happened. Read-only. -->
+      <div class="cr__panel" data-crpanel="events" hidden>
+        <p class="dir__notice" id="crEvtNotice" role="status" hidden></p>
+        <p class="cr__loading" id="crEvtLoading" hidden>Loading…</p>
+        <table class="dir__table" id="crEvtTable" hidden>
+          <thead><tr>
+            <th scope="col">Date</th>
+            <th scope="col">Event</th>
+            <th scope="col">Topic</th>
+            <th scope="col">Outcome</th>
+            <th scope="col">Minutes</th>
+          </tr></thead>
+          <tbody id="crEvtBody"></tbody>
+        </table>
+        <p class="dir__muted" id="crEvtEmpty" hidden>
+          This person has not registered for a CBM event.
+        </p>
       </div>
 
       <!-- Contacts: the people at this company (name/phone/email). Select a

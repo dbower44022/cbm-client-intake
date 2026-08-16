@@ -117,6 +117,7 @@ def make_router(cfg: DirectoryConfig) -> APIRouter:
             # True => the record page shows an Analytics tab rendering this
             # record's dashboard from the analytics app (Phase E).
             "analyticsEnabled": get_settings().analytics_active,
+            "eventsEnabled": get_settings().events_active,
         }
 
     @router.post("/logout")
@@ -173,6 +174,28 @@ def make_router(cfg: DirectoryConfig) -> APIRouter:
             return await service.detail(client, DIRECTORIES["contacts"], contact_id, user.get("userId"))
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not load the contact")
+
+    @router.get("/records/{record_id}/events")
+    async def record_events(record_id: str, request: Request) -> dict:
+        """EV-71 — this person's CBM event history.
+
+        Served by the DIRECTORY router, not the events app: /events/api is gated
+        to the Marketing Admin Team, and the people who read a contact record are
+        the Mentor Team. Same computation (events.reporting.contact_history), the
+        gate that fits the page. Empty (never an error) when Events is off, so
+        the panel simply stays hidden.
+        """
+        user = _require_user(request)
+        settings = get_settings()
+        if not settings.events_active:
+            return {"events": [], "enabled": False}
+        client = client_for(settings, user)
+        from events.reporting import contact_history
+
+        try:
+            return {"events": await contact_history(client, record_id), "enabled": True}
+        except EspoError as exc:
+            raise _crm_failure(request, exc, "Could not load the event history")
 
     if cfg.mentor_page:
         # The rich read-only mentor profile page (its own browser tab). The

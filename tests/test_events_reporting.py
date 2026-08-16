@@ -187,3 +187,29 @@ def test_the_events_reports_view_exists():
     assert 'id="reportsPanel"' in html
     assert "/reports/program" in js
     assert "/reports/conversion" in js
+
+
+def test_contact_event_history_is_served_by_the_directory_not_the_events_app():
+    """EV-71 lives on the directory contact page, whose readers are the Mentor
+    Team — but /events/api is gated to the Marketing Admin Team. Serving it from
+    the directory router keeps the computation shared and the gate correct."""
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    router = (root / "directory" / "router.py").read_text()
+    assert '"/records/{record_id}/events"' in router
+    assert "from events.reporting import contact_history" in router
+    # Events off must be an empty panel, never an error.
+    assert 'return {"events": [], "enabled": False}' in router
+
+
+def test_contact_event_history_frontend_is_wired():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    html = (root / "directory" / "frontend" / "record.html").read_text()
+    js = (root / "directory" / "frontend" / "record.js").read_text()
+    assert 'data-crpanel="events"' in html and 'id="crEventsTab"' in html
+    assert 'key === "events"' in js and "function renderEventHistory(" in js
+    # The tab appears only for a Contact, and only when Events is on.
+    assert "session.eventsEnabled" in js and "!session.companyPage" in js

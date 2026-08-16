@@ -4,6 +4,33 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.199.1] — 2026-08-16
+
+**feat(events): EV-71 — a person's event history on the contact record.** The
+last piece of Phase 6c. The endpoint existed since v0.194.0 with nothing calling
+it.
+
+- An **Events tab** on the directory Contact record page: every CBM event that
+  person registered for, newest first, with date, event, topic, outcome and
+  minutes attended. The outcome column shows the raw status on purpose — a past
+  event still reading *Registered* means attendance was never resolved, which is
+  worth seeing rather than smoothing away.
+- **Served by the directory router, not the events app.** `/events/api` is gated
+  to the Marketing Admin Team; the people who read a contact record are the
+  Mentor Team, so calling the events endpoint from this page would have 403'd
+  for its actual audience. Same computation (`events.reporting.contact_history`),
+  the gate that fits the page.
+- The tab appears only for a **Contact** (not the Company record page) and only
+  when Events is enabled; with the feature off the endpoint returns an empty,
+  successful payload so the panel stays hidden rather than erroring.
+
+**Verified:** 2 new tests (the endpoint is on the directory router with the
+shared computation and an empty-not-error path when Events is off; the tab,
+panel and renderer are wired and gated). Full suite 1673 green.
+
+**Phase 6c is now complete** — EV-70 (per-event counts) already existed, EV-71,
+EV-72 and EV-73/74 are built with their frontends.
+
 ## [0.199.0] — 2026-08-16
 
 **feat(events): Phase 6c frontend — the Events tab and the programme reports.**
