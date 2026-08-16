@@ -118,6 +118,22 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Smaller follow-ups from the 2026-07-24 partner migration
 
+**Not defects — Doug's ruling 2026-08-16.** The audit that came out of the
+company-link work flagged three prod records as incomplete. They are
+*accurately* incomplete, and are to be left alone:
+- **The Villages- Sheffield** (partner) has no company because **CBM has no
+  company for them yet** — not because the link was lost.
+- **key Bank** (funder) has no company and no manager assigned because **the
+  manager isn't known yet**.
+- **Fatherhood Initiative - Cuyahoga County** has no partner manager (item 2
+  below), which stays open for a different reason: its crm-test manager has no
+  prod mentor profile to point at.
+
+Do not re-raise the first two as data errors, and do not "repair" them — an
+empty company on a partner/funder now renders as "—" and is fixable in the app
+(v0.198.0) whenever the real information arrives.
+
+
 2. **Fatherhood Initiative – Cuyahoga County has no partner manager on prod**
    — its crm-test manager (Tom Mendelsohn) has no prod CMentorProfile. Assign
    an owner in Partner Management / the CRM. **Since v0.197.0 this is doable in
@@ -247,6 +263,18 @@ block a deploy.)*
     than silent loss ([[prod-ccommunication-field-length-drift]]).
 
 ## Live verification owed
+
+19b. **The v0.198.0 Company picker's CREATE path has never run as a non-admin**
+    (2026-08-16). "+ New company" creates the Account through the **intake API
+    client** on purpose, because the partner/funder gate roles don't hold
+    `Account` create — so an admin test proves nothing (admins bypass ACL). It
+    was going to be discharged by repairing the two company-less records, but
+    Doug ruled those stay as they are (see the partner-migration follow-ups
+    below), so nothing is scheduled to exercise it. **It will be verified the
+    first time a real manager adds a company from the Details tab** — if that
+    403s, the fallback to the API client is not working and the button fails for
+    exactly the users it was built for. Everything else about the picker is
+    verified (server payload, save-diff, end-to-end in the preview harness).
 
 20. **Everything through v0.187.0 is DEPLOYED to both environments** (verified
     2026-07-28; only docs commits are unpushed). What is owed is the *live
