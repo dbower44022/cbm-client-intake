@@ -682,6 +682,15 @@ and **6** are built; **Phase 4 (WordPress plugin + cutover) is the only one left
   event), the contact **Events tab** in the directory, and programme + conversion
   reports in `/events`. Conversion counts an attendee only when their engagement
   postdates their first attended event.
+- **Registration recognition is designed, not built** —
+  `prds/events/CBM_Events_Registration_Recognition_Plan.md` (Doug's rulings
+  2026-08-17): recognise a returning registrant by a signed device token, else
+  by an email-first lookup that **registers them and echoes nothing** (a public
+  page that returns what we know is a harvester), else the normal form; a
+  signed-in member is recognised through a **redirect handoff**, never by
+  loosening the staff session cookie. CBM sends its own confirmation email.
+  Prerequisite and live defect: the near-duplicate hold holds a person's *second
+  webinar of the day* (`OPEN-ITEMS.md` 19f).
 - **Phase 6d** `scripts/import_youtube_events.py` — playlist backfill, dry-run by
   default, importing **unpublished** because an upload date is not an event date.
   Never run against the real playlist.

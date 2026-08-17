@@ -265,6 +265,18 @@ block a deploy.)*
     - Both need `ANALYTICS_ENABLED`; record-scoped metrics always run live as
       the user, so an empty panel means the metric found nothing, not a cache.
 
+19f. **Event registration holds a person's SECOND webinar of the day for staff
+    review** (found 2026-08-17). `_recent_duplicate_id` matches on form slug +
+    email inside `duplicate_hold_seconds` (24h), and event registration rides
+    the shared pipeline, so registering for two different events on one day
+    captures the second as `held_duplicate` — never delivered, no Zoom
+    registration, and the visitor sees a normal thank-you. The guard is right
+    for client-intake (a re-filled form used to strip links off the first client
+    profile) and wrong here. Fix and rationale:
+    `prds/events/CBM_Events_Registration_Recognition_Plan.md`. Not urgent while
+    `EVENTS_PUBLIC_API` is crm-test-only, but it must land **before** the
+    website cutover.
+
 19d. **The events sign-up modal's consent line under-covers what `consent: true`
     writes** (2026-08-16, v0.203.0). The line copied from the live page —
     *"By registering, you are agreeing to receive emails about our webinars"* —
