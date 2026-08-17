@@ -171,6 +171,27 @@ def test_clean_changes_passes_link_id_and_clears_on_empty():
 
 
 # --- build_details: the option list -----------------------------------------
+# EspoCRM refuses maxSize over its recordListMaxSizeLimit with a 403 — it does
+# NOT truncate. Every fake list() below enforces that, so a caller that asks for
+# one oversized page fails the test instead of failing silently in production.
+
+_CRM_MAX_SIZE = 200
+
+
+def _enforce_max_size(kw):
+    if kw.get("max_size", 50) > _CRM_MAX_SIZE:
+        raise EspoError(
+            "list failed: HTTP 403 [Max size should not exceed "
+            f"{_CRM_MAX_SIZE}. Use offset and limit.]"
+        )
+
+
+def _page(rows, kw):
+    """The ``{"total", "list"}`` envelope for one page of ``rows``."""
+    offset = kw.get("offset", 0)
+    size = kw.get("max_size", 50)
+    return {"total": len(rows), "list": rows[offset : offset + size]}
+
 
 class _Fake:
     def __init__(self, *, partners=None, forbid_partner_list=False):
@@ -188,11 +209,15 @@ class _Fake:
         return {"id": record_id, "name": "Rec " + record_id}
 
     async def list(self, entity, **kw):
+        # EspoCRM's real limit. The fake used to accept any maxSize, which is
+        # how a hard-coded 500 shipped and left every picker empty — a 403 the
+        # best-effort handler swallowed. Enforcing it here is the guard.
+        _enforce_max_size(kw)
         if entity == "CPartnerProfile":
             if self._forbid:
                 raise EspoError("list CPartnerProfile failed: HTTP 403 forbidden")
-            return {"list": self._partners}
-        return {"list": []}
+            return _page(self._partners, kw)
+        return {"list": [], "total": 0}
 
     async def list_related(self, entity, record_id, link, **kw):
         return {"list": []}
@@ -215,6 +240,51 @@ async def test_build_details_link_options_best_effort_on_403():
     fake = _Fake(forbid_partner_list=True)
     res = await details.build_details(MENTOR, fake, "E1", user_id="u1")
     assert "linkOptions" not in res  # picker degrades read-only; tab still loads
+
+
+# --- the option list is PAGED --------------------------------------------
+# Doug's report, 2026-08-16: "the company drop down only shows (none), and there
+# is no way to select an existing company." The options were fetched in ONE page
+# of 500, which EspoCRM rejects outright (403 "Max size should not exceed 200"),
+# and the best-effort handler turned that into "no options" for every picker on
+# every domain — companies AND managers, for every user including admins.
+
+
+class _PagingClient:
+    """Counts pages so an oversized single request can't creep back in."""
+
+    def __init__(self, rows):
+        self._rows = rows
+        self.calls = []
+
+    async def list(self, entity, **kw):
+        _enforce_max_size(kw)
+        self.calls.append((kw.get("offset", 0), kw.get("max_size")))
+        return _page(self._rows, kw)
+
+
+@pytest.mark.asyncio
+async def test_link_options_pages_within_the_crm_limit():
+    rows = [{"id": f"A{i}", "name": f"Company {i:03d}"} for i in range(250)]
+    client = _PagingClient(rows)
+    got = await details._link_options(client, "Account")
+    assert len(got) == 250                      # nothing lost to the page size
+    assert got[0] == {"id": "A0", "name": "Company 000"}
+    assert [c[1] for c in client.calls] == [200, 200]   # never over the limit
+    assert [c[0] for c in client.calls] == [0, 200]     # and it walked the offset
+
+
+@pytest.mark.asyncio
+async def test_link_options_stops_on_a_short_page():
+    """One page covers today's ~97 companies — don't ask for a second."""
+    client = _PagingClient([{"id": "A1", "name": "Acme"}])
+    assert len(await details._link_options(client, "Account")) == 1
+    assert len(client.calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_link_options_page_size_stays_within_the_crm_limit():
+    assert details._OPTIONS_PAGE <= _CRM_MAX_SIZE
 
 
 # --- create_company: the picker's "+ New company" ----------------------------

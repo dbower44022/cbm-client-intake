@@ -4,6 +4,31 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.202.2] — 2026-08-16
+
+**fix(sessions): every curated link picker was empty — the option list asked
+EspoCRM for a page size it refuses.** Doug: "the company drop down only shows
+(none), and there is no way to select an existing company." Yes, it should list
+every company the user can read — it never did, for anyone.
+
+- `build_details` fetched the options with `maxSize=500`. EspoCRM does not
+  truncate an oversized page, it **403s**: *"Max size should not exceed 200. Use
+  offset and limit."* The best-effort `except EspoError` — there so a forbidden
+  list degrades the picker instead of breaking the tab — swallowed it, and the
+  payload simply carried no options.
+- So this hit **every picker on every domain for every user, admins included**:
+  Company, Partner manager, Funder manager and the engagement's Referring
+  partner. A picker with a value still showed that value (the frontend
+  re-inserts the stored record so a save can't drop it), which is why it looked
+  like it worked until someone tried to *change* one.
+- Options are now **paged** at the CRM's limit (`_OPTIONS_PAGE = 200`, ceiling
+  2000) and walked by offset until complete. Verified against live crm-test: 93
+  Accounts, 44 mentor profiles, 16 partner profiles — all previously zero.
+- The regression guard is in the fakes: every test client now raises the real
+  403 when `max_size` exceeds 200, so a caller that asks for one oversized page
+  fails the suite. Restoring the 500 fails four tests.
+- Nothing else in the codebase asks for more than 200 in a page (swept).
+
 ## [0.202.1] — 2026-08-16
 
 **fix(sessions): a partner with no company showed nothing about Company, so the

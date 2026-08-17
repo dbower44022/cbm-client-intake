@@ -205,6 +205,50 @@ def _select_for(spec: list[dict[str, Any]], raw: dict[str, Any], extra: tuple[st
     return ",".join(dict.fromkeys(fields))
 
 
+#: EspoCRM rejects a list request whose ``maxSize`` exceeds its
+#: ``recordListMaxSizeLimit`` — **403 "Max size should not exceed 200"**, not a
+#: truncated result. Asking for 500 in one go is why every curated link picker
+#: offered nothing but "(none)": the 403 was swallowed by the best-effort
+#: ``except EspoError`` and the options were simply omitted. So the options are
+#: PAGED at the limit. Keep this at or below 200 unless the CRM setting is
+#: raised on BOTH environments.
+_OPTIONS_PAGE = 200
+#: Ceiling across all pages — a picker is a dropdown, not a directory. A list
+#: longer than this is logged and truncated rather than stalling the tab.
+_OPTIONS_MAX = 2000
+
+
+async def _link_options(client: SessionClient, entity: str) -> list[dict[str, Any]]:
+    """Every ``entity`` record the USER can read, as ``{id, name}``, alphabetical.
+
+    Paged, because one big page is refused outright (see ``_OPTIONS_PAGE``).
+    """
+    rows: list[dict[str, Any]] = []
+    total: Optional[int] = None
+    while len(rows) < _OPTIONS_MAX:
+        data = await client.list(
+            entity, select="name", order_by="name",
+            max_size=_OPTIONS_PAGE, offset=len(rows),
+        )
+        page = data.get("list", [])
+        if isinstance(data.get("total"), int):
+            total = data["total"]
+        rows.extend(page)
+        if len(page) < _OPTIONS_PAGE:
+            break
+        if total is not None and len(rows) >= total:
+            break
+    # A truncated list silently hides records from the picker, and Accounts grow
+    # with every intake — say so in the log rather than let it look like a
+    # missing company. (Live counts 2026-08-16: 97 on prod, 93 on crm-test.)
+    if total is not None and total > len(rows):
+        log.warning(
+            "link-picker options for %s truncated: showing %s of %s",
+            entity, len(rows), total,
+        )
+    return [{"id": r["id"], "name": r.get("name")} for r in rows]
+
+
 def _section(
     title: str, entity: str, rec: dict[str, Any], spec: list[dict[str, Any]],
     editable: bool, extra: tuple[str, ...] = (),
@@ -372,21 +416,7 @@ async def build_details(
         options: dict[str, list[dict[str, Any]]] = {}
         for entity in sorted(link_entities):
             try:
-                data = await client.list(entity, select="name", order_by="name", max_size=500)
-                rows = data.get("list", [])
-                total = data.get("total")
-                # A truncated list silently hides records from the picker, and
-                # Accounts grow with every intake — say so in the log rather than
-                # let it look like a missing company. (Live counts 2026-08-16:
-                # 97 on prod, 93 on crm-test.)
-                if isinstance(total, int) and total > len(rows):
-                    log.warning(
-                        "link-picker options for %s truncated: showing %s of %s",
-                        entity, len(rows), total,
-                    )
-                options[entity] = [
-                    {"id": r["id"], "name": r.get("name")} for r in rows
-                ]
+                options[entity] = await _link_options(client, entity)
             except EspoError as exc:
                 log.warning("link-picker options for %s unavailable: %s", entity, exc)
         if options:
