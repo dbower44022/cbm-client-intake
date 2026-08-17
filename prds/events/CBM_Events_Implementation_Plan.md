@@ -273,6 +273,21 @@ provide that endpoint. This would have shipped as a wall of black boxes.
    desktop comparison is already done — see the preview note above.)*
 3. Freeze new events in the Apps Script; create the same events in the app.
 4. Swap the page's widgets to the shortcodes. Watch for one event cycle.
+4a. **Widen the section if the panels are to fill the screen** (Doug,
+   2026-08-17). The two panels are boxed today because their Elementor
+   container is set to *Boxed*: container `0c167db` carries `e-con-boxed`, and
+   its `.e-con-inner` computes to `max-width: min(100%, 1140px)`, which is what
+   pins each panel at 560px however wide the monitor is. Edit the page in
+   Elementor, select **that container** (the one holding both HTML widgets, not
+   a widget), and on **Layout → Content Width** either switch to **Full Width**
+   or raise the boxed width — 1600px keeps the panels in line with the rest of
+   the page, Full Width does not. **This is a page setting, not a plugin
+   setting**: do not have the plugin's stylesheet override an ancestor's
+   max-width, because a rule reaching up out of the widget breaks the day
+   Elementor changes its markup, and it takes the section's layout away from
+   whoever is editing the page. Note also that the `1140` is Elementor's global
+   content width — changing it in Site Settings would re-lay-out the whole
+   site, which is not what this asks for.
 5. Keep the Apps Script deployed but idle for a rollback window, then retire it
    and **rotate the exposed YouTube API key** (R-7).
 
