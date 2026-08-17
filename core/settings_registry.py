@@ -189,6 +189,9 @@ SETTINGS: tuple[SettingSpec, ...] = (
        kind="int", unit="s", component="worker", help="0 disables the nightly job."),
     _s("google_delegated_admin", GROUP_INTEGRATIONS, "Delegated Workspace admin",
        component="both", help="Must be a real licensed mailbox — a group or alias 403s."),
+    _s("google_members_group", GROUP_INTEGRATIONS, "All Members group",
+       help="Google Group a mentor's new mailbox joins when their account is created. "
+            "Blank skips the group step. Needs the Directory group scope."),
     _s("zoom_host_email", GROUP_INTEGRATIONS, "Zoom host", component="both"),
     _s("zoom_base_url", GROUP_INTEGRATIONS, "Zoom API base URL", component="both"),
     _s("fathom_base_url", GROUP_INTEGRATIONS, "Fathom API base URL", component="worker"),

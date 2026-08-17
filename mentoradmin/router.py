@@ -24,6 +24,7 @@ from assignments.auth import (
     session_expired,
 )
 from assignments.espo_user import client_for
+from core import action_log
 from core.admin_client import admin_client_factory
 from core.app_config import make_app_config_store
 from core.config import Settings, get_settings
@@ -57,6 +58,9 @@ class GoogleSetupIn(BaseModel):
     delegated_admin: str = ""
     directory_check: bool = True
     create_mailbox: bool = False
+    # The "All Members" Google Group a new mentor mailbox joins. Blank = skip the
+    # group step (the address is its own switch — there is no flag).
+    members_group: str = ""
 
 
 def _require_user(request: Request) -> dict:
@@ -153,12 +157,16 @@ async def mentor_status_check(request: Request) -> dict:
     """"Update Mentor Status" — verify every mentor's login User + mailbox.
 
     Sweeps the roster and reports, per mentor, whether the linked EspoCRM
-    login User actually exists (and is active) and whether the
-    ``@cbmentors.org`` mailbox exists in Google Workspace; also re-syncs the
-    stored recordStatus from live completeness. The User reads run as the
-    provisioning admin when that account is configured (regular staff can't
-    read Users); the mailbox check reports ``unavailable`` until the Google
-    Directory integration is configured in Email Setup.
+    login User actually exists (and is active), whether the ``@cbmentors.org``
+    mailbox exists in Google Workspace, and whether that mailbox is in the All
+    Members group; also re-syncs the stored recordStatus from live completeness.
+    The User reads run as the provisioning admin when that account is configured
+    (regular staff can't read Users); the mailbox and group checks report
+    ``unavailable`` until the Google Directory integration (and a group address)
+    is configured in Email Setup.
+
+    It **reports only** — nothing is created here, because creating a mailbox
+    yields a temporary password a human has to relay.
     """
     user = _require_user(request)
     settings = get_settings()
@@ -184,11 +192,17 @@ async def mentor_status_check(request: Request) -> dict:
 
     try:
         rows = await service.verify_all_mentor_statuses(
-            client, user_client=user_client, directory=directory
+            client, user_client=user_client, directory=directory,
+            members_group=google.members_group,
         )
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not verify mentor statuses")
-    return {"mentors": rows, "mailboxCheckEnabled": directory is not None}
+    return {
+        "mentors": rows,
+        "mailboxCheckEnabled": directory is not None,
+        "groupCheckEnabled": bool(directory is not None and google.members_group),
+        "membersGroup": google.members_group,
+    }
 
 
 @router.get("/fields")
@@ -595,10 +609,67 @@ def _sse(event: dict[str, Any]) -> str:
     return f"data: {json.dumps(event)}\n\n"
 
 
+async def _log_provision(
+    client: Any, user: dict, mentor_id: str, status: Any, outcome: dict[str, Any]
+) -> None:
+    """Record a provisioning run in the action history (stream note + CActionLog).
+
+    Worth logging even though EspoCRM has its own history: this flow creates a
+    Google account, adds it to a group, and at ``Accepted-Provisional`` changes
+    the mentor's status — and a status change made by the app is
+    indistinguishable from a hand edit in EspoCRM's history.
+
+    **The temporary password is stripped**: it is relayed to the mentor through
+    the browser, never written to a CRM record or a stream note.
+    """
+    result = dict(outcome.get("result") or {})
+    if result.get("skipped"):
+        return  # nothing happened (the mentor already had a login)
+    result.pop("tempPassword", None)
+    email_only = status in service.EMAIL_STATUSES
+    error = outcome.get("error")
+    if email_only:
+        action = action_log.ACT_MAILBOX_PROVISIONED
+        what = f"Email account {result.get('email') or ''}".strip()
+        if result.get("statusAdvanced"):
+            what += f" created; status moved to {service.STATUS_PROVISIONAL}"
+        elif result.get("mailboxCreated"):
+            what += " created"
+        else:
+            what += " confirmed"
+    else:
+        action = action_log.ACT_LOGIN_PROVISIONED
+        what = f"CRM login {result.get('userName') or result.get('email') or ''}".strip()
+        what += " linked" if result.get("reused") else " created"
+    summary = f"{what}." if not error else f"{what} — did not complete: {error}"
+    try:
+        await action_log.record_action(
+            client, app="Mentor Administration",
+            category=action_log.CAT_PROVISIONING, action=action,
+            parent_type=service.MENTOR_PROFILE, parent_id=mentor_id,
+            summary=summary,
+            actor_id=user.get("userId", ""), actor_name=user.get("name", ""),
+            details=result, outcome="Failure" if error else "Success",
+        )
+    except Exception as exc:  # noqa: BLE001 — history must never break the stream
+        log.warning("could not record the provisioning action for %s: %s", mentor_id, exc)
+
+
 @router.post("/mentors/{mentor_id}/provision")
 async def mentor_provision(mentor_id: str, request: Request) -> StreamingResponse:
-    """Provision the mentor's CBM mailbox + EspoCRM login, streaming a status
-    event per step (Server-Sent Events) to drive the live status window."""
+    """Provision the mentor, streaming a status event per step (Server-Sent
+    Events) to drive the live status window.
+
+    **Which** of the two provisioning events runs is decided here, from the
+    mentor's own status, so the state machine lives in one place and the frontend
+    only has to ask (see ``service.STATUS_*``):
+
+    * ``Accepted-Provisional`` → the Google Workspace account + the All Members
+      group, then advance the record to ``Provisional``. No EspoCRM login.
+    * ``Provisional`` → the same account steps as a recovery run (they should
+      already have one), with no status write.
+    * ``Approved`` / ``Active`` → the mailbox check plus the EspoCRM login.
+    """
     settings = get_settings()
     user = _require_user(request)
     client = client_for(settings, user)
@@ -620,13 +691,11 @@ async def mentor_provision(mentor_id: str, request: Request) -> StreamingRespons
         if factory is None:
             yield _emit(service._step(
                 "login", "error",
-                "Mentor login provisioning is turned off on this server. An "
+                "Mentor provisioning is turned off on this server. An "
                 "administrator must enable it (MENTOR_PROVISION_USERS + a service "
                 "account).",
             ))
             return
-        # Idempotency: skip a mentor that already has a login, or one not at an
-        # approval status (the button is only offered for Approved/Active anyway).
         try:
             prof = await client.get(
                 service.MENTOR_PROFILE, mentor_id,
@@ -635,28 +704,69 @@ async def mentor_provision(mentor_id: str, request: Request) -> StreamingRespons
         except EspoError as exc:
             yield _emit(service._step("login", "error", f"Could not read the mentor: {exc}"))
             return
-        if service.assigned_user_id(prof):
-            yield _emit(service._step("login", "done", "This mentor already has an EspoCRM login — nothing to provision."))
-            yield _emit({"step": "done", "status": "done", "message": "No provisioning needed", "result": {"skipped": True}})
-            return
-        if prof.get("mentorStatus") not in (service.STATUS_APPROVED, service.STATUS_ACTIVE):
-            yield _emit(service._step("login", "error", "A login is only created for an Approved or Active mentor."))
-            return
+        status = prof.get("mentorStatus")
+        email_only = status in service.EMAIL_STATUSES
+        first_step = "mailbox" if email_only else "login"
+
+        if not email_only:
+            # Idempotency: skip a mentor who already has a login, and refuse one at
+            # neither kind of provisioning status.
+            if service.assigned_user_id(prof):
+                yield _emit(service._step("login", "done", "This mentor already has an EspoCRM login — nothing to provision."))
+                yield _emit({"step": "done", "status": "done", "message": "No provisioning needed", "result": {"skipped": True}})
+                return
+            if status not in service.LOGIN_STATUSES:
+                yield _emit(service._step(
+                    "login", "error",
+                    "This mentor's status doesn't call for provisioning. An email "
+                    "account is created at Accepted-Provisional, and a CRM login "
+                    "when they are Approved or Active.",
+                ))
+                return
         try:
             admin_client = await factory()
         except Exception as exc:  # admin service-account login failed
-            yield _emit(service._step("login", "error", f"Could not sign in the provisioning service account: {exc}"))
+            yield _emit(service._step(first_step, "error", f"Could not sign in the provisioning service account: {exc}"))
             return
+
+        outcome: dict[str, Any] = {}
         try:
-            async for event in service.provision_mentor_user_steps(
-                admin_client, client, mentor_id,
-                team_name=settings.mentor_team_name,
-                directory=resolved.directory,
-                create_mailbox=resolved.create_enabled,
-            ):
+            if email_only:
+                events = service.provision_mentor_email_steps(
+                    client, mentor_id,
+                    admin_client=admin_client,
+                    directory=resolved.directory,
+                    create_mailbox=resolved.create_enabled,
+                    members_group=resolved.members_group,
+                    # Nothing to advance for a mentor already at Provisional: that
+                    # is the recovery run for a missing account, not the event.
+                    advance_status=(status == service.STATUS_ACCEPTED_PROVISIONAL),
+                )
+            else:
+                events = service.provision_mentor_user_steps(
+                    admin_client, client, mentor_id,
+                    team_name=settings.mentor_team_name,
+                    directory=resolved.directory,
+                    create_mailbox=resolved.create_enabled,
+                    members_group=resolved.members_group,
+                )
+            async for event in events:
+                # Remember the shape of the run for the action log: the final
+                # result, and the first error if it ended in one.
+                if event.get("step") == "done":
+                    outcome["result"] = event.get("result") or {}
+                elif event.get("status") == "error":
+                    outcome.setdefault("error", event.get("message"))
                 yield _emit(event)
         except Exception as exc:  # never leak a raw 500 into the stream
-            yield _emit(service._step("login", "error", f"Provisioning failed: {exc}"))
+            outcome.setdefault("error", str(exc))
+            yield _emit(service._step(first_step, "error", f"Provisioning failed: {exc}"))
+
+        # Action history. This is the app writing to the CRM on its own behalf —
+        # it creates a Google account and (at Accepted-Provisional) CHANGES THE
+        # MENTOR'S STATUS, and EspoCRM's own history can't tell an app write from
+        # a hand edit. Best-effort, and never touches the stream the user sees.
+        await _log_provision(client, user, mentor_id, status, outcome)
 
     return StreamingResponse(
         stream(),
@@ -693,6 +803,7 @@ async def google_setup_get(request: Request) -> dict:
         "delegatedAdmin": cfg.get("delegated_admin", ""),
         "directoryCheck": bool(cfg.get("directory_check", True)),
         "createMailbox": bool(cfg.get("create_mailbox", False)),
+        "membersGroup": cfg.get("members_group", ""),
         "updatedAt": (meta or {}).get("updatedAt"),
     }
 
@@ -722,6 +833,7 @@ def _build_google_payload(body: GoogleSetupIn, existing: dict) -> dict:
         "delegated_admin": body.delegated_admin.strip(),
         "directory_check": body.directory_check,
         "create_mailbox": body.create_mailbox,
+        "members_group": body.members_group.strip(),
     }
 
 
@@ -737,7 +849,12 @@ async def google_setup_put(body: GoogleSetupIn, request: Request) -> dict:
         await store.set_google_config(payload)
     finally:
         await store.dispose()
-    return {"status": "saved", "createMailbox": payload["create_mailbox"], "directoryCheck": payload["directory_check"]}
+    return {
+        "status": "saved",
+        "createMailbox": payload["create_mailbox"],
+        "directoryCheck": payload["directory_check"],
+        "membersGroup": payload["members_group"],
+    }
 
 
 @router.post("/setup/google/test")

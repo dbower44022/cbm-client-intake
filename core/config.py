@@ -231,6 +231,14 @@ class Settings(BaseSettings):
     # (the pre-existing behavior). Can also be set via the in-app Email Setup
     # screen (DB config takes precedence over these env vars).
     google_create_mailbox: bool = False
+    # The "All Members" Google Group every CBM member belongs to. A mentor's new
+    # mailbox is added to it when their account is created (mentor status
+    # Accepted-Provisional), so CBM can reach them during the provisional period.
+    # EMPTY = the group step is skipped entirely — the address is its own switch,
+    # there is no separate flag. Needs the Directory *group* scope authorized for
+    # domain-wide delegation. Also settable in the in-app Email Setup screen,
+    # which (like the values above) takes precedence over this env var.
+    google_members_group: str = ""
 
     # --- Communications: Gmail conversation integration (prds/communications-
     # gmail-integration.md). Master flag; the whole pipeline (sync, endpoints,

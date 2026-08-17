@@ -66,6 +66,15 @@ mentor and opens a results table showing, per mentor:
   **Google Workspace** (via the same Directory integration as approval-time
   checks). Shows *"n/a — check not configured"* until Google is connected in
   **Email Setup**; a mentor with no CBM email is flagged.
+- **Members group** — whether that mailbox is in the members group. Shows
+  *"n/a — check not configured"* until a group address is set in **Email Setup**.
+- Above the table, any mentor left at **`Accepted-Provisional` without an email
+  account** is called out by name: they were accepted but nobody can reach them
+  yet. Open each one and save to set the account up.
+
+The sweep **only reports** — it never creates an account and never adds anyone to
+the group. Creating an account produces a temporary password that has to be handed
+to the mentor, so it stays on the mentor's own screen.
 - **Record** — while sweeping, each mentor's **User links are first
   reconciled** (the mentor's User is re-assigned to both the member record and
   its Contact, same as a save — so a roster whose Contact assignments drifted,
@@ -169,29 +178,54 @@ When you press **Save**:
    - (The popup does *not* warn about missing logins/User assignments — the save
      creates and assigns those automatically; see below.)
 2. **The edited fields are written** to the mentor record.
-3. <a id="logins-on-save"></a>**Login provisioning (with a live status window).**
-   If the mentor's status is **Approved or Active** and they have **no login
-   yet**, saving opens a **status window** that narrates each step and provisions
-   their access. The CBM email `firstname.lastname@cbmentors.org` is filled in
-   automatically (reusing `cbmEmail` if already set). Then, depending on the
-   Google Workspace configuration:
-   - **Mailbox check (when enabled).** The app checks whether that mailbox exists.
-   - **Mailbox creation (when enabled).** If the mailbox is **missing**, the app
-     **creates** it in Google Workspace (a temporary password the mentor changes
-     at first sign-in; their personal email is set as the Google **recovery
-     email**), waits for it to become active, and shows the temp password in the
-     status window to relay to the mentor. *If creation is off*, a missing mailbox
-     instead **blocks** with *"the Google Workspace mailbox … does not exist —
-     create it before approving"*. If the check can't run, provisioning proceeds.
-   - **EspoCRM login.** Finally the app creates an EspoCRM **User**, places it in
-     the **Mentor Team**, assigns it to the mentor record **and to the mentor's
+3. <a id="logins-on-save"></a>**Provisioning (with a live status window).**
+   A mentor is set up in **two stages**, and the status you save decides which one
+   runs. Either way a **status window** opens and narrates each step.
+
+   **Stage 1 — the email account, at `Accepted-Provisional`.** Saving a mentor at
+   this status creates their Google Workspace account so CBM can talk to them
+   during their provisional period, and then **moves them to `Provisional`**. No
+   CRM login is created yet. In detail:
+   - The CBM address `firstname.lastname@cbmentors.org` is worked out
+     automatically (reusing `cbmEmail` if it is already filled in, and skipping an
+     address that belongs to another mentor).
+   - **Mailbox check.** If the account already exists — someone made it by hand —
+     that counts, and the mentor still moves to `Provisional`.
+   - **Mailbox creation (when enabled).** Otherwise the app **creates** it (a
+     temporary password the mentor changes at first sign-in; their personal email
+     is set as the Google **recovery email**), waits for it to become active, and
+     shows the temp password in the status window **to relay to the mentor**. That
+     password is shown here and nowhere else — it is never written to the CRM.
+   - **Members group.** The new address is added to the **members group** (if one
+     is configured in Email Setup), so CBM mail reaches them straight away. If
+     that fails, the window says so and the rest still succeeds — add them to the
+     group by hand, or just save again.
+   - **The status only moves when the account is confirmed.** If Google can't be
+     reached, or the new mailbox hasn't gone live yet, the mentor stays at
+     `Accepted-Provisional` and the next save finishes the job. So a mentor left
+     at that status is a mentor whose account still needs making — the **Update
+     Mentor Status** sweep calls those out.
+
+   **Stage 2 — the CRM login, at `Approved` or `Active`.** When the mentor has
+   **no login yet**, saving at either status creates their access:
+   - The mailbox is checked (and created / added to the group) exactly as above,
+     so a mentor who skips straight from `Accepted-Provisional` to `Approved`
+     still gets everything. *If creation is off*, a missing mailbox **blocks**
+     with *"the Google Workspace mailbox … does not exist — create it before
+     approving"*. If the check can't run, provisioning proceeds.
+   - **EspoCRM login.** The app creates an EspoCRM **User**, places it in the
+     **Mentor Team**, assigns it to the mentor record **and to the mentor's
      linked Contact record** (v0.121.0 — without the Contact assignment, the
      mentor's own "My Mentor Profile" contact-field saves would be rejected by
      their role's permissions), and emails the welcome / set-password link to
      the new CBM mailbox.
-   - The Google connection is configured in the admin-only **Email Setup** screen
-     (top of the list view) — service-account key, delegated admin, and the
-     check / create toggles, with a **Test connection** button.
+   - This stage **never changes the status** — approving a mentor does not move
+     them back to `Provisional`.
+
+   The Google connection is configured in the admin-only **Email Setup** screen
+   (top of the list view) — service-account key, delegated admin, the members
+   group address, and the check / create toggles, with a **Test connection**
+   button.
 4. **User reconciliation.** The mentor's User is assigned to **both** the member
    record and its **Contact** (filling any one-sided assignment).
 5. <a id="record-status"></a>**Record Status persisted.** The freshly computed
@@ -237,6 +271,11 @@ for any mentor that has been saved since the field was introduced.
   provisioning; with creation on, it's created instead; an inconclusive check
   fails open. Creating mailboxes needs the service account's read-write Directory
   scope. See `DEPLOYMENT.md` → *Google Workspace mailbox check + creation*.
+- **The members group** is whatever address is set in Email Setup (or
+  `GOOGLE_MEMBERS_GROUP`). **Blank means the group step is skipped** — there is no
+  separate switch, the address is the switch. Adding a member needs the service
+  account's Directory **group** scope authorized for domain-wide delegation, and
+  a delegated admin who can manage groups.
 
 Implementation lives in the `mentoradmin/` package (`service.py` is the
 source-of-truth for the editable-field set + completeness rules); the grid reuses

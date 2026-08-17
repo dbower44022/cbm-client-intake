@@ -175,6 +175,7 @@ the env vars are the fallback.
 | `GOOGLE_CREATE_MAILBOX` | `true` to CREATE a missing mailbox (needs the read-write scope) |
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | the service-account JSON key, **`type: SECRET`** |
 | `GOOGLE_DELEGATED_ADMIN` | a Workspace admin to impersonate, **`type: SECRET`** |
+| `GOOGLE_MEMBERS_GROUP` | the "All Members" group a new mentor mailbox joins (needs the group scope). **Blank skips the step** — the address is its own switch |
 | `APP_ENCRYPTION_KEY` | Fernet key encrypting the Email-Setup creds in Postgres, **`type: SECRET`**, web **+ worker** |
 
 **Google Calendar events for sessions (optional, web component, v0.40.0)** —
@@ -302,15 +303,19 @@ user for one named scope).
 *In the Google Workspace Admin console* (admin.google.com, as a super-admin):
 5. **Security → Access and data control → API controls → Domain-wide delegation →
    Add new.**
-6. Paste the service account's **Client ID** and, for scopes, list **both** (the
-   read-only scope is enough to *check*; the read-write scope is required to
-   *create* a mailbox):
+6. Paste the service account's **Client ID** and, for scopes, list **all three**
+   (read-only is enough to *check*; read-write is required to *create* a mailbox;
+   the group scope is required to add a new account to the members group):
    `https://www.googleapis.com/auth/admin.directory.user.readonly`,
-   `https://www.googleapis.com/auth/admin.directory.user`
+   `https://www.googleapis.com/auth/admin.directory.user`,
+   `https://www.googleapis.com/auth/admin.directory.group`
    (If you only ever want the check-and-block behavior, the read-only scope alone
-   suffices and `GOOGLE_CREATE_MAILBOX` must stay off.)
+   suffices and `GOOGLE_CREATE_MAILBOX` must stay off. Without the group scope the
+   membership add 403s `unauthorized_client` — reported as a non-fatal step, so the
+   account and the login still succeed.)
 7. Pick a Workspace admin for the service account to **impersonate** — to *create*
-   users it must be an admin with the **User Management** privilege; this becomes
+   users it must be an admin with the **User Management** privilege, and to add
+   members to the group it needs **Groups** admin privilege; this becomes
    `GOOGLE_DELEGATED_ADMIN`.
 
 *Config:* either paste the JSON key + delegated admin into the **Email Setup**
@@ -320,19 +325,29 @@ screen (`/mentoradmin`, admin-only — stored encrypted; needs `APP_ENCRYPTION_K
 right after setup isn't necessarily wrong. The Email Setup **Test connection**
 button confirms it.)
 
-**How it works at runtime** (`core/google_directory.py` + `mentoradmin/service.py`
-`provision_mentor_user_steps`): the browser saves the mentor's fields, then opens a
-**status window** that streams `POST /mentoradmin/api/mentors/{id}/provision`
-(Server-Sent Events). The app mints a short-lived OAuth token from the JSON key,
-signed as the service account with `subject = GOOGLE_DELEGATED_ADMIN` (read-only to
-check, read-write to create), and calls `admin/directory/v1/users`:
+**How it works at runtime** (`core/google_directory.py` + `mentoradmin/service.py`):
+the browser saves the mentor's fields, then opens a **status window** that streams
+`POST /mentoradmin/api/mentors/{id}/provision` (Server-Sent Events). The app mints a
+short-lived OAuth token from the JSON key, signed as the service account with
+`subject = GOOGLE_DELEGATED_ADMIN` (read-only to check, read-write to create, the
+group scope to add a member), and calls `admin/directory/v1/users`:
 **check** → 200 = exists (proceed), 404 = missing, anything else = `UNKNOWN` (fail
 open). On **missing** with `GOOGLE_CREATE_MAILBOX` on, it `POST`s a new user (temp
 password + change-at-first-login + the mentor's personal email as **recovery
-email**), polls ≤60s for it to go live, then creates the EspoCRM login + welcome
-email; the window shows the temp password to relay. If the mailbox doesn't verify
-in time the mentor stays Approved and the next Save self-heals. The creds are a
-separate credential from the EspoCRM admin service account.
+email**) and polls ≤60s for it to go live; the window shows the temp password to
+relay. It then adds the address to `GOOGLE_MEMBERS_GROUP` when one is set
+(non-fatal, 409 = already a member).
+
+**Which** work that endpoint does is decided server-side from the mentor's status,
+because provisioning is **two events** (v0.204.0):
+`Accepted-Provisional` runs the account + group steps and then moves the record to
+**`Provisional`** (`provision_mentor_email_steps`) — no EspoCRM login;
+`Approved`/`Active` runs the same account steps and then the EspoCRM login + welcome
+email (`provision_mentor_user_steps`), never touching the status. The status only
+advances on a **confirmed** account, so a Google outage or a mailbox that hasn't
+gone live yet leaves the mentor at `Accepted-Provisional` and the next Save
+self-heals — likewise an Approved mentor whose mailbox didn't verify in time. The
+Google creds are a separate credential from the EspoCRM admin service account.
 
 > **CRITICAL — do not clobber a live app.** The committed `.do/app.yaml` is the
 > *dry-run* spec: it hardcodes `ESPO_DRY_RUN=true` and contains **no secrets**.

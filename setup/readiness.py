@@ -105,10 +105,13 @@ FEATURES: tuple[Feature, ...] = (
         needs_database=True,
     ),
     Feature(
-        key="provisioning", name="Mentor login provisioning", flag="mentor_provision_users",
+        key="provisioning", name="Mentor provisioning", flag="mentor_provision_users",
         component="web", requires=("espo_provision_username", "espo_provision_password"),
-        note="EspoCRM makes User creation admin-only, so this runs as the dedicated "
-             "admin service account.",
+        note="Two events: the Google account at Accepted-Provisional (which then moves "
+             "the mentor to Provisional), the CRM login at Approved/Active. EspoCRM "
+             "makes User creation admin-only, so this runs as the dedicated admin "
+             "service account. Creating the account also needs the Google Workspace "
+             "connection; the members group is skipped unless an address is set.",
     ),
     Feature(
         key="async", name="Asynchronous delivery", flag="async_delivery",

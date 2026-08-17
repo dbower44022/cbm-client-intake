@@ -4,6 +4,68 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.204.0] — 2026-08-17
+
+**feat(mentoradmin): a mentor's Google account is created at
+Accepted-Provisional, not at approval.** Doug: "we want to create the gmail
+account and add them to the All Members group when their record is saved with a
+status of Accepted Provisional. This will allow us to communicate to them during
+their provisional period. Then when they are accepted we will create the crm
+account as we do today."
+
+Provisioning is now **two events**, and `Accepted-Provisional` is a **signal**
+status rather than a resting one — it means *accepted, and still needs a Google
+account*:
+
+- **`Accepted-Provisional` → the Workspace account + the All Members group, then
+  the record advances to `Provisional`.** No EspoCRM login. Doug's framing: the
+  two provisional statuses describe the same period, and the difference between
+  them is whether the account exists yet — so creating it is what moves the
+  mentor on. `provision_mentor_email_steps`.
+- **`Approved` / `Active` → the EspoCRM login, exactly as before**, on top of the
+  same mailbox stage — so a mentor who jumps straight from Accepted-Provisional to
+  Approved still gets everything. It **never writes the status**: that would
+  demote them, and there is a test whose only job is to keep it that way.
+- **The status advance requires a *confirmed* account** — created and live, or
+  already there. The mailbox check still fails open for the login (a Google outage
+  can't freeze approvals), but "has an account" must never be recorded on a guess,
+  so an UNKNOWN check, or a mailbox that hasn't gone live yet, leaves the mentor at
+  `Accepted-Provisional` for the next run to finish. Which makes a stuck
+  `Accepted-Provisional` the "account still owed" signal — **Update Mentor Status**
+  now names those mentors above its table.
+- **Which event runs is decided server-side from the mentor's status**, in the
+  `/provision` router, so the state machine lives in one place and the browser only
+  has to ask. Both stay in the SSE status window rather than the PUT, because
+  creating a mailbox yields a **temporary password a human has to relay** — the
+  same reason the sweep reports group membership but never joins anyone.
+- **Group membership is new plumbing**: `GoogleDirectory.add_group_member` /
+  `is_group_member` (409 = already a member = success, 404 = wrong group address
+  and never silently "added"), behind a **third** domain-wide-delegation scope,
+  `admin.directory.group`. The add is **non-fatal** — a distribution list is not
+  the account's existence — and an empty group address skips the step entirely.
+  The address is its own switch (`GOOGLE_MEMBERS_GROUP`, or the new field in Email
+  Setup, which as always takes precedence); Doug's group address is still to come,
+  so it ships blank and inert.
+- **`_reserve_cbm_email` keeps the duplicate-login guard sound.** That guard reads
+  "the profile already has a `cbmEmail`" as "the User with that userName IS this
+  mentor's login" — the fix for the doug.bower2/doug.bower3 pile-up. Since every
+  mentor now reaches approval carrying an address, the address is checked free
+  *before* it is stored: no EspoCRM User holds it as a userName, and no *other*
+  mentor profile holds it. A mailbox that merely exists is deliberately NOT
+  "taken" — an admin pre-creating one is the long-standing normal case. Side
+  benefit: the suffixed-login inconsistency is gone, where a `jane.doe2@` userName
+  was paired with a `jane.doe@` cbmEmail.
+- **The provisioning run is now action-logged** (`Provisioning` /
+  *Mailbox Provisioned* / *Login Provisioned*), which it never was — it is the
+  highest-privilege flow in the app and it now changes a mentor's status on its
+  own initiative, which EspoCRM's history cannot distinguish from a hand edit.
+  **The temp password is stripped** from both the CActionLog row and the stream
+  note; it goes to the browser and nowhere else.
+- Verified by 20 new tests plus the whole existing provisioning matrix unchanged
+  (the regression guard). **Not yet verified live** — the live pass needs the
+  group address, the `admin.directory.group` scope authorized, and "Create missing
+  mailboxes" confirmed on for the environment (`OPEN-ITEMS.md` #22).
+
 ## [0.203.2] — 2026-08-17
 
 **fix(events): the preview's panels grow with the window, and stack cleanly on a

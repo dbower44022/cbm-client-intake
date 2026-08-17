@@ -403,6 +403,21 @@
     return verifyMark(null, mb.detail || "could not determine");
   }
 
+  function groupCell(row) {
+    if (row.error) return document.createTextNode("—");
+    var g = row.group || {};
+    if (g.status === "member") return verifyMark(true, "in " + g.group);
+    if (g.status === "missing") return verifyMark(false, "not in " + g.group);
+    if (g.status === "no-email") return document.createTextNode("—");
+    if (g.status === "unavailable") {
+      var s = document.createElement("span");
+      s.className = "verify-na";
+      s.textContent = "n/a — check not configured";
+      return s;
+    }
+    return verifyMark(null, g.detail || "could not determine");
+  }
+
   function showVerifyModal(res) {
     var prev = document.getElementById("verifyModal");
     if (prev) prev.remove();
@@ -416,20 +431,38 @@
     var rows = res.mentors || [];
     var intro = document.createElement("p");
     intro.textContent = "Checked " + rows.length + " mentor(s): does the login user exist, " +
-      "and does the @cbmentors.org mailbox exist. Record statuses were refreshed.";
+      "does the @cbmentors.org mailbox exist, and is it in the members group. " +
+      "Record statuses were refreshed. Nothing was created — open a mentor to set " +
+      "up a missing account.";
     card.appendChild(intro);
     if (!res.mailboxCheckEnabled) {
       var warn = document.createElement("p");
       warn.className = "verify-na";
       warn.textContent = "Mailbox checking is not configured — connect Google Workspace under Email Setup to enable it.";
       card.appendChild(warn);
+    } else if (!res.groupCheckEnabled) {
+      var gwarn = document.createElement("p");
+      gwarn.className = "verify-na";
+      gwarn.textContent = "Group checking is not configured — set the members group address under Email Setup to enable it.";
+      card.appendChild(gwarn);
+    }
+    // Mentors accepted but still without an email account: the row this sweep
+    // exists to surface, called out above the table so it isn't scrolled past.
+    var stranded = rows.filter(function (r) { return r.needsEmailAccount; });
+    if (stranded.length) {
+      var sp = document.createElement("p");
+      sp.className = "verify-bad";
+      sp.textContent = stranded.length + " accepted mentor(s) have no email account yet: " +
+        stranded.map(function (r) { return r.name || r.id; }).join(", ") +
+        ". Open each one and save to set it up.";
+      card.appendChild(sp);
     }
 
     var wrap = document.createElement("div"); wrap.className = "verify-tablewrap";
     var table = document.createElement("table"); table.className = "ma__table verify-table";
     var thead = document.createElement("thead");
     var htr = document.createElement("tr");
-    ["Mentor", "Status", "Record", "Login user", "Mailbox"].forEach(function (t) {
+    ["Mentor", "Status", "Record", "Login user", "Mailbox", "Members group"].forEach(function (t) {
       var th = document.createElement("th"); th.textContent = t; htr.appendChild(th);
     });
     thead.appendChild(htr); table.appendChild(thead);
@@ -441,6 +474,7 @@
       tr.appendChild(cell(row.error ? "—" : (row.recordStatus || "—")));
       tr.appendChild(cell(userCell(row)));
       tr.appendChild(cell(mailboxCell(row)));
+      tr.appendChild(cell(groupCell(row)));
       tbody.appendChild(tr);
     });
     table.appendChild(tbody);
@@ -1336,10 +1370,26 @@
     });
   }
 
-  // An Approved/Active mentor with no login User needs one provisioned (mailbox
-  // check/create + EspoCRM user) — done via the live status window, not the PUT.
-  function needsProvisioning(m) {
+  // The two provisioning events, both driven through the live status window
+  // rather than the PUT (creating a mailbox yields a temporary password that has
+  // to be shown to a human). The server decides WHICH one runs, from the mentor's
+  // status — these only decide whether to ask.
+  //
+  // "Accepted-Provisional" is the signal to create the Google account; the flow
+  // then moves the mentor to "Provisional". A mentor already at "Provisional"
+  // with no CBM address never got one (or lost it), so that is a recovery run.
+  function needsEmailAccount(m) {
+    if (m.mentorStatus === "Accepted-Provisional") return true;
+    return m.mentorStatus === "Provisional" && !(m.cbmEmail || "").trim();
+  }
+
+  // An Approved/Active mentor with no login User needs one provisioned.
+  function needsLogin(m) {
     return (m.mentorStatus === "Approved" || m.mentorStatus === "Active") && !m.assignedUserId;
+  }
+
+  function needsProvisioning(m) {
+    return needsEmailAccount(m) || needsLogin(m);
   }
 
   function rebaseline() {
@@ -1364,8 +1414,9 @@
       // than failing the save) — the save succeeded, but the user should know.
       var warn = (current.warnings && current.warnings.length) ? " " + current.warnings.join(" ") : "";
       if (needsProvisioning(current)) {
-        notice("detailNotice", "Saved. Setting up the mentor's login…" + warn, warn ? "warn" : "success");
-        startProvision(current.id);
+        var what = needsEmailAccount(current) ? "email account" : "login";
+        notice("detailNotice", "Saved. Setting up the mentor's " + what + "…" + warn, warn ? "warn" : "success");
+        startProvision(current.id, what);
       } else if (warn) {
         notice("detailNotice", "Saved, with a note:" + warn, "warn");
       } else {
@@ -1380,8 +1431,8 @@
   // --- live provisioning status window (Server-Sent Events) ---
   var PROV_ICON = { running: "⏳", done: "✓", error: "✗" };
 
-  function startProvision(id) {
-    var modal = buildProvisionModal();
+  function startProvision(id, what) {
+    var modal = buildProvisionModal(what);
     streamProvision(id, modal.onEvent)
       .catch(function (e) {
         if (e && e.status === 401) { modal.close(); showLogin(); return; }
@@ -1416,11 +1467,13 @@
     }
   }
 
-  function buildProvisionModal() {
+  function buildProvisionModal(what) {
     var prev = document.getElementById("provModal"); if (prev) prev.remove();
     var overlay = document.createElement("div"); overlay.id = "provModal"; overlay.className = "modal-overlay";
     var card = document.createElement("div"); card.className = "modal-card";
-    var h = document.createElement("h3"); h.textContent = "Setting up the mentor's login"; card.appendChild(h);
+    var h = document.createElement("h3");
+    h.textContent = "Setting up the mentor's " + (what || "login");
+    card.appendChild(h);
     var ul = document.createElement("ul"); ul.className = "prov-steps"; card.appendChild(ul);
     var extra = document.createElement("div"); card.appendChild(extra);
     var actions = document.createElement("div"); actions.className = "modal-actions";
@@ -1501,6 +1554,7 @@
         : "Paste the service-account JSON key.";
       $("su_check").checked = s.directoryCheck !== false;
       $("su_create").checked = !!s.createMailbox;
+      $("su_group").value = s.membersGroup || "";
       $("setupStatus").textContent = s.configured
         ? ("Configured ✓" + (s.updatedAt ? " — last updated " + String(s.updatedAt).slice(0, 10) : ""))
         : "Not configured yet.";
@@ -1516,6 +1570,7 @@
       delegated_admin: $("su_admin").value.trim(),
       directory_check: $("su_check").checked,
       create_mailbox: $("su_create").checked,
+      members_group: $("su_group").value.trim(),
     };
   }
 

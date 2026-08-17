@@ -250,6 +250,35 @@ block a deploy.)*
 
 ## Live verification owed
 
+22. **Two-stage mentor provisioning has never run against real Google**
+    (v0.204.0, 2026-08-17). The `Accepted-Provisional` → account + group →
+    `Provisional` flow is covered by tests and fakes only. Three things gate the
+    live pass, in this order:
+    - **The All Members group address.** Doug does not have it yet. Until it is
+      set (Email Setup, or `GOOGLE_MEMBERS_GROUP`) the group step is skipped
+      silently and everything else works — that is deliberate, so the rest can be
+      verified first.
+    - **The `admin.directory.group` scope** must be added to the service account's
+      domain-wide-delegation grant in the Workspace admin console, and the
+      delegated admin needs group-admin privilege. Without it the add 403s
+      `unauthorized_client` — the same failure shape as
+      [[gmail-delegation-needs-licensed-mailbox]].
+    - **"Create missing mailboxes"** must actually be on for the environment
+      (check `/setup` or Email Setup — the overlays are gitignored). With it off,
+      an `Accepted-Provisional` save correctly reports the mailbox missing and
+      stops, which is not the intended outcome.
+
+    Then, on crm-test **as a real non-admin Mentor Administration user**, with a
+    throwaway mentor name (there is no test Workspace tenant — delete the mailbox
+    and the group membership afterwards): save at `Accepted-Provisional` → the
+    account is created, joins the group, the temp password is shown, **no** EspoCRM
+    User exists, and the record now reads `Provisional`. Then save at `Approved` →
+    the login is created against **that same address**, with no second mailbox, no
+    suffixed duplicate, and no demotion back to `Provisional`. Also confirm prod's
+    `mentorStatus` enum carries both `Accepted-Provisional` and `Provisional`
+    (verified on crm-test 2026-08-17; the two CRMs drift). Plan and rulings:
+    `prds/mentor-provisional-provisioning-plan.md`.
+
 19f. **The Company record page and the client dashboard section have never been
     opened by a human** (2026-08-16). Both shipped 2026-07-28 and are covered by
     tests, and the Company route serves on crm-test — but no one has looked at

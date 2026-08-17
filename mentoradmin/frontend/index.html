@@ -109,6 +109,11 @@
               <textarea id="su_json" rows="8" placeholder="Paste the whole service-account JSON key here (starts with { &quot;type&quot;: &quot;service_account&quot;, … }). Leave blank to keep the stored key."></textarea>
               <span class="cbm-help">The JSON key file downloaded in step 3. Stored encrypted — it is never shown again after saving.</span>
             </div>
+            <div class="cbm-field">
+              <label for="su_group">Members group address</label>
+              <input type="email" id="su_group" placeholder="allmembers@cbmentors.org" />
+              <span class="cbm-help">The Google Group a mentor's new account joins when it is created, so CBM can reach them during their provisional period. Leave blank to skip that step. Needs the Directory <em>group</em> scope (step 6) and an admin who can manage groups.</span>
+            </div>
             <div class="ma__setup-toggles">
               <div class="cbm-field cbm-field--check"><label><input type="checkbox" id="su_check" checked /> Check whether the mailbox exists before approving</label></div>
               <div class="cbm-field cbm-field--check"><label><input type="checkbox" id="su_create" /> Create the mailbox automatically when it is missing</label></div>
@@ -151,14 +156,19 @@
                 <code>https://www.googleapis.com/auth/admin.directory.user</code>
                 <button type="button" class="ma__copy" data-copy="https://www.googleapis.com/auth/admin.directory.user" title="Copy">⧉</button>
               </div>
-              <span class="ma__guide-hint">The first (read-only) is enough to <em>check</em>; the second (read-write) is required to <em>create</em> mailboxes. Add both.</span>
+              <div class="ma__guide-scopes">
+                <code>https://www.googleapis.com/auth/admin.directory.group</code>
+                <button type="button" class="ma__copy" data-copy="https://www.googleapis.com/auth/admin.directory.group" title="Copy">⧉</button>
+              </div>
+              <span class="ma__guide-hint">The first (read-only) is enough to <em>check</em>; the second (read-write) is required to <em>create</em> mailboxes; the third adds a new account to the <em>members group</em>. Add all three.</span>
             </li>
-            <li><strong>Pick the admin to impersonate.</strong> Any admin who can read the directory works for checking; to <em>create</em> mailboxes they need the <strong>User Management</strong> admin privilege. Use that email as <em>Delegated Workspace admin email</em>.</li>
+            <li><strong>Pick the admin to impersonate.</strong> Any admin who can read the directory works for checking; to <em>create</em> mailboxes they need the <strong>User Management</strong> admin privilege, and to add accounts to the members group they need <strong>Groups</strong> admin privilege. Use that email as <em>Delegated Workspace admin email</em>.</li>
           </ol>
 
           <h4>Back here</h4>
           <ol class="ma__guide-steps" start="8">
             <li>Paste the <strong>JSON key</strong> and enter the <strong>delegated admin email</strong>.</li>
+            <li>Enter the <strong>members group address</strong> if new mentor accounts should join one (leave blank to skip).</li>
             <li>Tick <strong>Check…</strong> (and <strong>Create…</strong> if you want missing mailboxes auto-created), then <strong>Save</strong>.</li>
             <li>Click <strong>Test connection</strong> to confirm it works. Delegation can take 5–10 minutes to take effect — if the test fails right after setup, wait a few minutes and retry.</li>
           </ol>

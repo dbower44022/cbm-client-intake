@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+from dataclasses import dataclass, field
 from typing import Any, AsyncIterator, Awaitable, Callable, Optional, Protocol
 
 from core.espo import EspoError
@@ -48,10 +49,33 @@ class MailboxDirectory(Protocol):
         self, primary_email: str, first_name: str, last_name: str,
         *, recovery_email: Optional[str], temp_password: str,
     ) -> None: ...
+    async def add_group_member(self, group_email: str, member_email: str) -> None: ...
+    async def is_group_member(self, group_email: str, member_email: str) -> Optional[bool]: ...
 
-# When a mentor is set to this status, a login User is provisioned for them.
+
+# --- The two provisioning events, and the statuses that trigger them ---------
+# A mentor is provisioned in TWO stages (Doug's ruling 2026-08-17):
+#
+#   Accepted-Provisional  → create the Google Workspace account, add it to the
+#                           All Members group, then ADVANCE the record to
+#                           Provisional. No EspoCRM login.
+#   Provisional           → the resting state: they have their account and are
+#                           serving their provisional period. Nothing happens.
+#   Approved / Active     → the EspoCRM login User (unchanged), on top of the
+#                           mailbox check/create. NEVER writes Provisional back —
+#                           a mentor may jump straight here from
+#                           Accepted-Provisional, and that must not demote them.
+#
+# So `Accepted-Provisional` is a SIGNAL status, not a resting one: it means
+# "accepted, and still needs a Google account".
 STATUS_APPROVED = "Approved"
 STATUS_ACTIVE = "Active"
+STATUS_ACCEPTED_PROVISIONAL = "Accepted-Provisional"
+STATUS_PROVISIONAL = "Provisional"
+# Statuses at which a login User is provisioned.
+LOGIN_STATUSES = (STATUS_APPROVED, STATUS_ACTIVE)
+# Statuses at which the email-account-only flow runs.
+EMAIL_STATUSES = (STATUS_ACCEPTED_PROVISIONAL, STATUS_PROVISIONAL)
 
 # Sign-off flags every complete mentor must have set (field -> label).
 # (Background check is optional — deliberately not required for completeness.)
@@ -373,6 +397,14 @@ async def update_mentor(
     Without it (the default), no provisioning is attempted. Runs *after* the
     status write and is best-effort: any failure is captured in the returned
     ``provision`` summary rather than failing the save.
+
+    The **Accepted-Provisional** event (create the Google account, add it to the
+    All Members group, advance to Provisional) is deliberately NOT run here: it
+    creates a mailbox, and a mailbox create produces a temporary password that a
+    human has to relay, so it belongs to the browser's streaming status window
+    (:func:`provision_mentor_email_steps`). A save straight over the API therefore
+    does nothing Google-side — it cannot create the account whose existence
+    ``Provisional`` would be asserting.
     """
     payload = {k: v for k, v in changes.items() if k in PROFILE_EDIT_NAMES}
     contact_payload = {k: v for k, v in changes.items() if k in CONTACT_NAMES}
@@ -417,7 +449,7 @@ async def update_mentor(
     if (
         admin_client_factory is not None
         and before is not None
-        and effective_status in (STATUS_APPROVED, STATUS_ACTIVE)
+        and effective_status in LOGIN_STATUSES
         and not assigned_user_id(before)
     ):
         try:
@@ -452,20 +484,24 @@ async def update_mentor(
         result["warnings"] = warnings
     if provision is not None:
         result["provision"] = provision
-    elif (
-        admin_client_factory is None
-        and result.get("mentorStatus") in (STATUS_APPROVED, STATUS_ACTIVE)
-        and not assigned_user_id(result)
+    elif admin_client_factory is None and (
+        (
+            result.get("mentorStatus") in LOGIN_STATUSES
+            and not assigned_user_id(result)
+        )
+        or result.get("mentorStatus") == STATUS_ACCEPTED_PROVISIONAL
     ):
-        # The mentor is Approved/Active but has no login User, and provisioning is
-        # disabled on this server (no admin service account configured). Surface
-        # it so the UI doesn't silently imply a login was created — without this,
-        # an approval looks identical to a successful one. See the overlay's
-        # MENTOR_PROVISION_USERS / ESPO_PROVISION_* to enable it.
+        # Provisioning is disabled on this server (no admin service account
+        # configured) and this mentor needs it — either an Approved/Active mentor
+        # with no login User, or one sitting at Accepted-Provisional waiting for a
+        # Google account. Surface it so the UI doesn't silently imply the work
+        # happened: without this, an approval looks identical to a successful one,
+        # and a provisional save leaves the mentor at a signal status nobody is
+        # acting on. See the overlay's MENTOR_PROVISION_USERS / ESPO_PROVISION_*.
         result["provision"] = {
             "ok": False,
             "disabled": True,
-            "error": "mentor login provisioning is disabled on this server",
+            "error": "mentor provisioning is disabled on this server",
         }
     return result
 
@@ -534,6 +570,66 @@ async def _unique_user_name(client: MentorClient, email: str) -> str:
     return email  # give up after 100; let the CRM enforce uniqueness
 
 
+def _suffixed(email: str, i: int) -> str:
+    """``jane.doe@d`` → itself for i=0, ``jane.doe2@d`` for i=1, and so on."""
+    if i == 0:
+        return email
+    local, _, domain = email.partition("@")
+    return f"{local}{i + 1}@{domain}"
+
+
+async def _reserve_cbm_email(
+    edit_client: MentorClient,
+    admin_client: Optional[MentorClient],
+    mentor_id: str,
+    first: str,
+    last: str,
+) -> str:
+    """Pick this mentor's ``firstname.lastname@cbmentors.org`` address, skipping
+    one that is demonstrably **someone else's**.
+
+    Why this matters: the duplicate-login guard in the login flow reads "the
+    profile already carries a cbmEmail" as "a User with that userName IS this
+    mentor's login — reuse it rather than minting ``jane.doe2@``" (the fix for the
+    doug.bower2/doug.bower3 pile-up). Since a mentor's account is now created at
+    **Accepted-Provisional**, every mentor reaches approval with a cbmEmail, so
+    that signal had to get stronger: the address is checked to be free *before*
+    it is stored, against the two records that prove ownership —
+
+    * an EspoCRM **User** with that userName (checked with ``admin_client``, the
+      only credential that can read Users), and
+    * **another CMentorProfile** already carrying it as its ``cbmEmail``.
+
+    A Workspace mailbox that merely *exists* is deliberately NOT treated as taken:
+    an admin pre-creating the mailbox before approval is the long-standing normal
+    case, and the caller reads EXISTS as "found — it's theirs".
+
+    Best-effort by design: a lookup failure (no grant, CRM hiccup) falls back to
+    the plain computed address rather than blocking provisioning.
+    """
+    base = cbm_email_for(first, last)
+    for i in range(0, 100):
+        candidate = _suffixed(base, i)
+        try:
+            if admin_client is not None and await admin_client.find_one(
+                "User", "userName", candidate, select="id"
+            ):
+                continue
+            owner = await edit_client.find_one(
+                MENTOR_PROFILE, "cbmEmail", candidate, select="id"
+            )
+            if owner and owner.get("id") != mentor_id:
+                continue
+        except Exception as exc:  # noqa: BLE001 — never block on a lookup
+            log.warning(
+                "could not verify that %s is free for CMentorProfile/%s: %s",
+                candidate, mentor_id, exc,
+            )
+            return candidate
+        return candidate
+    return base  # give up after 100 — the CRM/Workspace enforce uniqueness
+
+
 async def _find_team_id(client: MentorClient, team_name: str) -> str:
     team = await client.find_one("Team", "name", team_name, select="id,name")
     if team:
@@ -565,35 +661,82 @@ async def _mailbox_becomes_active(
     return False
 
 
-async def provision_mentor_user_steps(
-    admin_client: MentorClient,
+@dataclass
+class MailboxOutcome:
+    """What the mailbox stage established, for the stages that follow it.
+
+    ``confirmed`` is the load-bearing one: the Google account is *known* to
+    exist, because we either created it and watched it go live or found it
+    already there. An UNKNOWN check (Google unreachable — the fail-open path)
+    leaves it False, which is what stops the status advance from asserting an
+    account exists on a guess. ``blocked`` means a terminal error event was
+    already yielded and the caller must stop.
+    """
+
+    first: str = ""
+    last: str = ""
+    contact_id: Optional[str] = None
+    recovery_email: Optional[str] = None
+    address: str = ""
+    # The address as STORED on the profile ("" until it is). The login stage reads
+    # this exactly as it used to read a pre-existing cbmEmail.
+    existing_cbm: str = ""
+    confirmed: bool = False
+    created: bool = False
+    temp_password: Optional[str] = None
+    group_added: Optional[bool] = None   # None = not attempted (no group configured)
+    group_error: Optional[str] = None
+    blocked: bool = False
+
+    def result(self) -> dict[str, Any]:
+        """The parts of the outcome the browser needs (temp password included —
+        it is the one credential a human must relay to the mentor)."""
+        out: dict[str, Any] = {"email": self.address}
+        if self.created:
+            out["mailboxCreated"] = True
+            out["tempPassword"] = self.temp_password
+            out["recoveryEmail"] = self.recovery_email
+        if self.group_added is not None:
+            out["groupAdded"] = self.group_added
+        if self.group_error:
+            out["groupError"] = self.group_error
+        return out
+
+
+async def provision_mentor_mailbox_steps(
     edit_client: MentorClient,
     mentor_id: str,
+    outcome: MailboxOutcome,
     *,
-    team_name: str,
+    admin_client: Optional[MentorClient] = None,
     directory: Optional[MailboxDirectory] = None,
     create_mailbox: bool = False,
+    members_group: str = "",
+    for_login: bool = False,
     poll_seconds: int = MAILBOX_POLL_SECONDS,
     poll_timeout: int = MAILBOX_POLL_TIMEOUT,
     sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
 ) -> AsyncIterator[dict[str, Any]]:
-    """Provision an approved mentor's CBM mailbox + EspoCRM login, yielding a
-    human-readable status event for each step (for the live status window).
+    """Stage one of provisioning: the mentor's **Google Workspace account** and
+    its **All Members group** membership. Yields a status event per step and
+    records what happened in ``outcome`` (the caller's, so it survives the
+    generator).
 
-    Steps, in order: (1) resolve the ``firstname.lastname@cbmentors.org`` address;
-    (2) if a ``directory`` is given, check whether that Workspace mailbox exists —
-    if MISSING and ``create_mailbox`` is on, create it (temp password +
+    Steps: (1) resolve the ``firstname.lastname@cbmentors.org`` address —
+    reserving a free one when the profile has none (:func:`_reserve_cbm_email`);
+    (2) with a ``directory`` configured, check whether that mailbox exists — if
+    MISSING and ``create_mailbox`` is on, create it (temp password +
     change-at-first-login + the mentor's personal email as recovery) and poll
-    until it's live, else block; an inconclusive (UNKNOWN) check proceeds (fail
-    open); (3) create the EspoCRM **User** (welcome email via ``sendAccessInfo``),
-    link it as ``assignedUser``, and back-fill ``cbmEmail`` when blank.
+    until it is live, else stop; an inconclusive (UNKNOWN) check proceeds, failing
+    open, so a Google outage can't freeze approvals; (3) store the address on the
+    profile once the account is confirmed; (4) add it to ``members_group`` when one
+    is configured — **non-fatal**, because a distribution list is not the
+    account's existence.
 
-    Privilege split (unchanged): ``admin_client`` (a backend admin credential)
-    does the User read/create + Team lookup; ``edit_client`` (the staff user)
-    reads the profile/contact and writes the link. A terminal event has
-    ``status`` ``error`` (and stops) or is the final ``{"step":"done", ...,
-    "result": {...}}`` carrying the created login (and, if a mailbox was created,
-    the temp password + recovery email to relay to the mentor).
+    ``for_login`` only shapes the "mailbox is missing" message: the same stage
+    serves the email-only flow (Accepted-Provisional) and the login flow
+    (Approved/Active), and telling a provisional save that a login's welcome email
+    would bounce would be nonsense.
     """
     profile = await edit_client.get(
         MENTOR_PROFILE, mentor_id, select="name,cbmEmail,contactRecordId"
@@ -611,64 +754,284 @@ async def provision_mentor_user_steps(
         first, last = _split_name(profile.get("name"))
 
     existing_cbm = (profile.get("cbmEmail") or "").strip()
-    cbm = existing_cbm or cbm_email_for(first, last)
+    cbm = existing_cbm or await _reserve_cbm_email(
+        edit_client, admin_client, mentor_id, first, last
+    )
+    outcome.first, outcome.last = first, last
+    outcome.contact_id, outcome.recovery_email = contact_id, recovery_email
+    outcome.address, outcome.existing_cbm = cbm, existing_cbm
 
-    created_mailbox = False
-    temp_password: Optional[str] = None
+    if directory is None:
+        # No Workspace connection: the login flow carries on (it always has —
+        # the check is a gate, not a requirement), and the email-only flow's
+        # caller reports that there is nothing it can create.
+        return
 
-    if directory is not None:
-        yield _step("mailbox", "running", f"Checking for the mentor email account — {cbm}")
-        status = await directory.mailbox_status(cbm)
-        if status is MailboxStatus.EXISTS:
-            yield _step("mailbox", "done", f"Email account found for {cbm}")
-        elif status is MailboxStatus.MISSING:
-            if not create_mailbox:
-                yield _step(
-                    "mailbox", "error",
-                    f"the Google Workspace mailbox {cbm} does not exist — create it "
-                    "before approving this mentor (the login's welcome email would "
-                    "otherwise bounce and they could never sign in).",
-                )
-                return
-            recovery_note = f" (recovery to {recovery_email})" if recovery_email else ""
+    yield _step("mailbox", "running", f"Checking for the mentor email account — {cbm}")
+    status = await directory.mailbox_status(cbm)
+    if status is MailboxStatus.EXISTS:
+        outcome.confirmed = True
+        yield _step("mailbox", "done", f"Email account found for {cbm}")
+    elif status is MailboxStatus.MISSING:
+        if not create_mailbox:
+            outcome.blocked = True
             yield _step(
-                "mailbox", "running",
-                f"No email account found — creating a new account for {cbm}{recovery_note}",
+                "mailbox", "error",
+                f"the Google Workspace mailbox {cbm} does not exist and creating "
+                "mailboxes is switched off — create it in Google Workspace first, "
+                "or turn on 'Create missing mailboxes' in Email Setup."
+                if not for_login else
+                f"the Google Workspace mailbox {cbm} does not exist — create it "
+                "before approving this mentor (the login's welcome email would "
+                "otherwise bounce and they could never sign in).",
             )
-            temp_password = gen_temp_password()
-            try:
-                await directory.create_user(
-                    cbm, first, last,
-                    recovery_email=recovery_email, temp_password=temp_password,
-                )
-            except GoogleDirectoryError as exc:
-                yield _step("mailbox", "error", f"Could not create the email account: {exc}")
-                return
-            created_mailbox = True
-            yield _step("mailbox", "running", f"Created {cbm} — waiting for it to become active…")
-            active = await _mailbox_becomes_active(
-                directory, cbm, poll_seconds=poll_seconds, timeout=poll_timeout, sleep=sleep
+            return
+        recovery_note = f" (recovery to {recovery_email})" if recovery_email else ""
+        yield _step(
+            "mailbox", "running",
+            f"No email account found — creating a new account for {cbm}{recovery_note}",
+        )
+        temp_password = gen_temp_password()
+        outcome.temp_password = temp_password
+        try:
+            await directory.create_user(
+                cbm, first, last,
+                recovery_email=recovery_email, temp_password=temp_password,
             )
-            if not active:
-                yield _step(
-                    "mailbox", "error",
-                    f"The mailbox {cbm} was created but is not active yet. Save this "
-                    "mentor again in a few minutes to finish creating their login.",
-                    mailboxCreated=True, tempPassword=temp_password, recoveryEmail=recovery_email,
-                )
-                return
-            yield _step("mailbox", "done", f"The mailbox {cbm} is active")
-        else:  # UNKNOWN — fail open so a Google outage can't freeze approvals
-            yield _step("mailbox", "done", "Could not verify the mailbox — continuing anyway")
+        except GoogleDirectoryError as exc:
+            outcome.blocked = True
+            outcome.temp_password = None
+            yield _step("mailbox", "error", f"Could not create the email account: {exc}")
+            return
+        outcome.created = True
+        yield _step("mailbox", "running", f"Created {cbm} — waiting for it to become active…")
+        active = await _mailbox_becomes_active(
+            directory, cbm, poll_seconds=poll_seconds, timeout=poll_timeout, sleep=sleep
+        )
+        if not active:
+            # The account exists but isn't usable yet, so nothing downstream may
+            # run — not the login, and not the status advance. A re-run finds it
+            # EXISTS and finishes the job.
+            outcome.blocked = True
+            yield _step(
+                "mailbox", "error",
+                f"The mailbox {cbm} was created but is not active yet. Save this "
+                "mentor again in a few minutes to finish setting them up.",
+                mailboxCreated=True, tempPassword=temp_password, recoveryEmail=recovery_email,
+            )
+            return
+        outcome.confirmed = True
+        yield _step("mailbox", "done", f"The mailbox {cbm} is active")
+    else:  # UNKNOWN — fail open so a Google outage can't freeze approvals
+        yield _step("mailbox", "done", "Could not verify the mailbox — continuing anyway")
+
+    # Store the address now that the account is real. The login stage relies on
+    # cbmEmail being persisted BEFORE any User is created (P2, reliability review
+    # 2026-07-17): if its link write fails, the profile still carries the address,
+    # so the next run reuses that login instead of minting jane.doe2@ and sending
+    # a second welcome email.
+    if outcome.confirmed and not existing_cbm:
+        try:
+            await edit_client.update(MENTOR_PROFILE, mentor_id, {"cbmEmail": cbm})
+            outcome.existing_cbm = cbm
+        except EspoError as exc:
+            outcome.blocked = True
+            yield _step(
+                "mailbox", "error",
+                f"The account {cbm} exists, but the address could not be saved to "
+                f"the mentor's record ({exc}). Nothing else was changed — try again.",
+                mailboxCreated=outcome.created, tempPassword=outcome.temp_password,
+                recoveryEmail=recovery_email,
+            )
+            return
+
+    # All Members group. Only once the account is confirmed (adding an address
+    # Google doesn't have would just fail), and never fatally.
+    if members_group and outcome.confirmed:
+        yield _step("group", "running", f"Adding {cbm} to {members_group}…")
+        try:
+            await directory.add_group_member(members_group, cbm)
+            outcome.group_added = True
+            yield _step("group", "done", f"{cbm} is a member of {members_group}")
+        except GoogleDirectoryError as exc:
+            outcome.group_added = False
+            outcome.group_error = str(exc)
+            yield _step(
+                "group", "error",
+                f"The email account is ready, but it could not be added to "
+                f"{members_group} ({exc}). Add it by hand in Google Workspace, or "
+                f"run this again.",
+            )
+    elif members_group:
+        yield _step(
+            "group", "done",
+            f"Skipped adding {cbm} to {members_group} — the account is not confirmed yet.",
+        )
+
+
+async def _advance_to_provisional_steps(
+    edit_client: MentorClient, mentor_id: str
+) -> AsyncIterator[dict[str, Any]]:
+    """Move a mentor from ``Accepted-Provisional`` to ``Provisional`` — the record
+    of "their Google account now exists".
+
+    Written as the staff user (they just saved that same field, so no escalation
+    is involved). Guarded on the live enum: the two CRMs drift, and a status
+    option that isn't there must produce a note, not a 400 that reads as a failed
+    provisioning.
+    """
+    try:
+        fields = await edit_client.metadata(f"entityDefs.{MENTOR_PROFILE}.fields")
+        options = ((fields or {}).get("mentorStatus") or {}).get("options")
+    except Exception as exc:  # noqa: BLE001 — metadata read is advisory
+        log.warning("could not read mentorStatus options: %s", exc)
+        options = None
+    if isinstance(options, list) and STATUS_PROVISIONAL not in options:
+        yield _step(
+            "status", "done",
+            f"Left the status alone — this CRM has no '{STATUS_PROVISIONAL}' "
+            "status to move them to.",
+        )
+        return
+    yield _step("status", "running", f"Setting the status to {STATUS_PROVISIONAL}…")
+    try:
+        await edit_client.update(
+            MENTOR_PROFILE, mentor_id, {"mentorStatus": STATUS_PROVISIONAL}
+        )
+    except EspoError as exc:
+        yield _step(
+            "status", "error",
+            f"The email account is ready, but the status could not be changed to "
+            f"{STATUS_PROVISIONAL} ({exc}). Set it by hand, or save again.",
+        )
+        return
+    yield _step("status", "done", f"Status set to {STATUS_PROVISIONAL}")
+
+
+async def provision_mentor_email_steps(
+    edit_client: MentorClient,
+    mentor_id: str,
+    *,
+    admin_client: Optional[MentorClient] = None,
+    directory: Optional[MailboxDirectory] = None,
+    create_mailbox: bool = False,
+    members_group: str = "",
+    advance_status: bool = True,
+    poll_seconds: int = MAILBOX_POLL_SECONDS,
+    poll_timeout: int = MAILBOX_POLL_TIMEOUT,
+    sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+) -> AsyncIterator[dict[str, Any]]:
+    """The **Accepted-Provisional** event: create the mentor's Google Workspace
+    account, add it to the All Members group, and advance the record to
+    ``Provisional``. **No EspoCRM login** — that stays with approval.
+
+    ``advance_status`` is False for a mentor already at ``Provisional`` (the
+    recovery path — their account went missing or was never made), where there is
+    no status left to write. The status advance runs only on a *confirmed*
+    account: see :class:`MailboxOutcome`.
+    """
+    if directory is None:
+        yield _step(
+            "mailbox", "error",
+            "The Google Workspace connection isn't configured, so an email account "
+            "can't be created. An administrator can set it up in Email Setup.",
+        )
+        return
+    outcome = MailboxOutcome()
+    async for event in provision_mentor_mailbox_steps(
+        edit_client, mentor_id, outcome,
+        admin_client=admin_client, directory=directory,
+        create_mailbox=create_mailbox, members_group=members_group, for_login=False,
+        poll_seconds=poll_seconds, poll_timeout=poll_timeout, sleep=sleep,
+    ):
+        yield event
+    if outcome.blocked:
+        return
+
+    advanced = False
+    if advance_status and outcome.confirmed:
+        async for event in _advance_to_provisional_steps(edit_client, mentor_id):
+            if event.get("status") == "done" and event.get("step") == "status":
+                advanced = f"Status set to {STATUS_PROVISIONAL}" in (event.get("message") or "")
+            yield event
+    elif advance_status:
+        # UNKNOWN mailbox check: we don't know the account exists, so we must not
+        # record that it does. They stay at Accepted-Provisional and the next run
+        # advances them.
+        yield _step(
+            "status", "done",
+            "Left the status at Accepted-Provisional — the email account could not "
+            "be verified. Try again once Google is reachable.",
+        )
+
+    result = outcome.result()
+    result["statusAdvanced"] = advanced
+    if advanced:
+        result["mentorStatus"] = STATUS_PROVISIONAL
+    yield {
+        "step": "done", "status": "done",
+        "message": "The mentor's email account is ready", "result": result,
+    }
+
+
+async def provision_mentor_user_steps(
+    admin_client: MentorClient,
+    edit_client: MentorClient,
+    mentor_id: str,
+    *,
+    team_name: str,
+    directory: Optional[MailboxDirectory] = None,
+    create_mailbox: bool = False,
+    members_group: str = "",
+    poll_seconds: int = MAILBOX_POLL_SECONDS,
+    poll_timeout: int = MAILBOX_POLL_TIMEOUT,
+    sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+) -> AsyncIterator[dict[str, Any]]:
+    """The **Approved/Active** event: ensure the mentor's CBM mailbox (stage one,
+    :func:`provision_mentor_mailbox_steps`) and then create their EspoCRM
+    **login User**, yielding a human-readable status event for each step.
+
+    Stage two: create the User (welcome email via ``sendAccessInfo``), link it as
+    ``assignedUser``, stamp it on the linked Contact, and back-fill ``cbmEmail``
+    if stage one didn't. **The status is never touched** — a mentor arriving here
+    straight from Accepted-Provisional must not be demoted to Provisional.
+
+    Privilege split (unchanged): ``admin_client`` (a backend admin credential)
+    does the User read/create + Team lookup; ``edit_client`` (the staff user)
+    reads the profile/contact and writes the link. A terminal event has
+    ``status`` ``error`` (and stops) or is the final ``{"step":"done", ...,
+    "result": {...}}`` carrying the created login (and, if a mailbox was created,
+    the temp password + recovery email to relay to the mentor).
+    """
+    outcome = MailboxOutcome()
+    async for event in provision_mentor_mailbox_steps(
+        edit_client, mentor_id, outcome,
+        admin_client=admin_client, directory=directory,
+        create_mailbox=create_mailbox, members_group=members_group, for_login=True,
+        poll_seconds=poll_seconds, poll_timeout=poll_timeout, sleep=sleep,
+    ):
+        yield event
+    if outcome.blocked:
+        return
+
+    first, last, contact_id = outcome.first, outcome.last, outcome.contact_id
+    cbm, existing_cbm = outcome.address, outcome.existing_cbm
 
     # Reuse the mentor's existing CBM login rather than creating a duplicate,
-    # suffixed account on every save. Only reuse when the profile ALREADY had a
-    # cbmEmail (existing_cbm): that means this mentor was assigned `cbm` before, so
-    # a User with that userName IS their login (it just wasn't linked — the link
-    # write was silently failing on prod; see below). When cbmEmail is blank we're
-    # assigning a fresh address, so a userName clash is a DIFFERENT person and the
-    # create path suffixes it (jane.doe2@…). This fixes the doug.bower2/doug.bower3
-    # duplicate-User pileup without merging two same-named mentors onto one login.
+    # suffixed account on every save. Only reuse when the address is already
+    # STORED on the profile (existing_cbm): that means `cbm` was assigned to this
+    # mentor, so a User with that userName IS their login (it just wasn't linked —
+    # the link write was silently failing on prod; see below). When it is blank
+    # we're assigning a fresh address, so a userName clash is a DIFFERENT person
+    # and the create path suffixes it (jane.doe2@…). This fixes the
+    # doug.bower2/doug.bower3 duplicate-User pileup without merging two same-named
+    # mentors onto one login.
+    #
+    # Since a mentor's account is now created at Accepted-Provisional, stage one
+    # usually stored the address already — which is safe precisely because
+    # `_reserve_cbm_email` only stores an address that no User and no OTHER mentor
+    # profile holds. Without that check, "has a cbmEmail" would no longer mean
+    # "this login is theirs" and two same-named mentors would share one login.
     existing_user = None
     if existing_cbm:
         try:
@@ -758,13 +1121,10 @@ async def provision_mentor_user_steps(
         return
 
     result = {
-        "userId": user_id, "userName": user_name, "email": cbm,
+        **outcome.result(),  # email, mailbox creation + temp password, group
+        "userId": user_id, "userName": user_name,
         "team": team_name, "reused": reused,
     }
-    if created_mailbox:
-        result["mailboxCreated"] = True
-        result["tempPassword"] = temp_password
-        result["recoveryEmail"] = recovery_email
     done_msg = (
         f"Linked the existing login {user_name} to the mentor."
         if reused
@@ -782,6 +1142,7 @@ async def provision_mentor_user(
     team_name: str,
     directory: Optional[MailboxDirectory] = None,
     create_mailbox: bool = False,
+    members_group: str = "",
 ) -> dict[str, Any]:
     """Non-streaming wrapper over :func:`provision_mentor_user_steps`: drains the
     generator and returns the final result, raising :class:`MentorAdminError` on
@@ -791,6 +1152,7 @@ async def provision_mentor_user(
     async for event in provision_mentor_user_steps(
         admin_client, edit_client, mentor_id,
         team_name=team_name, directory=directory, create_mailbox=create_mailbox,
+        members_group=members_group,
     ):
         if event.get("status") == "error":
             raise MentorAdminError(event.get("message") or "provisioning failed")
@@ -807,17 +1169,25 @@ async def verify_mentor_status(
     *,
     user_client: Optional[MentorClient] = None,
     directory: Optional[MailboxDirectory] = None,
+    members_group: str = "",
     metrics: Any = _METRICS_UNSET,
 ) -> dict[str, Any]:
     """One mentor's row for the Update-Mentor-Status sweep.
 
     Verifies (1) the linked login **User** actually exists in EspoCRM and is
     active — not just that the profile carries a link (a deleted User leaves a
-    dangling FK), and (2) the mentor's ``@cbmentors.org`` **mailbox** exists in
+    dangling FK), (2) the mentor's ``@cbmentors.org`` **mailbox** exists in
     Google Workspace (when the Directory integration is configured — else
-    reported ``unavailable``, never a failure). Also recomputes completeness
-    and self-heals the stored ``recordStatus`` (same write rules as a detail
-    view: only on change, never over a manual Duplicate).
+    reported ``unavailable``, never a failure), and (3) that mailbox's membership
+    of the **All Members group** when one is configured. Also recomputes
+    completeness and self-heals the stored ``recordStatus`` (same write rules as
+    a detail view: only on change, never over a manual Duplicate).
+
+    The sweep **reports, it never creates** (Doug's ruling): creating an account
+    produces a temporary password that a human has to relay, so it stays in the
+    per-mentor status window. ``needsEmailAccount`` flags a mentor stranded at
+    ``Accepted-Provisional`` without an account — exactly the row this sweep
+    exists to surface.
 
     ``user_client``: privileged client for the User read — regular staff can't
     read Users, so the router passes the provisioning admin's client when that
@@ -885,15 +1255,46 @@ async def verify_mentor_status(
             mailbox = {"status": MailboxStatus.UNKNOWN.value, "email": email,
                        "detail": str(exc)}
 
+    # All Members group membership — same non-failure contract as the mailbox
+    # check: unconfigured or unverifiable reports itself, never sinks the sweep.
+    if not email:
+        group: dict[str, Any] = {"status": "no-email"}
+    elif directory is None or not members_group:
+        group = {
+            "status": "unavailable",
+            "detail": "group check not configured (see Email Setup)",
+        }
+    else:
+        try:
+            member = await directory.is_group_member(members_group, email)
+        except Exception as exc:  # noqa: BLE001 — advisory check
+            member, detail = None, str(exc)
+        else:
+            detail = None
+        group = {
+            "status": "member" if member else ("missing" if member is False else "unknown"),
+            "group": members_group,
+        }
+        if detail:
+            group["detail"] = detail
+
+    mentor_status = rec.get("mentorStatus")
     return {
         "id": mentor_id,
         "name": rec.get("name"),
-        "mentorStatus": rec.get("mentorStatus"),
+        "mentorStatus": mentor_status,
         "cbmEmail": email or None,
         "recordStatus": record_status,
         "issues": completeness["issues"],
         "user": user_check,
         "mailbox": mailbox,
+        "group": group,
+        # Stranded at the signal status: accepted, but their Google account was
+        # never made (or can't be seen), so nobody can reach them.
+        "needsEmailAccount": (
+            mentor_status == STATUS_ACCEPTED_PROVISIONAL
+            and mailbox.get("status") != MailboxStatus.EXISTS.value
+        ),
     }
 
 
@@ -902,6 +1303,7 @@ async def verify_all_mentor_statuses(
     *,
     user_client: Optional[MentorClient] = None,
     directory: Optional[MailboxDirectory] = None,
+    members_group: str = "",
 ) -> list[dict[str, Any]]:
     """Run :func:`verify_mentor_status` over the whole roster (bounded
     concurrency). A per-mentor CRM failure becomes an ``error`` row so one bad
@@ -925,7 +1327,8 @@ async def verify_all_mentor_statuses(
             try:
                 return await verify_mentor_status(
                     client, row["id"], user_client=user_client,
-                    directory=directory, metrics=metrics,
+                    directory=directory, members_group=members_group,
+                    metrics=metrics,
                 )
             except EspoError as exc:
                 return {"id": row["id"], "name": row.get("name"), "error": str(exc)}

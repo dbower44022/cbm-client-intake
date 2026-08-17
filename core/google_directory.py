@@ -34,8 +34,17 @@ DIRECTORY_SCOPE = "https://www.googleapis.com/auth/admin.directory.user.readonly
 # separately authorized in the domain-wide-delegation grant for the service
 # account; an account with only the read-only scope can check but not create.
 DIRECTORY_WRITE_SCOPE = "https://www.googleapis.com/auth/admin.directory.user"
+# Group-membership scope — required only to add a mailbox to a Google Group.
+# A THIRD scope: it must be authorized for domain-wide delegation separately
+# from the two user scopes above, and the impersonated admin needs group-admin
+# privilege. Without it the member insert 403s `unauthorized_client`.
+DIRECTORY_GROUP_SCOPE = "https://www.googleapis.com/auth/admin.directory.group"
 _USER_URL = "https://admin.googleapis.com/admin/directory/v1/users/{email}"
 _USERS_URL = "https://admin.googleapis.com/admin/directory/v1/users"
+_GROUP_MEMBERS_URL = "https://admin.googleapis.com/admin/directory/v1/groups/{group}/members"
+_GROUP_MEMBER_URL = (
+    "https://admin.googleapis.com/admin/directory/v1/groups/{group}/members/{member}"
+)
 
 
 class MailboxStatus(str, Enum):
@@ -183,6 +192,70 @@ class GoogleDirectory:
             f"{resp.text[:300]}"
         )
 
+    async def add_group_member(self, group_email: str, member_email: str) -> None:
+        """Add ``member_email`` to the Google Group ``group_email`` as a MEMBER.
+
+        Idempotent: a 409 (already a member) is success, exactly like
+        :meth:`create_user`. Raises :class:`GoogleDirectoryError` on anything
+        else — including a 404, which means the GROUP address is wrong and must
+        never read as "added". Callers treat the failure as non-fatal (the
+        mailbox itself is what matters) but must surface the message.
+        """
+        token = await self._access_token(scopes=[DIRECTORY_GROUP_SCOPE])
+        if not token:
+            raise GoogleDirectoryError(
+                "could not authenticate to Google Workspace to update the group — "
+                "check that the Directory *group* scope is authorized for "
+                "domain-wide delegation and that the delegated admin can manage groups"
+            )
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                resp = await client.post(
+                    _GROUP_MEMBERS_URL.format(group=group_email),
+                    json={"email": member_email, "role": "MEMBER"},
+                    headers={"Authorization": f"Bearer {token}"},
+                )
+        except httpx.HTTPError as exc:
+            raise GoogleDirectoryError(f"Google Workspace request failed: {exc}") from exc
+        if resp.status_code in (200, 201, 409):  # 409 = already a member
+            return
+        if resp.status_code == 404:
+            raise GoogleDirectoryError(
+                f"the group {group_email} was not found in Google Workspace — "
+                "check the address configured in Email Setup"
+            )
+        raise GoogleDirectoryError(
+            f"Google Workspace rejected the group membership (HTTP {resp.status_code}): "
+            f"{resp.text[:300]}"
+        )
+
+    async def is_group_member(self, group_email: str, member_email: str) -> Optional[bool]:
+        """Whether ``member_email`` is in ``group_email``: True / False (404) /
+        ``None`` when the check could not be made (fails open, like
+        :meth:`mailbox_status`) — used by the Update-Mentor-Status sweep, which
+        reports rather than acts."""
+        token = await self._access_token(scopes=[DIRECTORY_GROUP_SCOPE])
+        if not token:
+            return None
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                resp = await client.get(
+                    _GROUP_MEMBER_URL.format(group=group_email, member=member_email),
+                    headers={"Authorization": f"Bearer {token}"},
+                )
+        except httpx.HTTPError as exc:
+            log.warning("Group membership lookup failed for %s: %s", member_email, exc)
+            return None
+        if resp.status_code == 200:
+            return True
+        if resp.status_code == 404:  # not a member (or no such group — reported as absent)
+            return False
+        log.warning(
+            "Group membership lookup for %s in %s returned HTTP %s",
+            member_email, group_email, resp.status_code,
+        )
+        return None
+
     async def mailbox_status(self, email: str) -> MailboxStatus:
         """``EXISTS`` (200) / ``MISSING`` (404) / ``UNKNOWN`` (anything else)."""
         token = await self._access_token()
@@ -208,11 +281,17 @@ class GoogleDirectory:
 @dataclass
 class ResolvedGoogle:
     """The effective Google-Workspace integration for a request: the directory
-    client (or None when unconfigured) plus which capabilities are switched on."""
+    client (or None when unconfigured) plus which capabilities are switched on.
+
+    ``members_group`` is the Google Group every CBM member belongs to (the
+    "All Members" list). Empty = the group step is skipped entirely — no error,
+    no flag of its own; the address IS the switch.
+    """
 
     directory: Optional[GoogleDirectory]
     check_enabled: bool
     create_enabled: bool
+    members_group: str = ""
 
 
 def resolve_google_directory(settings: Any, db_config: Optional[dict[str, Any]]) -> ResolvedGoogle:
@@ -223,8 +302,12 @@ def resolve_google_directory(settings: Any, db_config: Optional[dict[str, Any]])
         directory = GoogleDirectory.from_config(db_config, settings.request_timeout_seconds)
         check = bool(db_config.get("directory_check", True)) and directory is not None
         create = bool(db_config.get("create_mailbox", False)) and directory is not None
-        return ResolvedGoogle(directory, check, create)
+        # The stored config wins as a whole (it is the screen an admin edits), so
+        # a blank group here means blank — it does NOT fall back to the env var.
+        group = (db_config.get("members_group") or "").strip()
+        return ResolvedGoogle(directory, check, create, group)
     directory = GoogleDirectory.from_settings(settings)
     check = directory is not None  # from_settings already honors google_directory_check
     create = bool(getattr(settings, "google_create_mailbox", False)) and directory is not None
-    return ResolvedGoogle(directory, check, create)
+    group = (getattr(settings, "google_members_group", "") or "").strip()
+    return ResolvedGoogle(directory, check, create, group)

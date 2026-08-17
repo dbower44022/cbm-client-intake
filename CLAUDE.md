@@ -320,23 +320,50 @@ detail screen that edits any whitelisted field on `CMentorProfile`.
 - **`reconcile_user_links` runs on every save** (best-effort), assigning the
   mentor's User to both the member and its Contact — this is what self-heals
   one-sided assignments.
-- **Approval → user provisioning.** A save leaving `mentorStatus` at Approved or
-  Active with no linked login, and `MENTOR_PROVISION_USERS` on, creates an
-  EspoCRM User (`firstname.lastname@cbmentors.org`, welcome email via
-  `sendAccessInfo`), places it in `MENTOR_TEAM_NAME`, links it as
-  `assignedUser`, back-fills `cbmEmail`, and stamps the User onto the linked
-  Contact. **Privilege split — EspoCRM makes User creation admin-only; API keys
-  and `api`-type users cannot do it and a *regular* user with roles 403s.** So
-  this runs as a **dedicated admin service account** (`ESPO_PROVISION_*`,
-  Type=Admin) via `core/admin_client.py` — Mentor Admin staff stay non-admin.
-  Best-effort: a failure returns `provision:{ok:false,error}` and never rolls
-  back the saved status.
+- **Provisioning happens in TWO stages, keyed on `mentorStatus`** (Doug's ruling
+  2026-08-17). `Accepted-Provisional` is a **signal** status, not a resting one:
+  it means *accepted, still needs a Google account*.
+  - **`Accepted-Provisional` → the Google Workspace account** (+ the All Members
+    group), then the app **advances the record to `Provisional`** — so CBM can
+    reach them during the provisional period. No EspoCRM login.
+    `provision_mentor_email_steps`.
+  - **`Approved` / `Active` → the EspoCRM login**, unchanged, on top of the same
+    mailbox stage — so a mentor who jumps straight here still gets everything.
+    It **never writes the status**: that would demote them.
+  - The status advance requires a **confirmed** account (created and live, or
+    already there). An UNKNOWN Directory check fails open for the *login* but must
+    never advance the status — we don't record "has an account" on a guess. A
+    stuck `Accepted-Provisional` is therefore the "account still owed" signal, and
+    the sweep flags it.
+  - Which stage runs is decided **server-side in the router** from the mentor's
+    status; the frontend only asks. Both run in the SSE status window and never in
+    `update_mentor`, because a mailbox create yields a **temp password a human
+    must relay** (also why the sweep reports but never creates).
+  - The group add is **non-fatal** (a distribution list is not the account), and
+    an empty `GOOGLE_MEMBERS_GROUP` / Email-Setup address skips it — the address is
+    its own switch. It needs a **third** DWD scope, `admin.directory.group`.
+  - `_reserve_cbm_email` is what keeps the login-reuse guard sound now that every
+    mentor reaches approval carrying a `cbmEmail`: an address is only stored if no
+    User holds it as a userName and no *other* mentor profile holds it. A merely
+    *existing* mailbox is not "taken" — a pre-created mailbox is the normal case.
+  - The login half creates an EspoCRM User (`firstname.lastname@cbmentors.org`,
+    welcome email via `sendAccessInfo`), places it in `MENTOR_TEAM_NAME`, links it
+    as `assignedUser`, back-fills `cbmEmail`, and stamps the User onto the linked
+    Contact. **Privilege split — EspoCRM makes User creation admin-only; API keys
+    and `api`-type users cannot do it and a *regular* user with roles 403s.** So
+    this runs as a **dedicated admin service account** (`ESPO_PROVISION_*`,
+    Type=Admin) via `core/admin_client.py` — Mentor Admin staff stay non-admin.
+  - Best-effort: a failure returns `provision:{ok:false,error}` and never rolls
+    back the saved status. Every run is action-logged (it changes a status on the
+    app's own initiative), with the temp password stripped.
 - **Permission teams** on the Status tab write the linked **User's** `teamsIds`
   (teams live on the User, not the profile), also under the admin account.
   Always clickable; a login-less mentor gets an explanatory message.
 - **"Update Mentor Status"** sweeps the roster: verifies each login User, checks
-  the mailbox, runs `reconcile_user_links`, and bulk re-syncs `recordStatus`.
-  This is the staff-facing repair button for stamp drift.
+  the mailbox and its members-group membership, flags anyone stranded at
+  `Accepted-Provisional`, runs `reconcile_user_links`, and bulk re-syncs
+  `recordStatus`. This is the staff-facing repair button for stamp drift. It
+  **reports, never creates** — see the temp-password reason above.
 - Functional reference for staff: `mentor-administration.md`.
 
 ### My Mentor Profile — `/mentorprofile`
@@ -1104,6 +1131,15 @@ holds anything still owed.*
 is unpushed. What is *verified* is narrower than what is deployed — see each
 block.
 
+- **v0.204.0 — a mentor's Google account is created at Accepted-Provisional.**
+  Provisioning is two events now (see the Mentor Administration section for the
+  standing rules): the Workspace account + All Members group at
+  `Accepted-Provisional`, which then advances the record to `Provisional`; the CRM
+  login still waits for Approved/Active. **Verified by tests only** — the live pass
+  needs three things Doug owns: the group address (still unknown, so the group step
+  ships inert), the `admin.directory.group` DWD scope, and "Create missing
+  mailboxes" confirmed on for the environment. Details and the exact live script:
+  `OPEN-ITEMS.md` #22; rulings: `prds/mentor-provisional-provisioning-plan.md`.
 - **v0.203.0 / v0.203.1 — the events website preview is the website now.** The
   site's own stylesheet (verbatim from its Elementor widgets) ships with the
   plugin and drives the preview, so the colours, type and the two-column

@@ -601,7 +601,7 @@ async def test_no_admin_client_means_no_provisioning():
     assert c.created == []
     assert res["provision"] == {
         "ok": False, "disabled": True,
-        "error": "mentor login provisioning is disabled on this server",
+        "error": "mentor provisioning is disabled on this server",
     }
 
 
@@ -654,13 +654,25 @@ async def test_already_approved_provisions_on_unrelated_field_save():
 class FakeDirectory:
     """A stand-in for core.google_directory.GoogleDirectory. ``status`` is the
     mailbox state; after a create_user() call it flips to EXISTS (so polling
-    succeeds), unless ``create_error`` is set or ``stays_missing`` is True."""
+    succeeds), unless ``create_error`` is set or ``stays_missing`` is True.
+    ``group_error`` makes the group-membership add fail."""
 
-    def __init__(self, status, *, create_error=None, stays_missing=False):
+    def __init__(self, status, *, create_error=None, stays_missing=False, group_error=None):
         self._status = status
         self.create_error = create_error
         self.stays_missing = stays_missing
+        self.group_error = group_error
         self.created = []
+        self.group_adds = []
+
+    async def add_group_member(self, group_email, member_email):
+        from core.google_directory import GoogleDirectoryError
+        if self.group_error:
+            raise GoogleDirectoryError(self.group_error)
+        self.group_adds.append((group_email, member_email))
+
+    async def is_group_member(self, group_email, member_email):
+        return (group_email, member_email) in self.group_adds
 
     async def mailbox_status(self, email):
         return self._status
@@ -787,6 +799,284 @@ async def test_steps_created_but_not_active_reports_pending():
     assert "not active yet" in events[-1]["message"]
     assert events[-1].get("mailboxCreated") is True
     assert c.created == []  # login deferred to a later save
+
+
+# --- Accepted-Provisional: the email account, the group, the status advance ---
+# Two provisioning events (Doug's ruling 2026-08-17): the Google account is made
+# at Accepted-Provisional and the record then moves to Provisional; the EspoCRM
+# login still waits for Approved/Active.
+
+GROUP = "allmembers@cbmentors.org"
+
+
+def _provisional_client(status=service.STATUS_ACCEPTED_PROVISIONAL, **kw):
+    profile = {
+        "id": "m1", "name": "Jane Doe", "mentorStatus": status,
+        "assignedUserId": None, "cbmEmail": "", "contactRecordId": "c1",
+    }
+    profile.update(kw)
+    return ProvisionClient(profile=profile)
+
+
+def _status_writes(c):
+    return [u[2]["mentorStatus"] for u in c.updates if "mentorStatus" in u[2]]
+
+
+@pytest.mark.asyncio
+async def test_accepted_provisional_creates_account_group_and_advances_status():
+    from core.google_directory import MailboxStatus
+    c = _provisional_client()
+    d = FakeDirectory(MailboxStatus.MISSING)
+    events = await _drain(service.provision_mentor_email_steps(
+        c, "m1", admin_client=c, directory=d, create_mailbox=True,
+        members_group=GROUP, poll_seconds=1, poll_timeout=5, sleep=_noop_sleep,
+    ))
+    # the Google account was created and joined the group
+    assert d.created and d.created[0]["email"] == "jane.doe@cbmentors.org"
+    assert d.group_adds == [(GROUP, "jane.doe@cbmentors.org")]
+    # NO EspoCRM login — that is the approval event, not this one
+    assert c.created == []
+    # the address is stored, and the record advanced
+    assert c.profile["cbmEmail"] == "jane.doe@cbmentors.org"
+    assert _status_writes(c) == [service.STATUS_PROVISIONAL]
+    final = events[-1]
+    assert final["step"] == "done"
+    assert final["result"]["statusAdvanced"] is True
+    assert final["result"]["mentorStatus"] == service.STATUS_PROVISIONAL
+    assert final["result"]["tempPassword"]  # relayed to the mentor by a human
+    assert final["result"]["groupAdded"] is True
+
+
+@pytest.mark.asyncio
+async def test_accepted_provisional_existing_mailbox_advances_without_creating():
+    """An admin who made the mailbox by hand still gets the status advance — the
+    signal is "the account exists", not "we made it"."""
+    from core.google_directory import MailboxStatus
+    c = _provisional_client()
+    d = FakeDirectory(MailboxStatus.EXISTS)
+    events = await _drain(service.provision_mentor_email_steps(
+        c, "m1", admin_client=c, directory=d, create_mailbox=True,
+        members_group=GROUP, sleep=_noop_sleep,
+    ))
+    assert d.created == []                       # nothing created
+    assert d.group_adds == [(GROUP, "jane.doe@cbmentors.org")]
+    assert _status_writes(c) == [service.STATUS_PROVISIONAL]
+    assert events[-1]["result"]["statusAdvanced"] is True
+    assert "tempPassword" not in events[-1]["result"]
+
+
+@pytest.mark.asyncio
+async def test_accepted_provisional_unknown_mailbox_leaves_the_status_alone():
+    """The mailbox check fails OPEN for the login flow, but an unverifiable
+    account must never be recorded as existing: no status write, no group add."""
+    from core.google_directory import MailboxStatus
+    c = _provisional_client()
+    d = FakeDirectory(MailboxStatus.UNKNOWN)
+    events = await _drain(service.provision_mentor_email_steps(
+        c, "m1", admin_client=c, directory=d, create_mailbox=True,
+        members_group=GROUP, sleep=_noop_sleep,
+    ))
+    assert _status_writes(c) == []
+    assert d.group_adds == []
+    assert c.profile["cbmEmail"] == ""           # nothing asserted about the account
+    assert events[-1]["result"]["statusAdvanced"] is False
+
+
+@pytest.mark.asyncio
+async def test_accepted_provisional_inactive_mailbox_does_not_advance():
+    """Created but not live yet: the run stops, the status stays, and the temp
+    password still reaches the screen so nothing is lost on the retry."""
+    from core.google_directory import MailboxStatus
+    c = _provisional_client()
+    d = FakeDirectory(MailboxStatus.MISSING, stays_missing=True)
+    events = await _drain(service.provision_mentor_email_steps(
+        c, "m1", admin_client=c, directory=d, create_mailbox=True,
+        members_group=GROUP, poll_seconds=1, poll_timeout=3, sleep=_noop_sleep,
+    ))
+    assert d.created and d.group_adds == []
+    assert _status_writes(c) == []
+    assert events[-1]["status"] == "error"
+    assert events[-1].get("tempPassword")
+
+
+@pytest.mark.asyncio
+async def test_accepted_provisional_missing_mailbox_with_create_off_explains_itself():
+    from core.google_directory import MailboxStatus
+    c = _provisional_client()
+    events = await _drain(service.provision_mentor_email_steps(
+        c, "m1", admin_client=c, directory=FakeDirectory(MailboxStatus.MISSING),
+        create_mailbox=False, members_group=GROUP, sleep=_noop_sleep,
+    ))
+    assert events[-1]["status"] == "error"
+    # the login flow's "before approving this mentor" wording would be nonsense here
+    assert "Create missing mailboxes" in events[-1]["message"]
+    assert _status_writes(c) == []
+
+
+@pytest.mark.asyncio
+async def test_no_directory_configured_cannot_create_an_account():
+    c = _provisional_client()
+    events = await _drain(service.provision_mentor_email_steps(c, "m1", directory=None))
+    assert events[-1]["status"] == "error"
+    assert "isn't configured" in events[-1]["message"]
+    assert _status_writes(c) == []
+
+
+@pytest.mark.asyncio
+async def test_provisional_recovery_run_writes_no_status():
+    """A mentor already at Provisional whose account went missing: re-run the
+    account steps, but there is no status left to advance."""
+    from core.google_directory import MailboxStatus
+    c = _provisional_client(status=service.STATUS_PROVISIONAL)
+    d = FakeDirectory(MailboxStatus.MISSING)
+    events = await _drain(service.provision_mentor_email_steps(
+        c, "m1", admin_client=c, directory=d, create_mailbox=True,
+        members_group=GROUP, advance_status=False,
+        poll_seconds=1, poll_timeout=5, sleep=_noop_sleep,
+    ))
+    assert d.created and _status_writes(c) == []
+    assert events[-1]["result"]["statusAdvanced"] is False
+
+
+@pytest.mark.asyncio
+async def test_login_flow_never_demotes_to_provisional():
+    """A mentor jumping straight from Accepted-Provisional to Approved gets a
+    login — and MUST NOT be moved back to Provisional by the account stage."""
+    from core.google_directory import MailboxStatus
+    c = _provisional_client(status=service.STATUS_ACCEPTED_PROVISIONAL)
+    events = await _drain(service.provision_mentor_user_steps(
+        c, c, "m1", team_name="Mentor Team",
+        directory=FakeDirectory(MailboxStatus.EXISTS), create_mailbox=True,
+        members_group=GROUP, sleep=_noop_sleep,
+    ))
+    assert len(c.created) == 1                   # the login WAS created
+    assert _status_writes(c) == []               # nothing touched the status
+    assert events[-1]["result"]["userName"] == "jane.doe@cbmentors.org"
+
+
+@pytest.mark.asyncio
+async def test_group_failure_is_never_fatal():
+    """All Members is a distribution list, not the account's existence: the run
+    reports the failure, advances the status, and (on approval) still logs in."""
+    from core.google_directory import MailboxStatus
+    c = _provisional_client()
+    d = FakeDirectory(MailboxStatus.EXISTS, group_error="not authorized")
+    events = await _drain(service.provision_mentor_email_steps(
+        c, "m1", admin_client=c, directory=d, create_mailbox=True,
+        members_group=GROUP, sleep=_noop_sleep,
+    ))
+    assert ("group", "error") in [(e.get("step"), e.get("status")) for e in events]
+    assert events[-1]["step"] == "done"          # the run still completed
+    assert events[-1]["result"]["groupAdded"] is False
+    assert _status_writes(c) == [service.STATUS_PROVISIONAL]
+
+    c2 = ProvisionClient()
+    await _drain(service.provision_mentor_user_steps(
+        c2, c2, "m1", team_name="Mentor Team",
+        directory=FakeDirectory(MailboxStatus.EXISTS, group_error="not authorized"),
+        create_mailbox=True, members_group=GROUP, sleep=_noop_sleep,
+    ))
+    assert len(c2.created) == 1                  # the login is unaffected
+
+
+@pytest.mark.asyncio
+async def test_no_group_configured_skips_the_group_step():
+    from core.google_directory import MailboxStatus
+    c = _provisional_client()
+    d = FakeDirectory(MailboxStatus.EXISTS)
+    events = await _drain(service.provision_mentor_email_steps(
+        c, "m1", admin_client=c, directory=d, create_mailbox=True,
+        members_group="", sleep=_noop_sleep,
+    ))
+    assert d.group_adds == []
+    assert [e for e in events if e.get("step") == "group"] == []
+    assert "groupAdded" not in events[-1]["result"]
+    assert _status_writes(c) == [service.STATUS_PROVISIONAL]
+
+
+@pytest.mark.asyncio
+async def test_status_advance_skipped_when_the_crm_has_no_provisional_option():
+    """The two CRMs drift: a missing status option is a note, not a 400 that
+    would read as a failed provisioning."""
+    from core.google_directory import MailboxStatus
+
+    class NoProvisionalClient(ProvisionClient):
+        async def metadata(self, key):
+            return {"mentorStatus": {"options": ["Candidate", "Approved", "Active"]}}
+
+    c = NoProvisionalClient(profile={
+        "id": "m1", "name": "Jane Doe", "mentorStatus": service.STATUS_ACCEPTED_PROVISIONAL,
+        "assignedUserId": None, "cbmEmail": "", "contactRecordId": "c1",
+    })
+    events = await _drain(service.provision_mentor_email_steps(
+        c, "m1", admin_client=c, directory=FakeDirectory(MailboxStatus.EXISTS),
+        create_mailbox=True, sleep=_noop_sleep,
+    ))
+    assert _status_writes(c) == []
+    assert events[-1]["step"] == "done"          # the account itself succeeded
+    assert events[-1]["result"]["statusAdvanced"] is False
+
+
+@pytest.mark.asyncio
+async def test_reserved_address_skips_one_that_is_already_taken():
+    """Since every mentor now reaches approval WITH a cbmEmail, the address must
+    be free before it is stored — otherwise "has a cbmEmail" would stop meaning
+    "that login is theirs" and two same-named mentors would share one."""
+
+    class TakenClient(ProvisionClient):
+        async def find_one(self, entity, attribute, value, select="id"):
+            if entity == "User" and value == "jane.doe@cbmentors.org":
+                return {"id": "u-someone-else"}
+            if entity == "CMentorProfile" and value == "jane.doe2@cbmentors.org":
+                return {"id": "m-another-jane"}   # a DIFFERENT mentor holds it
+            return await super().find_one(entity, attribute, value, select)
+
+    c = TakenClient(profile={
+        "id": "m1", "name": "Jane Doe", "mentorStatus": service.STATUS_ACCEPTED_PROVISIONAL,
+        "assignedUserId": None, "cbmEmail": "", "contactRecordId": "c1",
+    })
+    got = await service._reserve_cbm_email(c, c, "m1", "Jane", "Doe")
+    assert got == "jane.doe3@cbmentors.org"
+
+
+@pytest.mark.asyncio
+async def test_reserved_address_keeps_the_mentors_own_stored_value():
+    class OwnClient(ProvisionClient):
+        async def find_one(self, entity, attribute, value, select="id"):
+            if entity == "CMentorProfile" and value == "jane.doe@cbmentors.org":
+                return {"id": "m1"}               # this very mentor
+            return await super().find_one(entity, attribute, value, select)
+
+    c = OwnClient()
+    assert await service._reserve_cbm_email(c, c, "m1", "Jane", "Doe") == "jane.doe@cbmentors.org"
+
+
+def test_resolved_google_prefers_the_stored_group_over_the_env_var():
+    from core.google_directory import resolve_google_directory
+
+    class S:
+        google_directory_check = True
+        google_service_account_json = '{"type": "service_account"}'
+        google_delegated_admin = "admin@cbmentors.org"
+        google_create_mailbox = False
+        google_members_group = "env@cbmentors.org"
+        request_timeout_seconds = 20
+
+    env_only = resolve_google_directory(S(), None)
+    assert env_only.members_group == "env@cbmentors.org"
+
+    stored = resolve_google_directory(S(), {
+        "service_account_json": '{"type": "service_account"}',
+        "delegated_admin": "admin@cbmentors.org",
+        "members_group": "stored@cbmentors.org",
+    })
+    assert stored.members_group == "stored@cbmentors.org"
+    # A blank stored group means blank — the whole config comes from one place.
+    blanked = resolve_google_directory(S(), {
+        "service_account_json": '{"type": "service_account"}',
+        "delegated_admin": "admin@cbmentors.org",
+    })
+    assert blanked.members_group == ""
 
 
 def test_google_directory_disabled_without_config():
@@ -1155,6 +1445,59 @@ def test_provision_stream_requires_auth(monkeypatch):
         assert c.post("/mentoradmin/api/mentors/m1/provision").status_code == 401
 
 
+def _provisioning_enabled(monkeypatch, mentor_status, *, directory=None):
+    """The /provision endpoint with provisioning switched on and one mentor at
+    ``mentor_status``. Returns the fake client so a test can inspect the writes."""
+    from core.google_directory import ResolvedGoogle
+
+    client = ProvisionClient(profile={
+        "id": "m1", "name": "Jane Doe", "mentorStatus": mentor_status,
+        "assignedUserId": None, "cbmEmail": "", "contactRecordId": "c1",
+    })
+    monkeypatch.setenv("MENTOR_PROVISION_USERS", "true")
+    monkeypatch.setattr("mentoradmin.router.current_user", lambda request, key=None: _USER)
+    monkeypatch.setattr("mentoradmin.router.client_for", lambda settings, user: client)
+    monkeypatch.setattr("mentoradmin.router.admin_client_factory", lambda settings: _afactory(client))
+
+    async def resolved(settings):
+        return ResolvedGoogle(directory, directory is not None, directory is not None, GROUP)
+
+    monkeypatch.setattr("mentoradmin.router._resolve_google", resolved)
+    # Keep the test off the action-history path (it would try to reach a CRM).
+    async def no_log(*a, **kw):
+        return None
+    monkeypatch.setattr("mentoradmin.router.action_log.record_action", no_log)
+    return client
+
+
+def test_provision_stream_at_accepted_provisional_makes_an_account_not_a_login(monkeypatch):
+    """The endpoint picks the event from the mentor's status — the browser only
+    asks. Accepted-Provisional must not create an EspoCRM login."""
+    from core.google_directory import MailboxStatus
+
+    # EXISTS, so the endpoint test doesn't sit through the real create-then-poll
+    # wait — the creation path itself is covered at the service level above.
+    d = FakeDirectory(MailboxStatus.EXISTS)
+    client = _provisioning_enabled(
+        monkeypatch, service.STATUS_ACCEPTED_PROVISIONAL, directory=d,
+    )
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.post("/mentoradmin/api/mentors/m1/provision")
+    assert r.status_code == 200
+    assert "email account is ready" in r.text
+    assert d.group_adds == [(GROUP, "jane.doe@cbmentors.org")]
+    assert client.created == []                        # no EspoCRM User
+    assert _status_writes(client) == [service.STATUS_PROVISIONAL]
+
+
+def test_provision_stream_rejects_a_status_that_calls_for_neither(monkeypatch):
+    _provisioning_enabled(monkeypatch, "Candidate")
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.post("/mentoradmin/api/mentors/m1/provision")
+    assert r.status_code == 200
+    assert "Accepted-Provisional" in r.text and "Approved or Active" in r.text
+
+
 # --- "Update Mentor Status" verification sweep ---
 
 class VerifyClient:
@@ -1243,6 +1586,59 @@ async def test_verify_sweep_without_directory_reports_unavailable():
     )
     rows = await service.verify_all_mentor_statuses(client, directory=None)
     assert rows[0]["mailbox"]["status"] == "unavailable"
+    assert rows[0]["group"]["status"] == "unavailable"
+
+
+@pytest.mark.asyncio
+async def test_verify_sweep_reports_group_membership_and_never_joins():
+    """Doug's ruling: the sweep REPORTS group membership. It must not add anyone —
+    creating an account yields a temp password a human has to relay, so both
+    actions stay in the per-mentor status window."""
+    from core.google_directory import MailboxStatus
+
+    class GroupDirectory(VerifyDirectory):
+        def __init__(self, existing=(), members=()):
+            super().__init__(existing)
+            self.members = set(members)
+            self.added = []
+
+        async def is_group_member(self, group_email, member_email):
+            return member_email in self.members
+
+        async def add_group_member(self, group_email, member_email):
+            self.added.append(member_email)  # must stay empty
+
+    client = VerifyClient(mentors=[
+        _mentor("m1", "In Group", user=None, cbm="a.b@cbmentors.org"),
+        _mentor("m2", "Not In Group", user=None, cbm="c.d@cbmentors.org"),
+    ])
+    d = GroupDirectory(
+        existing={"a.b@cbmentors.org", "c.d@cbmentors.org"},
+        members={"a.b@cbmentors.org"},
+    )
+    rows = await service.verify_all_mentor_statuses(client, directory=d, members_group=GROUP)
+    by = {r["id"]: r for r in rows}
+    assert by["m1"]["group"] == {"status": "member", "group": GROUP}
+    assert by["m2"]["group"]["status"] == "missing"
+    assert d.added == []
+
+
+@pytest.mark.asyncio
+async def test_verify_sweep_flags_a_mentor_stranded_at_accepted_provisional():
+    client = VerifyClient(mentors=[
+        _mentor("m1", "Waiting", user=None, cbm=None,
+                status=service.STATUS_ACCEPTED_PROVISIONAL),
+        _mentor("m2", "Sorted", user=None, cbm="a.b@cbmentors.org",
+                status=service.STATUS_ACCEPTED_PROVISIONAL),
+        _mentor("m3", "Serving", user=None, cbm="c.d@cbmentors.org",
+                status=service.STATUS_PROVISIONAL),
+    ])
+    d = VerifyDirectory(existing={"a.b@cbmentors.org", "c.d@cbmentors.org"})
+    rows = await service.verify_all_mentor_statuses(client, directory=d)
+    by = {r["id"]: r for r in rows}
+    assert by["m1"]["needsEmailAccount"] is True    # accepted, no account
+    assert by["m2"]["needsEmailAccount"] is False   # accepted, account exists
+    assert by["m3"]["needsEmailAccount"] is False   # already past the signal
 
 
 @pytest.mark.asyncio
@@ -1310,7 +1706,7 @@ def test_status_check_endpoint_requires_auth(monkeypatch):
 def test_status_check_endpoint_returns_rows(monkeypatch):
     _authed(monkeypatch)
 
-    async def fake_verify(client, *, user_client=None, directory=None):
+    async def fake_verify(client, *, user_client=None, directory=None, members_group=""):
         return [{"id": "m1", "name": "Jane", "user": {"exists": True},
                  "mailbox": {"status": "unavailable"}}]
 
