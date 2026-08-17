@@ -5,7 +5,8 @@ first address input and have the app split it across Street / line 2 / City /
 State / ZIP, instead of the user retyping four fields from a website they
 copied it off.
 
-Status: **built and tested locally, v0.196.0 — not yet deployed.** Decisions
+Status: **shipped in v0.196.0 and deployed** (2026-08-13 push, both
+environments). A live pass is still owed — see `OPEN-ITEMS.md` #20. Decisions
 below are Doug's, recorded 2026-08-13.
 
 Two things changed during the build and are recorded in place below: the paste

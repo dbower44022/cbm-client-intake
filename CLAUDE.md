@@ -1103,12 +1103,12 @@ non-admin.)*
 - **v0.196.1** — a Drive grant for a `cbmEmail` with no Google account is no
   longer counted as a reconciliation failure (it was alerting nightly, forever).
 - **v0.196.0** — address paste-parsing across all six address surfaces (see the
-  Conventions entry). **Not deployed.** No flag: the module is inert unless a
-  page loads it, so per-surface wiring is the rollout control. Owed on review:
-  a live pass on the session tools' Details tab, which is the only surface with
-  a State `<select>`, disabled shipping inputs and the billing mirror in play.
-  **Now deployed** (it rode the 2026-08-13 push) — the live pass is still owed,
-  and there is no flag to fall back to, so a revert is the only rollback.
+  Conventions entry). **Deployed** on the 2026-08-13 push; **not yet verified
+  live.** There is no flag — the module is inert unless a page loads it, so
+  per-surface wiring was the rollout control and a **revert is the only
+  rollback**. Owed: a live pass on the session tools' Details tab, the only
+  surface with a State `<select>`, disabled shipping inputs and the billing
+  mirror in play at once (`OPEN-ITEMS.md` #20).
 - **v0.195.0** — quick add on Partner + Funder Management (see that app's
   section), **deployed to both environments** 2026-08-12. `RECORD_QUICK_ADD` is
   off by default, so the button is absent until toggled at `/setup` (now

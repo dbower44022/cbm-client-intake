@@ -339,11 +339,10 @@ block a deploy.)*
       button. Also worth a glance: the page's buttons changed from a white
       outline to the standard navy secondary, since it no longer defines its
       own.
-    - **Address paste-parsing (v0.196.0)** — built and tested locally
-      (2026-08-13), **not yet deployed**, and there is no flag: the module is
-      inert unless a page loads it, so per-surface wiring is the rollout
-      control. Verified against a faithful replica of each form shape in a
-      browser, NOT against the real pages. What is owed is one live pass on the
+    - **Address paste-parsing (v0.196.0)** — **deployed** on the 2026-08-13
+      push and live on both environments; there is no flag, so a revert is the
+      only rollback. Verified against a faithful replica of each form shape in
+      a browser, NOT against the real pages. What is owed is one live pass on the
       **session tools' Details tab** — the only surface where a State
       `<select>`, disabled shipping inputs and the "Same as billing" mirror are
       all in play at once. Paste a full address into Company **billing** line 1
