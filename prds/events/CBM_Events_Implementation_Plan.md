@@ -4,16 +4,29 @@ Companion to `CBM_Events_PRD.md`. This is the build order, the file-level
 design, and the verification gates. Requirement ids (`EV-nn`) and decision ids
 (`D-nn`) refer to the PRD.
 
-**Status:** Phase 0 complete (all decisions settled, crm-test schema applied).
-**Phase 1 BUILT and live-verified on crm-test, 2026-07-25 (v0.164.0)** — gated
-off by `EVENTS_ENABLED` + `EVENTS_PUBLIC_API`.
-**Phase 2 BUILT 2026-07-25 (v0.165.0)** — gated off by `ZOOM_EVENTS`; unit-tested
-against a stubbed Zoom, NOT yet driven against the real account (the OAuth app
-does not exist yet).
-**Phase 3 BUILT and live-verified on crm-test, 2026-07-25 (v0.166.0)** — the
-lead leak is closed.
-**Phase 5 BUILT and browser-verified against crm-test, 2026-07-26 (v0.168.0).**
-Phases 4 (plugin + cutover) and 6 remain.
+**Status:** Phase 0 complete (all decisions settled, schema applied on BOTH
+CRMs — prod caught up 2026-08-09).
+**Phases 1, 2, 3, 5 and 6 are BUILT. Phase 4 (WordPress plugin + cutover) is the
+only one left**, and it is the one that ends the lead leak.
+
+Live on crm-test since 2026-08-09 (`EVENTS_ENABLED` + `EVENTS_PUBLIC_API`); off
+on prod. Verified against the real CRM there: the staff app, the event graphic,
+the publish gate (page, payload AND image), a real public registration creating
+a Contact + CEventRegistration, its intake receipt, and the website preview.
+
+**Phase 6, built 2026-08-10 to 2026-08-16:**
+
+- **6a attendance** (v0.193.0) — `events/attendance.py` + worker timer.
+  **Never run against real Zoom.**
+- **6b follow-up email** (v0.201.0) — `events/notify.py` + reminder timer.
+  **Needs five EspoCRM templates; no frontend yet.**
+- **6c reporting** (v0.194.0, frontends v0.199.0/v0.199.1) — engagement rollup,
+  contact history, programme + conversion reports. Complete.
+- **6d YouTube backfill** (v0.200.0) — `scripts/import_youtube_events.py`.
+  **Never run against the real playlist.**
+
+What is *built* is wider than what is *verified* — 6a, 6b and 6d have all been
+unit-tested but never driven against their external service.
 
 ---
 

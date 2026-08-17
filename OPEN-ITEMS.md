@@ -264,6 +264,41 @@ block a deploy.)*
 
 ## Live verification owed
 
+19c. **Events Phase 6 is built but three of its four parts have never met their
+    external service** (2026-08-16). All are off everywhere; nothing is at risk
+    until each is switched on, but none of it is proven:
+
+    - **6a attendance** — `events/attendance.py` needs a real Zoom webinar with
+      real participants. `ZOOM_EVENTS` has never been on in any environment, so
+      **Phase 2 is unverified too** and the two have to be tested together: a
+      real webinar, real registrants, then confirm the pull marks attended /
+      no-show correctly and leaves hand-set attendance alone.
+    - **6b follow-up email** — blocked on **five EspoCRM templates**
+      (`EventReminder`, `EventRecordingAvailable`, `EventNoShow`,
+      `EventMentorCTA`, `EventSurvey`); each send refuses by name until its
+      template exists. Also **has no frontend** — the endpoints work but the
+      Follow-up tab doesn't call them, so it is API-only today. Never sent a
+      real message.
+    - **6d YouTube backfill** — never run against the real playlist; needs a
+      YouTube Data API v3 key and the playlist id. Run the dry-run on crm-test
+      first: the intake API user cannot delete, so a bad import is cleaned up by
+      hand.
+
+    **6c reporting is the exception** — built and wired end to end, but every
+    surface currently reads empty because no crm-test registration has been
+    marked Attended. Setting one attended is the cheapest way to see the
+    engagement rollup, the contact history and the programme reports carry real
+    numbers.
+
+19d. **Events is still off on production** (2026-08-16). crm-test has
+    `EVENTS_ENABLED` + `EVENTS_PUBLIC_API`; prod has neither, though its CRM
+    schema and the `Event Registration` receipt enum are both ready. Deliberate:
+    **Phase 4 (the WordPress plugin and cutover) is not built**, so there is no
+    public site pointing at prod and nothing to gain by switching it on. Phase 4
+    remains the only thing standing between this work and the lead leak actually
+    stopping.
+
+
 19b. **The v0.198.0 Company picker's CREATE path has never run as a non-admin**
     (2026-08-16). "+ New company" creates the Account through the **intake API
     client** on purpose, because the partner/funder gate roles don't hold
@@ -279,6 +314,31 @@ block a deploy.)*
 20. **Everything through v0.187.0 is DEPLOYED to both environments** (verified
     2026-07-28; only docs commits are unpushed). What is owed is the *live
     eyeball*, not a deploy. Never driven against the live CRM/Gmail/Drive:
+    - **The curated link pickers, now that they have options (v0.202.2)** —
+      until this release the option list was fetched with `maxSize=500`, which
+      EspoCRM 403s, so **every** picker offered only "(none)" for everyone
+      including admins. That invalidates the earlier manager-picker sign-off,
+      which could only have exercised the stored value. On a real partner and a
+      real funder, as a **non-admin** team member: open Details → **Edit** on
+      the first panel and confirm the **Company** picker lists the companies
+      (~97 prod / 93 crm-test) and the **manager** picker lists mentor
+      profiles; change each, Save, and confirm the CRM stored it and the grid
+      column follows. If a picker is still empty for a non-admin it is now a
+      genuine read-grant finding (Account / `CMentorProfile` on that team's
+      role) rather than this bug — the sponsor team's role in particular may
+      not read `CMentorProfile` at all.
+    - **The events Add/Edit editor (v0.202.0)** — a resizable workspace modal
+      with pinned Save/Cancel and the two Content fields on CBMRichText.
+      Verified only in a stub harness, but **`/events` is live on crm-test**
+      (`/events/api/session` 401s there and 404s on prod), so this can be done
+      now. Fold it into the Events Phase 5 pass below: create and edit one
+      event, confirm the rich text round-trips to `eventOverview` /
+      `eventSyllabus` and renders on the website preview, the Duration select
+      still translates into `dateEnd` (a wrong `dateEnd` is the four-hours-early
+      class of bug), and the graphic uploads through the new "Choose image…"
+      button. Also worth a glance: the page's buttons changed from a white
+      outline to the standard navy secondary, since it no longer defines its
+      own.
     - **Address paste-parsing (v0.196.0)** — built and tested locally
       (2026-08-13), **not yet deployed**, and there is no flag: the module is
       inert unless a page loads it, so per-surface wiring is the rollout

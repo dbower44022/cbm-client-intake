@@ -59,11 +59,18 @@ behaviour:
 | **Registration closes** | Leave empty and registration closes when the event starts. |
 | **Capacity** | Seat cap. **Leave empty (or 0) for unlimited.** Zero does not mean "full". |
 | **Location** | Venue, for in-person and hybrid events. |
-| **Full description / Syllabus** | Long-form content for the event's own page. |
+| **Full description / Syllabus** | Long-form content for the event's own page. Both are **formatted text** — bold, lists, links and headings work, and there is no need to know any HTML. |
 | **Publish to website** | The gate described above. Off by default. |
 
 Saving creates the event. It does **not** publish it and does **not** create a
 Zoom webinar until you ask.
+
+**About the form itself.** It opens as a large window sized to your screen, and
+you can drag the **bottom-right corner** to make it whatever size suits you. The
+**Save** and **Cancel** buttons are pinned to the bottom and stay put — long
+forms scroll under them, so the buttons never disappear off the end. On a wide
+monitor the panels fill the width in columns rather than stretching one field
+across the screen.
 
 ---
 
@@ -158,8 +165,9 @@ when automatic Zoom attendance arrives.
 ## The event graphic
 
 On the edit form, under **Content**, there is an **Event graphic** control:
-choose an image file, press **Upload graphic**, and it becomes the picture the
-website shows on the calendar card and the event page.
+press **Choose image…** and pick a file (the name appears beside the buttons),
+then press **Upload graphic**, and it becomes the picture the website shows on
+the calendar card and the event page.
 
 Why it matters: without one, a card falls back to the **recording's YouTube
 thumbnail** — and an upcoming event has no recording yet, so it would have no
@@ -212,10 +220,63 @@ don't exist:
 
 | Not yet | Meaning |
 |---|---|
-| **The website still runs on the old system** | Events you create here are not yet visible on clevelandbusinessmentors.org. Until the website change ships, this tool and the public page are separate worlds. The app warns you about this at the top of the screen. |
-| **Automatic attendance from Zoom** | Attendance is manual for now — the Registrants tab and door check-in. Pulling Zoom's participant report automatically is the next phase. |
-| **Follow-up emails** | Recording links, no-show nudges, the mentor call-to-action and the feedback survey are designed but not built. |
-| **Reporting** | Show-rate trends, attendee-to-client conversion, and the per-engagement attendance list are the last phase. |
+| **The website still runs on the old system** | Events you create here are not yet visible on clevelandbusinessmentors.org. Until the website change ships, this tool and the public page are separate worlds. The app warns you about this at the top of the screen. **This is the only phase still unbuilt, and it is the one that matters** — until it ships, every webinar registrant on the live site is still an invisible lead. |
+| **Automatic attendance from Zoom** | Built, but switched **off** and never yet run against the real Zoom account. Attendance is manual for now — the Registrants tab and door check-in. |
+| **Follow-up emails** | Built, but they need their five email templates created in EspoCRM before anything can send, and there is no button for them in this tool yet. See below. |
+
+---
+
+## Reports
+
+**Reports** on the event list opens two programme-level views for a period
+(the last twelve months by default):
+
+- **Programme totals** — events held, unique attendees, total attendances, how
+  many people came more than once, and the repeat rate.
+- **Attendee → client conversion** — how many attendees later became clients,
+  with the list. It counts someone **only if their engagement was created after
+  their first attended event** in the period: an existing client who happens to
+  attend a webinar is not a conversion, and counting them would flatter the
+  programme.
+
+Both are worked out from the registration records each time you ask, so they can
+never drift out of step with the records they count.
+
+### Where attendance shows up elsewhere
+
+- **On a person** — the directory Contact page has an **Events** tab listing
+  every event they registered for, with what happened and how long they stayed.
+  A past event still saying *Registered* means attendance was never resolved,
+  which is worth noticing rather than assuming they didn't come.
+- **On a client** — a client engagement in Client Management has an **Events**
+  tab showing what that client's people have attended, **one row per event**,
+  naming who went. Three colleagues at one webinar is one row: the question it
+  answers is whether the client engaged with the programme, not how many seats
+  were filled.
+
+---
+
+## Follow-up emails — what's needed before they work
+
+The five sends (reminder, recording available, no-show nudge, mentor
+call-to-action, feedback survey) are built and go out as the shared
+**info@** identity. Before any of them can send, someone has to create five
+**email templates in EspoCRM**, named exactly:
+
+`EventReminder` · `EventRecordingAvailable` · `EventNoShow` ·
+`EventMentorCTA` · `EventSurvey`
+
+Until a template exists, that send refuses and names the missing template —
+it will never improvise an email in CBM's name.
+
+Two rules worth knowing when they do go live:
+
+- **Nobody gets the same email twice.** Each send is recorded on the
+  registration, so retries, reruns and second clicks cannot produce a duplicate.
+- **Cancelled registrants get nothing**, and the two marketing-flavoured sends
+  (mentor call-to-action, survey) go only to people who opted in. The reminder,
+  recording and no-show emails are about something the person signed up for, so
+  they don't need an opt-in.
 
 ---
 

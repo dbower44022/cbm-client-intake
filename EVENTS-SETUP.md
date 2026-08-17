@@ -241,6 +241,63 @@ entirely on it. The probe exits non-zero and names any blocker.
 
 ---
 
+## 5b. Phase 6 — attendance, follow-ups, backfill
+
+All three are built and all three are **off**. Each needs something outside the
+app before it can do anything.
+
+### Attendance from Zoom (6a)
+
+Needs **Zoom working first** (§5) — it pulls the participant report, so with no
+webinars there is nothing to pull. Then, on the **worker**:
+
+| Variable | Default | Notes |
+|---|---|---|
+| `EVENTS_ATTENDANCE_SECONDS` | `1800` | How often the worker looks. `0` disables. |
+| `EVENTS_ATTENDANCE_GRACE_MINUTES` | `20` | Zoom does not publish the report the instant a webinar ends. |
+| `EVENTS_ATTENDANCE_GIVE_UP_HOURS` | `72` | Stops retrying an event that was never held. |
+
+An **empty report is treated as "not ready yet", never "nobody came"** — it
+retries until the give-up window closes. Attendance a person set by hand is
+never overwritten.
+
+### Follow-up email (6b)
+
+Needs `GMAIL_SYNC` + `OPS_MAILBOX` (the shared info@ identity), **and five
+EspoCRM email templates named exactly**:
+
+`EventReminder` · `EventRecordingAvailable` · `EventNoShow` ·
+`EventMentorCTA` · `EventSurvey`
+
+Until a template exists that send refuses and names it — it will never improvise
+an email in CBM's name. Reminders are the only automatic send:
+
+| Variable | Default | Notes |
+|---|---|---|
+| `EVENTS_REMINDERS` | `false` | The timed reminder. The other four are staff-triggered. |
+| `EVENTS_REMINDER_SECONDS` | `3600` | How often the worker looks. |
+| `EVENTS_REMINDER_LEAD_HOURS` | `24` | How far ahead a reminder goes out. |
+
+⚠️ **No frontend yet.** The endpoints work (preview is the default) but the
+Follow-up tab does not call them, so today this is API-only.
+
+### YouTube backfill (6d)
+
+One-off. Needs a **YouTube Data API v3 key** and the playlist id — used only by
+this script, never by the browser.
+
+```bash
+cd /home/doug/Dropbox/Projects/cbm-client-intake
+YOUTUBE_API_KEY='…' YOUTUBE_PLAYLIST_ID='PL…' ESPO_DRY_RUN=false PYTHONPATH=. uv run python scripts/import_youtube_events.py          # dry run
+#                                                          …--write  # apply
+```
+
+Every imported event arrives **unpublished** on purpose: a video's upload date
+is not the event date, so a human checks the date and topic before it can reach
+the website. Safe to re-run — anything already imported is skipped.
+
+---
+
 ## 6. Production
 
 **Do not do this until crm-test has been through §4.** Production needs, in

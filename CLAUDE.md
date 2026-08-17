@@ -655,10 +655,31 @@ today runs on a Google Apps Script plus a browser-side YouTube API call with
 Staff guide: `event-administration.md`; activation + test script:
 `EVENTS-SETUP.md`; schema: `cevent-entities-crm-handoff.md`.
 
-**Nothing is switched on** — `EVENTS_ENABLED`, `EVENTS_PUBLIC_API` and
-`ZOOM_EVENTS` all default off and the website still runs on the Apps Script.
-Phases 1, 2, 3 and 5 are built; Phase 4 (WordPress plugin + cutover) and Phase 6
-(attendance, follow-up, reporting) remain.
+**Live on crm-test, off on prod, and the website still runs on the Apps Script.**
+`EVENTS_ENABLED` + `EVENTS_PUBLIC_API` are on for crm-test only; `ZOOM_EVENTS`,
+`EVENTS_REMINDERS` and the attendance pull are off everywhere. Phases 1, 2, 3, 5
+and **6** are built; **Phase 4 (WordPress plugin + cutover) is the only one left**
+— and it is the one that actually stops the lead leak.
+
+- **Phase 6a attendance** (`events/attendance.py`, worker): pulls each finished
+  online event's Zoom participant report and matches by email. An empty report
+  means "not published yet", never "nobody came"; a `Manual`/`Check-in` source
+  is never overwritten; an attendee matching no registration is recorded flagged
+  rather than dropped. **Never run against real Zoom.**
+- **Phase 6b follow-ups** (`events/notify.py`): five sends as the shared info@
+  identity, from EspoCRM templates. Once per registrant/event/kind, ledgered on
+  `followUpsSent` **after** a successful send and enum-checked first. Preview is
+  the default. **Needs five templates** — `EventReminder`,
+  `EventRecordingAvailable`, `EventNoShow`, `EventMentorCTA`, `EventSurvey` —
+  and has no frontend yet.
+- **Phase 6c reporting** (`events/reporting.py`): the engagement **Events tab**
+  (attendance rolled up across all of a client's contacts, deduplicated by
+  event), the contact **Events tab** in the directory, and programme + conversion
+  reports in `/events`. Conversion counts an attendee only when their engagement
+  postdates their first attended event.
+- **Phase 6d** `scripts/import_youtube_events.py` — playlist backfill, dry-run by
+  default, importing **unpublished** because an upload date is not an event date.
+  Never run against the real playlist.
 
 - **⚠️ `CEvent` doubles as CBM's org calendar** — most rows are internal team
   meetings and mentoring-session mirrors. That is true **on crm-test (94 rows)**;
@@ -864,6 +885,13 @@ Conventions. Plan: `prds/action-history-plan.md`;
   `assignedUser`**: reads return null (hiding previously-stored values) and
   writes are silently ignored. All five assigned entities are now collaborators;
   the service dual-writes ([[crm-test-assignment-acl-fields]]).
+- **A list `maxSize` over 200 is a 403, not a truncation** — EspoCRM's
+  `recordListMaxSizeLimit` (default 200) makes an oversized page fail outright:
+  *"Max size should not exceed 200. Use offset and limit."* Page with `offset`
+  instead of asking for one big page. This is nastiest inside a **best-effort
+  `except EspoError`**, where the 403 reads as "no records" — a hard-coded 500
+  left every curated link picker showing only "(none)", for every user including
+  admins, and looked like a permissions problem ([[espo-list-maxsize-403]]).
 - **Soft deletes**: an admin's GET still returns a deleted row with
   `deleted: true` (ordinary users get 404). A cleanup script must treat that as
   gone or it re-plans the delete forever.
@@ -1036,9 +1064,28 @@ Entity Manager vocabulary — [[crm-specs-use-entity-manager-terms]]):
 deployed and verified; `CHANGELOG.md` is the permanent record, `OPEN-ITEMS.md`
 holds anything still owed.*
 
-**Pushed through v0.202.0 on 2026-08-16**, so all three apps built it, and
-`/healthz` reports it on prod and crm-test. Nothing is unpushed. What is
-*verified* is narrower than what is deployed — see each block.
+**Pushed through v0.202.2 on 2026-08-16**, so all three apps built it. Nothing
+is unpushed. What is *verified* is narrower than what is deployed — see each
+block.
+
+- **v0.202.1 / v0.202.2 — the curated link pickers actually work now.** Two
+  separate defects, both found from one report ("no way to select or create a
+  company"). (1) The Details **summary strip** dropped empty fields, including
+  link pickers — so on the record with no company, nothing about Company
+  appeared in view mode and there was no signpost to the picker behind **Edit**.
+  An unset picker now renders "—", and Company leads the partner/funder strip.
+  (2) The option list was fetched with `maxSize=500`, which EspoCRM **403s**
+  rather than truncating (see the Gotchas entry) — swallowed by the best-effort
+  handler, so **every** picker on every domain offered nothing but "(none)", for
+  every user including admins. Options are now paged at 200. Owed: a live look
+  now that they populate (`OPEN-ITEMS.md` #20).
+- **v0.202.0 — the events Add/Edit screens.** A resizable workspace modal with
+  pinned Save/Cancel, the two Content fields on the shared CBMRichText editor,
+  grid-packed panels, and the page's local `.cbm-button` override dropped in
+  favour of `/shared/tokens.css` (this page was the only one defining its own
+  buttons). Verified in a stub harness only — but `/events` is **live on
+  crm-test**, so the live pass can be done today; prod has the router unmounted
+  (`/events/api/session` 404s there, 401s on crm-test).
 
 *(The v0.198.0 company-link arc — the Company picker, the many-to-one CRM
 change for partners and funders, the client one-to-one ruling — is deployed and
@@ -1048,11 +1095,11 @@ owed is `OPEN-ITEMS.md` #19b: the picker's CREATE path has never run as a
 non-admin.)*
 
 - **v0.197.0 / v0.197.1** — the partner and funder **manager pickers** on the
-  Details tab (see that app's section). v0.197.0 is **verified live** (Doug,
-  2026-08-13); the funder half went out in the same session and its live pass is
-  owed. Both share one code path, so a funder-only failure would be the
-  `CMentorProfile` read grant on the Sponsor Management Team role, not the
-  picker.
+  Details tab (see that app's section). The 2026-08-13 "verified live" pass was
+  narrower than it read: v0.202.2 proved the option list had been empty for
+  everyone since the pickers shipped, so what was verified was the picker
+  rendering and holding its stored value, never *changing* one. Re-check both
+  halves now that the options populate.
 - **v0.196.1** — a Drive grant for a `cbmEmail` with no Google account is no
   longer counted as a reconciliation failure (it was alerting nightly, forever).
 - **v0.196.0** — address paste-parsing across all six address surfaces (see the
