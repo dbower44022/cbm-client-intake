@@ -1,17 +1,24 @@
-/* Preview chrome + an APPROXIMATION of the website's card styling.
+/* Preview HARNESS chrome only.
  *
- * The class names below (month-label, event-list, event-item, event-date,
- * event-info, video-list, video-item, …) are the DOM contract the live site's
- * Elementor CSS keys on — EV-01. They are styled here only so the preview is
- * legible; the real page will look different in detail. Do not treat this file
- * as a spec for the site, and do not copy it into the plugin.
+ * The panels themselves are styled by the website's own stylesheet, which ships
+ * with the plugin (/events-plugin/cbm-events.css) and is loaded ahead of this
+ * file. Nothing here may style the .cbm-wb / .cbm-yt contract classes — an
+ * approximation living here is exactly what hid a real class-name drift in the
+ * recorded-library renderer until 2026-08-16 (the preview styled our wrong
+ * names, so the section looked right here and would not have on the site).
+ *
+ * What IS styled here: the toolbar, the note, the width selector, and the
+ * per-event page — the last because the website has no such page yet, so there
+ * is nothing to copy. It uses the site's palette so it does not read as alien.
  */
 
 :root {
+  /* The site's palette (clevelandbusinessmentors.org). */
+  --pv-navy: #00205B;
+  --pv-gold: #B58113;
   --pv-ink: #1c1c1c;
   --pv-muted: #5c5c5c;
-  --pv-line: #e2e2e2;
-  --pv-accent: #00693e;
+  --pv-line: #dde3ef;
 }
 
 * { box-sizing: border-box; }
@@ -34,11 +41,11 @@ body {
   border-radius: 999px; background: #eef2f7; color: #33475b; font-size: .78rem;
 }
 .pv__controls { display: flex; align-items: center; gap: .75rem; font-size: .85rem; }
-.pv__controls select, .pv__controls button, .pv__searchrow input, .pv__searchrow button {
+.pv__controls select, .pv__controls button {
   font: inherit; padding: .35rem .6rem; border: 1px solid var(--pv-line);
   border-radius: 4px; background: #fff;
 }
-.pv__controls button, .pv__searchrow button { cursor: pointer; }
+.pv__controls button { cursor: pointer; }
 
 .pv__note {
   margin: 0; padding: .7rem 1rem; background: #fff8e6; border-bottom: 1px solid #ecd9a5;
@@ -50,98 +57,74 @@ body {
 .pv__msg--info { background: #eef2f7; color: #33475b; }
 
 .pv__stage { margin: 1.25rem auto; padding: 0 1rem; }
-.pv__section { background: #fff; border: 1px solid var(--pv-line); border-radius: 6px;
-  padding: 1rem 1.25rem; margin-bottom: 1.25rem; }
-.pv__section h2 { margin: 0 0 .25rem; font-size: 1.15rem; }
-.pv__count { margin: 0 0 .9rem; font-size: .82rem; color: var(--pv-muted); }
-.pv__searchrow { display: flex; gap: .5rem; margin-bottom: .75rem; }
-.pv__searchrow input { flex: 1 1 auto; }
+/* The two site panels sit one above the other, as they do on the live page. */
+.pv__stage > .cbm-wb, .pv__stage > .cbm-yt { margin-bottom: 1.25rem; }
 
-/* --- approximation of the site's calendar --- */
-.month-label {
-  margin: 1.2rem 0 .5rem; font-size: .8rem; letter-spacing: .08em;
-  color: var(--pv-muted); font-weight: 700;
+/* A harness readout, deliberately quiet — the site shows no such count. */
+.pv__count {
+  margin: 0 0 .9rem; font-size: .78rem; color: var(--pv-muted); font-style: italic;
 }
-.event-list, .video-list { list-style: none; margin: 0; padding: 0; }
-.event-item {
-  display: flex; gap: 1rem; align-items: flex-start;
-  padding: .9rem 0; border-top: 1px solid var(--pv-line);
-}
-.event-date {
-  flex: 0 0 3.5rem; text-align: center; background: var(--pv-accent); color: #fff;
-  border-radius: 4px; padding: .4rem 0;
-}
-.event-date__month { display: block; font-size: .7rem; letter-spacing: .06em; }
-.event-date__day { display: block; font-size: 1.4rem; font-weight: 700; line-height: 1; }
-.event-info { flex: 1 1 auto; }
-.event-info__time { font-size: .78rem; color: var(--pv-muted); letter-spacing: .04em; }
-.event-info__title { font-size: 1.05rem; font-weight: 600; margin: .15rem 0; }
-.event-info__summary { font-size: .9rem; color: #444; }
-.event-item img { max-width: 12rem; border-radius: 4px; }
 
-/* --- approximation of the recorded library --- */
-.video-item {
-  display: flex; gap: 1rem; align-items: flex-start;
-  padding: .9rem 0; border-top: 1px solid var(--pv-line);
+/* --- per-event page preview (no live counterpart to copy) --- */
+.pv__section {
+  background: #fff; border: 1px solid var(--pv-line); border-radius: 10px;
+  padding: 1rem 1.25rem; margin-bottom: 1.25rem;
 }
-.video-thumb-btn {
-  position: relative; flex: 0 0 12rem; padding: 0; border: 0; background: none;
-  cursor: pointer;
-}
-.video-thumb-btn img { width: 100%; border-radius: 4px; display: block; }
-.cbm-play-overlay {
-  position: absolute; inset: 0; display: grid; place-items: center;
-}
-.cbm-play-overlay::before {
-  content: "▶"; color: #fff; font-size: 1.6rem;
-  text-shadow: 0 1px 6px rgba(0, 0, 0, .6);
-}
-.cbm-search-msg { color: var(--pv-muted); font-size: .9rem; }
-
-/* --- per-event page preview --- */
-.pv__event { padding: 1.5rem 1.75rem; }
+.pv__event { padding: 1.5rem 1.75rem; font-family: Montserrat, Roboto, sans-serif; }
 .pv__hero {
   display: block; width: 100%; max-height: 20rem; object-fit: cover;
-  border-radius: 6px; margin-bottom: 1rem;
+  border-radius: 8px; margin-bottom: 1rem;
 }
 .pv__hero[hidden] { display: none; }
 .pv__eyebrow {
   margin: 0; font-size: .75rem; letter-spacing: .08em; text-transform: uppercase;
-  color: var(--pv-accent); font-weight: 700;
+  color: var(--pv-gold); font-weight: 700;
 }
-.pv__event h1 { margin: .2rem 0 .4rem; font-size: 1.9rem; line-height: 1.15; }
-.pv__when { margin: 0 0 .6rem; font-weight: 600; color: var(--pv-muted); }
+.pv__event h1 {
+  margin: .2rem 0 .4rem; font-size: 1.9rem; line-height: 1.15; color: var(--pv-navy);
+}
+.pv__when {
+  margin: 0 0 .6rem; font-weight: 600; color: var(--pv-gold);
+  text-transform: uppercase; letter-spacing: .04em; font-size: .85rem;
+}
 .pv__summary { margin: 0 0 1.2rem; font-size: 1.05rem; }
 .pv__facts {
   display: grid; grid-template-columns: max-content 1fr; gap: .3rem 1rem;
-  margin: 0 0 1.4rem; padding: .8rem 1rem; background: #f7f8f9; border-radius: 4px;
-  font-size: .9rem;
+  margin: 0 0 1.4rem; padding: .8rem 1rem; background: #F5F7FA;
+  border-left: 4px solid var(--pv-gold); border-radius: 8px; font-size: .9rem;
 }
-.pv__facts dt { font-weight: 600; color: var(--pv-muted); margin: 0; }
+.pv__facts dt { font-weight: 700; color: var(--pv-navy); margin: 0; }
 .pv__facts dd { margin: 0; }
 .pv__prose { margin-bottom: 1.4rem; line-height: 1.6; }
 .pv__prose[hidden] { display: none; }
 .pv__prose img { max-width: 100%; height: auto; }
 
 .pv__signup { border-top: 1px solid var(--pv-line); padding-top: 1.2rem; }
-.pv__signup h2 { margin: 0 0 .4rem; font-size: 1.2rem; }
+.pv__signup h2 { margin: 0 0 .4rem; font-size: 1.2rem; color: var(--pv-navy); }
 .pv__warn {
-  background: #fff8e6; border: 1px solid #ecd9a5; border-radius: 4px;
+  background: #fff8e6; border: 1px solid #ecd9a5; border-radius: 6px;
   padding: .6rem .8rem; font-size: .85rem; color: #6b4a05; margin: 0 0 .9rem;
 }
 .pv__signupgrid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
   gap: .7rem; margin-bottom: .9rem;
 }
-.pv__signupgrid label { display: flex; flex-direction: column; gap: .25rem; font-size: .85rem; }
+.pv__signupgrid label {
+  display: flex; flex-direction: column; gap: .25rem; font-size: .8rem;
+  font-weight: 600; color: var(--pv-navy);
+}
 .pv__signupgrid input {
-  font: inherit; padding: .4rem .6rem; border: 1px solid var(--pv-line); border-radius: 4px;
+  font: inherit; font-weight: 400; padding: .5rem .7rem;
+  border: 2px solid var(--pv-line); border-radius: 6px;
 }
+.pv__signupgrid input:focus { outline: none; border-color: var(--pv-gold); }
 #registerBtn {
-  font: inherit; padding: .5rem 1.1rem; border: 0; border-radius: 4px;
-  background: var(--pv-accent); color: #fff; cursor: pointer;
+  font: inherit; font-weight: 700; padding: .6rem 1.4rem; border: 0;
+  border-radius: 8px; background: var(--pv-gold); color: #fff; cursor: pointer;
+  transition: background-color .2s;
 }
+#registerBtn:hover { background: var(--pv-navy); }
 .pv__result { margin: .8rem 0 0; font-size: .88rem; word-break: break-word; }
 .pv__result[hidden] { display: none; }
-.pv__result--ok { color: #14603c; }
-.pv__result--error { color: #8a1f1f; }
+.pv__result--ok { color: #1b5e20; }
+.pv__result--error { color: #b3261e; }

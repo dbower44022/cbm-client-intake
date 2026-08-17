@@ -222,6 +222,36 @@ crm-test. Both panels rendered correctly under the site's own Elementor CSS,
 confirming the class contract in EV-01. Preview events were seeded on crm-test
 and deleted afterwards (back to 92 events / 0 registrations).
 
+**The plugin also ships the page's stylesheet** (`assets/cbm-events.css`, added
+2026-08-16). The live page keeps its CSS **inline inside the two Elementor HTML
+widgets**, and cutover replaces those widgets — so the plugin has to carry the
+styling with the markup or the page unstyles at the swap. It is a verbatim copy
+of both `<style>` blocks; keep it in sync with the live page rather than editing
+it to taste. The app's preview loads this file, so the preview is now an exact
+colour/type check rather than an approximation.
+
+**Second finding, from doing that (2026-08-16):** the recorded-library half of
+the renderer was **off the class contract** — `video-date` / `video-title` /
+`video-summary` against a stylesheet that only knows `video-info__date` /
+`__title` / `__meta`, plus a play overlay with no inline `<svg>`. It rendered as
+unstyled text on the site. The July preview pass confirmed the contract down to
+`.video-item` / `.video-info` and the inner text classes slipped through, then
+stayed hidden because the preview's own CSS styled our wrong names. Fixed, and
+`tests/test_events_graphic.py` now asserts every emitted contract class has a
+rule in the stylesheet.
+
+**Registration stays a modal on the calendar** (Doug, 2026-08-16). The
+per-event page is for reading about an event; signing up from the list keeps its
+one click, exactly as visitors know it today. `CBMEvents.mountSignupModal()`
+emits the site's existing modal DOM and the host supplies the POST — the plugin
+through its proxy, the preview straight to `/api/events/{slug}/register`. The
+open question there is consent wording (`OPEN-ITEMS.md` 19d).
+
+**Per-event links need a host-supplied base.** The public payload's `url` is
+always the live site's `/webinars/<slug>`, so anywhere but the website it 404s.
+The renderer takes `CBMEvents.config.eventUrlBase`; the plugin sets it to its
+own page URL, the preview to its stand-in page.
+
 **Finding that changed the design:** hotlinked `i.ytimg.com` thumbnails returned
 **HTTP 503** on that page, while the site's own proxied thumbnails loaded — which
 is why the current page already ships a `/wp-json/cbm-yt/v1/thumbnails`

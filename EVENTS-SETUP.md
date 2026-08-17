@@ -355,6 +355,13 @@ a line per staff write and per registration.
 Honest list, so nothing surprises you mid-test:
 
 - **The website page is not wired up** (Phase 4). The staff app warns about this.
+  The **Website preview** button on `/events` is the closest thing to it: since
+  v0.203.0 it renders through the site's own stylesheet, so the colours, type
+  and spacing are the website's rather than an approximation. A webinar's title
+  opens a stand-in event page and Sign Up opens the site's registration modal —
+  and that modal **really registers**, creating a Contact and a
+  CEventRegistration on whichever CRM this deployment points at. Use obvious
+  test data and delete the records afterwards.
 - **No automatic attendance** — manual only, until Phase 6.
 - **No follow-up emails** — designed, not built.
 - **The staff app has been driven with a stubbed session**, not a real

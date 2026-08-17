@@ -264,6 +264,28 @@ block a deploy.)*
 
 ## Live verification owed
 
+19d. **The events sign-up modal's consent line under-covers what `consent: true`
+    writes** (2026-08-16, v0.203.0). The line copied from the live page —
+    *"By registering, you are agreeing to receive emails about our webinars"* —
+    is a marketing-email statement, while `consent: true` also stamps
+    terms-of-use, privacy-policy and code-of-conduct acceptance on the Contact
+    (`forms/event_registration/orchestrator.py`). The preview therefore sends
+    **false**, which claims nothing the visitor was not shown but records no
+    opt-in at all. Before Phase 4 ships, decide which: a real consent checkbox
+    in the modal (a visible change to a page visitors know), or consent text
+    that names the three policies. Not urgent — no public traffic reaches this
+    yet.
+
+19e. **The events website preview has only been seen against stub data**
+    (2026-08-16, v0.203.0). The site's own stylesheet, the sign-up modal, the
+    title→event-page link and the corrected recorded-library markup were all
+    verified in a local harness with fabricated events. `/events` is live on
+    crm-test, so the real pass is available today: open
+    `/events/preview.html` there, confirm both panels against
+    `clevelandbusinessmentors.org/webinars/` side by side, click a title through
+    to the event page, and register once with obvious test data (it creates a
+    genuine Contact + CEventRegistration — delete them afterwards).
+
 19c. **Events Phase 6 is built but three of its four parts have never met their
     external service** (2026-08-16). All are off everywhere; nothing is at risk
     until each is switched on, but none of it is proven:

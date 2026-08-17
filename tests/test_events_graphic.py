@@ -8,6 +8,7 @@ to read attachments that are not meant to be public.
 from __future__ import annotations
 
 import base64
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -294,3 +295,102 @@ def test_registration_payload_shape_matches_the_schema():
         consent=False,
     )
     assert record.first_name == "Test"
+
+
+# --- the website's own stylesheet, and the class contract it keys on ---------
+
+PLUGIN_ASSETS = Path(__file__).resolve().parents[1] / "wp-plugin" / "cbm-events" / "assets"
+
+#: The EV-01 contract: every class the renderer emits that the site's CSS has a
+#: rule for. A rename unstyles a section SILENTLY rather than failing, which is
+#: how the recorded library shipped emitting video-date / video-title /
+#: video-summary against a stylesheet that only ever knew video-info__date,
+#: video-info__title and video-info__meta (2026-07-25 → 2026-08-16). The
+#: preview's own CSS hid it by styling our wrong names.
+#: The panel shell is emitted by the HOST — the shortcode on the site, the
+#: preview page here — so it is checked against the CSS only.
+HOST_CLASSES = ["panel", "panel__header", "panel__body"]
+
+RENDERER_CLASSES = [
+    # calendar
+    "month-label", "event-list", "event-item",
+    "event-date", "event-date__month", "event-date__day",
+    "event-info", "event-info__time", "event-info__title", "event-info__meta",
+    "cbm-meta-more", "event-signup-btn", "cbm-empty",
+    # sign-up modal
+    "cbm-modal-overlay", "cbm-modal", "cbm-modal-close", "cbm-modal-sub",
+    "cbm-field", "cbm-consent-text", "cbm-submit-btn", "cbm-status",
+    # recorded library
+    "video-list", "video-item", "video-thumb-btn", "cbm-play-overlay",
+    "video-info", "video-info__date", "video-info__title", "video-info__meta",
+]
+
+CONTRACT_CLASSES = HOST_CLASSES + RENDERER_CLASSES
+
+
+def _styles(css: str, name: str) -> bool:
+    """Does the stylesheet carry a rule for this class?"""
+    return any(f".{name}{tail}" in css for tail in (" ", "\n", ",", ":", "{"))
+
+
+def test_plugin_stylesheet_covers_every_class_the_renderer_emits():
+    """Renderer and stylesheet ship together and must agree.
+
+    Both files are read from disk, not from the app: this is a contract between
+    two artifacts, and it has to hold whether or not the feature is switched on.
+    """
+    css = (PLUGIN_ASSETS / "cbm-events.css").read_text(encoding="utf-8")
+    js = (PLUGIN_ASSETS / "cbm-events.js").read_text(encoding="utf-8")
+    missing_css = [c for c in CONTRACT_CLASSES if not _styles(css, c)]
+    assert not missing_css, f"styled by nothing on the site: {missing_css}"
+    missing_js = [c for c in RENDERER_CLASSES if f'"{c}"' not in js]
+    assert not missing_js, f"the renderer no longer emits: {missing_js}"
+
+
+def test_plugin_stylesheet_carries_the_site_palette():
+    """Navy and gold, copied from the live page — not an invented accent."""
+    css = (PLUGIN_ASSETS / "cbm-events.css").read_text(encoding="utf-8")
+    assert "#00205B" in css and "#B58113" in css
+
+
+def test_preview_loads_the_sites_stylesheet(monkeypatch):
+    """The preview must style the panels from the shipping stylesheet, so that
+    what it shows is what the website will show."""
+    client, _ = _staff_app(monkeypatch)
+    page = client.get("/events/preview.html")
+    assert "/events-plugin/cbm-events.css" in page.text
+    asset = client.get("/events-plugin/cbm-events.css")
+    assert asset.status_code == 200
+    assert ".cbm-wb .panel__header" in asset.text
+    # The site's own wrappers, not preview scaffolding — they scope every rule.
+    assert 'class="cbm-wb"' in page.text and 'class="cbm-yt"' in page.text
+
+
+def test_preview_css_does_not_restyle_the_contract_classes(monkeypatch):
+    """The harness sheet styles chrome only. An approximation here is what hid
+    the video-info__* drift for three weeks."""
+    css = (Path(__file__).resolve().parents[1] / "events" / "frontend" / "preview.css").read_text(
+        encoding="utf-8"
+    )
+    offenders = [c for c in CONTRACT_CLASSES if f".{c}" in css]
+    assert not offenders, f"preview.css must not style site classes: {offenders}"
+
+
+def test_preview_points_event_links_at_its_own_stand_in(monkeypatch):
+    """The payload's `url` is always the LIVE site's /webinars/<slug> — the
+    Phase 4 rewrite rule, which does not exist — so a title click used to leave
+    the preview and 404. The renderer takes an eventUrlBase for exactly this."""
+    client, _ = _staff_app(monkeypatch)
+    js = client.get("/events/preview.js")
+    assert js.status_code == 200
+    assert "eventUrlBase" in js.text and "preview-event.html?slug=" in js.text
+    assert "eventUrlBase" in client.get("/events-plugin/cbm-events.js").text
+
+
+def test_signup_stays_a_modal_on_the_calendar(monkeypatch):
+    """Doug, 2026-08-16: registration keeps the one-click modal visitors know;
+    the event page is for reading about the event."""
+    client, _ = _staff_app(monkeypatch)
+    renderer = client.get("/events-plugin/cbm-events.js").text
+    assert "CBMEvents.mountSignupModal" in renderer
+    assert "mountSignupModal" in client.get("/events/preview.js").text

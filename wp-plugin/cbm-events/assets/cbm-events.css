@@ -1,0 +1,256 @@
+/* CBM Events — the website's own stylesheet.
+ *
+ * Copied VERBATIM (only the enclosing <style> indent removed) from the two
+ * Elementor HTML widgets on clevelandbusinessmentors.org/webinars/, fetched
+ * 2026-08-16. That page carries its CSS inline inside the widgets, so at
+ * cutover the widgets are replaced by the plugin's shortcodes and this file has
+ * to carry the styling in their place — otherwise the page unstyles the moment
+ * it switches over.
+ *
+ * Two consequences worth knowing before editing:
+ *
+ *  - This is the SPEC, not our taste. Keep it in sync with the live page and do
+ *    not "improve" it here; a divergence shows up as the app's preview
+ *    disagreeing with the website, which is the one thing the preview exists to
+ *    rule out. (Same rule as the copied block in mentorprofile/frontend
+ *    /styles.css.)
+ *  - The class names are the contract cbm-events.js emits. Renaming one here
+ *    silently unstyles a section rather than breaking loudly.
+ *
+ * The page has no @media blocks in either widget — the layouts are flex and
+ * reflow on their own — so none are reproduced here.
+ */
+
+/* ===== Calendar of Upcoming Webinars (.cbm-wb) ========================== */
+
+.cbm-wb {
+  --navy: #00205B;
+  --gold: #B58113;
+  --border: #dde3ef;
+  font-family: 'Montserrat', Arial, sans-serif;
+  color: #000;
+}
+.cbm-wb .panel {
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  box-shadow: 0 4px 18px rgba(0,32,91,0.07);
+}
+.cbm-wb .panel__header { background-color: var(--navy); padding: 20px 28px; }
+.cbm-wb .panel__header h2 { color: #fff; font-size: 20px; font-weight: 700; margin: 0; }
+.cbm-wb .panel__body { padding: 28px; }
+
+/* ---- Calendar ---- */
+.cbm-wb .month-label {
+  font-size: 16px; font-weight: 700; color: var(--navy);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  margin: 0 0 14px 0; padding-bottom: 8px; border-bottom: 2px solid var(--gold);
+}
+.cbm-wb .month-label:not(:first-child) { margin-top: 32px; }
+.cbm-wb .event-list { list-style: none; padding: 0; margin: 0; }
+.cbm-wb .event-item {
+  display: flex; gap: 16px; align-items: flex-start;
+  padding: 14px 0; border-bottom: 1px solid #eef0f5;
+}
+.cbm-wb .event-item:last-child { border-bottom: none; }
+.cbm-wb .event-date {
+  flex-shrink: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  width: 52px; height: 52px; background-color: var(--navy); border-radius: 8px; color: #fff;
+}
+.cbm-wb .event-date__month { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gold); }
+.cbm-wb .event-date__day { font-size: 22px; font-weight: 700; line-height: 1.1; }
+.cbm-wb .event-info { flex: 1; }
+.cbm-wb .event-info__time { font-size: 12px; font-weight: 600; color: var(--gold); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 3px; }
+.cbm-wb .event-info__title { font-size: 15px; font-weight: 700; color: var(--navy); line-height: 1.4; margin-bottom: 4px; }
+.cbm-wb .event-info__meta { font-size: 13px; color: #000000; margin-bottom: 8px; }
+.cbm-wb .cbm-meta-more {
+  display: inline; background: none; border: none; padding: 0;
+  font-size: 13px; font-weight: 700; color: var(--gold); cursor: pointer;
+  margin-left: 4px; text-decoration: underline;
+}
+.cbm-wb .cbm-meta-more:hover { color: var(--navy); }
+.cbm-wb .event-signup-btn {
+  display: inline-block; font-size: 12px; font-weight: 700; color: #fff;
+  background-color: var(--gold); border: none; border-radius: 6px;
+  padding: 6px 16px; cursor: pointer; transition: background-color 0.2s;
+}
+.cbm-wb .event-signup-btn:hover { background-color: var(--navy); }
+.cbm-wb .cbm-loading, .cbm-wb .cbm-empty { font-size: 14px; color: #888; font-style: italic; padding: 12px 0; }
+
+/* ---- Modal ---- */
+.cbm-wb .cbm-modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,32,91,0.55);
+  z-index: 9999; align-items: center; justify-content: center; padding: 16px;
+}
+.cbm-wb .cbm-modal-overlay.open { display: flex; }
+.cbm-wb .cbm-modal {
+  background: #fff; border-radius: 10px; max-width: 420px; width: 100%;
+  padding: 28px; position: relative; max-height: 90vh; overflow-y: auto;
+}
+.cbm-wb .cbm-modal-close {
+  position: absolute; top: 14px; right: 16px; border: none; background: none;
+  font-size: 22px; line-height: 1; color: #888; cursor: pointer;
+}
+.cbm-wb .cbm-modal-close:hover { color: var(--navy); }
+.cbm-wb .cbm-modal h3 { font-size: 18px; color: var(--navy); margin: 0 0 4px; }
+.cbm-wb .cbm-modal p.cbm-modal-sub { font-size: 13px; color: #666; margin: 0 0 20px; }
+.cbm-wb .cbm-field { margin-bottom: 14px; }
+.cbm-wb .cbm-field label { display: block; font-size: 13px; font-weight: 600; color: var(--navy); margin-bottom: 5px; }
+.cbm-wb .cbm-field input {
+  width: 100%; font-size: 15px; padding: 10px 12px; border: 2px solid var(--border);
+  border-radius: 6px; outline: none; font-family: inherit;
+}
+.cbm-wb .cbm-field input:focus { border-color: var(--gold); }
+.cbm-wb .cbm-consent-text {
+  font-size: 12px; color: #888; line-height: 1.5; margin: 4px 0 12px;
+}
+.cbm-wb .cbm-submit-btn {
+  width: 100%; font-size: 15px; font-weight: 700; color: #fff;
+  background-color: var(--gold); border: none; border-radius: 8px;
+  padding: 12px; cursor: pointer; margin-top: 6px; transition: background-color 0.2s;
+}
+.cbm-wb .cbm-submit-btn:hover { background-color: var(--navy); }
+.cbm-wb .cbm-submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.cbm-wb .cbm-status { font-size: 14px; margin-top: 14px; padding: 10px 12px; border-radius: 6px; display: none; }
+.cbm-wb .cbm-status.show { display: block; }
+.cbm-wb .cbm-status.success { background: #e8f5e9; color: #1b5e20; }
+.cbm-wb .cbm-status.error { background: #fdecea; color: #b3261e; }
+.cbm-wb .cbm-status a { color: inherit; font-weight: 700; }
+
+/* ===== Recorded webinar library (.cbm-yt) =============================== */
+
+.cbm-yt {
+  --navy: #00205B;
+  --gold: #B58113;
+  --border: #dde3ef;
+  font-family: 'Montserrat', Arial, sans-serif;
+  color: #000;
+}
+.cbm-yt .panel {
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  box-shadow: 0 4px 18px rgba(0,32,91,0.07);
+}
+.cbm-yt .panel__header { background-color: var(--navy); padding: 20px 28px; }
+.cbm-yt .panel__header h2 { color: #fff; font-size: 20px; font-weight: 700; margin: 0; }
+.cbm-yt .panel__body { padding: 28px; }
+
+/* ---- Search ---- */
+.cbm-yt .search-hint {
+  font-size: 13px; color: #888; margin-bottom: 16px; font-style: italic;
+}
+.cbm-yt .search-wrap { display: flex; gap: 10px; margin-bottom: 10px; }
+.cbm-yt .search-input {
+  flex: 1; font-family: 'Montserrat', sans-serif; font-size: 15px;
+  padding: 12px 16px; border: 2px solid var(--border); border-radius: 8px;
+  outline: none; color: #000;
+}
+.cbm-yt .search-input:focus { border-color: var(--gold); }
+.cbm-yt .search-btn {
+  font-family: 'Montserrat', sans-serif; font-size: 15px; font-weight: 700;
+  color: #fff; background-color: var(--gold); border: none; border-radius: 8px;
+  padding: 12px 22px; cursor: pointer; white-space: nowrap; transition: background-color 0.2s;
+}
+.cbm-yt .search-btn:hover { background-color: var(--navy); }
+.cbm-yt .search-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.cbm-yt .search-status-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 18px; min-height: 20px;
+}
+.cbm-yt .search-status-row .cbm-search-msg { font-size: 13px; color: #666; }
+.cbm-yt .cbm-clear-search {
+  background: none; border: none; padding: 0; font-size: 13px; font-weight: 700;
+  color: var(--gold); cursor: pointer; text-decoration: underline;
+}
+.cbm-yt .cbm-clear-search:hover { color: var(--navy); }
+
+/* ---- Section labels ---- */
+.cbm-yt .section-label {
+  font-size: 14px; font-weight: 700; color: var(--navy);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  margin: 0 0 14px 0; padding-bottom: 8px; border-bottom: 2px solid var(--gold);
+}
+
+/* ---- Video list / cards ---- */
+.cbm-yt .video-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 16px; }
+.cbm-yt .video-item {
+  display: flex; gap: 16px; align-items: flex-start;
+  padding-bottom: 16px; border-bottom: 1px solid #eef0f5;
+}
+.cbm-yt .video-item:last-child { border-bottom: none; padding-bottom: 0; }
+.cbm-yt .video-thumb-btn {
+  flex-shrink: 0; width: 140px; height: 79px; border-radius: 8px; overflow: hidden;
+  border: none; padding: 0; cursor: pointer; position: relative; background: #000;
+}
+.cbm-yt .video-thumb-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cbm-yt .video-thumb-btn .cbm-play-overlay {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  background: rgba(0,32,91,0.15); transition: background 0.2s;
+}
+.cbm-yt .video-thumb-btn:hover .cbm-play-overlay { background: rgba(0,32,91,0.35); }
+.cbm-yt .video-thumb-btn .cbm-play-overlay svg { width: 32px; height: 32px; color: #fff; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5)); }
+.cbm-yt .video-info { flex: 1; min-width: 0; }
+.cbm-yt .video-info__date { font-size: 12px; font-weight: 600; color: var(--gold); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 3px; }
+.cbm-yt .video-info__title {
+  font-size: 15px; font-weight: 700; color: var(--navy); line-height: 1.4; margin-bottom: 4px;
+  cursor: pointer;
+}
+.cbm-yt .video-info__title:hover { text-decoration: underline; }
+.cbm-yt .video-info__meta { font-size: 13px; color: #444; }
+.cbm-yt .cbm-meta-more {
+  display: inline; background: none; border: none; padding: 0;
+  font-size: 13px; font-weight: 700; color: var(--gold); cursor: pointer;
+  margin-left: 4px; text-decoration: underline;
+}
+.cbm-yt .cbm-meta-more:hover { color: var(--navy); }
+
+.cbm-yt .cbm-loading, .cbm-yt .cbm-empty {
+  font-size: 14px; color: #888; font-style: italic; padding: 12px 0;
+}
+.cbm-yt .cbm-error { font-size: 14px; color: #b3261e; padding: 12px 0; }
+
+/* ---- Video modal ---- */
+.cbm-yt .cbm-modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,32,91,0.75);
+  z-index: 9999; align-items: center; justify-content: center; padding: 16px;
+}
+.cbm-yt .cbm-modal-overlay.open { display: flex; }
+.cbm-yt .cbm-modal {
+  background: #000; border-radius: 10px; max-width: 860px; width: 100%;
+  position: relative;
+}
+.cbm-yt .cbm-modal-close {
+  position: absolute; top: -38px; right: 0; border: none; background: none;
+  font-size: 28px; line-height: 1; color: #fff; cursor: pointer;
+}
+.cbm-yt .cbm-modal-close:hover { color: var(--gold); }
+.cbm-yt .cbm-video-frame-wrap {
+  position: relative; width: 100%; padding-top: 56.25%; /* 16:9 */
+}
+.cbm-yt .cbm-video-frame-wrap iframe {
+  position: absolute; inset: 0; width: 100%; height: 100%; border: 0; border-radius: 10px;
+}
+
+/* ===== Additions ========================================================= */
+/*
+ * Kept OUT of the verbatim blocks above so the copy stays diffable against the
+ * live page. Only what the site has no rule for yet, because the page it would
+ * style does not exist there yet.
+ */
+
+/* The event title becomes a link to the event's own page (Phase 4 rewrite
+ * rule). Without this it picks up the theme's link colour and underline and
+ * stops looking like the navy title beside it. */
+.cbm-wb .event-info__title a { color: inherit; text-decoration: none; }
+.cbm-wb .event-info__title a:hover { text-decoration: underline; }
+
+/* "Registration closed" — a state the live page never rendered, so it has no
+ * rule for it and a closed event's button looked exactly like an open one.
+ * Muted rather than hidden: the event stays visible with its reason showing. */
+.cbm-wb .event-signup-btn:disabled {
+  background-color: #98a2b3; cursor: not-allowed;
+}

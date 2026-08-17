@@ -701,6 +701,19 @@ and **6** are built; **Phase 4 (WordPress plugin + cutover) is the only one left
 - The renderer needs a **same-origin thumbnail proxy** — hotlinked
   `i.ytimg.com` thumbnails return 503 on the live page, which is why the current
   page already ships one.
+- **`wp-plugin/cbm-events/` holds the two files the website will run**: the
+  renderer (`cbm-events.js`) and the site's **own stylesheet**
+  (`cbm-events.css`, copied verbatim from the live page's Elementor widgets —
+  keep it in sync, do not restyle it). Cutover replaces those widgets, so the
+  plugin must carry the CSS with the markup. `/events/preview.html` loads both
+  from the shipping location, which is what makes it a real check; **nothing in
+  `events/frontend/preview.css` may style a contract class** — an approximation
+  there hid a live class-name drift for three weeks. A guard test asserts every
+  class the renderer emits has a rule in the stylesheet.
+- **A per-event link must come from `CBMEvents.config.eventUrlBase`**, never the
+  payload's `url` — that is always the live site's `/webinars/<slug>`, so
+  anywhere else it 404s. **Sign-up stays a modal on the calendar** (Doug,
+  2026-08-16); the event page is for reading, not the registration door.
 
 ## Cross-cutting subsystems
 
@@ -1077,6 +1090,16 @@ holds anything still owed.*
 is unpushed. What is *verified* is narrower than what is deployed — see each
 block.
 
+- **v0.203.0 — the events website preview is the website now.** The site's own
+  stylesheet (verbatim from its Elementor widgets) ships with the plugin and
+  drives the preview, so the colours and type are the site's rather than an
+  invented green approximation. Doing it exposed a defect the approximation had
+  been hiding since 2026-07-25: the recorded-library markup was off the class
+  contract and would have rendered unstyled on the live page. A webinar's title
+  now opens its own page (it used to 404 off to the live site), sign-up is the
+  site's modal, and both are guarded by tests. **Verified against stub data
+  only** — `/events` is live on crm-test, so the real side-by-side is available
+  today (`OPEN-ITEMS.md` 19e), along with the consent-wording decision (19d).
 - **v0.202.1 / v0.202.2 — the curated link pickers actually work now.** Two
   separate defects, both found from one report ("no way to select or create a
   company"). (1) The Details **summary strip** dropped empty fields, including

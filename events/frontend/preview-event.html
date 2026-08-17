@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CBM — Event page preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="preview.css" />
 </head>
 <body>
@@ -27,10 +29,13 @@
 
   <p class="pv__note">
     This is the <strong>per-event page</strong> as the website will present it,
-    built from the public API. On the live site this URL will be
-    <code id="realUrl">…</code>, served by the WordPress plugin — which is
-    Phase 4 and not built yet, so that address does not exist today. Styling is
-    approximate for the same reason as the calendar preview.
+    built from the public API — where the calendar's event titles now lead. On
+    the live site this URL will be <code id="realUrl">…</code>, served by the
+    WordPress plugin, which is Phase 4 and not built yet, so that address does
+    not exist today. Unlike the calendar, this page has no live counterpart to
+    copy styling from, so it uses the site's palette and type but is our own
+    layout. Signing up from the <em>calendar</em> stays a modal (Doug,
+    2026-08-16); this form is the page's own registration.
   </p>
 
   <div class="pv__msg" id="msg" hidden></div>

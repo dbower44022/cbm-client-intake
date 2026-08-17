@@ -4,6 +4,59 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.203.0] — 2026-08-16
+
+**feat(events): the website preview now uses the website's own stylesheet, and
+a webinar's title opens its page.** Doug: "The events preview page does not use
+the same colors as the original CBM site… when a user clicks on the webinar, it
+does not show a detailed view."
+
+- **The preview was styled by an approximation.** `events/frontend/preview.css`
+  said so at the top — a green `#00693e` accent on Roboto — while the site is
+  navy `#00205B` / gold `#B58113` on Montserrat, in a white rounded panel with a
+  navy header bar. The live page carries its CSS **inline inside the two
+  Elementor HTML widgets**, so there was nothing to guess: both `<style>` blocks
+  are now copied verbatim into **`wp-plugin/cbm-events/assets/cbm-events.css`**,
+  scoped `.cbm-wb` / `.cbm-yt`, with the same "keep in sync with the live page"
+  banner the mentor-page copy in `mentorprofile/frontend/styles.css` carries.
+  The preview loads that shipping file (as it already did the renderer) and
+  wraps both sections in the site's own `.panel` markup. `preview.css` is now
+  harness chrome only.
+- The stylesheet has to ship with the plugin regardless: **cutover replaces the
+  widgets**, and the widgets are where the CSS lives today. Without it the page
+  unstyles the moment it switches over.
+- **It immediately exposed a live defect.** The renderer emitted `video-date` /
+  `video-title` / `video-summary` inside `.video-info`, but the site styles
+  `video-info__date` / `__title` / `__meta`, and its play button expects an
+  inline `<svg>` inside `.cbm-play-overlay`. Under the real CSS the recorded
+  library rendered as unstyled text with no play triangle. Present since the
+  renderer was first committed (9e75b70, 2026-07-25) and invisible because
+  `preview.css` styled our wrong names. Fixed, and a test now asserts every
+  contract class the renderer emits has a rule in the stylesheet.
+- **Clicking a webinar goes nowhere no longer.** The title linked to the
+  payload's `url`, which is always `events_public_base_url` + slug — the LIVE
+  site's `/webinars/<slug>`, i.e. the Phase 4 rewrite rule, which does not
+  exist. So a title click left the preview and 404'd, and only the Sign Up
+  button reached the stand-in page. The renderer now takes
+  `CBMEvents.config.eventUrlBase`: the preview points it at
+  `preview-event.html?slug=`, the plugin will point it at its own page URL.
+- **Sign-up stays a modal on the calendar** (Doug's call): the renderer gained
+  `CBMEvents.mountSignupModal()`, emitting the site's exact modal DOM — the
+  markup that lives in the Elementor widget today — with the host supplying the
+  POST. The event page is for reading about the event; registering from the list
+  keeps its one click.
+- Also matched to the site: the 140-character summary with an inline More/Less
+  toggle on both panels, and the site's own empty-state wording. Two rules the
+  site has no counterpart for are kept in a separate **Additions** block so the
+  verbatim copy stays diffable: the title-link colour, and a muted
+  `:disabled` sign-up button (a closed event's button was gold and looked open).
+- **Consent, flagged not decided**: the modal's line promises emails about
+  webinars, while `consent: true` also records terms-of-use, privacy-policy and
+  code-of-conduct acceptance on the Contact. The preview sends **false**, so
+  nothing is claimed that the visitor was not shown. Recording the marketing
+  opt-in honestly needs either a checkbox or reworded consent text — an open
+  question for the Phase 4 build.
+
 ## [0.202.2] — 2026-08-16
 
 **fix(sessions): every curated link picker was empty — the option list asked

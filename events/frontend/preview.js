@@ -13,6 +13,8 @@
 
   function $(id) { return document.getElementById(id); }
 
+  var signupModal = null;
+
   function message(text, kind) {
     var box = $("msg");
     box.textContent = text || "";
@@ -40,6 +42,48 @@
     }
   }
 
+  /* The real registration POST, behind the modal's submit.
+   *
+   * This creates genuine CRM records on this deployment — the preview note and
+   * the per-event page both say so, and this modal is the same door. Use
+   * obvious test data. */
+  async function register(item, fields) {
+    var body = {
+      // Every submission carries a client-generated idempotency token; without
+      // one the endpoint 422s. A fresh token per submit, so two deliberate test
+      // registrations are two submissions rather than one deduplicated away.
+      submission_token: (window.crypto && window.crypto.randomUUID)
+        ? window.crypto.randomUUID()
+        : "preview-" + String(Math.floor(performance.now() * 1000)) + "-token",
+      company_url: "",          // the honeypot; real users never fill it
+      first_name: fields.firstName,
+      last_name: fields.lastName,
+      email: fields.email,
+      phone: fields.phone,
+      zip_code: fields.zip,
+      // The modal's consent line promises emails about webinars only, while
+      // consent:true also records terms-of-use, privacy-policy and code-of-
+      // conduct acceptance on the Contact. Sending false claims nothing the
+      // visitor was not shown; see the note in the CHANGELOG entry.
+      consent: false,
+    };
+    var resp = await fetch(
+      "/api/events/" + encodeURIComponent(item.slug || "") + "/register",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        credentials: "omit",
+      }
+    );
+    var data = null;
+    try { data = await resp.json(); } catch (e) { /* no body */ }
+    if (!resp.ok) {
+      throw new Error((data && (data.detail || data.message)) || ("HTTP " + resp.status));
+    }
+    return data || {};
+  }
+
   async function loadCalendar() {
     var data = await getJson("/api/events/upcoming");
     var items = data.webinars || [];
@@ -47,14 +91,11 @@
       items.length + " published upcoming event" + (items.length === 1 ? "" : "s");
     window.CBMEvents.renderCalendar($("calendar"), items, {
       onSignUp: function (item) {
-        // On the live site this goes to the WordPress per-event page. That page
-        // is Phase 4 and does not exist yet, so send the operator to our own
-        // stand-in rather than to a URL that 404s.
         if (!item.slug) {
-          message("This event has no URL slug yet, so it has no public page.", "error");
+          message("This event has no URL slug yet, so it cannot be registered for.", "error");
           return;
         }
-        window.location.href = "preview-event.html?slug=" + encodeURIComponent(item.slug);
+        signupModal.open(item);
       },
     });
   }
@@ -103,6 +144,14 @@
       );
       return;
     }
+    // The payload's `url` is always the LIVE site's /webinars/<slug>, which is
+    // the Phase 4 rewrite rule and does not exist yet — clicking a title used
+    // to leave the preview and 404. Point the renderer at our own stand-in
+    // instead, which is what the plugin will do with its own page URL.
+    window.CBMEvents.config.eventUrlBase = "preview-event.html?slug=";
+    signupModal = window.CBMEvents.mountSignupModal(
+      document.querySelector(".cbm-wb"), { register: register }
+    );
     $("reloadBtn").addEventListener("click", loadAll);
     $("searchBtn").addEventListener("click", function () {
       loadRecordings().catch(function (e) { message(e.message, "error"); });
