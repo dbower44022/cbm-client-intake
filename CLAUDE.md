@@ -869,6 +869,15 @@ Conventions. Plan: `prds/action-history-plan.md`;
   **Always verify before moving on**: read `entityDefs.<Entity>.links` from
   `GET /Metadata` and confirm each link is on the side you intended
   ([[crm-specs-use-entity-manager-terms]]).
+- **A list `maxSize` above `recordListMaxSizeLimit` (200) is a 403, not a
+  truncation** — and in this app a 403 on a best-effort read is *swallowed*, so
+  the symptom is an empty list, not an error. v0.198.0 raised the Details
+  link-picker options to 500 and emptied **every** picker in production
+  (v0.202.2 pages at 200). Page at 200 or below unless the CRM setting is raised
+  on BOTH environments; no other call site in the repo exceeds it. Note that
+  neither the unit tests (fakes) nor the preview harness (canned JSON) issue a
+  real list request, so **a page-size change has to be tried against a live CRM**
+  ([[espo-list-maxsize-limit]]).
 - **Removing a relationship is metadata-only — the column and its data stay.**
   Entity Manager cannot change a relationship's *type*, so a type change is
   delete-then-recreate; that is safe, because `LinkManager::delete()` only

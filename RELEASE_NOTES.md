@@ -37,6 +37,35 @@ orchestrator's find-or-create on `linkedCompanyId`.
 | CRM (both, 08-16) | `sponsorCompany` recreated as Many-to-One |
 | App (v0.198.0) | Company picker + "+ New company" on the partner/funder Details tab; the Overview's empty company now reads "—" instead of "(details)" |
 | App (v0.201.1) | Save on an unchanged Details panel closes it instead of ignoring the click |
+| App (v0.202.1) | An unset company picker no longer vanishes from the Details strip |
+| App (v0.202.2) | Link-picker options are paged at 200 — the fix for a regression shipped in v0.198.0 |
+
+**The feature needed two follow-ups after it was signed off, and the second was
+self-inflicted.** Worth recording honestly, because both are instructive:
+
+- **v0.202.1 — discoverability.** The Details summary strip drops empty cells by
+  design (density), so on a record with *no* company the strip showed no Company
+  cell at all — and that cell is the only signpost to a control that lives
+  behind Edit. The record the picker exists to repair was the one record that
+  hid it. Doug's report was "the ability to select or create a company seems to
+  be missing"; it had shipped, invisibly. An unset picker now renders "—", the
+  rule the Overview rail already followed.
+- **v0.202.2 — a regression introduced by the original change.** v0.198.0 raised
+  the picker's option query from `maxSize=200` to `500`, intending to avoid
+  silent truncation. **EspoCRM refuses a list request above its
+  `recordListMaxSizeLimit` with a 403** — not a truncated result — and the
+  best-effort `except EspoError` that omits options on failure swallowed it. So
+  *every* curated link picker, company and manager alike, offered nothing but
+  "(none)" in production. Options are now paged at the limit.
+
+  The raise was never needed: the counts taken the same day were 97 Accounts on
+  prod and 93 on crm-test, both far under 200. A limit that wasn't binding was
+  raised without checking the CRM would accept it, and nothing in the test
+  strategy could catch it — the preview harness serves canned JSON and the unit
+  tests use fakes, so **no test in the suite issues a real list request**. The
+  check that would have caught it was one live call against crm-test with
+  `maxSize=500`. Surveyed afterwards: no other call site in the codebase exceeds
+  200, so this was the only instance.
 
 **Worth carrying forward.**
 
