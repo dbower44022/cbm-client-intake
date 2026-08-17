@@ -1036,22 +1036,16 @@ Entity Manager vocabulary — [[crm-specs-use-entity-manager-terms]]):
 deployed and verified; `CHANGELOG.md` is the permanent record, `OPEN-ITEMS.md`
 holds anything still owed.*
 
-**Pushed through v0.197.1 on 2026-08-13**, so all three apps built it. What is
-*verified* is narrower than what is deployed — see each block. **v0.198.0 is
-committed but NOT pushed.**
+**Pushed through v0.202.0 on 2026-08-16**, so all three apps built it, and
+`/healthz` reports it on prod and crm-test. Nothing is unpushed. What is
+*verified* is narrower than what is deployed — see each block.
 
-- **v0.198.0** — the Company picker + "+ New company" on the partner and funder
-  Details tabs (see that app's section). **Not deployed.** No flag: the picker
-  is a curated link field, so the rollout control is the code itself — a revert
-  is the only rollback. Owed on review: a live pass as a **non-admin** partner
-  manager, since the create path leans on the intake API client for Account
-  create precisely because gate roles lack it.
-- **CRM, 2026-08-14/15** — `Account.cCompanyPartnerProfile` recreated as
-  many-to-one on prod then crm-test, so a company can hold several partner
-  records. Verified in both: every link survived, and two partner profiles now
-  share one company with neither losing it. The four company-less live records
-  (3 partners, 1 funder) are still to be repaired, and the two Harvard partner
-  duplicates on prod still need a merge decision.
+*(The v0.198.0 company-link arc — the Company picker, the many-to-one CRM
+change for partners and funders, the client one-to-one ruling — is deployed and
+verified on both environments; its standing facts live in the Session
+Management section above, its history in `CHANGELOG.md`, and the one thing still
+owed is `OPEN-ITEMS.md` #19b: the picker's CREATE path has never run as a
+non-admin.)*
 
 - **v0.197.0 / v0.197.1** — the partner and funder **manager pickers** on the
   Details tab (see that app's section). v0.197.0 is **verified live** (Doug,

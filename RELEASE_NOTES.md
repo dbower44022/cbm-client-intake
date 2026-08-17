@@ -6,6 +6,55 @@ the "Current status" section of `CLAUDE.md`.
 
 ---
 
+## 2026-08-13 → 08-16 — v0.198.0 + a CRM change (the company-link arc)
+
+Triggered by one question: a partner record on prod whose **Company read
+"(details)"**, with no Company section on the Details tab and no way to put one
+back.
+
+**What it turned out to be.** The record was created by "+ Add partner" at
+03:23 *with* its company. Nine and a half hours later a second staff member
+added the same partner again; quick-add reused the same-named Account, and
+because `Account.cCompanyPartnerProfile` was a **`hasOne`**, EspoCRM did not
+refuse the second link — it **moved** the Account onto the new record, silently
+emptying the first. Nothing failed, nobody saw an error, and the loser was the
+record nobody was looking at. Confirmed from `CActionLog` and the EspoCRM id
+timestamps, not inferred.
+
+**The ruling.** Doug: a partnership is with a *programme inside* an
+organisation as often as with the organisation itself — Case Western's
+Think\[box\] was already the many case wearing the one case's clothes. So one
+company, **many** partner records; likewise funders. **Clients are the
+deliberate exception** — a client never has two business profiles, so
+`CClientProfile.linkedCompany` stays `hasOne`, guarded in the app by the intake
+orchestrator's find-or-create on `linkedCompanyId`.
+
+**What changed.**
+
+| | |
+|---|---|
+| CRM (prod 08-14, crm-test 08-15) | `partnerCompany` recreated as Many-to-One |
+| CRM (both, 08-16) | `sponsorCompany` recreated as Many-to-One |
+| App (v0.198.0) | Company picker + "+ New company" on the partner/funder Details tab; the Overview's empty company now reads "—" instead of "(details)" |
+| App (v0.201.1) | Save on an unchanged Details panel closes it instead of ignoring the click |
+
+**Worth carrying forward.**
+
+- **Removing an EspoCRM relationship never drops the column or the data.**
+  Entity Manager cannot change a relationship's *type*, so a type change is
+  delete-then-recreate — and every link came back on its own each time, once the
+  recreated link had the same name. A mis-named recreate is the only real
+  hazard: it strands the data in the old column and looks exactly like data
+  loss. ([[espo-removelink-is-metadata-only]])
+- **The Create Link dialog inverts the two Name boxes** — the name typed under
+  one entity becomes the link stored on the *other*. Got wrong four times across
+  three builds before it was written into `CLAUDE.md` with a verify-by-metadata
+  step that doesn't depend on remembering the rule.
+- The audit that came out of this flagged three records as incomplete; two of
+  them are *accurately* incomplete (CBM has no company for that partner yet, and
+  the funder's manager isn't known). Recorded in `OPEN-ITEMS.md` so they stop
+  being re-raised as defects.
+
 ## 2026-06-24 — v0.9.0 → v0.10.5 (post-go-live hardening)
 
 The first cycle after the production go-live (v0.9.0). Triggered by a report that
