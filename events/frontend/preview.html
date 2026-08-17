@@ -35,43 +35,55 @@
     from <code>wp-plugin/cbm-events/</code> — the same two files the WordPress
     plugin will ship — driven by this deployment's live public API. The CSS was
     copied verbatim from the website's own Elementor widgets, so the colours,
-    type and spacing are the site's. What is <em>not</em> reproduced is the page
-    around them: the site's header, footer and section background. The
-    definitive check is still the side-by-side at cutover.
+    type and spacing are the site's — as is the two-column layout, calendar left
+    and library right, which stacks below 767px just as the site's does (try the
+    Width selector). What is <em>not</em> reproduced is the page around them: the
+    site's header, footer and section background. The definitive check is still
+    the side-by-side at cutover.
   </p>
 
   <div class="pv__msg" id="msg" hidden></div>
 
   <main class="pv__stage" id="stage">
-    <!-- The wrappers below are the site's own markup, not preview scaffolding:
-         .cbm-wb / .cbm-yt carry the CSS variables and scope every rule. -->
-    <div class="cbm-wb">
-      <div class="panel" aria-labelledby="cbm-cal-heading">
-        <div class="panel__header">
-          <h2 id="cbm-cal-heading">Calendar of Upcoming Webinars</h2>
-        </div>
-        <div class="panel__body">
-          <p class="pv__count" id="calendarCount"></p>
-          <div id="calendar"></div>
+    <!-- Two columns, calendar left and library right, because that is how the
+         site lays them out: an Elementor grid container, repeat(2, 1fr) with a
+         20px gap, boxed at min(100%, 1140px) and collapsing to one column at
+         767px. On the website Elementor keeps owning that — the plugin ships
+         one shortcode per panel and they drop into the same two cells — so the
+         reproduction lives in the preview's own CSS, not in the plugin's.
+
+         The wrappers below, by contrast, ARE the site's own markup, not preview
+         scaffolding: .cbm-wb / .cbm-yt carry the CSS variables and scope every
+         rule. -->
+    <div class="pv__columns">
+      <div class="cbm-wb">
+        <div class="panel" aria-labelledby="cbm-cal-heading">
+          <div class="panel__header">
+            <h2 id="cbm-cal-heading">Calendar of Upcoming Webinars</h2>
+          </div>
+          <div class="panel__body">
+            <p class="pv__count" id="calendarCount"></p>
+            <div id="calendar"></div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="cbm-yt">
-      <div class="panel" aria-labelledby="cbm-rec-heading">
-        <div class="panel__header">
-          <h2 id="cbm-rec-heading">Find a Recorded Webinar</h2>
-        </div>
-        <div class="panel__body">
-          <div class="search-wrap">
-            <input type="search" id="searchBox" class="search-input"
-                   placeholder="Search recordings…" aria-label="Search recordings" />
-            <button type="button" id="searchBtn" class="search-btn">Search</button>
+      <div class="cbm-yt">
+        <div class="panel" aria-labelledby="cbm-rec-heading">
+          <div class="panel__header">
+            <h2 id="cbm-rec-heading">Find a Recorded Webinar</h2>
           </div>
-          <div class="search-status-row">
-            <span class="cbm-search-msg" id="recordingsCount"></span>
+          <div class="panel__body">
+            <div class="search-wrap">
+              <input type="search" id="searchBox" class="search-input"
+                     placeholder="Search recordings…" aria-label="Search recordings" />
+              <button type="button" id="searchBtn" class="search-btn">Search</button>
+            </div>
+            <div class="search-status-row">
+              <span class="cbm-search-msg" id="recordingsCount"></span>
+            </div>
+            <div id="recordings"></div>
           </div>
-          <div id="recordings"></div>
         </div>
       </div>
     </div>

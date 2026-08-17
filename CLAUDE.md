@@ -1095,10 +1095,11 @@ holds anything still owed.*
 is unpushed. What is *verified* is narrower than what is deployed — see each
 block.
 
-- **v0.203.0 — the events website preview is the website now.** The site's own
-  stylesheet (verbatim from its Elementor widgets) ships with the plugin and
-  drives the preview, so the colours and type are the site's rather than an
-  invented green approximation. Doing it exposed a defect the approximation had
+- **v0.203.0 / v0.203.1 — the events website preview is the website now.** The
+  site's own stylesheet (verbatim from its Elementor widgets) ships with the
+  plugin and drives the preview, so the colours, type and the two-column
+  layout — calendar left, library right, stacking at 767px — are the site's
+  rather than an invented green approximation. Doing it exposed a defect the approximation had
   been hiding since 2026-07-25: the recorded-library markup was off the class
   contract and would have rendered unstyled on the live page. A webinar's title
   now opens its own page (it used to 404 off to the live site), sign-up is the

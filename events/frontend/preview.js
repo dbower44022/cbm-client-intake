@@ -133,6 +133,9 @@
     } else {
       stage.style.maxWidth = value + "px";
     }
+    // The site stacks its two panels at 767px. Narrowing the stage does not
+    // narrow the window, so the media query cannot see it — say so explicitly.
+    stage.classList.toggle("is-narrow", value !== "full" && Number(value) <= 767);
   }
 
   document.addEventListener("DOMContentLoaded", function () {

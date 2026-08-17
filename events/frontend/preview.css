@@ -57,8 +57,34 @@ body {
 .pv__msg--info { background: #eef2f7; color: #33475b; }
 
 .pv__stage { margin: 1.25rem auto; padding: 0 1rem; }
-/* The two site panels sit one above the other, as they do on the live page. */
-.pv__stage > .cbm-wb, .pv__stage > .cbm-yt { margin-bottom: 1.25rem; }
+
+/* Calendar left, recorded library right — the site's layout, reproduced.
+ *
+ * Read off the live page's own stylesheet (2026-08-16): the two widgets sit in
+ * an Elementor grid container, `--e-con-grid-template-columns: repeat(2, 1fr)`
+ * with a 20px gap, inside a boxed container at `min(100%, 1140px)` — which is
+ * why each panel measures exactly 560px on a desktop viewport. At ≤767px the
+ * same rule drops to `repeat(1, 1fr)` and they stack.
+ *
+ * This lives here and NOT in the plugin on purpose: the plugin ships one
+ * shortcode per panel, and at cutover they drop into the two cells Elementor
+ * already provides. The plugin owning a layout too would mean two sources of
+ * truth for the same grid.
+ */
+.pv__columns {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;
+  max-width: 1140px; margin: 0 auto;
+}
+/* The site's own breakpoint, for a genuinely narrow browser window… */
+@media (max-width: 767px) {
+  .pv__columns { grid-template-columns: 1fr; }
+}
+/* …and for the Width selector, which narrows the stage rather than the window,
+   so a media query alone would never fire. (A container query would be the
+   tidier tool, but `container-type` makes the element a containing block for
+   fixed-position descendants — and the sign-up modal is one, so it would be
+   trapped inside the column instead of covering the page.) */
+.pv__stage.is-narrow .pv__columns { grid-template-columns: 1fr; }
 
 /* A harness readout, deliberately quiet — the site shows no such count. */
 .pv__count {

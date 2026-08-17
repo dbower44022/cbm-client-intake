@@ -4,6 +4,33 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.203.1] — 2026-08-16
+
+**feat(events): the preview lays the two panels out the way the site does —
+calendar left, recorded library right.** Doug: "the website has the upcoming
+events on the left side of the page, and the recorded on the right."
+
+- Read off the live page's own stylesheet rather than eyeballed: the two widgets
+  sit in an Elementor grid container with
+  `--e-con-grid-template-columns: repeat(2, 1fr)`, a 20px gap and a boxed
+  container at `min(100%, 1140px)` — which is why each panel measures exactly
+  560px on a desktop viewport — dropping to `repeat(1, 1fr)` at ≤767px. The
+  preview now reproduces all of it, verified at 560px + 560px + 20px.
+- **The plugin deliberately does not own this.** It ships one shortcode per
+  panel, and at cutover they drop into the two cells Elementor already provides;
+  a layout in the plugin as well would be a second source of truth for the same
+  grid. A test asserts `pv__columns` never appears in the plugin's stylesheet.
+- The Width selector now reproduces the site's breakpoint too: 1200 and 768 give
+  two columns, 390 stacks. It narrows the stage rather than the window, so a
+  media query alone would never fire — the selector adds an `is-narrow` class.
+  A **container query** would have been the tidier tool and is deliberately not
+  used: `container-type` makes the element a containing block for
+  fixed-position descendants, which would trap the sign-up modal inside a
+  column instead of covering the page.
+- Note the site squeezes rather than balances its columns at exactly 768px (the
+  search input and button set a min-content floor the `1fr` cannot go below).
+  Reproduced as-is: the preview's job is to show what the site does.
+
 ## [0.203.0] — 2026-08-16
 
 **feat(events): the website preview now uses the website's own stylesheet, and

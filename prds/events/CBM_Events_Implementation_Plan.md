@@ -247,6 +247,12 @@ emits the site's existing modal DOM and the host supplies the POST — the plugi
 through its proxy, the preview straight to `/api/events/{slug}/register`. The
 open question there is consent wording (`OPEN-ITEMS.md` 19d).
 
+**The side-by-side layout stays Elementor's.** The page puts the two widgets in
+a grid container — `repeat(2, 1fr)`, 20px gap, boxed at `min(100%, 1140px)`,
+one column at ≤767px — so the shortcodes drop into cells that already exist and
+the plugin ships no layout of its own. The app's preview reproduces the grid in
+its own CSS (calendar left, library right) purely because it has no Elementor.
+
 **Per-event links need a host-supplied base.** The public payload's `url` is
 always the live site's `/webinars/<slug>`, so anywhere but the website it 404s.
 The renderer takes `CBMEvents.config.eventUrlBase`; the plugin sets it to its

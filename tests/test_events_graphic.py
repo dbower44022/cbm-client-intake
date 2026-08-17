@@ -394,3 +394,26 @@ def test_signup_stays_a_modal_on_the_calendar(monkeypatch):
     renderer = client.get("/events-plugin/cbm-events.js").text
     assert "CBMEvents.mountSignupModal" in renderer
     assert "mountSignupModal" in client.get("/events/preview.js").text
+
+
+def test_preview_puts_the_two_panels_side_by_side(monkeypatch):
+    """Calendar left, recorded library right — the site's layout.
+
+    Read off the live page 2026-08-16: an Elementor grid container,
+    repeat(2, 1fr) with a 20px gap, boxed at min(100%, 1140px), collapsing to
+    one column at 767px. The plugin does NOT own this — it ships one shortcode
+    per panel and they drop into the cells Elementor already provides — so the
+    reproduction belongs to the preview alone.
+    """
+    client, _ = _staff_app(monkeypatch)
+    page = client.get("/events/preview.html").text
+    assert 'class="pv__columns"' in page
+    # The calendar comes first, so it lands in the left cell.
+    assert page.index('class="cbm-wb"') < page.index('class="cbm-yt"')
+
+    css = (Path(__file__).resolve().parents[1] / "events" / "frontend" / "preview.css").read_text(
+        encoding="utf-8"
+    )
+    assert "repeat(2, 1fr)" in css and "1140px" in css and "max-width: 767px" in css
+    plugin_css = (PLUGIN_ASSETS / "cbm-events.css").read_text(encoding="utf-8")
+    assert "pv__columns" not in plugin_css
