@@ -414,6 +414,37 @@ def test_preview_puts_the_two_panels_side_by_side(monkeypatch):
     css = (Path(__file__).resolve().parents[1] / "events" / "frontend" / "preview.css").read_text(
         encoding="utf-8"
     )
-    assert "repeat(2, 1fr)" in css and "1140px" in css and "max-width: 767px" in css
+    # Two equal columns that FILL the width and stack at the site's breakpoint.
+    # `minmax(0, 1fr)` rather than `1fr`, and no 1140px box on .pv__columns:
+    # boxing it made "Full window" do nothing and froze the panels at 560px
+    # while the browser grew (Doug, 2026-08-17).
+    assert "repeat(2, minmax(0, 1fr))" in css
+    assert "max-width: 767px" in css
+    columns_rule = css.split(".pv__columns {", 1)[1].split("}", 1)[0]
+    assert "max-width" not in columns_rule
+    # Both stacked rules must clamp too: a bare `1fr` kept the single column at
+    # its 407px min-content inside a 390px phone and pushed the page sideways.
+    assert "grid-template-columns: 1fr" not in css
+    assert css.count("grid-template-columns: minmax(0, 1fr)") == 2
     plugin_css = (PLUGIN_ASSETS / "cbm-events.css").read_text(encoding="utf-8")
     assert "pv__columns" not in plugin_css
+
+
+def test_the_search_row_can_shrink():
+    """A flex item's default `min-width: auto` stopped the search input
+    shrinking, so on a phone `.panel { overflow: hidden }` clipped the Search
+    button off the right edge. Ships in the plugin: the site inherits the fix."""
+    css = (PLUGIN_ASSETS / "cbm-events.css").read_text(encoding="utf-8")
+    assert ".cbm-yt .search-input { min-width: 0; }" in css
+
+
+def test_preview_defaults_to_following_the_browser_window(monkeypatch):
+    """The fixed widths are simulations you opt into; the default should track
+    the window, so expanding the browser widens the panels."""
+    client, _ = _staff_app(monkeypatch)
+    for page in ("/events/preview.html", "/events/preview-event.html"):
+        markup = client.get(page).text
+        assert '<option value="full" selected>' in markup, page
+        # …and it must be the first option, so it is what a reset lands on.
+        opening = markup.split("<select id=\"widthSelect\">", 1)[1]
+        assert opening.lstrip().startswith('<option value="full"'), page

@@ -70,21 +70,37 @@ body {
  * shortcode per panel, and at cutover they drop into the two cells Elementor
  * already provides. The plugin owning a layout too would mean two sources of
  * truth for the same grid.
+ *
+ * Two deliberate departures from that, both so the preview behaves like a page
+ * rather than a photograph of one (Doug, 2026-08-17):
+ *
+ *  - **No 1140px box.** The panels fill whatever width they are given and grow
+ *    with the window. The live page boxes its content, so at very wide
+ *    viewports the site's panels stay 560px while these keep growing; pick a
+ *    fixed Width above to compare like with like. (Boxing here would also make
+ *    the Width selector's "Full window" do nothing, which is what prompted
+ *    this.)
+ *  - **minmax(0, 1fr), not 1fr.** A bare `1fr` refuses to shrink below its
+ *    content's min-content width, which is why the site's own columns go
+ *    lopsided just above its breakpoint. Equal halves at every width instead.
  */
 .pv__columns {
-  display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;
-  max-width: 1140px; margin: 0 auto;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px;
 }
 /* The site's own breakpoint, for a genuinely narrow browser window… */
 @media (max-width: 767px) {
-  .pv__columns { grid-template-columns: 1fr; }
+  .pv__columns { grid-template-columns: minmax(0, 1fr); }
 }
 /* …and for the Width selector, which narrows the stage rather than the window,
    so a media query alone would never fire. (A container query would be the
    tidier tool, but `container-type` makes the element a containing block for
    fixed-position descendants — and the sign-up modal is one, so it would be
-   trapped inside the column instead of covering the page.) */
-.pv__stage.is-narrow .pv__columns { grid-template-columns: 1fr; }
+   trapped inside the column instead of covering the page.)
+
+   `minmax(0, …)` in both stacked rules for the same reason as above: a bare
+   `1fr` would not shrink below the panel's min-content, so at 390px the single
+   column stayed 407px wide and pushed the page sideways. */
+.pv__stage.is-narrow .pv__columns { grid-template-columns: minmax(0, 1fr); }
 
 /* A harness readout, deliberately quiet — the site shows no such count. */
 .pv__count {

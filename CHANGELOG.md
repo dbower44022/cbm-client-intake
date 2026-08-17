@@ -4,6 +4,35 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.203.2] — 2026-08-17
+
+**fix(events): the preview's panels grow with the window, and stack cleanly on a
+phone.** Doug: "the panels should resize when the web page is expanded. And the
+two panels should stack up vertically on a small screen or phone."
+
+- **Expanding the browser did nothing** for two reasons, both now gone: the
+  Width selector defaulted to *Desktop — 1200px*, which caps the stage, and the
+  columns were boxed at the site's 1140px. **Full window is now the default**
+  (on the event page too) and `.pv__columns` carries no cap, so the panels
+  follow the browser — 1059px each on a 2170px viewport, measured.
+- **Stacking was already right, but the stacked column could not shrink.**
+  `1fr` is `minmax(auto, 1fr)`, so the single column sat at its 407px
+  min-content inside a 390px phone and pushed the page sideways. Both stacked
+  rules now use `minmax(0, 1fr)`. Verified at 390 / 700 / 1000px: stacked,
+  stacked, side-by-side — no horizontal overflow at any of them.
+- **A real clipping bug came out of the phone pass**, and it ships in the
+  plugin because the site has it too: the library's search row is a flex row
+  whose input keeps `min-width: auto`, so it refuses to shrink and
+  `.panel { overflow: hidden }` cuts the **Search button** off the right edge.
+  One line in the stylesheet's Additions block (`.cbm-yt .search-input
+  { min-width: 0; }`) and the row fits any width. The site has no rule for it
+  because its two panels have only ever been looked at side by side on a
+  desktop.
+- Two deliberate departures from the live page are now recorded in the preview's
+  own note: no 1140px box, and equal halves (`minmax(0, 1fr)`) rather than the
+  site's lopsided squeeze just above its breakpoint. Pick a fixed Width to
+  compare like with like.
+
 ## [0.203.1] — 2026-08-16
 
 **feat(events): the preview lays the two panels out the way the site does —

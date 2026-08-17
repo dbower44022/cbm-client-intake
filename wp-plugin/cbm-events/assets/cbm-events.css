@@ -254,3 +254,11 @@
 .cbm-wb .event-signup-btn:disabled {
   background-color: #98a2b3; cursor: not-allowed;
 }
+
+/* The search row is a flex row: a flexible input beside a nowrap button. A flex
+ * item's default `min-width: auto` means the input refuses to shrink below its
+ * intrinsic size, so on a phone the row overflows and `.panel { overflow:
+ * hidden }` clips the Search button off the right edge. The site has never had
+ * a rule for it because its calendar and library have only ever been measured
+ * side by side on a desktop. One line, and the row fits any width. */
+.cbm-yt .search-input { min-width: 0; }
