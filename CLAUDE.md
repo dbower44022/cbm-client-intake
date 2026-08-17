@@ -599,8 +599,13 @@ Live on both environments. User guide: `analytics-guide.md`; activation runbook:
   The three operational metrics read the app's own data and so aren't
   builder-editable.
 - **A dashboard's `scope` IS its location**, one dashboard per record type,
-  enforced at save. Starter dashboards exist for Mentor / Engagement / Partner /
-  Funder / Contact. Company and Client have no host screen yet (OPEN-ITEMS #0).
+  enforced at save. **All seven record views host one** — Mentor / Engagement /
+  Partner / Funder / Contact / Company / Client, each with a starter dashboard.
+  Company got a real record page of its own
+  (`/directory/companies/record/{id}`, sharing `record.html` with View Contact
+  but without Communications); Client has no screen by ruling — its dashboard
+  renders as a second section on the **engagement** Analytics tab, keyed off
+  `clientProfileId` in the session-detail payload.
 
 ### System Settings — `/setup`
 

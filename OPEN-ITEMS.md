@@ -6,20 +6,6 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
-0. **Analytics on the record views — the two remaining surfaces, decided
-   2026-07-28** (full context in `prds/analytics-app-plan.md` §17). Doug ruled
-   that a dashboard can be attached to every record view (Mentor, Company,
-   Contact, Engagement, Client, Partner, Funder), one dashboard per record
-   type. **The five with a host screen shipped in v0.187.0** (Mentor,
-   Engagement, Partner, Funder, Contact — each with a starter dashboard).
-   Direction for the remaining two:
-   - **Company — build a real Company record page** like the Contact page
-     (v0.144.0); the dashboard lives there. The Companies grid, preview strip
-     and View pop-up stay, but link through to the new page.
-   - **Client analytics attaches to the engagement view.** `CClientProfile` gets
-     no screen of its own; the client dashboard is a section on the engagement
-     record page.
-
 1. **This repository's `.git` lives inside the Dropbox-synced tree, and Dropbox
    destroyed it twice in one day** (2026-07-28).
 
@@ -264,6 +250,21 @@ block a deploy.)*
 
 ## Live verification owed
 
+19f. **The Company record page and the client dashboard section have never been
+    opened by a human** (2026-08-16). Both shipped 2026-07-28 and are covered by
+    tests, and the Company route serves on crm-test — but no one has looked at
+    either rendering real data. Worth ten minutes as a real non-admin in the
+    Mentor Team:
+    - `/directory/companies/` → click a company name → the page opens in its own
+      tab, Overview shows the CRM-arranged detail, and the **Analytics** tab
+      renders the `record-company` starter (people and activity for that
+      company) rather than the "no analytics set up" message.
+    - Client Management → any engagement → **Analytics**: two sections, the
+      engagement dashboard and the client one beneath it. An engagement with an
+      empty `engagementClientId` should show only the first, not an error.
+    - Both need `ANALYTICS_ENABLED`; record-scoped metrics always run live as
+      the user, so an empty panel means the metric found nothing, not a cache.
+
 19d. **The events sign-up modal's consent line under-covers what `consent: true`
     writes** (2026-08-16, v0.203.0). The line copied from the live page —
     *"By registering, you are agreeing to receive emails about our webinars"* —
@@ -442,6 +443,27 @@ block a deploy.)*
     assigned to an unlinked profile are invisible in the session tools.
 
 ## Resolved
+
+- **Analytics on the record views — the last two surfaces** (was item 0,
+  decided 2026-07-28, `prds/analytics-app-plan.md` §17). **Both were built the
+  same day the ruling was recorded and the item was simply never closed** —
+  found 2026-08-16 while picking it up as new work.
+  - **Company** — `44d7562` built the full record page at
+    `/directory/companies/record/{id}`: the View Contact shell (Overview +
+    Analytics, header/footer, single-tab lock) minus Communications, since
+    companies talk through their people. `DirectoryConfig.company_page` gates
+    the route mount and the `/session` flag; the grid's row-name click opens it
+    in a stable named window while the View pop-up and preview strip stay for
+    browsing, exactly as ruling 1 asked.
+  - **Client** — no screen of its own, per ruling 2. `sessions/service.py` puts
+    `clientProfileId` in the engagement detail payload and the Analytics tab
+    fetches the `CClientProfile` dashboard as a second section beside the
+    engagement one.
+  - Starter dashboards `record-company` and `record-client` seeded in `cf23bf0`,
+    so all seven record types now have one.
+  - Verified 2026-08-16: 51 directory tests + 21 analytics record tests pass,
+    and `GET /directory/companies/record/{id}` serves on the deployed crm-test
+    app. What is owed is the eyeball, logged under *Live verification owed*.
 
 - **`test_a_full_event_is_NOT_refused` failed on a date roll** (was item 7,
   found 2026-08-13). The shared `make_event()` fixture hard-codes
