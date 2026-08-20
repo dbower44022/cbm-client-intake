@@ -285,24 +285,35 @@ block a deploy.)*
 
 ## Live verification owed
 
-**De-Clevelanding (v0.205.0) has never been looked at in a browser.** 1763
-tests pass, including a 25-case guard suite, and the rendered output was
-compared page by page against the previous commit — but no page has been
-*opened*. What a live pass should confirm, in one sitting on crm-test:
+**De-Clevelanding (v0.205.x): partly verified live, the rest still owed.**
 
-- A page's `<title>`, footer and (on a public form) body prose all read
-  "Cleveland Business Mentors", with **no flicker** and no `{{org}}` visible at
-  any point, including on a hard refresh.
-- The three pages served by a **direct read** rather than the static mount —
-  the portal root `/`, a sessions record page (`/mentorsessions/record/{id}`)
-  and a directory record page (`/directory/contacts/record/{id}`) — because
-  those are a separate code path and were the near-miss in this change.
-- `/healthz` reports `organization`.
-- Setting `ORGANIZATION_NAME` at `/setup` changes the pages **without a
-  redeploy** (the rewrite re-reads settings per request and the ETag tracks the
-  name), and the worker/web `settingsVersion` split behaves as usual.
-- The portal birthday card's eyebrow and the directory mentor page's tab title,
-  which read the name from `<meta name="cbm-org">` rather than a fetch.
+Confirmed on **production** by fetching the served pages on 2026-08-20, after
+the push: `/volunteer/`, `/info-request/`, `/assignments/`, `/mentorsessions/`,
+`/directory/mentors/` and the **portal root `/`** all render
+"Cleveland Business Mentors" in the title, the footer, the public-form prose and
+the `cbm-org` meta, with **zero unsubstituted `{{` tokens**, and `/healthz`
+reports `organization`. The portal root matters most of those: it is one of
+three pages served by a **direct read** rather than the static mount, so it
+would have shipped a raw `{{org}}` had the rewrite been missed there.
+
+Reading the live headers in the same pass is what turned up the revalidation
+regression fixed in v0.205.1 — worth remembering that the version number
+matching is not the same as the response being right.
+
+**Still owed**, none of it reachable with an unauthenticated fetch:
+
+- The two remaining **direct-read** pages, which need a signed-in session:
+  a sessions record page (`/mentorsessions/record/{id}`) and a directory record
+  page (`/directory/contacts/record/{id}`).
+- **No flicker**, which only a browser shows — the whole reason the name is
+  substituted server-side instead of filled by JS. Watch the browser tab and the
+  public forms' prose on a hard refresh.
+- The two scripts that read `<meta name="cbm-org">` rather than fetching: the
+  **portal birthday card's eyebrow** and the **directory mentor page's tab
+  title**.
+- Changing `ORGANIZATION_NAME` at **`/setup`** and confirming the pages follow
+  **without a redeploy**, then changing it back — the revert path is the one
+  with the subtle failure mode (see v0.205.1).
 
 There is **no feature flag** — the safety property is that an unconfigured
 deployment renders what it always did — so the rollback is a revert, not a

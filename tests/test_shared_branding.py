@@ -211,9 +211,22 @@ def test_brand_as_identifier_is_left_alone():
 
 # --- what actually gets served ---------------------------------------------
 
+#: Branding env vars a test may set. Cleared when a test does NOT set one, so
+#: building a second app in the same test really does go back to the default —
+#: monkeypatch keeps setenv for the whole test, which silently turned a "revert"
+#: case into a no-op.
+_BRANDING_ENV = ("ORGANIZATION_NAME", "CHAPTER_TOKENS_URL")
+
+
 def _public_app(monkeypatch, **env):
+    for k in _BRANDING_ENV:
+        if k in env:
+            monkeypatch.setenv(k, env[k])
+        else:
+            monkeypatch.delenv(k, raising=False)
     for k, v in env.items():
-        monkeypatch.setenv(k, v)
+        if k not in _BRANDING_ENV:
+            monkeypatch.setenv(k, v)
     get_settings.cache_clear()
     return TestClient(create_app([info_request.SPEC, volunteer.SPEC, client_intake.SPEC]))
 
@@ -345,3 +358,54 @@ def test_the_verbatim_website_copy_keeps_its_links_but_not_the_name():
         "the verbatim copy lost its links — it is supposed to reproduce the "
         "live page exactly until plan phase 4 retires it"
     )
+
+
+def test_html_revalidates_by_date_too(monkeypatch):
+    """DO's edge strips the ETag from HTML responses (assets served straight
+    from disk keep theirs), so `If-Modified-Since` is the only conditional
+    request that reaches production. Honouring only `If-None-Match` meant every
+    page load transferred in full — found by checking the live headers after
+    v0.205.0 shipped, not by a test."""
+    client = _public_app(monkeypatch)
+    first = client.get("/volunteer/")
+    last_modified = first.headers["last-modified"]
+    again = client.get("/volunteer/", headers={"If-Modified-Since": last_modified})
+    assert again.status_code == 304
+
+
+def test_a_date_revalidation_cannot_serve_the_previous_name(monkeypatch):
+    """The trap in the fix above: the page's content changes when the SETTING
+    changes, not when the file does. A `Last-Modified` of the file's mtime would
+    tell a browser "unchanged" and leave the previous chapter's name on screen."""
+    client = _public_app(monkeypatch)
+    stamp = client.get("/volunteer/").headers["last-modified"]
+
+    renamed = _public_app(monkeypatch, ORGANIZATION_NAME="Akron Business Mentors")
+    resp = renamed.get("/volunteer/", headers={"If-Modified-Since": stamp})
+    assert resp.status_code == 200, "a rename must defeat a date revalidation"
+    assert "Akron Business Mentors" in resp.text
+
+
+def test_a_failed_etag_is_not_second_guessed_by_a_date(monkeypatch):
+    """RFC 9110 §13.1.3: If-None-Match wins outright when present."""
+    client = _public_app(monkeypatch)
+    first = client.get("/volunteer/")
+    resp = client.get("/volunteer/", headers={
+        "If-None-Match": '"definitely-not-the-etag"',
+        "If-Modified-Since": first.headers["last-modified"],
+    })
+    assert resp.status_code == 200
+
+
+def test_reverting_to_a_previous_name_also_defeats_a_date_revalidation(monkeypatch):
+    """A revert is a change like any other. Remembering a per-name timestamp
+    would hand back an OLDER date and let a browser holding the newer name keep
+    showing it."""
+    first = _public_app(monkeypatch).get("/volunteer/")
+    renamed = _public_app(monkeypatch, ORGANIZATION_NAME="Akron Business Mentors")
+    stamp = renamed.get("/volunteer/").headers["last-modified"]
+
+    reverted = _public_app(monkeypatch)  # back to the Cleveland default
+    resp = reverted.get("/volunteer/", headers={"If-Modified-Since": stamp})
+    assert resp.status_code == 200
+    assert ORG_LITERAL in resp.text

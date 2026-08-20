@@ -4,6 +4,34 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.205.1] — 2026-08-20
+
+**fix(branding): branded HTML revalidates again.** Found by reading the live
+response headers after v0.205.0 shipped, not by a test.
+
+Serving HTML through the branding rewrite replaced Starlette's `FileResponse`
+with a plain `Response`, and the replacement honoured `If-None-Match` but not
+`If-Modified-Since`. That would have been fine — except **DO's edge strips the
+`ETag` from HTML responses** (assets served straight from disk keep theirs), so
+`If-Modified-Since` is the only conditional request that actually reaches the
+app in production. Every page load was therefore transferring in full instead of
+answering `304`, which is exactly what the `_revalidate_frontend` middleware
+exists to avoid.
+
+The fix is not just "also check the date". A rewritten page's content changes
+when the **setting** changes, not when the file does, so a `Last-Modified` taken
+from the file's mtime would tell a browser "unchanged" and leave the previous
+organisation's name on screen. `Last-Modified` is now the later of the file's
+mtime and a **strictly increasing brand epoch** that moves on every change of
+branding — including a *revert* to a previously-used name, which is a change
+like any other and which a per-name memo would have got wrong. The `+1s` step
+matters because HTTP dates have one-second resolution and two renames inside the
+same second would otherwise compare equal.
+
+Four tests cover it: revalidation by date, a rename defeating a date
+revalidation, a revert doing the same, and `If-None-Match` winning outright when
+present (RFC 9110 §13.1.3) rather than being second-guessed by a date.
+
 ## [0.205.0] — 2026-08-20
 
 **feat(branding): the product no longer tells every user it belongs to

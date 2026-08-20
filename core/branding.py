@@ -43,7 +43,8 @@ from __future__ import annotations
 import hashlib
 import os
 import stat as stat_module
-from email.utils import formatdate
+import time
+from email.utils import formatdate, parsedate_to_datetime
 from typing import TYPE_CHECKING, Optional
 
 from starlette.datastructures import Headers
@@ -157,6 +158,36 @@ def brand_key(settings: "Settings") -> str:
     return hashlib.sha256(joined.encode("utf-8")).hexdigest()[:12]
 
 
+#: The current branding and when it last changed. Rewriting on serve means a
+#: page's content can change without its FILE changing, so ``Last-Modified`` has
+#: to move when the branding does — otherwise a conditional request is told
+#: "unchanged" and keeps showing the previous organisation's name.
+#:
+#: This matters because **DO's edge strips the ETag from HTML responses** (it
+#: survives on assets served straight from disk), so ``If-Modified-Since`` is
+#: the only conditional request that actually reaches us in production. A
+#: process restart resets this to "now": one extra full response per page, then
+#: normal revalidation. Chattier for one request, never stale.
+_BRAND_STATE: dict[str, float | str | None] = {"key": None, "epoch": 0.0}
+
+
+def _brand_epoch(key: str) -> float:
+    """A timestamp that moves forward on every CHANGE of branding.
+
+    Strictly increasing, and deliberately not a per-key memo: reverting to a
+    previously-used name is a change like any other, and a remembered older
+    timestamp would let a browser holding the *newer* name be told "unchanged"
+    and keep showing it.
+
+    ``+ 1.0`` because HTTP dates have one-second resolution — two renames inside
+    the same second would otherwise compare equal and 304.
+    """
+    if _BRAND_STATE["key"] != key:
+        _BRAND_STATE["epoch"] = max(time.time(), float(_BRAND_STATE["epoch"]) + 1.0)
+        _BRAND_STATE["key"] = key
+    return float(_BRAND_STATE["epoch"])
+
+
 class BrandedStaticFiles(StaticFiles):
     """``StaticFiles`` that substitutes branding tokens in ``.html`` responses.
 
@@ -222,14 +253,24 @@ class BrandedStaticFiles(StaticFiles):
             self._cache[key] = hit
         body, etag = hit
 
+        # The later of the file's own mtime and when this process first saw this
+        # branding — see _BRAND_FIRST_SEEN.
+        modified = max(stat_result.st_mtime, _brand_epoch(brand_key(settings)))
         headers = {
             "content-type": "text/html; charset=utf-8",
             "content-length": str(len(body)),
             "etag": etag,
-            "last-modified": formatdate(stat_result.st_mtime, usegmt=True),
+            "last-modified": formatdate(modified, usegmt=True),
         }
         request_headers = Headers(scope=scope)
-        if _etag_matches(request_headers.get("if-none-match"), etag):
+        inm = request_headers.get("if-none-match")
+        if inm is not None:
+            fresh = _etag_matches(inm, etag)
+        else:
+            fresh = _not_modified_since(
+                request_headers.get("if-modified-since"), modified
+            )
+        if fresh:
             headers.pop("content-length")
             return Response(status_code=304, headers=headers)
         if scope["method"] == "HEAD":
@@ -250,3 +291,17 @@ def _etag_matches(if_none_match: Optional[str], etag: str) -> bool:
         if candidate == etag:
             return True
     return False
+
+
+def _not_modified_since(if_modified_since: Optional[str], modified: float) -> bool:
+    """RFC 9110 §13.1.3. Consulted only when the request sent no ETag — an
+    ``If-None-Match`` that fails is a definite "changed" and must not then be
+    second-guessed by a date."""
+    if not if_modified_since:
+        return False
+    try:
+        since = parsedate_to_datetime(if_modified_since).timestamp()
+    except (TypeError, ValueError):
+        return False
+    # HTTP dates have one-second resolution; compare truncated to match.
+    return int(modified) <= int(since)

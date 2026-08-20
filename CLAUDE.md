@@ -1138,8 +1138,8 @@ Entity Manager vocabulary — [[crm-specs-use-entity-manager-terms]]):
 deployed and verified; `CHANGELOG.md` is the permanent record, `OPEN-ITEMS.md`
 holds anything still owed.*
 
-**Pushed through v0.204.0 on 2026-08-20**, so all three apps built it and prod
-reports `0.204.0`. **v0.205.0 is committed locally and NOT pushed.** What is *verified* is narrower than what
+**Pushed through v0.205.0 on 2026-08-20**; prod verified reporting `0.205.0`.
+**v0.205.1 is committed locally and NOT pushed.** What is *verified* is narrower than what
 is deployed — see each block.
 
 **Confirm that against the remote, do not trust this line.** On 2026-08-20 it
@@ -1148,13 +1148,26 @@ locally, and a session that believed it pushed a docs commit and shipped a
 feature to production with it. `git log origin/main..main` is the answer; this
 sentence is a convenience.
 
+- **v0.205.1 — branded HTML revalidates again.** Serving HTML through the
+  branding rewrite swapped `FileResponse` for a plain `Response` that honoured
+  `If-None-Match` only — and **DO's edge strips the ETag from HTML** (assets
+  keep theirs), so `If-Modified-Since` is the only conditional request that
+  reaches the app in production and every page load was transferring in full.
+  `Last-Modified` is now the later of the file's mtime and a strictly
+  increasing **brand epoch**, because a rewritten page changes when the
+  *setting* does, not when the file does — a mtime-only stamp would 304 a
+  browser into keeping the previous organisation's name, and a *revert* to an
+  earlier name is a change like any other. **Found by reading the live response
+  headers after the push, not by a test** — a matching version number is not
+  the same as a correct response. **Unpushed.**
 - **v0.205.0 — the product stopped saying Cleveland.** Phase 0 of the
   chapter-network plan, and worth doing whatever happens with the chapters. The
   organisation's name is one setting (`ORGANIZATION_NAME`, default Cleveland),
   substituted into every page's title, footer and public-form prose as the
   `{{org}}` token **server-side on serve** — not a JS fill, because the tab and
   the public prose would flicker. `CHAPTER_TOKENS_URL` is the `tokens.css`
-  override slot. **Unpushed.** No feature flag, deliberately: the safety
+  override slot. **Pushed 2026-08-20; live on all three apps.** No feature flag,
+  deliberately: the safety
   property is that an unconfigured deployment renders what it always did, and
   that was verified page by page against `origin/main` (14 pages differ by one
   invisible `<meta name="cbm-org">`, 2 not at all, and 4 carry the one
