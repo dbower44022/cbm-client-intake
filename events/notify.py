@@ -255,7 +255,7 @@ async def send_follow_up(
                     to=[reg["email"]],
                     subject=rendered.get("subject") or (event.get("name") or "CBM event"),
                     body_html=rendered.get("bodyHtml") or "",
-                    sender_name=settings.ops_mailbox_name,
+                    sender_name=settings.sender_display_name,
                 )
             except Exception as exc:  # noqa: BLE001 — one recipient never stops the rest
                 result["errors"].append(f"{reg.get('email')}: {exc}")

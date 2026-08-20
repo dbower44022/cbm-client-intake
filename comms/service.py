@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Optional
 
-from core.config import Settings
+from core.config import Settings, get_settings
 from core.espo import EspoError
 from core.gmail import GmailClient, build_mime, parse_message
 
@@ -1284,7 +1284,7 @@ async def lookup_contact_by_email(user_client: Any, address: str) -> dict[str, A
             "contact": {
                 "id": profile_hit.get("contactRecordId"),
                 "name": profile_hit.get("name"),
-                "company": "Cleveland Business Mentors",
+                "company": get_settings().organization_name,
                 "types": ["Mentor"],
                 "isCbmMember": True,
                 "mentorProfileId": profile_hit["id"],

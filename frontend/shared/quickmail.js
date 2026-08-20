@@ -40,8 +40,9 @@
   var MAX_ATTACH_TOTAL = 20 * 1024 * 1024;  // matches the server cap
 
   function fromDisplay() {
-    // Shared identity (info@) shows its display name so staff see the
-    // message will arrive as "Cleveland Business Mentors", not as them personally.
+    // Shared identity (info@) shows its display name so staff see the message
+    // will arrive as the ORGANISATION, not as them personally. The name comes
+    // from the server (Settings.sender_display_name), never hardcoded here.
     if (!state.mailbox) return "";
     return state.mailboxName
       ? state.mailboxName + " (" + state.mailbox + ")"

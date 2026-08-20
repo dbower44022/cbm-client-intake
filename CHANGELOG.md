@@ -4,6 +4,66 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.205.0] — 2026-08-20
+
+**feat(branding): the product no longer tells every user it belongs to
+Cleveland.** Phase 0 of `prds/multi-chapter-deployment-plan.md`, whose whole
+point is that it is worth doing whether or not a second chapter ever exists.
+
+The name was the literal string "Cleveland Business Mentors" in **18 frontend
+HTML files, 48 places** — every `<title>`, 17 footers, and 13 pieces of body
+prose read by members of the public on the intake forms — plus four surfaces
+outside HTML. It is now one setting, `ORGANIZATION_NAME`, substituted into the
+markup as a `{{org}}` token **server-side as the page is served**
+(`core/branding.py`).
+
+- **Server-side, not a `data-` attribute filled by JS.** The `footer.js`
+  pattern is right for the *version*, which nobody reads at first paint; it is
+  wrong for the organisation's name, where the browser tab would flicker and
+  the public forms' prose would visibly repaint after the `/healthz`
+  round-trip. Substituting on serve flickers nowhere.
+- **Cleveland is the default, not a special case.** With nothing configured
+  every page renders exactly what it rendered before — verified page by page
+  against the previous commit. That is what makes this shippable on `main`
+  with `deploy_on_push` on three apps and **no feature flag**. The only
+  difference in the served bytes is one invisible
+  `<meta name="cbm-org">` per page, which is how the two scripts that need the
+  name at runtime (the portal birthday card, the directory mentor page's
+  title) read it synchronously instead of racing a fetch.
+- **The value is escaped for where it lands** — HTML, the inside of a JS
+  string literal, or plain text. It is settable from `/setup` and it reaches
+  the public intake forms, so an admin who can reconfigure the platform is not
+  thereby handed a stored-XSS vector aimed at members of the public.
+- **`ops_mailbox_name` now defaults to the organisation name** through the new
+  `Settings.sender_display_name`, so a chapter says who it is once. Setting it
+  explicitly still wins; today's behaviour is unchanged.
+- **`/healthz` reports `organization`** next to `version` and `environment` —
+  what the fleet console (plan phase 5) will label an instance by.
+- **A chapter's `tokens.css` override** arrived with it: `CHAPTER_TOKENS_URL`
+  names a stylesheet loaded immediately after `/shared/tokens.css`, so the
+  cascade does the work — an override shadows only the `--cbm-*` properties it
+  names and cannot break the base. Empty (every deployment today) injects
+  nothing.
+- **A guard test** (`tests/test_shared_branding.py`, 24 cases) fails when a new
+  page hardcodes the name, when a new page omits it entirely, and when the
+  served output still contains a token. It also **fences off
+  brand-as-identifier**: `--cbm-*` (52 properties, 1223 uses), `cbm-` classes
+  (2298), `window.CBM*` (12) and `data-cbm-*` are identifiers, never renamed,
+  and two of them are live contracts with a chapter's WordPress site.
+
+**Left deliberately undone, and flagged rather than guessed:**
+
+- **`frontend/shared/legal-links.js`** hardcodes four Cleveland policy URLs —
+  client code of conduct, mentor code of ethics, terms of use, privacy policy —
+  injected into the consent checkbox on all four consent-bearing public forms.
+  **Three of the four still point at the WPEngine *staging* host.** That is a
+  live Cleveland defect as much as a chapter blocker, and where those links
+  should point is Doug's call, not a mechanical substitution.
+- **The seven "Cleveland Business *Mentoring*" occurrences** on the public
+  forms are pinned by a test, not collapsed — see the plan's Phase 0 § 5.
+- **No logo slot.** The app contains no image asset at all today; introducing
+  one is a feature, not a find-and-replace.
+
 ## [0.204.0] — 2026-08-17
 
 **feat(mentoradmin): a mentor's Google account is created at

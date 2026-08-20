@@ -48,7 +48,7 @@ def shared_staff_mailbox(settings: Any) -> tuple[str, str] | None:
     """
     mailbox = (getattr(settings, "ops_mailbox", "") or "").strip()
     if mailbox:
-        return (mailbox.lower(), settings.ops_mailbox_name)
+        return (mailbox.lower(), settings.sender_display_name)
     return None
 
 

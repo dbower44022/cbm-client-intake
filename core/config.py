@@ -33,6 +33,25 @@ class Settings(BaseSettings):
     # ("production" / "test" / "dev"); set explicitly to override the wording.
     env_label: str = ""
 
+    # WHOSE NAME THIS DEPLOYMENT CARRIES. Substituted into every page's
+    # <title>, footer and body prose as the `{{org}}` token, server-side on
+    # serve (core/branding.py) rather than filled by JS, so the browser tab and
+    # the public forms' prose never flicker. Defaulting to Cleveland is the
+    # point: an unconfigured deployment renders byte-identical to what it
+    # rendered before the token existed.
+    organization_name: str = "Cleveland Business Mentors"
+
+    # A chapter's own visual identity: the URL of a stylesheet that REDEFINES
+    # `--cbm-*` custom properties on `:root`. Loaded immediately after
+    # /shared/tokens.css, so the cascade does the work — an override can only
+    # shadow properties it names, and anything it omits falls back to the base
+    # tokens. It must define custom properties only, never selectors: styling
+    # rules would fight `cbm-` classes, which are IDENTIFIERS and not a theming
+    # surface. That rule cannot be enforced against a remote stylesheet, so it
+    # is a review item at chapter onboarding, not a guarantee.
+    # Empty (the default) injects nothing at all.
+    chapter_tokens_url: str = ""
+
     # The CBM documentation site (BookStack), linked from the portal home page
     # so signed-in users can find the app user guides. Empty hides the link.
     docs_site_url: str = "https://docs.clevelandbusinessmentors.org"
@@ -155,7 +174,9 @@ class Settings(BaseSettings):
     # only works against a licensed user mailbox. Empty = the pre-v0.110.0
     # behavior (per-admin mailbox + address search, no inbound capture).
     ops_mailbox: str = ""
-    ops_mailbox_name: str = "Cleveland Business Mentors"  # From display name on shared sends
+    # From display name on shared sends. Empty => the organisation name above,
+    # which is what a chapter wants without having to say it twice.
+    ops_mailbox_name: str = ""
     ops_inbound_seconds: int = 300          # inbound info@ poll cadence (0 = off)
     # How far back the inbound poll sweeps each cycle (Gmail `newer_than:Nd`).
     # The poll paginates the WHOLE window (not just the newest 100) so a burst
@@ -469,6 +490,16 @@ class Settings(BaseSettings):
     # shared token authorizing the read-only settings snapshot between them.
     setup_peer_url: str = ""
     setup_peer_token: str = ""
+
+    @property
+    def sender_display_name(self) -> str:
+        """The From display name on shared-identity sends.
+
+        ``ops_mailbox_name`` wins when set; otherwise the organisation's own
+        name, so a chapter says who it is once. Never empty in practice —
+        ``organization_name`` always has a value.
+        """
+        return self.ops_mailbox_name or self.organization_name
 
     @property
     def allowed_origins_list(self) -> list[str]:

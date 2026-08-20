@@ -1,13 +1,24 @@
 /*
- * CBM design tokens — extracted from the Cleveland Business Mentors
- * staging site (cbmentostagdev.wpenginepowered.com), which runs
- * WordPress + Astra theme + Elementor. Values pulled from the
- * Elementor global kit (--e-global-color-*, --e-global-typography-*)
- * and Astra theme variables on 2026-05-28.
+ * CBM design tokens — the BASE layer of the design system, and the only
+ * theming surface. Every value is a CSS custom property on :root, consumed
+ * everywhere through var(--cbm-*).
  *
- * Framework-agnostic: these CSS custom properties work in plain HTML,
- * React, Vue, etc. Use as the single source of truth for the rebuilt
- * (Approach B) intake form so it faithfully matches the site's look.
+ * The current values are Cleveland's, extracted on 2026-05-28 from the
+ * Cleveland Business Mentors staging site (cbmentostagdev.wpenginepowered.com
+ * — WordPress + Astra + Elementor), from the Elementor global kit
+ * (--e-global-color-*, --e-global-typography-*) and Astra theme variables.
+ * They are the DEFAULT, not a special case.
+ *
+ * A deployment for another organisation overrides them with its own
+ * stylesheet, named by the `CHAPTER_TOKENS_URL` setting and loaded
+ * immediately after this file (core/branding.py: render_page). The cascade
+ * does the work: an override shadows only the properties it names, so it
+ * cannot break the base — anything it omits keeps the value below. An
+ * override must define custom properties on :root and nothing else; the
+ * `--cbm-` prefix and the `cbm-` class names are IDENTIFIERS, not branding,
+ * and are never renamed (prds/multi-chapter-deployment-plan.md, Phase 0 § 0).
+ *
+ * Framework-agnostic: these work in plain HTML, React, Vue, etc.
  */
 
 :root {

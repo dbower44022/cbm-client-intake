@@ -132,7 +132,7 @@ async def session(request: Request) -> dict:
         # The shared send/read mailbox (info@ model, v0.110.0); null = the
         # legacy per-admin-mailbox mode.
         "opsMailbox": settings.ops_mailbox or None,
-        "opsMailboxName": settings.ops_mailbox_name,
+        "opsMailboxName": settings.sender_display_name,
         # The Close-with-reason disposition pick-list (Doug's approved values).
         "closeReasons": list(CLOSE_REASONS),
     }

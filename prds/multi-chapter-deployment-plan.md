@@ -375,6 +375,56 @@ back to Cleveland's. No `!important`, no build step, no new mechanism. What Phas
 header comment, which currently attributes the palette to Cleveland's staging
 site.
 
+### 9. What v0.205.0 actually built
+
+**Shipped, tested, unpushed as of 2026-08-20.** The mechanism, and the sweep of
+everything it covers.
+
+- **`ORGANIZATION_NAME`** — one setting, defaulting to Cleveland, substituted
+  into the markup as the `{{org}}` token by `core/branding.py`
+  **server-side, as the page is served** (`BrandedStaticFiles`). Chosen over
+  extending `footer.js`'s `data-cbm-*` fill because that pattern is right for
+  the version (nobody reads it at first paint) and wrong for the name: the
+  browser tab would flicker and the public forms' prose would visibly repaint
+  after the `/healthz` round-trip.
+- **The safety property was verified, not assumed** — every page's rendered
+  output was compared against the previous commit. 18 of 20 differ by exactly
+  one invisible `<meta name="cbm-org">` line; 2 (the developer preview
+  harnesses) are untouched. No feature flag.
+- **Three code paths read HTML directly instead of through the mount** — the
+  portal root, the sessions record page and the directory record pages. Each
+  would have served a raw `{{org}}` to a user. They render explicitly now; it
+  is the shape of bug this mechanism invites and the reason the guard test
+  checks *served* output rather than files on disk.
+- **The value is escaped for its context** (HTML / JS string / plain text). It
+  is settable from `/setup` and it lands on the public intake forms, so it is
+  treated as untrusted input, not as our own markup.
+- **`ops_mailbox_name` defaults to the organisation name** via
+  `Settings.sender_display_name` — a chapter says who it is once.
+- **`/healthz` reports `organization`**, which is what the fleet console
+  (phase 5) will label an instance by.
+- **`CHAPTER_TOKENS_URL`** — the `tokens.css` override slot: a stylesheet
+  loaded immediately after the base tokens, injected by the same rewrite so no
+  page needs a placeholder and the nineteenth page cannot forget one. The
+  cascade is the safety mechanism. Empty injects nothing.
+- **`tests/test_shared_branding.py`**, 24 cases, is the thing that keeps this
+  done: it fails when a new page hardcodes the name, when a new page omits it,
+  when a token survives to the browser, and when someone starts renaming
+  `--cbm-*` or `cbm-` classes.
+
+**Deliberately not built, and why.**
+
+- **`legal-links.js`.** Making the four policy URLs settings is squarely in
+  Phase 0's scope and the mechanism now exists for it, but *where the links
+  should point* is a decision: three of the four currently point at the
+  WPEngine staging host rather than the production site, which is a live
+  Cleveland defect. Bundling a decision into a mechanical sweep is how the
+  wrong URL ends up on a consent checkbox. Doug's call — see § 4.
+- **The logo slot** — § 6. A feature, not a parameterization.
+- **The hardcoded timezone** — § 2. Phase 3.
+- **The seven "Mentoring" occurrences** — § 5. Pinned by a test, not
+  collapsed.
+
 ### 8. Explicitly left alone, and why
 
 - **`mentorprofile/frontend/`** (index.html, styles.css) — a verbatim copy of

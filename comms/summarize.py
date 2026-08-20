@@ -25,15 +25,18 @@ from core.espo import EspoError
 
 from .crm import COMMUNICATION, CONVERSATION, CONVERSATION_FK
 
+from core.branding import MODE_TEXT, render as render_branding
+from core.config import get_settings
+
 log = logging.getLogger("cbm_intake.comms.summarize")
 
 _BATCH = 20            # conversations per pass
 _MAX_CHARS = 6000      # transcript cap sent to the model
 _HEAD, _TAIL = 2, 3    # long threads: first 2 + last 3 messages
 
-_SYSTEM = """You are an analyst for Cleveland Business Mentors (CBM), a nonprofit
+_SYSTEM_TEMPLATE = """You are an analyst for {{org}}, a nonprofit
 whose mentors advise small-business clients. You are given one email
-conversation between a CBM manager and their client/partner/sponsor contacts.
+conversation between a manager and their client/partner/sponsor contacts.
 
 Summarize it for the manager's record view:
 - status: "Open" if anything appears unresolved or awaiting a reply, "Closed"
@@ -93,7 +96,7 @@ async def summarize_conversation(
     response = await anthropic_client.messages.parse(
         model=model,
         max_tokens=1024,
-        system=_SYSTEM,
+        system=render_branding(_SYSTEM_TEMPLATE, get_settings(), MODE_TEXT),
         messages=[{"role": "user", "content": _transcript(messages)}],
         output_format=ConversationSummary,
     )

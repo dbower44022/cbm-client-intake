@@ -14,7 +14,9 @@ from .schemas import InfoEmail
 
 SPEC = FormSpec(
     slug="info-email",
-    title="Email to Cleveland Business Mentors",
+    # A branding token, not a literal — rendered by the two places that
+    # display a form title (core/receipts.py, core/monitoring.py).
+    title="Email to {{org}}",
     submission_model=InfoEmail,
     orchestrator=submit_email,
     frontend_dir=None,

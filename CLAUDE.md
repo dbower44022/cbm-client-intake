@@ -1113,6 +1113,17 @@ Entity Manager vocabulary — [[crm-specs-use-entity-manager-terms]]):
   "Same as billing" mirror listen for them. Add new address pages to
   `ADDRESS_PAGES` in `tests/test_shared_address.py`, which is what catches a
   form that forgot it. Plan: `prds/address-paste-parsing-plan.md`.
+- **No page may hardcode the organisation's name.** Every `<title>`, footer and
+  piece of body prose uses the `{{org}}` token, substituted server-side as the
+  page is served (`core/branding.py`; setting `ORGANIZATION_NAME`, default
+  Cleveland). A new page also needs `<meta name="cbm-org" content="{{org}}" />`
+  in its head — that is how page scripts read the name synchronously, with no
+  fetch and no race. `tests/test_shared_branding.py` fails on a hardcoded name
+  AND on a page that omits it. **`CBM`/`cbm-`/`--cbm-*`/`data-cbm-*` are
+  IDENTIFIERS, not content** — never renamed; two are live contracts with the
+  website. Chapter theming is `CHAPTER_TOKENS_URL`, a stylesheet loaded after
+  `/shared/tokens.css` that may redefine `--cbm-*` on `:root` and nothing else.
+  Inventory and rulings: `prds/multi-chapter-deployment-plan.md` § *Phase 0*.
 - **A new CRM-facing feature should feature-detect its field from metadata**
   rather than requiring a coordinated deploy — the established pattern is that
   the feature stays dark until the CRM field exists, then activates with no
@@ -1128,7 +1139,7 @@ deployed and verified; `CHANGELOG.md` is the permanent record, `OPEN-ITEMS.md`
 holds anything still owed.*
 
 **Pushed through v0.204.0 on 2026-08-20**, so all three apps built it and prod
-reports `0.204.0`. Nothing is unpushed. What is *verified* is narrower than what
+reports `0.204.0`. **v0.205.0 is committed locally and NOT pushed.** What is *verified* is narrower than what
 is deployed — see each block.
 
 **Confirm that against the remote, do not trust this line.** On 2026-08-20 it
@@ -1137,6 +1148,25 @@ locally, and a session that believed it pushed a docs commit and shipped a
 feature to production with it. `git log origin/main..main` is the answer; this
 sentence is a convenience.
 
+- **v0.205.0 — the product stopped saying Cleveland.** Phase 0 of the
+  chapter-network plan, and worth doing whatever happens with the chapters. The
+  organisation's name is one setting (`ORGANIZATION_NAME`, default Cleveland),
+  substituted into every page's title, footer and public-form prose as the
+  `{{org}}` token **server-side on serve** — not a JS fill, because the tab and
+  the public prose would flicker. `CHAPTER_TOKENS_URL` is the `tokens.css`
+  override slot. **Unpushed.** No feature flag, deliberately: the safety
+  property is that an unconfigured deployment renders what it always did, and
+  that was verified page by page against the previous commit (18 of 20 pages
+  differ by one invisible `<meta name="cbm-org">`, 2 not at all). **Verified by
+  tests only** — 1762 pass, including a 24-case guard suite; nothing has been
+  looked at in a browser. Two things are owed and one is a live Cleveland
+  defect: `frontend/shared/legal-links.js` hardcodes four policy URLs, **three
+  of them on the WPEngine staging host**, injected into the consent checkbox of
+  all four consent-bearing public forms; and seven "Cleveland Business
+  *Mentoring*" occurrences on those forms are pinned by a test pending Doug's
+  ruling on whether that is a second name or a copy bug. Inventory, rulings and
+  what was deliberately not built: `prds/multi-chapter-deployment-plan.md`
+  § *Phase 0*.
 - **v0.204.0 — a mentor's Google account is created at Accepted-Provisional.**
   Provisioning is two events now (see the Mentor Administration section for the
   standing rules): the Workspace account + All Members group at

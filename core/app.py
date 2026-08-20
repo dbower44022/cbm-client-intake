@@ -14,6 +14,7 @@ import re
 import time  # noqa: F401 — the TTL + rate-limit middlewares both use it
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from html import escape as html_escape
 from pathlib import Path
 from typing import Optional
 
@@ -26,6 +27,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from . import receipts
 from . import store as store_mod
+from .branding import BrandedStaticFiles, render_page as render_branding
 from .config import Settings, get_settings, override_values, overrides_version
 from .espo import DryRunEspoClient, EspoApi, EspoClient, EspoError
 from .forms import BaseSubmission, FormSpec
@@ -367,6 +369,7 @@ def _env_name(environment: str) -> str:
 def _index_html(
     forms: list[FormSpec],
     environment: str = "",
+    organization: str = "Cleveland Business Mentors",
 ) -> str:
     """The PUBLIC form index — served at ``/`` only when the staff stack is off
     (no ``SESSION_SECRET``, e.g. the dry-run dev app). With the staff stack on,
@@ -387,15 +390,16 @@ def _index_html(
         else:
             items.append(f"<li>{f.title} <em>(API only — UI pending)</em></li>")
     year = datetime.now(timezone.utc).year
+    org = html_escape(organization)
     name = _env_name(environment)
     version_label = f"v{__version__}" + (f" ({name})" if name else "")
     footer = (
-        f"<footer><p>&copy; {year} Cleveland Business Mentors. "
+        f"<footer><p>&copy; {year} {org}. "
         f"All rights reserved. &middot; {version_label}</p></footer>"
     )
     return (
         "<!DOCTYPE html><html><head><meta charset='utf-8'>"
-        "<title>CBM Intake Forms</title>"
+        f"<title>{org} — Intake Forms</title>"
         "<style>.shortcut{background:#f0f2f5;border:1px solid #d7dce2;"
         "border-radius:4px;padding:0.05em 0.4em;font-size:0.85em;color:#556}"
         "li{margin:0.3em 0}</style></head><body>"
@@ -738,6 +742,10 @@ def create_app(
             "status": "ok" if database != "error" else "degraded",
             "version": __version__,
             "environment": settings.environment,
+            # Whose deployment this is. Public, like the version — and the name
+            # is on every page of the app anyway. The fleet console (plan
+            # phase 5) reads it to label an instance.
+            "organization": settings.organization_name,
             "dryRun": settings.espo_dry_run,
             "forms": [f.slug for f in forms],
             "assignments": settings.assignments_active,
@@ -852,9 +860,18 @@ def create_app(
         # no-store so a freshly-deployed page is never served stale from a
         # browser/edge cache (either page is tiny — nothing to gain caching).
         if settings.assignments_active:
-            html = (PORTAL_FRONTEND_DIR / "index.html").read_text(encoding="utf-8")
+            # Read directly rather than through the mount, so the branding
+            # substitution the mount would have done has to happen here too.
+            html = render_branding(
+                (PORTAL_FRONTEND_DIR / "index.html").read_text(encoding="utf-8"),
+                settings,
+            )
         else:
-            html = _index_html(forms, environment=settings.environment)
+            html = _index_html(
+                forms,
+                environment=settings.environment,
+                organization=settings.organization_name,
+            )
         return HTMLResponse(html, headers={"Cache-Control": "no-store"})
 
     # Friendly URL aliases — a typed shortcut like /clientintake (or
@@ -913,13 +930,13 @@ def create_app(
         if spec.frontend_dir is not None:
             app.mount(
                 f"/{spec.slug}",
-                StaticFiles(directory=str(spec.frontend_dir), html=True),
+                BrandedStaticFiles(directory=str(spec.frontend_dir), html=True),
                 name=f"form-{spec.slug}",
             )
     if settings.assignments_active and ASSIGNMENTS_FRONTEND_DIR.is_dir():
         app.mount(
             "/assignments",
-            StaticFiles(directory=str(ASSIGNMENTS_FRONTEND_DIR), html=True),
+            BrandedStaticFiles(directory=str(ASSIGNMENTS_FRONTEND_DIR), html=True),
             name="assignments-frontend",
         )
     if settings.events_active and EVENTS_PLUGIN_ASSETS_DIR.is_dir():
@@ -933,50 +950,50 @@ def create_app(
     if settings.events_active and EVENTS_FRONTEND_DIR.is_dir():
         app.mount(
             "/events",
-            StaticFiles(directory=str(EVENTS_FRONTEND_DIR), html=True),
+            BrandedStaticFiles(directory=str(EVENTS_FRONTEND_DIR), html=True),
             name="events-frontend",
         )
     if settings.assignments_active and OPS_FRONTEND_DIR.is_dir():
         app.mount(
             "/ops",
-            StaticFiles(directory=str(OPS_FRONTEND_DIR), html=True),
+            BrandedStaticFiles(directory=str(OPS_FRONTEND_DIR), html=True),
             name="ops-frontend",
         )
     if settings.assignments_active and MENTORADMIN_FRONTEND_DIR.is_dir():
         app.mount(
             "/mentoradmin",
-            StaticFiles(directory=str(MENTORADMIN_FRONTEND_DIR), html=True),
+            BrandedStaticFiles(directory=str(MENTORADMIN_FRONTEND_DIR), html=True),
             name="mentoradmin-frontend",
         )
     if settings.assignments_active and MENTORPROFILE_FRONTEND_DIR.is_dir():
         app.mount(
             "/mentorprofile",
-            StaticFiles(directory=str(MENTORPROFILE_FRONTEND_DIR), html=True),
+            BrandedStaticFiles(directory=str(MENTORPROFILE_FRONTEND_DIR), html=True),
             name="mentorprofile-frontend",
         )
     if settings.assignments_active and MYEMAIL_FRONTEND_DIR.is_dir():
         app.mount(
             "/myemail",
-            StaticFiles(directory=str(MYEMAIL_FRONTEND_DIR), html=True),
+            BrandedStaticFiles(directory=str(MYEMAIL_FRONTEND_DIR), html=True),
             name="myemail-frontend",
         )
     if settings.analytics_active and ANALYTICS_FRONTEND_DIR.is_dir():
         app.mount(
             "/analytics",
-            StaticFiles(directory=str(ANALYTICS_FRONTEND_DIR), html=True),
+            BrandedStaticFiles(directory=str(ANALYTICS_FRONTEND_DIR), html=True),
             name="analytics-frontend",
         )
     if settings.setup_active and SETUP_FRONTEND_DIR.is_dir():
         app.mount(
             "/setup",
-            StaticFiles(directory=str(SETUP_FRONTEND_DIR), html=True),
+            BrandedStaticFiles(directory=str(SETUP_FRONTEND_DIR), html=True),
             name="setup-frontend",
         )
     if settings.assignments_active and PORTAL_FRONTEND_DIR.is_dir():
         # The portal's assets (its index.html is served at "/" above).
         app.mount(
             "/portal",
-            StaticFiles(directory=str(PORTAL_FRONTEND_DIR), html=True),
+            BrandedStaticFiles(directory=str(PORTAL_FRONTEND_DIR), html=True),
             name="portal-frontend",
         )
     if settings.assignments_active and SESSIONS_FRONTEND_DIR.is_dir():
@@ -989,7 +1006,10 @@ def create_app(
             frontend, booted straight into one record (the JS reads the id from
             the path; no list, no back-to-list). A <base> tag makes the page's
             relative assets resolve against /{slug}/ from the nested path."""
-            html = (SESSIONS_FRONTEND_DIR / "index.html").read_text(encoding="utf-8")
+            html = render_branding(
+                (SESSIONS_FRONTEND_DIR / "index.html").read_text(encoding="utf-8"),
+                settings,
+            )
             html = html.replace("<head>", f'<head><base href="/{slug}/">', 1)
             return HTMLResponse(html, headers={"Cache-Control": "no-store"})
 
@@ -1003,7 +1023,7 @@ def create_app(
             )
             app.mount(
                 f"/{_slug}",
-                StaticFiles(directory=str(SESSIONS_FRONTEND_DIR), html=True),
+                BrandedStaticFiles(directory=str(SESSIONS_FRONTEND_DIR), html=True),
                 name=f"sessions-frontend-{_slug}",
             )
     if settings.assignments_active and DIRECTORY_FRONTEND_DIR.is_dir():
@@ -1019,7 +1039,10 @@ def create_app(
             record (the JS reads the id from the path). A <base> tag makes
             relative assets resolve against /directory/{kind}/ from the nested
             path."""
-            html = (DIRECTORY_FRONTEND_DIR / html_file).read_text(encoding="utf-8")
+            html = render_branding(
+                (DIRECTORY_FRONTEND_DIR / html_file).read_text(encoding="utf-8"),
+                settings,
+            )
             html = html.replace("<head>", f'<head><base href="/directory/{kind}/">', 1)
             return HTMLResponse(html, headers={"Cache-Control": "no-store"})
 
@@ -1040,7 +1063,7 @@ def create_app(
                 )
             app.mount(
                 f"/directory/{_kind}",
-                StaticFiles(directory=str(DIRECTORY_FRONTEND_DIR), html=True),
+                BrandedStaticFiles(directory=str(DIRECTORY_FRONTEND_DIR), html=True),
                 name=f"directory-frontend-{_kind}",
             )
     app.mount("/shared", StaticFiles(directory=str(SHARED_DIR)), name="shared")

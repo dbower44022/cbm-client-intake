@@ -96,7 +96,12 @@ def _form_title(slug: str) -> str:
         from forms import SPECS_BY_SLUG
 
         spec = SPECS_BY_SLUG.get(slug)
-        return spec.title if spec else slug
+        if spec is None:
+            return slug
+        from core.branding import MODE_TEXT, render as render_branding
+        from core.config import get_settings
+
+        return render_branding(spec.title, get_settings(), MODE_TEXT)
     except Exception:  # noqa: BLE001 — a display name must never break a write
         return slug
 

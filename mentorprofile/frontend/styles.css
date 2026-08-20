@@ -299,9 +299,10 @@ body.mp--resizing { cursor: col-resize; user-select: none; }
 .mp__hint { font-size: 12px; color: var(--cbm-text); margin: 0.2rem 0 0.6rem; font-weight: 400; }
 span.mp__hint { align-self: center; margin: 0 0 0 0.75rem; }
 
-/* footer — matches the other apps: "© 2026 Cleveland Business Mentors.
-   All rights reserved. · v0.45.0 (Test)" (the " · " separator rule mirrors
-   /shared/wizard.css, which this app doesn't load) */
+/* footer — matches the other apps: "© 2026 {org}. All rights reserved. ·
+   v0.45.0 (Test)", the organisation name substituted server-side
+   (core/branding.py). The " · " separator rule mirrors /shared/wizard.css,
+   which this app doesn't load. */
 .cbm-footer { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--cbm-border);
   color: var(--cbm-text); font-size: var(--cbm-text-sm); }
 .cbm-footer p { margin: 0; }

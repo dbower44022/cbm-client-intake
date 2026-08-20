@@ -153,7 +153,10 @@ def _form_label(slug: Optional[str]) -> str:
 
         spec = SPECS_BY_SLUG.get(slug)
         if spec is not None:
-            return spec.title
+            from core.branding import MODE_TEXT, render as render_branding
+            from core.config import get_settings
+
+            return render_branding(spec.title, get_settings(), MODE_TEXT)
     except Exception:  # noqa: BLE001 — a label is never worth failing an alert
         pass
     return slug

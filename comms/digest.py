@@ -192,7 +192,7 @@ async def run_digest_cycle(settings: Settings, api_client: Any, store: Any) -> i
             try:
                 await comms_service.send_quick_message(
                     gmail=gmail, to=[m["cbmEmail"]], subject=subject,
-                    body_html=body, sender_name=settings.ops_mailbox_name,
+                    body_html=body, sender_name=settings.sender_display_name,
                 )
             finally:
                 await gmail.aclose()

@@ -13,6 +13,10 @@
 
   function $(id) { return document.getElementById(id); }
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  // The organisation's name, substituted into the page server-side
+  // (core/branding.py). Read from the meta rather than /healthz so it is
+  // available synchronously, with no fetch and no race.
+  function orgName() { var m = document.querySelector('meta[name="cbm-org"]'); return (m && m.content) || ""; }
   function show(e) { if (e) e.hidden = false; }
   function hide(e) { if (e) e.hidden = true; }
 
@@ -117,7 +121,7 @@
   // ---- render --------------------------------------------------------------
 
   function render(p) {
-    document.title = "Cleveland Business Mentors — " + (p.name || "Mentor");
+    document.title = orgName() + " — " + (p.name || "Mentor");
 
     // Hero
     $("mpName").textContent = p.name || "(no name)";

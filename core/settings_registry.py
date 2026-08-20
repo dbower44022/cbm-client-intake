@@ -291,6 +291,13 @@ SETTINGS: tuple[SettingSpec, ...] = (
     _s("sponsor_team_name", GROUP_GATES, "Funder team stamp"),
 
     # --- Presentation ------------------------------------------------------
+    _s("organization_name", GROUP_PRESENTATION, "Organisation name", component="both",
+       help="The name every page carries — title, footer and the public forms' prose. "
+            "Substituted server-side as it is served, so a change here takes effect on "
+            "the next page load with no redeploy."),
+    _s("chapter_tokens_url", GROUP_PRESENTATION, "Chapter design-token override",
+       help="URL of a stylesheet redefining --cbm-* custom properties on :root. "
+            "Loaded after the base tokens; custom properties only, never selectors."),
     _s("env_label", GROUP_PRESENTATION, "Environment label",
        help="Overrides the auto-derived Production/Test/Dev wording in the footer."),
     _s("docs_site_url", GROUP_PRESENTATION, "Documentation site"),

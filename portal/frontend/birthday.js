@@ -163,6 +163,14 @@
     return n;
   }
 
+  // The organisation's name, substituted into the page server-side
+  // (core/branding.py). Read from the meta rather than /healthz so it is
+  // available synchronously, with no fetch and no race.
+  function orgName() {
+    var m = document.querySelector('meta[name="cbm-org"]');
+    return (m && m.content) || "";
+  }
+
   function build(own, others) {
     var root = document.createElement("div");
     root.className = "bday";
@@ -173,7 +181,7 @@
     canvas.setAttribute("aria-hidden", "true");
 
     var card = el("div", "bday__card");
-    card.appendChild(el("p", "bday__eyebrow", "Cleveland Business Mentors"));
+    card.appendChild(el("p", "bday__eyebrow", orgName()));
 
     if (own) {
       root.setAttribute("aria-label", "Happy birthday");
