@@ -6,6 +6,26 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+**The public consent checkbox links to Cleveland's STAGING website** (found
+2026-08-20 during the Phase 0 de-Clevelanding inventory; nothing changed).
+`frontend/shared/legal-links.js` is the single source of truth for the four
+policy-document URLs it injects into the consent checkbox on client-intake,
+volunteer, partner and sponsor — and three of the four point at
+`cbmentostagdev.wpenginepowered.com`, not the live site:
+
+- Client Code of Conduct — **staging**
+- Terms of Use (`/legal-notices/`) — **staging**
+- Privacy Policy — **staging**
+- Mentor Code of Ethics — `clevelandbusinessmentors.org`, correct
+
+These are the documents a member of the public is told they are agreeing to, so
+this is worth fixing whatever happens with the chapters. Two decisions, both
+Doug's: **what the three production URLs are**, and whether the four become
+settings (`POLICY_*_URL`) at the same time — Phase 0 says they should, and the
+branding mechanism shipped in v0.205.0 extends to shared JS without new
+machinery, but *where the links point* is not a mechanical substitution and was
+deliberately left alone rather than guessed.
+
 1. **This repository's `.git` lives inside the Dropbox-synced tree, and Dropbox
    destroyed it twice in one day** (2026-07-28).
 
@@ -249,6 +269,29 @@ block a deploy.)*
     than silent loss ([[prod-ccommunication-field-length-drift]]).
 
 ## Live verification owed
+
+**De-Clevelanding (v0.205.0) has never been looked at in a browser.** 1763
+tests pass, including a 25-case guard suite, and the rendered output was
+compared page by page against the previous commit — but no page has been
+*opened*. What a live pass should confirm, in one sitting on crm-test:
+
+- A page's `<title>`, footer and (on a public form) body prose all read
+  "Cleveland Business Mentors", with **no flicker** and no `{{org}}` visible at
+  any point, including on a hard refresh.
+- The three pages served by a **direct read** rather than the static mount —
+  the portal root `/`, a sessions record page (`/mentorsessions/record/{id}`)
+  and a directory record page (`/directory/contacts/record/{id}`) — because
+  those are a separate code path and were the near-miss in this change.
+- `/healthz` reports `organization`.
+- Setting `ORGANIZATION_NAME` at `/setup` changes the pages **without a
+  redeploy** (the rewrite re-reads settings per request and the ETag tracks the
+  name), and the worker/web `settingsVersion` split behaves as usual.
+- The portal birthday card's eyebrow and the directory mentor page's tab title,
+  which read the name from `<meta name="cbm-org">` rather than a fetch.
+
+There is **no feature flag** — the safety property is that an unconfigured
+deployment renders what it always did — so the rollback is a revert, not a
+toggle.
 
 22. **Two-stage mentor provisioning has never run against real Google**
     (v0.204.0, 2026-08-17). The `Accepted-Provisional` → account + group →
