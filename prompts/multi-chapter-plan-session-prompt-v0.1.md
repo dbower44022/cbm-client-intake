@@ -84,6 +84,19 @@ what order*, *done how you'd know*, or *by whom*. Produce that. Specifically:
    change-request route, the onboarding runbook (both Workspace branches), the
    cost model, the de-Clevelanding workstream, the fleet console, and the
    emergency path through the release train.
+7. **Name the cheapest thing that would falsify the architecture early.** Doug is
+   being asked to commit to seven phases before a second chapter has said yes in
+   writing — the plan does not name a single prospective chapter. So end the
+   document with the smallest, soonest, cheapest test whose failure would change
+   the plan rather than merely delay it, and say what each outcome implies.
+   The load-bearing assumptions are the place to look: ruling 6 asks an
+   independent 501(c)(3) to accept that it holds **no** EspoCRM admin account on
+   its own CRM, and ruling 4 tells it that a field it wants is core for everyone
+   or does not exist. If no chapter will accept those, the architecture is not
+   delayed, it is wrong — and finding that out costs one conversation, not a
+   phase. Prefer a test that can be run before Phase 0 ships. If you conclude the
+   cheapest real test is still expensive, say that plainly instead of inventing a
+   cheap one.
 
 ### Where to go deeper than the plan currently does
 
