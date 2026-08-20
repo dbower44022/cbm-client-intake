@@ -1127,19 +1127,33 @@ Entity Manager vocabulary — [[crm-specs-use-entity-manager-terms]]):
 deployed and verified; `CHANGELOG.md` is the permanent record, `OPEN-ITEMS.md`
 holds anything still owed.*
 
-**Pushed through v0.202.2 on 2026-08-16**, so all three apps built it. Nothing
-is unpushed. What is *verified* is narrower than what is deployed — see each
-block.
+**Pushed through v0.204.0 on 2026-08-20**, so all three apps built it and prod
+reports `0.204.0`. Nothing is unpushed. What is *verified* is narrower than what
+is deployed — see each block.
+
+**Confirm that against the remote, do not trust this line.** On 2026-08-20 it
+still read "pushed through v0.202.2" while v0.203.x/v0.204.0 sat unpushed
+locally, and a session that believed it pushed a docs commit and shipped a
+feature to production with it. `git log origin/main..main` is the answer; this
+sentence is a convenience.
 
 - **v0.204.0 — a mentor's Google account is created at Accepted-Provisional.**
   Provisioning is two events now (see the Mentor Administration section for the
   standing rules): the Workspace account + All Members group at
   `Accepted-Provisional`, which then advances the record to `Provisional`; the CRM
-  login still waits for Approved/Active. **Verified by tests only** — the live pass
-  needs three things Doug owns: the group address (still unknown, so the group step
-  ships inert), the `admin.directory.group` DWD scope, and "Create missing
-  mailboxes" confirmed on for the environment. Details and the exact live script:
-  `OPEN-ITEMS.md` #22; rulings: `prds/mentor-provisional-provisioning-plan.md`.
+  login still waits for Approved/Active. **Verified by tests only, and live on
+  production since 2026-08-20 with the mailbox half unarmed** — checked that day:
+  neither overlay sets `GOOGLE_DIRECTORY_CHECK`, `GOOGLE_CREATE_MAILBOX` or
+  `GOOGLE_MEMBERS_GROUP`, and prod's single `/setup` override is `record_quick_add`,
+  so all three sit at their defaults. `google_directory_check` off means no Directory
+  client is built at all, which makes the create flag inert whatever it says and
+  leaves the status advance unable to fire (it demands a *confirmed* account). So a
+  prod mentor set to `Accepted-Provisional` behaves exactly as before. The live pass
+  still needs three things Doug owns: the group address (still unknown, so the group
+  step ships inert), the `admin.directory.group` DWD scope, and "Create missing
+  mailboxes" turned on deliberately for the environment. Details and the exact live
+  script: `OPEN-ITEMS.md` #22; rulings:
+  `prds/mentor-provisional-provisioning-plan.md`.
 - **v0.203.0 / v0.203.1 — the events website preview is the website now.** The
   site's own stylesheet (verbatim from its Elementor widgets) ships with the
   plugin and drives the preview, so the colours, type and the two-column
