@@ -23,13 +23,14 @@ markup as a `{{org}}` token **server-side as the page is served**
   the public forms' prose would visibly repaint after the `/healthz`
   round-trip. Substituting on serve flickers nowhere.
 - **Cleveland is the default, not a special case.** With nothing configured
-  every page renders exactly what it rendered before — verified page by page
-  against the previous commit. That is what makes this shippable on `main`
-  with `deploy_on_push` on three apps and **no feature flag**. The only
-  difference in the served bytes is one invisible
-  `<meta name="cbm-org">` per page, which is how the two scripts that need the
-  name at runtime (the portal birthday card, the directory mentor page's
-  title) read it synchronously instead of racing a fetch.
+  every page renders what it rendered before — verified page by page against
+  `origin/main`: **14 pages differ only by one invisible
+  `<meta name="cbm-org">`, 2 not at all, and 4 carry the deliberate
+  "…Mentoring" → "…Mentors" copy fix below.** That is what makes this
+  shippable on `main` with `deploy_on_push` on three apps and **no feature
+  flag**. The meta is how the two scripts that need the name at runtime (the
+  portal birthday card, the directory mentor page's title) read it
+  synchronously instead of racing a fetch.
 - **The value is escaped for where it lands** — HTML, the inside of a JS
   string literal, or plain text. It is settable from `/setup` and it reaches
   the public intake forms, so an admin who can reconfigure the platform is not
@@ -51,6 +52,15 @@ markup as a `{{org}}` token **server-side as the page is served**
   (2298), `window.CBM*` (12) and `data-cbm-*` are identifiers, never renamed,
   and two of them are live contracts with a chapter's WordPress site.
 
+**The product also stopped saying "Cleveland Business *Mentoring*".** Seven
+occurrences — the "How did you hear about …?" label on four public forms and the
+lead paragraph on three — used the wrong name. It reached the forms through
+commit `7cc6a8f`, which rebranded SCORE wording on the volunteer form; the later
+forms copied the phrasing. **Doug ruled it a copy bug** (2026-08-20), so the
+token vocabulary stays at one token and a test now fails if the wording
+reappears. The organisation is "Cleveland Business Mentors"; "…Mentoring" names
+the process-definition repository, which is not public-facing copy.
+
 **Left deliberately undone, and flagged rather than guessed:**
 
 - **`frontend/shared/legal-links.js`** hardcodes four Cleveland policy URLs —
@@ -59,8 +69,6 @@ markup as a `{{org}}` token **server-side as the page is served**
   **Three of the four still point at the WPEngine *staging* host.** That is a
   live Cleveland defect as much as a chapter blocker, and where those links
   should point is Doug's call, not a mechanical substitution.
-- **The seven "Cleveland Business *Mentoring*" occurrences** on the public
-  forms are pinned by a test, not collapsed — see the plan's Phase 0 § 5.
 - **No logo slot.** The app contains no image asset at all today; introducing
   one is a feature, not a find-and-replace.
 

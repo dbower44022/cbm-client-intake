@@ -327,7 +327,7 @@ a branding blemish — and unlike everything else in this list, **it is worth fi
 for Cleveland alone**, since three of the four already point at a staging domain
 rather than the production site.
 
-### 5. Two names, not one — a question for Doug, not a silent collapse
+### 5. Two names, not one — **ruled a copy bug** (Doug, 2026-08-20)
 
 The product says **"Cleveland Business Mentors"** in 59 places in code and
 **"Cleveland Business Mentoring"** in 7. The seven are not scattered: they are
@@ -347,10 +347,24 @@ domain is `clevelandbusinessmentors.org`, `ops_mailbox_name` is
 is used that way in all five markdown occurrences — but that is a repo name, not
 public-facing copy.
 
-**Recommendation: one parameter, `organization_name`, and the seven "Mentoring"
-occurrences are a copy bug to fix.** Two parameters would institutionalise an
-inconsistency that no chapter would want to reproduce. This is not built either
-way until ruled on.
+**Doug's ruling, 2026-08-20: a copy bug. Sweep them into `{{org}}`.** So the
+token vocabulary stays at one token, `organization_name`, and the seven
+occurrences were replaced in v0.205.0 — the four "How did you hear about …?"
+labels and the three lead paragraphs. Two parameters would have
+institutionalised an inconsistency no chapter would want to reproduce.
+
+A test now fails if the wording reappears in a frontend file, because a copied
+form is exactly how it spread the first time.
+
+**There is precedent, and it points the same way.** The v0.131.0 changelog
+(2026-07-21) records the same slip in a different place — *"the PROD CRM's
+Outbound Emails From Name reads 'Cleveland Business Mentoring' (with -ing) — fix
+to 'Cleveland Business Mentors' … so CRM-native sends match (crm-test is already
+correct)"*. So the wording has been recognised as wrong once before, in the CRM
+rather than the app. That Doug-side fix was never tracked anywhere and may still
+be outstanding on production; it is now in `OPEN-ITEMS.md`, because a chapter's
+CRM-native sends would carry whatever that field says regardless of what the app
+renders.
 
 ### 6. The logo — Phase 0 would be *introducing* one, not parameterizing one
 
@@ -388,9 +402,10 @@ everything it covers.
   browser tab would flicker and the public forms' prose would visibly repaint
   after the `/healthz` round-trip.
 - **The safety property was verified, not assumed** — every page's rendered
-  output was compared against the previous commit. 18 of 20 differ by exactly
-  one invisible `<meta name="cbm-org">` line; 2 (the developer preview
-  harnesses) are untouched. No feature flag.
+  output was compared against `origin/main`. 14 differ by exactly one invisible
+  `<meta name="cbm-org">` line; 2 (the developer preview harnesses) are
+  untouched; 4 carry the one deliberate visible change in the whole phase, the
+  seven "…Mentoring" words Doug ruled a copy bug (§ 5). No feature flag.
 - **Three code paths read HTML directly instead of through the mount** — the
   portal root, the sessions record page and the directory record pages. Each
   would have served a raw `{{org}}` to a user. They render explicitly now; it
@@ -422,8 +437,6 @@ everything it covers.
   wrong URL ends up on a consent checkbox. Doug's call — see § 4.
 - **The logo slot** — § 6. A feature, not a parameterization.
 - **The hardcoded timezone** — § 2. Phase 3.
-- **The seven "Mentoring" occurrences** — § 5. Pinned by a test, not
-  collapsed.
 
 ### 8. Explicitly left alone, and why
 

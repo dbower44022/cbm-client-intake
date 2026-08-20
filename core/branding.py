@@ -54,11 +54,11 @@ from starlette.types import Scope
 if TYPE_CHECKING:  # pragma: no cover
     from core.config import Settings
 
-#: The token vocabulary, and all of it. One token, one meaning: the display name
-#: of the organisation running this deployment. Kept as a table rather than an
-#: f-string so a second token (should the "Cleveland Business Mentors" /
-#: "Cleveland Business Mentoring" question be ruled two names rather than one)
-#: is a one-line addition here and nowhere else.
+#: The token vocabulary, and all of it. ONE token, one meaning: the display name
+#: of the organisation running this deployment. It is one rather than two because
+#: Doug ruled (2026-08-20) that the "Cleveland Business Mentoring" wording on four
+#: public forms was a copy bug, not a second brand. Kept as a table rather than an
+#: f-string so a genuinely new token is a one-line addition here and nowhere else.
 TOKEN_ORG = "{{org}}"
 
 

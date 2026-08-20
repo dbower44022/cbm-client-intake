@@ -65,19 +65,14 @@ GUARD_EXEMPT = {
 #: match ORG_LITERAL. No exemption is needed, and that is worth asserting.
 VERBATIM_WEBSITE_COPY = "mentorprofile/frontend/index.html"
 
-#: The SECOND name. "Cleveland Business Mentoring" appears in exactly these
-#: places, all body prose on the four public intake forms, traced to commit
-#: 7cc6a8f's rebrand of SCORE wording. Whether that is a deliberate second brand
-#: or a copy bug is an open question for Doug (plan § *Phase 0*, item 5), so it
-#: is neither collapsed silently nor left unguarded: the count is pinned, and a
-#: NEW occurrence fails this file just like a new "Mentors" would.
+#: The SECOND name, RULED A COPY BUG (Doug, 2026-08-20) and swept into the
+#: token. It reached the four public intake forms through commit 7cc6a8f, which
+#: rebranded SCORE wording on the volunteer form; the partner, sponsor and
+#: info-request forms then copied the phrasing. The organisation is
+#: "Cleveland Business Mentors" — the domain, the mailbox display name and every
+#: title and footer say so. "Cleveland Business Mentoring" survives only as the
+#: name of the process-definition REPOSITORY, which is not public-facing copy.
 SECOND_NAME = "Cleveland Business Mentoring"
-SECOND_NAME_PENDING = {
-    "forms/info_request/frontend/index.html": 2,
-    "forms/partner/frontend/index.html": 2,
-    "forms/sponsor/frontend/index.html": 2,
-    "forms/volunteer/frontend/index.html": 1,
-}
 
 
 @pytest.fixture(autouse=True)
@@ -160,20 +155,21 @@ def test_no_frontend_file_hardcodes_the_organisation_name():
     )
 
 
-def test_the_second_name_has_not_spread():
-    """"Cleveland Business Mentoring" is an OPEN QUESTION, not an accepted
-    second brand. Pin it where it is so nobody adds a ninth while it is being
-    decided."""
-    found: dict[str, int] = {}
+def test_the_second_name_does_not_come_back():
+    """The product briefly said "Cleveland Business Mentoring" in seven places,
+    all body prose on the public forms. Doug ruled it a copy bug (2026-08-20)
+    and it was swept into the token; the organisation is "…Mentors". This fails
+    if it reappears, which is how a copied form introduced it the first time."""
+    offenders = []
     for path in _frontend_files(".html", ".js", ".css"):
         text = path.read_text(encoding="utf-8", errors="ignore")
-        n = text.count(SECOND_NAME)
-        if n:
-            found[_rel(path)] = n
-    assert found == SECOND_NAME_PENDING, (
-        "the second name moved. If Doug ruled it a copy bug, replace these with "
-        "{{org}} and empty SECOND_NAME_PENDING; if he ruled it a real second "
-        "name, give it its own token. Do not just update the counts."
+        if SECOND_NAME in text:
+            lines = [i for i, l in enumerate(text.splitlines(), 1) if SECOND_NAME in l]
+            offenders.append(f"{_rel(path)}: lines {lines}")
+    assert not offenders, (
+        f'"{SECOND_NAME}" is not the organisation\'s name — it names the '
+        "process-definition repository. Use the {{org}} token:\n  "
+        + "\n  ".join(offenders)
     )
 
 

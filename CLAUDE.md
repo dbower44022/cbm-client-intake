@@ -1156,17 +1156,17 @@ sentence is a convenience.
   the public prose would flicker. `CHAPTER_TOKENS_URL` is the `tokens.css`
   override slot. **Unpushed.** No feature flag, deliberately: the safety
   property is that an unconfigured deployment renders what it always did, and
-  that was verified page by page against the previous commit (18 of 20 pages
-  differ by one invisible `<meta name="cbm-org">`, 2 not at all). **Verified by
+  that was verified page by page against `origin/main` (14 pages differ by one
+  invisible `<meta name="cbm-org">`, 2 not at all, and 4 carry the one
+  deliberate visible change: the seven "Cleveland Business *Mentoring*" words
+  on the public forms, which Doug ruled a copy bug on 2026-08-20). **Verified by
   tests only** — 1762 pass, including a 24-case guard suite; nothing has been
   looked at in a browser. Two things are owed and one is a live Cleveland
   defect: `frontend/shared/legal-links.js` hardcodes four policy URLs, **three
   of them on the WPEngine staging host**, injected into the consent checkbox of
-  all four consent-bearing public forms; and seven "Cleveland Business
-  *Mentoring*" occurrences on those forms are pinned by a test pending Doug's
-  ruling on whether that is a second name or a copy bug. Inventory, rulings and
-  what was deliberately not built: `prds/multi-chapter-deployment-plan.md`
-  § *Phase 0*.
+  all four consent-bearing public forms — the documents the public is told they
+  are consenting to. Inventory, rulings and what was deliberately not built:
+  `prds/multi-chapter-deployment-plan.md` § *Phase 0*.
 - **v0.204.0 — a mentor's Google account is created at Accepted-Provisional.**
   Provisioning is two events now (see the Mentor Administration section for the
   standing rules): the Workspace account + All Members group at

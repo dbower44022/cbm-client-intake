@@ -214,6 +214,21 @@ empty company on a partner/funder now renders as "—" and is fixable in the app
 
 ## CRM prerequisites outstanding
 
+**The prod CRM's Outbound Emails "From Name" may still say "Cleveland Business
+Mentoring"** (with `-ing`). Flagged as a Doug-side item in the v0.131.0
+changelog on 2026-07-21 — *"fix to 'Cleveland Business Mentors' in
+Administration → Outbound Emails so CRM-native sends match (crm-test is already
+correct)"* — but never tracked, so it is unknown whether it was done. Surfaced
+again on 2026-08-20 when the same wording turned up in seven places in the app's
+own public forms and was ruled a copy bug.
+
+Worth closing for two reasons: it is the name on every **CRM-native** send
+(password resets, `sendAccessInfo` welcome emails, workflow notifications),
+which the app's `{{org}}` token does not reach; and under the chapter
+architecture it is one of the database-half rows the config applier will have to
+own (plan § *CRM configuration as a build artifact*). **Check first** — this may
+already be fixed.
+
 *(Moved here from CLAUDE.md 2026-07-28 during the CLAUDE.md slim-down. Each is a
 CRM-side build/grant the app already feature-detects or degrades around — none
 block a deploy.)*
