@@ -198,10 +198,199 @@ configured with that chapter's app URL and `eventUrlBase`.
 Per-chapter visual identity is then `tokens.css` overrides plus a logo — a small,
 contained, versioned asset set, not a copy of anybody's site.
 
-**De-Clevelanding is an explicit workstream.** The settings are cheap and already
-settings: `ops_mailbox_name` ("Cleveland Business Mentors"), `comms_internal_domains`
-(`cbmentors.org`), `zoom_host_email` (`zweb@cbmentors.org`), `docs_site_url`. The
-markup is the work: **18 frontend HTML files carry the name in the page itself.**
+**De-Clevelanding is an explicit workstream** — measured in full in the next
+section. In outline: the settings are cheap and already settings, the markup is
+the work (18 frontend HTML files, 48 occurrences), and there are four surfaces
+outside HTML that the first pass missed, including one that hands a chapter's
+applicants Cleveland's own privacy policy.
+
+---
+
+## Phase 0 — De-Cleveland: the measured inventory
+
+**Measured against the tree on 2026-08-20**, not estimated. The plan's earlier
+figure ("18 frontend HTML files") counts *files* correctly and undercounts
+*occurrences* by roughly two-thirds, and it misses four surfaces outside HTML
+entirely — one of which sends the public to Cleveland's own legal documents.
+
+Every item below is classified as **setting** (already parameterized in
+`core/config.py`), **override** (a per-chapter value supplied at deploy or via
+`/setup`), or **markup edit** (the name is baked into a file). The safety
+property governing all of it: **with no chapter configuration set, every page
+must render byte-identical to today.** Cleveland is the default, not a special
+case, which is why Phase 0 needs no feature flag.
+
+### 0. Brand-as-identifier — fenced off, and it stays
+
+This is the distinction that keeps the workstream from doing damage. The `CBM`
+and `cbm-` tokens below are **identifiers, not content**. They are never shown to
+a user, renaming them is enormous churn for zero benefit, and a partial rename
+breaks every page. **They are out of scope permanently — this is not an
+unfinished job for someone to "complete" later.**
+
+| Identifier surface | Count | Examples |
+|---|---|---|
+| `window.CBM*` JS namespaces | 12 | `CBMBusy`, `CBMDateTime`, `CBMRichText`, `CBMConversation`, `CBMEvents`, `CBMWizard`, `CBMAddress`, `CBMCharts`, `CBMQuickMail`, `CBMBirthday`, `CBMDirRender`, `CBM` |
+| `--cbm-*` CSS custom properties | 52 distinct, **1223 uses** | `--cbm-navy`, `--cbm-gold`, `--cbm-surface` |
+| `cbm-` class-name occurrences | **2298** | `cbm-button`, `cbm-footer__version`, `cbm-required` |
+| `data-cbm-*` attributes | 4 | `data-cbm-year`, `data-cbm-version`, `data-cbm-busy`, `data-cbm-upload` |
+
+Two of these are worse than churn — they are **contracts**. `cbm-` classes in
+`wp-plugin/cbm-events/` are the class contract between the renderer and the
+website's own stylesheet, guarded by a test precisely because a drift there went
+unnoticed for three weeks; and `CBMEvents.config` is the object a chapter's
+WordPress page configures. Renaming either breaks a live site.
+
+**A new per-chapter attribute therefore keeps the `data-cbm-` prefix.** The
+prefix names the software, not the chapter.
+
+### 1. Settings — already parameterized, needing only a non-Cleveland default story
+
+All in `core/config.py`. Each already reads from the environment, so a chapter
+supplies its own value with no code change; what Phase 0 owes them is (a) a
+default that is *derived* rather than *hardcoded to Cleveland* where possible,
+and (b) a place in the per-chapter values file (Phase 3).
+
+| Setting | Today's default | Classification |
+|---|---|---|
+| `ops_mailbox_name` | `"Cleveland Business Mentors"` | **setting** → should default to `organization_name` |
+| `comms_internal_domains` | `"cbmentors.org"` | **setting**, per-chapter override |
+| `zoom_host_email` | `"zweb@cbmentors.org"` | **setting**, per-chapter override |
+| `docs_site_url` | `"https://docs.clevelandbusinessmentors.org"` | **setting**, per-chapter override |
+| `events_public_base_url` | `"https://clevelandbusinessmentors.org/webinars"` | **setting**, per-chapter override |
+
+`alert_email_from`, `gdrive_shared_drive_id`, `google_members_group` and
+`app_base_url` are already Cleveland-free in code and supplied per deployment.
+
+### 2. Locale — a fifth axis the plan did not name
+
+Cleveland's **timezone** is hardcoded in four places, and it is not the same
+thing as Cleveland's name:
+
+- `portal/birthday.py:47` — `_LOCAL = ZoneInfo("America/New_York")`
+- `assignments/service.py:942` — `ZoneInfo("America/New_York")` for the assignment stamp
+- `events/config.py:72` — `PUBLIC_TIMEZONE = "America/New_York"`
+- `core/zoom.py:247` — default argument
+- (`comms_digest_tz` is already a setting with the same default)
+
+A chapter outside Eastern time would show wrong calendar days on birthdays,
+assignment stamps and the public events programme. **Deliberately left out of
+Phase 0**, by the standard Phase 0 holds itself to: fixing this is justified
+*only* by chapters that may never exist — Cleveland gains nothing. It belongs
+with the per-chapter values file in **Phase 3**, and is recorded here so it is
+not rediscovered as a surprise during the first onboarding.
+
+### 3. Markup — the actual work
+
+**18 frontend HTML files, 48 occurrences**, in three shapes:
+
+| Shape | Count | Form |
+|---|---|---|
+| `<title>` | 18 | `<title>Cleveland Business Mentors — Client Administration</title>` |
+| Footer | 17 | `&copy; <span data-cbm-year>2026</span> Cleveland Business Mentors. All rights reserved.<span class="cbm-footer__version" data-cbm-version></span>` |
+| Body prose | 13 | headings, form labels, confirmation messages |
+
+`setup/frontend/index.html` is the one page with a title but no footer text — it
+loads `footer.js` for the year and version only. The two `events/frontend/preview*.html`
+harnesses use `CBM — …` titles instead; they are developer harnesses, not shipped
+pages, and are listed for completeness.
+
+The 13 body-prose occurrences are the hardest and the most likely to be missed,
+because they are **read by a member of the public**:
+
+- `portal/frontend/index.html:17` — the portal `<h1>`
+- Four public forms × "How did you hear about …?" labels
+- Three public forms × the `intake__sub` lead paragraph
+- Five public forms × "A member of the … team will be in touch." confirmations
+
+### 4. Four surfaces outside HTML that the earlier count missed
+
+| Location | What it is | Classification |
+|---|---|---|
+| **`frontend/shared/legal-links.js:11–15`** | **Four hardcoded Cleveland policy URLs** — client code of conduct, mentor code of ethics, terms of use, privacy policy — injected into the consent checkbox on all four consent-bearing public forms | **setting** (new) — see below |
+| `directory/frontend/mentor.js:120` | Sets `document.title` in JS on the mentor profile page | markup edit |
+| `core/app.py:393` | Server-rendered footer on the dev-app public form index | markup edit |
+| `portal/frontend/birthday.js:176` | The birthday card's eyebrow line | markup edit |
+| `forms/info_email/__init__.py:17` | `FormSpec.title = "Email to Cleveland Business Mentors"`, shown to staff in `/ops` | markup edit |
+| `comms/service.py:1287` | `"company": "Cleveland Business Mentors"` on a CBM member's contact lookup result | markup edit |
+| `comms/summarize.py:34` | The LLM system prompt's opening line | markup edit |
+| `events/frontend/app.js:891` | A warning naming the live website | markup edit |
+| `frontend/shared/tokens.css:2–10` | Header comment attributing the palette to Cleveland's staging site | comment reword |
+
+**`legal-links.js` is the serious one.** It is the single source of truth for the
+policy document URLs, its own comment says so, and every one of the four URLs
+points at Cleveland's WordPress (three of them still at the *staging* host,
+`cbmentostagdev.wpenginepowered.com`). A second chapter running this code would
+present Cleveland's privacy policy and Cleveland's code of conduct to its own
+applicants as the documents they are consenting to. That is a legal exposure, not
+a branding blemish — and unlike everything else in this list, **it is worth fixing
+for Cleveland alone**, since three of the four already point at a staging domain
+rather than the production site.
+
+### 5. Two names, not one — a question for Doug, not a silent collapse
+
+The product says **"Cleveland Business Mentors"** in 59 places in code and
+**"Cleveland Business Mentoring"** in 7. The seven are not scattered: they are
+*exclusively* body prose on the four public intake forms —
+
+- `how_did_you_hear` labels on info-request, partner, sponsor, volunteer
+- the `intake__sub` lead paragraph on info-request, partner, sponsor
+
+Provenance points to a slip rather than a second brand. Commit `7cc6a8f`
+("fix(volunteer): rebrand SCORE wording to Cleveland Business Mentoring on the
+review step") introduced the wording, and the later partner/sponsor/info-request
+forms copied the phrasing. Everywhere else the *organization* is "Mentors": the
+domain is `clevelandbusinessmentors.org`, `ops_mailbox_name` is
+`"Cleveland Business Mentors"`, and every footer and title says Mentors.
+"Cleveland Business Mentoring" does have a legitimate separate use — it names the
+**process-definition repository** (`dbower44022/ClevelandBusinessMentoring`) and
+is used that way in all five markdown occurrences — but that is a repo name, not
+public-facing copy.
+
+**Recommendation: one parameter, `organization_name`, and the seven "Mentoring"
+occurrences are a copy bug to fix.** Two parameters would institutionalise an
+inconsistency that no chapter would want to reproduce. This is not built either
+way until ruled on.
+
+### 6. The logo — Phase 0 would be *introducing* one, not parameterizing one
+
+**Verified: the application contains no image asset of any kind.** No `.svg`,
+`.png`, `.jpg`, `.ico`, `.webp` or `.gif` outside the vendored Jodit editor, no
+`<link rel="icon">` on any page, and every hit for "logo" in the codebase is the
+word *logout*. The plan's "per-chapter `tokens.css` + logo" therefore describes a
+**new feature** — a header/logo slot on 18 pages, an asset-serving path, and a
+sizing contract — not a find-and-replace. **Raised, not built.** It is a scope
+question for Doug and it is not required by the safety property.
+
+### 7. `tokens.css` — the override mechanism
+
+162 lines, 52 custom properties, all on `:root`, all consumed through
+`var(--cbm-*)`. The override mechanism is therefore already latent in the
+cascade: a chapter supplies a second stylesheet defining the same properties on
+`:root`, loaded **after** `tokens.css`, and it cannot break the base tokens
+because it can only shadow values it explicitly names — anything it omits falls
+back to Cleveland's. No `!important`, no build step, no new mechanism. What Phase
+0 owes is the loading slot and the rule that a chapter override may define
+**only** `--cbm-*` properties on `:root` (never selectors), plus rewording the
+header comment, which currently attributes the palette to Cleveland's staging
+site.
+
+### 8. Explicitly left alone, and why
+
+- **`mentorprofile/frontend/`** (index.html, styles.css) — a verbatim copy of
+  Cleveland's Elementor page, including 5 `clevelandbusinessmentors.org` links.
+  Ruling 8 and Phase 4 retire it; parameterizing a byte-copy would fight the
+  thing that makes it correct.
+- **`wp-plugin/cbm-events/assets/cbm-events.css`** and
+  `events/frontend/preview.css` — same reason, and the stylesheet is the class
+  contract with the live site.
+- **`tests/`** — assertions follow the code; they change with the sweep, not
+  before it.
+- **Markdown** (`prds/`, `prompts/`, guides) — these describe Cleveland as
+  historical fact and are not shipped to users.
+- **Comments** recording that a value came from Cleveland — provenance, not
+  identity.
+
 
 ---
 
