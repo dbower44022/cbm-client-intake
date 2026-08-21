@@ -373,6 +373,78 @@ async def seed_sessions(
     await s.upsert("CSession", f"{upcoming:%Y-%m-%d} - {company}", payload)
 
 
+#: Left with real gaps on purpose, so Mentor Administration's completeness
+#: badge has something to show and the "what's missing" list is not empty.
+#: These are pre-sign-off statuses, so missing flags is the honest state.
+INCOMPLETE_BY_DESIGN = frozenset({"Claudia Reinhart", "Owen Pryce", "Yusuf Karim"})
+
+
+async def complete_roster(s: Seeder, profiles: dict[str, str], users: dict[str, str]) -> None:
+    """Give the rest of the roster its sign-off flags and Contact stamps.
+
+    A roster that is 24/26 Incomplete makes Mentor Administration look like a
+    system nobody ever finished setting up. This brings everyone up except the
+    handful held back deliberately.
+
+    There is a ceiling: an **Active** mentor also needs a login User on both the
+    profile and its Contact, and EspoCRM makes user creation admin-only, so the
+    16 roster-only mentors can never read Complete while they are Active. That
+    is the badge doing its job, not a seeding gap.
+    """
+    logins = {name: user for name, user, _ in MENTORS_WITH_LOGINS}
+    for name, profile_id in sorted(profiles.items()):
+        if name in COMPLETE_MENTORS or name in INCOMPLETE_BY_DESIGN:
+            continue
+        if not s.apply:
+            continue
+        await s.client.update("CMentorProfile", profile_id, {
+            "ethicsAgreementAccepted": True,
+            "trainingCompleted": True,
+            "termsAccepted": True,
+            "backgroundCheckCompleted": True,
+            "mentorCodeAccepted": True,
+        })
+        user_id = users.get(logins.get(name, ""))
+        if user_id:
+            record = await s.client.get(
+                "CMentorProfile", profile_id, select="contactRecordId"
+            )
+            if record.get("contactRecordId"):
+                await s.client.update("Contact", record["contactRecordId"], {
+                    "assignedUserId": user_id, "assignedUsersIds": [user_id],
+                })
+    if s.apply:
+        await _persist_badges(s)
+    else:
+        held = len(COMPLETE_MENTORS) + len(INCOMPLETE_BY_DESIGN)
+        print(f"  would top up {max(0, len(profiles) - held)} more mentor profile(s)")
+
+
+async def _persist_badges(s: Seeder) -> None:
+    """Recompute every mentor's completeness with the APP's own rule and store it.
+
+    The grid renders the persisted ``recordStatus``, and the app only self-heals
+    it when a human opens or saves the record. Calling
+    :func:`mentoradmin.service.check_completeness` here rather than
+    re-implementing the predicate means this cannot drift from the badge the
+    application will show.
+    """
+    from mentoradmin.service import check_completeness  # local: keeps the CLI light
+
+    select = ("name,contactRecordId,cbmEmail,mentorStatus,assignedUserId,"
+              "assignedUsersIds,ethicsAgreementAccepted,trainingCompleted,"
+              "termsAccepted,recordStatus")
+    rows = (await s.client.list("CMentorProfile", select=select, max_size=200)).get("list", [])
+    complete = 0
+    for row in rows:
+        result = await check_completeness(s.client, row)
+        status = result["status"]
+        complete += status == "Complete"
+        if row.get("recordStatus") != status and row.get("recordStatus") != "Duplicate":
+            await s.client.update("CMentorProfile", row["id"], {"recordStatus": status})
+    print(f"  completeness: {complete}/{len(rows)} Complete")
+
+
 async def complete_mentors(s: Seeder, profiles: dict[str, str], users: dict[str, str]) -> None:
     """Bring the demo mentors up to a fully-established, Complete member.
 
@@ -402,11 +474,6 @@ async def complete_mentors(s: Seeder, profiles: dict[str, str], users: dict[str,
             "acceptingNewClients": True,
             "mentorStatus": "Active",
             "publicProfile": True,
-            # The badge the grid renders is the PERSISTED enum, which the app
-            # only self-heals when someone opens or saves the record. Without
-            # this the roster shows these two as Incomplete until a human
-            # clicks them — the opposite of the impression a demo wants.
-            "recordStatus": "Complete",
         }
         if not s.apply:
             print(f"  would complete {name} ({len(payload)} fields, Contact stamp)")
@@ -502,6 +569,7 @@ async def main() -> int:
     try:
         profiles = await seed_mentors(seeder, users)
         await complete_mentors(seeder, profiles, users)
+        await complete_roster(seeder, profiles, users)
         await seed_clients(seeder, profiles, users)
         await seed_partners(seeder, profiles)
         await seed_funders(seeder, profiles)
