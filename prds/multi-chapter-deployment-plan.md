@@ -422,11 +422,12 @@ Two refinements, both verified read-only against CRMBuilder at HEAD on 2026-08-2
   today and must not be introduced without knowing this.
 - **Managers exist for all three** — `saved_view_manager.py`,
   `duplicate_check_manager.py`, `workflow_manager.py` are all present. The
-  limitation is on *writing through the Metadata API*, not on the concept, and at
-  least `duplicateChecks` has a metadata representation that is **readable**. So
-  "cannot be applied" and "cannot be detected" are separable, and a check-only
-  path for an unapplyable category is worth asking about rather than assuming
-  away. That question belongs to the CRMBuilder session; it is recorded here so
+  limitation is on *writing through the Metadata API*, not on the concept — and
+  `/api/v1/Metadata` **is** readable. Whether each of the three has a
+  representation there that a check could compare against is **not verified
+  here** and needs a live CRM read. But "cannot be applied" and "cannot be
+  detected" are separable in principle, and a check-only path for an unapplyable
+  category is worth asking about rather than assuming away. That question belongs to the CRMBuilder session; it is recorded here so
   it is asked.
 
 **The ruling belongs to that session. Phase 1's consequence under either answer is
@@ -444,8 +445,8 @@ ours, and must be stated now:**
   never silently reads as "this instance is conformant".
 
 **One dependency of ours is live and unverified either way.** This app sends no
-`X-Skip-Duplicate-Check` header anywhere (`grep` across `core/espo.py` and
-`core/crm_upsert.py`, 2026-08-20: zero hits), so whatever duplicate-check
+`X-Skip-Duplicate-Check` header anywhere (case-insensitive `grep` for
+`skip.duplicate` across every `.py` and `.js` in the tree, 2026-08-20: zero hits), so whatever duplicate-check
 configuration a chapter's instance holds applies to every intake create the
 orchestrators make. Whether Cleveland's two instances have duplicate checking
 configured on `Account` or `Contact` **has not been checked** — it needs a live
