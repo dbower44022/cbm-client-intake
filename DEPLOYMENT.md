@@ -373,6 +373,38 @@ live config reproducible without committing secrets.
 
 After either, confirm `curl https://<app-url>/healthz` shows `"dryRun": false`.
 
+## Whose name the deployment carries (v0.205.0–v0.206.0)
+
+Every page names its owner — the `<title>`, the footer, and the body prose on
+the public forms — and so do the policy documents the consent checkbox links to.
+None of that is hardcoded any more. **All of it defaults to Cleveland**, so an
+existing deployment needs no action; a deployment for anyone else sets these:
+
+| Setting | Default | What it changes |
+|---|---|---|
+| `ORGANIZATION_NAME` | `Cleveland Business Mentors` | Every page title, footer and public-form sentence |
+| `CHAPTER_TOKENS_URL` | *(empty)* | A stylesheet loaded after `/shared/tokens.css` that may redefine `--cbm-*` on `:root` |
+| `POLICY_CLIENT_CONDUCT_URL` | `…/client-code-of-conduct/` | Consent checkbox link |
+| `POLICY_MENTOR_ETHICS_URL` | `…/mentor-code-of-ethics/` | Consent checkbox link (volunteer form only) |
+| `POLICY_TERMS_URL` | `…/legal-notices/` | Consent checkbox link |
+| `POLICY_PRIVACY_URL` | `…/privacy-policy/` | Consent checkbox link |
+| `OPS_MAILBOX_NAME` | *(empty ⇒ `ORGANIZATION_NAME`)* | From display name on shared-identity sends |
+
+All are on **`/setup`** (Presentation group), so they can be set without an
+overlay edit, and all take effect on the **next page load** — the substitution
+happens as the page is served and re-reads settings per request.
+
+**The policy URLs are the ones to get right.** They are the documents a member
+of the public is told they are agreeing to. Three of the four pointed at
+Cleveland's WPEngine *staging* host until v0.206.0.
+
+**Mechanics, if a page ever shows a raw `{{org}}`:** the markup carries tokens
+and `core/branding.py` substitutes them as the file is served — for `.html` and
+`.js`, never for anything under `vendor/`. Three HTML routes read their file
+directly instead of through the static mount (the portal root, sessions record
+pages, directory record pages) and call the renderer explicitly; a new route of
+that shape must do the same. `tests/test_shared_branding.py` is the guard.
+
 ## Custom domain (optional, recommended for production)
 
 **LIVE for prod (2026-07-06):** `https://apps.clevelandbusinessmentors.org` is
@@ -456,7 +488,10 @@ Two viable shapes — pick one:
 3. Confirm the records in EspoCRM:
    - client-intake → Account → Contact → CClientProfile → CEngagement
    - volunteer → Contact (`cContactType=["Mentor"]`) → CMentorProfile
-4. Logs: DO console → the app → **Runtime Logs**, or
+4. `curl https://<app-url>/healthz` → `"organization"` names the right
+   organisation, and `curl https://<app-url>/volunteer/ | grep -c '{{'` returns
+   `0` (no branding token reached the browser).
+5. Logs: DO console → the app → **Runtime Logs**, or
    `doctl apps logs <app-id> --type run -f`. The decisive line on a failed
    submission is `ERROR cbm_intake: … create <Entity> failed: HTTP <code> <body>`
    (the browser only shows a generic 502).

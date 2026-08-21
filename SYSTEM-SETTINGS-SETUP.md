@@ -82,6 +82,23 @@ The **worker / both** badge tells you which process reads the setting. A
 worker-side change takes up to `SETUP_REFRESH_SECONDS` (default 45s) to reach the
 worker, because it is a separate container on its own timer.
 
+### Presentation — whose name the app carries
+
+The **Presentation** group holds the deployment's identity, added in
+v0.205.0–v0.206.0: `Organisation name`, the four policy-document URLs the
+consent checkbox links to on the public forms, and `Chapter design-token
+override` (a stylesheet loaded after the base tokens that may redefine the
+`--cbm-*` custom properties).
+
+These behave differently from most settings here in one useful way: **they take
+effect on the next page load, with no redeploy and no restart**, because the
+name and the URLs are substituted into the page as it is served. Change one,
+reload the page, and it is there. Changing it back works the same way.
+
+Treat the policy URLs with more care than the rest — they are the documents a
+member of the public is told they are agreeing to, so a typo points consent at
+nothing.
+
 ### What this page cannot switch on
 
 **The master flags that mount an app are not here** — `EVENTS_ENABLED`,

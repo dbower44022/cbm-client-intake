@@ -265,7 +265,7 @@ block a deploy.)*
 
 ## Live verification owed
 
-**De-Clevelanding (v0.205.x): partly verified live, the rest still owed.**
+**De-Clevelanding (v0.205.0–v0.206.0): partly verified live, the rest still owed.**
 
 Confirmed on **production** by fetching the served pages on 2026-08-20, after
 the push: `/volunteer/`, `/info-request/`, `/assignments/`, `/mentorsessions/`,
@@ -285,6 +285,11 @@ or after, because the edge strips HTML `ETag`s and ignores `If-Modified-Since`.
 Two lessons worth keeping: a matching version number is not the same as a
 correct response, and a header that looks wrong in production needs a control
 on a file the change did not touch before it is called a regression.
+
+v0.206.0 was verified the same way: prod serves `legal-links.js` with the four
+production policy URLs, no tokens and no staging host, all four resolving `200`,
+and the other shared assets (including the 619KB vendored Jodit) unchanged by
+the rewrite being extended to `.js`.
 
 **Still owed**, none of it reachable with an unauthenticated fetch:
 

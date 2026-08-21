@@ -1062,7 +1062,11 @@ funder contributions, Gmail communications, email quality, the info@ mailbox
 rollout, the intake-receipt redesign, Meet and Fathom transcripts, submission-admin
 collaboration, workspace directories, transcription-vendor options) — each records
 the decisions and Doug's rulings behind that arc, so read the relevant one before
-reworking a feature. `prompts/` holds the kickoff prompts, design mockups and
+reworking a feature. **`prds/multi-chapter-deployment-plan.md`** is the largest:
+eight settled rulings on extending this suite to a network of mentoring chapters,
+a measured de-Cleveland inventory (Phase 0, **built**), and six phases after it —
+**Phase 1, CRM configuration as a versioned build artifact, is the next one and
+the only genuinely new engineering in the plan.** `prompts/` holds the kickoff prompts, design mockups and
 review documents those arcs were built from (including
 `reliability-review-2026-07-17.md` at the repo root, whose six hardening phases
 are all implemented).
@@ -1162,51 +1166,33 @@ locally, and a session that believed it pushed a docs commit and shipped a
 feature to production with it. `git log origin/main..main` is the answer; this
 sentence is a convenience.
 
-- **v0.206.0 — the consent checkbox linked to Cleveland's STAGING site.** Three
-  of the four policy URLs in `frontend/shared/legal-links.js` — Client Code of
-  Conduct, Terms of Use, Privacy Policy — pointed at
-  `cbmentostagdev.wpenginepowered.com` on all four consent-bearing public forms.
-  All four documents live at the **same slugs** on the production site (verified
-  live 2026-08-20), so the fix was the host. They are **settings** now
-  (`POLICY_*_URL`, on `/setup`), which closes Phase 0's last real item — the
-  plan classified them as "setting" and they were the only place outside a page
-  title where the product's owner was hardcoded. To make that possible the
-  branding rewrite covers **`.js` as well as `.html`**: `vendor/` is excluded,
-  a token-free file is remembered and handed back to `StaticFiles` untouched,
-  and values substituted into JS are escaped for a string-literal context.
-  **Verified live on prod**: the served `legal-links.js` carries the four
-  production URLs, no tokens and no staging host, all four resolve `200`, and
-  `busy.js` / `footer.js` / `tokens.css` / vendored Jodit are unchanged.
-- **v0.205.1 — the branded HTML path honours `If-Modified-Since` too**, closing
-  a real gap (`FileResponse` honours both; the plain `Response` that replaced it
-  honoured only `If-None-Match`) and restoring parity. `Last-Modified` is the
-  later of the file's mtime and a strictly increasing **brand epoch**, because a
-  rewritten page changes when the *setting* does, not when the file does — an
-  mtime-only stamp would 304 a browser into keeping the previous organisation's
-  name, and a *revert* to an earlier name is a change like any other.
-  **It changed nothing in production**: this was first written up as a shipped
-  regression, and a control test disproved that — see the gotcha below. Kept
-  because it is correct, not because users were seeing anything.
-- **v0.205.0 — the product stopped saying Cleveland.** Phase 0 of the
-  chapter-network plan, and worth doing whatever happens with the chapters. The
-  organisation's name is one setting (`ORGANIZATION_NAME`, default Cleveland),
-  substituted into every page's title, footer and public-form prose as the
-  `{{org}}` token **server-side on serve** — not a JS fill, because the tab and
-  the public prose would flicker. `CHAPTER_TOKENS_URL` is the `tokens.css`
-  override slot. **Pushed 2026-08-20; live on all three apps.** No feature flag,
-  deliberately: the safety
-  property is that an unconfigured deployment renders what it always did, and
-  that was verified page by page against `origin/main` (14 pages differ by one
-  invisible `<meta name="cbm-org">`, 2 not at all, and 4 carry the one
-  deliberate visible change: the seven "Cleveland Business *Mentoring*" words
-  on the public forms, which Doug ruled a copy bug on 2026-08-20). **Verified by
-  tests only** — 1762 pass, including a 24-case guard suite; nothing has been
-  looked at in a browser. Two things are owed and one is a live Cleveland
-  defect: `frontend/shared/legal-links.js` hardcodes four policy URLs, **three
-  of them on the WPEngine staging host**, injected into the consent checkbox of
-  all four consent-bearing public forms — the documents the public is told they
-  are consenting to. Inventory, rulings and what was deliberately not built:
+- **v0.205.0–v0.206.0 — the product stopped saying Cleveland** (Phase 0 of the
+  chapter-network plan; worth doing whatever happens with the chapters).
+  **Deployed and verified live on prod.** The standing rules now live in the
+  Conventions section above; the inventory, the rulings and what was
+  deliberately *not* built are in
   `prds/multi-chapter-deployment-plan.md` § *Phase 0*.
+
+  What is worth keeping in mind here rather than there:
+
+  - **No feature flag, deliberately.** The safety property is that an
+    unconfigured deployment renders what it always did, so **the rollback is a
+    revert, not a toggle.**
+  - **The one thing still owed is a browser.** Everything was verified by
+    fetching served pages, which cannot show the **absence of flicker** — the
+    entire reason the name is substituted server-side rather than filled by JS.
+    Also unchecked: the two *authenticated* direct-read pages
+    (`/mentorsessions/record/{id}`, `/directory/contacts/record/{id}`), the two
+    scripts reading `<meta name="cbm-org">` (portal birthday eyebrow, directory
+    mentor tab title), and changing `ORGANIZATION_NAME` at `/setup` and back.
+    `OPEN-ITEMS.md` § *Live verification owed* has the list.
+  - **Two diagnoses in this arc were wrong before they were right**, both from
+    reading a symptom without a control: a missing HTML `ETag` in prod was
+    called a shipped regression when it is the edge and always was
+    ([[do-edge-strips-html-etag]]), and a test "proved" the JS escaping missing
+    after stripping the backslash that was doing the escaping. Run the control
+    on something the change did not touch.
+
 - **v0.204.0 — a mentor's Google account is created at Accepted-Provisional.**
   Provisioning is two events now (see the Mentor Administration section for the
   standing rules): the Workspace account + All Members group at
