@@ -43,26 +43,39 @@ def _client(settings: Settings) -> EspoApi:
     )
 
 
-def _next_digest_time(settings: Settings, after: datetime) -> datetime:
-    """The next UTC instant at ``comms_digest_hour`` in ``comms_digest_tz``,
-    strictly after ``after`` — so the digest lands each morning and a worker
+def _next_local_hour(hour: int, tz_name: str, after: datetime, *, label: str) -> datetime:
+    """The next UTC instant at local ``hour`` in ``tz_name``, strictly after
+    ``after`` — so a daily job lands at the same wall-clock time and a worker
     restart past today's hour schedules tomorrow (never an immediate re-fire).
     Falls back to a plain +24h if the timezone name is bad."""
     try:
         from zoneinfo import ZoneInfo
 
-        tz = ZoneInfo(settings.comms_digest_tz)
+        tz = ZoneInfo(tz_name)
     except Exception:  # noqa: BLE001 — bad tz name: degrade to a daily cadence
-        log.warning("digest: bad timezone %r — using +24h cadence", settings.comms_digest_tz)
+        log.warning("%s: bad timezone %r — using +24h cadence", label, tz_name)
         return after + timedelta(days=1)
     local = after.astimezone(tz)
     target = local.replace(
-        hour=max(0, min(23, settings.comms_digest_hour)),
-        minute=0, second=0, microsecond=0,
+        hour=max(0, min(23, hour)), minute=0, second=0, microsecond=0
     )
     if target <= local:
         target = target + timedelta(days=1)
     return target.astimezone(timezone.utc)
+
+
+def _next_digest_time(settings: Settings, after: datetime) -> datetime:
+    """The next send time for the daily email digest."""
+    return _next_local_hour(
+        settings.comms_digest_hour, settings.comms_digest_tz, after, label="digest"
+    )
+
+
+def _next_sandbox_reset(settings: Settings, after: datetime) -> datetime:
+    """The next run of the training-sandbox app-database reset."""
+    return _next_local_hour(
+        settings.sandbox_reset_hour, settings.sandbox_reset_tz, after, label="sandbox reset"
+    )
 
 
 def _is_transient(exc: Exception) -> bool:
@@ -324,6 +337,24 @@ async def main() -> None:
             settings.comms_digest_hour, settings.comms_digest_tz, next_digest,
         )
 
+    # Training-sandbox reset (crm-test only): empty the app's own record tables
+    # so they match the CRM the droplet restored an hour earlier. Refuses on any
+    # deployment whose CRM base URL is not crm-test, whatever the flag says.
+    sandbox_on = False
+    next_sandbox = _next_sandbox_reset(settings, datetime.now(timezone.utc))
+    if settings.sandbox_nightly_reset:
+        try:
+            from core.sandbox_reset import guard as sandbox_guard
+
+            sandbox_guard(settings)
+            sandbox_on = True
+            log.info(
+                "training-sandbox reset enabled (%02d:00 %s; next %s UTC)",
+                settings.sandbox_reset_hour, settings.sandbox_reset_tz, next_sandbox,
+            )
+        except Exception as exc:  # noqa: BLE001 — a refused guard must not boot-loop
+            log.warning("training-sandbox reset NOT armed: %s", exc)
+
     # Events attendance (Phase 6a): pull the Zoom participant report for each
     # finished online event. Inert without Zoom, and bounded at both ends by the
     # grace / give-up windows so a webinar that was never held is not polled
@@ -501,6 +532,15 @@ async def main() -> None:
             except Exception as exc:  # noqa: BLE001 — never crashes delivery
                 log.warning("assignment stamp reconciliation failed: %s", exc)
             next_stamps = now + timedelta(seconds=settings.assignment_reconcile_seconds)
+        if sandbox_on and now >= next_sandbox:
+            try:
+                from core.sandbox_reset import reset_app_tables
+
+                result = await reset_app_tables(store._engine, settings, apply=True)
+                log.info("training-sandbox reset cleared %s rows", result["total_rows"])
+            except Exception as exc:  # noqa: BLE001 — never crashes delivery
+                log.warning("training-sandbox reset failed: %s", exc)
+            next_sandbox = _next_sandbox_reset(settings, datetime.now(timezone.utc))
         if digest_on and now >= next_digest:
             try:
                 from comms.digest import run_digest_cycle

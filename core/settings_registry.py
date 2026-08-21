@@ -99,6 +99,12 @@ DENYLIST: frozenset[str] = BOOT_READ_KEYS | frozenset({
     "settings_overrides",
     "setup_peer_url",
     "setup_peer_token",
+    # Arming the nightly training-sandbox wipe stays an overlay decision. It
+    # empties the Submission Admin queue and the Drive index, so it should
+    # require a deliberate `doctl apps update` rather than a toggle anyone
+    # holding the /setup page can flip. (The worker also reads it once at boot,
+    # so an override would be inert as well as unwise.)
+    "sandbox_nightly_reset",
 })
 
 # Settings whose VALUE must never be sent to the browser, even read-only. The

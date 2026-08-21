@@ -6,6 +6,74 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+23. **The training sandbox is built but not armed** (2026-08-21). crm-test is
+    becoming CBM's training sandbox and release-test environment on top of its
+    existing job as the pre-production review gate; the nightly restore that
+    keeps those from ruining each other is written, tested and **deliberately
+    inert**. Runbook: `SANDBOX-RESET.md`.
+
+    Done: `scripts/sandbox/reset_crm_sandbox.py` (the CRM half, verified in
+    read-only modes against the live droplet — 205 tables, 141 record / 64
+    config-kept), `core/sandbox_reset.py` + the worker timer (the app-database
+    half), 12 tests including the guard that fails the suite when a migration
+    adds an unclassified table.
+
+    **Purged and seeded 2026-08-21.** Backups first (`2026-08-21_044712.tar.gz`,
+    470 MB, plus a 73 MB logical dump). 1006 business records deleted via the
+    API (`scripts/sandbox/purge_crm_records.py`), then
+    `scripts/sandbox/seed_training_data.py` created the fictional training set:
+    26 mentor profiles (10 on real logins, 9 of them eligible for the Client
+    Administration dropdown), 30 companies, 56 contacts, 16 client profiles, 16
+    engagements across the lifecycle (4 left unassigned), 77 sessions
+    (65 completed back to 2025-09, 12 upcoming), 8 partners, 6 funders. The
+    training login is **`joe.mentor@cbmentors.org` / "Joe Mentor"**, book of 7.
+    Every seeded address is on **`sandbox.cbmentors.org`** — no mailboxes, so
+    an accidental Save cannot send mail or create a calendar invite. The seed
+    is idempotent (proved by a second run reusing everything).
+
+    Owed, in order:
+    - **Clear the app's Postgres before the baseline.** Purging the CRM alone
+      does not stick: the hourly receipt sweep recreated 68 `CIntakeSubmission`
+      receipts from the submissions still in the app database. This is exactly
+      the coupling `core/sandbox_reset.py` exists for — run it once (inside the
+      container, or by arming the flag) before capturing.
+    - **Capture the baseline and prove a restore by hand** before any cron.
+    - **Arm both halves** (crontab line + `SANDBOX_NIGHTLY_RESET` on the
+      crm-test worker only).
+    - **Decide the Google question.** crm-test and prod share one shared drive
+      and one Workspace, with calendar, Gmail and Drive all live. Training
+      barely touches this; release testing cannot be certified without it, and
+      turning the integrations off is not a substitute — a no-op that succeeds
+      is indistinguishable from a feature that works. A separate test Workspace
+      is the fix Doug raised on 2026-08-21; until then, decide per test.
+
+    **Containment pre-flight added 2026-08-21** (`scripts/sandbox/check_containment.py`,
+    run before every training session). Doug's ruling: nobody is meant to save
+    anything, but assume they will. Its first run against crm-test found:
+    - **BLOCKING — Drive uploads land in the production shared drive.** Both
+      apps carry `GDRIVE_SHARED_DRIVE_ID=0AE50yNppMh_hUk9PVA`. A sandbox
+      document save writes into the real CBM drive, and `GDRIVE_IDENTITY=service`
+      means a fake cbmEmail does not contain it. Needs its own drive.
+    - **19 of 44 crm-test mentor profiles carry a cbmEmail**, several of which
+      look like real mailboxes (`doug.bower@`, `sharon.rose@`, `anita.khayat@`
+      — the last two are real production members, `OPEN-ITEMS` #10). Email and
+      calendar containment rests entirely on these NOT existing, so each needs
+      confirming or replacing before training.
+    - **`joseph.blow25@gmail.com`** sits on a mentor profile — an external
+      address that would actually receive.
+    - **Two profiles share `sharon.rose@cbmentors.org`** ("Sharon Rose" and
+      "Jane Doe") — the duplicate-profile trap again.
+
+    Already contained and worth keeping that way on crm-test: `OPS_MAILBOX`
+    unset (no info@ sending, no second inbound poller) and all three
+    `GOOGLE_*` provisioning flags off.
+
+    Known seam: the `.sandbox-hold` sentinel pauses the CRM half only — the app
+    half is on the far side of an SSH boundary and does not read it. Documented
+    in the runbook. The clean close is to make the droplet the only scheduler
+    and have it trigger the app half over an authorised call (the
+    `setup_peer_token` pattern already exists for the environment diff).
+
 1. **This repository's `.git` lives inside the Dropbox-synced tree, and Dropbox
    destroyed it twice in one day** (2026-07-28).
 

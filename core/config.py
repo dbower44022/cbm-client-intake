@@ -143,6 +143,19 @@ class Settings(BaseSettings):
     # how the drift happened (pre-stamp-era records, the collaborators
     # switch, hand edits in the CRM UI). 0 disables.
     assignment_reconcile_seconds: int = 86400
+    # --- Training-sandbox nightly reset (crm-test only) -------------------
+    # crm-test doubles as the training sandbox and the release-test
+    # environment, so it is restored to a golden baseline every night: the CRM
+    # half on the droplet (scripts/sandbox/reset_crm_sandbox.py), the app's own
+    # Postgres here (core/sandbox_reset.py). Both halves refuse to run against
+    # a CRM whose base URL is not crm-test, whatever the flag says. OFF by
+    # default — this empties the Submission Admin queue and the Drive index.
+    # Anchored to a local hour so it lands at the same time nightly rather than
+    # at a worker-restart offset, and scheduled AFTER the droplet's CRM reset
+    # so the two halves land in order.
+    sandbox_nightly_reset: bool = False
+    sandbox_reset_hour: int = 1             # local hour (0-23); CRM half runs at 00:00
+    sandbox_reset_tz: str = "America/New_York"
     alert_check_seconds: int = 300          # how often the worker evaluates thresholds
     # WEB-side worker-liveness watch (2026-07-23): the web process checks the
     # worker's heartbeat row and alerts (email/webhook, same channels) when it
