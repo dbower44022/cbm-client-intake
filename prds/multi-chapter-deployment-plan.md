@@ -1,7 +1,7 @@
 # Multiple chapters — deployment, propagation and support
 
 **Status: PLAN. Eight rulings settled 2026-08-17/18; the design below follows
-from them. The six items in *Proposals* are mine, not Doug's — rule on them in
+from them. The seven items in *Proposals* are mine, not Doug's — rule on them in
 this document.**
 
 Other chapters like CBM want to use these apps and this website. The requirement:
@@ -1185,3 +1185,9 @@ repeatedly with only two instances.
    their own accounts under their own nonprofit grants (ruling 5).
 6. **The exit rehearsal is a Phase 6 deliverable with a named owner**, not a
    clause.
+7. **Phase 1's decision trigger fires 2026-09-19, and Doug owns it** — the date
+   is mine, the event and the owner are not negotiable for the trigger to mean
+   anything. See *Phase 1 § The decision trigger*: if the CRMBuilder requirements
+   session has not answered the product-vs-artifact boundary and the headless
+   requirement by then, Layer 3 proceeds in full and its sunk cost is accepted
+   deliberately.
