@@ -1151,9 +1151,9 @@ Entity Manager vocabulary — [[crm-specs-use-entity-manager-terms]]):
 deployed and verified; `CHANGELOG.md` is the permanent record, `OPEN-ITEMS.md`
 holds anything still owed.*
 
-**Pushed through v0.205.1 on 2026-08-20**; prod verified reporting `0.205.1`
-and serving correctly-branded, token-free pages. **v0.206.0 is committed
-locally and NOT pushed.** What is *verified* is narrower than what
+**Pushed through v0.206.0 on 2026-08-20**; prod verified reporting `0.206.0`,
+serving correctly-branded token-free pages and the four policy links now
+resolving on the live site. Nothing is unpushed. What is *verified* is narrower than what
 is deployed — see each block.
 
 **Confirm that against the remote, do not trust this line.** On 2026-08-20 it
@@ -1174,7 +1174,9 @@ sentence is a convenience.
   branding rewrite covers **`.js` as well as `.html`**: `vendor/` is excluded,
   a token-free file is remembered and handed back to `StaticFiles` untouched,
   and values substituted into JS are escaped for a string-literal context.
-  **Unpushed.**
+  **Verified live on prod**: the served `legal-links.js` carries the four
+  production URLs, no tokens and no staging host, all four resolve `200`, and
+  `busy.js` / `footer.js` / `tokens.css` / vendored Jodit are unchanged.
 - **v0.205.1 — the branded HTML path honours `If-Modified-Since` too**, closing
   a real gap (`FileResponse` honours both; the plain `Response` that replaced it
   honoured only `If-None-Match`) and restoring parity. `Last-Modified` is the
