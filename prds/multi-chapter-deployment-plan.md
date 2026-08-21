@@ -648,6 +648,47 @@ verification backlog, not a documentation one. Several of these are expected to
    against one with a hand-introduced drift, 3 against a URL that does not resolve.
    A code that has never been observed is a code that does not exist.
 
+#### Measured, 2026-08-21 — criteria 1–5 and 7 run for real
+
+The check was built (`scripts/preflight_crm.py`, rewritten; contract tests in
+`tests/test_preflight_conformance.py`) and run against **both live instances**
+with the org-wide API key only. Criterion 6 is covered by unit test rather than
+live, deliberately: producing a 403 needs an under-granted key, and hammering a
+production CRM with a bad credential to prove a message is not worth the auth
+noise. What it found:
+
+- **Two of the three predicted failures were wrong, and the check is what proved
+  it.** All **7 required teams exist on BOTH instances** (9 teams each,
+  identical lists), so `OPEN-ITEMS.md`'s "`Analytics Admin Team` — create in both
+  CRMs" is **done** and closable. And `sync_form_options.py`'s dry-run exits
+  **0 on crm-test**.
+- **The email-template prediction was right, and worse than recorded.** All five
+  `Event*` templates are missing on **both** instances. Beyond that: crm-test
+  holds 2 templates, prod holds 5, so the two CRMs **diverge on templates as well
+  as roles** — and **prod holds `MentorAssignmentNotice` TWICE**. The app looks
+  templates up by name, so a duplicate makes which one staff send arbitrary.
+  That is a live defect nobody was looking for.
+- **prod drifts on exactly one managed option list, and only in ORDER.**
+  `sync_form_options.py` inside the prod container exits 1 on
+  `CMentorProfile.howDidYouHearAboutCBM`: same nine values, different sequence.
+  No value would fail to store; the only effect is the order of a dropdown on the
+  volunteer form. It is also a neat illustration of why ruling 4 reverses this
+  script's arrow — with one static file serving both deploys, "which order is
+  correct" has no answer until the code is the truth.
+- **The check found three dead requirements in its own contract.**
+  `Account.cAccountType` and `CIntakeSubmission.reason` / `.status` had been
+  required for months and are written by nothing (`core/submission_log.py`, cited
+  as their source, no longer exists). A gate that reports drift nobody can fix is
+  a gate that gets ignored — corrected in the same commit.
+- **Exit codes 1 and 3 were produced live** (drift on both instances; 22
+  `unreachable` checks and exit 3 against a hostname that does not resolve), and
+  0 is reachable once the templates land.
+
+The residual value of criterion 5 stands: **the two CRMs are far closer than the
+drift narrative assumed** — identical teams, identical enum values across all 16
+managed lists, one ordering difference — and where they actually differ is
+**email templates**, which nothing was watching.
+
 **Provable once the applier exists (Layer 2 or 3):**
 
 8. **Idempotence, observed in the CRM**: apply against crm-test, then apply again.
