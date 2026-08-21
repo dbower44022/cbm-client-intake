@@ -295,6 +295,12 @@ SETTINGS: tuple[SettingSpec, ...] = (
        help="The name every page carries — title, footer and the public forms' prose. "
             "Substituted server-side as it is served, so a change here takes effect on "
             "the next page load with no redeploy."),
+    _s("policy_client_conduct_url", GROUP_PRESENTATION, "Client code of conduct URL",
+       help="Linked from the consent checkbox on the public forms."),
+    _s("policy_mentor_ethics_url", GROUP_PRESENTATION, "Mentor code of ethics URL",
+       help="The volunteer form's Code of Conduct link — a different document."),
+    _s("policy_terms_url", GROUP_PRESENTATION, "Terms of use URL"),
+    _s("policy_privacy_url", GROUP_PRESENTATION, "Privacy policy URL"),
     _s("chapter_tokens_url", GROUP_PRESENTATION, "Chapter design-token override",
        help="URL of a stylesheet redefining --cbm-* custom properties on :root. "
             "Loaded after the base tokens; custom properties only, never selectors."),

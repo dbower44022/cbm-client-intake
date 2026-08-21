@@ -1066,6 +1066,13 @@ def create_app(
                 BrandedStaticFiles(directory=str(DIRECTORY_FRONTEND_DIR), html=True),
                 name=f"directory-frontend-{_kind}",
             )
-    app.mount("/shared", StaticFiles(directory=str(SHARED_DIR)), name="shared")
+    app.mount(
+        "/shared",
+        # Branded: legal-links.js carries the policy-document URLs as tokens.
+        # Files without tokens (and anything vendored) fall through to the
+        # normal streamed response.
+        BrandedStaticFiles(directory=str(SHARED_DIR)),
+        name="shared",
+    )
 
     return app

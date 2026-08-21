@@ -52,6 +52,24 @@ class Settings(BaseSettings):
     # Empty (the default) injects nothing at all.
     chapter_tokens_url: str = ""
 
+    # The policy documents the consent checkbox links to on the public forms
+    # (client-intake, volunteer, partner, sponsor). Substituted into
+    # frontend/shared/legal-links.js as tokens, so a chapter points at its own
+    # documents without a code change.
+    #
+    # These are what a member of the public is told they are agreeing to. Until
+    # v0.206.0 three of the four were hardcoded to the WPEngine STAGING host
+    # (cbmentostagdev.wpenginepowered.com); all four documents live at the same
+    # slugs on the live site, verified 2026-08-20, so the fix was the host.
+    policy_client_conduct_url: str = (
+        "https://clevelandbusinessmentors.org/client-code-of-conduct/"
+    )
+    policy_mentor_ethics_url: str = (
+        "https://clevelandbusinessmentors.org/mentor-code-of-ethics/"
+    )
+    policy_terms_url: str = "https://clevelandbusinessmentors.org/legal-notices/"
+    policy_privacy_url: str = "https://clevelandbusinessmentors.org/privacy-policy/"
+
     # The CBM documentation site (BookStack), linked from the portal home page
     # so signed-in users can find the app user guides. Empty hides the link.
     docs_site_url: str = "https://docs.clevelandbusinessmentors.org"

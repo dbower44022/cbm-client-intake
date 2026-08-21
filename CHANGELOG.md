@@ -4,6 +4,48 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.206.0] — 2026-08-20
+
+**fix(forms): the consent checkbox linked to Cleveland's STAGING website.**
+Found during the Phase 0 de-Clevelanding inventory; this is the fix.
+
+`frontend/shared/legal-links.js` is what turns the phrases inside the consent
+checkbox into links, on **client-intake, volunteer, partner and sponsor** — the
+documents a member of the public is told they are agreeing to. Three of its four
+URLs pointed at `cbmentostagdev.wpenginepowered.com`:
+
+| Link | Was | Now |
+|---|---|---|
+| Client Code of Conduct | **staging** | `clevelandbusinessmentors.org/client-code-of-conduct/` |
+| Terms of Use | **staging** | `…/legal-notices/` |
+| Privacy Policy | **staging** | `…/privacy-policy/` |
+| Mentor Code of Ethics | live (correct) | unchanged |
+
+All four documents were verified live on 2026-08-20 at the **same slugs** on the
+production site — real pages, no redirects — so there was never an unknown URL
+to decide, only a stale host. (Worth noting: the page at
+`/client-code-of-conduct/` is titled "Client Code of *Ethics*" while the
+checkbox says "Client Code of Conduct". The slug is right; the wording differs.)
+
+**They are settings now, not constants** — `POLICY_CLIENT_CONDUCT_URL`,
+`POLICY_MENTOR_ETHICS_URL`, `POLICY_TERMS_URL`, `POLICY_PRIVACY_URL`, all on
+`/setup` — so a chapter points at its own policy documents without a code
+change. This completes Phase 0's last real item: the plan classified these as
+"setting", and until now they were the one place the product's owner was
+hardcoded outside a page title.
+
+**The branding rewrite now covers `.js` as well as `.html`**, which is what
+makes that possible. It stays cheap and safe: anything under a `vendor/` path is
+excluded outright, and a file containing no token is remembered as token-free
+and handed straight back to `StaticFiles` with its normal streamed response and
+ETag. Values substituted into JS are escaped for a **string-literal** context,
+so a policy URL cannot close its own literal — tested.
+
+Two of the four tests added here failed first for reasons that were my own
+fault, and both are worth recording: one asserted a staging link in a
+*provenance comment* was a live link, and one stripped the backslash that was
+doing the escaping and then reported the escaping missing.
+
 ## [0.205.1] — 2026-08-20
 
 **fix(branding): the branded HTML path honours `If-Modified-Since` too.**

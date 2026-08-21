@@ -1134,6 +1134,9 @@ Entity Manager vocabulary — [[crm-specs-use-entity-manager-terms]]):
   website. Chapter theming is `CHAPTER_TOKENS_URL`, a stylesheet loaded after
   `/shared/tokens.css` that may redefine `--cbm-*` on `:root` and nothing else.
   Inventory and rulings: `prds/multi-chapter-deployment-plan.md` § *Phase 0*.
+  The rewrite covers `.js` too (`vendor/` excluded, token-free files untouched),
+  which is how `legal-links.js` gets the four `POLICY_*_URL` settings — the
+  policy documents the public consent checkbox links to.
 - **A new CRM-facing feature should feature-detect its field from metadata**
   rather than requiring a coordinated deploy — the established pattern is that
   the feature stays dark until the CRM field exists, then activates with no
@@ -1149,7 +1152,8 @@ deployed and verified; `CHANGELOG.md` is the permanent record, `OPEN-ITEMS.md`
 holds anything still owed.*
 
 **Pushed through v0.205.1 on 2026-08-20**; prod verified reporting `0.205.1`
-and serving correctly-branded, token-free pages. Nothing is unpushed. What is *verified* is narrower than what
+and serving correctly-branded, token-free pages. **v0.206.0 is committed
+locally and NOT pushed.** What is *verified* is narrower than what
 is deployed — see each block.
 
 **Confirm that against the remote, do not trust this line.** On 2026-08-20 it
@@ -1158,6 +1162,19 @@ locally, and a session that believed it pushed a docs commit and shipped a
 feature to production with it. `git log origin/main..main` is the answer; this
 sentence is a convenience.
 
+- **v0.206.0 — the consent checkbox linked to Cleveland's STAGING site.** Three
+  of the four policy URLs in `frontend/shared/legal-links.js` — Client Code of
+  Conduct, Terms of Use, Privacy Policy — pointed at
+  `cbmentostagdev.wpenginepowered.com` on all four consent-bearing public forms.
+  All four documents live at the **same slugs** on the production site (verified
+  live 2026-08-20), so the fix was the host. They are **settings** now
+  (`POLICY_*_URL`, on `/setup`), which closes Phase 0's last real item — the
+  plan classified them as "setting" and they were the only place outside a page
+  title where the product's owner was hardcoded. To make that possible the
+  branding rewrite covers **`.js` as well as `.html`**: `vendor/` is excluded,
+  a token-free file is remembered and handed back to `StaticFiles` untouched,
+  and values substituted into JS are escaped for a string-literal context.
+  **Unpushed.**
 - **v0.205.1 — the branded HTML path honours `If-Modified-Since` too**, closing
   a real gap (`FileResponse` honours both; the plain `Response` that replaced it
   honoured only `If-None-Match`) and restoring parity. `Last-Modified` is the

@@ -409,3 +409,75 @@ def test_reverting_to_a_previous_name_also_defeats_a_date_revalidation(monkeypat
     resp = reverted.get("/volunteer/", headers={"If-Modified-Since": stamp})
     assert resp.status_code == 200
     assert ORG_LITERAL in resp.text
+
+
+# --- the policy document links ---------------------------------------------
+
+POLICY_TOKENS = (
+    "{{policyClientConduct}}", "{{policyMentorEthics}}",
+    "{{policyTerms}}", "{{policyPrivacy}}",
+)
+
+
+def test_the_policy_urls_are_not_hardcoded():
+    """These are the documents a member of the public is told they are agreeing
+    to. Three of the four used to be hardcoded to the WPEngine STAGING host."""
+    source = (ROOT / "frontend" / "shared" / "legal-links.js").read_text()
+    assert "wpenginepowered.com" not in source
+    assert "clevelandbusinessmentors.org" not in source
+    for token in POLICY_TOKENS:
+        assert token in source, f"{token} missing from legal-links.js"
+
+
+def test_no_frontend_file_points_at_the_staging_site():
+    """The staging host is never a correct destination for a shipped page."""
+    offenders = [
+        _rel(p) for p in _frontend_files(".html", ".js", ".css")
+        if _rel(p) not in GUARD_EXEMPT
+        and "wpenginepowered.com" in p.read_text(encoding="utf-8", errors="ignore")
+    ]
+    assert not offenders, "links to the WPEngine staging site: " + ", ".join(offenders)
+
+
+def test_the_served_script_carries_the_real_urls(monkeypatch):
+    client = _public_app(monkeypatch)
+    body = client.get("/shared/legal-links.js").text
+    assert "{{" not in body
+    assert "https://clevelandbusinessmentors.org/client-code-of-conduct/" in body
+    assert "https://clevelandbusinessmentors.org/mentor-code-of-ethics/" in body
+    assert "https://clevelandbusinessmentors.org/legal-notices/" in body
+    assert "https://clevelandbusinessmentors.org/privacy-policy/" in body
+
+
+def test_a_chapter_points_the_links_at_its_own_documents(monkeypatch):
+    client = _public_app(monkeypatch, POLICY_PRIVACY_URL="https://akron.org/privacy/")
+    body = client.get("/shared/legal-links.js").text
+    assert "https://akron.org/privacy/" in body
+    assert "clevelandbusinessmentors.org/privacy-policy" not in body
+
+
+def test_a_policy_url_cannot_break_out_of_its_string_literal(monkeypatch):
+    client = _public_app(
+        monkeypatch, POLICY_TERMS_URL='x"; window.stolen=document.cookie; //'
+    )
+    body = client.get("/shared/legal-links.js").text
+    # The payload's own text is expected to appear — INSIDE the string literal.
+    # What must not appear is an UNESCAPED quote closing that literal early.
+    assert 'x";' not in body, "the value closed its own string literal"
+    assert 'x\\";' in body, "the quote should have been escaped, not dropped"
+
+
+def test_a_shared_script_without_tokens_is_served_untouched(monkeypatch):
+    """Extending the rewrite to .js must not disturb the other shared assets."""
+    client = _public_app(monkeypatch)
+    r = client.get("/shared/busy.js")
+    assert r.status_code == 200
+    assert "CBMBusy" in r.text
+    assert r.headers.get("etag")
+
+
+def test_vendored_assets_are_never_rewritten(monkeypatch):
+    client = _public_app(monkeypatch)
+    r = client.get("/shared/vendor/jodit/jodit.min.js")
+    assert r.status_code == 200
+    assert len(r.content) > 100_000

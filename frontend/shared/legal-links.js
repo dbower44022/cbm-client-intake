@@ -1,17 +1,22 @@
 /* Turns the policy phrases inside the consent checkbox into links.
  *
- * SINGLE SOURCE OF TRUTH for the policy document URLs — update them here and
- * every form's consent checkbox picks up the change. Only forms that have the
- * `#terms_accepted` checkbox (client-intake, volunteer) are affected.
+ * The URLs are SETTINGS, substituted server-side as this file is served
+ * (core/branding.py; policy_* in core/config.py) — so a deployment points at
+ * its own policy documents without a code change. Only forms carrying the
+ * `#terms_accepted` checkbox are affected.
+ *
+ * These are the documents a member of the public is told they are agreeing to.
+ * Three of the four used to be hardcoded to the WPEngine STAGING host; see
+ * CHANGELOG v0.206.0.
  */
 (function () {
   "use strict";
 
   var URLS = {
-    conduct: "https://cbmentostagdev.wpenginepowered.com/client-code-of-conduct/",
-    mentorConduct: "https://clevelandbusinessmentors.org/mentor-code-of-ethics/",
-    terms: "https://cbmentostagdev.wpenginepowered.com/legal-notices/",
-    privacy: "https://cbmentostagdev.wpenginepowered.com/privacy-policy/",
+    conduct: "{{policyClientConduct}}",
+    mentorConduct: "{{policyMentorEthics}}",
+    terms: "{{policyTerms}}",
+    privacy: "{{policyPrivacy}}",
   };
 
   // The volunteer (mentor intake) form's "Code of Conduct" is the *mentor* code

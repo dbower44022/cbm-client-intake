@@ -61,6 +61,10 @@ if TYPE_CHECKING:  # pragma: no cover
 #: public forms was a copy bug, not a second brand. Kept as a table rather than an
 #: f-string so a genuinely new token is a one-line addition here and nowhere else.
 TOKEN_ORG = "{{org}}"
+TOKEN_POLICY_CLIENT_CONDUCT = "{{policyClientConduct}}"
+TOKEN_POLICY_MENTOR_ETHICS = "{{policyMentorEthics}}"
+TOKEN_POLICY_TERMS = "{{policyTerms}}"
+TOKEN_POLICY_PRIVACY = "{{policyPrivacy}}"
 
 
 #: How a value is escaped for the place it lands in. The value is CONFIGURATION,
@@ -75,7 +79,13 @@ MODE_TEXT = "text"
 
 def tokens(settings: "Settings") -> dict[str, str]:
     """The substitution table for one deployment, values unescaped."""
-    return {TOKEN_ORG: settings.organization_name}
+    return {
+        TOKEN_ORG: settings.organization_name,
+        TOKEN_POLICY_CLIENT_CONDUCT: settings.policy_client_conduct_url,
+        TOKEN_POLICY_MENTOR_ETHICS: settings.policy_mentor_ethics_url,
+        TOKEN_POLICY_TERMS: settings.policy_terms_url,
+        TOKEN_POLICY_PRIVACY: settings.policy_privacy_url,
+    }
 
 
 def _escape(value: str, mode: str) -> str:
@@ -210,6 +220,8 @@ class BrandedStaticFiles(StaticFiles):
             from core.config import get_settings as settings_provider  # noqa: N813
         self._settings_provider = settings_provider
         self._cache: dict[tuple, tuple[bytes, str]] = {}
+        #: Files checked once and found to contain no token — served normally.
+        self._no_tokens: set[tuple] = set()
 
     def file_response(
         self,
@@ -218,16 +230,36 @@ class BrandedStaticFiles(StaticFiles):
         scope: Scope,
         status_code: int = 200,
     ) -> Response:
-        if status_code == 200 and str(full_path).endswith(".html"):
-            branded = self._branded_html(full_path, stat_result, scope)
-            if branded is not None:
-                return branded
+        if status_code == 200:
+            mode = self._mode_for(str(full_path))
+            if mode is not None:
+                branded = self._branded(full_path, stat_result, scope, mode)
+                if branded is not None:
+                    return branded
         return super().file_response(full_path, stat_result, scope, status_code)
+
+    @staticmethod
+    def _mode_for(path: str) -> Optional[str]:
+        """Which files may carry tokens, and how their values must be escaped.
+
+        Vendored assets are excluded outright — they are third-party code we do
+        not rewrite, and jodit.min.js is 800KB we would otherwise read to find
+        no tokens in it. A `.js` file with no token falls through to the normal
+        streamed `FileResponse`, so extending this costs nothing on the files
+        that do not use it.
+        """
+        if "/vendor/" in path:
+            return None
+        if path.endswith(".html"):
+            return MODE_HTML
+        if path.endswith(".js"):
+            return MODE_JS
+        return None
 
     # -- internals ----------------------------------------------------------
 
-    def _branded_html(
-        self, full_path, stat_result: os.stat_result, scope: Scope
+    def _branded(
+        self, full_path, stat_result: os.stat_result, scope: Scope, mode: str
     ) -> Optional[Response]:
         if not stat_module.S_ISREG(stat_result.st_mode):
             return None
@@ -238,6 +270,8 @@ class BrandedStaticFiles(StaticFiles):
             stat_result.st_size,
             brand_key(settings),
         )
+        if key in self._no_tokens:
+            return None  # known token-free: stream it as StaticFiles would
         hit = self._cache.get(key)
         if hit is None:
             try:
@@ -246,7 +280,15 @@ class BrandedStaticFiles(StaticFiles):
                 # Unreadable or not really text — let StaticFiles handle it
                 # exactly as it would have. Branding must never 500 a page.
                 return None
-            body = render_page(raw, settings).encode("utf-8")
+            if not any(tok in raw for tok in tokens(settings)):
+                # No tokens: hand it back to StaticFiles so it keeps its normal
+                # streamed response, ETag and Range support.
+                self._no_tokens.add(key)
+                return None
+            rendered = render_page(raw, settings) if mode == MODE_HTML else render(
+                raw, settings, mode
+            )
+            body = rendered.encode("utf-8")
             etag = '"' + hashlib.md5(body, usedforsecurity=False).hexdigest() + '"'
             hit = (body, etag)
             # One entry per HTML file per deploy; the app has 18 of them.
@@ -257,7 +299,10 @@ class BrandedStaticFiles(StaticFiles):
         # branding — see _BRAND_FIRST_SEEN.
         modified = max(stat_result.st_mtime, _brand_epoch(brand_key(settings)))
         headers = {
-            "content-type": "text/html; charset=utf-8",
+            "content-type": (
+                "text/html; charset=utf-8" if mode == MODE_HTML
+                else "text/javascript; charset=utf-8"
+            ),
             "content-length": str(len(body)),
             "etag": etag,
             "last-modified": formatdate(modified, usegmt=True),
