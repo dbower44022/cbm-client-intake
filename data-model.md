@@ -5,7 +5,15 @@ the code (`core/store.py`, `core/schema_contract.py`, `sessions/config.py`, the
 five `forms/*/orchestrator.py` modules) and the CRM build handoffs, not from
 prose. Cardinality reflects the CRM as of 2026-08-20.
 
-Published as a browsable page: <https://claude.ai/code/artifact/43f7db62-7c3f-49cb-b2da-b0aba1c5ade6>
+> Published to the docs site 2026-08-21:
+> https://docs.clevelandbusinessmentors.org/books/data-model/page/how-the-data-is-structured
+> (System Administration shelf -> Data Model book). **Keep the two in sync.** The
+> diagrams there are PNGs exported from the mermaid blocks below with
+> `@mermaid-js/mermaid-cli`; re-export and re-upload them when the model changes,
+> because that BookStack has no mermaid renderer.
+
+Also published as a browsable page with live diagrams:
+<https://claude.ai/code/artifact/43f7db62-7c3f-49cb-b2da-b0aba1c5ade6>
 
 ## The two stores
 
@@ -166,6 +174,21 @@ erDiagram
         wysiwyg bodyCleaned
         string sourceMailbox
     }
+
+    CConversation ||--o{ CCommunication  : "communications"
+    CConversation }o--o{ CEngagement     : "engagements"
+    CConversation }o--o{ CPartnerProfile : "partnerProfiles"
+    CConversation }o--o{ CSponsorProfile : "sponsorProfiles"
+    CConversation }o--o{ Contact         : "contacts"
+```
+
+A conversation is one email thread and attaches to several records at once —
+which is how the same thread appears on an engagement and on each contact in it.
+The rest hang off the spine one-to-one: receipts, enquiries, events and the
+audit trail.
+
+```mermaid
+erDiagram
     CIntakeSubmission {
         enum intakeStatus "the receipt vocabulary"
         text payload
@@ -175,15 +198,15 @@ erDiagram
         enum requestStatus
         text message
     }
-    CEventRegistration {
-        datetime registrationDate
-        enum registrationSource
-        url zoomJoinUrl
-    }
     CEvent {
         bool publishToWebsite "the only public boundary"
         datetime dateStart
         url recordingUrl
+    }
+    CEventRegistration {
+        datetime registrationDate
+        enum registrationSource
+        url zoomJoinUrl
     }
     CActionLog {
         string app
@@ -192,11 +215,6 @@ erDiagram
         string recordId
     }
 
-    CConversation       ||--o{ CCommunication     : "communications"
-    CConversation       }o--o{ CEngagement        : "engagements"
-    CConversation       }o--o{ CPartnerProfile    : "partnerProfiles"
-    CConversation       }o--o{ CSponsorProfile    : "sponsorProfiles"
-    CConversation       }o--o{ Contact            : "contacts"
     CIntakeSubmission   }o--o| Contact            : "contact"
     CInformationRequest }o--|| Contact            : "contact"
     CInformationRequest }o--o| Account            : "infoRequestCompany"
@@ -254,6 +272,23 @@ erDiagram
         string user_name PK
         timestamptz viewed_at
     }
+
+    submission ||--o{ submission_comment  : "submission_id"
+    submission ||--o{ submission_activity : "submission_id"
+    submission ||--o{ submission_presence : "submission_id"
+    submission |o--o| submission          : "duplicate_of"
+    submission }o--o| CIntakeSubmission   : "crm_receipt_id"
+```
+
+`(form_slug, submission_token)` is the idempotency guarantee: a double-submitted
+form cannot produce two rows. And because the worker records each CRM create in
+`progress`, a retry resumes a half-finished chain instead of duplicating it.
+
+The remaining tables carry no foreign keys to each other. They reach into the
+CRM by soft key — a type string plus a record id, shown here as `CRM_Record`.
+
+```mermaid
+erDiagram
     app_document {
         string id PK
         string drive_file_id UK
@@ -304,24 +339,15 @@ erDiagram
         text panels "JSON, references metric keys"
     }
 
-    submission            ||--o{ submission_comment  : "submission_id"
-    submission            ||--o{ submission_activity : "submission_id"
-    submission            ||--o{ submission_presence : "submission_id"
-    submission            |o--o| submission          : "duplicate_of"
-    submission            }o--o| CIntakeSubmission   : "crm_receipt_id"
-    app_document          }o--|| CRM_Record          : "entity_type + record_id"
-    record_comment        }o--|| CRM_Record          : "parent_type + parent_id"
-    comm_attachment       }o--o| app_document        : "document_id"
-    comm_attachment       }o--|| CRM_Record          : "entity_type + record_id"
-    conversation_thread   }o--|| CConversation       : "conversation_id"
-    conversation_seen     }o--|| CConversation       : "conversation_id"
-    conversation_override }o--|| CConversation       : "conversation_id"
-    analytics_page        }o--o{ analytics_metric    : "panels[].metric_key"
+    app_document          }o--|| CRM_Record       : "entity_type + record_id"
+    record_comment        }o--|| CRM_Record       : "parent_type + parent_id"
+    comm_attachment       }o--o| app_document     : "document_id"
+    comm_attachment       }o--|| CRM_Record       : "entity_type + record_id"
+    conversation_thread   }o--|| CConversation    : "conversation_id"
+    conversation_seen     }o--|| CConversation    : "conversation_id"
+    conversation_override }o--|| CConversation    : "conversation_id"
+    analytics_page        }o--o{ analytics_metric : "panels[].metric_key"
 ```
-
-`(form_slug, submission_token)` is the idempotency guarantee: a double-submitted
-form cannot produce two rows. And because the worker records each CRM create in
-`progress`, a retry resumes a half-finished chain instead of duplicating it.
 
 | Table | Group | Holds | Key |
 |---|---|---|---|
