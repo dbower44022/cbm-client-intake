@@ -111,6 +111,36 @@ CLIENTS: tuple[tuple[str, str, str, str, str, int], ...] = (
 #: Clients belonging to the training mentor — the first six above.
 TRAINING_BOOK = 6
 
+#: Mentors built out to look like ordinary, fully-established members: the two
+#: identities a mentor demo is actually given. Mentor Administration's
+#: completeness badge (``mentoradmin.service.check_completeness``) reads
+#: Complete only with a linked Contact, all three sign-off flags, and — because
+#: these are Active — a cbmEmail plus the SAME login User on both the profile
+#: and its Contact. The rest of the roster is left with a realistic spread of
+#: gaps, because a Mentor Administration demo needs Incomplete rows to look at.
+COMPLETE_MENTORS: dict[str, dict] = {
+    "Joe Mentor": {
+        "mentorType": "Mentor",
+        "yearsOfExperience": 22,
+        "maximumClientCapacity": 5,
+        "industrySector": "Manufacturing",
+        "areaOfExpertise": ["Business Strategy & Planning", "Finance & Cash Flow Management"],
+        "mentoringFocusAreas": ["Business Consulting & Coaching", "Construction"],
+        "description": "Thirty years in operations before joining CBM. Enjoys "
+                       "sailing, bad puns and the Cleveland Orchestra.",
+    },
+    "Matt Mentor": {
+        "mentorType": "Mentor",
+        "yearsOfExperience": 14,
+        "maximumClientCapacity": 4,
+        "industrySector": "Retail Trade",
+        "areaOfExpertise": ["Digital Marketing & Social Media", "E-Commerce"],
+        "mentoringFocusAreas": ["Advertising, Design, & Marketing", "Accounting & Tax Services"],
+        "description": "Built and sold two retail businesses. Coaches youth "
+                       "soccer and roasts his own coffee.",
+    },
+}
+
 PARTNERS: tuple[tuple[str, str, str], ...] = (
     ("Cuyahoga Small Business Alliance", "Terrence", "Boyd"),
     ("Lakeshore Community Foundation", "Meredith", "Vance"),
@@ -343,6 +373,58 @@ async def seed_sessions(
     await s.upsert("CSession", f"{upcoming:%Y-%m-%d} - {company}", payload)
 
 
+async def complete_mentors(s: Seeder, profiles: dict[str, str], users: dict[str, str]) -> None:
+    """Bring the demo mentors up to a fully-established, Complete member.
+
+    This UPDATES rather than creating, so it is the one stage that fixes a
+    profile the seed already made. Two halves, and the second is the one that
+    is easy to miss: the completeness check requires the mentor's login User on
+    the **Contact** as well as the profile, and Contact uses Multiple Assigned
+    Users, so the id goes in ``assignedUsersIds`` (the single ``assignedUser``
+    is disabled and always reads back null).
+    """
+    logins = {name: user for name, user, _ in MENTORS_WITH_LOGINS}
+    for name, detail in COMPLETE_MENTORS.items():
+        profile_id = profiles.get(name)
+        if not profile_id:
+            print(f"  ! {name}: no profile — skipped")
+            continue
+        user_id = users.get(logins.get(name, ""))
+        payload = {
+            **detail,
+            # The three sign-off flags completeness insists on. Background
+            # check is optional to the badge, but an established member has one.
+            "ethicsAgreementAccepted": True,
+            "trainingCompleted": True,
+            "termsAccepted": True,
+            "backgroundCheckCompleted": True,
+            "mentorCodeAccepted": True,
+            "acceptingNewClients": True,
+            "mentorStatus": "Active",
+            "publicProfile": True,
+            # The badge the grid renders is the PERSISTED enum, which the app
+            # only self-heals when someone opens or saves the record. Without
+            # this the roster shows these two as Incomplete until a human
+            # clicks them — the opposite of the impression a demo wants.
+            "recordStatus": "Complete",
+        }
+        if not s.apply:
+            print(f"  would complete {name} ({len(payload)} fields, Contact stamp)")
+            continue
+        await s.client.update("CMentorProfile", profile_id, payload)
+
+        record = await s.client.get(
+            "CMentorProfile", profile_id, select="contactRecordId,cbmEmail"
+        )
+        contact_id = record.get("contactRecordId")
+        if contact_id and user_id:
+            await s.client.update("Contact", contact_id, {
+                "assignedUserId": user_id, "assignedUsersIds": [user_id],
+            })
+        print(f"  completed {name}"
+              f"{'' if contact_id else ' (no Contact to stamp!)'}")
+
+
 async def seed_partners(s: Seeder, profiles: dict[str, str]) -> None:
     manager = profiles.get("Partner Manager")
     for company, first, last in PARTNERS:
@@ -419,6 +501,7 @@ async def main() -> int:
 
     try:
         profiles = await seed_mentors(seeder, users)
+        await complete_mentors(seeder, profiles, users)
         await seed_clients(seeder, profiles, users)
         await seed_partners(seeder, profiles)
         await seed_funders(seeder, profiles)
