@@ -6,17 +6,36 @@ deploy marker on App Platform.
 
 ## [0.205.1] — 2026-08-20
 
-**fix(branding): branded HTML revalidates again.** Found by reading the live
-response headers after v0.205.0 shipped, not by a test.
+**fix(branding): the branded HTML path honours `If-Modified-Since` too.**
+
+**Correction to what this entry first said.** It was written as a regression —
+"branded HTML revalidates again" — on the strength of the branded pages having
+no `ETag` in production while untouched assets did. A control test afterwards
+showed that reading was wrong, and the entry below has been rewritten to say
+what is actually true.
 
 Serving HTML through the branding rewrite replaced Starlette's `FileResponse`
 with a plain `Response`, and the replacement honoured `If-None-Match` but not
-`If-Modified-Since`. That would have been fine — except **DO's edge strips the
-`ETag` from HTML responses** (assets served straight from disk keep theirs), so
-`If-Modified-Since` is the only conditional request that actually reaches the
-app in production. Every page load was therefore transferring in full instead of
-answering `304`, which is exactly what the `_revalidate_frontend` middleware
-exists to avoid.
+`If-Modified-Since`. That was a real gap — `FileResponse` honours both — and it
+is closed here, so the branded path now behaves exactly as the one it replaced.
+
+**But it changed nothing in production, and no regression had shipped.**
+Measured against prod on 2026-08-20:
+
+| | untouched asset (`/shared/tokens.css`) | branded HTML (`/volunteer/`) |
+|---|---|---|
+| local origin, by ETag | `304` | `304` |
+| local origin, by date | `304` | `304` |
+| **through the edge, by ETag** | `304` | **no ETag to send — stripped** |
+| **through the edge, by date** | **`200`** | **`200`** |
+
+The edge strips the `ETag` from HTML responses *and* does not act on
+`If-Modified-Since` for anything, assets included. So **HTML has never answered
+`304` in production** — not before v0.205.0 and not after. The
+`_revalidate_frontend` middleware's docstring, which says StaticFiles answers
+with a cheap `304`, is true at the origin and not true through the edge; that
+is now recorded as a gotcha in `CLAUDE.md` rather than left to mislead the next
+person, as it misled this one.
 
 The fix is not just "also check the date". A rewritten page's content changes
 when the **setting** changes, not when the file does, so a `Last-Modified` taken
@@ -30,7 +49,9 @@ same second would otherwise compare equal.
 
 Four tests cover it: revalidation by date, a rename defeating a date
 revalidation, a revert doing the same, and `If-None-Match` winning outright when
-present (RFC 9110 §13.1.3) rather than being second-guessed by a date.
+present (RFC 9110 §13.1.3) rather than being second-guessed by a date. The
+change is kept because it is correct and restores parity with `FileResponse` —
+not because it fixed anything users were seeing.
 
 ## [0.205.0] — 2026-08-20
 

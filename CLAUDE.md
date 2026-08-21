@@ -993,6 +993,16 @@ Conventions. Plan: `prds/action-history-plan.md`;
 - **Non-required fields must never block a save** over enum drift — schemas use
   free strings, the sanitizer is the gate, and validation errors return readable
   messages ([[non-required-enums-never-block]]).
+- **HTML never answers `304` through the DO edge** — it strips the `ETag` from
+  HTML responses (assets served from disk keep theirs) and does not act on
+  `If-Modified-Since` for anything. Measured on prod 2026-08-20: an asset 304s
+  by ETag and 200s by date; HTML 200s both ways, because it has no ETag left to
+  send. **At the origin all four combinations 304 correctly**, so a local test
+  proves nothing about this. The `_revalidate_frontend` middleware's docstring
+  ("StaticFiles answers with a cheap 304") is true locally and not true in
+  production. Do not read a missing HTML `ETag` as a regression — it is the
+  edge, it predates the branding rewrite, and it cost a wrong diagnosis and a
+  corrected changelog entry once already ([[do-edge-strips-html-etag]]).
 - **`.dockerignore` must exclude `.venv`** — `COPY . .` otherwise overwrites the
   container's virtualenv with the host's (`sh: .venv/bin/uvicorn: not found`).
 - **`app.js` in the session tools is one shared IIFE** — a later duplicate
@@ -1138,8 +1148,8 @@ Entity Manager vocabulary — [[crm-specs-use-entity-manager-terms]]):
 deployed and verified; `CHANGELOG.md` is the permanent record, `OPEN-ITEMS.md`
 holds anything still owed.*
 
-**Pushed through v0.205.0 on 2026-08-20**; prod verified reporting `0.205.0`.
-**v0.205.1 is committed locally and NOT pushed.** What is *verified* is narrower than what
+**Pushed through v0.205.1 on 2026-08-20**; prod verified reporting `0.205.1`
+and serving correctly-branded, token-free pages. Nothing is unpushed. What is *verified* is narrower than what
 is deployed — see each block.
 
 **Confirm that against the remote, do not trust this line.** On 2026-08-20 it
@@ -1148,18 +1158,16 @@ locally, and a session that believed it pushed a docs commit and shipped a
 feature to production with it. `git log origin/main..main` is the answer; this
 sentence is a convenience.
 
-- **v0.205.1 — branded HTML revalidates again.** Serving HTML through the
-  branding rewrite swapped `FileResponse` for a plain `Response` that honoured
-  `If-None-Match` only — and **DO's edge strips the ETag from HTML** (assets
-  keep theirs), so `If-Modified-Since` is the only conditional request that
-  reaches the app in production and every page load was transferring in full.
-  `Last-Modified` is now the later of the file's mtime and a strictly
-  increasing **brand epoch**, because a rewritten page changes when the
-  *setting* does, not when the file does — a mtime-only stamp would 304 a
-  browser into keeping the previous organisation's name, and a *revert* to an
-  earlier name is a change like any other. **Found by reading the live response
-  headers after the push, not by a test** — a matching version number is not
-  the same as a correct response. **Unpushed.**
+- **v0.205.1 — the branded HTML path honours `If-Modified-Since` too**, closing
+  a real gap (`FileResponse` honours both; the plain `Response` that replaced it
+  honoured only `If-None-Match`) and restoring parity. `Last-Modified` is the
+  later of the file's mtime and a strictly increasing **brand epoch**, because a
+  rewritten page changes when the *setting* does, not when the file does — an
+  mtime-only stamp would 304 a browser into keeping the previous organisation's
+  name, and a *revert* to an earlier name is a change like any other.
+  **It changed nothing in production**: this was first written up as a shipped
+  regression, and a control test disproved that — see the gotcha below. Kept
+  because it is correct, not because users were seeing anything.
 - **v0.205.0 — the product stopped saying Cleveland.** Phase 0 of the
   chapter-network plan, and worth doing whatever happens with the chapters. The
   organisation's name is one setting (`ORGANIZATION_NAME`, default Cleveland),

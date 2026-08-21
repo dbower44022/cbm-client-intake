@@ -296,9 +296,15 @@ reports `organization`. The portal root matters most of those: it is one of
 three pages served by a **direct read** rather than the static mount, so it
 would have shipped a raw `{{org}}` had the rewrite been missed there.
 
-Reading the live headers in the same pass is what turned up the revalidation
-regression fixed in v0.205.1 — worth remembering that the version number
-matching is not the same as the response being right.
+Reading the live headers in the same pass turned up a real gap in the branded
+path (it honoured `If-None-Match` but not `If-Modified-Since`, where the
+`FileResponse` it replaced honoured both), fixed in v0.205.1. It was first
+written up as a shipped regression; a control test against an untouched asset
+disproved that — **HTML has never answered `304` through the DO edge**, before
+or after, because the edge strips HTML `ETag`s and ignores `If-Modified-Since`.
+Two lessons worth keeping: a matching version number is not the same as a
+correct response, and a header that looks wrong in production needs a control
+on a file the change did not touch before it is called a regression.
 
 **Still owed**, none of it reachable with an unauthenticated fetch:
 
