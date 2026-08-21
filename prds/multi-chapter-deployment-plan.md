@@ -177,8 +177,10 @@ so that a candidate implementation can be held against it and fail.
 
 **C1 — Headless invocation.** One non-interactive entry point, invocable as a
 process with arguments and environment only. The precedent is already in the
-overlays: `.do/app.yaml` lines 45–52 and the live prod spec both carry
-`kind: PRE_DEPLOY`, `name: migrate`, `run_command: .venv/bin/alembic upgrade head`.
+overlays: the live prod spec carries `kind: PRE_DEPLOY`, `name: migrate`,
+`run_command: .venv/bin/alembic upgrade head` (`.do/app.prod-crm.yaml` lines
+14–27, verified 2026-08-20), and the checked-in `.do/app.yaml` documents the same
+shape in its commented reference block.
 No GUI, no operator laptop, no interactive keyring, no prompt, no human decision
 mid-run. If it cannot decide something, it exits — it does not ask.
 
@@ -1138,7 +1140,7 @@ granted the admin concession ruling 6 depends on.
 | Phase | What lands | Why here |
 |---|---|---|
 | **0 — De-Cleveland** | The four settings, the 18 HTML files, per-chapter `tokens.css` + logo. | Nothing else can be onboarded while the product says Cleveland. Useful alone. |
-| **1 — CRM config as an artifact** | The extension package, the desired-state definition, the applier generalized from `migrate_event_schema.py`, conformance from `preflight_crm.py`, wired as PRE_DEPLOY. | The only genuinely new engineering. Everything downstream assumes it. Provable against crm-test today, with zero chapters involved. |
+| **1 — CRM config as an artifact** | Written in three layers. **Layer 1**, the interface contract every applier must meet — headless, least-credential, five defined exit codes, a machine-readable result, plan identity, additive-only in an automatic slot, a version stamp. **Layer 2**, CRMBuilder as the preferred realization, pending its own requirements session. **Layer 3** and the current **plan of record**, the applier generalized from `migrate_event_schema.py`. Landing first either way: the extension package, the conformance check from `preflight_crm.py` wired as a read-only PRE_DEPLOY **gate**, and both version stamps. | The only genuinely new engineering, and everything downstream assumes it. Layer 1 and the conformance check are provable against crm-test **and prod** today with zero chapters involved, and they survive either answer from CRMBuilder — which is why they are built first. The applier's write path is the only part at risk from the decision trigger (2026-09-19, Doug). |
 | **2 — Release train** | Staging instance, tag cutting, `deploy_on_push` off, pinned-tag deploys, emergency path. | Must precede the first real member, because it is far harder to impose later. |
 | **3 — Spec generation + secrets** | Template plus per-chapter values, secrets store, generator. | The onboarding tool. Also removes the single-laptop dependency that exists today. |
 | **4 — Public pages** | `prds/public-mentor-pages-plan.md` delivered network-wide; the chapter events plugin. | Ruling 8. Retires the byte-copy coupling before it is multiplied. |
