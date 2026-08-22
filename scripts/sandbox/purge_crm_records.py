@@ -137,6 +137,12 @@ async def main() -> int:
     parser.add_argument("--apply", action="store_true", help="actually delete")
     parser.add_argument("--mentors", action="store_true", help="also purge CMentorProfile")
     parser.add_argument("--events", action="store_true", help="also purge CEvent")
+    parser.add_argument(
+        "--only", action="append", metavar="ENTITY",
+        help="purge ONLY these entities (repeatable). For clearing one entity "
+             "after the sandbox is already seeded — without it this script "
+             "empties everything and would take the training data with it.",
+    )
     args = parser.parse_args()
 
     settings = get_settings()
@@ -145,10 +151,20 @@ async def main() -> int:
         print(f"REFUSING: ESPO_BASE_URL is {base!r}, not the crm-test sandbox.")
         return 2
 
-    entities = list(PURGE_ORDER)
-    for flag, extra in OPTIONAL.items():
-        if getattr(args, flag):
-            entities.extend(extra)
+    known = set(PURGE_ORDER) | {name for group in OPTIONAL.values() for name in group}
+    if args.only:
+        unknown = [e for e in args.only if e not in known]
+        if unknown:
+            print(f"REFUSING: not purgeable entities: {', '.join(unknown)}")
+            return 2
+        # Keep PURGE_ORDER's child-before-parent sequence even for a subset.
+        ordered = list(PURGE_ORDER) + [n for g in OPTIONAL.values() for n in g]
+        entities = [e for e in ordered if e in set(args.only)]
+    else:
+        entities = list(PURGE_ORDER)
+        for flag, extra in OPTIONAL.items():
+            if getattr(args, flag):
+                entities.extend(extra)
 
     print(f"\nPurging business records from {base}")
     print("APPLY — records will be deleted\n" if args.apply
