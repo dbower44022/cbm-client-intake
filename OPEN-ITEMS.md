@@ -32,11 +32,16 @@ found; move resolved items to the bottom with the resolution date.
     is idempotent (proved by a second run reusing everything).
 
     Owed, in order:
-    - **Clear the app's Postgres before the baseline.** Purging the CRM alone
-      does not stick: the hourly receipt sweep recreated 68 `CIntakeSubmission`
-      receipts from the submissions still in the app database. This is exactly
-      the coupling `core/sandbox_reset.py` exists for — run it once (inside the
-      container, or by arming the flag) before capturing.
+    - ~~Clear the app's Postgres before the baseline.~~ **Done 2026-08-22**:
+      246 rows cleared inside the crm-test web container (the app's own
+      `DATABASE_URL` and engine helper, nothing exfiltrated), and the 68
+      orphaned `CIntakeSubmission` receipts deleted from the CRM. They had been
+      regenerating from the submissions still in Postgres — the coupling
+      `core/sandbox_reset.py` exists for. `SANDBOX_NIGHTLY_RESET` was armed on
+      the crm-test worker briefly and is now **back out** of the overlay: the
+      code is not on `main`, so it was inert, and leaving it would start
+      resetting the app half nightly the moment those commits land while the
+      CRM half still has no baseline. Arm both halves together.
     - **Capture the baseline and prove a restore by hand** before any cron.
     - **Arm both halves** (crontab line + `SANDBOX_NIGHTLY_RESET` on the
       crm-test worker only).
