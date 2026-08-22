@@ -38,6 +38,15 @@ templates, scheduled jobs, reports, workflow definitions, and the Google and
 mailbox wiring (`integration`, `external_account`, `o_auth_*`, `app_secret`,
 `inbound_email`).
 
+**Runtime noise is emptied, not restored.** `job`, `auth_log_record`,
+`scheduled_job_log_record`, `action_history_record`, the native `email` tables
+and their siblings are excluded from the baseline and truncated on every reset.
+This matters for more than size: the first baseline was 62 MB compressed and
+660 MB raw, almost all of it those three tables — and restoring `job` nightly
+would re-insert old queued jobs for the EspoCRM daemon to run. A reset that
+makes the CRM *do* things is not a reset. Excluding them took the baseline to
+**286 KB**.
+
 **Everything else resets** — including users. Trainee password and signature
 changes revert, and logins created by a provisioning demo disappear, which is
 the point. The cost: a user the CRM team adds mid-day reverts at midnight.
@@ -75,11 +84,20 @@ scp scripts/sandbox/reset_crm_sandbox.py root@104.131.45.208:/usr/local/sbin/
 ssh root@104.131.45.208 'chmod 750 /usr/local/sbin/reset_crm_sandbox.py'
 ```
 
-**2. Get the instance into the state you want to return to every night** —
+**2. Clear the soft-deleted rows.** EspoCRM soft-deletes, and its own Cleanup
+job only removes rows past a three-month retention window — so a baseline
+captured after a purge carries every purged record's data forward for ever:
+
+```bash
+ssh root@104.131.45.208 'python3 /usr/local/sbin/reset_crm_sandbox.py purge-deleted'
+ssh root@104.131.45.208 'python3 /usr/local/sbin/reset_crm_sandbox.py purge-deleted --apply'
+```
+
+**3. Get the instance into the state you want to return to every night** —
 the seeded training data, the right users, the right teams. Everything present
 at this moment becomes "pristine" until you re-baseline.
 
-**3. Capture the baseline.**
+**4. Capture the baseline.**
 
 ```bash
 ssh root@104.131.45.208 'python3 /usr/local/sbin/reset_crm_sandbox.py baseline --apply'
@@ -90,7 +108,7 @@ attachment *files* — restoring the table without them leaves every golden
 record pointing at a missing document), `config-reference.sql.gz` (disaster
 recovery only; a reset never restores it) and `manifest.json`.
 
-**4. Prove the restore before trusting it.** Change something obvious in the
+**5. Prove the restore before trusting it.** Change something obvious in the
 CRM, run the reset by hand, confirm it came back:
 
 ```bash
@@ -98,14 +116,14 @@ ssh root@104.131.45.208 'python3 /usr/local/sbin/reset_crm_sandbox.py reset'    
 ssh root@104.131.45.208 'python3 /usr/local/sbin/reset_crm_sandbox.py reset --apply'
 ```
 
-**5. Arm the CRM half.**
+**6. Arm the CRM half.**
 
 ```bash
 ssh root@104.131.45.208 \
   '(crontab -l; echo "0 0 * * * /usr/bin/python3 /usr/local/sbin/reset_crm_sandbox.py reset --apply >> /var/log/cbm-sandbox-reset.log 2>&1") | crontab -'
 ```
 
-**6. Arm the app half** — add to the crm-test overlay (`.do/app.prod.yaml`),
+**7. Arm the app half** — add to the crm-test overlay (`.do/app.prod.yaml`),
 **worker component only**, then `doctl apps update 509b4370-… --spec <file>`:
 
 ```yaml

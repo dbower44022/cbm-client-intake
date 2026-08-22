@@ -68,6 +68,32 @@ DB_NAME = "espocrm"
 # Guard: this script must never be pointed at production.
 REQUIRED_SITE_URL_MARKER = "crm-test"
 
+#: Runtime noise: never captured into the baseline, TRUNCATED on every reset.
+#: Distinct from KEEP_TABLES, which is left untouched — these are emptied.
+#:
+#: Found the hard way (2026-08-22): the first baseline was 62 MB compressed and
+#: 660 MB raw, of which `job` was 314 MB, `auth_log_record` 190 MB and
+#: `scheduled_job_log_record` 159 MB. Beyond the waste, restoring `job` nightly
+#: re-inserts old queued jobs for the EspoCRM daemon to pick up — a reset that
+#: makes the CRM *do* things is not a reset. `auth_log_record` also carries the
+#: login history of real people from before the sandbox was purged.
+#:
+#: The native `email` tables are here too: the app stores correspondence in
+#: CConversation/CCommunication and never reads these, and their contents
+#: predate the purge and cannot be inspected with the app's API key.
+RUNTIME_TABLES: frozenset[str] = frozenset(
+    {
+        "job", "scheduled_job_log_record", "auth_log_record", "app_log_record",
+        "action_history_record", "notification", "email_queue_item",
+        "webhook_queue_item", "webhook_event_queue_item", "workflow_log_record",
+        "bpmn_process", "bpmn_flow_node", "bpmn_user_task",
+        "import", "import_entity", "import_error", "export", "mass_action",
+        "auth_token", "two_factor_code", "password_change_request",
+        "email", "email_user", "email_email_address", "email_email_account",
+        "email_inbound_email",
+    }
+)
+
 #: Tables that survive a reset — config, identity definitions and credentials.
 #: Everything NOT listed here is record data and is restored from the golden
 #: dump.  Grouped by why, because the "why" is what a future reader needs when
@@ -176,11 +202,13 @@ def cmd_baseline(apply: bool) -> int:
     """
     guard_not_production()
     tables = live_tables()
-    records = sorted(tables - KEEP_TABLES)
+    records = sorted(tables - KEEP_TABLES - RUNTIME_TABLES)
     config = sorted(tables & KEEP_TABLES)
+    runtime = sorted(tables & RUNTIME_TABLES)
     upload = HOME / "data" / "espocrm" / "data" / "upload"
 
-    log(f"baseline: {len(records)} record tables, {len(config)} config tables")
+    log(f"baseline: {len(records)} record tables, {len(config)} config tables, "
+        f"{len(runtime)} runtime tables excluded")
     log(f"baseline: attachments from {upload}")
     if not apply:
         log("baseline: DRY RUN — nothing written. Re-run with --apply.")
@@ -203,6 +231,7 @@ def cmd_baseline(apply: bool) -> int:
         "captured": stamp,
         "record_tables": records,
         "config_tables_excluded": config,
+        "runtime_tables_excluded": runtime,
         "site_url": compose_value("ESPOCRM_CONFIG_SITE_URL"),
     }
     (GOLDEN / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
@@ -255,7 +284,9 @@ def cmd_reset(apply: bool) -> int:
 
     # Entities the CRM team added since the baseline: not in the dump, so the
     # import cannot clear them. Truncate them instead — they hold records.
-    newer = sorted((tables - KEEP_TABLES) - golden_tables)
+    newer = sorted((tables - KEEP_TABLES - RUNTIME_TABLES) - golden_tables)
+    # Runtime tables are never in the dump, so the import cannot clear them.
+    runtime = sorted(tables & RUNTIME_TABLES)
     # Entities removed since the baseline: the import recreates them. Harmless,
     # and a rebuild leaves them inert, but say so rather than doing it silently.
     stale = sorted(golden_tables - tables)
@@ -274,12 +305,14 @@ def cmd_reset(apply: bool) -> int:
     subprocess.run(["docker", "stop", DAEMON_CONTAINER], check=False,
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
-        if newer:
+        wipe = newer + runtime
+        if wipe:
             statements = "set foreign_key_checks=0; " + " ".join(
-                f"truncate table `{name}`;" for name in newer
+                f"truncate table `{name}`;" for name in wipe
             ) + " set foreign_key_checks=1;"
             sql(statements)
-            log(f"reset: truncated {len(newer)} post-baseline table(s)")
+            log(f"reset: truncated {len(newer)} post-baseline and "
+                f"{len(runtime)} runtime table(s)")
 
         log("reset: importing the golden record tables")
         _import(records_dump)
@@ -344,8 +377,10 @@ def cmd_status(_apply: bool) -> int:
     tables = live_tables()
     manifest_path = GOLDEN / "manifest.json"
     log(f"status: site {compose_value('ESPOCRM_CONFIG_SITE_URL')}")
-    log(f"status: {len(tables)} tables live — {len(tables - KEEP_TABLES)} record, "
-        f"{len(tables & KEEP_TABLES)} config (kept)")
+    log(f"status: {len(tables)} tables live — "
+        f"{len(tables - KEEP_TABLES - RUNTIME_TABLES)} record, "
+        f"{len(tables & KEEP_TABLES)} config (kept), "
+        f"{len(tables & RUNTIME_TABLES)} runtime (truncated)")
     if manifest_path.exists():
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         log(f"status: golden baseline captured {manifest['captured']}")
@@ -388,11 +423,50 @@ def cmd_deleted(_apply: bool) -> int:
     return 0
 
 
+def cmd_purge_deleted(apply: bool) -> int:
+    """Hard-delete every soft-deleted row, so the baseline does not carry them.
+
+    EspoCRM's own Cleanup job only removes rows older than
+    ``cleanupDeletedRecordsPeriod`` (three months by default), which is no use
+    immediately after a purge — and a golden baseline captured with them still
+    present would restore the deleted data every night, forever. These rows are
+    already invisible to every user; this just stops them being immortalised.
+
+    Run before ``baseline``, never on a whim: it also discards anything sitting
+    in the CRM's own trash awaiting restore.
+    """
+    guard_not_production()
+    out = sql(
+        "select table_name from information_schema.columns "
+        f"where table_schema='{DB_NAME}' and column_name='deleted' order by table_name;"
+    )
+    tables = [line.strip() for line in out.splitlines() if line.strip()]
+    total = 0
+    plan: list[tuple[str, int]] = []
+    for name in tables:
+        count = int((sql(f"select count(*) from `{name}` where deleted=1;").strip()
+                     or "0").splitlines()[0])
+        if count:
+            plan.append((name, count))
+            total += count
+    for name, count in sorted(plan, key=lambda pair: -pair[1]):
+        log(f"purge-deleted: {name:32} {count}")
+    log(f"purge-deleted: {total} soft-deleted row(s) across {len(plan)} table(s)")
+    if not apply:
+        log("purge-deleted: DRY RUN — nothing removed. Re-run with --apply.")
+        return 0
+    for name, _count in plan:
+        sql(f"delete from `{name}` where deleted=1;")
+    log(f"purge-deleted: removed {total} row(s)")
+    return 0
+
+
 COMMANDS = {
     "baseline": cmd_baseline,
     "reset": cmd_reset,
     "status": cmd_status,
     "deleted": cmd_deleted,
+    "purge-deleted": cmd_purge_deleted,
 }
 
 
