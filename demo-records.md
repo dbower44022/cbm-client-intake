@@ -49,10 +49,12 @@ Assigned, one On-Hold, two Completed. Brightline is the rich one.
 | Tab | What is there |
 |---|---|
 | Overview | Facts rail, notes feed, the company peek, and a **Next-session callout** with a real upcoming meeting |
-| Details | The full editable field set, including the address block for the paste-parser |
-| Sessions | **8 sessions** — 7 completed going back through the year, 1 scheduled ahead |
+| Details | Every field populated — company, client profile and engagement all complete, including the address block for the paste-parser |
+| Sessions | **8 sessions** — 7 completed going back through the year, 1 scheduled ahead, with attendees on the recent three |
 | Communications | A **5-message thread**, "Cash-flow forecast for the new oven", alternating inbound and outbound |
-| Contacts | Dana Whitcomb, with role chips and the agreements badge |
+| Contacts | Dana Whitcomb — phone, full address, job title, and all three agreements accepted so the badge reads complete |
+| Co-mentor | **Matt Mentor** is an additional mentor, so co-mentor visibility has a live example |
+| Referring partner | Credited to **Cuyahoga Small Business Alliance** |
 | Analytics | The engagement dashboard, computed live from the above |
 
 Staff notes are on five engagements (the Notes column in Client
@@ -60,10 +62,16 @@ Administration), so Brightline also shows the internal-note pattern —
 `Owner is expanding to a second site. Mentor asked for a finance-side
 co-mentor.`
 
-Also worth showing on this login: **My Mentor Profile**, which is fully filled
-in for Joe — 22 years' experience, industry sector, areas of expertise,
-mentoring focus areas and a personal-interests line — so the live preview
-renders as a complete public mentor page rather than a shell.
+Also worth showing on this login: **My Mentor Profile**, which is filled in
+completely for Joe — bio, summary, skills, languages, industry experience,
+dues, training and background-check dates, a Zoom link, a profile photo, and a
+Contact carrying his phone, address and birthday. The live preview renders as a
+finished public mentor page rather than a shell.
+
+Behind that record: Joe also co-mentors `Ashgrove Cabinetry — Mentoring`,
+manages one partner (Maple Ridge Enterprise Center) and one funder (Cedarcrest
+Charitable Fund), and is registered for a past event — so the reverse links on
+his profile are populated too.
 
 ## Client Administration — **Kitty Cat**
 
@@ -163,6 +171,25 @@ as a preview rather than something staff will use on Monday.
 
 ---
 
+## How complete the showcase records are
+
+`scripts/sandbox/audit_showcase_records.py` measures this against the CRM's own
+field definitions rather than a hand-kept list, so a field the CRM team adds
+tomorrow shows up as a new gap. Current state across the eight showcase
+records: **194 of 194 fields filled, 62 of 63 relationships populated.**
+
+The audit knows which blanks are *correct* and excludes them — an Active mentor
+has no `departureReason`, a client company carries no sponsorship fields, and
+`nextSessionDateTime` is deliberately left empty because the app derives the
+next session from real sessions and a stored value shows as a ghost. The one
+genuine gap is a mentor CV attachment, which is not worth fabricating.
+
+Run it after any re-seed:
+
+```bash
+uv run python scripts/sandbox/audit_showcase_records.py
+```
+
 ## What has no demo data yet
 
 Be aware of these before you build a session around them — they are empty, and
@@ -173,7 +200,6 @@ they will look broken rather than "not covered".
 | **Documents** tab, on every record | Drive uploads run as the service account, and crm-test still points at the **production** shared drive. Seeding documents would write training files into CBM's real Drive. Needs a sandbox shared drive first. |
 | **Submission Admin** (`/ops`) | The queue lives in the app's own database, which was cleared. Refilling it means posting the public intake forms so the whole capture pipeline runs — worth doing, not yet done. |
 | **Discussion pane** on partner and funder Overview | App-only comment rows, reachable through the app as a signed-in user rather than over the CRM API. |
-| **Co-mentors** | No engagement has an additional mentor, so co-mentor visibility and the swap-merge on reassignment have no example. |
 | **Session transcripts** and **My Email** | Both depend on integrations that are deliberately inert in the sandbox. |
 
 None of these is hard to add. If a training session needs one, say so and it
