@@ -116,11 +116,26 @@ ssh root@104.131.45.208 'python3 /usr/local/sbin/reset_crm_sandbox.py reset'    
 ssh root@104.131.45.208 'python3 /usr/local/sbin/reset_crm_sandbox.py reset --apply'
 ```
 
-**6. Arm the CRM half.**
+**6. Arm the CRM half.** ✅ **DONE 2026-08-22.**
 
 ```bash
 ssh root@104.131.45.208 \
-  '(crontab -l; echo "0 0 * * * /usr/bin/python3 /usr/local/sbin/reset_crm_sandbox.py reset --apply >> /var/log/cbm-sandbox-reset.log 2>&1") | crontab -'
+  '(crontab -l; echo "0 4 * * * /usr/bin/python3 /usr/local/sbin/reset_crm_sandbox.py reset --apply >> /var/log/cbm-sandbox-reset.log 2>&1") | crontab -'
+```
+
+**04:00 UTC, not 00:00.** The droplet's clock is `Etc/UTC`, so a naive midnight
+entry would fire at 8pm Eastern — during the working day, not overnight. 04:00
+UTC is midnight Eastern in summer and 23:00 the evening before in winter, and
+it is **always ahead of the app-database half**, which fires at 01:00
+`America/New_York` (05:00 UTC in summer, 06:00 in winter). Do not move it to
+05:00 UTC: that collides with the app half in summer and breaks the ordering.
+
+Verify it will actually run before trusting it — cron has a bare environment
+and the script shells out to `docker`:
+
+```bash
+ssh root@104.131.45.208 \
+  'env -i PATH=/usr/bin:/bin HOME=/root /usr/bin/python3 /usr/local/sbin/reset_crm_sandbox.py reset'
 ```
 
 **7. Arm the app half** — add to the crm-test overlay (`.do/app.prod.yaml`),

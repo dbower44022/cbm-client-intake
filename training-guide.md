@@ -22,10 +22,10 @@ Two documents, and the split matters so they don't drift:
 
 Engineers setting the sandbox up want the sandbox reset runbook instead.
 
-> **Status.** The sandbox data is live and ready. The overnight reset is
-> **built and tested but not yet switched on** — until it is, the sandbox keeps
-> whatever state a session leaves it in. Check with whoever runs the platform
-> before assuming last night's changes are gone.
+> **Status.** The overnight reset is **live** as of 22 August 2026. The system
+> is restored to a fixed snapshot every night, so anything a session creates,
+> edits or deletes is gone by the next morning and every session starts from
+> the same screens.
 
 ## Before you start — five minutes
 

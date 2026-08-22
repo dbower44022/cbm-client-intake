@@ -43,8 +43,17 @@ found; move resolved items to the bottom with the resolution date.
       resetting the app half nightly the moment those commits land while the
       CRM half still has no baseline. Arm both halves together.
     - **Capture the baseline and prove a restore by hand** before any cron.
-    - **Arm both halves** (crontab line + `SANDBOX_NIGHTLY_RESET` on the
-      crm-test worker only).
+    - ~~Arm the CRM half.~~ **DONE 2026-08-22**: `0 4 * * *` on the droplet.
+      04:00 UTC deliberately, not 00:00 — the droplet's clock is `Etc/UTC`, so
+      a naive midnight entry fires at 8pm Eastern, and 04:00 UTC is also always
+      ahead of the app half (01:00 America/New_York). Proved it runs under a
+      stripped cron environment (`env -i PATH=/usr/bin:/bin`) because the
+      script shells out to `docker`.
+    - **Arm the app half** — blocked on `3d291d9`..`06a7744` reaching `main`,
+      which deploys production too. Then `SANDBOX_NIGHTLY_RESET=true` on the
+      crm-test **worker** component only. Until then the CRM reverts nightly
+      and the app database does not; harmless while the /ops queue is empty,
+      but the two are meant to move together.
     - ~~Decide the Google question.~~ **Contained 2026-08-22.** Doug created a
       separate sandbox shared drive (`0ALcjRDPAiHRLUk9PVA`) and deleted
       EspoCRM's Google integration; every training `cbmEmail` is on
