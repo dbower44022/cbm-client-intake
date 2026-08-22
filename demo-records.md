@@ -11,7 +11,10 @@ record to open** — the record deliberately built to have something on every
 tab. Everything around it is thinner on purpose: that is what makes the
 showcase record look normal rather than staged.
 
-Setup and mechanics live in `SANDBOX-RESET.md`. The data is produced by
+This is the **reference**. For running an actual session — who to sign in as,
+what to click in what order, what to tell the room — use `training-guide.md`;
+it links here rather than repeating any of it. Setup and mechanics live in
+`SANDBOX-RESET.md`. The data is produced by
 `scripts/sandbox/seed_training_data.py` and
 `scripts/sandbox/enrich_training_data.py`; if you change what a demo shows,
 change it there so it survives the nightly restore.
