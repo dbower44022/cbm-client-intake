@@ -52,8 +52,14 @@ found; move resolved items to the bottom with the resolution date.
       `scripts/sandbox/check_containment.py` reports 0 blocking issues.
       **Still open for RELEASE TESTING only:** a test that needs to see
       calendar invites or email actually arrive cannot, and a no-op that
-      succeeds is indistinguishable from a feature that works. That is what a
-      separate test Workspace would buy, and it remains the right eventual fix.
+      succeeds is indistinguishable from a feature that works.
+    - **A separate Google Workspace for the test environment** — Doug's stated
+      direction 2026-08-22, deliberately not urgent. It converts containment
+      from "prevent every send" to "let sends happen inside an isolated
+      tenant", which is what release-testing calendar, email and mentor
+      provisioning actually requires. The six config changes it implies are
+      tabulated in `SANDBOX-RESET.md` § *The eventual fix*; none of them touch
+      the golden baseline or the nightly reset.
     - **Baseline captured 2026-08-22** (`2026-08-22_155832`, 286 KB records +
       32 MB attachments) and the restore **proved end to end**: a marker
       description and two deleted sessions were both recovered, all counts

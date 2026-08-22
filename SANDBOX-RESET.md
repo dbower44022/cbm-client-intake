@@ -178,6 +178,32 @@ Disarm the CRM half by removing the crontab line; disarm the app half by
 setting `SANDBOX_NIGHTLY_RESET=false` in the overlay and re-applying. Neither
 half destroys the golden baseline, so re-arming later needs no re-capture.
 
+## The eventual fix: a separate test Google Workspace
+
+Doug's direction (2026-08-22): a Workspace of its own for the test environment,
+so the sandbox can exercise Google end to end instead of being contained by
+making its addresses unreachable. Containment today works by *preventing*
+sends; a test tenant would let them happen harmlessly, which is the difference
+between "we could not break anything" and "we saw it work."
+
+It is not urgent — training is demo-led and contained. It matters for **release
+testing**, where a calendar write that silently no-ops looks exactly like one
+that passed.
+
+What changes when it lands, so this is a job rather than a rediscovery:
+
+| Today | With a test Workspace |
+|---|---|
+| `GOOGLE_SERVICE_ACCOUNT_JSON` is the production tenant's service account | A new service account in the test tenant, with its own domain-wide-delegation grants for the same scopes |
+| `GDRIVE_SHARED_DRIVE_ID` = `0ALcjRDPAiHRLUk9PVA`, a drive inside the production tenant | A shared drive in the test tenant |
+| Training `cbmEmail`s are on `@sandbox.cbmentors.org` **because it has no mailboxes** | They become **real** mailboxes in the test domain; the containment check flips from "must be unroutable" to "must be in the test tenant" |
+| `OPS_MAILBOX` must stay unset — setting it would double-poll the real info@ | Can be set to the test tenant's info@, unlocking Submission Admin's inbound half |
+| `GOOGLE_CREATE_MAILBOX` / `GOOGLE_DIRECTORY_CHECK` / `GOOGLE_MEMBERS_GROUP` all off — they would create real accounts | Can be turned on, which is the only way to release-test mentor provisioning |
+| EspoCRM has no outbound email at all | Point its SMTP at the test tenant |
+
+The one thing that does **not** change is the reset itself: none of the above
+touches the golden baseline or either half of the nightly restore.
+
 ## Containment — assume somebody saves
 
 Doug's ruling 2026-08-21: nobody is supposed to save anything during training,
