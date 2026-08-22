@@ -322,6 +322,15 @@ async def seed_clients(s: Seeder, profiles: dict[str, str], users: dict[str, str
             payload["assignedUsersIds"] = [users[login]]
         engagement_id = await s.upsert("CEngagement", engagement_name, payload)
 
+        # engagementContacts is a RELATIONSHIP, and it is what the session
+        # tools' Contacts table reads — primaryEngagementContact alone leaves
+        # that tab empty. Relate on every run, not just on create: EspoCRM
+        # treats relating an already-related record as a no-op.
+        if engagement_id and contact_id and s.apply:
+            await s.client.relate(
+                "CEngagement", engagement_id, "engagementContacts", contact_id
+            )
+
         if session_count and engagement_id:
             await seed_sessions(s, engagement_id, company, session_count, now, users, login)
 
@@ -330,7 +339,23 @@ async def seed_sessions(
     s: Seeder, engagement_id: str, company: str, count: int,
     now: datetime, users: dict[str, str], login: str | None,
 ) -> None:
-    """Session history walking backwards from a month ago, monthly-ish."""
+    """Session history walking backwards from a month ago, monthly-ish.
+
+    Idempotency here CANNOT be by name. Session names embed the session date,
+    which is derived from "now", so re-running the seed on a later day produces
+    a different set of names and duplicates the entire history (162 sessions
+    instead of 77, 2026-08-22). Gate on the engagement's existing session count
+    instead.
+    """
+    already = int((await s.client.list(
+        "CSession", max_size=1, select="id",
+        where=[{"type": "equals", "attribute": "engagementId", "value": engagement_id}],
+    )).get("total") or 0)
+    if already >= count + 1:  # + the one upcoming session
+        for _ in range(already):
+            s._tally("CSession", new=False)
+        return
+
     for n in range(count):
         # Business hours in Eastern, not whatever time the seed happened to run:
         # 13/15/17/19 UTC is 9am/11am/1pm/3pm EDT. A demo where every meeting
@@ -504,11 +529,13 @@ async def seed_partners(s: Seeder, profiles: dict[str, str]) -> None:
             "emailAddress": s.contact_email(first, last),
             **({"accountId": account_id} if account_id else {}),
         })
-        await s.upsert("CPartnerProfile", company, {
+        profile_id = await s.upsert("CPartnerProfile", company, {
             **({"partnerCompanyId": account_id} if account_id else {}),
             **({"primaryPartnercontactId": contact_id} if contact_id else {}),
             **({"partnerManagerId": manager} if manager else {}),
         })
+        if profile_id and contact_id and s.apply:
+            await s.client.relate("CPartnerProfile", profile_id, "contacts", contact_id)
 
 
 async def seed_funders(s: Seeder, profiles: dict[str, str]) -> None:
@@ -523,11 +550,15 @@ async def seed_funders(s: Seeder, profiles: dict[str, str]) -> None:
             "emailAddress": s.contact_email(first, last),
             **({"accountId": account_id} if account_id else {}),
         })
-        await s.upsert("CSponsorProfile", company, {
+        profile_id = await s.upsert("CSponsorProfile", company, {
             **({"sponsorCompanyId": account_id} if account_id else {}),
             **({"sponsorContactId": contact_id} if contact_id else {}),
             **({"sponsorManagerId": manager} if manager else {}),
         })
+        if profile_id and contact_id and s.apply:
+            await s.client.relate(
+                "CSponsorProfile", profile_id, "sponsorContacts", contact_id
+            )
 
 
 # --------------------------------------------------------------------------

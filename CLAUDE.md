@@ -1042,6 +1042,8 @@ unresolved: CRM prerequisites, live verification owed, cleanups, decisions).
 | `data-model.md` | **ERD reference** — the CRM entity model, the 18 Postgres tables, the soft key that joins them, and the cardinality rulings. **Published to the docs site** as *Data Model → How the data is structured* — keep the two in sync |
 | `mentor-administration.md` | `/mentoradmin` functionality + the completeness rules |
 | `mentor-directory.md` | Mentors directory + the read-only mentor profile page |
+| `demo-records.md` | **Which login and which record to open for each kind of user** in the training sandbox, and what each showcase record demonstrates |
+| `SANDBOX-RESET.md` | The training sandbox: the nightly restore, containment, capturing and re-baselining |
 | `address-paste.md` | Staff guide to pasting a whole address into one box |
 | `birthday-greetings.md` | The portal birthday celebration, rules, and how to test it without touching data |
 | `email-management.md` | **Umbrella** email reference; links to the deep-dives |
