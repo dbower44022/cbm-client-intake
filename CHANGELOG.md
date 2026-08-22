@@ -4,6 +4,29 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.206.1] — 2026-08-22
+
+**feat(sessions): a mentor can rename an engagement.**
+
+Intake names every engagement `First Last — Intake <date>`. That is a useful
+label for the arrival and a poor one for the record a mentor then works for a
+year, and until now nothing in the app could change it: `name` sat in
+`DETAILS_REMOVED_FIELDS.CEngagement`, so the Details tab neither showed it nor
+placed it on the Engagement panel (the layout is `noExtras`, so an unplaced
+field renders nowhere).
+
+It is an ordinary editable field now, leading the **Engagement** panel on the
+Details tab as "Engagement name", beside the referring-partner picker. Nothing
+server-side changed — `save_details` already whitelisted it from live CRM
+metadata, and the PUT already allowed `CEngagement` on this domain, so the block
+was purely the frontend exclusion.
+
+- It stays **off the summary strip**: `stripCells` skips every entity's `name`
+  because the page header shows it. A rename lands in that header straight away
+  — `refreshRecordViews` re-reads the record after any Details save.
+- The client-side profile, partner and funder record names remain excluded, and
+  deliberately: those mirror the company name rather than describing the work.
+
 ## [0.206.0] — 2026-08-20
 
 **fix(forms): the consent checkbox linked to Cleveland's STAGING website.**

@@ -3900,11 +3900,18 @@
     // ruling).
     CEngagement: { noExtras: true, groups: [
       { label: "Engagement", grow: 2, basis: 46, rows: [
-        [{ name: "engagementStatus", span: 3 }, { name: "engagementStartDate", span: 3 },
-         { ro: "mentorProfileName", label: "Mentor", span: 3 }, { name: "meetingCadence", span: 3 }],
+        // The record name leads (Doug, 2026-08-22): intake names an engagement
+        // "First Last — Intake <date>", which carries more noise than meaning
+        // once a mentor is working it, so the name is theirs to change. It is
+        // still kept off the summary strip — the page header shows it, and
+        // `refreshRecordViews` re-reads the record so a rename lands there
+        // immediately.
+        [{ name: "name", span: 6, label: "Engagement name" },
         // The referring-partner link picker (curated link field — Doug's
         // 2026-07-22 report: there was no way to set it in the app).
-        [{ name: "referringPartnerId", span: 6, label: "Referring partner" }],
+         { name: "referringPartnerId", span: 6, label: "Referring partner" }],
+        [{ name: "engagementStatus", span: 3 }, { name: "engagementStartDate", span: 3 },
+         { ro: "mentorProfileName", label: "Mentor", span: 3 }, { name: "meetingCadence", span: 3 }],
         [{ name: "holdEndDate", span: 4 }, { name: "closeDate", span: 4 }, { name: "closeReason", span: 4 }],
       ] },
       { label: "Outcomes", grow: 2, basis: 40, rows: [
@@ -4081,10 +4088,13 @@
       "cApplicantSinceTimestamp", "contactRole"],
     CClientProfile: ["name", "mostRecentFullYearRevenueCurrency",
       "mostRecentFullYearRevenueConverted"],
-    // CEngagement: the record name (the page header shows it), the Assign-
-    // action date stamp, and the session statistics the CRM/app maintain —
-    // all still visible on the summary strip, just never hand-editable.
-    CEngagement: ["name", "engagementAssignedDate", "lastSessionDate",
+    // CEngagement: the Assign-action date stamp and the session statistics the
+    // CRM/app maintain — still visible on the summary strip, just never
+    // hand-editable. `name` is NOT here: it is editable on the Engagement panel
+    // (see DETAILS_LAYOUTS). It stays out of the strip's cells the same way
+    // every entity's name does — `stripCells` skips it because the page header
+    // already shows it.
+    CEngagement: ["engagementAssignedDate", "lastSessionDate",
       "nextSessionDateTime", "totalSessions", "totalSessionsLast30Days",
       "totalSessionHours"],
     // CPartnerProfile: the record name mirrors the company (header shows it);
