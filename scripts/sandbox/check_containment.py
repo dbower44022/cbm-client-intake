@@ -42,6 +42,11 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 from core.config import get_settings  # noqa: E402
 from core.espo import EspoClient, EspoError  # noqa: E402
 
+#: Every training identity's cbmEmail must sit on this domain, which has no
+#: Workspace mailboxes. An address anywhere else can genuinely send mail and
+#: raise calendar invites, so it is a containment breach, not a warning.
+SANDBOX_EMAIL_DOMAIN = "sandbox.cbmentors.org"
+
 SANDBOX_APP = "509b4370-b9ca-42c7-b251-04d6820fe88e"
 PROD_APP = "aa1ddf69-f359-4b53-91ba-035cbed7bd53"
 
@@ -142,15 +147,22 @@ async def check_identities() -> list[tuple[str, str]]:
 
     addressed = [r for r in rows if (r.get("cbmEmail") or "").strip()]
     findings = [(OK, f"{len(rows)} mentor profiles, {len(addressed)} carrying a cbmEmail")]
-    for row in sorted(addressed, key=lambda r: (r.get("cbmEmail") or "").lower()):
+
+    offdomain = [r for r in addressed
+                 if not (r.get("cbmEmail") or "").strip().lower()
+                 .endswith("@" + SANDBOX_EMAIL_DOMAIN)]
+    if offdomain:
+        for row in sorted(offdomain, key=lambda r: (r.get("cbmEmail") or "").lower()):
+            findings.append(
+                (BAD, f"{row.get('cbmEmail')} ({row.get('name')}) is NOT on "
+                      f"@{SANDBOX_EMAIL_DOMAIN} — it can send mail and raise "
+                      "calendar invites if somebody saves")
+            )
+    else:
         findings.append(
-            ("      ", f"    {row.get('cbmEmail')}  —  {row.get('name')} "
-                       f"({row.get('mentorStatus') or 'no status'})")
+            (OK, f"every cbmEmail is on @{SANDBOX_EMAIL_DOMAIN}, which has no "
+                 "mailboxes — an accidental Save cannot reach anyone")
         )
-    findings.append(
-        (WARN, "confirm none of the above is a real mailbox — each one that is can "
-               "send mail and create calendar invites if somebody saves")
-    )
     return findings
 
 
@@ -162,10 +174,11 @@ async def main() -> int:
         print(f"[{mark}] {line}")
 
     print("\nSending identities")
-    for mark, line in await check_identities():
+    identity_findings = await check_identities()
+    for mark, line in identity_findings:
         print(f"[{mark}] {line}" if mark.strip() else line)
 
-    failures = sum(1 for mark, _ in findings if mark == BAD)
+    failures = sum(1 for mark, _ in findings + identity_findings if mark == BAD)
     print(f"\n{failures} blocking issue(s).\n")
     return 1 if failures else 0
 

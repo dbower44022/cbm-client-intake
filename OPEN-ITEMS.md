@@ -45,12 +45,20 @@ found; move resolved items to the bottom with the resolution date.
     - **Capture the baseline and prove a restore by hand** before any cron.
     - **Arm both halves** (crontab line + `SANDBOX_NIGHTLY_RESET` on the
       crm-test worker only).
-    - **Decide the Google question.** crm-test and prod share one shared drive
-      and one Workspace, with calendar, Gmail and Drive all live. Training
-      barely touches this; release testing cannot be certified without it, and
-      turning the integrations off is not a substitute — a no-op that succeeds
-      is indistinguishable from a feature that works. A separate test Workspace
-      is the fix Doug raised on 2026-08-21; until then, decide per test.
+    - ~~Decide the Google question.~~ **Contained 2026-08-22.** Doug created a
+      separate sandbox shared drive (`0ALcjRDPAiHRLUk9PVA`) and deleted
+      EspoCRM's Google integration; every training `cbmEmail` is on
+      `@sandbox.cbmentors.org`, which has no mailboxes.
+      `scripts/sandbox/check_containment.py` reports 0 blocking issues.
+      **Still open for RELEASE TESTING only:** a test that needs to see
+      calendar invites or email actually arrive cannot, and a no-op that
+      succeeds is indistinguishable from a feature that works. That is what a
+      separate test Workspace would buy, and it remains the right eventual fix.
+    - **Baseline captured 2026-08-22** (`2026-08-22_155832`, 286 KB records +
+      32 MB attachments) and the restore **proved end to end**: a marker
+      description and two deleted sessions were both recovered, all counts
+      matched, the showcase audit stayed at 194/194 fields, and the 23 custom
+      entityDefs files were untouched.
 
     **Containment pre-flight added 2026-08-21** (`scripts/sandbox/check_containment.py`,
     run before every training session). Doug's ruling: nobody is meant to save

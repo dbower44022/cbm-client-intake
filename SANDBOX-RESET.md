@@ -207,14 +207,25 @@ on the quick-compose that Client Administration opens after an assignment.
 
 ## ⚠️ What the reset cannot undo
 
-**Google side effects outlive it.** crm-test and production currently point at
-the **same Google shared drive** (`GDRIVE_SHARED_DRIVE_ID=0AE50yNppMh_hUk9PVA`)
-and the same Workspace, with `GCAL_EVENTS`, `GMAIL_SYNC` and `GDRIVE_DOCS` all
-on. So a sandbox document upload lands in the real CBM shared drive; a session
-saved Scheduled creates a real event on a real calendar; a send actually sends.
-Rolling the database back does not unsend an email or delete an invite, and
-because record ids change nightly, each night's testing deposits a fresh
-orphaned `Clients/<Name> (id)/` folder that nothing indexes.
+**Google side effects outlive it.** Rolling the database back does not unsend
+an email or delete a calendar invite, so containment has to stop them being
+created in the first place. As of 2026-08-22 it does, and
+`check_containment.py` reports **0 blocking issues**:
+
+- **Drive** — crm-test has its own shared drive (`0ALcjRDPAiHRLUk9PVA`,
+  "CBM Sandbox Documents"), separate from production's. Set in the overlay AND
+  overridable at `/setup`; the overlay matters because if the override lookup
+  ever fails the app falls back to the env var, and that must not be
+  production's drive. Verified from inside the container that the service
+  account can read it.
+- **Email and calendar** — still live, and contained by the addresses: every
+  training `cbmEmail` is on `@sandbox.cbmentors.org`, which has no mailboxes,
+  so the delegation call fails and nothing reaches a real person. The
+  pre-flight checks this rather than asking a human to eyeball the list.
+- **The CRM cannot send at all** — EspoCRM's Google integration was removed on
+  2026-08-22 and its global SMTP is unconfigured. Provisioning welcome emails
+  and CRM password resets therefore fail on this instance, which is correct for
+  training and a limitation to know about for release testing.
 
 For **training** this barely matters — training is demo-led and creates almost
 nothing. For **release testing** it matters a great deal, and it cannot be
