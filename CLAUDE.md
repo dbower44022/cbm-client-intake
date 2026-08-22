@@ -1042,7 +1042,7 @@ unresolved: CRM prerequisites, live verification owed, cleanups, decisions).
 | `data-model.md` | **ERD reference** — the CRM entity model, the 18 Postgres tables, the soft key that joins them, and the cardinality rulings. **Published to the docs site** as *Data Model → How the data is structured* — keep the two in sync |
 | `mentor-administration.md` | `/mentoradmin` functionality + the completeness rules |
 | `mentor-directory.md` | Mentors directory + the read-only mentor profile page |
-| `training-guide.md` | **Delivering a training session**: who to sign in as, the per-audience walkthroughs, what to tell the room, and how the overnight reset behaves |
+| `training-guide.md` | **Delivering a training session**: who to sign in as, the per-audience walkthroughs, what to tell the room, and how the overnight reset behaves. **Published to the docs site** as *Training Sandbox → Running a training session* — keep the two in sync, and note the published copy omits the sign-in usernames because that site is public |
 | `demo-records.md` | The data reference behind that guide — which record to open for each user type, and what is on each of its tabs |
 | `SANDBOX-RESET.md` | The training sandbox: the nightly restore, containment, capturing and re-baselining |
 | `address-paste.md` | Staff guide to pasting a whole address into one box |

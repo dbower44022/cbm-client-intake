@@ -1,15 +1,26 @@
 # Running a training session on the sandbox
 
+> Published to the docs site 2026-08-22:
+> https://docs.clevelandbusinessmentors.org/books/training-sandbox/page/running-a-training-session-on-the-sandbox
+> (Staff & Administration shelf → Training Sandbox book, **public**).
+> **Keep the two in sync.**
+>
+> The published copy deliberately carries **no sign-in usernames** — that site
+> is readable without logging in, and this page would otherwise list six live
+> accounts on an internet-facing CRM. If you sync a change, do not "helpfully"
+> restore them.
+
 For whoever is delivering the training. It covers who to sign in as, what to
 click, what to tell the room, and what the overnight reset does.
 
 Two documents, and the split matters so they don't drift:
 
 - **This page** — what to *do*: the walkthroughs, the ground rules, the reset.
-- **`demo-records.md`** — what's *on* each record: the tab-by-tab inventory,
-  the contribution amounts, the coverage figures.
+- **The demo-records reference**, kept with the application source — what's
+  *on* each record: the tab-by-tab inventory, the contribution amounts, the
+  coverage figures. Ask an administrator if you want a copy.
 
-Engineers setting the sandbox up want `SANDBOX-RESET.md` instead.
+Engineers setting the sandbox up want the sandbox reset runbook instead.
 
 > **Status.** The sandbox data is live and ready. The overnight reset is
 > **built and tested but not yet switched on** — until it is, the sandbox keeps
@@ -18,8 +29,8 @@ Engineers setting the sandbox up want `SANDBOX-RESET.md` instead.
 
 ## Before you start — five minutes
 
-1. Open **`cbm-client-intake-svxs3.ondigitalocean.app`** and sign in as
-   `joe.mentor@cbmentors.org`.
+1. Open the training system and sign in as the **training mentor** (Joe
+   Mentor). An administrator will give you the address and password.
 2. Look at the **footer**. It must read **`(Test)`** after the version number.
    If it says `(Production)` you are in the wrong system — stop.
 3. Open **Client Management**. You should see **seven clients**. If the list is
@@ -45,21 +56,23 @@ demo, and the hesitation costs more than the mistake would.
 
 ## Sign-ins
 
-One login per audience. Ask an administrator for the passwords; they're set in
-the CRM and are the same ones each time.
+There is one training account per audience. **Ask an administrator for the
+addresses and passwords** — they are not listed here, because this page is
+public. They are the same accounts every time, so once you have them you can
+keep them.
 
 | Audience | Sign in as |
 |---|---|
-| Mentors | `joe.mentor@cbmentors.org` |
-| Client Administration | `kitty.cat@cbmentors.org` |
-| Mentor Administration | `mentoradmin@cbmentors.org` |
-| Partner Management | `partner.manager@cbmentors.org` |
-| Funder Management | `sally.sponsor@cbmentors.org` |
-| Submission Admin | `mark.marketing@cbmentors.org` |
+| Mentors | Joe Mentor |
+| Client Administration | Kitty Cat |
+| Mentor Administration | Mentor Admin |
+| Partner Management | Partner Manager |
+| Funder Management | Sally Sponsor |
+| Submission Admin | Mark Marketing |
 
 **Nobody trains on their own login.** Signing in as yourself puts your real
-mailbox behind the Send button — the containment above only holds for these
-accounts.
+mailbox behind the Send button — the containment described above only holds for
+these six training accounts.
 
 ---
 
@@ -179,7 +192,7 @@ populated queue for a session, ask ahead of time; it can be seeded.
 ## How the overnight reset works
 
 **In one sentence:** every night the sandbox goes back to exactly the state
-described in `demo-records.md`, so every session starts from the same screens.
+described in the demo-records reference, so every session starts from the same screens.
 
 **What happens.** At midnight the CRM is restored from a saved snapshot. An
 hour later the app's own working data — the Submission Admin queue, record
