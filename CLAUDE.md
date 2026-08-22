@@ -108,6 +108,19 @@ runbook: `DEPLOYMENT.md`; plain-language console companion:
   secrets), see [[do-app-console-scripting]]. Admin CRM creds are on **web**
   only.
 
+**⚠️ crm-test reverts to a fixed snapshot every night.** It doubles as the
+training sandbox, and since 2026-08-22 a nightly reset runs in two halves — the
+CRM at **04:00 UTC** (droplet cron) and the app's own Postgres an hour later
+(the `delivery-worker`, `SANDBOX_NIGHTLY_RESET`). **Anything you create or edit
+on crm-test during the day is gone by morning**, so a live verification left
+half-finished overnight has to start again. Pause a night with
+`touch /var/www/espocrm/.sandbox-hold` on the droplet (CRM half only — clear the
+worker flag too if the app-side data matters). What survives by design: the CRM
+team's Entity Manager work (it lives in files, and the reset rebuilds from it),
+the `/setup` overrides in `app_setting`, roles, teams, email templates and the
+integration credentials. Runbook: `SANDBOX-RESET.md`; the training data and its
+showcase records: `training-guide.md` and `demo-records.md`.
+
 ## Commands
 
 ```bash

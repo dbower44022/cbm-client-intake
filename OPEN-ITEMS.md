@@ -6,197 +6,37 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
-23. **The training sandbox is built but not armed** (2026-08-21). crm-test is
-    becoming CBM's training sandbox and release-test environment on top of its
-    existing job as the pre-production review gate; the nightly restore that
-    keeps those from ruining each other is written, tested and **deliberately
-    inert**. Runbook: `SANDBOX-RESET.md`.
+23. **The training sandbox — done, with four residuals** (2026-08-22). crm-test
+    now doubles as CBM's training sandbox and release-test environment on top of
+    its existing job as the pre-production review gate, and the nightly reset
+    that keeps those three from ruining each other is **live in both halves**:
+    the CRM at 04:00 UTC (droplet cron) and the app database at 01:00
+    America/New_York (the worker, `SANDBOX_NIGHTLY_RESET`). Purged, seeded,
+    deepened to 194/194 fields and 62/63 relationships on the showcase records,
+    contained (`check_containment.py` reports 0 blocking issues), baseline
+    captured and the restore proved end to end. Docs: `SANDBOX-RESET.md`
+    (engineers), `training-guide.md` (trainers, also published to the docs
+    site), `demo-records.md` (the data reference).
 
-    Done: `scripts/sandbox/reset_crm_sandbox.py` (the CRM half, verified in
-    read-only modes against the live droplet — 205 tables, 141 record / 64
-    config-kept), `core/sandbox_reset.py` + the worker timer (the app-database
-    half), 12 tests including the guard that fails the suite when a migration
-    adds an unclassified table.
+    What is still owed:
 
-    **Purged and seeded 2026-08-21.** Backups first (`2026-08-21_044712.tar.gz`,
-    470 MB, plus a 73 MB logical dump). 1006 business records deleted via the
-    API (`scripts/sandbox/purge_crm_records.py`), then
-    `scripts/sandbox/seed_training_data.py` created the fictional training set:
-    26 mentor profiles (10 on real logins, 9 of them eligible for the Client
-    Administration dropdown), 30 companies, 56 contacts, 16 client profiles, 16
-    engagements across the lifecycle (4 left unassigned), 77 sessions
-    (65 completed back to 2025-09, 12 upcoming), 8 partners, 6 funders. The
-    training login is **`joe.mentor@cbmentors.org` / "Joe Mentor"**, book of 7.
-    Every seeded address is on **`sandbox.cbmentors.org`** — no mailboxes, so
-    an accidental Save cannot send mail or create a calendar invite. The seed
-    is idempotent (proved by a second run reusing everything).
-
-    Owed, in order:
-    - ~~Clear the app's Postgres before the baseline.~~ **Done 2026-08-22**:
-      246 rows cleared inside the crm-test web container (the app's own
-      `DATABASE_URL` and engine helper, nothing exfiltrated), and the 68
-      orphaned `CIntakeSubmission` receipts deleted from the CRM. They had been
-      regenerating from the submissions still in Postgres — the coupling
-      `core/sandbox_reset.py` exists for. `SANDBOX_NIGHTLY_RESET` was armed on
-      the crm-test worker briefly and is now **back out** of the overlay: the
-      code is not on `main`, so it was inert, and leaving it would start
-      resetting the app half nightly the moment those commits land while the
-      CRM half still has no baseline. Arm both halves together.
-    - **Capture the baseline and prove a restore by hand** before any cron.
-    - ~~Arm the CRM half.~~ **DONE 2026-08-22**: `0 4 * * *` on the droplet.
-      04:00 UTC deliberately, not 00:00 — the droplet's clock is `Etc/UTC`, so
-      a naive midnight entry fires at 8pm Eastern, and 04:00 UTC is also always
-      ahead of the app half (01:00 America/New_York). Proved it runs under a
-      stripped cron environment (`env -i PATH=/usr/bin:/bin`) because the
-      script shells out to `docker`.
-    - **Arm the app half** — blocked on `3d291d9`..`06a7744` reaching `main`,
-      which deploys production too. Then `SANDBOX_NIGHTLY_RESET=true` on the
-      crm-test **worker** component only. Until then the CRM reverts nightly
-      and the app database does not; harmless while the /ops queue is empty,
-      but the two are meant to move together.
-    - ~~Decide the Google question.~~ **Contained 2026-08-22.** Doug created a
-      separate sandbox shared drive (`0ALcjRDPAiHRLUk9PVA`) and deleted
-      EspoCRM's Google integration; every training `cbmEmail` is on
-      `@sandbox.cbmentors.org`, which has no mailboxes.
-      `scripts/sandbox/check_containment.py` reports 0 blocking issues.
-      **Still open for RELEASE TESTING only:** a test that needs to see
-      calendar invites or email actually arrive cannot, and a no-op that
-      succeeds is indistinguishable from a feature that works.
-    - **A separate Google Workspace for the test environment** — Doug's stated
-      direction 2026-08-22, deliberately not urgent. It converts containment
-      from "prevent every send" to "let sends happen inside an isolated
-      tenant", which is what release-testing calendar, email and mentor
-      provisioning actually requires. The six config changes it implies are
-      tabulated in `SANDBOX-RESET.md` § *The eventual fix*; none of them touch
-      the golden baseline or the nightly reset.
-    - **Baseline captured 2026-08-22** (`2026-08-22_155832`, 286 KB records +
-      32 MB attachments) and the restore **proved end to end**: a marker
-      description and two deleted sessions were both recovered, all counts
-      matched, the showcase audit stayed at 194/194 fields, and the 23 custom
-      entityDefs files were untouched.
-
-    **Containment pre-flight added 2026-08-21** (`scripts/sandbox/check_containment.py`,
-    run before every training session). Doug's ruling: nobody is meant to save
-    anything, but assume they will. Its first run against crm-test found:
-    - **BLOCKING — Drive uploads land in the production shared drive.** Both
-      apps carry `GDRIVE_SHARED_DRIVE_ID=0AE50yNppMh_hUk9PVA`. A sandbox
-      document save writes into the real CBM drive, and `GDRIVE_IDENTITY=service`
-      means a fake cbmEmail does not contain it. Needs its own drive.
-    - **19 of 44 crm-test mentor profiles carry a cbmEmail**, several of which
-      look like real mailboxes (`doug.bower@`, `sharon.rose@`, `anita.khayat@`
-      — the last two are real production members, `OPEN-ITEMS` #10). Email and
-      calendar containment rests entirely on these NOT existing, so each needs
-      confirming or replacing before training.
-    - **`joseph.blow25@gmail.com`** sits on a mentor profile — an external
-      address that would actually receive.
-    - **Two profiles share `sharon.rose@cbmentors.org`** ("Sharon Rose" and
-      "Jane Doe") — the duplicate-profile trap again.
-
-    Already contained and worth keeping that way on crm-test: `OPS_MAILBOX`
-    unset (no info@ sending, no second inbound poller) and all three
-    `GOOGLE_*` provisioning flags off.
-
-    Known seam: the `.sandbox-hold` sentinel pauses the CRM half only — the app
-    half is on the far side of an SSH boundary and does not read it. Documented
-    in the runbook. The clean close is to make the droplet the only scheduler
-    and have it trigger the app half over an authorised call (the
-    `setup_peer_token` pattern already exists for the environment diff).
-
-1. **This repository's `.git` lives inside the Dropbox-synced tree, and Dropbox
-   destroyed it twice in one day** (2026-07-28).
-
-   - **~10:38** — Dropbox replaced `.git` with a fresh clone of `origin/main`.
-     The reflog was left with a single `clone` entry and the unpushed commits
-     `e8f3a72` and `4230811` vanished. Working files survived, so the content
-     was restored by hand in commit `0451b09`.
-   - **~15:19** — worse: `.git` was reduced to a single empty `logs/HEAD`
-     (12 KB total). The directory stopped being a git repository at all — every
-     git command failed with `fatal: not a git repository` — while a parallel
-     session was actively writing a 52 KB document into the working tree with
-     no way to commit it. Rebuilt from `origin/main`; the in-flight work went in
-     as `862f2dc`.
-
-   The same afternoon Dropbox also left a `.venv (renamed)/` beside the real one
-   — 55 MB, 2,583 files, no `bin/`. **The hazard is not confined to `.git`.**
-
-   **Correction to the earlier record:** `e8f3a72` and `4230811` were *not*
-   unrecoverable. Both were found intact in Dropbox's own **local** cache during
-   the 15:19 salvage. The original entry was wrong on the single most important
-   point, which is why the rule below is stated the way it is.
-
-   **What survives and what does not** — established by salvaging the 15:19
-   incident:
-
-   - **Committed work is recoverable.** `~/Dropbox/.dropbox.cache/old_files`
-     held 6 git packfiles and 1,364 loose objects for this repo, yielding **134
-     commits**. 13 of them were absent from GitHub, and every one turned out to
-     be a superseded pre-amend/reword duplicate or an abandoned stash whose
-     final content was already pushed.
-   - **Uncommitted work is recoverable by no means at all.** The 52 KB System
-     Admin guide existed in **zero** git objects — no pack, no loose object, no
-     blob. It had never been `git add`ed, so nothing anywhere had ever hashed
-     it. Only the file on disk existed.
-
-   That asymmetry is the whole lesson: **the danger is never the history — it is
-   whatever has not been committed yet.** Commit early; the remote is a bonus.
-
-   **Salvage procedure**, if it happens again — do this *before* rebuilding,
-   since a `git init` in place is harmless but the cache is not forever:
-
-   ```bash
-   C=~/Dropbox/.dropbox.cache/old_files
-   # packfiles: 4-byte "PACK" magic
-   find $C -type f -size +1k | while read f; do \
-     [ "$(head -c4 "$f")" = PACK ] && echo "$f"; done
-   # index each into a scratch bare repo:
-   #   git init --bare salvage.git
-   #   cp <pack> salvage.git/objects/pack/p.pack && git -C salvage.git index-pack …
-   # loose objects: zlib streams starting 0x78 that decompress to
-   #   "commit|blob|tree|tag <len>\0" — write to salvage.git/objects/ab/cdef…
-   ```
-
-   Then `git cat-file --batch-all-objects` to enumerate, and compare against
-   `git rev-list --all` from a fresh clone to find anything the remote lacks.
-
-   **Do not use Dropbox's cloud Rewind for this.** It restores *folders*, so
-   rewinding rolls the working tree back too — and the working tree is where the
-   only copy of uncommitted work lives, so it can destroy the very thing you are
-   trying to save. A `.git` reassembled from an unordered file-level snapshot is
-   also a prime candidate for silent corruption (refs pointing at objects that
-   did not come back). The local cache above is strictly better: read-only,
-   instant, and verifiable.
-
-   **Why it happens:** `.git` is thousands of small files that must change
-   together. Dropbox syncs them individually and with no ordering guarantee, so
-   another machine's (or an older) `.git` can overwrite this one. This also
-   risks *corrupting* a repository, not just losing commits.
-
-   **Options, cheapest first:**
-   - **Push early and often** — a pushed commit survives any local `.git` loss.
-     Weakest fix; it only narrows the window, and conflicts with the "Doug
-     reviews and pushes" convention for work-in-progress.
-   - **Add a Dropbox selective-sync / ignore rule for `.git`** (Dropbox supports
-     marking a folder "ignored" via extended attribute:
-     `attr -s com.dropbox.ignored -V 1 .git`). Keeps the working tree synced,
-     stops the history being synced. Note this makes the repo's history
-     machine-local, which is the correct model anyway — git already has a
-     sync mechanism, and it is called a remote.
-   - **Move the repo out of Dropbox entirely** (e.g. `~/Projects/`) and rely on
-     GitHub for transport. The clean fix.
-
-   **Recommendation: move the repo out of Dropbox.** Two destructions in one
-   day settled this. The `com.dropbox.ignored` attribute is a real fix but has
-   to be re-applied every time `.git` is recreated — including after each of
-   these incidents — and it was absent both times precisely because nobody
-   remembered. Relocation cannot be forgotten. Note the `.venv (renamed)`
-   debris shows the working tree is exposed too, which the ignore attribute
-   would not have helped with at all.
-
-   Until it is done: **commit often, and never let a long editing session
-   accumulate uncommitted work** — that is the only category the salvage
-   procedure cannot rescue. Expect the same hazard in every other
-   Dropbox-hosted repo (`crmbuilder`, `cbm-mentoring-app`, …); their `.git`
-   directories are worth checking.
+    - **A separate Google Workspace for the test environment** — Doug's
+      direction 2026-08-22, deliberately not urgent. Containment today works by
+      *preventing* sends; a test tenant would let them happen inside an isolated
+      boundary, which is what release-testing calendar, email and mentor
+      provisioning actually needs. The six config changes it implies are
+      tabulated in `SANDBOX-RESET.md` § *The eventual fix*.
+    - **The Submission Admin queue is empty**, so `/ops` demos the screen and
+      not the workflow. Filling it means POSTing the public intake forms so the
+      whole capture pipeline runs, then re-baselining.
+    - **`CActionLog` (94 rows) and the native `Email`/`Document`/`Meeting`/
+      `Call`/`Task` entities** are still outside the API key's grants — no
+      delete on the first, no read on the rest, so their contents were never
+      inspected. The native email tables are truncated on every reset, so
+      nothing accumulates, but nobody has looked at what was in them.
+    - **Documents have no demo data** and must not get any until the sandbox
+      Drive is exercised — that part is now safe (its own shared drive since
+      2026-08-22), so this is just work not yet done.
 
 ## Smaller follow-ups from the 2026-07-24 partner migration
 

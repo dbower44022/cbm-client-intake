@@ -138,7 +138,7 @@ ssh root@104.131.45.208 \
   'env -i PATH=/usr/bin:/bin HOME=/root /usr/bin/python3 /usr/local/sbin/reset_crm_sandbox.py reset'
 ```
 
-**7. Arm the app half** — add to the crm-test overlay (`.do/app.prod.yaml`),
+**7. Arm the app half** ✅ **DONE 2026-08-22** — add to the crm-test overlay (`.do/app.prod.yaml`),
 **worker component only**, then `doctl apps update 509b4370-… --spec <file>`:
 
 ```yaml
@@ -152,8 +152,16 @@ ssh root@104.131.45.208 \
 index, so it should cost a deliberate `doctl` apply, not a toggle anyone
 holding that page can flip.
 
-Confirm it armed: the worker logs `training-sandbox reset enabled` at boot, or
-`training-sandbox reset NOT armed: <reason>` if a guard refused it.
+Confirm it armed by reading the worker's own words, not the spec — the spec
+only proves the variable is set, not that the deployed code understood it:
+
+```
+training-sandbox reset enabled (01:00 America/New_York; next 2026-08-23 05:00:00+00:00 UTC)
+```
+
+or `training-sandbox reset NOT armed: <reason>` if a guard refused it. **The
+code must be on `main` first** — the flag is inert against a build that predates
+`core/sandbox_reset.py`, and there is no error to tell you so.
 
 ## Day-to-day
 
