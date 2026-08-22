@@ -1,7 +1,11 @@
 # `CMentorProfile.mentorSummary` — CRM build specification
 
-**Status: NOT BUILT — wanted for the My Mentor Profile tool (`/mentorprofile`)
-and the website mentor-page feed.** The app side shipped feature-gated: the
+**Status: BUILT — confirmed live 2026-08-14** (the "Short summary (shown on the
+website)" box renders in `/mentorprofile`, and it is feature-gated on CRM
+metadata, so its presence proves the field exists). The build notes below are
+retained as the record of what was specified.
+
+The app side shipped feature-gated: the
 editor field and the preview's summary block activate on their own once this
 field exists (metadata feature-detection, the `sessionTranscription` /
 `googleCalendarEventId` precedent), so this build can land before or after any
