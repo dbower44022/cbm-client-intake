@@ -190,15 +190,26 @@ block a deploy.)*
     notice. Re-probe recipe + the local SA key path are in
     `csession-transcript-fields.md`.
 
-24. **`CMentorProfile.lastClientAssignedDate`** (both CRMs) — a Date-Time field
-    recording the last date a mentor was given a new client. Handoff:
-    `cmentorprofile-last-client-assigned-field.md`, which also covers the layout
-    placements that make it useful and the **Client Administration Team role's
-    `CMentorProfile` edit grant** the stamp needs (read is already there for the
-    dropdown; an admin test proves nothing about it). Shipped feature-detected
-    in v0.207.0, so Client Administration's Assign and Reassign start writing it
-    the moment the field exists — no deploy. Until then the picker's new **Last
-    Assigned** column is live but reads "—" on every row.
+24. **`CMentorProfile.lastClientAssignedDate`** — **the field is built on both
+    CRMs (2026-08-23)**, so Client Administration's Assign and Reassign are
+    writing it. What remains is the **Client Administration Team role's
+    `CMentorProfile` edit grant**: the stamp is best-effort and runs as the
+    signed-in staffer, so a role with read (which it has, for the dropdown) but
+    no edit loses the stamp to a logged warning while the assignment itself
+    stands. **An admin test proves nothing about this** — check it as a real
+    staffer, or watch the app log for `lastClientAssignedDate not stamped on
+    CMentorProfile/…` after the first live assignment. Handoff:
+    `cmentorprofile-last-client-assigned-field.md`, which also has the optional
+    layout placements and a five-step verification.
+
+    **The training sandbox is done** (2026-08-23): seeded engagements were never
+    assigned through the app, so all six mentors holding clients read "—" beside
+    a full book, which teaches a trainee that the column is broken. The seeder's
+    new `stamp_last_assigned` stage backfilled each of them from the latest
+    `engagementAssignedDate` on the engagements they hold, and the golden
+    baseline was recaptured, so the nightly restore puts the stamps back. Prod
+    needs no backfill — the value appears there the next time a mentor is given
+    a client.
 
 22. **One prod Gmail message can never be ingested** (gmail id
     `19f298a147e3ba38`). Its subject trips `CConversation.name`'s

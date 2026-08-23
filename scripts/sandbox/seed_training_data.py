@@ -398,6 +398,70 @@ async def seed_sessions(
     await s.upsert("CSession", f"{upcoming:%Y-%m-%d} - {company}", payload)
 
 
+#: One CEngagement page. EspoCRM refuses a maxSize above recordListMaxSizeLimit
+#: (200) outright rather than truncating ([[espo-list-maxsize-403]]).
+_ENGAGEMENT_PAGE = 200
+
+
+async def stamp_last_assigned(s: Seeder) -> None:
+    """Give every mentor holding a client the date they were last given one.
+
+    Client Administration's Available Mentors picker carries a **Last Assigned**
+    column, and the app is what writes the value behind it — on Assign and on
+    Reassign. Seeded engagements were never assigned through the app, so without
+    this the sandbox shows mentors with a book of clients and a "—" beside it,
+    which teaches a trainee that the feature is broken.
+
+    Derived from the **engagements themselves** (the latest
+    ``engagementAssignedDate`` the mentor holds), never from the seeding clock:
+    a re-run reuses the engagements it already created, so a recomputed "now"
+    would drift the profile away from the records it is describing.
+
+    Feature-detected through the app's own helpers, which is also why they are
+    imported rather than re-implemented — the stamp the sandbox shows and the
+    stamp Client Administration writes cannot then disagree. Until the CRM field
+    exists this stage says so and does nothing (``OPEN-ITEMS.md`` #24).
+    """
+    from assignments.service import (  # local: keeps the CLI light
+        LAST_ASSIGNED_FIELD,
+        last_assigned_field_exists,
+        stamp_mentor_last_assigned,
+    )
+
+    if not await last_assigned_field_exists(s.client):
+        print(f"  ! CMentorProfile.{LAST_ASSIGNED_FIELD} is not built on this CRM — "
+              "every mentor will read '—' under Last Assigned (OPEN-ITEMS.md #24)")
+        return
+
+    latest: dict[str, str] = {}
+    offset = 0
+    while True:
+        data = await s.client.list(
+            "CEngagement", select="mentorProfileId,engagementAssignedDate",
+            max_size=_ENGAGEMENT_PAGE, offset=offset, order_by="createdAt", order="asc",
+        )
+        rows = data.get("list", [])
+        for row in rows:
+            mentor_id, when = row.get("mentorProfileId"), row.get("engagementAssignedDate")
+            # CRM datetimes are "YYYY-MM-DD HH:MM:SS", so the string order IS
+            # the chronological order — no parsing needed to find the latest.
+            if mentor_id and when and when > latest.get(mentor_id, ""):
+                latest[mentor_id] = when
+        if len(rows) < _ENGAGEMENT_PAGE:
+            break
+        offset += _ENGAGEMENT_PAGE
+
+    if not s.apply:
+        print(f"  would stamp {len(latest)} mentor profile(s) with their last assignment date")
+        return
+
+    written = 0
+    for mentor_id, when in latest.items():
+        written += bool(await stamp_mentor_last_assigned(s.client, mentor_id, when))
+    print(f"  last assigned: {written} stamped, {len(latest) - written} already current "
+          f"({len(latest)} mentor(s) hold a client)")
+
+
 #: Left with real gaps on purpose, so Mentor Administration's completeness
 #: badge has something to show and the "what's missing" list is not empty.
 #: These are pre-sign-off statuses, so missing flags is the honest state.
@@ -602,6 +666,7 @@ async def main() -> int:
         await complete_mentors(seeder, profiles, users)
         await complete_roster(seeder, profiles, users)
         await seed_clients(seeder, profiles, users)
+        await stamp_last_assigned(seeder)
         await seed_partners(seeder, profiles)
         await seed_funders(seeder, profiles)
     except EspoError as exc:

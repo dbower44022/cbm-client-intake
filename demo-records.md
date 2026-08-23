@@ -90,6 +90,13 @@ For **Reassign** and **Repair assignment**, use an already-assigned row —
 `Halstead Print Works — Mentoring` is Assigned with a single session, so the
 before-and-after is easy to see. The Notes column is populated on five rows.
 
+In **Review Mentors**, the six mentors who hold clients carry a **Last Assigned**
+date and the rest read "—". Sorting that column ascending is the demo: the
+never-assigned mentors come to the top, then the longest-waiting. The dates are
+history, so **Assigned (30d)** reads 0 across the roster until someone assigns
+in the room — which is exactly what to point at afterwards, since the assignment
+just made stamps today's date onto that mentor.
+
 ## Mentor Administration — **Mentor Admin**
 
 **Open: `Joe Mentor`, then `Claudia Reinhart`.**

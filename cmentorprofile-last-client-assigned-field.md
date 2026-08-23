@@ -3,9 +3,14 @@
 Doug's request (2026-08-22): **track the last date a mentor was assigned a new
 client**, and have the Client Administration app set it when it assigns one.
 
-Status: **the app half is built and shipped; the CRM field is not built yet.**
-The stamp is feature-detected, so the app is inert until the field exists and
-starts writing it the moment it does — no deploy, no coordination window.
+Status: **built on both CRMs 2026-08-23** (Doug), so the app — shipped
+feature-detected in v0.207.0 — began writing the stamp with no deploy. Read
+back live on crm-test that morning: `datetime`, custom, neither audited nor
+read-only, which is what the app needs (the read-only note below is why it does
+not matter either way). The **training sandbox has been backfilled and
+re-baselined**; see *Records that predate the field*. What is still owed is the
+ACL check below and one live assignment as a real Client Administration
+staffer.
 
 ## The field to build
 
@@ -116,6 +121,43 @@ staffer.
 4. Reassign the same engagement to a second mentor: the second mentor is
    stamped, the first mentor's value is unchanged.
 5. Right-click the assigned row → **Repair assignment…**: no new stamp.
+
+## Records that predate the field
+
+**Only assignments made *after* the field exists are stamped**, so on the day it
+is built every mentor reads "—" no matter how many clients they hold. On
+production that is cosmetic and self-correcting: the value appears the next time
+that mentor is given a client, and nothing depends on it.
+
+**On the training sandbox it is not acceptable**, because a trainee shown a
+mentor with seven clients and no assignment date learns that the column is
+broken. The seeded engagements were never assigned through the app — the seeder
+writes `engagementAssignedDate` directly — so the sandbox needs the backfill
+that `seed_training_data.py`'s `stamp_last_assigned` stage performs: for each
+mentor, the **latest `engagementAssignedDate` on the engagements they hold**,
+which is the same derived value described at the bottom of this page.
+
+```bash
+uv run python scripts/sandbox/seed_training_data.py --apply   # backfills the stamps
+ssh root@104.131.45.208 'python3 /usr/local/sbin/reset_crm_sandbox.py baseline --apply'
+```
+
+The second line is what makes it stick: mentor profiles are **record** tables,
+so the nightly restore puts back whatever the golden baseline holds. The field
+*definition* needs no such step — Entity Manager output lives in files and the
+reset rebuilds the schema from them (`SANDBOX-RESET.md`).
+
+The stage is feature-detected the same way the app is: while the field is
+missing it prints that fact and does nothing, so it is safe to run at any time.
+
+### Read-only does not block the app's write
+
+EspoCRM's **Read-only** checkbox is a client-side field param. Checked in the
+crm-test build: the record service filters `readOnlyAfterCreate` and dynamic
+logic's `readOnlySaved` out of an input payload, but nothing filters a plain
+`readOnly` field — an API write still lands. Confirm it anyway with step 2 of
+*Verifying it* above the first time, because a silently-dropped write is exactly
+the failure this field cannot afford.
 
 ## A note on the alternative that was not taken
 
