@@ -1189,7 +1189,7 @@ Entity Manager vocabulary — [[crm-specs-use-entity-manager-terms]]):
 deployed and verified; `CHANGELOG.md` is the permanent record, `OPEN-ITEMS.md`
 holds anything still owed.*
 
-**Pushed through v0.208.1 on 2026-08-23** — so it is building on dev,
+**Pushed through v0.209.0 on 2026-08-23** — so it is building on dev,
 crm-test and prod. The last live prod pass verified `0.206.0` (correctly-branded
 token-free pages, the four policy links resolving). What is *verified* is
 narrower than what is deployed — see each block.
@@ -1199,6 +1199,17 @@ still read "pushed through v0.202.2" while v0.203.x/v0.204.0 sat unpushed
 locally, and a session that believed it pushed a docs commit and shipped a
 feature to production with it. `git log origin/main..main` is the answer; this
 sentence is a convenience.
+
+- **v0.209.0 — Client Administration got Status and Company columns.** Both
+  sortable, both out of the Engagement cell's meta line. The Company column is
+  the one with a trap behind it: intake-created engagements leave
+  `CEngagement.clientOrganization` **null** and carry the Account on
+  `CClientProfile.linkedCompany`, so the column resolves through the client
+  profile when the direct link is empty (`assignments/service._fill_company_names`,
+  mirroring `sessions.service.fill_company_fallback` — duplicated because
+  sessions imports FROM assignments). Best-effort: an unreadable profile renders
+  "—". **Verified in a stub harness only** — the fallback read is the path most
+  prod rows take and has not been watched against a live CRM.
 
 - **v0.208.0 / v0.208.1 — inbound mail stops filing calendar invites, and the
   Operations tab shows the plan it produced.** Both **deployed and verified on
