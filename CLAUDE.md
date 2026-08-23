@@ -1200,25 +1200,17 @@ locally, and a session that believed it pushed a docs commit and shipped a
 feature to production with it. `git log origin/main..main` is the answer; this
 sentence is a convenience.
 
-- **v0.208.0 — inbound mail stops filing calendar invites as documents.**
-  The standing rules are in the Email section above. Two things to know here:
-  there is **no feature flag** — the never-file list ships with a non-empty
-  default, so the behaviour changes on both environments the moment this
-  deploys, and the rollback is emptying the setting at `/setup` rather than a
-  revert. And the **cleanup is a separate, deliberate act**: the invites
-  already filed stay where they are until someone runs the Operations job and
-  applies its plan (`OPEN-ITEMS.md` #24) — and running it on crm-test proved
-  only the plumbing, because that database is emptied nightly and held no
-  documents at all, so **the archive path has never actually run**. The filter
-  is covered by tests and confirmed live in the crm-test container.
-
-- **v0.208.1 — the Operations tab shows the plan it just produced.** A dry run
-  rendered its report and then `loadJobs()` rebuilt the panel and destroyed it,
-  so every job since the tab shipped has said `done` with nothing to review —
-  hollowing out the dry-run-then-apply ruling the tab exists to enforce. Past
-  runs now keep their report under a **Report** column too. Verified in a
-  browser against a stub harness, including the control that the job list is
-  genuinely rebuilt.
+- **v0.208.0 / v0.208.1 — inbound mail stops filing calendar invites, and the
+  Operations tab shows the plan it produced.** Both **deployed and verified on
+  production** on 2026-08-23: the cleanup archived **45 documents across 30
+  records, 45 of 45, no failures**, which is also the first real run of the
+  archive path (crm-test cannot rehearse it — its app database is emptied
+  nightly). That same sequence proved the tab fix: the first dry run is the one
+  that showed "done" and nothing else. The standing rules are in the Email
+  section above; the closing evidence is in `OPEN-ITEMS.md` § *Resolved*. The
+  one thing nobody has watched happen is a *new* invite arriving and being
+  skipped at filing time — the matcher itself is proven, since it is what
+  selected those 45 files.
 
 - **v0.205.0–v0.206.0 — the product stopped saying Cleveland** (Phase 0 of the
   chapter-network plan; worth doing whatever happens with the chapters).

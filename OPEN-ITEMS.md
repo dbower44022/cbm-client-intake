@@ -76,31 +76,6 @@ empty company on a partner/funder now renders as "—" and is fixable in the app
 
 ## Data cleanup
 
-24. **Archive the calendar invites already filed as documents** (v0.208.0,
-    2026-08-23). Filing now refuses excluded types, but everything filed
-    before that is still sitting in Documents tabs — chiefly `invite.ics`,
-    one per meeting, per reschedule and per acceptance, on every record the
-    thread touched. Run **`/setup` → Operations → "Clean up excluded email
-    attachments"**: read the plan, then apply it. Applying **archives** (moves
-    to the record folder's `_Archived`, restorable) — nothing is deleted and a
-    file a person uploaded is never touched. Do **crm-test** first: the plan is
-    the same shape there, and it is the cheap rehearsal since the sandbox
-    reverts overnight anyway. Then prod, where the count is the one that
-    matters. The CLI equivalent inside a container is
-    `scripts/cleanup_excluded_attachments.py [--apply]`.
-
-    **crm-test was run on 2026-08-23 and is not a rehearsal.** The job
-    completed cleanly in the crm-test web container (exit 0, plan rendered,
-    the never-file list live and correct) but reported nothing to archive —
-    because that deployment's `app_document` and `comm_attachment` tables are
-    **entirely empty**. Not a configuration gap: `gmail_sync`, `gdrive_docs`,
-    `gdrive_identity=service`, the shared drive and the service account are all
-    set there. It is the nightly sandbox reset wiping the app's own Postgres.
-    So the run proved the plumbing (settings, database, list, plan renderer)
-    and left the **archive path itself unexercised anywhere** — the first real
-    run of it will be the prod one. Read the plan carefully before applying;
-    the Operations tab shows it properly from v0.208.1 onward.
-
 10. **Two prod CBM members have no linked Contact — and one has no mentor
     status** (found 2026-07-28, probing the birthday roster; both CRMs read
     read-only). On **production**:
@@ -505,6 +480,25 @@ toggle.
     assigned to an unlinked profile are invisible in the session tools.
 
 ## Resolved
+
+- **The calendar invites filed as documents are gone** (was item 24, raised and
+  closed 2026-08-23). Doug ran the cleanup on **production** through `/setup` →
+  Operations the same day it shipped, and the app's own job record is the
+  evidence: two dry runs (16:48, 16:55 UTC) both planned **45 documents across
+  30 records**, and the apply at 16:57 — reason *"Remove existing ics files from
+  production system"* — reported **"Archived 45 of 45 document(s)"** with no
+  failures. `app_document` now reads 45 `Email attachment` rows archived against
+  95 still active, which matches the plan exactly. Every one of those files sits
+  in its record folder's `_Archived` subfolder and can be restored; nothing was
+  deleted.
+
+  Two things this settles beyond the cleanup itself. The **archive path has now
+  run for real, at scale** — it had been exercised only by tests, and crm-test
+  could not rehearse it ([[crm-test-app-data-empties-nightly]]). And the
+  **v0.208.1 Operations-tab fix is verified live by that same sequence**: the
+  16:48 dry run is the one that showed "done" and nothing else, which is what
+  surfaced the defect; the 16:55 re-run showed the plan, and only then was it
+  applied. crm-test remains unrehearsable and unnecessary here.
 
 - **`CMentorProfile.lastClientAssignedDate`** (was item 24, raised and closed
   2026-08-23). The Date-Time field recording when a mentor was last given a new
