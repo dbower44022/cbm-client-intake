@@ -15,6 +15,9 @@ read-rich, not write-heavy):
 * A **supporting roster** so the directory, the Client Administration mentor
   dropdown and the analytics panels are not bare.
 * **Unassigned engagements** so Client Administration has something to assign.
+* **Two clients assigned within the last month** (``RECENT_ASSIGNMENTS``), so
+  the Assigned-30-days column and the near end of the Last Assigned sort are
+  not empty while every other assignment is months old.
 * **Partners and funders** for those two management tools.
 
 **Containment.**  Every seeded ``cbmEmail`` goes on ``--email-domain``
@@ -101,6 +104,11 @@ CLIENTS: tuple[tuple[str, str, str, str, str, int], ...] = (
     ("Tidewater Bookkeeping", "Frank", "Delacroix", "Small-business bookkeeping", "Active", 8),
     ("Verdigris Ceramics", "Nora", "Ashworth", "Studio pottery and classes", "Completed", 9),
     ("Whitmore Automotive", "Sam", "Kowalczyk", "Independent repair shop", "Dormant", 2),
+    # --- assigned within the last month (see RECENT_ASSIGNMENTS) ---------
+    ("Larkspur Provisions", "Nadia", "Whitlock", "Neighbourhood grocer and deli",
+     "Pending Acceptance", 0),
+    ("Bellweather Signage", "Gideon", "Castellano", "Storefront and vehicle signage",
+     "Assigned", 0),
     # --- waiting for Client Administration to assign ---------------------
     ("Ember Lane Florists", "Grace", "Odom", "Retail florist", "Submitted", 0),
     ("Kestrel Fabrication", "Luis", "Berganza", "Small-batch metal fabrication", "Submitted", 0),
@@ -110,6 +118,23 @@ CLIENTS: tuple[tuple[str, str, str, str, str, int], ...] = (
 
 #: Clients belonging to the training mentor — the first six above.
 TRAINING_BOOK = 6
+
+#: Clients assigned to a NAMED mentor within the last month, rather than by the
+#: spread formula in :func:`seed_clients`. Every other seeded assignment is
+#: months old by design, which left Client Administration's **Assigned (30d)**
+#: column reading 0 for the whole roster and the Last Assigned sort with no near
+#: end to compare the far end against.
+#:
+#: They are new, thin records on purpose: a client assigned three weeks ago has
+#: no session history, so this shape needs no invented past. Moving one of the
+#: established books forward instead would have put months of sessions *before*
+#: the date the mentor was given the client.
+#:
+#: ``company -> (mentor display name, days ago)``
+RECENT_ASSIGNMENTS: dict[str, tuple[str, int]] = {
+    "Larkspur Provisions": ("Tony Tiger", 9),
+    "Bellweather Signage": ("Wally Walrus", 24),
+}
 
 #: Mentors built out to look like ordinary, fully-established members: the two
 #: identities a mentor demo is actually given. Mentor Administration's
@@ -282,10 +307,14 @@ async def seed_clients(s: Seeder, profiles: dict[str, str], users: dict[str, str
             **({"clientcontactId": contact_id} if contact_id else {}),
         })
 
-        # Who owns it: the training mentor takes the first TRAINING_BOOK,
-        # the rest spread across the other logins. Submitted ones stay free.
+        # Who owns it: the training mentor takes the first TRAINING_BOOK, the
+        # rest spread across the other logins, and RECENT_ASSIGNMENTS names its
+        # own. Submitted ones stay free.
+        recent = RECENT_ASSIGNMENTS.get(company)
         mentor_name: str | None = None
-        if status != "Submitted":
+        if recent:
+            mentor_name = recent[0]
+        elif status != "Submitted":
             mentor_name = (
                 TRAINING_MENTOR if index < TRAINING_BOOK
                 else mentor_names[index % len(mentor_names)]
@@ -304,7 +333,7 @@ async def seed_clients(s: Seeder, profiles: dict[str, str], users: dict[str, str
             **({"primaryEngagementContactId": contact_id} if contact_id else {}),
         }
         if mentor_profile_id:
-            assigned = now - timedelta(days=300 - index * 7)
+            assigned = now - timedelta(days=recent[1] if recent else 300 - index * 7)
             payload["mentorProfileId"] = mentor_profile_id
             # engagementAssignedDate is a DATETIME (not a date) — a bare
             # YYYY-MM-DD is rejected as a validation failure, not coerced.
@@ -401,6 +430,49 @@ async def seed_sessions(
 #: One CEngagement page. EspoCRM refuses a maxSize above recordListMaxSizeLimit
 #: (200) outright rather than truncating ([[espo-list-maxsize-403]]).
 _ENGAGEMENT_PAGE = 200
+
+#: How far the stored date may sit from its target before the refresh rewrites
+#: it. Half a day, so a re-run on the same day is a no-op rather than a write.
+_RECENT_TOLERANCE = timedelta(hours=12)
+
+
+async def refresh_recent_assignments(s: Seeder) -> None:
+    """Keep :data:`RECENT_ASSIGNMENTS` genuinely recent, not merely once-recent.
+
+    The nightly restore puts back a **fixed** baseline, so every date in the
+    sandbox ages: two clients assigned "9 and 24 days ago" the day the baseline
+    was captured are 40 and 55 days old six weeks later, and Client
+    Administration's Assigned (30d) column is back to zero across the roster
+    with nothing to say why.
+
+    This is the one stage that deliberately re-dates a record it did not just
+    create, and it is what makes the fix maintainable: re-running the seeder and
+    recapturing the baseline is all that keeping the sandbox current takes.
+    ``seed_clients`` sets the same dates on first create, so a fresh seed and a
+    refreshed one land in the same place.
+    """
+    now = datetime.now(timezone.utc)
+    for company, (mentor_name, days) in sorted(RECENT_ASSIGNMENTS.items()):
+        name = f"{company} — Mentoring"
+        found = await s.find_by_name("CEngagement", name)
+        if not found:
+            print(f"  ! {name}: not created yet — run with --apply first")
+            continue
+        target = now - timedelta(days=days)
+        record = await s.client.get("CEngagement", found["id"], select="engagementAssignedDate")
+        stored = record.get("engagementAssignedDate")
+        current = datetime.strptime(stored, CRM_FMT).replace(tzinfo=timezone.utc) if stored else None
+        if current and abs(current - target) <= _RECENT_TOLERANCE:
+            print(f"  {company}: assigned {days}d ago ({stored}) — current")
+            continue
+        if not s.apply:
+            print(f"  would re-date {company} to {days} days ago ({target:{CRM_FMT}})")
+            continue
+        await s.client.update("CEngagement", found["id"], {
+            "engagementAssignedDate": target.strftime(CRM_FMT),
+            "engagementStartDate": target.strftime("%Y-%m-%d"),
+        })
+        print(f"  {company}: re-dated to {days} days ago ({target:{CRM_FMT}}), {mentor_name}")
 
 
 async def stamp_last_assigned(s: Seeder) -> None:
@@ -666,6 +738,7 @@ async def main() -> int:
         await complete_mentors(seeder, profiles, users)
         await complete_roster(seeder, profiles, users)
         await seed_clients(seeder, profiles, users)
+        await refresh_recent_assignments(seeder)
         await stamp_last_assigned(seeder)
         await seed_partners(seeder, profiles)
         await seed_funders(seeder, profiles)

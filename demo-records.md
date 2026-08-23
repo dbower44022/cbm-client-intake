@@ -90,12 +90,19 @@ For **Reassign** and **Repair assignment**, use an already-assigned row —
 `Halstead Print Works — Mentoring` is Assigned with a single session, so the
 before-and-after is easy to see. The Notes column is populated on five rows.
 
-In **Review Mentors**, the six mentors who hold clients carry a **Last Assigned**
-date and the rest read "—". Sorting that column ascending is the demo: the
-never-assigned mentors come to the top, then the longest-waiting. The dates are
-history, so **Assigned (30d)** reads 0 across the roster until someone assigns
-in the room — which is exactly what to point at afterwards, since the assignment
-just made stamps today's date onto that mentor.
+In **Review Mentors**, the eight mentors who hold clients carry a **Last
+Assigned** date and the rest read "—". Sorting that column ascending is the
+demo: the never-assigned mentors come to the top, then the longest-waiting.
+**Tony Tiger** (9 days) and **Wally Walrus** (24 days) are the near end — they
+are also the only two rows with **Assigned (30d)** above zero — and Tommy
+Tranell at eight months is the far end. Assign one of the Submitted rows in the
+room and watch today's date land on that mentor, which is the whole point of the
+column.
+
+Their two clients, **Larkspur Provisions** (Pending Acceptance) and
+**Bellweather Signage** (Assigned), are the only ones with no session history.
+That is not a gap: they are what a client looks like in the first weeks, before
+the first meeting, and the sandbox has nothing else at that stage.
 
 ## Mentor Administration — **Mentor Admin**
 

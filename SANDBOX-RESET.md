@@ -188,6 +188,20 @@ Nothing re-baselines on a schedule. A day's training mess can never be
 silently promoted into the pristine state — that only ever happens because
 someone typed this.
 
+**Re-run the seeder first, in the same sitting:**
+
+```bash
+uv run python scripts/sandbox/seed_training_data.py --apply
+```
+
+The baseline freezes dates, so the training data ages against the calendar: two
+clients seeded as "assigned 9 and 24 days ago" are two months old by October,
+and Client Administration's **Assigned (30d)** column silently returns to zero
+across the roster. The seeder's `refresh_recent_assignments` stage re-dates
+them to *today* minus the same offsets and `stamp_last_assigned` follows, so
+running it immediately before a recapture is what keeps the sandbox current.
+It is idempotent — on the same day it reports "current" and writes nothing.
+
 **Check on it:**
 
 ```bash

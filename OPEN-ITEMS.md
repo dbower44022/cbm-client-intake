@@ -190,26 +190,28 @@ block a deploy.)*
     notice. Re-probe recipe + the local SA key path are in
     `csession-transcript-fields.md`.
 
-24. **`CMentorProfile.lastClientAssignedDate`** — **the field is built on both
-    CRMs (2026-08-23)**, so Client Administration's Assign and Reassign are
-    writing it. What remains is the **Client Administration Team role's
-    `CMentorProfile` edit grant**: the stamp is best-effort and runs as the
-    signed-in staffer, so a role with read (which it has, for the dropdown) but
-    no edit loses the stamp to a logged warning while the assignment itself
-    stands. **An admin test proves nothing about this** — check it as a real
-    staffer, or watch the app log for `lastClientAssignedDate not stamped on
-    CMentorProfile/…` after the first live assignment. Handoff:
-    `cmentorprofile-last-client-assigned-field.md`, which also has the optional
-    layout placements and a five-step verification.
+24. **`CMentorProfile.lastClientAssignedDate`** — **built on both CRMs and
+    working on crm-test (2026-08-23)**. A live Assign there stamped the mentor
+    as `doug.bower@cbmentors.org`, a **`type = regular`** user, so the Client
+    Administration Team role's `CMentorProfile` **edit** grant is proven for
+    real rather than by an admin who would have bypassed ACL either way.
+
+    **Still owed: the same grant on production.** The stamp is best-effort and
+    runs as the signed-in staffer, so a role with read (which it has, for the
+    dropdown) but no edit loses the stamp to a logged warning while the
+    assignment itself stands — the failure is silent from the staffer's side.
+    Check it as a real staffer, or watch the app log for
+    `lastClientAssignedDate not stamped on CMentorProfile/…` after the first
+    live assignment. Handoff: `cmentorprofile-last-client-assigned-field.md`.
 
     **The training sandbox is done** (2026-08-23): seeded engagements were never
     assigned through the app, so all six mentors holding clients read "—" beside
     a full book, which teaches a trainee that the column is broken. The seeder's
-    new `stamp_last_assigned` stage backfilled each of them from the latest
-    `engagementAssignedDate` on the engagements they hold, and the golden
-    baseline was recaptured, so the nightly restore puts the stamps back. Prod
-    needs no backfill — the value appears there the next time a mentor is given
-    a client.
+    `stamp_last_assigned` stage backfilled each of them from the latest
+    `engagementAssignedDate` on the engagements they hold, two clients assigned
+    inside the last month were added so **Assigned (30d)** is not zero across
+    the roster, and the golden baseline was recaptured. Prod needs no
+    backfill — the value appears there the next time a mentor is given a client.
 
 22. **One prod Gmail message can never be ingested** (gmail id
     `19f298a147e3ba38`). Its subject trips `CConversation.name`'s
