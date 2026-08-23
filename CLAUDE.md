@@ -320,6 +320,16 @@ full-height grid with a status multi-select, and assigns each to a mentor.
 - Every row function is also on the **right-click context menu**. The Notes
   column edits `CEngagement.description` inline — staff-internal by design, and
   excluded from the session tools' Details tab for that reason.
+- **The View-details popup is editable** (v0.210.0). It opens at 90% of the
+  window, resizable, with the title bar and the Save/Cancel bar pinned around a
+  scrolling body. `service.ENGAGEMENT_EDIT_FIELDS` is **one spec serving as both
+  the form layout and the update whitelist**; enum options come from live CRM
+  metadata, link-picker options are **paged at 200** (an oversized page is a 403,
+  not a truncation), a forbidden list degrades the field to read-only, a stored
+  value outside the option list keeps its place, and Save sends only what
+  changed. **The assigned mentor is deliberately not an editable field** —
+  swapping `mentorProfile` re-homes contacts, client profile, company and
+  sessions, so the row hands off to Assign/Reassign instead.
 
 ### Mentor Administration — `/mentoradmin`
 
@@ -1189,7 +1199,7 @@ Entity Manager vocabulary — [[crm-specs-use-entity-manager-terms]]):
 deployed and verified; `CHANGELOG.md` is the permanent record, `OPEN-ITEMS.md`
 holds anything still owed.*
 
-**Pushed through v0.209.0 on 2026-08-23** — so it is building on dev,
+**Pushed through v0.210.0 on 2026-08-23** — so it is building on dev,
 crm-test and prod. The last live prod pass verified `0.206.0` (correctly-branded
 token-free pages, the four policy links resolving). What is *verified* is
 narrower than what is deployed — see each block.
@@ -1199,6 +1209,18 @@ still read "pushed through v0.202.2" while v0.203.x/v0.204.0 sat unpushed
 locally, and a session that believed it pushed a docs commit and shipped a
 feature to production with it. `git log origin/main..main` is the answer; this
 sentence is a convenience.
+
+- **v0.210.0 — the Client Administration engagement popup fills the window and
+  can be edited.** The standing rules are in that app's section above. Two things
+  worth keeping here: the 1040px cap it replaced is exactly the width cap the
+  density ruling exists to prevent, and **the mentor is not one of the editable
+  fields on purpose** — a plain `mentorProfileId` write would skip the re-homing,
+  the stamp, the history note and the Drive grants, so the edit form hands off to
+  the existing Assign/Reassign picker. **Verified in a stub harness only**, and
+  the half that harness cannot rehearse is the one that has failed before: no
+  test and no harness issues a real list request, which is how `maxSize=500`
+  emptied every link picker in production unnoticed. `OPEN-ITEMS.md` #20 has the
+  live pass.
 
 - **v0.209.0 — Client Administration got Status and Company columns.** Both
   sortable, both out of the Engagement cell's meta line. The Company column is

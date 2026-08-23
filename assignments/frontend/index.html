@@ -114,7 +114,9 @@
       </div>
     </div>
 
-    <!-- Engagement detail popup -->
+    <!-- Engagement detail popup. A flex COLUMN: the title bar and the action
+         footer stay pinned while only the body scrolls, so Edit/Save/Cancel are
+         reachable at every window size and at every drag of the resize grip. -->
     <div class="modal" id="engModal" hidden>
       <div class="modal__backdrop" data-close></div>
       <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
@@ -123,25 +125,45 @@
           <h2 class="modal__title" id="modalTitle">Loading…</h2>
           <span class="eng-status" id="modalStatus" hidden></span>
         </div>
-        <div class="modal__contact" id="modalContact"></div>
-        <section class="modal__section">
-          <h3 class="modal__h">Focus Areas</h3>
-          <div class="chips" id="modalFocus"></div>
-        </section>
-        <div class="modal__cols">
-          <section class="modal__col">
-            <h3 class="modal__h">Mentoring Needs</h3>
-            <div class="modal__rich" id="modalNeeds"></div>
-          </section>
-          <section class="modal__col">
-            <h3 class="modal__h">Engagement Notes</h3>
-            <div class="modal__rich" id="modalNotes"></div>
-          </section>
+
+        <div class="modal__body">
+          <!-- Read view -->
+          <div id="modalView">
+            <div class="modal__contact" id="modalContact"></div>
+            <section class="modal__section">
+              <h3 class="modal__h">Focus Areas</h3>
+              <div class="chips" id="modalFocus"></div>
+            </section>
+            <div class="modal__cols">
+              <section class="modal__col">
+                <h3 class="modal__h">Mentoring Needs</h3>
+                <div class="modal__rich" id="modalNeeds"></div>
+              </section>
+              <section class="modal__col">
+                <h3 class="modal__h">Engagement Notes</h3>
+                <div class="modal__rich" id="modalNotes"></div>
+              </section>
+            </div>
+            <section class="modal__section">
+              <h3 class="modal__h">Internal Notes</h3>
+              <div class="modal__plain" id="modalInternalNotes"></div>
+            </section>
+          </div>
+
+          <!-- Edit view (built by app.js from the server's field spec) -->
+          <form id="modalEdit" class="edit-form" hidden autocomplete="off"></form>
         </div>
-        <section class="modal__section">
-          <h3 class="modal__h">Internal Notes</h3>
-          <div class="modal__plain" id="modalInternalNotes"></div>
-        </section>
+
+        <div class="modal__foot">
+          <p class="modal__msg" id="modalMsg" role="status"></p>
+          <span class="modal__footactions" id="modalViewActions">
+            <button type="button" class="cbm-button" id="modalEditBtn">Edit</button>
+          </span>
+          <span class="modal__footactions" id="modalEditActions" hidden>
+            <button type="button" class="cbm-button cbm-button--secondary" id="modalCancelBtn">Cancel</button>
+            <button type="button" class="cbm-button" id="modalSaveBtn">Save changes</button>
+          </span>
+        </div>
       </div>
     </div>
 

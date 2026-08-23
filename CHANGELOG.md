@@ -4,6 +4,59 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.210.0] — 2026-08-23
+
+**feat(assignments): the engagement popup fills the window, and it can be
+edited.**
+
+Two changes to the same screen — View details in Client Administration.
+
+- **Size.** The popup was capped at `1040px` wide, so on the 4K monitors these
+  grids are worked on it occupied about a third of the display while its own
+  two-column body wrapped. It now opens at **90% of the window** in both
+  dimensions and is still resizable from the corner (it always was — the cap was
+  what made the grip necessary). The dialog became a flex **column**: title bar
+  and action bar pinned, only the middle scrolls, so Edit / Save / Cancel are on
+  screen however long the form is and however far the grip is dragged in.
+
+- **Edit.** An **Edit** button turns the read view into a form over the
+  engagement's own fields — name, status, meeting cadence, focus areas, the
+  referring partner and requested-mentor links, mentoring needs, engagement
+  notes and the staff-internal notes. Enough to fix bad intake data without
+  opening the CRM.
+
+  - `service.ENGAGEMENT_EDIT_FIELDS` is **one declared spec serving as both the
+    form layout and the server-side update whitelist** — the pattern the rest of
+    the suite already follows, so a field that is not listed cannot be written
+    through this endpoint however the request is hand-rolled.
+  - Enum options are read **live from CRM metadata** (`ENGAGEMENT_STATUSES` is
+    the fallback for Status only, so it can never become unpickable), and the
+    link pickers are **paged at 200** — EspoCRM refuses a larger page with a 403
+    rather than truncating it, which a best-effort handler turns into a picker
+    that offers nothing. A list the user's role forbids degrades the field to
+    read-only instead of showing an empty select, and a **stored value outside
+    the option list keeps its place**, so saving one field can never silently
+    drop another.
+  - **Save sends only what changed** (diffed against the render-time snapshot):
+    re-sending an unchanged value that has since drifted out of its CRM enum
+    would drop it for no reason. A drifted value that *was* changed is dropped
+    rather than allowed to 400 the whole save, and named in the result — except
+    on a required field, which is left alone instead of blanked.
+  - **The assigned mentor is deliberately not an editable field here.** Swapping
+    `mentorProfile` re-homes the contacts, client profile, company and sessions,
+    stamps the mentor, posts the history note and re-derives the Drive grants —
+    that is Assign / Reassign, so the row shows the current mentor and hands off
+    to the existing picker rather than writing the link as if it were a field.
+  - Every save is recorded through `core/action_log.py` (stream note + a
+    `CActionLog` row), because an app write to a CRM record is indistinguishable
+    from a hand edit in EspoCRM's own history.
+  - Closing the popup — the ×, the backdrop or Escape — with unsaved edits asks
+    before discarding them.
+
+- **Fixed:** `performAssign` dereferenced the grid row unconditionally, so an
+  assign started with the row filtered out of the grid threw. It now guards the
+  row like `performReassign` always has.
+
 ## [0.209.0] — 2026-08-23
 
 **feat(assignments): Status and Company are their own columns in Client

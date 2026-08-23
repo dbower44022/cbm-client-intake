@@ -335,21 +335,115 @@ body { display: flex; flex-direction: column; }
   background: var(--cbm-white);
   border-radius: var(--cbm-radius);
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.3);
-  /* Default size scales with the viewport: ~90% wide on small screens, capped
-     so the percentage shrinks on large ones (~54% at 1920px, ~41% on very large
-     displays). Users can still drag the corner to override. */
-  width: clamp(340px, 88vw, 1040px);
-  max-width: 95vw;
-  max-height: 92vh;
-  min-height: 220px;
+  /* 90% of the window, and resizable from there. It used to be capped at
+     1040px, which on the 4K screens these grids are worked on left the popup
+     occupying a third of the display while its own columns wrapped — the
+     width cap the product-wide rule exists to prevent. */
+  width: 90vw;
+  height: 90vh;
+  max-width: 96vw;
+  max-height: 94vh;
+  min-width: 20rem;
+  min-height: 14rem;
   overflow: auto;
   padding: 1.6rem 1.8rem;
   resize: both;
 }
-/* Available Mentors is a wide roster grid — default it to nearly the full
-   window (uncapped, unlike the engagement popup) so more columns are visible
-   without resizing. The corner drag still overrides. */
+/* Available Mentors is a wide roster grid — a couple of points wider still, so
+   more columns are visible without resizing. The corner drag overrides both. */
 #mentorModal .modal__dialog { width: 96vw; }
+
+/* The engagement popup is a flex COLUMN: title bar and action footer pinned,
+   only the middle scrolls. That is what keeps Edit / Save / Cancel on screen
+   however long the form is and however far the grip is dragged in — the same
+   shape as the events editor and the compose window. */
+#engModal .modal__dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+  padding: 0;
+}
+#engModal .modal__head { flex: 0 0 auto; padding: 1.4rem 3rem 0.9rem 1.8rem; }
+.modal__body {
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 0 1.8rem 1.4rem;
+}
+/* Pinned action bar. The extra right padding keeps the resize grip clear of
+   the Save button. */
+.modal__foot {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  border-top: 1px solid var(--cbm-border);
+  background: var(--cbm-white);
+  padding: 0.75rem 2.1rem 0.75rem 1.8rem;
+}
+.modal__footactions { display: flex; gap: 0.6rem; margin-left: auto; }
+.modal__msg { margin: 0; font-size: var(--cbm-text-sm); color: var(--cbm-slate-700); }
+.modal__msg.is-error { color: var(--cbm-error, #b3261e); }
+.modal__msg.is-success { color: var(--cbm-navy); }
+
+/* --- Edit mode -------------------------------------------------------------
+   Panels are grids that gain COLUMNS as the popup widens, rather than one
+   lonely field stretched across a 4K screen (the same packing rule as the
+   events editor). Long-form controls take the whole row. */
+.edit-form { display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem; }
+.edit-group {
+  border: 1px solid var(--cbm-border);
+  border-radius: var(--cbm-radius);
+  padding: 0.7rem 0.9rem 0.9rem;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  align-items: start;
+  gap: 0.9rem 1.1rem;
+}
+.edit-group legend {
+  grid-column: 1 / -1;
+  font-size: var(--cbm-text-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--cbm-navy);
+  padding: 0 0.3rem;
+}
+.edit-field {
+  display: flex; flex-direction: column; gap: 0.25rem; min-width: 0;
+  font-size: var(--cbm-text-sm); color: var(--cbm-slate-700);
+}
+.edit-field > span { font-weight: 600; color: var(--cbm-navy); }
+.edit-field input, .edit-field select, .edit-field textarea {
+  width: 100%; box-sizing: border-box;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--cbm-border); border-radius: 6px;
+  font-size: var(--cbm-text-base); font-family: inherit;
+  line-height: 1.35; color: var(--cbm-ink);
+}
+.edit-field input, .edit-field select { height: 2.35rem; }
+.edit-field textarea { resize: vertical; min-height: 6rem; }
+.edit-field--wide, .edit-field--rich, .edit-field--chips { grid-column: 1 / -1; }
+.edit-help { font-size: 12px; color: var(--cbm-text); }
+/* Multi-enum: the live CRM options as toggle chips, so the whole set is
+   visible at once instead of hidden inside a multi-select. */
+.edit-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.edit-chip {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  background: var(--cbm-surface); border: 1px solid var(--cbm-border);
+  border-radius: 999px; padding: 0.25rem 0.7rem;
+  font-size: var(--cbm-text-sm); color: var(--cbm-navy); cursor: pointer;
+}
+.edit-chip input { width: auto; height: auto; margin: 0; }
+.edit-chip.is-on { border-color: var(--cbm-blue); background: var(--cbm-white); }
+/* The mentor is shown, not edited: reassigning is a whole re-homing operation,
+   so the row hands off to the Assign/Reassign flow instead. */
+/* flex-direction is load-bearing: .edit-field above sets `column`, which
+   stacked the label, the mentor name and the button down the middle. */
+.edit-mentor { display: flex; flex-direction: row; align-items: center;
+  gap: 0.6rem; flex-wrap: wrap; }
+.edit-mentor strong { color: var(--cbm-navy); }
+.edit-mentor .edit-help { flex: 1 0 100%; margin: 0; }
 
 .modal__close {
   position: absolute;

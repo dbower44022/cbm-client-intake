@@ -374,6 +374,23 @@ toggle.
 20. **Everything through v0.187.0 is DEPLOYED to both environments** (verified
     2026-07-28; only docs commits are unpushed). What is owed is the *live
     eyeball*, not a deploy. Never driven against the live CRM/Gmail/Drive:
+    - **Editing an engagement from the Client Administration popup (v0.210.0)** —
+      the Edit button, its live-metadata enums and its two link pickers were
+      verified in a stub harness only, and the pickers are the half that cannot
+      be rehearsed there: neither the unit tests (fakes) nor the harness (canned
+      JSON) issue a real list request, and this is the same call shape that
+      silently emptied every picker in production at `maxSize=500`
+      ([[espo-list-maxsize-403]]). As a **non-admin** Client Administration
+      team member, on a real intake-created engagement: press **Edit**, confirm
+      the **Referring partner** picker actually lists partner profiles and
+      **Requested mentor** lists mentor profiles (an empty one is now a genuine
+      read-grant finding on that team's role, not the page-size bug), change one
+      scalar and one link, Save, and confirm the CRM stored both and the grid's
+      Status / Company / Notes columns follow. Then check the two guards that
+      only a live CRM exercises: a **required** field left blank comes back as a
+      readable message rather than a 502, and the save appears in the
+      engagement's stream as an app action. Also confirm the popup opens at 90%
+      of the window and the corner grip still resizes it.
     - **The curated link pickers, now that they have options (v0.202.2)** —
       until this release the option list was fetched with `maxSize=500`, which
       EspoCRM 403s, so **every** picker offered only "(none)" for everyone

@@ -14,7 +14,7 @@ class FakeClient:
     """Mock of the EspoClient slice the service uses; records get/list/update calls."""
 
     def __init__(self, *, mentor=None, engagement=None, contact=None, related=None,
-                 lists=None, mentor_fields=None):
+                 lists=None, mentor_fields=None, enum_options=None):
         # The CMentorProfile field defs this fake CRM reports. Defaults to a CRM
         # that HAS the lastClientAssignedDate stamp field built, so the suite
         # exercises the live shape; pass ``mentor_fields={}`` for a CRM without it.
@@ -27,6 +27,9 @@ class FakeClient:
         self._contact = contact
         self._related = related or {"list": []}
         self._lists = lists or {}
+        # {(entity, field): [options] | None} — what the fake CRM's metadata
+        # reports for an enum field; a missing key behaves like "no such field".
+        self._enum_options = enum_options or {}
         self.updates: list[tuple[str, str, dict]] = []
         self.creates: list[tuple[str, dict]] = []
         self.list_calls: list[tuple[str, list]] = []
@@ -44,7 +47,23 @@ class FakeClient:
     async def list(self, entity, *, where=None, **kwargs):
         self.list_calls.append((entity, where or []))
         self.list_selects.append((entity, kwargs.get("select")))
-        return self._lists.get(entity, {"total": 0, "list": []})
+        # EspoCRM REFUSES a page above recordListMaxSizeLimit with a 403 rather
+        # than truncating it (the defect that silently emptied every link picker
+        # in production), so the fake refuses it too — a page-size regression
+        # fails here instead of on a live CRM.
+        max_size = kwargs.get("max_size", 50)
+        if max_size > 200:
+            raise EspoError(
+                f"list {entity} failed: 403 Max size should not exceed 200. "
+                "Use offset and limit."
+            )
+        data = self._lists.get(entity, {"total": 0, "list": []})
+        rows = data.get("list", [])
+        offset = kwargs.get("offset", 0)
+        return {
+            "total": data.get("total", len(rows)),
+            "list": rows[offset:offset + max_size],
+        }
 
     async def list_related(self, entity, record_id, link, **kwargs):
         return self._related
@@ -61,6 +80,9 @@ class FakeClient:
         if key == f"entityDefs.{service.MENTOR_PROFILE}.fields":
             return self._mentor_fields
         return {}
+
+    async def metadata_enum_options(self, entity, field):
+        return self._enum_options.get((entity, field))
 
 
 def _mentor(**overrides):
@@ -1216,6 +1238,185 @@ async def test_requested_mentor_orphaned_link_resolves_to_no_name():
     client = OrphanClient(engagement={"name": "Y", "requestedMentorId": "m1"})
     d = await service.get_engagement_detail(client, "e1")
     assert d["requestedMentor"] == {"id": "m1", "name": None}
+
+
+# --- Edit mode: the form spec + the whitelisted update ------------------------
+
+def _edit_client(**overrides):
+    """A fake CRM holding one engagement, a partner roster and live enums."""
+    engagement = {
+        "name": "Ashgrove Cabinetry",
+        "engagementStatus": "Submitted",
+        "meetingCadence": "Monthly",
+        "mentoringFocusAreas": ["Marketing", "Finance"],
+        "mentoringNeedsDescription": "<p>Needs help</p>",
+        "engagementNotes": "<p>Notes</p>",
+        "description": "internal",
+        "referringPartnerId": "p1",
+        "referringPartnerName": "Cuyahoga Alliance",
+        "requestedMentorId": "",
+        "requestedMentorName": "",
+    }
+    engagement.update(overrides)
+    return FakeClient(
+        engagement=engagement,
+        lists={
+            service.PARTNER_PROFILE: {
+                "total": 2,
+                "list": [{"id": "p1", "name": "Cuyahoga Alliance"},
+                         {"id": "p2", "name": "Lakeside Partners"}],
+            },
+            service.MENTOR_PROFILE: {
+                "total": 1, "list": [{"id": "m1", "name": "Matt Mentor"}],
+            },
+        },
+        enum_options={
+            (service.ENGAGEMENT, "engagementStatus"): list(service.ENGAGEMENT_STATUSES),
+            (service.ENGAGEMENT, "meetingCadence"): ["Weekly", "Monthly", "Quarterly"],
+            (service.ENGAGEMENT, "mentoringFocusAreas"): ["Marketing", "Finance", "Operations"],
+        },
+    )
+
+
+def _field(form, name):
+    return next(f for f in form["fields"] if f["name"] == name)
+
+
+async def test_edit_form_carries_values_and_live_options():
+    form = await service.get_engagement_edit_form(_edit_client(), "e1")
+    assert [f["name"] for f in form["fields"]] == [
+        f["name"] for f in service.ENGAGEMENT_EDIT_FIELDS
+    ]
+    status = _field(form, "engagementStatus")
+    assert status["value"] == "Submitted"
+    assert status["required"] is True
+    assert "Assignment Dormant" in status["options"]
+    assert _field(form, "meetingCadence")["options"] == ["Weekly", "Monthly", "Quarterly"]
+    assert _field(form, "mentoringFocusAreas")["value"] == ["Marketing", "Finance"]
+    partner = _field(form, "referringPartner")
+    assert partner["value"] == "p1"
+    assert {"id": "p2", "name": "Lakeside Partners"} in partner["options"]
+
+
+async def test_edit_form_never_asks_for_a_page_over_the_crm_limit():
+    """A link picker paged above recordListMaxSizeLimit is a 403, not a
+    truncation — which a best-effort handler turns into an empty picker."""
+    client = _edit_client()
+    form = await service.get_engagement_edit_form(client, "e1")
+    # The fake refuses an oversized page exactly as EspoCRM does, and the
+    # best-effort handler would swallow it into an empty picker — so the proof
+    # is that the options actually arrived.
+    assert client.list_calls, "the picker options were never fetched"
+    assert len(_field(form, "referringPartner")["options"]) == 2
+
+
+async def test_edit_form_keeps_a_stored_link_outside_the_option_list():
+    client = _edit_client(referringPartnerId="p9", referringPartnerName="Gone Ltd")
+    form = await service.get_engagement_edit_form(client, "e1")
+    partner = _field(form, "referringPartner")
+    assert partner["value"] == "p9"
+    assert partner["options"][0] == {"id": "p9", "name": "Gone Ltd"}
+
+
+async def test_edit_form_degrades_to_read_only_when_the_list_is_forbidden():
+    class ForbiddenClient(FakeClient):
+        async def list(self, entity, *, where=None, **kwargs):
+            if entity == service.PARTNER_PROFILE:
+                raise EspoError("list CPartnerProfile failed: HTTP 403 Forbidden")
+            return await super().list(entity, where=where, **kwargs)
+
+    client = ForbiddenClient(engagement={"name": "X"})
+    form = await service.get_engagement_edit_form(client, "e1")
+    partner = _field(form, "referringPartner")
+    assert partner["optionsUnavailable"] is True
+    assert "options" not in partner
+
+
+async def test_edit_form_falls_back_to_the_module_status_list():
+    """A metadata read that finds nothing must not leave Status unpickable."""
+    client = _edit_client()
+    client._enum_options = {}
+    form = await service.get_engagement_edit_form(client, "e1")
+    assert _field(form, "engagementStatus")["options"] == service.ENGAGEMENT_STATUSES
+    assert _field(form, "meetingCadence")["optionsUnavailable"] is True
+
+
+async def test_update_writes_only_the_changed_whitelisted_fields():
+    client = _edit_client()
+    result = await service.update_engagement(client, "e1", {
+        "engagementNotes": "<p>New</p>",
+        "referringPartner": "p2",
+        "mentoringFocusAreas": ["Operations"],
+    })
+    entity, record_id, payload = client.updates[0]
+    assert (entity, record_id) == (service.ENGAGEMENT, "e1")
+    assert payload == {
+        "engagementNotes": "<p>New</p>",
+        "referringPartnerId": "p2",
+        "mentoringFocusAreas": ["Operations"],
+    }
+    assert result["droppedValues"] == []
+    assert "Engagement notes" in result["changedFields"]
+
+
+async def test_update_drops_a_field_outside_the_whitelist():
+    """The declared spec IS the write contract — mentorProfile is reassignment,
+    not a field write, so it can never be smuggled in through this endpoint."""
+    client = _edit_client()
+    await service.update_engagement(client, "e1", {
+        "name": "Renamed", "mentorProfileId": "m-evil", "assignedUserId": "u-evil",
+    })
+    _, _, payload = client.updates[0]
+    assert payload == {"name": "Renamed"}
+
+
+async def test_update_clears_a_link_with_an_empty_value():
+    client = _edit_client()
+    await service.update_engagement(client, "e1", {"referringPartner": ""})
+    _, _, payload = client.updates[0]
+    assert payload == {"referringPartnerId": None}
+
+
+async def test_update_drops_an_enum_value_the_crm_no_longer_offers():
+    client = _edit_client()
+    result = await service.update_engagement(
+        client, "e1", {"mentoringFocusAreas": ["Finance", "Astrology"]}
+    )
+    _, _, payload = client.updates[0]
+    assert payload["mentoringFocusAreas"] == ["Finance"]
+    assert result["droppedValues"] == ["Astrology"]
+
+
+async def test_update_never_blanks_a_required_field_on_enum_drift():
+    client = _edit_client()
+    result = await service.update_engagement(
+        client, "e1", {"engagementStatus": "Bogus", "name": "Kept"}
+    )
+    _, _, payload = client.updates[0]
+    assert "engagementStatus" not in payload
+    assert payload == {"name": "Kept"}
+    assert result["droppedValues"] == ["Bogus"]
+
+
+async def test_update_rejects_a_blank_required_field_with_a_readable_message():
+    client = _edit_client()
+    with pytest.raises(service.AssignError, match="Engagement name is required"):
+        await service.update_engagement(client, "e1", {"name": "   "})
+    assert client.updates == []
+
+
+async def test_update_rejects_an_oversized_varchar():
+    client = _edit_client()
+    with pytest.raises(service.AssignError, match="too long"):
+        await service.update_engagement(client, "e1", {"name": "x" * 300})
+    assert client.updates == []
+
+
+async def test_update_with_nothing_editable_writes_nothing():
+    client = _edit_client()
+    with pytest.raises(service.AssignError, match="Nothing to save"):
+        await service.update_engagement(client, "e1", {"mentorProfileId": "m1"})
+    assert client.updates == []
 
 
 # --- auth team/role gate -----------------------------------------------------

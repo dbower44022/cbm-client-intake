@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
@@ -26,6 +27,16 @@ class AssignIn(BaseModel):
 class NotesIn(BaseModel):
     # Empty string is a valid value — it clears the notes.
     notes: str = Field(default="", max_length=65535)
+
+
+class EngagementEditIn(BaseModel):
+    """An Edit-mode save. ``changes`` carries ONLY the fields the user actually
+    touched (the frontend diffs against its render-time snapshot), so an
+    unchanged value that has since drifted out of its CRM enum is never
+    re-sent — the same rule Mentor Administration saves under. Keys outside
+    ``service.ENGAGEMENT_EDIT_FIELDS`` are dropped by the service."""
+
+    changes: dict[str, Any] = Field(default_factory=dict)
 
 
 def _require_user(request: Request) -> dict:
@@ -156,6 +167,54 @@ async def update_notes(engagement_id: str, body: NotesIn, request: Request) -> d
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not save notes")
     log.info("notes saved on CEngagement/%s by %s", engagement_id, user["userName"])
+    return result
+
+
+@router.get("/engagements/{engagement_id}/edit")
+async def engagement_edit_form(engagement_id: str, request: Request) -> dict:
+    """The Edit-mode form spec + current values + live option sets."""
+    user = _require_user(request)
+    client = client_for(get_settings(), user)
+    try:
+        return await service.get_engagement_edit_form(client, engagement_id)
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not open the engagement for editing")
+
+
+@router.put("/engagements/{engagement_id}")
+async def update_engagement(
+    engagement_id: str, body: EngagementEditIn, request: Request
+) -> dict:
+    """Save the Edit-mode changes and return the refreshed detail payload."""
+    user = _require_user(request)
+    client = client_for(get_settings(), user)
+    try:
+        result = await service.update_engagement(client, engagement_id, body.changes)
+    except service.AssignError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not save the engagement")
+    log.info(
+        "edited CEngagement/%s (%s) by %s",
+        engagement_id, ", ".join(result["changedFields"]), user["userName"],
+    )
+    # A staff edit to a CRM record is indistinguishable from a hand edit in
+    # EspoCRM's own history, so the action log is what says the app did it.
+    await action_log.record_action(
+        client, app=action_log.APP_CLIENT_ADMIN, category=action_log.CAT_RECORD_EDIT,
+        action=action_log.ACT_RECORD_EDITED,
+        parent_type=service.ENGAGEMENT, parent_id=engagement_id,
+        summary="Engagement edited: " + ", ".join(result["changedFields"]) + ".",
+        actor_id=user["userId"], actor_name=user["name"],
+        details=result,
+        outcome="Partial" if result["droppedValues"] else "Success",
+    )
+    try:
+        result["detail"] = await service.get_engagement_detail(client, engagement_id)
+    except EspoError as exc:
+        # The save succeeded — a failed read-back is not a failed edit. The
+        # frontend falls back to reloading the grid.
+        log.warning("re-read after edit failed for CEngagement/%s: %s", engagement_id, exc)
     return result
 
 

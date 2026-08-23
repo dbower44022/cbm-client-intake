@@ -101,7 +101,10 @@
   document.addEventListener("keydown", function (ev) {
     if (ev.key !== "Escape") return;
     var openModal = document.querySelector(".modal:not([hidden])");
-    if (openModal) { hide(openModal); return; }
+    if (openModal) {
+      if (openModal.id === "engModal") closeModal(); else hide(openModal);
+      return;
+    }
     var details = $("statusFilter");
     if (details && details.open) details.open = false;
   });
@@ -573,7 +576,22 @@
   }
 
   // --- engagement detail modal ---
-  function closeModal() { hide($("engModal")); }
+  var currentDetailId = null;   // the engagement the popup is showing
+
+  // `force` skips the unsaved-changes guard (used after a successful save).
+  function closeModal(force) {
+    if (!force && inEditMode() && editDirty()) {
+      showConfirmModal({
+        title: "Discard your changes?",
+        body: "The edits you made to this engagement have not been saved.",
+        confirmLabel: "Discard",
+      }, function () { closeModal(true); });
+      return;
+    }
+    exitEditMode();
+    currentDetailId = null;
+    hide($("engModal"));
+  }
 
   // Rich-text (wysiwyg) rendering. Formatting tags are kept; everything risky is
   // stripped (scripts, event handlers, styles, unknown tags), so CRM/intake HTML
@@ -739,6 +757,8 @@
   }
 
   async function openDetail(id) {
+    currentDetailId = id;
+    exitEditMode();
     $("modalTitle").textContent = "Loading…";
     $("modalStatus").hidden = true;
     $("modalContact").innerHTML = "";
@@ -762,9 +782,322 @@
     var t = ev.target;
     if (t && t.hasAttribute && t.hasAttribute("data-close")) {
       var m = t.closest(".modal");
-      if (m) hide(m);
+      if (!m) return;
+      // The engagement popup can hold unsaved edits, so it closes through its
+      // own guard; the others are read-only.
+      if (m.id === "engModal") closeModal(); else hide(m);
     }
   });
+
+  // --- engagement detail: Edit mode ------------------------------------------
+  // The popup opens read-only; Edit swaps the body for a form built from the
+  // server's field spec (ENGAGEMENT_EDIT_FIELDS), which is also the update
+  // whitelist — so the layout and what may be written can never drift apart.
+  // Enum options come from live CRM metadata, and Save sends ONLY the fields
+  // the user actually touched: re-sending an unchanged value that has since
+  // drifted out of its CRM enum would drop it for no reason.
+
+  var editState = null;   // { fields: [{name, type, initial, getVal}], busy: bool }
+
+  function modalMsg(text, kind) {
+    var m = $("modalMsg");
+    m.textContent = text || "";
+    m.className = "modal__msg" + (kind ? " is-" + kind : "");
+  }
+
+  function inEditMode() { return !!editState; }
+
+  function setEditMode(on) {
+    $("modalView").hidden = on;
+    $("modalEdit").hidden = !on;
+    $("modalViewActions").hidden = on;
+    $("modalEditActions").hidden = !on;
+  }
+
+  function exitEditMode() {
+    editState = null;
+    $("modalEdit").innerHTML = "";
+    setEditMode(false);
+    modalMsg("");
+  }
+
+  // Values are compared as JSON so a multi-enum array diffs like a scalar.
+  function sameValue(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
+
+  function labelled(field, cls) {
+    var lab = document.createElement("label");
+    lab.className = "edit-field" + (cls ? " " + cls : "");
+    var span = document.createElement("span");
+    span.textContent = field.label + (field.required ? " *" : "");
+    lab.appendChild(span);
+    return lab;
+  }
+
+  function addHelp(host, text) {
+    if (!text) return;
+    var p = document.createElement("p");
+    p.className = "edit-help";
+    p.textContent = text;
+    host.appendChild(p);
+  }
+
+  function buildEditField(field) {
+    var initial = field.value;
+    var getVal;
+
+    if (field.type === "multiEnum") {
+      // A div, not a <label>: a label wraps its own control, so one label
+      // around many checkboxes makes every chip click the first one.
+      var wrap = document.createElement("div");
+      wrap.className = "edit-field edit-field--chips";
+      var lg = document.createElement("span");
+      lg.textContent = field.label;
+      wrap.appendChild(lg);
+      var chips = document.createElement("div");
+      chips.className = "edit-chips";
+      var options = (field.options || []).slice();
+      // A stored value the CRM no longer offers still shows, ticked — the user
+      // decides whether to drop it; the save never does it behind their back.
+      (initial || []).forEach(function (v) {
+        if (options.indexOf(v) < 0) options.push(v);
+      });
+      options.forEach(function (o) {
+        var chip = document.createElement("label");
+        chip.className = "edit-chip";
+        var cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.value = o;
+        cb.checked = (initial || []).indexOf(o) >= 0;
+        chip.classList.toggle("is-on", cb.checked);
+        cb.addEventListener("change", function () { chip.classList.toggle("is-on", cb.checked); });
+        chip.appendChild(cb);
+        chip.appendChild(document.createTextNode(o));
+        chips.appendChild(chip);
+      });
+      wrap.appendChild(chips);
+      if (field.optionsUnavailable) {
+        addHelp(wrap, "The CRM's option list could not be read — only the stored values are shown.");
+      }
+      getVal = function () {
+        return Array.prototype.slice.call(chips.querySelectorAll("input:checked"))
+          .map(function (c) { return c.value; });
+      };
+      return { el: wrap, name: field.name, initial: initial || [], getVal: getVal, label: field.label };
+    }
+
+    if (field.type === "enum" || field.type === "link") {
+      var lab = labelled(field);
+      if (field.optionsUnavailable) {
+        // Degrade to read-only rather than offering an empty picker: a list the
+        // user's CRM role forbids must not look like "there is nothing to pick".
+        var ro = document.createElement("input");
+        ro.type = "text";
+        ro.readOnly = true;
+        ro.value = (field.type === "link" ? field.valueName : initial) || "—";
+        lab.appendChild(ro);
+        addHelp(lab, "Your CRM role can't read this list, so it can't be changed here.");
+        return { el: lab, name: field.name, initial: initial, getVal: function () { return initial; }, label: field.label };
+      }
+      var sel = document.createElement("select");
+      var blank = new Option(field.required ? "Select…" : "— none —", "");
+      sel.appendChild(blank);
+      (field.options || []).forEach(function (o) {
+        var isLink = field.type === "link";
+        sel.appendChild(new Option(isLink ? o.name : o, isLink ? o.id : o));
+      });
+      sel.value = initial || "";
+      // A stored value outside the live options keeps its place in the list, so
+      // saving an unrelated field can never silently drop it.
+      if (initial && sel.value !== initial) {
+        var extra = new Option(
+          (field.type === "link" ? (field.valueName || initial) : initial) + " (current)", initial
+        );
+        sel.insertBefore(extra, sel.children[1] || null);
+        sel.value = initial;
+      }
+      lab.appendChild(sel);
+      return { el: lab, name: field.name, initial: initial, getVal: function () { return sel.value; }, label: field.label };
+    }
+
+    if (field.type === "wysiwyg") {
+      var rich = labelled(field, "edit-field--rich");
+      var host = window.CBMRichText && CBMRichText.create
+        ? CBMRichText.create(initial || "", { minHeight: 180 })
+        : null;
+      if (host) {
+        rich.appendChild(host);
+        getVal = function () { return host._cbmRichText.getValue(); };
+      } else {
+        // Jodit failed to load — a plain textarea still saves the field.
+        var ta = document.createElement("textarea");
+        ta.value = initial || "";
+        rich.appendChild(ta);
+        getVal = function () { return ta.value; };
+      }
+      addHelp(rich, field.help);
+      return { el: rich, name: field.name, initial: initial, getVal: getVal, label: field.label };
+    }
+
+    if (field.type === "text") {
+      var tl = labelled(field, "edit-field--wide");
+      var area = document.createElement("textarea");
+      area.value = initial || "";
+      tl.appendChild(area);
+      addHelp(tl, field.help);
+      return { el: tl, name: field.name, initial: initial, getVal: function () { return area.value; }, label: field.label };
+    }
+
+    var vl = labelled(field, "edit-field--wide");
+    var input = document.createElement("input");
+    input.type = "text";
+    input.value = initial || "";
+    vl.appendChild(input);
+    addHelp(vl, field.help);
+    return { el: vl, name: field.name, initial: initial, getVal: function () { return input.value; }, label: field.label };
+  }
+
+  // The mentor is shown here but not edited: swapping `mentorProfile` re-homes
+  // the contacts, client profile, company and sessions, stamps the mentor and
+  // records the change — that is the Assign/Reassign action, so this row hands
+  // off to it rather than writing the link as if it were a field.
+  function buildMentorRow(eng) {
+    var row = document.createElement("div");
+    row.className = "edit-field edit-field--wide edit-mentor";
+    var label = document.createElement("span");
+    label.textContent = "Assigned mentor:";
+    var value = document.createElement("strong");
+    value.textContent = (eng && eng.mentorName) || "None yet";
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "cbm-button cbm-button--secondary";
+    btn.textContent = (eng && eng.mentorId) ? "Reassign mentor…" : "Assign mentor…";
+    btn.addEventListener("click", function () {
+      if (!eng) {
+        modalMsg("Reopen this engagement from the grid to change its mentor.", "error");
+        return;
+      }
+      if (editDirty()) {
+        modalMsg("Save or cancel your changes first — changing the mentor is a "
+          + "separate action.", "error");
+        return;
+      }
+      // It rewrites records this popup is displaying, so close it rather than
+      // leave a stale form behind the picker.
+      closeModal(true);
+      openMentorPicker(rowFor(eng.id), eng, eng.mentorId ? "reassign" : "assign");
+    });
+    row.appendChild(label);
+    row.appendChild(value);
+    row.appendChild(btn);
+    addHelp(row, "Changing the mentor also moves the client's contacts, records and "
+      + "sessions, so it runs as its own action — and is recorded in the engagement's history.");
+    return row;
+  }
+
+  async function openEditForm() {
+    if (!currentDetailId) return;
+    modalMsg("Loading the editable fields…");
+    var form;
+    try {
+      form = await api("/engagements/" + encodeURIComponent(currentDetailId) + "/edit");
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      modalMsg(e.message, "error");
+      return;
+    }
+    var host = $("modalEdit");
+    host.innerHTML = "";
+    var built = [];
+    var groups = {};
+    (form.fields || []).forEach(function (f) {
+      var key = f.group || "Engagement";
+      if (!groups[key]) {
+        var fs = document.createElement("fieldset");
+        fs.className = "edit-group";
+        var lg = document.createElement("legend");
+        lg.textContent = key;
+        fs.appendChild(lg);
+        groups[key] = fs;
+        host.appendChild(fs);
+      }
+      var b = buildEditField(f);
+      groups[key].appendChild(b.el);
+      built.push(b);
+    });
+    // The mentor row belongs with the other attribution facts.
+    (groups.Attribution || groups.Engagement || host).appendChild(
+      buildMentorRow(engRows.filter(function (e) { return e.id === currentDetailId; })[0])
+    );
+
+    editState = { fields: built, busy: false };
+    setEditMode(true);
+    modalMsg("Editing — only the fields you change are saved.");
+  }
+
+  function cancelEdit() {
+    if (!editState) return;
+    if (!editDirty()) { exitEditMode(); return; }
+    showConfirmModal({
+      title: "Discard your changes?",
+      body: "The edits you made to this engagement have not been saved.",
+      confirmLabel: "Discard",
+    }, exitEditMode);
+  }
+
+  function editDirty() {
+    return !!(editState && editState.fields.some(function (f) {
+      return !sameValue(f.getVal(), f.initial);
+    }));
+  }
+
+  async function saveEdit() {
+    if (!editState || editState.busy) return;
+    var changes = {}, changed = 0;
+    editState.fields.forEach(function (f) {
+      var v = f.getVal();
+      if (sameValue(v, f.initial)) return;
+      changes[f.name] = v;
+      changed += 1;
+    });
+    if (!changed) {
+      // Never disable the button — say what is missing instead (Doug's ruling).
+      modalMsg("Nothing has changed yet.", "error");
+      return;
+    }
+    editState.busy = true;
+    modalMsg("Saving…");
+    try {
+      var res = await api("/engagements/" + encodeURIComponent(currentDetailId), {
+        method: "PUT",
+        body: JSON.stringify({ changes: changes }),
+      });
+      var detail = res.detail;
+      exitEditMode();          // clears the popup message, so report after it
+      if (detail) fillDetail(detail); else await openDetail(currentDetailId);
+      var msg = "Saved: " + (res.changedFields || []).join(", ") + ".";
+      var dropped = res.droppedValues || [];
+      if (dropped.length) {
+        // The CRM no longer offers these values, so they were left out rather
+        // than 400-ing the whole save. Say so — a silent drop reads as a bug.
+        msg += " ⚠ " + dropped.join(", ") + " is no longer an option in the CRM "
+          + "and was not saved.";
+      }
+      // Both surfaces: the popup covers the page notice, and the notice is what
+      // the user still sees once they close the popup.
+      modalMsg(msg, dropped.length ? "error" : "success");
+      notice(msg, dropped.length ? "error" : "success");
+      // The grid shows name, status, company and notes — all editable here.
+      await reloadEngagements();
+    } catch (e) {
+      editState.busy = false;
+      if (e.status === 401) { showLogin(); return; }
+      modalMsg(e.message, "error");
+    }
+  }
+
+  $("modalEditBtn").addEventListener("click", openEditForm);
+  $("modalCancelBtn").addEventListener("click", cancelEdit);
+  $("modalSaveBtn").addEventListener("click", saveEdit);
 
   // --- mentor review ---
   function chipRow(values) {
@@ -1006,7 +1339,10 @@
 
   async function performAssign(tr, eng, mentorProfileId) {
     clearNotice();
-    tr.classList.add("row-busy");
+    // `tr` can be absent when the action was started from the detail popup and
+    // the row has since been filtered out of the grid (performReassign has
+    // always guarded this; performAssign threw).
+    if (tr) tr.classList.add("row-busy");
     try {
       var res = await api("/engagements/" + encodeURIComponent(eng.id) + "/assign", {
         method: "POST",
@@ -1055,7 +1391,7 @@
         );
       }
     } catch (e) {
-      tr.classList.remove("row-busy");
+      if (tr) tr.classList.remove("row-busy");
       if (e.status === 401) { showLogin(); return; }
       if (e.status === 400) {
         // Rejected as stale (already assigned / no longer Submitted) or an

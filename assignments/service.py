@@ -148,6 +148,7 @@ class AssignClient(Protocol):
     async def list_related(self, entity: str, record_id: str, link: str, **kwargs: Any) -> dict[str, Any]: ...
     async def update(self, entity: str, record_id: str, payload: dict[str, Any]) -> dict[str, Any]: ...
     async def create(self, entity: str, payload: dict[str, Any]) -> dict[str, Any]: ...
+    async def metadata_enum_options(self, entity: str, field: str) -> list[str] | None: ...
 
 
 class AssignError(Exception):
@@ -324,6 +325,279 @@ async def get_engagement_detail(
         # The grid's internal process notes (CEngagement.description) — plain
         # text, staff-only (this tool is the field's only UI).
         "internalNotes": eng.get("description") or "",
+    }
+
+
+# --- Engagement editing (the detail popup's Edit mode) -----------------------
+#
+# ONE declared field spec serves as BOTH the edit-form layout and the
+# server-side update whitelist — the pattern every staff tool in this suite
+# follows, so a field that is not listed here can never be smuggled into the
+# update by a hand-rolled request. Enum options are read LIVE from CRM
+# metadata (the CRM stays the source of truth for its own vocabulary), and a
+# value outside the live options is DROPPED rather than allowed to 400 the
+# whole save — the platform-wide rule that optional fields never block a save.
+#
+# The assigned MENTOR is deliberately NOT here. Changing `mentorProfile` is not
+# a field write: it has to re-home the contacts, client profile, company and
+# sessions, stamp the mentor, post the history note and re-derive the Drive
+# grants. That is `assign_engagement` / `reassign_engagement`, and the edit
+# form hands off to them instead of writing the link itself.
+
+PARTNER_PROFILE = "CPartnerProfile"
+
+ENGAGEMENT_EDIT_FIELDS: tuple[dict[str, Any], ...] = (
+    {
+        "name": "name", "label": "Engagement name", "type": "varchar",
+        "group": "Engagement", "required": True, "maxLength": 255,
+    },
+    {
+        "name": "engagementStatus", "label": "Status", "type": "enum",
+        "group": "Engagement", "required": True, "fallback": ENGAGEMENT_STATUSES,
+    },
+    {
+        "name": "meetingCadence", "label": "Meeting cadence", "type": "enum",
+        "group": "Engagement",
+    },
+    {
+        "name": "mentoringFocusAreas", "label": "Focus areas", "type": "multiEnum",
+        "group": "Engagement",
+    },
+    {
+        "name": "referringPartner", "label": "Referring partner", "type": "link",
+        "entity": PARTNER_PROFILE, "group": "Attribution",
+    },
+    {
+        "name": "requestedMentor", "label": "Requested mentor", "type": "link",
+        "entity": MENTOR_PROFILE, "group": "Attribution",
+    },
+    {
+        "name": "mentoringNeedsDescription", "label": "Mentoring needs",
+        "type": "wysiwyg", "group": "Narrative",
+    },
+    {
+        "name": "engagementNotes", "label": "Engagement notes",
+        "type": "wysiwyg", "group": "Narrative",
+    },
+    {
+        "name": "description", "label": "Internal notes", "type": "text",
+        "group": "Narrative",
+        "help": "Staff-only. The same notes as the grid's Notes column — never shown to the mentor.",
+    },
+)
+
+_EDIT_FIELDS_BY_NAME = {f["name"]: f for f in ENGAGEMENT_EDIT_FIELDS}
+
+# EspoCRM refuses a page larger than `recordListMaxSizeLimit` (200) with a 403
+# rather than truncating, so link-picker options are PAGED, never asked for in
+# one big page — the defect that emptied every curated picker in production
+# (v0.202.2). The overall cap keeps a large roster from becoming an unusable
+# select; a stored value outside it is added back by :func:`_link_field_options`.
+_LINK_OPTION_PAGE = 200
+_LINK_OPTION_MAX = 1000
+
+_TEXT_MAX_LENGTH = 65535
+
+
+async def _link_options(client: AssignClient, entity: str) -> list[dict[str, str]]:
+    """Every readable record of ``entity`` as ``{id, name}``, A→Z, paged."""
+    out: list[dict[str, str]] = []
+    offset = 0
+    while len(out) < _LINK_OPTION_MAX:
+        data = await client.list(
+            entity, select="name", max_size=_LINK_OPTION_PAGE, offset=offset,
+            order_by="name", order="asc",
+        )
+        rows = data.get("list") or []
+        for r in rows:
+            if r.get("id"):
+                out.append({"id": r["id"], "name": r.get("name") or "(unnamed)"})
+        offset += len(rows)
+        total = data.get("total")
+        if not rows or (isinstance(total, int) and offset >= total):
+            break
+    return out
+
+
+async def _link_field_options(
+    client: AssignClient, spec: dict[str, Any], value_id: Any, value_name: Any
+) -> dict[str, Any]:
+    """The option list for one link field, degraded rather than broken.
+
+    A list the user's role forbids leaves the picker read-only (``options``
+    absent) instead of failing the whole form, and the record's STORED value is
+    always present in the list — so a save can never silently drop a linked
+    record just because it fell outside the page cap.
+    """
+    try:
+        options = await _link_options(client, spec["entity"])
+    except EspoError as exc:
+        log.warning(
+            "assignments: %s options unavailable for the %s picker: %s",
+            spec["entity"], spec["name"], exc,
+        )
+        return {"optionsUnavailable": True}
+    if value_id and not any(o["id"] == value_id for o in options):
+        options.insert(0, {"id": value_id, "name": value_name or "(no longer in the system)"})
+    return {"options": options}
+
+
+async def _live_options(
+    client: AssignClient, spec: dict[str, Any]
+) -> Optional[list[str]]:
+    """The live CRM options for an enum/multiEnum field, with the module's own
+    list as the fallback when the metadata read fails — None when neither is
+    available, which every caller reads as "don't filter" (fail open, like
+    every other enum path in this product)."""
+    try:
+        options = await client.metadata_enum_options(ENGAGEMENT, spec["name"])
+    except EspoError as exc:
+        log.warning("assignments: enum options unavailable for %s: %s", spec["name"], exc)
+        options = None
+    if options is None:
+        options = spec.get("fallback")
+    return list(options) if options else None
+
+
+async def _enum_field_options(
+    client: AssignClient, spec: dict[str, Any]
+) -> dict[str, Any]:
+    """:func:`_live_options` in the shape the edit form wants."""
+    options = await _live_options(client, spec)
+    return {"options": options} if options else {"optionsUnavailable": True}
+
+
+def _edit_select() -> str:
+    """The ``select`` covering every editable field (links read as id + name)."""
+    names: list[str] = []
+    for f in ENGAGEMENT_EDIT_FIELDS:
+        if f["type"] == "link":
+            names.extend((f"{f['name']}Id", f"{f['name']}Name"))
+        else:
+            names.append(f["name"])
+    return ",".join(names)
+
+
+async def get_engagement_edit_form(
+    client: AssignClient, engagement_id: str
+) -> dict[str, Any]:
+    """The Edit-mode form for one engagement: the spec, its current values, and
+    the live option sets. Fetched only when the user presses Edit, so the read
+    path of the detail popup keeps its two reads.
+    """
+    eng = await client.get(ENGAGEMENT, engagement_id, select=_edit_select())
+
+    async def _one(spec: dict[str, Any]) -> dict[str, Any]:
+        field: dict[str, Any] = {
+            k: spec[k] for k in ("name", "label", "type", "group") if k in spec
+        }
+        if spec.get("required"):
+            field["required"] = True
+        if spec.get("help"):
+            field["help"] = spec["help"]
+        if spec["type"] == "link":
+            value_id = eng.get(f"{spec['name']}Id")
+            field["value"] = value_id or ""
+            field["valueName"] = eng.get(f"{spec['name']}Name") or ""
+            field["entity"] = spec["entity"]
+            field.update(await _link_field_options(client, spec, value_id, field["valueName"]))
+        elif spec["type"] == "multiEnum":
+            value = eng.get(spec["name"]) or []
+            field["value"] = [value] if isinstance(value, str) else list(value)
+            field.update(await _enum_field_options(client, spec))
+        elif spec["type"] == "enum":
+            field["value"] = eng.get(spec["name"]) or ""
+            field.update(await _enum_field_options(client, spec))
+        else:
+            field["value"] = eng.get(spec["name"]) or ""
+        return field
+
+    fields = await asyncio.gather(*(_one(spec) for spec in ENGAGEMENT_EDIT_FIELDS))
+    return {"id": engagement_id, "name": eng.get("name"), "fields": list(fields)}
+
+
+def _clean_enum(value: Any, options: Optional[list[str]]) -> tuple[Any, list[str]]:
+    """An enum value filtered to the live options — drifted values are dropped,
+    never allowed to 400 the save. Returns ``(kept, dropped)``; a missing option
+    list means the metadata read failed, so nothing is dropped (fail open)."""
+    if options is None:
+        return value, []
+    if isinstance(value, list):
+        kept = [v for v in value if v in options]
+        return kept, [v for v in value if v not in options]
+    if value and value not in options:
+        return "", [value]
+    return value, []
+
+
+async def update_engagement(
+    client: AssignClient, engagement_id: str, changes: dict[str, Any]
+) -> dict[str, Any]:
+    """Apply an Edit-mode save to ``CEngagement``.
+
+    Only fields declared in :data:`ENGAGEMENT_EDIT_FIELDS` are written —
+    anything else in ``changes`` is dropped silently, because the whitelist IS
+    the contract. Enum values outside the live CRM options are dropped too (and
+    named in the result) rather than failing the save; a required field the
+    caller tried to blank is an :class:`AssignError`, so the user gets a message
+    naming the field instead of a 502.
+    """
+    payload: dict[str, Any] = {}
+    changed_labels: list[str] = []
+    dropped: list[str] = []
+
+    for name, raw in changes.items():
+        spec = _EDIT_FIELDS_BY_NAME.get(name)
+        if spec is None:
+            log.info("assignments: ignoring non-editable field %r in an engagement edit", name)
+            continue
+        kind = spec["type"]
+
+        if kind == "link":
+            value: Any = str(raw or "").strip()
+            if spec.get("required") and not value:
+                raise AssignError(f"{spec['label']} is required.")
+            payload[f"{name}Id"] = value or None
+        elif kind == "multiEnum":
+            values = [str(v) for v in (raw or []) if str(v).strip()]
+            options = await _live_options(client, spec)
+            values, gone = _clean_enum(values, options)
+            dropped.extend(gone)
+            payload[name] = values
+        elif kind == "enum":
+            value = str(raw or "").strip()
+            if spec.get("required") and not value:
+                raise AssignError(f"{spec['label']} is required.")
+            options = await _live_options(client, spec)
+            value, gone = _clean_enum(value, options)
+            if gone:
+                dropped.extend(gone)
+                # A required field cannot be blanked by drift — leave it alone.
+                if spec.get("required"):
+                    continue
+            payload[name] = value or None
+        else:
+            value = "" if raw is None else str(raw)
+            limit = spec.get("maxLength", _TEXT_MAX_LENGTH)
+            if len(value) > limit:
+                raise AssignError(
+                    f"{spec['label']} is too long ({len(value)} characters; "
+                    f"the CRM allows {limit})."
+                )
+            if spec.get("required") and not value.strip():
+                raise AssignError(f"{spec['label']} is required.")
+            payload[name] = value
+
+        changed_labels.append(spec["label"])
+
+    if not payload:
+        raise AssignError("Nothing to save — no editable field was changed.")
+
+    await client.update(ENGAGEMENT, engagement_id, payload)
+    return {
+        "engagementId": engagement_id,
+        "changedFields": changed_labels,
+        "droppedValues": dropped,
     }
 
 
