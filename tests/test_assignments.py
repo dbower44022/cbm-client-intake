@@ -997,6 +997,69 @@ def test_parse_espo_datetime():
     assert service._parse_espo_datetime("not-a-date") is None
 
 
+async def test_list_engagements_company_column():
+    """The Company column: the engagement's own link, else the client profile's.
+
+    Intake-created engagements leave CEngagement.clientOrganization null and
+    carry the Account on CClientProfile.linkedCompany only — without the
+    fallback the column would be empty for exactly the rows this tool works.
+    """
+
+    class CompanyClient(FakeClient):
+        def __init__(self, profiles, **kw):
+            super().__init__(**kw)
+            self.profiles = profiles
+            self.profile_reads = []
+
+        async def get(self, entity, record_id, select=None):
+            if entity == service.CLIENT_PROFILE:
+                self.profile_reads.append(record_id)
+                return {"id": record_id, **self.profiles.get(record_id, {})}
+            return await super().get(entity, record_id, select=select)
+
+    client = CompanyClient(
+        {"cp1": {"linkedCompanyId": "a1", "linkedCompanyName": "Rose LLC"},
+         "cp3": {}},
+        lists={
+            service.ENGAGEMENT: {
+                "list": [
+                    # No own company link -> resolved through the client profile.
+                    {"id": "e1", "name": "Rose", "engagementClientId": "cp1"},
+                    # Own link present -> used as-is, no profile read.
+                    {"id": "e2", "name": "Green", "engagementClientId": "cp2",
+                     "clientOrganizationName": "Green Co"},
+                    # Profile with no company of its own -> blank, not an error.
+                    {"id": "e3", "name": "Blue", "engagementClientId": "cp3"},
+                    # No client profile at all -> blank.
+                    {"id": "e4", "name": "Gray"},
+                ]
+            }
+        },
+    )
+    rows = await service.list_engagements(client, ["Submitted"])
+    assert [r["companyName"] for r in rows] == ["Rose LLC", "Green Co", None, None]
+    # One read per DISTINCT profile, and only for the rows that needed one.
+    assert sorted(client.profile_reads) == ["cp1", "cp3"]
+
+
+async def test_list_engagements_company_lookup_failure_is_not_fatal():
+    """A client profile the user can't read leaves the cell blank, not a 500."""
+
+    class ForbiddenClient(FakeClient):
+        async def get(self, entity, record_id, select=None):
+            if entity == service.CLIENT_PROFILE:
+                raise EspoError("403 Forbidden")
+            return await super().get(entity, record_id, select=select)
+
+    client = ForbiddenClient(
+        lists={service.ENGAGEMENT: {"list": [
+            {"id": "e1", "name": "Rose", "engagementClientId": "cp1"},
+        ]}},
+    )
+    rows = await service.list_engagements(client, ["Submitted"])
+    assert rows[0]["companyName"] is None
+
+
 async def test_list_engagements_query_and_shape():
     client = FakeClient(
         lists={
@@ -1035,6 +1098,7 @@ async def test_list_engagements_query_and_shape():
         "status": "Submitted",
         "contactName": "Sharon Rose",
         "clientName": "Rose LLC",
+        "companyName": None,
         "mentorId": None,
         "mentorName": None,
         "assignedDate": None,

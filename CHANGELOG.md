@@ -4,6 +4,33 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.209.0] — 2026-08-23
+
+**feat(assignments): Status and Company are their own columns in Client
+Administration.**
+
+The grid carried the engagement's status as a chip under its name and the
+client name in the same grey meta line — readable one row at a time, useless
+for scanning a queue, and neither could be sorted on. Both now have a dedicated
+sortable column, and the company is a real company rather than the client
+profile's name.
+
+- **Status** column (`CEngagement.engagementStatus`), the same chip, moved out
+  of the Engagement cell. It is what the status filter filters on, so it now
+  reads back in the place staff are looking.
+- **Company** column. The engagement's own `clientOrganization` link is used
+  when set — but **intake-created engagements leave it null**, carrying the
+  Account on `CClientProfile.linkedCompany` only, so the column is resolved
+  through the client profile when the direct link is empty (one read per
+  distinct profile, `service._fill_company_names`, mirroring
+  `sessions.service.fill_company_fallback`). A profile the user cannot read, or
+  a client with no company at all, renders "—" rather than vanishing.
+- The Engagement cell's meta line keeps the client-profile name only when it
+  differs from the company — on most rows the two are the same string, and
+  repeating it would cost width without saying anything. Contact and created
+  date are unchanged.
+- Search covers the company text; both new columns sort in both directions.
+
 ## [0.208.1] — 2026-08-23
 
 **fix(setup): the Operations tab shows you the plan it just produced.**

@@ -21,6 +21,7 @@ Field/link names and enum values reconciled live against crm-test (2026-06-19):
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional, Protocol
@@ -162,13 +163,17 @@ async def list_engagements(
         where=[{"type": "in", "attribute": "engagementStatus", "value": list(statuses)}],
         select=(
             "name,createdAt,engagementStatus,primaryEngagementContactName,"
-            "engagementClientName,mentorProfileId,mentorProfileName,"
+            "engagementClientName,engagementClientId,"
+            "clientOrganizationName,clientOrganizationId,"
+            "mentorProfileId,mentorProfileName,"
             "engagementAssignedDate,description"
         ),
         max_size=200,
         order_by="createdAt",
         order="desc",
     )
+    rows = data.get("list", [])
+    await _fill_company_names(client, rows)
     return [
         {
             "id": r["id"],
@@ -177,6 +182,10 @@ async def list_engagements(
             "status": r.get("engagementStatus"),
             "contactName": r.get("primaryEngagementContactName"),
             "clientName": r.get("engagementClientName"),
+            # The client's COMPANY (CEngagement.clientOrganization, or resolved
+            # through the client profile — see _fill_company_names). Its own
+            # grid column; blank when the CRM holds no company for the client.
+            "companyName": r.get("clientOrganizationName"),
             # The assigned mentor (CEngagement.mentorProfile). Present => the row
             # shows the mentor name instead of the Select-a-Mentor picker + button.
             "mentorId": r.get("mentorProfileId"),
@@ -188,8 +197,47 @@ async def list_engagements(
             # see update_engagement_notes.
             "notes": r.get("description") or "",
         }
-        for r in data.get("list", [])
+        for r in rows
     ]
+
+
+async def _fill_company_names(
+    client: AssignClient, rows: list[dict[str, Any]]
+) -> None:
+    """Fill each row's ``clientOrganizationName`` through its client profile.
+
+    Intake-created engagements carry the Account on ``CClientProfile.linkedCompany``
+    only — ``CEngagement.clientOrganization`` is null — so the grid's Company
+    column would be empty for exactly the rows this tool exists to work. Mirrors
+    ``sessions.service.fill_company_fallback`` (duplicated rather than imported:
+    sessions imports FROM this module). Mutates ``rows`` in place, one read per
+    DISTINCT profile. Best-effort — a profile the user can't read stays blank.
+    """
+    need = {
+        r["engagementClientId"] for r in rows
+        if not r.get("clientOrganizationName") and r.get("engagementClientId")
+    }
+    if not need:
+        return
+
+    async def _resolve(profile_id: str) -> tuple[str, dict[str, Any] | None]:
+        try:
+            return profile_id, await client.get(
+                CLIENT_PROFILE, profile_id,
+                select="linkedCompanyId,linkedCompanyName",
+            )
+        except EspoError:
+            log.warning("assignments: company lookup failed for CClientProfile %s",
+                        profile_id)
+            return profile_id, None
+
+    resolved = dict(await asyncio.gather(*(_resolve(p) for p in need)))
+    for r in rows:
+        if r.get("clientOrganizationName") or not r.get("engagementClientId"):
+            continue
+        profile = resolved.get(r["engagementClientId"]) or {}
+        if profile.get("linkedCompanyName"):
+            r["clientOrganizationName"] = profile["linkedCompanyName"]
 
 
 async def update_engagement_notes(

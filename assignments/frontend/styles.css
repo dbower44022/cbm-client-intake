@@ -143,7 +143,6 @@ body { display: flex; flex-direction: column; }
 
 .eng-status {
   display: inline-block;
-  margin-bottom: 0.25rem;
   padding: 0.1rem 0.5rem;
   border-radius: 999px;
   background: var(--cbm-surface);
@@ -185,8 +184,13 @@ body { display: flex; flex-direction: column; }
   top: 0;
   z-index: 5;
 }
-.assign__table th.col-notes { width: 26%; }
-.assign__table th.col-eng { width: 42%; }
+.assign__table th.col-notes { width: 24%; }
+.assign__table th.col-eng { width: 30%; }
+.assign__table th.col-status { width: 10rem; }
+.assign__table th.col-company { width: 16%; }
+/* The status badge is one chip — never let it wrap mid-phrase. */
+.assign__table td.status-cell { white-space: nowrap; }
+.assign__table td.company-cell { color: var(--cbm-slate-700); }
 .assign__table th.col-assigned { width: 8.5rem; }
 .assign__table th.col-days { width: 7rem; }
 .assigned-date-cell { white-space: nowrap; color: var(--cbm-slate-700); }

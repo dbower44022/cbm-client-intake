@@ -241,7 +241,7 @@
 
   function engHaystack(e) {
     return [
-      e.name, e.status, e.clientName, e.contactName, e.mentorName, e.notes,
+      e.name, e.status, e.clientName, e.companyName, e.contactName, e.mentorName, e.notes,
       (e.createdAt || "").slice(0, 10), (e.assignedDate || "").slice(0, 10),
     ].join(" ").toLowerCase();
   }
@@ -354,21 +354,20 @@
     name.textContent = eng.name || "(unnamed engagement)";
     name.addEventListener("click", function () { openDetail(eng.id); });
     tdEng.appendChild(name);
-    if (eng.status) {
-      var badge = document.createElement("span");
-      badge.className = "eng-status";
-      badge.textContent = eng.status;
-      tdEng.appendChild(badge);
-    }
     var meta = document.createElement("span");
     meta.className = "eng-meta";
     var bits = [];
-    if (eng.clientName) bits.push(eng.clientName);
+    // The client profile's name — usually the same string as the company, so
+    // it only earns a place here when it says something the Company column
+    // doesn't. Status has its own column (below) and is no longer repeated here.
+    if (eng.clientName && eng.clientName !== eng.companyName) bits.push(eng.clientName);
     if (eng.contactName) bits.push(eng.contactName);
     if (eng.createdAt) bits.push("created " + eng.createdAt.slice(0, 10));
     meta.textContent = bits.join(" · ");
     tdEng.appendChild(meta);
     tr.appendChild(tdEng);
+    tr.appendChild(buildStatusCell(eng));
+    tr.appendChild(buildCompanyCell(eng));
 
     var tdAssign = document.createElement("td");
     if (eng.mentorId) {
@@ -427,6 +426,32 @@
     tr.appendChild(buildDaysCell(eng));
     tr.appendChild(buildNotesCell(eng));
     return tr;
+  }
+
+  // CEngagement.engagementStatus — its own column since staff filter and sort
+  // on it; an engagement always has one, so no "—" fallback is expected.
+  function buildStatusCell(eng) {
+    var td = document.createElement("td");
+    td.className = "status-cell";
+    if (eng.status) {
+      var badge = document.createElement("span");
+      badge.className = "eng-status";
+      badge.textContent = eng.status;
+      td.appendChild(badge);
+    } else {
+      td.textContent = "—";
+    }
+    return td;
+  }
+
+  // The client's company. Blank when the CRM holds none for the client (the
+  // server already resolves it through the client profile) — an empty cell
+  // renders "—" rather than vanishing.
+  function buildCompanyCell(eng) {
+    var td = document.createElement("td");
+    td.className = "company-cell";
+    td.textContent = eng.companyName || "—";
+    return td;
   }
 
   // When the mentor was assigned (engagementAssignedDate — stamped by the
