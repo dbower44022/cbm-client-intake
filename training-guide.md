@@ -126,11 +126,20 @@ accepting new clients, and have a login.
 address and the assignment template. **Don't send it** — but do show it, and
 say the send is what tells the mentor they have a new client.
 
-**4. The Notes column** is staff-internal and edits in place. Five rows already
+**4. Open Review Mentors** — the same list the dropdown draws from, with the
+numbers behind each name: Active Clients, Assigned (30d), **Last Assigned** and
+Lifetime. Sort **Last Assigned** ascending. Mentors never given a client come
+first, reading "—", then the longest-waiting; Tony Tiger and Wally Walrus are
+the only two assigned within the last month. Point out the mentor from step 2:
+their Last Assigned now reads today. That is the question the column exists to
+answer — *who is due for one?* — and it is the app that writes the date, every
+time an assignment is made here.
+
+**5. The Notes column** is staff-internal and edits in place. Five rows already
 have notes; `Whitmore Automotive` reads *"Unresponsive since spring. Consider
 closing."*
 
-**5. Right-click any row** for the full menu — Reassign, Repair assignment,
+**6. Right-click any row** for the full menu — Reassign, Repair assignment,
 Notes. Use `Halstead Print Works` for Reassign; it's assigned with a single
 session, so the before-and-after is easy to see.
 
