@@ -15,6 +15,7 @@ from comms import attachments as att
 from comms import crm
 from comms.store import (
     ATTACHMENT_DUPLICATE,
+    ATTACHMENT_EXCLUDED,
     ATTACHMENT_FAILED,
     ATTACHMENT_FILED,
     ATTACHMENT_TOO_LARGE,
@@ -40,6 +41,9 @@ class Cfg:
     request_timeout_seconds = 20
     espo_dry_run = True
     espo_api_key = ""
+    comms_attachment_excluded_types_list = [
+        "text/calendar", ".ics", "application/ms-tnef", "winmail.dat",
+    ]
 
 
 class FakeEspo:
@@ -62,6 +66,8 @@ class FakeDrive:
         self.uploads: list[tuple[str, str, int]] = []
         self._ids = itertools.count(1)
         self.fail = False
+        self.parents: dict[str, list[str]] = {}
+        self.moves: list[tuple[str, str]] = []
 
     async def find_child_folder(self, parent, name):
         return None
@@ -90,7 +96,11 @@ class FakeDrive:
         pass
 
     async def get_file(self, fid, fields=""):
-        return {"id": fid}
+        return {"id": fid, "parents": self.parents.get(fid, ["rec-folder"])}
+
+    async def move_file(self, fid, dest, remove_parents):
+        self.parents[fid] = [dest]
+        self.moves.append((fid, dest))
 
 
 class FakeGmail:
@@ -574,3 +584,136 @@ async def test_enrich_pages_within_espo_200_cap():
     assert calls[0] == (200, 0) and calls[1] == (200, 200)
     assert rows[0]["awaitingReply"] is False   # last message outbound
     assert rows[1]["awaitingReply"] is True    # found on page 2
+
+
+# --- excluded file types (Doug 2026-08-23) ------------------------------------
+
+ICS_BYTES = b"BEGIN:VCALENDAR\r\nMETHOD:REQUEST\r\nEND:VCALENDAR\r\n"
+
+ICS_PART = {
+    "mimeType": "text/calendar",
+    "filename": "invite.ics",
+    "headers": [
+        {"name": "Content-Disposition", "value": 'attachment; filename="invite.ics"'},
+    ],
+    "body": {"attachmentId": "att-ics", "size": len(ICS_BYTES)},
+}
+
+
+class NoExclusions(Cfg):
+    """The pre-0.208.0 world: everything files."""
+
+    comms_attachment_excluded_types_list: list = []
+
+
+def test_is_excluded_type_matches_mime_extension_and_whole_name():
+    pats = Cfg.comms_attachment_excluded_types_list
+    # The MIME entry matches with the parameters a real invite carries.
+    assert att.is_excluded_type("invite.ics", "text/calendar; method=REQUEST", pats)
+    assert att.is_excluded_type("Meeting.ICS", "application/octet-stream", pats)
+    assert att.is_excluded_type("winmail.dat", "", pats)
+    # A document is never caught, and an empty list excludes nothing.
+    assert not att.is_excluded_type("plan.pdf", "application/pdf", pats)
+    assert not att.is_excluded_type("notes.icsx", "text/plain", pats)
+    assert not att.is_excluded_type("invite.ics", "text/calendar", [])
+
+
+async def test_calendar_invite_is_not_filed_and_leaves_no_ledger_row(doc_store, drive):
+    store = MemoryCommsStore()
+    gmail = FakeGmail(parts={"att-pdf": PDF_BYTES, "att-ics": ICS_BYTES})
+    parsed = parse_message(raw_with_attachments(extra_parts=[ICS_PART]))
+    await att.file_message_attachments(
+        Cfg(), FakeEspo(), store, gmail, parsed,
+        [("CPartnerProfile", "P1", "Acme Partners")],
+    )
+    docs = await doc_store.list_documents("CPartnerProfile", "P1")
+    assert [d["filename"] for d in docs] == ["plan.pdf"]   # the invite never filed
+    assert len(drive.uploads) == 1
+    # No ledger row either — a chip saying "not filed" for every invite would be
+    # the same noise in a different place.
+    assert await store.attachment_state("m1@mail", 4, "CPartnerProfile", "P1") is None
+    assert (await store.attachment_state(
+        "m1@mail", 2, "CPartnerProfile", "P1"))["status"] == ATTACHMENT_FILED
+
+
+async def test_retry_sweep_retires_a_pre_existing_excluded_row(doc_store, drive,
+                                                               monkeypatch):
+    """A failed .ics row from before the list existed stops being re-fetched."""
+    store = MemoryCommsStore()
+    await store.upsert_attachment({
+        "rfc_message_id": "m1@mail", "part_index": 4,
+        "entity_type": "CPartnerProfile", "record_id": "P1",
+        "filename": "invite.ics", "mime_type": "text/calendar", "size": 40,
+        "status": ATTACHMENT_FAILED, "attempts": 3,
+        "gmail_message_id": "m1", "source_mailbox": "bob.mentor@cbmentors.org",
+    })
+    fetched = []
+
+    class Watcher(FakeGmail):
+        async def get_message(self, message_id):
+            fetched.append(message_id)
+            raise AssertionError("an excluded row must never be re-fetched")
+
+    monkeypatch.setattr(att, "GmailClient", lambda info, mailbox, timeout: Watcher())
+    n = await att.retry_failed_attachments(Cfg(), FakeEspo(), store, {"sa": True})
+    assert n == 0 and not fetched
+    state = await store.attachment_state("m1@mail", 4, "CPartnerProfile", "P1")
+    assert state["status"] == ATTACHMENT_EXCLUDED
+    # Terminal: the next sweep does not see it at all.
+    assert not await store.failed_attachments()
+
+
+# --- the cleanup of what was filed before the list existed --------------------
+
+
+async def _file_with_invite(doc_store, store, gmail, record):
+    parsed = parse_message(raw_with_attachments(extra_parts=[ICS_PART]))
+    await att.file_message_attachments(
+        NoExclusions(), FakeEspo(), store, gmail, parsed, [record]
+    )
+
+
+async def test_cleanup_plans_and_archives_only_the_excluded_documents(doc_store, drive):
+    from scripts import cleanup_excluded_attachments as cleanup
+
+    store = MemoryCommsStore()
+    gmail = FakeGmail(parts={"att-pdf": PDF_BYTES, "att-ics": ICS_BYTES})
+    await _file_with_invite(doc_store, store, gmail, ("CPartnerProfile", "P1", "Acme"))
+    # A human-uploaded .ics on the same record must survive the sweep.
+    await doc_store.insert_document({
+        "drive_file_id": "human-ics", "drive_folder_id": "rec-folder",
+        "entity_type": "CPartnerProfile", "record_id": "P1",
+        "original_filename": "programme.ics", "mime_type": "text/calendar",
+        "doc_type": "Other", "record_name": "Acme",
+    })
+    assert len(await doc_store.list_documents("CPartnerProfile", "P1")) == 3
+
+    settings = Cfg()
+    rows = await cleanup.collect(settings, doc_store)
+    assert [r["filename"] for r in rows] == ["invite.ics"]
+    plan = cleanup.render_plan(settings, rows)
+    assert "invite.ics" in plan and "plan.pdf" not in plan
+    assert "archive 1 document(s) across 1 record(s)" in plan
+    # Deterministic — the Operations tab fingerprints this text.
+    assert cleanup.render_plan(settings, await cleanup.collect(settings, doc_store)) == plan
+
+    code = await cleanup.run(apply=True, settings=settings)
+    assert code == 0
+    left = [d["filename"] for d in await doc_store.list_documents("CPartnerProfile", "P1")]
+    assert sorted(left) == ["plan.pdf", "programme.ics"]
+    archived = await doc_store.list_documents("CPartnerProfile", "P1", include_archived=True)
+    assert [d["status"] for d in archived if d["filename"] == "invite.ics"] == ["archived"]
+    assert drive.moves  # the file moved to _Archived, it was not deleted
+    # Idempotent: nothing left to plan.
+    assert await cleanup.collect(settings, doc_store) == []
+
+
+async def test_cleanup_plans_nothing_when_the_list_is_empty(doc_store, drive):
+    from scripts import cleanup_excluded_attachments as cleanup
+
+    store = MemoryCommsStore()
+    gmail = FakeGmail(parts={"att-pdf": PDF_BYTES, "att-ics": ICS_BYTES})
+    await _file_with_invite(doc_store, store, gmail, ("CPartnerProfile", "P1", "Acme"))
+    settings = NoExclusions()
+    assert await cleanup.collect(settings, doc_store) == []
+    assert "(empty)" in cleanup.render_plan(settings, [])

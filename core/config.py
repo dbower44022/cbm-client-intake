@@ -313,6 +313,20 @@ class Settings(BaseSettings):
     # records). Comma-separated; engagement set matches the sessions tools.
     comms_engagement_statuses: str = "Active,Assigned,Pending Acceptance,On-Hold"
     comms_partner_excluded_statuses: str = "Ended,Declined"
+    # File types an inbound attachment is never auto-filed as a document
+    # (Doug 2026-08-23). Comma-separated; an entry containing "/" matches the
+    # part's MIME type, anything else matches the filename (".ics" as a
+    # suffix, "winmail.dat" as a whole name). The default set is the mail
+    # plumbing that arrives looking like a document and is not one: calendar
+    # invites (every reschedule and every acceptance sends another, all with
+    # different bytes, so the SHA-256 dedup cannot collapse them), S/MIME
+    # signature blobs and Outlook's TNEF envelope. Excluded parts are still
+    # in the message — View original always has them. Empty disables the
+    # filter and files everything, which is the pre-0.208.0 behaviour.
+    comms_attachment_excluded_types: str = (
+        "text/calendar,text/x-vcalendar,application/ics,.ics,"
+        "application/pkcs7-signature,.p7s,application/ms-tnef,winmail.dat"
+    )
     # Internal email domains (comma-separated). The background sync exists to
     # capture mentor↔client correspondence — addresses at these domains are
     # dropped from the sweep's match scope, and a message whose every
@@ -597,6 +611,14 @@ class Settings(BaseSettings):
     @property
     def comms_partner_excluded_statuses_list(self) -> list[str]:
         return [s.strip() for s in self.comms_partner_excluded_statuses.split(",") if s.strip()]
+
+    @property
+    def comms_attachment_excluded_types_list(self) -> list[str]:
+        return [
+            t.strip().lower()
+            for t in self.comms_attachment_excluded_types.split(",")
+            if t.strip()
+        ]
 
     @property
     def comms_internal_domains_list(self) -> list[str]:

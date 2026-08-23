@@ -76,6 +76,19 @@ empty company on a partner/funder now renders as "—" and is fixable in the app
 
 ## Data cleanup
 
+24. **Archive the calendar invites already filed as documents** (v0.208.0,
+    2026-08-23). Filing now refuses excluded types, but everything filed
+    before that is still sitting in Documents tabs — chiefly `invite.ics`,
+    one per meeting, per reschedule and per acceptance, on every record the
+    thread touched. Run **`/setup` → Operations → "Clean up excluded email
+    attachments"**: read the plan, then apply it. Applying **archives** (moves
+    to the record folder's `_Archived`, restorable) — nothing is deleted and a
+    file a person uploaded is never touched. Do **crm-test** first: the plan is
+    the same shape there, and it is the cheap rehearsal since the sandbox
+    reverts overnight anyway. Then prod, where the count is the one that
+    matters. The CLI equivalent inside a container is
+    `scripts/cleanup_excluded_attachments.py [--apply]`.
+
 10. **Two prod CBM members have no linked Contact — and one has no mentor
     status** (found 2026-07-28, probing the birthday roster; both CRMs read
     read-only). On **production**:

@@ -4,6 +4,60 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.208.0] — 2026-08-23
+
+**feat(comms): inbound mail stops filing calendar invites as documents — and a
+job that archives the ones it already filed.**
+
+Attachment auto-filing had no notion of file type: the only filter was
+structural (a real attachment, not an inline signature image) and the only
+limit was size. So every `invite.ics` a client's calendar sent arrived in the
+record's **Documents** tab as a document. They multiply in a way the dedup
+cannot stop — a reschedule sends a fresh `METHOD:REQUEST` with a bumped
+`SEQUENCE`, a cancellation sends `METHOD:CANCEL`, each attendee's acceptance
+sends `METHOD:REPLY`, and every one of those is different bytes, so the
+per-record SHA-256 dedup sees a new file each time. One rescheduled meeting
+could deposit half a dozen "documents" and push the real contracts down the
+list.
+
+There is no value in the file itself: nothing in the app or Drive renders an
+`.ics` usefully, the meeting is already on the manager's calendar and in
+`CSession`, and the invite email stays fully readable through **View
+original** — excluding a part removes only its promotion to a document, never
+the bytes.
+
+- **`COMMS_ATTACHMENT_EXCLUDED_TYPES`** is the managed list, editable at
+  `/setup` → Email → *Never file these attachments* with no deploy. An entry
+  containing `/` matches the MIME type **without its parameters** (so
+  `text/calendar` catches `text/calendar; method=REQUEST` and its CANCEL and
+  REPLY variants); anything else matches the filename, as an extension
+  (`.ics`) or a whole name (`winmail.dat`). Default:
+  `text/calendar, text/x-vcalendar, application/ics, .ics,
+  application/pkcs7-signature, .p7s, application/ms-tnef, winmail.dat` — the
+  invites plus the two other things that arrive looking like a document and
+  are not one, S/MIME signature blobs and Outlook's TNEF envelope. **Emptying
+  the setting restores the old behaviour exactly**, which is the rollback:
+  one field, both environments, instant.
+- **Deliberately not applied in `GmailAttachment.is_attachment`** — an
+  excluded part is still a real attachment of the message. It is filtered at
+  the filing step only.
+- **No ledger row for a newly-arriving excluded part.** A chip reading "not
+  filed" under every invite would be the same noise in a different place. A
+  row that already existed (a `failed` `.ics` from before the list) is retired
+  to a new terminal `excluded` status by the retry sweep instead of being
+  re-fetched from Gmail forever, and those rows render as
+  "— not filed (excluded file type)".
+- **The cleanup for what was already filed**: `/setup` → Operations →
+  *Clean up excluded email attachments*, the house dry-run-then-apply pair
+  (`scripts/cleanup_excluded_attachments.py`, also runnable in a container).
+  The plan lists every active document whose `doc_type` is **Email
+  attachment** and whose type the list would refuse today; applying
+  **archives** them — the same move a staff member's Archive button makes,
+  into the record folder's `_Archived` subfolder, restorable, nothing deleted.
+  A file a person uploaded is never touched even if it is an `.ics`, because
+  the sweep is scoped to the email-attachment document type. Failures are
+  per-document and the run is re-runnable.
+
 ## [0.207.0] — 2026-08-22
 
 **feat(assignments): a mentor's profile records when they were last given a new

@@ -32,6 +32,7 @@ from core.gmail import GmailClient, GmailError, MessageGoneError, ParsedGmailMes
 from . import crm
 from .store import (
     ATTACHMENT_DUPLICATE,
+    ATTACHMENT_EXCLUDED,
     ATTACHMENT_FAILED,
     ATTACHMENT_FILED,
     ATTACHMENT_MAX_ATTEMPTS,
@@ -49,6 +50,47 @@ def attachments_enabled(settings: Settings) -> bool:
         and settings.gdrive_shared_drive_id
         and settings.gdrive_identity == "service"
     )
+
+
+def excluded_types(settings: Settings) -> list[str]:
+    """The configured never-file list (``COMMS_ATTACHMENT_EXCLUDED_TYPES``),
+    lowercased. Empty means file everything."""
+    return list(getattr(settings, "comms_attachment_excluded_types_list", []) or [])
+
+
+def is_excluded_type(
+    filename: Optional[str], mime_type: Optional[str], patterns: list[str]
+) -> bool:
+    """Is this part mail plumbing rather than a document? (Doug 2026-08-23.)
+
+    An entry containing ``/`` matches the MIME type, compared without its
+    parameters — ``text/calendar`` catches the
+    ``text/calendar; method=REQUEST`` an invite actually carries, and the
+    ``method=CANCEL`` / ``method=REPLY`` variants with it. Any other entry
+    matches the FILENAME: with a leading dot as an extension, otherwise as a
+    whole name (``winmail.dat``) or that same extension without the dot.
+
+    Deliberately not applied in :meth:`GmailAttachment.is_attachment` — an
+    excluded part is still a real attachment of the message and stays visible
+    through View original; all it loses is promotion to a document.
+    """
+    if not patterns:
+        return False
+    name = (filename or "").strip().lower()
+    mime = (mime_type or "").split(";")[0].strip().lower()
+    for entry in patterns:
+        if "/" in entry:
+            if mime and mime == entry:
+                return True
+            continue
+        if not name:
+            continue
+        if name == entry:
+            return True
+        ext = entry if entry.startswith(".") else "." + entry
+        if name.endswith(ext):
+            return True
+    return False
 
 
 async def _service_drive(settings: Settings, attribution: str) -> Optional[DriveClient]:
@@ -207,6 +249,18 @@ async def file_message_attachments(
     nothing — per-attachment failures are recorded on their ledger rows.
     """
     atts = parsed.real_attachments
+    patterns = excluded_types(settings)
+    if patterns:
+        keep = []
+        for a in atts:
+            if is_excluded_type(a.filename, a.mime_type, patterns):
+                log.debug(
+                    "attachment %r (%s) not filed — excluded file type",
+                    a.filename, a.mime_type,
+                )
+                continue
+            keep.append(a)
+        atts = keep
     if not atts or not records:
         return
     from docs import service as docs_service
@@ -330,12 +384,30 @@ async def retry_failed_attachments(
     if not rows:
         return 0
     clients: dict[str, GmailClient] = {}
+    patterns = excluded_types(settings)
     attempted = 0
     try:
         for row in rows:
             mailbox = row.get("sourceMailbox") or ""
             gmail_id = row.get("gmailMessageId") or ""
             if not mailbox or not gmail_id:
+                continue
+            if is_excluded_type(row.get("filename"), row.get("mimeType"), patterns):
+                # A row that predates the exclusion list (or an entry added to
+                # it since). Retire it terminally rather than re-fetching the
+                # message forever for something we would refuse to file.
+                await store.upsert_attachment({
+                    "rfc_message_id": row["rfcMessageId"],
+                    "part_index": row["partIndex"],
+                    "entity_type": row["entityType"],
+                    "record_id": row["recordId"],
+                    "filename": row.get("filename"),
+                    "mime_type": row.get("mimeType"),
+                    "size": row.get("size") or 0,
+                    "status": ATTACHMENT_EXCLUDED,
+                    "attempts": row.get("attempts", 0),
+                    "last_error": None,
+                })
                 continue
             gmail = clients.get(mailbox)
             if gmail is None:

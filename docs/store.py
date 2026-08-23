@@ -141,6 +141,28 @@ class DocumentStore:
             ).all()
         return [_row_dict(r) for r in rows]
 
+    async def list_by_doc_type(
+        self, doc_type: str, *, status: str = STATUS_ACTIVE
+    ) -> list[dict[str, Any]]:
+        """Every document of one business type across all records, oldest
+        first — the maintenance-sweep read (the excluded-attachment cleanup).
+        Deterministically ordered so a dry-run plan is stable enough to
+        fingerprint."""
+        async with self._engine.begin() as conn:
+            rows = (
+                await conn.execute(
+                    select(app_document)
+                    .where(
+                        app_document.c.doc_type == doc_type,
+                        app_document.c.status == status,
+                    )
+                    .order_by(
+                        app_document.c.uploaded_at.asc(), app_document.c.id.asc()
+                    )
+                )
+            ).all()
+        return [_row_dict(r) for r in rows]
+
     async def set_status(self, doc_id: str, status: str) -> None:
         """Flip one document's lifecycle status (DOC-07 archive/restore)."""
         async with self._engine.begin() as conn:
@@ -350,6 +372,16 @@ class MemoryDocumentStore:
                     setattr(self, col.name, d.get(col.name))
 
         return [_row_dict(_Row(r)) for r in matches]
+
+    async def list_by_doc_type(
+        self, doc_type: str, *, status: str = STATUS_ACTIVE
+    ) -> list[dict[str, Any]]:
+        matches = [
+            r for r in self.rows
+            if r.get("doc_type") == doc_type and r["status"] == status
+        ]
+        matches.sort(key=lambda r: (r["uploaded_at"], r["id"]))
+        return await self._as_rows(matches)
 
     async def set_status(self, doc_id: str, status: str) -> None:
         for r in self.rows:

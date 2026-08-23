@@ -110,7 +110,7 @@ comm_attachment = Table(
     Column("mime_type", String(128)),
     Column("size", BigInteger),
     Column("sha256", String(64)),
-    # filed | duplicate | too_large | failed
+    # filed | duplicate | too_large | failed | excluded
     Column("status", String(16), nullable=False),
     Column("document_id", String(36)),  # app_document.id when filed/duplicate
     # Where the bytes live, for retry/backfill refetches.
@@ -128,6 +128,10 @@ ATTACHMENT_FILED = "filed"
 ATTACHMENT_DUPLICATE = "duplicate"
 ATTACHMENT_TOO_LARGE = "too_large"
 ATTACHMENT_FAILED = "failed"
+# Never filed because its type is on COMMS_ATTACHMENT_EXCLUDED_TYPES — terminal,
+# and written only for rows that already existed when the list caught up with
+# them (a newly-arriving excluded part is skipped without a ledger row at all).
+ATTACHMENT_EXCLUDED = "excluded"
 # A failed row stops being retried after this many attempts (a WARN marks the
 # give-up); View original still has the bytes, so nothing is lost outright.
 ATTACHMENT_MAX_ATTEMPTS = 10

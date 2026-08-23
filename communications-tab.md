@@ -95,6 +95,16 @@ inline images are never filed (they stay visible in View original). A file
 too large to store, or one that hit a temporary error, shows a greyed chip
 — the bytes are always available through View original.
 
+**Some file types are never filed.** Calendar invites (`.ics`), S/MIME
+signature blobs (`.p7s`) and Outlook's `winmail.dat` envelope are mail
+plumbing rather than documents: an invite arrives again on every reschedule
+and again for every acceptance, each copy slightly different, so they piled
+up in Documents and pushed the real files down the list. They are skipped
+silently — the message still carries them, and **View original** shows them
+as it always did. A CBM administrator manages that list at **System
+Settings → Email → "Never file these attachments"**, so a type can be added
+or removed without a deploy.
+
 **A bounced send is never silent.** If your email couldn't be delivered
 (a typoed address, a dead mailbox), the mail system's bounce notice renders
 as a red **"Delivery failed"** card in the thread, and the conversation row

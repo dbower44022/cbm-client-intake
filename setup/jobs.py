@@ -116,6 +116,18 @@ async def _stamp_audit_apply(settings: Settings) -> str:
     return await _capture(run, True, False)
 
 
+async def _attachment_cleanup_dry(settings: Settings) -> str:
+    from scripts.cleanup_excluded_attachments import run
+
+    return await _capture(run, False, settings)
+
+
+async def _attachment_cleanup_apply(settings: Settings) -> str:
+    from scripts.cleanup_excluded_attachments import run
+
+    return await _capture(run, True, settings)
+
+
 async def _analytics_refresh(settings: Settings) -> str:
     from analytics.refresh import refresh_system_metrics
 
@@ -145,6 +157,21 @@ JOBS: tuple[JobSpec, ...] = (
         mutating=True,
         dry_run=_stamp_audit_dry,
         apply=_stamp_audit_apply,
+    ),
+    JobSpec(
+        key="attachment_cleanup",
+        name="Clean up excluded email attachments",
+        description=(
+            "Finds the documents that inbound mail filed automatically but whose "
+            "file type is now on the never-file list — calendar invites and the "
+            "like. Applying ARCHIVES them: each file moves to its record folder's "
+            "_Archived subfolder and leaves the Documents list. Nothing is "
+            "deleted, files a person uploaded are never touched, and any of them "
+            "can be restored from the record."
+        ),
+        mutating=True,
+        dry_run=_attachment_cleanup_dry,
+        apply=_attachment_cleanup_apply,
     ),
     JobSpec(
         key="analytics_refresh",

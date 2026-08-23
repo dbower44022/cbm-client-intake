@@ -2064,8 +2064,8 @@
   }
 
   // Per-message attachment chips (email-quality §3.1): filed/duplicate link
-  // to the record's Documents copy; too_large/failed say so and point at
-  // View original (the bytes are always one click away there).
+  // to the record's Documents copy; too_large/failed/excluded say so and point
+  // at View original (the bytes are always one click away there).
   function attachmentChips(m, c, convId) {
     var wrap = document.createElement("div"); wrap.className = "sx__msg-atts";
     (m.attachments || []).forEach(function (a) {
@@ -2086,7 +2086,10 @@
         var span = document.createElement("span");
         span.className = "sx__att-chip sx__att-chip--muted";
         span.textContent = label + (a.status === "too_large"
-          ? " — too large to file" : " — not filed yet");
+          ? " — too large to file"
+          : a.status === "excluded"
+            ? " — not filed (excluded file type)"
+            : " — not filed yet");
         span.title = "Use View original to see the message with this attachment.";
         wrap.appendChild(span);
       }

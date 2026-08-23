@@ -818,7 +818,15 @@ Umbrella reference: **`email-management.md`**. Deep dives:
   re-appended below a rendered template — so templates must not carry sign-offs.
 - **Inbound attachments auto-file** to the record's Documents tab (real
   attachments only, never inline images), with per-record SHA-256 dedup and a
-  `comm_attachment` retry ledger. **View original** renders the sanitized
+  `comm_attachment` retry ledger. A managed **never-file list**
+  (`COMMS_ATTACHMENT_EXCLUDED_TYPES`, editable at `/setup`) drops mail plumbing
+  before filing — calendar invites, S/MIME blobs, `winmail.dat`. The dedup
+  cannot handle invites on its own: a reschedule, a cancellation and every
+  acceptance are all different bytes. It is applied at the FILING step, never
+  in `is_attachment` — an excluded part is still a real attachment and stays in
+  View original. Emptying the setting is the rollback. Documents filed before
+  the list existed are archived by `/setup` → Operations → *Clean up excluded
+  email attachments* (`scripts/cleanup_excluded_attachments.py`). **View original** renders the sanitized
   original in a sandboxed iframe. Bounces are classified and rendered as a red
   "Delivery failed" card rather than masquerading as a reply.
 - All four thread windows render through the shared
@@ -1181,16 +1189,25 @@ Entity Manager vocabulary — [[crm-specs-use-entity-manager-terms]]):
 deployed and verified; `CHANGELOG.md` is the permanent record, `OPEN-ITEMS.md`
 holds anything still owed.*
 
-**Pushed through v0.206.0 on 2026-08-20**; prod verified reporting `0.206.0`,
-serving correctly-branded token-free pages and the four policy links now
-resolving on the live site. Nothing is unpushed. What is *verified* is narrower than what
-is deployed — see each block.
+**Pushed through v0.207.0.** The 2026-08-20 prod pass verified `0.206.0`
+live: correctly-branded token-free pages and the four policy links resolving on
+the live site. **v0.208.0 is committed locally and NOT pushed** (Doug pushes).
+What is *verified* is narrower than what is deployed — see each block.
 
 **Confirm that against the remote, do not trust this line.** On 2026-08-20 it
 still read "pushed through v0.202.2" while v0.203.x/v0.204.0 sat unpushed
 locally, and a session that believed it pushed a docs commit and shipped a
 feature to production with it. `git log origin/main..main` is the answer; this
 sentence is a convenience.
+
+- **v0.208.0 — inbound mail stops filing calendar invites as documents.**
+  The standing rules are in the Email section above. Two things to know here:
+  there is **no feature flag** — the never-file list ships with a non-empty
+  default, so the behaviour changes on both environments the moment this
+  deploys, and the rollback is emptying the setting at `/setup` rather than a
+  revert. And the **cleanup is a separate, deliberate act**: the invites
+  already filed stay where they are until someone runs the Operations job and
+  applies its plan (`OPEN-ITEMS.md` #24). Verified by tests only.
 
 - **v0.205.0–v0.206.0 — the product stopped saying Cleveland** (Phase 0 of the
   chapter-network plan; worth doing whatever happens with the chapters).

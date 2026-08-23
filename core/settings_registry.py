@@ -238,6 +238,11 @@ SETTINGS: tuple[SettingSpec, ...] = (
        component="both"),
     _s("comms_partner_excluded_statuses", GROUP_EMAIL, "Excluded partner statuses",
        kind="csv", component="both"),
+    _s("comms_attachment_excluded_types", GROUP_EMAIL, "Never file these attachments",
+       kind="csv", component="both",
+       help="MIME types (text/calendar) or filenames/extensions (.ics, winmail.dat) "
+            "that inbound mail never files to a record's Documents tab. The bytes "
+            "stay in the message — View original still shows them."),
 
     # --- Reliability -------------------------------------------------------
     _s("duplicate_hold_seconds", GROUP_RELIABILITY, "Near-duplicate hold", kind="int",

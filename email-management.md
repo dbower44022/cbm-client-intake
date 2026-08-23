@@ -39,7 +39,9 @@ Gmail and do three things:
   Gmail** finds it in your own mailbox when you were on the email). Real
   attachments a client sends are **auto-filed into the record's Documents
   tab** (deduplicated, so the same file re-attached in replies is stored
-  once) and show as chips on the message; a bounced send shows a red
+  once; calendar invites and other mail plumbing are skipped — the
+  never-file list at System Settings → Email) and show as chips on the
+  message; a bounced send shows a red
   **"Delivery failed"** flag on the thread and its list rows instead of
   looking delivered. (Details: `communications-tab.md`.)
 - **Show.** You read those conversations in three places — your unified
