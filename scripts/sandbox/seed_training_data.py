@@ -491,8 +491,8 @@ async def stamp_last_assigned(s: Seeder) -> None:
 
     Feature-detected through the app's own helpers, which is also why they are
     imported rather than re-implemented — the stamp the sandbox shows and the
-    stamp Client Administration writes cannot then disagree. Until the CRM field
-    exists this stage says so and does nothing (``OPEN-ITEMS.md`` #24).
+    stamp Client Administration writes cannot then disagree. The field is built
+    on both CRMs; on any other instance this stage says so and does nothing.
     """
     from assignments.service import (  # local: keeps the CLI light
         LAST_ASSIGNED_FIELD,
@@ -502,7 +502,8 @@ async def stamp_last_assigned(s: Seeder) -> None:
 
     if not await last_assigned_field_exists(s.client):
         print(f"  ! CMentorProfile.{LAST_ASSIGNED_FIELD} is not built on this CRM — "
-              "every mentor will read '—' under Last Assigned (OPEN-ITEMS.md #24)")
+              "every mentor will read '—' under Last Assigned "
+              "(cmentorprofile-last-client-assigned-field.md)")
         return
 
     latest: dict[str, str] = {}

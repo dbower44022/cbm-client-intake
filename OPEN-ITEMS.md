@@ -190,29 +190,6 @@ block a deploy.)*
     notice. Re-probe recipe + the local SA key path are in
     `csession-transcript-fields.md`.
 
-24. **`CMentorProfile.lastClientAssignedDate`** — **built on both CRMs and
-    working on crm-test (2026-08-23)**. A live Assign there stamped the mentor
-    as `doug.bower@cbmentors.org`, a **`type = regular`** user, so the Client
-    Administration Team role's `CMentorProfile` **edit** grant is proven for
-    real rather than by an admin who would have bypassed ACL either way.
-
-    **Still owed: the same grant on production.** The stamp is best-effort and
-    runs as the signed-in staffer, so a role with read (which it has, for the
-    dropdown) but no edit loses the stamp to a logged warning while the
-    assignment itself stands — the failure is silent from the staffer's side.
-    Check it as a real staffer, or watch the app log for
-    `lastClientAssignedDate not stamped on CMentorProfile/…` after the first
-    live assignment. Handoff: `cmentorprofile-last-client-assigned-field.md`.
-
-    **The training sandbox is done** (2026-08-23): seeded engagements were never
-    assigned through the app, so all six mentors holding clients read "—" beside
-    a full book, which teaches a trainee that the column is broken. The seeder's
-    `stamp_last_assigned` stage backfilled each of them from the latest
-    `engagementAssignedDate` on the engagements they hold, two clients assigned
-    inside the last month were added so **Assigned (30d)** is not zero across
-    the roster, and the golden baseline was recaptured. Prod needs no
-    backfill — the value appears there the next time a mentor is given a client.
-
 22. **One prod Gmail message can never be ingested** (gmail id
     `19f298a147e3ba38`). Its subject trips `CConversation.name`'s
     `$noBadCharacters` validation pattern, which exists on both CRMs. The
@@ -503,6 +480,30 @@ toggle.
     assigned to an unlinked profile are invisible in the session tools.
 
 ## Resolved
+
+- **`CMentorProfile.lastClientAssignedDate`** (was item 24, raised and closed
+  2026-08-23). The Date-Time field recording when a mentor was last given a new
+  client, shipped feature-detected in v0.207.0 and inert until the CRM caught
+  up. **Built on both CRMs**, and the ACL both halves depend on is confirmed:
+  - **crm-test** — a live Assign stamped the mentor as
+    `doug.bower@cbmentors.org`, a `type = regular` user, so the grant was
+    exercised rather than bypassed.
+  - **production** — read from the role definitions as admin (a write test
+    would have proved nothing, since an admin bypasses ACL): the **Client
+    Assignment Role**, the only role attached to the Client Administration
+    Team, grants `CMentorProfile` `read: all` **and `edit: all`**, and the role
+    carries **no field-level locks at all**, so the new field is not blocked.
+    Five of the team's eight members are `regular`, so real staffers exercise
+    it. Roles merge by the most permissive level, so nothing attached elsewhere
+    can revoke this.
+
+  Prod carries no historical values and needs no backfill — the date appears on
+  each mentor the next time they are given a client. The **training sandbox was
+  backfilled** (`stamp_last_assigned` in `seed_training_data.py`, from the
+  latest `engagementAssignedDate` on the engagements each mentor holds), gained
+  two clients assigned inside the last month so **Assigned (30d)** is not zero
+  across the roster, and was re-baselined so the nightly restore keeps both.
+  Handoff: `cmentorprofile-last-client-assigned-field.md`.
 
 - **Analytics on the record views — the last two surfaces** (was item 0,
   decided 2026-07-28, `prds/analytics-app-plan.md` §17). **Both were built the

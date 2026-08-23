@@ -5,12 +5,11 @@ client**, and have the Client Administration app set it when it assigns one.
 
 Status: **built on both CRMs 2026-08-23** (Doug), so the app — shipped
 feature-detected in v0.207.0 — began writing the stamp with no deploy. Read
-back live on crm-test that morning: `datetime`, custom, neither audited nor
-read-only, which is what the app needs (the read-only note below is why it does
-not matter either way). The **training sandbox has been backfilled and
-re-baselined**; see *Records that predate the field*. What is still owed is the
-ACL check below and one live assignment as a real Client Administration
-staffer.
+back live on both that day: `datetime`, custom, neither audited nor read-only,
+which is what the app needs (the read-only note below is why it would not matter
+either way). The ACL is confirmed on both CRMs and the **training sandbox has
+been backfilled and re-baselined** — see *The one ACL thing to check* and
+*Records that predate the field*. **Nothing is outstanding.**
 
 ## The field to build
 
@@ -100,15 +99,23 @@ Three properties worth knowing:
   stands. The response carries `mentorLastAssignedDate: null` and the action-log
   entry records it.
 
-### The one ACL thing to check
+### The one ACL thing to check — confirmed on both CRMs
 
 The **Client Administration Team** role needs **edit** on `CMentorProfile` for
-the stamp to land. It already needs **read** (the mentor dropdown), so this may
-already be granted — confirm on both CRMs via Administration → Roles, or watch
-for `lastClientAssignedDate not stamped on CMentorProfile/...` in the app logs
-after the first assignment. Admin accounts bypass ACL entirely, so **testing
-this as an admin proves nothing** — sign in as a real Client Administration
-staffer.
+the stamp to land. It already needs **read** (the mentor dropdown), so the
+question was only whether edit came with it. Admin accounts bypass ACL
+entirely, so **testing this as an admin proves nothing** — each CRM was checked
+in the way that does prove something:
+
+| CRM | How it was checked (2026-08-23) | Result |
+|---|---|---|
+| crm-test | a live Assign in the app as `doug.bower@cbmentors.org`, a **`type = regular`** user | mentor stamped |
+| production | the role definitions read as admin — a write test by an admin would have proved nothing | **Client Assignment Role**, the only role on the team, grants `read: all` and **`edit: all`** with **no field-level locks**; 5 of the team's 8 members are `regular` |
+
+EspoCRM merges roles by the most permissive level, so a role attached elsewhere
+can add to this but never revoke it. If the grant is ever lost, the symptom is
+silent from the staffer's side: the assignment succeeds and only the stamp goes
+missing, logged as `lastClientAssignedDate not stamped on CMentorProfile/...`.
 
 ## Verifying it
 
