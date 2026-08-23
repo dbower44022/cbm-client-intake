@@ -116,7 +116,9 @@ Sign in as **Kitty Cat**, open **Client Administration**.
 
 **1.** Four engagements sit at **Submitted** — Ember Lane Florists, Kestrel
 Fabrication, Pinehurst Tutoring, Quarry Street Coffee. These are the ones
-waiting for a mentor.
+waiting for a mentor. **Status** and **Company** are columns of their own, both
+sortable, so the room can see the queue the way staff read it — what state each
+request is in and who it is from — without opening a single row.
 
 **2. Assign one.** Pick Ember Lane Florists. The mentor dropdown offers nine
 eligible mentors; explain that a mentor only appears if they're Active,

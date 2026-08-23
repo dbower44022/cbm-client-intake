@@ -479,6 +479,26 @@ toggle.
     the real linked "Douglas Bower") and two "Acme Inc" CPartnerProfiles — records
     assigned to an unlinked profile are invisible in the session tools.
 
+23. **The Client Administration Company column has never been seen against a
+    live CRM** (v0.209.0, 2026-08-23). Status and Company became their own
+    sortable grid columns; both were verified in a stub harness, which cannot
+    exercise the part that matters. The engagement's own
+    `CEngagement.clientOrganization` link is **null on every intake-created
+    row** — the Account hangs off `CClientProfile.linkedCompany` — so almost
+    every row in the action-needed filter resolves its company through
+    `service._fill_company_names`, one read per distinct client profile. What to
+    confirm, on crm-test first and then prod, signed in as a **real non-admin**
+    Client Administration user (an admin bypasses ACL, so an admin pass proves
+    nothing about the read):
+    - Intake-created rows show a company, not "—". A whole column of "—" means
+      the fallback read is being denied, not that the data is missing.
+    - The grid still loads at full size (200 rows) without a visible stall — the
+      profile reads are gathered, but there is one per distinct profile.
+    - A client with genuinely no company renders "—" and nothing else breaks.
+
+    Blank is also the correct render when the profile read 403s, so the failure
+    mode here is silent by design; the app logs a warning per denied profile.
+
 ## Resolved
 
 - **The calendar invites filed as documents are gone** (was item 24, raised and
