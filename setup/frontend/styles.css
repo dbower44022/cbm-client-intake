@@ -131,3 +131,7 @@
 .su__field.is-disabled { opacity: 0.55; }
 .su__envnote { font-size: 0.83rem; color: #5c5c5c; margin: -0.3rem 0 0.8rem; }
 .su__dialogactions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem; }
+
+/* A history run's report row: [hidden] alone loses to a table display rule. */
+.su__runrow[hidden] { display: none; }
+.su__runrow td { background: var(--cbm-surface-alt, #f7f7f9); }

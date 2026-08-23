@@ -4,6 +4,25 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.208.1] — 2026-08-23
+
+**fix(setup): the Operations tab shows you the plan it just produced.**
+
+A dry run rendered its report into the job's panel and then called
+`loadJobs()`, which rebuilds that panel's `innerHTML` — so the plan appeared
+for a moment and was destroyed, leaving a history row reading `done` with
+nothing to read. That has been true for every job since the tab shipped, and
+it hollowed out the ruling the tab exists to enforce: *dry-run first, review
+the plan, apply that exact plan*. There was no way to review anything.
+
+- The last result per job is now kept, and a re-render of the job list
+  restores it. The list is still rebuilt on every run (it has to be — the
+  history table lives inside it); the report survives it.
+- **Recent runs gained a Report column.** Each run's output is one click away
+  under its row, so a plan is still readable after the fact — which is what
+  makes an apply auditable against the plan it came from. The API had been
+  returning `output` on every history row all along; nothing rendered it.
+
 ## [0.208.0] — 2026-08-23
 
 **feat(comms): inbound mail stops filing calendar invites as documents — and a

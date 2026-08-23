@@ -336,6 +336,13 @@
 
   // --- operations ------------------------------------------------------------
 
+  // The last result per job, so a re-render of the job list cannot lose the
+  // plan you are supposed to be reviewing. runJob used to write the output
+  // into the job's panel and then call loadJobs(), which rebuilds the panel's
+  // innerHTML — the plan flashed and vanished, leaving a history row saying
+  // "done" and nothing to review. That defeated the point of dry-run-then-apply.
+  var lastResult = {};
+
   function jobOutput(run) {
     if (!run) return "";
     var cls = run.status === "done" ? "" : " su__pre--warn";
@@ -369,18 +376,53 @@
         + "</section>";
     }).join("");
 
+    Object.keys(lastResult).forEach(function (key) {
+      var slot = document.querySelector('[data-output="' + key + '"]');
+      if (slot) slot.innerHTML = resultBlock(lastResult[key]);
+    });
+
+    // Every past run keeps its report: a run that says "done" and shows nothing
+    // is not a record of anything (and an apply is judged against the plan it
+    // was applied from, which has to stay readable afterwards).
+    jobRuns = {};
+    data.recent.forEach(function (r) { jobRuns[r.id] = r; });
     $("jobHistory").innerHTML = data.recent.length
-      ? '<table class="su__table"><thead><tr><th>When</th><th>Job</th><th>Mode</th><th>Status</th><th>Who</th><th>Reason</th></tr></thead><tbody>'
+      ? '<table class="su__table"><thead><tr><th>When</th><th>Job</th><th>Mode</th><th>Status</th><th>Who</th><th>Reason</th><th>Report</th></tr></thead><tbody>'
         + data.recent.map(function (r) {
+            var has = !!(r.output || r.error);
             return "<tr><td>" + esc((r.startedAt || "").replace("T", " ").slice(0, 16)) + "</td>"
               + "<td>" + esc(r.name) + "</td><td>" + esc(r.mode) + "</td>"
               + '<td><span class="su__chip su__chip--' + esc(r.status) + '">' + esc(r.status) + "</span></td>"
-              + "<td>" + esc(r.actor) + "</td><td>" + esc(r.reason) + "</td></tr>";
+              + "<td>" + esc(r.actor) + "</td><td>" + esc(r.reason) + "</td>"
+              + "<td>" + (has
+                  ? '<button type="button" class="su__linkbtn" data-run="' + esc(r.id) + '">Show</button>'
+                  : '<span class="su__hint">—</span>') + "</td></tr>"
+              + '<tr class="su__runrow" data-runrow="' + esc(r.id) + '" hidden>'
+              + '<td colspan="7"></td></tr>';
           }).join("") + "</tbody></table>"
       : '<p class="su__hint">No jobs have been run yet.</p>';
   }
 
+  function resultBlock(result) {
+    if (!result) return "";
+    return (result.error ? '<p class="form-error">' + esc(result.error) + "</p>" : "")
+      + jobOutput(result);
+  }
+
   var lastPlan = {};
+  var jobRuns = {};   // id -> the recent-run row, for the history "Show" toggle
+
+  function toggleRunOutput(runId) {
+    var row = document.querySelector('[data-runrow="' + runId + '"]');
+    var run = jobRuns[runId];
+    if (!row || !run) return;
+    if (row.hidden) {
+      row.cells[0].innerHTML = resultBlock(run);
+      row.hidden = false;
+    } else {
+      row.hidden = true;
+    }
+  }
 
   async function runJob(key, apply) {
     var out = document.querySelector('[data-output="' + key + '"]');
@@ -393,9 +435,9 @@
         body: JSON.stringify({ reason: reason, planId: apply ? (lastPlan[key] || "") : "" }),
       });
       if (!apply && result.id) lastPlan[key] = result.id;
-      out.innerHTML = (result.error ? '<p class="form-error">' + esc(result.error) + "</p>" : "")
-        + jobOutput(result);
-      await loadJobs();
+      lastResult[key] = result;
+      out.innerHTML = resultBlock(result);
+      await loadJobs();   // restores the block above from lastResult
     } catch (e) {
       out.innerHTML = '<p class="form-error">' + esc(e.message) + "</p>";
     }
@@ -460,6 +502,7 @@
     if (t.dataset && t.dataset.edit) { openEditor(t.dataset.edit); return; }
     if (t.dataset && t.dataset.dry) { runJob(t.dataset.dry, false); return; }
     if (t.dataset && t.dataset.apply) { runJob(t.dataset.apply, true); return; }
+    if (t.dataset && t.dataset.run) { toggleRunOutput(t.dataset.run); return; }
     if (t.classList && t.classList.contains("su__tab")) { selectTab(t.dataset.tab); return; }
   });
 
