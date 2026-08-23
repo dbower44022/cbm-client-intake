@@ -4,6 +4,74 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.207.0] — 2026-08-22
+
+**feat(assignments): a mentor's profile records when they were last given a new
+client.**
+
+Client Administration already stamped the *engagement* with
+`engagementAssignedDate`. The mentor's own record kept nothing, so "who hasn't
+been given a client lately?" could only be answered inside this app, from the
+derived metrics sweep — never as a roster column, a search filter or a report in
+the CRM. `CMentorProfile.lastClientAssignedDate` is that value, and the two
+actions that hand a mentor a client are what write it.
+
+| Action | Stamps | Which mentor |
+|---|---|---|
+| **Assign** | yes | the mentor being assigned |
+| **Reassign Mentor** | yes | the **new** mentor only — the outgoing one is untouched, because the field records gaining a client, not losing one |
+| **Repair assignment…** | no | a repair re-runs the re-homing for an assignment that already happened; that is why it leaves `engagementAssignedDate` alone too |
+
+- **Feature-detected**, so this shipped ahead of the CRM build and starts
+  writing the moment the field exists — no deploy, no coordination window. A
+  metadata *failure* is treated as "unknown", not "absent", and is never cached:
+  a CRM hiccup does not switch the feature off for the next ten minutes.
+- **Advance-only** (the `touch_last_contact` rule): a stored value at or after
+  the new one is left alone, so the date can never move backward.
+- **Best-effort.** The write runs as the signed-in staffer, so their EspoCRM ACL
+  applies — a Client Administration role without **edit on `CMentorProfile`**
+  gets the stamp refused, logged as a warning, and the assignment that was
+  already written still stands. The response and the action-log entry carry
+  `mentorLastAssignedDate` (null when nothing was written).
+
+**It is a column in the mentor picker.** *Available Mentors* (Review Mentors in
+Client Administration) gains a sortable **Last Assigned** column, between
+Assigned (30d) and Lifetime. Sorted ascending it puts the mentors who have gone
+longest without a client — and the never-assigned ones, which show "—" — at the
+top, which is the question the column exists to answer. The field is added to
+the roster query by the same feature detection, not hardcoded into the select:
+what EspoCRM does with an unknown attribute in `select` is not something to bet
+a staff grid on.
+
+**The CRM field is not built yet** — Date-Time, named exactly
+`lastClientAssignedDate`, on **both** CRMs. The build steps, the layout
+placements that make it useful, the ACL grant to confirm, a five-step
+verification, and why a stored field was chosen over deriving the value are all
+in **`cmentorprofile-last-client-assigned-field.md`** (tracked as
+`OPEN-ITEMS.md` #24).
+
+## [0.206.2] — 2026-08-22
+
+**feat(portal): the sign-in screen can show the password you typed.**
+
+A **Show / Hide** link sits on the Password label line of the portal login form,
+flipping the input between `password` and `text` so a user can check what they
+typed before submitting — the usual remedy for a mistyped password on a keyboard
+whose layout or caps state is not what the typist expects.
+
+- **Reveal is never sticky.** It resets to hidden whenever the sign-in form is
+  shown (including the round trip through "Forgot your password?") and again
+  after a successful sign-in, so a revealed password is not left on screen for
+  the next person at the machine.
+- The toggle keeps the caret where it was — changing an input's `type` moves it
+  to the end otherwise — and carries `aria-pressed` plus an explicit
+  "Show password" / "Hide password" label for screen readers. It is
+  `type="button"`, so Enter in the password box still submits the form.
+- Fixed alongside it: `.cbm-field input[type="password"]` was missing from the
+  shared control styles in `tokens.css`, so the password box rendered at the
+  browser's default width while the username box above it was full width. This
+  is the only password input in the suite.
+
 ## [0.206.1] — 2026-08-22
 
 **feat(sessions): a mentor can rename an engagement.**

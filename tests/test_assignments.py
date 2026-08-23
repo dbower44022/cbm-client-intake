@@ -7,12 +7,21 @@ from fastapi.testclient import TestClient
 
 from assignments import auth, service
 from core.config import Settings, get_settings
+from core.espo import EspoError
 
 
 class FakeClient:
     """Mock of the EspoClient slice the service uses; records get/list/update calls."""
 
-    def __init__(self, *, mentor=None, engagement=None, contact=None, related=None, lists=None):
+    def __init__(self, *, mentor=None, engagement=None, contact=None, related=None,
+                 lists=None, mentor_fields=None):
+        # The CMentorProfile field defs this fake CRM reports. Defaults to a CRM
+        # that HAS the lastClientAssignedDate stamp field built, so the suite
+        # exercises the live shape; pass ``mentor_fields={}`` for a CRM without it.
+        self._mentor_fields = (
+            {"name": {}, "mentorStatus": {}, service.LAST_ASSIGNED_FIELD: {}}
+            if mentor_fields is None else mentor_fields
+        )
         self._mentor = mentor or {}
         self._engagement = engagement or {}
         self._contact = contact
@@ -21,6 +30,7 @@ class FakeClient:
         self.updates: list[tuple[str, str, dict]] = []
         self.creates: list[tuple[str, dict]] = []
         self.list_calls: list[tuple[str, list]] = []
+        self.list_selects: list[tuple[str, str | None]] = []
 
     async def get(self, entity, record_id, select=None):
         if entity == service.MENTOR_PROFILE:
@@ -33,6 +43,7 @@ class FakeClient:
 
     async def list(self, entity, *, where=None, **kwargs):
         self.list_calls.append((entity, where or []))
+        self.list_selects.append((entity, kwargs.get("select")))
         return self._lists.get(entity, {"total": 0, "list": []})
 
     async def list_related(self, entity, record_id, link, **kwargs):
@@ -45,6 +56,11 @@ class FakeClient:
     async def create(self, entity, payload):
         self.creates.append((entity, payload))
         return {"id": f"{entity.lower()}-new", **payload}
+
+    async def metadata(self, key):
+        if key == f"entityDefs.{service.MENTOR_PROFILE}.fields":
+            return self._mentor_fields
+        return {}
 
 
 def _mentor(**overrides):
@@ -420,6 +436,125 @@ async def test_assign_fresh_assignment_is_not_marked_repaired():
     assert res["engagementStatus"] == "Pending Acceptance"
 
 
+# --- the mentor-side "last assigned a new client" stamp -----------------------
+
+
+def _submitted_engagement(**over):
+    return dict({
+        "engagementStatus": "Submitted",
+        "primaryEngagementContactId": "contact-primary",
+    }, **over)
+
+
+def _mentor_stamps(client):
+    """Every write of the stamp field, as (mentorProfileId, value)."""
+    return [
+        (rid, payload[service.LAST_ASSIGNED_FIELD])
+        for entity, rid, payload in client.updates
+        if entity == service.MENTOR_PROFILE and service.LAST_ASSIGNED_FIELD in payload
+    ]
+
+
+async def test_assign_stamps_the_mentors_last_client_assigned_date():
+    import re
+
+    client = FakeClient(mentor=_mentor(), engagement=_submitted_engagement())
+    res = await service.assign_engagement(client, "eng-1", "mentor-1")
+
+    stamps = _mentor_stamps(client)
+    assert len(stamps) == 1
+    mentor_id, value = stamps[0]
+    assert mentor_id == "mentor-1"
+    # EspoCRM's UTC datetime format, the same shape as engagementAssignedDate.
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}", value)
+    assert res["mentorLastAssignedDate"] == value
+
+
+async def test_assign_does_not_stamp_when_the_crm_field_is_not_built():
+    """Feature-detected: inert until the CRM field exists, so the app can ship
+    ahead of the CRM build."""
+    client = FakeClient(
+        mentor=_mentor(), engagement=_submitted_engagement(), mentor_fields={},
+    )
+    res = await service.assign_engagement(client, "eng-1", "mentor-1")
+    assert _mentor_stamps(client) == []
+    assert res["mentorLastAssignedDate"] is None
+    # The assignment itself still happened.
+    assert [u for u in client.updates if u[0] == service.ENGAGEMENT]
+
+
+async def test_assign_repair_does_not_restamp_the_mentor():
+    """A repair re-runs the re-homing for an assignment that already happened —
+    it is not a new client, which is why the engagement's own date is left
+    alone too."""
+    client = FakeClient(
+        mentor=_mentor(),
+        engagement=_half_assigned_engagement(),
+        related={"list": [{"id": "contact-primary"}]},
+    )
+    res = await service.assign_engagement(client, "eng-1", "mentor-1")
+    assert res["repaired"] is True
+    assert _mentor_stamps(client) == []
+    assert res["mentorLastAssignedDate"] is None
+
+
+async def test_stamp_is_advance_only():
+    """A stored value at or after the new one is left alone — the date can
+    never move backward."""
+    client = FakeClient(mentor=_mentor(**{service.LAST_ASSIGNED_FIELD: "2099-01-01 00:00:00"}))
+    assert await service.stamp_mentor_last_assigned(client, "mentor-1") is None
+    assert _mentor_stamps(client) == []
+
+    client = FakeClient(mentor=_mentor(**{service.LAST_ASSIGNED_FIELD: "2020-01-01 00:00:00"}))
+    written = await service.stamp_mentor_last_assigned(client, "mentor-1")
+    assert written and _mentor_stamps(client) == [("mentor-1", written)]
+
+
+async def test_stamp_failure_never_fails_the_assignment():
+    """A Client Administration role without edit on CMentorProfile must not
+    lose the assignment that has already been written."""
+    class Refusing(FakeClient):
+        async def update(self, entity, record_id, payload):
+            if entity == service.MENTOR_PROFILE:
+                raise EspoError("403 Forbidden: CMentorProfile edit")
+            return await super().update(entity, record_id, payload)
+
+    client = Refusing(mentor=_mentor(), engagement=_submitted_engagement())
+    res = await service.assign_engagement(client, "eng-1", "mentor-1")
+    assert res["mentorLastAssignedDate"] is None
+    assert res["engagementStatus"] == "Pending Acceptance"
+    assert [u for u in client.updates if u[0] == service.ENGAGEMENT]
+
+
+async def test_stamp_skipped_without_metadata_access():
+    """The dry-run client has no ``metadata`` method — no detection, no stamp."""
+    class NoMetadata(FakeClient):
+        metadata = None
+
+    client = NoMetadata(mentor=_mentor(), engagement=_submitted_engagement())
+    res = await service.assign_engagement(client, "eng-1", "mentor-1")
+    assert res["mentorLastAssignedDate"] is None
+    assert _mentor_stamps(client) == []
+
+
+async def test_reassign_stamps_the_new_mentor_only():
+    """The field records GAINING a client; the outgoing mentor is untouched."""
+    client = FakeClient(
+        mentor=_mentor(assignedUserId="user-new", assignedUserName="Nina New"),
+        engagement={
+            "engagementStatus": "Active",
+            "mentorProfileId": "mentor-old",
+            "mentorProfileName": "Olly Old",
+            "assignedUsersIds": ["user-old"],
+            "primaryEngagementContactId": "contact-primary",
+        },
+    )
+    res = await service.reassign_engagement(client, "eng-1", "mentor-new")
+    stamps = _mentor_stamps(client)
+    assert len(stamps) == 1 and stamps[0][0] == "mentor-new"
+    assert res["mentorLastAssignedDate"] == stamps[0][1]
+
+
 # --- reassign_engagement -----------------------------------------------------
 
 class ReassignClient(FakeClient):
@@ -631,6 +766,7 @@ async def test_eligible_mentors_query_and_shape():
                         "industryExperience": ["Manufacturing", "Retail Trade"],
                         "mentoringFocusAreas": ["Agriculture"],
                         "areaOfExpertise": ["Lean"],
+                        service.LAST_ASSIGNED_FIELD: "2026-08-01 14:00:00",
                     },
                     # Userless row: must be dropped in Python (the query no longer
                     # filters on assignedUserId — prod forbids it in `where`).
@@ -656,6 +792,8 @@ async def test_eligible_mentors_query_and_shape():
             "cbmEmail": "tommy.tranell@cbmentors.org", "industrySector": "Manufacturing",
             "industryExperience": ["Manufacturing", "Retail Trade"],
             "focusAreas": ["Agriculture"], "expertise": ["Lean"],
+            # The mentor-side stamp feeds the picker's "Last Assigned" column.
+            "lastClientAssigned": "2026-08-01 14:00:00",
         }
     ]
     # The query filters acceptingNewClients + Active; the has-user filter is done
@@ -733,6 +871,39 @@ async def test_mentor_type_options_empty_without_metadata_access():
     # [] so the frontend falls back to the values found in the rows.
     res = await service.list_all_mentors(FakeClient())
     assert res["mentorTypeOptions"] == []
+
+
+async def test_mentor_select_asks_for_the_stamp_only_when_the_crm_has_it():
+    """An unknown attribute in ``select`` is not something to bet the roster on,
+    so the column's field is added by feature detection, not hardcoded."""
+    built = FakeClient()
+    await service.list_eligible_mentors(built)
+    entity, select = built.list_selects[0]
+    assert entity == service.MENTOR_PROFILE
+    assert select.endswith("," + service.LAST_ASSIGNED_FIELD)
+
+    unbuilt = FakeClient(mentor_fields={})
+    await service.list_eligible_mentors(unbuilt)
+    _, select = unbuilt.list_selects[0]
+    assert service.LAST_ASSIGNED_FIELD not in select
+
+
+async def test_roster_rows_carry_the_stamp_for_the_picker_column():
+    client = FakeClient(
+        lists={
+            service.MENTOR_PROFILE: {
+                "list": [
+                    {"id": "m1", "name": "Stamped", "assignedUserId": "u1",
+                     service.LAST_ASSIGNED_FIELD: "2026-08-01 14:00:00"},
+                    # Never given a client — the column renders "—", not a zero.
+                    {"id": "m2", "name": "Never", "assignedUserId": "u2"},
+                ]
+            }
+        }
+    )
+    rows = {m["id"]: m for m in (await service.list_all_mentors(client))["mentors"]}
+    assert rows["m1"]["lastClientAssigned"] == "2026-08-01 14:00:00"
+    assert rows["m2"]["lastClientAssigned"] is None
 
 
 # --- mentor engagement metrics -------------------------------------------------

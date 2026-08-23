@@ -13,6 +13,10 @@ Field/link names and enum values reconciled live against crm-test (2026-06-19):
   * Mentor source ``CMentorProfile``; eligible = ``acceptingNewClients=true`` AND
     ``mentorStatus="Active"`` AND ``assignedUser`` set. The mentor's login User is
     ``CMentorProfile.assignedUser``.
+  * ``CMentorProfile.lastClientAssignedDate`` (datetime) — the mentor-side
+    "last given a new client" stamp, written by the Assign/Reassign actions
+    here and by nothing else. Feature-detected, so it is inert until the CRM
+    field is built (spec: ``cmentorprofile-last-client-assigned-field.md``).
 """
 
 from __future__ import annotations
@@ -286,6 +290,19 @@ _MENTOR_SELECT = (
     "mentoringFocusAreas,areaOfExpertise"
 )
 
+async def _mentor_select(client: AssignClient) -> str:
+    """:data:`_MENTOR_SELECT`, plus the last-assigned stamp when the CRM has it.
+
+    Feature-detected rather than appended unconditionally: what EspoCRM does
+    with an unknown attribute in ``select`` is not something to bet the mentor
+    roster on, and this list is read on every open of the Available Mentors
+    picker. One cached-free metadata GET per open is the cheaper risk.
+    """
+    if await last_assigned_field_exists(client):
+        return _MENTOR_SELECT + "," + LAST_ASSIGNED_FIELD
+    return _MENTOR_SELECT
+
+
 _METRICS_PAGE = 200
 _EMPTY_METRICS = {"activeClients": 0, "assignedLast30": 0, "lifetimeClients": 0}
 
@@ -304,6 +321,72 @@ def _parse_espo_datetime(value: Any) -> Optional[datetime]:
 def espo_now() -> str:
     """Current UTC time in EspoCRM's datetime format."""
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
+
+# --- The mentor-side "last assigned a new client" stamp ----------------------
+# CMentorProfile carries the date the mentor was last given a NEW client, so the
+# roster answers "who hasn't had one lately?" in the CRM itself (grids, filters,
+# reports) rather than only through this app's derived metrics. Nothing CRM-side
+# maintains it: the Assign and Reassign actions below are what write it.
+#
+# Feature-detected per write (the documentsFolderUrl/transcript precedent), so
+# this stays inert until the CRM field is built and activates with no deploy.
+# Spec: cmentorprofile-last-client-assigned-field.md.
+LAST_ASSIGNED_FIELD = "lastClientAssignedDate"
+
+
+async def last_assigned_field_exists(client: AssignClient) -> bool:
+    """Whether the live CRM has the mentor-side stamp field (CRM = truth).
+
+    ``metadata`` is reached by ``getattr`` rather than the Protocol because the
+    dry-run client doesn't implement it (the ``metadata_enum_options``
+    convention in this module); no metadata access simply means no stamp.
+    A failed lookup is NOT cached as absent — it is a CRM hiccup, not a schema
+    fact.
+    """
+    fetch = getattr(client, "metadata", None)
+    if fetch is None:
+        return False
+    try:
+        fields = await fetch(f"entityDefs.{MENTOR_PROFILE}.fields") or {}
+    except EspoError as exc:
+        log.warning("%s.%s metadata unavailable: %s", MENTOR_PROFILE, LAST_ASSIGNED_FIELD, exc)
+        return False
+    return LAST_ASSIGNED_FIELD in fields
+
+
+async def stamp_mentor_last_assigned(
+    client: AssignClient, mentor_profile_id: str, when: Optional[str] = None
+) -> Optional[str]:
+    """Record on the mentor's profile that they were just given a new client.
+
+    **Advance-only** (the ``touch_last_contact`` rule): a stored value at or
+    after ``when`` is left alone, so re-driving an old action can never move the
+    date backward. **Best-effort** — a Client Administration staffer's EspoCRM
+    role may not grant edit on ``CMentorProfile``, and that must never fail an
+    assignment that has already been written. Returns the stamp written, or
+    None when nothing was (field not built, not an advance, or the write was
+    refused); the caller reports it in the action payload.
+    """
+    if not await last_assigned_field_exists(client):
+        return None
+    stamp = when or espo_now()
+    try:
+        current = await client.get(
+            MENTOR_PROFILE, mentor_profile_id, select=LAST_ASSIGNED_FIELD
+        )
+        existing = _parse_espo_datetime(current.get(LAST_ASSIGNED_FIELD))
+        new = _parse_espo_datetime(stamp)
+        if existing and new and existing >= new:
+            return None
+        await client.update(MENTOR_PROFILE, mentor_profile_id, {LAST_ASSIGNED_FIELD: stamp})
+    except EspoError as exc:
+        log.warning(
+            "%s not stamped on %s/%s (the assignment itself stands): %s",
+            LAST_ASSIGNED_FIELD, MENTOR_PROFILE, mentor_profile_id, exc,
+        )
+        return None
+    return stamp
 
 
 async def mentor_engagement_metrics(client: AssignClient) -> dict[str, dict[str, int]]:
@@ -424,6 +507,9 @@ def _mentor_row(
         "industryExperience": r.get("industryExperience") or [],
         "focusAreas": r.get("mentoringFocusAreas") or [],
         "expertise": r.get("areaOfExpertise") or [],
+        # None until the CRM field is built (and for any mentor not yet given a
+        # client since it was) — the grid renders that as "—", not as a zero.
+        "lastClientAssigned": r.get(LAST_ASSIGNED_FIELD),
     }
 
 
@@ -439,7 +525,7 @@ async def list_eligible_mentors(client: AssignClient) -> dict[str, Any]:
             {"type": "isTrue", "attribute": "acceptingNewClients"},
             {"type": "equals", "attribute": "mentorStatus", "value": MENTOR_STATUS_ACTIVE},
         ],
-        select=_MENTOR_SELECT,
+        select=await _mentor_select(client),
         max_size=200,
         order_by="name",
     )
@@ -457,7 +543,8 @@ async def list_eligible_mentors(client: AssignClient) -> dict[str, Any]:
 async def list_all_mentors(client: AssignClient) -> dict[str, Any]:
     """Every mentor profile (any status) for the review/roster lists."""
     data = await client.list(
-        MENTOR_PROFILE, select=_MENTOR_SELECT, max_size=200, order_by="name"
+        MENTOR_PROFILE, select=await _mentor_select(client), max_size=200,
+        order_by="name",
     )
     metrics = await _metrics_or_none(client)
     rows = [_mentor_row(r, metrics) for r in data.get("list", [])]
@@ -509,6 +596,9 @@ async def assign_engagement(
          the response carries ``"repaired": true``.
       1. Resolve + re-validate the mentor -> their User.
       2. Engagement: set assignedUser + mentorProfile, status -> Pending Acceptance.
+      2b. Mentor profile: stamp ``lastClientAssignedDate`` (best-effort,
+         feature-detected, skipped on a repair — see
+         :func:`stamp_mentor_last_assigned`).
       3. Read the engagement's related contact/client/account ids.
       4. Set assignedUser on every contact, the CClientProfile, and the Account —
          merging into (never overwriting) each record's ``assignedUsers`` so
@@ -599,6 +689,13 @@ async def assign_engagement(
     # ``reassignmentErrors`` and reported to the staffer, rather than raising and
     # leaving them unsure whether the engagement itself was assigned (it was).
     reassignment_errors: list[dict[str, str]] = []
+
+    # 2b. The mentor-side stamp. A repair is NOT a new client — it re-runs the
+    # re-homing for an assignment that already happened, which is also why the
+    # engagement's own date is left alone above.
+    mentor_stamp = (
+        None if repair else await stamp_mentor_last_assigned(client, mentor_profile_id)
+    )
 
     # 3. Gather related records.
     contact_ids: set[str] = set()
@@ -718,6 +815,7 @@ async def assign_engagement(
         "contactsTotal": len(contact_ids),
         "clientProfileUpdated": client_profile_updated,
         "accountUpdated": account_updated,
+        "mentorLastAssignedDate": mentor_stamp,
         "reassignmentErrors": reassignment_errors,
     }
 
@@ -745,7 +843,10 @@ async def reassign_engagement(
          old User for new (old kept when a co-mentor shares it);
          ``engagementAssignedDate`` re-stamped (Days Assigned counts the
          CURRENT mentor's tenure). ``engagementStatus`` is deliberately NOT
-         changed — a replacement doesn't restart the acceptance flow.
+         changed — a replacement doesn't restart the acceptance flow. The NEW
+         mentor's ``lastClientAssignedDate`` is stamped (best-effort); the old
+         mentor's is left alone — the field records gaining a client, not
+         losing one.
       4. Client records re-homed so the new mentor can edit everything:
          every related Contact (single ``assignedUser`` -> new User), the
          CClientProfile and the Account (swap-merge on ``assignedUsers``).
@@ -848,6 +949,11 @@ async def reassign_engagement(
     )
 
     reassignment_errors: list[dict[str, str]] = []
+
+    # 3b. The new mentor was just handed a client they did not have — stamp
+    # them. The OLD mentor is deliberately untouched: the field records when a
+    # mentor last GAINED a client, not when they last lost one.
+    mentor_stamp = await stamp_mentor_last_assigned(client, mentor_profile_id)
 
     # 4. Related client records.
     contact_ids: set[str] = set()
@@ -978,5 +1084,6 @@ async def reassign_engagement(
         "accountUpdated": account_updated,
         "sessionsUpdated": sessions_updated,
         "sessionsTotal": sessions_total,
+        "mentorLastAssignedDate": mentor_stamp,
         "reassignmentErrors": reassignment_errors,
     }

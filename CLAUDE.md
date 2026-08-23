@@ -295,6 +295,15 @@ full-height grid with a status multi-select, and assigns each to a mentor.
   re-homes assigned users across every related Contact, the CClientProfile and
   the Account. **Merge, never overwrite** (`_merged_assignment_payload`) — an
   overwrite silently revokes co-mentor access.
+- **The mentor gets a stamp too** — `CMentorProfile.lastClientAssignedDate`, the
+  last date that mentor was given a NEW client. Written by Assign and by
+  Reassign (the **new** mentor only; the field records gaining a client, not
+  losing one), never by a repair. Advance-only, feature-detected, and
+  best-effort — a role without `CMentorProfile` edit logs a warning rather than
+  losing an assignment already written. It is a sortable **Last Assigned**
+  column in the Available Mentors picker (ascending = who is most overdue), and
+  the roster query asks for the field only when the CRM has it. Spec:
+  `cmentorprofile-last-client-assigned-field.md`.
 - **Stale-write guard**: the engagement is re-read before any write and the call
   is rejected (400, nothing written) if it already has a mentor or is no longer
   `Submitted`. The frontend reloads the grid on any Assign 400.

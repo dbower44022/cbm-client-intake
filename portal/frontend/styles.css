@@ -29,6 +29,23 @@
 .portal__login .form-error { color: var(--cbm-danger); font-weight: 600; margin-top: 1rem; }
 .portal__login .form-success { color: var(--cbm-success); font-weight: 600; margin-top: 1rem; }
 
+/* Password field: a Show/Hide link sits on the label line so the user can
+   check what they typed before signing in. */
+.portal__lab-line { display: flex; align-items: baseline; gap: 0.6rem; }
+.portal__lab-line label { margin-bottom: 0.4rem; }
+.portal__link-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: var(--cbm-text-sm);
+  color: var(--cbm-blue);
+  cursor: pointer;
+  text-decoration: underline;
+}
+.portal__link-btn:hover { color: var(--cbm-blue-dark); }
+
 .portal__forgot { margin: 0.9rem 0 0; font-size: var(--cbm-text-sm); }
 .portal__forgot a { color: var(--cbm-blue); }
 .portal__forgot a:hover { color: var(--cbm-blue-dark); text-decoration: underline; }

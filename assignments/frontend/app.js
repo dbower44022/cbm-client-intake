@@ -791,6 +791,9 @@
     if (k === "maxCapacity" || k === "activeClients" || k === "assignedLast30" || k === "lifetimeClients")
       return m[k] == null ? -Infinity : m[k];
     if (k === "availableCapacity") return mentorAvail(m);
+    // A CRM datetime string sorts correctly as-is; never-assigned mentors sort
+    // to the bottom of a most-recent-first sort, which is where they belong.
+    if (k === "lastClientAssigned") return m.lastClientAssigned || "";
     if (k === "acceptingNewClients") return m.acceptingNewClients ? 1 : 0;
     if (k === "mentorType") return mentorTypes(m).join(", ").toLowerCase();
     if (k === "industryExperience") return (m.industryExperience || []).join(", ").toLowerCase();
@@ -851,7 +854,7 @@
     if (!rows.length) {
       var tr = document.createElement("tr");
       var td = document.createElement("td");
-      td.colSpan = 11;
+      td.colSpan = 12;
       td.className = "mentor-empty";
       td.textContent = "No mentors match the current filters.";
       tr.appendChild(td);
@@ -872,6 +875,10 @@
       tr.appendChild(cell(numText(m.maxCapacity), "num"));
       tr.appendChild(cell(m.availableCapacity === -1 ? "Unlimited" : numText(m.availableCapacity), "num"));
       tr.appendChild(cell(numText(m.assignedLast30), "num"));
+      // The mentor-side stamp (CMentorProfile.lastClientAssignedDate, written by
+      // Assign/Reassign). "—" covers both "never" and "the CRM field isn't built
+      // yet" — the count columns beside it are what say whether they have clients.
+      tr.appendChild(cell(formatDate(m.lastClientAssigned) || "—", "date"));
       tr.appendChild(cell(numText(m.lifetimeClients), "num"));
       var ieTd = document.createElement("td"); ieTd.appendChild(chipRow(m.industryExperience)); tr.appendChild(ieTd);
       var exTd = document.createElement("td"); exTd.appendChild(chipRow(m.expertise)); tr.appendChild(exTd);

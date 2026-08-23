@@ -190,6 +190,16 @@ block a deploy.)*
     notice. Re-probe recipe + the local SA key path are in
     `csession-transcript-fields.md`.
 
+24. **`CMentorProfile.lastClientAssignedDate`** (both CRMs) — a Date-Time field
+    recording the last date a mentor was given a new client. Handoff:
+    `cmentorprofile-last-client-assigned-field.md`, which also covers the layout
+    placements that make it useful and the **Client Administration Team role's
+    `CMentorProfile` edit grant** the stamp needs (read is already there for the
+    dropdown; an admin test proves nothing about it). Shipped feature-detected
+    in v0.207.0, so Client Administration's Assign and Reassign start writing it
+    the moment the field exists — no deploy. Until then the picker's new **Last
+    Assigned** column is live but reads "—" on every row.
+
 22. **One prod Gmail message can never be ingested** (gmail id
     `19f298a147e3ba38`). Its subject trips `CConversation.name`'s
     `$noBadCharacters` validation pattern, which exists on both CRMs. The

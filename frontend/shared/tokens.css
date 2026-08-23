@@ -145,6 +145,7 @@ a:hover { text-decoration: underline; }
 }
 .cbm-field .cbm-required { color: var(--cbm-danger); }
 .cbm-field input[type="text"],
+.cbm-field input[type="password"],
 .cbm-field input[type="email"],
 .cbm-field input[type="tel"],
 .cbm-field input[type="number"],

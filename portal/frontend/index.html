@@ -29,7 +29,11 @@
           <input type="text" id="username" name="username" autocomplete="username" required />
         </div>
         <div class="cbm-field">
-          <label for="password">Password</label>
+          <div class="portal__lab-line">
+            <label for="password">Password</label>
+            <button type="button" class="portal__link-btn" id="pwToggle"
+                    aria-controls="password" aria-pressed="false">Show</button>
+          </div>
           <input type="password" id="password" name="password" autocomplete="current-password" required />
         </div>
         <p class="form-error" id="loginError" role="alert" hidden></p>

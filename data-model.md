@@ -71,6 +71,7 @@ erDiagram
         enum mentorStatus "Candidate to Active"
         string cbmEmail
         bool acceptingNewClients
+        datetime lastClientAssignedDate "set by Client Administration"
     }
     CPartnerProfile {
         enum partnershipStatus

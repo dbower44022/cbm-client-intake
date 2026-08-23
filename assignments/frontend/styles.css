@@ -482,6 +482,8 @@ body { display: flex; flex-direction: column; }
   z-index: 1;
 }
 .mentor-table th.num, .mentor-table td.num { text-align: center; white-space: nowrap; }
+/* Dates stay on one line — a wrapped "Aug 1, 2026" reads as two values. */
+.mentor-table th.date, .mentor-table td.date { white-space: nowrap; }
 .mentor-table th.is-sortable { cursor: pointer; user-select: none; }
 .mentor-table th.is-sortable:hover { color: var(--cbm-blue); }
 .mentor-table th[data-dir="asc"]::after { content: " ▲"; font-size: 0.7em; }

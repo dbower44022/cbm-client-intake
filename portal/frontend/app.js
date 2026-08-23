@@ -32,7 +32,23 @@
     return data;
   }
 
-  function showLogin() { hide($("homeView")); hide($("forgotView")); show($("loginView")); $("username").focus(); }
+  // --- Show/hide the typed password ---------------------------------------
+  // Reveal is opt-in and never sticky: it resets to hidden whenever the form is
+  // shown or a sign-in completes, so a revealed password can't be left on
+  // screen for the next person at the machine.
+  function setPasswordVisible(on) {
+    var input = $("password"), btn = $("pwToggle");
+    input.type = on ? "text" : "password";
+    btn.textContent = on ? "Hide" : "Show";
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    btn.setAttribute("aria-label", on ? "Hide password" : "Show password");
+  }
+
+  function showLogin() {
+    hide($("homeView")); hide($("forgotView")); show($("loginView"));
+    setPasswordVisible(false);
+    $("username").focus();
+  }
 
   function showForgot() {
     hide($("loginView")); hide($("homeView"));
@@ -247,11 +263,24 @@
         body: JSON.stringify({ username: $("username").value, password: $("password").value }),
       });
       $("password").value = "";
+      setPasswordVisible(false);
       enter(data);
     } catch (e) {
       var le = $("loginError"); le.textContent = e.message; show(le);
     } finally { $("loginBtn").disabled = false; }
   });
+
+  $("pwToggle").addEventListener("click", function () {
+    var input = $("password"), on = input.type === "password";
+    // Read the caret BEFORE the type change — changing `type` moves it.
+    var at = input.selectionStart;
+    setPasswordVisible(on);
+    input.focus();
+    if (at !== null && at !== undefined) {
+      try { input.setSelectionRange(at, at); } catch (e) {}
+    }
+  });
+  setPasswordVisible(false);
 
   $("forgotLink").addEventListener("click", function (ev) { ev.preventDefault(); showForgot(); });
   $("backToLogin").addEventListener("click", function (ev) { ev.preventDefault(); showLogin(); });
