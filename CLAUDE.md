@@ -1189,7 +1189,7 @@ Entity Manager vocabulary — [[crm-specs-use-entity-manager-terms]]):
 deployed and verified; `CHANGELOG.md` is the permanent record, `OPEN-ITEMS.md`
 holds anything still owed.*
 
-**Pushed through v0.208.0 on 2026-08-23** — so it is building on dev,
+**Pushed through v0.208.1 on 2026-08-23** — so it is building on dev,
 crm-test and prod. The last live prod pass verified `0.206.0` (correctly-branded
 token-free pages, the four policy links resolving). What is *verified* is
 narrower than what is deployed — see each block.
