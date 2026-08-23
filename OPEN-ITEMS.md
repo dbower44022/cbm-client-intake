@@ -89,6 +89,18 @@ empty company on a partner/funder now renders as "—" and is fixable in the app
     matters. The CLI equivalent inside a container is
     `scripts/cleanup_excluded_attachments.py [--apply]`.
 
+    **crm-test was run on 2026-08-23 and is not a rehearsal.** The job
+    completed cleanly in the crm-test web container (exit 0, plan rendered,
+    the never-file list live and correct) but reported nothing to archive —
+    because that deployment's `app_document` and `comm_attachment` tables are
+    **entirely empty**. Not a configuration gap: `gmail_sync`, `gdrive_docs`,
+    `gdrive_identity=service`, the shared drive and the service account are all
+    set there. It is the nightly sandbox reset wiping the app's own Postgres.
+    So the run proved the plumbing (settings, database, list, plan renderer)
+    and left the **archive path itself unexercised anywhere** — the first real
+    run of it will be the prod one. Read the plan carefully before applying;
+    the Operations tab shows it properly from v0.208.1 onward.
+
 10. **Two prod CBM members have no linked Contact — and one has no mentor
     status** (found 2026-07-28, probing the birthday roster; both CRMs read
     read-only). On **production**:

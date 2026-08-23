@@ -1207,7 +1207,18 @@ sentence is a convenience.
   deploys, and the rollback is emptying the setting at `/setup` rather than a
   revert. And the **cleanup is a separate, deliberate act**: the invites
   already filed stay where they are until someone runs the Operations job and
-  applies its plan (`OPEN-ITEMS.md` #24). Verified by tests only.
+  applies its plan (`OPEN-ITEMS.md` #24) — and running it on crm-test proved
+  only the plumbing, because that database is emptied nightly and held no
+  documents at all, so **the archive path has never actually run**. The filter
+  is covered by tests and confirmed live in the crm-test container.
+
+- **v0.208.1 — the Operations tab shows the plan it just produced.** A dry run
+  rendered its report and then `loadJobs()` rebuilt the panel and destroyed it,
+  so every job since the tab shipped has said `done` with nothing to review —
+  hollowing out the dry-run-then-apply ruling the tab exists to enforce. Past
+  runs now keep their report under a **Report** column too. Verified in a
+  browser against a stub harness, including the control that the job list is
+  genuinely rebuilt.
 
 - **v0.205.0–v0.206.0 — the product stopped saying Cleveland** (Phase 0 of the
   chapter-network plan; worth doing whatever happens with the chapters).

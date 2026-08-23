@@ -170,6 +170,25 @@ Some mutating routines are listed but **not runnable**: they write as they go
 and have no plan-producing pass, so they cannot honour dry-run-then-apply yet.
 They say so instead of offering a button that would skip the review.
 
+**The plan is the point — read it before applying.** A dry run prints exactly
+what it would do: for the attachment cleanup, every document it would archive,
+by record, with its filename, type, date and id, and a count line at the end.
+Applying re-derives that plan and compares it to the one you read, so the two
+are bound together. Every run keeps its report: **Recent runs** has a **Report**
+column, and expanding a row shows what that run printed — which is how an apply
+stays auditable against the plan it came from. (Before v0.208.1 the report was
+rendered and then immediately destroyed by the page's own refresh, so a run
+showed "done" and nothing else.)
+
+**Clean up excluded email attachments** archives the documents that inbound mail
+auto-filed but whose file type is now on the never-file list — calendar invites
+above all (see *Email → Never file these attachments* on the Settings tab).
+"Archive" is the same move as the Archive button on a record's Documents tab:
+the file goes to that record folder's `_Archived` subfolder and leaves the
+default list. Nothing is deleted, anything can be restored, and a file a person
+uploaded by hand is never touched — the sweep only considers documents whose
+type is *Email attachment*.
+
 ### History tab
 
 Every change: old value → new value, who, when, and why. Also written to

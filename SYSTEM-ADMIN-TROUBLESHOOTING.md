@@ -535,6 +535,8 @@ By far the most common report. Work down in order:
 | **F1** | Documents listed but won't open / uploads fail | The service account lost its access to the shared drive | Check the **CBM Documents** shared drive membership in Google Admin — the service account must be a member. Escalate if it looks right. |
 | **F2** | A mentor says they can't find a document in Drive directly | **Expected.** People aren't members of the shared drive by design; per-folder Commenter access is granted by the app | Not a fault. They access documents through the app. |
 | **F3** | A document is in the app but archived/missing in Drive | An archive action moved it to `_Archived` | Look in the `_Archived` folder before treating it as lost. |
+| **F4** | Calendar invites (`.ics`) or `winmail.dat` clutter a Documents tab | Files auto-filed from email before the never-file list existed (an invite arrives again on every reschedule and every acceptance, each copy different, so the duplicate check can't collapse them) | New arrivals are already skipped. Clear the old ones with **System Settings → Operations → "Clean up excluded email attachments"**: dry run, read the plan, then apply. It archives (recoverable), never deletes, and never touches a file a person uploaded. |
+| **F5** | A file type you don't want keeps landing in Documents | It isn't on the never-file list | Add it at **System Settings → Email → "Never file these attachments"** — a MIME type (`text/calendar`) or a filename/extension (`.ics`, `winmail.dat`). Takes effect without a deploy. The message still carries the file: **View original** on the message always shows it. |
 
 ### G. Calendar, meetings, transcripts
 
