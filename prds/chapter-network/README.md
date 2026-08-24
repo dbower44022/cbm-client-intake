@@ -38,8 +38,11 @@ removes hardcoded identity, the second ends the drift that has bitten this proje
 repeatedly with only two instances. Everything from Phase 2 on is contingent on
 there actually being a network.
 
-The live work list is **[TASKS.md](TASKS.md)**. Open decisions, including the ones
-blocking the most work, are in **[DECISIONS.md](DECISIONS.md)**.
+The live work list is **[TASKS.md](TASKS.md)**, where every entry carries a plain
+summary of the issue, the options and a recommendation where a decision is owed,
+and step-by-step instructions. Its Part 1 is the four decisions currently blocking
+otherwise-ready work — start there. The organizational rulings that block nothing
+are in **[DECISIONS.md](DECISIONS.md)**.
 
 ## The files
 
@@ -47,7 +50,7 @@ blocking the most work, are in **[DECISIONS.md](DECISIONS.md)**.
 |---|---|---|
 | `README.md` | This. Orientation and current state. | A phase changes state |
 | [`DECISIONS.md`](DECISIONS.md) | The eight rulings, the seven proposals awaiting a ruling, the decision log, and the open questions nobody owns yet | Doug rules something |
-| [`TASKS.md`](TASKS.md) | The project's own open items — what is actually owed, by phase | Every working session |
+| [`TASKS.md`](TASKS.md) | The project's own open items. Each one: what the issue is, the options and a recommendation where a decision is owed, then steps | Every working session |
 | [`interface-contract.md`](interface-contract.md) | C1–C10 and both version stamps: what any CRM-config applier must satisfy | Rarely. It is meant to be stable, and it has a reader outside this repo |
 | `phase-0…6-*.md` | One file per phase, each closable on its own | Work on that phase |
 | [`governance-and-exit.md`](governance-and-exit.md) | Change governance, non-payment, the exit kit | The organizational design changes |

@@ -128,8 +128,9 @@ the rest was written. Everything above tells you what CRMBuilder *can do*. This
 section tells you what its consumer *needs*, which is the other half of a
 requirements conversation and the half that was missing.
 
-It comes from `prds/multi-chapter-deployment-plan.md` § *Phase 1*, in
-`cbm-client-intake`, rewritten 2026-08-20. That phase is deliberately written in
+It comes from `prds/chapter-network/interface-contract.md` in `cbm-client-intake`
+(written 2026-08-20 inside Phase 1; split into its own file 2026-08-24 precisely
+so this session can be handed it on its own). That phase is deliberately written in
 three layers: **Layer 1** is this contract, stated without naming a tool, because
 it survives whatever this session rules; **Layer 2** is adopting CRMBuilder as the
 realization; **Layer 3**, the current *plan of record*, is that repo generalizing
