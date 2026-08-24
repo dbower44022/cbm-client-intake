@@ -6,6 +6,30 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+26. **Two live CRM defects the chapter conformance check found** (2026-08-21).
+    Both surfaced by the first run of `scripts/preflight_crm.py` against the two
+    live instances, and both are Cleveland defects rather than chapter work —
+    recorded here so they are not stranded in a planning document. Context:
+    `prds/chapter-network/phase-1-crm-config.md` § *Measured, 2026-08-21*.
+
+    - **Production holds `MentorAssignmentNotice` TWICE.** The app looks email
+      templates up **by name**, so which of the two a member of staff actually
+      sends after an Assign or Reassign is arbitrary, and the two may differ.
+      Delete or rename one in the prod CRM, then re-run the check. crm-test holds
+      2 templates and prod holds 5, so the two CRMs diverge on templates as well
+      as roles — templates are the one surface nothing was watching.
+    - **Prod drifts on one managed option list, in ORDER only.**
+      `sync_form_options.py` inside the prod container exits 1 on
+      `CMentorProfile.howDidYouHearAboutCBM`: the same nine values in a different
+      sequence. No value would fail to store; the only effect is the order of a
+      dropdown on the volunteer form. Worth noting *why* it has no obvious fix
+      today — one static `options.js` serves both deploys, so "which order is
+      correct" has no answer until the code is the truth, which is what ruling 4
+      in the chapter plan reverses.
+
+    The five `Event*` templates the same run found missing on **both** instances
+    are already tracked under item 19 as an events blocker, not duplicated here.
+
 23. **The training sandbox — done, with four residuals** (2026-08-22). crm-test
     now doubles as CBM's training sandbox and release-test environment on top of
     its existing job as the pre-production review gate, and the nightly reset
@@ -233,8 +257,6 @@ block a deploy.)*
     WARNING). Same list for the session-tool CRM prereqs generally: `CSession`
     create + read-own/edit-own, `assignedUsers` enabled on `CSession`, and the
     `CSession` name formula must be **keep-if-present**.
-17. **`Analytics Admin Team`** — create in both CRMs to hand Analytics to
-    non-admin staff (admins already pass the gate).
 19. **Meet transcripts — three Google-side changes, none done** (re-probed
     2026-07-27: a delegated token minted fine for `calendar.events` but was
     rejected `unauthorized_client` for `meetings.space.created`, so the DWD scope
@@ -604,6 +626,15 @@ toggle.
     mode here is silent by design; the app logs a warning per denied profile.
 
 ## Resolved
+
+- **`Analytics Admin Team` exists in both CRMs** (was item 17, closed
+  2026-08-21). Nobody had checked; the first run of the rewritten conformance
+  check (`scripts/preflight_crm.py`, `ac6f1b4`) reported all **7** teams named in
+  `core/config.py` present on **both** instances, which hold 9 teams each and
+  **identical lists**. This item was one of three failures that run was predicted
+  to find, and two of the three predictions were wrong — the check is what proved
+  it. Evidence and the rest of that sweep:
+  `prds/chapter-network/phase-1-crm-config.md` § *Measured, 2026-08-21*.
 
 - **The calendar invites filed as documents are gone** (was item 24, raised and
   closed 2026-08-23). Doug ran the cleanup on **production** through `/setup` →

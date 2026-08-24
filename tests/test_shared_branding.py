@@ -1,6 +1,7 @@
 """Whose name the product carries — and the guard that keeps it configurable.
 
-Phase 0 of ``prds/multi-chapter-deployment-plan.md`` removed the literal string
+Phase 0 of the chapter network (``prds/chapter-network/phase-0-decleveland.md``)
+removed the literal string
 "Cleveland Business Mentors" from 18 frontend HTML files (48 occurrences) plus
 four surfaces outside HTML, replacing it with the ``{{org}}`` token substituted
 server-side by ``core/branding.py``.

@@ -1,0 +1,153 @@
+# The chapter network
+
+**Read this first if you are working on chapters.** This directory is the whole
+project: the architecture other chapters would run on, split so that a phase can
+be worked and closed without loading the rest. It is deliberately separate from
+the app's ongoing feature work — the repo's `CLAUDE.md` is the anchor for *this
+application*, and this file is the anchor for *the network*.
+
+## What the project is
+
+Other mentoring chapters like CBM want to use these apps and this website. The
+requirement: **all instances hold the same configuration, and a change made once
+propagates to all of them**, while each chapter keeps **its own website with its
+own graphics and marketing content**.
+
+The shape that answers it: a **central services organization** owns development
+and support, **one EspoCRM per chapter**, **strictly identical function** — core
+or nothing, no per-chapter fields — **each chapter owning its own
+infrastructure** and granting the services org access, and **a release train**
+that moves every chapter to the same tag at the same time. Eight rulings settled
+2026-08-17/18; they are in **[DECISIONS.md](DECISIONS.md)** and everything here
+follows from them.
+
+## Where it stands
+
+| Phase | State | Next thing |
+|---|---|---|
+| **[0 — De-Cleveland](phase-0-decleveland.md)** | **Substantially delivered.** v0.205.0–v0.206.0, deployed and verified on prod: `{{org}}`, `CHAPTER_TOKENS_URL`, the guard test, the four policy URLs. | A live-verification list, and the logo question ruled |
+| **[1 — CRM config as an artifact](phase-1-crm-config.md)** | **In progress.** The interface contract is written; the conformance check is built (`ac6f1b4`) and has been run against both live CRMs. | The week's tranche: `crmConfig` at `/healthz`, Stamp B's home, the PRE_DEPLOY gate |
+| **[2 — Release train](phase-2-release-train.md)** | Not started. Zero git tags exist in this repo. | Cadence ruled; Stamp A |
+| **[3 — Spec generation + secrets](phase-3-spec-secrets.md)** | Not started. | Nothing blocks it; it also fixes today's single-laptop deploy dependency |
+| **[4 — Public pages](phase-4-public-pages.md)** | Not started. Substance is in `prds/public-mentor-pages-plan.md`. | — |
+| **[5 — Fleet console](phase-5-fleet-console.md)** | Not started. | Consumes Phases 1 and 2; owns nothing until they land |
+| **[6 — First chapter](phase-6-first-chapter.md)** | Not started. | Its dress rehearsal is Phase 1's acceptance criterion 13, and needs no chapter |
+
+**Phases 0 and 1 are worth doing whatever happens with the chapters** — the first
+removes hardcoded identity, the second ends the drift that has bitten this project
+repeatedly with only two instances. Everything from Phase 2 on is contingent on
+there actually being a network.
+
+The live work list is **[TASKS.md](TASKS.md)**. Open decisions, including the ones
+blocking the most work, are in **[DECISIONS.md](DECISIONS.md)**.
+
+## The files
+
+| File | What it holds | Changes when |
+|---|---|---|
+| `README.md` | This. Orientation and current state. | A phase changes state |
+| [`DECISIONS.md`](DECISIONS.md) | The eight rulings, the seven proposals awaiting a ruling, the decision log, and the open questions nobody owns yet | Doug rules something |
+| [`TASKS.md`](TASKS.md) | The project's own open items — what is actually owed, by phase | Every working session |
+| [`interface-contract.md`](interface-contract.md) | C1–C10 and both version stamps: what any CRM-config applier must satisfy | Rarely. It is meant to be stable, and it has a reader outside this repo |
+| `phase-0…6-*.md` | One file per phase, each closable on its own | Work on that phase |
+| [`governance-and-exit.md`](governance-and-exit.md) | Change governance, non-payment, the exit kit | The organizational design changes |
+
+## Working this project separately
+
+**There is no branch-level lane yet, and that is the same defect the project
+exists to fix.** All three CBM apps track `main` with `deploy_on_push: true`, so a
+push deploys dev, crm-test *and* prod. [Phase 2](phase-2-release-train.md) is what
+creates a real lane. Until then, separation is by discipline:
+
+- **Documents and read-only scripts are inert.** Everything in this directory,
+  plus `scripts/preflight_crm.py`, ships to production on every push and does
+  nothing there. Work them on `main` freely.
+- **Anything that touches runtime ships dark**, behind a flag defaulting off, and
+  is reviewed on crm-test as a real non-admin before the flag reaches the prod
+  overlay. That is the repo's existing gate and this project does not get an
+  exception from it.
+- **A chapter change that alters Cleveland's behaviour is not a chapter change.**
+  The safety property Phase 0 held itself to — an unconfigured deployment renders
+  and behaves exactly as it did before — is the standard for every later phase
+  too. Where a phase cannot hold it, say so in that phase's file.
+
+**A session working this project** should read this file, `DECISIONS.md`, and the
+one phase file it is working. It should not need the 1,235-line original, which
+is now a pointer file — kept only so that the changelog, the session prompts and
+the commit history that cite it by path still land somewhere. It *will* still need the repo's `CLAUDE.md`
+for how the application works.
+
+## Other repositories this touches
+
+The network spans more than this repo, and only this one's `CLAUDE.md` loads
+automatically. Read the other repo's own rules before creating or changing
+anything in it.
+
+| Repo / system | Relationship | Rule |
+|---|---|---|
+| **CRMBuilder** | The preferred realization of Phase 1's applier. HEAD `db1dbef0`, 2026-08-10; nothing has moved since the 2026-08-18 read-only review. | **Requirement-first governance.** Its shape is not ours to assume, and we cannot write a plan that obliges it to grow an interface it has not agreed to. Read-only from here until the requirements session runs |
+| **`dbower44022/ClevelandBusinessMentoring`** | Owns **MN-INTAKE**, the business definition of the client-intake process. The Requirements Spec here is kept aligned to it by carry-forward | Process definition, not application. Changes there are Doug's |
+| The chapters' **WordPress sites** | Ruling 8: the app serves the public pages, each chapter's site embeds them. `wp-plugin/cbm-events/` already ships the renderer plus the site's own stylesheet | The stylesheet is a **class contract**, guarded by a test. Do not restyle it |
+| **DigitalOcean, per chapter** | Ruling 5: each chapter owns its account and grants the services org access | Lock-out must be impossible in either direction |
+
+---
+
+## What already works, and what is genuinely new
+
+**Already true, and free.** Code propagation is the existing model — every app
+tracks `main` with `deploy_on_push`, so N chapters costs a DO app each. Branding
+is `frontend/shared/tokens.css`, 162 lines of CSS custom properties. The marketing
+sites are already separate WordPress installs. Per-deployment configuration is
+already how everything works: `get_settings()` reads one environment, `gmail.py`
+and `gdrive.py` impersonate exactly one subject per client, and there is one
+service-account JSON, one `gdrive_shared_drive_id`, one members group. A chapter's
+Google stack is just another env set.
+
+**Why one app per chapter rather than one multi-tenant app.** `get_settings()` is
+process-global, `core/settings_store.py` merges the DB override layer
+process-wide, and the worker is a single process owning the delivery loop, Gmail
+sync, Drive reconciliation and receipt sweeps. Resolving a tenant per request
+through all of that is a rewrite of the foundation, and it would put every
+chapter's CRM credentials in one process — discarding the isolation ruling 2
+buys. N deployments of one image get isolation for free.
+
+**Why not one shared CRM**, even though it would make propagation free by
+construction: **29 non-test modules construct an EspoCRM client**, and the
+org-wide API-key paths among them (the worker, receipts, action log, directory
+availability, analytics system metrics, monitoring, birthday, docs grants, ops
+inbound, assignment stamps) plus **8 modules reaching the admin service account**
+all bypass user ACL by design. In a shared database each becomes a place where one
+chapter can read another's records, and a miss is silent — this codebase's
+documented failure mode ([[espo-field-acl-silently-strips-writes]],
+[[espo-403-diagnosis-merged-team-roles]]). Separate instances delete that surface
+physically rather than by audit.
+
+**The one genuinely new build is CRM configuration.** Everything else in this plan
+is configuration, runbook or governance. EspoCRM has no supported
+push-config-from-A-to-B, and its customization is split in two halves with very
+different distribution stories.
+
+
+---
+
+## What would make this fail
+
+- **The change-request route being slow.** Named above; it is the top risk, and it
+  is organizational rather than technical.
+- **The first exception.** One chapter granted one custom field ends ruling 4, and
+  the applier's desired state stops being describable.
+- **Espo upgrades.** The extension and the applier both bind to Espo's admin API
+  surface; a major upgrade lands on six instances at once. The train helps —
+  staging sees it first.
+- **`deploy_on_push` left on** at a chapter, quietly delivering unreleased `main`
+  to a member's production.
+- **The services org bus factor.** Today deployment ability lives with whoever
+  holds the gitignored overlays. Phase 3 fixes that; until then it is the single
+  point of failure for the whole network.
+
+
+---
+
+*Split out of `prds/multi-chapter-deployment-plan.md` on 2026-08-24. Nothing was
+summarized away: every section of that document is in one of these files, and the
+substance of the rulings is unchanged.*

@@ -1134,11 +1134,14 @@ rollout, the intake-receipt redesign, Meet and Fathom transcripts, submission-ad
 collaboration, workspace directories, transcription-vendor options, **grant
 management** and **the rating engine**) — each records
 the decisions and Doug's rulings behind that arc, so read the relevant one before
-reworking a feature. **`prds/multi-chapter-deployment-plan.md`** is the largest:
-eight settled rulings on extending this suite to a network of mentoring chapters,
-a measured de-Cleveland inventory (Phase 0, **built**), and six phases after it —
-**Phase 1, CRM configuration as a versioned build artifact, is the next one and
-the only genuinely new engineering in the plan.** `prompts/` holds the kickoff prompts, design mockups and
+reworking a feature. The chapter network is
+**not** one of those plans any more — it is its own project directory,
+**`prds/chapter-network/`**, worked separately from the app's feature arcs; start
+at its `README.md`. Eight settled rulings, a phase file each for phases 0–6, a
+decision log, and its own task list. Phase 0 (de-Cleveland) is **built**; **Phase
+1, CRM configuration as a versioned build artifact, is the next one and the only
+genuinely new engineering in the plan** — its conformance check is built, its
+applier is not. `prompts/` holds the kickoff prompts, design mockups and
 review documents those arcs were built from (including
 `reliability-review-2026-07-17.md` at the repo root, whose six hardening phases
 are all implemented).
@@ -1212,7 +1215,7 @@ build on crm-test), `cgrant-entities-crm-handoff.md`,
   IDENTIFIERS, not content** — never renamed; two are live contracts with the
   website. Chapter theming is `CHAPTER_TOKENS_URL`, a stylesheet loaded after
   `/shared/tokens.css` that may redefine `--cbm-*` on `:root` and nothing else.
-  Inventory and rulings: `prds/multi-chapter-deployment-plan.md` § *Phase 0*.
+  Inventory and rulings: `prds/chapter-network/phase-0-decleveland.md`.
   The rewrite covers `.js` too (`vendor/` excluded, token-free files untouched),
   which is how `legal-links.js` gets the four `POLICY_*_URL` settings — the
   policy documents the public consent checkbox links to.
@@ -1296,7 +1299,7 @@ sentence is a convenience.
   **Deployed and verified live on prod.** The standing rules now live in the
   Conventions section above; the inventory, the rulings and what was
   deliberately *not* built are in
-  `prds/multi-chapter-deployment-plan.md` § *Phase 0*.
+  `prds/chapter-network/phase-0-decleveland.md`.
 
   What is worth keeping in mind here rather than there:
 

@@ -35,7 +35,7 @@ out with no token left in it.
 identifiers, not content — 12 namespaces, 52 custom properties across 1223 uses,
 2298 class occurrences, and two of them are live contracts with a chapter's
 WordPress site. The prefix names the software, not the chapter. See
-``prds/multi-chapter-deployment-plan.md`` § *Phase 0*.
+``prds/chapter-network/phase-0-decleveland.md``.
 """
 
 from __future__ import annotations

@@ -1,7 +1,8 @@
 """Read-only conformance check for an EspoCRM instance.
 
-**What it is.** The check half of *Phase 1* in
-``prds/multi-chapter-deployment-plan.md``: "is this instance equal to what the
+**What it is.** The check half of *Phase 1* of the chapter network
+(``prds/chapter-network/phase-1-crm-config.md``, and the contract it answers to
+in ``prds/chapter-network/interface-contract.md``): "is this instance equal to what the
 application requires, and if not, exactly how does it differ". It began as a
 production-readiness pre-flight (before pointing the app at a new CRM, verify it
 has the schema the orchestrators write to — the crm-test drift saga showed how a
