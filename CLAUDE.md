@@ -1145,7 +1145,9 @@ are all implemented).
 
 **CRM build handoffs** (one file per pending or completed CRM change, written in
 Entity Manager vocabulary — [[crm-specs-use-entity-manager-terms]]):
-`cgrant-entities-crm-handoff.md`, `crating-entity-crm-handoff.md`,
+**`GRANT-CRM-FIX-RUNBOOK.md`** (the ordered do-this-next list for the grant
+build on crm-test), `cgrant-entities-crm-handoff.md`,
+`crating-entity-crm-handoff.md`,
 `cintake-submission-*.md`, `cinformation-request-entity.md`,
 `cconversation-entity.md`, `cevent-entities-crm-handoff.md`,
 `csession-*.md`, `cmentorprofile-*.md`, `clastcontactdate-field.md`,

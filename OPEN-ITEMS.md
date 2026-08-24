@@ -157,7 +157,17 @@ block a deploy.)*
     only, no custom fields, no links, no records), so **delete and recreate is
     clean** — handoff §0/§2. Type `Grant`, not `CGrant`.
 
-    Either build path works now: the rewritten handoff has per-field steps and a
+    **`GRANT-CRM-FIX-RUNBOOK.md` is the ordered sequence to follow** — delete,
+    rebuild, verify, grant roles, check in the app. State re-read live
+    2026-08-24 04:23 UTC: still the three bare `CCGrant*` shells, zero records
+    (the 04:00 reset truncated their tables), nothing else built.
+
+    Worth knowing for planning: the reset log shows it truncates records and
+    then **rebuilds the schema from live custom metadata**, so entity/field/link
+    definitions SURVIVE the nightly reset — only records inside them go. The
+    schema can be built any evening; test records cannot outlive the night.
+
+    Either build path works: the rewritten handoff has per-field steps and a
     box-by-box table per link, or `scripts/migrate_grant_schema.py --apply` does
     §3–§5 through the API with no dialog involved (dry-run by default, and it
     verifies each link's direction afterwards). Role grants stay a UI step
