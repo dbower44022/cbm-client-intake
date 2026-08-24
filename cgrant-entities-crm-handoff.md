@@ -1,233 +1,466 @@
 # CGrant + CGrantDeliverable + CGrantReport — CRM build handoff
 
-Written in **Entity Manager vocabulary** — "LEFT" means the entity whose
-Relationships tab you are on. Plan: `prds/grant-management-plan.md` (rulings of
-2026-08-23). Nothing here exists yet; this is a **from-scratch build**.
+Step-by-step build instructions for EspoCRM's Entity Manager. Plan:
+`prds/grant-management-plan.md` (Doug's rulings 2026-08-23).
 
-**Build on crm-test first**, verify, then repeat on production. The app
-feature-detects every field, so it stays inert until the CRM has these.
+**Everything in this document was verified against the running crm-test
+instance on 2026-08-23** — the dialog layout from
+`client/res/templates/admin/link-manager/modals/edit.tpl`, the naming rules from
+`Tools/EntityManager/NameUtil.php` and `Tools/LinkManager/LinkManager.php`, the
+valid link types from `Tools/LinkManager/Type.php`, and the field types from
+`Resources/metadata/fields/`. Earlier versions of this file were written from
+memory and were wrong. Where a statement here comes from source, it says so.
 
----
-
-## 0. What is being built and why
-
-A funder awards a **grant**. The grant is the hub: it is tied to the money
-(existing `CContribution` rows, which become its *payments*), to the
-**deliverables** CBM promised in return, and to the periodic **reports** sent to
-the funder to keep the funding coming. Deliverables and contributions are
-**siblings under the grant, never a chain** — a deliverable that runs the whole
-grant year has no single payment to hang off, and a grant paid in four tranches
-has no single deliverable to hang each payment off.
-
-Three new entities, **six links**, one role change.
-
-> **Two fields added 2026-08-23 while the app side was being built**:
-> `CGrantDeliverable.currentValue` and `.currentNote`. Manual measurement needs
-> somewhere to record progress *before* the reporting engine exists, and without
-> them a deliverable can state a target but never show how it is doing. Both are
-> in the table below. Also changed: `deliverableStatus` and `nextReportDue`
-> should stay **editable** rather than read-only — see their rows.
+> **§9 is a script that does this whole build through the API in one command.**
+> The API has no dialog and no inverted boxes, so if you would rather not hand-
+> build 24 fields and 6 links, skip to it. The instructions below are the manual
+> path, and both produce exactly the same schema.
 
 ---
 
-## 1. `CGrant` — the award
+## 0. READ THIS FIRST — the three entities on crm-test are named wrong
 
-Administration → Entity Manager → **Create Entity**.
+The entities created on crm-test are **`CCGrant`, `CCGrantDeliverable` and
+`CCGrantReport`** — with a double C. Read live from
+`custom/Espo/Custom/Resources/metadata/entityDefs/` on 2026-08-23.
 
-- **Name:** `CGrant`  ·  **Label:** `Grant`  ·  **Plural:** `Grants`
-- **Type:** `BasePlus` (gives `assignedUser`, `teams`, `description`)
-- Disable **Stream** unless you want grant edits in the stream (the app writes
-  its own history via `CActionLog`).
+That is my fault: the previous version of this file said *"Name: `CGrant`"*.
+**EspoCRM adds the `C` itself.** From `NameUtil::addCustomPrefix()`:
 
-Fields:
+```php
+$prefix = $ucFirst ? 'C' : 'c';
+return $prefix . ucfirst($name);
+```
 
-| Name | Type | Notes |
+and `EntityManager::create()` calls it unconditionally on every new entity
+(`customPrefixDisabled` is `false` on this instance — checked). So typing
+`CGrant` gives `CCGrant`; **typing `Grant` gives `CGrant`**, which is what the
+application expects and what every existing entity here already follows
+(`CEngagement`, `CSession`, `CContribution` were all created by typing the name
+without the C).
+
+**The fix is clean.** All three are bare `BasePlus` shells — stock fields only
+(`name`, `description`, `createdAt`, `modifiedAt`, `createdBy`, `modifiedBy`,
+`assignedUser`, `teams`), no custom fields, no custom links, no records. Delete
+them and start again at §2. Nothing is lost.
+
+## 1. The naming rules, once, so they stop biting
+
+Three different rules, all verified in source. They are not the same rule, which
+is why this keeps going wrong.
+
+| What you are naming | Rule | Consequence here |
 |---|---|---|
-| `name` | varchar | **Required.** The grant's title as the funder calls it |
-| `awardNumber` | varchar | The funder's own reference, if they issue one |
-| `grantStatus` | enum | **Required.** `Applied` · `Awarded` · `Active` · `Reporting` · `Closed` · `Declined` · `Cancelled`. Default `Applied` |
-| `awardAmount` | currency | EspoCRM adds `awardAmountCurrency` automatically — **a save that sets an amount must also set the currency or the CRM 400s the whole write** (this bit the Contributions ledger once) |
-| `periodStart` | date | Start of the period of performance |
-| `periodEnd` | date | End of it |
-| `programArea` | varchar | What the grant funds. Left as free text deliberately — make it an enum once CBM's own list settles |
-| `reportingFrequency` | enum | `Monthly` · `Quarterly` · `Semi-annual` · `Annual` · `Final only` · `Ad hoc` |
-| `firstReportDue` | date | Seeds the report schedule |
-| `nextReportDue` | date | **Leave it editable for now.** The report engine takes it over later; until then the app seeds it from `firstReportDue` and staff may correct it. (Entity Manager's Read-only is a UI setting only and never blocks an API write, so it can be locked down later with no code change) |
-| `renewalDeadline` | date | When the next application is due — "in order to continue receiving grants". Replaces the inert `CContribution.nextGrantDeadline` |
-| `notes` | wysiwyg | |
+| **An entity** | **Always** gets `C` prepended (`EntityManager::create`) | Type `Grant`, get `CGrant` |
+| **A field** | Prefixed **only if the entity is not custom** (`FieldManager::create`) | `CGrant` is custom ⇒ type `awardNumber`, get `awardNumber` |
+| **A link** | `link` prefixed only if **this** entity isn't custom; `linkForeign` prefixed only if the **foreign** entity isn't custom, **or if there is no foreign entity** (`LinkManager` lines 162–168) | Every link in this build joins two custom entities ⇒ **no prefixing anywhere in §5** |
 
-`description` and `assignedUser` come with BasePlus — no need to add them.
+That last row is why the CRating build has a `cRatings` in it (Contact is a
+system entity) and this one has nothing of the kind. Do not add a `C` to
+anything below.
 
-## 2. `CGrantDeliverable` — one promise, with a type and a target
+## 2. Delete the three mis-named entities
 
-- **Name:** `CGrantDeliverable` · **Label:** `Grant Deliverable` · **Plural:** `Grant Deliverables`
-- **Type:** `BasePlus` (`assignedUser` is the *responsible individual* every
-  grant-management product has)
+For each of `CCGrant`, `CCGrantDeliverable`, `CCGrantReport`:
 
-| Name | Type | Notes |
-|---|---|---|
-| `name` | varchar | **Required.** As the funder worded it — "10 seminars" |
-| `deliverableType` | enum | **Required.** `Numeric` · `Rate` · `Percentage` · `Milestone` · `Narrative` |
-| `targetValue` | float | 10 seminars; 25 hours; 4.0 average rating |
-| `unit` | varchar | `seminars` · `hours` · `clients` — shown after the number |
-| `ratingScaleMax` | float | `Rate` only. Default `5` |
-| `measurementSource` | enum | `Automatic` · `Manual`. Default `Manual` |
-| `measureKey` | varchar | Which measure computes it — `events.held`, `sessions.hours`, `rating.sessions.avg`, or `analytics:<metric key>`. Ignored when Manual |
-| `measurementNotes` | text | How this deliverable is measured, as a standing description |
-| `currentValue` | float | **Progress to date.** Typed in today; computed from `measureKey` once the measures are wired |
-| `currentNote` | text | Where the current figure came from — what makes a typed-in number defensible a year later |
-| `dueBy` | date | `Milestone` only |
-| `deliverableStatus` | enum | `On track` · `At risk` · `Behind` · `Met` · `Not met`. **Leave it editable** — the app derives a status from the numbers but staff must be able to override it, which is the whole point of the manual phase |
-| `sortOrder` | int | The order the funder listed them in |
+1. Administration → **Entity Manager**.
+2. Click the entity (it displays as **CGrant** / **CGrant Deliverable** /
+   **CGrant Report** — the *label*, which is why this was easy to miss; the real
+   name is on the row and in the URL).
+3. Click **Remove** (bottom of the entity's detail view), confirm.
 
-## 3. `CGrantReport` — one reporting period, and what was sent
+Then Administration → **Clear Cache**, then **Rebuild**.
 
-- **Name:** `CGrantReport` · **Label:** `Grant Report` · **Plural:** `Grant Reports`
-- **Type:** `BasePlus`
+## 3. Create the three entities
 
-| Name | Type | Notes |
-|---|---|---|
-| `name` | varchar | **Required.** e.g. "Q2 2026 report" |
-| `periodStart` | date | |
-| `periodEnd` | date | |
-| `dueDate` | date | Overdue is derived from this, never stored |
-| `reportStatus` | enum | `Due` · `Draft` · `Submitted` · `Accepted`. Default `Due` |
-| `submittedDate` | date | |
-| `narrative` | wysiwyg | The prose half of the report |
-| `results` | text | **The frozen numbers, as JSON.** Doug's ruling 2026-08-23: a period's per-deliverable figures are a snapshot on the report, not their own entity. Written once at submission and never recomputed — it is what CBM told the funder. Do not hand-edit it |
-| `gmailThreadId` | varchar | The thread the report was sent on |
-| `documentUrl` | url | The filed copy in Drive |
+Administration → Entity Manager → **Create Entity**, once per row:
+
+| Type box | Name box (**no C**) | Label Singular | Label Plural |
+|---|---|---|---|
+| `BasePlus` | `Grant` | `Grant` | `Grants` |
+| `BasePlus` | `GrantDeliverable` | `Grant Deliverable` | `Grant Deliverables` |
+| `BasePlus` | `GrantReport` | `Grant Report` | `Grant Reports` |
+
+- **Type must be `BasePlus`**, not `Base` — BasePlus is what supplies
+  `assignedUser`, `teams` and `description`, all three of which this build uses.
+- Leave **Stream** off. The application writes its own history through
+  `CActionLog`; a stream here would duplicate it.
+- Everything else on the dialog stays at its default.
+
+Save each one, then **Clear Cache** → **Rebuild**.
+
+Confirm before going on: the Entity Manager list must now show `CGrant`,
+`CGrantDeliverable`, `CGrantReport` — **one C each**.
 
 ---
 
-## 4. The six links
+## 4. Fields
 
-The Create Link dialog has a **Name** box on the LEFT panel *and* another on the
-RIGHT panel, and likewise two **Label** boxes. **The dialog inverts what you
-type**: a panel's Name defines the link that *points at that panel's entity*, so
-it is stored on the **other** side. The values below are already in the correct —
-i.e. inverted-looking — boxes. Do not compress them into a table; putting the two
-Names in the wrong boxes is how this CRM ended up with reversed links four times.
+For every field: Administration → Entity Manager → click the entity → **Fields**
+→ **Add Field** → pick the type → fill the boxes named below → **Save**.
+Anything not named below stays at its default (no Required, no Read-only, no
+Audited, no tooltip, no default value).
 
-After each one: Administration → **Clear Cache** → **Rebuild**.
+`name` and `description` already exist on all three entities — they come with
+BasePlus. Do not re-create them.
 
-### 4.1 Grant → Funder
+### 4.1 `CGrant` — 11 fields
 
-1. Entity Manager → **Grant** → **Relationships** → **+ Create Link**.
-2. Confirm the fixed LEFT panel header reads **Grant**.
-3. **Relationship Type:** `Many-to-One` (LEFT is the Many — many grants, one funder).
-4. **RIGHT panel Entity:** `Sponsor Profile` (`CSponsorProfile`).
-5. **LEFT panel Name:** `grants`   **LEFT panel Label:** `Grants`
-6. **RIGHT panel Name:** `sponsorProfile`   **RIGHT panel Label:** `Funder`
-7. Save.
+**1. `awardNumber`** — type **Varchar**
+- Name: `awardNumber` · Label: `Award number` · Max Length: `50`
+- The funder's own reference for the award, when they issue one.
 
-**Verify by outcome:** a **Grant** record shows a **Funder** field; a **Sponsor
-Profile** shows a **Grants** panel.
+**2. `grantStatus`** — type **Enum**
+- Name: `grantStatus` · Label: `Status`
+- Options, one per line, in this order:
+  `Applied`, `Awarded`, `Active`, `Reporting`, `Closed`, `Declined`, `Cancelled`
+- Default: `Applied` · **Required: ✔**
+- `Declined` and `Cancelled` are the soft delete — a grant that falls through
+  keeps its record and stops counting. There is no delete anywhere in this app.
 
-### 4.2 Grant Deliverable → Grant
+**3. `awardAmount`** — type **Currency**
+- Name: `awardAmount` · Label: `Award amount`
+- EspoCRM creates `awardAmountCurrency` alongside it automatically. Do not
+  create that yourself, and do not delete it: EspoCRM validates the amount
+  against it, and a bare amount on a record whose currency is null is rejected
+  outright. That defect cost the contributions ledger a live 400 in v0.123.2;
+  the app now always sends both.
 
-1. Entity Manager → **Grant Deliverable** → Relationships → + Create Link.
-2. LEFT panel header must read **Grant Deliverable**.
-3. **Type:** `Many-to-One`.
-4. **RIGHT panel Entity:** `Grant`.
-5. **LEFT panel Name:** `deliverables`   **Label:** `Deliverables`
-6. **RIGHT panel Name:** `grant`   **Label:** `Grant`
+**4. `periodStart`** — type **Date** · Name: `periodStart` · Label: `Period start`
+
+**5. `periodEnd`** — type **Date** · Name: `periodEnd` · Label: `Period end`
+
+**6. `programArea`** — type **Varchar**
+- Name: `programArea` · Label: `Programme area` · Max Length: `100`
+- Free text on purpose — make it an enum later, once CBM's own list settles.
+
+**7. `reportingFrequency`** — type **Enum**
+- Name: `reportingFrequency` · Label: `Reporting frequency`
+- Options: `Monthly`, `Quarterly`, `Semi-annual`, `Annual`, `Final only`, `Ad hoc`
+- No default, not required.
+
+**8. `firstReportDue`** — type **Date** · Name: `firstReportDue` · Label: `First report due`
+
+**9. `nextReportDue`** — type **Date** · Name: `nextReportDue` · Label: `Next report due`
+- **Leave it editable** (do NOT tick Read-only). The app seeds it from
+  `firstReportDue` once and never overwrites a value someone typed; the
+  reporting engine takes it over in a later phase, and it can be locked down
+  then with no code change.
+
+**10. `renewalDeadline`** — type **Date** · Name: `renewalDeadline` · Label: `Renewal deadline`
+- When the next application is due. This is the field that keeps the funding
+  continuous, and it replaces the inert `CContribution.nextGrantDeadline`.
+
+**11. `notes`** — type **Wysiwyg** · Name: `notes` · Label: `Notes`
+
+### 4.2 `CGrantDeliverable` — 12 fields
+
+**1. `deliverableType`** — type **Enum**
+- Name: `deliverableType` · Label: `Type`
+- Options: `Numeric`, `Rate`, `Percentage`, `Milestone`, `Narrative`
+- Default: `Numeric` · **Required: ✔**
+- This drives the progress arithmetic: `Numeric`/`Percentage`/`Rate` divide
+  current by target, `Milestone` is binary, and `Narrative` has **no**
+  percentage at all — a written answer is not a quantity.
+
+**2. `targetValue`** — type **Float** · Name: `targetValue` · Label: `Target`
+- 10 seminars; 25 hours; a 4.0 average rating.
+
+**3. `unit`** — type **Varchar** · Name: `unit` · Label: `Unit` · Max Length: `50`
+- `seminars` · `hours` · `clients`. Rendered after the number.
+
+**4. `ratingScaleMax`** — type **Float** · Name: `ratingScaleMax` · Label: `Rating scale max`
+- Default: `5`. Only shown for a `Rate` deliverable.
+
+**5. `currentValue`** — type **Float** · Name: `currentValue` · Label: `Progress to date`
+- Typed in today; computed from `measureKey` once the measures are wired.
+
+**6. `currentNote`** — type **Text** · Name: `currentNote` · Label: `Progress note`
+- Where the current figure came from. This is what makes a typed-in number
+  defensible to a funder a year later.
+
+**7. `dueBy`** — type **Date** · Name: `dueBy` · Label: `Due by`
+- Past this date and short of target, the app reads the deliverable as *Behind*.
+
+**8. `deliverableStatus`** — type **Enum**
+- Name: `deliverableStatus` · Label: `Status`
+- Options: `On track`, `At risk`, `Behind`, `Met`, `Not met`
+- No default. **Leave it editable** (do NOT tick Read-only): the app derives a
+  status from the numbers, but a stored value always wins, and staff being able
+  to override the arithmetic is the entire point of the manual phase.
+
+**9. `measurementSource`** — type **Enum**
+- Name: `measurementSource` · Label: `Measured` · Options: `Automatic`, `Manual`
+- Default: `Manual`.
+
+**10. `measureKey`** — type **Varchar** · Name: `measureKey` · Label: `Measure` · Max Length: `100`
+- Which measure computes this: `events.held`, `sessions.hours`,
+  `rating.sessions.avg`, or `analytics:<metric key>`. Collected now, computed in
+  a later phase; ignored while the source is Manual.
+
+**11. `measurementNotes`** — type **Text** · Name: `measurementNotes` · Label: `How it is measured`
+- The standing description of the method, as opposed to `currentNote`, which is
+  about one reading.
+
+**12. `sortOrder`** — type **Int** · Name: `sortOrder` · Label: `Order`
+- The order the funder listed the deliverables in. The app sorts on this, then
+  on creation date.
+
+### 4.3 `CGrantReport` — 9 fields
+
+**1. `periodStart`** — type **Date** · Name: `periodStart` · Label: `Period start`
+
+**2. `periodEnd`** — type **Date** · Name: `periodEnd` · Label: `Period end`
+
+**3. `dueDate`** — type **Date** · Name: `dueDate` · Label: `Due date`
+- Overdue is derived from this and never stored.
+
+**4. `reportStatus`** — type **Enum**
+- Name: `reportStatus` · Label: `Status`
+- Options: `Due`, `Draft`, `Submitted`, `Accepted` · Default: `Due`
+
+**5. `submittedDate`** — type **Date** · Name: `submittedDate` · Label: `Submitted`
+
+**6. `narrative`** — type **Wysiwyg** · Name: `narrative` · Label: `Narrative`
+
+**7. `results`** — type **Text** · Name: `results` · Label: `Results (JSON)`
+- **The frozen numbers.** Doug's ruling 2026-08-23: a period's per-deliverable
+  figures are a snapshot on the report rather than their own entity. Written
+  once at submission and never recomputed — it is what CBM told the funder.
+  **Do not hand-edit it.**
+
+**8. `gmailThreadId`** — type **Varchar** · Name: `gmailThreadId` · Label: `Email thread` · Max Length: `100`
+
+**9. `documentUrl`** — type **Url** · Name: `documentUrl` · Label: `Filed copy`
+
+After all three entities: **Clear Cache** → **Rebuild**.
+
+---
+
+## 5. Links
+
+### 5.1 What the dialog's boxes actually are
+
+This is where I have been wrong repeatedly, so here it is from the dialog's own
+template (`client/res/templates/admin/link-manager/modals/edit.tpl`), which lays
+out three rows of three columns:
+
+```
+        LEFT COLUMN                MIDDLE              RIGHT COLUMN
+row 1   entity  (fixed:          linkType            entityForeign
+        the entity you                               (you pick)
+        opened this from)
+row 2   Name  → linkForeign      relationName        Name  → link
+row 3   Label → labelForeign     (blank)             Label → label
+```
+
+So, in plain words — and this is the whole trap:
+
+> **The Name box on the LEFT, under the entity you are working on, is
+> `linkForeign` — the link that will be created on the OTHER entity.**
+> **The Name box on the RIGHT, under the foreign entity you picked, is `link` —
+> the link that will be created on the entity you are working on.**
+
+Each panel's Name describes the link that *points at that panel's entity*, and a
+link that points at something is stored on the other side. The tables below are
+already filled in correctly, i.e. they will look inverted. Type them as written.
+
+Every link below joins two custom entities, so **no name gets a `C` added**
+(§1).
+
+**The Foreign Entity dropdown lists LABELS, not entity names**, and several
+here do not resemble their names (read from the CRM's own i18n, 2026-08-23):
+`CSponsorProfile` is **"Sponsor"**, `CMentorProfile` is **"CBM Member"**,
+`CEngagement` is "Engagement", `CContribution` is "Contribution". Each table
+below names the label to pick and the entity it corresponds to.
+
+### 5.2 Grant → Funder
+
+Entity Manager → **CGrant** → **Relationships** → **Create Link**.
+Confirm the left panel header reads **Grant** before typing anything.
+
+| Box | Position | Value |
+|---|---|---|
+| Entity | left, row 1 | **Grant** (fixed — if it says anything else, close and start from CGrant) |
+| Link Type | middle, row 1 | **Many-to-One** (many grants, one funder) |
+| Foreign Entity | right, row 1 | **Sponsor** — that is how `CSponsorProfile` is labelled in this CRM (checked 2026-08-23). The app calls it "Funder"; the CRM dropdown says **Sponsor** |
+| **Name** | **left**, row 2 | `grants` ← lands on CSponsorProfile |
+| **Name** | **right**, row 2 | `sponsorProfile` ← lands on CGrant |
+| Label | left, row 3 | `Grants` |
+| Label | right, row 3 | `Funder` |
+
+**Verify by outcome:** a **Grant** record shows a **Funder** field; a **Sponsor**
+record shows a **Grants** panel. If they are the other way round, remove the
+link and redo it with the two Names swapped.
+
+### 5.3 Grant Deliverable → Grant
+
+Entity Manager → **CGrantDeliverable** → Relationships → Create Link.
+
+| Box | Position | Value |
+|---|---|---|
+| Entity | left | **Grant Deliverable** (fixed) |
+| Link Type | middle | **Many-to-One** |
+| Foreign Entity | right | **Grant** |
+| **Name** | **left** | `deliverables` ← lands on CGrant |
+| **Name** | **right** | `grant` ← lands on CGrantDeliverable |
+| Label | left | `Deliverables` |
+| Label | right | `Grant` |
 
 **Verify:** a Grant shows a **Deliverables** panel; a Grant Deliverable shows a
 **Grant** field.
 
-### 4.3 Grant Report → Grant
+### 5.4 Grant Report → Grant
 
-1. Entity Manager → **Grant Report** → Relationships → + Create Link.
-2. LEFT panel header must read **Grant Report**.
-3. **Type:** `Many-to-One`.
-4. **RIGHT panel Entity:** `Grant`.
-5. **LEFT panel Name:** `reports`   **Label:** `Reports`
-6. **RIGHT panel Name:** `grant`   **Label:** `Grant`
+Entity Manager → **CGrantReport** → Relationships → Create Link.
 
-### 4.4 Contribution → Grant  *(this is what makes payments part of the grant)*
+| Box | Position | Value |
+|---|---|---|
+| Entity | left | **Grant Report** (fixed) |
+| Link Type | middle | **Many-to-One** |
+| Foreign Entity | right | **Grant** |
+| **Name** | **left** | `reports` ← lands on CGrant |
+| **Name** | **right** | `grant` ← lands on CGrantReport |
+| Label | left | `Reports` |
+| Label | right | `Grant` |
 
-1. Entity Manager → **Contribution** → Relationships → + Create Link.
-2. LEFT panel header must read **Contribution**.
-3. **Type:** `Many-to-One` (a grant may be paid in tranches).
-4. **RIGHT panel Entity:** `Grant`.
-5. **LEFT panel Name:** `payments`   **Label:** `Payments`
-6. **RIGHT panel Name:** `grant`   **Label:** `Grant`
+**Verify:** a Grant shows a **Reports** panel; a Grant Report shows a **Grant** field.
+
+### 5.5 Contribution → Grant  *(this is what makes payments part of the grant)*
+
+Entity Manager → **CContribution** → Relationships → Create Link.
+
+| Box | Position | Value |
+|---|---|---|
+| Entity | left | **Contribution** (fixed) |
+| Link Type | middle | **Many-to-One** (a grant may be paid in tranches) |
+| Foreign Entity | right | **Grant** |
+| **Name** | **left** | `payments` ← lands on CGrant |
+| **Name** | **right** | `grant` ← lands on CContribution |
+| Label | left | `Payments` |
+| Label | right | `Grant` |
 
 **Nothing about the existing ledger changes.** A grant payment stays an ordinary
-`CContribution` row and keeps counting in the Contributions tab's tiles exactly
-as it does today; the link only says which grant it belongs to.
+contribution row and keeps counting in the Contributions tab's tiles exactly as
+today; this link only records which grant it belongs to.
 
-### 4.5 Grant ↔ Engagement  *(the funded clients)*
+**Verify:** a Grant shows a **Payments** panel; a Contribution shows a **Grant**
+field.
+
+### 5.6 Grant ↔ Engagement  *(the funded clients)*
 
 Doug's ruling 2026-08-23: attribution lives on the **grant**, not the funder, so
 a client belongs to *this year's* grant and a renewal starts clean.
 
-1. Entity Manager → **Grant** → Relationships → + Create Link.
-2. LEFT panel header must read **Grant**.
-3. **Type:** `Many-to-Many` (a grant funds many clients; a client may be funded
-   by more than one grant over time).
-4. **RIGHT panel Entity:** `Engagement` (`CEngagement`).
-5. **LEFT panel Name:** `fundingGrants`   **Label:** `Funding Grants`
-6. **RIGHT panel Name:** `fundedEngagements`   **Label:** `Funded Clients`
+Entity Manager → **CGrant** → Relationships → Create Link.
+
+| Box | Position | Value |
+|---|---|---|
+| Entity | left | **Grant** (fixed) |
+| Link Type | middle | **Many-to-Many** |
+| Foreign Entity | right | **Engagement** (`CEngagement`) |
+| **Name** | **left** | `fundingGrants` ← lands on CEngagement |
+| Relationship Name | **middle**, row 2 | `grantEngagement` (appears only for Many-to-Many; it names the join table) |
+| **Name** | **right** | `fundedEngagements` ← lands on CGrant |
+| Label | left | `Funding Grants` |
+| Label | right | `Funded Clients` |
 
 **Verify:** a Grant shows a **Funded Clients** panel; an Engagement shows
-**Funding Grants**. This link is what `sessions.hours`, `sessions.count` and
-`clients.served` count over — get it backwards and those three measure nothing.
+**Funding Grants**. Get this one backwards and the `sessions.hours`,
+`sessions.count` and `clients.served` measures count nothing at all.
 
-### 4.6 Grant → Mentor Profile  *(the grant manager)*
+### 5.7 Grant → Mentor Profile  *(the grant manager)*
 
-1. Entity Manager → **Grant** → Relationships → + Create Link.
-2. **Type:** `Many-to-One`.
-3. **RIGHT panel Entity:** `Mentor Profile` (`CMentorProfile`).
-4. **LEFT panel Name:** `managedGrants`   **Label:** `Managed Grants`
-5. **RIGHT panel Name:** `grantManager`   **Label:** `Grant Manager`
+Entity Manager → **CGrant** → Relationships → Create Link.
 
-### 4.7 *(Phase 5, build only if convenient)* Grant → Grant, the renewal chain
+| Box | Position | Value |
+|---|---|---|
+| Entity | left | **Grant** (fixed) |
+| Link Type | middle | **Many-to-One** |
+| Foreign Entity | right | **CBM Member** — that is how `CMentorProfile` is labelled here (checked 2026-08-23), NOT "Mentor Profile" |
+| **Name** | **left** | `managedGrants` ← lands on CMentorProfile |
+| **Name** | **right** | `grantManager` ← lands on CGrant |
+| Label | left | `Managed Grants` |
+| Label | right | `Grant Manager` |
 
-Self-referencing, so both links land on Grant. LEFT and RIGHT are both **Grant**;
-Type `Many-to-One`; **LEFT panel Name:** `renewals` / **Label:** `Renewals`;
-**RIGHT panel Name:** `renewalOf` / **Label:** `Renewal Of`.
+### 5.8 *(Optional, a later phase)* Grant → Grant, the renewal chain
+
+Both sides are **Grant**, Type **Many-to-One**; left Name `renewals` / Label
+`Renewals`; right Name `renewalOf` / Label `Renewal Of`. Skip it for now if you
+would rather — nothing in the app reads it yet.
+
+After the links: **Clear Cache** → **Rebuild**.
 
 ---
 
-## 5. Verify the links before moving on
+## 6. Verify the whole build
 
-Reading the labels in the UI is the quick check; the authoritative one is the
-metadata. `GET /Metadata` and confirm, under `entityDefs`:
+Reading labels in the UI catches a reversed link; the authoritative check is the
+metadata. As an admin, `GET /api/v1/Metadata`, then confirm under `entityDefs`:
 
-- `CGrant.links` contains `sponsorProfile` (belongsTo), `deliverables` (hasMany),
-  `reports` (hasMany), `payments` (hasMany), `fundedEngagements` (hasMany),
-  `grantManager` (belongsTo)
+- `CGrant.links` has `sponsorProfile`, `deliverables`, `reports`, `payments`,
+  `fundedEngagements`, `grantManager`
+- `CGrant.fields` has all 11 from §4.1 **without a `c` prefix**
 - `CSponsorProfile.links.grants`, `CContribution.links.grant`,
   `CEngagement.links.fundingGrants`, `CMentorProfile.links.managedGrants`
+- `CGrantDeliverable.links.grant`, `CGrantReport.links.grant`
 
-If a link sits on the wrong side, remove the row (▾ at its far right → Remove,
+If a link is on the wrong side, remove the row (▾ at its far right → Remove,
 which deletes **both** sides) and redo it. Removing a relationship is
-metadata-only — the column and any data in it survive, and a recreate under the
-**same name** re-adopts them. A **mis-named** recreate is the trap: it strands
+metadata-only: the column and any data in it survive, and a recreate under the
+**same name** re-adopts them. A **mis-named** recreate is the trap — it strands
 the data in the old column and looks exactly like data loss.
 
-## 6. Role grants — Sponsor Management Team (Doug's ruling 2026-08-23)
+The application also tells you where it stands: switch `GRANTS_ENABLED` on at
+`/setup` and open a funder's **Grants** tab. It probes for `CGrant` and
+`CGrantDeliverable` and either shows the grid or says the entities aren't built
+yet — and every field is checked against live metadata before it is offered, so
+a field that is missing or mis-named simply doesn't appear. Nothing breaks
+while the build is half-done.
 
-On the role attached to the **Sponsor Management Team**, for all three new
-entities:
+## 7. Role grants — Sponsor Management Team (Doug's ruling 2026-08-23)
+
+On the role attached to the **Sponsor Management Team**:
 
 | | Create | Read | Edit | Delete | Stream |
 |---|---|---|---|---|---|
-| `CGrant` | ✅ | **All** | ✅ | ❌ | — |
-| `CGrantDeliverable` | ✅ | **All** | ✅ | ❌ | — |
-| `CGrantReport` | ✅ | **All** | ✅ | ❌ | — |
+| `CGrant` | ✔ | **All** | ✔ | ✘ | — |
+| `CGrantDeliverable` | ✔ | **All** | ✔ | ✘ | — |
+| `CGrantReport` | ✔ | **All** | ✔ | ✘ | — |
 
-**No delete anywhere**, matching the Contributions decision — a grant that falls
-through is `Declined`/`Cancelled`, not a deleted row. Remember that a role only
-reaches a user through **team attachment**: check Users → Access on a real
-non-admin member afterwards, because an admin account passes regardless and
-proves nothing.
+**No delete anywhere**, matching the Contributions decision. A role only reaches
+a user through **team attachment**, so check Users → Access on a real non-admin
+member afterwards — an admin account passes regardless and proves nothing.
 
-## 7. One thing that needs no CRM work at all
+## 8. Then production
 
-**`CEvent.sponsorProfiles` already exists** (many-to-many CEvent ↔
-CSponsorProfile) and is exposed nowhere in the app. That link is how a seminar
-gets attributed to a funder, which is what the `events.held` measure counts.
-Exposing it is an app change, not a CRM one.
+Repeat §3–§7 on prod, and diff the enum options between the two CRMs when you
+are done. The two have drifted before, and the application reads its option
+lists live from whichever CRM it is pointed at.
+
+## 9. The script that does all of this
+
+`scripts/migrate_grant_schema.py` performs §3, §4 and §5 through the admin API —
+**no dialog, so no inverted boxes**. It is modelled on
+`scripts/migrate_event_schema.py`, which built the event schema on crm-test in
+July and is the reason the API contract here is known rather than guessed. In
+the API the parameters are unambiguous: `link` is the link stored on `entity`
+and `linkForeign` the one stored on `entityForeign`, with no inversion of any
+kind.
+
+It is **idempotent** (an entity, field or link that already exists is left
+alone) and **dry-run by default**:
+
+```bash
+# show the plan, change nothing
+PYTHONPATH=. ADMIN_BASE=https://crm-test.clevelandbusinessmentors.org \
+  ADMIN_USER=... ADMIN_PASS=... uv run python scripts/migrate_grant_schema.py
+
+# apply it
+... uv run python scripts/migrate_grant_schema.py --apply
+```
+
+It will NOT delete the mis-named `CCGrant*` entities — deleting things is not
+something a script should do on its own. Do §2 by hand first, then run this.
+
+Role grants (§7) are not scriptable either; they stay a UI step.

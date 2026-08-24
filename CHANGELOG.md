@@ -4,6 +4,55 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.213.0] — 2026-08-23
+
+**docs(crm)+scripts: the grant CRM build, verified against the running CRM
+instead of written from memory** — after Doug reported the previous handoff was
+too thin to build from, and that the relationship instructions have been wrong
+repeatedly.
+
+**The finding that prompted the rewrite:** the three entities created on
+crm-test are **`CCGrant`, `CCGrantDeliverable`, `CCGrantReport`** — a double C.
+EspoCRM's `NameUtil::addCustomPrefix()` prepends the `C` itself, unconditionally
+(`customPrefixDisabled` is `false` here), so the old handoff's *"Name: `CGrant`"*
+was wrong: **you type `Grant` and get `CGrant`.** All three are bare BasePlus
+shells with no custom fields, links or records, so deleting and recreating is
+clean — handoff §0 and §2.
+
+Everything in `cgrant-entities-crm-handoff.md` is now read from the running
+instance rather than recalled: the **dialog layout from its own template**
+(`client/res/templates/admin/link-manager/modals/edit.tpl` — a 3×3 grid where
+the Name box under the LEFT panel is `linkForeign`, the link created on the
+*other* entity, and the box under the RIGHT panel is `link`), the three
+different **naming rules** (entities always prefixed; fields prefixed only on a
+non-custom scope; link names prefixed per side — so nothing in the grant build
+gets a `C`, while the CRating→Contact link does), the valid **link types** from
+`Tools/LinkManager/Type.php`, and the field types from
+`Resources/metadata/fields/`. The file now has per-field steps for all 32 fields
+and a box-by-box table for each of the 6 links.
+
+**`scripts/migrate_grant_schema.py`** does the whole build through the admin API
+— **no dialog, so no inverted boxes**; in the API `link` is stored on `entity`
+and `linkForeign` on `entityForeign` with no inversion at all. Modelled on
+`migrate_event_schema.py` (which is why the contract is known rather than
+guessed), idempotent, **dry-run by default**, and it reads every link back
+afterwards to confirm it landed on the intended side — a reversed link is
+invisible in a success response. It deliberately does **not** delete the
+mis-named entities or set role grants.
+
+`crating-entity-crm-handoff.md` §2.3 — flagged in v0.212.0 as the one step
+written without being able to read the dialog — is now settled from
+`LinkManager.php`: `Children to Parent` takes no foreign entity, its
+`parentEntityTypeList` becomes the `linkParent` field's `entityList` (so a third
+subject really is a config edit), the foreign link name **is** prefixed because
+there is no foreign entity, and the parent entities do **not** get a `ratings`
+panel automatically — the earlier claim that they would was wrong.
+
+Three new guard tests assert the script and the app's field specs stay the same
+schema, that the entity names omit the `C`, and that each link is declared on
+the side that stores it. Suite green (39 in this file). No application code
+changed.
+
 ## [0.212.0] — 2026-08-23
 
 **feat(sessions): Grants on the funder record — awards, deliverables and

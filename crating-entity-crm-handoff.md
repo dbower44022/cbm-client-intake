@@ -34,7 +34,12 @@ than three:
 
 Administration → Entity Manager → **Create Entity**.
 
-- **Name:** `CRating` · **Label:** `Rating` · **Plural:** `Ratings`
+- **Name:** `Rating` — **type it WITHOUT the C.** EspoCRM's
+  `NameUtil::addCustomPrefix()` prepends it unconditionally
+  (`customPrefixDisabled` is `false` on this instance — checked in source
+  2026-08-23), so `Rating` becomes `CRating` and `CRating` would become
+  `CCRating`. That is exactly how the grant build produced `CCGrant`.
+- **Label:** `Rating` · **Plural:** `Ratings`
 - **Type:** `BasePlus`
 - **Stream:** off.
 
@@ -49,11 +54,18 @@ Administration → Entity Manager → **Create Entity**.
 | `submittedDate` | datetime | |
 | `ratingStatus` | enum | `Submitted` · `Comment Redacted`. Default `Submitted` |
 
+Field names are **not** prefixed here: `FieldManager::create()` only prefixes on
+a non-custom scope, and `CRating` is custom. Type them exactly as written.
+
 ## 2. Links
 
-The Create Link dialog's two **Name** boxes are **inverted**: a panel's Name
-defines the link that *points at that panel's entity*, so it is stored on the
-**other** side. The values below are already in the correct boxes.
+The Create Link dialog's two **Name** boxes are **inverted**: the Name box under
+the LEFT panel is `linkForeign` (the link created on the *other* entity) and the
+one under the RIGHT panel is `link` (created on the entity you opened the dialog
+from). That is read straight off the dialog's own template — the box-by-box map
+is in `cgrant-entities-crm-handoff.md` §5.1, and it is worth reading once before
+doing any of these. The values below are already in the correct, inverted-looking
+boxes.
 
 ### 2.1 Rating → Contact (who responded)
 
@@ -78,7 +90,8 @@ what the read-own ACL below keys on.
 
 1. Entity Manager → **Rating** → Relationships → + Create Link.
 2. **Type:** `Many-to-One`.
-3. **RIGHT panel Entity:** `Mentor Profile` (`CMentorProfile`).
+3. **RIGHT panel Entity:** **CBM Member** — that is how `CMentorProfile` is
+   labelled in this CRM (checked 2026-08-23), NOT "Mentor Profile".
 4. **LEFT panel Name:** `ratings`   **Label:** `Ratings`
 5. **RIGHT panel Name:** `mentorProfile`   **Label:** `Mentor`
 
@@ -90,22 +103,47 @@ what the read-own ACL below keys on.
 **adding a third subject later must be configuration, not a rebuild** (Doug's
 ruling: "design for more later").
 
-The EspoCRM mechanism for that is a **parent** field (`linkParent`) whose entity
-list is editable afterwards — `CEvent` already carries one, so the pattern is
-present in this CRM. Create the link on **Rating** as **Children to Parent**,
-named `parent`, then set its **Entity List** to `CSession` and `CEvent` in Field
-Manager. A third subject is then adding an entity to that list.
+This section was previously written without being able to read the dialog. It
+has now been verified against `Tools/LinkManager/LinkManager.php` on the running
+crm-test instance (2026-08-23), and the mechanism is real:
 
-**Verify before moving on**, because this is the one step whose dialog I could
-not read: `GET /Metadata` must show `entityDefs.CRating.fields.parent` of type
-`linkParent` with `CSession` and `CEvent` in its `entityList`, and each of those
-entities must show a `ratings` (hasChildren) link back.
+1. Entity Manager → **Rating** → Relationships → **Create Link**.
+2. **Link Type:** `Children to Parent`.
+3. Leave **Foreign Entity** empty — this link type does not take one. (Source:
+   the `CHILDREN_TO_PARENT` branch sets only the left-hand entity's defs.)
+4. **Name** (the box that becomes the field on Rating): `parent`
+5. **Label:** `About`
+6. The dialog offers a **parent entity list** — set it to **Session** and
+   **Event** (those are the labels for `CSession` and `CEvent`; both match their
+   names here, unlike CBM Member). This is `parentEntityTypeList` in the API,
+   and it becomes the `entityList` of a `linkParent` field. **Adding a third
+   subject later is editing this list** — which is what makes the ruling true.
 
-**If Children-to-Parent proves awkward in the dialog**, the fallback is two
-ordinary nullable `Many-to-One` links — `session` → `CSession` (LEFT Name
-`ratings`) and `event` → `CEvent` (LEFT Name `ratings`). It costs one CRM link
-per future subject instead of a config edit. Take the fallback rather than
-fighting the dialog; tell me which way it went and the app follows.
+Two things to know that are easy to get wrong:
+
+- **The foreign link name DOES get a `c` prefix here.** The prefix rule is
+  `if (!$entityForeign || !$this->isScopeCustom($entityForeign))` — and for
+  Children-to-Parent there *is* no foreign entity, so the condition is true and
+  the prefix is applied regardless. Expect `cRatings`, not `ratings`, wherever
+  the foreign link name shows up.
+- **The parent entities do NOT automatically get a `ratings` panel.** The
+  `CHILDREN_TO_PARENT` branch writes defs for the left-hand entity only; there
+  is no right-hand half. An earlier version of this file said each parent entity
+  would show a `ratings` (hasChildren) link — that was wrong. The application
+  does not need one (it filters `CRating` on `parentId` / `parentType`), but if
+  you want the panel on a session, add a `hasChildren` link to that entity
+  separately.
+
+**Verify:** `GET /api/v1/Metadata` must show
+`entityDefs.CRating.fields.parent` with `"type": "linkParent"` and both
+`CSession` and `CEvent` in its `entityList`, and
+`entityDefs.CRating.links.parent` with `"type": "belongsToParent"`.
+
+**Fallback if the dialog fights you**: two ordinary nullable `Many-to-One`
+links, `session` → `CSession` and `event` → `CEvent` (left-panel Name `ratings`
+in each case — see §2.1 for which box that is). It costs one CRM link per future
+subject instead of a config edit. Take it rather than wrestling the dialog, and
+say which way it went.
 
 ## 3. Role grants — and one of them is a rule, not a preference
 

@@ -150,8 +150,18 @@ CRM-side build/grant the app already feature-detects or degrades around — none
 block a deploy.)*
 
 24. **The grant entities — `CGrant`, `CGrantDeliverable`, `CGrantReport`**
-    (2026-08-23, IN PROGRESS: Doug started building them the day the app side
-    shipped). Full build spec, in Entity Manager vocabulary and with each Create
+    (2026-08-23, IN PROGRESS, and **the first attempt needs redoing**). The
+    three entities on crm-test are named **`CCGrant` / `CCGrantDeliverable` /
+    `CCGrantReport`** — EspoCRM prepends the `C` itself, and the handoff told
+    Doug to type `CGrant`. All three are bare BasePlus shells (stock fields
+    only, no custom fields, no links, no records), so **delete and recreate is
+    clean** — handoff §0/§2. Type `Grant`, not `CGrant`.
+
+    Either build path works now: the rewritten handoff has per-field steps and a
+    box-by-box table per link, or `scripts/migrate_grant_schema.py --apply` does
+    §3–§5 through the API with no dialog involved (dry-run by default, and it
+    verifies each link's direction afterwards). Role grants stay a UI step
+    either way. Full build spec, in Entity Manager vocabulary and with each Create
     Link dialog step in its correctly-inverted box:
     **`cgrant-entities-crm-handoff.md`**. Six links —
     `CGrant.sponsorProfile`, `deliverables`, `reports`, `CContribution.grant`,

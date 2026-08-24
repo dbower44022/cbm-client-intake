@@ -955,6 +955,24 @@ Conventions. Plan: `prds/action-history-plan.md`;
   entirely, which is how several mentor-only bugs stayed invisible.
 - **Custom linkMultiple fields are relationships** — see the Session Management
   notes ([[espo-custom-linkmultiple-is-a-relationship]]).
+- **EspoCRM renames what you type, by three DIFFERENT rules** (all read from
+  source on crm-test 2026-08-23; `customPrefixDisabled` is `false`). An
+  **entity** name is *always* given a leading `C` — type `Grant`, get `CGrant`;
+  type `CGrant`, get **`CCGrant`**, which is exactly what a handoff saying
+  "Name: `CGrant`" produced. A **field** name is prefixed only when its entity
+  is NOT custom, so fields on `C*` entities are stored exactly as typed. A
+  **link** name is prefixed per side — `link` when *this* entity isn't custom,
+  `linkForeign` when the *foreign* entity isn't custom **or when there is no
+  foreign entity at all** (which is the Children-to-Parent case). Verify names
+  in `GET /Metadata` after building, never by reading the UI label — the label
+  said "CGrant" while the entity was `CCGrant`
+  ([[espo-custom-prefix-rules]]).
+- **The API has no inversion — prefer it to the dialog.**
+  `EntityManager/action/createLink` takes `entity`/`link` and
+  `entityForeign`/`linkForeign` with `link` stored on `entity`, full stop.
+  `scripts/migrate_grant_schema.py` and `scripts/migrate_event_schema.py` are
+  the worked examples (idempotent, dry-run by default); the grant one also reads
+  every link back to prove it landed on the intended side.
 - **The Create Link dialog INVERTS the two Name boxes.** Read this before
   writing a single line of relationship build steps — it has now been got wrong
   four times (CConversation, CEvent, CPartnerProfile ×2). The dialog has two

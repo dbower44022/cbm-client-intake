@@ -528,3 +528,67 @@ def test_no_delete_route_exists(monkeypatch):
         assert c.delete("/sponsorsessions/api/grants/g1").status_code in (404, 405)
         assert c.delete("/sponsorsessions/api/deliverables/d1").status_code in (404, 405)
     get_settings.cache_clear()
+
+
+# --- the CRM build script must not drift from the app's spec ----------------
+
+def _load_migration_script():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "migrate_grant_schema", "scripts/migrate_grant_schema.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_migration_script_builds_exactly_the_fields_the_app_reads():
+    """`scripts/migrate_grant_schema.py` and the app's field specs are two
+    statements of the same schema. If they drift, the CRM grows a field nothing
+    reads or the app offers a box the CRM rejects — and because every field is
+    feature-detected, the second failure is SILENT (the field just vanishes from
+    the form). This is the guard for that."""
+    mod = _load_migration_script()
+    for entity, spec in (("CGrant", GRANT_FIELDS),
+                         ("CGrantDeliverable", DELIVERABLE_FIELDS)):
+        built = {name for ent, name, _ in mod.NEW_FIELDS if ent == entity}
+        # name + description come with the BasePlus template, not the script.
+        wanted = {f["name"] for f in spec} - {"name", "description"}
+        assert built == wanted, f"{entity}: script={built ^ wanted} differs from app spec"
+
+
+def test_migration_script_entity_names_omit_the_C_espo_adds():
+    """EspoCRM's NameUtil::addCustomPrefix prepends 'C' to every new entity
+    unconditionally, so passing 'CGrant' creates 'CCGrant' — which is exactly
+    what happened on crm-test on 2026-08-23."""
+    mod = _load_migration_script()
+    assert [e["name"] for e in mod.NEW_ENTITIES] == [
+        "Grant", "GrantDeliverable", "GrantReport"]
+    assert all(e["type"] == "BasePlus" for e in mod.NEW_ENTITIES)
+
+
+def test_migration_script_links_match_what_the_service_reads():
+    """The link names are the ones the service actually calls, and each must be
+    declared on the side that stores it — `link` on `entity`, `linkForeign` on
+    `entityForeign` (no inversion in the API, unlike the dialog)."""
+    mod = _load_migration_script()
+    by_key = {(l["entity"], l["link"]): l for l in mod.NEW_LINKS}
+    # the reverse link the funder's grant list is read through
+    funder = by_key[("CGrant", "sponsorProfile")]
+    assert funder["entityForeign"] == "CSponsorProfile"
+    assert funder["linkForeign"] == SPONSOR.grants_link == "grants"
+    # the FK the service stamps on a new grant
+    assert SPONSOR.grants_parent_fk == funder["link"] + "Id" == "sponsorProfileId"
+    # deliverables are read through CGrant.deliverables
+    deliv = by_key[("CGrantDeliverable", "grant")]
+    assert deliv["entityForeign"] == "CGrant" and deliv["linkForeign"] == "deliverables"
+    # contributions become the grant's payments — siblings, not a chain
+    pay = by_key[("CContribution", "grant")]
+    assert pay["entityForeign"] == "CGrant" and pay["linkForeign"] == "payments"
+    # attribution lives on the GRANT (Doug's ruling 2026-08-23)
+    funded = by_key[("CGrant", "fundedEngagements")]
+    assert funded["linkType"] == "manyToMany"
+    assert funded["entityForeign"] == "CEngagement"
+    # no deliverable→contribution link exists anywhere
+    assert not any(
+        l["entityForeign"] == "CContribution" or l["entity"] == "CContribution"
+        and l["link"] != "grant" for l in mod.NEW_LINKS)
