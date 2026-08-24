@@ -47,7 +47,7 @@
     <!-- List of the records the user owns -->
     <section id="listView" hidden>
       <div class="sx__filters">
-        <input type="search" id="search" class="sx__search" placeholder="Search…" autocomplete="off" />
+        <input type="search" id="search" class="sx__search" placeholder="Search…" aria-label="Search records" autocomplete="off" />
         <label class="sx__statusfilter" id="statusFilterWrap" hidden>
           <span>Status</span>
           <select id="statusFilter"><option value="">All</option></select>
@@ -173,7 +173,7 @@
           <label class="sx__statusfilter">Status
             <select id="rclStatus"></select>
           </label>
-          <input type="search" id="rclSearch" class="sx__search" placeholder="Search referred clients…">
+          <input type="search" id="rclSearch" class="sx__search" placeholder="Search referred clients…" aria-label="Search referred clients">
           <span class="rcl__count" id="rclCount"></span>
         </div>
         <p class="sx__notice" id="rclNotice" role="status" hidden></p>
@@ -202,7 +202,7 @@
           <h3>Events</h3>
         </div>
         <div class="evt__bar">
-          <input type="search" id="evtSearch" class="sx__search" placeholder="Search events…">
+          <input type="search" id="evtSearch" class="sx__search" placeholder="Search events…" aria-label="Search events">
           <span class="evt__count" id="evtCount"></span>
         </div>
         <p class="sx__notice" id="evtNotice" role="status" hidden></p>

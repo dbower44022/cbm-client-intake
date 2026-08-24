@@ -554,6 +554,17 @@
     sel.value = statusFilter;
   }
 
+  // Make a non-button interactive element (a sortable <th>) keyboard-operable:
+  // focusable + activate on click AND Enter/Space, so sorting isn't mouse-only.
+  // The <th> keeps its columnheader role (no role override).
+  function onActivate(el, fn) {
+    el.tabIndex = 0;
+    el.addEventListener("click", fn);
+    el.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fn(e); }
+    });
+  }
+
   function setSort(key) {
     if (sortKey === key) { sortDir = -sortDir; } else { sortKey = key; sortDir = 1; }
     renderTable();
@@ -578,7 +589,7 @@
       var th = document.createElement("th"); th.className = "sx__th-sort";
       th.textContent = c.label;
       if (sortKey === c.key) { var ind = document.createElement("span"); ind.className = "sx__sortind"; ind.textContent = sortDir > 0 ? " ▲" : " ▼"; th.appendChild(ind); th.setAttribute("aria-sort", sortDir > 0 ? "ascending" : "descending"); }
-      th.addEventListener("click", function () { setSort(c.key); });
+      onActivate(th, function () { setSort(c.key); });
       htr.appendChild(th);
     });
     head.appendChild(htr);
@@ -1935,7 +1946,7 @@
       var th = document.createElement("th");
       th.scope = "col"; th.textContent = c.label;
       th.className = "sx__th-sort"; th.setAttribute("data-sort", c.key);
-      th.addEventListener("click", function () {
+      onActivate(th, function () {
         if (convSort.key === c.key) {
           convSort.dir = -convSort.dir;
         } else {
@@ -5440,7 +5451,7 @@
     document.querySelectorAll("#sessionsTable th[data-sort]"),
     function (th) {
       th.classList.add("sx__th-sort");
-      th.addEventListener("click", function () {
+      onActivate(th, function () {
         var key = th.getAttribute("data-sort");
         if (sessionsSort.key === key) {
           sessionsSort.dir = -sessionsSort.dir;
@@ -5684,7 +5695,7 @@
     document.querySelectorAll("#rclTable th[data-sort]"),
     function (th) {
       th.classList.add("sx__th-sort");
-      th.addEventListener("click", function () {
+      onActivate(th, function () {
         var key = th.getAttribute("data-sort");
         if (rcl.sort.key === key) rcl.sort.dir = -rcl.sort.dir;
         else { rcl.sort.key = key; rcl.sort.dir = (key === "startDate" || key === "lastContact" || key === "totalSessions") ? -1 : 1; }
@@ -5771,7 +5782,7 @@
     document.querySelectorAll("#evtTable th[data-sort]"),
     function (th) {
       th.classList.add("sx__th-sort");
-      th.addEventListener("click", function () {
+      onActivate(th, function () {
         var key = th.getAttribute("data-sort");
         if (evt.sort.key === key) evt.sort.dir = -evt.sort.dir;
         else { evt.sort.key = key; evt.sort.dir = (key === "startsAtUtc" || key === "attendees") ? -1 : 1; }
@@ -5976,7 +5987,7 @@
     document.querySelectorAll("#ctbTable th[data-sort]"),
     function (th) {
       th.classList.add("sx__th-sort");
-      th.addEventListener("click", function () {
+      onActivate(th, function () {
         var key = th.getAttribute("data-sort");
         if (ctb.sort.key === key) ctb.sort.dir = -ctb.sort.dir;
         else { ctb.sort.key = key; ctb.sort.dir = /Date$/.test(key) || key === "amount" ? -1 : 1; }

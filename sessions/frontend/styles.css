@@ -55,6 +55,8 @@
 /* Sortable column headers. */
 .sx__th-sort { cursor: pointer; user-select: none; white-space: nowrap; }
 .sx__th-sort:hover { color: var(--cbm-navy, #123); }
+/* Sort headers are keyboard-focusable (Enter/Space to sort) — show the focus. */
+.sx__th-sort:focus-visible, .sx__table th[data-sort]:focus-visible { outline: 2px solid var(--cbm-blue, #1a5fb4); outline-offset: -2px; }
 .sx__sortind { color: var(--cbm-blue, #1a5fb4); }
 /* Sessions + Communications grids: stable theads, so the sort arrow rides
    data-dir (set by JS) instead of an injected span; columns resize via a grip

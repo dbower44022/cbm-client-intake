@@ -4,6 +4,24 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.211.0] — 2026-08-23
+
+**fix(sessions): accessibility pass on Client/Partner/Funder Management — sort
+headers keyboard-operable + search inputs labelled** (from a Web Interface
+Guidelines review of the shared sessions frontend). The sortable table headers
+(`<th data-sort>`) across every grid — records, sessions, referred-clients,
+events, contributions, inbox — were click-to-sort only, unreachable by keyboard.
+A new `onActivate(el, fn)` helper makes each one focusable and activatable by
+Enter/Space as well as click (it keeps its `columnheader` role — no role
+override), with a `:focus-visible` outline so the focus is visible; the six sort
+wirings now route through it. The three search inputs (records, referred
+clients, events) had a placeholder but no accessible name — each now carries an
+`aria-label`. Frontend-only (`sessions/frontend/app.js` / `index.html` /
+`styles.css`); no behavior change for mouse users. Guard/frontend tests green
+(365). Remaining review items (native-`<select>` dark-mode colors, modal
+`overscroll-behavior`, `theme-color`, hardcoded `en-US` locale in two
+formatters) are noted for a later pass.
+
 ## [0.210.0] — 2026-08-23
 
 **feat(assignments): the engagement popup fills the window, and it can be
