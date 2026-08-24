@@ -149,6 +149,43 @@ already be fixed.
 CRM-side build/grant the app already feature-detects or degrades around — none
 block a deploy.)*
 
+24. **The grant entities — `CGrant`, `CGrantDeliverable`, `CGrantReport`**
+    (2026-08-23, IN PROGRESS: Doug started building them the day the app side
+    shipped). Full build spec, in Entity Manager vocabulary and with each Create
+    Link dialog step in its correctly-inverted box:
+    **`cgrant-entities-crm-handoff.md`**. Six links —
+    `CGrant.sponsorProfile`, `deliverables`, `reports`, `CContribution.grant`,
+    `CGrant.fundedEngagements` ↔ `CEngagement`, `grantManager` — plus Sponsor
+    Management Team create/read(All)/edit and **no delete** on all three.
+    crm-test first, then prod, with an enum-option parity check between them.
+
+    Two fields were added to the handoff *after* Doug began, because building
+    the app side surfaced the need: **`CGrantDeliverable.currentValue` and
+    `.currentNote`** — manual measurement has nowhere to record progress before
+    the reporting engine exists, so without them a deliverable can state a
+    target and never show how it is doing. Also changed there:
+    `deliverableStatus` and `nextReportDue` should stay **editable**, not
+    read-only.
+
+    The app degrades cleanly against any subset of this: `grants_available()`
+    fails closed, and every field is filtered against live metadata before it is
+    served, so a missing or differently-named field simply drops out of both the
+    form and the whitelist. Nothing is blocked; the tab just says the entities
+    aren't built yet.
+
+25. **`CRating` — the rating engine's one entity** (2026-08-23, not started).
+    Spec: **`crating-entity-crm-handoff.md`**. One entity plus three links, and
+    the role grants carry a rule rather than a preference: **Mentor Team reads
+    its own with NO edit and NO delete** — the person being rated can never
+    alter or remove a response about themselves. Mentor Administration reads all
+    and edits (that is how an abusive comment gets redacted); the org-wide API
+    key creates (the respondent is a client or attendee with no CRM identity).
+
+    §2.3 (the `parent` link letting a rating point at a session *or* an event)
+    is the one step written without being able to read the dialog — it names the
+    metadata that must result and gives a two-ordinary-links fallback. Take the
+    fallback rather than fighting the dialog, and say which way it went.
+
 11. **`Held-Duplicate` option on `CIntakeSubmission.intakeStatus`** (both CRMs) —
     handoff `cintake-submission-duplicate-status.md`. Until built, the receipt
     engine falls back to `Received` with the explanation in `intakeMessage`;
@@ -495,6 +532,36 @@ toggle.
     duplicate unlinked mentor profile "Doug Bower" (`6a4425f4c82d3f2ec`, alongside
     the real linked "Douglas Bower") and two "Acme Inc" CPartnerProfiles — records
     assigned to an unlinked profile are invisible in the session tools.
+
+24. **Nothing in the grant book has ever run against a real CRM** (v0.212.0,
+    2026-08-23) — and it *cannot* until item 24 above is built, which is the
+    honest state of it rather than a backlog entry. 36 unit tests and a green
+    suite cover the math, the whitelists, the scope gates and the feature
+    detection; what no test can cover is the same thing that has bitten this
+    repo before — **no test issues a real list request**, and a `maxSize` over
+    200 is a 403 that reads as an empty list. The grant paths page at
+    `_PAGE` (200), so they are inside the limit by construction; confirm it
+    anyway on the first live pass.
+
+    When the entities exist, on crm-test first, signed in as a **real non-admin**
+    Sponsor Management Team member (an admin bypasses ACL, so an admin pass
+    proves nothing):
+    - Switch `GRANTS_ENABLED` on at `/setup` **before** the entities exist and
+      confirm the tab shows the "not built yet" panel rather than an error —
+      that is the fail-closed path, and it is easiest to test while it is true.
+    - Create a grant, then add deliverables of each type. A `Narrative` one must
+      show no progress bar at all; a `Numeric` one over its target must clamp at
+      100% and read Met.
+    - Set a deliverable's status by hand against the arithmetic and confirm the
+      typed status wins in the grid.
+    - Save an `awardAmount` on a grant whose stored currency is null — the
+      backfill is guarding the live defect that 400'd the ledger in v0.123.2, and
+      only a real CRM exercises `validCurrency`.
+    - Confirm the deliverable rollup is genuinely ONE list request (the grid's
+      "N of M met" column), and that a role without `CGrantDeliverable` read
+      shows zeroes rather than breaking the grid.
+    - Set `firstReportDue` and confirm `nextReportDue` is seeded from it once,
+      and that a hand-typed `nextReportDue` is never overwritten.
 
 23. **The Client Administration Company column has never been seen against a
     live CRM** (v0.209.0, 2026-08-23). Status and Company became their own

@@ -514,6 +514,15 @@ one shared frontend that derives its domain from the first segment of its URL.
   unconditional create silently moved the Account and contact off the existing
   hub (twice in production, 2026-07-17 and 2026-07-27). Verified clean
   2026-08-16: all 73 prod client profiles have a company and none share one.
+- **Grants (funder only, `grants_link`)** — the Grants tab: awards, their
+  deliverables, and later their funder reports. The **grant is the hub**:
+  `CContribution` rows become its payments and deliverables its obligations, and
+  the two are **siblings under it, never a chain**. Client attribution lives on
+  the grant (`fundedEngagements`), so a renewal starts clean. Deliverable
+  progress math lives in ONE place (`service.deliverable_progress`) — a stored
+  status always beats the arithmetic, and a Narrative deliverable has no
+  percentage at all. Gated by `GRANTS_ENABLED` **and** CRM feature detection,
+  which fails closed. Plan + rulings: `prds/grant-management-plan.md`.
 - **Partner and Funder can be CREATED here** (`RECORD_QUICK_ADD`, off by
   default): the grid's "+ Add partner" / "+ Add funder" runs the same
   Account → Contact → profile sequence the public intake forms do, as the
@@ -1104,7 +1113,8 @@ form, tool and platform arc is documented in this file plus its own guide.
 `prds/` also holds **one plan document per feature arc** (analytics, events,
 funder contributions, Gmail communications, email quality, the info@ mailbox
 rollout, the intake-receipt redesign, Meet and Fathom transcripts, submission-admin
-collaboration, workspace directories, transcription-vendor options) — each records
+collaboration, workspace directories, transcription-vendor options, **grant
+management** and **the rating engine**) — each records
 the decisions and Doug's rulings behind that arc, so read the relevant one before
 reworking a feature. **`prds/multi-chapter-deployment-plan.md`** is the largest:
 eight settled rulings on extending this suite to a network of mentoring chapters,
@@ -1117,6 +1127,7 @@ are all implemented).
 
 **CRM build handoffs** (one file per pending or completed CRM change, written in
 Entity Manager vocabulary — [[crm-specs-use-entity-manager-terms]]):
+`cgrant-entities-crm-handoff.md`, `crating-entity-crm-handoff.md`,
 `cintake-submission-*.md`, `cinformation-request-entity.md`,
 `cconversation-entity.md`, `cevent-entities-crm-handoff.md`,
 `csession-*.md`, `cmentorprofile-*.md`, `clastcontactdate-field.md`,
@@ -1209,6 +1220,21 @@ still read "pushed through v0.202.2" while v0.203.x/v0.204.0 sat unpushed
 locally, and a session that believed it pushed a docs commit and shipped a
 feature to production with it. `git log origin/main..main` is the answer; this
 sentence is a convenience.
+
+- **v0.212.0 — Grants on the funder record** (phase 2 of the grant arc). The
+  standing model is in `prds/grant-management-plan.md`; what belongs here is the
+  shape of the gate. It ships **dark twice over**: `GRANTS_ENABLED` (off,
+  per-request like `record_quick_add`, so `/setup` flips it) **and** live CRM
+  feature detection — **the three entities do not exist in either CRM yet**, so
+  `grants_available()` probes for them and **fails closed**, and every field is
+  filtered against live metadata before it is served. That matters because the
+  spec IS the whitelist: an absent field drops out of the form and the write
+  together. Switching the flag on before the CRM build shows an explanatory
+  panel, not a broken tab. Doug is building the entities from
+  `cgrant-entities-crm-handoff.md`. **Verified by tests only (36 new, suite
+  green) — nothing has ever run against a real CGrant.** The rating engine that
+  turns rating deliverables automatic is its own arc:
+  `prds/rating-engine-plan.md` + `crating-entity-crm-handoff.md`.
 
 - **v0.210.0 — the Client Administration engagement popup fills the window and
   can be edited.** The standing rules are in that app's section above. Two things

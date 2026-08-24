@@ -118,6 +118,13 @@ class ContributionIn(BaseModel):
     changes: dict = {}
 
 
+class GrantIn(BaseModel):
+    """A grant or deliverable editor's changed fields. The server whitelists
+    against the feature-detected spec, so anything else is dropped."""
+
+    changes: dict = {}
+
+
 class RecordCreateIn(BaseModel):
     """The Add-partner / Add-funder form's values, keyed by the field names in
     ``service.create_field_spec`` (anything else is dropped server-side)."""
@@ -222,7 +229,9 @@ NO_PROFILE_MESSAGE = (
 )
 
 
-def _detail_tabs(cfg: DomainConfig, *, analytics: bool = False) -> list[dict]:
+def _detail_tabs(
+    cfg: DomainConfig, *, analytics: bool = False, grants: bool = False
+) -> list[dict]:
     """The domain's tab bar: the common tabs, plus Contributions (sponsor) or
     Referred Clients (partner) inserted right after Sessions on a domain that
     enables them. The two are on different domains, so the ordering never
@@ -236,6 +245,13 @@ def _detail_tabs(cfg: DomainConfig, *, analytics: bool = False) -> list[dict]:
     idx = next((i for i, t in enumerate(tabs) if t["key"] == "sessions"), len(tabs) - 1)
     if cfg.contributions_link:
         tabs.insert(idx + 1, {"key": "contributions", "label": "Contributions"})
+    # Grants sit next to the money they are attached to. The flag is only half
+    # the gate — the tab's own load asks the CRM whether the entities exist, so
+    # switching the setting on before the CRM build lands shows an explanatory
+    # panel rather than a broken tab.
+    if grants and cfg.grants_link:
+        tabs.insert(idx + 2 if cfg.contributions_link else idx + 1,
+                    {"key": "grants", "label": "Grants"})
     if cfg.referred_clients_link:
         tabs.insert(idx + 1, {"key": "referredClients", "label": "Referred Clients"})
     if cfg.events_tab:
@@ -355,7 +371,15 @@ def make_router(cfg: DomainConfig) -> APIRouter:
             },
             "emptyMessage": cfg.empty_message,
             "noProfileMessage": NO_PROFILE_MESSAGE,
-            "detailTabs": _detail_tabs(cfg, analytics=get_settings().analytics_active),
+            "detailTabs": _detail_tabs(
+                cfg,
+                analytics=get_settings().analytics_active,
+                grants=get_settings().grants_enabled,
+            ),
+            # True => the Grants tab is mounted (setting on + this domain has a
+            # grants link). The tab itself still asks the CRM whether CGrant
+            # exists before it renders anything.
+            "grantsEnabled": bool(get_settings().grants_enabled and cfg.grants_link),
             "supportsComentor": cfg.supports_comentor,
             "defaultSessionType": cfg.default_session_type,
             # True => the Communications tab talks to the real endpoints below;
@@ -860,6 +884,117 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 raise HTTPException(status_code=400, detail=str(exc))
             except EspoError as exc:
                 raise _crm_failure(request, exc, "Could not save the contribution")
+
+    if cfg.grants_link:
+        # The funder grant book (prds/grant-management-plan.md) — registered
+        # ONLY on a domain with a grants link (sponsor), the contributions
+        # precedent. Two gates on top of that, both per REQUEST so /setup can
+        # flip them without a deploy: the ``grants_enabled`` setting, and live
+        # CRM feature detection inside the service. No DELETE anywhere — a
+        # grant that falls through is Declined or Cancelled.
+
+        def _require_grants() -> None:
+            """404 when the feature is off, so a disabled tool is indistinguishable
+            from one that was never built (the routes still exist because router
+            mounting happens once at boot)."""
+            if not get_settings().grants_enabled:
+                raise HTTPException(status_code=404, detail="Grants are not enabled.")
+
+        @router.get("/grantfields")
+        async def grant_fields(request: Request) -> dict:
+            _require_grants()
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            try:
+                if not await service.grants_available(client):
+                    return {"available": False, "fields": [], "options": {}, "required": []}
+                return {
+                    "available": True,
+                    "fields": await service.grant_fields(client),
+                    "options": await service.grant_field_options(client),
+                    "required": await service.grant_field_required(client),
+                    "deliverable": {
+                        "fields": await service.deliverable_fields(client),
+                        "options": await service.deliverable_field_options(client),
+                        "required": await service.deliverable_field_required(client),
+                    },
+                }
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not load grant field options")
+
+        @router.get("/records/{parent_id}/grants")
+        async def list_grants(parent_id: str, request: Request) -> dict:
+            _require_grants()
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            try:
+                return await service.list_grants(cfg, client, parent_id)
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not load grants")
+
+        @router.post("/records/{parent_id}/grants")
+        async def create_grant(parent_id: str, body: GrantIn, request: Request) -> dict:
+            _require_grants()
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            try:
+                return await service.create_grant(cfg, client, parent_id, body.changes)
+            except service.SessionError as exc:
+                raise HTTPException(status_code=400, detail=str(exc))
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not save the grant")
+
+        @router.get("/grants/{grant_id}")
+        async def grant_detail(grant_id: str, request: Request) -> dict:
+            _require_grants()
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            try:
+                return await service.get_grant(cfg, client, grant_id)
+            except service.SessionError as exc:
+                raise HTTPException(status_code=400, detail=str(exc))
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not load the grant")
+
+        @router.put("/grants/{grant_id}")
+        async def update_grant(grant_id: str, body: GrantIn, request: Request) -> dict:
+            _require_grants()
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            try:
+                return await service.update_grant(cfg, client, grant_id, body.changes)
+            except service.SessionError as exc:
+                raise HTTPException(status_code=400, detail=str(exc))
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not save the grant")
+
+        @router.post("/grants/{grant_id}/deliverables")
+        async def create_deliverable(grant_id: str, body: GrantIn, request: Request) -> dict:
+            _require_grants()
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            try:
+                return await service.create_deliverable(cfg, client, grant_id, body.changes)
+            except service.SessionError as exc:
+                raise HTTPException(status_code=400, detail=str(exc))
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not save the deliverable")
+
+        @router.put("/deliverables/{deliverable_id}")
+        async def update_deliverable(
+            deliverable_id: str, body: GrantIn, request: Request
+        ) -> dict:
+            _require_grants()
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            try:
+                return await service.update_deliverable(
+                    cfg, client, deliverable_id, body.changes
+                )
+            except service.SessionError as exc:
+                raise HTTPException(status_code=400, detail=str(exc))
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not save the deliverable")
 
     if cfg.discussion_enabled:
         # Staff-internal Discussion pane (partner + sponsor) — an attributed,

@@ -1082,3 +1082,61 @@ textarea.sx__msg-input { resize: vertical; min-height: 8rem; }
 .qadd__form-actions {
   display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 0.8rem;
 }
+
+/* --- Grants tab (the funder grant book — prds/grant-management-plan.md) ----
+   The grant modal FILLS the window rather than capping at a comfortable
+   reading width: a grant is a working surface (the award, then every promise
+   made against it), and density comes from packing the full width. It reuses
+   the Contributions form primitives (.ctb__group / .ctb__line / .ctb__field)
+   so the two editors stay visibly the same tool. */
+#grtModal .sx__modal-card {
+  width: 90vw; height: 90vh; max-width: 96vw; max-height: 94vh;
+  min-width: 22rem; min-height: 16rem;
+  resize: both; overflow: hidden;
+  display: flex; flex-direction: column;
+}
+#grtModal .sx__modal-head { flex: 0 0 auto; }
+#grtModal .sx__modal-body { flex: 1 1 auto; overflow: auto; padding: 0.6rem 1rem 1rem; }
+#grtModal .sx__modal-foot { flex: 0 0 auto; }
+.grt__foot { justify-content: space-between; align-items: center; }
+.grt__foot-hint { flex: 1 1 18rem; margin: 0; text-align: left; }
+.grt__foot-actions { display: inline-flex; gap: 0.5rem; }
+
+.grt__unavailable {
+  border: 1px dashed var(--cbm-border, #d7dce2); border-radius: var(--cbm-radius, 6px);
+  padding: 1rem 1.1rem; background: #fbfcfe;
+}
+.grt__unavailable h4 { margin: 0 0 0.3rem; color: var(--cbm-navy, #00205B); }
+
+/* Deliverables live INSIDE the grant, because that is what they are. */
+.grt__deliv {
+  margin-top: 0.9rem; padding-top: 0.8rem;
+  border-top: 1px solid var(--cbm-border, #eef1f4);
+}
+.grt__deliv-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+}
+.grt__deliv-head h4 { margin: 0; color: var(--cbm-navy, #00205B); }
+.grt__deliv-form { margin-top: 0.7rem; }
+.grt__deliv-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+.grt__deliv-locked { margin-top: 0.9rem; }
+
+/* Progress bar: no bar at all when the deliverable has no number to show —
+   a Narrative answer is not a quantity, and an empty bar reads as zero. */
+.grt__bar {
+  position: relative; height: 0.5rem; min-width: 4rem; border-radius: 999px;
+  background: #e9edf3; overflow: hidden;
+}
+.grt__bar-fill { position: absolute; top: 0; bottom: 0; left: 0; background: var(--cbm-navy, #00205B); }
+.grt__bar-fill.is-met { background: #2e7d32; }
+.grt__bar-fill.is-behind { background: #b8860b; }
+.grt__bar-label { font-size: 0.75rem; color: var(--cbm-slate-700, #667); margin-top: 0.15rem; }
+
+.grt__row--excluded td { color: #98a1ab; }
+.grt__row--overdue td:first-child { box-shadow: inset 3px 0 0 #b8860b; }
+.grt__tag {
+  display: inline-block; margin-left: 0.45rem; padding: 0.05rem 0.45rem;
+  border-radius: 999px; font-size: 0.72rem; background: #eef0f3; color: #667;
+}
+.grt__tag--overdue { background: #fbf1dc; color: #7a5c00; }
+.grt__tag--met { background: #e6f4e7; color: #1f5c22; }

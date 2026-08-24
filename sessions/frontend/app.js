@@ -297,6 +297,7 @@
     });
     if (tab === "details") ensureDetails();
     if (tab === "contributions") renderContributions();
+    if (tab === "grants") renderGrants();
     if (tab === "referredClients") renderReferredClients();
     if (tab === "events") renderEvents();
     if (tab === "communications") renderComms();
@@ -6221,6 +6222,569 @@
   $("ctbBackdrop").addEventListener("click", requestCloseContrib);
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && !$("ctbModal").hidden) requestCloseContrib();
+  });
+
+  // --- Grants tab (the funder grant book — sponsor domain only) -------------
+  // prds/grant-management-plan.md. The GRANT is the hub: contributions are its
+  // payments and deliverables its obligations, siblings under it rather than a
+  // chain. Phase 2 is manual measurement — "to date" is typed in; a deliverable
+  // that names a measure will compute its own number later, and only
+  // grtProgressCell() has to change when it does.
+  //
+  // Two gates, both server-side: the grants_enabled setting decides whether the
+  // tab exists at all, and the load asks the CRM whether CGrant really exists
+  // (res.available) so a flag switched on ahead of the CRM build explains
+  // itself instead of erroring.
+  var grt = {
+    forId: null, rows: [], summary: null, parentName: "", available: true,
+    sort: { key: null, dir: 1 },
+    editing: null,                                   // the grant being edited
+    g: { spec: [], options: {}, required: [], fieldEls: {}, snapshot: {} },
+    d: { spec: [], options: {}, required: [], fieldEls: {}, snapshot: {} },
+    editingDeliv: null,                              // the deliverable being edited
+    nameAuto: "", discardArmed: false, saving: false, savingDeliv: false,
+  };
+
+  function grtMoney(v, cur) {
+    if (v == null || v === "") return "—";
+    var n = Number(v);
+    if (isNaN(n)) return String(v);
+    try {
+      return new Intl.NumberFormat("en-US", {
+        style: "currency", currency: cur || (grt.summary && grt.summary.currency) || "USD",
+        minimumFractionDigits: 0, maximumFractionDigits: n % 1 ? 2 : 0,
+      }).format(n);
+    } catch (e) { return "$" + n; }
+  }
+
+  function grtNum(v) {
+    if (v == null || v === "") return "—";
+    var n = Number(v);
+    if (isNaN(n)) return String(v);
+    return String(Math.round(n * 100) / 100);
+  }
+
+  async function renderGrants() {
+    if (!currentDetail) return;
+    if (grt.forId === currentDetail.id && grt.summary) { paintGrants(); return; }
+    grt.forId = currentDetail.id;
+    grt.rows = []; grt.summary = null;
+    hide($("grtNotice")); hide($("grtTiles")); hide($("grtRecency"));
+    hide($("grtTable")); hide($("noGrt")); hide($("grtUnavailable"));
+    show($("grtLoading"));
+    try {
+      if (!grt.g.spec.length) {
+        var f = await api("/grantfields");
+        grt.available = f.available !== false;
+        grt.g.spec = f.fields || []; grt.g.options = f.options || {}; grt.g.required = f.required || [];
+        var d = f.deliverable || {};
+        grt.d.spec = d.fields || []; grt.d.options = d.options || {}; grt.d.required = d.required || [];
+      }
+      var res = await api("/records/" + encodeURIComponent(currentDetail.id) + "/grants");
+      grt.available = res.available !== false;
+      grt.rows = res.records || [];
+      grt.summary = res.summary || null;
+      grt.parentName = res.parentName || (currentDetail.record && currentDetail.record.name) || "";
+      paintGrants();
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      notice("grtNotice", e.message, "error");
+    } finally { hide($("grtLoading")); }
+  }
+
+  function paintGrants() {
+    // The CRM hasn't got the entities yet: say so, and hide every control that
+    // would only produce a failing save. The Add button stays visible but
+    // explains itself on click (buttons are never hidden for a missing
+    // capability — a missing button reads as a bug).
+    $("grtUnavailable").hidden = grt.available;
+    if (!grt.available) {
+      hide($("grtTiles")); hide($("grtRecency")); hide($("grtTable")); hide($("noGrt"));
+      return;
+    }
+    paintGrtTiles();
+    paintGrtRecency();
+    paintGrtTable();
+  }
+
+  function paintGrtTiles() {
+    var s = grt.summary, box = $("grtTiles"); box.innerHTML = "";
+    if (!s) { hide(box); return; }
+    box.appendChild(ctbTile(String(s.activeCount), "Active grants",
+      s.totalCount !== s.activeCount ? s.totalCount + " in total" : ""));
+    box.appendChild(ctbTile(grtMoney(s.awardedAmount), "Awarded", "live grants"));
+    box.appendChild(ctbTile(
+      s.deliverablesTotal ? s.deliverablesMet + " of " + s.deliverablesTotal : "—",
+      "Deliverables met", s.deliverablesTotal ? "" : "none recorded"));
+    box.appendChild(ctbTile(
+      s.nextReportDue ? ctbDate(s.nextReportDue) : "—", "Next report due",
+      s.overdueReports ? s.overdueReports + " overdue" : ""));
+    show(box);
+  }
+
+  function paintGrtRecency() {
+    var s = grt.summary, el = $("grtRecency");
+    if (!s) { hide(el); return; }
+    el.classList.remove("is-stale");
+    if (!grt.rows.length) {
+      el.textContent = "No grants recorded for this funder.";
+    } else if (s.overdueReports) {
+      el.textContent = s.overdueReports === 1
+        ? "One grant report is past its due date."
+        : s.overdueReports + " grant reports are past their due date.";
+      el.classList.add("is-stale");
+    } else if (s.nextReportDue) {
+      el.textContent = "Next report due " + ctbDate(s.nextReportDue) + ".";
+    } else {
+      el.textContent = "No reporting dates recorded yet.";
+    }
+    show(el);
+  }
+
+  function grtSortVal(r, k) {
+    if (k === "awardAmount") return Number(r.awardAmount) || 0;
+    if (k === "deliverables") return Number(r.deliverableCount) || 0;
+    return (r[k] || "").toString().toLowerCase();
+  }
+
+  function updateGrtSortIndicators() {
+    Array.prototype.forEach.call(document.querySelectorAll("#grtTable th[data-sort]"), function (th) {
+      var active = th.getAttribute("data-sort") === grt.sort.key;
+      th.setAttribute("aria-sort", active ? (grt.sort.dir === 1 ? "ascending" : "descending") : "none");
+      th.dataset.dir = active ? (grt.sort.dir === 1 ? "asc" : "desc") : "";
+    });
+  }
+
+  function grtPeriodText(r) {
+    if (!r.periodStart && !r.periodEnd) return "—";
+    return ctbDate(r.periodStart) + " – " + ctbDate(r.periodEnd);
+  }
+
+  function paintGrtTable() {
+    var list = grt.rows.slice(), tb = $("grtBody");
+    tb.innerHTML = "";
+    $("noGrt").hidden = list.length > 0;
+    $("grtTable").hidden = list.length === 0;
+    updateGrtSortIndicators();
+    if (grt.sort.key) {
+      var k = grt.sort.key, dir = grt.sort.dir;
+      list.sort(function (a, b) {
+        var va = grtSortVal(a, k), vb = grtSortVal(b, k);
+        return (va < vb ? -1 : va > vb ? 1 : 0) * dir;
+      });
+    }
+    list.forEach(function (r) {
+      var tr = document.createElement("tr");
+      if (r.excluded) tr.className = "grt__row--excluded";
+      else if (r.reportOverdue) tr.className = "grt__row--overdue";
+      var nameCell = document.createElement("td");
+      var link = document.createElement("button");
+      link.type = "button"; link.className = "sx__link";
+      link.textContent = r.name || "(untitled)";
+      link.addEventListener("click", function () { openGrantEditor(r); });
+      nameCell.appendChild(link);
+      if (r.awardNumber) {
+        var an = document.createElement("span");
+        an.className = "grt__tag"; an.textContent = r.awardNumber;
+        nameCell.appendChild(an);
+      }
+      tr.appendChild(nameCell);
+      tr.appendChild(td(r.grantStatus || "—"));
+      tr.appendChild(td(grtMoney(r.awardAmount, r.awardAmountCurrency)));
+      tr.appendChild(td(grtPeriodText(r)));
+      var due = document.createElement("td");
+      due.textContent = r.reportDue ? ctbDate(r.reportDue) : "—";
+      if (r.reportOverdue) {
+        var tag = document.createElement("span");
+        tag.className = "grt__tag grt__tag--overdue"; tag.textContent = "overdue";
+        due.appendChild(tag);
+      }
+      tr.appendChild(due);
+      var dl = document.createElement("td");
+      dl.textContent = r.deliverableCount
+        ? r.deliverablesMet + " of " + r.deliverableCount + " met" : "—";
+      tr.appendChild(dl);
+      var actions = document.createElement("td");
+      var edit = document.createElement("button"); edit.type = "button";
+      edit.className = "cbm-button cbm-button--secondary sx__sm"; edit.textContent = "Open";
+      edit.addEventListener("click", function () { openGrantEditor(r); });
+      actions.appendChild(edit); tr.appendChild(actions);
+      tb.appendChild(tr);
+    });
+  }
+
+  Array.prototype.forEach.call(
+    document.querySelectorAll("#grtTable th[data-sort]"),
+    function (th) {
+      th.classList.add("sx__th-sort");
+      onActivate(th, function () {
+        var key = th.getAttribute("data-sort");
+        if (grt.sort.key === key) grt.sort.dir = -grt.sort.dir;
+        else {
+          grt.sort.key = key;
+          grt.sort.dir = /Date$|^period|^reportDue$/.test(key) || key === "awardAmount" ? -1 : 1;
+        }
+        paintGrtTable();
+      });
+    }
+  );
+  makeColumnsResizable($("grtTable"));
+
+  // --- shared field builder (grant + deliverable use the same one) ----------
+  // ``ctx`` is grt.g or grt.d — spec, live CRM options, required list, and the
+  // element/snapshot maps the save diffs against.
+  function grtCtxValue(ctx, name) {
+    var el = ctx.fieldEls[name];
+    if (!el) return "";
+    if (el._cbmRichText) return el._cbmRichText.getValue();
+    if (el.type === "checkbox") return el.checked;
+    return el.value;
+  }
+
+  function grtField(ctx, f, rec) {
+    var value = rec ? rec[f.name] : null;
+    var wrap = document.createElement("div");
+    wrap.className = "ctb__field" + (f.big ? " ctb__field--big" : "");
+    var label = document.createElement("label"); label.className = "ctb__label";
+    label.textContent = f.label + (ctx.required.indexOf(f.name) >= 0 ? " *" : "");
+    wrap.appendChild(label);
+    var el;
+    if (f.type === "enum") {
+      el = document.createElement("select");
+      var blank = document.createElement("option"); blank.value = ""; blank.textContent = "—";
+      el.appendChild(blank);
+      var opts = (ctx.options[f.name] || []).slice();
+      // A stored value that drifted out of the live options keeps its place, so
+      // a save can never silently drop what the CRM already holds.
+      if (value && opts.indexOf(value) < 0) opts.push(value);
+      opts.forEach(function (o) {
+        var op = document.createElement("option"); op.value = o; op.textContent = o;
+        el.appendChild(op);
+      });
+      el.value = value || "";
+    } else if (f.type === "bool") {
+      el = document.createElement("input"); el.type = "checkbox"; el.checked = !!value;
+    } else if (f.type === "date") {
+      el = document.createElement("input"); el.type = "date";
+      el.value = value ? String(value).slice(0, 10) : "";
+    } else if (f.type === "currency" || f.type === "float") {
+      el = document.createElement("input"); el.type = "number";
+      el.step = "0.01"; el.inputMode = "decimal";
+      if (f.type === "currency") el.min = "0";
+      el.value = value == null ? "" : value;
+    } else if (f.type === "int") {
+      el = document.createElement("input"); el.type = "number";
+      el.step = "1"; el.inputMode = "numeric";
+      el.value = value == null ? "" : value;
+    } else if (f.type === "text") {
+      el = document.createElement("textarea"); el.rows = 3; el.value = value || "";
+    } else if (f.type === "wysiwyg") {
+      el = window.CBMRichText && window.CBMRichText.create(value || "", { minHeight: 180 });
+      if (!el) { el = document.createElement("textarea"); el.rows = 6; el.value = value || ""; }
+    }
+    if (!el) { el = document.createElement("input"); el.type = "text"; el.value = value || ""; }
+    el.className = (el.className ? el.className + " " : "") + "ctb__input";
+    ctx.fieldEls[f.name] = el;
+    wrap.appendChild(el);
+    if (f.help) {
+      var help = document.createElement("span");
+      help.className = "sx__muted grt__bar-label"; help.textContent = f.help;
+      wrap.appendChild(help);
+    }
+    return el.type === "checkbox" ? ctbCheckWrap(wrap, label, el) : wrap;
+  }
+
+  function grtBuildForm(ctx, form, rec) {
+    form.innerHTML = "";
+    ctx.fieldEls = {}; ctx.snapshot = {};
+    var groups = [], byGroup = {};
+    (ctx.spec || []).forEach(function (f) {
+      if (!byGroup[f.group]) { byGroup[f.group] = []; groups.push(f.group); }
+      byGroup[f.group].push(f);
+    });
+    groups.forEach(function (g) {
+      var panel = document.createElement("fieldset"); panel.className = "ctb__group";
+      var legend = document.createElement("legend"); legend.textContent = g;
+      panel.appendChild(legend);
+      var rows = [], byRow = {};
+      byGroup[g].forEach(function (f) {
+        var key = f.row || f.name;
+        if (!byRow[key]) { byRow[key] = []; rows.push(key); }
+        byRow[key].push(f);
+      });
+      rows.forEach(function (rk) {
+        var line = document.createElement("div"); line.className = "ctb__line";
+        byRow[rk].forEach(function (f) {
+          var cell = grtField(ctx, f, rec);
+          // The rating scale only means anything on a Rate deliverable; it is
+          // hidden rather than removed, so its value is never lost on a save.
+          if (f.ratingOnly) cell.dataset.ratingonly = "1";
+          line.appendChild(cell);
+        });
+        panel.appendChild(line);
+      });
+      form.appendChild(panel);
+    });
+    (ctx.spec || []).forEach(function (f) {
+      ctx.snapshot[f.name] = String(grtCtxValue(ctx, f.name));
+    });
+  }
+
+  function grtChanges(ctx) {
+    var changes = {};
+    (ctx.spec || []).forEach(function (f) {
+      var raw = grtCtxValue(ctx, f.name);
+      if (String(raw) === String(ctx.snapshot[f.name])) return;      // unchanged
+      if (f.type === "currency" || f.type === "float" || f.type === "int") {
+        changes[f.name] = raw === "" ? null : Number(raw);
+      } else {
+        changes[f.name] = raw;
+      }
+    });
+    return changes;
+  }
+
+  function grtMissing(ctx) {
+    var missing = [];
+    (ctx.spec || []).forEach(function (f) {
+      if (ctx.required.indexOf(f.name) < 0) return;
+      var v = grtCtxValue(ctx, f.name);
+      if (v === "" || v == null) missing.push(f.label);
+    });
+    return missing;
+  }
+
+  // --- grant editor ---------------------------------------------------------
+  function grtDefaultName() {
+    var y = new Date().getFullYear();
+    return y + " — " + (grt.parentName || "Funder") + " grant";
+  }
+
+  async function openGrantEditor(row) {
+    if (!grt.available) {
+      notice("grtNotice", "Grants aren’t built in this CRM yet — the Grant and " +
+        "Grant Deliverable entities have to exist first.", "error");
+      return;
+    }
+    hide($("grtFormNotice")); hide($("grtDelivNotice"));
+    grt.discardArmed = false;
+    grt.editingDeliv = null;
+    var full = row;
+    if (row) {
+      try { full = await api("/grants/" + encodeURIComponent(row.id)); }
+      catch (e) { notice("grtNotice", e.message, "error"); return; }
+    }
+    grt.editing = full || null;
+    $("grtModalTitle").textContent = full ? (full.name || "Grant") : "New grant";
+    $("grtCancelBtn").textContent = "Cancel";
+    grtBuildForm(grt.g, $("grtForm"), full);
+    if (!full) {
+      var nameEl = grt.g.fieldEls.name;
+      if (nameEl) {
+        grt.nameAuto = grtDefaultName();
+        nameEl.value = grt.nameAuto;
+        grt.g.snapshot.name = "";   // the default title must reach the create
+      }
+    }
+    paintDeliverables();
+    show($("grtModal"));
+  }
+
+  function closeGrantModal() {
+    hide($("grtModal"));
+    grt.editing = null; grt.editingDeliv = null;
+    grt.g.fieldEls = {}; grt.g.snapshot = {};
+    grt.d.fieldEls = {}; grt.d.snapshot = {};
+    hide($("grtDelivForm")); hide($("grtDelivActions"));
+  }
+
+  function grtDirty() {
+    for (var name in grt.g.snapshot) {
+      if (!grt.editing && name === "name" && grtCtxValue(grt.g, "name") === grt.nameAuto) continue;
+      if (String(grtCtxValue(grt.g, name)) !== String(grt.g.snapshot[name])) return true;
+    }
+    return !$("grtDelivForm").hidden;   // an open deliverable form counts as work
+  }
+
+  function requestCloseGrant() {
+    if (grtDirty() && !grt.discardArmed) {
+      grt.discardArmed = true;
+      $("grtCancelBtn").textContent = "Discard changes?";
+      notice("grtFormNotice",
+        "You have unsaved changes — Cancel again to discard them, or Save.", "error");
+      return;
+    }
+    $("grtCancelBtn").textContent = "Cancel";
+    closeGrantModal();
+  }
+
+  async function saveGrant() {
+    if (grt.saving) return;
+    hide($("grtFormNotice"));
+    var missing = grtMissing(grt.g);
+    if (missing.length) {
+      notice("grtFormNotice", "Please complete: " + missing.join(", ") + ".", "error");
+      return;
+    }
+    var changes = grtChanges(grt.g);
+    if (grt.editing && !Object.keys(changes).length) { closeGrantModal(); return; }
+    grt.saving = true; $("grtSaveBtn").disabled = true;
+    try {
+      var saved;
+      if (grt.editing) {
+        saved = await api("/grants/" + encodeURIComponent(grt.editing.id),
+          { method: "PUT", body: JSON.stringify({ changes: changes }) });
+      } else {
+        saved = await api("/records/" + encodeURIComponent(currentDetail.id) + "/grants",
+          { method: "POST", body: JSON.stringify({ changes: changes }) });
+      }
+      grt.forId = null;                     // force a refetch (tiles recompute)
+      await renderGrants();
+      // A brand-new grant stays open on its saved self, because the next thing
+      // anyone wants is to add the deliverables it came with.
+      var isNew = !grt.editing;
+      grt.editing = saved;
+      grt.discardArmed = false;
+      $("grtModalTitle").textContent = saved.name || "Grant";
+      $("grtCancelBtn").textContent = "Cancel";
+      grtBuildForm(grt.g, $("grtForm"), saved);
+      paintDeliverables();
+      notice("grtFormNotice",
+        isNew ? "Grant saved — add its deliverables below." : "Grant saved.", "success");
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      notice("grtFormNotice", e.message, "error");
+    } finally { grt.saving = false; $("grtSaveBtn").disabled = false; }
+  }
+
+  // --- deliverables (inside the grant) --------------------------------------
+  function grtProgressCell(d) {
+    var cell = document.createElement("td");
+    if (d.percent == null) { cell.textContent = "—"; return cell; }
+    var bar = document.createElement("div"); bar.className = "grt__bar";
+    var fill = document.createElement("div"); fill.className = "grt__bar-fill";
+    if (d.status === "Met") fill.className += " is-met";
+    else if (d.status === "Behind") fill.className += " is-behind";
+    fill.style.width = Math.max(0, Math.min(100, d.percent)) + "%";
+    bar.appendChild(fill);
+    var lab = document.createElement("div"); lab.className = "grt__bar-label";
+    lab.textContent = Math.round(d.percent) + "%";
+    cell.appendChild(bar); cell.appendChild(lab);
+    return cell;
+  }
+
+  function paintDeliverables() {
+    var open = !!(grt.editing && grt.editing.id);
+    $("grtDeliverables").hidden = !open;
+    $("grtDelivLocked").hidden = open;
+    if (!open) return;
+    var list = (grt.editing.deliverables || []), tb = $("grtDelivBody");
+    tb.innerHTML = "";
+    $("grtDelivTable").hidden = list.length === 0;
+    $("noGrtDeliv").hidden = list.length > 0;
+    list.forEach(function (d) {
+      var tr = document.createElement("tr");
+      var nameCell = document.createElement("td");
+      var link = document.createElement("button");
+      link.type = "button"; link.className = "sx__link";
+      link.textContent = d.name || "(untitled)";
+      link.addEventListener("click", function () { openDelivEditor(d); });
+      nameCell.appendChild(link);
+      tr.appendChild(nameCell);
+      tr.appendChild(td(d.deliverableType || "—"));
+      tr.appendChild(td(d.targetValue == null || d.targetValue === ""
+        ? "—" : grtNum(d.targetValue) + (d.unit ? " " + d.unit : "")));
+      tr.appendChild(td(grtNum(d.currentValue)));
+      tr.appendChild(grtProgressCell(d));
+      var st = document.createElement("td");
+      st.textContent = d.status || "—";
+      if (d.status === "Met") {
+        var tag = document.createElement("span");
+        tag.className = "grt__tag grt__tag--met"; tag.textContent = "met";
+        st.appendChild(tag);
+      }
+      tr.appendChild(st);
+      var actions = document.createElement("td");
+      var edit = document.createElement("button"); edit.type = "button";
+      edit.className = "cbm-button cbm-button--secondary sx__sm"; edit.textContent = "Edit";
+      edit.addEventListener("click", function () { openDelivEditor(d); });
+      actions.appendChild(edit); tr.appendChild(actions);
+      tb.appendChild(tr);
+    });
+  }
+
+  function syncDelivRating() {
+    var typeEl = grt.d.fieldEls.deliverableType;
+    var on = typeEl && typeEl.value === "Rate";
+    Array.prototype.forEach.call(
+      $("grtDelivForm").querySelectorAll("[data-ratingonly]"),
+      function (el) { el.hidden = !on; }
+    );
+  }
+
+  function openDelivEditor(row) {
+    hide($("grtDelivNotice"));
+    grt.editingDeliv = row || null;
+    grtBuildForm(grt.d, $("grtDelivForm"), row);
+    var typeEl = grt.d.fieldEls.deliverableType;
+    if (typeEl) typeEl.addEventListener("change", syncDelivRating);
+    syncDelivRating();
+    show($("grtDelivForm")); show($("grtDelivActions"));
+    $("grtDelivSaveBtn").textContent = row ? "Save deliverable" : "Add deliverable";
+  }
+
+  function closeDelivEditor() {
+    hide($("grtDelivForm")); hide($("grtDelivActions"));
+    grt.editingDeliv = null; grt.d.fieldEls = {}; grt.d.snapshot = {};
+  }
+
+  async function saveDeliverable() {
+    if (grt.savingDeliv) return;
+    hide($("grtDelivNotice"));
+    if (!grt.editing || !grt.editing.id) {
+      notice("grtDelivNotice", "Save the grant first — a deliverable attaches to it.", "error");
+      return;
+    }
+    var missing = grtMissing(grt.d);
+    if (missing.length) {
+      notice("grtDelivNotice", "Please complete: " + missing.join(", ") + ".", "error");
+      return;
+    }
+    var changes = grtChanges(grt.d);
+    if (grt.editingDeliv && !Object.keys(changes).length) { closeDelivEditor(); return; }
+    grt.savingDeliv = true; $("grtDelivSaveBtn").disabled = true;
+    try {
+      if (grt.editingDeliv) {
+        await api("/deliverables/" + encodeURIComponent(grt.editingDeliv.id),
+          { method: "PUT", body: JSON.stringify({ changes: changes }) });
+      } else {
+        await api("/grants/" + encodeURIComponent(grt.editing.id) + "/deliverables",
+          { method: "POST", body: JSON.stringify({ changes: changes }) });
+      }
+      closeDelivEditor();
+      // Re-read the grant (its deliverable rollup changed) and the grid behind
+      // it (the Deliverables-met tile counts across every grant).
+      grt.editing = await api("/grants/" + encodeURIComponent(grt.editing.id));
+      paintDeliverables();
+      grt.forId = null;
+      await renderGrants();
+      notice("grtDelivNotice", "Deliverable saved.", "success");
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      notice("grtDelivNotice", e.message, "error");
+    } finally { grt.savingDeliv = false; $("grtDelivSaveBtn").disabled = false; }
+  }
+
+  $("grtAddBtn").addEventListener("click", function () { openGrantEditor(null); });
+  $("grtSaveBtn").addEventListener("click", saveGrant);
+  $("grtCancelBtn").addEventListener("click", requestCloseGrant);
+  $("grtClose").addEventListener("click", requestCloseGrant);
+  $("grtBackdrop").addEventListener("click", requestCloseGrant);
+  $("grtDelivAddBtn").addEventListener("click", function () { openDelivEditor(null); });
+  $("grtDelivSaveBtn").addEventListener("click", saveDeliverable);
+  $("grtDelivCancelBtn").addEventListener("click", closeDelivEditor);
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !$("grtModal").hidden) requestCloseGrant();
   });
 
   // --- quick add: a new partner / funder ------------------------------------

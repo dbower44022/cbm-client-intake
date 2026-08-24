@@ -268,6 +268,45 @@
         <p class="sx__muted" id="noCtb" hidden>No contributions recorded.</p>
       </div>
 
+      <!-- Grants: the funder grant book (sponsor domain only —
+           prds/grant-management-plan.md). The grant is the HUB: contributions
+           are its payments and deliverables its obligations, siblings under it.
+           The tab only exists when grants_enabled is on AND the CRM really has
+           CGrant + CGrantDeliverable; the panel below states which of those is
+           missing rather than failing. No delete: a grant that falls through is
+           Declined or Cancelled. -->
+      <div class="sx__dpanel" data-dpanel="grants" hidden>
+        <div class="sx__comm-head">
+          <h3>Grants</h3>
+          <span class="sx__comm-acts">
+            <button type="button" class="cbm-button" id="grtAddBtn">+ Add grant</button>
+          </span>
+        </div>
+        <p class="sx__notice" id="grtNotice" role="status" hidden></p>
+        <p class="sx__loading" id="grtLoading" hidden>Loading&hellip;</p>
+        <div class="grt__unavailable" id="grtUnavailable" hidden>
+          <h4>Grants aren&rsquo;t built in this CRM yet</h4>
+          <p class="sx__muted">The Grant and Grant Deliverable entities haven&rsquo;t been
+            created in EspoCRM. This tab starts working the moment they exist &mdash;
+            nothing has to be deployed for that.</p>
+        </div>
+        <div class="ctb__tiles" id="grtTiles" hidden></div>
+        <p class="ctb__recency" id="grtRecency" hidden></p>
+        <table class="sx__table" id="grtTable" hidden>
+          <thead><tr>
+            <th data-sort="name" scope="col">Grant</th>
+            <th data-sort="grantStatus" scope="col">Status</th>
+            <th data-sort="awardAmount" scope="col">Award</th>
+            <th data-sort="periodStart" scope="col">Period</th>
+            <th data-sort="reportDue" scope="col">Next report</th>
+            <th data-sort="deliverables" scope="col">Deliverables</th>
+            <th scope="col"></th>
+          </tr></thead>
+          <tbody id="grtBody"></tbody>
+        </table>
+        <p class="sx__muted" id="noGrt" hidden>No grants recorded.</p>
+      </div>
+
       <!-- Communications: email inbox for this record. UI only for now — no CRM
            email data is read yet (structure still being designed). -->
       <div class="sx__dpanel" data-dpanel="communications" hidden>
@@ -383,6 +422,69 @@
           <button type="button" class="cbm-button" id="ctbSaveBtn">Save contribution</button>
           <button type="button" class="cbm-button cbm-button--secondary" id="ctbCancelBtn">Cancel</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create / edit a grant, with its deliverables inside it. Fills the window
+       (the v0.210.0 engagement-popup treatment) because a grant is a working
+       surface, not a peek: the award, then the promises made against it. There
+       is deliberately no delete button. -->
+  <div class="sx__modal" id="grtModal" hidden role="dialog" aria-modal="true" aria-labelledby="grtModalTitle">
+    <div class="sx__modal-backdrop" id="grtBackdrop"></div>
+    <div class="sx__modal-card" role="document">
+      <div class="sx__modal-head">
+        <div>
+          <p class="sx__modal-kind" id="grtModalKind">Grant</p>
+          <h3 class="sx__modal-name" id="grtModalTitle">New grant</h3>
+        </div>
+        <span class="sx__modal-actions">
+          <button type="button" class="sx__modal-close" id="grtClose" aria-label="Close">&times;</button>
+        </span>
+      </div>
+      <div class="sx__modal-body">
+        <p class="sx__notice" id="grtFormNotice" role="status" hidden></p>
+        <form id="grtForm" class="ctb__form"></form>
+
+        <section class="grt__deliv" id="grtDeliverables" hidden>
+          <div class="grt__deliv-head">
+            <h4>Deliverables</h4>
+            <button type="button" class="cbm-button cbm-button--secondary sx__sm" id="grtDelivAddBtn">+ Add deliverable</button>
+          </div>
+          <p class="sx__muted">What CBM promised in return for this grant. Progress is
+            entered by hand today; a deliverable that names a measure will compute its
+            own number once the measures are wired.</p>
+          <table class="sx__table" id="grtDelivTable" hidden>
+            <thead><tr>
+              <th scope="col">Deliverable</th>
+              <th scope="col">Type</th>
+              <th scope="col">Target</th>
+              <th scope="col">To date</th>
+              <th scope="col">Progress</th>
+              <th scope="col">Status</th>
+              <th scope="col"></th>
+            </tr></thead>
+            <tbody id="grtDelivBody"></tbody>
+          </table>
+          <p class="sx__muted" id="noGrtDeliv" hidden>No deliverables on this grant yet.</p>
+          <p class="sx__notice" id="grtDelivNotice" role="status" hidden></p>
+          <form id="grtDelivForm" class="ctb__form grt__deliv-form" hidden></form>
+          <div class="grt__deliv-actions" id="grtDelivActions" hidden>
+            <button type="button" class="cbm-button" id="grtDelivSaveBtn">Save deliverable</button>
+            <button type="button" class="cbm-button cbm-button--secondary" id="grtDelivCancelBtn">Cancel</button>
+          </div>
+        </section>
+        <p class="sx__muted grt__deliv-locked" id="grtDelivLocked" hidden>Save the grant first &mdash;
+          deliverables attach to it.</p>
+      </div>
+      <div class="sx__modal-foot grt__foot">
+        <p class="sx__muted grt__foot-hint">To withdraw a grant, set its status to
+          <strong>Declined</strong> or <strong>Cancelled</strong> &mdash; it stays visible
+          on the record but stops counting toward any total.</p>
+        <span class="grt__foot-actions">
+          <button type="button" class="cbm-button" id="grtSaveBtn">Save grant</button>
+          <button type="button" class="cbm-button cbm-button--secondary" id="grtCancelBtn">Cancel</button>
+        </span>
       </div>
     </div>
   </div>

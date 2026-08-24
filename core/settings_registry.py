@@ -162,6 +162,10 @@ SETTINGS: tuple[SettingSpec, ...] = (
     _s("record_quick_add", GROUP_FEATURES, "Add partners & funders in-app", kind="bool",
        help="The '+ Add partner' / '+ Add funder' button on those grids. Creates the "
             "company, primary contact and profile as the signed-in user."),
+    _s("grants_enabled", GROUP_FEATURES, "Grants on funder records", kind="bool",
+       help="The Grants tab in Funder Management — awards, deliverables and (later) "
+            "funder reporting. Stays hidden until the CRM has CGrant and "
+            "CGrantDeliverable, so it is safe to switch on early."),
     _s("comms_ai_summary", GROUP_FEATURES, "AI conversation summaries", kind="bool",
        component="worker", help="Optional. Requires ANTHROPIC_API_KEY."),
     _s("comms_digest", GROUP_FEATURES, "Daily email digest", kind="bool",

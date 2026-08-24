@@ -243,6 +243,13 @@ class Settings(BaseSettings):
     # the signed-in user. Off by default — build dark, review on crm-test, then
     # enable on prod. Read per request (never at boot), so /setup can toggle it.
     record_quick_add: bool = False
+    # Grants (prds/grant-management-plan.md): the Grants tab on a funder record,
+    # its grant popup and the deliverables inside it. Off by default — build
+    # dark, review on crm-test, then enable on prod. Read PER REQUEST (never at
+    # boot) so /setup can toggle it, and paired with live CRM feature detection:
+    # the tab stays hidden unless CGrant + CGrantDeliverable actually exist, so
+    # switching this on ahead of the CRM build changes nothing.
+    grants_enabled: bool = False
     # Team stamped onto every NEW CPartnerProfile the partner intake form
     # creates, so team-scoped roles (Partner Management Team members) can see
     # all partners in /partnersessions — also stamped by the quick add above.

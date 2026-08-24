@@ -275,6 +275,21 @@ class DomainConfig:
     contributions_donor_account_attr: Optional[str] = None
     contributions_donor_contact_attr: Optional[str] = None
 
+    # --- Grants (the funder grant book — sponsor domain only; plan:
+    # prds/grant-management-plan.md, Doug's rulings 2026-08-23). Setting
+    # ``grants_link`` (the hasMany link on the parent to its CGrant rows)
+    # enables the Grants detail tab + the grant/deliverable endpoints — the
+    # ``contributions_link`` gating precedent exactly.
+    #
+    # The grant is the HUB: contributions become its payments and deliverables
+    # are its obligations, and the two are SIBLINGS under it, never a chain.
+    # Everything here also stands behind the ``grants_enabled`` setting (checked
+    # per request, the ``record_quick_add`` pattern) AND live CRM feature
+    # detection, so it stays dark until the entities exist.
+    grants_link: Optional[str] = None
+    # FK attr written on a new CGrant to bind it to the parent funder.
+    grants_parent_fk: str = "sponsorProfileId"
+
     # --- Referred Clients tab (partner domain only; Doug's request 2026-07-25).
     # The hasMany reverse link on the parent (CPartnerProfile) to the client
     # engagements that name it as their referring partner (reverse of
@@ -416,6 +431,85 @@ CONTRIBUTION_EDIT_NAMES = {f["name"] for f in CONTRIBUTION_FIELDS} | {"amountCur
 CONTRIBUTION_ENUM_FIELDS = [
     f["name"] for f in CONTRIBUTION_FIELDS if f["type"] in ("enum", "multiEnum")
 ]
+
+# --- Grants + deliverables (sponsor domain only) -----------------------------
+# prds/grant-management-plan.md. Same contract as SESSION_FIELDS and
+# CONTRIBUTION_FIELDS: ONE spec is both the form layout and the server-side
+# update whitelist, enum options and required flags come live from CRM metadata.
+#
+# Phase 2 is MANUAL measurement only: ``currentValue`` / ``currentNote`` are
+# typed in and ``deliverableStatus`` is set by hand. Phase 3 computes the value
+# from ``measureKey`` and derives the status; nothing about the spec changes.
+#
+# EVERY field here is feature-detected against live CRM metadata before it is
+# served (``grant_fields`` / ``deliverable_fields``), so a CRM that is missing
+# one — or that names it differently — drops that field from the form and the
+# whitelist rather than rendering a box whose save the CRM must reject.
+
+GRANT_FIELDS: list[dict] = [
+    {"name": "name", "label": "Grant", "type": "varchar", "group": "Award", "big": True},
+    {"name": "awardNumber", "label": "Award number", "type": "varchar", "group": "Award", "row": "top"},
+    {"name": "grantStatus", "label": "Status", "type": "enum", "group": "Award", "row": "top"},
+    {"name": "awardAmount", "label": "Award amount", "type": "currency", "group": "Award", "row": "top"},
+    {"name": "programArea", "label": "Programme area", "type": "varchar", "group": "Award", "row": "prog"},
+    {"name": "periodStart", "label": "Period start", "type": "date", "group": "Award", "row": "prog"},
+    {"name": "periodEnd", "label": "Period end", "type": "date", "group": "Award", "row": "prog"},
+    {"name": "reportingFrequency", "label": "Reporting frequency", "type": "enum",
+     "group": "Reporting", "row": "rep"},
+    {"name": "firstReportDue", "label": "First report due", "type": "date",
+     "group": "Reporting", "row": "rep"},
+    {"name": "nextReportDue", "label": "Next report due", "type": "date",
+     "group": "Reporting", "row": "rep"},
+    {"name": "renewalDeadline", "label": "Renewal deadline", "type": "date",
+     "group": "Reporting", "row": "rep",
+     "help": "When the next application is due — this is what keeps the funding continuous."},
+    {"name": "notes", "label": "Notes", "type": "wysiwyg", "group": "Notes", "big": True},
+    {"name": "description", "label": "Description", "type": "text", "group": "Notes", "big": True},
+]
+
+GRANT_EDIT_NAMES = {f["name"] for f in GRANT_FIELDS} | {"awardAmountCurrency"}
+GRANT_ENUM_FIELDS = [f["name"] for f in GRANT_FIELDS if f["type"] in ("enum", "multiEnum")]
+
+# The grid + summary read; notes/description load on the per-record GET.
+GRANT_LIST_SELECT = (
+    "name,awardNumber,grantStatus,awardAmount,awardAmountCurrency,programArea,"
+    "periodStart,periodEnd,reportingFrequency,firstReportDue,nextReportDue,"
+    "renewalDeadline,createdAt"
+)
+
+DELIVERABLE_FIELDS: list[dict] = [
+    {"name": "name", "label": "Deliverable", "type": "varchar", "group": "Deliverable",
+     "big": True, "help": "Word it the way the funder did — \u201c10 seminars\u201d."},
+    {"name": "deliverableType", "label": "Type", "type": "enum", "group": "Deliverable", "row": "top"},
+    {"name": "targetValue", "label": "Target", "type": "float", "group": "Deliverable", "row": "top"},
+    {"name": "unit", "label": "Unit", "type": "varchar", "group": "Deliverable", "row": "top",
+     "help": "seminars \u00b7 hours \u00b7 clients"},
+    {"name": "ratingScaleMax", "label": "Rating scale max", "type": "float",
+     "group": "Deliverable", "row": "top", "ratingOnly": True},
+    {"name": "currentValue", "label": "Progress to date", "type": "float",
+     "group": "Progress", "row": "prog"},
+    {"name": "dueBy", "label": "Due by", "type": "date", "group": "Progress", "row": "prog"},
+    {"name": "deliverableStatus", "label": "Status", "type": "enum", "group": "Progress", "row": "prog"},
+    {"name": "currentNote", "label": "Progress note", "type": "text", "group": "Progress",
+     "big": True,
+     "help": "Where this figure came from. A typed-in number needs this to be defensible a year later."},
+    {"name": "measurementSource", "label": "Measured", "type": "enum",
+     "group": "Measurement", "row": "meas"},
+    {"name": "measureKey", "label": "Measure", "type": "varchar", "group": "Measurement", "row": "meas"},
+    {"name": "sortOrder", "label": "Order", "type": "int", "group": "Measurement", "row": "meas"},
+    {"name": "measurementNotes", "label": "How it is measured", "type": "text",
+     "group": "Measurement", "big": True},
+]
+
+DELIVERABLE_EDIT_NAMES = {f["name"] for f in DELIVERABLE_FIELDS}
+DELIVERABLE_ENUM_FIELDS = [
+    f["name"] for f in DELIVERABLE_FIELDS if f["type"] in ("enum", "multiEnum")
+]
+DELIVERABLE_LIST_SELECT = (
+    "name,deliverableType,targetValue,unit,ratingScaleMax,currentValue,currentNote,"
+    "dueBy,deliverableStatus,measurementSource,measureKey,measurementNotes,sortOrder,createdAt"
+)
+
 
 # Fields read for the tab's grid + summary math (notes/description load on the
 # editor's per-record GET, not the list).
@@ -841,6 +935,11 @@ SPONSOR = DomainConfig(
     contributions_parent_fk="sponsorProfileId",
     contributions_donor_account_attr="sponsorCompanyId",
     contributions_donor_contact_attr="sponsorContactId",
+    # The grant book (prds/grant-management-plan.md): the Grants tab + endpoints,
+    # reading CGrant through the funder's ``grants`` reverse link. Dark until
+    # ``grants_enabled`` is on AND the CRM has the entities.
+    grants_link="grants",
+    grants_parent_fk="sponsorProfileId",
     # Reuse the existing date field — advanced on outbound email / recorded session.
     last_contact_attr="lastContacted",
     last_contact_type="date",

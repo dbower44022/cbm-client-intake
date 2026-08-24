@@ -42,7 +42,15 @@ from .config import (
     CONTRIBUTION_ENUM_FIELDS,
     CONTRIBUTION_FIELDS,
     CONTRIBUTION_LIST_SELECT,
+    DELIVERABLE_EDIT_NAMES,
+    DELIVERABLE_ENUM_FIELDS,
+    DELIVERABLE_FIELDS,
+    DELIVERABLE_LIST_SELECT,
     DETAIL_SESSION_SELECT,
+    GRANT_EDIT_NAMES,
+    GRANT_ENUM_FIELDS,
+    GRANT_FIELDS,
+    GRANT_LIST_SELECT,
     ENGAGEMENT,
     MENTOR_PROFILE,
     SESSION,
@@ -2622,6 +2630,484 @@ async def update_contribution(
         await client.update(CONTRIBUTION, contribution_id, payload)
         log.info("contribution %s updated (%s)", contribution_id, ", ".join(sorted(payload)))
     return await get_contribution(cfg, client, contribution_id)
+
+
+# --- Grants + deliverables (the funder grant book — sponsor domain only) ----
+# prds/grant-management-plan.md. Doug's rulings 2026-08-23:
+#   * the GRANT is the hub — contributions are its payments, deliverables are
+#     its obligations, and the two are SIBLINGS, never a chain;
+#   * client attribution lives on the grant (``fundedEngagements``), so a
+#     renewal starts clean;
+#   * a reporting period's numbers freeze as a JSON snapshot on the report.
+#
+# Phase 2 (this code) is MANUAL measurement: ``currentValue`` is typed in.
+# Phase 3 computes it from ``measureKey``; the progress math below is already
+# the one place that decides what a number MEANS, so that change lands here and
+# nowhere else.
+#
+# Everything is feature-detected — the CRM entities may not exist yet, and a
+# funder workspace must not break because they don't.
+
+GRANT = "CGrant"
+DELIVERABLE = "CGrantDeliverable"
+
+#: Grant statuses that count as live money in hand or in flight.
+_GRANT_ACTIVE = ("Awarded", "Active", "Reporting")
+#: Statuses excluded from every total (visible, never counted) — the
+#: Contributions Cancelled/Unsuccessful precedent.
+_GRANT_EXCLUDED = ("Declined", "Cancelled")
+
+_DELIV_MILESTONE = "Milestone"
+_DELIV_NARRATIVE = "Narrative"
+_DELIV_MET = "Met"
+_DELIV_BEHIND = "Behind"
+_DELIV_ON_TRACK = "On track"
+
+_GRANT_DEFAULT_CURRENCY = "USD"
+
+
+async def grants_available(client: SessionClient) -> bool:
+    """Whether the live CRM actually has the grant entities.
+
+    The three entities are a pending CRM build, so every grant surface asks
+    this first: flag ON + entities missing must read as "not built yet", not as
+    an error. Fails CLOSED — an unreadable metadata call means we cannot prove
+    the entities exist, and offering the tab on a guess would produce forms
+    whose saves the CRM rejects.
+    """
+    try:
+        fields = await client.metadata(f"entityDefs.{GRANT}.fields")
+        deliv = await client.metadata(f"entityDefs.{DELIVERABLE}.fields")
+    except Exception as exc:  # noqa: BLE001 — never raise out of a feature probe
+        log.info("grant entities not detectable (%s); grants stay dark", exc)
+        return False
+    return bool(fields) and bool(deliv)
+
+
+async def _present_fields(
+    client: SessionClient, entity: str, spec: list[dict]
+) -> list[dict]:
+    """``spec`` filtered to the fields the live CRM really has.
+
+    The standing convention (CLAUDE.md): a CRM-facing feature feature-detects
+    its fields rather than requiring a coordinated deploy. Serving a field the
+    CRM lacks renders a box whose save must fail; dropping it also drops it
+    from the whitelist, because the whitelist IS this spec.
+    """
+    fields = await client.metadata(f"entityDefs.{entity}.fields") or {}
+    return [f for f in spec if f["name"] in fields]
+
+
+async def grant_fields(client: SessionClient) -> list[dict]:
+    """The grant form layout + whitelist, feature-detected."""
+    return await _present_fields(client, GRANT, GRANT_FIELDS)
+
+
+async def deliverable_fields(client: SessionClient) -> list[dict]:
+    """The deliverable form layout + whitelist, feature-detected."""
+    return await _present_fields(client, DELIVERABLE, DELIVERABLE_FIELDS)
+
+
+def _num(value: Any) -> float:
+    try:
+        return float(value or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def deliverable_progress(row: dict[str, Any], today: date) -> dict[str, Any]:
+    """How far along one deliverable is — the single place that decides.
+
+    Returns ``percent`` (None when the type has no number: a Narrative answer
+    is not a quantity) and ``derivedStatus``, which is only ever a value from
+    the CRM's own status vocabulary. A stored ``deliverableStatus`` always
+    wins: staff overriding the arithmetic is the point of a manual phase.
+    """
+    dtype = row.get("deliverableType")
+    target, current = _num(row.get("targetValue")), _num(row.get("currentValue"))
+    if dtype == _DELIV_NARRATIVE:
+        percent = None
+    elif dtype == _DELIV_MILESTONE:
+        percent = 100.0 if current else 0.0
+    elif target > 0:
+        percent = max(0.0, min(100.0, current / target * 100.0))
+    else:
+        percent = None  # no target set yet — a bar would be a lie
+
+    derived = None
+    if percent is not None:
+        if percent >= 100.0:
+            derived = _DELIV_MET
+        else:
+            due = _iso_date(row.get("dueBy"))
+            derived = _DELIV_BEHIND if (due and due < today) else _DELIV_ON_TRACK
+    return {
+        "percent": None if percent is None else round(percent, 1),
+        "derivedStatus": derived,
+        "status": row.get("deliverableStatus") or derived,
+        "met": (row.get("deliverableStatus") or derived) == _DELIV_MET,
+    }
+
+
+def _deliverable_row(r: dict[str, Any], today: date) -> dict[str, Any]:
+    """A decorated deliverable: raw scalars + the derived progress block."""
+    row = {k: r.get(k) for k in (
+        "id", "name", "deliverableType", "targetValue", "unit", "ratingScaleMax",
+        "currentValue", "currentNote", "dueBy", "deliverableStatus",
+        "measurementSource", "measureKey", "measurementNotes", "sortOrder", "createdAt",
+    )}
+    row["grantId"] = r.get("grantId")
+    row.update(deliverable_progress(row, today))
+    return row
+
+
+def _grant_row(r: dict[str, Any], today: date) -> dict[str, Any]:
+    """A decorated grant row for the grid (deliverable rollups added later)."""
+    status = r.get("grantStatus")
+    row = {k: r.get(k) for k in (
+        "id", "name", "awardNumber", "grantStatus", "awardAmount", "awardAmountCurrency",
+        "programArea", "periodStart", "periodEnd", "reportingFrequency",
+        "firstReportDue", "nextReportDue", "renewalDeadline", "createdAt",
+    )}
+    row["excluded"] = status in _GRANT_EXCLUDED
+    row["active"] = status in _GRANT_ACTIVE
+    # What the "next report due" column shows: the maintained date if there is
+    # one, else the first one — until the report engine (phase 5) maintains it.
+    row["reportDue"] = r.get("nextReportDue") or r.get("firstReportDue")
+    due = _iso_date(row["reportDue"])
+    row["reportOverdue"] = bool(due and due < today and not row["excluded"])
+    end = _iso_date(r.get("periodEnd"))
+    row["periodEnded"] = bool(end and end < today)
+    row["deliverableCount"] = 0
+    row["deliverablesMet"] = 0
+    return row
+
+
+def grant_summary(rows: list[dict[str, Any]], today: date) -> dict[str, Any]:
+    """The tab's four tiles. Pure math over decorated rows, so the rules are
+    tested in one place: Declined/Cancelled grants never count toward anything,
+    and the award total is the money CBM is actually committed to delivering
+    against (Awarded / Active / Reporting)."""
+    live = [r for r in rows if r.get("active")]
+    counted = [r for r in rows if not r.get("excluded")]
+    awarded = round(sum(_num(r.get("awardAmount")) for r in live), 2)
+    total_deliv = sum(r.get("deliverableCount") or 0 for r in counted)
+    met_deliv = sum(r.get("deliverablesMet") or 0 for r in counted)
+    upcoming = sorted(
+        d for d in (_iso_date(r.get("reportDue")) for r in counted) if d and d >= today
+    )
+    overdue = [r for r in counted if r.get("reportOverdue")]
+    currencies = [r.get("awardAmountCurrency") for r in rows if r.get("awardAmountCurrency")]
+    return {
+        "totalCount": len(rows),
+        "activeCount": len(live),
+        "awardedAmount": awarded,
+        "deliverablesTotal": total_deliv,
+        "deliverablesMet": met_deliv,
+        "nextReportDue": upcoming[0].isoformat() if upcoming else None,
+        "overdueReports": len(overdue),
+        "currency": currencies[0] if currencies else _GRANT_DEFAULT_CURRENCY,
+    }
+
+
+async def _attach_deliverable_rollups(
+    client: SessionClient, rows: list[dict[str, Any]], today: date
+) -> None:
+    """Fill each grant row's deliverable count / met count, in ONE list call.
+
+    A per-grant read would be N+1; the ``in`` filter keeps it to one request.
+    Best-effort: a funder whose role cannot read deliverables still gets their
+    grants, with the rollup columns simply reading zero.
+    """
+    ids = [r["id"] for r in rows if r.get("id")]
+    if not ids:
+        return
+    try:
+        data = await client.list(
+            DELIVERABLE,
+            select=DELIVERABLE_LIST_SELECT + ",grantId",
+            where=[{"type": "in", "attribute": "grantId", "value": ids}],
+            max_size=_PAGE,
+        )
+    except Exception as exc:  # noqa: BLE001 — decoration, never breaks the grid
+        log.warning("could not read deliverables for the grants grid: %s", exc)
+        return
+    by_grant: dict[str, list[dict[str, Any]]] = {}
+    for raw in data.get("list", []):
+        row = _deliverable_row(raw, today)
+        if row.get("grantId"):
+            by_grant.setdefault(row["grantId"], []).append(row)
+    for r in rows:
+        mine = by_grant.get(r["id"], [])
+        r["deliverableCount"] = len(mine)
+        r["deliverablesMet"] = sum(1 for d in mine if d.get("met"))
+
+
+async def list_grants(
+    cfg: DomainConfig, client: SessionClient, parent_id: str
+) -> dict[str, Any]:
+    """A funder's grants + the computed summary block.
+
+    The parent read is the ACL gate (a forbidden funder never leaks its grant
+    book) and supplies the funder name for the editor's default title — the
+    contributions-endpoint contract exactly.
+    """
+    parent = await client.get(cfg.parent_entity, parent_id, select="name")
+    if not await grants_available(client):
+        return {
+            "records": [], "summary": None, "parentName": parent.get("name"),
+            "available": False,
+        }
+    data = await client.list_related(
+        cfg.parent_entity, parent_id, cfg.grants_link,
+        select=GRANT_LIST_SELECT, max_size=_PAGE,
+    )
+    today = datetime.now(timezone.utc).date()
+    rows = [_grant_row(r, today) for r in data.get("list", [])]
+    await _attach_deliverable_rollups(client, rows, today)
+    rows.sort(key=lambda r: (r.get("periodStart") or "", r.get("createdAt") or ""), reverse=True)
+    return {
+        "records": rows,
+        "summary": grant_summary(rows, today),
+        "parentName": parent.get("name"),
+        "available": True,
+    }
+
+
+async def get_grant(
+    cfg: DomainConfig, client: SessionClient, grant_id: str
+) -> dict[str, Any]:
+    """One grant's full editable values + its deliverables, record-scope checked.
+
+    The grant must belong to a funder of THIS domain that the user can read (the
+    contributions/documents precedent) — a bare CGrant id never resolves from
+    outside the funder workspace.
+    """
+    rec = await client.get(
+        GRANT, grant_id,
+        select=GRANT_LIST_SELECT + ",notes,description," + cfg.grants_parent_fk,
+    )
+    parent_id = rec.get(cfg.grants_parent_fk)
+    if not parent_id:
+        raise SessionError("That grant isn't linked to a funder record.")
+    await client.get(cfg.parent_entity, parent_id, select="id")  # ACL gate
+    today = datetime.now(timezone.utc).date()
+    row = _grant_row(rec, today)
+    row["notes"] = rec.get("notes")
+    row["description"] = rec.get("description")
+    row["parentId"] = parent_id
+    row["deliverables"] = await list_deliverables(client, grant_id, today=today)
+    row["deliverableCount"] = len(row["deliverables"])
+    row["deliverablesMet"] = sum(1 for d in row["deliverables"] if d.get("met"))
+    return row
+
+
+async def list_deliverables(
+    client: SessionClient, grant_id: str, *, today: Optional[date] = None
+) -> list[dict[str, Any]]:
+    """A grant's deliverables, in the funder's own order (``sortOrder``, then
+    creation). Best-effort: a role that cannot read them shows a grant with no
+    deliverables rather than a broken record."""
+    today = today or datetime.now(timezone.utc).date()
+    try:
+        data = await client.list_related(
+            GRANT, grant_id, "deliverables",
+            select=DELIVERABLE_LIST_SELECT, max_size=_PAGE,
+        )
+    except Exception as exc:  # noqa: BLE001
+        log.warning("could not read deliverables for grant %s: %s", grant_id, exc)
+        return []
+    rows = [_deliverable_row(r, today) for r in data.get("list", [])]
+    rows.sort(key=lambda r: (
+        _num(r.get("sortOrder")) if r.get("sortOrder") is not None else 1e9,
+        r.get("createdAt") or "",
+    ))
+    return rows
+
+
+async def _entity_enum_options(
+    client: SessionClient, entity: str, names: list[str]
+) -> dict[str, list[Any]]:
+    """Live option lists for an entity's enum fields (CRM = truth)."""
+    fields = await client.metadata(f"entityDefs.{entity}.fields") or {}
+    options: dict[str, list[Any]] = {}
+    for name in names:
+        opts = (fields.get(name) or {}).get("options")
+        if isinstance(opts, list):
+            options[name] = [o for o in opts if o != ""]
+    return options
+
+
+async def _entity_required(
+    client: SessionClient, entity: str, names: set[str]
+) -> list[str]:
+    """Editable fields the CRM marks required (read live, never hard-coded)."""
+    fields = await client.metadata(f"entityDefs.{entity}.fields") or {}
+    return [
+        name for name in sorted(names)
+        if isinstance(fields.get(name), dict) and fields[name].get("required")
+    ]
+
+
+async def grant_field_options(client: SessionClient) -> dict[str, list[Any]]:
+    return await _entity_enum_options(client, GRANT, GRANT_ENUM_FIELDS)
+
+
+async def grant_field_required(client: SessionClient) -> list[str]:
+    return await _entity_required(client, GRANT, GRANT_EDIT_NAMES)
+
+
+async def deliverable_field_options(client: SessionClient) -> dict[str, list[Any]]:
+    return await _entity_enum_options(client, DELIVERABLE, DELIVERABLE_ENUM_FIELDS)
+
+
+async def deliverable_field_required(client: SessionClient) -> list[str]:
+    return await _entity_required(client, DELIVERABLE, DELIVERABLE_EDIT_NAMES)
+
+
+async def _sanitize_entity_enums(
+    client: SessionClient, entity: str, enum_names: list[str], payload: dict[str, Any]
+) -> None:
+    """Drop enum values the live entity no longer accepts, in place.
+
+    The `_sanitize_enum_payload` contract: single enums are OMITTED rather than
+    blanked, and it FAILS OPEN — an options read that breaks must never block a
+    staff member's save.
+    """
+    keys = [k for k in payload if k in enum_names]
+    if not keys:
+        return
+    try:
+        options = await _entity_enum_options(client, entity, enum_names)
+    except Exception as exc:  # noqa: BLE001 — fail open
+        log.warning("could not fetch %s enum options (%s); keeping values", entity, exc)
+        return
+    for key in keys:
+        opts, value = options.get(key), payload[key]
+        if opts is None or value in (None, ""):
+            continue
+        if value not in opts:
+            log.warning("%s.%s: dropping unrecognized value %r", entity, key, value)
+            del payload[key]
+
+
+def _backfill_award_currency(
+    payload: dict[str, Any], existing_currency: Optional[str] = None
+) -> None:
+    """EspoCRM validates a currency amount against its ``*Currency`` companion,
+    so a bare ``awardAmount`` on a record whose stored currency is null is
+    REJECTED outright. The editor never collects a currency (CBM is USD only),
+    so any save that sets an amount carries one. This exact defect cost the
+    contributions ledger a live 400 in v0.123.2 — do not remove it."""
+    if payload.get("awardAmount") is not None and not payload.get("awardAmountCurrency"):
+        payload["awardAmountCurrency"] = existing_currency or _GRANT_DEFAULT_CURRENCY
+
+
+def _seed_next_report_due(payload: dict[str, Any], current: Optional[dict] = None) -> None:
+    """Until the report engine (phase 5) maintains ``nextReportDue``, seed it
+    from ``firstReportDue`` so the tile and the overdue flag have something
+    truthful to read. Never overwrites a value that is already set — a date
+    someone typed always wins over one we inferred."""
+    first = payload.get("firstReportDue")
+    if not first:
+        return
+    already = payload.get("nextReportDue") or (current or {}).get("nextReportDue")
+    if not already:
+        payload["nextReportDue"] = first
+
+
+async def create_grant(
+    cfg: DomainConfig, client: SessionClient, parent_id: str, changes: dict[str, Any]
+) -> dict[str, Any]:
+    """Create a grant on a funder record, as the signed-in user."""
+    if not await grants_available(client):
+        raise SessionError("Grants aren't built in this CRM yet.")
+    await client.get(cfg.parent_entity, parent_id, select="id")  # ACL gate
+    spec = await grant_fields(client)
+    payload = _whitelist(changes, {f["name"] for f in spec} | {"awardAmountCurrency"})
+    await _sanitize_entity_enums(client, GRANT, GRANT_ENUM_FIELDS, payload)
+    _backfill_award_currency(payload)
+    _seed_next_report_due(payload)
+    payload[cfg.grants_parent_fk] = parent_id
+    created = await client.create(GRANT, payload)
+    log.info("grant created on %s/%s: CGrant/%s",
+             cfg.parent_entity, parent_id, created.get("id"))
+    return await get_grant(cfg, client, created["id"])
+
+
+async def update_grant(
+    cfg: DomainConfig, client: SessionClient, grant_id: str, changes: dict[str, Any]
+) -> dict[str, Any]:
+    """Whitelisted, enum-sanitized grant update. There is NO delete surface —
+    a grant that falls through is Declined or Cancelled, the Contributions
+    soft-delete ruling applied to the award."""
+    current = await get_grant(cfg, client, grant_id)  # scope + ACL gate first
+    spec = await grant_fields(client)
+    payload = _whitelist(changes, {f["name"] for f in spec} | {"awardAmountCurrency"})
+    await _sanitize_entity_enums(client, GRANT, GRANT_ENUM_FIELDS, payload)
+    _backfill_award_currency(payload, current.get("awardAmountCurrency"))
+    _seed_next_report_due(payload, current)
+    if payload:
+        await client.update(GRANT, grant_id, payload)
+        log.info("grant %s updated (%s)", grant_id, ", ".join(sorted(payload)))
+    return await get_grant(cfg, client, grant_id)
+
+
+async def _grant_scope_gate(
+    cfg: DomainConfig, client: SessionClient, grant_id: str
+) -> str:
+    """Confirm a grant belongs to a funder this user can read; return its id."""
+    await get_grant(cfg, client, grant_id)
+    return grant_id
+
+
+async def create_deliverable(
+    cfg: DomainConfig, client: SessionClient, grant_id: str, changes: dict[str, Any]
+) -> dict[str, Any]:
+    """Add a deliverable to a grant, as the signed-in user."""
+    if not await grants_available(client):
+        raise SessionError("Grants aren't built in this CRM yet.")
+    await _grant_scope_gate(cfg, client, grant_id)
+    spec = await deliverable_fields(client)
+    payload = _whitelist(changes, {f["name"] for f in spec})
+    await _sanitize_entity_enums(client, DELIVERABLE, DELIVERABLE_ENUM_FIELDS, payload)
+    payload["grantId"] = grant_id
+    created = await client.create(DELIVERABLE, payload)
+    log.info("deliverable created on CGrant/%s: %s/%s", grant_id, DELIVERABLE, created.get("id"))
+    return await get_deliverable(cfg, client, created["id"])
+
+
+async def get_deliverable(
+    cfg: DomainConfig, client: SessionClient, deliverable_id: str
+) -> dict[str, Any]:
+    """One deliverable, record-scope checked through its grant's funder."""
+    rec = await client.get(
+        DELIVERABLE, deliverable_id, select=DELIVERABLE_LIST_SELECT + ",grantId",
+    )
+    grant_id = rec.get("grantId")
+    if not grant_id:
+        raise SessionError("That deliverable isn't linked to a grant.")
+    await _grant_scope_gate(cfg, client, grant_id)
+    return _deliverable_row(rec, datetime.now(timezone.utc).date())
+
+
+async def update_deliverable(
+    cfg: DomainConfig, client: SessionClient, deliverable_id: str, changes: dict[str, Any]
+) -> dict[str, Any]:
+    """Whitelisted, enum-sanitized deliverable update. No delete surface."""
+    await get_deliverable(cfg, client, deliverable_id)  # scope + ACL gate first
+    spec = await deliverable_fields(client)
+    payload = _whitelist(changes, {f["name"] for f in spec})
+    await _sanitize_entity_enums(client, DELIVERABLE, DELIVERABLE_ENUM_FIELDS, payload)
+    if payload:
+        await client.update(DELIVERABLE, deliverable_id, payload)
+        log.info("deliverable %s updated (%s)", deliverable_id, ", ".join(sorted(payload)))
+    return await get_deliverable(cfg, client, deliverable_id)
+
+
+def _whitelist(changes: dict[str, Any], allowed: set[str]) -> dict[str, Any]:
+    """Keep only allowed keys — smuggled links and FK swaps are dropped."""
+    return {k: v for k, v in changes.items() if k in allowed}
 
 
 # --- Quick add: create a new partner / funder -------------------------------

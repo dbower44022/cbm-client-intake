@@ -4,6 +4,59 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.212.0] — 2026-08-23
+
+**feat(sessions): Grants on the funder record — awards, deliverables and
+progress** (phase 2 of `prds/grant-management-plan.md`; Doug's rulings
+2026-08-23). Funder Management gains a **Grants** tab beside Contributions: four
+tiles (active grants · awarded · deliverables met · next report due), a sortable
+grid, and a **full-window grant popup** (the v0.210.0 engagement-popup
+treatment — 90% of the window, resizable, pinned Save/Cancel around a scrolling
+body) holding the award fields *and its deliverables inside it*, because that is
+what a deliverable is: a promise attached to one grant.
+
+The model follows the rulings exactly. **The grant is the hub** — existing
+`CContribution` rows become its payments and deliverables are its obligations,
+**siblings under it rather than a chain** (a deliverable running the whole grant
+year has no single payment to hang off, and a grant paid in four tranches has no
+single deliverable to hang each payment off). Deliverables carry a type
+(`Numeric` · `Rate` · `Percentage` · `Milestone` · `Narrative`), a target, a
+unit, and a progress figure; `deliverable_progress()` is the single place that
+decides what a number means — clamped at 100%, binary for a milestone, **no
+percentage at all for a narrative** (a written answer is not a quantity, and an
+empty bar reads as zero), Behind when past due and short, and **a stored status
+always beats the arithmetic**, which is the point of a manual phase.
+
+**Phase 2 is manual measurement**: `currentValue` is typed in with a note on
+where it came from. `measureKey` is collected but not yet computed — phase 3
+wires the measures (`events.held` counting a funder's own seminars,
+`sessions.hours`, and `analytics:<key>` delegating to a builder metric) and only
+`grtProgressCell()` and one service function change.
+
+Shipped **dark, twice over**: `GRANTS_ENABLED` (off by default, checked **per
+request** like `record_quick_add`, so `/setup` can flip it without a deploy —
+deliberately not boot-read), **and** live CRM feature detection. The three
+entities do not exist in either CRM yet, so `grants_available()` probes for
+`CGrant` + `CGrantDeliverable` and **fails closed**; every field is filtered
+against live metadata before it is served, so the spec-is-the-whitelist contract
+drops an absent field from the form *and* the write. Switching the flag on ahead
+of the CRM build shows an explanatory panel, never a broken tab.
+
+Also carried over from the ledger: the parent record is read first as the ACL
+gate (a forbidden funder never leaks its grant book), a bare grant or
+deliverable id never resolves from outside the funder workspace, enum drift is
+dropped and fails open, the deliverable rollup is **one** list call rather than
+N+1 and degrades to zeroes rather than breaking the grid, and any save setting
+`awardAmount` backfills `awardAmountCurrency` — the exact defect that 400'd the
+contributions ledger in v0.123.2. **No delete surface anywhere**: a grant that
+falls through is `Declined` or `Cancelled`.
+
+CRM prerequisite: `cgrant-entities-crm-handoff.md` (three entities, six links,
+Sponsor Management Team create/read/edit, no delete). Rating-based deliverables
+stay manual until the rating engine lands — `prds/rating-engine-plan.md`,
+`crating-entity-crm-handoff.md`. 36 new tests; full suite green (1873).
+**Verified by tests only — no live CRM has these entities yet.**
+
 ## [0.211.0] — 2026-08-23
 
 **fix(sessions): accessibility pass on Client/Partner/Funder Management — sort
