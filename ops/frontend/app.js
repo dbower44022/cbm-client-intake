@@ -740,8 +740,12 @@
     try {
       var res = await api("/submissions/" + encodeURIComponent(current.id) + "/close",
         { method: "POST", body: JSON.stringify({ reason: reason, note: note || "" }) });
+      // crmWarning = the CRM write failed and the two may disagree (red).
+      // crmNote = the linked CRM record is gone, so there was nothing to
+      // update — a fact about the close, not a failure of it.
       if (res && res.crmWarning) notice("detailNotice", res.crmWarning, "error");
-      else notice("detailNotice", "Closed — " + reason + ".", "success");
+      else notice("detailNotice", "Closed — " + reason + "."
+        + (res && res.crmNote ? " " + res.crmNote : ""), "success");
       await refreshDetailRow(); syncListRow();
     } catch (e) {
       if (e.status === 401) { showLogin(); return; }

@@ -181,6 +181,22 @@ def is_forbidden(exc: Exception) -> bool:
     return bool(m) and m.group(1) == "403"
 
 
+def is_not_found(exc: Exception) -> bool:
+    """True when a CRM call failed with 404 — the record is GONE.
+
+    Distinct from :func:`is_forbidden` in the only way that matters to a
+    caller: a 403 is a missing grant that an admin can restore and a retry can
+    then succeed, while a 404 means the record was deleted (or soft-deleted, so
+    an ordinary user no longer sees it at all) and no retry will ever work.
+    Best-effort mirrors of app state onto a CRM record use this to tell
+    "nothing left to update" apart from "the update failed" — the first is a
+    fact to state, the second a warning that something has drifted. Matches the
+    FIRST ``HTTP <code>`` in the message, like :func:`is_forbidden`.
+    """
+    m = _HTTP_STATUS_RE.search(str(exc))
+    return bool(m) and m.group(1) == "404"
+
+
 def forbidden_hint(exc: Exception) -> Optional[str]:
     """When a CRM call was denied, name the missing permission — e.g.
     ``"read access to CClientProfile records"`` — parsed from the

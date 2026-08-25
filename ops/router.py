@@ -29,7 +29,7 @@ from assignments import auth
 from assignments.auth import clear_session, current_user, is_member
 from assignments.espo_user import client_for
 from core.config import get_settings
-from core.espo import EspoError, forbidden_hint, is_forbidden
+from core.espo import EspoError, forbidden_hint, is_forbidden, is_not_found
 from core.store import (
     ACT_DISCARDED,
     ACT_REDRIVEN,
@@ -287,9 +287,11 @@ async def close_submission(submission_id: str, body: CloseIn, request: Request) 
         raise HTTPException(status_code=404, detail="Submission not found.")
     log.info("close %s (%s) by %s", submission_id, body.reason, user["userName"])
     out: dict = {"status": "ok", "closed": True}
-    _updated, warning = await _writethrough_request_status(row, "Closed", user)
+    _updated, warning, note = await _writethrough_request_status(row, "Closed", user)
     if warning:
         out["crmWarning"] = warning
+    if note:
+        out["crmNote"] = note
     return out
 
 
@@ -367,27 +369,38 @@ async def save_request_status(
         raise HTTPException(status_code=404, detail="Submission not found.")
     log.info("request status %s on %s by %s", body.status, submission_id, user["userName"])
     out: dict = {"status": "ok", "requestStatus": body.status}
-    updated, warning = await _writethrough_request_status(row, body.status, user)
+    updated, warning, note = await _writethrough_request_status(row, body.status, user)
     if updated:
         out["crmUpdated"] = True
     if warning:
         out["crmWarning"] = warning
+    if note:
+        out["crmNote"] = note
     return out
 
 
 async def _writethrough_request_status(
     row: dict, value: str, user: dict
-) -> tuple[bool, Optional[str]]:
+) -> tuple[bool, Optional[str], Optional[str]]:
     """Best-effort mirror of the staff request status onto the delivery's
-    CInformationRequest (when it created one). Returns ``(updated, warning)`` —
-    ``warning`` is a readable string if the CRM write failed (the app-side
-    state is already saved). Shared by the request-status endpoint and Close."""
+    CInformationRequest (when it created one).
+
+    Returns ``(updated, warning, note)``; the app-side state is already saved
+    either way, and at most one of the two messages is set:
+
+    * ``warning`` — the CRM write FAILED and the two may now disagree. Worth
+      alarming about, and worth trying again.
+    * ``note`` — the CRM record is GONE (a 404), so there is nothing left to
+      keep in step and no retry can change that. Stating it as a failure sent
+      staff hunting for a drift that does not exist, so it is reported as the
+      plain fact it is. Shared by the request-status endpoint and Close.
+    """
     info_id = ((row.get("result") or {}).get("informationRequestId") or "").strip()
     if not info_id:
-        return False, None
+        return False, None, None
     client = _api_client()
     if client is None:
-        return False, None
+        return False, None, None
     try:
         await client.update("CInformationRequest", info_id, {"requestStatus": value})
         from core import action_log
@@ -402,8 +415,22 @@ async def _writethrough_request_status(
             summary=f"Request status set to {value}",
             actor_name=user.get("name") or user["userName"],
         )
-        return True, None
+        return True, None, None
     except EspoError as exc:
+        if is_not_found(exc):
+            # The record this submission's delivery created has since been
+            # deleted in the CRM — a test-record sweep, or on crm-test the
+            # nightly restore, which puts the CRM back an hour before the app's
+            # own tables are cleared. Nothing to update, and nothing to fix.
+            log.info(
+                "requestStatus write-through skipped: CInformationRequest/%s "
+                "no longer exists in the CRM", info_id,
+            )
+            return False, None, (
+                "The linked CRM information-request record no longer exists "
+                "(it was deleted in the CRM), so there was nothing to update "
+                "there."
+            )
         log.warning(
             "requestStatus write-through failed on CInformationRequest/%s: %s",
             info_id, exc,
@@ -411,7 +438,7 @@ async def _writethrough_request_status(
         return False, (
             "Saved here, but the CRM information-request record couldn't be "
             f"updated — its Request Status may be out of date. ({exc})"
-        )
+        ), None
 
 
 @router.put("/submissions/{submission_id}/resolved")

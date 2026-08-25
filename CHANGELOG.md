@@ -4,6 +4,37 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.213.1] — 2026-08-24
+
+**fix(ops): closing a submission whose CRM record was deleted is no longer
+reported as a failure.** Reported live: closing an `info-request` submission
+answered *"Saved here, but the CRM information-request record couldn't be
+updated — its Request Status may be out of date. (… HTTP 404 [Record … not
+found.])"* in red, which reads as data drift somebody has to go and repair.
+
+The close itself had worked — it always does, the write-through is best-effort
+and runs after the app-side save. What had happened is simply that the
+`CInformationRequest` the delivery created is **gone from the CRM**: deleted by
+hand, or, on crm-test, removed by the nightly restore, which puts the CRM back
+at 04:00 UTC an hour before the app's own tables are cleared at 05:00 (so for
+that hour a submission row outlives the record it points at). Confirmed against
+the running crm-test instance: the id in the message is a 404 there and the
+entity holds **zero** records.
+
+So the 404 is now told apart from every other CRM failure, because the two mean
+opposite things to the person reading the message: a 403 or a 5xx means the
+write failed and the app and the CRM may now disagree — worth alarming about,
+and worth retrying — while a 404 means there is nothing left to keep in step and
+no retry can ever change that. `_writethrough_request_status` returns
+`(updated, warning, note)`; the deleted case takes the `note` path, the response
+carries `crmNote` instead of `crmWarning`, and the page shows the ordinary green
+*"Closed — <reason>."* with the fact appended rather than a red error. Logged at
+INFO, not WARNING. Applies to the request-status endpoint on the same terms.
+
+New `core.espo.is_not_found`, the sibling of `is_forbidden` — worth having
+beyond this call site, since every best-effort mirror onto a CRM record has the
+same "the record is gone" case hiding inside its `except EspoError`.
+
 ## [0.213.0] — 2026-08-23
 
 **docs(crm)+scripts: the grant CRM build, verified against the running CRM

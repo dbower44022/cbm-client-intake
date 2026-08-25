@@ -340,14 +340,21 @@ def test_set_request_status(monkeypatch):
 
 
 class _FakeCrm:
-    def __init__(self, fail=False):
+    def __init__(self, fail=False, missing=False):
         self.fail = fail
+        self.missing = missing
         self.updates = []
         self.creates = []
 
     async def update(self, entity, record_id, payload):
+        from core.espo import EspoError
+
+        if self.missing:
+            raise EspoError(
+                f"update {entity}/{record_id} failed: "
+                f"HTTP 404 [Record {record_id} not found.]"
+            )
         if self.fail:
-            from core.espo import EspoError
             raise EspoError("update CInformationRequest: 403 Forbidden")
         self.updates.append((entity, record_id, payload))
         return {"id": record_id}
@@ -386,6 +393,40 @@ def test_request_status_crm_failure_keeps_app_save(monkeypatch):
     assert r.status_code == 200
     assert "couldn't be updated" in r.json()["crmWarning"]
     assert store.rows["abc12345"]["request_status"] == "Closed"
+
+
+def test_request_status_crm_record_deleted_is_a_note_not_a_warning(monkeypatch):
+    """A 404 means the CInformationRequest was DELETED in the CRM — there is
+    nothing left to keep in step and no retry can help, so the response carries
+    a plain crmNote rather than the drift warning (which sent staff hunting for
+    a problem that does not exist)."""
+    store = FakeOpsStore()
+    store.rows["abc12345"]["result"] = {"informationRequestId": "ir-77"}
+    monkeypatch.setattr("ops.router._api_client", lambda: _FakeCrm(missing=True))
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, store)) as c:
+        r = c.put("/ops/api/submissions/abc12345/requeststatus",
+                  json={"status": "Closed"})
+    body = r.json()
+    assert r.status_code == 200
+    assert "crmWarning" not in body and "crmUpdated" not in body
+    assert "no longer exists" in body["crmNote"]
+    assert store.rows["abc12345"]["request_status"] == "Closed"
+
+
+def test_close_when_crm_record_deleted_still_closes(monkeypatch):
+    """Close is never blocked by the missing CRM record, and says so plainly."""
+    store = FakeOpsStore()
+    store.rows["abc12345"]["result"] = {"informationRequestId": "ir-9"}
+    monkeypatch.setattr("ops.router._api_client", lambda: _FakeCrm(missing=True))
+    _authed(monkeypatch)
+    with TestClient(_app(monkeypatch, store)) as c:
+        r = c.post("/ops/api/submissions/abc12345/close",
+                   json={"reason": "Responded — resolved"})
+    body = r.json()
+    assert r.status_code == 200 and body["closed"] is True
+    assert "crmWarning" not in body and "no longer exists" in body["crmNote"]
+    assert store.rows["abc12345"]["closed_at"]
 
 
 def test_reply_states_empty_when_gmail_off(monkeypatch):
