@@ -35,6 +35,13 @@ New `core.espo.is_not_found`, the sibling of `is_forbidden` — worth having
 beyond this call site, since every best-effort mirror onto a CRM record has the
 same "the record is gone" case hiding inside its `except EspoError`.
 
+**Also in this release — `/ops` opens on the work queue, not the archive.** The
+response filter now boots on **Open (not closed)** rather than showing
+everything, so a closed submission is out of the way until someone asks for it.
+"Clear filters" still clears to *everything* — that is what clear means, and it
+stays the one control that reaches closed rows in the grid. The filter selects
+are synced at boot so the control shows the state it actually starts in.
+
 ## [0.213.0] — 2026-08-23
 
 **docs(crm)+scripts: the grant CRM build, verified against the running CRM

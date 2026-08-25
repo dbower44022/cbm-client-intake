@@ -54,11 +54,15 @@
   // Discard resolves a stuck row that can't be re-driven (e.g. a bad payload).
   var DISCARDABLE = { held_honeypot: 1, held_review: 1, held_duplicate: 1, needs_attention: 1, retry: 1 };
 
-  // All filters default to "" (show everything) and run client-side over the
-  // loaded rows, so the count chips can double as one-click filters.
+  // Filters run client-side over the loaded rows, so the count chips can double
+  // as one-click filters.
   //   intake   — an INTAKE_LABELS value ("Received", "Error", …)
   //   response — a RESPONSE_LABELS value, or "open" (everything not Closed)
-  var state = { intake: "", response: "", form: "", search: "" };
+  // The page opens on the WORK QUEUE, not the archive: response defaults to
+  // "open" so a closed submission is out of the way until someone asks for it.
+  // "Clear filters" still clears to "" (show everything) — that is what clear
+  // means, and it is the one control that reaches the closed rows in the grid.
+  var state = { intake: "", response: "open", form: "", search: "" };
   var rows = [];                 // the loaded submissions
   var countsCache = {};          // last /submissions counts, so chips redraw on filter
   var sortKey = null, sortDir = 1;
@@ -1393,6 +1397,9 @@
     }
   })();
   fillSelect($("formFilter"), FORMS, "All forms");
+  // Show the selects the state they actually boot with — the response filter
+  // starts on "Open (not closed)", so the control has to say so.
+  syncFilterSelects();
   (async function init() {
     try {
       config = await api("/session");
