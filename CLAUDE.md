@@ -1233,10 +1233,12 @@ build on crm-test), `cgrant-entities-crm-handoff.md`,
 deployed and verified; `CHANGELOG.md` is the permanent record, `OPEN-ITEMS.md`
 holds anything still owed.*
 
-**Pushed through v0.210.0 on 2026-08-23** — so it is building on dev,
-crm-test and prod. The last live prod pass verified `0.206.0` (correctly-branded
-token-free pages, the four policy links resolving). What is *verified* is
-narrower than what is deployed — see each block.
+**Pushed through v0.213.1 on 2026-08-24, and confirmed live**: `/healthz`
+reports `0.213.1` on **both** crm-test and prod (checked 2026-08-26). That push
+also carried the six docs commits that had been sitting unpushed since v0.212.0.
+The last live prod pass that exercised a *feature* verified `0.206.0`
+(correctly-branded token-free pages, the four policy links resolving). What is
+*verified* is narrower than what is deployed — see each block.
 
 **Confirm that against the remote, do not trust this line.** On 2026-08-20 it
 still read "pushed through v0.202.2" while v0.203.x/v0.204.0 sat unpushed
@@ -1258,6 +1260,30 @@ sentence is a convenience.
   green) — nothing has ever run against a real CGrant.** The rating engine that
   turns rating deliverables automatic is its own arc:
   `prds/rating-engine-plan.md` + `crating-entity-crm-handoff.md`.
+
+- **v0.213.1 — a deleted CRM record is not a failed close.** Closing an
+  info-request submission in `/ops` answered with a red "the CRM
+  information-request record couldn't be updated — its Request Status may be out
+  of date" whenever the `CInformationRequest` the delivery created had since been
+  deleted. The close had worked (the write-through is best-effort and runs after
+  the app-side save); what was wrong was the message. The standing rule this
+  established is worth more than the fix: **a 403/5xx and a 404 mean opposite
+  things to the reader** — the first says the write failed and the two may now
+  disagree, which is worth alarming about and worth retrying; the second says
+  there is nothing left to keep in step and no retry can ever help. `is_not_found`
+  in `core/espo.py` is the sibling of `is_forbidden`, and every other best-effort
+  mirror onto a CRM record still has that case buried in its `except EspoError`.
+  Shipped alongside it: `/ops` now **opens on the work queue** (Response status
+  defaults to *Open (not closed)*; the `total` chip is the one control that
+  reaches closed rows). **Deployed to both environments; the eyeball is owed** —
+  `OPEN-ITEMS.md` § *Live verification owed*.
+
+  Worth knowing about the trigger, because it will recur on crm-test: the
+  nightly restore puts the **CRM** back at 04:00 UTC an hour before the app's
+  own Postgres is cleared at 05:00, so for that hour a submission row outlives
+  the CRM record it points at. The stale id is deliberately **not** rewritten —
+  it is the audit trail of what the delivery created — so the note recurs on
+  every status change for that submission, by design.
 
 - **v0.210.0 — the Client Administration engagement popup fills the window and
   can be edited.** The standing rules are in that app's section above. Two things
@@ -1281,18 +1307,6 @@ sentence is a convenience.
   sessions imports FROM assignments). Best-effort: an unreadable profile renders
   "—". **Verified in a stub harness only** — the fallback read is the path most
   prod rows take and has not been watched against a live CRM.
-
-- **v0.208.0 / v0.208.1 — inbound mail stops filing calendar invites, and the
-  Operations tab shows the plan it produced.** Both **deployed and verified on
-  production** on 2026-08-23: the cleanup archived **45 documents across 30
-  records, 45 of 45, no failures**, which is also the first real run of the
-  archive path (crm-test cannot rehearse it — its app database is emptied
-  nightly). That same sequence proved the tab fix: the first dry run is the one
-  that showed "done" and nothing else. The standing rules are in the Email
-  section above; the closing evidence is in `OPEN-ITEMS.md` § *Resolved*. The
-  one thing nobody has watched happen is a *new* invite arriving and being
-  skipped at filing time — the matcher itself is proven, since it is what
-  selected those 45 files.
 
 - **v0.205.0–v0.206.0 — the product stopped saying Cleveland** (Phase 0 of the
   chapter-network plan; worth doing whatever happens with the chapters).

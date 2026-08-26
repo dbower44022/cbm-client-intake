@@ -625,6 +625,36 @@ toggle.
     Blank is also the correct render when the profile read 403s, so the failure
     mode here is silent by design; the app logs a warning per denied profile.
 
+27. **Nobody has watched a *new* calendar invite arrive and be skipped at
+    filing time** (v0.208.0, carried forward from the CLAUDE.md status window
+    when that block was retired 2026-08-26). The cleanup half is settled — see
+    § *Resolved*, "The calendar invites filed as documents are gone" — and the
+    matcher itself is proven by it, since the matcher is what selected those 45
+    files. What has never been observed is the *live* path: an `.ics` arriving
+    on an inbound message and being dropped at the filing step while staying
+    visible in **View original**. It is an excluded part, not a non-attachment,
+    and that distinction lives only in where the list is applied. Confirm on
+    production by sending a meeting invite to info@, then checking the record's
+    Documents tab holds nothing new and the message still shows the attachment
+    in View original.
+
+28. **The v0.213.1 `/ops` changes are deployed to both environments and unseen**
+    (2026-08-26; `/healthz` reports `0.213.1` on crm-test and prod). Neither
+    half is risky, and neither has been looked at by a human:
+    - **Close with a deleted CRM record.** Open an info-request submission whose
+      `CInformationRequest` no longer exists (crm-test manufactures these on its
+      own — the CRM is restored at 04:00 UTC, the app's tables not until 05:00)
+      and close it. Expect the ordinary **green** "Closed — <reason>." with the
+      note appended, not a red warning, and expect the row to be closed. The
+      note recurs on every later status change for that submission by design:
+      the stale id is the audit trail of what the delivery created and is not
+      rewritten.
+    - **The page opens on the work queue.** Response status should boot on
+      *Open (not closed)* with the dropdown **showing** that (the boot-time
+      `syncFilterSelects()` is the half most likely to be wrong), and the
+      `total` chip should clear every filter and bring closed rows back. Worth a
+      minute because it changes what staff see first on a page they use daily.
+
 ## Resolved
 
 - **`Analytics Admin Team` exists in both CRMs** (was item 17, closed

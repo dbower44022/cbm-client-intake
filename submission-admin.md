@@ -89,6 +89,11 @@ that reconciliation on demand (safe to press any time).
 - **Three filters** (Intake status / Response status / Form), each offering
   **every** value, plus a live search. The Response-status filter also has an
   **Open (not closed)** shortcut for the work-queue view.
+- **The page opens on the work queue, not the archive** (v0.213.1): Response
+  status starts on **Open (not closed)**, so closed requests are out of the way
+  until you ask for them. To see them, either pick another Response status or
+  click the **`total`** chip, which clears every filter — that chip is the one
+  control that reaches closed rows.
 - **The count chips are clickable filters.** Each chip at the top —
   `Completed`, `Held-Email`, `Error`, … and `open` / `resolved` — applies the
   filter that produced its count when you click it (click again to clear); the
@@ -138,7 +143,12 @@ Three tabs, like the Client Management record pages.
   **reason** (Responded — resolved / Referred / Duplicate / No response
   needed / Spam) and optionally add a note; closing marks the request resolved
   *and*, on an information request, sets the matching CRM record's Request
-  Status to Closed, so the queue and EspoCRM stay in step. A closed request
+  Status to Closed, so the queue and EspoCRM stay in step. If that CRM record
+  has since been **deleted**, the close still happens and simply tells you
+  there was nothing left to update there — it is a note on a successful close,
+  not a failure (v0.213.1). A red warning means something different: the CRM
+  write was *refused*, so the two may now disagree and the close is worth
+  repeating once the reason is fixed. A closed request
   shows its reason and a **Reopen** button. Re-drive / Discard appear when
   applicable. (There's no manual status dropdown any more — the State column
   works itself out from the conversation.)
