@@ -20,9 +20,11 @@ is a table at the end of this file linking to them.
 
 # Part 1 — Ruled, and what follows
 
-**Doug ruled D1, D2 and D3 on 2026-08-26.** They are recorded in
-[DECISIONS.md](DECISIONS.md); what each one now *obliges* is below. **D4 is still
-open** and is the only decision blocking work.
+**Doug ruled D1, D2 and D3 on 2026-08-26, and the cadence half of D4 the same
+day.** They are recorded in [DECISIONS.md](DECISIONS.md); what each one now
+*obliges* is below. **No decision is currently blocking work** — the one still
+open (which machine hosts staging) does not need answering until Phase 6 is in
+sight.
 
 ---
 
@@ -74,49 +76,40 @@ this repo owns under either answer, which is why the build order does them first
 
 ---
 
-## D4. Release cadence, and which machine is the staging tenant
+## D4. Which machine is the staging tenant
 
-**Still open. The only decision now blocking work.**
+**Half ruled. The cadence is settled; the machine is not — and it is not urgent.**
 
 ### What this is
 
-Ruling 7 says all chapters move together on a release train: every merge lands on
-a services-org staging instance, it soaks, then on a fixed cadence a tag is cut
-and every chapter moves to that tag at once. Two details were never settled, and
-[Phase 2](phase-2-release-train.md) cannot start without them.
+**Ruled (2026-08-26): the release train leaves WEEKLY**, the soak being the week
+itself, with a security fix allowed to bypass the cadence but never staging. That
+was the half of D4 that shaped Phase 2's design, and it is now recorded in
+[phase-2](phase-2-release-train.md).
 
-**Cadence.** How often the train leaves. This decides how long a finished feature
-waits before a chapter sees it, and therefore how much pressure builds behind the
-change-request route — already named as the project's top risk, because a slow
-route is what makes a chapter ask for its own admin, and the first exception
-granted ends ruling 4.
-
-**The staging tenant.** Which machine soaks the release. CBM's crm-test app
+What is still open is **which machine soaks the release**. CBM's crm-test app
 already does three jobs — pre-production review gate, training sandbox, and
 release-test environment — with a nightly reset keeping them from ruining each
 other.
 
-### The decision
+| Option | Assessment |
+|---|---|
+| **Repurpose CBM's crm-test** | Cheapest, and it already has the reset machinery and the training data. **But it makes CBM's sandbox the network's gate** — the "Cleveland as landlord" shape ruling 1 exists to avoid — and it would be that machine's fourth job. |
+| **Stand up a services-org instance** | Costs a droplet and a DO app. Keeps the guinea pig a machine the co-op owns, which is what ruling 7 actually says. |
 
-| Question | Option | Assessment |
-|---|---|---|
-| Cadence | **Weekly**, the soak being the week itself | Recommended. Short enough that chapters do not route around it, long enough that a bad merge is caught by real use. |
-| | Fortnightly or monthly | Every extra week is pressure on ruling 4. Monthly means a chapter waits up to a month for a fix it has already seen work on staging. |
-| Staging tenant | **Repurpose CBM's crm-test** | Cheapest, and it already has the reset machinery and the training data. **But it makes CBM's sandbox the network's gate** — the "Cleveland as landlord" shape ruling 1 exists to avoid — and it is already carrying three jobs. |
-| | Stand up a new services-org instance | Costs a droplet and a DO app. Keeps the guinea pig a machine the co-op owns, which is what ruling 7 actually says. |
+**Recommendation: a services-org machine eventually, crm-test as the interim, and
+do not decide yet.** Standing one up is only worth the money when there is a
+second chapter to soak *for*. Until then crm-test is what exists and it works.
 
-**Recommendation: weekly cadence, and a new instance rather than repurposing
-crm-test — but not yet.** Standing up the staging tenant is only worth doing when
-there is a second chapter to soak *for*. Rule the cadence now (it is free, and it
-shapes Phase 2's design); defer the machine until Phase 6 is in sight, and record
-crm-test as the interim.
+**This blocks almost nothing.** Tag cutting, the image stamp, `deploy_on_push`
+and pinned-tag deploys are all independent of where staging lives — only the soak
+step itself is not.
 
 ### Steps
 
-1. Rule the cadence.
-2. Record it in [DECISIONS.md](DECISIONS.md) against proposals 1 and 2.
-3. Note in [phase-2](phase-2-release-train.md) that crm-test is the interim
-   staging tenant and a dedicated instance is a Phase 6 prerequisite.
+1. When Phase 6 comes into view, decide.
+2. Record it in [DECISIONS.md](DECISIONS.md) against proposal 2, which currently
+   argues the opposite of my present recommendation and says so.
 
 ---
 
@@ -370,6 +363,52 @@ on the deployed **web** component.
 
 ---
 
+## R5. Cut the first release tag, and make cutting one cheap
+
+**Newly unblocked by the weekly-cadence ruling.**
+
+### What this is
+
+The release train identifies an instance by a **pair** — `(releaseTag,
+standardVersion)` — and an instance is conformant when it holds the pair the
+train pinned, not when each half independently looks plausible. R0 builds the home
+for the second half. This is the first half, and it does not exist at all:
+**`git tag | wc -l` in this repo is 0.** The train's tag has never been cut.
+
+**Cutting tags is inert and can be done today.** A git tag changes no deployment,
+breaks nothing, and costs nothing to undo. What is *not* inert — turning
+`deploy_on_push` off and moving Cleveland's production to pinned-tag deploys — is
+the large operational change at the heart of [Phase 2](phase-2-release-train.md)
+and stays there. Do not conflate them: this task is the tagging half only.
+
+**Why the cadence ruling makes it urgent rather than tidy.** Weekly means roughly
+fifty tags a year. If cutting one is a half-hour ritual of remembering the
+commands, it will not happen fifty times — the cadence will quietly become "when
+someone remembers", which is the failure mode the train exists to prevent. The
+tag has to be one command from the start, while there is no pressure on it.
+
+### Steps
+
+1. Decide the tag format and write it down. Recommend `v<version>` matching
+   `pyproject.toml`'s version, so `releaseTag` and `version` are legible against
+   each other — they will differ after a hotfix rebuild, which is the whole reason
+   both exist.
+2. Add `scripts/cut_release.sh`: assert a clean tree on `main`, read the version
+   from `pyproject.toml`, refuse if that tag already exists, create an
+   **annotated** tag (annotated, not lightweight — it carries the tagger and date
+   the fleet console will want), and print the push command rather than pushing.
+   Pushing stays Doug's, per the repo's standing convention.
+3. Cut `v0.213.0` — or whatever HEAD is by then — as the first one. It is a
+   marker, not a promotion; nothing about how the apps deploy changes.
+4. Wire `RELEASE_TAG` into the image. R1 adds the `ARG`/`ENV` pair to the
+   `Dockerfile`; this supplies the value, as an env var with
+   **`scope: RUN_AND_BUILD_TIME`** in each overlay. That scope is already in use
+   in `.do/app.prod.yaml`, so the mechanism is proven here rather than assumed.
+5. Confirm `/healthz` reports the tag on crm-test and `null` on a local build.
+6. **Stop there.** `deploy_on_push` stays on until Phase 2 proper.
+
+---
+
 # Part 3 — Blocked
 
 ## B1. The applier itself
@@ -451,6 +490,15 @@ and linked from here so the finding is not lost between two lists.
 ---
 
 # Closed
+
+- **Release cadence ruled: weekly** (Doug, 2026-08-26). The soak is the week
+  itself; a security fix may bypass the cadence but never staging. It unblocked
+  the tagging half of Phase 2 (§ R5) and left one sub-question — which machine
+  hosts staging — which does not need answering until Phase 6 (§ D4). Two
+  consequences are designed around rather than discovered, both recorded in
+  [phase-2](phase-2-release-train.md): weekly needs a **day** (recommend Tuesday
+  or Wednesday, so a bad promotion meets people at their desks), and fifty tags a
+  year means cutting one must be a single command.
 
 - **D1, D2 and D3 ruled** (Doug, 2026-08-26). The configuration stamp is a new
   `CNetworkStandard` entity, not an EspoCRM setting and not a log row — build

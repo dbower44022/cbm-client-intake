@@ -46,11 +46,29 @@ included.
 
 ---
 
+## Cadence — ruled weekly (Doug, 2026-08-26)
+
+**The train leaves weekly, and the soak is the week itself.** Every merge lands on
+staging immediately; once a week a tag is cut and every chapter moves to it
+together. A security fix may bypass the cadence — never staging.
+
+Two consequences worth designing around rather than discovering:
+
+- **Weekly needs a day**, and the day is not a detail. Cutting late in the week
+  means a bad promotion is discovered by a chapter's staff on a Monday with
+  nobody having watched it land. **Recommend cutting Tuesday or Wednesday**, so
+  the people who can roll it back are at their desks for the two days that
+  matter. Doug's to override; it does not block the build.
+- **A week is short enough that the tag has to be cheap to cut.** If cutting a
+  release is a half-hour ritual, fifty of them a year will not happen and the
+  cadence quietly becomes "when someone remembers". Tag cutting and the image
+  stamp (Stamp A) should be one command.
+
 ## Open
 
-- **Cadence is unruled** — [DECISIONS.md](DECISIONS.md) proposal 1 (weekly, with
-  the soak being the week itself) and proposal 2 (the staging instance is CBM's
-  current crm-test app, repurposed rather than newly stood up).
+- **Which machine is the staging tenant** — [TASKS.md](TASKS.md) § D4. Nothing in
+  this phase except the soak itself waits on it; tag cutting, `deploy_on_push`
+  and the pinned-tag deploys are all independent of where staging lives.
 - **`deploy_on_push` left on at a chapter** is named in the risk list as one of the
   ways this whole plan fails quietly. Whatever this phase builds, that specific
   setting needs a detector in the [fleet console](phase-5-fleet-console.md), not
