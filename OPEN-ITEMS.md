@@ -6,6 +6,19 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+27. **The Email Guide's published copy has drifted from the repo**
+    (2026-08-26, found by the first live run of `scripts/publish_docs.py`).
+    `email-executive-summary.md` is 6963 characters in the repo against 6682 on
+    the site. The manifest already marks it `check_only` — the published copy
+    was written for that site's audience — so the checker reports the gap and
+    refuses to publish over it. **The decision owed is whether those ~280
+    characters are deliberate.** If they are, the entry keeps its note and the
+    drift is permanent noise on every run; if they are not, reconcile the two
+    and make the entry publishable. `data-model.md` needs no decision: it is
+    HTML-authored on the site with PNGs replacing the mermaid blocks, so it
+    cannot be compared at all and is synced by hand
+    ([[data-model-erd-published]]).
+
 26. **Two live CRM defects the chapter conformance check found** (2026-08-21).
     Both surfaced by the first run of `scripts/preflight_crm.py` against the two
     live instances, and both are Cleveland defects rather than chapter work —

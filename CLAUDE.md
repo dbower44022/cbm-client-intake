@@ -134,6 +134,8 @@ docker build -t cbm-intake . && docker run --rm -p 8099:8080 cbm-intake  # prod-
 ./scripts/deploy.sh                      # deploy to DO App Platform (see DEPLOYMENT.md)
 uv run python scripts/sync_form_options.py          # dry-run: form dropdowns vs live CRM enums
 uv run python scripts/sync_form_options.py --write  # apply the sync (review the git diff)
+uv run python scripts/publish_docs.py               # check every docs-site twin for drift
+uv run python scripts/publish_docs.py --publish training-guide.md   # publish one
 ```
 
 ## Architecture
@@ -1113,6 +1115,18 @@ Conventions. Plan: `prds/action-history-plan.md`;
 **Start here for status:** `CHANGELOG.md` (per-version detail — the value
 `/healthz` reports is the deploy marker) and `OPEN-ITEMS.md` (everything
 unresolved: CRM prerequisites, live verification owed, cleanups, decisions).
+
+**"Keep the two in sync" is checked now, rather than remembered.**
+`scripts/publish_docs.py` compares every published twin against its repo
+original and exits non-zero on drift, so it doubles as a CI check; `--publish`
+pushes one. The `PUBLISHED` tuple in that script is the registry and credentials
+come from `.env`, never an app env var — the application does not publish docs.
+**That site is readable without signing in**, so a publish is refused if the
+text still carries a live `@cbmentors.org` address or a credential, and the
+repo-only `> Published to the docs site` header is stripped from the twin. Two
+entries are `check_only` because their live copy differs on purpose
+(`data-model.md`'s PNGs, the Email Guide's rewording): drift is reported,
+publishing refused.
 
 | Doc | What it covers |
 |---|---|
