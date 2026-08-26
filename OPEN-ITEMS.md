@@ -638,24 +638,30 @@ toggle.
     Documents tab holds nothing new and the message still shows the attachment
     in View original.
 
-28. **The v0.213.1 `/ops` changes are deployed to both environments and unseen**
-    (2026-08-26; `/healthz` reports `0.213.1` on crm-test and prod). Neither
-    half is risky, and neither has been looked at by a human:
-    - **Close with a deleted CRM record.** Open an info-request submission whose
-      `CInformationRequest` no longer exists (crm-test manufactures these on its
-      own — the CRM is restored at 04:00 UTC, the app's tables not until 05:00)
-      and close it. Expect the ordinary **green** "Closed — <reason>." with the
-      note appended, not a red warning, and expect the row to be closed. The
-      note recurs on every later status change for that submission by design:
-      the stale id is the audit trail of what the delivery created and is not
-      rewritten.
-    - **The page opens on the work queue.** Response status should boot on
-      *Open (not closed)* with the dropdown **showing** that (the boot-time
-      `syncFilterSelects()` is the half most likely to be wrong), and the
-      `total` chip should clear every filter and bring closed rows back. Worth a
-      minute because it changes what staff see first on a page they use daily.
-
 ## Resolved
+
+- **The v0.213.1 `/ops` changes are verified** (was item 28, raised and closed
+  2026-08-26). Doug exercised **both halves on crm-test** the day after they
+  shipped, and both behaved:
+  - Closing an info-request submission whose `CInformationRequest` no longer
+    exists gives the ordinary **green** confirmation with the "nothing to update
+    there" note, and the row closes. crm-test manufactures this condition on its
+    own every night — the CRM is restored at 04:00 UTC, the app's tables not
+    until 05:00 — so it is the one environment where the case is easy to reach
+    deliberately.
+  - The page opens on **Open (not closed)** with the dropdown showing it, and
+    the `total` chip clears every filter and brings closed rows back. The
+    boot-time `syncFilterSelects()` was the half most likely to be wrong; it
+    is not.
+
+  **Not separately re-checked on production, and deliberately not tracked as
+  owed.** Neither half has an environment-specific dependency: the write-through
+  runs under the org-wide API key on both, and the filter default is identical
+  static JS. Worth knowing rather than verifying — prod is the real info@ queue,
+  so staff there will notice the front page now opens on open work instead of
+  the whole archive.
+
+
 
 - **`Analytics Admin Team` exists in both CRMs** (was item 17, closed
   2026-08-21). Nobody had checked; the first run of the rewritten conformance

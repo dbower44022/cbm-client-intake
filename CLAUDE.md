@@ -113,7 +113,10 @@ training sandbox, and since 2026-08-22 a nightly reset runs in two halves — th
 CRM at **04:00 UTC** (droplet cron) and the app's own Postgres an hour later
 (the `delivery-worker`, `SANDBOX_NIGHTLY_RESET`). **Anything you create or edit
 on crm-test during the day is gone by morning**, so a live verification left
-half-finished overnight has to start again. Pause a night with
+half-finished overnight has to start again. The two halves are an hour apart, so
+**between 04:00 and 05:00 UTC app rows outlive the CRM records they point at** —
+a submission whose `CInformationRequest` has already been restored away is the
+normal case there, not a defect (see the 403-vs-404 gotcha). Pause a night with
 `touch /var/www/espocrm/.sandbox-hold` on the droplet (CRM half only — clear the
 worker flag too if the app-side data matters). What survives by design: the CRM
 team's Entity Manager work (it lives in files, and the reset rebuilds from it),
@@ -1053,6 +1056,19 @@ Conventions. Plan: `prds/action-history-plan.md`;
   unrecognized ones rather than letting one value 400 the whole create. It never
   touches system discriminators. Fails open. This is why re-driving a
   drift-failed submission succeeds.
+- **A 403 and a 404 from the CRM mean OPPOSITE things to the person reading the
+  message** — and a best-effort mirror that lumps them together cries wolf. A
+  403/5xx means the write was refused, so the app and the CRM may now disagree:
+  worth alarming about, and worth retrying. A **404 means the record is gone**
+  (deleted, or soft-deleted so an ordinary user cannot see it): there is nothing
+  left to keep in step and no retry can ever help, so it is a fact to state on a
+  successful action, not a warning. `core.espo.is_not_found` is the sibling of
+  `is_forbidden`; `ops.router._writethrough_request_status` is the worked
+  example, returning `(updated, warning, note)` so the two land in different
+  colours. **Every other best-effort mirror onto a CRM record still has this
+  case buried in its `except EspoError`** — check before adding another.
+  A stale id is deliberately NOT rewritten when this happens: it is the audit
+  trail of what the delivery created, so the note recurs by design.
 - **Implausible phone numbers are dropped, not fatal** — `e164_or_none` returns
   None for <10 or >15 digits, and the Contact create omits the field rather than
   losing the lead. `create_dropping_invalid` handles a CRM-side `valid`/`pattern`
@@ -1261,30 +1277,6 @@ sentence is a convenience.
   green) — nothing has ever run against a real CGrant.** The rating engine that
   turns rating deliverables automatic is its own arc:
   `prds/rating-engine-plan.md` + `crating-entity-crm-handoff.md`.
-
-- **v0.213.1 — a deleted CRM record is not a failed close.** Closing an
-  info-request submission in `/ops` answered with a red "the CRM
-  information-request record couldn't be updated — its Request Status may be out
-  of date" whenever the `CInformationRequest` the delivery created had since been
-  deleted. The close had worked (the write-through is best-effort and runs after
-  the app-side save); what was wrong was the message. The standing rule this
-  established is worth more than the fix: **a 403/5xx and a 404 mean opposite
-  things to the reader** — the first says the write failed and the two may now
-  disagree, which is worth alarming about and worth retrying; the second says
-  there is nothing left to keep in step and no retry can ever help. `is_not_found`
-  in `core/espo.py` is the sibling of `is_forbidden`, and every other best-effort
-  mirror onto a CRM record still has that case buried in its `except EspoError`.
-  Shipped alongside it: `/ops` now **opens on the work queue** (Response status
-  defaults to *Open (not closed)*; the `total` chip is the one control that
-  reaches closed rows). **Deployed to both environments; the eyeball is owed** —
-  `OPEN-ITEMS.md` § *Live verification owed*.
-
-  Worth knowing about the trigger, because it will recur on crm-test: the
-  nightly restore puts the **CRM** back at 04:00 UTC an hour before the app's
-  own Postgres is cleared at 05:00, so for that hour a submission row outlives
-  the CRM record it points at. The stale id is deliberately **not** rewritten —
-  it is the audit trail of what the delivery created — so the note recurs on
-  every status change for that submission, by design.
 
 - **v0.210.0 — the Client Administration engagement popup fills the window and
   can be edited.** The standing rules are in that app's section above. Two things
