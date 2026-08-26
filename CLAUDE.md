@@ -1176,6 +1176,12 @@ review documents those arcs were built from (including
 `reliability-review-2026-07-17.md` at the repo root, whose six hardening phases
 are all implemented).
 
+**How to apply any of them**, step by step — author the handoff, crm-test first,
+rebuild, verify the shape AND the grants (twice: as the org-wide API key and as a
+real non-admin), soak, then production at the Sunday 17:00 UTC slot:
+`prds/chapter-network/crm-update-runbook.md`. Its § 7 is the twelve traps this
+project has actually been bitten by.
+
 **CRM build handoffs** (one file per pending or completed CRM change, written in
 Entity Manager vocabulary — [[crm-specs-use-entity-manager-terms]]):
 **`GRANT-CRM-FIX-RUNBOOK.md`** (the ordered do-this-next list for the grant

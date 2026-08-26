@@ -153,7 +153,9 @@ enums, no formulas.** That is the design, not an omission.
 ### Steps
 
 The full specification is written: **`cnetworkstandard-entity-crm-handoff.md`**
-at the repo root, in Entity Manager vocabulary. In outline:
+at the repo root, in Entity Manager vocabulary. Follow
+[crm-update-runbook.md](crm-update-runbook.md) to apply it — this is the first
+change to go through that procedure. In outline:
 
 1. Create the entity on **crm-test**, typing the name **`NetworkStandard`
    without the `C`** — EspoCRM prepends it unconditionally, and typing
@@ -490,6 +492,17 @@ and linked from here so the finding is not lost between two lists.
 ---
 
 # Closed
+
+- **The release slot is Sunday 17:00 UTC, and the CRM-update procedure is
+  written** (2026-08-26). [crm-update-runbook.md](crm-update-runbook.md) is the
+  twelve-step procedure for getting a configuration change onto every instance —
+  written for today's by-hand reality with a section on what changes when the
+  applier lands, because the *shape* does not change, only who performs two of
+  the steps. Two things it settles that were previously folklore: the order is
+  always crm-test then production, and verification is **two** checks, one as the
+  org-wide API key and one as a real non-admin, because an admin bypasses ACL and
+  proves nothing. Flagged in passing: 17:00 UTC is Sunday **afternoon** in
+  Cleveland (13:00 EDT), not night.
 
 - **Release cadence ruled: weekly** (Doug, 2026-08-26). The soak is the week
   itself; a security fix may bypass the cadence but never staging. It unblocked

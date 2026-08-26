@@ -46,19 +46,35 @@ included.
 
 ---
 
-## Cadence — ruled weekly (Doug, 2026-08-26)
+## Cadence — ruled weekly, Sunday 17:00 UTC (Doug, 2026-08-26)
 
-**The train leaves weekly, and the soak is the week itself.** Every merge lands on
-staging immediately; once a week a tag is cut and every chapter moves to it
-together. A security fix may bypass the cadence — never staging.
+**The train leaves every Sunday at 17:00 UTC, and the soak is the week itself.**
+Every merge lands on staging immediately; at the Sunday slot a tag is cut and
+every chapter moves to it together. A security fix may bypass the cadence —
+never staging.
+
+**Worth stating once, because the slot was described as "Sunday night": 17:00 UTC
+is Sunday *afternoon* in Cleveland** — 13:00 EDT in summer, 12:00 EST in winter.
+It is evening in the UK (18:00 BST / 17:00 GMT) and Sunday night in central
+Europe. If the intent was "late enough that nobody is working", the Cleveland
+slot is the middle of Sunday; if the intent was a UTC-evening window that suits a
+future non-US chapter, it is exactly right. Recorded as ruled either way — the
+step-by-step procedure in [crm-update-runbook.md](crm-update-runbook.md) uses
+17:00 UTC throughout.
+
+The choice has one thing going for it that a weekday slot does not: **the CRM
+half of a promotion is the risky half**, and Sunday is the day with the fewest
+staff mid-transaction in a CRM being altered underneath them.
 
 Two consequences worth designing around rather than discovering:
 
-- **Weekly needs a day**, and the day is not a detail. Cutting late in the week
-  means a bad promotion is discovered by a chapter's staff on a Monday with
-  nobody having watched it land. **Recommend cutting Tuesday or Wednesday**, so
-  the people who can roll it back are at their desks for the two days that
-  matter. Doug's to override; it does not block the build.
+- **The day is settled and it is Sunday**, which trades away the thing a midweek
+  cut buys — people at their desks when it lands — for the thing Sunday buys, an
+  empty CRM at the moment it is altered. That trade is fine, but it means
+  **nobody is watching by default**, so the promotion has to report its own
+  outcome rather than relying on someone noticing. The conformance check's JSON
+  result and the fleet console are what make an unattended Sunday cut safe; until
+  those exist, a human confirms the Monday-morning state (runbook step 12).
 - **A week is short enough that the tag has to be cheap to cut.** If cutting a
   release is a half-hour ritual, fifty of them a year will not happen and the
   cadence quietly becomes "when someone remembers". Tag cutting and the image

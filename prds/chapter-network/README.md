@@ -27,7 +27,7 @@ follows from them.
 |---|---|---|
 | **[0 — De-Cleveland](phase-0-decleveland.md)** | **Substantially delivered.** v0.205.0–v0.206.0, deployed and verified on prod: `{{org}}`, `CHAPTER_TOKENS_URL`, the guard test, the four policy URLs. | A browser verification pass — the last thing owed |
 | **[1 — CRM config as an artifact](phase-1-crm-config.md)** | **In progress.** The interface contract is written; the conformance check is built (`ac6f1b4`) and has been run against both live CRMs. | The week's tranche: `crmConfig` at `/healthz`, Stamp B's home, the PRE_DEPLOY gate |
-| **[2 — Release train](phase-2-release-train.md)** | Not started, but **cadence is ruled: weekly** (2026-08-26). Zero git tags exist in this repo. | Cut the first tag and make cutting one cheap ([TASKS.md](TASKS.md) § R5) |
+| **[2 — Release train](phase-2-release-train.md)** | Not started, but **cadence is ruled: weekly, Sunday 17:00 UTC** (2026-08-26), and the CRM-side procedure is written ([crm-update-runbook.md](crm-update-runbook.md)). Zero git tags exist in this repo. | Cut the first tag and make cutting one cheap ([TASKS.md](TASKS.md) § R5) |
 | **[3 — Spec generation + secrets](phase-3-spec-secrets.md)** | Not started. | Nothing blocks it; it also fixes today's single-laptop deploy dependency |
 | **[4 — Public pages](phase-4-public-pages.md)** | Not started. Substance is in `prds/public-mentor-pages-plan.md`. | — |
 | **[5 — Fleet console](phase-5-fleet-console.md)** | Not started. | Consumes Phases 1 and 2; owns nothing until they land |
@@ -51,6 +51,7 @@ are in **[DECISIONS.md](DECISIONS.md)**.
 | `README.md` | This. Orientation and current state. | A phase changes state |
 | [`DECISIONS.md`](DECISIONS.md) | The eight rulings, the seven proposals awaiting a ruling, the decision log, and the open questions nobody owns yet | Doug rules something |
 | [`TASKS.md`](TASKS.md) | The project's own open items. Each one: what the issue is, the options and a recommendation where a decision is owed, then steps | Every working session |
+| [`crm-update-runbook.md`](crm-update-runbook.md) | **How to get a configuration change onto every CRM, step by step.** The procedure, the verification, and the twelve traps this project has been bitten by | The procedure changes — chiefly when the applier lands |
 | [`interface-contract.md`](interface-contract.md) | C1–C10 and both version stamps: what any CRM-config applier must satisfy | Rarely. It is meant to be stable, and it has a reader outside this repo |
 | `phase-0…6-*.md` | One file per phase, each closable on its own | Work on that phase |
 | [`governance-and-exit.md`](governance-and-exit.md) | Change governance, non-payment, the exit kit | The organizational design changes |
