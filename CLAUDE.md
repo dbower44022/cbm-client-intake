@@ -1151,7 +1151,8 @@ Entity Manager vocabulary — [[crm-specs-use-entity-manager-terms]]):
 **`GRANT-CRM-FIX-RUNBOOK.md`** (the ordered do-this-next list for the grant
 build on crm-test), `cgrant-entities-crm-handoff.md`,
 `crating-entity-crm-handoff.md`,
-`cintake-submission-*.md`, `cinformation-request-entity.md`,
+`cnetworkstandard-entity-crm-handoff.md` (the chapter network's config-version
+stamp — pending on both CRMs), `cintake-submission-*.md`, `cinformation-request-entity.md`,
 `cconversation-entity.md`, `cevent-entities-crm-handoff.md`,
 `csession-*.md`, `cmentorprofile-*.md`, `clastcontactdate-field.md`,
 `documentsfolderurl-crm-field.md`, `emailtemplate-et-crm-prereqs.md`,

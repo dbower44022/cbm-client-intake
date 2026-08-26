@@ -178,15 +178,23 @@ be outstanding on production; it is now in `OPEN-ITEMS.md`, because a chapter's
 CRM-native sends would carry whatever that field says regardless of what the app
 renders.
 
-## 6. The logo — Phase 0 would be *introducing* one, not parameterizing one
+## 6. The logo — ruled out (Doug, 2026-08-26)
 
 **Verified: the application contains no image asset of any kind.** No `.svg`,
 `.png`, `.jpg`, `.ico`, `.webp` or `.gif` outside the vendored Jodit editor, no
 `<link rel="icon">` on any page, and every hit for "logo" in the codebase is the
 word *logout*. The plan's "per-chapter `tokens.css` + logo" therefore describes a
 **new feature** — a header/logo slot on 18 pages, an asset-serving path, and a
-sizing contract — not a find-and-replace. **Raised, not built.** It is a scope
-question for Doug and it is not required by the safety property.
+sizing contract — not a find-and-replace.
+
+**Ruled 2026-08-26: nothing now.** Chapters get colours, not marks. The favicon
+was offered alongside it — there is none on any page today, which is a Cleveland
+gap rather than a chapter question — and was declined in the same breath.
+
+So this is **closed, not deferred**: "per-chapter `tokens.css` + logo" comes out
+of the plan wording rather than becoming a backlog item, and Phase 0 no longer
+waits on it. If a chapter ever asks for a mark, this section is the measurement
+of what it would cost, and it starts from zero.
 
 ## 7. `tokens.css` — the override mechanism
 
@@ -247,7 +255,8 @@ everything it covers.
   WPEngine staging host rather than the production site, which is a live
   Cleveland defect. Bundling a decision into a mechanical sweep is how the
   wrong URL ends up on a consent checkbox. Doug's call — see § 4.
-- **The logo slot** — § 6. A feature, not a parameterization.
+- **The logo slot** — § 6. A feature, not a parameterization, and **ruled out
+  entirely on 2026-08-26** rather than deferred.
 - **The hardcoded timezone** — § 2. Phase 3.
 
 ## 8. Explicitly left alone, and why
@@ -274,9 +283,10 @@ everything it covers.
 | Item | Kind | Where it is tracked |
 |---|---|---|
 | Live verification: no-flicker in a real browser, the two authenticated direct-read pages, the two `<meta cbm-org>` readers, the `/setup` round trip | verification | `OPEN-ITEMS.md` § *Live verification owed* |
-| The logo slot | **decision** — a feature, not a parameterization | [DECISIONS.md](DECISIONS.md) § *Open questions* |
+| ~~The logo slot~~ | **Ruled out 2026-08-26** — no logo, no favicon. Closed, not deferred | [DECISIONS.md](DECISIONS.md) § *Decisions taken* |
 | Hardcoded `America/New_York` in four files | deferred by design | [Phase 3](phase-3-spec-secrets.md) |
 | The prod CRM's *Outbound Emails From Name* reading "Cleveland Business Mentoring" | CRM-side, Doug's | `OPEN-ITEMS.md` |
 
-Phase 0 closes when the verification list is done and the logo question is ruled.
-Neither blocks any other phase.
+The logo question is ruled, so **Phase 0 now closes on the verification list
+alone** — a browser pass nobody has done, set out step by step in
+[TASKS.md](TASKS.md) § V1. Nothing in it blocks another phase.

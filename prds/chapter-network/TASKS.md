@@ -18,198 +18,65 @@ is a table at the end of this file linking to them.
 
 ---
 
-# Part 1 — Decisions waiting on Doug
+# Part 1 — Ruled, and what follows
 
-Each of these blocks work that is otherwise ready. They are here rather than in
-[DECISIONS.md](DECISIONS.md) because a task is stalled behind each one;
-`DECISIONS.md` holds the organizational rulings that stall nothing.
-
----
-
-## D1. Where does the CRM record which configuration version it is running?
-
-### What this is
-
-Every chapter runs its own EspoCRM. The whole point of Phase 1 is that all of
-them hold the *same* configuration, and that we can tell at a glance which ones
-have drifted. That requires each CRM to carry a stamp saying "I am running
-configuration version X, applied on date Y" — the same way a database carries an
-Alembic migration number.
-
-**No such stamp exists anywhere today.** `/healthz` reports the *app* version
-(read from `pyproject.toml`) but nothing at all about the CRM's configuration.
-So the question "is this chapter's CRM up to date?" currently has no answer short
-of a full field-by-field sweep.
-
-Three properties decide where the stamp can live:
-
-- It describes the **CRM**, so it must survive the app being redeployed,
-  reconfigured or replaced entirely. That rules out an app environment variable.
-- Only the applier is entitled to write it. An env var could be edited by anyone
-  with the DigitalOcean console, and would then **lie** — worse than no stamp,
-  because the fleet console would believe it.
-- The app must be able to **read** it with the ordinary org-wide API key. If
-  reading it needs an admin login, we have dragged CRM admin credentials into
-  application runtime, which the interface contract (C2) exists to prevent.
-
-### The decision
-
-| Option | How it works | Cost / risk |
-|---|---|---|
-| **A. A single-record custom entity, `CNetworkStandard`** | A new EspoCRM entity holding one row, with fields `standardVersion`, `appliedAt`, `appliedBy`, `planFingerprint`, `appliedByTool`. | Needs a small CRM build (Entity Manager) on every instance — but the applier already drives Entity Manager, so creating it is inside the mechanism it already needs. Readable by the API key. Nothing else writes to it, so it cannot be clobbered by hand. |
-| **B. A key under EspoCRM's admin Settings** | Store the version string in the CRM's own settings. | Fewer moving parts, but **reading admin Settings requires an admin login**, which breaks C2. It also shares a surface that CBM staff and the CRM team edit by hand. |
-| **C. A `CActionLog` row** | Reuse the entity the app already writes to when it acts on its own initiative. | It exists already — but it is an append-only *history*, not a current-state assertion. Answering "what version is this" by scanning a log is the wrong shape, and gets slower forever. |
-
-**Recommendation: A, and the evidence for it firmed up today.** I probed
-crm-test's org-wide API key read-only: it reads custom entities and `Team` and
-`EmailTemplate` fine (HTTP 200), and it gets **HTTP 403 on `Role`**. That is not
-a preference — it is proof that admin-only surfaces are genuinely closed to the
-credential the app runs on, so option B would not merely be inelegant, it would
-not work without a second credential in the web tier.
-
-The cost of A is one CRM build handoff, which this repo does routinely and has a
-documented convention for.
-
-### Steps
-
-1. Write `cnetworkstandard-entity-crm-handoff.md` at the repo root, in the same
-   shape as the existing handoffs (`cgrant-entities-crm-handoff.md` is the most
-   recent example). It must be written in **Entity Manager vocabulary**, not
-   metadata vocabulary — see [[crm-specs-use-entity-manager-terms]], and note
-   EspoCRM will prepend a `C` to the entity name on its own, so type
-   `NetworkStandard`, not `CNetworkStandard`.
-2. Specify the five fields: `standardVersion` (varchar), `appliedAt` (datetime),
-   `appliedBy` (varchar), `planFingerprint` (varchar), `appliedByTool` (varchar).
-   All plain scalars; no links, no formulas, no enums to drift.
-3. Build it on **crm-test** first. Grant the org-wide API role **read** on the
-   new scope — that grant is the thing being tested, and it is easy to forget.
-4. Verify the read works with the API key and nothing else:
-   `GET /api/v1/CNetworkStandard?maxSize=1` with `X-Api-Key`. A **403 here means
-   the role grant was missed**; an empty 200 with `total: 0` is the correct
-   "built but never applied" state and is what you want to see.
-5. Only then build it on prod, and re-verify the same way.
-6. Record the outcome in [phase-1](phase-1-crm-config.md) and unblock task R1.
+**Doug ruled D1, D2 and D3 on 2026-08-26.** They are recorded in
+[DECISIONS.md](DECISIONS.md); what each one now *obliges* is below. **D4 is still
+open** and is the only decision blocking work.
 
 ---
 
-## D2. What happens on 2026-09-19, and who convenes the session before it?
+## A1. Convene the CRMBuilder requirements session — by 2026-09-19
+
+**Owner: Doug. This is the only dated commitment in the project.**
 
 ### What this is
+
+**Ruled (D2, 2026-08-26): the trigger date stands at 2026-09-19.**
 
 Phase 1's biggest deliverable is the **applier** — the program that takes a
 description of the correct CRM configuration and makes a chapter's CRM match it.
-There are two ways to get one.
+There are two ways to get one: adopt **CRMBuilder** (a separate repo that already
+has most of the machinery, including an **Audit** that reverse-engineers a live
+CRM — the only existing answer to the roles problem in R4), or **build our own**
+by generalizing `scripts/migrate_event_schema.py`.
 
-- **Adopt CRMBuilder** (the separate repo). A read-only review on 2026-08-18
-  found it already has most of the machinery: a CHECK→ACT deploy pipeline,
-  managers for roles, teams, email templates and entity settings, and — most
-  valuable of all — an **Audit** that reverse-engineers a live CRM into the same
-  format the engine consumes. That Audit is the answer to the single hardest
-  unknown in Phase 1 (see task R4, the roles problem), and we have nothing like
-  it here.
-- **Build our own**, generalizing `scripts/migrate_event_schema.py` from a
-  hand-written change list into a declarative desired state plus a runner.
+We cannot simply pick. CRMBuilder is governed requirement-first: its shape is not
+ours to assume, and we cannot oblige it to grow an interface it has not agreed
+to. Only a requirements session with Doug can answer its two questions — is the
+network standard a CRMBuilder *product capability* or a *CBM-network artifact
+that merely uses CRMBuilder*, and will it support headless execution.
 
-We cannot simply choose. CRMBuilder is governed **requirement-first** — its shape
-is not ours to assume, and we cannot write a plan obliging it to grow an
-interface it has not agreed to. The session that would settle it has a prompt
-written and waiting (`prompts/crmbuilder-chapter-network-prompt-v0.1.md`, which
-already carries our full interface contract), and **it has not been convened.**
-CRMBuilder's HEAD is still `db1dbef0`, dated 2026-08-10 — nothing has moved.
-
-**Why there is a date at all.** Without one, "wait for CRMBuilder" becomes an
-indefinite block on the one phase everything downstream assumes. The proposed
-date, 2026-09-19, was chosen so the decision lands *before* our own applier's
-write path starts — the build order deliberately puts the conformance check and
-the version stamps first, and those are safe under either answer. If we build our
-own applier and then adopt CRMBuilder anyway, roughly two to three weeks of work
-is genuinely thrown away: the directive executor, the plan-fingerprint plumbing
-and their tests.
-
-### The decision
-
-Two separate things need answering, and only you can do either.
-
-**First: will you convene the CRMBuilder requirements session, and by when?** It
-needs answers to two of its own questions — is the network standard a CRMBuilder
-*product capability* or a *CBM-network artifact that merely uses CRMBuilder*, and
-is headless execution something it will support.
-
-**Second: is 2026-09-19 the right date?**
-
-| Option | What it means | Cost |
-|---|---|---|
-| **A. Keep 2026-09-19.** | Convene the session in the next four weeks. If it has not run by that date, we build our own applier in full and accept the sunk cost deliberately. | Requires ~half a day of your time in the next four weeks. |
-| **B. Move the date out.** | More time to convene, but the applier does not start, and everything from Phase 2 onward waits on it. | Phase 1 stalls. Nothing else can fill the gap — the check and the stamps are only about four weeks of work and they are already partly done. |
-| **C. Decide now, without the session.** | Rule that the network standard is a CBM-network artifact, and build our own applier starting immediately. | Loses the CRMBuilder Audit, which is the only existing answer to the roles problem. Probably means solving R4 by hand. |
-
-**Recommendation: A, with one change — treat "convene the session" as the task
-and put a date on that instead.** The trigger as written fires on a session that
-nobody has scheduled, which makes it a deadline on an event rather than on a
-person. A date on *your* action ("I will run this session by 2026-09-12") makes
-it real; 2026-09-19 then becomes the fallback it was designed to be rather than
-the only thing carrying the weight.
+**What happens if the date passes with no session:** Layer 3 becomes permanent.
+We build our own applier in full, and the sunk cost is accepted **deliberately
+rather than by drift** — that is the entire purpose of having a date. If
+CRMBuilder is then adopted anyway, roughly two to three weeks is genuinely thrown
+away: the directive executor, the plan-fingerprint plumbing and their tests. The
+conformance check, the desired-state definition, the exit-code contract, the JSON
+result and both version stamps are *not* at risk — they are the app-derived half
+this repo owns under either answer, which is why the build order does them first.
 
 ### Steps
 
-1. Decide whether to convene, and put a date on it.
-2. If yes: run the session using `prompts/crmbuilder-chapter-network-prompt-v0.1.md`.
-   It is ready — its § *What the consumer requires* already carries C1–C10, and
-   as of today it points at [interface-contract.md](interface-contract.md) so the
-   session can be handed that file on its own.
-3. Record the answer in [DECISIONS.md](DECISIONS.md), and update
-   [phase-1](phase-1-crm-config.md) § *The decision trigger* to say which layer
-   is now the plan of record.
-4. Whichever way it goes, task B1 unblocks.
+1. Schedule the session. It needs roughly half a day.
+2. Run it from `prompts/crmbuilder-chapter-network-prompt-v0.1.md`. It is ready
+   and needs no preparation — its § *What the consumer requires* already carries
+   C1 through C10 by number, and it now cites
+   [interface-contract.md](interface-contract.md) so that file can be handed over
+   on its own.
+3. Record the answer in [DECISIONS.md](DECISIONS.md) and update
+   [phase-1](phase-1-crm-config.md) § *The decision trigger* to name which layer
+   is the plan of record.
+4. Either way, B1 unblocks the same day.
 
----
-
-## D3. Does this product have a logo — and should it have a favicon regardless?
-
-### What this is
-
-The chapter plan has said from the start that per-chapter branding is
-"`tokens.css` overrides plus a logo". The first half is built and shipped
-(`CHAPTER_TOKENS_URL`). The second half turns out to describe something that does
-not exist: **the application contains no image asset of any kind.** No `.svg`,
-`.png`, `.jpg`, `.ico`, `.webp` or `.gif` outside the vendored Jodit editor, and
-**no `<link rel="icon">` on any page** — every hit for "logo" in the codebase is
-the word *logout*.
-
-So "parameterize the logo" is not a find-and-replace. It is a new feature: a
-header slot on 18 pages, a path that serves the asset, and a sizing contract that
-stops one chapter's wide wordmark from breaking a layout that fits another's
-square mark.
-
-Worth separating out: the **missing favicon is a Cleveland defect today**, not a
-chapter question. Every tab of every one of these apps shows a blank default
-icon, and staff routinely have several open at once.
-
-### The decision
-
-| Option | What lands | Cost |
-|---|---|---|
-| **A. Nothing now.** | Keep the plan honest by deleting "plus a logo" from it. Chapters get colours, not marks. | Free. A chapter's staff see their colours but Cleveland's absence of a mark — which is survivable, since there is no mark today either. |
-| **B. Favicon only.** | One favicon, settable per chapter, added to the shared head. Treats the real defect and gives chapters the one branding surface people actually notice. | Small. One asset, one setting, one line in the shared page head, plus the same escaping treatment `ORGANIZATION_NAME` already gets. |
-| **C. Full logo slot.** | Header mark on all 18 pages, asset-serving path, sizing contract. | Real design work, and it is the first time this product would have a header image at all. Justified by chapters that may not exist. |
-
-**Recommendation: B now, C never until a second chapter is actually real.** B
-fixes something that is wrong for Cleveland today, which is the same test Phase 0
-held itself to and the reason Phase 0 was worth doing at all. C fails that test.
-
-### Steps
-
-1. Rule on it.
-2. If B: add a `FAVICON_URL` setting (empty default = today's behaviour exactly),
-   inject the `<link rel="icon">` through `core/branding.py`'s existing rewrite so
-   the nineteenth page cannot forget it, and extend
-   `tests/test_shared_branding.py` to assert it appears on every served page.
-3. Update [phase-0](phase-0-decleveland.md) § 6 and
-   [DECISIONS.md](DECISIONS.md) with the ruling either way.
+**If 2026-09-19 arrives with no session held**, that is not a failure to escalate
+— it is the ruling taking effect. Start B1 as Layer 3 and note the date it fired.
 
 ---
 
 ## D4. Release cadence, and which machine is the staging tenant
+
+**Still open. The only decision now blocking work.**
 
 ### What this is
 
@@ -218,14 +85,15 @@ a services-org staging instance, it soaks, then on a fixed cadence a tag is cut
 and every chapter moves to that tag at once. Two details were never settled, and
 [Phase 2](phase-2-release-train.md) cannot start without them.
 
-**Cadence.** How often the train leaves. This is the number that decides how long
-a finished feature waits before a chapter sees it, and therefore how much
-pressure builds behind the change-request route — which is already named as the
-project's top risk.
+**Cadence.** How often the train leaves. This decides how long a finished feature
+waits before a chapter sees it, and therefore how much pressure builds behind the
+change-request route — already named as the project's top risk, because a slow
+route is what makes a chapter ask for its own admin, and the first exception
+granted ends ruling 4.
 
-**The staging tenant.** Which machine soaks the release. Today CBM's crm-test app
-is already doing three jobs: pre-production review gate, training sandbox, and
-release-test environment, with a nightly reset that keeps them from ruining each
+**The staging tenant.** Which machine soaks the release. CBM's crm-test app
+already does three jobs — pre-production review gate, training sandbox, and
+release-test environment — with a nightly reset keeping them from ruining each
 other.
 
 ### The decision
@@ -233,29 +101,82 @@ other.
 | Question | Option | Assessment |
 |---|---|---|
 | Cadence | **Weekly**, the soak being the week itself | Recommended. Short enough that chapters do not route around it, long enough that a bad merge is caught by real use. |
-| | Fortnightly or monthly | Every extra week is pressure on ruling 4. Monthly means a chapter waits up to a month for a fix it has already seen work. |
-| Staging tenant | **Repurpose CBM's crm-test** | Cheapest, and it already has the reset machinery and the training data. **But it makes CBM's sandbox the network's gate**, which is exactly the "Cleveland as landlord" shape ruling 1 was written to avoid, and it is already carrying three jobs. |
+| | Fortnightly or monthly | Every extra week is pressure on ruling 4. Monthly means a chapter waits up to a month for a fix it has already seen work on staging. |
+| Staging tenant | **Repurpose CBM's crm-test** | Cheapest, and it already has the reset machinery and the training data. **But it makes CBM's sandbox the network's gate** — the "Cleveland as landlord" shape ruling 1 exists to avoid — and it is already carrying three jobs. |
 | | Stand up a new services-org instance | Costs a droplet and a DO app. Keeps the guinea pig a machine the co-op owns, which is what ruling 7 actually says. |
 
 **Recommendation: weekly cadence, and a new instance rather than repurposing
 crm-test — but not yet.** Standing up the staging tenant is only worth doing when
-there is a second chapter to soak *for*. Rule the cadence now (it is free and it
+there is a second chapter to soak *for*. Rule the cadence now (it is free, and it
 shapes Phase 2's design); defer the machine until Phase 6 is in sight, and record
-that crm-test is the interim.
+crm-test as the interim.
 
 ### Steps
 
 1. Rule the cadence.
 2. Record it in [DECISIONS.md](DECISIONS.md) against proposals 1 and 2.
 3. Note in [phase-2](phase-2-release-train.md) that crm-test is the interim
-   staging tenant and that a dedicated instance is a Phase 6 prerequisite.
+   staging tenant and a dedicated instance is a Phase 6 prerequisite.
 
 ---
 
 # Part 2 — Ready to build
 
 No decision needed. Listed in the order the plan's own build sequence argues for
-— the things that survive whatever D2 rules come first.
+— the things that survive whatever A1 concludes come first.
+
+---
+
+## R0. Build the `CNetworkStandard` entity in both CRMs
+
+### What this is
+
+**Ruled (D1, 2026-08-26): the CRM's configuration version lives in a new
+single-record custom entity, `CNetworkStandard`.**
+
+Every chapter runs its own EspoCRM, and the point of Phase 1 is that they all
+hold the same configuration. That needs each CRM to carry a stamp saying "I am
+running configuration version X, applied on date Y" — the CRM's equivalent of the
+Alembic version row in the app's Postgres. **No such stamp exists anywhere
+today**, so "is this chapter's CRM up to date?" currently has no answer short of
+a full field-by-field sweep.
+
+The two rejected alternatives are worth remembering, because both look cheaper:
+storing it under EspoCRM's admin **Settings** would need an admin login just to
+*read* the version, dragging admin credentials into application runtime — and a
+read-only probe of crm-test on 2026-08-24 proved that wall is real, with the
+org-wide API key returning HTTP 200 on `Team` and `EmailTemplate` and **403 on
+`Role`**. A **`CActionLog`** row is append-only history, and answering "what
+version is this" by scanning a log is the wrong shape and gets slower forever.
+
+**Nothing writes to this until the applier exists (B1), and building it now is
+deliberate.** An instance holding the entity with no row reads as *"configured to
+report, never applied to"* — the honest state of every instance today — and it
+lets R1 ship against a real scope rather than a hypothetical one.
+
+The build is the smallest in the repo: **one entity, six fields, no links, no
+enums, no formulas.** That is the design, not an omission.
+
+### Steps
+
+The full specification is written: **`cnetworkstandard-entity-crm-handoff.md`**
+at the repo root, in Entity Manager vocabulary. In outline:
+
+1. Create the entity on **crm-test**, typing the name **`NetworkStandard`
+   without the `C`** — EspoCRM prepends it unconditionally, and typing
+   `CNetworkStandard` yields `CCNetworkStandard`. That is exactly how the grant
+   build produced `CCGrant`.
+2. Add the six scalar fields; type `Base`, stream off, no navigation tab.
+3. Grant the org-wide API role **read** on the new scope. This is the step that
+   is easy to miss and it is the whole reason this option was chosen.
+4. **Verify with the API key, not an admin session** — an admin bypasses ACL, so
+   an admin check proves nothing about step 3. `GET /api/v1/CNetworkStandard`
+   must return **HTTP 200 with `total: 0`**; a 403 means the grant was missed and
+   a 404 means the name landed wrong.
+5. Confirm `entityDefs.CNetworkStandard` in `GET /Metadata` — six fields, empty
+   `links`. If it reads `CCNetworkStandard`, delete and rebuild rather than
+   renaming around it.
+6. Repeat the whole build on production and verify the same way.
 
 ---
 
@@ -279,7 +200,8 @@ identifies **the code**. It does not identify:
   tag and then verify that a chapter is actually running it. This repo has
   **zero git tags** — the train's tag has never been cut, so this slot is empty
   in both senses.
-- **What configuration the CRM behind it holds.** Covered by D1.
+- **What configuration the CRM behind it holds.** That is the stamp R0 builds
+  the home for.
 
 The invariant that makes both worth having: a promotion pins a **pair**,
 `(releaseTag, standardVersion)`, and an instance is conformant when it holds the
@@ -299,8 +221,9 @@ shape rather than waiting.
    as `"releaseTag": settings.release_tag or None`. Empty string becomes `null` —
    an untagged dev build says so rather than pretending.
 3. **`crmConfig`.** Add a block returning
-   `{"version": …, "appliedAt": …, "fingerprint": …}`, **all `null`** until D1 is
-   built. Read it on the same refresh loop that already serves `settingsVersion`
+   `{"version": …, "appliedAt": …, "fingerprint": …}`, read from the
+   `CNetworkStandard` row once R0 has built it — and **all `null`** until an
+   applier writes one, which is every instance today. Read it on the same refresh loop that already serves `settingsVersion`
    rather than hitting the CRM on every health check — `/healthz` deliberately
    never pings the CRM, because a CRM outage must not take the web tier down, and
    that rule must not be broken here.
@@ -310,7 +233,8 @@ shape rather than waiting.
    there; `releaseTag` is for machines and the fleet console.
 
 Acceptance criterion 11 in [phase-1](phase-1-crm-config.md) is the finish line
-for the `crmConfig` half, and it cannot be fully met until D1 lands.
+for the `crmConfig` half: it cannot be fully met until R0 has built the entity,
+and cannot report a non-null version until B1 has applied something.
 
 ---
 
@@ -450,13 +374,13 @@ on the deployed **web** component.
 
 ## B1. The applier itself
 
-**Blocked on D2.** This is the month-sized deliverable: the desired-state
+**Blocked on A1.** This is the month-sized deliverable: the desired-state
 definition generalized from `scripts/migrate_event_schema.py`'s change list, the
 directive executor that applies it, plan identity (dry-run, then apply *that
 exact plan*, refusing if the plan moved), the additive-only fence, the EspoCRM
 extension package, and the release-train wiring.
 
-It is the **only** part of Phase 1 at risk from D2. The desired-state definition,
+It is the **only** part of Phase 1 at risk from the CRMBuilder decision. The desired-state definition,
 the conformance check, the exit-code contract, the JSON result and both version
 stamps are the app-derived half this repo owns under either answer — they are
 what a CRMBuilder adoption would *consume*. What is genuinely thrown away if we
@@ -527,6 +451,15 @@ and linked from here so the finding is not lost between two lists.
 ---
 
 # Closed
+
+- **D1, D2 and D3 ruled** (Doug, 2026-08-26). The configuration stamp is a new
+  `CNetworkStandard` entity, not an EspoCRM setting and not a log row — build
+  handoff written, now task R0. The CRMBuilder trigger stands at **2026-09-19**,
+  which makes convening that session the project's only dated commitment (A1).
+  And there is **no logo and no favicon** — chapters get colours, not marks, so
+  "per-chapter `tokens.css` + logo" comes out of the plan wording rather than
+  becoming a backlog item. That last one **closes the last open question in
+  Phase 0**, which now finishes on a browser pass alone (V1).
 
 - **The CRMBuilder prompt already carries the interface contract** (checked
   2026-08-24). I had this listed as work to do; it is not. § *What the consumer

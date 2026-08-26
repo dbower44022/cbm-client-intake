@@ -93,10 +93,13 @@ therefore not paperwork; it is the load-bearing half of ruling 4.
 
 | Date | Decision | Where it landed |
 |---|---|---|
+| 2026-08-26 | **D1 — the CRM's configuration version lives in a new single-record custom entity, `CNetworkStandard`.** Not in EspoCRM Settings (reading those needs admin, and admin is genuinely closed to the app's credential — the org-wide key 403s on `Role`), and not as a `CActionLog` row (append-only history is the wrong shape for a current-state assertion). | Build handoff written: `cnetworkstandard-entity-crm-handoff.md`. [TASKS.md](TASKS.md) § R0 |
+| 2026-08-26 | **D2 — the CRMBuilder decision trigger stands at 2026-09-19, Doug owning it.** If the requirements session has not answered the product-vs-artifact boundary and the headless requirement by then, Layer 3 proceeds in full and its sunk cost is accepted deliberately. | [phase-1](phase-1-crm-config.md) § *The decision trigger*; the action is [TASKS.md](TASKS.md) § A1 |
+| 2026-08-26 | **D3 — no logo and no favicon.** Chapters get colours, not marks. The plan's "per-chapter `tokens.css` + logo" was describing a feature that does not exist — the application contains no image asset of any kind — so the phrase comes out of the plan rather than becoming a backlog item. | [phase-0](phase-0-decleveland.md) § 6; [phase-4](phase-4-public-pages.md) |
+| 2026-08-24 | **The chapter-network project gets its own directory and its own tracker, inside this repo, splitting out at Phase 2** when the services org becomes real. The app-derived half of the desired state is maintained in the same commit as the code that requires it, which a separate repo would split; Phases 2/3/5/6 belong to the services org and are what will justify the move. | This directory |
 | 2026-08-20 | **"Cleveland Business Mentoring" (with -ing) in seven public-form strings is a copy bug, not a second brand.** Sweep them into `{{org}}` rather than introducing a second token. | [Phase 0](phase-0-decleveland.md) § 5; shipped in v0.205.0 |
 | 2026-08-20 | **Phase 0 ships with no feature flag.** The safety property — an unconfigured deployment renders byte-identical to before — is what makes a flag unnecessary, and it means the rollback is a revert. | [Phase 0](phase-0-decleveland.md) § 9 |
 | 2026-08-20 | **The `legal-links.js` policy URLs are not swept blind.** Making them settings is in scope; *where they should point* is a decision, and three of the four pointed at a WPEngine staging host. | Ruled and shipped in v0.206.0 — prod now serves the four production URLs |
-| 2026-08-24 | **The chapter-network project gets its own directory and its own tracker, inside this repo, splitting out at Phase 2** when the services org becomes real. The app-derived half of the desired state is maintained in the same commit as the code that requires it, which a separate repo would split; Phases 2/3/5/6 belong to the services org and are what will justify the move. | This directory |
 
 ---
 
@@ -108,14 +111,10 @@ answered. They are recorded so they are asked rather than rediscovered.
 
 - **Does the network standard live as a CRMBuilder product capability, or as a
   CBM-network artifact that merely uses CRMBuilder?** The two answers put Phase
-  1's applier in different repos under different governance. This is the
-  [decision trigger](phase-1-crm-config.md#the-decision-trigger); owner Doug,
-  proposed date **2026-09-19**.
-- **Is the logo a thing this product has?** The application contains no image
-  asset of any kind — no `.svg`, `.png`, `.ico`, and no `<link rel="icon">` on any
-  page. "Per-chapter `tokens.css` + logo" therefore describes a new feature (a
-  header slot on 18 pages, an asset-serving path, a sizing contract), not a
-  parameterization. [Phase 0](phase-0-decleveland.md) § 6.
+  1's applier in different repos under different governance. Only the CRMBuilder
+  requirements session can answer it. **The trigger date is confirmed at
+  2026-09-19 (Doug, 2026-08-26)** — if the session has not run by then, Layer 3
+  proceeds in full. See [phase-1](phase-1-crm-config.md#the-decision-trigger).
 - **Which of the two live CRMs is the standard, where their roles differ?** The
   capture is mechanical; the adjudication is a ruling, and it is the riskiest part
   of Phase 1's applier.

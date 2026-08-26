@@ -27,8 +27,12 @@ programme, which `wp-plugin/cbm-events/` already almost delivers — it ships th
 renderer plus the stylesheet and is one step from a distributable chapter plugin
 configured with that chapter's app URL and `eventUrlBase`.
 
-Per-chapter visual identity is then `tokens.css` overrides plus a logo — a small,
-contained, versioned asset set, not a copy of anybody's site.
+Per-chapter visual identity is then `tokens.css` overrides — a small, contained,
+versioned set of colour values, not a copy of anybody's site.
+
+*(That sentence originally read "`tokens.css` overrides plus a logo". There is no
+logo, and after Doug's ruling of 2026-08-26 there will not be one — see
+[phase-0](phase-0-decleveland.md) § 6.)*
 
 **De-Clevelanding is an explicit workstream** — measured in full in
 [Phase 0](phase-0-decleveland.md). In outline: the settings are cheap and already

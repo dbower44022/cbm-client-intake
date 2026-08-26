@@ -25,7 +25,7 @@ follows from them.
 
 | Phase | State | Next thing |
 |---|---|---|
-| **[0 — De-Cleveland](phase-0-decleveland.md)** | **Substantially delivered.** v0.205.0–v0.206.0, deployed and verified on prod: `{{org}}`, `CHAPTER_TOKENS_URL`, the guard test, the four policy URLs. | A live-verification list, and the logo question ruled |
+| **[0 — De-Cleveland](phase-0-decleveland.md)** | **Substantially delivered.** v0.205.0–v0.206.0, deployed and verified on prod: `{{org}}`, `CHAPTER_TOKENS_URL`, the guard test, the four policy URLs. | A browser verification pass — the last thing owed |
 | **[1 — CRM config as an artifact](phase-1-crm-config.md)** | **In progress.** The interface contract is written; the conformance check is built (`ac6f1b4`) and has been run against both live CRMs. | The week's tranche: `crmConfig` at `/healthz`, Stamp B's home, the PRE_DEPLOY gate |
 | **[2 — Release train](phase-2-release-train.md)** | Not started. Zero git tags exist in this repo. | Cadence ruled; Stamp A |
 | **[3 — Spec generation + secrets](phase-3-spec-secrets.md)** | Not started. | Nothing blocks it; it also fixes today's single-laptop deploy dependency |
