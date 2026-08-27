@@ -1,0 +1,32 @@
+{
+  "name": "cnetworkstandard",
+  "description": "The chapter network's configuration-version stamp. Spec: cnetworkstandard-entity-crm-handoff.md (sections 1 and 2). Six plain scalars, no links, no enums, stream off — deliberately the least interesting entity in the CRM.",
+
+  "entities": [
+    {
+      "name": "NetworkStandard",
+      "type": "Base",
+      "labelSingular": "Network Standard",
+      "labelPlural": "Network Standards",
+      "stream": false
+    }
+  ],
+
+  "fields": [
+    {"entity": "CNetworkStandard", "name": "standardVersion", "type": "varchar",
+     "label": "Standard version",
+     "tooltipText": "The configuration standard's version, and the field everything reads."},
+    {"entity": "CNetworkStandard", "name": "appliedAt", "type": "datetime",
+     "label": "Applied at", "readOnly": true,
+     "tooltipText": "When the apply COMPLETED. A partial apply must not stamp at all."},
+    {"entity": "CNetworkStandard", "name": "appliedBy", "type": "varchar",
+     "label": "Applied by", "readOnly": true,
+     "tooltipText": "Which account applied it, so an unexpected change is traceable to a credential."},
+    {"entity": "CNetworkStandard", "name": "planFingerprint", "type": "varchar",
+     "label": "Plan fingerprint", "readOnly": true,
+     "tooltipText": "Fingerprint of the dry-run plan that was applied — what makes 'which plan actually ran' answerable afterwards."},
+    {"entity": "CNetworkStandard", "name": "appliedByTool", "type": "varchar",
+     "label": "Applied by tool", "readOnly": true,
+     "tooltipText": "Which applier wrote it, and its version."}
+  ]
+}

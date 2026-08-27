@@ -8,6 +8,25 @@ shape over the two alternatives is `prds/chapter-network/TASKS.md` § D1
 
 **Build on crm-test first**, verify, then production.
 
+> **Built on crm-test 2026-08-27.** Structurally correct first time. Two things
+> were missed and are now fixed, both worth reading before the production run:
+> the § 4 **role grant** was not applied, so the org-wide API key got HTTP 403 —
+> the entity existed and was invisible to the application, which is the one
+> failure mode that makes this whole design pointless; and the entity was left in
+> the **navigation tab list** contrary to § 1. Verified afterwards by the
+> effective ACL the app itself sees — `{create: no, delete: no, edit: no,
+> read: all}` — and `GET /api/v1/CNetworkStandard` as the org key returning
+> **HTTP 200, `total: 0`**. **Production: not yet built.**
+>
+> **Build it from the plan file, not by hand:** `scripts/plans/cnetworkstandard.json`
+> is what crm-test was built from, so the production run is the same input through
+> the same applier rather than a human repeating § 1 —
+> `apply_crm_plan.py scripts/plans/cnetworkstandard.json`, dry run first. **The plan
+> covers the entity and its fields only.** The two things that were missed here are
+> both outside it and stay manual: the § 4 role grant and keeping it out of the tab
+> list. Do those in the same session, then run § 5's verification with the org API
+> key rather than an admin session.
+
 This is the smallest handoff in the repo: **one entity, five fields, no links, no
 enums, no formulas.** That is deliberate and it is the point — read § 0.
 

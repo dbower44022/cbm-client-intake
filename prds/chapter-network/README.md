@@ -51,6 +51,7 @@ are in **[DECISIONS.md](DECISIONS.md)**.
 | `README.md` | This. Orientation and current state. | A phase changes state |
 | [`DECISIONS.md`](DECISIONS.md) | The eight rulings, the seven proposals awaiting a ruling, the decision log, and the open questions nobody owns yet | Doug rules something |
 | [`TASKS.md`](TASKS.md) | The project's own open items. Each one: what the issue is, the options and a recommendation where a decision is owed, then steps | Every working session |
+| [`chapter-values.md`](chapter-values.md) | **Everything that differs between cities** — ~35 values, six secrets, one image. The per-city surface in one place, plus the ruling-4 fence listing what is deliberately the same everywhere | A new per-chapter value appears, or one gets parameterized |
 | [`crm-update-runbook.md`](crm-update-runbook.md) | **How to get a configuration change onto every CRM, step by step.** The procedure, the verification, and the twelve traps this project has been bitten by | The procedure changes — chiefly when the applier lands |
 | [`interface-contract.md`](interface-contract.md) | C1–C10 and both version stamps: what any CRM-config applier must satisfy | Rarely. It is meant to be stable, and it has a reader outside this repo |
 | `phase-0…6-*.md` | One file per phase, each closable on its own | Work on that phase |

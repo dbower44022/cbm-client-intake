@@ -493,6 +493,28 @@ and linked from here so the finding is not lost between two lists.
 
 # Closed
 
+- **R0 is done on crm-test, and it took two corrections** (2026-08-27).
+  `CNetworkStandard` was built correctly in every structural respect — one `C`,
+  type `Base`, stream off, all six fields, no custom links, all read back from
+  `GET /Metadata` rather than from a screen. But **the org-wide API key got HTTP
+  403**: `CustomAppAPIRole` had no grant on the new scope, which is exactly the
+  step the handoff flags as "the grant that is easy to forget" and exactly the
+  property the entity was chosen for. Doug granted it, then narrowed it to
+  read-only after review — confirmed via the effective ACL the app itself sees:
+  `{create: no, delete: no, edit: no, read: all}`, against a `CEngagement`
+  control still showing full write. The entity was also in the navigation tab
+  list; removed via the API (45 → 44 tabs). `GET /api/v1/CNetworkStandard` as the
+  org key now returns **HTTP 200, `total: 0`** — the correct "built, never applied
+  to" state. Production is owed at a Sunday slot.
+
+- **The per-chapter values are inventoried** (2026-08-27).
+  [chapter-values.md](chapter-values.md). Two findings worth keeping: **eleven
+  EspoCRM instance settings are per-city and had never been listed anywhere**
+  (including a logo file, so there *is* one per-city image asset despite the app
+  having none by ruling); and **email template bodies carry no hardcoded brand at
+  all**, so templates are genuinely build-once-deploy-everywhere rather than
+  per-city content. Neither was knowable without reading the live instance.
+
 - **The release slot is Sunday 17:00 UTC, and the CRM-update procedure is
   written** (2026-08-26). [crm-update-runbook.md](crm-update-runbook.md) is the
   twelve-step procedure for getting a configuration change onto every instance —

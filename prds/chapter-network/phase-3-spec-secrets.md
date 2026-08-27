@@ -37,13 +37,31 @@ N chapter-owned accounts it is not viable.
 
 ---
 
+## The values themselves are now written down
+
+**[chapter-values.md](chapter-values.md)** (2026-08-27) is the measured inventory
+of everything that differs between cities — about 35 values, six of them secrets,
+one of them an image. This phase automates filling it in; the document exists
+first deliberately, because a generator built before the list is known generates
+the wrong thing.
+
+Two things that inventory turned up which this phase now owns:
+
+- **Eleven EspoCRM instance settings** are per-chapter and appeared on no list
+  anywhere before it was written — `applicationName`, `outboundEmailFromName`,
+  `outboundEmailFromAddress`, `siteUrl`, `companyLogoName`, and six locale
+  settings. No script sets them today.
+- **The CRM carries a logo** (`CBM Logo DEV V2.png`) even though the app has none
+  by ruling. It is the single per-city image asset in the system.
+
 ## Inherited from Phase 0: locale
 
 Cleveland's **timezone** is hardcoded in four places and is not the same thing as
 Cleveland's name:
 
 - `portal/birthday.py:47` — `_LOCAL = ZoneInfo("America/New_York")`
-- `assignments/service.py:942` — the assignment stamp
+- `assignments/service.py:1370` — the assignment stamp *(line corrected
+  2026-08-27; the plan recorded 942 and the code has moved since)*
 - `events/config.py:72` — `PUBLIC_TIMEZONE`
 - `core/zoom.py:247` — a default argument
 - (`comms_digest_tz` is already a setting with the same default)
