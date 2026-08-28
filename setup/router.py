@@ -13,7 +13,7 @@ token is configured.
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response
@@ -22,7 +22,7 @@ from pydantic import BaseModel, Field
 from assignments.auth import current_user
 from core import action_log
 from core.config import get_settings
-from core.settings_registry import spec_for
+from core.settings_registry import LOCKOUT_KEYS, VERIFIED_KEYS, spec_for
 from core.settings_store import (
     SettingsError,
     SettingsStore,
@@ -31,6 +31,7 @@ from core.settings_store import (
 from core.config import get_settings as _get_settings
 
 from . import jobs as jobs_mod
+from . import verify
 from . import readiness as readiness_mod
 from . import snapshot as snapshot_mod
 from .service import describe_change, page_payload
@@ -101,6 +102,28 @@ class JobIn(BaseModel):
     planId: str = ""
 
 
+# How long an admin has to confirm a lockout-capable change before it undoes
+# itself. Long enough to sign out, sign back in and look around; short enough
+# that an admin who HAS locked themselves out is not stuck for an afternoon.
+CONFIRM_WINDOW_MINUTES = 10
+
+
+def _revert_deadline(key: str) -> Optional[datetime]:
+    """When this change must undo itself unless confirmed, or None.
+
+    Only for settings that can lock the admin out of this page. Neither the
+    pre-flight probe nor the post-apply health check can catch that case — the
+    application would be working perfectly and simply refusing to let anyone
+    back in — so the countdown is the only mechanism that survives it. It is
+    deliberately NOT applied to merely-dangerous settings: an unattended change
+    undoing itself is disruptive, and it should only happen where the
+    alternative is being locked out.
+    """
+    if key not in LOCKOUT_KEYS:
+        return None
+    return datetime.now(timezone.utc) + timedelta(minutes=CONFIRM_WINDOW_MINUTES)
+
+
 @router.get("/settings")
 async def get_settings_page(request: Request) -> dict:
     _require_admin(request)
@@ -143,6 +166,20 @@ async def put_setting(key: str, body: SettingIn, request: Request) -> dict:
             detail="A temporary change needs a review date — that is the whole point "
                    "of marking it temporary.",
         )
+    # 1. PRE-FLIGHT. Try the value for real before storing it. A CRM key the
+    #    CRM rejects, or an address that is not a CRM this application can use,
+    #    is refused HERE with the actual error — never accepted and left to fail
+    #    on every later call. A probe that cannot REACH the thing it tests
+    #    returns "unknown" and does not block: an admin fixing configuration
+    #    during an outage must not be blocked by the outage.
+    checked = await verify.probe(key, body.value)
+    if checked.blocks_save:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{spec.label} was not saved — {checked.detail}",
+        )
+
+    deadline = _revert_deadline(key)
     try:
         record = await store.set(
             key,
@@ -153,11 +190,31 @@ async def put_setting(key: str, body: SettingIn, request: Request) -> dict:
             review_at=body.reviewAt,
             scope_teams=body.scopeTeams,
             scope_users=body.scopeUsers,
+            revert_at=deadline,
         )
     except SettingsError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     await refresh_into_config(store, get_settings())
+
+    # 2. POST-APPLY. With the change actually installed, is the system still
+    #    working? A failure here reverts immediately rather than leaving a
+    #    broken configuration in place for someone to discover.
+    reverted = None
+    if key in VERIFIED_KEYS and not spec.restart:
+        health = await verify.still_functional()
+        if health.outcome == verify.FAILED:
+            await store.revert(
+                key, actor="system",
+                reason=f"reverted automatically: {health.detail}",
+            )
+            await refresh_into_config(store, get_settings())
+            reverted = health.detail
+            await _log(
+                user, action_log.ACT_SETTING_CLEARED,
+                f"{key} reverted automatically — the system stopped working",
+                {"key": key, "detail": health.detail},
+            )
     await _log(
         user,
         action_log.ACT_SETTING_CHANGED,
@@ -170,11 +227,40 @@ async def put_setting(key: str, body: SettingIn, request: Request) -> dict:
         },
     )
     return {
-        "ok": True,
+        "ok": reverted is None,
         "restart": spec.restart,
+        "verification": checked.as_dict(),
+        # Set when the change was applied and then undone because the system
+        # stopped working. The page says so instead of reporting a success.
+        "reverted": reverted,
+        # Set when the change is live but will undo itself unless confirmed.
+        "confirmBy": deadline.isoformat() if deadline and reverted is None else None,
         "setting": record.as_dict(),
         "page": await page_payload(store),
     }
+
+
+@router.post("/settings/{key}/confirm")
+async def confirm_setting(key: str, request: Request) -> dict:
+    """A human says the system still works. Cancels the countdown.
+
+    Reaching this endpoint at all is the proof: it needs an authenticated admin
+    session on this page, which is precisely what a lockout would prevent.
+    """
+    user = _require_admin(request)
+    store = _store(request)
+    if store is None:
+        raise HTTPException(status_code=503, detail="No database is attached.")
+    if not await store.confirm(key, actor=_actor(user)):
+        raise HTTPException(
+            status_code=404, detail=f"'{key}' has no change awaiting confirmation."
+        )
+    await _log(
+        user, action_log.ACT_SETTING_CHANGED,
+        f"{key} confirmed working — the automatic revert is cancelled",
+        {"key": key},
+    )
+    return {"ok": True, "page": await page_payload(store)}
 
 
 @router.delete("/settings/{key}")

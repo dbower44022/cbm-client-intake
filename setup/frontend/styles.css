@@ -144,3 +144,10 @@
 .su__note--warn { color: #7a5200; }
 .su__pending { font-size: 0.82rem; margin-top: 0.3rem; color: #8a2a2a; }
 .su__linkbtn--off { color: var(--color-text-muted, #5c5c5c); cursor: default; }
+
+/* Confirm-or-revert (Doug's ruling 2026-08-28: a dangerous change must prove
+   the system still works, or undo itself). */
+.su__banner--danger { background: #fdeaea; border-color: #e6b3b3; color: #7a2222; }
+.su__countdown { font-variant-numeric: tabular-nums; font-weight: 600; }
+.su__verified { font-size: 0.82rem; margin-top: 0.3rem; color: #2b6a3f; }
+.su__verified--unknown { color: #7a5200; }

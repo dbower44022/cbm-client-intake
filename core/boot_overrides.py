@@ -145,11 +145,23 @@ def load_at_boot(settings) -> BootLoad:
 
 async def _load(settings) -> BootLoad:
     from core import config as config_module
-    from core.settings_store import SettingsStore, global_overrides
+    from core.settings_store import (
+        SettingsStore,
+        global_overrides,
+        make_settings_store,
+    )
 
     store: Optional[SettingsStore] = None
     try:
-        store = SettingsStore(settings.database_url)
+        # via the factory, so the Fernet cipher comes with it — a stored secret
+        # is a ciphertext and must be decrypted before it reaches the config.
+        store = make_settings_store(settings)
+        if store is None:
+            return BootLoad(
+                outcome=BOOT_DISABLED,
+                detail="No database configured.",
+                snapshot=_snapshot(settings),
+            )
         rows = await store.load()
     except Exception as exc:  # noqa: BLE001 — degrade to the overlay, never the default
         log.warning(

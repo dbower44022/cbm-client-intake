@@ -44,6 +44,12 @@ GROUP_PRESENTATION = "Presentation"
 # together rather than scattered, because the thing they share — "saving this
 # does not take effect yet" — is the thing a reader most needs told.
 GROUP_RESTART = "Restart required"
+# Editable, but a wrong value breaks something important — so each is TRIED
+# before it is stored and the system is checked afterwards (setup/verify.py).
+GROUP_CONNECTION = "CRM connection"
+GROUP_SECURITY = "Access & security"
+# Visible, never editable here. Two of them are not dangerous but impossible.
+GROUP_FOUNDATIONS = "Foundations"
 
 GROUP_ORDER = [
     GROUP_FEATURES,
@@ -53,6 +59,9 @@ GROUP_ORDER = [
     GROUP_GATES,
     GROUP_PRESENTATION,
     GROUP_RESTART,
+    GROUP_CONNECTION,
+    GROUP_SECURITY,
+    GROUP_FOUNDATIONS,
 ]
 
 # Keys that may NEVER be overridden from the UI, whatever the request says.
@@ -94,18 +103,36 @@ BOOT_READ_KEYS: frozenset[str] = frozenset({
     "release_tag",
 })
 
-DENYLIST: frozenset[str] = frozenset({
-    # Baked into the container image at build time. An override would survive a
-    # restart and make the deployment MISREPORT which image it is running,
-    # which defeats the only reason the stamp exists. Curated read-only instead
-    # of hidden, per the 2026-08-28 ruling: visible, explained, not editable.
-    "release_tag",
+# --- what a change can cost, and what proves it safe ------------------------
+#
+# Doug's ruling, 2026-08-28: "All settings should be editable, unless a change
+# would make the system unusable. Then there must be a verification that the
+# system is still functional."
+#
+# So the denylist is now tiny and holds only the two changes that are not
+# dangerous but IMPOSSIBLE (see below). Everything else that used to be hidden
+# is editable through the verified path in `setup/verify.py`, which tries the
+# value before storing it and checks the system afterwards.
+
+# A change here could lock the admin out of this page. Neither a pre-flight
+# probe nor a health check catches that: the app would be working perfectly and
+# simply refusing to let anyone back in. These get a confirm-or-revert deadline
+# instead — the change applies, and unless a human confirms the system still
+# works it reverts itself. The network engineer's `commit confirmed`.
+LOCKOUT_KEYS: frozenset[str] = frozenset({
+    "setup_enabled",        # hides this page
+    "settings_overrides",   # switches off the whole override layer
+    "session_cookie_secure",  # `true` over plain http means nobody can sign in
+    "allowed_origins",
+    "session_secret",       # signs every session cookie: changing it signs you out
+})
+
+# A wrong value here breaks something important but cannot lock anyone out, so
+# the pre-flight probe plus the post-apply check are the whole safety net.
+VERIFIED_KEYS: frozenset[str] = frozenset({
     "espo_base_url",
     "espo_api_key",
     "espo_dry_run",
-    "database_url",
-    "session_secret",
-    "app_encryption_key",
     "espo_provision_username",
     "espo_provision_password",
     "google_service_account_json",
@@ -115,23 +142,38 @@ DENYLIST: frozenset[str] = frozenset({
     "zoom_client_secret",
     "fathom_api_key",
     "youtube_api_key",
-    "allowed_origins",
-    "session_cookie_secure",
-    "setup_enabled",
-    "settings_overrides",
     "setup_peer_url",
     "setup_peer_token",
-    # Arming the nightly training-sandbox wipe stays an overlay decision. It
-    # empties the Submission Admin queue and the Drive index, so it should
-    # require a deliberate `doctl apps update` rather than a toggle anyone
-    # holding the /setup page can flip. (The worker also reads it once at boot,
-    # so an override would be inert as well as unwise.)
     "sandbox_nightly_reset",
+})
+
+DENYLIST: frozenset[str] = frozenset({
+    # Baked into the container image at build time. An override would survive a
+    # restart and make the deployment MISREPORT which image it is running,
+    # which defeats the only reason the stamp exists. Curated read-only instead
+    # of hidden, per the 2026-08-28 ruling: visible, explained, not editable.
+    "release_tag",
+    # NOT caution — a logical impossibility. The override table lives INSIDE the
+    # database this names, so an override moving the app to a different database
+    # would live in the database being left behind: the new one has no such row,
+    # the app reads its own configuration from there, and moves straight back.
+    # There is no value of this setting that can change it.
+    "database_url",
+    # Rotating this makes every already-encrypted stored secret permanently
+    # unreadable — the Google configuration and now the secrets on this page.
+    # That is data loss rather than lockout, and no verification can undo it.
+    # Rotation needs a re-encryption migration, not a text box.
+    "app_encryption_key",
 })
 
 # Settings whose VALUE must never be sent to the browser, even read-only. The
 # page shows "set / not set" for these instead.
 SECRET_KEYS: frozenset[str] = frozenset({
+    # A Postgres URL carries the password inside it, so rendering the value
+    # hands any admin the database credential. It was in the read-only "show
+    # all" list in the clear before 2026-08-28; curating it as a visible row
+    # would have made that worse rather than better. Read-only AND masked.
+    "database_url",
     "espo_api_key",
     "session_secret",
     "app_encryption_key",
@@ -353,6 +395,24 @@ SETTINGS: tuple[SettingSpec, ...] = (
     _s("events_public_base_url", GROUP_PRESENTATION, "Public event page base"),
     _s("events_cache_seconds", GROUP_PRESENTATION, "Public read cache", kind="int", unit="s"),
 
+    # Integration credentials. A wrong one disables that integration and nothing
+    # else, so the pre-flight check is the whole safety net. None is ever shown
+    # back once set.
+    _s("google_service_account_json", GROUP_INTEGRATIONS, "Google service account",
+       component="both",
+       help="The key behind Gmail, Calendar, Drive and Directory. Checked for shape "
+            "before it is stored; whether domain-wide delegation has been granted "
+            "cannot be seen from here."),
+    _s("anthropic_api_key", GROUP_INTEGRATIONS, "Anthropic API key", component="worker",
+       help="AI conversation summaries only."),
+    _s("zoom_account_id", GROUP_INTEGRATIONS, "Zoom account ID", component="both"),
+    _s("zoom_client_id", GROUP_INTEGRATIONS, "Zoom client ID", component="both"),
+    _s("zoom_client_secret", GROUP_INTEGRATIONS, "Zoom client secret", component="both",
+       help="Public webinars only. Mentor sessions never use the CBM Zoom account."),
+    _s("fathom_api_key", GROUP_INTEGRATIONS, "Fathom API key", component="worker"),
+    _s("youtube_api_key", GROUP_INTEGRATIONS, "YouTube API key",
+       help="The recorded-webinar library."),
+
     # --- Restart required --------------------------------------------------
     # Every one of these is read while the process starts — routers are mounted,
     # middleware is built and logging is configured before the app serves its
@@ -392,6 +452,75 @@ SETTINGS: tuple[SettingSpec, ...] = (
             "page. 0 switches it off. The background task is created once at "
             "startup, so starting or stopping it needs a restart. /healthz always "
             "serves the cached answer and never waits on the CRM."),
+    # --- CRM connection ----------------------------------------------------
+    # Each of these is tried against the live CRM before it is stored: a key
+    # the CRM rejects, or an address that is not a CRM this application can
+    # use, is refused with the CRM's own error rather than accepted and left to
+    # fail on every later call.
+    _s("espo_base_url", GROUP_CONNECTION, "CRM address",
+       help="Which EspoCRM this deployment reads and writes. Checked before it is "
+            "saved: the address must answer AND hold this application's entities, so "
+            "pointing at a stranger's EspoCRM is refused rather than accepted."),
+    _s("espo_api_key", GROUP_CONNECTION, "CRM API key",
+       help="The org-wide key. Tried against the CRM before it is stored; a key the "
+            "CRM rejects is refused. Never shown back once set."),
+    _s("espo_dry_run", GROUP_CONNECTION, "Dry run (no CRM writes)", kind="bool",
+       component="both",
+       help="On, nothing is ever written to the CRM and submissions are logged only. "
+            "This is how the dev deployment runs."),
+    _s("espo_provision_username", GROUP_CONNECTION, "Provisioning admin username",
+       help="The admin service account used for the few operations EspoCRM reserves "
+            "for admins — creating mentor logins, team membership."),
+    _s("espo_provision_password", GROUP_CONNECTION, "Provisioning admin password",
+       help="Never shown back once set."),
+
+    # --- Access & security -------------------------------------------------
+    # Everything here can lock somebody out, which no probe can detect — the app
+    # would be working perfectly and simply refusing to let anyone in. They
+    # apply with a countdown and revert themselves unless confirmed.
+    _s("session_secret", GROUP_SECURITY, "Session signing secret",
+       help="Signs every session cookie. Changing it signs EVERYONE out, including "
+            "you — so confirm you can still sign in, or it reverts itself."),
+    _s("session_cookie_secure", GROUP_SECURITY, "HTTPS-only session cookie",
+       kind="bool",
+       help="On is correct for any real deployment. On over plain http, no one can "
+            "sign in at all — hence the countdown."),
+    _s("allowed_origins", GROUP_SECURITY, "Allowed origins", kind="csv",
+       help="Only matters if a separate frontend origin is ever introduced; the "
+            "wizard posts to its own origin."),
+    _s("setup_enabled", GROUP_SECURITY, "This Settings page", kind="bool",
+       help="Switching this off hides the page you are reading. It reverts itself "
+            "unless confirmed, because otherwise recovery would need a redeploy."),
+    _s("settings_overrides", GROUP_SECURITY, "Settings overrides", kind="bool",
+       component="both",
+       help="The break-glass. Off, every stored setting stops applying and the "
+            "deployment's own values take over — including the one that switched "
+            "this off, so it could never switch itself back on. Reverts unless "
+            "confirmed."),
+    _s("setup_peer_url", GROUP_SECURITY, "Peer deployment URL",
+       help="The other environment, for the comparison on the Environment diff tab."),
+    _s("setup_peer_token", GROUP_SECURITY, "Peer deployment token",
+       help="Authorises that comparison. No secret value ever crosses the wire."),
+    _s("sandbox_nightly_reset", GROUP_SECURITY, "Nightly sandbox wipe", kind="bool",
+       component="worker",
+       help="Worker-side. Empties this deployment's own submission queue and "
+            "document index every night. Correct on the training sandbox, ruinous "
+            "anywhere else — which is why it is checked before it is stored."),
+
+    # --- Foundations -------------------------------------------------------
+    _s("database_url", GROUP_FOUNDATIONS, "Database", readonly=True,
+       help="Cannot be changed here, and this is a logical impossibility rather "
+            "than caution: the stored settings live INSIDE this database, so a "
+            "setting that moved the app elsewhere would be left behind in the "
+            "database being abandoned, and the app would read its configuration "
+            "from the new one and move straight back. Change it in the deployment "
+            "configuration."),
+    _s("app_encryption_key", GROUP_FOUNDATIONS, "Encryption key", readonly=True,
+       help="Protects the secrets stored on this page and the Google configuration. "
+            "Rotating it makes every one of them permanently unreadable — data "
+            "loss, which no verification can undo. Rotation needs a re-encryption "
+            "migration, not a text box."),
+
     _s("release_tag", GROUP_RESTART, "Release tag", restart=True, readonly=True,
        help="Which release this container was built from — stamped into the image "
             "at build time and supplied by the deployment's own configuration. "

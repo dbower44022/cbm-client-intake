@@ -61,6 +61,16 @@ app_setting = Table(
     Column("reason", Text),
     Column("updated_at", DateTime(timezone=True), nullable=False),
     Column("updated_by", String(128)),
+    # --- verified settings (0027) -----------------------------------------
+    # `value` is a Fernet ciphertext rather than plain text.
+    Column("encrypted", Boolean, nullable=False, server_default="false"),
+    # What to restore if this change proves harmful. NULL means "there was no
+    # override before", so reverting deletes the row rather than writing a value.
+    Column("previous_value", Text),
+    # Revert automatically at this time unless confirmed. NULL = no countdown.
+    # Deliberately NOT `review_at`, which is advisory and never auto-reverts.
+    Column("revert_at", DateTime(timezone=True)),
+    Column("confirmed", Boolean, nullable=False, server_default="true"),
 )
 
 app_setting_history = Table(
@@ -93,6 +103,16 @@ class Override:
     reason: str = ""
     updated_at: Optional[datetime] = None
     updated_by: str = ""
+    # --- verified settings -------------------------------------------------
+    encrypted: bool = False
+    previous_value: Optional[str] = None
+    revert_at: Optional[datetime] = None
+    confirmed: bool = True
+
+    @property
+    def awaiting_confirmation(self) -> bool:
+        """Applied, and it will undo itself unless a human says it is working."""
+        return self.revert_at is not None and not self.confirmed
 
     @property
     def scoped(self) -> bool:
@@ -101,9 +121,19 @@ class Override:
         return bool(self.scope_teams or self.scope_users)
 
     def as_dict(self) -> dict[str, Any]:
+        from core.settings_registry import is_secret
+
+        # A secret's value never leaves the server, not even here. The page can
+        # set one and can say whether one is set; it can never read one back.
+        secret = is_secret(self.key)
         return {
             "key": self.key,
-            "value": self.value,
+            "value": "" if secret else self.value,
+            "isSet": bool(self.value) if secret else None,
+            "encrypted": self.encrypted,
+            "revertAt": self.revert_at.isoformat() if self.revert_at else None,
+            "confirmed": self.confirmed,
+            "awaitingConfirmation": self.awaiting_confirmation,
             "temporary": self.temporary,
             "reviewAt": self.review_at.isoformat() if self.review_at else None,
             "scopeTeams": list(self.scope_teams),
@@ -138,9 +168,22 @@ def validate_value(key: str, value: str) -> None:
     other override at refresh time.
     """
     if key in DENYLIST:
+        # Three keys, each impossible rather than merely risky. Say which.
+        why = {
+            "database_url":
+                "the stored settings live inside this database, so a setting "
+                "moving the app elsewhere would be left behind in the database "
+                "being abandoned",
+            "app_encryption_key":
+                "rotating it makes every already-encrypted stored secret "
+                "permanently unreadable, which no verification can undo",
+            "release_tag":
+                "it is stamped into the container image, so an override would "
+                "make this deployment misreport which build it is running",
+        }.get(key, "it is a foundation of the application")
         raise SettingsError(
-            f"'{key}' can never be changed from this page — it is a secret or a "
-            "foundation setting. Change it in the deployment overlay."
+            f"'{key}' cannot be changed here — {why}. Change it in the "
+            "deployment configuration."
         )
     if not is_editable(key):
         raise SettingsError(f"'{key}' is not an editable setting.")
@@ -150,11 +193,55 @@ def validate_value(key: str, value: str) -> None:
         raise SettingsError(f"'{value}' is not a valid value for {key}: {exc}") from exc
 
 
+def _history_value(key: str, value: Optional[str]) -> Optional[str]:
+    """History must never carry a credential.
+
+    The whole point of the history tab is answering "when did this change and
+    who did it". For a secret, the answer to "to what" is nobody's business and
+    storing it would put plaintext credentials in a table nothing encrypts.
+    """
+    from core.settings_registry import is_secret
+
+    if value is None:
+        return None
+    return "(secret set)" if is_secret(key) else value
+
+
 class SettingsStore:
     """Read/write the override table. One instance per process is fine."""
 
-    def __init__(self, database_url: str) -> None:
+    def __init__(self, database_url: str, cipher: Any = None) -> None:
         self._engine = make_async_engine(database_url)
+        # Secrets may now be stored here (Doug's ruling, 2026-08-28), so the
+        # store needs the same Fernet cipher `app_config` uses. Without one,
+        # storing a secret is REFUSED rather than written in plain text — the
+        # failure mode of quietly writing a plaintext credential to a database
+        # that gets backed up is not one to fail open on.
+        self._cipher = cipher
+
+    def _encode(self, key: str, value: str) -> tuple[str, bool]:
+        from core.settings_registry import is_secret
+
+        if not is_secret(key):
+            return value, False
+        if self._cipher is None:
+            raise SettingsError(
+                f"'{key}' is a secret and cannot be stored without an encryption "
+                "key. Set APP_ENCRYPTION_KEY in the deployment configuration first."
+            )
+        return self._cipher.encrypt(value), True
+
+    def _decode(self, value: str, encrypted: bool) -> str:
+        if not encrypted:
+            return value
+        if self._cipher is None:
+            log.warning("a stored secret cannot be decrypted: no encryption key")
+            return ""
+        try:
+            return self._cipher.decrypt(value)
+        except Exception as exc:  # noqa: BLE001 — a bad row must not break the load
+            log.warning("could not decrypt a stored secret: %s", exc)
+            return ""
 
     async def create_all(self) -> None:
         async with self._engine.begin() as conn:
@@ -167,7 +254,11 @@ class SettingsStore:
         for row in rows:
             out[row["key"]] = Override(
                 key=row["key"],
-                value=row["value"],
+                value=self._decode(row["value"], bool(row["encrypted"])),
+                encrypted=bool(row["encrypted"]),
+                previous_value=row["previous_value"],
+                revert_at=row["revert_at"],
+                confirmed=bool(row["confirmed"]),
                 temporary=bool(row["temporary"]),
                 review_at=row["review_at"],
                 scope_teams=_json_list(row["scope_teams"]),
@@ -189,13 +280,27 @@ class SettingsStore:
         review_at: Optional[datetime] = None,
         scope_teams: Optional[list[str]] = None,
         scope_users: Optional[list[str]] = None,
+        revert_at: Optional[datetime] = None,
     ) -> Override:
         validate_value(key, value)
         existing = (await self.load()).get(key)
         now = _now()
+        stored, encrypted = self._encode(key, value)
+        # What to go back to if this proves harmful. None means there was no
+        # override before, so undoing it deletes the row rather than writing a
+        # value — and the difference matters: writing back the environment's own
+        # value would create an override that merely LOOKS like the default and
+        # would then survive a later change to the deployment configuration.
+        previous = existing.value if existing else None
+        if previous is not None and existing is not None and existing.encrypted:
+            previous, _ = self._encode(key, previous)
         record = Override(
             key=key,
             value=value,
+            encrypted=encrypted,
+            previous_value=previous,
+            revert_at=revert_at,
+            confirmed=revert_at is None,
             temporary=temporary,
             review_at=review_at,
             scope_teams=tuple(scope_teams or ()),
@@ -206,7 +311,13 @@ class SettingsStore:
         )
         values = {
             "key": key,
-            "value": value,
+            "value": stored,
+            "encrypted": encrypted,
+            "previous_value": previous,
+            "revert_at": revert_at,
+            # A change with a deadline starts UNconfirmed. That is the whole
+            # mechanism: silence undoes it.
+            "confirmed": revert_at is None,
             "temporary": temporary,
             "review_at": review_at,
             "scope_teams": json.dumps(list(scope_teams)) if scope_teams else None,
@@ -229,8 +340,9 @@ class SettingsStore:
                 app_setting_history.insert().values(
                     id=str(uuid.uuid4()),
                     key=key,
-                    old_value=existing.value if existing else None,
-                    new_value=value,
+                    old_value=_history_value(key, existing.value if existing else None),
+                    new_value=_history_value(key, value),
+                    encrypted=False,
                     action="set",
                     reason=reason or None,
                     created_at=now,
@@ -252,7 +364,7 @@ class SettingsStore:
                 app_setting_history.insert().values(
                     id=str(uuid.uuid4()),
                     key=key,
-                    old_value=existing.value,
+                    old_value=_history_value(key, existing.value),
                     new_value=None,
                     action="clear",
                     reason=reason or None,
@@ -260,6 +372,68 @@ class SettingsStore:
                     actor=actor or None,
                 )
             )
+        return True
+
+    async def confirm(self, key: str, *, actor: str = "") -> bool:
+        """A human says the system still works. Cancels the countdown."""
+        async with self._engine.begin() as conn:
+            result = await conn.execute(
+                app_setting.update()
+                .where(app_setting.c.key == key)
+                .values(confirmed=True, revert_at=None)
+            )
+        ok = bool(result.rowcount)
+        if ok:
+            log.info("settings: %s confirmed by %s", key, actor or "?")
+        return ok
+
+    async def due_reverts(self, now: Optional[datetime] = None) -> list[Override]:
+        """Changes whose deadline has passed with no confirmation."""
+        moment = now or _now()
+        return [
+            o for o in (await self.load()).values()
+            if o.revert_at is not None and not o.confirmed and o.revert_at <= moment
+        ]
+
+    async def revert(self, key: str, *, actor: str = "system", reason: str = "") -> bool:
+        """Undo a change: restore the previous override, or delete the row when
+        there was none. Used by the countdown sweep and by a failed post-apply
+        check."""
+        existing = (await self.load()).get(key)
+        if existing is None:
+            return False
+        now = _now()
+        async with self._engine.begin() as conn:
+            if existing.previous_value is None:
+                await conn.execute(delete(app_setting).where(app_setting.c.key == key))
+                new_value = None
+            else:
+                await conn.execute(
+                    app_setting.update()
+                    .where(app_setting.c.key == key)
+                    .values(
+                        value=existing.previous_value,
+                        previous_value=None,
+                        revert_at=None,
+                        confirmed=True,
+                        updated_at=now,
+                        updated_by=actor or None,
+                    )
+                )
+                new_value = self._decode(existing.previous_value, existing.encrypted)
+            await conn.execute(
+                app_setting_history.insert().values(
+                    id=str(uuid.uuid4()),
+                    key=key,
+                    old_value=_history_value(key, existing.value),
+                    new_value=_history_value(key, new_value),
+                    action="revert",
+                    reason=reason or "reverted automatically — not confirmed in time",
+                    created_at=now,
+                    actor=actor or None,
+                )
+            )
+        log.warning("settings: %s REVERTED (%s)", key, reason or "not confirmed")
         return True
 
     async def history(self, key: str = "", limit: int = 50) -> list[dict[str, Any]]:
@@ -288,10 +462,23 @@ class SettingsStore:
 
 
 def make_settings_store(settings: Settings) -> Optional[SettingsStore]:
-    """A store when a database is configured, else None (env-only behaviour)."""
+    """A store when a database is configured, else None (env-only behaviour).
+
+    Carries the Fernet cipher when one is configured, which is what allows a
+    secret to be set from the page. Without it the store still works for every
+    ordinary setting and REFUSES secrets — never writing one in plain text.
+    """
     if not settings.database_url:
         return None
-    return SettingsStore(settings.database_url)
+    cipher = None
+    if settings.app_encryption_key:
+        try:
+            from core.crypto import SecretCipher
+
+            cipher = SecretCipher(settings.app_encryption_key)
+        except Exception as exc:  # noqa: BLE001 — no cipher is a working state
+            log.warning("settings store: encryption unavailable (%s)", exc)
+    return SettingsStore(settings.database_url, cipher)
 
 
 def global_overrides(rows: dict[str, Override]) -> dict[str, str]:
@@ -382,6 +569,53 @@ async def refresh_into_config(store: Optional[SettingsStore], settings: Settings
     _scoped = {k: o for k, o in rows.items() if o.scoped and k not in DENYLIST}
     config_module.apply_overrides(global_overrides(rows))
     return True
+
+
+async def sweep_reverts(store: Optional[SettingsStore]) -> list[str]:
+    """Undo any change whose confirmation deadline has passed. Returns the keys.
+
+    This is the half of the confirm-or-revert mechanism that actually saves you,
+    and it runs in BOTH processes on the ordinary settings timer. That is
+    deliberate rather than redundant:
+
+    * The web process is the one that can be locked out — if a change made the
+      page unreachable, the sweep still runs there because it is a background
+      task, not a request.
+    * The worker is the backstop for the web process being down entirely.
+    * It operates on the database directly, so it keeps working even when the
+      change under test was ``settings_overrides=false`` — which switches off
+      the very layer that would otherwise be asked to undo it.
+
+    Idempotent: two processes sweeping the same row is safe, because the second
+    revert finds nothing to do.
+    """
+    if store is None:
+        return []
+    try:
+        due = await store.due_reverts()
+    except Exception as exc:  # noqa: BLE001 — a sweep failure must not kill the loop
+        log.debug("revert sweep failed: %s", exc)
+        return []
+    done: list[str] = []
+    for override in due:
+        try:
+            if await store.revert(
+                override.key,
+                actor="system",
+                reason=(
+                    "reverted automatically: nobody confirmed the system was still "
+                    "working before the deadline"
+                ),
+            ):
+                done.append(override.key)
+        except Exception as exc:  # noqa: BLE001
+            log.warning("could not revert %s: %s", override.key, exc)
+    if done:
+        log.warning(
+            "settings: reverted %d unconfirmed change(s): %s",
+            len(done), ", ".join(done),
+        )
+    return done
 
 
 async def overdue_reviews(store: Optional[SettingsStore]) -> list[Override]:

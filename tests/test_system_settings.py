@@ -102,12 +102,82 @@ def test_cache_clear_resets_overrides_too():
 
 # --- the denylist and validation --------------------------------------------
 
-@pytest.mark.parametrize("key", ["espo_api_key", "database_url", "espo_dry_run",
-                                 "session_secret", "settings_overrides"])
-def test_denylisted_keys_are_refused(key):
+@pytest.mark.parametrize("key", ["database_url", "app_encryption_key", "release_tag"])
+def test_the_three_impossible_keys_are_refused(key):
+    """Doug's ruling, 2026-08-28: all settings editable unless a change would
+    make the system unusable. These three are not merely dangerous — each is
+    impossible or destructive in a way no verification can cover, and the
+    refusal says which."""
     assert not is_editable(key)
-    with pytest.raises(SettingsError):
+    with pytest.raises(SettingsError) as e:
         validate_value(key, "anything")
+    assert "cannot be changed here" in str(e.value)
+    assert "deployment configuration" in str(e.value)
+
+
+@pytest.mark.parametrize("key", ["espo_api_key", "espo_dry_run", "session_secret",
+                                 "settings_overrides", "setup_enabled",
+                                 "google_service_account_json"])
+def test_the_dangerous_keys_are_now_editable(key):
+    """They used to be hidden. Hiding pushed the risk onto whoever edits the
+    deployment configuration by hand with no check at all — a worse place for
+    it. They are editable now, through the verified path."""
+    assert is_editable(key)
+    assert key not in DENYLIST
+
+
+def test_the_tiers_do_not_overlap_and_are_all_editable():
+    """A key that is both 'impossible' and 'verified' would render a control the
+    server always refuses. And a lockout key must be editable, or its countdown
+    — the only mechanism that survives an admin being locked out — is dead code."""
+    from core.settings_registry import LOCKOUT_KEYS, VERIFIED_KEYS
+
+    assert not (LOCKOUT_KEYS & VERIFIED_KEYS)
+    assert not (LOCKOUT_KEYS & DENYLIST)
+    assert not (VERIFIED_KEYS & DENYLIST)
+    for key in LOCKOUT_KEYS | VERIFIED_KEYS:
+        assert is_editable(key), f"{key} is in a safety tier but is not editable"
+
+
+def test_every_lockout_key_gets_a_countdown():
+    """No probe can detect 'the app works perfectly and will not let anyone back
+    in', so these MUST get the confirm-or-revert deadline rather than relying on
+    a check."""
+    from core.settings_registry import LOCKOUT_KEYS
+    from setup.router import _revert_deadline
+
+    for key in LOCKOUT_KEYS:
+        assert _revert_deadline(key) is not None, f"{key} has no countdown"
+
+
+def test_a_key_with_no_lockout_risk_gets_no_countdown():
+    """The countdown is disruptive — an unattended change undoes itself. It must
+    fire only where the alternative is being locked out."""
+    from setup.router import _revert_deadline
+
+    assert _revert_deadline("worker_batch_size") is None
+    assert _revert_deadline("espo_api_key") is None  # probed instead
+
+
+def test_no_secret_reaches_the_history_table():
+    """History answers 'when did this change and who did it'. For a secret,
+    'to what' is nobody's business and would put plaintext credentials in a
+    table nothing encrypts."""
+    from core.settings_store import _history_value
+
+    assert _history_value("espo_api_key", "hunter2") == "(secret set)"
+    assert _history_value("worker_batch_size", "25") == "25"
+    assert _history_value("espo_api_key", None) is None
+
+
+def test_a_secret_value_never_leaves_the_server():
+    """Editable, never readable. You can set a new one; you can never read the
+    old one back."""
+    o = _override("espo_api_key", "hunter2")
+    d = o.as_dict()
+    assert d["value"] == ""
+    assert d["isSet"] is True
+    assert "hunter2" not in str(d)
 
 
 def test_unknown_key_refused():
@@ -177,7 +247,7 @@ def test_a_stored_denylisted_row_is_ignored_on_load():
     would leave a stale override live forever. Uses a genuinely denylisted key:
     the boot-read ones are permitted now."""
     rows = {
-        "espo_base_url": _override("espo_base_url", "https://evil.example"),
+        "database_url": _override("database_url", "postgres://elsewhere"),
         "worker_batch_size": _override("worker_batch_size", "7"),
     }
     assert global_overrides(rows) == {"worker_batch_size": "7"}

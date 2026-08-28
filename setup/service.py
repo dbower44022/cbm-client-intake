@@ -161,6 +161,17 @@ async def page_payload(store: Optional[SettingsStore]) -> dict[str, Any]:
     ]
     restart_rows = groups.get(GROUP_RESTART, [])
     boot = boot_overrides.state()
+    # A change that is live but will undo itself unless somebody says the system
+    # still works. The page has to lead with this — the whole mechanism depends
+    # on an admin seeing it before the deadline.
+    awaiting = [
+        {
+            "key": o.key,
+            "label": (spec_for(o.key).label if spec_for(o.key) else o.key),
+            "revertAt": o.revert_at.isoformat() if o.revert_at else None,
+        }
+        for o in overrides.values() if o.awaiting_confirmation
+    ]
     return {
         "environment": settings.environment,
         "overridesActive": settings.overrides_active,
@@ -179,6 +190,7 @@ async def page_payload(store: Optional[SettingsStore]) -> dict[str, Any]:
             "bootOutcome": boot.outcome,
             "bootDetail": boot.detail,
         },
+        "awaitingConfirmation": awaiting,
         # The break-glass being off is the single most important thing to say
         # loudly: the page still renders, but nothing it saves takes effect.
         "breakGlass": not settings.settings_overrides,

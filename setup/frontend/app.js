@@ -180,6 +180,55 @@
       + (page.temporaryCount ? " · " + page.temporaryCount + " temporary" : ""));
   }
 
+  // Confirm-or-revert. This banner is the entire safety net for the settings
+  // that can lock an admin out, so it leads the page and counts down out loud.
+  var confirmTimer = null;
+
+  function renderConfirm() {
+    var pending = (state.page && state.page.awaitingConfirmation) || [];
+    var el = $("confirmBanner");
+    if (confirmTimer) { clearInterval(confirmTimer); confirmTimer = null; }
+    if (!pending.length) { el.hidden = true; return; }
+    el.hidden = false;
+
+    function paint() {
+      var html = "<strong>" + pending.length + " change"
+        + (pending.length === 1 ? "" : "s")
+        + " will undo " + (pending.length === 1 ? "itself" : "themselves")
+        + " unless you confirm the system still works.</strong> "
+        + "Check that you can still sign in and use the app, then confirm. "
+        + "Doing nothing is safe \u2014 it reverts.<ul class=\"su__confirmlist\">";
+      pending.forEach(function (p) {
+        var left = p.revertAt ? Math.max(0, Math.round((new Date(p.revertAt) - Date.now()) / 1000)) : null;
+        var mins = left == null ? "" : Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0");
+        html += "<li><code>" + esc(p.key) + "</code> \u2014 " + esc(p.label)
+          + (left == null ? "" : ' <span class="su__countdown">' + mins + "</span> left")
+          + ' <button type="button" class="cbm-button cbm-button--secondary" data-confirm="'
+          + esc(p.key) + '">It works \u2014 keep it</button></li>';
+      });
+      el.innerHTML = html + "</ul>";
+    }
+    paint();
+    confirmTimer = setInterval(paint, 1000);
+  }
+
+  async function confirmSetting(key) {
+    try {
+      var result = await api("/settings/" + encodeURIComponent(key) + "/confirm", { method: "POST" });
+      state.page = result.page;
+      renderAll();
+    } catch (e) {
+      window.console && window.console.warn("confirm failed", e);
+    }
+  }
+
+  // One entry point, so a new banner cannot be forgotten by a call site.
+  function renderAll() {
+    renderSettings();
+    renderOverdue();
+    renderConfirm();
+  }
+
   function renderOverdue() {
     var overdue = (state.page && state.page.overdue) || [];
     var el = $("overdueBanner");
@@ -221,7 +270,16 @@
     } else {
       control.innerHTML = '<input type="text" id="editValue" />';
     }
-    $("editValue").value = row.value;
+    // A secret is never sent to the browser, so there is nothing to prefill and
+    // the box means "the NEW value" rather than "the current one".
+    $("editValue").value = row.secret ? "" : row.value;
+    if (row.secret) {
+      $("editValue").setAttribute("placeholder",
+        row.isSet ? "A value is set. Type a new one to replace it."
+                  : "Not set. Type a value.");
+    } else {
+      $("editValue").removeAttribute("placeholder");
+    }
 
     text($("editEnvNote"), row.overridden
       ? "This is currently overridden. The deployment overlay says \"" + row.envValue
@@ -286,8 +344,25 @@
       });
       state.page = result.page;
       closeEditor();
-      renderSettings();
-      renderOverdue();
+      renderAll();
+      if (result.reverted) {
+        var rb = $("restartBanner");
+        rb.hidden = false;
+        rb.innerHTML = "<strong>" + esc(row.label) + " was undone.</strong> "
+          + "It saved, but the system stopped working with it, so the previous "
+          + "value was put back automatically: " + esc(result.reverted);
+        return;
+      }
+      var v = result.verification || {};
+      if (v.outcome === "unknown") {
+        var ub = $("restartBanner");
+        ub.hidden = false;
+        ub.innerHTML = "<strong>" + esc(row.label) + " is saved, but could not be "
+          + "checked.</strong> " + esc(v.detail || "")
+          + " The value was stored because a check that cannot run must not block "
+          + "you from fixing configuration during an outage \u2014 but nothing has "
+          + "confirmed it works.";
+      }
       if (result.restart) {
         // Not an alert(): a modal blocks the page to repeat what the row now
         // says next to the value. This states it once, in place, and stays put.
@@ -314,8 +389,7 @@
       });
       state.page = result.page;
       closeEditor();
-      renderSettings();
-      renderOverdue();
+      renderAll();
     } catch (e) {
       $("editError").hidden = false;
       text($("editError"), e.message);
@@ -549,13 +623,13 @@
     text($("pageSubtitle"),
       "This deployment: " + state.page.environment
       + (state.page.writable ? "" : " · read-only (no database attached)"));
-    renderSettings();
-    renderOverdue();
+    renderAll();
   }
 
   document.addEventListener("click", function (ev) {
     var t = ev.target;
     if (t.dataset && t.dataset.edit) { openEditor(t.dataset.edit); return; }
+    if (t.dataset && t.dataset.confirm) { confirmSetting(t.dataset.confirm); return; }
     if (t.dataset && t.dataset.dry) { runJob(t.dataset.dry, false); return; }
     if (t.dataset && t.dataset.apply) { runJob(t.dataset.apply, true); return; }
     if (t.dataset && t.dataset.run) { toggleRunOutput(t.dataset.run); return; }

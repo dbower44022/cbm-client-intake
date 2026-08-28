@@ -391,6 +391,7 @@ async def main() -> None:
     # outage.
     from core.settings_store import make_settings_store, overdue_reviews
     from core.settings_store import refresh_into_config as _refresh_settings
+    from core.settings_store import sweep_reverts as _sweep_reverts
 
     settings_store = make_settings_store(settings)
     next_settings = datetime.now(timezone.utc)
@@ -408,6 +409,11 @@ async def main() -> None:
         now_cfg = datetime.now(timezone.utc)
         if settings_store is not None and now_cfg >= next_settings:
             try:
+                # Backstop for the web process being down. A change that nobody
+                # confirmed working undoes itself here too, and reverting BEFORE
+                # the refresh means the restored value is installed in the same
+                # pass. Idempotent, so both processes sweeping is safe.
+                await _sweep_reverts(settings_store)
                 await _refresh_settings(settings_store, get_settings())
             except Exception as exc:  # noqa: BLE001 — config refresh never crashes the worker
                 log.warning("settings override refresh failed: %s", exc)

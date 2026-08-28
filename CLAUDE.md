@@ -709,10 +709,40 @@ the crm-test overlay, so every prod flag change needed `doctl`. Runbook:
   fails (no DB, Postgres down, a bad value) the accessor returns the env value
   and logs. A database incident must not silently reconfigure the app — which is
   also why the overlays keep their flags permanently.
-- **A server-side denylist** (`core/settings_registry.py`) refuses every secret,
-  `ESPO_BASE_URL`/`ESPO_DRY_RUN`, `DATABASE_URL`, `SESSION_SECRET` and the two
-  switches guarding this feature. Secrets are never rendered — "set / not set"
-  only. `SETTINGS_OVERRIDES=false` is the env-only break-glass.
+- **Every setting is editable unless a change is genuinely impossible** (Doug's
+  ruling, 2026-08-28: *"All settings should be editable, unless a change would
+  make the system unusable. Then there must be a verification that the system is
+  still functional."*). The denylist is down to **three** keys — `DATABASE_URL`
+  (the override table lives inside the database it names, so a move would be
+  left behind in the database being abandoned), `APP_ENCRYPTION_KEY` (rotating
+  it makes every stored secret permanently unreadable — data loss, not lockout)
+  and `RELEASE_TAG` (stamped into the image; an override would make the
+  deployment misreport its own build). All three are **visible and read-only**,
+  each refusal naming its reason. Everything else that used to be hidden — the
+  CRM address and key, dry-run, the provisioning account, every integration
+  credential, the session secret, `SETUP_ENABLED`, `SETTINGS_OVERRIDES` — is
+  editable through the **verified path** (`setup/verify.py`):
+  - **Pre-flight**: the value is tried before it is stored. A CRM key the CRM
+    rejects, or an address that answers but holds none of this app's entities,
+    is refused with the CRM's own error. A probe that cannot *reach* its target
+    returns `unknown`, never `ok`, and `unknown` does **not** block the save —
+    an admin fixing configuration during an outage must not be blocked by it.
+  - **Post-apply**: a `VERIFIED_KEYS` change that leaves the system non-functional
+    is **reverted automatically**.
+  - **Confirm-or-revert**: `LOCKOUT_KEYS` (the two switches guarding this page,
+    the session secret, the cookie flag, allowed origins) apply with a
+    **10-minute countdown** and undo themselves unless an admin confirms. No
+    probe can detect a lockout — the app is working perfectly and simply will not
+    let anyone back in — so this is the only mechanism that survives it. The
+    sweep runs in **both** processes on the settings timer, and works directly
+    against the database so it still fires when the change under test was
+    `settings_overrides=false`.
+  - **Secrets are editable but never readable** — set a new one, never read the
+    old one back. Stored **encrypted** with `APP_ENCRYPTION_KEY`; without a
+    cipher a secret is **refused**, never written in plain text. `DATABASE_URL`
+    counts as a secret because the password is inside the URL. History stores
+    `(secret set)`, never the value.
+  `SETTINGS_OVERRIDES=false` is still the env-only break-glass.
 - **Every setting is on the page — including the ones that need a restart**
   (Doug's ruling, 2026-08-28: a setting hidden where it cannot be viewed or
   edited is unacceptable). `BOOT_READ_KEYS` are curated into a **Restart

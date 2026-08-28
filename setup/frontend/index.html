@@ -45,6 +45,12 @@
          not already say beside the value. -->
     <div class="su__banner su__banner--info" id="restartBanner" role="status" hidden></div>
 
+    <!-- Confirm-or-revert. A change that can lock the admin out of this page
+         applies with a deadline and undoes itself unless somebody confirms the
+         system still works. Reaching this button IS the proof, since a lockout
+         is exactly what would stop you. -->
+    <div class="su__banner su__banner--danger" id="confirmBanner" role="alert" hidden></div>
+
     <section class="su__body" id="bodyView" hidden>
       <nav class="su__tabs" role="tablist">
         <button type="button" class="su__tab is-active" data-tab="settings" role="tab">Settings</button>

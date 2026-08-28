@@ -508,6 +508,7 @@ def create_app(
             import asyncio as _asyncio
 
             from core.settings_store import refresh_into_config as _refresh
+            from core.settings_store import sweep_reverts as _sweep_reverts
 
             await _refresh(settings_store, settings)
 
@@ -515,6 +516,12 @@ def create_app(
                 while True:
                     await _asyncio.sleep(max(5, settings.setup_refresh_seconds))
                     try:
+                        # Undo any change nobody confirmed in time BEFORE
+                        # re-reading, so the refresh installs the restored value
+                        # in the same pass. This is what rescues an admin who
+                        # locked themselves out: it is a background task, so it
+                        # keeps running even when no request can reach the page.
+                        await _sweep_reverts(settings_store)
                         await _refresh(settings_store, get_settings())
                     except Exception:  # noqa: BLE001 — must never take the app down
                         log.exception("settings override refresh failed")

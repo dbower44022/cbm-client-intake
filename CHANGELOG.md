@@ -4,6 +4,70 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.216.0] — 2026-08-28
+
+**feat(setup): every setting is editable, and the system proves a dangerous
+change before and after it is made.** Doug's ruling: *"All settings should be
+editable, unless a change would make the system unusable. Then there must be a
+verification that the system is still functional."*
+
+Twenty settings that could never be changed from the page now can be: the CRM
+address and API key, dry-run, the provisioning account, every integration
+credential, the session secret and cookie flag, allowed origins, the peer
+settings, the sandbox wipe, and both switches that guard this page. **The
+denylist is down from twenty-three keys to three.**
+
+The argument for the change, which is worth keeping: **hiding a setting never
+made it safe.** It moved the risk to whoever edits the deployment configuration
+by hand — where there is no check, no health verification and no undo at all.
+
+**Three mechanisms make editable-and-dangerous defensible** (new `setup/verify.py`):
+
+- **Pre-flight.** The value is tried before it is stored. A CRM key the CRM
+  rejects is refused with the CRM's own error; an address that answers but holds
+  none of this application's entities is refused as "not a CRM this application
+  can use", so pointing at a stranger's EspoCRM fails at the page rather than on
+  every later write. A probe that cannot *reach* what it is testing returns
+  **unknown, never ok** — and unknown deliberately does **not** block the save,
+  because an admin fixing configuration during an outage must not be blocked by
+  the outage.
+- **Post-apply.** With the change installed, the system is checked. One that left
+  it non-functional is **reverted automatically**, and the page says so instead
+  of reporting a success.
+- **Confirm-or-revert.** The settings that can lock an admin out of this page get
+  a **10-minute countdown** and undo themselves unless someone confirms. Neither
+  check above can catch a lockout — the application would be working perfectly
+  and simply refusing to let anyone back in — so this is the only mechanism that
+  survives it, and reaching the confirm button *is* the proof. The sweep runs in
+  **both** processes on the existing settings timer, and operates directly on the
+  database so it still fires when the change under test was
+  `settings_overrides=false`, which switches off the very layer that would
+  otherwise undo it.
+
+**Secrets become editable but never readable.** Set a new one; never read the old
+one back. Stored encrypted with the Fernet key that already protects the Google
+configuration — and where no cipher is configured a secret is **refused rather
+than written in plain text**. History stores `(secret set)`, never the value.
+
+**A pre-existing leak fixed on the way:** `DATABASE_URL` was rendered in full in
+the read-only "show all" list, and a Postgres URL carries the password inside it.
+It is now masked as a secret as well as read-only.
+
+**What remains impossible, each visible and read-only with its reason:**
+`DATABASE_URL` (the override table lives *inside* the database it names — an
+override moving the app elsewhere would be left behind in the database being
+abandoned, and the app would read its configuration from the new one and move
+straight back), `APP_ENCRYPTION_KEY` (rotating it makes every already-encrypted
+stored secret permanently unreadable: data loss, which no verification can undo)
+and `RELEASE_TAG` (stamped into the image).
+
+Migration `0027_app_setting_verified` adds `encrypted`, `previous_value`,
+`revert_at` and `confirmed`. The revert columns are deliberately separate from
+the existing `temporary`/`review_at` pair, which is advisory by ruling 5 —
+"reported, never auto-reverted". The two look alike and mean opposite things.
+
+23 new tests; full suite green at 1938.
+
 ## [0.215.0] — 2026-08-28
 
 **feat(setup): every setting is on the Settings page, including the ones that
