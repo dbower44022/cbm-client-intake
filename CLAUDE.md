@@ -192,7 +192,7 @@ fast and stateless — no CRM call at page load). CRM-backed arrays are wrapped 
 sentinel comments and refreshed by `scripts/sync_form_options.py`:
 
 ```js
-// >>> crm-enum key=industryExperience field=CMentorProfile.industrySector — generated; do not hand-edit between the markers.
+// >>> crm-enum key=industryExperience field=CMentorProfile.industryExperience — generated; do not hand-edit between the markers.
 industryExperience: [ ... ],
 // <<< crm-enum
 ```
@@ -200,7 +200,8 @@ industryExperience: [ ... ],
 The marker is self-describing (no mapping duplicated in the script) and supports
 `exclude="A|B"`. Default run is a **non-destructive dry-run** that exits
 non-zero on drift, so it doubles as a CI check; `--write` applies, then review
-the diff and commit. 8 lists are managed today. The static file serves **both**
+the diff and commit. 16 lists across 4 `options.js` files, from 14 distinct
+`Entity.field` sources, are managed today. The static file serves **both**
 deploys, so synced values must be valid on crm-test *and* prod — the dry-run is
 also how you catch the two CRMs diverging. To check prod, override
 `ESPO_BASE_URL`/`ESPO_API_KEY` for one run (read-only metadata GETs).

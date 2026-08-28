@@ -2,8 +2,12 @@
 
 The rulings below are **Doug's**, given in the planning session of 2026-08-17/18
 and preserved verbatim in substance; the whole design follows from them. The
-proposals at the bottom are **mine, not his** — they are the open decisions, and
-each one blocks work that is otherwise ready to start.
+proposals at the bottom are **mine, not his** — they are the open decisions.
+**Two of the seven are now ruled (1 and 7), and none of the remaining five blocks
+work today**: proposal 2 waits on Phase 6 being in sight, and 3, 5 and 6 are
+organizational and have no phase behind them yet. That is the same statement
+[TASKS.md](TASKS.md) Part 1 makes; if the two ever disagree, TASKS is the one
+being worked from.
 
 **How to use this file.** Nothing here is a task. A ruling changes only when Doug
 changes it, and then the phase files change to follow. A proposal leaves this

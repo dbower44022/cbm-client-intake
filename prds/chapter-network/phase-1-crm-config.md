@@ -13,7 +13,7 @@ below, and two of them are live production defects now tracked in
 | Tranche | Deliverable | State |
 |---|---|---|
 | A weekend | The conformance check: teams, templates, JSON output, defined exit codes, absent/forbidden/unreachable | **done** (`ac6f1b4`) |
-| A week | `/healthz` `crmConfig` block, the `releaseTag` slot, Stamp B's home decided against a live CRM, the gate wired PRE_DEPLOY on crm-test with a break-glass | not started |
+| A week | `/healthz` `crmConfig` block, the `releaseTag` slot, Stamp B's home decided against a live CRM, the gate wired PRE_DEPLOY on crm-test with a break-glass | **Stamp B's home done** — ruled D1 (`CNetworkStandard`), built and verified on crm-test 2026-08-27, production owed at a Sunday slot. The other three not started |
 | A month | The applier: desired-state definition, directive executor, plan identity, additive-only fence, the extension package, the roles capture and adjudication | not started, and **the only part at risk from the decision trigger** |
 
 The interface contract that governs all of it — C1–C10 and both version stamps —

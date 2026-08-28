@@ -26,7 +26,7 @@ follows from them.
 | Phase | State | Next thing |
 |---|---|---|
 | **[0 — De-Cleveland](phase-0-decleveland.md)** | **Substantially delivered.** v0.205.0–v0.206.0, deployed and verified on prod: `{{org}}`, `CHAPTER_TOKENS_URL`, the guard test, the four policy URLs. | A browser verification pass — the last thing owed |
-| **[1 — CRM config as an artifact](phase-1-crm-config.md)** | **In progress.** The interface contract is written; the conformance check is built (`ac6f1b4`) and has been run against both live CRMs. | The week's tranche: `crmConfig` at `/healthz`, Stamp B's home, the PRE_DEPLOY gate |
+| **[1 — CRM config as an artifact](phase-1-crm-config.md)** | **In progress.** The interface contract is written; the conformance check is built (`ac6f1b4`) and has been run against both live CRMs. Stamp B's home is ruled (D1, `CNetworkStandard`) and built on crm-test; production is owed at a Sunday slot. | The rest of the week's tranche: `crmConfig` + `releaseTag` at `/healthz` ([TASKS.md](TASKS.md) § R1), then the PRE_DEPLOY gate (§ R2) |
 | **[2 — Release train](phase-2-release-train.md)** | Not started, but **cadence is ruled: weekly, Sunday 17:00 UTC** (2026-08-26), and the CRM-side procedure is written ([crm-update-runbook.md](crm-update-runbook.md)). Zero git tags exist in this repo. | Cut the first tag and make cutting one cheap ([TASKS.md](TASKS.md) § R5) |
 | **[3 — Spec generation + secrets](phase-3-spec-secrets.md)** | Not started. | Nothing blocks it; it also fixes today's single-laptop deploy dependency |
 | **[4 — Public pages](phase-4-public-pages.md)** | Not started. Substance is in `prds/public-mentor-pages-plan.md`. | — |

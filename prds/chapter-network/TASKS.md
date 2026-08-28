@@ -291,28 +291,6 @@ during an urgent app fix produces an undocumented bypass invented under pressure
 
 ---
 
-## R3. Fix a stale count in `CLAUDE.md`
-
-### What this is
-
-`CLAUDE.md` line 198 says `sync_form_options.py` manages "8 lists". It manages
-**16** — I counted the sentinel blocks in the tree today: 6 in
-`forms/volunteer/frontend/options.js`, 6 in `client_intake`, 3 in `partner`, 1 in
-`sponsor`, drawn from **14** distinct `Entity.field` sources.
-
-Small, but `CLAUDE.md` loads into every session, so a wrong number there is a
-wrong number everywhere, and this one was noticed during the Phase 1 rewrite and
-never fixed.
-
-### Steps
-
-1. Change "8 lists are managed today" to "16 lists across 4 `options.js` files,
-   from 14 distinct `Entity.field` sources, are managed today".
-2. Re-derive rather than trusting me:
-   `grep -rc ">>> crm-enum" --include=options.js .`
-
----
-
 ## R4. Capture both CRMs' roles and tabulate where they differ
 
 ### What this is
@@ -492,6 +470,28 @@ and linked from here so the finding is not lost between two lists.
 ---
 
 # Closed
+
+- **R3 — the stale count in `CLAUDE.md` is fixed** (2026-08-28). It now reads
+  "16 lists across 4 `options.js` files, from 14 distinct `Entity.field` sources"
+  — both numbers re-derived rather than trusted (`grep -rc ">>> crm-enum"` gives
+  1/6/6/3, and the distinct `field=` values sort to 14). The same paragraph's
+  worked example cited `field=CMentorProfile.industrySector`; the real marker in
+  `forms/volunteer/frontend/options.js:47` is `industryExperience`, so that was
+  corrected in the same edit. Both were wrong in a file that loads into every
+  session.
+
+- **Three stale spots in this project's own documents** (2026-08-28). Found by a
+  review pass that checked each document's falsifiable claims against the tree.
+  (1) [DECISIONS.md](DECISIONS.md)'s proposals preamble still said each open
+  proposal "blocks work that is otherwise ready to start", which contradicted
+  Part 1 of this file — two of the seven are ruled and none of the remaining five
+  blocks anything today. (2) [README.md](README.md)'s Phase 1 row and (3)
+  [phase-1](phase-1-crm-config.md)'s tranche table both still listed "Stamp B's
+  home" as pending, which D1 ruled on 2026-08-26 and R0 built on crm-test on
+  2026-08-27. Everything else in all fourteen documents checked out: zero git
+  tags, no `releaseTag`/`crmConfig` in `core/`, no conformance job in either
+  overlay, the four timezone hardcodes at the exact cited lines, and
+  `OPEN-ITEMS.md` item 26 present.
 
 - **R0 is done on crm-test, and it took two corrections** (2026-08-27).
   `CNetworkStandard` was built correctly in every structural respect — one `C`,
