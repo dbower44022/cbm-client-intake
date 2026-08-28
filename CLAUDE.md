@@ -713,14 +713,30 @@ the crm-test overlay, so every prod flag change needed `doctl`. Runbook:
   `ESPO_BASE_URL`/`ESPO_DRY_RUN`, `DATABASE_URL`, `SESSION_SECRET` and the two
   switches guarding this feature. Secrets are never rendered — "set / not set"
   only. `SETTINGS_OVERRIDES=false` is the env-only break-glass.
-- **Boot-read flags are denylisted, not badged** (`BOOT_READ_KEYS`).
-  `create_app` mounts routers and builds middleware from the ENVIRONMENT and the
-  override layer loads afterwards, so an override for `analytics_enabled`,
-  `events_enabled`, `intake_rate_limit`, `log_level` … never applies — not even
-  after a redeploy, which re-runs mounting first. v0.190.1 offered them with a
-  "takes effect on next deploy" badge and toggling `events_enabled` produced a
-  portal tile whose routes did not exist. **The denylist is filtered on READ as
-  well as write**, so a row that outlives its rule goes inert with no cleanup.
+- **Every setting is on the page — including the ones that need a restart**
+  (Doug's ruling, 2026-08-28: a setting hidden where it cannot be viewed or
+  edited is unacceptable). `BOOT_READ_KEYS` are curated into a **Restart
+  required** group that explains itself, and each row shows the value **in
+  force** beside the stored one, badged *Waiting for restart* when they differ.
+  Two things make that honest rather than a repeat of v0.190.1, when these were
+  offered with a "takes effect on next deploy" badge and toggling
+  `events_enabled` produced a portal tile whose routes did not exist:
+  - **`core/boot_overrides.load_at_boot` installs the override layer at the very
+    top of `create_app`**, before routers are mounted, middleware built or
+    logging configured. Previously the layer loaded afterwards, so such an
+    override never applied *at all* — a redeploy re-ran the mounting first. It
+    never raises, and on a database failure it degrades to the **deployment's**
+    values, never the code defaults.
+  - **The live `Settings` object is not the truth for these keys.** The periodic
+    refresh installs a newer value into it while the already-built routers keep
+    the old one, so reading it back would report a change as taken effect when it
+    had not. `boot_overrides.state().snapshot` is the only honest source and is
+    what the page reports as `inForce`.
+  `DENYLIST` now holds only secrets, infrastructure and the break-glass pair —
+  plus **`release_tag`**, which is curated **read-only**: it is stamped into the
+  image, so a stored override would survive a restart and make the deployment
+  misreport which image it is running. **The denylist is still filtered on READ
+  as well as write**, so a row that outlives its rule goes inert with no cleanup.
 - **Web and worker refresh independently** (`SETUP_REFRESH_SECONDS`, default 45).
   `/healthz` reports `settingsVersion` per component so you can see the worker
   catch up.

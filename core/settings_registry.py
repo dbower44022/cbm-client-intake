@@ -40,6 +40,10 @@ GROUP_EMAIL = "Email"
 GROUP_RELIABILITY = "Reliability"
 GROUP_GATES = "Team gates"
 GROUP_PRESENTATION = "Presentation"
+# Read once while the process starts, so a change waits for a restart. Grouped
+# together rather than scattered, because the thing they share — "saving this
+# does not take effect yet" — is the thing a reader most needs told.
+GROUP_RESTART = "Restart required"
 
 GROUP_ORDER = [
     GROUP_FEATURES,
@@ -48,6 +52,7 @@ GROUP_ORDER = [
     GROUP_RELIABILITY,
     GROUP_GATES,
     GROUP_PRESENTATION,
+    GROUP_RESTART,
 ]
 
 # Keys that may NEVER be overridden from the UI, whatever the request says.
@@ -61,8 +66,14 @@ GROUP_ORDER = [
 #   * setup_enabled / settings_overrides — the break-glass pair. If the page
 #     could switch itself (or the whole override layer) off, recovery would
 #     need a redeploy;
-#   * BOOT_READ_KEYS — see below. An override for these is inert by
-#     construction, so offering one would be a lie.
+#
+# BOOT_READ_KEYS are NO LONGER denylisted. Doug ruled on 2026-08-28 that every
+# setting belongs on the page — hiding one where it cannot be viewed or edited
+# is not acceptable — and `core/boot_overrides.load_at_boot` now installs the
+# override layer BEFORE create_app mounts anything, so "takes effect on
+# restart" is true rather than a promise. They are curated into the
+# "Restart required" group, which shows the value in force beside the one
+# waiting for a restart.
 BOOT_READ_KEYS: frozenset[str] = frozenset({
     # Decide router mounting / static mounts / portal tiles in create_app.
     "analytics_enabled",
@@ -83,7 +94,12 @@ BOOT_READ_KEYS: frozenset[str] = frozenset({
     "release_tag",
 })
 
-DENYLIST: frozenset[str] = BOOT_READ_KEYS | frozenset({
+DENYLIST: frozenset[str] = frozenset({
+    # Baked into the container image at build time. An override would survive a
+    # restart and make the deployment MISREPORT which image it is running,
+    # which defeats the only reason the stamp exists. Curated read-only instead
+    # of hidden, per the 2026-08-28 ruling: visible, explained, not editable.
+    "release_tag",
     "espo_base_url",
     "espo_api_key",
     "espo_dry_run",
@@ -137,6 +153,10 @@ class SettingSpec:
     kind: Kind = "text"
     help: str = ""
     restart: bool = False
+    # Shown on the page but never editable. For values the app cannot own — the
+    # release tag comes from the image. Ruled 2026-08-28: visible beats hidden,
+    # and "read-only, here is why" beats absent.
+    readonly: bool = False
     component: Component = "web"
     choices: tuple[str, ...] = ()
     unit: str = ""
@@ -332,6 +352,52 @@ SETTINGS: tuple[SettingSpec, ...] = (
        help="Used for deep links in alert emails and the digest."),
     _s("events_public_base_url", GROUP_PRESENTATION, "Public event page base"),
     _s("events_cache_seconds", GROUP_PRESENTATION, "Public read cache", kind="int", unit="s"),
+
+    # --- Restart required --------------------------------------------------
+    # Every one of these is read while the process starts — routers are mounted,
+    # middleware is built and logging is configured before the app serves its
+    # first request. Saving one here stores it; the running process keeps the
+    # value it booted with until it restarts, and the page shows both.
+    _s("analytics_enabled", GROUP_RESTART, "Analytics", kind="bool", restart=True,
+       component="both",
+       help="Mounts the /analytics routes and its portal tile. The routes do not "
+            "exist until the process restarts, so switching this on mid-run would "
+            "otherwise produce a tile leading nowhere."),
+    _s("events_enabled", GROUP_RESTART, "Events & Webinars", kind="bool", restart=True,
+       component="both",
+       help="Mounts the /events routes and its portal tile."),
+    _s("events_public_api", GROUP_RESTART, "Public events API", kind="bool", restart=True,
+       help="The unauthenticated read API the website's programme reads. "
+            "Publishing is still gated per event."),
+    _s("assignments_enabled", GROUP_RESTART, "Staff applications", kind="bool",
+       restart=True, component="both",
+       help="The whole staff stack — portal, Client Administration and the rest. "
+            "Turning this off leaves only the public intake forms."),
+    _s("log_level", GROUP_RESTART, "Log level", kind="choice", restart=True,
+       component="both", choices=("DEBUG", "INFO", "WARNING", "ERROR"),
+       help="Applied once by logging setup as the process starts."),
+    _s("intake_rate_limit", GROUP_RESTART, "Intake rate limit", kind="int",
+       restart=True, unit="requests",
+       help="Built into the middleware at startup. Submissions allowed per window "
+            "from one address."),
+    _s("intake_rate_window_seconds", GROUP_RESTART, "Intake rate window", kind="int",
+       restart=True, unit="s", help="The window the limit above is counted over."),
+    _s("intake_max_body_mb", GROUP_RESTART, "Maximum submission size", kind="int",
+       restart=True, unit="MB",
+       help="Built into the middleware at startup. Chiefly the volunteer form's "
+            "optional resume."),
+    _s("crm_config_refresh_seconds", GROUP_RESTART, "CRM configuration check",
+       kind="int", restart=True, unit="s",
+       help="How often to re-read the CRM's configuration version for the status "
+            "page. 0 switches it off. The background task is created once at "
+            "startup, so starting or stopping it needs a restart. /healthz always "
+            "serves the cached answer and never waits on the CRM."),
+    _s("release_tag", GROUP_RESTART, "Release tag", restart=True, readonly=True,
+       help="Which release this container was built from — stamped into the image "
+            "at build time and supplied by the deployment's own configuration. "
+            "Read-only here on purpose: a stored override would survive a restart "
+            "and make this deployment misreport which image it is running. Empty "
+            "means an untagged build."),
 )
 
 BY_KEY: dict[str, SettingSpec] = {s.key: s for s in SETTINGS}
@@ -350,8 +416,17 @@ def is_secret(key: str) -> bool:
     return key in SECRET_KEYS
 
 
+def is_readonly(key: str) -> bool:
+    spec = BY_KEY.get(key)
+    return bool(spec and spec.readonly) or key in DENYLIST
+
+
 # Sanity: a curated setting that is also denylisted would render an editable
-# control the server always refuses. Catch it at import rather than in the UI.
-_conflict = sorted(set(BY_KEY) & DENYLIST)
+# control the server always refuses. A spec marked `readonly` is the exception —
+# it is curated precisely so the value is VISIBLE and explained rather than
+# hidden, and it renders no control at all.
+_conflict = sorted(
+    k for k in (set(BY_KEY) & DENYLIST) if not BY_KEY[k].readonly
+)
 if _conflict:  # pragma: no cover — a coding error, not a runtime condition
     raise RuntimeError(f"settings registry: curated but denylisted: {_conflict}")

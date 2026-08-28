@@ -188,10 +188,18 @@ async def test_the_page_size_stays_inside_the_crm_list_limit():
 
 # --- Boot-read discipline ---------------------------------------------------
 
-def test_boot_read_keys_are_not_offered_at_setup():
-    """Both are read once at process start, so an override for either would be
-    inert. v0.190.1 offered such a key with a badge and it produced a portal
-    tile whose routes did not exist; the rule now is denylist, not badge."""
+def test_both_are_on_the_settings_page_marked_restart_required():
+    """Doug's ruling, 2026-08-28: every setting belongs on the Settings page.
+    Both of these are read once at process start, so they live in the
+    "Restart required" group, which shows the value in force beside the stored
+    one. `release_tag` is there read-only — it comes from the image, and an
+    override would make the deployment misreport which image it is running."""
+    from core.settings_registry import BY_KEY, GROUP_RESTART
+
     for key in ("crm_config_refresh_seconds", "release_tag"):
         assert key in BOOT_READ_KEYS
-        assert key in DENYLIST
+        assert BY_KEY[key].group == GROUP_RESTART
+        assert BY_KEY[key].restart
+    assert not BY_KEY["crm_config_refresh_seconds"].readonly
+    assert BY_KEY["release_tag"].readonly
+    assert "release_tag" in DENYLIST

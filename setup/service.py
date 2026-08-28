@@ -15,11 +15,13 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Optional
 
+from core import boot_overrides
 from core import config as config_module
 from core.config import Settings, get_settings
 from core.settings_registry import (
     DENYLIST,
     GROUP_ORDER,
+    GROUP_RESTART,
     SETTINGS,
     SettingSpec,
     is_secret,
@@ -69,7 +71,7 @@ def _row(
         "help": spec.help,
         "restart": spec.restart,
         "component": spec.component,
-        "editable": True,
+        "editable": not spec.readonly,
         "secret": secret,
         "value": SECRET_MASK if secret else _as_text(effective),
         "envValue": SECRET_MASK if secret else _as_text(env_value),
@@ -85,7 +87,33 @@ def _row(
         # nothing (plan §5).
         "scopable": spec.component == "web",
     }
+    if spec.restart:
+        _add_restart_state(row, key, secret, effective)
     return row
+
+
+def _add_restart_state(
+    row: dict[str, Any], key: str, secret: bool, effective: Any
+) -> None:
+    """Say what this process is ACTUALLY running, beside what is stored.
+
+    For a restart-required setting the live ``Settings`` object is not the
+    truth. The periodic refresh installs a newer value into it happily, while
+    the routers, middleware and logging built at startup carry on using the one
+    the process booted with. Reading it back would report that a change had
+    taken effect when it had not — the failure this whole section exists to
+    prevent.
+
+    ``core.boot_overrides`` snapshots the real boot values, and that snapshot is
+    what ``inForce`` reports.
+    """
+    boot = boot_overrides.state()
+    booted = boot.snapshot.get(key, effective)
+    row["inForce"] = SECRET_MASK if secret else _as_text(booted)
+    # A pending change is one where what is stored now differs from what this
+    # process started with. Nothing pending is the ordinary, quiet case.
+    row["pendingRestart"] = not secret and _as_text(booted) != _as_text(effective)
+    row["bootOutcome"] = boot.outcome
 
 
 def _readonly_rows(settings: Settings, env: dict[str, Any]) -> list[dict[str, Any]]:
@@ -131,9 +159,26 @@ async def page_payload(store: Optional[SettingsStore]) -> dict[str, Any]:
         for o in overrides.values()
         if o.temporary and o.review_at and o.review_at <= now
     ]
+    restart_rows = groups.get(GROUP_RESTART, [])
+    boot = boot_overrides.state()
     return {
         "environment": settings.environment,
         "overridesActive": settings.overrides_active,
+        # The restart-required group, summarised so the page can lead with it
+        # when something is waiting rather than burying it at the bottom.
+        "restart": {
+            "pending": [
+                {"key": r["key"], "label": r["label"],
+                 "inForce": r.get("inForce"), "stored": r["value"]}
+                for r in restart_rows if r.get("pendingRestart")
+            ],
+            "count": sum(1 for r in restart_rows if r.get("pendingRestart")),
+            # How the boot-time load went. `failed` matters: the process is
+            # running on its deployment configuration and every stored override
+            # for a restart-required setting is NOT in force, whatever it says.
+            "bootOutcome": boot.outcome,
+            "bootDetail": boot.detail,
+        },
         # The break-glass being off is the single most important thing to say
         # loudly: the page still renders, but nothing it saves takes effect.
         "breakGlass": not settings.settings_overrides,

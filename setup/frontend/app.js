@@ -39,6 +39,8 @@
     return body;
   }
 
+  var RESTART_GROUP = "Restart required";
+
   function showMessage(msg) {
     $("bodyView").hidden = true;
     $("msgView").hidden = false;
@@ -55,9 +57,19 @@
 
   function badges(row) {
     var out = "";
-    if (row.restart) {
-      out += '<span class="su__chip su__chip--warn" title="Router mounting and boot-time '
-           + 'configuration are decided when the process starts">Takes effect on next deploy</span>';
+    if (row.pendingRestart) {
+      out += '<span class="su__chip su__chip--pending" title="Saved, but this process is '
+           + 'still running the value it started with. It will take effect when the app '
+           + 'restarts \u2014 a redeploy, or Restart from the DigitalOcean console.">'
+           + 'Waiting for restart</span>';
+    } else if (row.restart) {
+      out += '<span class="su__chip su__chip--muted" title="Read once while the process '
+           + 'starts. Saving a change here stores it; it takes effect on the next '
+           + 'restart.">In force</span>';
+    }
+    if (row.editable === false) {
+      out += '<span class="su__chip su__chip--muted" title="Shown so it is never hidden, '
+           + 'but it cannot be set from here">Read-only</span>';
     }
     if (row.component && row.component !== "web") {
       out += '<span class="su__chip su__chip--muted" title="Which process reads this setting">'
@@ -88,10 +100,20 @@
       ? '<div class="su__disagree">Deployment says <code>' + esc(row.envValue)
         + "</code> · override says <code>" + esc(row.value) + "</code></div>"
       : "";
+    // A restart-required setting that has been changed is running the OLD
+    // value. Say both, plainly, rather than showing the stored one as if it
+    // were live.
+    if (row.pendingRestart) {
+      disagree += '<div class="su__pending">Running <code>' + esc(row.inForce)
+        + "</code> now \u2014 will become <code>" + esc(row.value)
+        + "</code> when the app restarts.</div>";
+    }
     return ''
       + '<tr class="su__row' + (row.overridden ? " is-overridden" : "") + '" data-key="' + esc(row.key) + '">'
       + '  <td class="su__namecell">'
-      + '    <button type="button" class="su__linkbtn" data-edit="' + esc(row.key) + '">' + esc(row.label) + "</button>"
+      + (row.editable === false
+          ? '    <span class="su__linkbtn su__linkbtn--off">' + esc(row.label) + "</span>"
+          : '    <button type="button" class="su__linkbtn" data-edit="' + esc(row.key) + '">' + esc(row.label) + "</button>")
       + '    <div class="su__key">' + esc(row.key) + "</div>"
       + (row.help ? '<div class="su__rowhelp">' + esc(row.help) + "</div>" : "")
       + disagree
@@ -99,6 +121,33 @@
       + '  <td class="su__valuecell">' + valueCell(row) + "</td>"
       + '  <td class="su__metacell">' + sourceChip(row) + badges(row) + "</td>"
       + "</tr>";
+  }
+
+  // Every setting is on this page, including the ones a running process cannot
+  // pick up. Those say so here rather than being left off — a setting you
+  // cannot see is a setting nobody can fix.
+  function groupNote(name) {
+    if (name !== RESTART_GROUP) return "";
+    var r = (state.page && state.page.restart) || {};
+    var note = '<p class="su__note">These are read <strong>once, while the app '
+      + "starts</strong> \u2014 they decide which parts of the product are mounted, how "
+      + "requests are limited and how much is logged. You can change any of them here "
+      + "and the change is stored immediately, but <strong>the running app keeps the "
+      + "value it started with until it restarts</strong>. Each row shows which value is "
+      + "in force now. Restart from the DigitalOcean console, or redeploy.</p>";
+    if (r.bootOutcome === "failed") {
+      note += '<p class="su__note su__note--warn"><strong>Stored settings could not be '
+        + "read when this app started</strong>, so none of them are in force here \u2014 "
+        + "the app is running entirely on its deployment configuration. "
+        + esc(r.bootDetail || "") + "</p>";
+    }
+    if (r.count) {
+      note += '<p class="su__note su__note--warn"><strong>' + r.count + " change"
+        + (r.count === 1 ? " is" : "s are") + " waiting for a restart:</strong> "
+        + r.pending.map(function (x) { return "<code>" + esc(x.key) + "</code>"; }).join(", ")
+        + ".</p>";
+    }
+    return note;
   }
 
   function renderSettings() {
@@ -114,6 +163,7 @@
       });
       if (!rows.length) return;
       html += '<section class="su__group"><h2 class="su__h2">' + esc(group.name) + "</h2>"
+            + groupNote(group.name)
             + '<table class="su__table"><tbody>' + rows.map(settingRow).join("") + "</tbody></table></section>";
     });
     $("groups").innerHTML = html || '<p class="su__hint">Nothing matches that filter.</p>';
@@ -239,8 +289,14 @@
       renderSettings();
       renderOverdue();
       if (result.restart) {
-        window.alert(row.label + " is saved, but it is read when the process starts — "
-          + "it will not take effect until the next deploy.");
+        // Not an alert(): a modal blocks the page to repeat what the row now
+        // says next to the value. This states it once, in place, and stays put.
+        var b = $("restartBanner");
+        b.hidden = false;
+        b.innerHTML = "<strong>" + esc(row.label) + " is saved and stored.</strong> "
+          + "It is read while the app starts, so the running app keeps its current "
+          + "value until it restarts \u2014 redeploy, or use Restart in the "
+          + "DigitalOcean console. The row below shows which value is in force now.";
       }
     } catch (e) {
       err.hidden = false;

@@ -126,33 +126,68 @@ def test_valid_value_accepted():
     validate_value("gdrive_identity", "service")
 
 
-def test_registry_has_no_denylisted_keys():
-    assert not ({s.key for s in SETTINGS} & DENYLIST)
+def test_a_curated_key_is_denylisted_only_when_read_only():
+    """An editable control the server always refuses is a lie. The one allowed
+    overlap is a spec marked `readonly`, which is curated precisely so the value
+    is VISIBLE and explained rather than hidden, and renders no control."""
+    from core.settings_registry import BY_KEY
+
+    for key in {s.key for s in SETTINGS} & DENYLIST:
+        assert BY_KEY[key].readonly, f"{key} is curated, denylisted and editable"
 
 
-def test_boot_read_settings_are_not_editable():
-    """v0.190.1 offered these with a "takes effect on next deploy" badge, which
-    was wrong: create_app mounts routers from the ENVIRONMENT and the override
-    layer loads afterwards, so a redeploy re-runs mounting first and the override
-    never applies. Toggling events_enabled produced a portal tile whose routes
-    did not exist."""
-    from core.settings_registry import BOOT_READ_KEYS
+def test_boot_read_settings_are_on_the_page_and_marked_restart():
+    """Doug's ruling, 2026-08-28: every setting belongs on the page. Hiding one
+    where it cannot be viewed or edited is not acceptable.
+
+    This reverses the v0.190.1 lesson rather than forgetting it. That failure
+    was a setting that SILENTLY did nothing — offered with a "next deploy"
+    badge while create_app mounted routers from the environment before the
+    override layer loaded, so the override never applied at all and toggling
+    events_enabled produced a portal tile whose routes did not exist. The fix is
+    both halves: `boot_overrides.load_at_boot` now installs overrides BEFORE
+    create_app reads anything, so a restart really does apply them, and the row
+    shows which value is in force meanwhile."""
+    from core.settings_registry import BOOT_READ_KEYS, BY_KEY, GROUP_RESTART
 
     for key in BOOT_READ_KEYS:
-        assert key in DENYLIST
-        assert not is_editable(key)
-        with pytest.raises(SettingsError):
-            validate_value(key, "true")
+        spec = BY_KEY.get(key)
+        assert spec is not None, f"{key} is boot-read but not on the page"
+        assert spec.group == GROUP_RESTART
+        assert spec.restart, f"{key} must be marked as needing a restart"
+        # Editable unless it is a value the app cannot own at all.
+        assert spec.readonly == (key in DENYLIST)
+
+
+def test_the_release_tag_is_visible_but_never_editable():
+    """It is stamped into the image. A stored override would survive a restart
+    and make the deployment misreport which image it is running — so it is
+    curated read-only, which is visible-and-explained rather than hidden."""
+    from core.settings_registry import BY_KEY
+
+    assert "release_tag" in BY_KEY          # on the page
+    assert BY_KEY["release_tag"].readonly   # but no control
+    assert not is_editable("release_tag")
+    with pytest.raises(SettingsError):
+        validate_value("release_tag", "v9.9.9")
 
 
 def test_a_stored_denylisted_row_is_ignored_on_load():
     """A row can outlive the rule that allowed it — filtering only on write
-    would leave the stale events_enabled override live forever."""
+    would leave a stale override live forever. Uses a genuinely denylisted key:
+    the boot-read ones are permitted now."""
     rows = {
-        "events_enabled": _override("events_enabled", "true"),
+        "espo_base_url": _override("espo_base_url", "https://evil.example"),
         "worker_batch_size": _override("worker_batch_size", "7"),
     }
     assert global_overrides(rows) == {"worker_batch_size": "7"}
+
+
+def test_a_boot_read_override_now_survives_the_load():
+    """The other half of the ruling: these must actually reach the config layer,
+    or "takes effect on restart" would still be a promise the app cannot keep."""
+    rows = {"events_enabled": _override("events_enabled", "true")}
+    assert global_overrides(rows) == {"events_enabled": "true"}
 
 
 # --- scoped rollout ----------------------------------------------------------

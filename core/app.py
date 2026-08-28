@@ -25,6 +25,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 from starlette.middleware.sessions import SessionMiddleware
 
+from . import boot_overrides
 from . import network_standard as _network_standard
 from . import receipts
 from . import store as store_mod
@@ -413,6 +414,15 @@ def create_app(
     forms: list[FormSpec], *, store: Optional[SubmissionStore] = None
 ) -> FastAPI:
     settings = get_settings()
+    # Install stored overrides BEFORE anything below reads a setting. Router
+    # mounting, middleware and logging are all decided in this function, so an
+    # override for one of those keys used to never apply at all — not even after
+    # a redeploy, because the redeploy re-ran this first. Doug's ruling of
+    # 2026-08-28 is that every setting belongs on the Settings page, which
+    # requires "takes effect on restart" to be TRUE rather than a promise. This
+    # is what makes it true. Never raises, and degrades to the deployment's own
+    # values rather than to code defaults. See core/boot_overrides.
+    boot_overrides.load_at_boot(settings)
     setup_logging(settings.log_level)
     # Fail-fast on contradictory config (Phase 6, reliability review
     # 2026-07-17): these combinations used to boot fine and fail at runtime —
