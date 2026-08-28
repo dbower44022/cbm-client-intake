@@ -21,6 +21,15 @@ RUN uv sync --frozen --no-dev
 # Application source.
 COPY . .
 
+# The release tag (chapter network, Stamp A). A container has no .git, so the
+# tag the release train pinned has to be baked in at build time and supplied by
+# each deployment's spec as a RUN_AND_BUILD_TIME variable. Empty on a local or
+# untagged build, which /healthz reports as null rather than guessing: `version`
+# answers "what code is this", `releaseTag` answers "what promotion is this",
+# and after a hotfix rebuild those two differ.
+ARG RELEASE_TAG=""
+ENV RELEASE_TAG=$RELEASE_TAG
+
 # App Platform injects $PORT (default 8080); bind all interfaces.
 ENV PORT=8080
 EXPOSE 8080

@@ -543,6 +543,20 @@ class Settings(BaseSettings):
     setup_peer_url: str = ""
     setup_peer_token: str = ""
 
+    # --- The chapter network's two version stamps (prds/chapter-network) ---
+    # Stamp A, the release tag: baked into the image by the Dockerfile ARG of
+    # the same name and reported at /healthz as `releaseTag`. Empty on an
+    # untagged build, which reports as null.
+    release_tag: str = ""
+    # Stamp B, the CRM's configuration version: how often to re-read the
+    # CNetworkStandard record behind this deployment. ZERO DISABLES THE PROBE
+    # entirely, and zero is the default — this ships dark and is switched on
+    # per deployment, crm-test first, which is this repo's standing gate for
+    # anything that touches runtime. /healthz NEVER reads the CRM inline; it
+    # serves whatever this background refresh last cached, because a CRM outage
+    # must not take the web tier down.
+    crm_config_refresh_seconds: int = 0
+
     @property
     def sender_display_name(self) -> str:
         """The From display name on shared-identity sends.

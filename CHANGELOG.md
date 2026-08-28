@@ -4,6 +4,64 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.214.0] — 2026-08-28
+
+**feat(healthz): the release train's two version stamps.** `/healthz` has always
+answered one version question and there are three. `version` comes from
+`pyproject.toml` and identifies **the code**. It does not identify which
+*promotion* this is — after a hotfix rebuild two deployments can carry the same
+`version` and be different builds — and it says nothing about what configuration
+the CRM behind the app holds. Both gaps are load-bearing for the chapter network
+(`prds/chapter-network/`), where a promotion pins a **pair**,
+`(releaseTag, standardVersion)`, and an instance is conformant when it holds the
+pair the train pinned rather than when each half independently looks plausible.
+
+**`releaseTag`** — baked into the image at build time, since a container has no
+`.git`: a `RELEASE_TAG` build arg in the `Dockerfile`, supplied per deployment
+as a `RUN_AND_BUILD_TIME` variable and read as `Settings.release_tag`. Null on
+an untagged build, which is every build today and is the honest answer rather
+than a guess. Deliberately **not** added to the page footer — `version` is what
+a human needs there; this is for machines and the fleet console.
+
+**`crmConfig`** — `{state, version, appliedAt, fingerprint}`, read from the
+`CNetworkStandard` record in the CRM behind this deployment (ruled 2026-08-26;
+built on crm-test 2026-08-27). New `core/network_standard.py`. Three properties
+it exists to hold:
+
+- **`/healthz` never waits on the CRM.** The health check deliberately does not
+  ping EspoCRM — a CRM outage must not take the web tier down — so the value is
+  cached by a background refresh and the handler serves the cache. A test asserts
+  that priming it once is the only call however many health checks follow.
+- **Absent, forbidden and unreachable stay three different facts.** Collapsing
+  them turns "your API key lost its role" into "your CRM is missing an entity",
+  which is the exact defect `preflight_crm.py` was rewritten to stop making. Not
+  hypothetical: production's `CNetworkStandard` is owed at a Sunday release slot,
+  so `absent` is production's expected reading until then and must not read as a
+  fault — and `forbidden` is precisely the grant that was missed on crm-test.
+  Hence the `state` key alongside the three documented ones, which are always
+  present and null so a consumer that only knows the documented contract still
+  works. States: `stamped` / `unstamped` / `absent` / `forbidden` / `unreachable`
+  / `disabled`.
+- **Nothing here can fail a health check.** Every path is wrapped; the worst
+  outcome is a null block and a log line.
+
+**Ships dark**, per the repo's standing gate: `CRM_CONFIG_REFRESH_SECONDS`
+defaults to **0**, which disables the probe entirely, and it is switched on per
+deployment with crm-test first. Both new keys are **denylisted at `/setup`** as
+boot-read — the refresh task is created once in the lifespan and `RELEASE_TAG`
+is baked into the image, so an override for either would be inert, and offering
+an inert override is the v0.190.1 mistake.
+
+**Also: `scripts/cut_release.sh`, and this repo's first git tag.** The train
+leaves weekly, which is about fifty tags a year; if cutting one is a ritual of
+remembered commands it will not happen fifty times and the cadence becomes "when
+someone remembers". The script asserts a clean tree on `main`, reads the version
+from `pyproject.toml`, refuses to move an existing tag, creates an **annotated**
+tag (it carries the tagger and date the fleet console wants) and prints the push
+command rather than pushing. A tag is a marker: it changes no deployment and
+promotes nothing. Taking `deploy_on_push` off and moving to pinned-tag deploys
+is the release-train phase and is deliberately not part of this.
+
 ## [0.213.1] — 2026-08-24
 
 **fix(ops): closing a submission whose CRM record was deleted is no longer

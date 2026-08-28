@@ -25,6 +25,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 from starlette.middleware.sessions import SessionMiddleware
 
+from . import network_standard as _network_standard
 from . import receipts
 from . import store as store_mod
 from .branding import BrandedStaticFiles, render_page as render_branding
@@ -513,9 +514,37 @@ def create_app(
                 "settings overrides enabled (refresh every %ss)",
                 settings.setup_refresh_seconds,
             )
+        # Stamp B — the CRM's configuration version, cached for /healthz. Its
+        # own task rather than a line in the settings loop above, because that
+        # one only runs when a database is configured and this has nothing to
+        # do with a database. Ships dark: 0 disables, and 0 is the default.
+        # /healthz reads the cache, never the CRM (see core/network_standard).
+        crm_config_task = None
+        if settings.crm_config_refresh_seconds > 0 and not settings.espo_dry_run:
+            import asyncio as _asyncio
+
+            from core import network_standard as _ns
+
+            async def _crm_config_loop() -> None:
+                while True:
+                    try:
+                        await _ns.refresh(_make_client(get_settings()))
+                    except Exception:  # noqa: BLE001 — must never take the app down
+                        log.exception("crmConfig refresh failed")
+                    await _asyncio.sleep(
+                        max(30, get_settings().crm_config_refresh_seconds)
+                    )
+
+            crm_config_task = _asyncio.create_task(_crm_config_loop())
+            log.info(
+                "crmConfig probe enabled (refresh every %ss)",
+                settings.crm_config_refresh_seconds,
+            )
         try:
             yield
         finally:
+            if crm_config_task is not None:
+                crm_config_task.cancel()
             if liveness_task is not None:
                 liveness_task.cancel()
             if settings_task is not None:
@@ -747,6 +776,14 @@ def create_app(
             # phase 5) reads it to label an instance.
             "organization": settings.organization_name,
             "dryRun": settings.espo_dry_run,
+            # The release train's two version stamps (prds/chapter-network).
+            # `version` says what CODE this is; `releaseTag` says what
+            # PROMOTION it is, and after a hotfix rebuild the two differ. Null
+            # on an untagged build rather than guessing. `crmConfig` is the
+            # configuration version of the CRM behind this deployment, served
+            # from a cache — /healthz never pings the CRM.
+            "releaseTag": settings.release_tag or None,
+            "crmConfig": _network_standard.current().as_health(),
             "forms": [f.slug for f in forms],
             "assignments": settings.assignments_active,
             "durableStore": store is not None,

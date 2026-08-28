@@ -75,6 +75,12 @@ BOOT_READ_KEYS: frozenset[str] = frozenset({
     "intake_max_body_mb",
     # Applied once by logging_setup at process start.
     "log_level",
+    # The CRM configuration-stamp probe: its refresh task is created once in
+    # the lifespan, so changing the interval later cannot start, stop or
+    # re-time it. `release_tag` is baked into the image at build time and is
+    # not a runtime value at all.
+    "crm_config_refresh_seconds",
+    "release_tag",
 })
 
 DENYLIST: frozenset[str] = BOOT_READ_KEYS | frozenset({
