@@ -91,7 +91,16 @@ runbook: `DEPLOYMENT.md`; plain-language console companion:
   Alembic is the sole schema authority — there is no boot-time `create_all()`,
   so a fresh environment must migrate before first boot.
 - `/healthz` reports version, environment, `dryRun`, `durableStore` and a
-  worker-liveness block. It is the deploy marker.
+  worker-liveness block. It is the deploy marker. Since v0.214.0 it also
+  answers the other two version questions the chapter network needs:
+  **`releaseTag`** (which *promotion* this is — baked into the image by the
+  `RELEASE_TAG` build arg, since a container has no `.git`; null on an
+  untagged build) and **`crmConfig`** (what configuration the CRM behind it
+  holds, read from `CNetworkStandard`). The `crmConfig` probe is a cached
+  background read — **`/healthz` still never pings the CRM** — ships dark
+  (`CRM_CONFIG_REFRESH_SECONDS=0`), and reports `absent` / `forbidden` /
+  `unreachable` as three distinct states, because collapsing them turns a
+  lost API grant into "the CRM is missing an entity".
 - **Which component gets which flag matters**: the worker runs the delivery
   loop, monitoring, Gmail sync, Drive reconciliation, transcripts and receipt
   sweeps; the web process runs everything user-facing plus worker-liveness

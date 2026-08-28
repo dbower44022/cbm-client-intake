@@ -56,7 +56,7 @@ TAG="v$VERSION"
 # Re-pointing a tag someone may already have deployed is how "which version are
 # you on" stops having an answer. Bump pyproject.toml instead.
 if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
-  die "$TAG already exists (at $(git rev-parse --short "$TAG")). Bump the version in pyproject.toml — never move a tag that may already be deployed."
+  die "$TAG already exists (at commit $(git rev-parse --short "$TAG^{commit}")). Bump the version in pyproject.toml — never move a tag that may already be deployed."
 fi
 
 SHA="$(git rev-parse --short HEAD)"

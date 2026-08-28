@@ -175,64 +175,6 @@ change to go through that procedure. In outline:
 
 ---
 
-## R1. Report both version numbers on `/healthz`
-
-### What this is
-
-`/healthz` is how you find out what a deployment is running, and it is the deploy
-marker this project already relies on. Today it answers **one** version question
-and there are three.
-
-It currently returns `status`, `version`, `environment`, `organization`,
-`dryRun`, `forms`, `assignments`, `durableStore`, `database`, a `worker` block,
-and a `settings` block carrying `settingsVersion` (`core/app.py:710`).
-
-`version` comes from `core/version.py`, which reads `pyproject.toml`. That
-identifies **the code**. It does not identify:
-
-- **Which promotion this is.** After a hotfix rebuild, two deployments can carry
-  the same `version` and be different builds. The release train needs to pin a
-  tag and then verify that a chapter is actually running it. This repo has
-  **zero git tags** — the train's tag has never been cut, so this slot is empty
-  in both senses.
-- **What configuration the CRM behind it holds.** That is the stamp R0 builds
-  the home for.
-
-The invariant that makes both worth having: a promotion pins a **pair**,
-`(releaseTag, standardVersion)`, and an instance is conformant when it holds the
-pair the train pinned — not when each half independently looks plausible.
-
-Build the slots now, before there is anything to put in them. Both report `null`
-until a tag is cut and a stamp is written, which is the honest reading of every
-instance today, and it means the fleet console can be built against a stable
-shape rather than waiting.
-
-### Steps
-
-1. **`releaseTag`.** A container has no `.git`, so the tag has to be baked in at
-   build time. Add to the `Dockerfile`, after the `COPY . .` line:
-   `ARG RELEASE_TAG=""` and `ENV RELEASE_TAG=$RELEASE_TAG`.
-2. Add `release_tag: str = ""` to `core/config.py`, and return it from `/healthz`
-   as `"releaseTag": settings.release_tag or None`. Empty string becomes `null` —
-   an untagged dev build says so rather than pretending.
-3. **`crmConfig`.** Add a block returning
-   `{"version": …, "appliedAt": …, "fingerprint": …}`, read from the
-   `CNetworkStandard` row once R0 has built it — and **all `null`** until an
-   applier writes one, which is every instance today. Read it on the same refresh loop that already serves `settingsVersion`
-   rather than hitting the CRM on every health check — `/healthz` deliberately
-   never pings the CRM, because a CRM outage must not take the web tier down, and
-   that rule must not be broken here.
-4. Add tests asserting both keys are present and null on a stock deployment. The
-   point of the test is the *shape*, so the fleet console has a contract.
-5. Do **not** add `releaseTag` to the footer. `version` is what a human needs
-   there; `releaseTag` is for machines and the fleet console.
-
-Acceptance criterion 11 in [phase-1](phase-1-crm-config.md) is the finish line
-for the `crmConfig` half: it cannot be fully met until R0 has built the entity,
-and cannot report a non-null version until B1 has applied something.
-
----
-
 ## R2. Wire the conformance check as a deploy gate on crm-test
 
 ### What this is
@@ -293,6 +235,10 @@ during an urgent app fix produces an undocumented bypass invented under pressure
 
 ## R4. Capture both CRMs' roles and tabulate where they differ
 
+**The script is written and waiting; what is owed is two console runs and a
+ruling.** Steps 2 onward are Doug's — the credentials exist only inside the
+deployed containers.
+
 ### What this is
 
 This is the largest unknown in Phase 1, and it is the one thing the conformance
@@ -323,11 +269,16 @@ on the deployed **web** component.
 
 ### Steps
 
-1. Write `scripts/capture_roles.py` — **read-only**, no writes of any kind. It
-   should log in with the provisioning admin account via `core/admin_client.py`
-   (the existing shared admin login), `GET /api/v1/Role?maxSize=200`, then fetch
-   each role's full record including its `data` and `fieldData` scope maps, and
-   print one JSON document.
+1. ~~Write `scripts/capture_roles.py`~~ — **done 2026-08-28.** Read-only, no
+   write path in the file at all. It logs in with the provisioning admin via
+   `core/admin_client.py`, pages `Team` and `Role` at 200, fetches each role's
+   full record for its `data` and `fieldData` scope maps, and prints one JSON
+   document. Two guards worth knowing: it **refuses to run as a non-admin**,
+   because a non-admin's answer is silently partial and a partial capture
+   adjudicated as complete is worse than none; and a role it cannot read is
+   recorded in `notes` rather than dropped, since a missing role would read as
+   "this instance does not have it". Run it with `--indent 0` for a single line
+   that is easier to copy out of a web console.
 2. Run it inside the **crm-test** app's console and save the output. Use the
    pty-pipe technique in [[do-app-console-scripting]] — running it inside the
    container is the only way to reach those credentials, and it is also how you
@@ -343,49 +294,47 @@ on the deployed **web** component.
 
 ---
 
-## R5. Cut the first release tag, and make cutting one cheap
-
-**Newly unblocked by the weekly-cadence ruling.**
+## R6. Switch the two new stamps on, crm-test first
 
 ### What this is
 
-The release train identifies an instance by a **pair** — `(releaseTag,
-standardVersion)` — and an instance is conformant when it holds the pair the
-train pinned, not when each half independently looks plausible. R0 builds the home
-for the second half. This is the first half, and it does not exist at all:
-**`git tag | wc -l` in this repo is 0.** The train's tag has never been cut.
+v0.214.0 added both version stamps to `/healthz` and **both ship inert**, which
+is this repo's standing gate rather than caution for its own sake. Turning them
+on is two variables per deployment and one `doctl` apply, and it needs the
+overlays, so it is Doug's.
 
-**Cutting tags is inert and can be done today.** A git tag changes no deployment,
-breaks nothing, and costs nothing to undo. What is *not* inert — turning
-`deploy_on_push` off and moving Cleveland's production to pinned-tag deploys — is
-the large operational change at the heart of [Phase 2](phase-2-release-train.md)
-and stays there. Do not conflate them: this task is the tagging half only.
-
-**Why the cadence ruling makes it urgent rather than tidy.** Weekly means roughly
-fifty tags a year. If cutting one is a half-hour ritual of remembering the
-commands, it will not happen fifty times — the cadence will quietly become "when
-someone remembers", which is the failure mode the train exists to prevent. The
-tag has to be one command from the start, while there is no pressure on it.
+- **`RELEASE_TAG`** supplies the value `releaseTag` reports. Without it the key
+  is `null`, which is honest but useless. Scope **`RUN_AND_BUILD_TIME`** — the
+  Dockerfile reads it as a build arg, so a plain run-time variable will not
+  reach it. That scope is already used in `.do/app.prod.yaml`, so the mechanism
+  is proven here rather than assumed.
+- **`CRM_CONFIG_REFRESH_SECONDS`** arms the CRM stamp probe. `0` disables it and
+  `0` is the default; `300` is plenty, since the stamp changes at most weekly.
+  It is a **boot-read** key — the refresh task is created once in the lifespan —
+  so it must be set in the overlay and **cannot** be toggled at `/setup`, which
+  is why it is denylisted there.
 
 ### Steps
 
-1. Decide the tag format and write it down. Recommend `v<version>` matching
-   `pyproject.toml`'s version, so `releaseTag` and `version` are legible against
-   each other — they will differ after a hotfix rebuild, which is the whole reason
-   both exist.
-2. Add `scripts/cut_release.sh`: assert a clean tree on `main`, read the version
-   from `pyproject.toml`, refuse if that tag already exists, create an
-   **annotated** tag (annotated, not lightweight — it carries the tagger and date
-   the fleet console will want), and print the push command rather than pushing.
-   Pushing stays Doug's, per the repo's standing convention.
-3. Cut `v0.213.0` — or whatever HEAD is by then — as the first one. It is a
-   marker, not a promotion; nothing about how the apps deploy changes.
-4. Wire `RELEASE_TAG` into the image. R1 adds the `ARG`/`ENV` pair to the
-   `Dockerfile`; this supplies the value, as an env var with
-   **`scope: RUN_AND_BUILD_TIME`** in each overlay. That scope is already in use
-   in `.do/app.prod.yaml`, so the mechanism is proven here rather than assumed.
-5. Confirm `/healthz` reports the tag on crm-test and `null` on a local build.
-6. **Stop there.** `deploy_on_push` stays on until Phase 2 proper.
+1. Add both to `.do/app.prod.yaml` (**this is the crm-test overlay** — the
+   filenames are confusing; `app.prod-crm.yaml` is production), on the **web**
+   component. `RELEASE_TAG: v0.214.0` with `scope: RUN_AND_BUILD_TIME`, and
+   `CRM_CONFIG_REFRESH_SECONDS: "300"`.
+2. **Edit the overlay in place. Do not regenerate it** from `doctl apps spec
+   get` — that encrypts every plaintext secret into unreadable `EV[…]` blobs and
+   the local credentials are lost ([[overlay-regen-encrypts-secrets]]).
+3. Apply: `doctl apps update 509b4370-b9ca-42c7-b251-04d6820fe88e --spec .do/app.prod.yaml`
+4. Check `/healthz` on crm-test: `releaseTag` should read `v0.214.0` and
+   `crmConfig.state` should read **`unstamped`** — the entity is there (built
+   2026-08-27) and nothing has applied to it yet. A `forbidden` here would mean
+   the read grant was lost; an `absent` would mean the entity is not what we
+   think it is.
+5. Repeat on production (`.do/app.prod-crm.yaml`, app
+   `aa1ddf69-f359-4b53-91ba-035cbed7bd53`) — but expect
+   `crmConfig.state: "absent"` until R0's production half is built at the Sunday
+   slot, and **that is the correct reading**, not a fault. Watching it flip from
+   `absent` to `unstamped` on Sunday is the reader proving itself against a real
+   change at no cost.
 
 ---
 
@@ -470,6 +419,36 @@ and linked from here so the finding is not lost between two lists.
 ---
 
 # Closed
+
+- **R1 and R5 are done — both version stamps exist, and so does the first tag**
+  (v0.214.0, 2026-08-28, commit `786c138`). `/healthz` now answers all three
+  version questions: `version` (the code), `releaseTag` (the promotion, baked in
+  by a `RELEASE_TAG` Dockerfile arg because a container has no `.git`) and
+  `crmConfig` (the CRM's configuration standard, from `CNetworkStandard`, in new
+  `core/network_standard.py`). 17 tests in `tests/test_version_stamps.py`; full
+  suite green at 1894 passed.
+
+  Three things worth keeping. **`/healthz` still never pings the CRM** — a
+  background task caches and the handler serves the cache, and a test asserts
+  that priming it once is the only call however many health checks follow.
+  **`absent`, `forbidden` and `unreachable` are three separate states** rather
+  than one null, which is not academic: production has no `CNetworkStandard`
+  until its Sunday build, so `absent` is production's *expected* reading and
+  must not read as a fault — and `forbidden` is exactly the grant that was
+  missed on crm-test on 2026-08-27. That is one key (`state`) beyond the three
+  the interface contract documents; the documented three are still always
+  present and null, so a consumer that only knows the contract still works.
+  **Both keys are denylisted at `/setup`** as boot-read — an override for either
+  would be inert, and offering an inert override is the v0.190.1 mistake.
+
+  `scripts/cut_release.sh` cuts the tag: clean tree on `main`, version from
+  `pyproject.toml`, refuses to move an existing tag, annotated (it carries the
+  tagger and date the fleet console wants), and prints the push rather than
+  pushing. **`v0.214.0` is this repository's first tag ever** — `git tag | wc -l`
+  had been 0 since the repo was created. It promotes nothing; `deploy_on_push`
+  stays on and pinned-tag deploys remain Phase 2. What is still owed is turning
+  the two switches on per deployment, which needs `doctl` — now § R6.
+
 
 - **R3 — the stale count in `CLAUDE.md` is fixed** (2026-08-28). It now reads
   "16 lists across 4 `options.js` files, from 14 distinct `Entity.field` sources"
