@@ -1038,9 +1038,22 @@ def create_app(
             name="analytics-frontend",
         )
     if settings.setup_active and SETUP_FRONTEND_DIR.is_dir():
+        class _SetupSwitch(BrandedStaticFiles):
+            """The page honours ``setup_enabled`` per request, not only at boot,
+            so switching it off at /setup itself (a countdown-guarded lockout
+            key) hides the page within a refresh cycle instead of after the
+            next restart. Mirrors the API's own gate in ``setup/router.py``."""
+
+            async def __call__(self, scope, receive, send):  # type: ignore[override]
+                if not settings.setup_active:
+                    from starlette.responses import PlainTextResponse
+                    await PlainTextResponse("Not Found", status_code=404)(scope, receive, send)
+                    return
+                await super().__call__(scope, receive, send)
+
         app.mount(
             "/setup",
-            BrandedStaticFiles(directory=str(SETUP_FRONTEND_DIR), html=True),
+            _SetupSwitch(directory=str(SETUP_FRONTEND_DIR), html=True),
             name="setup-frontend",
         )
     if settings.assignments_active and PORTAL_FRONTEND_DIR.is_dir():

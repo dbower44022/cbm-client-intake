@@ -4,6 +4,26 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.216.3] — 2026-08-29
+
+**fix(setup): switching *This Settings page* off now takes effect without a
+restart.** Found while watching the confirm-or-revert countdown run for real on
+crm-test (it fired correctly — set 15:47:47Z, reverted by the sweep at
+15:57:53Z, History row and all). During those ten minutes the page never went
+away: `setup_enabled` was read once at boot, where `create_app` mounts the
+`/setup` router and frontend behind `setup_active`, and nothing checked it per
+request. So the override stored, `/healthz` reported `page: false`, and every
+admin kept using the page — the countdown was guarding a lockout that could
+not happen before the next restart.
+
+The API's admin gate (`setup/router._require_admin`) and the static `/setup`
+mount now read `setup_active` live on every request and answer **404** when it
+is off — the same answer an unmounted page gives, because a switched-off page
+is absent, not forbidden. The override refresh mutates the one `Settings`
+object in place, so the switch bites within `SETUP_REFRESH_SECONDS` (45 s) and
+the revert brings the page straight back. A test flips the live setting after
+boot and checks both the API and the page in both directions.
+
 ## [0.216.2] — 2026-08-29
 
 **fix(setup): saving any override returned HTTP 500 — the history table was

@@ -45,6 +45,14 @@ peer_router = APIRouter(prefix="/api/setup", tags=["setup"])
 
 
 def _require_admin(request: Request) -> dict[str, Any]:
+    # The page is switched off per REQUEST, not only at boot. ``setup_enabled``
+    # is a lockout key with a confirm-or-revert countdown; that countdown only
+    # guards something real if switching the page off actually takes effect
+    # before a restart. Read live (the override refresh mutates the one
+    # Settings object in place), and answer 404 exactly as an unmounted page
+    # would — a switched-off page is absent, not forbidden.
+    if not get_settings().setup_active:
+        raise HTTPException(status_code=404, detail="Not Found")
     user = current_user(request)
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated.")

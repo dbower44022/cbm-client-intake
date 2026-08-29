@@ -495,7 +495,10 @@ toggle.
       an outcome that cannot occur without one. Decision owed: a per-request
       gate in `setup/router.py` (404 when `setup_active` is false, taking
       effect within a refresh cycle) so the countdown protects something real
-      — or class the key as restart-read. Not changed unasked.
+      — or class the key as restart-read. **Ruled and built the same day
+      (Doug: per-request gate), v0.216.3:** API and static page both 404 while
+      the setting is off, within a refresh cycle. Owed: repeat (4) on
+      v0.216.3 and watch the page itself disappear and come back.
     - **The two version stamps (v0.214.0)** — after the R6 `doctl` applies:
       `releaseTag` reads `v0.216.1` on crm-test, `crmConfig.state` reads
       `unstamped` there and `absent` on prod until Sunday's build, then

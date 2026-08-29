@@ -533,6 +533,30 @@ def test_setup_absent_when_disabled(monkeypatch):
     assert client.get("/setup/api/settings").status_code == 404
 
 
+def test_switching_the_page_off_takes_effect_without_a_restart(monkeypatch):
+    """setup_enabled is a lockout key guarded by a confirm-or-revert countdown.
+    Observed live 2026-08-29: the override stored, /healthz said page:false,
+    and the page kept serving — it was read at boot only. The countdown only
+    guards something real if the switch bites per request."""
+    from core import config as config_module
+
+    _authed(monkeypatch, _ADMIN)
+    client = TestClient(_app(monkeypatch))
+    assert client.get("/setup/api/settings").status_code == 200
+    assert client.get("/setup/").status_code == 200
+    # What the periodic override refresh does after an admin saves Off.
+    config_module.apply_overrides({"setup_enabled": False})
+    try:
+        assert client.get("/setup/api/settings").status_code == 404
+        assert client.get("/setup/").status_code == 404
+        # The revert (or a confirm-and-clear) brings it straight back.
+        config_module.apply_overrides({})
+        assert client.get("/setup/api/settings").status_code == 200
+        assert client.get("/setup/").status_code == 200
+    finally:
+        config_module.apply_overrides({})
+
+
 def test_setup_absent_without_a_database(monkeypatch):
     _authed(monkeypatch, _ADMIN)
     client = TestClient(_app(monkeypatch, database=""))
