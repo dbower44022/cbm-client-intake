@@ -164,8 +164,13 @@ async def test_the_page_says_when_the_boot_load_itself_failed():
 
 
 @pytest.mark.anyio
-async def test_the_read_only_row_offers_no_control():
+async def test_the_restart_group_holds_only_settings_a_restart_applies():
+    """The release tag was in here and moved out: it comes from the image, so a
+    restart applies nothing, and sitting among nine settings a restart DOES
+    apply implied a promise the system cannot keep."""
     from setup.service import page_payload
 
-    row = _restart_rows(await page_payload(None))["release_tag"]
-    assert row["editable"] is False
+    rows = _restart_rows(await page_payload(None))
+    assert "release_tag" not in rows
+    assert all(r["editable"] for r in rows.values())
+    assert all(r["restart"] for r in rows.values())

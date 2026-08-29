@@ -218,15 +218,23 @@ def test_boot_read_settings_are_on_the_page_and_marked_restart():
     both halves: `boot_overrides.load_at_boot` now installs overrides BEFORE
     create_app reads anything, so a restart really does apply them, and the row
     shows which value is in force meanwhile."""
-    from core.settings_registry import BOOT_READ_KEYS, BY_KEY, GROUP_RESTART
+    from core.settings_registry import (
+        BOOT_READ_KEYS, BY_KEY, GROUP_FOUNDATIONS, GROUP_RESTART,
+    )
 
     for key in BOOT_READ_KEYS:
         spec = BY_KEY.get(key)
         assert spec is not None, f"{key} is boot-read but not on the page"
-        assert spec.group == GROUP_RESTART
-        assert spec.restart, f"{key} must be marked as needing a restart"
-        # Editable unless it is a value the app cannot own at all.
-        assert spec.readonly == (key in DENYLIST)
+        if key in DENYLIST:
+            # Read-only and unchangeable by any means available here, so it
+            # belongs with the other foundations. "Restart required" promises
+            # that a restart WOULD apply your change, which is false for these.
+            assert spec.group == GROUP_FOUNDATIONS
+            assert spec.readonly
+        else:
+            assert spec.group == GROUP_RESTART
+            assert spec.restart, f"{key} must be marked as needing a restart"
+            assert not spec.readonly
 
 
 def test_the_release_tag_is_visible_but_never_editable():

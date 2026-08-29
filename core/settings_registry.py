@@ -521,12 +521,18 @@ SETTINGS: tuple[SettingSpec, ...] = (
             "loss, which no verification can undo. Rotation needs a re-encryption "
             "migration, not a text box."),
 
-    _s("release_tag", GROUP_RESTART, "Release tag", restart=True, readonly=True,
+    # In Foundations, NOT "Restart required", although it is read once at
+    # startup. That group means "change it here and it takes effect on the next
+    # restart", and this cannot be changed here at all — a restart will never
+    # alter it, only rebuilding the image will. Sitting among nine editable
+    # settings implied otherwise, which is exactly the confusion the group was
+    # created to remove.
+    _s("release_tag", GROUP_FOUNDATIONS, "Release tag", readonly=True,
        help="Which release this container was built from — stamped into the image "
             "at build time and supplied by the deployment's own configuration. "
-            "Read-only here on purpose: a stored override would survive a restart "
-            "and make this deployment misreport which image it is running. Empty "
-            "means an untagged build."),
+            "Read-only on purpose: a stored value would survive a restart and make "
+            "this deployment misreport which build it is running. Empty means an "
+            "untagged build."),
 )
 
 BY_KEY: dict[str, SettingSpec] = {s.key: s for s in SETTINGS}

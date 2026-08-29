@@ -4,6 +4,22 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.216.1] — 2026-08-29
+
+**fix(setup): the Release tag row moves out of "Restart required".** Noticed by
+Doug reading the page. That group means *"change this here and it takes effect on
+the next restart"* — and the release tag cannot be changed there at all: it is
+stamped into the container image, so no restart applies anything to it. Sitting
+among nine settings a restart genuinely does apply implied a promise the system
+cannot keep. It now sits under **Foundations** with Database and Encryption key,
+the other two that are visible, read-only and changed only in the deployment
+configuration.
+
+Also a vocabulary correction with no code in it: the product calls this a
+**release tag**, on the page and at `/healthz`, and status write-ups should use
+that name rather than inventing a friendlier synonym for something that already
+has a name on screen.
+
 ## [0.216.0] — 2026-08-28
 
 **feat(setup): every setting is editable, and the system proves a dangerous

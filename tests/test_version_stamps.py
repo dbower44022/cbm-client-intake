@@ -194,12 +194,20 @@ def test_both_are_on_the_settings_page_marked_restart_required():
     "Restart required" group, which shows the value in force beside the stored
     one. `release_tag` is there read-only — it comes from the image, and an
     override would make the deployment misreport which image it is running."""
-    from core.settings_registry import BY_KEY, GROUP_RESTART
+    from core.settings_registry import BY_KEY, GROUP_FOUNDATIONS, GROUP_RESTART
 
     for key in ("crm_config_refresh_seconds", "release_tag"):
         assert key in BOOT_READ_KEYS
-        assert BY_KEY[key].group == GROUP_RESTART
-        assert BY_KEY[key].restart
+        assert key in BY_KEY, f"{key} must be on the page"
+
+    # The CRM check is genuinely "change it here, restart applies it".
+    assert BY_KEY["crm_config_refresh_seconds"].group == GROUP_RESTART
+    assert BY_KEY["crm_config_refresh_seconds"].restart
     assert not BY_KEY["crm_config_refresh_seconds"].readonly
+
+    # The release tag is NOT: it comes from the image, so no restart applies
+    # anything. Grouping it with settings a restart WOULD apply implied a
+    # promise the system cannot keep, so it sits with the other foundations.
+    assert BY_KEY["release_tag"].group == GROUP_FOUNDATIONS
     assert BY_KEY["release_tag"].readonly
     assert "release_tag" in DENYLIST
