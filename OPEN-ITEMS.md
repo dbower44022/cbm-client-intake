@@ -481,8 +481,21 @@ toggle.
       rests on. **First attempt 2026-08-29 (v0.216.1, crm-test): (4) failed at
       the save with HTTP 500 — `Unconsumed column names: encrypted`, the
       history Table missing a column migration 0027 added. Fixed in v0.216.2;
-      nothing was stored, so no cleanup. The whole list is still owed, on
-      v0.216.2 or later.**
+      nothing was stored, so no cleanup. Re-run on v0.216.2 the same
+      afternoon: (4) OBSERVED. Set at 15:47:47Z with `revertAt` 15:57:47Z;
+      `/healthz` read `settings.page: false`, `settingsVersion 2` within the
+      45 s refresh; the sweep reverted it at 15:57:53Z (6 s past the deadline,
+      History row `revert` / actor `system` / "nobody confirmed the system was
+      still working before the deadline"), version 3, override gone, page
+      back to the deployment value. (1), (2), (3) and (5) still owed.**
+      **Found on the way — `setup_enabled` is read at boot only** (`core/app.py`
+      mounts the router and frontend behind `settings.setup_active` once, and
+      nothing checks it per request), so switching *This Settings page* off
+      does NOT lock anyone out until a restart; the countdown currently guards
+      an outcome that cannot occur without one. Decision owed: a per-request
+      gate in `setup/router.py` (404 when `setup_active` is false, taking
+      effect within a refresh cycle) so the countdown protects something real
+      — or class the key as restart-read. Not changed unasked.
     - **The two version stamps (v0.214.0)** — after the R6 `doctl` applies:
       `releaseTag` reads `v0.216.1` on crm-test, `crmConfig.state` reads
       `unstamped` there and `absent` on prod until Sunday's build, then
