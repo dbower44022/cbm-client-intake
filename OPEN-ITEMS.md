@@ -478,7 +478,11 @@ toggle.
       must come back on its own within ~11 minutes with a `revert` row in
       History; (5) repeat and press *It works — keep it* instead. Nobody has
       watched (4) happen for real, and it is the mechanism the whole ruling
-      rests on.
+      rests on. **First attempt 2026-08-29 (v0.216.1, crm-test): (4) failed at
+      the save with HTTP 500 — `Unconsumed column names: encrypted`, the
+      history Table missing a column migration 0027 added. Fixed in v0.216.2;
+      nothing was stored, so no cleanup. The whole list is still owed, on
+      v0.216.2 or later.**
     - **The two version stamps (v0.214.0)** — after the R6 `doctl` applies:
       `releaseTag` reads `v0.216.1` on crm-test, `crmConfig.state` reads
       `unstamped` there and `absent` on prod until Sunday's build, then

@@ -4,6 +4,29 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.216.2] — 2026-08-29
+
+**fix(setup): saving any override returned HTTP 500 — the history table was
+missing a column the code writes.** Found on the very first live run of the
+verified-settings path (the confirm-or-revert countdown test on crm-test, owed by
+`OPEN-ITEMS.md` #20): switching *This Settings page* off failed with `HTTP 500`
+in the editor and nothing was stored. The log said why —
+`sqlalchemy.exc.CompileError: Unconsumed column names: encrypted`. Migration 0027
+added `encrypted` to **both** `app_setting` and `app_setting_history`, and
+`SettingsStore.set` writes it to the history row, but the `app_setting_history`
+Table in `core/settings_store.py` never declared it, so SQLAlchemy refused to
+compile the insert before touching the database. **Every override save on every
+deployment has failed since v0.216.0 shipped** (`clear` and `revert` did not
+name the column, so they were unaffected). The database itself was always
+right; the fix is the one-line Table declaration.
+
+Why 1,894 green tests missed it: nothing compiled the statement. The Postgres
+store tests skip without `TEST_DATABASE_URL`, and the router tests use a fake
+store. `tests/test_settings_store_schema.py` now replays migration 0027's
+`add_column` calls against the store's Table metadata and compiles the exact
+history insert for the Postgres dialect — both without a database, and both fail
+on the previous code.
+
 ## [0.216.1] — 2026-08-29
 
 **fix(setup): the Release tag row moves out of "Restart required".** Noticed by

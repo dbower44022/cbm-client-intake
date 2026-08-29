@@ -84,6 +84,11 @@ app_setting_history = Table(
     Column("reason", Text),
     Column("created_at", DateTime(timezone=True), nullable=False),
     Column("actor", String(128)),
+    # Whether new_value/old_value were secrets (they are stored as "(secret set)",
+    # never the value). Added by migration 0027 — the Table MUST declare every
+    # column an insert names, or SQLAlchemy refuses to compile the statement at
+    # all ("Unconsumed column names"), which 500'd every save on v0.216.0/1.
+    Column("encrypted", Boolean, nullable=False, server_default="false"),
     Index("ix_app_setting_history_key", "key"),
 )
 
