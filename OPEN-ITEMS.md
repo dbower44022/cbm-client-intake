@@ -466,6 +466,23 @@ toggle.
 20. **Everything through v0.187.0 is DEPLOYED to both environments** (verified
     2026-07-28; only docs commits are unpushed). What is owed is the *live
     eyeball*, not a deploy. Never driven against the live CRM/Gmail/Drive:
+    - **The verified-settings path (v0.216.0)** — tests and a stub harness only.
+      On **crm-test**, as an EspoCRM admin at `/setup`: (1) set **CRM API key**
+      to a wrong value and confirm it is *refused* with the CRM's own 401/403
+      message, never stored; (2) set **CRM address** to some unrelated but
+      reachable host and confirm it is refused as "not a CRM this application
+      can use"; (3) set a real secret (e.g. **YouTube API key**) and confirm the
+      row reads *set*, the value never appears in the page payload, and the
+      `app_setting` row has `encrypted=true`; (4) toggle **This Settings page**
+      off, watch the confirm banner count down, and **let it expire** — the page
+      must come back on its own within ~11 minutes with a `revert` row in
+      History; (5) repeat and press *It works — keep it* instead. Nobody has
+      watched (4) happen for real, and it is the mechanism the whole ruling
+      rests on.
+    - **The two version stamps (v0.214.0)** — after the R6 `doctl` applies:
+      `releaseTag` reads `v0.216.1` on crm-test, `crmConfig.state` reads
+      `unstamped` there and `absent` on prod until Sunday's build, then
+      `unstamped`.
     - **Editing an engagement from the Client Administration popup (v0.210.0)** —
       the Edit button, its live-metadata enums and its two link pickers were
       verified in a stub harness only, and the pickers are the half that cannot

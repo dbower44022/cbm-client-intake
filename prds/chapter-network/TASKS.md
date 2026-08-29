@@ -299,9 +299,13 @@ on the deployed **web** component.
 ### What this is
 
 v0.214.0 added both version stamps to `/healthz` and **both ship inert**, which
-is this repo's standing gate rather than caution for its own sake. Turning them
-on is two variables per deployment and one `doctl` apply, and it needs the
-overlays, so it is Doug's.
+is this repo's standing gate rather than caution for its own sake. **The two
+overlay edits are DONE (2026-08-28) and validated** — both files parse, both
+variables sit on the web component, and the tag value is **`v0.216.1`**, the tag
+cut against the currently-deployed commit (an earlier draft said `v0.214.0`,
+which would have made each system report a promotion it was not running — the
+exact lie the two stamps exist to prevent). What is left is the two `doctl`
+applies, which need the overlays and are Doug's.
 
 - **`RELEASE_TAG`** supplies the value `releaseTag` reports. Without it the key
   is `null`, which is honest but useless. Scope **`RUN_AND_BUILD_TIME`** — the
@@ -310,26 +314,25 @@ overlays, so it is Doug's.
   is proven here rather than assumed.
 - **`CRM_CONFIG_REFRESH_SECONDS`** arms the CRM stamp probe. `0` disables it and
   `0` is the default; `300` is plenty, since the stamp changes at most weekly.
-  It is a **boot-read** key — the refresh task is created once in the lifespan —
-  so it must be set in the overlay and **cannot** be toggled at `/setup`, which
-  is why it is denylisted there.
+  It is a **boot-read** key — the refresh task is created once in the lifespan.
+  Since v0.215.0 it IS on `/setup`, in the *Restart required* group, so it can
+  be set there and takes effect on the next restart; the overlay is simply the
+  route that does not need one.
 
 ### Steps
 
-1. Add both to `.do/app.prod.yaml` (**this is the crm-test overlay** — the
-   filenames are confusing; `app.prod-crm.yaml` is production), on the **web**
-   component. `RELEASE_TAG: v0.214.0` with `scope: RUN_AND_BUILD_TIME`, and
-   `CRM_CONFIG_REFRESH_SECONDS: "300"`.
-2. **Edit the overlay in place. Do not regenerate it** from `doctl apps spec
-   get` — that encrypts every plaintext secret into unreadable `EV[…]` blobs and
-   the local credentials are lost ([[overlay-regen-encrypts-secrets]]).
-3. Apply: `doctl apps update 509b4370-b9ca-42c7-b251-04d6820fe88e --spec .do/app.prod.yaml`
-4. Check `/healthz` on crm-test: `releaseTag` should read `v0.214.0` and
+1. ~~Add both to the overlays~~ **done 2026-08-28**, in place, never
+   regenerated ([[overlay-regen-encrypts-secrets]]). `.do/app.prod.yaml` is
+   **crm-test** (the filenames are confusing; `app.prod-crm.yaml` is
+   production). Re-check the `RELEASE_TAG` value matches the tag you mean to
+   report before applying — it goes stale every time the version bumps.
+2. Apply crm-test: `doctl apps update 509b4370-b9ca-42c7-b251-04d6820fe88e --spec .do/app.prod.yaml`
+3. Check `/healthz` on crm-test: `releaseTag` should read `v0.216.1` and
    `crmConfig.state` should read **`unstamped`** — the entity is there (built
    2026-08-27) and nothing has applied to it yet. A `forbidden` here would mean
    the read grant was lost; an `absent` would mean the entity is not what we
    think it is.
-5. Repeat on production (`.do/app.prod-crm.yaml`, app
+4. Repeat on production (`.do/app.prod-crm.yaml`, app
    `aa1ddf69-f359-4b53-91ba-035cbed7bd53`) — but expect
    `crmConfig.state: "absent"` until R0's production half is built at the Sunday
    slot, and **that is the correct reading**, not a fault. Watching it flip from
@@ -419,6 +422,33 @@ and linked from here so the finding is not lost between two lists.
 ---
 
 # Closed
+
+- **The Settings page holds every setting, and every setting is editable
+  unless a change is genuinely impossible** (v0.215.0 + v0.216.0 + v0.216.1,
+  2026-08-28/29, all live on both environments). Two of Doug's rulings in one
+  afternoon, both recorded in `CLAUDE.md` § System Settings and both
+  chapter-relevant because they change what `/setup` — and so the future fleet
+  console — can do. (1) *All settings on the page*: the ten boot-read keys now
+  form a **Restart required** group, and `core/boot_overrides.load_at_boot`
+  installs the override layer BEFORE `create_app` mounts anything, so "takes
+  effect on restart" is true rather than the v0.190.1 lie; each row shows the
+  value in force beside the stored one. (2) *All settings editable, with
+  verification*: the denylist fell from 23 keys to 3, and `setup/verify.py`
+  tries a value before storing it, checks the system after, and gives the
+  lockout-capable keys a 10-minute confirm-or-revert countdown that sweeps in
+  BOTH processes. Secrets are editable, encrypted, never readable. Found on the
+  way: `DATABASE_URL` was rendered in the clear on the read-only list — now
+  masked. The three that stay read-only (`DATABASE_URL`, `APP_ENCRYPTION_KEY`,
+  `RELEASE_TAG`) sit under **Foundations** with their reasons.
+
+- **Two tags exist now, and `v0.216.1` is the one the overlays name**
+  (2026-08-29). `v0.214.0` was cut first; the code moved on the same day, and
+  the prepared overlay value was stale before it was ever applied — a live
+  illustration of why `version` and `releaseTag` are separate fields. An attempt
+  to delete `v0.214.0` was (correctly) refused: it marks a real published
+  commit, and `cut_release.sh` refuses to move a published tag for the same
+  reason. Both stay.
+
 
 - **R1 and R5 are done — both version stamps exist, and so does the first tag**
   (v0.214.0, 2026-08-28, commit `786c138`). `/healthz` now answers all three

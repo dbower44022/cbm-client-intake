@@ -1,7 +1,12 @@
 # Phase 2 — The release train
 
-**Status: not started, and the repo has zero git tags** — so the train's tag is
-not merely unreported, it has never been cut.
+**Status: started.** `scripts/cut_release.sh` cuts an annotated tag in one
+command and refuses to move a published one; two exist (`v0.214.0`, `v0.216.1`,
+both 2026-08-28/29). Stamp A is baked into the image by a `RELEASE_TAG` build
+arg and reported at `/healthz` (v0.214.0). What has NOT started — and is this
+phase's real work — is taking `deploy_on_push` off and moving to pinned-tag
+deploys. Until the overlay switches are applied `releaseTag` reads `null`
+everywhere, which is honest.
 
 **Why it comes early.** It must precede the first real member, because taking
 `deploy_on_push` off a chapter's app after that chapter has learned to expect

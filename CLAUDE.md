@@ -1326,18 +1326,36 @@ stamp — pending on both CRMs), `cintake-submission-*.md`, `cinformation-reques
 deployed and verified; `CHANGELOG.md` is the permanent record, `OPEN-ITEMS.md`
 holds anything still owed.*
 
-**Pushed through v0.213.1 on 2026-08-24, and confirmed live**: `/healthz`
-reports `0.213.1` on **both** crm-test and prod (checked 2026-08-26). That push
-also carried the six docs commits that had been sitting unpushed since v0.212.0.
-The last live prod pass that exercised a *feature* verified `0.206.0`
-(correctly-branded token-free pages, the four policy links resolving). What is
-*verified* is narrower than what is deployed — see each block.
+**Pushed through v0.216.1 on 2026-08-29, and confirmed live on all three
+apps** — dev, crm-test and prod all report `0.216.1`, healthy, workers alive with
+empty backlogs (checked 2026-08-29 06:30 UTC). The 0.216.0 push carried Alembic
+migration `0027_app_setting_verified`, which ran clean on both database-backed
+apps. Two git tags exist (`v0.214.0`, `v0.216.1`); `deploy_on_push` is still on
+everywhere by design. The last live prod pass that exercised a *feature* verified
+`0.206.0`. What is *verified* is narrower than what is deployed — see each block.
 
 **Confirm that against the remote, do not trust this line.** On 2026-08-20 it
 still read "pushed through v0.202.2" while v0.203.x/v0.204.0 sat unpushed
 locally, and a session that believed it pushed a docs commit and shipped a
 feature to production with it. `git log origin/main..main` is the answer; this
 sentence is a convenience.
+
+- **v0.214.0 → v0.216.1 (2026-08-28/29) — the release train's two version
+  stamps, and the Settings page holds and edits every setting.** Four releases
+  in one day, all live on all three apps. Standing rules are in the Deployment
+  (`/healthz`) and System Settings sections above; what belongs here is what is
+  still owed. (a) **Both stamps ship inert** — `releaseTag` reads `null` and
+  `crmConfig.state` reads `disabled` on every app until the two overlay
+  variables are applied with `doctl`; the overlays are edited and validated and
+  name `v0.216.1`. (b) **Production's `crmConfig` will read `absent` until its
+  `CNetworkStandard` is built** at the Sunday 17:00 UTC slot — that is the
+  correct reading, not a fault, and watching it flip to `unstamped` is the
+  reader's first live proof. (c) **The verified-settings path has run only in
+  tests and a stub harness.** No real probe has been fired against a live CRM
+  from `/setup`, no countdown has been allowed to expire, and no secret has been
+  stored encrypted on a real deployment. `OPEN-ITEMS.md` #20 has the live pass.
+  (d) A pre-existing leak was fixed on the way: `DATABASE_URL` had been rendered
+  in the clear on the read-only "show all" list.
 
 - **v0.212.0 — Grants on the funder record** (phase 2 of the grant arc). The
   standing model is in `prds/grant-management-plan.md`; what belongs here is the
