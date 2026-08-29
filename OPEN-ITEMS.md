@@ -497,8 +497,23 @@ toggle.
       effect within a refresh cycle) so the countdown protects something real
       — or class the key as restart-read. **Ruled and built the same day
       (Doug: per-request gate), v0.216.3:** API and static page both 404 while
-      the setting is off, within a refresh cycle. Owed: repeat (4) on
-      v0.216.3 and watch the page itself disappear and come back.
+      the setting is off, within a refresh cycle. **(4) repeated on v0.216.3
+      at 17:57:04Z: page and API 404 within 7 s, held through the deadline,
+      back at 18:07:23Z.** Same session, v0.216.3: **(1) PASSED** — wrong key
+      refused, "The CRM answered but rejected this key: … HTTP 401", nothing
+      stored. **(2) FAILED — example.com was ACCEPTED** (it answered HTTP 404
+      and the probe called that "could not reach"; cleared by hand after 11 s;
+      the post-apply check missed it the same way). Fixed in v0.216.4; repeat
+      (2) there. **(3) blocked on crm-test: the deployment has no
+      `APP_ENCRYPTION_KEY`**, so every secret is refused with "cannot be
+      stored without an encryption key" — correct behaviour, but it means
+      (3) cannot run there until the overlay carries a key (Doug; it is a
+      secret, so overlay + `doctl`, never `/setup`). Check prod's overlay
+      too before assuming it differs. **(5) PASSED** on v0.216.3 with
+      `allowed_origins` (a lockout key whose value is inert here): saved with
+      a deadline, `confirm` cleared it — `confirmed: true`, `revertAt` null,
+      nothing awaiting — then cleared. Left owed on this list: (2) on
+      v0.216.4, and (3) once crm-test has an encryption key.
     - **The two version stamps (v0.214.0)** — after the R6 `doctl` applies:
       `releaseTag` reads `v0.216.1` on crm-test, `crmConfig.state` reads
       `unstamped` there and `absent` on prod until Sunday's build, then

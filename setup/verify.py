@@ -97,22 +97,39 @@ async def _crm_reachable(settings: Settings) -> Result:
     if not settings.espo_api_key:
         return Result(FAILED, "No CRM API key is set.")
 
-    from core.espo import EspoClient
+    from core.espo import EspoClient, EspoError, EspoTransportError
 
     client = EspoClient(settings.espo_base_url, settings.espo_api_key, 10)
     # Ask for ONE entity's field definitions rather than the whole metadata
     # document: it is a far smaller response and it proves more. A stranger's
     # EspoCRM would answer a bare connectivity check and then fail on every
     # write, because it has none of this application's entities.
+    #
+    # Only a TRANSPORT failure (DNS, connect, TLS, timeout) is "unknown" —
+    # the one case where we genuinely could not check. Any HTTP answer means
+    # the host was reached: a 401/403 is a rejected key, and anything else
+    # (a 404 from a website, a 500, a non-JSON body) is an address that is
+    # not this application's CRM. Live on crm-test 2026-08-29,
+    # https://www.example.com answered 404 to the metadata call and was
+    # classed "could not reach", so it was ACCEPTED — and the post-apply
+    # check, taking the same branch, did not revert it either.
     try:
         defs = await client.metadata("entityDefs.CEngagement.fields")
-    except Exception as exc:  # noqa: BLE001 — the message is the product here
+    except EspoTransportError as exc:
+        return Result(UNKNOWN, f"Could not reach the CRM to check: {exc}")
+    except EspoError as exc:
         text = str(exc)
         if "401" in text or "403" in text:
             return Result(
                 FAILED, f"The CRM answered but rejected this key: {text}"
             )
-        return Result(UNKNOWN, f"Could not reach the CRM to check: {text}")
+        return Result(
+            FAILED,
+            "That address answered, but it is not a CRM this application can "
+            f"use: {text}. Check the address.",
+        )
+    except Exception as exc:  # noqa: BLE001 — never raise out of a probe
+        return Result(UNKNOWN, f"Could not check the CRM: {exc}")
 
     if not defs:
         return Result(

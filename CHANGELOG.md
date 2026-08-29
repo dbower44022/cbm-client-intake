@@ -4,6 +4,25 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.216.4] — 2026-08-29
+
+**fix(setup): a CRM address that answers but is not a CRM is now refused.**
+The `OPEN-ITEMS.md` #20 live pass, check (2): setting **CRM address** to
+`https://www.example.com` on crm-test was **accepted** — the deployment ran
+against example.com for eleven seconds until the override was cleared by hand.
+The log shows why: example.com answered the metadata call with **HTTP 404**,
+and `setup/verify._crm_reachable` classed every exception other than a 401/403
+as *"could not reach the CRM"* — the `unknown` outcome, which by design never
+blocks a save. The post-apply check took the same branch, so it did not revert
+either. Two halves of the verification, one misclassification.
+
+Now only an `EspoTransportError` (DNS, connect, TLS, timeout) is `unknown`. Any
+HTTP answer means the host was reached: 401/403 is a rejected key, anything
+else is *"That address answered, but it is not a CRM this application can
+use"* — `failed`, which refuses the save and reverts a post-apply failure. Two
+tests pin it, one being the exact live case. Check (1) passed on the same run:
+a wrong **CRM API key** was refused with the CRM's own `HTTP 401`.
+
 ## [0.216.3] — 2026-08-29
 
 **fix(setup): switching *This Settings page* off now takes effect without a

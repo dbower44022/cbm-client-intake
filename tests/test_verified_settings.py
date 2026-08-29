@@ -127,6 +127,41 @@ async def test_the_crm_probe_rejects_a_stranger_instance():
     assert "CEngagement" in got.detail
 
 
+@pytest.mark.anyio
+async def test_an_address_that_answers_but_is_not_a_crm_is_refused(monkeypatch):
+    """The live case, 2026-08-29: https://www.example.com answered HTTP 404 to
+    the metadata call. That is an ANSWER — the host was reached — so it must
+    fail the probe, not fall into 'could not reach', which never blocks a
+    save. It was accepted, and the post-apply check did not revert it."""
+    from core.espo import EspoError
+
+    class _Client:
+        async def metadata(self, key):
+            raise EspoError("metadata entityDefs.CEngagement.fields failed: HTTP 404")
+
+    import core.espo as espo_mod
+    monkeypatch.setattr(espo_mod, "EspoClient", lambda *a, **k: _Client())
+    got = await verify._crm_reachable(_live())
+    assert got.outcome == verify.FAILED
+    assert got.blocks_save
+    assert "not a CRM this application can use" in got.detail
+
+
+@pytest.mark.anyio
+async def test_only_a_transport_failure_is_unknown(monkeypatch):
+    from core.espo import EspoTransportError
+
+    class _Client:
+        async def metadata(self, key):
+            raise EspoTransportError("connect: name resolution failed")
+
+    import core.espo as espo_mod
+    monkeypatch.setattr(espo_mod, "EspoClient", lambda *a, **k: _Client())
+    got = await verify._crm_reachable(_live())
+    assert got.outcome == verify.UNKNOWN
+    assert not got.blocks_save
+
+
 # --- the countdown ----------------------------------------------------------
 
 def test_lockout_settings_get_a_deadline():
