@@ -512,8 +512,12 @@ toggle.
       too before assuming it differs. **(5) PASSED** on v0.216.3 with
       `allowed_origins` (a lockout key whose value is inert here): saved with
       a deadline, `confirm` cleared it — `confirmed: true`, `revertAt` null,
-      nothing awaiting — then cleared. Left owed on this list: (2) on
-      v0.216.4, and (3) once crm-test has an encryption key.
+      nothing awaiting — then cleared. **(2) PASSED on v0.216.4** (22:26Z):
+      HTTP 400 "That address answered, but it is not a CRM this application
+      can use: … HTTP 404", nothing stored. Cosmetic: the detail carries the
+      foreign host's HTML body after the status — trim `http_error_detail`
+      for non-JSON bodies some day. Left owed on this list: only (3), once
+      crm-test has an encryption key.
     - **The two version stamps (v0.214.0)** — after the R6 `doctl` applies:
       `releaseTag` reads `v0.216.1` on crm-test, `crmConfig.state` reads
       `unstamped` there and `absent` on prod until Sunday's build, then
