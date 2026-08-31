@@ -919,3 +919,12 @@ toggle.
   v0.153.0 removed the app's references (the Company group is now organization
   type + announcements). The `cIndustrySector` stamped default was cleared in
   the same pass — see item 7 for the stored values it left behind.
+
+29. **Production's `Data Integrity Team Role` is attached to NO team** (found
+    2026-08-31 by the § R4 roles capture; crm-test attaches it to Data
+    Integrity Team). Members of production's Data Integrity Team currently
+    hold no CRM grants from this role — same class as the twice-before
+    attachment losses ([[espo-403-diagnosis-merged-team-roles]]). Fix is one
+    admin action in production EspoCRM: Roles → Data Integrity Team Role →
+    Teams → add *Data Integrity Team*. Verify as a member of that team, not
+    as an admin.

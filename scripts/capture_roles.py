@@ -171,10 +171,14 @@ async def capture() -> dict[str, Any]:
             "auditPermission": full.get("auditPermission"),
             # Which teams and users this role reaches, so the team→role
             # attachment is captured from both directions. It has gone missing
-            # twice in this project's history.
-            "teamsIds": full.get("teamsIds") or [],
-            "teamsNames": full.get("teamsNames") or {},
-            "usersIds": full.get("usersIds") or [],
+            # twice in this project's history — and the record GET is NOT how
+            # to read it: measured on both live CRMs 2026-08-31, GET Role/{id}
+            # returns empty teamsIds/usersIds even where attachments exist
+            # (crm-test's database holds 7). The relationship endpoint is the
+            # truth. Best-effort with a note, never silently empty.
+            "teamsIds": await _related_ids(client, rid, "teams", result["notes"]),
+            "teamsNames": await _related_names(client, rid, "teams", result["notes"]),
+            "usersIds": await _related_ids(client, rid, "users", result["notes"]),
         })
 
     result["counts"] = {
@@ -183,6 +187,26 @@ async def capture() -> dict[str, Any]:
         "unreadableRoles": len(result["notes"]),
     }
     return result
+
+
+async def _related_list(client, rid: str, link: str, notes: list) -> list:
+    resp = await client._request(
+        "GET", f"{client._base}/Role/{rid}/{link}",
+        op=f"role {link}", params={"maxSize": 200},
+    )
+    if resp.status_code != 200:
+        notes.append(f"Role {rid}: could not read {link} (HTTP {resp.status_code}) — "
+                     f"attachments unknown, NOT known-empty")
+        return []
+    return resp.json().get("list") or []
+
+
+async def _related_ids(client, rid: str, link: str, notes: list) -> list:
+    return [x.get("id") for x in await _related_list(client, rid, link, notes)]
+
+
+async def _related_names(client, rid: str, link: str, notes: list) -> dict:
+    return {x.get("id"): x.get("name") for x in await _related_list(client, rid, link, notes)}
 
 
 def main() -> int:

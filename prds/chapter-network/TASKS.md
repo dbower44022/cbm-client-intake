@@ -392,9 +392,17 @@ during an urgent app fix produces an undocumented bypass invented under pressure
 
 ## R4. Capture both CRMs' roles and tabulate where they differ
 
-**The script is written and waiting; what is owed is two console runs and a
-ruling.** Steps 2 onward are Doug's — the credentials exist only inside the
-deployed containers.
+**Both captures are DONE (2026-08-31) and the table is built — what is owed is
+the ruling.** Production was captured by `capture_roles.py` in its web
+container; crm-test's capture came from the rehearsal (database over SSH, the
+API login being dead there — F8). The diff:
+[roles-standard/differences-2026-08-31.md](roles-standard/differences-2026-08-31.md)
+— same 12 roles and 9 teams on both; 43 cells and ONE team attachment differ
+for real (Data Integrity Team Role has no team on production —
+`OPEN-ITEMS.md` #29). Found and fixed on the way: `GET Role/{id}` returns
+empty `teamsIds` even where attachments exist, so the script now reads
+`Role/{id}/teams`. Rule the table (groups A and B are one decision each), then
+file the ruled version in phase-1.
 
 ### What this is
 
