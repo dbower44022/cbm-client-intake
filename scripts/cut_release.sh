@@ -67,9 +67,10 @@ if $DRY_RUN; then
 
 Dry run — nothing was created.
 
-  would tag : $TAG
-  at commit : $SHA  $SUBJECT
-  then push : git push origin $TAG
+  would tag          : $TAG
+  at commit          : $SHA  $SUBJECT
+  would fast-forward : release -> $TAG
+  then push          : git push origin $TAG release
 
 EOF
   exit 0
@@ -84,16 +85,37 @@ Cut from main at $SHA.
 Reported at /healthz as releaseTag once each deployment's spec supplies
 RELEASE_TAG=$TAG as a RUN_AND_BUILD_TIME variable."
 
+# --- 5. Fast-forward the release lane -------------------------------------
+# Chapter apps track the `release` branch, never main (decided 2026-08-31):
+# they must only ever see finished, named releases, and all the same one.
+# Fast-forward ONLY — if release is not an ancestor of the tag, something
+# rewrote history and a human must look.
+if git rev-parse -q --verify refs/heads/release >/dev/null; then
+  if git merge-base --is-ancestor release "$TAG^{commit}"; then
+    git branch -f release "$TAG^{commit}"
+  else
+    die "the release branch is not an ancestor of $TAG — it cannot be fast-forwarded. Investigate before touching it."
+  fi
+else
+  git branch release "$TAG^{commit}"
+fi
+
 cat <<EOF
 
-Cut $TAG at $SHA ($SUBJECT).
+Cut $TAG at $SHA ($SUBJECT); release fast-forwarded to it.
 
-Push it:
+Push both:
 
-    git push origin $TAG
+    git push origin $TAG release
 
-Then, for each deployment that should report it, set RELEASE_TAG=$TAG with
-scope RUN_AND_BUILD_TIME in its overlay and apply with doctl. Until then
-/healthz reports releaseTag: null, which is the honest answer.
+Then promote each deployment that should run it:
+
+    uv run python scripts/promote.py <app-id> $TAG          # dry run
+    uv run python scripts/promote.py <app-id> $TAG --apply
+
+(Deployments whose Updates policy is Latest Stable and which track the
+release branch with deploy_on_push on will rebuild on the push by
+themselves — the promote script is for On Demand ones, and it also sets
+RELEASE_TAG so /healthz reports the promotion honestly.)
 
 EOF
