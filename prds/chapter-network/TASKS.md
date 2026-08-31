@@ -327,7 +327,8 @@ change to go through that procedure. In outline:
 5. Confirm `entityDefs.CNetworkStandard` in `GET /Metadata` — six fields, empty
    `links`. If it reads `CCNetworkStandard`, delete and rebuild rather than
    renaming around it.
-6. Repeat the whole build on production and verify the same way.
+6. ~~Repeat the whole build on production and verify the same way~~ —
+   **done 2026-08-31**; R0 is complete on both CRMs. See § Closed.
 
 ---
 
@@ -577,6 +578,21 @@ and linked from here so the finding is not lost between two lists.
 ---
 
 # Closed
+
+- **R0 is done on production too — `CNetworkStandard` exists on both CRMs**
+  (2026-08-31). Built NOT by hand: Doug ran `scripts/build_networkstandard.py`
+  from inside the deployed production web container (dry run, then
+  `--apply --expect 54fb5b37192027f7 --production`), so production was built
+  from the same plan file crm-test matches, through code rehearsed twice
+  (crm-test's container 2026-08-30, the Lakeside instance the same weekend).
+  Both crm-test misses were caught mechanically this time: the § 4 role grant
+  applied in the same run, and the entity's automatic tab-list entry removed
+  (39 → 38 tabs). Read back as the org-wide API key: five plan fields, zero
+  custom links, no `CCNetworkStandard`, `GET /api/v1/CNetworkStandard` →
+  HTTP 200 `total 0` — the correct "built, never applied to" state. The Sunday
+  slot was spent on the Lakeside rehearsal, so this ran Monday by Doug's call.
+  `/healthz` `crmConfig` still reads `disabled` everywhere until the § R6
+  overlay applies; production will read `unstamped` once they run.
 
 - **B2 — the throwaway-instance round trip, acceptance criterion 13, is done**
   (2026-08-31). Evidence in

@@ -16,7 +16,12 @@ shape over the two alternatives is `prds/chapter-network/TASKS.md` § D1
 > the **navigation tab list** contrary to § 1. Verified afterwards by the
 > effective ACL the app itself sees — `{create: no, delete: no, edit: no,
 > read: all}` — and `GET /api/v1/CNetworkStandard` as the org key returning
-> **HTTP 200, `total: 0`**. **Production: not yet built.**
+> **HTTP 200, `total: 0`**. **Production: built 2026-08-31** by Doug running
+> `scripts/build_networkstandard.py` from inside the deployed web container —
+> dry run, then `--apply --expect 54fb5b37192027f7 --production`. All eight
+> steps `DONE` (the create added the entity to the tab list; the script removed
+> it, 39 → 38). Read back as the org key: five plan fields, zero custom links,
+> no `CCNetworkStandard`, `GET /api/v1/CNetworkStandard` → HTTP 200 `total 0`.
 >
 > **Build it from the script, not by hand:** `scripts/build_networkstandard.py`
 > covers the ENTIRE handoff — the entity and fields (read from
