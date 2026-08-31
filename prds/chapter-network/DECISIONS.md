@@ -121,6 +121,7 @@ therefore not paperwork; it is the load-bearing half of ruling 4.
 |---|---|---|
 | 2026-08-31 | **What a chapter deployment follows is a release branch, now; images by tag later.** The weekly cut fast-forwards a `release` branch to the tag; chapter apps track it, only the soak copy tracks `main`. Building one image per tag and shipping it by tag is deferred until the fleet outgrows N builds of one commit — the per-deployment policy and the Update button (proposal 8) must survive that swap unchanged. Chosen over "straight to images" because images need a registry every chapter's own DO account can pull from, which is Phase 3's secrets problem again. | [phase-2](phase-2-release-train.md) § *The release lane*; [TASKS.md](TASKS.md) § R10 |
 | 2026-08-31 | **The per-deployment update policy is named Development / Latest Stable / On Demand** (Doug's words, replacing "staging / train / held"). One Development in the fleet, never a chapter's; Cleveland's dry-run `lobster-app` is not the soak copy and is not registered. | Proposal 8; `prompts/crmbuilder-deployment-updates-requirements-v0.1.md` |
+| 2026-08-31 | **The network-standard applier lives INSIDE CRMBuilder** — a product capability, not a CBM-side artifact. Doug: *"It will reside inside CRMBuilder. It is designed to maintain a design and push it to CRM systems."* This rules the product-vs-artifact half of the A1 boundary question: Phase 1's Layer 2 (CRMBuilder as the realization) is the plan of record, and Layer 3's write path will not be built in this repo. Still owed to the requirements session: confirming **headless execution** and turning both briefing documents into confirmed CRMBuilder requirements under its requirement-first process. | [phase-1](phase-1-crm-config.md) § *The decision trigger*; [TASKS.md](TASKS.md) § A1 |
 | 2026-08-31 | **The roles standard is PRODUCTION'S shape, with one sanctioned staging deviation.** Groups B and C of the ruling table: production is the standard and crm-test was updated to match (verified by re-capture the same day; six leftovers noted in the table). Group A: `CustomAppAPIRole` `delete: all` exists on crm-test ONLY because the nightly recycle deletes app-created records through the API — **production and every chapter get `delete: no`**, and the drift detector must treat the staging delete grant as sanctioned, not drift. | [roles-standard/differences-2026-08-31.md](roles-standard/differences-2026-08-31.md); TASKS § R4 |
 | 2026-08-31 | **R7 — the extensions are IN the standard.** Advanced Pack 3.12.1 and Google Integration 1.8.4 are part of the network standard: every chapter installs both before the roles are applied (an Advanced Pack licence per instance is accepted cost). The roles then apply verbatim — no per-target scope filtering. | [chapter-values.md](chapter-values.md) § G; [phase-6](phase-6-first-chapter.md) step 2 |
 | 2026-08-31 | **The Lakeside rehearsal instance is NOT torn down.** Criterion 13 was met on the throwaway (`crm-lakeside`, DEP-001 / INST-001, app `lakeside-intake`); Doug ruled the same evening that it stays up to rehearse **Phase 6 step 3 — the Google integration** — and to document and automate that path. Cost: one droplet (~$24/mo) and one small App Platform app, in Doug's own accounts. The teardown steps are written and waiting on the standing page; "nothing left billing" is owed when that arc ends. | [TASKS.md](TASKS.md) § Closed (B2); [phase-6](phase-6-first-chapter.md) |
@@ -141,12 +142,11 @@ These are not proposals — I have no recommendation to offer on them — and th
 are not tracked as tasks because there is no work to start until they are
 answered. They are recorded so they are asked rather than rediscovered.
 
-- **Does the network standard live as a CRMBuilder product capability, or as a
-  CBM-network artifact that merely uses CRMBuilder?** The two answers put Phase
-  1's applier in different repos under different governance. Only the CRMBuilder
-  requirements session can answer it. **The trigger date is confirmed at
-  2026-09-19 (Doug, 2026-08-26)** — if the session has not run by then, Layer 3
-  proceeds in full. See [phase-1](phase-1-crm-config.md#the-decision-trigger).
+- ~~Does the network standard live as a CRMBuilder product capability, or as a
+  CBM-network artifact that merely uses CRMBuilder?~~ **RULED 2026-08-31: a
+  CRMBuilder product capability** (see the decision log). What the session
+  still owes: the headless-execution requirement, and confirmed requirements
+  for both briefs. The 2026-09-19 date stands for that work.
 - **Are the Advanced Pack and Google Integration extensions part of the
   standard?** The roles say yes by naming their scopes; no document had said so;
   a chapter would have to license the pack. Recommendation and steps in

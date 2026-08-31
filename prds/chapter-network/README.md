@@ -90,7 +90,7 @@ anything in it.
 
 | Repo / system | Relationship | Rule |
 |---|---|---|
-| **CRMBuilder** | The preferred realization of Phase 1's applier. HEAD `db1dbef0`, 2026-08-10; nothing has moved since the 2026-08-18 read-only review. | **Requirement-first governance.** Its shape is not ours to assume, and we cannot write a plan that obliges it to grow an interface it has not agreed to. Read-only from here until the requirements session runs |
+| **CRMBuilder** | **The ruled home of Phase 1's applier** (Doug, 2026-08-31 — a product capability). HEAD `db1dbef0`, 2026-08-10; nothing has moved since the 2026-08-18 read-only review. | **Requirement-first governance.** Its shape is not ours to assume, and we cannot write a plan that obliges it to grow an interface it has not agreed to. Read-only from here until the requirements session runs |
 | **`dbower44022/ClevelandBusinessMentoring`** | Owns **MN-INTAKE**, the business definition of the client-intake process. The Requirements Spec here is kept aligned to it by carry-forward | Process definition, not application. Changes there are Doug's |
 | The chapters' **WordPress sites** | Ruling 8: the app serves the public pages, each chapter's site embeds them. `wp-plugin/cbm-events/` already ships the renderer plus the site's own stylesheet | The stylesheet is a **class contract**, guarded by a test. Do not restyle it |
 | **DigitalOcean, per chapter** | Ruling 5: each chapter owns its account and grants the services org access | Lock-out must be impossible in either direction |

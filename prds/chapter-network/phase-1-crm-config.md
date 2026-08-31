@@ -344,12 +344,17 @@ the number the trigger's date should be chosen against.
 ## The decision trigger
 
 **Event.** The CRMBuilder requirements session produces confirmed answers to two
-of its own questions: the **product-vs-client boundary** ("is the network standard
-a CRMBuilder product capability or a CBM-network artifact?") and **candidate
-requirement 1, headless execution**. Either answer moves Phase 1 — a product-level
-answer with a confirmed headless requirement switches Phase 1 to Layer 2; an
-artifact-level answer, or headless execution declined or deferred, confirms Layer
-3 permanently.
+of its own questions: the **product-vs-client boundary** and **candidate
+requirement 1, headless execution**.
+
+> **The boundary half is RULED (Doug, 2026-08-31):** *"It will reside inside
+> CRMBuilder. It is designed to maintain a design and push it to CRM systems."*
+> — a **product capability**, so **Layer 2 is the plan of record** and Layer 3's
+> write path will not be built in this repo. What the session still owes:
+> confirming headless execution, and drafting both briefs into confirmed
+> requirements under CRMBuilder's requirement-first process. If headless
+> execution is declined there, that specific consequence comes back here for a
+> fresh ruling rather than silently reviving Layer 3.
 
 **Date. Proposed: 2026-09-19** — four weeks from the rewrite of this phase. Chosen
 so the decision lands **before** Layer 3's applier write path starts, given the

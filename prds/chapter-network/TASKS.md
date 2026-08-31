@@ -32,6 +32,14 @@ sight.
 
 **Owner: Doug. This is the only dated commitment in the project.**
 
+> **The decision half is DONE (2026-08-31):** Doug ruled the applier a
+> **CRMBuilder product capability** — see DECISIONS. The session is now a
+> *drafting* session, not a decision session: turn the two briefs
+> (`prompts/crmbuilder-chapter-network-prompt-v0.1.md` and
+> `prompts/crmbuilder-deployment-updates-requirements-v0.1.md`, per A3) into
+> confirmed CRMBuilder requirements, headless execution included. The date
+> stands.
+
 ### What this is
 
 **Ruled (D2, 2026-08-26): the trigger date stands at 2026-09-19.**
@@ -518,7 +526,11 @@ applies, which need the overlays and are Doug's.
 
 ## B1. The applier itself
 
-**Blocked on A1.** This is the month-sized deliverable: the desired-state
+**Now CRMBuilder's to build (ruled 2026-08-31) — blocked on A1's requirements
+session.** This repo's remaining obligation is the consumer half, already
+written: [interface-contract.md](interface-contract.md), the plan-file format,
+the ruled roles table, and the conformance check that verifies whatever the
+applier does. This is the month-sized deliverable: the desired-state
 definition generalized from `scripts/migrate_event_schema.py`'s change list, the
 directive executor that applies it, plan identity (dry-run, then apply *that
 exact plan*, refusing if the plan moved), the additive-only fence, the EspoCRM
