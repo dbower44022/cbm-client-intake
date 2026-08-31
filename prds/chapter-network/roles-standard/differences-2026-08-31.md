@@ -4,9 +4,12 @@
 > `scripts/capture_roles.py` run inside the deployed web container
 > (`prod-capture-2026-08-31.json`); crm-test from the database over SSH during
 > the Lakeside rehearsal (`../rehearsal-2026-08-31/crmtest-capture/`).
-> **Where the two agree, that is the standard by default** — only the rows
-> below need a ruling. Fill the **Standard** column; the ruled table then moves
-> to `phase-1-crm-config.md` as the roles half of the desired state.
+> **RULED (Doug, 2026-08-31): production is the standard for every row.**
+> Group A's crm-test `delete: all` is a **sanctioned staging-only deviation**
+> — the nightly recycle deletes app-created records through the API, and
+> production (and every chapter) must never grant the API delete. crm-test was
+> updated to match on groups B and C; the re-capture verification and its six
+> leftovers are in the postscript.
 
 Both CRMs hold the **same 12 roles** and the **same 9 teams**. Of the compared
 cells, 415 agree outright and 213 differ only in representation (empty-vs-absent
@@ -34,58 +37,58 @@ scopes shown as on/off; *(not set)* means the role does not mention the scope).
 
 | Role | Scope | crm-test | production | Standard |
 |---|---|---|---|---|
-| CustomAppAPIRole | `Account` | create: yes, delete: all, edit: all, read: all, stream: all | create: yes, delete: no, edit: all, read: all, stream: all | |
-| CustomAppAPIRole | `CClientProfile` | create: yes, delete: all, edit: all, read: all, stream: all | create: yes, delete: no, edit: all, read: all, stream: all | |
-| CustomAppAPIRole | `CCommunication` | create: yes, delete: all, edit: all, read: all | create: yes, delete: no, edit: all, read: all | |
-| CustomAppAPIRole | `CContribution` | create: yes, delete: all, edit: all, read: all | create: yes, delete: no, edit: all, read: all | |
-| CustomAppAPIRole | `CConversation` | create: yes, delete: all, edit: all, read: all | create: yes, delete: no, edit: all, read: all | |
-| CustomAppAPIRole | `CEngagement` | create: yes, delete: all, edit: all, read: all, stream: all | create: yes, delete: no, edit: all, read: all, stream: all | |
-| CustomAppAPIRole | `CEvent` | create: yes, delete: all, edit: all, read: all, stream: all | create: yes, delete: no, edit: all, read: all, stream: all | |
-| CustomAppAPIRole | `CEventRegistration` | create: yes, delete: all, edit: all, read: all | create: yes, delete: no, edit: all, read: all | |
-| CustomAppAPIRole | `CInformationRequest` | create: yes, delete: all, edit: all, read: all, stream: all | create: yes, delete: no, edit: all, read: all, stream: no | |
-| CustomAppAPIRole | `CIntakeSubmission` | create: yes, delete: all, edit: all, read: all, stream: all | create: yes, delete: no, edit: all, read: all, stream: all | |
-| CustomAppAPIRole | `CMentorProfile` | create: yes, delete: all, edit: all, read: all, stream: all | create: yes, delete: no, edit: all, read: all, stream: all | |
-| CustomAppAPIRole | `CPartnerProfile` | create: yes, delete: all, edit: all, read: all, stream: all | create: yes, delete: no, edit: all, read: all, stream: all | |
-| CustomAppAPIRole | `CResource` | create: yes, delete: all, edit: all, read: all, stream: all | create: yes, delete: no, edit: all, read: all, stream: all | |
-| CustomAppAPIRole | `CSession` | create: yes, delete: all, edit: all, read: all, stream: all | create: yes, delete: no, edit: all, read: all, stream: all | |
-| CustomAppAPIRole | `CSponsorProfile` | create: yes, delete: all, edit: all, read: all, stream: all | create: yes, delete: no, edit: all, read: all, stream: all | |
-| CustomAppAPIRole | `Contact` | create: yes, delete: all, edit: all, read: all, stream: all | create: yes, delete: no, edit: all, read: all, stream: all | |
-| CustomAppAPIRole | `Team` | read: all | create: no, delete: no, edit: no, read: all, stream: no | |
+| CustomAppAPIRole | `Account` | create: yes, delete: all, edit: all, read: all, stream: all | create: yes, delete: no, edit: all, read: all, stream: all | **production** |
+| CustomAppAPIRole | `CClientProfile` | create: yes, delete: all, edit: all, read: all, stream: all | create: yes, delete: no, edit: all, read: all, stream: all | **production** |
+| CustomAppAPIRole | `CCommunication` | create: yes, delete: all, edit: all, read: all | create: yes, delete: no, edit: all, read: all | **production** |
+| CustomAppAPIRole | `CContribution` | create: yes, delete: all, edit: all, read: all | create: yes, delete: no, edit: all, read: all | **production** |
+| CustomAppAPIRole | `CConversation` | create: yes, delete: all, edit: all, read: all | create: yes, delete: no, edit: all, read: all | **production** |
+| CustomAppAPIRole | `CEngagement` | create: yes, delete: all, edit: all, read: all, stream: all | create: yes, delete: no, edit: all, read: all, stream: all | **production** |
+| CustomAppAPIRole | `CEvent` | create: yes, delete: all, edit: all, read: all, stream: all | create: yes, delete: no, edit: all, read: all, stream: all | **production** |
+| CustomAppAPIRole | `CEventRegistration` | create: yes, delete: all, edit: all, read: all | create: yes, delete: no, edit: all, read: all | **production** |
+| CustomAppAPIRole | `CInformationRequest` | create: yes, delete: all, edit: all, read: all, stream: all | create: yes, delete: no, edit: all, read: all, stream: no | **production** |
+| CustomAppAPIRole | `CIntakeSubmission` | create: yes, delete: all, edit: all, read: all, stream: all | create: yes, delete: no, edit: all, read: all, stream: all | **production** |
+| CustomAppAPIRole | `CMentorProfile` | create: yes, delete: all, edit: all, read: all, stream: all | create: yes, delete: no, edit: all, read: all, stream: all | **production** |
+| CustomAppAPIRole | `CPartnerProfile` | create: yes, delete: all, edit: all, read: all, stream: all | create: yes, delete: no, edit: all, read: all, stream: all | **production** |
+| CustomAppAPIRole | `CResource` | create: yes, delete: all, edit: all, read: all, stream: all | create: yes, delete: no, edit: all, read: all, stream: all | **production** |
+| CustomAppAPIRole | `CSession` | create: yes, delete: all, edit: all, read: all, stream: all | create: yes, delete: no, edit: all, read: all, stream: all | **production** |
+| CustomAppAPIRole | `CSponsorProfile` | create: yes, delete: all, edit: all, read: all, stream: all | create: yes, delete: no, edit: all, read: all, stream: all | **production** |
+| CustomAppAPIRole | `Contact` | create: yes, delete: all, edit: all, read: all, stream: all | create: yes, delete: no, edit: all, read: all, stream: all | **production** |
+| CustomAppAPIRole | `Team` | read: all | create: no, delete: no, edit: no, read: all, stream: no | **production** |
 
 ### B — Extension and personal-integration scopes (rule together with **R7**)
 
 | Role | Scope | crm-test | production | Standard |
 |---|---|---|---|---|
-| Client Assignment Role | `EmailAccountScope` | on | (not set) | |
-| Client Assignment Role | `GoogleCalendar` | on | (not set) | |
-| Client Assignment Role | `GoogleContacts` | on | (not set) | |
-| Marketing Admin Role | `Activities` | (not set) | on | |
-| Mentor Role | `EmailAccountScope` | on | (not set) | |
-| Mentor Role | `GoogleCalendar` | on | (not set) | |
-| Mentor Role | `GoogleContacts` | on | (not set) | |
-| Standard User | `Activities` | on | (not set) | |
-| Standard User | `Calendar` | on | (not set) | |
-| Standard User | `EmailAccountScope` | on | (not set) | |
-| Standard User | `ExternalAccount` | on | (not set) | |
-| Standard User | `GoogleCalendar` | on | (not set) | |
+| Client Assignment Role | `EmailAccountScope` | on | (not set) | **production** |
+| Client Assignment Role | `GoogleCalendar` | on | (not set) | **production** |
+| Client Assignment Role | `GoogleContacts` | on | (not set) | **production** |
+| Marketing Admin Role | `Activities` | (not set) | on | **production** |
+| Mentor Role | `EmailAccountScope` | on | (not set) | **production** |
+| Mentor Role | `GoogleCalendar` | on | (not set) | **production** |
+| Mentor Role | `GoogleContacts` | on | (not set) | **production** |
+| Standard User | `Activities` | on | (not set) | **production** |
+| Standard User | `Calendar` | on | (not set) | **production** |
+| Standard User | `EmailAccountScope` | on | (not set) | **production** |
+| Standard User | `ExternalAccount` | on | (not set) | **production** |
+| Standard User | `GoogleCalendar` | on | (not set) | **production** |
 
 ### C — Individual differences, one decision each
 
 | Role | Scope | crm-test | production | Standard |
 |---|---|---|---|---|
-| ClientMentorIntakeRole | `CInformationRequest` | create: yes, delete: no, edit: all, read: all, stream: no | create: yes, delete: no, edit: all, read: all, stream: all | |
-| ClientMentorIntakeRole | `CResource` | create: yes, delete: no, edit: all, read: all, stream: no | create: yes, delete: no, edit: all, read: all, stream: all | |
-| ClientMentorIntakeRole | `User` | (not set) | edit: own, read: all | |
-| CustomAppAPIRole | *permission* `assignmentPermission` | all | not-set | |
-| CustomAppAPIRole | `OpenApi` | (not set) | on | |
-| Marketing Admin Role | `EmailTemplateCategory` | (not set) | create: yes, delete: no, edit: all, read: all, stream: no | |
-| Mentor Administration Role | *permission* `auditPermission` | yes | not-set | |
-| Mentor Role | `CCommunication` | create: no, delete: no, edit: no, read: all | create: yes, delete: no, edit: own, read: all | |
-| Mentor Role | `CConversation` | create: no, delete: no, edit: no, read: all | create: yes, delete: no, edit: own, read: own | |
-| Mentor Role | `CPartnerProfile` | create: no, delete: no, edit: own, read: all, stream: no | create: no, delete: no, edit: no, read: all, stream: no | |
-| Partner Manager Role | `Team` | (not set) | read: all | |
-| Sponsor Manager Role | `CCommunication` | create: no, delete: no, edit: no, read: all | (not set) | |
-| Sponsor Manager Role | `CConversation` | create: no, delete: no, edit: no, read: all | (not set) | |
+| ClientMentorIntakeRole | `CInformationRequest` | create: yes, delete: no, edit: all, read: all, stream: no | create: yes, delete: no, edit: all, read: all, stream: all | **production** |
+| ClientMentorIntakeRole | `CResource` | create: yes, delete: no, edit: all, read: all, stream: no | create: yes, delete: no, edit: all, read: all, stream: all | **production** |
+| ClientMentorIntakeRole | `User` | (not set) | edit: own, read: all | **production** |
+| CustomAppAPIRole | *permission* `assignmentPermission` | all | not-set | **production** |
+| CustomAppAPIRole | `OpenApi` | (not set) | on | **production** |
+| Marketing Admin Role | `EmailTemplateCategory` | (not set) | create: yes, delete: no, edit: all, read: all, stream: no | **production** |
+| Mentor Administration Role | *permission* `auditPermission` | yes | not-set | **production** |
+| Mentor Role | `CCommunication` | create: no, delete: no, edit: no, read: all | create: yes, delete: no, edit: own, read: all | **production** |
+| Mentor Role | `CConversation` | create: no, delete: no, edit: no, read: all | create: yes, delete: no, edit: own, read: own | **production** |
+| Mentor Role | `CPartnerProfile` | create: no, delete: no, edit: own, read: all, stream: no | create: no, delete: no, edit: no, read: all, stream: no | **production** |
+| Partner Manager Role | `Team` | (not set) | read: all | **production** |
+| Sponsor Manager Role | `CCommunication` | create: no, delete: no, edit: no, read: all | (not set) | **production** |
+| Sponsor Manager Role | `CConversation` | create: no, delete: no, edit: no, read: all | (not set) | **production** |
 | Standard User | field locks on `Account` | cClientProfile: edit: no, read: no, cCompanyPartnerProfile: edit: no, read: no, cSponsorProfile: edit: no, read: no |  | |
 
 ## Notes for the ruling
@@ -106,3 +109,24 @@ scopes shown as on/off; *(not set)* means the role does not mention the scope).
   the stale `cCompanyPartnerProfile` entry (field deleted 2026-08-14, finding
   F6) — whichever side is ruled, that entry must not enter the standard:
   EspoCRM 10 rejects the whole role over it.
+
+## Verification, 2026-08-31 18:37 UTC — after the ruling
+
+crm-test was re-captured and re-diffed against production. Groups B and C are
+substantially aligned; group A's 17 delete cells remain different **by ruling**
+(sanctioned). **Six cells still differ and are owed a crm-test edit** (the
+standard is production's value in each):
+
+| Role | Scope | crm-test now | production (= standard) |
+|---|---|---|---|
+| Mentor Role | `EmailAccountScope` | on | not set |
+| Standard User | `ExternalAccount` | on | not set |
+| Marketing Admin Role | `Activities` | not set | on |
+| Sponsor Manager Role | `CCommunication` | read: all | not set |
+| Sponsor Manager Role | `CConversation` | read: all | not set |
+| CustomAppAPIRole | *permission* `assignmentPermission` | all | not-set |
+
+(Also inside group A's sanctioned block, `CInformationRequest` differs on
+`stream` — crm-test `all`, production `no` — not part of the delete deviation,
+so it should follow production too.) The stale `Standard User` field lock (F6)
+is GONE from crm-test — the update cleared it.

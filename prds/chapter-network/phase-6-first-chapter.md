@@ -30,8 +30,8 @@ A runbook, executed by the services org inside accounts the chapter owns
    standard onto the droplet (the path depends on the installer version:
    `data/espocrm/persistent/custom` and `…/custom-client` on the 10.x
    installer), `chown www-data`, `php command.php rebuild`; (b) the **extensions
-   the roles depend on**, if R7 rules them in (Advanced Pack, Google
-   Integration) — *before* the roles; (c) the **API half** as the admin login —
+   the roles depend on** — Advanced Pack and Google Integration, ruled IN
+   (R7, 2026-08-31) — *before* the roles; (c) the **API half** as the admin login —
    teams, roles (validated against the target's `entityDefs`; stripped scopes
    are *unapplyable*, exit 4), role→team attachments, email templates, the
    org-wide API user and its role, the services-org admin accounts, the § E

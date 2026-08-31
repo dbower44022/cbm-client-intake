@@ -156,7 +156,11 @@ question (product capability or CBM-network artifact) and should get one answer.
 
 ## R7. Rule on the extensions — are Advanced Pack and Google Integration part of the standard?
 
-**Owner: Doug. A ruling, then a small follow-through.**
+**RULED 2026-08-31: IN the standard** (DECISIONS log). Follow-through done the
+same day: [chapter-values.md](chapter-values.md) § G and
+[phase-6](phase-6-first-chapter.md) step 2 now state it unconditionally. Step 1
+(does anyone actually use a Report or a BPM flowchart?) was overtaken by the
+ruling and not performed.
 
 ### What this is
 
@@ -401,8 +405,12 @@ API login being dead there — F8). The diff:
 for real (Data Integrity Team Role has no team on production —
 `OPEN-ITEMS.md` #29). Found and fixed on the way: `GET Role/{id}` returns
 empty `teamsIds` even where attachments exist, so the script now reads
-`Role/{id}/teams`. Rule the table (groups A and B are one decision each), then
-file the ruled version in phase-1.
+`Role/{id}/teams`. **RULED the same day** (DECISIONS log): production is the standard; group A's
+delete grant is a sanctioned crm-test-only deviation (the nightly recycle
+deletes via the API); crm-test was updated to match on B and C — verified by
+re-capture at 18:37Z, with six leftover cells listed in the table's
+postscript for the CRM team to finish. Owed still: file the ruled table in
+phase-1, and the six leftovers.
 
 ### What this is
 

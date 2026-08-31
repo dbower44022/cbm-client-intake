@@ -186,7 +186,7 @@ inference.
 | **Roles** | 12 on crm-test. They define what teams *mean*; a chapter with different roles is a chapter running different software |
 | **Email templates** | 6 required. **Verified 2026-08-27: template bodies carry no hardcoded brand at all**, so they are genuinely build-once-deploy-everywhere. This was not knowable without looking, and it removes a category people would otherwise assume was per-city |
 | **Entity and field schema** | 16 custom entities, ~298 custom fields, ~96 custom links — **two file trees**: `custom/Espo/Custom/` and `client/custom/src/` (the CBM navbar view; without it the CRM UI is blank) |
-| **Extensions the roles depend on** | Advanced Pack 3.12.1 and Google Integration 1.8.4 are installed on crm-test and the roles name their scopes. **Whether they are standard is R7's ruling** — they are listed here because leaving them off this fence is what made them invisible |
+| **Extensions the roles depend on** | Advanced Pack 3.12.1 and Google Integration 1.8.4 are installed on crm-test and the roles name their scopes. **Ruled IN the standard (R7, 2026-08-31)**: every chapter installs both before the roles are applied; an Advanced Pack licence per instance is accepted cost |
 | **Enum options / form dropdowns** | 16 managed lists from 14 `Entity.field` sources |
 | **Layouts** | `/directory` reads the CRM's own list and detail layouts live |
 | **Everything in `frontend/`** | `CBM`, `cbm-`, `--cbm-*`, `data-cbm-*` are **identifiers, not content**, and two are live contracts with the website |
