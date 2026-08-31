@@ -27,6 +27,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Optional, Protocol
 from zoneinfo import ZoneInfo
 
+from core import inline_images
 from core.espo import EspoError
 from core.stream import post_stream_note
 
@@ -486,11 +487,17 @@ async def get_engagement_edit_form(
     path of the detail popup keeps its two reads.
     """
     eng = await client.get(ENGAGEMENT, engagement_id, select=_edit_select())
+    # Long-form fields render as the type the LIVE CRM gives them — this is how
+    # `description` upgrades from a textarea to the rich editor the day the CRM
+    # field is converted to wysiwyg, with no deploy (see live_wysiwyg_fields).
+    live_wysiwyg = await live_wysiwyg_fields(client)
 
     async def _one(spec: dict[str, Any]) -> dict[str, Any]:
         field: dict[str, Any] = {
             k: spec[k] for k in ("name", "label", "type", "group") if k in spec
         }
+        if spec["type"] in ("text", "wysiwyg"):
+            field["type"] = "wysiwyg" if spec["name"] in live_wysiwyg else "text"
         if spec.get("required"):
             field["required"] = True
         if spec.get("help"):
@@ -599,6 +606,76 @@ async def update_engagement(
         "changedFields": changed_labels,
         "droppedValues": dropped,
     }
+
+
+# --- inline images (the popup's wysiwyg fields + the Notes column) ----------
+#
+# Mechanics in ``core/inline_images.py`` (the session tools' pattern). What is
+# local here is the whitelist: only ``ENGAGEMENT_EDIT_FIELDS`` entries whose
+# LIVE CRM type is wysiwyg may hold one — EspoCRM's Wysiwyg saver is what binds
+# the attachment to the engagement on save, and an attachment referenced from a
+# plain-text field is never bound, so cleanup would collect it later.
+
+
+async def live_wysiwyg_fields(client: AssignClient) -> set[str]:
+    """The ``ENGAGEMENT_EDIT_FIELDS`` names whose LIVE CRM type is wysiwyg.
+
+    This is the feature switch for rich internal notes: ``description`` is
+    declared plain text here and stays a plain textarea until the CRM field is
+    converted to wysiwyg (cengagement-description-wysiwyg-crm-handoff.md), at
+    which point the served edit spec, the grid's Notes editor and the
+    inline-image whitelist all upgrade with no deploy — the established
+    feature-detection pattern. A failed metadata read falls back to the
+    statically-declared wysiwyg fields, never a guess that a text field can
+    hold an attachment.
+    """
+    declared = {f["name"] for f in ENGAGEMENT_EDIT_FIELDS if f["type"] == "wysiwyg"}
+    fetch = getattr(client, "metadata", None)  # dry-run clients have none
+    if fetch is None:
+        return declared
+    try:
+        fields = await fetch(f"entityDefs.{ENGAGEMENT}.fields") or {}
+    except EspoError as exc:
+        log.warning("assignments: %s field metadata unavailable: %s", ENGAGEMENT, exc)
+        return declared
+    return {
+        f["name"] for f in ENGAGEMENT_EDIT_FIELDS
+        if (fields.get(f["name"]) or {}).get("type") == "wysiwyg"
+    }
+
+
+async def upload_inline_image(
+    client: AssignClient,
+    *,
+    filename: str,
+    content_type: str,
+    data_base64: str,
+    field: str,
+) -> dict[str, str]:
+    """Store a pasted/picked image as an EspoCRM Inline Attachment on
+    ``CEngagement``. Validation refusals are :class:`AssignError` (readable 400)."""
+    allowed = await live_wysiwyg_fields(client)
+    try:
+        return await inline_images.upload_inline_image(
+            client,
+            filename=filename,
+            content_type=content_type,
+            data_base64=data_base64,
+            related_type=ENGAGEMENT,
+            field=field,
+            allowed_fields=allowed,
+            field_error="Images can't be stored in this field.",
+        )
+    except inline_images.InlineImageError as exc:
+        raise AssignError(str(exc)) from exc
+
+
+async def fetch_inline_image(
+    client: AssignClient, attachment_id: str
+) -> tuple[bytes, str]:
+    """The attachment's bytes + content type, read AS THE USER — EspoCRM checks
+    access against the related engagement."""
+    return await inline_images.fetch_inline_image(client, attachment_id)
 
 
 # Shared select for both the assign dropdown and the review list. The CRM's own

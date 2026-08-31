@@ -112,8 +112,16 @@
   }
 
   function richInto(node, html) {
+    // Inline-image references stored the EspoCRM-native way
+    // (?entryPoint=attachment&amp;id=X — e.g. images added to the professional
+    // bio in My Mentor Profile) render through the app's streaming proxy,
+    // because the browser can't reach the CRM.
+    var display = String(html || "").replace(
+      /\?entryPoint=attachment&(?:amp;)?id=([A-Za-z0-9_-]+)/g,
+      API + "/attachments/$1"
+    );
     var clean = (window.CBMRichText && window.CBMRichText.sanitizeHtml)
-      ? window.CBMRichText.sanitizeHtml(String(html || ""))
+      ? window.CBMRichText.sanitizeHtml(display)
       : "";
     node.innerHTML = clean;
   }

@@ -109,8 +109,9 @@ def test_crm_500_on_session_save_returns_readable_502(monkeypatch):
 def test_inline_image_upload_and_fetch_endpoints(monkeypatch):
     _as(monkeypatch, _USER)
 
-    async def fake_upload(client, *, filename, content_type, data_base64, field):
+    async def fake_upload(client, *, filename, content_type, data_base64, field, entity=""):
         assert field == "sessionNotes"
+        assert entity == ""          # no entity named => the CSession default
         return {"id": "a77"}
 
     async def fake_fetch(client, attachment_id):
@@ -128,6 +129,41 @@ def test_inline_image_upload_and_fetch_endpoints(monkeypatch):
         assert got.content == b"png-bytes"
         assert got.headers["content-type"].startswith("image/png")
         assert "immutable" in got.headers["cache-control"]
+
+
+def test_inline_image_upload_for_a_details_entity(monkeypatch):
+    """A Details-tab editor names its own entity: the router allowlists it like
+    the details PUT and asks live metadata whether the field is an editable
+    wysiwyg (the binding gate) before any upload."""
+    _as(monkeypatch, _USER)
+    checked = []
+
+    async def fake_is_wysiwyg(client, entity, field):
+        checked.append((entity, field))
+        return field == "engagementNotes"
+
+    async def fake_upload(client, *, filename, content_type, data_base64, field, entity=""):
+        assert (entity, field) == ("CEngagement", "engagementNotes")
+        return {"id": "a88"}
+
+    monkeypatch.setattr("sessions.details.is_editable_wysiwyg", fake_is_wysiwyg)
+    monkeypatch.setattr("sessions.service.upload_inline_image", fake_upload)
+    with TestClient(_app(monkeypatch)) as c:
+        ok = c.post("/mentorsessions/api/inlineimages",
+                    json={"contentType": "image/png", "dataBase64": "aGk=",
+                          "field": "engagementNotes", "entity": "CEngagement"})
+        assert ok.status_code == 200 and ok.json()["id"] == "a88"
+        # A non-wysiwyg field on an allowed entity is a readable 400.
+        bad = c.post("/mentorsessions/api/inlineimages",
+                     json={"contentType": "image/png", "dataBase64": "aGk=",
+                           "field": "engagementStatus", "entity": "CEngagement"})
+        assert bad.status_code == 400
+        # An entity outside the domain's allowlist 404s (like the details PUT).
+        gone = c.post("/mentorsessions/api/inlineimages",
+                      json={"contentType": "image/png", "dataBase64": "aGk=",
+                            "field": "x", "entity": "CMentorProfile"})
+        assert gone.status_code == 404
+    assert ("CEngagement", "engagementNotes") in checked
 
 
 def test_inline_image_upload_validation_is_a_readable_400(monkeypatch):

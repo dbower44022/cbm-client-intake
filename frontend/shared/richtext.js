@@ -40,8 +40,9 @@
 
   var BUTTONS = [
     "bold", "italic", "underline", "strikethrough", "|",
-    "brush", "paragraph", "|",
-    "ul", "ol", "|",
+    "brush", "paragraph", "fontsize", "|",
+    "ul", "ol", "outdent", "indent", "|",
+    "align", "|",
     "link", "table", "hr", "|",
     "eraser", "|",
     "undo", "redo",
@@ -54,8 +55,20 @@
     host.className = "cbm-richtext";
     var area = document.createElement("textarea");
     host.appendChild(area);
+    // The Insert-image button only exists where the host app supplies an
+    // uploadImage hook — i.e. where a picked file can actually be stored as a
+    // CRM attachment. A file chosen in the dialog is inserted as a base64
+    // data: URI (insertImageAsBase64URI), which the same handleEmbeddedImages
+    // pass below immediately uploads and swaps for the attachment URL — one
+    // pipeline for pasted, dropped and picked images alike.
+    var canUpload = typeof opts.uploadImage === "function";
+    var buttons = BUTTONS;
+    if (canUpload) {
+      buttons = BUTTONS.slice();
+      buttons.splice(buttons.indexOf("hr") + 1, 0, "image");
+    }
     var editor = window.Jodit.make(area, {
-      buttons: BUTTONS,
+      buttons: buttons,
       toolbarAdaptive: false,     // same toolbar at every width
       statusbar: false,
       spellcheck: true,
@@ -66,6 +79,7 @@
       askBeforePasteFromWord: false,
       defaultActionOnPaste: "insert_as_html",
       disablePlugins: ["add-new-line"],
+      uploader: { insertImageAsBase64URI: true },
     });
     var initial = sanitizeHtml(value == null ? "" : String(value));
     if (isEmptyHtml(initial)) initial = "";

@@ -14,7 +14,8 @@ class FakeClient:
     """Mock of the EspoClient slice the service uses; records get/list/update calls."""
 
     def __init__(self, *, mentor=None, engagement=None, contact=None, related=None,
-                 lists=None, mentor_fields=None, enum_options=None):
+                 lists=None, mentor_fields=None, enum_options=None,
+                 engagement_fields=None):
         # The CMentorProfile field defs this fake CRM reports. Defaults to a CRM
         # that HAS the lastClientAssignedDate stamp field built, so the suite
         # exercises the live shape; pass ``mentor_fields={}`` for a CRM without it.
@@ -30,10 +31,14 @@ class FakeClient:
         # {(entity, field): [options] | None} — what the fake CRM's metadata
         # reports for an enum field; a missing key behaves like "no such field".
         self._enum_options = enum_options or {}
+        # The CEngagement field defs this fake CRM reports ({} = read succeeds
+        # but no field is wysiwyg — the pre-conversion live shape).
+        self._engagement_fields = engagement_fields or {}
         self.updates: list[tuple[str, str, dict]] = []
         self.creates: list[tuple[str, dict]] = []
         self.list_calls: list[tuple[str, list]] = []
         self.list_selects: list[tuple[str, str | None]] = []
+        self.uploads: list[tuple[str, str, str, str, str]] = []
 
     async def get(self, entity, record_id, select=None):
         if entity == service.MENTOR_PROFILE:
@@ -79,7 +84,17 @@ class FakeClient:
     async def metadata(self, key):
         if key == f"entityDefs.{service.MENTOR_PROFILE}.fields":
             return self._mentor_fields
+        if key == f"entityDefs.{service.ENGAGEMENT}.fields":
+            return self._engagement_fields
         return {}
+
+    async def upload_attachment(self, *, filename, content_type, data_base64,
+                                related_type, field, role="Attachment"):
+        self.uploads.append((filename, content_type, related_type, field, role))
+        return "att-9"
+
+    async def download_attachment(self, attachment_id):
+        return b"png-bytes", "image/png"
 
     async def metadata_enum_options(self, entity, field):
         return self._enum_options.get((entity, field))
@@ -1658,3 +1673,87 @@ async def test_refresh_membership_expired_token_raises(monkeypatch):
     _patch_refresh_client(monkeypatch, _RefreshClient(exc=EspoError("get failed: HTTP 401 Unauthorized")))
     with pytest.raises(auth.AuthError):
         await auth.refresh_membership(_settings(), dict(_SESSION_USER))
+
+
+# --- inline images + the rich-notes feature switch ---------------------------
+#
+# CEngagement.description ships as plain text; converting it to wysiwyg in the
+# CRM (cengagement-description-wysiwyg-crm-handoff.md) is what turns the Notes
+# column rich. live_wysiwyg_fields is that switch, and the inline-image upload
+# is gated on it because only a wysiwyg field binds its inline attachments
+# (an unbound attachment is collected by EspoCRM's cleanup).
+
+_WYSIWYG_ENG_FIELDS = {
+    "description": {"type": "wysiwyg"},
+    "engagementNotes": {"type": "wysiwyg"},
+    "mentoringNeedsDescription": {"type": "wysiwyg"},
+}
+
+
+async def test_live_wysiwyg_fields_reads_the_live_types():
+    client = FakeClient(engagement_fields=_WYSIWYG_ENG_FIELDS)
+    assert await service.live_wysiwyg_fields(client) == {
+        "description", "engagementNotes", "mentoringNeedsDescription",
+    }
+    # Pre-conversion CRM: description is text, so it is NOT offered.
+    client = FakeClient(engagement_fields={
+        "description": {"type": "text"},
+        "engagementNotes": {"type": "wysiwyg"},
+    })
+    assert await service.live_wysiwyg_fields(client) == {"engagementNotes"}
+
+
+async def test_live_wysiwyg_fields_falls_back_to_declared_without_metadata():
+    """No metadata access (dry-run client) or a failed read = the statically
+    declared wysiwyg fields — never a guess that a text field can bind an
+    attachment."""
+    declared = {"engagementNotes", "mentoringNeedsDescription"}
+
+    class NoMeta:
+        pass
+
+    assert await service.live_wysiwyg_fields(NoMeta()) == declared
+
+    class Failing(FakeClient):
+        async def metadata(self, key):
+            raise EspoError("metadata unavailable")
+
+    assert await service.live_wysiwyg_fields(Failing()) == declared
+
+
+async def test_upload_inline_image_is_gated_on_the_live_field_type():
+    # description still text => refused, nothing reaches the CRM.
+    client = FakeClient(engagement_fields={"description": {"type": "text"}})
+    with pytest.raises(service.AssignError):
+        await service.upload_inline_image(
+            client, filename="x", content_type="image/png",
+            data_base64="aGk=", field="description",
+        )
+    assert client.uploads == []
+    # description converted => stored as an Inline Attachment on CEngagement.
+    client = FakeClient(engagement_fields=_WYSIWYG_ENG_FIELDS)
+    res = await service.upload_inline_image(
+        client, filename="shot.png", content_type="image/png",
+        data_base64="aGk=", field="description",
+    )
+    assert res == {"id": "att-9"}
+    assert client.uploads == [
+        ("shot.png", "image/png", "CEngagement", "description", "Inline Attachment"),
+    ]
+
+
+async def test_edit_form_serves_the_live_type_for_long_form_fields():
+    """The popup's Internal-notes field upgrades from textarea to rich editor
+    the day the CRM field is converted — with no deploy."""
+    eng = {"name": "E", "engagementStatus": "Active", "description": "plain"}
+    client = FakeClient(engagement=eng)  # metadata: no wysiwyg fields
+    form = await service.get_engagement_edit_form(client, "e1")
+    types = {f["name"]: f["type"] for f in form["fields"]}
+    assert types["description"] == "text"
+    assert types["engagementNotes"] == "text"  # live type wins over declared
+
+    client = FakeClient(engagement=eng, engagement_fields=_WYSIWYG_ENG_FIELDS)
+    form = await service.get_engagement_edit_form(client, "e1")
+    types = {f["name"]: f["type"] for f in form["fields"]}
+    assert types["description"] == "wysiwyg"
+    assert types["engagementNotes"] == "wysiwyg"

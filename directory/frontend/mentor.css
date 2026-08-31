@@ -164,6 +164,8 @@ body.mp2--resizing { cursor: col-resize; user-select: none; }
 
 /* ---- rich text (about / bio) --------------------------------------------- */
 .mp2__rich { color: var(--cbm-slate-900); line-height: 1.65; font-size: 15px; }
+/* Inline images (bio may embed CRM attachments) never overflow the card. */
+.mp2__rich img { max-width: 100%; height: auto; }
 .mp2__rich p { margin: 0 0 0.7rem; }
 .mp2__rich ul, .mp2__rich ol { margin: 0 0 0.7rem 1.2rem; }
 .mp2__rich a { color: var(--cbm-blue); }

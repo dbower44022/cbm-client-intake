@@ -13,6 +13,10 @@
   var mentors = [];
   var selectedStatuses = [];   // engagementStatus values currently filtered to
   var statusFilterBuilt = false;
+  // Whether CEngagement.description is a wysiwyg field on the live CRM — the
+  // server feature-detects it per load (see live_wysiwyg_fields). Off = the
+  // Notes column keeps its plain textarea, exactly as before.
+  var notesRich = false;
 
   // --- tiny DOM helpers ---
   function $(id) { return document.getElementById(id); }
@@ -38,6 +42,49 @@
       throw err;
     }
     return data;
+  }
+
+  // --- inline images (the session tools' pattern) ---
+  // Stored HTML references an image the EspoCRM-native way —
+  // <img src="?entryPoint=attachment&amp;id=X"> — so the CRM UI renders it and
+  // EspoCRM's saver binds the attachment to the engagement. The browser can't
+  // reach the CRM, so display rewrites the reference to the app's streaming
+  // proxy; saves rewrite it back to the stored form.
+  function inlineImgToDisplay(html) {
+    return String(html == null ? "" : html).replace(
+      /\?entryPoint=attachment&(?:amp;)?id=([A-Za-z0-9_-]+)/g,
+      API + "/attachments/$1"
+    );
+  }
+  var _PROXY_RE = new RegExp(
+    (API + "/attachments/").replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "([A-Za-z0-9_-]+)", "g"
+  );
+  function inlineImgToStored(html) {
+    return String(html == null ? "" : html).replace(
+      _PROXY_RE, "?entryPoint=attachment&amp;id=$1"
+    );
+  }
+  async function uploadInlineImage(dataUri, field) {
+    var m = /^data:([^;,]+);base64,(.+)$/.exec(dataUri || "");
+    if (!m) return null;
+    var r = await api("/inlineimages", {
+      method: "POST",
+      body: JSON.stringify({
+        filename: "pasted-image", contentType: m[1], dataBase64: m[2],
+        field: field || "description",
+      }),
+    });
+    return API + "/attachments/" + r.id;
+  }
+
+  // A value stored before the field went rich is plain text — handing it to
+  // an HTML editor as-is would collapse its line breaks, so it is escaped and
+  // <br>-joined on the way in. Anything already carrying markup passes through.
+  function plainToHtml(s) {
+    if (!s || /<[a-z][\s\S]*>/i.test(s)) return s || "";
+    return String(s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/\r?\n/g, "<br>");
   }
 
   // --- views ---
@@ -186,7 +233,9 @@
   // --- data + rendering ---
   async function fetchEngagements() {
     var qs = statusQuery();
-    return api("/engagements" + (qs ? "?" + qs : ""));
+    var eng = await api("/engagements" + (qs ? "?" + qs : ""));
+    notesRich = !!eng.notesRich;
+    return eng;
   }
 
   async function loadData() {
@@ -513,12 +562,25 @@
     return td;
   }
 
+  // The cell's read view is a one-line text preview whichever way the field is
+  // stored — rich notes render fully in the editor and the detail popup, not
+  // in a grid cell. An image-only note still gets a visible marker.
+  function notesPreviewText(html) {
+    if (!/<[a-z][\s\S]*>/i.test(html || "")) return html || "";
+    var tmp = document.createElement("div");
+    tmp.innerHTML = html;
+    var text = tmp.textContent.replace(/\s+/g, " ").trim();
+    var imgs = tmp.querySelectorAll("img").length;
+    if (imgs) text = (text ? text + " " : "") + "📷" + (imgs > 1 ? "×" + imgs : "");
+    return text;
+  }
+
   function renderNotesView(td, eng) {
     td.innerHTML = "";
     var view = document.createElement("button");
     view.type = "button";
     view.className = "notes-view" + (eng.notes ? "" : " notes-view--empty");
-    view.textContent = eng.notes || "Add notes…";
+    view.textContent = notesPreviewText(eng.notes) || "Add notes…";
     view.title = "Click to edit internal notes";
     view.addEventListener("click", function () { openNotesEditor(td, eng); });
     td.appendChild(view);
@@ -526,11 +588,23 @@
 
   function openNotesEditor(td, eng) {
     td.innerHTML = "";
-    var ta = document.createElement("textarea");
-    ta.className = "notes-input";
-    ta.rows = 3;
-    ta.value = eng.notes || "";
-    ta.placeholder = "Internal notes about this client assignment…";
+    // Rich editor when the live CRM stores description as wysiwyg (the server
+    // says so per load); the plain textarea otherwise, exactly as before.
+    var rich = null;
+    if (notesRich && window.CBMRichText && window.CBMRichText.create) {
+      rich = window.CBMRichText.create(inlineImgToDisplay(plainToHtml(eng.notes || "")), {
+        minHeight: 140,
+        uploadImage: function (dataUri) { return uploadInlineImage(dataUri, "description"); },
+      });
+    }
+    var ta = null;
+    if (!rich) {
+      ta = document.createElement("textarea");
+      ta.className = "notes-input";
+      ta.rows = 3;
+      ta.value = eng.notes || "";
+      ta.placeholder = "Internal notes about this client assignment…";
+    }
 
     var actions = document.createElement("div");
     actions.className = "notes-actions";
@@ -545,11 +619,15 @@
 
     function closeEditor() { renderNotesView(td, eng); }
     cancel.addEventListener("click", closeEditor);
-    ta.addEventListener("keydown", function (e) {
+    if (ta) ta.addEventListener("keydown", function (e) {
       if (e.key === "Escape") { e.stopPropagation(); closeEditor(); }
     });
     save.addEventListener("click", async function () {
-      var value = ta.value.trim();
+      // Rich value goes back to the CRM-native stored form
+      // (?entryPoint=attachment&amp;id=…) so EspoCRM binds + renders it.
+      var value = rich
+        ? inlineImgToStored(rich._cbmRichText.getValue())
+        : ta.value.trim();
       save.disabled = true;
       cancel.disabled = true;
       try {
@@ -569,10 +647,14 @@
 
     actions.appendChild(save);
     actions.appendChild(cancel);
-    td.appendChild(ta);
+    td.appendChild(rich || ta);
     td.appendChild(actions);
-    ta.focus();
-    ta.setSelectionRange(ta.value.length, ta.value.length);
+    if (ta) {
+      ta.focus();
+      ta.setSelectionRange(ta.value.length, ta.value.length);
+    } else if (rich._cbmRichText.focus) {
+      rich._cbmRichText.focus();
+    }
   }
 
   // --- engagement detail modal ---
@@ -600,11 +682,11 @@
     A: 1, B: 1, STRONG: 1, I: 1, EM: 1, U: 1, S: 1, STRIKE: 1, P: 1, BR: 1,
     UL: 1, OL: 1, LI: 1, H1: 1, H2: 1, H3: 1, H4: 1, H5: 1, H6: 1, BLOCKQUOTE: 1,
     SPAN: 1, DIV: 1, PRE: 1, CODE: 1, HR: 1, TABLE: 1, THEAD: 1, TBODY: 1,
-    TR: 1, TD: 1, TH: 1, SUB: 1, SUP: 1,
+    TR: 1, TD: 1, TH: 1, SUB: 1, SUP: 1, IMG: 1,
   };
   var RICH_DROP = {
     SCRIPT: 1, STYLE: 1, IFRAME: 1, OBJECT: 1, EMBED: 1, LINK: 1, META: 1,
-    SVG: 1, MATH: 1, FORM: 1, INPUT: 1, BUTTON: 1, TEXTAREA: 1, IMG: 1,
+    SVG: 1, MATH: 1, FORM: 1, INPUT: 1, BUTTON: 1, TEXTAREA: 1,
   };
 
   function sanitizeBody(body) {
@@ -614,10 +696,15 @@
       var tag = el.tagName;
       if (RICH_DROP[tag]) { drop.push(el); return; }
       Array.prototype.slice.call(el.attributes).forEach(function (a) {
-        var keep = tag === "A" && a.name.toLowerCase() === "href" &&
-          /^(https?:|mailto:|tel:)/i.test(a.value.trim());
+        var keep = (tag === "A" && a.name.toLowerCase() === "href" &&
+          /^(https?:|mailto:|tel:)/i.test(a.value.trim())) ||
+          // Only the app's own attachment proxy may feed an image — an
+          // arbitrary external src would leak the viewer's IP to its host.
+          (tag === "IMG" && a.name.toLowerCase() === "src" &&
+            a.value.indexOf(API + "/attachments/") === 0);
         if (!keep) el.removeAttribute(a.name);
       });
+      if (tag === "IMG" && !el.getAttribute("src")) { drop.push(el); return; }
       if (!RICH_ALLOWED[tag]) {
         unwrap.push(el);
       } else if (tag === "A") {
@@ -635,11 +722,12 @@
 
   function renderRichText(target, html) {
     target.innerHTML = "";
-    var raw = (html || "").trim();
+    // Stored inline-image references become viewable proxy URLs on the way in.
+    var raw = inlineImgToDisplay((html || "").trim());
     if (!raw) { target.textContent = "—"; return; }
     var doc = new DOMParser().parseFromString(raw, "text/html");
     sanitizeBody(doc.body);
-    if (!doc.body.textContent.trim() && !doc.body.querySelector("br,hr")) {
+    if (!doc.body.textContent.trim() && !doc.body.querySelector("br,hr,img")) {
       target.textContent = "—";
       return;
     }
@@ -921,8 +1009,16 @@
 
     if (field.type === "wysiwyg") {
       var rich = labelled(field, "edit-field--rich");
+      // The editor works in display form (proxy image URLs, plain legacy text
+      // up-converted); the descriptor's initial matches, so the dirty-diff
+      // compares like with like. saveEdit rewrites changed values back to the
+      // CRM-native stored form.
+      initial = inlineImgToDisplay(plainToHtml(initial || ""));
       var host = window.CBMRichText && CBMRichText.create
-        ? CBMRichText.create(initial || "", { minHeight: 180 })
+        ? CBMRichText.create(initial, {
+            minHeight: 180,
+            uploadImage: function (dataUri) { return uploadInlineImage(dataUri, field.name); },
+          })
         : null;
       if (host) {
         rich.appendChild(host);
@@ -1056,6 +1152,8 @@
     editState.fields.forEach(function (f) {
       var v = f.getVal();
       if (sameValue(v, f.initial)) return;
+      // Editors work in display form; the CRM stores the entryPoint form.
+      if (typeof v === "string") v = inlineImgToStored(v);
       changes[f.name] = v;
       changed += 1;
     });

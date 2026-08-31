@@ -19,6 +19,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Optional, Protocol
 
+from core import inline_images
 from core.phone import to_e164
 from sessions.service import (
     MEETING_LINK_FIELD,
@@ -416,3 +417,60 @@ async def get_own_photo(client: ProfileClient, user_id: str) -> Optional[tuple[b
     if not attachment_id:
         return None
     return await client.download_attachment(attachment_id)
+
+
+# --- inline images (the internal bio editors) --------------------------------
+#
+# Mechanics in ``core/inline_images.py``. Only the two INTERNAL wysiwyg fields
+# accept images — the ones read solely inside the app (the directory's mentor
+# page). The other two rich editors on this page are DELIBERATELY excluded:
+#
+#   * ``aboutMentor`` feeds the PUBLIC WEBSITE mentor page, and a website
+#     visitor cannot reach the app's attachment proxy (or the CRM), so an
+#     embedded image would render broken on the live site.
+#   * The email signature is appended to outbound mail, and a recipient can
+#     reach neither the proxy nor the CRM either.
+#
+# Both keep the paste-strips-with-a-notice behaviour, with messages saying why
+# (the frontend's imageBlockedMessage). Do not "fix" either by adding it here.
+INLINE_IMAGE_FIELDS = frozenset({"mentorProfessionalBio", "mentoringWhyInterested"})
+
+
+async def upload_inline_image(
+    client: ProfileClient,
+    user_id: str,
+    *,
+    filename: str,
+    content_type: str,
+    data_base64: str,
+    field: str,
+) -> dict[str, str]:
+    """Store an image pasted/picked into an internal bio editor as an EspoCRM
+    Inline Attachment on ``CMentorProfile``. Requires a linked profile (the
+    same rule as every other endpoint here); validation refusals are
+    :class:`MentorProfileError` (readable 400)."""
+    profile_id = await resolve_manager_profile(client, user_id)
+    if not profile_id:
+        raise MentorProfileError(
+            "No mentor profile is linked to your login. Please contact CBM staff."
+        )
+    try:
+        return await inline_images.upload_inline_image(
+            client,
+            filename=filename,
+            content_type=content_type,
+            data_base64=data_base64,
+            related_type=MENTOR_PROFILE,
+            field=field,
+            allowed_fields=INLINE_IMAGE_FIELDS,
+            field_error="Images can't be stored in this field.",
+        )
+    except inline_images.InlineImageError as exc:
+        raise MentorProfileError(str(exc)) from exc
+
+
+async def fetch_inline_image(
+    client: ProfileClient, attachment_id: str
+) -> tuple[bytes, str]:
+    """The attachment's bytes + content type, read AS THE USER."""
+    return await inline_images.fetch_inline_image(client, attachment_id)

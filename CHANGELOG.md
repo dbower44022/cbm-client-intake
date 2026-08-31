@@ -4,6 +4,54 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.218.0] — 2026-08-31
+
+**feat(richtext): the editors grew up — more formatting, and images you can
+actually insert.** Doug's report: "some of the text editors in the apps do not
+allow users to select an image file."
+
+- **Every CBMRichText toolbar** (all apps at once — one shared `BUTTONS` list
+  in `frontend/shared/richtext.js`) gains font size, alignment, and
+  indent/outdent.
+- **An Insert-image button appears wherever the editor can actually store an
+  image** — i.e. wherever the host page supplies the `uploadImage` hook. A
+  picked file is inserted as a base64 data URI (Jodit's
+  `insertImageAsBase64URI`) and immediately funnels through the SAME
+  `handleEmbeddedImages` pipeline pasted images already use: uploaded as an
+  EspoCRM Inline Attachment, base64 swapped for the attachment reference.
+  One pipeline for pasted, dropped and picked images. No hook = no button,
+  and pasting keeps stripping with a notice.
+- **Session tools**: the session editor's notes fields had the pipeline
+  already and now get the button. New: Details-tab wysiwyg fields (e.g.
+  `CPartnerProfile.partnerNotes`, `CEngagement.engagementNotes`) take images
+  too — `/inlineimages` accepts an `entity`, allowlisted like the details PUT
+  and gated on live metadata saying the field is an editable wysiwyg. Details
+  and Overview-notes saves now rewrite proxy image URLs back to the CRM-native
+  stored form (they never carried images before, so this was latent).
+- **Client Administration**: new `/inlineimages` + `/attachments/{id}`
+  endpoints on `CEngagement`. The popup's two wysiwyg fields (Mentoring needs,
+  Engagement notes) take images now. **The grid's Notes column
+  (`description`) is feature-detected**: the CRM still holds it as plain
+  `text`, so nothing changes until it is converted to wysiwyg —
+  `cengagement-description-wysiwyg-crm-handoff.md`, crm-test first, prod at
+  the Sunday slot — at which point the served edit spec, the Notes editor and
+  the upload whitelist all upgrade with no deploy (`live_wysiwyg_fields`).
+  Plain legacy notes up-convert (escape + `<br>`) when the rich editor opens,
+  so line breaks survive. The modal sanitizer now allows `<img>`, but ONLY
+  with the app's own attachment-proxy src.
+- **My Mentor Profile**: images in the two INTERNAL bio fields
+  (`mentorProfessionalBio`, `mentoringWhyInterested`) via its own
+  `/inlineimages` + `/attachments/{id}`. **Deliberately refused**:
+  `aboutMentor` (feeds the public website, whose visitors can't reach the
+  app's proxy) and the email signature (recipients can't either) — each
+  editor says why when an image is pasted. The directory's mentor page renders
+  bio images through a new attachments proxy on its router.
+- Tests: 297 across the four touched suites; upload validation, the live-type
+  gate, the served-spec flip, and the aboutMentor/signature exclusion are all
+  pinned. **Verified by tests only** — the live pass (including whether the
+  staff/mentor roles hold Attachment create, which an admin test cannot
+  prove) is `OPEN-ITEMS.md` #29.
+
 ## [0.217.0] — 2026-08-31
 
 **feat(chapters): a chapter's own mail domain is a setting, not Cleveland's

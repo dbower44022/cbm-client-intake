@@ -19,6 +19,7 @@ from pydantic import BaseModel
 
 from assignments.auth import clear_session, current_user, is_member, session_expired
 from assignments.espo_user import client_for
+from core import inline_images
 from core.config import Settings, get_settings
 from core.espo import EspoClient, EspoError, forbidden_hint, is_forbidden, validation_message
 
@@ -222,6 +223,26 @@ def make_router(cfg: DirectoryConfig) -> APIRouter:
                 except EspoError as exc:
                     log.debug("availability skipped for %s: %s", record_id, exc)
             return payload
+
+        @router.get("/attachments/{attachment_id}")
+        async def inline_attachment(attachment_id: str, request: Request) -> Response:
+            """Stream an inline-image attachment for display (images embedded
+            in a mentor's bio via My Mentor Profile) — read AS THE USER, so
+            EspoCRM's ACL on the related profile gates who sees it. Content is
+            immutable by id, so the browser may cache it forever."""
+            user = _require_user(request)
+            client = client_for(get_settings(), user)
+            try:
+                content, content_type = await inline_images.fetch_inline_image(
+                    client, attachment_id
+                )
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not load the image")
+            return Response(
+                content=content,
+                media_type=content_type,
+                headers={"Cache-Control": "private, max-age=31536000, immutable"},
+            )
 
         @router.get("/photo/{record_id}")
         async def mentor_photo(record_id: str, request: Request) -> Response:

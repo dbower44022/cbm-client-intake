@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
 
 from core import action_log
@@ -27,6 +27,16 @@ class AssignIn(BaseModel):
 class NotesIn(BaseModel):
     # Empty string is a valid value — it clears the notes.
     notes: str = Field(default="", max_length=65535)
+
+
+class InlineImageIn(BaseModel):
+    """An image pasted/picked into a rich-text editor, uploaded as an EspoCRM
+    Inline Attachment (base64-JSON — small images only, the service caps the
+    size)."""
+    filename: str = "pasted-image"
+    contentType: str
+    dataBase64: str
+    field: str = "description"
 
 
 class EngagementEditIn(BaseModel):
@@ -123,12 +133,16 @@ async def engagements(
         statuses = list(service.DEFAULT_FILTER_STATUSES)
     try:
         rows = await service.list_engagements(client, statuses)
+        # Whether the Notes column edits in the rich editor (live CRM type of
+        # CEngagement.description — feature-detected, see live_wysiwyg_fields).
+        notes_rich = "description" in await service.live_wysiwyg_fields(client)
     except EspoError as exc:
         raise _crm_failure(request, exc, "Could not load engagements")
     return {
         "engagements": rows,
         "allStatuses": service.ENGAGEMENT_STATUSES,
         "selectedStatuses": statuses,
+        "notesRich": notes_rich,
     }
 
 
@@ -168,6 +182,50 @@ async def update_notes(engagement_id: str, body: NotesIn, request: Request) -> d
         raise _crm_failure(request, exc, "Could not save notes")
     log.info("notes saved on CEngagement/%s by %s", engagement_id, user["userName"])
     return result
+
+
+@router.post("/inlineimages")
+async def upload_inline_image(body: InlineImageIn, request: Request) -> dict:
+    """Store an image pasted or picked into a rich-text editor here as an
+    EspoCRM Inline Attachment on ``CEngagement``; the editor swaps the base64
+    for a reference to it. Runs as the user (their CRM edit ACL is the gate)."""
+    user = _require_user(request)
+    client = client_for(get_settings(), user)
+    try:
+        result = await service.upload_inline_image(
+            client,
+            filename=body.filename,
+            content_type=body.contentType,
+            data_base64=body.dataBase64,
+            field=body.field,
+        )
+    except service.AssignError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not store the image")
+    log.info(
+        "inline image uploaded by %s (%s, CEngagement.%s, Attachment/%s)",
+        user["userName"], body.contentType, body.field, result["id"],
+    )
+    return result
+
+
+@router.get("/attachments/{attachment_id}")
+async def inline_attachment(attachment_id: str, request: Request) -> Response:
+    """Stream an inline-image attachment for display — read AS THE USER, so
+    EspoCRM's ACL on the related engagement gates who sees it. Attachment
+    content is immutable by id, so the browser may cache it forever."""
+    user = _require_user(request)
+    client = client_for(get_settings(), user)
+    try:
+        content, content_type = await service.fetch_inline_image(client, attachment_id)
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not load the image")
+    return Response(
+        content=content,
+        media_type=content_type,
+        headers={"Cache-Control": "private, max-age=31536000, immutable"},
+    )
 
 
 @router.get("/engagements/{engagement_id}/edit")

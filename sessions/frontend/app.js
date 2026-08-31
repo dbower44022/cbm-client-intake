@@ -1093,7 +1093,7 @@
     var ftype = n.type === "html" ? "wysiwyg" : "text";
     // A stashed draft from an earlier visit opens IN the editor (with a
     // "Start fresh" escape back to the stored value — quickmail pattern).
-    var input = makeInput({ name: n.attr, type: ftype }, draft != null ? draft : stored);
+    var input = makeInput({ name: n.attr, type: ftype, entity: n.entity }, draft != null ? draft : stored);
     input.dataset.field = n.attr; input.dataset.type = ftype;
     if (ftype === "text") input.rows = 8;
     overallNotesDirty = draft != null;
@@ -1120,9 +1120,10 @@
       saveBtns.forEach(function (b) { b.disabled = true; }); err.hidden = true;
       try {
         var changes = {}; changes[n.attr] = val;
+        storedFormChanges(changes);  // proxy image URLs -> CRM-native references
         await api("/details/" + encodeURIComponent(n.entity) + "/" + encodeURIComponent(d.id),
           { method: "PUT", body: JSON.stringify({ changes: changes }) });
-        n.value = val;
+        n.value = changes[n.attr];
         closed = true; clearEditDraft(dkey); overallNotesDirty = false;
         currentDetails = null;  // the Details tab re-reads on next activation
         renderOverallNotes(d);
@@ -4188,7 +4189,12 @@
   // Build one section's grouped form body. Returns the element; every editable
   // input carries data-field, so the snapshot/diff save machinery is unchanged.
   function layoutForm(sec, layout) {
-    var byName = {}; (sec.fields || []).forEach(function (f) { byName[f.name] = f; });
+    var byName = {}; (sec.fields || []).forEach(function (f) {
+      // Stamp each field with its section's entity so a wysiwyg editor's
+      // image-upload hook can name the record type it stores against.
+      f.entity = sec.entity;
+      byName[f.name] = f;
+    });
     var exclude = detailsExcludes(sec.entity);
     var used = {};
     var body = document.createElement("div"); body.className = "sxf";
@@ -4585,6 +4591,9 @@
       if (JSON.stringify(v) !== snap[el.dataset.field]) changes[el.dataset.field] = v;
     });
     if (!Object.keys(changes).length) { delete detailsEditSet[key]; repaintDetails(key); return; }
+    // Inline-image references go back to the CRM-native stored form
+    // (?entryPoint=attachment&amp;id=…) so EspoCRM binds + renders them.
+    storedFormChanges(changes);
     btns.forEach(function (b) { b.disabled = true; }); errEl.hidden = true;
     try {
       await api("/details/" + encodeURIComponent(sec.entity) + "/" + encodeURIComponent(sec.id),
@@ -7760,7 +7769,7 @@
       // is uploaded as a CRM attachment via the hook (save rewrites back).
       el = (window.CBMRichText && window.CBMRichText.create(inlineImgToDisplay(value), {
         minHeight: f.big ? 360 : 160,
-        uploadImage: function (dataUri) { return uploadInlineImage(dataUri, f.name); },
+        uploadImage: function (dataUri) { return uploadInlineImage(dataUri, f.name, f.entity); },
       })) || makeWysiwyg(value);
     } else if (f.type === "text") {
       el = document.createElement("textarea"); el.rows = 3; el.value = value == null ? "" : value;
@@ -7916,15 +7925,19 @@
     });
     return changes;
   }
-  async function uploadInlineImage(dataUri, field) {
+  async function uploadInlineImage(dataUri, field, entity) {
     var m = /^data:([^;,]+);base64,(.+)$/.exec(dataUri || "");
     if (!m) return null;
+    var body = {
+      filename: "pasted-image", contentType: m[1], dataBase64: m[2],
+      field: field || "sessionNotes",
+    };
+    // A Details-tab editor stores against its own record type; the session
+    // editor's fields carry no entity and default to CSession server-side.
+    if (entity && entity !== "CSession") body.entity = entity;
     var r = await api("/inlineimages", {
       method: "POST",
-      body: JSON.stringify({
-        filename: "pasted-image", contentType: m[1], dataBase64: m[2],
-        field: field || "sessionNotes",
-      }),
+      body: JSON.stringify(body),
     });
     return API + "/attachments/" + r.id;
   }

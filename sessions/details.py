@@ -705,3 +705,15 @@ async def save_details(
     if payload:
         await client.update(entity, record_id, payload)
     return {"entity": entity, "id": record_id, "saved": list(payload.keys())}
+
+
+async def is_editable_wysiwyg(client: SessionClient, entity: str, field: str) -> bool:
+    """Whether ``entity.field`` is an EDITABLE WYSIWYG field per live metadata —
+    the gate for inline-image uploads targeting a Details-tab field. Only a
+    wysiwyg field may hold an inline attachment: EspoCRM's Wysiwyg saver is
+    what binds the attachment to the record on save, so an image referenced
+    from any other field type would be collected by cleanup later."""
+    meta_fields = await client.metadata(f"entityDefs.{entity}.fields")
+    spec = {f["name"]: f for f in _field_spec(meta_fields, entity)}
+    f = spec.get(field)
+    return bool(f and f.get("editable") and f["type"] == "wysiwyg")

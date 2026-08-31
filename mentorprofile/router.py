@@ -214,6 +214,58 @@ async def photo(request: Request) -> Response:
     )
 
 
+class InlineImageIn(BaseModel):
+    """An image pasted/picked into an internal bio editor, uploaded as an
+    EspoCRM Inline Attachment (base64-JSON — the service caps the size)."""
+    filename: str = "pasted-image"
+    contentType: str
+    dataBase64: str
+    field: str
+
+
+@router.post("/inlineimages")
+async def upload_inline_image(body: InlineImageIn, request: Request) -> dict:
+    """Store an image from one of the INTERNAL bio editors as an Inline
+    Attachment on the caller's own profile. `aboutMentor` and the signature
+    are deliberately refused — see service.INLINE_IMAGE_FIELDS."""
+    user = _require_user(request)
+    client = client_for(get_settings(), user)
+    try:
+        result = await service.upload_inline_image(
+            client, user["userId"],
+            filename=body.filename,
+            content_type=body.contentType,
+            data_base64=body.dataBase64,
+            field=body.field,
+        )
+    except service.MentorProfileError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not store the image")
+    log.info(
+        "inline image uploaded by %s (%s, CMentorProfile.%s, Attachment/%s)",
+        user["userName"], body.contentType, body.field, result["id"],
+    )
+    return result
+
+
+@router.get("/attachments/{attachment_id}")
+async def inline_attachment(attachment_id: str, request: Request) -> Response:
+    """Stream an inline-image attachment for display — read AS THE USER.
+    Attachment content is immutable by id, so the browser may cache it."""
+    user = _require_user(request)
+    client = client_for(get_settings(), user)
+    try:
+        content, content_type = await service.fetch_inline_image(client, attachment_id)
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not load the image")
+    return Response(
+        content=content,
+        media_type=content_type,
+        headers={"Cache-Control": "private, max-age=31536000, immutable"},
+    )
+
+
 @router.delete("/photo")
 async def photo_delete(request: Request) -> dict:
     user = _require_user(request)

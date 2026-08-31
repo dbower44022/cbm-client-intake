@@ -27,6 +27,7 @@ from assignments.service import (
     assigned_user_id,
     is_assigned_to,
 )
+from core import inline_images
 from core.config import get_settings
 from core.crm_upsert import create_dropping_invalid, find_create_or_fill
 from core.espo import EspoError, is_forbidden
@@ -1120,31 +1121,18 @@ def _embedded_image_warning(stripped: list[str]) -> str:
     )
 
 
-# --- inline images (pasted into the notes editors) --------------------------
+# --- inline images (pasted or picked into the notes editors) -----------------
 #
-# The RIGHT way to keep a pasted image: an EspoCRM Attachment (role "Inline
-# Attachment") referenced from the wysiwyg HTML as
-# ``<img src="?entryPoint=attachment&amp;id=…">`` — EspoCRM's own editor stores
-# exactly this, its Wysiwyg saver binds the attachment to the record on save
-# (so cleanup never collects it, its ACL follows the record, and the CRM UI
-# renders it too), and the app proxies the bytes for display (the browser
-# can't reach the CRM). The base64 strip above remains the fallback for
-# anything that skips this path.
-INLINE_IMAGE_MAX_MB = 5
-_INLINE_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+# The mechanics live in ``core/inline_images.py`` (this package established
+# the pattern; the other staff tools share it now). This wrapper holds what is
+# session-specific: the field whitelist, the CSession binding, and the
+# SessionError vocabulary the router maps to a readable 400. An optional
+# ``entity`` targets a Details-tab record's own wysiwyg field instead — the
+# caller must have validated the entity/field pair against live metadata
+# (see the router: ``details.py`` owns that check).
+INLINE_IMAGE_MAX_MB = inline_images.INLINE_IMAGE_MAX_MB
 _INLINE_IMAGE_FIELDS = {
     f["name"] for f in SESSION_FIELDS if f.get("type") == "wysiwyg"
-}
-# EspoCRM validates an inline attachment by deriving the mime type FROM THE
-# FILENAME EXTENSION and requiring it to equal the declared type
-# (Tools/Attachment/Checker.php checkTypeImage) — an extensionless name is
-# rejected with "Not allowed file type." (found live 2026-07-24), so the
-# stored filename always carries the canonical extension for its type.
-_INLINE_IMAGE_EXT = {
-    "image/jpeg": ".jpg",
-    "image/png": ".png",
-    "image/webp": ".webp",
-    "image/gif": ".gif",
 }
 
 
@@ -1155,41 +1143,27 @@ async def upload_inline_image(
     content_type: str,
     data_base64: str,
     field: str,
+    entity: str = "",
 ) -> dict[str, str]:
-    """Store a pasted image as an EspoCRM Inline Attachment on ``CSession`` and
-    return its id. Validation errors are :class:`SessionError` (readable 400)."""
-    if field not in _INLINE_IMAGE_FIELDS:
-        raise SessionError("Images can only be pasted into the notes fields.")
-    if content_type not in _INLINE_IMAGE_TYPES:
-        raise SessionError(
-            "Only JPEG, PNG, WebP, or GIF images can be pasted into notes."
+    """Store a pasted/picked image as an EspoCRM Inline Attachment on
+    ``CSession`` (or ``entity``, pre-validated by the router) and return its
+    id. Validation errors are :class:`SessionError` (readable 400)."""
+    try:
+        return await inline_images.upload_inline_image(
+            client,
+            filename=filename,
+            content_type=content_type,
+            data_base64=data_base64,
+            related_type=entity or SESSION,
+            field=field,
+            allowed_fields=(
+                {field} if entity else _INLINE_IMAGE_FIELDS
+            ),
+            field_error="Images can only be pasted into the notes fields.",
+            too_large_hint="Upload it on the Documents tab instead.",
         )
-    # base64 is ~4/3 of the decoded size; cap before any decode/transfer.
-    if len(data_base64) * 3 // 4 > INLINE_IMAGE_MAX_MB * 1024 * 1024:
-        raise SessionError(
-            f"The pasted image is too large (limit {INLINE_IMAGE_MAX_MB} MB). "
-            "Upload it on the Documents tab instead."
-        )
-    ext = _INLINE_IMAGE_EXT[content_type]
-    name = (filename or "pasted-image").strip() or "pasted-image"
-    # Exact lowercase extension required (".jpeg" also maps to image/jpeg);
-    # anything else — missing, wrong, or upper-case — is rebuilt on the stem.
-    if not name.endswith(ext) and not (ext == ".jpg" and name.endswith(".jpeg")):
-        name = name.rsplit(".", 1)[0] if "." in name else name
-        name = (name or "pasted-image") + ext
-    attachment_id = await client.upload_attachment(
-        filename=name,
-        content_type=content_type,
-        data_base64=data_base64,
-        related_type=SESSION,
-        field=field,
-        role="Inline Attachment",
-    )
-    log.info(
-        "inline image stored as Attachment/%s (%s, ~%d KB, field %s)",
-        attachment_id, content_type, len(data_base64) * 3 // 4 // 1024, field,
-    )
-    return {"id": attachment_id}
+    except inline_images.InlineImageError as exc:
+        raise SessionError(str(exc)) from exc
 
 
 async def fetch_inline_image(
@@ -1198,7 +1172,7 @@ async def fetch_inline_image(
     """The attachment's bytes + content type, read AS THE USER — EspoCRM checks
     access against the related session, so a viewer sees an image iff they can
     read the session it belongs to."""
-    return await client.download_attachment(attachment_id)
+    return await inline_images.fetch_inline_image(client, attachment_id)
 
 
 async def _sync_attendees(

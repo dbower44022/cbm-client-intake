@@ -6,6 +6,30 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+29. **Rich-text image support (v0.218.0): the CRM half + the live pass**
+    (2026-08-31). The editors' Insert-image button and inline-attachment
+    pipeline shipped app-side; three things are owed:
+
+    - **Convert `CEngagement.description` (the Notes column) to wysiwyg** —
+      `cengagement-description-wysiwyg-crm-handoff.md`. crm-test is a one-key
+      edit of the existing custom entityDefs file over SSH + rebuild (the exact
+      command is in the handoff; a session attempted it and was
+      permission-blocked, so it awaits Doug or an approved run); production at
+      the Sunday 17:00 UTC slot. Until then the Notes column stays a plain
+      textarea by design (feature-detected).
+    - **Live pass, as real non-admins**: paste AND insert-by-button an image in
+      (a) a session's notes, (b) a partner record's Details-tab Partner Notes,
+      (c) the Client Administration popup's Engagement notes, (d) a mentor's
+      Professional bio — then reopen each and check the image comes back, and
+      check (d) renders on the directory's mentor page. The decisive question
+      an admin test cannot answer: **do the staff/mentor roles hold
+      `Attachment` create?** (The mentor role needed exactly this grant for
+      photos, 2026-07-14.) Also confirm aboutMentor and the signature editor
+      refuse a pasted image with their explanatory messages.
+    - The `crm.config` structural-admin login is still rejected on crm-test
+      (item 28) — fixing it would have let the conversion be applied through
+      the skill tooling.
+
 28. **Three Cleveland defects the Lakeside dress rehearsal found** (2026-08-31).
     All three surfaced while standing a throwaway chapter instance up from
     crm-test's configuration

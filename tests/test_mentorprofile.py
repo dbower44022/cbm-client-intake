@@ -71,8 +71,8 @@ class FakeClient:
         return self._metadata
 
     async def upload_attachment(self, *, filename, content_type, data_base64,
-                                related_type, field):
-        self.uploads.append((filename, content_type, related_type, field))
+                                related_type, field, role="Attachment"):
+        self.uploads.append((filename, content_type, related_type, field, role))
         return "att-1"
 
     async def download_attachment(self, attachment_id):
@@ -320,7 +320,7 @@ async def test_set_own_photo_uploads_and_links():
     result = await service.set_own_photo(
         client, "u1", filename="me.jpg", content_type="image/jpeg", data_base64="aGk="
     )
-    assert client.uploads == [("me.jpg", "image/jpeg", "CMentorProfile", "profilePhoto")]
+    assert client.uploads == [("me.jpg", "image/jpeg", "CMentorProfile", "profilePhoto", "Attachment")]
     assert ("CMentorProfile", "m1", {"profilePhotoId": "att-1"}) in client.updates
     assert result == {"profilePhotoId": "att-1"}
 
@@ -628,3 +628,51 @@ async def test_heal_inert_without_settings_or_in_dry_run(monkeypatch):
     await service.get_own_profile(FakeClient(), "u1")  # no settings
     await service.get_own_profile(FakeClient(), "u1", Settings(espo_dry_run=True))
     assert called == []
+
+
+# --- inline images (the internal bio editors) --------------------------------
+
+def test_inline_image_fields_exclude_the_public_surfaces():
+    """Guard: aboutMentor feeds the PUBLIC WEBSITE and the signature rides
+    outbound email — neither audience can reach the app's attachment proxy, so
+    neither field may ever accept an inline image. The two INTERNAL bio fields
+    (read only inside the app) are the whole whitelist."""
+    assert service.INLINE_IMAGE_FIELDS == {"mentorProfessionalBio", "mentoringWhyInterested"}
+    assert "aboutMentor" not in service.INLINE_IMAGE_FIELDS
+
+
+@pytest.mark.asyncio
+async def test_upload_inline_image_stores_on_own_profile():
+    client = FakeClient()
+    res = await service.upload_inline_image(
+        client, "u1", filename="shot.png", content_type="image/png",
+        data_base64="aGk=", field="mentorProfessionalBio",
+    )
+    assert res == {"id": "att-1"}
+    assert client.uploads == [
+        ("shot.png", "image/png", "CMentorProfile", "mentorProfessionalBio",
+         "Inline Attachment"),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_upload_inline_image_rejects_about_mentor_and_unknown_fields():
+    client = FakeClient()
+    for field in ("aboutMentor", "mentorStatus", "signature"):
+        with pytest.raises(service.MentorProfileError):
+            await service.upload_inline_image(
+                client, "u1", filename="x", content_type="image/png",
+                data_base64="aGk=", field=field,
+            )
+    assert client.uploads == []
+
+
+@pytest.mark.asyncio
+async def test_upload_inline_image_requires_a_linked_profile():
+    client = FakeClient(profiles=[])
+    with pytest.raises(service.MentorProfileError):
+        await service.upload_inline_image(
+            client, "u1", filename="x", content_type="image/png",
+            data_base64="aGk=", field="mentorProfessionalBio",
+        )
+    assert client.uploads == []

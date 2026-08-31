@@ -112,6 +112,10 @@ class InlineImageIn(BaseModel):
     contentType: str
     dataBase64: str
     field: str = "sessionNotes"
+    # Empty = a CSession notes field (the original case). A Details-tab editor
+    # names its own entity instead; the router validates the pair against the
+    # domain's entity allowlist and live metadata before any upload.
+    entity: str = ""
 
 
 class ContributionIn(BaseModel):
@@ -1056,11 +1060,28 @@ def make_router(cfg: DomainConfig) -> APIRouter:
 
     @router.post("/inlineimages")
     async def upload_inline_image(body: InlineImageIn, request: Request) -> dict:
-        """Store an image pasted into a session notes editor as an EspoCRM
-        Inline Attachment; the editor swaps the pasted base64 for a reference
-        to it. Runs as the user (their CSession edit ACL is the gate)."""
+        """Store an image pasted or picked into a rich-text editor as an
+        EspoCRM Inline Attachment; the editor swaps the base64 for a reference
+        to it. Runs as the user (their CRM edit ACL is the gate). Targets a
+        CSession notes field by default; a Details-tab editor names its entity,
+        checked against the same allowlist as the details PUT plus live
+        metadata (only an editable wysiwyg field may hold one — the Wysiwyg
+        saver's binding is what keeps the attachment from cleanup)."""
         user = _require_user(request)
         client = client_for(get_settings(), user)
+        if body.entity:
+            if body.entity not in _details_put_entities:
+                # 404 (not 403) so probing can't confirm which entity names exist.
+                raise HTTPException(status_code=404, detail="Not found")
+            try:
+                ok = await details_svc.is_editable_wysiwyg(client, body.entity, body.field)
+            except EspoError as exc:
+                raise _crm_failure(request, exc, "Could not store the image")
+            if not ok:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Images can't be stored in this field.",
+                )
         try:
             result = await service.upload_inline_image(
                 client,
@@ -1068,14 +1089,16 @@ def make_router(cfg: DomainConfig) -> APIRouter:
                 content_type=body.contentType,
                 data_base64=body.dataBase64,
                 field=body.field,
+                entity=body.entity,
             )
         except service.SessionError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
         except EspoError as exc:
             raise _crm_failure(request, exc, "Could not store the pasted image")
         log.info(
-            "inline image uploaded by %s (%s, Attachment/%s)",
-            user["userName"], body.contentType, result["id"],
+            "inline image uploaded by %s (%s, %s.%s, Attachment/%s)",
+            user["userName"], body.contentType,
+            body.entity or "CSession", body.field, result["id"],
         )
         return result
 

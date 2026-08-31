@@ -514,6 +514,8 @@ body { display: flex; flex-direction: column; }
   word-break: break-word;
 }
 .modal__rich { line-height: var(--cbm-line); color: var(--cbm-slate-700); word-break: break-word; }
+/* Inline images (notes/needs may embed CRM attachments) never overflow the popup. */
+.modal__rich img { max-width: 100%; height: auto; }
 .modal__rich p { margin: 0 0 0.6rem; }
 .modal__rich p:last-child { margin-bottom: 0; }
 .modal__rich ul, .modal__rich ol { margin: 0 0 0.6rem 1.25rem; padding: 0; }

@@ -1241,7 +1241,9 @@ project has actually been bitten by.
 **CRM build handoffs** (one file per pending or completed CRM change, written in
 Entity Manager vocabulary — [[crm-specs-use-entity-manager-terms]]):
 **`GRANT-CRM-FIX-RUNBOOK.md`** (the ordered do-this-next list for the grant
-build on crm-test), `cgrant-entities-crm-handoff.md`,
+build on crm-test), `cengagement-description-wysiwyg-crm-handoff.md` (converts
+the Notes column's field to wysiwyg — the switch that turns rich notes on),
+`cgrant-entities-crm-handoff.md`,
 `crating-entity-crm-handoff.md`,
 `cnetworkstandard-entity-crm-handoff.md` (the chapter network's config-version
 stamp — pending on both CRMs), `cintake-submission-*.md`, `cinformation-request-entity.md`,
@@ -1288,6 +1290,15 @@ stamp — pending on both CRMs), `cintake-submission-*.md`, `cinformation-reques
   contenteditable. Load `jodit.min.css` + `jodit.min.js` + `richtext.js` before
   the app's own JS. It sanitizes on load and on read, and `getValue()` is
   snapshot-stable for untouched editors so save-diffing keeps working.
+  **Images**: the Insert-image button appears only when the host passes an
+  `uploadImage` hook (dataUri → attachment URL), and pasted/dropped/picked
+  images all funnel through one pipeline (`core/inline_images.py` server-side:
+  Inline Attachment + `?entryPoint=attachment&amp;id=X`, display via an app
+  proxy, saves rewritten back to the stored form). **Only a live-wysiwyg CRM
+  field may take one** — the Wysiwyg saver's binding is what keeps the
+  attachment from cleanup. Two editors refuse images BY RULING: `aboutMentor`
+  (public website) and the email signature (email recipients) — their
+  audiences can't reach the proxy.
 - **Every postal-address form wires the shared paste-parser**
   (`frontend/shared/address-paste.js` + `.css`): paste a whole address into the
   first input and it splits across Street / line 2 / City / State / ZIP, with an
@@ -1339,6 +1350,18 @@ still read "pushed through v0.202.2" while v0.203.x/v0.204.0 sat unpushed
 locally, and a session that believed it pushed a docs commit and shipped a
 feature to production with it. `git log origin/main..main` is the answer; this
 sentence is a convenience.
+
+- **v0.218.0 (2026-08-31, not yet pushed) — richer text editors, and images
+  you can insert.** Standing rules live in the Conventions CBMRichText entry;
+  what is owed lives in `OPEN-ITEMS.md` #29. The shape of the gate is worth
+  keeping here: the Notes column upgrade is **feature-detected on
+  `CEngagement.description`'s live type** and the CRM still says `text` on
+  both instances, so nothing user-visible changes there until
+  `cengagement-description-wysiwyg-crm-handoff.md` runs (crm-test = one SSH
+  edit + rebuild; prod at the Sunday slot). The popup's two wysiwyg fields and
+  the session tools take images immediately on deploy. **Verified by tests
+  only (297 across the touched suites)** — the live pass, including the
+  Attachment-create role question an admin cannot answer, is #29.
 
 - **v0.214.0 → v0.216.1 (2026-08-28/29) — the release train's two version
   stamps, and the Settings page holds and edits every setting.** Four releases

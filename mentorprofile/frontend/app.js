@@ -34,6 +34,39 @@
     return data;
   }
 
+  // --- inline images (the session tools' pattern) ---
+  // Only the INTERNAL bio fields take images — aboutMentor feeds the public
+  // website and the signature goes into outbound email, and neither audience
+  // can reach the app's attachment proxy, so those two editors refuse images
+  // with a message saying why (see the wysiwyg branch of makeInput and
+  // buildSignaturePanel).
+  var IMAGE_FIELDS = { mentorProfessionalBio: 1, mentoringWhyInterested: 1 };
+  function inlineImgToDisplay(html) {
+    return String(html == null ? "" : html).replace(
+      /\?entryPoint=attachment&(?:amp;)?id=([A-Za-z0-9_-]+)/g,
+      API + "/attachments/$1"
+    );
+  }
+  var _PROXY_RE = new RegExp(
+    (API + "/attachments/").replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "([A-Za-z0-9_-]+)", "g"
+  );
+  function inlineImgToStored(html) {
+    return String(html == null ? "" : html).replace(
+      _PROXY_RE, "?entryPoint=attachment&amp;id=$1"
+    );
+  }
+  async function uploadInlineImage(dataUri, field) {
+    var m = /^data:([^;,]+);base64,(.+)$/.exec(dataUri || "");
+    if (!m) return null;
+    var r = await api("/inlineimages", {
+      method: "POST",
+      body: JSON.stringify({
+        filename: "pasted-image", contentType: m[1], dataBase64: m[2], field: field,
+      }),
+    });
+    return API + "/attachments/" + r.id;
+  }
+
   // Not signed in: hand off to the portal, which brings the user back here
   // after login (single sign-on — this app has no login form of its own).
   function showLogin() {
@@ -95,7 +128,11 @@
       "You can still edit or remove it on any individual message.";
     sec.appendChild(help);
     var wrap = document.createElement("div"); wrap.className = "cbm-field";
-    var editor = (window.CBMRichText && window.CBMRichText.create("", {})) || makeWysiwyg("");
+    var editor = (window.CBMRichText && window.CBMRichText.create("", {
+      // No uploadImage hook on purpose: a signature rides outbound email, and
+      // recipients can reach neither the app's proxy nor the CRM.
+      imageBlockedMessage: "Images can't be included in your email signature, so it was removed.",
+    })) || makeWysiwyg("");
     wrap.appendChild(editor); sec.appendChild(wrap);
     var line = document.createElement("div"); line.className = "mp__row";
     var save = document.createElement("button"); save.type = "button";
@@ -348,7 +385,18 @@
       // only if the vendored script failed to load. onInput drives the live
       // website preview — Jodit toolbar actions don't fire a native bubbling
       // "input", so the form's delegated listener alone would miss them.
-      el = (window.CBMRichText && window.CBMRichText.create(value, { onInput: refreshPreview })) || makeWysiwyg(value);
+      var richOpts = { onInput: refreshPreview };
+      if (IMAGE_FIELDS[f.name]) {
+        // Internal bio fields hold images: the editor works in display form
+        // (proxy URLs); collectChanges rewrites back to the stored form.
+        value = inlineImgToDisplay(value);
+        richOpts.uploadImage = function (dataUri) { return uploadInlineImage(dataUri, f.name); };
+      } else {
+        richOpts.imageBlockedMessage =
+          "Images can't be used in this field — it appears on the public " +
+          "website, which can't display them — so it was removed.";
+      }
+      el = (window.CBMRichText && window.CBMRichText.create(value, richOpts)) || makeWysiwyg(value);
     } else if (f.type === "text") {
       el = document.createElement("textarea"); el.rows = f.rows || 2; el.value = value == null ? "" : value;
     } else if (f.type === "url") {
@@ -396,7 +444,10 @@
     var changes = {};
     Array.prototype.forEach.call($("editForm").querySelectorAll("[data-field]"), function (el) {
       var v = readField(el);
-      if (JSON.stringify(v) !== el.dataset.original) changes[el.dataset.field] = v;
+      if (JSON.stringify(v) !== el.dataset.original) {
+        // Editors work in display form; the CRM stores the entryPoint form.
+        changes[el.dataset.field] = typeof v === "string" ? inlineImgToStored(v) : v;
+      }
     });
     return changes;
   }
