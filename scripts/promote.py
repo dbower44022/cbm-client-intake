@@ -95,12 +95,16 @@ def plan_changes(spec: dict, tag: str, keep_branch: bool) -> list[str]:
 
 
 def remote_has_release_at(tag: str) -> tuple[bool, str]:
-    heads = run(["git", "ls-remote", "origin", f"refs/heads/{RELEASE_BRANCH}", f"refs/tags/{tag}"])
+    heads = run(["git", "ls-remote", "origin",
+                 f"refs/heads/{RELEASE_BRANCH}", f"refs/tags/{tag}", f"refs/tags/{tag}^{{}}"])
     lines = dict(
-        (ref.split("/")[-1], sha)
+        (ref.removeprefix("refs/heads/").removeprefix("refs/tags/"), sha)
         for sha, ref in (l.split("\t") for l in heads.stdout.strip().splitlines() if "\t" in l)
     )
-    branch_sha, tag_sha = lines.get(RELEASE_BRANCH), lines.get(tag)
+    branch_sha = lines.get(RELEASE_BRANCH)
+    # An annotated tag's own ref names the TAG OBJECT; the commit it marks is
+    # the peeled "^{}" entry. Compare commits, or this refuses its own success.
+    tag_sha = lines.get(f"{tag}^{{}}") or lines.get(tag)
     if not branch_sha:
         return False, f"origin has no '{RELEASE_BRANCH}' branch — push it first (cut_release.sh prints the command)"
     if not tag_sha:
