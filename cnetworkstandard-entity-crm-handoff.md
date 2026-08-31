@@ -18,14 +18,17 @@ shape over the two alternatives is `prds/chapter-network/TASKS.md` § D1
 > read: all}` — and `GET /api/v1/CNetworkStandard` as the org key returning
 > **HTTP 200, `total: 0`**. **Production: not yet built.**
 >
-> **Build it from the plan file, not by hand:** `scripts/plans/cnetworkstandard.json`
-> is what crm-test was built from, so the production run is the same input through
-> the same applier rather than a human repeating § 1 —
-> `apply_crm_plan.py scripts/plans/cnetworkstandard.json`, dry run first. **The plan
-> covers the entity and its fields only.** The two things that were missed here are
-> both outside it and stay manual: the § 4 role grant and keeping it out of the tab
-> list. Do those in the same session, then run § 5's verification with the org API
-> key rather than an admin session.
+> **Build it from the script, not by hand:** `scripts/build_networkstandard.py`
+> covers the ENTIRE handoff — the entity and fields (read from
+> `scripts/plans/cnetworkstandard.json`, the plan crm-test was built from), the
+> § 4 role grant, the § 1 tab rule, and the § 5 verification as the org API key.
+> It is self-contained (the general applier lives in the gitignored `.claude/`
+> skill and never reaches the deployed image, where production's admin
+> credential lives), idempotent, and dry-run by default; `--apply` demands the
+> dry run's `--expect` fingerprint, and a non-crm-test target additionally
+> demands `--production`. Rehearsed 2026-08-30 inside the crm-test web
+> container against the finished instance: every step `ok`, org-key GET 200
+> `total 0`, exit 0.
 
 This is the smallest handoff in the repo: **one entity, five fields, no links, no
 enums, no formulas.** That is deliberate and it is the point — read § 0.
