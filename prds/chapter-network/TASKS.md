@@ -579,6 +579,16 @@ and linked from here so the finding is not lost between two lists.
 
 # Closed
 
+- **R6 is done — both stamps are LIVE on crm-test and production**
+  (2026-08-31, ~17:40 UTC). Doug applied both overlays (`doctl apps update`,
+  crm-test 17:38, production 17:40); each app flipped within two minutes.
+  Both now report `releaseTag: "v0.217.0"` and `crmConfig.state: "unstamped"`
+  — production included, because R0's production half was built the same
+  afternoon, so the `absent` interlude never happened. The overlays' RELEASE_TAG
+  had been bumped v0.216.4 → v0.217.0 before the applies (the stale-tag trap,
+  caught a second time). Dev deliberately unchanged: no overlay carries the
+  switches there, so it reads `null` / `disabled` — the honest values.
+
 - **R0 is done on production too — `CNetworkStandard` exists on both CRMs**
   (2026-08-31). Built NOT by hand: Doug ran `scripts/build_networkstandard.py`
   from inside the deployed production web container (dry run, then

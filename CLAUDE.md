@@ -1344,16 +1344,17 @@ sentence is a convenience.
   stamps, and the Settings page holds and edits every setting.** Four releases
   in one day, all live on all three apps. Standing rules are in the Deployment
   (`/healthz`) and System Settings sections above; what belongs here is what is
-  still owed. (a) **Both stamps ship inert** — `releaseTag` reads `null` and
-  `crmConfig.state` reads `disabled` on every app until the two overlay
-  variables are applied with `doctl`; the overlays are edited and validated and
-  name `v0.216.1`. (b) **Production's `crmConfig` will read `absent` until its
-  `CNetworkStandard` is built** at the Sunday 17:00 UTC slot — that is the
-  correct reading, not a fault, and watching it flip to `unstamped` is the
-  reader's first live proof. (c) **The verified-settings path has run only in
-  tests and a stub harness.** No real probe has been fired against a live CRM
-  from `/setup`, no countdown has been allowed to expire, and no secret has been
-  stored encrypted on a real deployment. `OPEN-ITEMS.md` #20 has the live pass.
+  still owed. (a) ~~Both stamps ship inert~~ — **switched ON 2026-08-31**:
+  Doug applied both overlays and crm-test AND production now report
+  `releaseTag: "v0.217.0"` and `crmConfig.state: "unstamped"` (dev deliberately
+  stays `null`/`disabled` — no overlay there). (b) ~~production reads `absent`
+  until its `CNetworkStandard` is built~~ — **built 2026-08-31** by
+  `scripts/build_networkstandard.py` run from inside the prod web container, so
+  the `absent` interlude never happened. (c) **The verified-settings live pass
+  ran 2026-08-29** and found and fixed three defects (override saves 500'd;
+  the page-off switch was boot-read; a non-CRM address was accepted —
+  v0.216.2–v0.216.4). Still owed: the encrypted-secret check, blocked on
+  crm-test having no `APP_ENCRYPTION_KEY` (`OPEN-ITEMS.md` #20).
   (d) A pre-existing leak was fixed on the way: `DATABASE_URL` had been rendered
   in the clear on the read-only "show all" list.
 
