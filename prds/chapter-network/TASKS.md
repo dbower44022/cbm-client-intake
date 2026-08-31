@@ -115,6 +115,45 @@ step itself is not.
 
 # Part 2 — Ready to build
 
+## R10. The release branch, and a `promote` script for one deployment
+
+### What this is
+
+Decided 2026-08-31 ([DECISIONS.md](DECISIONS.md) log): chapter apps follow a
+`release` branch that the weekly cut fast-forwards to the tag, and the Update
+button in CRMBuilder (proposal 8) promotes one deployment by **two** operations
+— set `RELEASE_TAG=<tag>` on every component of its spec, then trigger a
+deployment. This repo owes the consumer's half.
+
+### Steps
+
+1. Create the `release` branch at `v0.216.4` (the last tag every live app is
+   past) and add the fast-forward to `scripts/cut_release.sh` — printed, not
+   pushed, like the tag itself.
+2. Write `scripts/promote.py <app-id> <tag>`: read the spec (`doctl apps spec
+   get`), set `RELEASE_TAG` on every component (create it where absent, scope
+   `RUN_AND_BUILD_TIME`), confirm the tracked branch is `release`, apply, create
+   a deployment, wait, re-read `/healthz`, and print the before/after
+   `releaseTag`. Dry-run by default. This is the worked example the CRMBuilder
+   button is specified against, and the way `lakeside-intake` gets v0.217.0.
+3. Mind the overlay trap: never regenerate `.do/app.prod*.yaml` from the live
+   spec to do this ([[overlay-regen-encrypts-secrets]]) — `promote.py` works on
+   the live spec via the API and touches only `RELEASE_TAG`.
+4. Add the detector: a read-only comparison of "policy says Latest Stable" against
+   the live spec's `deploy_on_push` and branch, reported as the fleet-console
+   signal Phase 2 § Open asks for.
+
+---
+
+## A3. Hand the deployment-updates requirements to CRMBuilder's process
+
+**Owner: Doug.** `prompts/crmbuilder-deployment-updates-requirements-v0.1.md`
+is candidate input for a requirements session in the CRMBuilder repo: the
+Deployment record (D1), the *Updates* policy (D2), the Update / Update-all
+button with its two guards (D3), the fleet view (D4) and what must not be
+required (D5). It should be run together with A1 — both carry the same boundary
+question (product capability or CBM-network artifact) and should get one answer.
+
 ## R7. Rule on the extensions — are Advanced Pack and Google Integration part of the standard?
 
 **Owner: Doug. A ruling, then a small follow-through.**

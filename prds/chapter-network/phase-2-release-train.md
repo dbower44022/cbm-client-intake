@@ -85,6 +85,38 @@ Two consequences worth designing around rather than discovering:
   cadence quietly becomes "when someone remembers". Tag cutting and the image
   stamp (Stamp A) should be one command.
 
+## The release lane, and who presses the button (2026-08-31)
+
+Two decisions taken the day the first non-automatic deployment existed
+(`lakeside-intake`, from the rehearsal), both in [DECISIONS.md](DECISIONS.md):
+
+- **What a chapter app follows is a `release` branch.** The Sunday cut
+  (`scripts/cut_release.sh`) fast-forwards `release` to the new tag; chapter
+  apps track `release`, and only the soak copy tracks `main`. That gives ruling
+  7 its guarantee with today's App Platform mechanism — a branch is the only
+  thing an app can track — and no cross-account registry. Building an image
+  once per tag is deferred; when it comes, only the mechanism under the button
+  changes.
+- **The per-deployment policy and the Update button live in CRMBuilder**
+  (proposal 8): an *Updates* setting of **Development** (every push; the one
+  soak copy) / **Latest Stable** (each release, automatically; the chapter
+  default) / **On Demand** (the button only, with a reason and a review date),
+  and a button that sets `RELEASE_TAG`, triggers the deployment, and refuses
+  when the paired CRM's conformance check is not green. The consumer
+  requirements are in `prompts/crmbuilder-deployment-updates-requirements-v0.1.md`.
+
+**Two operations, not one.** Under the branch mechanism `RELEASE_TAG` is a
+build-time env var in each app's spec, so promoting a deployment is *set the
+variable, then trigger the build*. Triggering alone makes `/healthz` report the
+previous promotion as if it were the new one — which is why the button, not a
+person, should do it.
+
+**What this repo owes** (TASKS § R10): the `release` branch and the one-line
+fast-forward in `cut_release.sh`; a `promote` script that does the two
+operations for one app so the button has a worked example; and the detector
+Phase 5 asked for — "Latest Stable, but `deploy_on_push` is off" — which is a
+comparison of the policy against the live spec.
+
 ## Open
 
 - **Which machine is the staging tenant** — [TASKS.md](TASKS.md) § D4. Nothing in

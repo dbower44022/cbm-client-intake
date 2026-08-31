@@ -95,6 +95,22 @@ therefore not paperwork; it is the load-bearing half of ruling 4.
    session has not answered the product-vs-artifact boundary and the headless
    requirement by then, Layer 3 proceeds in full and its sunk cost is accepted
    deliberately.
+8. **App deployments are managed from CRMBuilder — a Deployment record beside
+   each Instance, an *Updates* policy per deployment, and an Update button —
+   which makes CRMBuilder the fleet console of Phase 5.** Discussed with Doug
+   2026-08-31 after the Lakeside rehearsal produced the first deployment not on
+   automatic updates. The policy's three values are Doug's words: **Development**
+   (takes every push; the one soak copy, never a chapter's), **Latest Stable**
+   (moves automatically to each named release; the chapter default) and **On
+   Demand** (moves only on the button, with a reason and a review date). The
+   button refuses when the paired CRM is not conformant and moves the CRM
+   configuration in the same promotion (ruling 7). It is a proposal because it
+   lands in CRMBuilder's requirement-first process, and because it answers a
+   question this plan had left open — whether the fleet console *is*
+   CRMBuilder. The consumer-requirements draft for that session is
+   `prompts/crmbuilder-deployment-updates-requirements-v0.1.md`; the
+   consumer's own half is [TASKS.md](TASKS.md) § R10. **Doug agreed the shape
+   and the words in discussion; the ruling is the CRMBuilder session's.**
 
 
 ---
@@ -103,6 +119,8 @@ therefore not paperwork; it is the load-bearing half of ruling 4.
 
 | Date | Decision | Where it landed |
 |---|---|---|
+| 2026-08-31 | **What a chapter deployment follows is a release branch, now; images by tag later.** The weekly cut fast-forwards a `release` branch to the tag; chapter apps track it, only the soak copy tracks `main`. Building one image per tag and shipping it by tag is deferred until the fleet outgrows N builds of one commit — the per-deployment policy and the Update button (proposal 8) must survive that swap unchanged. Chosen over "straight to images" because images need a registry every chapter's own DO account can pull from, which is Phase 3's secrets problem again. | [phase-2](phase-2-release-train.md) § *The release lane*; [TASKS.md](TASKS.md) § R10 |
+| 2026-08-31 | **The per-deployment update policy is named Development / Latest Stable / On Demand** (Doug's words, replacing "staging / train / held"). One Development in the fleet, never a chapter's; Cleveland's dry-run `lobster-app` is not the soak copy and is not registered. | Proposal 8; `prompts/crmbuilder-deployment-updates-requirements-v0.1.md` |
 | 2026-08-31 | **The Lakeside rehearsal instance is NOT torn down.** Criterion 13 was met on the throwaway (`crm-lakeside`, DEP-001 / INST-001, app `lakeside-intake`); Doug ruled the same evening that it stays up to rehearse **Phase 6 step 3 — the Google integration** — and to document and automate that path. Cost: one droplet (~$24/mo) and one small App Platform app, in Doug's own accounts. The teardown steps are written and waiting on the standing page; "nothing left billing" is owed when that arc ends. | [TASKS.md](TASKS.md) § Closed (B2); [phase-6](phase-6-first-chapter.md) |
 | 2026-08-26 | **Release cadence is WEEKLY, cut Sunday 17:00 UTC** (proposal 1). Every merge lands on staging immediately; on a weekly cadence a tag is cut and every chapter moves to it together, the soak being the week itself. A security fix may bypass the cadence but never staging. **Note 17:00 UTC is Sunday *afternoon* in Cleveland** — 13:00 EDT / 12:00 EST — not night. | [phase-2](phase-2-release-train.md); the procedure is [crm-update-runbook.md](crm-update-runbook.md) |
 | 2026-08-26 | **D1 — the CRM's configuration version lives in a new single-record custom entity, `CNetworkStandard`.** Not in EspoCRM Settings (reading those needs admin, and admin is genuinely closed to the app's credential — the org-wide key 403s on `Role`), and not as a `CActionLog` row (append-only history is the wrong shape for a current-state assertion). | Build handoff written: `cnetworkstandard-entity-crm-handoff.md`. [TASKS.md](TASKS.md) § R0 |

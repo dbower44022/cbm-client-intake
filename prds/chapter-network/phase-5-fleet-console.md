@@ -1,6 +1,14 @@
 # Phase 5 — The fleet console
 
-**Status: not started.** Needed the moment there is a second production tenant.
+**Status: not started — and, since 2026-08-31, proposed to be CRMBuilder.**
+Needed the moment there is a second production tenant. [DECISIONS.md](DECISIONS.md)
+proposal 8 puts the console inside CRMBuilder: a Deployment record beside each
+CRM Instance, an *Updates* policy (Development / Latest Stable / On Demand), an
+Update button with the conformance guard, and the fleet view below. Everything
+in this file stays true under that answer — the console still owns no
+instrumentation; it reads `/healthz` and the check's JSON. The consumer
+requirements handed to that session are
+`prompts/crmbuilder-deployment-updates-requirements-v0.1.md` § D4.
 
 **It owns no instrumentation.** Every signal it aggregates already exists per
 deployment, and both version stamps are defined and written elsewhere —
