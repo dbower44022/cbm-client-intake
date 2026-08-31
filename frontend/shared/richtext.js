@@ -67,6 +67,21 @@
       buttons = BUTTONS.slice();
       buttons.splice(buttons.indexOf("hr") + 1, 0, "image");
     }
+    // opts.logo = { url, alt } adds an Insert-logo button that places a
+    // PUBLICLY-HOSTED image (an https URL every reader can fetch) — the one
+    // image kind an editor without an upload hook can safely carry, and the
+    // supported way to put a logo in an email signature. The button is always
+    // present when the host asks for it (buttons are never hidden — Doug's
+    // ruling); an empty/non-https URL explains itself on click.
+    if (opts.logo) {
+      if (buttons === BUTTONS) buttons = BUTTONS.slice();
+      buttons.push("|", {
+        name: "cbmLogo",
+        tooltip: opts.logo.tooltip || "Insert logo",
+        icon: "image",
+        exec: function () { insertLogo(); },
+      });
+    }
     var editor = window.Jodit.make(area, {
       buttons: buttons,
       toolbarAdaptive: false,     // same toolbar at every width
@@ -124,6 +139,34 @@
         : (opts.imageBlockedMessage ||
            "Pasted images can't be stored in this text and were removed — " +
            "attach the image as a file instead (e.g. on the Documents tab)."));
+    }
+    function escAttr(s) {
+      return String(s == null ? "" : s)
+        .replace(/&/g, "&amp;").replace(/"/g, "&quot;")
+        .replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+    function insertLogo() {
+      var lg = opts.logo || {};
+      if (!lg.url) {
+        imageNotice(lg.missingMessage ||
+          "No logo is set up yet — an administrator can set the " +
+          "Organization logo URL on the System Settings page.");
+        return;
+      }
+      if (!/^https:\/\//i.test(lg.url)) {
+        imageNotice("The configured logo URL must start with https:// — " +
+          "ask an administrator to update it in System Settings.");
+        return;
+      }
+      // A plain <img> with a height attribute — the form that renders most
+      // consistently across email clients (styles are often stripped there).
+      editor.s.insertHTML(
+        '<img src="' + escAttr(lg.url) + '" alt="' + escAttr(lg.alt || "logo") +
+        '" height="48">'
+      );
+      if (editor.synchronizeValues) editor.synchronizeValues();
+      touched = true;
+      if (typeof opts.onInput === "function") opts.onInput();
     }
     function handleEmbeddedImages() {
       // Operates on the live editable DOM so an in-flight upload can keep its

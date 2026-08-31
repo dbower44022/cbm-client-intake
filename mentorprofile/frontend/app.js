@@ -128,12 +128,22 @@
       "You can still edit or remove it on any individual message.";
     sec.appendChild(help);
     var wrap = document.createElement("div"); wrap.className = "cbm-field";
-    var editor = (window.CBMRichText && window.CBMRichText.create("", {
-      // No uploadImage hook on purpose: a signature rides outbound email, and
-      // recipients can reach neither the app's proxy nor the CRM.
-      imageBlockedMessage: "Images can't be included in your email signature, so it was removed.",
-    })) || makeWysiwyg("");
-    wrap.appendChild(editor); sec.appendChild(wrap);
+    // The editor is built once the saved signature arrives, because the
+    // Insert-logo button's config (the org logo URL) rides the same response.
+    var editor = null;
+    function buildEditor(initial, logo) {
+      editor = (window.CBMRichText && window.CBMRichText.create(initial, {
+        // No uploadImage hook on purpose: a signature rides outbound email,
+        // and recipients can reach neither the app's proxy nor the CRM. The
+        // logo button inserts a publicly-hosted image instead — the one kind
+        // every recipient can display.
+        imageBlockedMessage: "Uploaded images can't be included in your email signature, " +
+          "so it was removed. Use the Insert logo toolbar button instead.",
+        logo: logo,
+      })) || makeWysiwyg(initial);
+      wrap.appendChild(editor);
+    }
+    sec.appendChild(wrap);
     var line = document.createElement("div"); line.className = "mp__row";
     var save = document.createElement("button"); save.type = "button";
     save.className = "cbm-button"; save.textContent = "Save signature";
@@ -149,17 +159,20 @@
       return editor._cbmRichText ? editor._cbmRichText.getValue()
         : (editor.querySelector("[contenteditable]") || {}).innerHTML || "";
     }
-    function setEditor(html) {
-      if (editor._cbmRichText) editor._cbmRichText.setValue(html);
-      else {
-        var ce = editor.querySelector("[contenteditable]");
-        if (ce) ce.innerHTML = html;
-      }
-    }
     api("/signature").then(function (r) {
-      setEditor((r && r.signature) || "");
-    }).catch(function () { status.textContent = "Couldn't load your saved signature."; });
+      buildEditor((r && r.signature) || "", {
+        url: (r && r.logoUrl) || "",
+        alt: (r && r.logoAlt) || "logo",
+      });
+    }).catch(function () {
+      status.textContent = "Couldn't load your saved signature.";
+      buildEditor("", { url: "" });  // still editable; the button explains itself
+    });
     save.addEventListener("click", async function () {
+      if (!editor) {
+        status.textContent = "Your signature is still loading — try again in a moment.";
+        return;
+      }
       save.disabled = true; status.textContent = "Saving…";
       try {
         await api("/signature", {

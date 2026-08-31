@@ -676,3 +676,43 @@ async def test_upload_inline_image_requires_a_linked_profile():
             data_base64="aGk=", field="mentorProfessionalBio",
         )
     assert client.uploads == []
+
+
+# --- the signature editor's Insert-logo config -------------------------------
+
+def test_signature_carries_the_org_logo_config(monkeypatch):
+    """The GET /signature payload rides the org-logo setting to the editor's
+    Insert-logo button — including when EMPTY, so the button can explain
+    itself instead of vanishing (buttons are never hidden)."""
+    _authed(monkeypatch)
+
+    async def fake_signature(client, user_id):
+        return "<p>Jane</p>"
+
+    monkeypatch.setattr("comms.service.user_signature", fake_signature)
+    monkeypatch.setenv("ORGANIZATION_LOGO_URL",
+                       "https://example.org/logo.png")
+    monkeypatch.setenv("ORGANIZATION_NAME", "Lakeside Business Mentors")
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.get("/mentorprofile/api/signature").json()
+    assert r["signature"] == "<p>Jane</p>"
+    assert r["logoUrl"] == "https://example.org/logo.png"
+    assert r["logoAlt"] == "Lakeside Business Mentors logo"
+
+
+def test_signature_logo_config_defaults_empty(monkeypatch):
+    _authed(monkeypatch)
+
+    async def fake_signature(client, user_id):
+        return ""
+
+    monkeypatch.setattr("comms.service.user_signature", fake_signature)
+    with TestClient(_app(monkeypatch)) as c:
+        r = c.get("/mentorprofile/api/signature").json()
+    assert r["logoUrl"] == ""
+    assert r["logoAlt"].endswith(" logo")
+
+
+def test_organization_logo_url_setting_defaults_empty():
+    from core.config import Settings
+    assert Settings().organization_logo_url == ""

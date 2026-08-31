@@ -21,7 +21,10 @@ found; move resolved items to the bottom with the resolution date.
       (a) a session's notes, (b) a partner record's Details-tab Partner Notes,
       (c) the Client Administration popup's Engagement notes, (d) a mentor's
       Professional bio — then reopen each and check the image comes back, and
-      check (d) renders on the directory's mentor page. The decisive question
+      check (d) renders on the directory's mentor page, and (e — v0.219.0)
+      set `ORGANIZATION_LOGO_URL` at `/setup`, press Insert logo in the
+      signature editor, save, and send a test email to an external mailbox to
+      see the logo arrive. The decisive question
       an admin test cannot answer: **do the staff/mentor roles hold
       `Attachment` create?** (The mentor role needed exactly this grant for
       photos, 2026-07-14.) Also confirm aboutMentor and the signature editor

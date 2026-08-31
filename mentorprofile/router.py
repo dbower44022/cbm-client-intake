@@ -151,12 +151,22 @@ async def profile_update(body: UpdateIn, request: Request) -> dict:
 async def signature(request: Request) -> dict:
     """The caller's own email signature (EspoCRM ``Preferences.signature`` —
     what every compose dialog seeds into the body). Own record only: the id
-    always comes from the session, never the request."""
+    always comes from the session, never the request.
+
+    Also carries the org-logo config for the editor's Insert-logo button —
+    the one image kind a signature can safely hold is a publicly-hosted URL
+    (see ``organization_logo_url`` in core/config.py). Served even when empty
+    so the button can explain itself instead of vanishing."""
     user = _require_user(request)
-    client = client_for(get_settings(), user)
+    settings = get_settings()
+    client = client_for(settings, user)
     from comms.service import user_signature
 
-    return {"signature": await user_signature(client, user["userId"])}
+    return {
+        "signature": await user_signature(client, user["userId"]),
+        "logoUrl": settings.organization_logo_url or "",
+        "logoAlt": f"{settings.organization_name} logo",
+    }
 
 
 @router.put("/signature")

@@ -81,7 +81,13 @@ def test_mentorprofile_signature_roundtrip(monkeypatch):
     _as(monkeypatch, espo)
     with TestClient(_app(monkeypatch)) as c:
         r = c.get("/mentorprofile/api/signature")
-        assert r.status_code == 200 and r.json() == {"signature": "<p>old</p>"}
+        assert r.status_code == 200
+        body = r.json()
+        assert body["signature"] == "<p>old</p>"
+        # The org-logo config rides along for the Insert-logo button — empty
+        # URL by default, alt built from the organisation name.
+        assert body["logoUrl"] == ""
+        assert body["logoAlt"].endswith(" logo")
         r2 = c.put("/mentorprofile/api/signature", json={
             "signature": "<p>Bob Mentor</p><script>evil()</script>",
         })

@@ -4,6 +4,33 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.219.0] — 2026-08-31
+
+**feat(signature): an organisation logo for email signatures — the safe way.**
+Follow-on to v0.218.0's ruling that signatures refuse uploaded images (an
+attachment lives behind the app's login, so every external recipient would see
+a broken picture). The supported alternative is now built in:
+
+- **`ORGANIZATION_LOGO_URL`** (new setting, default empty, on `/setup` under
+  Presentation) — a publicly-hosted https image, typically the logo already on
+  the org's website. Per-chapter, like `ORGANIZATION_NAME`. Read per request,
+  so a `/setup` change applies with no restart.
+- **The signature editor grew an "Insert logo" toolbar button**
+  (`CBMRichText` `opts.logo`): one click inserts
+  `<img src="<the URL>" alt="<org> logo" height="48">` — a height *attribute*,
+  not a style, because mail clients strip styles. The button is always present
+  (buttons are never hidden — the standing ruling): with the setting empty it
+  explains that no logo is configured and where an admin sets it; a non-https
+  value is refused with the same courtesy. `GET /mentorprofile/api/signature`
+  now carries `logoUrl`/`logoAlt`; the editor builds after that response.
+- The blocked-image notice in the signature editor now points at the button.
+- Save path verified: `sanitize_template_html` keeps an https `<img>`, and
+  compose seeds the signature HTML as-is.
+- Caveat for the docs: like every URL-based logo (including big companies'),
+  some mail clients hide remote images until the reader clicks "show images".
+  Verified by tests (1956 passed); the click-through is added to the
+  `OPEN-ITEMS.md` #29 live pass.
+
 ## [0.218.0] — 2026-08-31
 
 **feat(richtext): the editors grew up — more formatting, and images you can

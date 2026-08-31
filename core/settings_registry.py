@@ -380,6 +380,10 @@ SETTINGS: tuple[SettingSpec, ...] = (
        help="The name every page carries — title, footer and the public forms' prose. "
             "Substituted server-side as it is served, so a change here takes effect on "
             "the next page load with no redeploy."),
+    _s("organization_logo_url", GROUP_PRESENTATION, "Organisation logo URL",
+       help="A publicly-hosted https image (typically on the org's own website). "
+            "Powers the email-signature editor's Insert-logo button — signature "
+            "images must be reachable without a login, which uploaded images are not."),
     _s("policy_client_conduct_url", GROUP_PRESENTATION, "Client code of conduct URL",
        help="Linked from the consent checkbox on the public forms."),
     _s("policy_mentor_ethics_url", GROUP_PRESENTATION, "Mentor code of ethics URL",

@@ -430,7 +430,10 @@ deliberately omitted.
   are NOT in it, and smuggled changes are dropped. The page has no width cap.
 - Photo upload is base64 JSON → Attachment → `profilePhotoId`; display proxies
   through the app (`GET /photo`) because the browser can't reach the CRM.
-- Also hosts the **email-signature editor** (EspoCRM `Preferences.signature`).
+- Also hosts the **email-signature editor** (EspoCRM `Preferences.signature`),
+  whose toolbar carries the Insert-logo button (`ORGANIZATION_LOGO_URL` — see
+  the CBMRichText convention); uploaded/pasted images stay refused because
+  recipients can't reach them.
 - The `description` field is surfaced here as **"Personal interests"** — it is
   what the directory's mentor profile page shows to fellow members, and this is
   the single edit surface for it.
@@ -1298,7 +1301,10 @@ stamp — pending on both CRMs), `cintake-submission-*.md`, `cinformation-reques
   field may take one** — the Wysiwyg saver's binding is what keeps the
   attachment from cleanup. Two editors refuse images BY RULING: `aboutMentor`
   (public website) and the email signature (email recipients) — their
-  audiences can't reach the proxy.
+  audiences can't reach the proxy. The signature's sanctioned alternative is
+  the **Insert-logo button** (`opts.logo`), which places the publicly-hosted
+  `ORGANIZATION_LOGO_URL` image (per-chapter, `/setup` → Presentation); with
+  the setting empty the button stays visible and explains itself.
 - **Every postal-address form wires the shared paste-parser**
   (`frontend/shared/address-paste.js` + `.css`): paste a whole address into the
   first input and it splits across Street / line 2 / City / State / ZIP, with an
@@ -1351,8 +1357,11 @@ locally, and a session that believed it pushed a docs commit and shipped a
 feature to production with it. `git log origin/main..main` is the answer; this
 sentence is a convenience.
 
-- **v0.218.0 (2026-08-31, not yet pushed) — richer text editors, and images
-  you can insert.** Standing rules live in the Conventions CBMRichText entry;
+- **v0.218.0 / v0.219.0 (2026-08-31, not yet pushed) — richer text editors,
+  images you can insert, and a signature logo done safely.** v0.219.0 adds
+  `ORGANIZATION_LOGO_URL` + the signature editor's Insert-logo button (the
+  sanctioned image path for signatures). Standing rules live in the
+  Conventions CBMRichText entry;
   what is owed lives in `OPEN-ITEMS.md` #29. The shape of the gate is worth
   keeping here: the Notes column upgrade is **feature-detected on
   `CEngagement.description`'s live type** and the CRM still says `text` on

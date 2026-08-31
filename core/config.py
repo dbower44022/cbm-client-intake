@@ -41,6 +41,15 @@ class Settings(BaseSettings):
     # rendered before the token existed.
     organization_name: str = "Cleveland Business Mentors"
 
+    # The organization's logo as a PUBLICLY-HOSTED https URL (typically a file
+    # already served by the org's own website). Powers the email-signature
+    # editor's "Insert logo" button: a signature travels OUTSIDE the org, so
+    # its images must be reachable with no login — which is exactly why the
+    # editor refuses uploaded/pasted images (they live behind the app's proxy)
+    # and offers this instead. Empty (the default) keeps the button, which
+    # explains that no logo is configured. Per-chapter, like the name above.
+    organization_logo_url: str = ""
+
     # A chapter's own visual identity: the URL of a stylesheet that REDEFINES
     # `--cbm-*` custom properties on `:root`. Loaded immediately after
     # /shared/tokens.css, so the cascade does the work — an override can only
