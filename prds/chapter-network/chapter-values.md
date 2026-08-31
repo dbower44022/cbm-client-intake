@@ -98,12 +98,12 @@ below differs either way.
 | Key | Lands in | Supplied by | Notes |
 |---|---|---|---|
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | App env, **secret** | Services org | The delegation identity |
-| `COMMS_INTERNAL_DOMAINS` | App env | Chapter | `cbmentors.org` today. Decides which mail is internal CBM↔CBM and so links to Contacts rather than records — wrong value silently pollutes the record Communications tabs |
+| `COMMS_INTERNAL_DOMAINS` | App env | Chapter | `cbmentors.org` today. Decides which mail is internal CBM↔CBM and so links to Contacts rather than records — wrong value silently pollutes the record Communications tabs. Since v0.217.0 it also governs the three "is this address one of ours" checks in `comms/service.py`, which were literals before |
 | `OPS_MAILBOX` | App env | Chapter | The shared info@ identity. **Only ONE deployment may poll a given mailbox** — two double-capture |
 | `ALERT_EMAIL_FROM` / `ALERT_EMAIL_TO` | App env | Chapter | The from-address must be a **real licensed mailbox**; a group or alias 403s `unauthorized_client` |
 | `GDRIVE_SHARED_DRIVE_ID` | App env | Chapter | |
 | `GOOGLE_MEMBERS_GROUP` | App env | Chapter | Empty disables the group step; the address is its own switch |
-| `MENTOR_EMAIL_DOMAIN` | derived today from `cbmentors.org` | Chapter | The domain mentor logins are minted in |
+| `MENTOR_EMAIL_DOMAIN` | `cbmentors.org` | Chapter | The domain mentor logins and mailboxes are minted in. **Built** (v0.217.0) — it was a module constant, not "derived", until the Lakeside rehearsal reached the Google step |
 | `ZOOM_HOST_EMAIL` | App env | Chapter | `zweb@cbmentors.org`; **defaults to Cleveland**. Public webinars only — mentor sessions never use a chapter Zoom account |
 
 ---

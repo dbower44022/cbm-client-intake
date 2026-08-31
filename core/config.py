@@ -265,6 +265,11 @@ class Settings(BaseSettings):
     # as a dedicated admin service account via the App/user token flow — NEVER
     # the staff user's token. Mentor Admin staff stay non-admin.
     mentor_provision_users: bool = False
+    # The domain mentor logins and mailboxes are minted in
+    # (firstname.lastname@<domain>). Cleveland's is the default, so an
+    # unconfigured deployment behaves exactly as before; a chapter with its own
+    # Workspace sets its own (chapter-values § D, MENTOR_EMAIL_DOMAIN).
+    mentor_email_domain: str = "cbmentors.org"
     # Credentials of that dedicated admin account (used only for provisioning).
     espo_provision_username: str = ""
     espo_provision_password: str = ""

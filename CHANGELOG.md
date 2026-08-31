@@ -4,6 +4,29 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.217.0] — 2026-08-31
+
+**feat(chapters): a chapter's own mail domain is a setting, not Cleveland's
+constant.** Found on the Lakeside dress rehearsal the moment a second Google
+Workspace came into view: two places still hardcoded `cbmentors.org`, and both
+would have misbehaved silently on a chapter with its own domain.
+
+- **`MENTOR_EMAIL_DOMAIN`** (new, default `cbmentors.org`, on `/setup` under
+  Email) — the domain mentor logins and mailboxes are minted in
+  (`firstname.lastname@<domain>`). `mentoradmin/service.py` read a module
+  constant; it now reads the setting. `chapter-values.md` § D had listed this
+  row as "derived today" — it was a constant.
+- **`COMMS_INTERNAL_DOMAINS` now governs every "is this one of ours" check.**
+  `comms/service.py` decided whether an address was a CBM member's with three
+  literal `endswith("@cbmentors.org")` tests — while the setting that exists for
+  exactly that question was consulted only by the sync scope. A new
+  `_is_internal_address` helper reads the setting (case-insensitive, any of the
+  listed domains); the three call sites use it.
+
+No behaviour change for Cleveland: both defaults are the old literals, and
+`tests/test_chapter_mail_domain.py` pins that alongside the chapter case. No
+flag, same reasoning as Phase 0 — an unconfigured deployment is byte-identical.
+
 ## [0.216.4] — 2026-08-29
 
 **fix(setup): a CRM address that answers but is not a CRM is now refused.**

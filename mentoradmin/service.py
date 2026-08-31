@@ -14,6 +14,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, AsyncIterator, Awaitable, Callable, Optional, Protocol
 
+from core.config import get_settings
 from core.espo import EspoError
 from core.phone import to_e164
 from core.google_directory import (
@@ -84,8 +85,14 @@ COMPLETENESS_FLAGS = [
     ("trainingCompleted", "training completed"),
     ("termsAccepted", "terms accepted"),
 ]
-# CBM-issued email/login domain: userName = firstname.lastname@cbmentors.org.
-CBM_EMAIL_DOMAIN = "cbmentors.org"
+# CBM-issued email/login domain: userName = firstname.lastname@<domain>. The
+# domain is a setting (``MENTOR_EMAIL_DOMAIN``, default Cleveland's) since the
+# Lakeside rehearsal showed a chapter with its own Workspace needs its own.
+CBM_EMAIL_DOMAIN = "cbmentors.org"  # the default; read the setting, not this
+
+
+def cbm_email_domain() -> str:
+    return (get_settings().mentor_email_domain or CBM_EMAIL_DOMAIN).strip().lower()
 DEFAULT_MENTOR_TEAM = "Mentor Team"
 USER_TYPE = "regular"
 
@@ -548,7 +555,7 @@ def cbm_email_for(first: str, last: str) -> str:
     f = re.sub(r"[^a-z0-9]", "", (first or "").lower())
     last_clean = re.sub(r"[^a-z0-9]", "", (last or "").lower())
     local = ".".join(p for p in (f, last_clean) if p) or "mentor"
-    return f"{local}@{CBM_EMAIL_DOMAIN}"
+    return f"{local}@{cbm_email_domain()}"
 
 
 def _split_name(name: Optional[str]) -> tuple[str, str]:

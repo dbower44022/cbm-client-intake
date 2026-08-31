@@ -306,6 +306,8 @@ SETTINGS: tuple[SettingSpec, ...] = (
        component="worker"),
     _s("comms_internal_domains", GROUP_EMAIL, "Internal domains", kind="csv",
        component="both", help="Mail between these domains links to Contacts, never records."),
+    _s("mentor_email_domain", GROUP_EMAIL, "Mentor email domain", component="web",
+       help="Mentor logins and mailboxes are minted as firstname.lastname@ this domain."),
     _s("comms_engagement_statuses", GROUP_EMAIL, "Active engagement statuses", kind="csv",
        component="both"),
     _s("comms_partner_excluded_statuses", GROUP_EMAIL, "Excluded partner statuses",

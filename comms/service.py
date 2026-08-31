@@ -42,6 +42,17 @@ class OriginalGoneError(CommsError):
 _store: Optional[CommsStore] = None
 _sa_info: Optional[dict[str, Any]] = None
 
+def _is_internal_address(address: str) -> bool:
+    """Whether ``address`` belongs to one of this chapter's own mail domains
+    (``COMMS_INTERNAL_DOMAINS``, default ``cbmentors.org``). Replaces three
+    literal ``endswith("@cbmentors.org")`` checks that a chapter with its own
+    Workspace would silently fail — found on the Lakeside rehearsal."""
+    domain = (address or "").rsplit("@", 1)[-1].strip().lower()
+    return bool(domain) and domain in {
+        d.lower() for d in get_settings().comms_internal_domains_list
+    }
+
+
 
 def get_store(settings: Settings) -> Optional[CommsStore]:
     global _store
@@ -956,7 +967,7 @@ async def send_message(
     everyone = to + cc + bcc
     unknown = [
         a for a in everyone
-        if a not in ref.addresses and not a.endswith("@cbmentors.org")
+        if a not in ref.addresses and not _is_internal_address(a)
     ]
     if unknown and not allow_unknown_recipients:
         raise CommsError(
@@ -1260,7 +1271,7 @@ async def lookup_contact_by_email(user_client: Any, address: str) -> dict[str, A
 
     profile_hit = None
     profiles_cache: Optional[list[dict[str, Any]]] = None
-    if address.endswith("@cbmentors.org"):
+    if _is_internal_address(address):
         profiles_cache = await _profiles()
         for pr in profiles_cache:
             if (pr.get("cbmEmail") or "").strip().lower() == address:
@@ -1295,7 +1306,7 @@ async def lookup_contact_by_email(user_client: Any, address: str) -> dict[str, A
     types = c.get("cContactType") or []
     if isinstance(types, str):
         types = [types]
-    is_cbm = "Mentor" in types or address.endswith("@cbmentors.org")
+    is_cbm = "Mentor" in types or _is_internal_address(address)
     mentor_profile_id = None
     if is_cbm:
         # Personal-address path: find their profile through its Contact link
