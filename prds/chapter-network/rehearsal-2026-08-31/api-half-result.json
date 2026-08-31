@@ -1,0 +1,662 @@
+{
+ "instance": "https://crm-lakeside.acmeconstruction.us",
+ "standardVersion": null,
+ "mode": "apply",
+ "counts": {
+  "conformant": 33,
+  "unapplyable": 73,
+  "applied": 2
+ },
+ "directives": [
+  {
+   "category": "team",
+   "target": "Client Administration Team",
+   "outcome": "conformant",
+   "reason": "exists"
+  },
+  {
+   "category": "team",
+   "target": "Data Integrity Team",
+   "outcome": "conformant",
+   "reason": "exists"
+  },
+  {
+   "category": "team",
+   "target": "Partner Management Team",
+   "outcome": "conformant",
+   "reason": "exists"
+  },
+  {
+   "category": "team",
+   "target": "Sponsor Management Team",
+   "outcome": "conformant",
+   "reason": "exists"
+  },
+  {
+   "category": "team",
+   "target": "Mentor Team",
+   "outcome": "conformant",
+   "reason": "exists"
+  },
+  {
+   "category": "team",
+   "target": "Mentor Administration Team",
+   "outcome": "conformant",
+   "reason": "exists"
+  },
+  {
+   "category": "team",
+   "target": "System Administration Team",
+   "outcome": "conformant",
+   "reason": "exists"
+  },
+  {
+   "category": "team",
+   "target": "Marketing Admin Team",
+   "outcome": "conformant",
+   "reason": "exists"
+  },
+  {
+   "category": "team",
+   "target": "Analytics Admin Team",
+   "outcome": "conformant",
+   "reason": "exists"
+  },
+  {
+   "category": "roleScope",
+   "target": "Standard User: BpmnFlowchart",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Standard User: BpmnProcess",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Standard User: BpmnUserTask",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Standard User: GoogleCalendar",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Standard User: Report",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Standard User: ReportCategory",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleField",
+   "target": "Standard User: Account.cCompanyPartnerProfile",
+   "outcome": "unapplyable",
+   "reason": "field-level entry names a field the target does not have (stale on the source)"
+  },
+  {
+   "category": "roleField",
+   "target": "Standard User: Account.cSponsorProfile",
+   "outcome": "unapplyable",
+   "reason": "field-level entry names a field the target does not have (stale on the source)"
+  },
+  {
+   "category": "role",
+   "target": "Standard User",
+   "outcome": "applied",
+   "reason": "created and read back"
+  },
+  {
+   "category": "roleScope",
+   "target": "Mentor Role: BpmnFlowchart",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Mentor Role: BpmnProcess",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Mentor Role: BpmnUserTask",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Mentor Role: GoogleCalendar",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Mentor Role: GoogleContacts",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Mentor Role: Report",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Mentor Role: ReportCategory",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "role",
+   "target": "Mentor Role",
+   "outcome": "conformant",
+   "reason": "matches capture"
+  },
+  {
+   "category": "roleScope",
+   "target": "Client Assignment Role: BpmnFlowchart",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Client Assignment Role: BpmnProcess",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Client Assignment Role: BpmnUserTask",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Client Assignment Role: GoogleCalendar",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Client Assignment Role: GoogleContacts",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Client Assignment Role: Report",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Client Assignment Role: ReportCategory",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "role",
+   "target": "Client Assignment Role",
+   "outcome": "conformant",
+   "reason": "matches capture"
+  },
+  {
+   "category": "roleScope",
+   "target": "Partner Manager Role: BpmnFlowchart",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Partner Manager Role: BpmnProcess",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Partner Manager Role: BpmnUserTask",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Partner Manager Role: GoogleCalendar",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Partner Manager Role: Report",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Partner Manager Role: ReportCategory",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "role",
+   "target": "Partner Manager Role",
+   "outcome": "conformant",
+   "reason": "matches capture"
+  },
+  {
+   "category": "roleScope",
+   "target": "Sponsor Manager Role: BpmnFlowchart",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Sponsor Manager Role: BpmnProcess",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Sponsor Manager Role: BpmnUserTask",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Sponsor Manager Role: GoogleCalendar",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Sponsor Manager Role: Report",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Sponsor Manager Role: ReportCategory",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "role",
+   "target": "Sponsor Manager Role",
+   "outcome": "conformant",
+   "reason": "matches capture"
+  },
+  {
+   "category": "roleScope",
+   "target": "Event Manager Role: BpmnFlowchart",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Event Manager Role: BpmnProcess",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Event Manager Role: BpmnUserTask",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Event Manager Role: Report",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Event Manager Role: ReportCategory",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "role",
+   "target": "Event Manager Role",
+   "outcome": "conformant",
+   "reason": "matches capture"
+  },
+  {
+   "category": "roleScope",
+   "target": "Data Integrity Team Role: BpmnFlowchart",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Data Integrity Team Role: BpmnProcess",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Data Integrity Team Role: BpmnUserTask",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Data Integrity Team Role: Report",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Data Integrity Team Role: ReportCategory",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "role",
+   "target": "Data Integrity Team Role",
+   "outcome": "conformant",
+   "reason": "matches capture"
+  },
+  {
+   "category": "roleScope",
+   "target": "Mentor Administration Role: BpmnFlowchart",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Mentor Administration Role: BpmnProcess",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Mentor Administration Role: BpmnUserTask",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Mentor Administration Role: GoogleCalendar",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Mentor Administration Role: Report",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Mentor Administration Role: ReportCategory",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "role",
+   "target": "Mentor Administration Role",
+   "outcome": "conformant",
+   "reason": "matches capture"
+  },
+  {
+   "category": "roleScope",
+   "target": "ClientMentorIntakeRole: BpmnFlowchart",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "ClientMentorIntakeRole: BpmnProcess",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "ClientMentorIntakeRole: BpmnUserTask",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "ClientMentorIntakeRole: GoogleCalendar",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "ClientMentorIntakeRole: Report",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "ClientMentorIntakeRole: ReportCategory",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "role",
+   "target": "ClientMentorIntakeRole",
+   "outcome": "conformant",
+   "reason": "matches capture"
+  },
+  {
+   "category": "roleScope",
+   "target": "ContentAndEventAdmin: BpmnFlowchart",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "ContentAndEventAdmin: BpmnProcess",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "ContentAndEventAdmin: BpmnUserTask",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "ContentAndEventAdmin: Report",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "ContentAndEventAdmin: ReportCategory",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "role",
+   "target": "ContentAndEventAdmin",
+   "outcome": "conformant",
+   "reason": "matches capture"
+  },
+  {
+   "category": "roleScope",
+   "target": "Marketing Admin Role: BpmnFlowchart",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Marketing Admin Role: BpmnProcess",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Marketing Admin Role: BpmnUserTask",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Marketing Admin Role: GoogleCalendar",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Marketing Admin Role: Report",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "Marketing Admin Role: ReportCategory",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "role",
+   "target": "Marketing Admin Role",
+   "outcome": "conformant",
+   "reason": "matches capture"
+  },
+  {
+   "category": "roleScope",
+   "target": "CustomAppAPIRole: BpmnFlowchart",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "CustomAppAPIRole: BpmnProcess",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "CustomAppAPIRole: BpmnUserTask",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "CustomAppAPIRole: GoogleCalendar",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "CustomAppAPIRole: Report",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "roleScope",
+   "target": "CustomAppAPIRole: ReportCategory",
+   "outcome": "unapplyable",
+   "reason": "scope does not exist on the target (extension not installed)"
+  },
+  {
+   "category": "role",
+   "target": "CustomAppAPIRole",
+   "outcome": "conformant",
+   "reason": "matches capture"
+  },
+  {
+   "category": "roleTeam",
+   "target": "Client Assignment Role -> Client Administration Team",
+   "outcome": "conformant",
+   "reason": "attached"
+  },
+  {
+   "category": "roleTeam",
+   "target": "Data Integrity Team Role -> Data Integrity Team",
+   "outcome": "conformant",
+   "reason": "attached"
+  },
+  {
+   "category": "roleTeam",
+   "target": "Marketing Admin Role -> Marketing Admin Team",
+   "outcome": "conformant",
+   "reason": "attached"
+  },
+  {
+   "category": "roleTeam",
+   "target": "Mentor Administration Role -> Mentor Administration Team",
+   "outcome": "conformant",
+   "reason": "attached"
+  },
+  {
+   "category": "roleTeam",
+   "target": "Mentor Role -> Mentor Team",
+   "outcome": "conformant",
+   "reason": "attached"
+  },
+  {
+   "category": "roleTeam",
+   "target": "Partner Manager Role -> Partner Management Team",
+   "outcome": "conformant",
+   "reason": "attached"
+  },
+  {
+   "category": "roleTeam",
+   "target": "Sponsor Manager Role -> Sponsor Management Team",
+   "outcome": "conformant",
+   "reason": "attached"
+  },
+  {
+   "category": "emailTemplate",
+   "target": "Case-to-Email auto-reply",
+   "outcome": "conformant",
+   "reason": "exists"
+  },
+  {
+   "category": "emailTemplate",
+   "target": "MentorAssignmentNotice",
+   "outcome": "conformant",
+   "reason": "exists"
+  },
+  {
+   "category": "user",
+   "target": "customapps",
+   "outcome": "conformant",
+   "reason": "exists"
+  },
+  {
+   "category": "userRole",
+   "target": "customapps -> CustomAppAPIRole",
+   "outcome": "conformant",
+   "reason": "attached"
+  },
+  {
+   "category": "user",
+   "target": "lakeside.provision",
+   "outcome": "conformant",
+   "reason": "exists"
+  },
+  {
+   "category": "settings",
+   "target": "Settings",
+   "outcome": "conformant",
+   "reason": "all keys match"
+  },
+  {
+   "category": "rebuild",
+   "target": "Admin/rebuild",
+   "outcome": "applied",
+   "reason": "ok"
+  }
+ ],
+ "espoVersion": "10.0.6",
+ "exitCode": 4
+}

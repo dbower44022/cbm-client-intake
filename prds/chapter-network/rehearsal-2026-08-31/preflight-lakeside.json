@@ -1,0 +1,146 @@
+{
+  "instance": "https://crm-lakeside.acmeconstruction.us",
+  "standardVersion": null,
+  "mode": "check",
+  "strictEnums": false,
+  "exitCode": 1,
+  "counts": {
+    "conformant": 20,
+    "absent": 1
+  },
+  "checks": [
+    {
+      "category": "entity",
+      "target": "Account",
+      "outcome": "conformant",
+      "detail": "all 6 required fields/links present"
+    },
+    {
+      "category": "entity",
+      "target": "Contact",
+      "outcome": "conformant",
+      "detail": "all 12 required fields/links present"
+    },
+    {
+      "category": "entity",
+      "target": "CClientProfile",
+      "outcome": "conformant",
+      "detail": "all 3 required fields/links present"
+    },
+    {
+      "category": "entity",
+      "target": "CEngagement",
+      "outcome": "conformant",
+      "detail": "all 9 required fields/links present"
+    },
+    {
+      "category": "entity",
+      "target": "CMentorProfile",
+      "outcome": "conformant",
+      "detail": "all 20 required fields/links present"
+    },
+    {
+      "category": "entity",
+      "target": "CPartnerProfile",
+      "outcome": "conformant",
+      "detail": "all 7 required fields/links present"
+    },
+    {
+      "category": "entity",
+      "target": "CSponsorProfile",
+      "outcome": "conformant",
+      "detail": "all 4 required fields/links present"
+    },
+    {
+      "category": "entity",
+      "target": "CInformationRequest",
+      "outcome": "conformant",
+      "detail": "all 12 required fields/links present"
+    },
+    {
+      "category": "entity",
+      "target": "CIntakeSubmission",
+      "outcome": "conformant",
+      "detail": "all 12 required fields/links present"
+    },
+    {
+      "category": "enum",
+      "target": "CEngagement.engagementStatus",
+      "outcome": "conformant",
+      "detail": "all 2 expected values present"
+    },
+    {
+      "category": "enum",
+      "target": "CEngagement.mentoringFocusAreas",
+      "outcome": "conformant",
+      "detail": "all 31 expected values present"
+    },
+    {
+      "category": "enum",
+      "target": "CMentorProfile.mentorStatus",
+      "outcome": "conformant",
+      "detail": "all 2 expected values present"
+    },
+    {
+      "category": "enum",
+      "target": "CMentorProfile.mentorType",
+      "outcome": "conformant",
+      "detail": "all 1 expected values present"
+    },
+    {
+      "category": "enum",
+      "target": "CMentorProfile.industryExperience",
+      "outcome": "conformant",
+      "detail": "all 28 expected values present"
+    },
+    {
+      "category": "enum",
+      "target": "CMentorProfile.fluentLanguages",
+      "outcome": "conformant",
+      "detail": "all 2 expected values present"
+    },
+    {
+      "category": "enum",
+      "target": "CMentorProfile.mentoringFocusAreas",
+      "outcome": "conformant",
+      "detail": "all 42 expected values present"
+    },
+    {
+      "category": "enum",
+      "target": "Account.cCompanyType",
+      "outcome": "conformant",
+      "detail": "all 3 expected values present"
+    },
+    {
+      "category": "enum",
+      "target": "Account.cClientStatus",
+      "outcome": "conformant",
+      "detail": "all 1 expected values present"
+    },
+    {
+      "category": "enum",
+      "target": "Contact.cContactType",
+      "outcome": "conformant",
+      "detail": "all 6 expected values present"
+    },
+    {
+      "category": "team",
+      "target": "Team",
+      "outcome": "conformant",
+      "detail": "9 teams on the instance; 7 required"
+    },
+    {
+      "category": "emailTemplate",
+      "target": "EmailTemplate",
+      "outcome": "absent",
+      "detail": "2 templates on the instance; 6 required",
+      "missing": [
+        "EventReminder",
+        "EventRecordingAvailable",
+        "EventNoShow",
+        "EventMentorCTA",
+        "EventSurvey"
+      ]
+    }
+  ]
+}

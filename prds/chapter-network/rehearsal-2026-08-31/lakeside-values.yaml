@@ -1,0 +1,60 @@
+# Per-chapter values for the fictional Lakeside chapter — the blank form from
+# prds/chapter-network/chapter-values.md, filled in for the dress rehearsal.
+# No secrets here; those live in lakeside.env (scratchpad, never committed).
+chapter:
+  name: Lakeside Business Mentors
+  slug: lakeside
+  timezone: America/New_York        # § C is not parameterized; Eastern is the only honest value today
+  currency: USD
+  locale: en_US
+
+web:
+  app_base_url: ""                  # filled after `doctl apps create` prints the default ingress
+  website_base_url: https://lakeside.example.invalid          # no chapter website exists (Phase 6 step 5 out of scope)
+  events_public_base_url: https://lakeside.example.invalid/webinars
+  docs_site_url: ""                 # Lakeside has no docs site; the CRM tab-list url item is dropped
+  policy_client_conduct_url: https://lakeside.example.invalid/client-code-of-conduct/
+  policy_mentor_ethics_url: https://lakeside.example.invalid/mentor-code-of-ethics/
+  policy_terms_url: https://lakeside.example.invalid/legal-notices/
+  policy_privacy_url: https://lakeside.example.invalid/privacy-policy/
+  chapter_tokens_url: ""
+
+google:
+  branch: none                      # DARK for the rehearsal by design — a chapter decision (branch A/B)
+  primary_domain: ""
+  ops_mailbox: ""
+  alert_email_from: ""
+  alert_email_to: ""
+  members_group: ""
+  shared_drive_id: ""
+  zoom_host_email: ""
+
+crm:
+  base_url: https://crm-lakeside.acmeconstruction.us
+  application_name: Lakeside Business Mentors
+  outbound_from_name: Lakeside Business Mentors
+  outbound_from_address: ""
+  logo_file: ""
+
+secrets:                            # names only — values in lakeside.env
+  - ESPO_API_KEY
+  - ESPO_PROVISION_USERNAME
+  - ESPO_PROVISION_PASSWORD
+  - DATABASE_URL                    # injected by App Platform (${lakeside-db.DATABASE_URL})
+  - SESSION_SECRET
+  - APP_ENCRYPTION_KEY
+
+flags:
+  analytics_enabled: true
+  events_enabled: true
+  events_public_api: false
+  gmail_sync: false                 # dark
+  gcal_events: false                # dark
+  gdrive_docs: false                # dark
+  mentor_provision_users: true      # the login half only; Google half dark
+  google_directory_check: false     # dark
+  record_quick_add: true
+  setup_enabled: true
+  async_delivery: true
+  espo_dry_run: false
+  deploy_on_push: false             # OFF — a chapter app is moved by the release train, not by pushes

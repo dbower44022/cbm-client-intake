@@ -439,6 +439,37 @@ drift narrative assumed** — identical teams, identical enum values across all 
 managed lists, one ordering difference — and where they actually differ is
 **email templates**, which nothing was watching.
 
+### Measured, 2026-08-31 — criterion 13 run for real, without the applier
+
+The round trip did not wait for B1. A throwaway instance was deployed with the
+CRMBuilder desktop, brought to the standard by a **file copy plus a scripted API
+half**, and put in front of a fresh App Platform app; the full record is
+[rehearsal-2026-08-31/](rehearsal-2026-08-31/) and the closing entry in
+[TASKS.md](TASKS.md). What it measured, against the words of this phase:
+
+- **The file half is two trees, not one** — `custom/Espo/Custom/` *and*
+  `client/custom/src/`. The extension package this phase proposes has to carry
+  both, or the CRM's own UI renders blank. And it needs a shell on the droplet.
+- **The roles capture is not a definition until it is validated against the
+  target.** Roles name extension scopes (Advanced Pack, Google Integration)
+  that a fresh instance lacks, and one stale field-level entry; EspoCRM 10
+  refuses the whole role for either. The applier's role directive must filter
+  and report — and the unapplyable exit code **4** was produced live for the
+  first time, for a reason nobody had predicted (extension scopes rather than
+  saved views or workflows).
+- **Roles CAN be written through the API** as an admin — `POST Role` with
+  `data` and `fieldData`, read back identical. The capability map's "untested,
+  probably possible" row is settled, and the roles half of the desired state no
+  longer depends on a hand-edit instruction.
+- **The conformance check agreed with CRMBuilder's Audit** on 29 entities /
+  573 fields / 164 relationships / 12 roles / 9 teams, and its result on the
+  new instance was identical to crm-test's — the check is reading what is there.
+- **The stamp was not written**, correctly: the apply was not complete. C9
+  held.
+- **A major-version gap appeared unbidden** — the deploy installs 10.0.6,
+  Cleveland runs 9.3.4 — and the 9.x configuration rebuilt cleanly on 10.x.
+  Good news that the release train cannot rely on.
+
 **Provable once the applier exists (Layer 2 or 3):**
 
 8. **Idempotence, observed in the CRM**: apply against crm-test, then apply again.
@@ -461,6 +492,8 @@ managed lists, one ordering difference — and where they actually differ is
     in each gated team able to open each app. Admins bypass ACL, so an admin test
     proves nothing ([[espo-403-diagnosis-merged-team-roles]]). This is the honest
     dress rehearsal for onboarding, and it can be done before any chapter exists.
+    **Done 2026-08-31** — see *Measured, 2026-08-31* above; teardown deferred by
+    ruling.
 
 ## Size
 

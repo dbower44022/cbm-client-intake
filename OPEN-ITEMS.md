@@ -6,6 +6,31 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+28. **Three Cleveland defects the Lakeside dress rehearsal found** (2026-08-31).
+    All three surfaced while standing a throwaway chapter instance up from
+    crm-test's configuration
+    (`prds/chapter-network/rehearsal-2026-08-31/coverage-record.md`); none is
+    chapter work.
+
+    - **Two visible "CBM" strings on the public client-intake form** — the
+      served page for a non-Cleveland deployment still reads *"How did you hear
+      about CBM?"* and *"I consent to receive marketing communication from
+      CBM."* Phase 0 treated `CBM` as an identifier; these two are content an
+      applicant reads. Sweep them into `{{org}}` (or a neutral phrasing) and
+      extend `tests/test_shared_branding.py` to catch a bare `CBM` inside
+      visible text. Ten CRM field *labels* carry it too (*CBM Email*, *CBM
+      Client*, …) — a CRM-side question, noted in the chapter record, not here.
+    - **`Analytics Admin Team` has no role attached on crm-test** (nor does
+      System Administration Team). A user whose only team is Analytics Admin
+      holds no CRM read grant at all; Cleveland's analytics users happen to sit
+      in other teams too. Decide what the role should be and attach it on both
+      CRMs.
+    - **The `crm.config` structural-admin account on crm-test does not survive
+      the nightly reset.** Created 2026-08-27 for the `espo-crm-changes` skill;
+      users reset unless re-baselined (`SANDBOX-RESET.md`), and its login is
+      refused today. Recreate it and re-baseline, or accept that the skill's
+      crm-test path needs the account re-made each time.
+
 27. **The Email Guide's published copy has drifted from the repo**
     (2026-08-26, found by the first live run of `scripts/publish_docs.py`).
     `email-executive-summary.md` is 6963 characters in the repo against 6682 on

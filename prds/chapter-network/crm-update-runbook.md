@@ -292,6 +292,9 @@ Every one of these has already cost this project time.
 | **Soft deletes** | An admin GET returns a deleted row with `deleted: true`; ordinary users get 404 | Treat `deleted: true` as gone |
 | **Some system entities are not customizable** | The field build is impossible, e.g. `EmailTemplate` | Check `scopes.{Entity}.customizable` **before** speccing |
 | **The CRM team edits crm-test underneath the app** | Something that worked stops | Check field and enum drift first |
+| **A role names a scope the target does not have** | EspoCRM 10 rejects the whole role (HTTP 400 *Scope X is not allowed*). crm-test's roles name Advanced Pack and Google Integration scopes | Install the extensions first, or filter the capture per target and record each strip as *unapplyable* |
+| **A role's field-level entry names a deleted field** | Same rejection (*Field X does not exist in Y*); the source tolerates the stale entry, the target does not | Validate `fieldData` against `entityDefs` before writing; clean the source |
+| **The file half is TWO trees** | Copying `custom/Espo/Custom/` alone leaves the CRM's own UI blank — `clientDefs/App.json` names a view that lives in `client/custom/src/` | Copy both, `chown www-data`, rebuild; sign in to the CRM and look, not just the app |
 
 ---
 

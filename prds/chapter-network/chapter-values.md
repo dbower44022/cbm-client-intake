@@ -128,6 +128,13 @@ on any list until now. Measured live on crm-test.
 | `language` | `en_US` | |
 | `weekStart` | `0` | |
 
+Learned on the 2026-08-31 rehearsal, and not on the list above until then:
+
+| | Cleveland's value | Notes |
+|---|---|---|
+| **The `tabList` url item** | *CBM Documentation* → `docs.clevelandbusinessmentors.org` | The one per-chapter item inside an otherwise-standard tab list; it is `DOCS_SITE_URL`'s twin inside the CRM |
+| **EspoCRM version** | crm-test 9.3.4, prod (unverified) | The CRMBuilder deploy installs the current release (10.0.6 on 2026-08-31). Not a value a chapter picks — but until the deploy pins one, it *is* per-instance, and it must not be |
+
 Also per-chapter inside the CRM, and not configuration:
 
 - **Users.** The chapter's own staff and mentors. 26 on crm-test.
@@ -178,7 +185,8 @@ inference.
 | **The 7 team names** | Every team gate in the product resolves one of these strings. All 7 exist identically on both live instances (verified 2026-08-24) |
 | **Roles** | 12 on crm-test. They define what teams *mean*; a chapter with different roles is a chapter running different software |
 | **Email templates** | 6 required. **Verified 2026-08-27: template bodies carry no hardcoded brand at all**, so they are genuinely build-once-deploy-everywhere. This was not knowable without looking, and it removes a category people would otherwise assume was per-city |
-| **Entity and field schema** | 16 custom entities, ~298 custom fields, ~96 custom links |
+| **Entity and field schema** | 16 custom entities, ~298 custom fields, ~96 custom links — **two file trees**: `custom/Espo/Custom/` and `client/custom/src/` (the CBM navbar view; without it the CRM UI is blank) |
+| **Extensions the roles depend on** | Advanced Pack 3.12.1 and Google Integration 1.8.4 are installed on crm-test and the roles name their scopes. **Whether they are standard is R7's ruling** — they are listed here because leaving them off this fence is what made them invisible |
 | **Enum options / form dropdowns** | 16 managed lists from 14 `Entity.field` sources |
 | **Layouts** | `/directory` reads the CRM's own list and detail layouts live |
 | **Everything in `frontend/`** | `CBM`, `cbm-`, `--cbm-*`, `data-cbm-*` are **identifiers, not content**, and two are live contracts with the website |

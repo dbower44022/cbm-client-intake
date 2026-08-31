@@ -103,6 +103,7 @@ therefore not paperwork; it is the load-bearing half of ruling 4.
 
 | Date | Decision | Where it landed |
 |---|---|---|
+| 2026-08-31 | **The Lakeside rehearsal instance is NOT torn down.** Criterion 13 was met on the throwaway (`crm-lakeside`, DEP-001 / INST-001, app `lakeside-intake`); Doug ruled the same evening that it stays up to rehearse **Phase 6 step 3 — the Google integration** — and to document and automate that path. Cost: one droplet (~$24/mo) and one small App Platform app, in Doug's own accounts. The teardown steps are written and waiting on the standing page; "nothing left billing" is owed when that arc ends. | [TASKS.md](TASKS.md) § Closed (B2); [phase-6](phase-6-first-chapter.md) |
 | 2026-08-26 | **Release cadence is WEEKLY, cut Sunday 17:00 UTC** (proposal 1). Every merge lands on staging immediately; on a weekly cadence a tag is cut and every chapter moves to it together, the soak being the week itself. A security fix may bypass the cadence but never staging. **Note 17:00 UTC is Sunday *afternoon* in Cleveland** — 13:00 EDT / 12:00 EST — not night. | [phase-2](phase-2-release-train.md); the procedure is [crm-update-runbook.md](crm-update-runbook.md) |
 | 2026-08-26 | **D1 — the CRM's configuration version lives in a new single-record custom entity, `CNetworkStandard`.** Not in EspoCRM Settings (reading those needs admin, and admin is genuinely closed to the app's credential — the org-wide key 403s on `Role`), and not as a `CActionLog` row (append-only history is the wrong shape for a current-state assertion). | Build handoff written: `cnetworkstandard-entity-crm-handoff.md`. [TASKS.md](TASKS.md) § R0 |
 | 2026-08-26 | **D2 — the CRMBuilder decision trigger stands at 2026-09-19, Doug owning it.** If the requirements session has not answered the product-vs-artifact boundary and the headless requirement by then, Layer 3 proceeds in full and its sunk cost is accepted deliberately. | [phase-1](phase-1-crm-config.md) § *The decision trigger*; the action is [TASKS.md](TASKS.md) § A1 |
@@ -126,6 +127,10 @@ answered. They are recorded so they are asked rather than rediscovered.
   requirements session can answer it. **The trigger date is confirmed at
   2026-09-19 (Doug, 2026-08-26)** — if the session has not run by then, Layer 3
   proceeds in full. See [phase-1](phase-1-crm-config.md#the-decision-trigger).
+- **Are the Advanced Pack and Google Integration extensions part of the
+  standard?** The roles say yes by naming their scopes; no document had said so;
+  a chapter would have to license the pack. Recommendation and steps in
+  [TASKS.md](TASKS.md) § R7.
 - **Which of the two live CRMs is the standard, where their roles differ?** The
   capture is mechanical; the adjudication is a ruling, and it is the riskiest part
   of Phase 1's applier.

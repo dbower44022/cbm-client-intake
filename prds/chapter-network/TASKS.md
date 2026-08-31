@@ -115,6 +115,123 @@ step itself is not.
 
 # Part 2 — Ready to build
 
+## R7. Rule on the extensions — are Advanced Pack and Google Integration part of the standard?
+
+**Owner: Doug. A ruling, then a small follow-through.**
+
+### What this is
+
+The dress rehearsal (§ Closed, 2026-08-31) found that **crm-test's twelve roles
+name scopes from two installed extensions** — `Report`, `ReportCategory`,
+`BpmnFlowchart`, `BpmnProcess`, `BpmnUserTask` from the paid **Advanced Pack
+3.12.1**, and `GoogleCalendar`, `GoogleContacts` from **Google Integration
+1.8.4** — and EspoCRM 10 **refuses a role that names a scope the instance does
+not have** (HTTP 400, whole role rejected). Nothing in this project's documents
+had listed either extension as part of the standard; the roles simply assumed
+them. 71 role×scope entries were stripped to get the roles on, and the applier
+correctly exited 4 (*unapplyable*) rather than 0.
+
+### The decision
+
+Either answer works; what does not work is not choosing.
+
+- **In the standard.** Every chapter installs both extensions before the roles
+  are applied. Cost: an Advanced Pack licence per instance (paid, per site), and
+  the extension install becomes a step in the runbook (it is a file upload to
+  Admin → Extensions, or the droplet). Benefit: the roles apply verbatim and the
+  reports/BPM features the CRM team may be using stay available.
+- **Out of the standard.** The roles are filtered to core scopes per target —
+  exactly what `scripts/rehearsal/apply_api_half.py` does today — and the
+  extension scopes become a Cleveland-only local addition. Cost: Cleveland and
+  the chapters differ, which ruling 4 says must not happen; the drift detector
+  has to know about it.
+
+**Recommendation: in the standard**, because ruling 4 leaves no room for a
+"Cleveland-only" anything, and because the alternative makes the roles capture
+a per-target computation forever. If the Advanced Pack is not actually used
+(nobody has checked whether any Report or BPM flowchart exists on either CRM),
+the cheaper answer is to **remove its scopes from the roles on crm-test and
+prod** and drop the pack — but that is a removal, so it is a deliberate job
+under the additive-only rule, not something the applier does.
+
+### Steps
+
+1. Read whether either CRM holds a Report, a ReportCategory or a BpmnFlowchart
+   record (admin, both instances).
+2. Rule.
+3. If *in*: add both extensions (name, version) to
+   [chapter-values.md](chapter-values.md) § G as standard, and to
+   [phase-6](phase-6-first-chapter.md) step 2 as a runbook step before the
+   roles. If *out*: file the scope removal as a Sunday-slot job.
+
+---
+
+## R8. The file half is three trees, and it needs a shell — fix the runbook
+
+### What this is
+
+The rehearsal carried the file half by copying crm-test's Entity Manager tree
+and rebuilding, and it worked cleanly across a major version (9.3.4 → 10.0.6).
+Three things it learned that the plan did not say:
+
+1. **There are three trees, not one.** `custom/Espo/Custom/` (entities, fields,
+   links, layouts, labels, formulas) **and `client/custom/src/`** — the
+   CBM navbar view that `clientDefs/App.json` names. Without the second the
+   CRM's own UI renders a blank page. (The extensions' `client/custom/modules/`
+   is theirs, not ours.) The third is the database-side API half.
+2. **It needs a shell on the droplet**, which the CRMBuilder deploy gives nobody
+   unless *Extra SSH keys* is ticked. The DO web console is the fallback.
+3. **The on-disk path differs by installer version** — `data/espocrm/custom`
+   on crm-test, `data/espocrm/persistent/custom` (+ `custom-client`) on the
+   10.x installer.
+
+### Steps
+
+1. Amend [phase-6](phase-6-first-chapter.md) step 2 and
+   [crm-update-runbook.md](crm-update-runbook.md) § 7 — **done 2026-08-31** in
+   the same commit as this entry.
+2. When the applier (B1) is designed, its file half is "two trees + rebuild",
+   and the extension package the phase proposes must carry both.
+3. Ask CRMBuilder (A1 session) whether the deploy run's SSH key can be shared
+   with the services org, or *Extra SSH keys* made the default.
+
+---
+
+## R9. Validate a roles capture against the target before writing it
+
+### What this is
+
+crm-test's `Standard User` role carries a **field-level entry for
+`Account.cCompanyPartnerProfile`**, a field deleted on 2026-08-14 when that link
+was rebuilt many-to-one. crm-test tolerates the stale entry; EspoCRM 10 rejects
+the entire role for it. CRMBuilder's Audit skips such entries silently
+("has no design field — skipped"). So a capture is not a definition until it has
+been checked against the target's `entityDefs`.
+
+### Steps
+
+1. `scripts/capture_roles.py` (R4) should flag field-level entries whose field
+   is not in the source's own `entityDefs` — a stale entry is a source defect.
+2. The applier's role directive filters `fieldData` against the target's
+   `entityDefs`, as `apply_api_half.py` now does, and reports each strip.
+3. Clean the stale entry out of `Standard User` on crm-test and prod (a
+   removal — Sunday slot).
+
+---
+
+## A2. Report the rehearsal's CRMBuilder findings to that repo's process
+
+**Owner: Doug.** Four findings belong to CRMBuilder and are not fixed from here:
+
+- The deploy installs the **current EspoCRM (10.0.6)**; Cleveland runs 9.3.4. A
+  chapter starts a major version ahead unless the deploy pins a version.
+- The deploy leaves the services org **without a shell** unless *Extra SSH
+  keys* is ticked (R8).
+- The Audit's **email-template listing returns HTTP 400 on 10.0.6** for every
+  parent type, so it reports 0 templates where 2 exist.
+- The Audit **silently skips** a field-level role entry that names a link or a
+  deleted field (R9).
+
 No decision needed. Listed in the order the plan's own build sequence argues for
 — the things that survive whatever A1 concludes come first.
 
@@ -362,14 +479,10 @@ This is why the build order is what it is: check and stamps first, applier last.
 
 ## B2. The throwaway-instance round trip
 
-**Blocked on B1.** Acceptance criterion 13: stand up a fresh EspoCRM, apply the
-standard to it, have the conformance check pass, and have a **real non-admin**
-user in each gated team successfully open each app. Admins bypass ACL entirely,
-so an admin test proves nothing.
-
-Worth flagging that this needs **no chapter** — it is the onboarding runbook's
-dress rehearsal, and running it inside Phase 1 is what turns
-[Phase 6](phase-6-first-chapter.md) into a rehearsal rather than a first attempt.
+**Done 2026-08-31 — moved to *Closed* with its evidence.** It turned out not to
+be blocked on B1 after all: the standard went on without the applier, and the
+measurement of *what carried each category* is the most useful thing the day
+produced. Its follow-ups are R7–R9 and A2 above.
 
 ---
 
@@ -418,10 +531,40 @@ and linked from here so the finding is not lost between two lists.
 | Production holds **`MentorAssignmentNotice` twice** | The app looks email templates up **by name**, so which of the two a staff member actually sends after an Assign is arbitrary — and the two may differ | `OPEN-ITEMS.md` item 26 |
 | Prod's `CMentorProfile.howDidYouHearAboutCBM` differs from the static list in **order only** | Cosmetic today (dropdown sequence on the volunteer form). Notable because one static file serves both deploys, so "which order is correct" has no answer until the code is the truth | `OPEN-ITEMS.md` item 26 |
 | Five `Event*` email templates missing on **both** instances | Blocks the events follow-up sends | `OPEN-ITEMS.md` item 19 (already an events blocker) |
+| Two visible **"CBM"** strings on the public client-intake form | Content an applicant reads on a non-Cleveland deployment; Phase 0 treated `CBM` as an identifier | `OPEN-ITEMS.md` item 28 |
+| **`Analytics Admin Team` has no role** on crm-test | A user in only that team holds no CRM grant at all | `OPEN-ITEMS.md` item 28 |
+| The `crm.config` admin on crm-test **does not survive the nightly reset** | The `espo-crm-changes` skill's crm-test path is dead until it is re-made | `OPEN-ITEMS.md` item 28 |
 
 ---
 
 # Closed
+
+- **B2 — the throwaway-instance round trip, acceptance criterion 13, is done**
+  (2026-08-31). Evidence in
+  [rehearsal-2026-08-31/](rehearsal-2026-08-31/): the applier-coverage record,
+  both preflight JSONs, the 7×12 non-admin gate matrix, the API-half result, the
+  final `/healthz`, the values file, and crm-test's roles/teams/templates
+  capture. What happened, in one paragraph: Doug deployed a throwaway EspoCRM
+  with the CRMBuilder desktop (DEP-001 / INST-001, `crm-lakeside`, one wizard,
+  under twenty minutes); crm-test's file tree was copied and rebuilt clean on
+  **EspoCRM 10.0.6** (source 9.3.4); the API half — 9 teams, **12 roles written
+  through the API for the first time**, attachments, templates, the API user, a
+  provisioning admin, the § E settings — was applied by script; the conformance
+  check on the new instance read **identically to crm-test** (20 conformant, one
+  absent: the five `Event*` templates); a fresh App Platform app rendered from a
+  values file by a 60-line generator went ACTIVE on first deploy with
+  `/healthz` honest on both stamps (`releaseTag null`, `crmConfig unstamped`);
+  seven **real non-admins**, one per gated team, each got 200 only on their own
+  apps and 403 on the other eleven; and a human pass — public form → client
+  admin assigns → mentor sees it → marketing sees it closed — matched every
+  expectation. **The stamp was deliberately not written**: 73 role entries were
+  unapplyable (extension scopes, one stale field), so the apply exited 4, and
+  C9 says the stamp follows a complete apply. Thirteen findings, F1–F13, are in
+  the coverage record; the ones that need a decision or a fix are R7–R9, A2 and
+  `OPEN-ITEMS.md` 28. **Teardown was not executed** — Doug ruled the same day
+  that the instance stays up for the Google-integration rehearsal (Phase 6
+  step 3), so the "nothing left billing" half of the criterion is owed when
+  that arc ends; the teardown steps are written and waiting.
 
 - **The Settings page holds every setting, and every setting is editable
   unless a change is genuinely impossible** (v0.215.0 + v0.216.0 + v0.216.1,
