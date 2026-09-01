@@ -1357,11 +1357,15 @@ locally, and a session that believed it pushed a docs commit and shipped a
 feature to production with it. `git log origin/main..main` is the answer; this
 sentence is a convenience.
 
-- **v0.218.0 / v0.219.0 (2026-08-31, not yet pushed) — richer text editors,
-  images you can insert, and a signature logo done safely.** v0.219.0 adds
-  `ORGANIZATION_LOGO_URL` + the signature editor's Insert-logo button (the
-  sanctioned image path for signatures). Standing rules live in the
-  Conventions CBMRichText entry;
+- **v0.218.0 / v0.219.0 (2026-08-31) — richer text editors, images you can
+  insert, and a signature logo done safely. Live on all three apps** (checked
+  2026-08-31: dev, crm-test and prod all report 0.219.0). crm-test's
+  `CEngagement.description` is converted to wysiwyg, so its Notes column is
+  rich; **prod's conversion waits for the Sunday slot** and its Notes column
+  stays a plain textarea until then, by design. The signature logo
+  (`ORGANIZATION_LOGO_URL` + Insert-logo button) is configured and verified
+  live by Doug, including delivery to an external mailbox. Standing rules
+  live in the Conventions CBMRichText entry;
   what is owed lives in `OPEN-ITEMS.md` #29. The shape of the gate is worth
   keeping here: the Notes column upgrade is **feature-detected on
   `CEngagement.description`'s live type** and the CRM still says `text` on
