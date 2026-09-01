@@ -422,7 +422,7 @@ API login being dead there — F8). The diff:
 [roles-standard/differences-2026-08-31.md](roles-standard/differences-2026-08-31.md)
 — same 12 roles and 9 teams on both; 43 cells and ONE team attachment differ
 for real (Data Integrity Team Role has no team on production —
-`OPEN-ITEMS.md` #29). Found and fixed on the way: `GET Role/{id}` returns
+`OPEN-ITEMS.md` #30). Found and fixed on the way: `GET Role/{id}` returns
 empty `teamsIds` even where attachments exist, so the script now reads
 `Role/{id}/teams`. **RULED the same day** (DECISIONS log): production is the standard; group A's
 delete grant is a sanctioned crm-test-only deviation (the nightly recycle

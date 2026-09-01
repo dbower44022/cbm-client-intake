@@ -24,7 +24,7 @@ maps, an explicit `stream: no`, `not-set` vs `no` — identical effective ACL);
 
 The third occurrence of the attachments-go-missing failure class
 ([[espo-403-diagnosis-merged-team-roles]]). Tracked as a Cleveland defect in
-`OPEN-ITEMS.md` #29. Read via `Role/{id}/teams` on both instances — the record
+`OPEN-ITEMS.md` #30. Read via `Role/{id}/teams` on both instances — the record
 GET returns empty lists even where attachments exist, which is why
 `capture_roles.py` was fixed the same day to read the relationship endpoint.
 

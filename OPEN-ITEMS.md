@@ -942,7 +942,7 @@ toggle.
   type + announcements). The `cIndustrySector` stamped default was cleared in
   the same pass — see item 7 for the stored values it left behind.
 
-29. **Production's `Data Integrity Team Role` is attached to NO team** (found
+30. **Production's `Data Integrity Team Role` is attached to NO team** (found
     2026-08-31 by the § R4 roles capture; crm-test attaches it to Data
     Integrity Team). Members of production's Data Integrity Team currently
     hold no CRM grants from this role — same class as the twice-before
