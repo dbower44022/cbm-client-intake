@@ -6,30 +6,6 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
-29. **Rich-text image support (v0.218.0/v0.219.0): what remains after the
-    2026-08-31 rollout.** Both releases are live on all three apps; crm-test's
-    `CEngagement.description` is converted to wysiwyg (verified via metadata),
-    so the Notes column is rich there; the signature logo
-    (`ORGANIZATION_LOGO_URL` + Insert logo) is configured and **verified
-    working live by Doug 2026-08-31**, including external delivery. Still owed:
-
-    - **Production's `CEngagement.description` conversion** at the Sunday
-      17:00 UTC slot — `cengagement-description-wysiwyg-crm-handoff.md` § 3.
-      Until then prod's Notes column stays a plain textarea by design
-      (feature-detected). Prod hosting details weren't verifiable from the
-      build session — the handoff says to confirm paths before running.
-    - **The remaining non-admin checks**, if the 2026-08-31 pass didn't cover
-      them (delete this bullet if it did): paste AND insert-by-button an image
-      in (a) a session's notes, (b) a partner record's Partner Notes, (c) the
-      Client Administration popup's Engagement notes, (d) a mentor's
-      Professional bio (+ its render on the directory's mentor page) — each
-      reopened to prove the image comes back. The decisive question an admin
-      test cannot answer: **do the staff/mentor roles hold `Attachment`
-      create?** (The mentor role needed exactly this grant for photos,
-      2026-07-14.) Repeat on production after its conversion — roles drift.
-    - The `crm.config` structural-admin login is still rejected on crm-test
-      (item 28).
-
 28. **Three Cleveland defects the Lakeside dress rehearsal found** (2026-08-31).
     All three surfaced while standing a throwaway chapter instance up from
     crm-test's configuration
@@ -215,6 +191,16 @@ empty company on a partner/funder now renders as "—" and is fixable in the app
    renders on the Overview feed, the session view, and in the EspoCRM UI.
 
 ## CRM prerequisites outstanding
+
+**Production's `CEngagement.description` → wysiwyg conversion** (added
+2026-08-31) — `cengagement-description-wysiwyg-crm-handoff.md` § 3, at a
+Sunday 17:00 UTC slot. It is the switch that turns Client Administration's
+Notes column rich on production (the app feature-detects the field's type per
+load, so nothing else is needed); crm-test's conversion is done and verified.
+The handoff's crm-test commands were verified against that droplet only —
+confirm production's paths before running, and repeat the non-admin
+Attachment-create check there afterwards, because roles drift between the two
+instances.
 
 **The prod CRM's Outbound Emails "From Name" may still say "Cleveland Business
 Mentoring"** (with `-ing`). Flagged as a Doug-side item in the v0.131.0
@@ -757,6 +743,18 @@ toggle.
     in View original.
 
 ## Resolved
+
+- **Rich-text images and the signature logo are live and verified** (was item
+  29, raised and closed 2026-08-31). v0.218.0 (formatting buttons, Insert
+  image, the shared inline-attachment pipeline across the session tools,
+  Client Administration and My Mentor Profile) and v0.219.0
+  (`ORGANIZATION_LOGO_URL` + the signature editor's Insert-logo button) are
+  live on all three apps; crm-test's `CEngagement.description` is converted to
+  wysiwyg, so its Notes column is rich; Doug ran the non-admin pass and the
+  logo deployment on crm-test the same day and reported everything working,
+  including the logo arriving in an external mailbox. The one piece that is
+  not done is production's field conversion, which waits for a Sunday slot and
+  is tracked under *CRM prerequisites outstanding*.
 
 - **The v0.213.1 `/ops` changes are verified** (was item 28, raised and closed
   2026-08-26). Doug exercised **both halves on crm-test** the day after they

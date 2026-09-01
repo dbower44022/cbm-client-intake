@@ -228,6 +228,18 @@ Email signature**; other staff use EspoCRM → Preferences → Email Signature.
 The signature seeds into every new personal-identity compose. Submission
 Admin's shared info@ identity never adds one.
 
+**The logo in a signature.** A signature travels to people outside the
+organisation, so any picture in it has to be one they can load without
+signing in. That is why the signature editor refuses a pasted or uploaded
+image (those are stored inside the CRM, behind the app's login, and would
+arrive as a broken picture) and instead offers an **Insert logo** button — the
+picture icon at the right end of its toolbar. One click places the official
+logo, which is hosted on the public website; an administrator points the app
+at it once with **Organisation logo URL** on the System Settings page
+(`/setup` → Presentation). Some mail programs hide remote images until the
+reader clicks "show images" — that is normal for every URL-based logo, not
+something specific to ours.
+
 ## 6. Submission email management (Submission Admin)
 
 Form submissions are a **subset of email management** with their own rules,

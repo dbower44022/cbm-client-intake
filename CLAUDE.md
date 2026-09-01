@@ -334,7 +334,15 @@ full-height grid with a status multi-select, and assigns each to a mentor.
   `cbmEmail` and the EspoCRM `MentorAssignmentNotice` template pre-applied.
 - Every row function is also on the **right-click context menu**. The Notes
   column edits `CEngagement.description` inline — staff-internal by design, and
-  excluded from the session tools' Details tab for that reason.
+  excluded from the session tools' Details tab for that reason. **Whether it
+  is a rich editor or a plain textarea is feature-detected per load** from the
+  field's live CRM type (`service.live_wysiwyg_fields`): wysiwyg ⇒ the shared
+  editor with images, text ⇒ the textarea, because only a wysiwyg field binds
+  its inline attachments (an unbound one is collected by EspoCRM's cleanup).
+  crm-test is converted; production's conversion is a tracked CRM
+  prerequisite (`cengagement-description-wysiwyg-crm-handoff.md`). The popup's
+  Engagement-notes and Mentoring-needs fields are wysiwyg on both CRMs and take
+  images now.
 - **The View-details popup is editable** (v0.210.0). It opens at 90% of the
   window, resizable, with the title bar and the Save/Cancel bar pinned around a
   scrolling body. `service.ENGAGEMENT_EDIT_FIELDS` is **one spec serving as both
@@ -1356,25 +1364,6 @@ still read "pushed through v0.202.2" while v0.203.x/v0.204.0 sat unpushed
 locally, and a session that believed it pushed a docs commit and shipped a
 feature to production with it. `git log origin/main..main` is the answer; this
 sentence is a convenience.
-
-- **v0.218.0 / v0.219.0 (2026-08-31) — richer text editors, images you can
-  insert, and a signature logo done safely. Live on all three apps** (checked
-  2026-08-31: dev, crm-test and prod all report 0.219.0). crm-test's
-  `CEngagement.description` is converted to wysiwyg, so its Notes column is
-  rich; **prod's conversion waits for the Sunday slot** and its Notes column
-  stays a plain textarea until then, by design. The signature logo
-  (`ORGANIZATION_LOGO_URL` + Insert-logo button) is configured and verified
-  live by Doug, including delivery to an external mailbox. Standing rules
-  live in the Conventions CBMRichText entry;
-  what is owed lives in `OPEN-ITEMS.md` #29. The shape of the gate is worth
-  keeping here: the Notes column upgrade is **feature-detected on
-  `CEngagement.description`'s live type** and the CRM still says `text` on
-  both instances, so nothing user-visible changes there until
-  `cengagement-description-wysiwyg-crm-handoff.md` runs (crm-test = one SSH
-  edit + rebuild; prod at the Sunday slot). The popup's two wysiwyg fields and
-  the session tools take images immediately on deploy. **Verified by tests
-  only (297 across the touched suites)** — the live pass, including the
-  Attachment-create role question an admin cannot answer, is #29.
 
 - **v0.214.0 → v0.216.1 (2026-08-28/29) — the release train's two version
   stamps, and the Settings page holds and edits every setting.** Four releases
