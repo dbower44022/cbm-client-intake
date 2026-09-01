@@ -125,6 +125,17 @@ step itself is not.
 
 ## R10. The release branch, and a `promote` script for one deployment
 
+**Done except the fleet half of step 4 — and used for real the same day.**
+`release` exists on origin and the weekly cut fast-forwards it; `scripts/promote.py`
+promoted `lakeside-intake` to **v0.217.0** on 2026-08-31 — the first deployment
+ever to report a non-null `releaseTag` (`/healthz`: version 0.217.0, releaseTag
+v0.217.0, all three components on the `release` branch). One defect found live
+and fixed on the spot: the guard compared the branch against the annotated
+**tag object** instead of its peeled commit and refused its own success case
+(`73b97e9`). `--status` is the per-app policy-vs-spec signal; the fleet-wide
+"policy says Latest Stable but the spec disagrees" detector needs the policy to
+live somewhere first — CRMBuilder's Deployment record (A3).
+
 ### What this is
 
 Decided 2026-08-31 ([DECISIONS.md](DECISIONS.md) log): chapter apps follow a
