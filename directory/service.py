@@ -398,6 +398,59 @@ async def _detail_panels(
     return panels
 
 
+# Field types the "Other fields" sweep can render as a scalar value. The
+# composite ``address`` parent is excluded (an unplaced one's sub-fields are
+# plain varchars and appear individually); links, attachments and images are
+# relationships, not values. ``foreign`` is a read-only mirror of a linked
+# record's field — a value worth showing, rendered as text.
+_UNPLACED_TYPES = (set(_CELL_TYPE) - {"address"}) | {"foreign"}
+# Plumbing names that ARE stored scalars but never worth a row. createdAt /
+# modifiedAt are deliberately NOT here — "all field values" includes them.
+_UNPLACED_SKIP = {"id", "deleted", "versionNumber", "streamUpdatedAt"}
+
+
+async def _unplaced_names(meta: _Meta, placed: set[str]) -> list[str]:
+    """Stored scalar field names the detail layout does not place.
+
+    What makes ``include_unplaced`` literal: anything scalar the CRM admin left
+    off the layout is swept into one final panel rather than silently missing.
+    A computed (``notStorable``) field is skipped — a plain select can't honestly
+    report it — EXCEPT ``foreign`` mirrors, which selects do return.
+    """
+    fields = await meta.fields()
+    out: list[str] = []
+    for name, fdef in fields.items():
+        if not isinstance(fdef, dict) or name in placed or name in _UNPLACED_SKIP:
+            continue
+        ftype = fdef.get("type", "varchar")
+        if ftype not in _UNPLACED_TYPES or fdef.get("disabled"):
+            continue
+        if fdef.get("notStorable") and ftype != "foreign":
+            continue
+        out.append(name)
+    return sorted(out)
+
+
+async def _unplaced_panel(
+    meta: _Meta, rec: dict[str, Any], names: list[str]
+) -> Optional[dict[str, Any]]:
+    """The read-only "Other fields" panel from :func:`_unplaced_names` (or None
+    when the layout already places everything). ``key: "unplaced"`` marks it so
+    a caller can position other panels relative to it."""
+    if not names:
+        return None
+    fields = [
+        {
+            "key": name, "label": await meta.label(name),
+            "type": await meta.cell_type(name), "value": _read_cell(rec, name),
+            "editable": False, "options": None, "phone": False,
+        }
+        for name in names
+    ]
+    fields.sort(key=lambda f: str(f["label"]).lower())
+    return {"key": "unplaced", "title": "Other fields", "fields": fields}
+
+
 def _type_panel_type(title: str, type_words: list[str]) -> Optional[str]:
     """If ``title`` is a "<Type> Profile" panel, the matching type word, else
     None. So "Client Profile" -> "Client"; "Identification"/"Social Media" -> None
@@ -456,11 +509,18 @@ async def _company_contacts(
 
 async def detail(
     client: DirClient, cfg: DirectoryConfig, record_id: str,
-    user_id: Optional[str] = None,
+    user_id: Optional[str] = None, *, include_unplaced: bool = False,
 ) -> dict[str, Any]:
     """The record detail payload for BOTH the preview pane and the pop-up: name,
     the CRM-arranged panels (view value + edit metadata per field), and whether
     this user may edit / owns this record.
+
+    ``include_unplaced=True`` appends one final read-only **"Other fields"**
+    panel holding every stored scalar the detail layout does NOT place — the
+    layout shows only what a CRM admin arranged, and Client Administration's
+    mentor popup promises *all* field values (``prds/mentor-detail-popup-plan
+    .md``). Default ``False``: the directory pop-up stays exactly the CRM's own
+    arrangement.
     """
     meta = _Meta(client, cfg.entity)
     editable_spec = _field_spec(await meta.fields(), cfg.entity)
@@ -470,6 +530,7 @@ async def detail(
     # type field, so profile panels can be filtered to the company's type).
     layout = await meta.layout("detail")
     names: set[str] = {"id", "name", *_OWNER_FIELDS}
+    placed: set[str] = set()   # bare layout-placed field names
     if cfg.type_field:
         names.add(cfg.type_field)
     for panel in layout:
@@ -479,7 +540,12 @@ async def detail(
                     n = cell["name"]
                     names.add(n)
                     names.add(n + "Name")
+                    placed.add(n)
     names.update(spec_by_name)
+    unplaced: list[str] = []
+    if include_unplaced:
+        unplaced = await _unplaced_names(meta, placed)
+        names.update(unplaced)
     rec = await client.get(cfg.entity, record_id, select=",".join(names))
 
     levels = await _acl_edit_levels(client, {cfg.entity})
@@ -493,6 +559,10 @@ async def detail(
             if o
         ]
         panels = _filter_type_panels(panels, type_words, rec.get(cfg.type_field))
+    if include_unplaced:
+        extra = await _unplaced_panel(meta, rec, unplaced)
+        if extra:
+            panels.append(extra)
     return {
         "id": record_id,
         "entity": cfg.entity,

@@ -1,7 +1,7 @@
-/* Shared type-aware value/panel renderers for the Workspace Directory pages —
-   used by the grid SPA (app.js: preview pane + detail pop-up) AND the View
-   Contact page (record.js: Overview tab). Extracted so both render the same
-   CRM-layout-driven panels identically. Load before app.js / record.js. */
+/* Shared type-aware value/panel renderers for CRM-layout-driven detail panels.
+   Served at /shared/detail-render.js; used by the Workspace Directory grid SPA
+   (preview pane + detail pop-up), the View Contact page (Overview tab), and
+   Client Administration's mentor detail popup. Load before the page's own JS. */
 (function () {
   "use strict";
 
@@ -48,14 +48,18 @@
     node.textContent = String(value);   // text / longtext / int / currency
   }
 
-  // The CRM-arranged detail panels (empty values hidden in view mode).
-  function panelsInto(container, panels) {
+  // The CRM-arranged detail panels. View mode hides empty values by default;
+  // pass {showEmpty:true} to render them as "\u2014" instead (the mentor detail
+  // popup promises every field a visible slot — an absent row reads as a bug).
+  function panelsInto(container, panels, opts) {
+    var showEmpty = !!(opts && opts.showEmpty);
     (panels || []).forEach(function (p) {
       var block = el("div", "dir__panel");
       if (p.title) block.appendChild(el("h3", null, p.title));
       var dl = el("dl", "dir__kv");
       p.fields.forEach(function (f) {
-        if (f.value == null || f.value === "" || (Array.isArray(f.value) && !f.value.length)) return;
+        var empty = f.value == null || f.value === "" || (Array.isArray(f.value) && !f.value.length);
+        if (empty && !showEmpty) return;
         dl.appendChild(el("dt", null, f.label));
         var dd = el("dd"); renderValue(dd, f.type, f.value); dl.appendChild(dd);
       });

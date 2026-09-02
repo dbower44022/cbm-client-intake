@@ -1757,3 +1757,129 @@ async def test_edit_form_serves_the_live_type_for_long_form_fields():
     types = {f["name"]: f["type"] for f in form["fields"]}
     assert types["description"] == "wysiwyg"
     assert types["engagementNotes"] == "wysiwyg"
+
+
+# --- mentor detail popup (Available Mentors -> click a name) -----------------
+
+class MentorDetailFakeClient:
+    """The EspoClient slice mentor_detail needs: the directory detail engine
+    (metadata/layout/i18n/app_user/get) plus the Contact-panel reads."""
+
+    def __init__(self, *, contact=None, contact_error=None):
+        self._contact = contact
+        self._contact_error = contact_error
+        self._mentor = {
+            "id": "m1", "name": "Pat Mentor", "mentorStatus": "Active",
+            "mentorTitle": "Retired CFO", "cbmEmail": "pat@cbmentors.org",
+            "contactRecordId": "c1" if (contact or contact_error) else None,
+            "assignedUsersIds": ["u1"],
+        }
+
+    async def metadata(self, key):
+        assert key == "entityDefs.CMentorProfile.fields"
+        return {
+            "name": {"type": "varchar"},
+            "mentorStatus": {"type": "enum", "options": ["Active"]},
+            "mentorTitle": {"type": "varchar"},
+            "cbmEmail": {"type": "varchar"},
+        }
+
+    async def layout(self, entity, name="list"):
+        assert (entity, name) == ("CMentorProfile", "detail")
+        return [{"tabLabel": "Status", "rows": [[{"name": "mentorStatus"}]]}]
+
+    async def i18n(self, scope):
+        return {scope: {"fields": {}}}
+
+    async def app_user(self):
+        # CRM says edit=all — the popup must stay read-only regardless.
+        return {"acl": {"table": {"CMentorProfile": {"edit": "all"}}}}
+
+    async def get(self, entity, record_id, select=None):
+        if entity == "CMentorProfile":
+            return dict(self._mentor)
+        if entity == "Contact":
+            if self._contact_error:
+                raise self._contact_error
+            return dict(self._contact)
+        raise AssertionError(entity)
+
+
+@pytest.mark.asyncio
+async def test_mentor_detail_is_read_only_with_other_fields_last():
+    d = await service.mentor_detail(MentorDetailFakeClient(), "m1", "u1")
+    assert d["editable"] is False and d["editHandoff"] is None
+    assert all(f["editable"] is False for p in d["panels"] for f in p["fields"])
+    assert d["panels"][-1]["title"] == "Other fields"
+    keys = {f["key"] for f in d["panels"][-1]["fields"]}
+    assert "mentorTitle" in keys and "mentorStatus" not in keys
+
+
+@pytest.mark.asyncio
+async def test_mentor_detail_contact_panel_before_other_fields():
+    client = MentorDetailFakeClient(contact={
+        "firstName": "Pat", "lastName": "Mentor",
+        "emailAddress": "pat@example.com", "phoneNumber": "+12165550100",
+        "addressStreet": "1 Main St", "addressCity": "Cleveland",
+        "addressState": "OH", "addressPostalCode": "44113",
+        "cLinkedInProfile": "linkedin.com/in/pat",
+    })
+    d = await service.mentor_detail(client, "m1", "u1")
+    titles = [p["title"] for p in d["panels"]]
+    assert titles.index("Contact") == titles.index("Other fields") - 1
+    contact = next(p for p in d["panels"] if p["title"] == "Contact")
+    fields = {f["key"]: f for f in contact["fields"]}
+    assert fields["contactName"]["value"] == "Pat Mentor"
+    assert fields["contactEmail"]["type"] == "email"
+    assert fields["contactAddress"]["value"] == "1 Main St\nCleveland, OH 44113"
+    assert fields["contactLinkedIn"]["type"] == "url"
+
+
+@pytest.mark.asyncio
+async def test_mentor_detail_unreadable_contact_degrades_to_no_panel():
+    client = MentorDetailFakeClient(
+        contact_error=EspoError("403 Forbidden: Contact read")
+    )
+    d = await service.mentor_detail(client, "m1", "u1")
+    assert all(p["title"] != "Contact" for p in d["panels"])
+    assert d["panels"][-1]["title"] == "Other fields"   # the rest still renders
+
+
+def test_mentor_detail_endpoint_gate_and_payload(monkeypatch):
+    """401 unauthenticated; 403 outside the team (naming it); 200 pass-through
+    running as the signed-in user when gated in."""
+    monkeypatch.setenv("SESSION_SECRET", "test-secret")
+    monkeypatch.setenv("ASSIGN_ALLOWED_TEAMS", "Client Administration Team")
+    get_settings.cache_clear()
+    from core.app import create_app
+    from forms import info_request
+    try:
+        monkeypatch.setattr("assignments.auth.current_user", lambda request: None)
+        with TestClient(create_app([info_request.SPEC])) as c:
+            assert c.get("/assignments/api/mentors/m1/detail").status_code == 401
+        outsider = {"userId": "u", "userName": "x", "name": "X", "isAdmin": False,
+                    "token": "t", "teams": ["Mentor Team"], "roles": []}
+        monkeypatch.setattr("assignments.auth.current_user", lambda request: outsider)
+        with TestClient(create_app([info_request.SPEC])) as c:
+            r = c.get("/assignments/api/mentors/m1/detail")
+        assert r.status_code == 403
+        assert "Client Administration Team" in r.json()["detail"]
+        staff = {"userId": "u1", "userName": "x", "name": "X", "isAdmin": True,
+                 "token": "t", "teams": [], "roles": []}
+        monkeypatch.setattr("assignments.auth.current_user", lambda request: staff)
+        monkeypatch.setattr(
+            "assignments.router.client_for", lambda settings, user: object()
+        )
+        seen = {}
+
+        async def fake_detail(client, mentor_id, user_id=None):
+            seen["args"] = (mentor_id, user_id)
+            return {"id": mentor_id, "panels": []}
+
+        monkeypatch.setattr(service, "mentor_detail", fake_detail)
+        with TestClient(create_app([info_request.SPEC])) as c:
+            r = c.get("/assignments/api/mentors/m1/detail")
+        assert r.status_code == 200 and r.json()["id"] == "m1"
+        assert seen["args"] == ("m1", "u1")
+    finally:
+        get_settings.cache_clear()  # don't leak the patched env into other tests

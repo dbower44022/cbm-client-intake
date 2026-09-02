@@ -114,6 +114,33 @@
       </div>
     </div>
 
+    <!-- Mentor detail popup — opened by clicking a name in the Available
+         Mentors list. Read-only (editing lives in Mentor Administration); the
+         CRM's own detail-layout panels + Contact + "Other fields", rendered by
+         the shared /shared/detail-render.js. Stacks ABOVE the mentor list.
+         Same pinned head/foot column as the engagement popup below. -->
+    <div class="modal modal--stacked" id="mentorDetailModal" hidden>
+      <div class="modal__backdrop" data-close></div>
+      <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="mentorDetailTitle">
+        <button type="button" class="modal__close" aria-label="Close" data-close>&times;</button>
+        <div class="modal__head">
+          <h2 class="modal__title" id="mentorDetailTitle">Loading…</h2>
+          <span class="eng-status" id="mentorDetailStatus" hidden></span>
+          <span class="mentor-detail-stats" id="mentorDetailStats"></span>
+        </div>
+        <div class="modal__body">
+          <p class="form-error" id="mentorDetailError" role="alert" hidden></p>
+          <div class="mentor-detail-panels" id="mentorDetailPanels"></div>
+        </div>
+        <div class="modal__foot">
+          <p class="modal__msg" id="mentorDetailMsg" role="status"></p>
+          <span class="modal__footactions">
+            <button type="button" class="cbm-button" id="mentorDetailAssignBtn">Assign this mentor</button>
+          </span>
+        </div>
+      </div>
+    </div>
+
     <!-- Engagement detail popup. A flex COLUMN: the title bar and the action
          footer stay pinned while only the body scrolls, so Edit/Save/Cancel are
          reachable at every window size and at every drag of the resize grip. -->
@@ -179,6 +206,7 @@
   <script src="/shared/vendor/jodit/jodit.min.js"></script>
   <script src="/shared/richtext.js"></script>
   <script src="/shared/quickmail.js"></script>
+  <script src="/shared/detail-render.js"></script>
   <script src="app.js"></script>
   <script src="/shared/footer.js"></script>
 </body>

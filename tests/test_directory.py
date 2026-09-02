@@ -623,3 +623,43 @@ async def test_mentor_photo_returns_bytes_or_none():
     # A mentor with no photo -> None (the endpoint turns this into a 404).
     fake.records[("CMentorProfile", "m3")] = {"id": "m3", "profilePhotoId": None}
     assert await service.mentor_photo(fake, "m3") is None
+
+
+# --- include_unplaced: the "Other fields" sweep ------------------------------
+
+@pytest.mark.asyncio
+async def test_detail_include_unplaced_appends_other_fields_panel():
+    d = await service.detail(
+        _mentor_client(), MENTORS, "m1", user_id="u1", include_unplaced=True
+    )
+    last = d["panels"][-1]
+    assert last["title"] == "Other fields" and last["key"] == "unplaced"
+    keys = {f["key"] for f in last["fields"]}
+    assert {"mentorTitle", "aboutMentor", "cbmEmail"} <= keys
+    assert "mentorStatus" not in keys          # placed on the detail layout
+    assert "availableCapacity" not in keys     # computed (notStorable)
+    assert all(f["editable"] is False for f in last["fields"])
+    # cbmEmail gets the product-wide compose-link treatment (varchar -> email).
+    cbm = next(f for f in last["fields"] if f["key"] == "cbmEmail")
+    assert cbm["type"] == "email" and cbm["value"] == "pat@cbmentors.org"
+
+
+@pytest.mark.asyncio
+async def test_detail_default_has_no_other_fields_panel():
+    # The directory pop-up stays exactly the CRM's own arrangement.
+    d = await service.detail(_mentor_client(), MENTORS, "m1", user_id="u1")
+    assert all(p["title"] != "Other fields" for p in d["panels"])
+
+
+def test_pages_load_the_shared_detail_renderer():
+    """detail-render.js moved to /shared/ (Client Administration's mentor popup
+    loads it too) — every page rendering CRM-layout panels must use that path."""
+    from pathlib import Path
+
+    base = Path(__file__).resolve().parent.parent
+    assert (base / "frontend/shared/detail-render.js").is_file()
+    for page in (
+        "directory/frontend/index.html", "directory/frontend/record.html",
+        "directory/frontend/mentor.html", "assignments/frontend/index.html",
+    ):
+        assert "/shared/detail-render.js" in (base / page).read_text(), page

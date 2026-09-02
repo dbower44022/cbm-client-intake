@@ -1486,3 +1486,105 @@ async def reassign_engagement(
         "mentorLastAssignedDate": mentor_stamp,
         "reassignmentErrors": reassignment_errors,
     }
+
+
+# --- Mentor detail popup (Available Mentors list -> click a name) ------------
+# Read-only by ruling (Doug 2026-09-01): editing stays in Mentor Administration
+# — one write surface per record. Plan: prds/mentor-detail-popup-plan.md.
+
+# The linked Contact's reachability facts, shown as a "Contact" panel — the
+# CMentorProfile detail layout doesn't carry them. Same fields Mentor
+# Administration merges from the Contact.
+_CONTACT_PANEL_SELECT = (
+    "firstName,lastName,emailAddress,phoneNumber,addressStreet,addressCity,"
+    "addressState,addressPostalCode,addressCountry,cLinkedInProfile"
+)
+
+
+def _contact_panel_fields(contact: dict[str, Any]) -> list[dict[str, Any]]:
+    """The Contact panel's rows, in the shared detail-panel field shape."""
+
+    def _f(key: str, label: str, type_: str, value: Any) -> dict[str, Any]:
+        return {"key": key, "label": label, "type": type_, "value": value,
+                "editable": False, "options": None, "phone": False}
+
+    name = " ".join(
+        str(contact.get(k) or "").strip() for k in ("firstName", "lastName")
+    ).strip()
+    region = " ".join(
+        str(contact[k]) for k in ("addressState", "addressPostalCode")
+        if contact.get(k)
+    )
+    city_line = ", ".join(
+        str(part) for part in (contact.get("addressCity"), region) if part
+    )
+    address = "\n".join(
+        str(part) for part in
+        (contact.get("addressStreet"), city_line, contact.get("addressCountry"))
+        if part
+    )
+    return [
+        _f("contactName", "Name", "text", name),
+        _f("contactEmail", "Email", "email", contact.get("emailAddress")),
+        _f("contactPhone", "Phone", "phone", contact.get("phoneNumber")),
+        _f("contactAddress", "Address", "address", address),
+        _f("contactLinkedIn", "LinkedIn", "url", contact.get("cLinkedInProfile")),
+    ]
+
+
+async def mentor_detail(
+    client: Any, mentor_id: str, user_id: Optional[str] = None
+) -> dict[str, Any]:
+    """ALL of one mentor's field values for the read-only detail popup.
+
+    Reuses the Workspace Directory detail engine — the CRM's own detail-layout
+    panels, live labels and types — with ``include_unplaced=True`` so scalars
+    the layout omits land in a final "Other fields" panel, plus a best-effort
+    "Contact" panel from the linked Contact. Runs as the signed-in user, so
+    their field ACL decides what comes back (an ACL-stripped field is simply
+    absent — correct, not a defect).
+
+    ``client`` is the full ``EspoClient``: the directory engine needs
+    ``layout``/``i18n``/``metadata``/``app_user`` beyond ``AssignClient``'s
+    slice. Every ``editable`` flag is forced off — the MENTORS directory config
+    is already read-only, but this popup must stay view-only even if that
+    config ever changes.
+    """
+    # Imported here, not at module top: directory -> sessions -> assignments is
+    # the existing import chain, so a top-level import back would be circular.
+    from directory import service as directory_service
+    from directory.config import MENTORS
+
+    payload = await directory_service.detail(
+        client, MENTORS, mentor_id, user_id, include_unplaced=True
+    )
+    payload["editable"] = False
+    payload["editHandoff"] = None
+    for panel in payload.get("panels") or []:
+        for field in panel.get("fields") or []:
+            field["editable"] = False
+            if field.get("subFields"):
+                field["subFields"] = []
+
+    contact_panel = None
+    try:
+        rec = await client.get(MENTOR_PROFILE, mentor_id, select="contactRecordId")
+        contact_id = rec.get("contactRecordId")
+        if contact_id:
+            contact = await client.get(
+                CONTACT, contact_id, select=_CONTACT_PANEL_SELECT
+            )
+            contact_panel = {
+                "key": "contact", "title": "Contact",
+                "fields": _contact_panel_fields(contact),
+            }
+    except EspoError as exc:  # readable mentor, unreadable Contact — no panel
+        log.debug("mentor %s contact panel skipped: %s", mentor_id, exc)
+    if contact_panel:
+        panels = payload["panels"]
+        pos = next(
+            (i for i, pn in enumerate(panels) if pn.get("key") == "unplaced"),
+            len(panels),
+        )
+        panels.insert(pos, contact_panel)
+    return payload

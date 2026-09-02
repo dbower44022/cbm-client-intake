@@ -592,3 +592,52 @@ body { display: flex; flex-direction: column; }
 .mentor-empty { color: var(--cbm-text); padding: 1.25rem 0.7rem; }
 .mentor-table .chips { gap: 0.25rem; }
 .mentor-table .chip { font-size: 12px; padding: 0.1rem 0.5rem; }
+/* --- Mentor detail popup (Available Mentors -> click a name) --------------- */
+/* Stacks ABOVE the mentor list modal (z 100) and BELOW the picker/confirm
+   cards (z 1000), so the assign confirmation still tops everything. */
+.modal--stacked { z-index: 200; }
+.mentor-name-link {
+  background: none; border: 0; padding: 0; font: inherit; font-weight: 600;
+  color: var(--cbm-blue); cursor: pointer; text-align: left;
+}
+.mentor-name-link:hover, .mentor-name-link:focus-visible { text-decoration: underline; }
+/* Same pinned head/foot column as the engagement popup. */
+#mentorDetailModal .modal__dialog {
+  display: flex; flex-direction: column; gap: 0; overflow: hidden; padding: 0;
+}
+#mentorDetailModal .modal__head { flex: 0 0 auto; padding: 1.4rem 3rem 0.9rem 1.8rem; }
+.mentor-detail-stats { display: flex; gap: 1.1rem; margin-left: auto; flex-wrap: wrap; }
+.mentor-detail-stat { display: flex; flex-direction: column; align-items: flex-start; }
+.mentor-detail-stat small {
+  color: var(--cbm-slate-700); font-size: 0.72rem;
+  text-transform: uppercase; letter-spacing: 0.03em;
+}
+.mentor-detail-stat strong { color: var(--cbm-navy); font-size: var(--cbm-text-sm); }
+/* Panels pack into columns as the popup widens (density by packing, no cap). */
+.mentor-detail-panels { column-width: 26rem; column-gap: 1.4rem; margin-top: 0.4rem; }
+.mentor-detail-panels .dir__panel { break-inside: avoid; margin: 0 0 1.1rem; }
+/* The shared renderer's classes (/shared/detail-render.js) — this page doesn't
+   load the directory stylesheet, so the rules it needs live here. */
+.mentor-detail-panels .dir__panel > h3 {
+  color: var(--cbm-navy); font-size: 0.85rem; text-transform: uppercase;
+  letter-spacing: 0.03em; margin: 0 0 0.4rem;
+  border-bottom: 1px solid var(--cbm-border); padding-bottom: 0.2rem;
+}
+.mentor-detail-panels .dir__kv {
+  display: grid; grid-template-columns: minmax(6rem, 40%) 1fr;
+  gap: 0.25rem 0.75rem; margin: 0.2rem 0;
+}
+.mentor-detail-panels .dir__kv dt { color: var(--cbm-slate-700); font-size: 0.85rem; }
+.mentor-detail-panels .dir__kv dd { margin: 0; word-break: break-word; }
+.mentor-detail-panels .dir__cell-chips { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.mentor-detail-panels .dir__pill {
+  background: var(--cbm-surface); border: 1px solid var(--cbm-border);
+  border-radius: 999px; padding: 0.05rem 0.5rem; font-size: 0.8rem;
+  color: var(--cbm-slate-700);
+}
+.mentor-detail-panels .dir__val-html { font-size: 0.9rem; }
+.mentor-detail-panels .dir__val-html img { max-width: 100%; }
+.mentor-browse-link {
+  background: none; border: 0; padding: 0; margin: 0.5rem 0 0; font: inherit;
+  color: var(--cbm-blue); cursor: pointer; text-decoration: underline; display: block;
+}

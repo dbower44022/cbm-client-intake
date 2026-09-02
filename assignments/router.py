@@ -161,6 +161,21 @@ async def mentors(request: Request, all_: bool = Query(default=False, alias="all
         raise _crm_failure(request, exc, "Could not load mentors")
 
 
+@router.get("/mentors/{mentor_id}/detail")
+async def mentor_detail(mentor_id: str, request: Request) -> dict:
+    """The read-only mentor detail popup behind a name click in the Available
+    Mentors list: the CRM's own detail-layout panels + a Contact panel + an
+    "Other fields" sweep, read as the signed-in user so their field ACL
+    applies. View-only by ruling — editing stays in Mentor Administration
+    (prds/mentor-detail-popup-plan.md)."""
+    user = _require_user(request)
+    client = client_for(get_settings(), user)
+    try:
+        return await service.mentor_detail(client, mentor_id, user.get("userId"))
+    except EspoError as exc:
+        raise _crm_failure(request, exc, "Could not load the mentor's details")
+
+
 @router.get("/engagements/{engagement_id}")
 async def engagement_detail(engagement_id: str, request: Request) -> dict:
     user = _require_user(request)

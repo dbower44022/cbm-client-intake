@@ -4,6 +4,43 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.220.0] — 2026-09-01
+
+**feat(assignments): a mentor's name in the Available Mentors list opens a
+read-only detail popup of ALL their field values — with Assign in its footer.**
+Plan and rulings: `prds/mentor-detail-popup-plan.md` (Doug, 2026-09-01: include
+the button "to save time for the user if the mentor is the right fit").
+
+- **The popup** stacks above the roster modal in the engagement-popup shape
+  (90% of the window, resizable, pinned title/footer): a header strip with the
+  row's own app-computed counts (Active/Max/Available/30d/Last assigned), then
+  the CRM's own `CMentorProfile` detail-layout panels with live labels and
+  type-aware rendering, a best-effort **Contact** panel from the linked
+  Contact, and a final **"Other fields"** panel sweeping every stored scalar
+  the layout omits — so "all fields" is literal, not "whatever the CRM admin
+  placed". Empty values render "—" rather than vanishing.
+- **`GET /assignments/api/mentors/{id}/detail`** behind the Client
+  Administration gate, reading as the signed-in user so their field ACL
+  applies (an ACL-stripped field is simply absent). **View-only by ruling** —
+  every `editable` flag is forced off; editing stays in Mentor Administration.
+- **Assign from the popup**: the Assign/Reassign picker card gained **"Browse
+  the full mentor list…"**, which opens the roster scoped to that engagement;
+  the popup's footer button then runs the existing confirm →
+  `performAssign`/`performReassign` paths (stale-write guard, quick-compose,
+  grid refresh all unchanged). Opened unscoped from the toolbar, the button
+  stays visible and explains itself on click (buttons never disabled).
+- **Reuse, not a fourth mentor view**: `directory/frontend/detail-render.js`
+  moved to **`frontend/shared/detail-render.js`** (same `CBMDirRender` global;
+  the three directory pages now load the shared path, and `panelsInto` grew an
+  opt-in `showEmpty`), and `directory.service.detail` grew opt-in
+  `include_unplaced` — the directory pop-up itself is byte-for-byte unchanged
+  by default.
+- **No feature flag** (additive read-only UI, the v0.209/v0.210 precedent) —
+  rollback is a revert. Tests: +8 (read-only enforcement, panel order, Contact
+  degradation, endpoint gate, unplaced sweep, shared-renderer paths). **Owed:**
+  the live pass as a real Client Administration non-admin — no test issues a
+  real list/layout request (`OPEN-ITEMS.md` #31).
+
 ## [0.219.0] — 2026-08-31
 
 **feat(signature): an organisation logo for email signatures — the safe way.**

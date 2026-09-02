@@ -147,7 +147,10 @@
   });
   document.addEventListener("keydown", function (ev) {
     if (ev.key !== "Escape") return;
-    var openModal = document.querySelector(".modal:not([hidden])");
+    // The TOPMOST open modal — the mentor detail popup stacks above the
+    // Available Mentors list, and later-in-DOM is higher in the stack.
+    var openModals = document.querySelectorAll(".modal:not([hidden])");
+    var openModal = openModals.length ? openModals[openModals.length - 1] : null;
     if (openModal) {
       if (openModal.id === "engModal") closeModal(); else hide(openModal);
       return;
@@ -1319,7 +1322,16 @@
     }
     rows.forEach(function (m) {
       var tr = document.createElement("tr");
-      tr.appendChild(cell(m.name || "(unnamed)", "mentor-name-cell"));
+      // The name opens the read-only mentor detail popup (every field value).
+      var nameTd = document.createElement("td");
+      nameTd.className = "mentor-name-cell";
+      var nameBtn = document.createElement("button");
+      nameBtn.type = "button";
+      nameBtn.className = "mentor-name-link";
+      nameBtn.textContent = m.name || "(unnamed)";
+      nameBtn.addEventListener("click", function () { openMentorDetail(m); });
+      nameTd.appendChild(nameBtn);
+      tr.appendChild(nameTd);
       tr.appendChild(cell(m.status || "—"));
       var types = mentorTypes(m);
       tr.appendChild(cell(types.length ? types.join(", ") : "—"));
@@ -1359,7 +1371,18 @@
     });
   }
 
-  async function openMentorReview() {
+  // When the review modal is opened FROM an engagement's Assign/Reassign flow
+  // it carries that engagement, so the detail popup's footer button can
+  // complete the assignment (Doug's ruling 2026-09-01). The toolbar button
+  // passes a click Event, which has no .eng — i.e. an unscoped browse.
+  var mentorReviewCtx = null;   // { tr, eng, mode } | null
+
+  async function openMentorReview(ctx) {
+    mentorReviewCtx = (ctx && ctx.eng) ? ctx : null;
+    $("mentorModalTitle").textContent = mentorReviewCtx
+      ? (mentorReviewCtx.mode === "reassign" ? "Reassign" : "Assign") + " \u201c" +
+        (mentorReviewCtx.eng.name || "engagement") + "\u201d \u2014 Available Mentors"
+      : "Available Mentors";
     clearNotice();
     try {
       if (!reviewMentors.length) {
@@ -1388,6 +1411,103 @@
       notice(e.message, "error");
     }
   }
+
+  // --- Mentor detail popup ---------------------------------------------------
+  // Click a name in the Available Mentors list -> a read-only popup of ALL the
+  // mentor's field values (the CRM's own detail layout + Contact + Other
+  // fields), served by /mentors/{id}/detail as the signed-in user. The footer
+  // button completes the assignment when the list was opened from an
+  // engagement's Assign/Reassign flow (Doug's ruling 2026-09-01); view-only
+  // otherwise — editing stays in Mentor Administration.
+  var mentorDetailCurrent = null;   // the roster row the popup is showing
+
+  function mentorDetailMsg(text, kind) {
+    var m = $("mentorDetailMsg");
+    m.textContent = text || "";
+    m.className = "modal__msg" + (kind ? " is-" + kind : "");
+  }
+
+  function renderMentorDetailStats(m) {
+    var bits = [
+      ["Active", numText(m.activeClients)],
+      ["Max", numText(m.maxCapacity)],
+      ["Available", m.availableCapacity === -1 ? "Unlimited" : numText(m.availableCapacity)],
+      ["Assigned 30d", numText(m.assignedLast30)],
+      ["Last assigned", formatDate(m.lastClientAssigned) || "\u2014"],
+    ];
+    var wrap = $("mentorDetailStats");
+    wrap.innerHTML = "";
+    bits.forEach(function (b) {
+      var s = document.createElement("span");
+      s.className = "mentor-detail-stat";
+      var lab = document.createElement("small"); lab.textContent = b[0];
+      var val = document.createElement("strong"); val.textContent = b[1];
+      s.appendChild(lab); s.appendChild(val);
+      wrap.appendChild(s);
+    });
+  }
+
+  async function openMentorDetail(m) {
+    mentorDetailCurrent = m;
+    $("mentorDetailTitle").textContent = m.name || "(unnamed)";
+    var chip = $("mentorDetailStatus");
+    chip.textContent = m.status || "";
+    chip.hidden = !m.status;
+    renderMentorDetailStats(m);
+    mentorDetailMsg("");
+    hide($("mentorDetailError"));
+    $("mentorDetailPanels").innerHTML = "";
+    $("mentorDetailAssignBtn").textContent =
+      mentorReviewCtx && mentorReviewCtx.mode === "reassign"
+        ? "Reassign to this mentor" : "Assign this mentor";
+    show($("mentorDetailModal"));
+    try {
+      var d = await api("/mentors/" + encodeURIComponent(m.id) + "/detail");
+      if (mentorDetailCurrent !== m) return;   // another row opened meanwhile
+      if (!window.CBMDirRender) throw new Error("The detail renderer did not load \u2014 hard-refresh the page.");
+      CBMDirRender.panelsInto($("mentorDetailPanels"), d.panels, { showEmpty: true });
+    } catch (e) {
+      if (e.status === 401) { showLogin(); return; }
+      var err = $("mentorDetailError");
+      err.textContent = e.message;
+      show(err);
+    }
+  }
+
+  // Confirm wrapper for a reassignment started from the detail popup — the
+  // same wording the picker card carries, then the existing reassign path.
+  function doReassign(tr, eng, mentorProfileId, mentorLabel) {
+    showConfirmModal({
+      title: "Reassign \u201c" + (eng.name || "this engagement") + "\u201d to " + mentorLabel + "?",
+      body: "Current mentor: " + (eng.mentorName || "unknown") + ". The engagement, " +
+        "its contacts, client records, and sessions all move to the new mentor, " +
+        "and the change is recorded in the engagement's history.",
+      confirmLabel: "Reassign",
+    }, function () { performReassign(tr, eng, mentorProfileId); });
+  }
+
+  // Never disabled, never hidden: without an engagement in context the click
+  // explains how to get one (Doug's buttons ruling).
+  $("mentorDetailAssignBtn").addEventListener("click", function () {
+    var m = mentorDetailCurrent;
+    if (!m) return;
+    var ctx = mentorReviewCtx;
+    if (!ctx) {
+      mentorDetailMsg(
+        "To assign this mentor, start from the engagement: use its Assign " +
+        "dropdown (or right-click the row \u2192 Assign/Reassign mentor) and choose " +
+        "\u201cBrowse the full mentor list\u2026\u201d.", "error");
+      return;
+    }
+    if (ctx.mode === "reassign" && m.id === ctx.eng.mentorId) {
+      mentorDetailMsg((m.name || "This mentor") + " is already this engagement's mentor.", "error");
+      return;
+    }
+    hide($("mentorDetailModal"));
+    hide($("mentorModal"));
+    if (ctx.mode === "reassign") doReassign(ctx.tr, ctx.eng, m.id, m.name);
+    else doAssign(ctx.tr, ctx.eng, m.id, m.name || "this mentor");
+  });
 
   $("reviewMentorsBtn").addEventListener("click", openMentorReview);
   $("mentorSearch").addEventListener("input", function () {
@@ -1574,6 +1694,18 @@
       select.appendChild(new Option(label, m.id));
     });
     card.appendChild(select);
+
+    // The full roster browser, scoped to this engagement — from there a
+    // mentor's name opens their detail popup, whose footer button completes
+    // this same assignment.
+    var browse = document.createElement("button");
+    browse.type = "button"; browse.className = "mentor-browse-link";
+    browse.textContent = "Browse the full mentor list\u2026";
+    browse.addEventListener("click", function () {
+      close();
+      openMentorReview({ tr: tr, eng: eng, mode: mode });
+    });
+    card.appendChild(browse);
 
     var err = document.createElement("p");
     err.className = "form-error"; err.hidden = true;

@@ -305,6 +305,15 @@ full-height grid with a status multi-select, and assigns each to a mentor.
 - **Mentor dropdown** = `CMentorProfile` where `acceptingNewClients=true` AND
   `mentorStatus="Active"` AND `assignedUser` set. An empty dropdown means no
   mentor passes all three.
+- **A mentor's name in the Available Mentors list opens a read-only detail
+  popup** (v0.220.0): the CRM's own `CMentorProfile` detail layout rendered by
+  the shared `/shared/detail-render.js`, plus a Contact panel and an "Other
+  fields" sweep (`directory.service.detail(..., include_unplaced=True)` via
+  `service.mentor_detail`), read as the signed-in user. Its footer
+  Assign/Reassign button completes the assignment when the roster was opened
+  from an engagement's Assign/Reassign card ("Browse the full mentor list…");
+  unscoped it explains itself on click. View-only by ruling — editing stays in
+  Mentor Administration.
 - **Assign** (`service.assign_engagement`) sets `mentorProfile` +
   `engagementStatus="Pending Acceptance"`, stamps `engagementAssignedDate`, and
   re-homes assigned users across every related Contact, the CClientProfile and
@@ -1364,6 +1373,14 @@ still read "pushed through v0.202.2" while v0.203.x/v0.204.0 sat unpushed
 locally, and a session that believed it pushed a docs commit and shipped a
 feature to production with it. `git log origin/main..main` is the answer; this
 sentence is a convenience.
+
+- **v0.220.0 — the mentor detail popup in Client Administration.** A mentor's
+  name in Available Mentors opens a read-only all-fields popup with
+  Assign/Reassign in its footer (standing rules in that app's section; plan:
+  `prds/mentor-detail-popup-plan.md`). **Verified by tests only** — the layout
+  read and the full-field select have never run under a real Client
+  Administration non-admin, and no test issues a real list or layout request.
+  Live pass: `OPEN-ITEMS.md` #31.
 
 - **v0.214.0 → v0.216.1 (2026-08-28/29) — the release train's two version
   stamps, and the Settings page holds and edits every setting.** Four releases
