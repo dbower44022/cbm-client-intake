@@ -1360,15 +1360,12 @@ stamp — pending on both CRMs), `cintake-submission-*.md`, `cinformation-reques
 deployed and verified; `CHANGELOG.md` is the permanent record, `OPEN-ITEMS.md`
 holds anything still owed.*
 
-**Pushed through v0.220.0 on 2026-09-01, and confirmed live on all three
-apps** — dev, crm-test and prod all report `0.220.0`, and the deploy was checked
-at the artifact level (prod serves the new `assignments/app.js` and
-`/shared/detail-render.js` answers 200 on prod and crm-test — a version stamp
-alone proves nothing, [[footer-version-stale-js]]). That push also carried two
-docs commits that had sat unpushed since the 2026-08-31 close-out.
-`deploy_on_push` is still on everywhere by design. The last live prod pass that
-exercised a *feature* verified `0.206.0`. What is *verified* is narrower than
-what is deployed — see each block.
+**Pushed through v0.221.0 on 2026-09-01, confirmed live on all three apps,
+and feature-verified live by Doug the same day** — dev, crm-test and prod all
+report `0.221.0`, artifact-checked, and Doug exercised the two new features in
+the live UI (the mentor detail popup and the employment-status fields) and
+reported them working. `deploy_on_push` is still on everywhere by design. What
+is *verified* is narrower than what is deployed — see each block.
 
 **Confirm that against the remote, do not trust this line.** On 2026-08-20 it
 still read "pushed through v0.202.2" while v0.203.x/v0.204.0 sat unpushed
@@ -1376,23 +1373,17 @@ locally, and a session that believed it pushed a docs commit and shipped a
 feature to production with it. `git log origin/main..main` is the answer; this
 sentence is a convenience.
 
-- **v0.221.0 — employment status on both mentor detail screens.** The
-  volunteer form's `Contact.cEmploymentStatus` now shows in the v0.220.0
-  popup's Contact panel and edits on Mentor Administration's Status tab next
-  to Mentor start date (Contact-routed save, live Contact-metadata options,
-  drift-sanitized — `field_options`/`_sanitize_enum_changes` now cover
-  Contact-entity enums). Verified by tests; riding the same live-pass caveats
-  as v0.220.0 below.
+- **v0.220.0 / v0.221.0 (2026-09-01) — the mentor detail popup, and
+  employment status on both mentor screens.** Both deployed and **verified
+  live by Doug the same day** (OPEN-ITEMS #31 closed); standing rules live in
+  the Client Administration and Mentor Administration sections above. Two
+  things worth keeping here: the popup's ACL half is only as verified as the
+  account Doug's pass used — a staff "fields missing in the popup" report
+  starts at field-level ACL, not the renderer — and
+  `mentoradmin.field_options`/`_sanitize_enum_changes` now cover
+  **Contact-entity enums**, so a new Contact-backed enum field needs no new
+  plumbing.
 
-- **v0.220.0 — the mentor detail popup in Client Administration.** A mentor's
-  name in Available Mentors opens a read-only all-fields popup with
-  Assign/Reassign in its footer (standing rules in that app's section; plan:
-  `prds/mentor-detail-popup-plan.md`). **Deployed and confirmed serving the new
-  artifacts on all three apps 2026-09-01 — but still verified by tests only**:
-  the layout read and the full-field select have never run under a real Client
-  Administration non-admin, and no test issues a real list or layout request.
-  What's owed is a human click-through, not a fetch — the live pass is
-  `OPEN-ITEMS.md` #31.
 
 - **v0.214.0 → v0.216.1 (2026-08-28/29) — the release train's two version
   stamps, and the Settings page holds and edits every setting.** Four releases
