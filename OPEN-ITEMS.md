@@ -742,28 +742,17 @@ toggle.
     Documents tab holds nothing new and the message still shows the attachment
     in View original.
 
-31. **The mentor detail popup (v0.220.0) has never run against a live CRM.**
-    A mentor's name in Client Administration's Available Mentors list opens a
-    read-only all-fields popup with Assign/Reassign in the footer — built from
-    the directory detail engine and verified by tests/fakes only; no test
-    issues a real list or layout request (the lesson of
-    [[espo-list-maxsize-limit]]). On crm-test, **as a real Client
-    Administration Team non-admin** (an admin bypasses ACL and proves nothing):
-    - Review Mentors → click a name → the panels populate and match the CRM's
-      own detail view of that mentor; note any fields the role's field ACL
-      hides and confirm that is acceptable to Doug.
-    - From an engagement row: Assign (or right-click → Reassign) → "Browse the
-      full mentor list…" → click a name → the footer button runs the confirm →
-      the assignment completes (quick-compose opens, the grid refreshes).
-    - A toolbar-opened (unscoped) popup: the Assign button explains itself on
-      click instead of acting.
-    - The three directory pages after the renderer move to `/shared/`
-      (`/directory/companies` pop-up, a contact record's Overview, a mentor
-      profile page) still render their panels.
-    Then the same click-through once on prod after promotion. No flag —
-    rollback is a revert.
 
 ## Resolved
+
+- **The mentor detail popup (v0.220.0) is verified live** (was item 31, raised
+  and closed 2026-09-01 — the day it shipped). Doug tested the new UI on the
+  live system and reported it working well: the popup renders its panels and
+  the assign-from-popup flow behaves. Closed on his report. One caveat kept for
+  the record: the item's ACL half (which fields a *non-admin* Client
+  Administration user's field ACL hides in the popup) is only as verified as
+  the account the pass used — if a staff user later reports "fields missing"
+  there, start at field-level ACL, not the renderer.
 
 - **Rich-text images and the signature logo are live and verified** (was item
   29, raised and closed 2026-08-31). v0.218.0 (formatting buttons, Insert
