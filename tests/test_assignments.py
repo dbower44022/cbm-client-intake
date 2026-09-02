@@ -1820,6 +1820,7 @@ async def test_mentor_detail_contact_panel_before_other_fields():
     client = MentorDetailFakeClient(contact={
         "firstName": "Pat", "lastName": "Mentor",
         "emailAddress": "pat@example.com", "phoneNumber": "+12165550100",
+        "cEmploymentStatus": "Yes, Full-time",
         "addressStreet": "1 Main St", "addressCity": "Cleveland",
         "addressState": "OH", "addressPostalCode": "44113",
         "cLinkedInProfile": "linkedin.com/in/pat",
@@ -1833,6 +1834,7 @@ async def test_mentor_detail_contact_panel_before_other_fields():
     assert fields["contactEmail"]["type"] == "email"
     assert fields["contactAddress"]["value"] == "1 Main St\nCleveland, OH 44113"
     assert fields["contactLinkedIn"]["type"] == "url"
+    assert fields["contactEmployment"]["value"] == "Yes, Full-time"
 
 
 @pytest.mark.asyncio

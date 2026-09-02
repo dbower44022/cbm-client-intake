@@ -1376,6 +1376,14 @@ locally, and a session that believed it pushed a docs commit and shipped a
 feature to production with it. `git log origin/main..main` is the answer; this
 sentence is a convenience.
 
+- **v0.221.0 — employment status on both mentor detail screens.** The
+  volunteer form's `Contact.cEmploymentStatus` now shows in the v0.220.0
+  popup's Contact panel and edits on Mentor Administration's Status tab next
+  to Mentor start date (Contact-routed save, live Contact-metadata options,
+  drift-sanitized — `field_options`/`_sanitize_enum_changes` now cover
+  Contact-entity enums). Verified by tests; riding the same live-pass caveats
+  as v0.220.0 below.
+
 - **v0.220.0 — the mentor detail popup in Client Administration.** A mentor's
   name in Available Mentors opens a read-only all-fields popup with
   Assign/Reassign in its footer (standing rules in that app's section; plan:

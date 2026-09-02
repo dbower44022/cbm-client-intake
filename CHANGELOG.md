@@ -4,6 +4,30 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.221.0] — 2026-09-01
+
+**feat(mentors): employment status surfaced on both mentor detail screens**
+(Doug's request, 2026-09-01, after the v0.220.0 popup went live: the volunteer
+form's "are you currently employed" answer — `Contact.cEmploymentStatus` —
+had no staff-facing surface).
+
+- **Client Administration's mentor detail popup**: the Contact panel gains an
+  "Employment status" row (between Phone and Address), read best-effort from
+  the linked Contact like the rest of the panel.
+- **Mentor Administration, Status tab**: `cEmploymentStatus` joins
+  `EDITABLE_FIELDS` as an editable enum sharing a row with Mentor start date
+  (`row: "startrow"`). It routes to the linked **Contact** on save (the
+  existing `CONTACT_NAMES` path — a mentor with no Contact still fails fast
+  with the readable 400), its options come **live from Contact metadata**
+  (`field_options` now reads both entities; a static list is exactly what
+  drifted and 400'd a prod save once before), and it is drift-sanitized like
+  the profile enums — `_sanitize_enum_changes` now covers the Contact payload
+  too, so one stale value warns instead of failing the save.
+- No frontend changes needed in Mentor Administration — the form renders from
+  the field spec and `fieldOptions` by name.
+- Tests: +2 new, 4 extended (spec layout/row, Contact-metadata options,
+  route-and-sanitize, popup panel row).
+
 ## [0.220.0] — 2026-09-01
 
 **feat(assignments): a mentor's name in the Available Mentors list opens a

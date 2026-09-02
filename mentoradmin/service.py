@@ -143,7 +143,12 @@ EDITABLE_FIELDS: list[dict[str, Any]] = [
     {"name": "mentorPauseEndDate", "label": "Mentor pause end date", "type": "date", "group": "Status", "row": "pause"},
     {"name": "acceptingNewClients", "label": "Accepting new clients", "type": "bool", "group": "Status"},
     {"name": "publicProfile", "label": "Public profile", "type": "bool", "group": "Status"},
-    {"name": "mentorStartDate", "label": "Mentor start date", "type": "date", "group": "Status"},
+    # Start date + the volunteer form's "are you employed" answer share a line
+    # (Doug, 2026-09-01). Employment status lives on the linked Contact
+    # (cEmploymentStatus — the same field the volunteer intake writes), so it
+    # routes through CONTACT_NAMES like the Contact tab's fields.
+    {"name": "mentorStartDate", "label": "Mentor start date", "type": "date", "group": "Status", "row": "startrow"},
+    {"name": "cEmploymentStatus", "label": "Employment status", "type": "enum", "group": "Status", "row": "startrow", "entity": CONTACT_ENTITY},
     {"name": "mentorStatusNotes", "label": "Status notes", "type": "text", "group": "Status"},
     {"name": "maximumClientCapacity", "label": "Maximum client capacity", "type": "int", "group": "Capacity"},
     {"name": "yearsOfExperience", "label": "Years of experience", "type": "int", "group": "Capacity"},
@@ -185,6 +190,12 @@ CONTACT_NAMES = {f["name"] for f in EDITABLE_FIELDS if f.get("entity") == CONTAC
 EDITABLE_NAMES = PROFILE_EDIT_NAMES | CONTACT_NAMES
 _ENUM_FIELDS = [f["name"] for f in EDITABLE_FIELDS
                 if f["type"] in ("enum", "multiEnum") and not f.get("entity")]
+# Enum fields living on the linked Contact (e.g. cEmploymentStatus): their live
+# options come from Contact metadata, and they are drift-sanitized like the
+# profile enums.
+_CONTACT_ENUM_FIELDS = [f["name"] for f in EDITABLE_FIELDS
+                        if f["type"] in ("enum", "multiEnum")
+                        and f.get("entity") == CONTACT_ENTITY]
 _FIELD_LABELS = {f["name"]: f["label"] for f in EDITABLE_FIELDS}
 
 # Read-only context shown above the form. Includes the contact-info "foreign"
@@ -338,7 +349,7 @@ async def _sanitize_enum_changes(
     its valid members. **Fails open**: if the live options can't be fetched,
     the payload is left untouched — never drop what can't be verified.
     """
-    keys = [k for k in payload if k in _ENUM_FIELDS]
+    keys = [k for k in payload if k in _ENUM_FIELDS or k in _CONTACT_ENUM_FIELDS]
     if not keys:
         return []
     try:
@@ -349,9 +360,10 @@ async def _sanitize_enum_changes(
     warnings: list[str] = []
 
     def note(name: str, values: list[Any]) -> None:
+        entity = CONTACT_ENTITY if name in _CONTACT_ENUM_FIELDS else MENTOR_PROFILE
         log.warning(
             "%s.%s: dropping unrecognized %s (not in the live enum)",
-            MENTOR_PROFILE, name, values,
+            entity, name, values,
         )
         vals = ", ".join(f"“{v}”" for v in values)
         warnings.append(
@@ -416,6 +428,7 @@ async def update_mentor(
     payload = {k: v for k, v in changes.items() if k in PROFILE_EDIT_NAMES}
     contact_payload = {k: v for k, v in changes.items() if k in CONTACT_NAMES}
     warnings = await _sanitize_enum_changes(client, payload)
+    warnings += await _sanitize_enum_changes(client, contact_payload)
 
     # Contact-tab fields save to the linked Contact record. Resolve the link
     # BEFORE any write, so a mentor with no Contact fails fast with a clear
@@ -1344,13 +1357,21 @@ async def verify_all_mentor_statuses(
 
 
 async def field_options(client: MentorClient) -> dict[str, list[str]]:
-    """Live option lists for the editable enum/multi-enum fields (CRM = truth)."""
+    """Live option lists for the editable enum/multi-enum fields (CRM = truth).
+    Profile enums read CMentorProfile metadata; Contact-entity enums
+    (``_CONTACT_ENUM_FIELDS``) read Contact metadata."""
     fields = await client.metadata(f"entityDefs.{MENTOR_PROFILE}.fields")
     options: dict[str, list[str]] = {}
     for name in _ENUM_FIELDS:
         opts = (fields.get(name) or {}).get("options")
         if isinstance(opts, list):
             options[name] = opts
+    if _CONTACT_ENUM_FIELDS:
+        cfields = await client.metadata(f"entityDefs.{CONTACT_ENTITY}.fields")
+        for name in _CONTACT_ENUM_FIELDS:
+            opts = (cfields.get(name) or {}).get("options")
+            if isinstance(opts, list):
+                options[name] = opts
     return options
 
 

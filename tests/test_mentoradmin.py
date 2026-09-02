@@ -143,6 +143,16 @@ def test_field_spec_layout():
     assert not any(f["group"] == "Dates" for f in service.EDITABLE_FIELDS)
     # Status: status/type share a row, pause window on the line beneath them
     assert by["mentorStatus"]["row"] == "statustype" and by["mentorType"]["row"] == "statustype"
+    # Employment status sits right next to the start date (Doug, 2026-09-01),
+    # and lives on the linked Contact (the volunteer form's field).
+    assert by["mentorStartDate"]["row"] == "startrow"
+    assert by["cEmploymentStatus"]["row"] == "startrow"
+    assert by["cEmploymentStatus"]["group"] == "Status"
+    assert by["cEmploymentStatus"]["entity"] == service.CONTACT_ENTITY
+    assert by["cEmploymentStatus"]["type"] == "enum"
+    assert "options" not in by["cEmploymentStatus"]   # live options, never static
+    assert "cEmploymentStatus" in service._CONTACT_ENUM_FIELDS
+    assert "cEmploymentStatus" not in service._ENUM_FIELDS
     assert by["mentorPauseStartDate"]["group"] == "Status" and by["mentorPauseStartDate"]["row"] == "pause"
     assert by["mentorPauseEndDate"]["group"] == "Status" and by["mentorPauseEndDate"]["row"] == "pause"
     # Expertise carries industry experience, not the (removed) focus areas / sector
@@ -175,12 +185,17 @@ def test_contact_tab_field_spec():
     assert {f["name"] for f in contact} == {
         "firstName", "lastName", "emailAddress", "phoneNumber",
         "addressStreet", "addressCity", "addressState", "addressPostalCode",
-        "cLinkedInProfile",
+        "cLinkedInProfile", "cEmploymentStatus",
     }
-    # LinkedIn is Contact-backed but deliberately shown on the Profile tab.
-    assert all(f["group"] == "Contact" for f in contact if f["name"] != "cLinkedInProfile")
+    # LinkedIn (Profile tab) and employment status (Status tab) are
+    # Contact-backed but deliberately shown elsewhere.
+    assert all(
+        f["group"] == "Contact" for f in contact
+        if f["name"] not in ("cLinkedInProfile", "cEmploymentStatus")
+    )
     by = {f["name"]: f for f in contact}
     assert by["cLinkedInProfile"]["group"] == "Profile"
+    assert by["cEmploymentStatus"]["group"] == "Status"
     # Contact fields never leak into the CMentorProfile select/update whitelist,
     # but they ARE editable (accepted by the update endpoint).
     assert not (service.PROFILE_EDIT_NAMES & service.CONTACT_NAMES)
@@ -289,18 +304,67 @@ async def test_get_mentor_counts_blank_when_engagements_unreadable():
     assert cc["maxCapacity"] == 3  # the stored field still shows
 
 
+class EntityMetaClient(FakeClient):
+    """A fake whose metadata differs per entityDefs key."""
+
+    def __init__(self, per_entity):
+        super().__init__()
+        self._per_entity = per_entity
+        self.metadata_keys = []
+
+    async def metadata(self, key):
+        self.metadata_keys.append(key)
+        return self._per_entity.get(key, {})
+
+
 @pytest.mark.asyncio
 async def test_field_options_reads_live_enums():
-    meta = {
-        "mentorStatus": {"type": "enum", "options": ["Active", "Inactive"]},
-        "industryExperience": {"type": "multiEnum", "options": ["Finance", "Marketing"]},
-        "name": {"type": "varchar"},  # not an enum -> excluded
-    }
-    client = FakeClient(metadata=meta)
+    client = EntityMetaClient({
+        "entityDefs.CMentorProfile.fields": {
+            "mentorStatus": {"type": "enum", "options": ["Active", "Inactive"]},
+            "industryExperience": {"type": "multiEnum", "options": ["Finance", "Marketing"]},
+            "name": {"type": "varchar"},  # not an enum -> excluded
+        },
+        "entityDefs.Contact.fields": {
+            "cEmploymentStatus": {"type": "enum",
+                                  "options": ["Yes, Full-time", "Yes, Part-time", "No"]},
+        },
+    })
     opts = await service.field_options(client)
     assert opts["mentorStatus"] == ["Active", "Inactive"]
     assert opts["industryExperience"] == ["Finance", "Marketing"]
+    # Contact-entity enums are read from CONTACT metadata, not CMentorProfile's.
+    assert opts["cEmploymentStatus"] == ["Yes, Full-time", "Yes, Part-time", "No"]
     assert "name" not in opts
+    assert "entityDefs.Contact.fields" in client.metadata_keys
+
+
+@pytest.mark.asyncio
+async def test_update_mentor_routes_and_sanitizes_employment_status():
+    """cEmploymentStatus writes to the linked Contact, and a drifted value is
+    dropped with a warning instead of 400ing the save."""
+    client = EntityMetaClient({
+        "entityDefs.Contact.fields": {
+            "cEmploymentStatus": {"type": "enum", "options": ["No"]},
+        },
+    })
+    client.record = {"id": "m1", "contactRecordId": "c9"}
+    res = await service.update_mentor(client, "m1", {"cEmploymentStatus": "No"})
+    assert ("Contact", "c9", {"cEmploymentStatus": "No"}) in client.updates
+    assert res.get("warnings", []) == [] or "warnings" not in res or not res["warnings"]
+
+    drifted = EntityMetaClient({
+        "entityDefs.Contact.fields": {
+            "cEmploymentStatus": {"type": "enum", "options": ["No"]},
+        },
+    })
+    drifted.record = {"id": "m1", "contactRecordId": "c9"}
+    res = await service.update_mentor(
+        drifted, "m1", {"cEmploymentStatus": "Yes, Full-time"}
+    )
+    # The drifted value was dropped -> no Contact write at all, one warning.
+    assert not [u for u in drifted.updates if u[0] == "Contact"]
+    assert any("Employment status" in w for w in res["warnings"])
 
 
 # --- data-structure completeness ---

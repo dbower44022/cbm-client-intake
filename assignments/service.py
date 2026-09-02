@@ -1496,8 +1496,9 @@ async def reassign_engagement(
 # CMentorProfile detail layout doesn't carry them. Same fields Mentor
 # Administration merges from the Contact.
 _CONTACT_PANEL_SELECT = (
-    "firstName,lastName,emailAddress,phoneNumber,addressStreet,addressCity,"
-    "addressState,addressPostalCode,addressCountry,cLinkedInProfile"
+    "firstName,lastName,emailAddress,phoneNumber,cEmploymentStatus,"
+    "addressStreet,addressCity,addressState,addressPostalCode,addressCountry,"
+    "cLinkedInProfile"
 )
 
 
@@ -1527,6 +1528,9 @@ def _contact_panel_fields(contact: dict[str, Any]) -> list[dict[str, Any]]:
         _f("contactName", "Name", "text", name),
         _f("contactEmail", "Email", "email", contact.get("emailAddress")),
         _f("contactPhone", "Phone", "phone", contact.get("phoneNumber")),
+        # The volunteer form's "are you employed" answer (Doug, 2026-09-01).
+        _f("contactEmployment", "Employment status", "text",
+           contact.get("cEmploymentStatus")),
         _f("contactAddress", "Address", "address", address),
         _f("contactLinkedIn", "LinkedIn", "url", contact.get("cLinkedInProfile")),
     ]
