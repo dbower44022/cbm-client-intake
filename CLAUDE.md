@@ -1360,13 +1360,15 @@ stamp — pending on both CRMs), `cintake-submission-*.md`, `cinformation-reques
 deployed and verified; `CHANGELOG.md` is the permanent record, `OPEN-ITEMS.md`
 holds anything still owed.*
 
-**Pushed through v0.216.1 on 2026-08-29, and confirmed live on all three
-apps** — dev, crm-test and prod all report `0.216.1`, healthy, workers alive with
-empty backlogs (checked 2026-08-29 06:30 UTC). The 0.216.0 push carried Alembic
-migration `0027_app_setting_verified`, which ran clean on both database-backed
-apps. Two git tags exist (`v0.214.0`, `v0.216.1`); `deploy_on_push` is still on
-everywhere by design. The last live prod pass that exercised a *feature* verified
-`0.206.0`. What is *verified* is narrower than what is deployed — see each block.
+**Pushed through v0.220.0 on 2026-09-01, and confirmed live on all three
+apps** — dev, crm-test and prod all report `0.220.0`, and the deploy was checked
+at the artifact level (prod serves the new `assignments/app.js` and
+`/shared/detail-render.js` answers 200 on prod and crm-test — a version stamp
+alone proves nothing, [[footer-version-stale-js]]). That push also carried two
+docs commits that had sat unpushed since the 2026-08-31 close-out.
+`deploy_on_push` is still on everywhere by design. The last live prod pass that
+exercised a *feature* verified `0.206.0`. What is *verified* is narrower than
+what is deployed — see each block.
 
 **Confirm that against the remote, do not trust this line.** On 2026-08-20 it
 still read "pushed through v0.202.2" while v0.203.x/v0.204.0 sat unpushed
@@ -1377,10 +1379,12 @@ sentence is a convenience.
 - **v0.220.0 — the mentor detail popup in Client Administration.** A mentor's
   name in Available Mentors opens a read-only all-fields popup with
   Assign/Reassign in its footer (standing rules in that app's section; plan:
-  `prds/mentor-detail-popup-plan.md`). **Verified by tests only** — the layout
-  read and the full-field select have never run under a real Client
+  `prds/mentor-detail-popup-plan.md`). **Deployed and confirmed serving the new
+  artifacts on all three apps 2026-09-01 — but still verified by tests only**:
+  the layout read and the full-field select have never run under a real Client
   Administration non-admin, and no test issues a real list or layout request.
-  Live pass: `OPEN-ITEMS.md` #31.
+  What's owed is a human click-through, not a fetch — the live pass is
+  `OPEN-ITEMS.md` #31.
 
 - **v0.214.0 → v0.216.1 (2026-08-28/29) — the release train's two version
   stamps, and the Settings page holds and edits every setting.** Four releases

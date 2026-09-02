@@ -1,6 +1,6 @@
 # Mentor Detail from the Available Mentors List — Plan
 
-**Status:** Approved (Doug, 2026-09-01: "Build it", Assign button included) · **Built as v0.220.0** — live verification owed (`OPEN-ITEMS.md` #31) · rev 2
+**Status:** Approved (Doug, 2026-09-01: "Build it", Assign button included) · **Built as v0.220.0, deployed and live on all three apps 2026-09-01** (artifact-checked) — the § 6 live pass is still owed (`OPEN-ITEMS.md` #31) · rev 3
 **Author:** Claude (grounded in a code read of `assignments/`, `directory/`,
 `mentoradmin/`; no CRM reads were needed)
 
