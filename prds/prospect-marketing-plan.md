@@ -1,11 +1,13 @@
-# Prospect Marketing — plan v0.2 draft (2026-09-01)
+# Prospect Marketing — plan v0.3 draft (2026-09-02)
 
 **STRAWMAN — not an approved plan.** Sections marked *Doug's rulings* record
 decisions already made in the 2026-08-11 session. Everything marked **PROPOSAL**
 is my recommendation awaiting your call, not a settled decision. The
-**Discussion in progress** section at the end records the 2026-09-01 session on
-funnel stages — ideas only, explicitly **not decisions**, pending further
-discussion of the process.
+**Discussion in progress** sections at the end record the 2026-09-01 and
+2026-09-02 sessions on funnel stages — ideas only, explicitly **not
+decisions**, pending further discussion of the process. **The 2026-09-02
+section supersedes the two stage drafts in the 2026-09-01 section**: Doug
+tabled his own funnel diagram, and that is now the ladder under discussion.
 
 Scope: manage prospects from **all lead sources**, including those with no email
 or phone, and reach the latter by **postcard** carrying a per-prospect QR code
@@ -437,7 +439,7 @@ sales tools track *how the contact attempt is going* (not contacted / attempted
 / contacted / nurturing) as a status separate from lifecycle stage, and the
 commonest complaint in the practitioner articles is mixing the two.
 
-### Open for the next session
+### Open for the next session (as of 2026-09-01 — see the 2026-09-02 section below for what changed)
 
 - Walk the process end to end, source by source, and see whether it needs more
   status buckets than Draft B — Doug's expectation is that it might.
@@ -455,13 +457,141 @@ commonest complaint in the practitioner articles is mixing the two.
 
 ---
 
+## Discussion in progress — Doug's funnel diagram (2026-09-02, no decisions yet)
+
+The 2026-09-02 session was set up to walk the process source by source
+against Draft B. One question in, Doug tabled his own funnel diagram, which
+**replaces Draft A and Draft B as the ladder under discussion**. The image is
+kept in the repo as `prompts/prospect-marketing-funnel-2026-09-02.png`. The
+session recorded the diagram and the first review point, then stopped at the
+first open question; the source-by-source walk has not yet been done against
+this ladder.
+
+### The ladder as Doug drew it (Doug's, 2026-09-02 — a proposal, not a ruling)
+
+Eight rungs in three colour bands, each band naming who owns the work there.
+Definitions transcribed from the diagram.
+
+| # | Band | Rung | Doug's definition |
+|---|---|---|---|
+| 1 | Prospect Marketing | **Unqualified Prospect** | Companies that have a company name, address and other basic information, but no email address or phone number. They also have NOT been verified to be a running company in an industry segment where CBM offers mentoring (could be a real-estate LLC). |
+| 2 | Prospect Marketing | **Qualified Prospect** | Companies where CBM has enriched the company information adequately to know they are a functioning company, has an email or phone number, and knows they are the type of company that might want mentoring. |
+| 3 | Prospect Marketing | **Active Prospect** | Companies that have been selected for an active outreach campaign. |
+| 4 | Lead Marketing | **Lead** | A prospect who has explored at least one Service (Mentoring, Webinar, Seminar) but NOT registered. |
+| 5 | Lead Marketing | **Warm Lead** | A prospect that has registered for at least one Service. |
+| 6 | Lead Marketing | **Opportunity** | A company that has consumed a Service, but not Mentoring. |
+| 7 | Lead Marketing | **Candidate** | A company that has expressed interest in Mentoring, but not attended a session. |
+| 8 | Client Management | **Client** | A company with at least one active mentoring session. |
+
+Two things the diagram settles that the earlier drafts left open, read as
+Doug's intent rather than as rulings: the funnel is **company-centric** (every
+rung is defined on a company), and the three bands make the ownership handoffs
+explicit — Prospect Marketing → Lead Marketing at the first sign of the
+company's own action, Lead Marketing → Client Management at the first active
+mentoring session. The "funnel ends at the form submission" working position of
+2026-09-01 is refined by this: **Candidate** and **Client** sit below the
+submission and are read from the engagement (Candidate ≈ an engagement that
+exists but has no completed session; Client ≈ an engagement with one), which is
+consistent with that position rather than contradicting it.
+
+### First review point (Claude's, 2026-09-02 — recommendation, not adopted)
+
+**The postcard has no home on this ladder as drawn.** *Qualified* bundles three
+tests: verified as a running company in a segment CBM serves, an email or
+phone in hand, and the right type of company. *Active Prospect* sits below it,
+so a campaign selects from the Qualified. But the enrichment study
+(`research/registry-enrichment/enrichment-findings.md`) is the reason the
+postcard exists: ~99 in 100 filings carry no email or phone and web enrichment
+cannot find one. Under the ladder as drawn a filing can never reach Qualified
+before it is mailed, so the postcard campaign has nothing to select from. The
+postcard is not an outreach *to* the qualified; it is the instrument that
+qualifies them, by getting the owner to hand over the email or phone CBM could
+not find.
+
+The concrete collapse: two companies share *Unqualified* today — a Houston
+formation-service shell that will never want a mentor, and a real Westlake
+landscaper CBM simply cannot reach yet. The first is a reject; the second is
+exactly who the postcard is for. Different handling, same label.
+
+**Recommendation:** split what Qualified bundles.
+
+- **Qualified = verified fit only** — a running company, in the service area,
+  in a segment CBM mentors, not already a client or contact.
+- **Reach becomes a separate label** on the record (working name *reach*:
+  none / email / phone / both, recomputed whenever the record changes), which
+  any campaign can select on. This is the 2026-09-01 "second axis" idea, now
+  grounded in the diagram rather than in the surveyed models.
+- **Active Prospect becomes campaign membership, not a rung** a company climbs
+  to. The postcard campaign selects *Qualified + no reach*; an email campaign
+  selects *Qualified + email*; both companies are "Active" while their campaign
+  runs, and the same company can be mailed this month and emailed next month
+  without moving a rung. Each touch stamps the rung and the reach as they were
+  that day, so campaign reporting stays honest after the record changes.
+
+This keeps all eight of Doug's names and all three bands; it changes what two
+of the top three rungs mean.
+
+**The question put to Doug, unanswered when the session paused:** does the
+split hold, or should email-or-phone stay inside Qualified with the postcard
+campaign selecting directly from the Unqualified rung instead?
+
+### Noted for the walk, not yet raised (Claude's)
+
+Held back so the discussion stays one question at a time; each is a candidate
+missing or ambiguous bucket to test when the source-by-source walk resumes.
+
+- **Where an inbound info@ email or an Information Request lands.** It is not a
+  registration (Warm Lead) and not necessarily interest in mentoring
+  (Candidate); *Lead* ("explored but not registered") is the nearest rung but
+  its evidence is passive. An inquiry is a person writing to us — possibly its
+  own bucket.
+- **Evidence for *Lead*.** "Explored a service" is observable for a postcard (a
+  QR scan) and an email (a link click) but not for an anonymous website visit.
+  Each source needs a stated observable, or the rung is unreachable from it.
+- **Jumps.** A postcard recipient who presses *Request a Mentor* goes from
+  Unqualified/Qualified straight to Candidate, skipping four rungs. The ladder
+  reads as strictly sequential (Candidate below Opportunity implies a service
+  consumed first); the process needs to say jumps are normal and the *entry*
+  rung is recorded per source.
+- **Company-centric vs. person-centric sources.** A webinar registrant is a
+  person, business often unknown; a filing is a business, person often
+  unknown. Today a webinar registration creates a **Contact** (Prospect) by
+  email plus a `CEventRegistration` (verified in `events/service.py`,
+  2026-09-02), i.e. it never touches a prospect record at all. The
+  one-record-two-halves question from 2026-09-01 is still open and this
+  ladder makes it sharper.
+- **Naming smell.** In every surveyed CRM *Unqualified* is a terminal reject,
+  not the top of the funnel. If rung 1 keeps its meaning it may want a name
+  like *Unverified*; if the split above is adopted, the reject becomes a side
+  exit and the name is free.
+- **Side exits are absent from the diagram** (already known / suppressed /
+  undeliverable / do-not-contact / declined / stale). The 2026-09-01 list
+  still stands as the candidate set.
+- **Former or dormant clients** re-entering the funnel — the diagram ends at
+  Client with no return path.
+- **Chapter-network vocabulary** — none of the eight rung names is
+  Cleveland-specific, which is a point in the ladder's favour.
+
+### Open for the next session
+
+- Doug's answer to the Qualified/reach question above.
+- Then the source-by-source walk against *this* ladder: filings, purchased
+  lists, webinar registrants and attendees, inbound info@, partner referrals,
+  mentor/client referrals and walk-ups, dormant clients — entry rung, rungs
+  passed, touches, evidence per move, side exits.
+- The items held back above, raised as the walk reaches them.
+- Still queued behind those: the `source` ruling, `CProspect` storage, and the
+  `/p/<token>` page versus the 2026-08-17 harvester ruling.
+
+---
+
 ## Revision control
 
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — plan |
-| Version | v0.2 draft — **strawman, not approved**; stage discussion open |
-| Last Updated | 2026-09-01 |
+| Version | v0.3 draft — **strawman, not approved**; stage discussion open against Doug's 2026-09-02 funnel diagram |
+| Last Updated | 2026-09-02 |
 | Prepared by | Claude, for D. Bower |
-| Session | 2026-08-11 requirements elicitation; 2026-09-01 funnel-stage discussion |
-| Related | `research/registry-enrichment/enrichment-findings.md`, `cinformation-request-entity.md`, `prds/intake-receipt-redesign-plan.md` |
+| Session | 2026-08-11 requirements elicitation; 2026-09-01 funnel-stage discussion; 2026-09-02 funnel diagram review (paused at the first question) |
+| Related | `research/registry-enrichment/enrichment-findings.md`, `cinformation-request-entity.md`, `prds/intake-receipt-redesign-plan.md`, `prompts/prospect-marketing-funnel-2026-09-02.png`, `prompts/prospect-marketing-process-session-prompt-v0.1.md` |
