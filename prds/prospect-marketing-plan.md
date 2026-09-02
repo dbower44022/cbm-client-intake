@@ -1,8 +1,11 @@
-# Prospect Marketing — plan v0.1 (2026-08-11)
+# Prospect Marketing — plan v0.2 draft (2026-09-01)
 
 **STRAWMAN — not an approved plan.** Sections marked *Doug's rulings* record
 decisions already made in the 2026-08-11 session. Everything marked **PROPOSAL**
-is my recommendation awaiting your call, not a settled decision.
+is my recommendation awaiting your call, not a settled decision. The
+**Discussion in progress** section at the end records the 2026-09-01 session on
+funnel stages — ideas only, explicitly **not decisions**, pending further
+discussion of the process.
 
 Scope: manage prospects from **all lead sources**, including those with no email
 or phone, and reach the latter by **postcard** carrying a per-prospect QR code
@@ -325,13 +328,140 @@ tracking. Every mutating action through `core/action_log.py` per convention.
 
 ---
 
+## Discussion in progress — funnel stages (2026-09-01, no decisions yet)
+
+The 2026-09-01 session widened the scope from "postcards to registry filings"
+to **a marketing process that takes prospects from every source and moves them
+through one funnel**. What follows is the state of that discussion. Nothing in
+this section is decided; Doug wants further, more detailed discussion of the
+process before settling the stage list, and expects the process may need more
+status buckets than any draft below.
+
+### Working positions stated by Doug during the session
+
+Recorded because he said them, not as rulings — he may revise them.
+
+- **Every source uses the same stages**, even though sources enter at different
+  stages (a state filing enters at the top; a webinar registrant enters part-way
+  down).
+- **The funnel ends at the form submission.** "Client" is read from the linked
+  engagement for reporting, never tracked a second time on the prospect record.
+- **The first stage draft (Identified / Reached / Engaged / Requesting) was
+  not granular enough.**
+- **Qualification is not one thing.** A real, in-area business with no email,
+  phone or business type is *not* as qualified as one with all three, and the
+  difference drives which campaign a prospect belongs to.
+- **Campaign membership must be reportable.** Segmenting analytics on "has
+  email / has phone / …" field-by-field is unworkable; the grouping needs a
+  first-class label.
+
+### Ideas on the table
+
+**1. Two axes, not one.** Every model surveyed separates *how far along the
+prospect is* (lifecycle stage) from *what we know and can do* (working status /
+reach). Mixing them makes a prospect who merely gained an email look as if they
+moved a stage. Proposed shape:
+
+- **Stage** — moves forward only, on evidence the system can observe (a mail
+  piece accepted, a QR scan, a registration, a form submission). Staff never
+  set it by hand. The **entry stage** is stored separately from the current
+  stage so per-source conversion reporting stays honest (a source entering
+  half-way down will always "convert better" unless the entry rung is visible).
+- **Reach level** — a small named set computed from the fields present,
+  recomputed whenever the record changes. First cut: *Address only* → *Email*
+  → *Phone* → *Known* (named owner + business type). This is the label
+  campaigns target and analytics segments on.
+- **Campaigns select on stage + reach level**, and each *touch* stamps both as
+  they were that day, so a prospect mailed at *Address only* and later emailed
+  at *Email* counts once in each segment even though the record has since
+  changed. An enrichment hit that adds an email changes the label, and the
+  prospect is picked up by the matching campaign on its next run — nobody moves
+  them by hand.
+
+**2. Candidate stage ladders.** Two drafts were discussed; neither is adopted.
+
+*Draft A (eight rungs, plain English):* Identified → Qualified → Contacted →
+Delivered → Aware → Interested → Conversing → Requesting.
+
+*Draft B (names borrowed from the surveyed models, "Delivered" dropped
+because no model treats delivery as a stage — it is a fact about the touch):*
+
+| # | Stage | Meaning | Borrowed from |
+|---|---|---|---|
+| 1 | Identified | We know the business exists | Nonprofit "Identification"; Marketo "Anonymous" |
+| 2 | Qualified | It fits and is worth the effort | Nonprofit "Qualification"; MQL |
+| 3 | Contacted | We have made a touch | Salesforce / Zoho "Contacted" |
+| 4 | Engaged | They responded in some way | Marketo "Engaged"; HubSpot "Subscriber" |
+| 5 | Interested | They took a step toward us | AIDA "Interest"; HubSpot "Lead" |
+| 6 | Nurturing | Two-way exchange under way | Salesforce "Nurturing"; nonprofit "Cultivation" |
+| 7 | Applied | Form submitted — funnel complete | The Sales-Accepted handoff |
+| 8 | Client | Read from the engagement | Neoserra "Client"; HubSpot "Customer" |
+
+Side exits (not rungs; the reason matters more than the rung left from):
+**Unqualified**, **Do Not Contact**, **Undeliverable** (kills the address, not
+the prospect), **Declined** (they said no — distinct from silence), **Stale**
+(no movement for a set period; the re-entry point for re-marketing), **Lost**,
+**Junk**.
+
+**3. Qualified = fit, and only fit.** Real operating business (not a
+formation-service mail drop), in the service area, not already a client or
+contact, not do-not-contact. Ruling 1 above says an outside process applies
+this for filings; for the other sources it would be a quick staff review or a
+simple automatic check (ZIP in area), with the record showing who or what
+cleared it and when. Whether "qualified" should carry more than fit is exactly
+what Doug's reach-level point challenges — open.
+
+**4. One prospect record with a business half and a person half**, each
+optional, at least one required. A filing enters with only the business half;
+a webinar registrant with only the person half; later touches fill the other.
+The alternative (separate business-prospect and person-prospect records, linked
+when both are known) doubles every report and workflow. **Not yet answered** —
+Doug redirected to the stage discussion before ruling.
+
+### Survey of stage models (for reference)
+
+| Model | Stages, in order |
+|---|---|
+| HubSpot lifecycle | Subscriber → Lead → MQL → SQL → Opportunity → Customer → Evangelist |
+| Marketo / Forrester demand waterfall | Anonymous → Known → Engaged → MQL → Sales Accepted → Sales Qualified → Opportunity → Closed Won |
+| Salesforce lead status | Open (not contacted) → Working → Contacted → Nurturing → Qualified / Unqualified → Converted |
+| Zoho lead status | Not Contacted → Attempted to Contact → Contacted → Contact in Future → Pre-Qualified → Qualified; plus Junk, Lost |
+| Nonprofit donor cycle | Identification → Qualification → Cultivation → Solicitation → Stewardship |
+| SBDC software (Neoserra) | Pre-client → Client (pre-client activity kept off official reports) |
+| AIDA | Attention → Interest → Desire → Action |
+
+Two patterns hold across all of them: (a) a marketing half and a sales half
+with a named handoff in the middle — for CBM the handoff is the form
+submission, where intake and Client Administration already take over; (b) the
+sales tools track *how the contact attempt is going* (not contacted / attempted
+/ contacted / nurturing) as a status separate from lifecycle stage, and the
+commonest complaint in the practitioner articles is mixing the two.
+
+### Open for the next session
+
+- Walk the process end to end, source by source, and see whether it needs more
+  status buckets than Draft B — Doug's expectation is that it might.
+- Naming family: business-CRM (Lead / Qualified / Nurturing), nonprofit
+  (Identification / Cultivation / Solicitation), or plain English.
+- Whether reach level is the right second axis, and its levels.
+- The one-record-two-halves question (idea 4).
+- Then return to the earlier open items: the `source` field ruling, `CProspect`
+  storage, and the tension between the `/p/<token>` page and the 2026-08-17
+  events ruling that a public page may echo nothing we know about a person.
+- Chapter-network note: "Ohio SOS document number" and "State New Business
+  Filing" are chapter-specific vocabulary now that the product is
+  de-Clevelanded; a `CProspect` build would go through
+  `prds/chapter-network/crm-update-runbook.md`, not a one-off handoff.
+
+---
+
 ## Revision control
 
 | Field | Value |
 |---|---|
 | Document | Prospect Marketing — plan |
-| Version | v0.1 — **strawman, not approved** |
-| Last Updated | 2026-08-11 |
+| Version | v0.2 draft — **strawman, not approved**; stage discussion open |
+| Last Updated | 2026-09-01 |
 | Prepared by | Claude, for D. Bower |
-| Session | 2026-08-11 requirements elicitation |
+| Session | 2026-08-11 requirements elicitation; 2026-09-01 funnel-stage discussion |
 | Related | `research/registry-enrichment/enrichment-findings.md`, `cinformation-request-entity.md`, `prds/intake-receipt-redesign-plan.md` |
