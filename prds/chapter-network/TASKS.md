@@ -164,6 +164,40 @@ deployment. This repo owes the consumer's half.
 
 ---
 
+## R11. The Google branch-A rehearsal on the Lakeside instance — prepared, not started
+
+### What this is
+
+Doug's ruling of 2026-08-31 keeps the rehearsal instance up for exactly this:
+a brand-new Google Workspace on `acmeconstruction.us` (branch A — the chapter
+brings its own and grants delegation in its own console), connected to the
+Lakeside CRM and app, with the console path documented as it is walked. The
+prerequisites are all in force — v0.217.0 (the `MENTOR_EMAIL_DOMAIN` /
+`COMMS_INTERNAL_DOMAINS` fixes) is what the Lakeside app runs, promoted through
+the release lane — but **nothing Google-side has been executed**: as of
+2026-09-04 the zone carries no Google TXT or MX record, so no Workspace tenant
+exists yet.
+
+### Steps
+
+1. The step-by-step for the whole arc lives on the rehearsal's standing page
+   (Stage 5, sections 1–4 written; the artifact link is in the
+   `lakeside-rehearsal-instance` session memory): Workspace tenant → domain
+   verification → MX → mailboxes (`info@`, `jordan.mentor@`) and the
+   `all-members@` group.
+2. Then the service account + one delegation row (scopes: the two Gmail, the
+   Calendar-events, `admin.directory.user` + `.readonly`, `admin.directory.group`;
+   Drive optional), the key handed to the app via `/setup` (secret, encrypted),
+   the § D settings, and the verification ladder: worker `gmail access as …`
+   log lines → send/receive from a record → ops capture → calendar → a mentor
+   provisioned at Accepted-Provisional gaining a real mailbox.
+3. The documentation deliverable: a branch-A Google onboarding runbook for
+   chapters, written from the executed steps, filed in
+   `prds/chapter-network/` when the arc completes — plus the deferred teardown
+   (the rehearsal page § Stage 4 sections 7–9, extended with the Workspace).
+
+---
+
 ## A3. Hand the deployment-updates requirements to CRMBuilder's process
 
 **Owner: Doug.** `prompts/crmbuilder-deployment-updates-requirements-v0.1.md`

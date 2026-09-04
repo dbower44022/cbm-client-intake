@@ -410,7 +410,8 @@ detail screen that edits any whitelisted field on `CMentorProfile`.
     mentor reaches approval carrying a `cbmEmail`: an address is only stored if no
     User holds it as a userName and no *other* mentor profile holds it. A merely
     *existing* mailbox is not "taken" — a pre-created mailbox is the normal case.
-  - The login half creates an EspoCRM User (`firstname.lastname@cbmentors.org`,
+  - The login half creates an EspoCRM User (`firstname.lastname@` the
+    `MENTOR_EMAIL_DOMAIN` setting, default `cbmentors.org` — v0.217.0,
     welcome email via `sendAccessInfo`), places it in `MENTOR_TEAM_NAME`, links it
     as `assignedUser`, back-fills `cbmEmail`, and stamps the User onto the linked
     Contact. **Privilege split — EspoCRM makes User creation admin-only; API keys
@@ -953,7 +954,8 @@ PRD in `prompts/Google Drive Documents/`.
   grants. Commenter means uploads can never bypass the app's index.
 - **A grant needs a real Google account.** The person's address is their
   `CMentorProfile.cbmEmail`, and mentor provisioning back-fills that
-  (`firstname.lastname@cbmentors.org`) **without creating a Workspace mailbox**
+  (`firstname.lastname@` the `MENTOR_EMAIL_DOMAIN` setting, default
+  `cbmentors.org`) **without creating a Workspace mailbox**
   — so the address often doesn't exist, which is the norm on crm-test. Drive
   400s a silent share to an unknown address, so `create_permission` raises
   `DriveNoAccountError` and the reconciliation counts it as `unfulfillable`,

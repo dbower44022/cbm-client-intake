@@ -1,12 +1,15 @@
 # Phase 2 — The release train
 
-**Status: started.** `scripts/cut_release.sh` cuts an annotated tag in one
-command and refuses to move a published one; two exist (`v0.214.0`, `v0.216.1`,
-both 2026-08-28/29). Stamp A is baked into the image by a `RELEASE_TAG` build
-arg and reported at `/healthz` (v0.214.0). What has NOT started — and is this
-phase's real work — is taking `deploy_on_push` off and moving to pinned-tag
-deploys. Until the overlay switches are applied `releaseTag` reads `null`
-everywhere, which is honest.
+**Status: the lane is real and has carried one promotion.** `scripts/cut_release.sh`
+cuts the tag AND fast-forwards the `release` branch (six tags exist, through
+`v0.217.0`); both stamps are switched on — crm-test and production report
+`releaseTag: "v0.217.0"` — and `scripts/promote.py` performed the first real
+promotion on 2026-08-31: `lakeside-intake` to v0.217.0, the first deployment
+with `deploy_on_push` off, moved by the two-operation update and verified at
+`/healthz`. What remains of this phase: cutting on cadence each Sunday, taking
+`deploy_on_push` off Cleveland's three apps once the train is trusted, and the
+CRMBuilder Deployment record + Update button (proposal 8, session A3) that
+turns `promote.py` into a console action.
 
 **Why it comes early.** It must precede the first real member, because taking
 `deploy_on_push` off a chapter's app after that chapter has learned to expect
