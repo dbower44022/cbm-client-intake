@@ -34,8 +34,8 @@ carry User read.
 - **`crm.config` recreated on crm-test** without an admin login, from inside
   the container (EspoCRM's own `Application` bootstrap under
   `docker exec -u www-data`, password minted on the droplet and piped into
-  `.env`, never printed). Re-baseline of the sandbox owed so it survives the
-  nightly reset.
+  `.env`, never printed), and the sandbox re-baselined the same evening so it
+  survives the nightly reset.
 - **The roles standard's crm-test capture has drifted** — a fresh database
   read is saved as `prds/chapter-network/roles-standard/crmtest-capture-2026-09-07/`;
   the ruling on ~60 changed cells is Doug's (`OPEN-ITEMS.md` #28).

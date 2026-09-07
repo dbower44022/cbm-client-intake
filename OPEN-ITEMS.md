@@ -33,9 +33,10 @@ found; move resolved items to the bottom with the resolution date.
       `docker exec -u www-data espocrm php` bootstraps EspoCRM's `Application`,
       creates the `admin`-type user and hashes a password minted on the droplet
       (the skill's `SETUP.md` has the recipe). Login verified (`whoami`: all
-      five probes 200). **Re-baseline owed** so it survives the 04:00 UTC
-      reset: seeder re-run done, `purge-deleted --apply` and `baseline --apply`
-      still to run (Doug, over SSH).
+      five probes 200). **Re-baselined the same evening** (seeder re-run →
+      `purge-deleted --apply` → `baseline --apply`, golden captured
+      2026-09-07 23:31 UTC), so the account now survives the 04:00 UTC reset.
+      Closed.
     - **The roles standard's crm-test capture is stale** (2026-09-07). A
       database re-read of `role` / `team` / `role_team` — saved as
       `prds/chapter-network/roles-standard/crmtest-capture-2026-09-07/`, the
