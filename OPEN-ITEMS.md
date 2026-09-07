@@ -71,7 +71,10 @@ found; move resolved items to the bottom with the resolution date.
       (same throwaway-user test, 403 → 200), after `crm.config` was recreated
       from inside the container — `role` is a KEEP table, so the grant itself
       survives the nightly reset. **Owed:** (a) production at the Sunday
-      17:00 UTC slot, the same script run from inside the deployed container;
+      17:00 UTC slot — the step-by-step is
+      `client-assignment-role-user-grant-crm-handoff.md` (standing page with
+      copy buttons: https://claude.ai/code/artifact/2bc5ad86-efa4-4618-ab0c-43adce3ae882); the
+      outside-in proof is `scripts/probe_user_read_grant.py`;
       (b) a ruling on the roles-standard drift the re-read exposed — see
       `prds/chapter-network/roles-standard/crmtest-capture-2026-09-07/`; (c)
       the app-side 403 wording — the user saw a generic "security error", and
