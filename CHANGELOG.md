@@ -26,10 +26,19 @@ carry User read.
 - **`scripts/migrate_client_assignment_role.py`** applies it: idempotent,
   merge-only (never lowers a level), dry-run by default, admin login from the
   environment, reads the role back and rebuilds. One script, three targets.
-- **Lakeside: applied and proven.** A throwaway single-team user read the
-  mentor's User as 403 before and 200 after, then was deleted. **crm-test and
-  production are owed** (`OPEN-ITEMS.md` #28) — crm-test is blocked on the
-  `crm.config` login the nightly reset removed.
+- **Lakeside and crm-test: applied and proven.** On each, a throwaway
+  single-team user read the mentor's User as 403 before and 200 after, then was
+  deleted. Doug confirmed Assign working live as `lakeside.clientadmin`.
+  **Production is owed** (`OPEN-ITEMS.md` #28), Sunday slot, same script from
+  inside the container.
+- **`crm.config` recreated on crm-test** without an admin login, from inside
+  the container (EspoCRM's own `Application` bootstrap under
+  `docker exec -u www-data`, password minted on the droplet and piped into
+  `.env`, never printed). Re-baseline of the sandbox owed so it survives the
+  nightly reset.
+- **The roles standard's crm-test capture has drifted** — a fresh database
+  read is saved as `prds/chapter-network/roles-standard/crmtest-capture-2026-09-07/`;
+  the ruling on ~60 changed cells is Doug's (`OPEN-ITEMS.md` #28).
 - Settles the `espo-crm-changes` capability map's open row: roles are readable
   and writable through the API as an administrator; the hand-edit limit was the
   credential.

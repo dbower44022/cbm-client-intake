@@ -28,8 +28,27 @@ found; move resolved items to the bottom with the resolution date.
     - **The `crm.config` structural-admin account on crm-test does not survive
       the nightly reset.** Created 2026-08-27 for the `espo-crm-changes` skill;
       users reset unless re-baselined (`SANDBOX-RESET.md`), and its login is
-      refused today. Recreate it and re-baseline, or accept that the skill's
-      crm-test path needs the account re-made each time.
+      refused today. ~~Recreate it and re-baseline~~ — **recreated 2026-09-07**
+      without an admin login, from inside the container: a PHP script run by
+      `docker exec -u www-data espocrm php` bootstraps EspoCRM's `Application`,
+      creates the `admin`-type user and hashes a password minted on the droplet
+      (the skill's `SETUP.md` has the recipe). Login verified (`whoami`: all
+      five probes 200). **Re-baseline owed** so it survives the 04:00 UTC
+      reset: seeder re-run done, `purge-deleted --apply` and `baseline --apply`
+      still to run (Doug, over SSH).
+    - **The roles standard's crm-test capture is stale** (2026-09-07). A
+      database re-read of `role` / `team` / `role_team` — saved as
+      `prds/chapter-network/roles-standard/crmtest-capture-2026-09-07/`, the
+      2026-08-31 rehearsal record left untouched — differs from the 08-31
+      capture in ~60 cells across eight roles, only one of which is the User
+      grant above. Several are the differences doc's "production wins" rulings
+      having been applied (`ClientMentorIntakeRole.User`, `OpenApi`,
+      `Partner Manager Role.Team`); others are not obviously ruled
+      (`Mentor Role.CConversation` read all → own, `CCommunication` create
+      no → yes, `Mentor Administration Role.auditPermission` yes → not-set,
+      `Standard User` field locks dropped). Teams and attachments are
+      identical. **Owed: Doug rules which side is right, cell by cell**, before
+      the standard is re-captured or applied anywhere.
     - **The Client Assignment Role cannot assign a mentor on its own**
       (found 2026-09-07 on Lakeside; fixed there the same day). Assigning writes
       the mentor's login User into `CEngagement.assignedUsers` (and the same
@@ -47,13 +66,15 @@ found; move resolved items to the bottom with the resolution date.
       `scripts/migrate_client_assignment_role.py` (idempotent, merge-only,
       dry-run by default). **Lakeside: applied and proven 2026-09-07** — a
       throwaway single-team user read the mentor's User as 403 before and 200
-      after, then was deleted. **Owed:** (a) crm-test, blocked on the
-      `crm.config` login above; (b) a re-capture of
-      `prds/chapter-network/rehearsal-2026-08-31/crmtest-capture/roles.json`
-      after that, since the standard is a capture, never a hand edit; (c)
-      production at the Sunday 17:00 UTC slot, the same script run from inside
-      the deployed container; (d) the app-side 403 wording — the user saw a
-      generic "security error", and the role name it needs is knowable.
+      after, then was deleted. **crm-test: applied and proven the same day**
+      (same throwaway-user test, 403 → 200), after `crm.config` was recreated
+      from inside the container — `role` is a KEEP table, so the grant itself
+      survives the nightly reset. **Owed:** (a) production at the Sunday
+      17:00 UTC slot, the same script run from inside the deployed container;
+      (b) a ruling on the roles-standard drift the re-read exposed — see
+      `prds/chapter-network/roles-standard/crmtest-capture-2026-09-07/`; (c)
+      the app-side 403 wording — the user saw a generic "security error", and
+      the role name it needs is knowable.
 
 27. **The Email Guide's published copy has drifted from the repo**
     (2026-08-26, found by the first live run of `scripts/publish_docs.py`).

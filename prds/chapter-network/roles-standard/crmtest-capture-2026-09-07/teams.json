@@ -1,0 +1,56 @@
+[
+  {
+    "id": "6a0e39fecf84d1842",
+    "layoutSetId": null,
+    "name": "Client Administration Team",
+    "positionList": "[]"
+  },
+  {
+    "id": "6a0e3ab76383159ae",
+    "layoutSetId": null,
+    "name": "Data Integrity Team",
+    "positionList": "[\"\"]"
+  },
+  {
+    "id": "6a0fde0781bf9b299",
+    "layoutSetId": null,
+    "name": "Partner Management Team",
+    "positionList": "[]"
+  },
+  {
+    "id": "6a0fde1e4c29b919b",
+    "layoutSetId": null,
+    "name": "Sponsor Management Team",
+    "positionList": "[]"
+  },
+  {
+    "id": "6a1e4565d708ce440",
+    "layoutSetId": null,
+    "name": "Mentor Team",
+    "positionList": "[]"
+  },
+  {
+    "id": "6a2b6b0cb326a06ee",
+    "layoutSetId": null,
+    "name": "Mentor Administration Team",
+    "positionList": "[]"
+  },
+  {
+    "id": "6a2b6c97237480557",
+    "layoutSetId": null,
+    "name": "System Administration Team",
+    "positionList": "[]"
+  },
+  {
+    "id": "6a4d3da3d7726c253",
+    "layoutSetId": null,
+    "name": "Marketing Admin Team",
+    "positionList": "[]"
+  },
+  {
+    "id": "6a654b30930f639ad",
+    "layoutSetId": null,
+    "name": "Analytics Admin Team",
+    "positionList": "[]"
+  }
+]
