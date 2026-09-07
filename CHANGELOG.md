@@ -4,6 +4,36 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.221.1] — 2026-09-07
+
+**fix(crm): the Client Assignment Role can assign a mentor on its own** — a
+role defect found by the Lakeside rehearsal instance, not an app change. A
+Client Administration Team member with no other team seat pressed Assign and
+the CRM refused the first write:
+`403 No foreign record access for link operation (CEngagement:assignedUsers)`
+(`cannotRelateForbidden`, foreign entity `User`, action `read`). Stamping
+`assignedUsers` is a link write, and EspoCRM's link check — read from source on
+both droplets, identical in 9.3.4 and 10.0.6 — requires the acting user to
+*read* every User being linked. The role granted nothing on `User`. Cleveland
+never saw it because every Client Administration Team member on crm-test is an
+admin or also sits on the Mentor Team / Mentor Administration Team, whose roles
+carry User read.
+
+- **Doug's ruling (2026-09-07):** the role becomes self-sufficient —
+  `User: read all, edit own`, the shape production's `ClientMentorIntakeRole`
+  already has — over the narrower `read: team` that would have kept the
+  accidental Mentor-Team coupling.
+- **`scripts/migrate_client_assignment_role.py`** applies it: idempotent,
+  merge-only (never lowers a level), dry-run by default, admin login from the
+  environment, reads the role back and rebuilds. One script, three targets.
+- **Lakeside: applied and proven.** A throwaway single-team user read the
+  mentor's User as 403 before and 200 after, then was deleted. **crm-test and
+  production are owed** (`OPEN-ITEMS.md` #28) — crm-test is blocked on the
+  `crm.config` login the nightly reset removed.
+- Settles the `espo-crm-changes` capability map's open row: roles are readable
+  and writable through the API as an administrator; the hand-edit limit was the
+  credential.
+
 ## [0.221.0] — 2026-09-01
 
 **feat(mentors): employment status surfaced on both mentor detail screens**

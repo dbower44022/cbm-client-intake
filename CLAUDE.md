@@ -328,6 +328,14 @@ full-height grid with a status multi-select, and assigns each to a mentor.
   column in the Available Mentors picker (ascending = who is most overdue), and
   the roster query asks for the field only when the CRM has it. Spec:
   `cmentorprofile-last-client-assigned-field.md`.
+- **Assign needs `User: read` on the acting role.** The assignedUsers stamp is
+  a link write, and EspoCRM refuses it (403 `cannotRelateForbidden`, identical
+  in 9.3.4 and 10.0.6) unless the user can read every User being linked. The
+  Client Assignment Role carried no User grant until 2026-09-07; Cleveland's
+  client admins only ever passed through a second team seat (Mentor Team).
+  Ruling: `User: read all, edit own` on the role itself —
+  `scripts/migrate_client_assignment_role.py`, Lakeside done, crm-test and
+  prod owed (`OPEN-ITEMS.md` #28).
 - **Stale-write guard**: the engagement is re-read before any write and the call
   is rejected (400, nothing written) if it already has a mentor or is no longer
   `Submitted`. The frontend reloads the grid on any Assign 400.

@@ -30,6 +30,30 @@ found; move resolved items to the bottom with the resolution date.
       users reset unless re-baselined (`SANDBOX-RESET.md`), and its login is
       refused today. Recreate it and re-baseline, or accept that the skill's
       crm-test path needs the account re-made each time.
+    - **The Client Assignment Role cannot assign a mentor on its own**
+      (found 2026-09-07 on Lakeside; fixed there the same day). Assigning writes
+      the mentor's login User into `CEngagement.assignedUsers` (and the same
+      list on the Contact, CClientProfile and Account), and EspoCRM's link check
+      — identical in 9.3.4 and 10.0.6 — refuses that unless the acting user can
+      **read** every User being linked. The role, the only one attached to the
+      Client Administration Team, grants nothing on `User`, so a member of that
+      team and no other gets `403 No foreign record access for link operation
+      (CEngagement:assignedUsers)`. Cleveland never saw it because every Client
+      Administration Team member on crm-test is an admin or also on the Mentor
+      Team / Mentor Administration Team, whose roles carry User read — Kitty
+      Cat passes only through her Mentor Team seat. **Doug's ruling: the role
+      becomes self-sufficient — `User: read all, edit own`** (the shape prod's
+      `ClientMentorIntakeRole` already has), applied by
+      `scripts/migrate_client_assignment_role.py` (idempotent, merge-only,
+      dry-run by default). **Lakeside: applied and proven 2026-09-07** — a
+      throwaway single-team user read the mentor's User as 403 before and 200
+      after, then was deleted. **Owed:** (a) crm-test, blocked on the
+      `crm.config` login above; (b) a re-capture of
+      `prds/chapter-network/rehearsal-2026-08-31/crmtest-capture/roles.json`
+      after that, since the standard is a capture, never a hand edit; (c)
+      production at the Sunday 17:00 UTC slot, the same script run from inside
+      the deployed container; (d) the app-side 403 wording — the user saw a
+      generic "security error", and the role name it needs is knowable.
 
 27. **The Email Guide's published copy has drifted from the repo**
     (2026-08-26, found by the first live run of `scripts/publish_docs.py`).

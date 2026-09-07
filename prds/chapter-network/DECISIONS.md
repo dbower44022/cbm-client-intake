@@ -133,6 +133,7 @@ therefore not paperwork; it is the load-bearing half of ruling 4.
 | 2026-08-20 | **"Cleveland Business Mentoring" (with -ing) in seven public-form strings is a copy bug, not a second brand.** Sweep them into `{{org}}` rather than introducing a second token. | [Phase 0](phase-0-decleveland.md) § 5; shipped in v0.205.0 |
 | 2026-08-20 | **Phase 0 ships with no feature flag.** The safety property — an unconfigured deployment renders byte-identical to before — is what makes a flag unnecessary, and it means the rollback is a revert. | [Phase 0](phase-0-decleveland.md) § 9 |
 | 2026-08-20 | **The `legal-links.js` policy URLs are not swept blind.** Making them settings is in scope; *where they should point* is a decision, and three of the four pointed at a WPEngine staging host. | Ruled and shipped in v0.206.0 — prod now serves the four production URLs |
+| 2026-09-07 | **A gated team's role must be self-sufficient — it never borrows a grant from a second team seat.** The Client Assignment Role could not assign a mentor (EspoCRM's link check needs `User` read to stamp `assignedUsers`); Cleveland's client admins only ever passed because each also sat on the Mentor Team. Ruled `User: read all, edit own` on the role itself, over the narrower `read: team` that would have kept the accidental coupling. | Found on Lakeside 2026-09-07, fixed there by `scripts/migrate_client_assignment_role.py`; crm-test, the roles-standard re-capture and production owed — `OPEN-ITEMS.md` #28 |
 
 ---
 
