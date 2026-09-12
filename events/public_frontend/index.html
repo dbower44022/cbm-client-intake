@@ -27,16 +27,23 @@
       <img class="pub__logo" src="{{logoUrl}}" alt="{{org}}" hidden id="brandLogo" />
       <span class="pub__brandname">{{org}}</span>
     </a>
-    <a class="pub__back" href="{{siteUrl}}">Back to our website</a>
+    <!-- The organisation's own menu, built server-side. A visitor who followed
+         the site's Webinars link arrives on this domain, and without this has
+         no way on to anything else. -->
+    {{siteNav}}
   </header>
 
+  <!-- The hero and the band below are the marketing page's own opening, carried
+       across because that page now redirects here. Each line is a setting and
+       each may be emptied. -->
+  <section class="pub__hero">
+    <h1>{{org}} Webinars</h1>
+    <p class="pub__tagline" id="heroTagline">{{heroTagline}}</p>
+    <p class="pub__pillars" id="heroPillars">{{heroPillars}}</p>
+  </section>
+  <p class="pub__band" id="heroBand">{{heroBand}}</p>
+
   <main class="pub__main">
-    <div class="pub__intro">
-      <h1>Workshops and Webinars</h1>
-      <p>Practical sessions for people starting, growing and strengthening a
-        business — always at no cost. Register for what is coming up, or watch
-        something you missed.</p>
-    </div>
 
     <div class="pub__msg" id="msg" hidden></div>
 
@@ -53,8 +60,7 @@
       <div class="cbm-wb">
         <section class="panel" aria-labelledby="cbm-cal-heading">
           <div class="panel__header">
-            <h2 id="cbm-cal-heading">Upcoming Sessions</h2>
-            <span class="pub__count" id="calendarCount"></span>
+            <h2 id="cbm-cal-heading">Calendar of Upcoming Webinars</h2>
           </div>
           <div class="panel__body" id="calendar"></div>
         </section>
@@ -63,15 +69,17 @@
       <div class="cbm-yt">
         <section class="panel" aria-labelledby="cbm-rec-heading">
           <div class="panel__header">
-            <h2 id="cbm-rec-heading">Recorded Library</h2>
-            <span class="pub__count" id="recordingsCount"></span>
+            <h2 id="cbm-rec-heading">Find a Recorded Webinar</h2>
           </div>
           <div class="panel__body">
+            <p class="pub__searchnote">Search by topic, keyword, or title to find
+              a recorded webinar. Results link directly to the recording.</p>
             <div class="pub__search">
-              <label class="pub__srlabel" for="searchBox">Search recordings</label>
-              <input type="search" id="searchBox" placeholder="Search recordings…" />
+              <label class="pub__srlabel" for="searchBox">Search recorded webinars</label>
+              <input type="search" id="searchBox" placeholder="Search recorded webinars…" />
               <button type="button" class="cbm-button cbm-button--secondary" id="searchBtn">Search</button>
             </div>
+            <p class="pub__reclabel" id="recordingsLabel" hidden>Most Recent</p>
             <div id="recordings"></div>
           </div>
         </section>

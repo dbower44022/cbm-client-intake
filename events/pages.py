@@ -69,11 +69,45 @@ def _template(name: str) -> str:
     return cached
 
 
-def _render(name: str, settings: Settings, values: dict[str, str]) -> str:
-    """Branding first, then this page's own values, every value escaped."""
+def _nav_html(settings: Settings) -> str:
+    """The organisation's own menu, built server-side.
+
+    Server-side rather than fetched, for the same reason the organisation's name
+    is substituted on serve: a menu that appears a moment after the page does is
+    worse than no menu, and this one is the only way back to the site.
+    """
+    items = settings.site_nav_items
+    if not items:
+        return ""
+    links = []
+    for item in items:
+        current = ' aria-current="page"' if item.get("current") else ""
+        links.append(
+            f'<a class="pub__navlink" href="{escape(item["url"], quote=True)}"{current}>'
+            f'{escape(item["label"])}</a>'
+        )
+    return (
+        '<nav class="pub__nav" aria-label="Site">' + "".join(links) + "</nav>"
+    )
+
+
+def _render(
+    name: str,
+    settings: Settings,
+    values: dict[str, str],
+    raw: Optional[dict[str, str]] = None,
+) -> str:
+    """Branding first, then this page's own values, every value escaped.
+
+    ``raw`` carries fragments this module BUILT and escaped itself, piece by
+    piece - the menu. Nothing from the CRM or from a setting reaches it without
+    going through :func:`escape` on the way in.
+    """
     html = branding.render_page(_template(name), settings)
     for token, value in values.items():
         html = html.replace("{{" + token + "}}", escape(value or "", quote=True))
+    for token, fragment in (raw or {}).items():
+        html = html.replace("{{" + token + "}}", fragment)
     return html
 
 
@@ -84,6 +118,9 @@ def _chrome(settings: Settings) -> dict[str, str]:
         "logoUrl": (settings.organization_logo_url or "").strip(),
         "contactEmail": settings.events_contact_address,
         "pageUrl": f"{settings.events_public_base}/" if settings.events_public_base else "",
+        "heroTagline": (settings.events_hero_tagline or "").strip(),
+        "heroPillars": (settings.events_hero_pillars or "").strip(),
+        "heroBand": (settings.events_hero_band or "").strip(),
     }
 
 
@@ -130,7 +167,9 @@ async def programme_no_slash() -> RedirectResponse:
 @page_router.get("/webinars/", include_in_schema=False)
 async def programme() -> Response:
     settings = get_settings()
-    return _page(_render("index.html", settings, _chrome(settings)), settings)
+    html = _render("index.html", settings, _chrome(settings),
+                   raw={"siteNav": _nav_html(settings)})
+    return _page(html, settings)
 
 
 @page_router.get("/webinars/{slug}", include_in_schema=False)
@@ -163,4 +202,6 @@ async def event_page(slug: str, request: Request) -> Response:
             "pageUrl": public.get("url") or "",
         }
     )
-    return _page(_render("event.html", settings, values), settings)
+    html = _render("event.html", settings, values,
+                   raw={"siteNav": _nav_html(settings)})
+    return _page(html, settings)

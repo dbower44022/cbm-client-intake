@@ -857,8 +857,29 @@ would be indistinguishable from a slug.
 - **`EVENTS_PUBLIC_BASE_URL` empty means "this app"** (derived from
   `APP_BASE_URL` + `/webinars`). It used to default to the marketing site's
   `/webinars`, which **404s**, so every shared event link pointed at nothing.
-- New settings: `ORGANIZATION_WEBSITE_URL` (the back-link every public page
-  carries, per-chapter like `DOCS_SITE_URL`) and `EVENTS_CONTACT_EMAIL` (the
+- **The marketing page's whole opening came across, not just its panels** — the
+  navy hero, the gold strapline band and the organisation's own top-level menu.
+  All of it is content on a page that redirects away, and the first side-by-side
+  (2026-09-12) is what found it missing, exactly as it found the presenting
+  invitation. Settings: `EVENTS_HERO_TAGLINE`, `EVENTS_HERO_PILLARS`,
+  `EVENTS_HERO_BAND` (each emptiable) and `ORGANIZATION_SITE_NAV`
+  (`Label|path` pairs; a leading `/` resolves against
+  `ORGANIZATION_WEBSITE_URL`, so a chapter changes one setting, not seven).
+  The menu is built **server-side** for the same reason the name is substituted
+  there: a menu that appears a moment late is worse than none, and it is the
+  visitor's only way on to the rest of the site.
+- **Panel wording is the SITE's, not ours** — "Calendar of Upcoming Webinars"
+  and "Find a Recorded Webinar". Inventing better names put our page out of step
+  with the one it replaces; don't re-invent them.
+- **⚠️ The recorded library is empty and that blocks the redirect**
+  (`OPEN-ITEMS.md` 19i). The live page's library comes straight from the YouTube
+  playlist; ours comes from `CEvent` rows with a `recordingUrl`, and there are
+  none on either CRM. `scripts/import_youtube_events.py` fixes it and has never
+  been run — it needs `YOUTUBE_API_KEY` and `YOUTUBE_PLAYLIST_ID`, neither of
+  which is configured anywhere, and the playlist id is not in the live page's
+  source.
+- New settings: `ORGANIZATION_WEBSITE_URL` (the back-link and the menu's base,
+  per-chapter like `DOCS_SITE_URL`) and `EVENTS_CONTACT_EMAIL` (the
   presenting invitation's address; empty falls back to `OPS_MAILBOX`).
 - The portal's bottom section is **"Public pages"** and leads with Workshops and
   Webinars, beside the five intake forms.
@@ -1422,7 +1443,7 @@ stamp — pending on both CRMs), `cintake-submission-*.md`, `cinformation-reques
 deployed and verified; `CHANGELOG.md` is the permanent record, `OPEN-ITEMS.md`
 holds anything still owed.*
 
-**Local work sits at v0.222.0 (2026-09-11), unpushed. Pushed through v0.221.0
+**Local work sits at v0.223.0 (2026-09-12), unpushed. Pushed through v0.221.0
 on 2026-09-01, confirmed live on all three apps,
 and feature-verified live by Doug the same day** — dev, crm-test and prod all
 report `0.221.0`, artifact-checked, and Doug exercised the two new features in
@@ -1435,6 +1456,16 @@ still read "pushed through v0.202.2" while v0.203.x/v0.204.0 sat unpushed
 locally, and a session that believed it pushed a docs commit and shipped a
 feature to production with it. `git log origin/main..main` is the answer; this
 sentence is a convenience.
+
+- **v0.223.0 (2026-09-12) — the public page opens the way the page it replaces
+  does.** The first side-by-side against the live site found four differences.
+  Three are fixed: the navy hero, the gold band and the organisation's menu all
+  came across, and the panel headings are the site's again. **The fourth is
+  blocking and is not fixed** — the recorded library would go from full to
+  empty, because the live one is the YouTube playlist and ours is CRM rows with
+  a recording link, of which there are none. The backfill script exists and has
+  never been run; it needs a YouTube key and the playlist id, neither of which
+  is configured anywhere (`OPEN-ITEMS.md` 19i). **Committed, not pushed.**
 
 - **v0.222.0 (2026-09-11) — the public workshops-and-webinars programme is a
   page THIS APP serves, at `/webinars/`.** Doug struck the WordPress plugin:

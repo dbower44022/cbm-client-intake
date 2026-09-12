@@ -73,8 +73,6 @@
   async function loadCalendar() {
     var data = await getJson("/api/events/upcoming");
     var items = data.webinars || [];
-    $("calendarCount").textContent =
-      items.length ? items.length + (items.length === 1 ? " session" : " sessions") : "";
     window.CBMEvents.renderCalendar($("calendar"), items, {
       onSignUp: function (item) {
         // Buttons are never disabled — say what is wrong on click. An event
@@ -98,8 +96,9 @@
       "/api/events/recordings?limit=24" + (q ? "&q=" + encodeURIComponent(q) : "")
     );
     var items = data.recordings || [];
-    $("recordingsCount").textContent =
-      items.length ? items.length + (items.length === 1 ? " recording" : " recordings") : "";
+    // The site labels its default list "Most Recent". A search result is not
+    // that, so the label goes away while one is showing.
+    $("recordingsLabel").hidden = !!q || !items.length;
     window.CBMEvents.renderRecordings($("recordings"), items, {
       onPlay: function (item) {
         if (item.recordingUrl) window.open(item.recordingUrl, "_blank", "noopener");

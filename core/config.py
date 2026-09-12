@@ -521,6 +521,35 @@ class Settings(BaseSettings):
     # people to write to. Empty falls back to OPS_MAILBOX, and with both empty
     # the panel renders without a contact line rather than a broken mailto.
     events_contact_email: str = ""
+
+    # --- the public programme page's chrome -------------------------------
+    #
+    # These four carry the marketing copy the organisation's own /webinars/
+    # page shows today, so the page visitors are redirected to opens the way
+    # the page they left did. Each defaults to Cleveland's live wording and
+    # each may be emptied to drop that line entirely - a chapter with nothing
+    # to say there gets a clean page, not a placeholder.
+    #
+    # The heading itself is not here: it is "{{org}} Webinars" in the markup,
+    # substituted from ORGANIZATION_NAME like every other page.
+    events_hero_tagline: str = "Free Education for Every Stage of Your Business"
+    events_hero_pillars: str = "Launch • Grow • Thrive"
+    events_hero_band: str = (
+        "CBM Workshops Program | Business Questions, Answered Free, Live, "
+        "Straightforward"
+    )
+    # The organisation's own top-level menu, reproduced across the top of the
+    # public programme pages - a visitor who followed the site's Webinars link
+    # arrives on our domain and must not lose the site's navigation.
+    #
+    # Format: "Label|path" pairs separated by commas. A path starting with "/"
+    # is resolved against ORGANIZATION_WEBSITE_URL, so a chapter whose site has
+    # the same shape needs to change only that one setting. An absolute URL is
+    # used as given. Empty renders no menu, leaving just the back-link.
+    organization_site_nav: str = (
+        "Home|/,About|/about/,Mentoring|/mentoring/,Webinars|/webinars/,"
+        "Resources|/resources/,Support Us|/support-us/,Contact|/contact/"
+    )
     # YouTube: needed ONLY by the playlist backfill (EV-42). Rendering the
     # recorded library derives thumbnails from the video id with no key and no
     # API call - which is what gets the key out of the browser (EV-05).
@@ -744,6 +773,38 @@ class Settings(BaseSettings):
     def events_contact_address(self) -> str:
         """Who the public programme page tells people to write to."""
         return (self.events_contact_email or "").strip() or (self.ops_mailbox or "").strip()
+
+    @property
+    def site_nav_items(self) -> list[dict[str, str]]:
+        """The organisation's menu, as {label, url, current} rows.
+
+        ``current`` marks the entry that leads back to this very page - the
+        site's own Webinars link, which after the redirect returns the visitor
+        here. It is matched on the last path segment rather than a configured
+        flag, so a chapter that renames the page simply gets no highlight
+        instead of a wrong one.
+        """
+        raw = (self.organization_site_nav or "").strip()
+        if not raw:
+            return []
+        base = (self.organization_website_url or "").strip().rstrip("/")
+        out: list[dict[str, str]] = []
+        for part in raw.split(","):
+            part = part.strip()
+            if not part or "|" not in part:
+                continue
+            label, _, target = part.partition("|")
+            label, target = label.strip(), target.strip()
+            if not label or not target:
+                continue
+            if target.startswith("/"):
+                url = f"{base}{target}" if base else target
+            else:
+                url = target
+            segment = target.rstrip("/").rsplit("/", 1)[-1].lower()
+            out.append({"label": label, "url": url,
+                        "current": "yes" if segment == "webinars" else ""})
+        return out
 
     @property
     def analytics_active(self) -> bool:

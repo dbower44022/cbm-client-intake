@@ -1,6 +1,6 @@
 # CBM Events & Webinars — Finalization Plan
 
-Last Updated: 09-11-26 23:10 · Revision 2.0 — see change log at the end.
+Last Updated: 09-12-26 14:05 · Revision 2.1 — see change log at the end.
 
 Companion to `CBM_Events_PRD.md`, `CBM_Events_Implementation_Plan.md` and
 `CBM_Events_Registration_Recognition_Plan.md`. Those three say what the feature
@@ -93,7 +93,8 @@ website, and it is one redirect rule.
 | # | Item | Owner | Depends on | State |
 |---|---|---|---|---|
 | A1 | **Build the public pages** at `/webinars/` and `/webinars/{slug}`: server-rendered so a social crawler sees each event's own title, description and image, and so an unpublished event 404s; the two panels driven by the existing renderer under the site's own stylesheet; the presenting invitation carried across. | build | — | **Done, v0.222.0** |
-| A2 | **A browser pass against real crm-test data**, as a real visitor (`OPEN-ITEMS.md` 19e). The fabricated-data pass is done and found three defects; this one has never run. Note crm-test's seeded events carry no slug, so create one event through `/events` first — that is what generates a slug. | verify | A1, deploy | Owed |
+| A2 | **A browser pass against real crm-test data**, as a real visitor (`OPEN-ITEMS.md` 19e). | verify | A1, deploy | **First pass done 2026-09-12** — side by side against the live page. Found four differences; three fixed in v0.223.0 (hero, band, site menu, panel wording), the fourth is A2b. |
+| A2b | **Populate the recorded library** (`OPEN-ITEMS.md` 19i). The live page's library comes from the YouTube playlist; ours comes from event records, and there are none. Redirecting today replaces a populated section with an empty one. `scripts/import_youtube_events.py` is the fix and needs a **YouTube API key** and the **playlist identifier**, neither configured anywhere. | Doug supplies, build runs | — | **Blocking** |
 | A3 | **Scope the near-duplicate hold per event** (19f). Give the form specification an optional payload key that joins the match, so event registration matches on form + email + event. Test: two events, one email, both deliver; the same event twice still holds. **Lands before the redirect** — every returning registrant makes this fire more often. | build | — | Owed |
 | A4 | **Decide the consent wording** (19d). Both public doors send `consent: false` today, so a registration records no opt-in at all. Options and the recommendation are in § 4. **Lands before the redirect.** | Doug rules, build | — | Owed |
 | A5 | **Share the Apps Script source and its Google Sheet.** Now needed only to confirm nothing else runs on it before it is retired — it is no longer a parity baseline, because we are not reimplementing its rendering. | Doug | — | Owed |
@@ -233,5 +234,6 @@ attendance recorded → recording link pasted → the engagement rollup shows it
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 2.1 | 09-12-26 14:05 | Claude (Claude Code) | First side-by-side against the live page. Track A gains A2b, the recorded-library backfill, which is blocking and needs two values from Doug. A2 records the three differences already fixed in v0.223.0. |
 | 2.0 | 09-11-26 23:10 | Claude (Claude Code) | Track A rebuilt around Doug's 2026-09-11 ruling: the marketing site redirects to a page this app serves, and the presenting invitation moves onto it. The WordPress plugin, its proxy, its thumbnail proxy and its settings screen are struck. A1 is built (v0.222.0); the remaining Track A items are the browser pass, the per-event duplicate hold, the consent wording, and one redirect rule. Definition of done, sequence, decisions and verification gates follow. |
 | 1.0 | 09-08-26 19:05 | Claude (Claude Code) | First draft. State verified against both live deployments and the website; seven-point definition of done; five tracks with owners and dependencies; two decisions for Doug. |

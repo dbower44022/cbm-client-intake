@@ -469,6 +469,33 @@ toggle.
     - Both need `ANALYTICS_ENABLED`; record-scoped metrics always run live as
       the user, so an empty panel means the metric found nothing, not a cache.
 
+19i. **The recorded library would go from full to empty at the redirect — and
+    the fix has never been run** (found 2026-09-12 by the first side-by-side
+    against the live page). The marketing page's recorded library is drawn
+    straight from the **YouTube playlist** by the Apps Script. Our page draws it
+    from `CEvent` rows carrying a `recordingUrl`, and crm-test holds **six
+    events and zero recordings**, so `/webinars/` currently renders
+    "No recordings matched" where the live page shows a populated library.
+    Redirecting in that state replaces a whole section of the page with nothing.
+
+    `scripts/import_youtube_events.py` is written for exactly this: it imports
+    each playlist video as a past event carrying the recording link, **dry-run
+    by default**, **unpublished** on purpose (a video's upload date is not the
+    event date, so a human checks each before it can reach the public page), and
+    idempotent. It has never been run against the real playlist.
+
+    **Blocked on two values only Doug can supply**, neither of which is in
+    `.env` or in either overlay, and the playlist identifier is not recoverable
+    from the live page's source (the Apps Script holds it):
+    - a **YouTube Data API v3 key** — used ONLY by this script; rendering the
+      library derives thumbnails from the video id with no key and no API call,
+      which is what keeps a key out of the browser (EV-05, and the reason the
+      current page's exposed key gets rotated at retirement);
+    - the **playlist identifier** for the recorded-webinar playlist.
+
+    Run the dry run on crm-test first and read the plan: the intake API user
+    cannot delete, so a bad import is cleaned up by hand.
+
 19f. **Event registration holds a person's SECOND webinar of the day for staff
     review** (found 2026-08-17). `_recent_duplicate_id` matches on form slug +
     email inside `duplicate_hold_seconds` (24h), and event registration rides

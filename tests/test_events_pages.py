@@ -257,3 +257,88 @@ def test_the_event_page_orders_the_date_the_way_people_read_it():
     assert 'day + " " + month' in js
     # The naive join is what produced the defect; it must not come back.
     assert "[event.month, event.day, event.time]" not in js
+
+
+# --- the marketing page's own chrome, carried across -------------------------
+
+
+def test_the_hero_and_band_come_across(monkeypatch):
+    """The page that redirects here opens with a navy hero and a gold band. Both
+    are content on that page, so both had to move — the same omission as the
+    presenting invitation, found the same way, by looking at the two side by
+    side."""
+    client, _ = build(monkeypatch, events=[make_event()])
+    html = client.get("/webinars/").text
+    assert "Free Education for Every Stage of Your Business" in html
+    assert "Launch" in html and "Grow" in html and "Thrive" in html
+    assert "Answered Free, Live, Straightforward" in html
+    # The heading carries the organisation, not a literal.
+    assert "Cleveland Business Mentors Webinars" in html
+
+
+def test_each_hero_line_can_be_emptied(monkeypatch):
+    """A chapter with nothing to say there gets a clean page, not a placeholder."""
+    monkeypatch.setenv("EVENTS_HERO_TAGLINE", "")
+    monkeypatch.setenv("EVENTS_HERO_PILLARS", "")
+    monkeypatch.setenv("EVENTS_HERO_BAND", "")
+    client, _ = build(monkeypatch, events=[make_event()])
+    html = client.get("/webinars/").text
+    assert "Free Education for Every Stage" not in html
+    assert "Answered Free, Live, Straightforward" not in html
+    # The heading is not one of the three and stays.
+    assert "Webinars</h1>" in html
+
+
+def test_the_site_menu_is_rendered_server_side(monkeypatch):
+    """A menu that appears a moment after the page is worse than none, and this
+    is the visitor's only way on to the rest of the site."""
+    client, _ = build(monkeypatch, events=[make_event()])
+    html = client.get("/webinars/").text
+    for label in ("Home", "About", "Mentoring", "Resources", "Support Us", "Contact"):
+        assert f">{label}</a>" in html, label
+    assert 'href="https://clevelandbusinessmentors.org/about/"' in html
+    # The site's own Webinars entry leads back here; mark it rather than let a
+    # visitor make the round trip.
+    assert 'aria-current="page"' in html
+
+
+def test_the_menu_follows_the_configured_website(monkeypatch):
+    """A chapter whose site has the same shape changes one setting, not seven."""
+    monkeypatch.setenv("ORGANIZATION_WEBSITE_URL", "https://lakeside.example")
+    client, _ = build(monkeypatch, events=[make_event()])
+    html = client.get("/webinars/").text
+    assert 'href="https://lakeside.example/about/"' in html
+    assert "clevelandbusinessmentors.org/about/" not in html
+
+
+def test_the_menu_can_be_turned_off(monkeypatch):
+    monkeypatch.setenv("ORGANIZATION_SITE_NAV", "")
+    client, _ = build(monkeypatch, events=[make_event()])
+    assert 'class="pub__nav"' not in client.get("/webinars/").text
+
+
+def test_a_menu_label_is_escaped(monkeypatch):
+    """The menu is a setting, and a setting is configuration an administrator
+    types — escaped on the way into markup like every other value here."""
+    monkeypatch.setenv("ORGANIZATION_SITE_NAV", '<script>x</script>|/x/')
+    client, _ = build(monkeypatch, events=[make_event()])
+    html = client.get("/webinars/").text
+    assert "<script>x</script>" not in html
+    assert "&lt;script&gt;" in html
+
+
+def test_the_event_page_carries_the_menu_too(monkeypatch):
+    client, _ = build(monkeypatch, events=[make_event()])
+    html = client.get("/webinars/grant-writing-basics").text
+    assert 'class="pub__nav"' in html
+    assert "All webinars and workshops" in html
+
+
+def test_the_panels_use_the_sites_own_wording(monkeypatch):
+    """These headings were mine, and they did not match the page this replaces."""
+    client, _ = build(monkeypatch, events=[make_event()])
+    html = client.get("/webinars/").text
+    assert "Calendar of Upcoming Webinars" in html
+    assert "Find a Recorded Webinar" in html
+    assert "Results link directly to the recording." in html
+    assert "Most Recent" in html

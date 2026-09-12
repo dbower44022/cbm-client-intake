@@ -4,6 +4,54 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.223.0] — 2026-09-12
+
+**feat(events): the public programme page opens the way the page it replaces
+does.** Found by putting the two side by side, which is the pass
+`OPEN-ITEMS.md` 19e exists for. Four differences, three of them fixed here.
+
+- **The hero and the gold band came across.** The marketing page opens with a
+  navy hero — the organisation's name, *Free Education for Every Stage of Your
+  Business*, *Launch • Grow • Thrive* — over a gold strapline band. That is
+  content on the page that now redirects away, exactly like the presenting
+  invitation, and it was missed for the same reason: nobody had looked at the
+  two together. Three settings carry it — `EVENTS_HERO_TAGLINE`,
+  `EVENTS_HERO_PILLARS`, `EVENTS_HERO_BAND` — each defaulting to Cleveland's
+  live wording and each **emptiable**, so a chapter with nothing to say there
+  gets a clean page rather than a placeholder. The heading itself is not a
+  setting: it is `{{org}} Webinars`, substituted like every other page's.
+- **The organisation's menu came across**, server-side, in
+  `ORGANIZATION_SITE_NAV` — `Label|path` pairs, a leading `/` resolved against
+  `ORGANIZATION_WEBSITE_URL`, so a chapter whose site has the same shape changes
+  **one** setting rather than seven. Built in the page rather than fetched, for
+  the reason the organisation's name is: a menu that appears a moment after the
+  page is worse than none, and this is the visitor's only way on to the rest of
+  the site. The site's own Webinars entry is marked `aria-current`, since after
+  the redirect it leads back here — matched on the last path segment, so a
+  chapter that renames the page gets no highlight rather than a wrong one.
+- **The panel wording is the site's again.** "Calendar of Upcoming Webinars" and
+  "Find a Recorded Webinar", not the "Upcoming Sessions" and "Recorded Library"
+  I invented; the site's line above the search box explaining that results link
+  directly to the recording; and its **Most Recent** label, shown only for the
+  default list, because search results are not that. The per-panel counts I had
+  added are gone — the site has none.
+
+**The fourth difference is a blocker and is NOT fixed: the recorded library
+would go from full to empty.** The live page's library is drawn straight from
+the YouTube playlist by the Apps Script. Ours is drawn from `CEvent` rows
+carrying a `recordingUrl`, and crm-test has **six events and zero recordings**.
+Redirecting today would replace a populated section of the page with
+"No recordings matched". `scripts/import_youtube_events.py` is exactly the fix
+and has never been run: it needs `YOUTUBE_API_KEY` and `YOUTUBE_PLAYLIST_ID`,
+**neither of which is configured in `.env` or in either overlay**, and the
+playlist identifier is not recoverable from the live page's source. Both are
+Doug's to supply. Tracked as `OPEN-ITEMS.md` 19i.
+
+Tests: 8 new, covering the hero, each line being emptiable, the menu rendering
+server-side, the menu following the configured website, the menu being turnable
+off, a menu label being escaped, the event page carrying it too, and the panel
+wording. Suite 1,994 green.
+
 ## [0.222.0] — 2026-09-11
 
 **feat(events): the workshops-and-webinars programme is a page this app serves,
