@@ -673,8 +673,16 @@ toggle.
       HTTP 400 "That address answered, but it is not a CRM this application
       can use: … HTTP 404", nothing stored. Cosmetic: the detail carries the
       foreign host's HTML body after the status — trim `http_error_detail`
-      for non-JSON bodies some day. Left owed on this list: only (3), once
-      crm-test has an encryption key.
+      for non-JSON bodies some day. **(3) is UNBLOCKED as of 2026-09-12**:
+      both overlays now carry an `APP_ENCRYPTION_KEY` (a distinct Fernet key
+      per deployment, the same key on the web service and the delivery-worker
+      within each, applied with `doctl`), so a secret can be stored from the
+      page for the first time. The check itself has still not been run — set a
+      real secret (`YOUTUBE_API_KEY` is the natural one, since the events
+      backfill needs it anyway), confirm the row reads *set*, that the value
+      never appears in the page payload, and that the `app_setting` row has
+      `encrypted=true`. **Nothing outside the page reports whether the cipher
+      loaded**, so this check is the only proof the keys took effect.
     - **The two version stamps (v0.214.0)** — after the R6 `doctl` applies:
       `releaseTag` reads `v0.216.1` on crm-test, `crmConfig.state` reads
       `unstamped` there and `absent` on prod until Sunday's build, then
