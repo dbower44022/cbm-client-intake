@@ -451,8 +451,11 @@ toggle.
     (verified on crm-test 2026-08-17; the two CRMs drift). Plan and rulings:
     `prds/mentor-provisional-provisioning-plan.md`.
 
-19f. **The Company record page and the client dashboard section have never been
-    opened by a human** (2026-08-16). Both shipped 2026-07-28 and are covered by
+19h. **The Company record page and the client dashboard section have never been
+    opened by a human** (2026-08-16; renumbered from a second "19f" on
+    2026-09-11 — the duplicate numbering made a bare reference ambiguous, and
+    19f is the event-registration duplicate-hold item everywhere else that
+    cites it). Both shipped 2026-07-28 and are covered by
     tests, and the Company route serves on crm-test — but no one has looked at
     either rendering real data. Worth ten minutes as a real non-admin in the
     Mentor Team:
@@ -478,27 +481,53 @@ toggle.
     `EVENTS_PUBLIC_API` is crm-test-only, but it must land **before** the
     website cutover.
 
-19d. **The events sign-up modal's consent line under-covers what `consent: true`
-    writes** (2026-08-16, v0.203.0). The line copied from the live page —
-    *"By registering, you are agreeing to receive emails about our webinars"* —
-    is a marketing-email statement, while `consent: true` also stamps
-    terms-of-use, privacy-policy and code-of-conduct acceptance on the Contact
-    (`forms/event_registration/orchestrator.py`). The preview therefore sends
-    **false**, which claims nothing the visitor was not shown but records no
-    opt-in at all. Before Phase 4 ships, decide which: a real consent checkbox
-    in the modal (a visible change to a page visitors know), or consent text
-    that names the three policies. Not urgent — no public traffic reaches this
-    yet.
+19d. **The events sign-up consent line under-covers what `consent: true`
+    writes — and this now BLOCKS the redirect** (2026-08-16; re-scoped
+    2026-09-11, v0.222.0). The line copied from the live page — *"By
+    registering, you are agreeing to receive emails about our webinars"* — is a
+    marketing-email statement, while `consent: true` also stamps terms-of-use,
+    privacy-policy and code-of-conduct acceptance on the Contact
+    (`forms/event_registration/orchestrator.py`). **Both public doors send
+    `false`** — the calendar's modal and the per-event page's own form — which
+    claims nothing the visitor was not shown but records **no opt-in at all**.
+    That was tolerable while nothing public pointed here. Once
+    `clevelandbusinessmentors.org/webinars/` redirects to this app it is real
+    traffic, so the wording has to be settled first.
 
-19e. **The events website preview has only been seen against stub data**
-    (2026-08-16, v0.203.0). The site's own stylesheet, the sign-up modal, the
-    title→event-page link and the corrected recorded-library markup were all
-    verified in a local harness with fabricated events. `/events` is live on
-    crm-test, so the real pass is available today: open
-    `/events/preview.html` there, confirm both panels against
-    `clevelandbusinessmentors.org/webinars/` side by side, click a title through
-    to the event page, and register once with obvious test data (it creates a
-    genuine Contact + CEventRegistration — delete them afterwards).
+    Two options, both small. (a) **A consent checkbox naming the three
+    policies**, as every other public form on the site does — unambiguous
+    evidence, at the cost of one more click and a visible change to a page
+    visitors know. (b) **Consent text under the button** naming the three
+    policies with links, no checkbox — keeps one-click sign-up, weaker evidence.
+    Claude's recommendation is (a). Note the constraint: the modal's markup is
+    emitted by `wp-plugin/cbm-events/assets/cbm-events.js` against the site's
+    verbatim stylesheet, and a guard test requires every emitted class to have a
+    rule in that stylesheet — so a checkbox in the **modal** means touching both
+    contract files, while the per-event page's own form is ours and can carry
+    one today. Whichever is chosen, the two doors must agree.
+
+19e. **The public `/webinars/` pages have been driven only against fabricated
+    events** (2026-08-16; superseded 2026-09-11, v0.222.0). The preview page is
+    no longer the thing to check — the real public pages now exist at
+    `/webinars/` and `/webinars/{slug}`, and they are what the marketing site
+    will redirect to. A browser pass against **fabricated** events found and
+    fixed three defects (wrapper scoping, a broken logo image, a backwards date
+    line), so the layout is proven; what is not is any of it against **real**
+    crm-test data, as a real visitor.
+
+    The pass, once v0.222.0 is deployed to crm-test:
+    - Open `/webinars/` there and compare both panels with
+      `clevelandbusinessmentors.org/webinars/` side by side, at a desktop width
+      and on a phone. crm-test's seeded events carry **no slug** (they were
+      written straight into the CRM rather than saved through the app), so
+      **create one event through `/events` first** — that is what generates a
+      slug, and without one a title renders as plain text and has no page.
+    - Click that title through to `/webinars/<slug>` and check the graphic, the
+      overview and syllabus, and the facts rail.
+    - Register once from the calendar modal and once from the event page's own
+      form, with obvious test data. Both create a genuine Contact +
+      CEventRegistration — delete them afterwards.
+    - Confirm an **unpublished** event's page 404s rather than rendering empty.
 
 19c. **Events Phase 6 is built but three of its four parts have never met their
     external service** (2026-08-16). All are off everywhere; nothing is at risk
@@ -526,13 +555,30 @@ toggle.
     engagement rollup, the contact history and the programme reports carry real
     numbers.
 
-19d. **Events is still off on production** (2026-08-16). crm-test has
-    `EVENTS_ENABLED` + `EVENTS_PUBLIC_API`; prod has neither, though its CRM
-    schema and the `Event Registration` receipt enum are both ready. Deliberate:
-    **Phase 4 (the WordPress plugin and cutover) is not built**, so there is no
-    public site pointing at prod and nothing to gain by switching it on. Phase 4
-    remains the only thing standing between this work and the lead leak actually
-    stopping.
+19g. **Events is still off on production, and switching it on is now most of
+    the remaining work** (2026-08-16; re-scoped 2026-09-11, v0.222.0). crm-test
+    has `EVENTS_ENABLED` + `EVENTS_PUBLIC_API`; prod has neither, though its CRM
+    schema and the `Event Registration` receipt enum have been ready since
+    2026-08-09. It stayed off because there was no public site pointing at it.
+
+    That reason is gone: the public programme is a page this app serves at
+    `/webinars/`, and the marketing site redirects to it, so there is no plugin
+    left to build. What production now needs, in order:
+
+    1. Run `scripts/probe_events_schema.py` inside the prod web container and
+       diff it against crm-test (the two CRMs have drifted before).
+    2. Set `EVENTS_ENABLED` and `EVENTS_PUBLIC_API` — at `/setup`, which is live
+       on prod, so this no longer needs `doctl`.
+    3. Confirm `APP_BASE_URL` is set (it is), because that is what
+       `EVENTS_PUBLIC_BASE_URL` derives every shared event link from.
+    4. Confirm the Marketing Admin Team is who should administer events.
+    5. Settle 19d (consent) and land 19f (the per-event duplicate hold) BEFORE
+       the redirect is switched on. Both touch what a real visitor gets.
+    6. Create the upcoming events in prod `/events` so the page is not empty at
+       the swap, then add the redirect on the website.
+
+    Prod's `CEvent` legitimately holds **0 records**, so the first published
+    event there will be a real one.
 
 
 19b. **The v0.198.0 Company picker's CREATE path has never run as a non-admin**

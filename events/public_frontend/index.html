@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="cbm-org" content="{{org}}" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Workshops and Webinars — {{org}}</title>
+  <meta name="description" content="Free workshops and webinars from {{org}}. Register for an upcoming session, or watch a recording of one you missed." />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Workshops and Webinars — {{org}}" />
+  <meta property="og:description" content="Free workshops and webinars from {{org}}. Register for an upcoming session, or watch a recording of one you missed." />
+  <meta property="og:url" content="{{pageUrl}}" />
+  <meta name="twitter:card" content="summary" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/tokens.css" />
+  <!-- The website's OWN stylesheet, shipped alongside the renderer. Loaded
+       before our page chrome so the chrome can never win a specificity tie
+       against a contract class. -->
+  <link rel="stylesheet" href="/events-plugin/cbm-events.css" />
+  <link rel="stylesheet" href="/webinars-assets/public.css" />
+</head>
+<body>
+  <header class="pub__bar">
+    <a class="pub__brand" href="{{siteUrl}}">
+      <img class="pub__logo" src="{{logoUrl}}" alt="{{org}}" hidden id="brandLogo" />
+      <span class="pub__brandname">{{org}}</span>
+    </a>
+    <a class="pub__back" href="{{siteUrl}}">Back to our website</a>
+  </header>
+
+  <main class="pub__main">
+    <div class="pub__intro">
+      <h1>Workshops and Webinars</h1>
+      <p>Practical sessions for people starting, growing and strengthening a
+        business — always at no cost. Register for what is coming up, or watch
+        something you missed.</p>
+    </div>
+
+    <div class="pub__msg" id="msg" hidden></div>
+
+    <!-- The two panels below are the site's own markup and the site's own
+         stylesheet. Nothing in public.css may style a contract class; that is
+         how a class-name drift stayed hidden for three weeks once already. -->
+    <div class="pub__columns">
+      <!-- .cbm-wb and .cbm-yt are two SEPARATE wrapper scopes in the site's
+           stylesheet: each carries its own CSS variables and every one of its
+           rules is written as `.cbm-wb .panel …` / `.cbm-yt .panel …`. So the
+           wrapper must be an ANCESTOR of .panel, not the same element, and the
+           library must carry cbm-yt rather than cbm-wb. Collapsing the two, or
+           reusing one wrapper for both panels, silently unstyles a section. -->
+      <div class="cbm-wb">
+        <section class="panel" aria-labelledby="cbm-cal-heading">
+          <div class="panel__header">
+            <h2 id="cbm-cal-heading">Upcoming Sessions</h2>
+            <span class="pub__count" id="calendarCount"></span>
+          </div>
+          <div class="panel__body" id="calendar"></div>
+        </section>
+      </div>
+
+      <div class="cbm-yt">
+        <section class="panel" aria-labelledby="cbm-rec-heading">
+          <div class="panel__header">
+            <h2 id="cbm-rec-heading">Recorded Library</h2>
+            <span class="pub__count" id="recordingsCount"></span>
+          </div>
+          <div class="panel__body">
+            <div class="pub__search">
+              <label class="pub__srlabel" for="searchBox">Search recordings</label>
+              <input type="search" id="searchBox" placeholder="Search recordings…" />
+              <button type="button" class="cbm-button cbm-button--secondary" id="searchBtn">Search</button>
+            </div>
+            <div id="recordings"></div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Carried over from the marketing site's own webinars page at cutover,
+         because that page now redirects here and this invitation would
+         otherwise have nowhere left to live. -->
+    <section class="pub__presenting" id="presenting">
+      <h2>Interested in Presenting or Hosting?</h2>
+      <p>For more information about the Workshops Program, please reach out.
+        We'd love to connect.</p>
+      <p class="pub__contact" id="contactLine" hidden>
+        <a id="contactLink" href="#">{{contactEmail}}</a>
+      </p>
+      <p><a class="cbm-button" id="contactBtn" href="#">Contact Us Today</a></p>
+    </section>
+  </main>
+
+  <footer class="cbm-footer pub__footer">
+    <p>&copy; <span data-cbm-year>2026</span> {{org}}. All rights reserved.<span class="cbm-footer__version" data-cbm-version></span></p>
+  </footer>
+
+  <!-- busy.js first: it wraps fetch/XHR, so it must be in place before any
+       other script can start a request. -->
+  <script src="/shared/busy.js"></script>
+  <script src="/events-plugin/cbm-events.js"></script>
+  <script src="/webinars-assets/public.js"></script>
+  <script src="/shared/footer.js"></script>
+</body>
+</html>

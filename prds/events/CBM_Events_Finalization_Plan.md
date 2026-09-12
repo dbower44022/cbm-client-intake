@@ -1,6 +1,6 @@
 # CBM Events & Webinars — Finalization Plan
 
-Last Updated: 09-08-26 19:05 · Revision 1.0 — see change log at the end.
+Last Updated: 09-11-26 23:10 · Revision 2.0 — see change log at the end.
 
 Companion to `CBM_Events_PRD.md`, `CBM_Events_Implementation_Plan.md` and
 `CBM_Events_Registration_Recognition_Plan.md`. Those three say what the feature
@@ -8,7 +8,8 @@ is and how it was built. This document says what is left between today's state
 and a finished, live, production feature, in the order it should be done, and
 who owns each piece.
 
-**Status:** DRAFT for Doug's approval.
+**Status:** Track A approved and half built (Doug, 2026-09-11: redirect, and
+move the presenting section onto our page). Tracks B to E await scheduling.
 
 ---
 
@@ -39,10 +40,16 @@ Built and verified: Phases 0, 1, 3, 5 and 6c (reporting).
 Built and **never run against their external service**: Phase 2 (Zoom
 provisioning), 6a (attendance from the Zoom report), 6b (follow-up email), 6d
 (YouTube backfill).
-**Not built:** Phase 4, the WordPress plugin and the cutover. The repository
-holds only the renderer (`wp-plugin/cbm-events/assets/cbm-events.js`) and the
-site's stylesheet. There is no plugin file, no server-side proxy, no thumbnail
-proxy, no per-event page and no settings screen.
+**Struck:** Phase 4, the WordPress plugin. Doug ruled on 2026-09-11 that the
+marketing site should **redirect** to a page this app serves rather than embed
+or reimplement one. The plugin, its server-side proxy, its thumbnail proxy, its
+rewrite rules and its settings screen are all cancelled. The two files under
+`wp-plugin/cbm-events/assets/` stay exactly where they are — they are the
+renderer and the site's verbatim stylesheet, and the public pages drive both.
+
+**Built 2026-09-11 (v0.222.0):** the public pages themselves, at `/webinars/`
+and `/webinars/{slug}`, with the "Interested in Presenting or Hosting?"
+invitation carried across from the page that will redirect away.
 **Designed, not built:** registration recognition (the five-step plan), and its
 prerequisite fix to the near-duplicate hold.
 
@@ -52,12 +59,13 @@ prerequisite fix to the near-duplicate hold.
 
 The feature is finished when all of the following are true on **production**:
 
-1. The live `/webinars/` page renders from the application's API and looks the
-   same as today at desktop and phone widths.
+1. `clevelandbusinessmentors.org/webinars/` redirects to this app's programme
+   page, which looks like the site and works at desktop and phone widths.
 2. A registration from that page creates a Contact and an Event Registration in
    the production CRM, and the visitor receives a confirmation.
 3. Each event has a shareable page of its own.
-4. The page still renders when the application is unreachable.
+4. A visitor who reloads during a brief outage is answered from their own
+   browser cache (the page sets a 60-second public `Cache-Control`).
 5. A person registering for two events on one day gets both registrations.
 6. Staff create, publish, run and report on an event entirely in `/events`,
    signed in as a non-admin member of the Marketing Admin Team.
@@ -76,20 +84,27 @@ parallel or after. Each item names its owner: **Doug** (access, credentials,
 site changes, rulings), **build** (code in this repository), or **verify** (a
 live pass, always as a real non-admin where a gate is involved).
 
-### Track A — The cutover (Phase 4). Ends the lead leak.
+### Track A — The redirect. Ends the lead leak.
 
-| # | Item | Owner | Depends on |
-|---|---|---|---|
-| A1 | Share the **Apps Script source and its Google Sheet**. The script's real behaviour is the parity baseline (PRD R-1); so far it is inferred from network traffic. | Doug | — |
-| A2 | Confirm **WordPress plugin-install rights** and export the current `/webinars/` page content as the rollback copy. | Doug | — |
-| A3 | **Scope the near-duplicate hold per event** (`OPEN-ITEMS.md` 19f). Give the form specification an optional payload key that joins the match, so event registration matches on form + email + event. Test: two events, one email, both deliver; the same event twice still holds. | build | — |
-| A4 | **Decide the consent wording** in the sign-up modal (19d). The line copied from the live page covers marketing email only; `consent: true` also records terms-of-use, privacy-policy and code-of-conduct acceptance. Options in § 4. | Doug rules, build | — |
-| A5 | **Build the WordPress plugin** (`wp-plugin/cbm-events/`): the plugin file with header, asset enqueue and a settings screen (API base URL, cache lifetime, on/off); the three shortcodes emitting the EV-01 class contract; a server-side proxy under `/wp-json/cbm-events/v1/` that caches in transients (about 60 s) and **serves stale on error**; a same-origin **thumbnail proxy** and **image proxy** (hotlinked YouTube thumbnails 503 on that page); the sign-up modal posting through the proxy, with the 409 refusals rendered as readable messages; per-event pages at `/webinars/<slug>` with title, meta description and Open Graph tags. Do not rewrite the renderer; build around it. | build | A1 |
-| A6 | **Local WordPress harness.** A throwaway WordPress in Docker pointed at the crm-test API, so the plugin is driven end to end before it touches the real site. Screenshots at desktop and phone widths against the live page. | build + verify | A5 |
-| A7 | **Switch production on.** Run `scripts/probe_events_schema.py` inside the production web container and diff against crm-test; set `EVENTS_ENABLED`, `EVENTS_PUBLIC_API` and `EVENTS_PUBLIC_BASE_URL` (at `/setup`, or the production overlay); confirm Marketing Admin Team membership is the intended event-administration group. | Doug + build | A3, A4 |
-| A8 | **Staging page on the real site.** Install the plugin with rendering off; confirm the proxy returns production data; build a preview page from the shortcodes; compare side by side with the live page at both widths. | Doug + verify | A5, A6, A7 |
-| A9 | **Cutover.** Freeze new events in the Apps Script; create the same upcoming events in production `/events`; swap the page's two HTML widgets for the shortcodes; set the Elementor container's Content Width (Full Width or 1600 px, Doug's choice — a page setting, never a plugin stylesheet rule); register once with obvious test data through the live page and delete the records; watch one event cycle. | Doug + verify | A8 |
-| A10 | **Retire.** After the rollback window, remove the Apps Script, **rotate the exposed YouTube key** (R-7), and fix the mismatched contact address on the page (R-8, `info@clbmentors.org` in the footer). | Doug | A9 |
+Doug's ruling, 2026-09-11: the marketing site **redirects** to a page this app
+serves. No plugin, no proxy, no embedding. A8 is the only step that touches the
+website, and it is one redirect rule.
+
+| # | Item | Owner | Depends on | State |
+|---|---|---|---|---|
+| A1 | **Build the public pages** at `/webinars/` and `/webinars/{slug}`: server-rendered so a social crawler sees each event's own title, description and image, and so an unpublished event 404s; the two panels driven by the existing renderer under the site's own stylesheet; the presenting invitation carried across. | build | — | **Done, v0.222.0** |
+| A2 | **A browser pass against real crm-test data**, as a real visitor (`OPEN-ITEMS.md` 19e). The fabricated-data pass is done and found three defects; this one has never run. Note crm-test's seeded events carry no slug, so create one event through `/events` first — that is what generates a slug. | verify | A1, deploy | Owed |
+| A3 | **Scope the near-duplicate hold per event** (19f). Give the form specification an optional payload key that joins the match, so event registration matches on form + email + event. Test: two events, one email, both deliver; the same event twice still holds. **Lands before the redirect** — every returning registrant makes this fire more often. | build | — | Owed |
+| A4 | **Decide the consent wording** (19d). Both public doors send `consent: false` today, so a registration records no opt-in at all. Options and the recommendation are in § 4. **Lands before the redirect.** | Doug rules, build | — | Owed |
+| A5 | **Share the Apps Script source and its Google Sheet.** Now needed only to confirm nothing else runs on it before it is retired — it is no longer a parity baseline, because we are not reimplementing its rendering. | Doug | — | Owed |
+| A6 | **Export the current `/webinars/` page content** as the rollback copy, and confirm who can edit the page and add a redirect. | Doug | — | Owed |
+| A7 | **Switch production on**: probe the prod events schema and diff against crm-test; set `EVENTS_ENABLED` and `EVENTS_PUBLIC_API` at `/setup`; confirm `APP_BASE_URL` is set, because every shared event link derives from it; confirm the Marketing Admin Team is the right administrator group. Full list: `OPEN-ITEMS.md` 19g. | Doug + build | A3, A4 | Owed |
+| A8 | **Create the upcoming events in production `/events`**, so the page is not empty at the swap, then **add the redirect** from `clevelandbusinessmentors.org/webinars/` to the app's programme page. Runbook: `EVENTS-SETUP.md` § 6. Register once with obvious test data and delete the records. | Doug + verify | A7 | Owed |
+| A9 | **Retire.** After a rollback window of one event cycle, remove the Apps Script, **rotate the exposed YouTube key** (R-7), and fix the mismatched contact address (R-8: the footer says `info@clbmentors.org`, the presenting section `info@cbmentors.org`; the second is the real domain). | Doug | A8 | Owed |
+
+**The rollback is the redirect.** Removing it puts the old page back exactly as
+it was, in under a minute, with no deploy and no code change. That is why the
+Apps Script stays deployed but idle until A9.
 
 ### Track B — Live verification already owed on crm-test. Can start today.
 
@@ -141,12 +156,12 @@ link-existing path, EV-23). The cutover does not wait for Zoom.
 
 Two decisions shape the build. The rest are rulings recorded already.
 
-**Decision 1 — Sequencing: cut over before Zoom, or wait for Zoom?**
-Cutting over first (Track A, then C) stops the lead leak as soon as the plugin
-is verified; online events carry a hand-pasted Zoom link until Track C lands.
-Waiting for Zoom ships one coordinated change but leaves every registrant
-invisible for as long as the OAuth application takes. **Recommendation: cut
-over first.** Cost: a few weeks of staff pasting webinar links by hand.
+**Decision 1 — Sequencing: redirect before Zoom, or wait for Zoom?**
+Redirecting first (Track A, then C) stops the lead leak as soon as the public
+pages are verified; online events carry a hand-pasted Zoom link until Track C
+lands. Waiting for Zoom ships one coordinated change but leaves every registrant
+invisible for as long as the OAuth application takes. **Recommendation: redirect
+first.** Cost: a few weeks of staff pasting webinar links by hand.
 
 **Decision 2 — Consent wording in the sign-up modal (19d).**
 (a) A **consent checkbox** naming the three policies, like the intake forms. It
@@ -158,35 +173,43 @@ checkbox** — it matches what every other public form on the site does, and
 `consent: true` should never be written on the strength of a sentence nobody
 had to read.
 
-Smaller choices, decided at the step: the Elementor container width (Full
-Width or 1600 px, A9); template wording (D1); whether the Apps Script rollback
-window is one event cycle or two (A10).
+One constraint worth knowing before choosing. The calendar modal's markup comes
+from `wp-plugin/cbm-events/assets/cbm-events.js`, checked against the site's
+verbatim stylesheet by a guard test, so a checkbox **in the modal** means
+editing both contract files. The per-event page's form is ours and can carry one
+today. Whichever is chosen, **the two doors must agree** — one recording consent
+and the other not is worse than neither doing so.
+
+Smaller choices, decided at the step: template wording (D1); whether the Apps
+Script rollback window is one event cycle or two (A9).
 
 ---
 
 ## 5. Sequence
 
 ```
-A1 A2 (Doug)  ─┐
-A3 A4 (build) ─┼─> A5 plugin ─> A6 local harness ─> A8 staging ─> A9 cutover ─> A10 retire
-A7 prod on    ─┘                                          ▲
-B1–B4 (crm-test, any day)                                 │
-C1 (Doug) ─> C2 ─> C3 ─> C4 ─> C5 ─────────────────────────┘ (optional before A9)
+A1 pages (done) ─> A2 browser pass on crm-test ─┐
+A3 duplicate hold ─┐                            ├─> A7 prod on ─> A8 redirect ─> A9 retire
+A4 consent wording ┘                            │
+A5 A6 (Doug, any time) ─────────────────────────┘
+B1–B4 (crm-test, any day)
+C1 (Doug) ─> C2 ─> C3 ─> C4 ─> C5      (optional before A8)
 D1 (Doug) ─> D2 D3 ─> D4
 ```
 
-The critical path is A1 → A5 → A6 → A8 → A9. Everything Doug owns on that path
-(A1, A2, A7's flags, A8's install, A9's page edit) is short; the long item is
-A5, the plugin build.
+The critical path is A2 → A3/A4 → A7 → A8. Nothing on it is long: A3 is a small
+extension to an existing query, A4 is a decision plus a line of markup, and A8
+is one redirect rule on the website. The build half of Track A is finished.
 
 ---
 
 ## 6. Verification gates
 
 Nothing on Track A reaches the live page without: the house test suite green
-with new coverage · the plugin driven in the local WordPress harness · the
-staging page compared side by side at desktop and phone widths · a real
-registration through the staging page landing in the production CRM.
+with new coverage · the public pages driven in a browser against real crm-test
+data as a real visitor · both panels compared side by side with the current
+site page at desktop and phone widths · a real registration from each of the
+two doors landing in the CRM.
 
 The single most important test remains the first real event end to end on
 production: create → publish → a real person registers from the website →
@@ -210,4 +233,5 @@ attendance recorded → recording link pasted → the engagement rollup shows it
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 2.0 | 09-11-26 23:10 | Claude (Claude Code) | Track A rebuilt around Doug's 2026-09-11 ruling: the marketing site redirects to a page this app serves, and the presenting invitation moves onto it. The WordPress plugin, its proxy, its thumbnail proxy and its settings screen are struck. A1 is built (v0.222.0); the remaining Track A items are the browser pass, the per-event duplicate hold, the consent wording, and one redirect rule. Definition of done, sequence, decisions and verification gates follow. |
 | 1.0 | 09-08-26 19:05 | Claude (Claude Code) | First draft. State verified against both live deployments and the website; seven-point definition of done; five tracks with owners and dependencies; two decisions for Doug. |

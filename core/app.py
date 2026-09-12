@@ -63,6 +63,9 @@ SESSIONS_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "sessions" / "f
 DIRECTORY_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "directory" / "frontend"
 MYEMAIL_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "myemail" / "frontend"
 EVENTS_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "events" / "frontend"
+EVENTS_PUBLIC_FRONTEND_DIR = (
+    Path(__file__).resolve().parent.parent / "events" / "public_frontend"
+)
 ANALYTICS_FRONTEND_DIR = (
     Path(__file__).resolve().parent.parent / "analytics" / "frontend"
 )
@@ -895,6 +898,13 @@ def create_app(
         from forms import event_registration as _event_registration
 
         app.include_router(events_public_router)
+        # The public programme PAGES at /webinars/ — where the marketing site
+        # redirects. Registered before the static mounts below so /webinars/
+        # and /webinars/{slug} win over any file path; the pages' own CSS and
+        # JS live under /webinars-assets for exactly that reason.
+        from events.pages import page_router as events_page_router
+
+        app.include_router(events_page_router)
         # Registration rides the SAME durable pipeline as the intake forms —
         # capture before any external call, idempotency, retries, /ops
         # visibility — with the event slug taken from the URL.
@@ -993,9 +1003,13 @@ def create_app(
             BrandedStaticFiles(directory=str(ASSIGNMENTS_FRONTEND_DIR), html=True),
             name="assignments-frontend",
         )
-    if settings.events_active and EVENTS_PLUGIN_ASSETS_DIR.is_dir():
+    if (
+        settings.events_active or settings.events_public_active
+    ) and EVENTS_PLUGIN_ASSETS_DIR.is_dir():
         # Its own top-level path, not under /events, so it cannot be shadowed by
-        # the events frontend mount registered below.
+        # the events frontend mount registered below. Served for the PUBLIC
+        # pages too - they drive the same renderer and wear the same stylesheet,
+        # which is what keeps the staff preview and the live page one code path.
         app.mount(
             "/events-plugin",
             StaticFiles(directory=str(EVENTS_PLUGIN_ASSETS_DIR)),
@@ -1006,6 +1020,15 @@ def create_app(
             "/events",
             BrandedStaticFiles(directory=str(EVENTS_FRONTEND_DIR), html=True),
             name="events-frontend",
+        )
+    if settings.events_public_active and EVENTS_PUBLIC_FRONTEND_DIR.is_dir():
+        # The public pages' own CSS and JS. A separate top-level path rather
+        # than /webinars/assets, because /webinars/{slug} is a route and
+        # "assets" would be indistinguishable from an event's slug.
+        app.mount(
+            "/webinars-assets",
+            BrandedStaticFiles(directory=str(EVENTS_PUBLIC_FRONTEND_DIR)),
+            name="events-public-frontend",
         )
     if settings.assignments_active and OPS_FRONTEND_DIR.is_dir():
         app.mount(

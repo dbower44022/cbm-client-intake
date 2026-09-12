@@ -50,6 +50,14 @@ class Settings(BaseSettings):
     # explains that no logo is configured. Per-chapter, like the name above.
     organization_logo_url: str = ""
 
+    # The organization's own public website. The events programme this app
+    # serves at /webinars/ is a page on the app's domain, reached by a redirect
+    # from the marketing site, so every one of its pages needs a way BACK to
+    # that site — a visitor who followed a link from the site's menu must not
+    # be stranded on a page with no navigation. Per-chapter, like the name and
+    # the logo above; empty hides the link rather than rendering a dead one.
+    organization_website_url: str = "https://clevelandbusinessmentors.org"
+
     # A chapter's own visual identity: the URL of a stylesheet that REDEFINES
     # `--cbm-*` custom properties on `:root`. Loaded immediately after
     # /shared/tokens.css, so the cascade does the work — an override can only
@@ -500,9 +508,19 @@ class Settings(BaseSettings):
     # In-process cache for the public read endpoints. The WordPress plugin
     # caches too, so a normal page load makes no live call to us at all.
     events_cache_seconds: int = 60
-    # Where per-event pages live, for the `url` in the public payload. The
-    # WordPress plugin owns these URLs so they stay on the marketing domain.
-    events_public_base_url: str = "https://clevelandbusinessmentors.org/webinars"
+    # Where per-event pages live, for the `url` in the public payload.
+    #
+    # Empty (the default) means "this app's own /webinars/", derived from
+    # APP_BASE_URL — which is correct now that the programme is served here and
+    # the marketing site redirects to it. It used to name the marketing site's
+    # own /webinars/, from when a WordPress plugin was going to own those URLs;
+    # that address 404s today and would have sent every shared link nowhere.
+    # Set it explicitly only to point the payload at some other host.
+    events_public_base_url: str = ""
+    # The address the "Interested in Presenting or Hosting?" panel invites
+    # people to write to. Empty falls back to OPS_MAILBOX, and with both empty
+    # the panel renders without a contact line rather than a broken mailto.
+    events_contact_email: str = ""
     # YouTube: needed ONLY by the playlist backfill (EV-42). Rendering the
     # recorded library derives thumbnails from the video id with no key and no
     # API call - which is what gets the key out of the browser (EV-05).
@@ -705,6 +723,27 @@ class Settings(BaseSettings):
             and self.events_public_api
             and not self.espo_dry_run
         )
+
+    @property
+    def events_public_base(self) -> str:
+        """Where an individual event's page lives, absolute, no trailing slash.
+
+        The explicit setting wins. With it empty this app serves the programme
+        itself at ``/webinars/``, so the answer is its own public root — and if
+        even that is unset the payload's ``url`` goes empty, which the renderer
+        already handles by rendering a title as plain text instead of a link.
+        An empty link is recoverable; one pointing at a 404 is not.
+        """
+        explicit = (self.events_public_base_url or "").strip()
+        if explicit:
+            return explicit.rstrip("/")
+        root = (self.app_base_url or "").strip().rstrip("/")
+        return f"{root}/webinars" if root else ""
+
+    @property
+    def events_contact_address(self) -> str:
+        """Who the public programme page tells people to write to."""
+        return (self.events_contact_email or "").strip() or (self.ops_mailbox or "").strip()
 
     @property
     def analytics_active(self) -> bool:

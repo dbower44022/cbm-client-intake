@@ -1,0 +1,230 @@
+/* Chrome for the PUBLIC workshops-and-webinars pages at /webinars/.
+ *
+ * Scope rule, and it is load-bearing: nothing here may style a class the
+ * renderer emits. Those belong to the website's own stylesheet
+ * (/events-plugin/cbm-events.css), and an approximation living in a second
+ * file is exactly what hid a class-name drift for three weeks in 2026. Every
+ * selector below is prefixed `pub__`, or is a house `cbm-` token class.
+ *
+ * No page-width cap on the panels themselves beyond the reading measure the
+ * prose needs — density comes from packing the full width.
+ */
+
+/* `display:` on a class beats the `hidden` ATTRIBUTE, every time. The logo
+   below is hidden until a URL is configured and a `display:block` on its class
+   put it back on the page as a broken image — the same trap that has produced a
+   page-covering invisible overlay in this repo before. One guard, at the top,
+   so no later rule in this file can reintroduce it. */
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  background: var(--cbm-surface, #f7f8fa);
+  color: var(--cbm-text, #1f2933);
+  font-family: var(--cbm-font-body, "Montserrat", system-ui, sans-serif);
+}
+
+/* --- top bar ------------------------------------------------------------ */
+
+.pub__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 24px;
+  background: var(--cbm-navy, #16284f);
+  color: var(--cbm-white, #fff);
+}
+
+.pub__brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.pub__logo { max-height: 40px; width: auto; display: block; }
+
+.pub__brandname {
+  font-family: var(--cbm-font-heading, inherit);
+  font-weight: var(--cbm-fw-heading, 700);
+  font-size: 1.05rem;
+  letter-spacing: 0.01em;
+}
+
+.pub__back { color: inherit; text-decoration: underline; font-size: 0.9rem; }
+.pub__back:hover { text-decoration: none; }
+
+/* --- page body ---------------------------------------------------------- */
+
+.pub__main { padding: 28px 24px 48px; }
+
+.pub__intro { margin: 0 0 24px; }
+.pub__intro h1 {
+  margin: 0 0 8px;
+  font-family: var(--cbm-font-heading, inherit);
+  font-size: var(--cbm-h1, 2rem);
+  color: var(--cbm-navy, #16284f);
+}
+.pub__intro p { margin: 0; max-width: 70ch; line-height: 1.55; }
+
+/* Two panels, calendar left and library right — the arrangement the marketing
+   site used, reproduced here because there is no Elementor grid to inherit it
+   from. Stacks at the same 767px breakpoint the site's own CSS uses. */
+.pub__columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 767px) {
+  .pub__columns { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* It sits in the panel header, which the site's stylesheet paints navy. */
+.pub__count { font-size: 0.82rem; opacity: 0.85; color: #fff; }
+
+.pub__search {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 0 0 12px;
+}
+.pub__search input[type="search"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--cbm-border, #cfd6e0);
+  border-radius: var(--cbm-radius, 6px);
+  font: inherit;
+}
+/* Visually hidden, still read aloud — a search box with only a placeholder has
+   no accessible name. */
+.pub__srlabel {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0; border: 0;
+  clip: rect(0 0 0 0); clip-path: inset(50%);
+  overflow: hidden; white-space: nowrap;
+}
+
+.pub__msg {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: var(--cbm-radius, 6px);
+  background: #fdf0e6;
+  border: 1px solid #f0c9a8;
+}
+.pub__msg--error { background: #fdeaea; border-color: #f0b4b4; }
+
+/* --- "Interested in presenting" ----------------------------------------- */
+
+.pub__presenting {
+  margin: 32px 0 0;
+  padding: 24px;
+  background: var(--cbm-white, #fff);
+  border: 1px solid var(--cbm-border, #e2e6ec);
+  border-radius: var(--cbm-radius, 6px);
+}
+.pub__presenting h2 {
+  margin: 0 0 8px;
+  font-family: var(--cbm-font-heading, inherit);
+  color: var(--cbm-navy, #16284f);
+}
+.pub__presenting p { margin: 0 0 12px; max-width: 70ch; line-height: 1.55; }
+.pub__contact a { color: var(--cbm-blue, #1d4ed8); }
+
+/* --- one event's page --------------------------------------------------- */
+
+.pub__main--event { max-width: none; }
+
+.pub__event {
+  background: var(--cbm-white, #fff);
+  border: 1px solid var(--cbm-border, #e2e6ec);
+  border-radius: var(--cbm-radius, 6px);
+  padding: 24px;
+}
+
+.pub__hero {
+  display: block;
+  width: 100%;
+  max-height: 360px;
+  object-fit: cover;
+  border-radius: var(--cbm-radius, 6px);
+  margin: 0 0 20px;
+}
+
+.pub__eyebrow {
+  margin: 0 0 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.76rem;
+  color: var(--cbm-slate-700, #52606d);
+}
+
+.pub__event h1 {
+  margin: 0 0 8px;
+  font-family: var(--cbm-font-heading, inherit);
+  font-size: var(--cbm-h1, 2rem);
+  color: var(--cbm-navy, #16284f);
+}
+
+.pub__when { margin: 0 0 12px; font-weight: 600; }
+.pub__summary { margin: 0 0 20px; max-width: 75ch; line-height: 1.6; }
+
+.pub__facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px 20px;
+  margin: 0 0 20px;
+  padding: 16px;
+  background: var(--cbm-surface, #f7f8fa);
+  border-radius: var(--cbm-radius, 6px);
+}
+.pub__facts dt {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--cbm-slate-700, #52606d);
+}
+.pub__facts dd { margin: 2px 0 0; font-weight: 600; }
+
+.pub__prose { margin: 0 0 20px; max-width: 75ch; line-height: 1.6; }
+.pub__prose img { max-width: 100%; height: auto; }
+
+.pub__signup {
+  margin: 24px 0 0;
+  padding: 20px;
+  border: 1px solid var(--cbm-border, #e2e6ec);
+  border-radius: var(--cbm-radius, 6px);
+  background: var(--cbm-surface, #f7f8fa);
+}
+.pub__signup h2 { margin: 0 0 4px; font-family: var(--cbm-font-heading, inherit); }
+.pub__signupsub { margin: 0 0 16px; color: var(--cbm-slate-700, #52606d); }
+
+.pub__signupgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px 16px;
+  margin: 0 0 12px;
+}
+.pub__lab { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; }
+.pub__lab input {
+  padding: 8px 10px;
+  border: 1px solid var(--cbm-border, #cfd6e0);
+  border-radius: var(--cbm-radius, 6px);
+  font: inherit;
+}
+
+.pub__hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+.pub__consent { margin: 0 0 14px; font-size: 0.82rem; color: var(--cbm-slate-700, #52606d); max-width: 70ch; }
+
+.pub__result { margin: 12px 0 0; padding: 10px 12px; border-radius: var(--cbm-radius, 6px); background: #eef2f7; }
+.pub__result--ok { background: #e7f6ec; }
+.pub__result--error { background: #fdeaea; }
+
+.pub__footer { padding: 20px 24px; }

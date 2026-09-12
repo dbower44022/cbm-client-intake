@@ -102,7 +102,7 @@ async def upcoming(request: Request, response: Response) -> dict[str, Any]:
         try:
             cached = await service.upcoming_payload(
                 _client(request),
-                base_url=settings.events_public_base_url,
+                base_url=settings.events_public_base,
                 api_base_url=settings.app_base_url,
             )
         except EspoError as exc:
@@ -130,7 +130,7 @@ async def recordings(
         cached = [
             service.public_recording(
                 r,
-                base_url=settings.events_public_base_url,
+                base_url=settings.events_public_base,
                 api_base_url=settings.app_base_url,
             )
             for r in rows
@@ -159,7 +159,7 @@ async def event_detail(slug: str, request: Request, response: Response) -> dict[
                 seats_left = (await service.event_summary(client, event))["seatsRemaining"]
             cached = service.public_event_detail(
                 event,
-                base_url=settings.events_public_base_url,
+                base_url=settings.events_public_base,
                 api_base_url=settings.app_base_url,
                 seats_left=seats_left,
             )

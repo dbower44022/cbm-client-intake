@@ -821,8 +821,49 @@ Staff guide: `event-administration.md`; activation + test script:
 **Live on crm-test, off on prod, and the website still runs on the Apps Script.**
 `EVENTS_ENABLED` + `EVENTS_PUBLIC_API` are on for crm-test only; `ZOOM_EVENTS`,
 `EVENTS_REMINDERS` and the attendance pull are off everywhere. Phases 1, 2, 3, 5
-and **6** are built; **Phase 4 (WordPress plugin + cutover) is the only one left**
-— and it is the one that actually stops the lead leak.
+and **6** are built. **Phase 4 — the WordPress plugin — was STRUCK on
+2026-09-11**: Doug ruled that the marketing site should **redirect** to a page
+this app serves rather than embed or reimplement one. What stops the lead leak
+now is one redirect, plus two things owed before it (`OPEN-ITEMS.md` 19d
+consent, 19f the per-event duplicate hold).
+
+### The PUBLIC pages — `/webinars/` and `/webinars/{slug}` (v0.222.0)
+
+`events/pages.py` + `events/public_frontend/`. Gated on `events_public_active`,
+so an unconfigured deploy serves nothing. Assets ride `/webinars-assets` — a
+separate top-level path, because `/webinars/{slug}` is a route and "assets"
+would be indistinguishable from a slug.
+
+- **They are ROUTES, not static files, for two reasons.** A social crawler runs
+  no JavaScript, so each event's `<head>` is filled **server-side** or a shared
+  link renders as a blank card. And an unpublished event must **404** — `CEvent`
+  doubles as the internal calendar, so a page that merely rendered empty would
+  still confirm the record exists.
+- **The body is the SAME renderer the staff preview drives**
+  (`/events-plugin/cbm-events.js`) under the site's own stylesheet, so the
+  preview and the live page are one code path rather than two kept in step.
+- **The site's stylesheet has TWO wrapper scopes, and they are not
+  interchangeable**: `.cbm-wb` for the calendar, `.cbm-yt` for the recorded
+  library, each carrying its own CSS variables, every rule written as
+  `.cbm-wb .panel …`. The wrapper must be an **ancestor** of `.panel`, never the
+  same element. Getting this wrong unstyles a whole panel and raises no error —
+  it shipped that way for an hour on 2026-09-11 and is now in the class contract
+  (`HOST_CLASSES` in `tests/test_events_graphic.py`).
+- **Branding renders first, page values second**, every value HTML-escaped, so
+  CRM-authored content is never rescanned for a `{{token}}`.
+- **Both public doors send `consent: false`** — the calendar modal and the event
+  page's own form — so a registration records **no opt-in at all**. That is
+  deliberate and blocking: see `OPEN-ITEMS.md` 19d.
+- **`EVENTS_PUBLIC_BASE_URL` empty means "this app"** (derived from
+  `APP_BASE_URL` + `/webinars`). It used to default to the marketing site's
+  `/webinars`, which **404s**, so every shared event link pointed at nothing.
+- New settings: `ORGANIZATION_WEBSITE_URL` (the back-link every public page
+  carries, per-chapter like `DOCS_SITE_URL`) and `EVENTS_CONTACT_EMAIL` (the
+  presenting invitation's address; empty falls back to `OPS_MAILBOX`).
+- The portal's bottom section is **"Public pages"** and leads with Workshops and
+  Webinars, beside the five intake forms.
+- Redirect runbook: `EVENTS-SETUP.md` § 6b. **The rollback is removing the
+  redirect** — under a minute, no deploy.
 
 - **Phase 6a attendance** (`events/attendance.py`, worker): pulls each finished
   online event's Zoom participant report and matches by email. An empty report
@@ -870,22 +911,33 @@ and **6** are built; **Phase 4 (WordPress plugin + cutover) is the only one left
 - **Vocabulary trap**: in the public payload `topic` means the event **TITLE**
   (Zoom/Apps-Script vocabulary); the category rides as `category`. Aligning the
   names would blank every title on the live site.
-- The renderer needs a **same-origin thumbnail proxy** — hotlinked
-  `i.ytimg.com` thumbnails return 503 on the live page, which is why the current
-  page already ships one.
-- **`wp-plugin/cbm-events/` holds the two files the website will run**: the
-  renderer (`cbm-events.js`) and the site's **own stylesheet**
-  (`cbm-events.css`, copied verbatim from the live page's Elementor widgets —
-  keep it in sync, do not restyle it). Cutover replaces those widgets, so the
-  plugin must carry the CSS with the markup. `/events/preview.html` loads both
-  from the shipping location, which is what makes it a real check; **nothing in
-  `events/frontend/preview.css` may style a contract class** — an approximation
-  there hid a live class-name drift for three weeks. A guard test asserts every
-  class the renderer emits has a rule in the stylesheet.
-- **A per-event link must come from `CBMEvents.config.eventUrlBase`**, never the
-  payload's `url` — that is always the live site's `/webinars/<slug>`, so
-  anywhere else it 404s. **Sign-up stays a modal on the calendar** (Doug,
-  2026-08-16); the event page is for reading, not the registration door.
+- **The live page restricts images** — it sends `content-security-policy:
+  img-src 'self' data: https://drive.google.com https://*.googleusercontent.com`
+  (measured 2026-09-11). Anything rendered INSIDE that page would have needed
+  every event graphic and YouTube thumbnail proxied through the WordPress
+  domain; hotlinked `i.ytimg.com` thumbnails also returned 503 there. Serving
+  our own page sidesteps both, because our document carries no such policy —
+  one of the reasons the plugin was struck.
+- **`wp-plugin/cbm-events/` holds the two files the public pages run**: the
+  renderer (`cbm-events.js`) and the site's **own stylesheet** (`cbm-events.css`,
+  copied verbatim from the live page's Elementor widgets — keep it in sync, do
+  not restyle it). The directory name is now historical; the plugin was struck,
+  but these two files are how our pages look like the website, so they stay
+  where they are. `/webinars/` and `/events/preview.html` both load them from
+  this shipping location, which is what makes either a real check. **Neither
+  `events/frontend/preview.css` nor `events/public_frontend/public.css` may
+  style a contract class** — an approximation in one hid a live class-name drift
+  for three weeks. Guard tests assert every class the renderer emits has a rule
+  in the stylesheet, and that neither of our own sheets styles one. Both guards
+  strip CSS comments first, since a comment naming a class is the opposite of
+  styling it.
+- **A per-event link comes from `CBMEvents.config.eventUrlBase`**, which the
+  public programme page sets to `/webinars/`. The payload's `url` is now this
+  app's own address for the event (derived from `APP_BASE_URL`), so it is
+  usable rather than a 404 — but the renderer still takes the base from config,
+  because a host serving these panels somewhere else needs its own. **Sign-up
+  stays a modal on the calendar** (Doug, 2026-08-16); the event page is for
+  reading, and carries its own form rather than the modal.
 
 ## Cross-cutting subsystems
 
@@ -1370,7 +1422,8 @@ stamp — pending on both CRMs), `cintake-submission-*.md`, `cinformation-reques
 deployed and verified; `CHANGELOG.md` is the permanent record, `OPEN-ITEMS.md`
 holds anything still owed.*
 
-**Pushed through v0.221.0 on 2026-09-01, confirmed live on all three apps,
+**Local work sits at v0.222.0 (2026-09-11), unpushed. Pushed through v0.221.0
+on 2026-09-01, confirmed live on all three apps,
 and feature-verified live by Doug the same day** — dev, crm-test and prod all
 report `0.221.0`, artifact-checked, and Doug exercised the two new features in
 the live UI (the mentor detail popup and the employment-status fields) and
@@ -1382,6 +1435,24 @@ still read "pushed through v0.202.2" while v0.203.x/v0.204.0 sat unpushed
 locally, and a session that believed it pushed a docs commit and shipped a
 feature to production with it. `git log origin/main..main` is the answer; this
 sentence is a convenience.
+
+- **v0.222.0 (2026-09-11) — the public workshops-and-webinars programme is a
+  page THIS APP serves, at `/webinars/`.** Doug struck the WordPress plugin:
+  the marketing site will **redirect** here rather than embed or reimplement the
+  programme. The standing rules are in the Events section above; what belongs
+  here is what is owed. **Committed, not yet pushed or deployed** — so nothing
+  public has changed and the website still runs the Apps Script. Three defects
+  were found by opening the page in a browser that 1,983 green tests missed: the
+  recorded library rendered unstyled (the site's stylesheet has two wrapper
+  scopes, `.cbm-wb` and `.cbm-yt`, and they are not interchangeable), the
+  organisation logo rendered as a broken image (`display:block` beating the
+  `hidden` **attribute**, the same trap as the page-covering overlay), and an
+  event's date read "September 2026 26". All three are fixed and guarded. Still
+  owed before the redirect: **19d the consent wording** — both public doors send
+  `consent: false`, so a registration records no opt-in at all — and **19f the
+  per-event duplicate hold**. The browser pass against **real** crm-test data
+  has never run (19e); note crm-test's seeded events carry no slug, so an event
+  has to be created through `/events` first.
 
 - **v0.220.0 / v0.221.0 (2026-09-01) — the mentor detail popup, and
   employment status on both mentor screens.** Both deployed and **verified

@@ -220,7 +220,7 @@ don't exist:
 
 | Not yet | Meaning |
 |---|---|
-| **The website still runs on the old system** | Events you create here are not yet visible on clevelandbusinessmentors.org. Until the website change ships, this tool and the public page are separate worlds. The app warns you about this at the top of the screen. **This is the only phase still unbuilt, and it is the one that matters** — until it ships, every webinar registrant on the live site is still an invisible lead. |
+| **The website still points at the old system** | The public programme page is built and live here — `/webinars/`, with a page per event — but `clevelandbusinessmentors.org/webinars/` has not been redirected to it yet. Until that one redirect is added, this tool and the public page are separate worlds, and every webinar registrant on the live site is still an invisible lead. **Publishing an event here is what gives it a web address**, so create events through this screen rather than in the CRM. |
 | **Automatic attendance from Zoom** | Built, but switched **off** and never yet run against the real Zoom account. Attendance is manual for now — the Registrants tab and door check-in. |
 | **Follow-up emails** | Built, but they need their five email templates created in EspoCRM before anything can send, and there is no button for them in this tool yet. See below. |
 

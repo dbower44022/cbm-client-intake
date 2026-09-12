@@ -56,14 +56,24 @@ class ForgotPasswordIn(BaseModel):
     emailAddress: str = Field(min_length=3)
 
 
-def _forms(request: Request) -> list[dict[str, str]]:
-    """The public intake-form links (from the registered specs)."""
+def _public_pages(request: Request, settings: Settings) -> list[dict[str, str]]:
+    """The pages a member of the public can open, which staff need to hand out.
+
+    The intake forms come from the registered specs, so a new form appears here
+    without anyone remembering to add it. The workshops-and-webinars programme
+    is not a form - it is a page this app serves at ``/webinars/``, and the
+    marketing site redirects to it - but it belongs in the same list for the
+    same reason: it is a public address staff are asked for.
+    """
     specs = getattr(request.app.state, "form_specs", []) or []
-    return [
+    pages = [
         {"title": s.title, "url": f"/{s.slug}/"}
         for s in specs
         if s.frontend_dir is not None
     ]
+    if settings.events_public_active:
+        pages.insert(0, {"title": "Workshops and Webinars", "url": "/webinars/"})
+    return pages
 
 
 def _directories_for(user: dict[str, Any], settings: Settings) -> list[dict[str, str]]:
@@ -149,7 +159,7 @@ def _home_payload(user: dict[str, Any], request: Request, settings: Settings) ->
         # (GET /analytics/api/portal; it self-gates, so non-analytics users just
         # get available:false and no dashboard shows). Phase D.
         "analyticsEnabled": settings.analytics_active,
-        "forms": _forms(request),
+        "forms": _public_pages(request, settings),
     }
 
 

@@ -4,6 +4,115 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.222.0] — 2026-09-11
+
+**feat(events): the workshops-and-webinars programme is a page this app serves,
+at `/webinars/`.** Doug, 2026-09-11: *"Maybe we do not run it in an iframe, and
+just launch it directly."* That replaces Phase 4 of the events plan — the
+WordPress plugin, its server-side proxy, its thumbnail proxy and its rewrite
+rules are all struck. The marketing site's `/webinars/` redirects here instead,
+and the "Interested in Presenting or Hosting?" invitation moves onto this page,
+because the page it lived on now redirects away.
+
+**Why this is less work AND a better result, not a trade.** Three things the
+plugin route had to solve stop existing:
+
+- **The registration modal.** Inside an inline frame a modal positions itself
+  against the frame's own viewport, so on a tall frame it opens below what the
+  visitor is looking at — and that modal is the click that creates every
+  Contact. On an ordinary page it simply works.
+- **The site's image policy.** The live page sends
+  `content-security-policy: img-src 'self' data: https://drive.google.com
+  https://*.googleusercontent.com`. A plugin drawing our event graphics and
+  YouTube thumbnails into that page would have had every one of them blocked
+  unless proxied through WordPress. Our own document carries no such policy.
+- **Per-event sharing.** `clevelandbusinessmentors.org/webinars/<slug>` returns
+  **404 today** — there are no per-event pages to lose. These are new, and
+  because we render them we own the `<head>`, so a shared link carries that
+  event's own title, description and image.
+
+What is given up, honestly: a shared webinar's social card is served from the
+app's domain rather than the marketing domain, and if this app is unreachable
+the visitor gets our error page where a WordPress proxy would have served a
+cached copy. The page sets a 60-second public `Cache-Control`, so a reload
+during a brief blip is answered by the visitor's own browser.
+
+**What shipped**
+
+- **`events/pages.py`** — two server-rendered routes, registered only when
+  `EVENTS_PUBLIC_API` is on. `/webinars/` is the programme; `/webinars/{slug}`
+  is one event. They are routes rather than static files for two reasons that
+  a static file cannot cover: a social crawler runs no JavaScript, so the
+  per-event `<head>` has to be filled before the bytes leave; and an
+  unpublished event must **404**, because `CEvent` doubles as the internal
+  calendar and a page that merely rendered empty would still confirm the record
+  exists. Branding tokens render first, this page's values second, every value
+  HTML-escaped — so CRM-authored content is never rescanned for a token.
+- **`events/public_frontend/`** — the two page templates, one stylesheet and
+  two scripts. The body is driven by the **same** renderer the staff preview
+  drives (`/events-plugin/cbm-events.js`) wearing the **same** site stylesheet,
+  so the preview and the live page stay one code path rather than two that have
+  to be kept in step.
+- **The per-event page** carries the event graphic, the wysiwyg overview and
+  syllabus (scripts, embeds and inline handlers stripped — staff-authored is
+  not the same as trusted), the facts rail, and its own registration form.
+  Sign-up from the calendar stays a modal, per Doug's 2026-08-16 ruling.
+- **`ORGANIZATION_WEBSITE_URL`** (new, defaults to Cleveland's site, like
+  `DOCS_SITE_URL` already did) — every public page links back to it, so a
+  visitor who arrived from the site's menu is never stranded.
+  **`EVENTS_CONTACT_EMAIL`** (new, empty falls back to `OPS_MAILBOX`) — the
+  address the presenting invitation writes to; with neither set the invitation
+  still reads and simply carries no address rather than a broken `mailto:`.
+- **The portal's bottom section is now "Public pages"** and leads with
+  Workshops and Webinars, beside the five intake forms. It is a public address
+  staff get asked for, which is the same reason the forms are listed there.
+
+**`EVENTS_PUBLIC_BASE_URL` now defaults to empty, and empty means this app.**
+It used to default to the marketing site's `/webinars`, from when a plugin was
+going to own those addresses. That address 404s, so every `url` in the public
+payload — the one a shared link uses — pointed at nothing. Empty now derives
+`APP_BASE_URL` + `/webinars`; with even that unset the `url` is blank, and the
+renderer already draws a blank-url title as plain text. An empty link is
+recoverable. One pointing at a 404 is not.
+
+**Three defects the tests did not catch, and a browser did.** All three were
+found by opening the page, which is the whole argument for doing it:
+
+1. **The recorded library rendered unstyled.** The site's stylesheet has two
+   separate wrapper scopes — `.cbm-wb` for the calendar, `.cbm-yt` for the
+   library — each carrying its own CSS variables, and every rule is written as
+   `.cbm-wb .panel …` / `.cbm-yt .panel …`. The first cut gave both panels
+   `class="cbm-wb panel"`, so the library's 42 rules never matched and the
+   calendar's panel box lost its own. **`cbm-wb` and `cbm-yt` are now in the
+   class contract** (`HOST_CLASSES` in `tests/test_events_graphic.py`), which
+   they never were — this is the same silent-unstyling class of bug as the
+   `video-info__*` drift of 2026-08-16.
+2. **The organisation logo rendered as a broken image.** It ships `hidden`
+   until a URL is configured, and `.pub__logo { display: block }` beat the
+   `hidden` **attribute** — the same trap that has produced a page-covering
+   invisible overlay in this repo before. `public.css` now opens with
+   `[hidden] { display: none !important; }`.
+3. **The event date read "September 2026 26".** The payload's `month` is the
+   full "September 2026" and `day` the bare "26", because the calendar renders
+   them as a two-line chip; joined in payload order they come out backwards.
+
+**A guard test was fixed on the way.** `test_preview_css_does_not_restyle_the_
+contract_classes` matched a class name inside a **comment**, so the file
+documenting "nothing here may style `.cbm-wb`" failed the rule it was stating.
+Both CSS guards now strip comments before looking.
+
+Tests: 24 new (`tests/test_events_pages.py`), covering the mount gates, the
+publish gate, server-side social tags, escaping of CRM content into the head,
+the wrapper structure, the branding substitution, and the three `url` cases.
+Full suite green.
+
+**Still owed before the redirect goes live:** the consent wording
+(`OPEN-ITEMS.md` 19d) — the modal's line promises emails about our sessions
+while `consent: true` would also stamp terms-of-use, privacy-policy and
+code-of-conduct acceptance, so both doors send **false** today and record no
+opt-in at all; and the near-duplicate hold scoped per event (19f), which today
+holds a person's *second* session of the day for staff review.
+
 ## [0.221.1] — 2026-09-07
 
 **fix(crm): the Client Assignment Role can assign a mentor on its own** — a

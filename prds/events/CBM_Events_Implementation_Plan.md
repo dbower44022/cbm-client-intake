@@ -6,8 +6,12 @@ design, and the verification gates. Requirement ids (`EV-nn`) and decision ids
 
 **Status:** Phase 0 complete (all decisions settled, schema applied on BOTH
 CRMs — prod caught up 2026-08-09).
-**Phases 1, 2, 3, 5 and 6 are BUILT. Phase 4 (WordPress plugin + cutover) is the
-only one left**, and it is the one that ends the lead leak.
+**Phases 1, 2, 3, 5 and 6 are BUILT. Phase 4 was STRUCK on 2026-09-11** — Doug
+ruled that the marketing site should redirect to a page this app serves rather
+than run a WordPress plugin. The public pages shipped the same day (v0.222.0);
+what remains of Phase 4 is the redirect itself, the consent wording and the
+per-event duplicate hold. Current state and owners:
+`CBM_Events_Finalization_Plan.md`.
 
 Live on crm-test since 2026-08-09 (`EVENTS_ENABLED` + `EVENTS_PUBLIC_API`); off
 on prod. Verified against the real CRM there: the staff app, the event graphic,
@@ -201,7 +205,30 @@ them from Zoom.
 
 ---
 
-## Phase 4 — WordPress plugin and cutover
+## Phase 4 — WordPress plugin and cutover  ❌ STRUCK 2026-09-11
+
+**This phase was cancelled, not completed.** Doug, 2026-09-11: *"We were
+thinking that the wordpress website would simply launch the events url in an
+iframe… Maybe we do not run it in an iframe, and just launch it directly."* The
+programme is now a page **this app serves** at `/webinars/`, and the marketing
+site redirects to it. The plugin file, the shortcodes, the server-side proxy,
+the thumbnail proxy, the rewrite rules and the settings screen are all
+cancelled. The two files under `wp-plugin/cbm-events/assets/` remain — they are
+the renderer and the site's verbatim stylesheet, and the public pages drive
+both.
+
+Three things this removed rather than moved: the sign-up modal's positioning
+problem inside a frame, the site's `img-src` Content Security Policy blocking
+our graphics and thumbnails, and having to reimplement the page's rendering at
+all. What it gives up: a shared event's social card comes from the app's domain,
+and a proxy's stale-on-error cache becomes the visitor's own browser cache.
+
+**The design below is kept as the record of what was considered and why**, and
+because several of its findings still apply to the pages that replaced it — the
+class contract, the `topic`-means-title trap and the thumbnail proxying are all
+live concerns. Read it as history, not as work.
+
+---
 
 **Build** — `wp-plugin/cbm-events/` in this repo:
 - Shortcodes `[cbm_events_calendar]`, `[cbm_events_recordings]`,

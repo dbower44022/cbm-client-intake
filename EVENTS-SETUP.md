@@ -326,9 +326,92 @@ ESPO_API_KEY=... uv run python scripts/probe_events_schema.py
    schema drifts happened.
 
 2. **Marketing Admin Team role grants** on prod (§3 table).
-3. **The flags** on `.do/app.prod-crm.yaml` (app id
-   `aa1ddf69-f359-4b53-91ba-035cbed7bd53`).
+3. **The flags.** `EVENTS_ENABLED` and `EVENTS_PUBLIC_API`, set at `/setup`
+   (System Settings is live on production, so this no longer needs `doctl`).
+   Also confirm `APP_BASE_URL` is set: every shared event link is derived from
+   it, and with it empty a shared link comes out blank.
 4. A short repeat of §4 against prod, using clearly-labelled test records.
+
+---
+
+## 6b. Pointing the website at the programme
+
+The programme is a page **this application serves**, at `/webinars/`. The
+marketing site redirects to it. There is no plugin to install and nothing to
+embed — the whole change on the website is one redirect, which is also the
+rollback.
+
+Settle these two before starting, because both change what a real visitor gets:
+the consent wording (`OPEN-ITEMS.md` 19d) and the per-event duplicate hold
+(19f).
+
+### In the application, signed in as an EspoCRM administrator
+
+1. In the browser, go to the address below and sign in.
+   ```
+   https://apps.clevelandbusinessmentors.org/events/
+   ```
+   You should see the Event Administration list. If you get a 404, Events is
+   not switched on yet — stop, and finish section 6 first.
+
+2. On that page, create each upcoming workshop and webinar that is currently
+   advertised on the website, and publish each one. Saving through this screen
+   is what generates the web address for an event; an event written straight
+   into the CRM has none, and its title appears on the programme as plain text
+   with no page behind it.
+
+3. In the browser, go to the address below.
+   ```
+   https://apps.clevelandbusinessmentors.org/webinars/
+   ```
+   You should see the same sessions you just published, in the left panel, and
+   the recorded library on the right. If a session is missing, open it again in
+   Event Administration and check that **Publish to website** is ticked.
+
+### On the website, in WordPress
+
+4. In the WordPress admin, open the page at `/webinars/` and export or copy its
+   current content to a file on your own computer. This is the rollback copy.
+   You should end with a file you can open and read. If you cannot export it,
+   stop and tell me — do not continue without a copy.
+
+5. In the WordPress admin, add a redirect from the path below to the
+   application's programme page.
+   ```
+   /webinars/  →  https://apps.clevelandbusinessmentors.org/webinars/
+   ```
+   Use a **temporary** redirect (HTTP 302), not a permanent one: a permanent
+   redirect is cached hard by browsers and would outlive the decision to undo
+   it. The menu is called *Redirection*, *Tools → Redirects* or similar,
+   depending on which plugin the site runs — if there is no redirect tool,
+   stop and tell me what the Plugins list shows.
+
+6. In a **private browsing window**, go to the address below.
+   ```
+   https://clevelandbusinessmentors.org/webinars/
+   ```
+   You should land on the application's programme page, with the sessions you
+   published. If you land on the old page, the redirect has not taken effect —
+   wait a minute, reload, and if it still shows the old page, stop and tell me
+   exactly what the address bar reads.
+
+7. On that page, press **Sign Up** on one session and register with obviously
+   fake details, for example `ZZTEST` as the last name. You should see a
+   confirmation message in the dialog. If you see an error, stop and tell me
+   exactly what it says.
+
+8. In the CRM, open the Contact you just created and delete it, then delete its
+   Event Registration. You should end with neither record present. These are the
+   only records the test creates.
+
+### Afterwards
+
+9. Leave the Apps Script deployed but idle for one event cycle. Removing the
+   redirect puts the old page back exactly as it was, in under a minute, with no
+   deploy — that is the rollback, and it is why the script stays.
+
+10. After that window, retire the Apps Script and **rotate the YouTube API key**
+    that is visible in the old page's source.
 
 ---
 
@@ -354,14 +437,18 @@ a line per staff write and per registration.
 
 Honest list, so nothing surprises you mid-test:
 
-- **The website page is not wired up** (Phase 4). The staff app warns about this.
-  The **Website preview** button on `/events` is the closest thing to it: since
-  v0.203.0 it renders through the site's own stylesheet, so the colours, type
-  and spacing are the website's rather than an approximation. A webinar's title
-  opens a stand-in event page and Sign Up opens the site's registration modal —
-  and that modal **really registers**, creating a Contact and a
-  CEventRegistration on whichever CRM this deployment points at. Use obvious
-  test data and delete the records afterwards.
+- **The website does not point here yet.** Since v0.222.0 the public programme
+  is a real page this application serves at `/webinars/`, with a page per event
+  at `/webinars/<slug>`; what is missing is the one redirect on the marketing
+  site, which is section 6b. The **Website preview** button on `/events` still
+  exists and still drives the same renderer, but `/webinars/` is now the thing
+  to look at, because it is what visitors will get. Both **really register**,
+  creating a Contact and a CEventRegistration on whichever CRM this deployment
+  points at — use obvious test data and delete the records afterwards.
+- **Registration records no consent.** Both public doors send `consent: false`,
+  because the wording shown to the visitor promises emails about sessions while
+  the flag would also record terms-of-use, privacy-policy and code-of-conduct
+  acceptance. Settle this before the redirect (`OPEN-ITEMS.md` 19d).
 - **No automatic attendance** — manual only, until Phase 6.
 - **No follow-up emails** — designed, not built.
 - **The staff app has been driven with a stubbed session**, not a real

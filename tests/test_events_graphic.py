@@ -309,7 +309,14 @@ PLUGIN_ASSETS = Path(__file__).resolve().parents[1] / "wp-plugin" / "cbm-events"
 #: preview's own CSS hid it by styling our wrong names.
 #: The panel shell is emitted by the HOST — the shortcode on the site, the
 #: preview page here — so it is checked against the CSS only.
-HOST_CLASSES = ["panel", "panel__header", "panel__body"]
+#: `cbm-wb` and `cbm-yt` are the two WRAPPER scopes. Every rule in the site's
+#: stylesheet is written under one of them, and they are not interchangeable —
+#: the calendar's 45 rules hang off cbm-wb, the recorded library's 42 off
+#: cbm-yt. A host that reuses one wrapper for both panels, or puts the wrapper
+#: class on the same element as `.panel` instead of an ancestor, unstyles a
+#: whole section and nothing fails. Both were missing from this list until
+#: 2026-09-11, when the public /webinars/ page did exactly that.
+HOST_CLASSES = ["cbm-wb", "cbm-yt", "panel", "panel__header", "panel__body"]
 
 RENDERER_CLASSES = [
     # calendar
@@ -328,9 +335,22 @@ RENDERER_CLASSES = [
 CONTRACT_CLASSES = HOST_CLASSES + RENDERER_CLASSES
 
 
+def _without_comments(css: str) -> str:
+    """The stylesheet with its /* comments */ removed.
+
+    These guards ask whether a file STYLES a class. A comment naming one -
+    "nothing here may style .cbm-wb" - is the opposite of styling it, and
+    matching on it fails the very file that documents the rule.
+    """
+    import re
+
+    return re.sub(r"/\*.*?\*/", " ", css, flags=re.S)
+
+
 def _styles(css: str, name: str) -> bool:
     """Does the stylesheet carry a rule for this class?"""
-    return any(f".{name}{tail}" in css for tail in (" ", "\n", ",", ":", "{"))
+    body = _without_comments(css)
+    return any(f".{name}{tail}" in body for tail in (" ", "\n", ",", ":", "{"))
 
 
 def test_plugin_stylesheet_covers_every_class_the_renderer_emits():
@@ -372,7 +392,7 @@ def test_preview_css_does_not_restyle_the_contract_classes(monkeypatch):
     css = (Path(__file__).resolve().parents[1] / "events" / "frontend" / "preview.css").read_text(
         encoding="utf-8"
     )
-    offenders = [c for c in CONTRACT_CLASSES if f".{c}" in css]
+    offenders = [c for c in CONTRACT_CLASSES if _styles(css, c)]
     assert not offenders, f"preview.css must not style site classes: {offenders}"
 
 

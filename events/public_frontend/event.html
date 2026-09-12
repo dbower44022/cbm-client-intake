@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="cbm-org" content="{{org}}" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Every tag below is filled SERVER-SIDE, per event. A social crawler runs
+       no JavaScript, so a page that filled these in the browser would share as
+       a blank card whatever the event was. -->
+  <title>{{eventTitle}} — {{org}}</title>
+  <meta name="description" content="{{eventSummary}}" />
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="{{eventTitle}}" />
+  <meta property="og:description" content="{{eventSummary}}" />
+  <meta property="og:url" content="{{pageUrl}}" />
+  <meta property="og:image" content="{{eventImage}}" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="canonical" href="{{pageUrl}}" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/tokens.css" />
+  <link rel="stylesheet" href="/events-plugin/cbm-events.css" />
+  <link rel="stylesheet" href="/webinars-assets/public.css" />
+</head>
+<body data-event-slug="{{eventSlug}}">
+  <header class="pub__bar">
+    <a class="pub__brand" href="{{siteUrl}}">
+      <img class="pub__logo" src="{{logoUrl}}" alt="{{org}}" hidden id="brandLogo" />
+      <span class="pub__brandname">{{org}}</span>
+    </a>
+    <a class="pub__back" href="/webinars/">All workshops and webinars</a>
+  </header>
+
+  <main class="pub__main pub__main--event">
+    <div class="pub__msg" id="msg" hidden></div>
+
+    <article class="pub__event" id="eventBody" hidden>
+      <img class="pub__hero" id="hero" alt="" hidden />
+      <p class="pub__eyebrow" id="eyebrow"></p>
+      <h1 id="title">{{eventTitle}}</h1>
+      <p class="pub__when" id="when"></p>
+      <p class="pub__summary" id="summary"></p>
+
+      <dl class="pub__facts" id="facts"></dl>
+
+      <section class="pub__prose" id="overview" hidden></section>
+      <section class="pub__prose" id="syllabus" hidden></section>
+
+      <section class="pub__signup" id="signupBox">
+        <h2>Register</h2>
+        <p class="pub__signupsub" id="signupSub">Free, and takes a moment.</p>
+        <div class="pub__signupgrid">
+          <label class="pub__lab">First name <input type="text" id="firstName" autocomplete="given-name" /></label>
+          <label class="pub__lab">Last name <input type="text" id="lastName" autocomplete="family-name" /></label>
+          <label class="pub__lab">Email <input type="email" id="email" autocomplete="email" /></label>
+          <label class="pub__lab">Phone <input type="tel" id="phone" autocomplete="tel" /></label>
+          <label class="pub__lab">ZIP code <input type="text" id="zip" autocomplete="postal-code" /></label>
+        </div>
+        <!-- The honeypot, same shape the intake forms use. A real visitor never
+             sees it and never fills it. -->
+        <div class="pub__hp" aria-hidden="true">
+          <label>Leave this field empty <input type="text" id="companyUrl" tabindex="-1" autocomplete="off" /></label>
+        </div>
+        <p class="pub__consent">By registering, you are agreeing to receive emails about our workshops and webinars.</p>
+        <button type="button" class="cbm-button" id="registerBtn">Register for this event</button>
+        <p class="pub__result" id="registerResult" hidden role="status"></p>
+      </section>
+    </article>
+  </main>
+
+  <footer class="cbm-footer pub__footer">
+    <p>&copy; <span data-cbm-year>2026</span> {{org}}. All rights reserved.<span class="cbm-footer__version" data-cbm-version></span></p>
+  </footer>
+
+  <script src="/shared/busy.js"></script>
+  <script src="/webinars-assets/event.js"></script>
+  <script src="/shared/footer.js"></script>
+</body>
+</html>
