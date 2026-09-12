@@ -55,10 +55,30 @@ FEATURES: tuple[Feature, ...] = (
         note="publishToWebsite is the entire boundary to the public website.",
     ),
     Feature(
-        key="events_public", name="Events public API", flag="events_public_api",
+        key="events_public", name="Public programme pages", flag="events_public_api",
         component="web",
-        note="Unauthenticated. Also requires a live CRM — there is nothing to serve "
-             "in dry-run.",
+        note="Unauthenticated, and it serves the visitor-facing pages at /webinars/ "
+             "as well as the read API — this is the switch the marketing site's "
+             "redirect lands on. Also requires a live CRM: there is nothing to "
+             "serve in dry-run.",
+    ),
+    Feature(
+        key="events_library", name="Recorded webinar library", flag="",
+        component="web",
+        requires=("youtube_api_key", "youtube_playlist_id"),
+        note="The library on the public page is built from events carrying a "
+             "recording link. Until scripts/import_youtube_events.py has been run "
+             "against the playlist there are none, and the panel renders empty "
+             "where the old website page showed a full library. The two settings "
+             "below are needed ONLY by that import — the page derives thumbnails "
+             "from the video id with no key and no API call.",
+    ),
+    Feature(
+        key="events_reminders", name="Event reminder emails", flag="events_reminders",
+        component="worker",
+        note="The only time-driven follow-up. Needs the EventReminder template in "
+             "the CRM — every send refuses by name until it exists — and the "
+             "shared mailbox the other four kinds send as.",
     ),
     Feature(
         key="zoom", name="Zoom webinars", flag="zoom_events", component="both",

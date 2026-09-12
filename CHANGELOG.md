@@ -4,6 +4,65 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.224.0] — 2026-09-12
+
+**fix(setup): every setting really is on the Settings page now, and a guard
+keeps it that way.** Doug asked whether Events should get its own section there.
+Looking properly turned up something worse than a missing section: **nine
+settings were not registered at all**, so they fell into the catch-all group
+behind "show all", where rows are **read-only**. Forgetting one does not fail —
+it quietly turns that setting back into an overlay edit plus `doctl`, which is
+the exact friction the page exists to remove (Doug's ruling, 2026-08-28).
+
+Six of the nine were mine, shipped in v0.222.0 and v0.223.0: the organisation's
+website, the site menu, the three hero lines and the programme contact address —
+between them the **entire visible wording of the new public page**. The other
+three: `events_reminders`, the feature flag for the only time-driven follow-up,
+and the sandbox wipe's hour and timezone. All nine are registered now, each in
+the group that matches what a reader needs to know about it — the page's wording
+under Presentation, the worker cadences with the other worker cadences, the wipe
+schedule beside the switch that arms it.
+
+**Three guards** so there is no tenth: every settings field must be registered,
+no key twice, and no spec for a key that is not a setting.
+
+**No Events group, by ruling.** The page groups by KIND — Features,
+Integrations, Team gates, Presentation, Restart required — and every feature is
+spread across it the same way, analytics and Drive and Gmail included. A single
+feature-shaped group would be the first of its kind, leaving events either the
+odd one out or the start of a second organising scheme. Doug chose the existing
+**feature-readiness panel** as the per-feature view instead, and it gains what
+Events was missing:
+
+- **Recorded webinar library** — names `YOUTUBE_API_KEY` and
+  `YOUTUBE_PLAYLIST_ID` and says plainly that the library renders **empty** until
+  `scripts/import_youtube_events.py` has been run, which is the live blocker
+  behind the redirect (`OPEN-ITEMS.md` 19i). It also records that those two are
+  needed only by that import, never by the page.
+- **Event reminder emails** — the worker flag, and the `EventReminder` template
+  every send refuses by name without.
+- The public-API entry is renamed **Public programme pages**, because since
+  v0.222.0 that flag serves the visitor-facing pages at `/webinars/` and not
+  just a read API. It is the switch the marketing site's redirect lands on.
+
+Two further guards check that no readiness entry names a flag or a required
+setting that does not exist — either would read as a permanent, unfixable gap.
+
+**`APP_ENCRYPTION_KEY` added to both deployment overlays** (gitignored; not in
+this commit). Without a cipher the settings store **refuses** to write a secret
+rather than storing it in plain text, so `YOUTUBE_API_KEY` and
+`ZOOM_CLIENT_SECRET` were rows on the page that could never be saved on either
+environment. A distinct Fernet key per deployment, and the **same key on the web
+service and the delivery-worker** within each — they share one `app_setting`
+table, and a worker without the cipher decrypts a stored secret to an **empty
+string** and logs a warning, which would have left the Zoom secret it needs for
+the attendance pull silently blank. `migrate` is deliberately left without one;
+it runs `alembic upgrade head` and reads no setting. This closes the half of
+`OPEN-ITEMS.md` #20 that was blocked on crm-test having no key. **Both overlays
+still need applying with `doctl`.**
+
+Tests: 6 new. Suite 2,000 green.
+
 ## [0.223.0] — 2026-09-12
 
 **feat(events): the public programme page opens the way the page it replaces

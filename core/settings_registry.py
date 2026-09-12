@@ -213,6 +213,10 @@ SETTINGS: tuple[SettingSpec, ...] = (
     _s("zoom_events", GROUP_FEATURES, "Zoom webinar provisioning", kind="bool",
        component="both",
        help="Public webinars only — mentor 1:1 sessions never use the CBM Zoom account."),
+    _s("events_reminders", GROUP_FEATURES, "Event reminder emails", kind="bool",
+       component="worker",
+       help="The only time-driven follow-up. Needs the EventReminder template in "
+            "the CRM; every send refuses by name until it exists."),
     _s("gmail_sync", GROUP_FEATURES, "Gmail conversation sync", kind="bool",
        component="both",
        help="The whole Communications pipeline. Needs the Google service account."),
@@ -351,6 +355,32 @@ SETTINGS: tuple[SettingSpec, ...] = (
        unit="s", component="worker"),
     _s("analytics_default_cache_ttl_seconds", GROUP_RELIABILITY, "Analytics cache TTL",
        kind="int", unit="s"),
+    # Events worker cadences. Inert unless Events is on; grouped with the other
+    # worker timers rather than with the events feature, because what a reader
+    # needs to know about them is that they are polling intervals.
+    _s("events_attendance_seconds", GROUP_RELIABILITY, "Attendance pull", kind="int",
+       unit="s", component="worker",
+       help="How often finished online events are checked for a Zoom participant "
+            "report."),
+    _s("events_attendance_grace_minutes", GROUP_RELIABILITY, "Attendance grace",
+       kind="int", unit="min", component="worker",
+       help="How long after an event ends before its report is first asked for — "
+            "an empty report means 'not published yet', never 'nobody came'."),
+    _s("events_attendance_give_up_hours", GROUP_RELIABILITY, "Attendance give-up",
+       kind="int", unit="h", component="worker",
+       help="When to stop asking. Past this an event's attendance stays as it is."),
+    _s("events_reminder_seconds", GROUP_RELIABILITY, "Reminder sweep", kind="int",
+       unit="s", component="worker",
+       help="How often the worker looks for reminders that are due."),
+    _s("events_reminder_lead_hours", GROUP_RELIABILITY, "Reminder lead time",
+       kind="int", unit="h", component="worker",
+       help="How far ahead of an event a reminder goes out. Never sent after an "
+            "event has started, so a worker that was down through the window "
+            "stays quiet rather than sending late."),
+    _s("setup_refresh_seconds", GROUP_RELIABILITY, "Settings refresh", kind="int",
+       unit="s", component="both",
+       help="How often each process re-reads the overrides on this page. Web and "
+            "worker refresh independently; /healthz reports each one's version."),
     _s("membership_refresh_seconds", GROUP_RELIABILITY, "Membership re-read", kind="int",
        unit="s", help="How long a session's cached team membership stays trusted."),
     _s("request_timeout_seconds", GROUP_RELIABILITY, "CRM request timeout", kind="int",
@@ -398,8 +428,31 @@ SETTINGS: tuple[SettingSpec, ...] = (
     _s("docs_site_url", GROUP_PRESENTATION, "Documentation site"),
     _s("app_base_url", GROUP_PRESENTATION, "This app's public URL",
        help="Used for deep links in alert emails and the digest."),
-    _s("events_public_base_url", GROUP_PRESENTATION, "Public event page base"),
+    _s("events_public_base_url", GROUP_PRESENTATION, "Public event page base",
+       help="Empty means this app's own /webinars/, derived from the public URL "
+            "above — which is almost always what you want."),
     _s("events_cache_seconds", GROUP_PRESENTATION, "Public read cache", kind="int", unit="s"),
+    # The public programme page's chrome. All six were shipped in v0.222.0 and
+    # v0.223.0 WITHOUT being registered here, so they landed in the catch-all
+    # group and were read-only — a page's whole visible wording editable only by
+    # an overlay edit, which is exactly what the 2026-08-28 ruling forbids.
+    _s("organization_website_url", GROUP_PRESENTATION, "Organisation website",
+       help="The public site. Every /webinars/ page links back to it, and it is "
+            "the base the menu below resolves its paths against."),
+    _s("organization_site_nav", GROUP_PRESENTATION, "Website menu",
+       help="Reproduced across the top of the public pages so a visitor is not "
+            "stranded. \"Label|path\" pairs, comma separated; a leading / is "
+            "resolved against the website above. Empty renders no menu."),
+    _s("events_hero_tagline", GROUP_PRESENTATION, "Programme page tagline",
+       help="The line under the heading on /webinars/. Empty removes it."),
+    _s("events_hero_pillars", GROUP_PRESENTATION, "Programme page pillars",
+       help="The short third line in the hero. Empty removes it."),
+    _s("events_hero_band", GROUP_PRESENTATION, "Programme page band",
+       help="The gold strapline under the hero. Empty removes it."),
+    _s("events_contact_email", GROUP_PRESENTATION, "Programme contact address",
+       help="Who the \"Interested in Presenting or Hosting?\" panel writes to. "
+            "Empty falls back to the shared mailbox; with both empty the panel "
+            "carries no address rather than a dead link."),
 
     # Integration credentials. A wrong one disables that integration and nothing
     # else, so the pre-flight check is the whole safety net. None is ever shown
@@ -507,6 +560,13 @@ SETTINGS: tuple[SettingSpec, ...] = (
        help="The other environment, for the comparison on the Environment diff tab."),
     _s("setup_peer_token", GROUP_SECURITY, "Peer deployment token",
        help="Authorises that comparison. No secret value ever crosses the wire."),
+    _s("sandbox_reset_hour", GROUP_SECURITY, "Sandbox wipe hour", kind="int",
+       component="worker",
+       help="When the nightly wipe runs, in the timezone below. Meaningless "
+            "unless the wipe itself is switched on."),
+    _s("sandbox_reset_tz", GROUP_SECURITY, "Sandbox wipe timezone",
+       component="worker",
+       help="The timezone the hour above is read in."),
     _s("sandbox_nightly_reset", GROUP_SECURITY, "Nightly sandbox wipe", kind="bool",
        component="worker",
        help="Worker-side. Empties this deployment's own submission queue and "

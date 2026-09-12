@@ -598,3 +598,91 @@ def test_healthz_reports_the_override_layer(monkeypatch):
     assert body["settings"]["page"] is True
     assert body["settings"]["overridesActive"] is True
     assert "settingsVersion" in body["settings"]
+
+
+# --- every setting reaches the page -----------------------------------------
+
+
+def test_every_setting_is_curated_onto_the_page():
+    """Doug's ruling, 2026-08-28: every setting is on the Settings page.
+
+    An unregistered field does not vanish — it falls into the catch-all "Other"
+    group behind "show all", where it is **read-only**. So forgetting one does
+    not fail, it quietly makes that setting an overlay-edit-and-doctl job again,
+    which is the exact friction the page was built to remove.
+
+    Nine had slipped through by 2026-09-12: the six that carry the public
+    programme page's entire visible wording, the event reminder feature flag,
+    and the sandbox wipe schedule. This guard is why there will not be a tenth.
+    """
+    from core.config import Settings
+    from core.settings_registry import SETTINGS
+
+    curated = {spec.key for spec in SETTINGS}
+    missing = sorted(k for k in Settings.model_fields if k not in curated)
+    assert not missing, (
+        "these settings are not on the Settings page and are therefore "
+        f"read-only: {missing}"
+    )
+
+
+def test_no_setting_is_registered_twice():
+    """Two specs for one key would render it twice and make the second silently
+    decide its group."""
+    from core.settings_registry import SETTINGS
+
+    keys = [spec.key for spec in SETTINGS]
+    dupes = sorted({k for k in keys if keys.count(k) > 1})
+    assert not dupes, f"registered more than once: {dupes}"
+
+
+def test_every_registered_key_is_a_real_setting():
+    """A spec for a key that no longer exists renders a row that does nothing."""
+    from core.config import Settings
+    from core.settings_registry import SETTINGS
+
+    unknown = sorted(
+        spec.key for spec in SETTINGS if spec.key not in Settings.model_fields
+    )
+    assert not unknown, f"registered but not a setting: {unknown}"
+
+
+def test_the_readiness_panel_names_what_events_still_needs():
+    """The panel is the per-feature view — Doug's choice, 2026-09-12, over a
+    feature-shaped settings group. It has to actually carry the two things
+    Events is waiting on, or it does not do that job."""
+    from setup.readiness import FEATURES
+
+    by_key = {f.key: f for f in FEATURES}
+    library = by_key["events_library"]
+    assert set(library.requires) == {"youtube_api_key", "youtube_playlist_id"}
+    assert "import_youtube_events" in library.note
+    reminders = by_key["events_reminders"]
+    assert reminders.flag == "events_reminders"
+    assert reminders.component == "worker"
+    assert "EventReminder" in reminders.note
+
+
+def test_every_readiness_requirement_is_a_real_setting():
+    """A requirement naming a setting that does not exist always reads 'not
+    set', which is indistinguishable from a genuine gap."""
+    from core.config import Settings
+    from setup.readiness import FEATURES
+
+    unknown = sorted({
+        key
+        for feature in FEATURES
+        for key in feature.requires
+        if key not in Settings.model_fields
+    })
+    assert not unknown, f"readiness requires settings that do not exist: {unknown}"
+
+
+def test_every_readiness_flag_is_a_real_setting():
+    from core.config import Settings
+    from setup.readiness import FEATURES
+
+    unknown = sorted({
+        f.flag for f in FEATURES if f.flag and f.flag not in Settings.model_fields
+    })
+    assert not unknown, f"readiness names flags that do not exist: {unknown}"
