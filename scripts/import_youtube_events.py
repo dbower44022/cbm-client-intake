@@ -29,6 +29,18 @@ Usage::
 Needs ``YOUTUBE_API_KEY`` and ``YOUTUBE_PLAYLIST_ID`` (the key is used ONLY
 here — rendering the library derives thumbnails from the video id with no key
 and no API call, which is what keeps it out of the browser, EV-05).
+
+``YOUTUBE_PLAYLIST_ID`` takes **one id or several separated by commas**. CBM
+keeps its recordings in five topic playlists rather than one library, and the
+website's page shows them mixed together, so all five are read and planned as
+one list. A video listed in two playlists is imported once — the plan
+deduplicates on the video id.
+
+**The playlist does NOT set the event's topic.** The five playlist names are a
+different taxonomy from the CRM's ten curated ``topic`` values: two of them
+would collapse onto the same value and one has no home there at all. Guessing
+would put a wrong category on a public page, so the topic stays part of the
+same human review the date already needs.
 """
 
 from __future__ import annotations
@@ -137,8 +149,9 @@ def plan_import(
 async def main() -> int:
     write = "--write" in sys.argv
     settings = Settings()
-    if not settings.youtube_api_key or not settings.youtube_playlist_id:
-        print("Set YOUTUBE_API_KEY and YOUTUBE_PLAYLIST_ID.", file=sys.stderr)
+    if not settings.youtube_api_key or not settings.youtube_playlist_ids:
+        print("Set YOUTUBE_API_KEY and YOUTUBE_PLAYLIST_ID (one id, or several "
+              "separated by commas).", file=sys.stderr)
         return 2
     if settings.espo_dry_run or not settings.espo_api_key:
         print("No live CRM configured (ESPO_DRY_RUN / ESPO_API_KEY).", file=sys.stderr)
@@ -149,18 +162,37 @@ async def main() -> int:
     )
     tube = YouTubeClient(settings.youtube_api_key, settings.request_timeout_seconds)
 
-    print(f"CRM:      {settings.espo_base_url}")
-    print(f"Playlist: {settings.youtube_playlist_id}")
-    print(f"Mode:     {'WRITE' if write else 'DRY RUN — nothing will change'}\n")
+    playlists = settings.youtube_playlist_ids
+    print(f"CRM:       {settings.espo_base_url}")
+    print(f"Playlists: {len(playlists)} — {', '.join(playlists)}")
+    print(f"Mode:      {'WRITE' if write else 'DRY RUN — nothing will change'}\n")
 
-    items = await tube.playlist_items(settings.youtube_playlist_id)
+    # Read every configured playlist and plan ONCE over the combined list. The
+    # planner deduplicates on the video id, so a recording that appears in two
+    # topic playlists — an AI webinar aimed at nonprofits, say — is imported
+    # once rather than twice under two slugs.
+    items: list[dict[str, Any]] = []
+    for playlist_id in playlists:
+        try:
+            found = await tube.playlist_items(playlist_id)
+        except Exception as exc:  # noqa: BLE001 — one bad id must not lose the rest
+            print(f"  ! playlist {playlist_id}: {exc}", file=sys.stderr)
+            continue
+        print(f"  {playlist_id}: {len(found)} item(s)")
+        items.extend(found)
+    if not items:
+        print("\nNo playlist items were read. Check the ids and the API key.",
+              file=sys.stderr)
+        return 2
+    print()
+
     events = await service._all_events(
         crm, select="id,name,slug,recordingUrl", where=None, limit=2000
     )
     to_create, skipped = plan_import(items, events)
 
-    print(f"{len(items)} playlist item(s); {len(skipped)} already in the CRM; "
-          f"{len(to_create)} to import.\n")
+    print(f"{len(items)} playlist item(s) across {len(playlists)} playlist(s); "
+          f"{len(skipped)} already in the CRM; {len(to_create)} to import.\n")
     for payload in to_create:
         print(f"  + {payload['dateStart'][:10] if payload.get('dateStart') else '(no date)'}"
               f"  {payload['name'][:70]}")

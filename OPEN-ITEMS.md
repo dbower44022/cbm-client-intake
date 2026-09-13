@@ -491,7 +491,11 @@ toggle.
       library derives thumbnails from the video id with no key and no API call,
       which is what keeps a key out of the browser (EV-05, and the reason the
       current page's exposed key gets rotated at retirement);
-    - the **playlist identifier** for the recorded-webinar playlist.
+    - the **playlist identifiers** — there are **five**, not one (Doug,
+      2026-09-13): Startup, New Product Development, AI and Tech, Business
+      Planning and Strategy, Nonprofit. `YOUTUBE_PLAYLIST_ID` takes them comma
+      separated and they are planned as one list, so a video in two of them is
+      imported once (v0.225.0).
 
     Run the dry run on crm-test first and read the plan: the intake API user
     cannot delete, so a bad import is cleaned up by hand.

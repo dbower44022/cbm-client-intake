@@ -91,3 +91,62 @@ def test_items_without_a_usable_video_id_are_ignored():
 def test_video_id_of_reads_the_resource_id():
     assert video_id_of(_item("abc")) == "abc"
     assert video_id_of({}) == ""
+
+
+# --- five playlists, not one -------------------------------------------------
+
+
+def test_the_playlist_setting_takes_several_ids():
+    """CBM keeps its recordings in five topic playlists — Startup, New Product
+    Development, AI and Tech, Business Planning and Strategy, Nonprofit — rather
+    than one library, and the website's page shows them mixed together. The
+    import reads them all."""
+    from core.config import Settings
+
+    s = Settings(youtube_playlist_id="PLstartup, PLnpd ,PLtech")
+    assert s.youtube_playlist_ids == ["PLstartup", "PLnpd", "PLtech"]
+
+
+def test_one_id_still_works():
+    from core.config import Settings
+
+    assert Settings(youtube_playlist_id="PLonly").youtube_playlist_ids == ["PLonly"]
+
+
+def test_no_playlist_configured_reads_as_none():
+    from core.config import Settings
+
+    assert Settings().youtube_playlist_ids == []
+    assert Settings(youtube_playlist_id="  ").youtube_playlist_ids == []
+
+
+def test_the_same_playlist_listed_twice_is_read_once():
+    """A duplicated id would double every video it holds into the plan, where
+    the video-id dedup would then hide the configuration mistake."""
+    from core.config import Settings
+
+    s = Settings(youtube_playlist_id="PLone,PLtwo,PLone")
+    assert s.youtube_playlist_ids == ["PLone", "PLtwo"]
+
+
+def test_a_video_in_two_playlists_is_imported_once():
+    """The real reason the planner runs over the COMBINED list rather than once
+    per playlist: an AI webinar aimed at nonprofits sits in two of them, and two
+    separate runs would create it twice under two slugs."""
+    startup = [_item("shared00001"), _item("onlyone0001")]
+    nonprofit = [_item("shared00001"), _item("onlytwo0001")]
+    to_create, _ = plan_import(startup + nonprofit, [])
+    slugs = [p["slug"] for p in to_create]
+    assert len(to_create) == 3, slugs
+    assert len(set(slugs)) == 3, slugs
+
+
+def test_the_import_does_not_guess_a_topic():
+    """The five playlist names are a different taxonomy from the CRM's ten
+    curated topic values: 'AI and Tech' and 'Nonprofit' map cleanly, 'Startup'
+    and 'Business Planning and Strategy' would both collapse onto Business
+    Fundamentals, and 'New Product Development' has no home at all. A wrong
+    category on a public page is worse than an empty one, so the topic stays
+    part of the same human review the date already needs."""
+    to_create, _ = plan_import([_item("v100000001x")], [])
+    assert "topic" not in to_create[0]

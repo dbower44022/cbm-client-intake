@@ -283,7 +283,10 @@ SETTINGS: tuple[SettingSpec, ...] = (
        kind="int", unit="days", component="worker",
        help="Keep inside Google's 30-day transcript retention."),
     _s("summary_model", GROUP_INTEGRATIONS, "Summary model", component="worker"),
-    _s("youtube_playlist_id", GROUP_INTEGRATIONS, "YouTube playlist"),
+    _s("youtube_playlist_id", GROUP_INTEGRATIONS, "YouTube playlists",
+       help="The recorded-webinar playlists to import from, comma separated. "
+            "CBM keeps five topic playlists rather than one library. A video in "
+            "two of them is imported once. Read only by the import script."),
 
     # --- Email -------------------------------------------------------------
     _s("ops_mailbox", GROUP_EMAIL, "Shared mailbox", component="both",

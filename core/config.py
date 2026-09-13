@@ -554,6 +554,11 @@ class Settings(BaseSettings):
     # recorded library derives thumbnails from the video id with no key and no
     # API call - which is what gets the key out of the browser (EV-05).
     youtube_api_key: str = ""
+    # One playlist id, or SEVERAL separated by commas. CBM keeps its recordings
+    # in five topic playlists rather than one library, and the website's page
+    # shows them mixed together — so the import has to read them all. A video
+    # listed in two playlists is imported once; the plan deduplicates on the
+    # video id, not on which list it came from.
     youtube_playlist_id: str = ""
 
     # --- Analytics (prds/analytics-app-plan.md) — the /analytics app + the
@@ -768,6 +773,19 @@ class Settings(BaseSettings):
             return explicit.rstrip("/")
         root = (self.app_base_url or "").strip().rstrip("/")
         return f"{root}/webinars" if root else ""
+
+    @property
+    def youtube_playlist_ids(self) -> list[str]:
+        """Every configured playlist, in the order given, duplicates removed."""
+        raw = (self.youtube_playlist_id or "").strip()
+        if not raw:
+            return []
+        seen: list[str] = []
+        for part in raw.replace("\n", ",").split(","):
+            part = part.strip()
+            if part and part not in seen:
+                seen.append(part)
+        return seen
 
     @property
     def events_contact_address(self) -> str:

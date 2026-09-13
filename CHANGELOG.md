@@ -4,6 +4,36 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.225.0] — 2026-09-13
+
+**feat(events): the recorded-library import reads every playlist, because there
+are five.** Doug, 2026-09-13: the recordings are not one library but five topic
+playlists — *Startup*, *New Product Development*, *AI and Tech*, *Business
+Planning and Strategy*, *Nonprofit*. The website's page shows them mixed
+together, so all five have to be imported. `YOUTUBE_PLAYLIST_ID` now takes one
+id **or several separated by commas**; a single id behaves exactly as before.
+
+**Planned once over the combined list, not once per playlist.** That is the
+whole point rather than a detail: a recording that sits in two topic playlists —
+an AI webinar aimed at nonprofits — would be created **twice under two slugs**
+by two separate runs. `plan_import` already deduplicated on the video id within
+a list, so feeding it the concatenation gets cross-playlist dedup for free and
+the pure function is untouched. A duplicated id in the setting is collapsed on
+read, so a configuration slip cannot hide behind that dedup either. One
+unreadable playlist is reported and skipped rather than losing the other four.
+
+**The playlist does NOT set the event's topic, deliberately.** It is tempting —
+the names look like categories and it would halve the post-import review. But
+they are a different taxonomy from the CRM's ten curated `topic` values (read
+live from crm-test): *AI and Tech* → Technology & Digital and *Nonprofit* →
+Industry-Specific map cleanly, *Startup* and *Business Planning and Strategy*
+would both collapse onto Business Fundamentals, and *New Product Development*
+has no home at all. A wrong category on a public page is worse than an empty
+one, and a video in two playlists would take whichever was read first. The topic
+stays part of the same human review the date already needs.
+
+Tests: 6 new. Suite 2,006 green.
+
 ## [0.224.0] — 2026-09-12
 
 **fix(setup): every setting really is on the Settings page now, and a guard
