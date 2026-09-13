@@ -4,6 +4,33 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.225.1] — 2026-09-13
+
+**fix(events): the import stops calling a cross-playlist duplicate "already in
+the CRM".** Found on the first real dry run, against the five live playlists:
+13 items, *"3 already in the CRM"* — against a CRM holding **zero** events with
+a recording link. The three were recordings that appear in more than one topic
+playlist.
+
+The old single count was near enough true while one playlist was read, because
+the only way to meet a video twice was a playlist listing it twice. v0.225.0
+made the second case ordinary and the label then actively misled: it told an
+operator that three videos were already imported into a CRM that had none of
+them. A count that is wrong in a way the reader cannot check is worse than no
+count. `plan_import` now returns the two separately and the run prints three
+lines — listed in more than one playlist, already in the CRM, to import.
+
+Nothing about which events get created changed; 10 was right before and is right
+now.
+
+**A test was reading the developer's own `.env`.** `test_no_playlist_configured_
+reads_as_none` asserted on `Settings()`, which pydantic-settings fills from
+`.env` — so it passed until the day real playlist ids were configured locally,
+which is the worst possible moment for a test to start lying. It now names the
+field explicitly.
+
+Tests: 3 new, 1 repaired. Suite 2,008 green.
+
 ## [0.225.0] — 2026-09-13
 
 **feat(events): the recorded-library import reads every playlist, because there

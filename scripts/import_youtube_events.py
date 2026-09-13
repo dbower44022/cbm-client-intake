@@ -122,12 +122,26 @@ def build_payload(item: dict[str, Any], *, slug: str) -> dict[str, Any]:
 
 def plan_import(
     items: list[dict[str, Any]], events: list[dict[str, Any]]
-) -> tuple[list[dict[str, Any]], list[str]]:
-    """Split the playlist into (to create, already present). Pure — testable."""
+) -> tuple[list[dict[str, Any]], list[str], list[str]]:
+    """Split the playlist items into (to create, already in the CRM, duplicates).
+
+    Pure, so it is testable without a CRM or a network.
+
+    **The last two are counted separately on purpose.** They used to be one
+    number reported as "already in the CRM", which was near enough true while
+    one playlist was read: the only way to meet a video twice was a playlist
+    listing it twice. Reading five playlists made the second case ordinary — a
+    recording lives in more than one topic list — and the old label then told an
+    operator that 3 videos were already imported into a CRM holding none of
+    them. A count that is wrong in a way the reader cannot check is worse than
+    no count.
+    """
     have = existing_video_ids(events)
     taken = {e.get("slug") for e in events if e.get("slug")}
     to_create: list[dict[str, Any]] = []
-    skipped: list[str] = []
+    already: list[str] = []
+    duplicates: list[str] = []
+    planned: set[str] = set()
     for item in items:
         vid = video_id_of(item)
         # An id the URL helpers refuse would yield recordingUrl=None, i.e. an
@@ -136,14 +150,19 @@ def plan_import(
         if not vid or not watch_url(vid):
             continue
         if vid in have:
-            skipped.append(vid)
+            already.append(vid)
+            continue
+        if vid in planned:
+            # The same recording in two of the five playlists, or listed twice
+            # in one. Imported once; this is not a problem, just a fact.
+            duplicates.append(vid)
             continue
         title = str(_snippet(item).get("title") or "").strip()
         slug = service.unique_slug(title or f"recording-{vid}", taken)
         taken.add(slug)
-        have.add(vid)              # a playlist can list the same video twice
+        planned.add(vid)
         to_create.append(build_payload(item, slug=slug))
-    return to_create, skipped
+    return to_create, already, duplicates
 
 
 async def main() -> int:
@@ -189,10 +208,12 @@ async def main() -> int:
     events = await service._all_events(
         crm, select="id,name,slug,recordingUrl", where=None, limit=2000
     )
-    to_create, skipped = plan_import(items, events)
+    to_create, already, duplicates = plan_import(items, events)
 
-    print(f"{len(items)} playlist item(s) across {len(playlists)} playlist(s); "
-          f"{len(skipped)} already in the CRM; {len(to_create)} to import.\n")
+    print(f"{len(items)} playlist item(s) across {len(playlists)} playlist(s)")
+    print(f"  {len(duplicates)} listed in more than one playlist (imported once)")
+    print(f"  {len(already)} already in the CRM")
+    print(f"  {len(to_create)} to import\n")
     for payload in to_create:
         print(f"  + {payload['dateStart'][:10] if payload.get('dateStart') else '(no date)'}"
               f"  {payload['name'][:70]}")
