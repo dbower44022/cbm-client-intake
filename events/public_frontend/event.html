@@ -63,7 +63,17 @@
         <div class="pub__hp" aria-hidden="true">
           <label>Leave this field empty <input type="text" id="companyUrl" tabindex="-1" autocomplete="off" /></label>
         </div>
-        <p class="pub__consent">By registering, you are agreeing to receive emails about our workshops and webinars.</p>
+        <!-- The same active tick the calendar's dialog asks for. Both doors must
+             agree, or consent is recorded for some registrants and not others
+             depending which button they happened to press. -->
+        <label class="pub__consent">
+          <input type="checkbox" id="consent" />
+          <span>I agree to the
+            <a href="{{policyTerms}}" target="_blank" rel="noopener">Terms of Use</a>,
+            <a href="{{policyPrivacy}}" target="_blank" rel="noopener">Privacy Policy</a> and
+            <a href="{{policyClientConduct}}" target="_blank" rel="noopener">Code of Conduct</a>,
+            and to receive emails about our workshops and webinars.</span>
+        </label>
         <button type="button" class="cbm-button" id="registerBtn">Register for this event</button>
         <p class="pub__result" id="registerResult" hidden role="status"></p>
       </section>

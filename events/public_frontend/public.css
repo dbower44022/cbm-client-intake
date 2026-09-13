@@ -297,7 +297,13 @@ body {
 
 .pub__hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 
-.pub__consent { margin: 0 0 14px; font-size: 0.82rem; color: var(--cbm-slate-700, #52606d); max-width: 70ch; }
+.pub__consent {
+  display: flex; align-items: flex-start; gap: 8px;
+  margin: 0 0 14px; font-size: 0.82rem;
+  color: var(--cbm-slate-700, #52606d); max-width: 70ch; cursor: pointer;
+}
+.pub__consent input { flex: 0 0 auto; margin: 2px 0 0; cursor: pointer; }
+.pub__consent a { color: var(--cbm-blue, #1d4ed8); }
 
 .pub__result { margin: 12px 0 0; padding: 10px 12px; border-radius: var(--cbm-radius, 6px); background: #eef2f7; }
 .pub__result--ok { background: #e7f6ec; }

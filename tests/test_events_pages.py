@@ -386,3 +386,58 @@ def test_the_events_own_graphic_beats_the_default():
         default_image="https://example.org/house.png",
     )
     assert payload["imageUrl"].startswith("https://apps.example.org/api/events/")
+
+
+# --- consent is an active tick on BOTH doors --------------------------------
+
+
+def test_the_event_page_asks_for_consent_and_names_the_three_documents(monkeypatch):
+    """Doug's ruling, 2026-09-13, option A. Registration used to record no
+    consent at all, because the only line shown promised emails about webinars
+    while the record carries three separate agreements. Recording three
+    acceptances nobody was shown would have been untrue; recording none was the
+    lesser wrong. Now it asks properly."""
+    client, _ = build(monkeypatch, events=[make_event()])
+    html = client.get("/webinars/grant-writing-basics").text
+    assert 'id="consent"' in html
+    assert "Terms of Use" in html
+    assert "Privacy Policy" in html
+    assert "Code of Conduct" in html
+    # Linked, not just named, and pointing at the live documents.
+    assert "clevelandbusinessmentors.org/client-code-of-conduct/" in html
+    assert "clevelandbusinessmentors.org/privacy-policy/" in html
+
+
+def test_the_policy_links_follow_their_settings(monkeypatch):
+    """A chapter points at its own documents without a code change."""
+    monkeypatch.setenv("POLICY_TERMS_URL", "https://lakeside.example/terms/")
+    client, _ = build(monkeypatch, events=[make_event()])
+    assert 'href="https://lakeside.example/terms/"' in client.get(
+        "/webinars/grant-writing-basics"
+    ).text
+
+
+def test_the_calendar_dialog_gets_its_policy_links_from_the_page(monkeypatch):
+    """The renderer is served with no template substitution, so it cannot carry
+    the links itself — the host page hands them over."""
+    client, _ = build(monkeypatch, events=[make_event()])
+    js = client.get("/webinars-assets/public.js").text
+    assert "CBMEvents.config.policies" in js
+    assert "clevelandbusinessmentors.org/privacy-policy/" in js
+    # And the value sent is what was ticked, never a hardcoded answer.
+    assert "consent: !!fields.consent," in js
+    assert "consent: false," not in js
+
+
+def test_neither_door_can_register_without_the_tick():
+    """One door recording consent and the other not would be worse than
+    neither doing so."""
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    renderer = (root / "wp-plugin" / "cbm-events" / "assets" / "cbm-events.js").read_text()
+    assert "if (!fields.consent)" in renderer
+    assert "cbm-consent-box" in renderer
+    page = (root / "events" / "public_frontend" / "event.js").read_text()
+    assert "if (!body.consent)" in page
+    assert 'consent: !!$("consent").checked,' in page

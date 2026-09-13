@@ -32,14 +32,12 @@
 
   /* The real registration POST behind the modal's submit.
    *
-   * `consent` stays FALSE deliberately. The modal's line promises emails about
-   * our sessions, while consent:true also stamps terms-of-use, privacy-policy
-   * and code-of-conduct acceptance on the Contact — three things this visitor
-   * was never shown. Sending false records no opt-in rather than a false one.
-   * Settling that wording is a decision owed before this page goes live
-   * (OPEN-ITEMS 19d); until then the honest value is the one that claims
-   * nothing.
-   */
+   * `consent` is now what the visitor actually TICKED (Doug, 2026-09-13). The
+   * dialog names the three documents and links them, and refuses to submit
+   * until the box is ticked, so a true here means a person agreed to the three
+   * things the record is about to claim they agreed to. It used to be hardcoded
+   * false — the old line mentioned only emails, so recording three acceptances
+   * would have been untrue, and recording none was the lesser wrong. */
   async function register(item, fields) {
     var body = {
       submission_token: (window.crypto && window.crypto.randomUUID)
@@ -51,7 +49,7 @@
       email: fields.email,
       phone: fields.phone,
       zip_code: fields.zip,
-      consent: false,
+      consent: !!fields.consent,
     };
     var resp = await fetch(
       "/api/events/" + encodeURIComponent(item.slug || "") + "/register",
@@ -155,6 +153,15 @@
     }
     // Each event's own page is served by this app at /webinars/<slug>.
     window.CBMEvents.config.eventUrlBase = "/webinars/";
+    // The three documents the consent tick names. Substituted server-side as
+    // this file is served, so a chapter points at its own without a code
+    // change; the renderer itself is served without substitution, which is why
+    // it takes them from here rather than carrying them.
+    window.CBMEvents.config.policies = {
+      terms: "{{policyTerms}}",
+      privacy: "{{policyPrivacy}}",
+      conduct: "{{policyClientConduct}}",
+    };
     signupModal = window.CBMEvents.mountSignupModal(
       document.querySelector(".cbm-wb"), { register: register }
     );

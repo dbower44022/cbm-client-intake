@@ -153,13 +153,19 @@
       email: ($("email").value || "").trim(),
       phone: ($("phone").value || "").trim(),
       zip_code: ($("zip").value || "").trim(),
-      // See the note in public.js: the consent line promises emails about our
-      // sessions only, so nothing broader is recorded (OPEN-ITEMS 19d).
-      consent: false,
+      // What the visitor actually ticked. The label names the three documents
+      // and links them, so a true here is a real agreement rather than an
+      // assumption drawn from small print.
+      consent: !!$("consent").checked,
     };
     // Never disable the button — validate on click and name what is missing.
     if (!body.first_name || !body.email) {
       out.textContent = "Please give at least your first name and email address.";
+      out.className = "pub__result pub__result--error";
+      return;
+    }
+    if (!body.consent) {
+      out.textContent = "Please tick the box to agree before registering.";
       out.className = "pub__result pub__result--error";
       return;
     }

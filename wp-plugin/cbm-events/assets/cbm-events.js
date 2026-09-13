@@ -254,10 +254,50 @@
       inputs[spec[0]] = input;
     });
 
-    form.appendChild(el(
-      "p", "cbm-consent-text",
-      "By registering, you are agreeing to receive emails about our webinars."
+    /* Consent is an ACTIVE tick, not small print (Doug, 2026-09-13).
+     *
+     * The old line promised emails about webinars and nothing else, while the
+     * record this creates carries three separate agreements — terms of use,
+     * privacy policy, code of conduct. Rather than record three acceptances
+     * nobody was shown, registration recorded none at all. This asks for them
+     * properly, the way every other public form on the site already does.
+     *
+     * Links come from the host (CBMEvents.config.policies) because this file is
+     * served without any template substitution. With none configured the three
+     * documents are still NAMED, so the sentence never claims less than it
+     * records. */
+    var consentLabel = el("label", "cbm-consent");
+    var consentBox = document.createElement("input");
+    consentBox.type = "checkbox";
+    consentBox.className = "cbm-consent-box";
+    consentBox.id = "cbm-signup-consent";
+    consentLabel.appendChild(consentBox);
+    var consentText = el("span", "cbm-consent-text");
+    consentText.appendChild(document.createTextNode("I agree to the "));
+    var policies = (CBMEvents.config && CBMEvents.config.policies) || {};
+    [
+      ["Terms of Use", policies.terms],
+      ["Privacy Policy", policies.privacy],
+      ["Code of Conduct", policies.conduct],
+    ].forEach(function (pair, index) {
+      if (index === 1) consentText.appendChild(document.createTextNode(", "));
+      if (index === 2) consentText.appendChild(document.createTextNode(" and "));
+      if (pair[1]) {
+        var link = document.createElement("a");
+        link.href = pair[1];
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.textContent = pair[0];
+        consentText.appendChild(link);
+      } else {
+        consentText.appendChild(document.createTextNode(pair[0]));
+      }
+    });
+    consentText.appendChild(document.createTextNode(
+      ", and to receive emails about our webinars."
     ));
+    consentLabel.appendChild(consentText);
+    form.appendChild(consentLabel);
 
     var submit = el("button", "cbm-submit-btn", "Register");
     submit.type = "submit";
@@ -320,11 +360,16 @@
         email: inputs.email.value.trim(),
         phone: inputs.phone.value.trim(),
         zip: inputs.zip.value.trim(),
+        consent: consentBox.checked,
       };
       // Validate on click and name what is missing, rather than sitting there
       // disabled with no explanation.
       if (!fields.firstName || !fields.email) {
         setStatus("error", "A first name and an email address are required.");
+        return;
+      }
+      if (!fields.consent) {
+        setStatus("error", "Please tick the box to agree before registering.");
         return;
       }
       submit.disabled = true;
@@ -338,6 +383,7 @@
             result && result.joinUrl
           );
           form.reset();
+          consentBox.checked = false;
           submit.textContent = "Registered";
         },
         function (err) {

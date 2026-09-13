@@ -512,7 +512,15 @@ toggle.
     `EVENTS_PUBLIC_API` is crm-test-only, but it must land **before** the
     website cutover.
 
-19d. **The events sign-up consent line under-covers what `consent: true`
+19d. ~~**The events sign-up consent line under-covers what `consent: true`
+    writes**~~ — **SETTLED 2026-09-13 (v0.227.0).** Doug chose option (a): an
+    active tick on BOTH public doors, naming the three documents and linking
+    each, refusing to register until it is ticked. The links ride
+    `CBMEvents.config.policies` from the four `POLICY_*_URL` settings, because
+    the renderer is served without template substitution. Original text kept
+    below for the reasoning.
+
+    **The events sign-up consent line under-covers what `consent: true`
     writes — and this now BLOCKS the redirect** (2026-08-16; re-scoped
     2026-09-11, v0.222.0). The line copied from the live page — *"By
     registering, you are agreeing to receive emails about our webinars"* — is a

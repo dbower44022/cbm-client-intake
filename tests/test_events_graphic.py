@@ -326,7 +326,8 @@ RENDERER_CLASSES = [
     "cbm-meta-more", "event-signup-btn", "cbm-empty",
     # sign-up modal
     "cbm-modal-overlay", "cbm-modal", "cbm-modal-close", "cbm-modal-sub",
-    "cbm-field", "cbm-consent-text", "cbm-submit-btn", "cbm-status",
+    "cbm-field", "cbm-consent", "cbm-consent-box", "cbm-consent-text",
+    "cbm-submit-btn", "cbm-status",
     # recorded library
     "video-list", "video-item", "video-thumb-btn", "cbm-play-overlay",
     "video-info", "video-info__date", "video-info__title", "video-info__meta",

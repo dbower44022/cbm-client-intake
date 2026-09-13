@@ -4,6 +4,47 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.227.0] — 2026-09-13
+
+**feat(events): registering now asks for consent, and records what was actually
+agreed.** Doug's ruling, 2026-09-13, option A: an active tick, not better small
+print. This was the last blocker on the redirect that was a decision rather than
+work (`OPEN-ITEMS.md` 19d).
+
+**What was wrong.** A registration creates a Contact carrying three separate
+agreements — terms of use, privacy policy, code of conduct. The only sentence a
+visitor saw promised *emails about our webinars* and named none of them. Ticking
+three boxes on the strength of that would have recorded acceptances nobody was
+shown, so both public doors sent **false** and a registration recorded **no
+consent at all**. Harmless while nothing pointed at the page; not harmless the
+moment the site redirects.
+
+**Both doors now ask, and neither will register without it.** The calendar's
+sign-up dialog and the event page's own form each carry a tick naming all three
+documents with a link to each, and each refuses on click with a readable message
+rather than sitting there disabled. They had to move together: one door
+recording consent and the other not would be worse than neither doing so.
+
+**The links come from the host page, not the renderer.**
+`wp-plugin/cbm-events/assets/cbm-events.js` is served with **no** template
+substitution (it rides a plain `StaticFiles` mount so the preview exercises the
+exact shipping file), so it cannot carry `{{policyTerms}}` itself. The page
+hands them over as `CBMEvents.config.policies`, filled from the four existing
+`POLICY_*_URL` settings, so a chapter points at its own documents with no code
+change. With none configured the three are still **named**, so the sentence
+never claims less than the record does.
+
+**This is the first deliberate departure of `cbm-events.css` from the website's
+own.** The rule was to keep it verbatim because the plugin would inject markup
+into the live page; that page is now being retired behind a redirect and this
+stylesheet dresses ours. The three new classes are in the class contract
+(`HOST_CLASSES`/`RENDERER_CLASSES`) so the guard still holds, and the departure
+is commented where it sits.
+
+Tests: 4 new. Suite 2,019 green. Verified in a browser on both doors: the event
+page's markup carries all three links to the live documents, and the dialog
+opens with the tick and its label.
+
 ## [0.226.0] — 2026-09-13
 
 **feat(events): the grid opens on the work, and an event without a picture can
