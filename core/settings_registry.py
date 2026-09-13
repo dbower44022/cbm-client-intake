@@ -450,6 +450,11 @@ SETTINGS: tuple[SettingSpec, ...] = (
        help="The line under the heading on /webinars/. Empty removes it."),
     _s("events_hero_pillars", GROUP_PRESENTATION, "Programme page pillars",
        help="The short third line in the hero. Empty removes it."),
+    _s("events_default_graphic_url", GROUP_PRESENTATION, "Default event graphic",
+       help="A publicly-hosted image for events with no picture of their own. "
+            "Last fallback only — an event's own graphic wins, and a recording's "
+            "video thumbnail wins over this. Mainly fixes the empty social-share "
+            "card an image-less event otherwise has. Empty means no image."),
     _s("events_hero_band", GROUP_PRESENTATION, "Programme page band",
        help="The gold strapline under the hero. Empty removes it."),
     _s("events_contact_email", GROUP_PRESENTATION, "Programme contact address",

@@ -4,6 +4,43 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.226.0] — 2026-09-13
+
+**feat(events): the grid opens on the work, and an event without a picture can
+have one.** Both came out of the first real import.
+
+**"Needs review" on the event list.** Doug ran the import, then asked where the
+ten events had gone. They were there; the grid was hiding them. It opens on a
+filter called *Published to the website*, which exists for a good reason — that
+entity doubles as the organisation's internal calendar, so opening on everything
+shows ninety team meetings instead of the workshop programme. But the import
+creates events **unpublished on purpose**, so a person checks the date before
+anything reaches the public page. The tool where that review happens therefore
+hid, by default, exactly the records needing it, and an import looked like it
+had done nothing.
+
+A new scope leads the dropdown, and the grid **switches to it automatically when
+there is anything in it** — once, and never again after the user picks a view
+for themselves, so a reload cannot yank them out of the one they chose. The
+option carries its own count.
+
+*Needs review* is `unpublished AND has a recording link`. The precision is what
+makes the automatic switch safe rather than annoying: that is exactly what the
+import creates and nothing else in this CRM looks like it — an internal team
+meeting has no recording link. Verified against the live sandbox mid-review: 16
+events, 8 published, and the rule selected precisely the 8 still waiting.
+
+**A default event graphic** (`EVENTS_DEFAULT_GRAPHIC_URL`, empty by default). It
+is the **last** fallback, after the event's own uploaded graphic and after a
+recording's video thumbnail — a recorded webinar's own still frame says more
+about it than a house card, so the default only fills a hole neither of the
+other two could. What it actually fixes is quieter than the name suggests: an
+event with no graphic had an **empty `og:image`**, so sharing its page produced
+a card with no picture at all, and that is every upcoming event until someone
+uploads one. Empty keeps today's behaviour exactly.
+
+Tests: 11 new. Suite 2,015 green.
+
 ## [0.225.1] — 2026-09-13
 
 **fix(events): the import stops calling a cross-playlist duplicate "already in

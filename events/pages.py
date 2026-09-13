@@ -191,6 +191,7 @@ async def event_page(slug: str, request: Request) -> Response:
         event,
         base_url=settings.events_public_base,
         api_base_url=settings.app_base_url,
+        default_image=settings.events_default_graphic_url,
     )
     values = _chrome(settings)
     values.update(

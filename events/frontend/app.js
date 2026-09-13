@@ -24,6 +24,7 @@
     current: null,      // { event, counts, registrations }
     sort: { key: "startsAtUtc", dir: -1 },
     scope: "published",
+    scopeChosen: false, // set once the user picks for themselves
     search: "",
   };
 
@@ -68,9 +69,26 @@
 
   /* ---------- list ---------- */
 
+  /* An event waiting for a human before it can go on the website.
+   *
+   * A recording link with the website flag off is exactly what the YouTube
+   * import creates, and nothing else in this CRM looks like that — the entity
+   * doubles as the organisation's internal calendar, and a team meeting has no
+   * recording link. That precision is what makes the automatic switch below
+   * safe: it can never land the grid on ninety internal meetings.
+   *
+   * Why this exists: the import creates events UNPUBLISHED on purpose, so a
+   * person can check the date (a video's upload date is not the event date).
+   * The grid then opened on "Published to the website" and hid every one of
+   * them, so an import looked like it had done nothing. */
+  function needsReview(e) {
+    return !e.publishToWebsite && !!e.recordingUrl;
+  }
+
   function visibleEvents() {
     var now = new Date().toISOString();
     var rows = state.events.filter(function (e) {
+      if (state.scope === "review") return needsReview(e);
       if (state.scope === "published") return e.publishToWebsite;
       if (state.scope === "upcoming") return e.startsAtUtc && e.startsAtUtc >= now;
       if (state.scope === "past") return e.startsAtUtc && e.startsAtUtc < now;
@@ -142,11 +160,23 @@
     $("listEmpty").hidden = rows.length > 0;
     $("listCount").textContent =
       rows.length + " of " + state.events.length + " event" + (state.events.length === 1 ? "" : "s");
+    var waiting = state.events.filter(needsReview).length;
+    var option = document.querySelector('#scopeFilter option[value="review"]');
+    if (option) {
+      option.textContent = waiting ? "Needs review (" + waiting + ")" : "Needs review";
+    }
   }
 
   async function loadEvents() {
     var data = await api("/events");
     state.events = data.events || [];
+    // Open on the work, when there is any — once, and only before the user has
+    // chosen for themselves. Reloading the grid later must not yank them back
+    // out of the view they picked.
+    if (!state.scopeChosen && state.events.some(needsReview)) {
+      state.scope = "review";
+      $("scopeFilter").value = "review";
+    }
     renderList();
   }
 
@@ -846,6 +876,7 @@
       state.search = this.value; renderList();
     });
     $("scopeFilter").addEventListener("change", function () {
+      state.scopeChosen = true;
       state.scope = this.value; renderList();
     });
     $("regSearch").addEventListener("input", renderRegistrants);

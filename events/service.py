@@ -407,6 +407,7 @@ def public_event(
     *,
     base_url: str = "",
     api_base_url: str = "",
+    default_image: str = "",
     seats_left: Optional[int] = None,
     now: Optional[datetime] = None,
 ) -> dict[str, Any]:
@@ -460,6 +461,12 @@ def public_event(
         # there is none, so the renderer falls back to thumbnailUrl.
         "imageUrl": public_image_url(event, base_url=api_base_url),
     }
+    # LAST fallback, after the event's own graphic and after a recording's video
+    # thumbnail: the configured house image. Ordering matters — a recorded
+    # webinar's own still frame says more about it than a generic card, so the
+    # default only fills a hole neither of the other two could.
+    if not payload["imageUrl"] and not payload["thumbnailUrl"] and default_image:
+        payload["imageUrl"] = default_image
     return payload
 
 
@@ -473,7 +480,8 @@ def public_event_detail(event: dict[str, Any], **kwargs: Any) -> dict[str, Any]:
 
 
 def public_recording(
-    event: dict[str, Any], *, base_url: str = "", api_base_url: str = ""
+    event: dict[str, Any], *, base_url: str = "", api_base_url: str = "",
+    default_image: str = "",
 ) -> dict[str, Any]:
     """One row of the recorded-webinar library."""
     start = parse_crm_datetime(event.get("dateStart"))
@@ -492,7 +500,12 @@ def public_recording(
         "thumbnailUrl": thumbnail_url(video_id) if video_id else "",
         "slug": slug,
         "url": f"{base_url.rstrip('/')}/{slug}" if base_url and slug else "",
-        "imageUrl": public_image_url(event, base_url=api_base_url),
+        # A recording always has a video thumbnail to fall back on, so the
+        # default is reached only when the video id could not be read.
+        "imageUrl": (
+            public_image_url(event, base_url=api_base_url)
+            or ("" if video_id else default_image)
+        ),
     }
 
 
@@ -501,6 +514,7 @@ async def upcoming_payload(
     *,
     base_url: str = "",
     api_base_url: str = "",
+    default_image: str = "",
     now: Optional[datetime] = None,
 ) -> list[dict[str, Any]]:
     """The public calendar, with seat counts.
@@ -524,6 +538,7 @@ async def upcoming_payload(
                 event,
                 base_url=base_url,
                 api_base_url=api_base_url,
+                default_image=default_image,
                 seats_left=seats_left,
                 now=now,
             )

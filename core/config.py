@@ -517,6 +517,18 @@ class Settings(BaseSettings):
     # that address 404s today and would have sent every shared link nowhere.
     # Set it explicitly only to point the payload at some other host.
     events_public_base_url: str = ""
+    # A publicly-hosted image used when an event has no picture of its own AND
+    # no recording to take a video thumbnail from. It is the LAST fallback, not
+    # the first: a recorded webinar's own video still says more than a house
+    # card. Empty (the default) means an image-less event simply has no image,
+    # exactly as before.
+    #
+    # What it actually fixes: an event with no graphic had an EMPTY `og:image`,
+    # so sharing its page produced a card with no picture at all. That is the
+    # visible cost, and it applies to every upcoming event until someone
+    # uploads a graphic for it.
+    events_default_graphic_url: str = ""
+
     # The address the "Interested in Presenting or Hosting?" panel invites
     # people to write to. Empty falls back to OPS_MAILBOX, and with both empty
     # the panel renders without a contact line rather than a broken mailto.

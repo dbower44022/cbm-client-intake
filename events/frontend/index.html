@@ -43,6 +43,10 @@
         <label class="ev__filter">
           Show
           <select id="scopeFilter">
+            <!-- Leads the list because it is the only option that names WORK.
+                 The grid opens on it whenever there is any, so an import's
+                 output cannot hide behind the published default again. -->
+            <option value="review">Needs review</option>
             <option value="published">Published to the website</option>
             <option value="upcoming">Upcoming</option>
             <option value="past">Past</option>

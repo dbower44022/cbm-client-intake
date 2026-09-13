@@ -223,3 +223,46 @@ async def test_the_staff_grid_shows_unpublished_events_too():
     ])
     rows = await service.list_events(crm)
     assert {r["name"] for r in rows} == {"Public Workshop", "Operations/Team Meeting"}
+
+
+# --- the Needs review filter -------------------------------------------------
+
+
+def _events_app_js() -> str:
+    from pathlib import Path
+
+    return (
+        Path(__file__).resolve().parents[1] / "events" / "frontend" / "app.js"
+    ).read_text(encoding="utf-8")
+
+
+def test_the_grid_offers_a_needs_review_scope():
+    """The import creates events UNPUBLISHED so a person can check the date, and
+    the grid opened on "Published to the website" — hiding every one of them, so
+    an import looked like it had done nothing. Found live on 2026-09-13 when ten
+    imported recordings were reported missing."""
+    from pathlib import Path
+
+    html = (
+        Path(__file__).resolve().parents[1] / "events" / "frontend" / "index.html"
+    ).read_text(encoding="utf-8")
+    assert '<option value="review">Needs review</option>' in html
+    js = _events_app_js()
+    assert 'state.scope === "review"' in js
+    assert "function needsReview(e)" in js
+
+
+def test_needs_review_means_unpublished_with_a_recording():
+    """Precision is what makes the automatic switch safe. That entity doubles as
+    the organisation's internal calendar, and a team meeting has no recording
+    link — so this can never land the grid on ninety internal meetings."""
+    js = _events_app_js()
+    assert "return !e.publishToWebsite && !!e.recordingUrl;" in js
+
+
+def test_the_grid_opens_on_the_work_but_yields_to_the_user():
+    """Switch once, and never yank someone back out of the view they chose."""
+    js = _events_app_js()
+    assert "if (!state.scopeChosen && state.events.some(needsReview))" in js
+    assert "state.scopeChosen = true;" in js
+    assert "scopeChosen: false," in js

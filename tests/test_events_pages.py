@@ -342,3 +342,47 @@ def test_the_panels_use_the_sites_own_wording(monkeypatch):
     assert "Find a Recorded Webinar" in html
     assert "Results link directly to the recording." in html
     assert "Most Recent" in html
+
+
+# --- the default event graphic ----------------------------------------------
+
+
+def test_an_event_with_no_picture_gets_the_configured_default(monkeypatch):
+    """What this actually fixes: an image-less event had an EMPTY og:image, so
+    sharing its page produced a card with no picture at all."""
+    monkeypatch.setenv("EVENTS_DEFAULT_GRAPHIC_URL", "https://example.org/house.png")
+    client, _ = build(monkeypatch, events=[make_event()])
+    html = client.get("/webinars/grant-writing-basics").text
+    assert 'property="og:image" content="https://example.org/house.png"' in html
+
+
+def test_no_default_configured_leaves_the_event_without_one(monkeypatch):
+    """Empty means an image-less event has no image, exactly as before."""
+    client, _ = build(monkeypatch, events=[make_event()])
+    html = client.get("/webinars/grant-writing-basics").text
+    assert 'property="og:image" content=""' in html
+
+
+def test_a_recordings_own_video_thumbnail_beats_the_default():
+    """Ordering matters: a recorded webinar's own still frame says more about it
+    than a house card, so the default fills a hole neither the event's own
+    graphic nor the video could."""
+    from events import service
+    from tests.test_events_service import make_event as _ev
+
+    recorded = _ev(recordingUrl="https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+    payload = service.public_event(recorded, default_image="https://example.org/house.png")
+    assert payload["thumbnailUrl"]
+    assert payload["imageUrl"] == ""      # the renderer falls through to the video
+
+
+def test_the_events_own_graphic_beats_the_default():
+    from events import service
+    from tests.test_events_service import make_event as _ev
+
+    with_graphic = _ev(eventGraphicId="att123456789")
+    payload = service.public_event(
+        with_graphic, api_base_url="https://apps.example.org",
+        default_image="https://example.org/house.png",
+    )
+    assert payload["imageUrl"].startswith("https://apps.example.org/api/events/")

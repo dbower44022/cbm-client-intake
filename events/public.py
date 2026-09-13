@@ -104,6 +104,7 @@ async def upcoming(request: Request, response: Response) -> dict[str, Any]:
                 _client(request),
                 base_url=settings.events_public_base,
                 api_base_url=settings.app_base_url,
+                default_image=settings.events_default_graphic_url,
             )
         except EspoError as exc:
             raise _crm_failure(exc, "upcoming") from exc
@@ -132,6 +133,7 @@ async def recordings(
                 r,
                 base_url=settings.events_public_base,
                 api_base_url=settings.app_base_url,
+                default_image=settings.events_default_graphic_url,
             )
             for r in rows
         ]
@@ -161,6 +163,7 @@ async def event_detail(slug: str, request: Request, response: Response) -> dict[
                 event,
                 base_url=settings.events_public_base,
                 api_base_url=settings.app_base_url,
+                default_image=settings.events_default_graphic_url,
                 seats_left=seats_left,
             )
         except EspoError as exc:
