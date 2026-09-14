@@ -28,6 +28,8 @@ from fastapi.testclient import TestClient
 from core import network_standard as ns
 from core.config import Settings
 from core.espo import EspoError, EspoTransportError
+from core import version
+from core.version import __version__, release_stamp
 from core.settings_registry import BOOT_READ_KEYS, DENYLIST
 from main import app
 
@@ -64,14 +66,57 @@ def test_healthz_carries_both_stamps():
     assert "crmConfig" in body
 
 
-def test_untagged_build_reports_null_rather_than_guessing():
+def test_release_tag_is_this_release_or_nothing():
+    """Never "the last tag that went by".
+
+    Asserted as an invariant rather than a fixed value, because this suite runs
+    both on ordinary commits (no stamp in force) and on the commit a tag names
+    (stamp in force) — and it must pass at the tagged commit, which is the one
+    that gets built into an image.
+    """
     body = TestClient(app).get("/healthz").json()
-    assert body["releaseTag"] is None
+    assert body["releaseTag"] in (None, f"v{__version__}")
 
 
-def test_release_tag_comes_from_the_image_stamp():
+def test_release_tag_comes_from_the_source_stamp():
     assert Settings(release_tag="v0.213.1").release_tag == "v0.213.1"
-    assert Settings().release_tag == ""
+    assert Settings().release_tag == release_stamp()
+
+
+def test_stamp_counts_only_when_it_names_this_version(tmp_path, monkeypatch):
+    """The cut writes v<version> at the commit declaring that version, so the
+    two agree there and nowhere else. The next commit bumps the version and the
+    stamp stops applying — which is what keeps the soak copy, which tracks
+    main, from reporting a release it has already moved past."""
+    stamp = tmp_path / "release-tag.txt"
+    monkeypatch.setattr(version, "_RELEASE_STAMP", stamp)
+
+    stamp.write_text("v1.2.3\n")
+    assert version.release_stamp("1.2.3") == "v1.2.3"
+    assert version.release_stamp("1.2.4") == ""
+
+
+@pytest.mark.parametrize(
+    "body, expected",
+    [
+        ("# explanation\n# more\n\nv9.9.9\n", "v9.9.9"),
+        ("# explanation only\n\n", ""),
+        ("", ""),
+        ("   v9.9.9   \n", "v9.9.9"),
+    ],
+)
+def test_stamp_file_parsing(tmp_path, monkeypatch, body, expected):
+    stamp = tmp_path / "release-tag.txt"
+    stamp.write_text(body)
+    monkeypatch.setattr(version, "_RELEASE_STAMP", stamp)
+    assert version.release_stamp("9.9.9") == expected
+
+
+def test_missing_stamp_file_is_not_an_error(tmp_path, monkeypatch):
+    """An old checkout, or a build context that dropped the file: report no
+    release rather than failing to start."""
+    monkeypatch.setattr(version, "_RELEASE_STAMP", tmp_path / "absent.txt")
+    assert version.release_stamp("9.9.9") == ""
 
 
 def test_crm_config_block_keeps_the_three_documented_keys():

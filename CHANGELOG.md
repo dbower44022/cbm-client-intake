@@ -4,6 +4,50 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.228.0] — 2026-09-13
+
+**feat(chapters): upgrading a chapter is one operation.** Doug's judgement on
+the nine-step Lakeside upgrade put in front of him this week: *"This is way too
+difficult."* Ruled the same day — make the weekly cut cheap enough that it
+actually happens weekly, and leave the console button to CRMBuilder, where it
+is already ruled to live (proposal 8).
+
+- **The release tag travels in the source, not in every deployment's spec.**
+  `scripts/cut_release.sh` writes it into **`release-tag.txt`** in the very
+  commit the tag names, and the image carries it (`COPY . .`). Promoting a
+  deployment is therefore *build this commit*, one operation, where it used to
+  be *set `RELEASE_TAG`, then trigger a build* — and a half-done promotion made
+  `/healthz` report the previous promotion as if it were the new one.
+- **The stamp counts only when it names this build's version**
+  (`core.version.release_stamp`). The cut writes `v<version>` at the commit
+  where `pyproject.toml` declares that version, so the two agree there and
+  nowhere else: the next commit bumps the version and the stamp stops applying.
+  That is what keeps the soak copy, which tracks `main`, reporting **no**
+  release rather than the last one it went past. `RELEASE_TAG` in the
+  environment still overrides the file, so the Dockerfile ARG and any
+  hand-pinned deployment keep working; no deployment should need it.
+- **`scripts/set_updates_policy.py`** (new) sets one deployment's Updates
+  policy — `development` (main, auto), `latest-stable` (release, auto, the
+  chapter default), `on-demand` (release, manual) — across **all three**
+  components at once, because setting one and not the others half-updates the
+  app and nothing on the platform says so. It drops the now-redundant
+  `RELEASE_TAG` (`--keep-release-tag` retains it), reads the result back, and
+  `--status` is the per-app policy-vs-spec detector Phase 5 asked for. Dry run
+  by default; it edits the **live** spec via `doctl`, never an overlay file, so
+  `EV[…]` secrets round-trip untouched.
+- **`scripts/promote.py` waits for the new container before judging.**
+  DigitalOcean reports ACTIVE a few seconds before the public address serves the
+  new revision, so the single health read after the wait loop saw the old
+  container and the script declared a false failure on the 2026-09-13
+  `lakeside-intake` promotion to v0.226.0 — which had in fact landed, verified
+  five minutes later. It now polls `/healthz` for up to two minutes for the tag.
+- **Owed, in this order**: push, cut the tag (the cut now writes the stamp), push
+  the tag and `release`, then put Lakeside on `latest-stable`. The order matters
+  — dropping the variable before a stamped commit exists on `release` would make
+  Lakeside report null until the next cut. Cleveland's three apps are untouched
+  and keep their overlay variable; they track `main`, so what they should report
+  is Doug's call (`OPEN-ITEMS.md`).
+
 ## [0.227.0] — 2026-09-13
 
 **feat(events): registering now asks for consent, and records what was actually

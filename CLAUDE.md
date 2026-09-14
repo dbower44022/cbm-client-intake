@@ -93,9 +93,12 @@ runbook: `DEPLOYMENT.md`; plain-language console companion:
 - `/healthz` reports version, environment, `dryRun`, `durableStore` and a
   worker-liveness block. It is the deploy marker. Since v0.214.0 it also
   answers the other two version questions the chapter network needs:
-  **`releaseTag`** (which *promotion* this is — baked into the image by the
-  `RELEASE_TAG` build arg, since a container has no `.git`; null on an
-  untagged build) and **`crmConfig`** (what configuration the CRM behind it
+  **`releaseTag`** (which *promotion* this is — read from **`release-tag.txt`**,
+  which `scripts/cut_release.sh` writes into the commit the tag names, since a
+  container has no `.git`. Honoured **only when it matches this build's
+  version**, so an untagged build and every commit after the cut report null
+  rather than the last release that went by; `RELEASE_TAG` in the environment
+  still overrides it, and no deployment should need to) and **`crmConfig`** (what configuration the CRM behind it
   holds, read from `CNetworkStandard`). The `crmConfig` probe is a cached
   background read — **`/healthz` still never pings the CRM** — ships dark
   (`CRM_CONFIG_REFRESH_SECONDS=0`), and reports `absent` / `forbidden` /

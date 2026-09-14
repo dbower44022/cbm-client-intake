@@ -6,7 +6,10 @@ import logging
 from functools import lru_cache
 from typing import Literal, Optional
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from .version import release_stamp
 
 
 class Settings(BaseSettings):
@@ -622,10 +625,16 @@ class Settings(BaseSettings):
     setup_peer_token: str = ""
 
     # --- The chapter network's two version stamps (prds/chapter-network) ---
-    # Stamp A, the release tag: baked into the image by the Dockerfile ARG of
-    # the same name and reported at /healthz as `releaseTag`. Empty on an
-    # untagged build, which reports as null.
-    release_tag: str = ""
+    # Stamp A, the release tag, reported at /healthz as `releaseTag`. It travels
+    # in the source: `release-tag.txt`, written by scripts/cut_release.sh into
+    # the commit the tag names, and read by core.version.release_stamp — which
+    # returns it ONLY when it matches this build's version, so an untagged build
+    # and a commit past the cut both report null rather than the last release
+    # that went by. Setting RELEASE_TAG in the environment still overrides it
+    # (that is how the Dockerfile ARG and any per-deployment pin work), but no
+    # deployment needs to: that variable is what made promoting a deployment two
+    # operations instead of one.
+    release_tag: str = Field(default_factory=release_stamp)
     # Stamp B, the CRM's configuration version: how often to re-read the
     # CNetworkStandard record behind this deployment. ZERO DISABLES THE PROBE
     # entirely, and zero is the default — this ships dark and is switched on

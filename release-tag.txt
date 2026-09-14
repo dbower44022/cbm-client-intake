@@ -1,0 +1,11 @@
+# The release tag this commit belongs to — the chapter network's Stamp A.
+#
+# WRITTEN BY scripts/cut_release.sh, in the commit the tag names. Never edit it
+# by hand: a value that does not match pyproject.toml's version is ignored (see
+# core/version.release_stamp), so a hand edit does not lie, it just does nothing.
+#
+# A container has no .git, so the tag has to travel in the source. It used to
+# travel as a RUN_AND_BUILD_TIME variable in every deployment's spec, which made
+# promoting a deployment two operations instead of one.
+#
+# Blank below = this commit is not a release.

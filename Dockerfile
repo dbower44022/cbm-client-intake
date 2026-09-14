@@ -21,12 +21,15 @@ RUN uv sync --frozen --no-dev
 # Application source.
 COPY . .
 
-# The release tag (chapter network, Stamp A). A container has no .git, so the
-# tag the release train pinned has to be baked in at build time and supplied by
-# each deployment's spec as a RUN_AND_BUILD_TIME variable. Empty on a local or
-# untagged build, which /healthz reports as null rather than guessing: `version`
-# answers "what code is this", `releaseTag` answers "what promotion is this",
-# and after a hotfix rebuild those two differ.
+# The release tag (chapter network, Stamp A) normally travels in the SOURCE:
+# release-tag.txt, written by scripts/cut_release.sh into the commit the tag
+# names and copied in above. Nothing needs to be passed at build time, which is
+# what makes promoting a deployment one operation rather than two.
+#
+# This ARG stays as an override for a build that is not a release commit but
+# must still claim a tag. An environment variable wins over the file, so use it
+# deliberately: a stale value here makes the deployment report the PREVIOUS
+# promotion as if it were the new one, which is worse than reporting none.
 ARG RELEASE_TAG=""
 ENV RELEASE_TAG=$RELEASE_TAG
 

@@ -67,13 +67,41 @@ if $DRY_RUN; then
 
 Dry run — nothing was created.
 
+  would stamp        : release-tag.txt <- $TAG  (committed, then tagged)
   would tag          : $TAG
-  at commit          : $SHA  $SUBJECT
+  at commit          : one new commit on top of $SHA  $SUBJECT
   would fast-forward : release -> $TAG
   then push          : git push origin $TAG release
 
 EOF
   exit 0
+fi
+
+# --- 4. Stamp the tag into the source -------------------------------------
+# A container has no .git, so the tag has to travel in the source. It used to
+# travel as a RUN_AND_BUILD_TIME variable in every deployment's spec, which made
+# promoting a deployment two operations rather than one — and when only the
+# second was done, the deployment reported the PREVIOUS promotion as if it were
+# the new one. The stamp is written HERE, into the commit the tag names, so the
+# image carries it and promoting a deployment is one operation: build this commit.
+#
+# core.version.release_stamp honours it only when it matches pyproject's
+# version — true at this commit, false at the next one — so main stops claiming
+# a release as soon as it moves past one.
+STAMP_FILE="release-tag.txt"
+[[ -f "$STAMP_FILE" ]] || die "$STAMP_FILE is missing. It carries the release stamp into the image; restore it before cutting."
+# Keep the file's explanatory header; replace only the value line below it.
+{ grep '^#' "$STAMP_FILE"; echo "$TAG"; } > "$STAMP_FILE.new" && mv "$STAMP_FILE.new" "$STAMP_FILE"
+
+if [[ -n "$(git status --porcelain -- "$STAMP_FILE")" ]]; then
+  git add "$STAMP_FILE"
+  git commit -q -m "chore(release): stamp $TAG
+
+Written by scripts/cut_release.sh into the commit $TAG names, so the image
+carries the release tag without a per-deployment environment variable."
+  SHA="$(git rev-parse --short HEAD)"
+else
+  echo "release-tag.txt already reads $TAG; tagging the existing commit $SHA."
 fi
 
 # --- 4. Annotated, not lightweight ----------------------------------------
@@ -82,8 +110,8 @@ fi
 git tag -a "$TAG" -m "Release $TAG
 
 Cut from main at $SHA.
-Reported at /healthz as releaseTag once each deployment's spec supplies
-RELEASE_TAG=$TAG as a RUN_AND_BUILD_TIME variable."
+Stamped into release-tag.txt in this commit, so any deployment built from it
+reports releaseTag=$TAG at /healthz with no per-deployment variable."
 
 # --- 5. Fast-forward the release lane -------------------------------------
 # Chapter apps track the `release` branch, never main (decided 2026-08-31):

@@ -11,7 +11,9 @@ A promotion is TWO operations, deliberately in this order:
    Triggering a build without setting the variable makes ``/healthz`` report
    the PREVIOUS promotion as if it were the new one, which is worse than null.
 2. Trigger a deployment and wait for it, then re-read ``/healthz`` and print
-   the before/after ``releaseTag``.
+   the before/after ``releaseTag``. After ACTIVE the script waits up to two
+   minutes for ``/healthz`` to report the new tag, because the platform reports
+   ACTIVE before the public address serves the new revision.
 
 Dry run by default: prints the plan and touches nothing. ``--status`` is the
 read-only fleet signal Phase 2 asks for — the live spec's ``deploy_on_push``
@@ -205,7 +207,16 @@ def main() -> int:
         if phase in ("ACTIVE", "ERROR", "CANCELED", "SUPERSEDED"):
             break
         print(f"  {phase.lower()}…")
+    # DigitalOcean reports ACTIVE a few seconds before the public address serves
+    # the new revision. One read there sees the old container, or nothing at all,
+    # and the script then declares a false failure — which is exactly what
+    # happened on the 2026-09-13 promotion of lakeside-intake, where the tag was
+    # in force five minutes later. Wait for the tag to appear before judging.
     after = healthz(url) if url else {}
+    settle_deadline = time.time() + 120
+    while url and after.get("releaseTag") != args.tag and time.time() < settle_deadline:
+        time.sleep(10)
+        after = healthz(url)
     print(f"deployment phase: {phase}")
     print(f"reported releaseTag: {before.get('releaseTag')!r} -> {after.get('releaseTag')!r}"
           f" (version {after.get('version')!r}, crmConfig {((after.get('crmConfig') or {}).get('state'))!r})")
