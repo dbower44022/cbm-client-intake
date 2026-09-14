@@ -6,6 +6,17 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+31. **A settings-store test reads the developer's own `.env`** (found
+    2026-09-13). `tests/test_settings_store_pg.py::test_override_round_trip_and_
+    history` asserts the override history is exactly `["30", "25"]`; with a real
+    `.env` present it sees the entries the surrounding tests wrote and fails.
+    **Reproduced on v0.228.1**, so it predates the v0.229.0 store change and is
+    not caused by it. Invisible in normal runs — the whole file is skipped
+    without `TEST_DATABASE_URL` — which is exactly why it rotted unnoticed.
+    Same class as the playlist test repaired in v0.225.1. Fix is to scope the
+    assertion to the key under test rather than the whole history table.
+
+
 29. **Cleveland's two live apps misreport which promotion they are running**
     (2026-09-13). Production and crm-test both carry `RELEASE_TAG=v0.217.0` in
     their overlays while running 0.226.0, so `/healthz` names a promotion six
@@ -519,7 +530,15 @@ toggle.
     Run the dry run on crm-test first and read the plan: the intake API user
     cannot delete, so a bad import is cleaned up by hand.
 
-19f. **Event registration holds a person's SECOND webinar of the day for staff
+19f. ~~**Event registration holds a person's SECOND webinar of the day for staff
+    review**~~ — **FIXED 2026-09-13 (v0.229.0).** `FormSpec.duplicate_scope_key`
+    adds one payload key to the match; event registration sets it to
+    `event_slug`, so two different sessions both deliver and a repeat for the
+    same one still holds. No value for the key means no hold, never a fallback
+    to the broad match. Covered against real Postgres, not a fake. Original text
+    below.
+
+    **Event registration holds a person's SECOND webinar of the day for staff
     review** (found 2026-08-17). `_recent_duplicate_id` matches on form slug +
     email inside `duplicate_hold_seconds` (24h), and event registration rides
     the shared pipeline, so registering for two different events on one day

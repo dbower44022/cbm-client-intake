@@ -39,6 +39,7 @@ class FakeStore:
         self.completed: list[tuple] = []
         self.failed: list[tuple[str, str, str]] = []
         self.progress: dict[str, dict] = {}
+        self.duplicate_calls: list[dict] = []
         self._n = 0
 
     async def create_all(self) -> None:
@@ -54,9 +55,17 @@ class FakeStore:
     async def dispose(self) -> None:
         pass
 
-    async def find_recent_duplicate(self, form_slug, email, *, within_seconds):
+    async def find_recent_duplicate(self, form_slug, email, *, within_seconds,
+                                    scope_key=None, scope_value=None):
         """No prior submission by default; tests that exercise the duplicate
-        hold set ``self.duplicate`` to the row to return."""
+        hold set ``self.duplicate`` to the row to return.
+
+        The call is recorded so a test can assert WHAT was matched on, not just
+        that a check happened — which is the whole of the per-event fix."""
+        self.duplicate_calls.append(
+            {"form_slug": form_slug, "email": email,
+             "scope_key": scope_key, "scope_value": scope_value}
+        )
         return getattr(self, "duplicate", None)
 
     async def capture(

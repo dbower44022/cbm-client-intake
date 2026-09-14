@@ -338,6 +338,7 @@ class SubmissionStore(Protocol):
     ) -> Captured: ...
     async def find_recent_duplicate(
         self, form_slug: str, email: str, *, within_seconds: int,
+        scope_key: Optional[str] = None, scope_value: Optional[str] = None,
     ) -> Optional[dict[str, Any]]: ...
     async def mark_completed(
         self, submission_id: str, result: dict[str, Any], *,
@@ -522,21 +523,35 @@ class PostgresStore:
 
     async def find_recent_duplicate(
         self, form_slug: str, email: str, *, within_seconds: int,
+        scope_key: Optional[str] = None, scope_value: Optional[str] = None,
     ) -> Optional[dict[str, Any]]:
         """The most recent PRIOR submission of this form from this email inside
         the window, or None.
 
-        Matching is form + email only: the two real cases (2026-07-17 and
+        Matching is form + email: the two real cases (2026-07-17 and
         2026-07-27) differed in their free-text answers, so comparing payloads
         would have missed both — a client re-filling the form is *editing*, not
         repeating. The token idempotency check already covers a literal re-send
         of one form session; this catches a fresh one.
+
+        ``scope_key``/``scope_value`` narrow it with ONE more payload key, when
+        the form says so (``FormSpec.duplicate_scope_key``). Event registration
+        sets it to the event: two sign-ups from one address on one day are two
+        different sessions, and holding the second was a live defect — the
+        visitor saw a normal thank-you and no registration was ever created. A
+        repeat for the SAME event still holds, which is the case the guard is
+        for.
 
         Spam, already-held duplicates and staff-discarded rows don't count as a
         prior submission (see ``_NOT_A_PRIOR_SUBMISSION``), so a third
         submission is measured against the original rather than its own sibling.
         """
         if not email or within_seconds <= 0:
+            return None
+        # A form that declares a scope but whose payload carries no value for it
+        # must NOT silently fall back to the broad match — that is the defect,
+        # not the fix. No value, no hold.
+        if scope_key and not scope_value:
             return None
         cutoff = _now() - timedelta(seconds=within_seconds)
         async with self._engine.connect() as conn:
@@ -553,6 +568,11 @@ class PostgresStore:
                         func.lower(submission.c.payload["email"].astext) == email.lower(),
                         submission.c.received_at >= cutoff,
                         submission.c.status.notin_(_NOT_A_PRIOR_SUBMISSION),
+                        *(
+                            [submission.c.payload[scope_key].astext == scope_value]
+                            if scope_key
+                            else []
+                        ),
                     )
                     .order_by(submission.c.received_at.desc())
                     .limit(1)

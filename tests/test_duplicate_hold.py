@@ -197,3 +197,91 @@ def test_held_duplicate_is_redrivable_and_counts_as_open_work():
     assert store_mod.STATUS_HELD_DUPLICATE in store_mod.OPEN_REVIEW_STATUSES
     # Never claimed by the worker while held.
     assert store_mod.STATUS_HELD_DUPLICATE not in store_mod.CLAIMABLE
+
+
+# --- scoped per event (2026-09-13) -------------------------------------------
+
+
+def _event_body(**over):
+    body = {
+        "submission_token": "tok-ev-1",
+        "company_url": "",
+        "first_name": "Bea",
+        "last_name": "Nolan",
+        "email": "bea@example.com",
+        "phone": "",
+        "zip_code": "",
+        "consent": True,
+        "event_slug": "grant-writing-basics",
+    }
+    body.update(over)
+    return body
+
+
+def test_event_registration_matches_on_the_event_as_well(monkeypatch):
+    """The live defect (OPEN-ITEMS 19f): the guard matched form + email inside
+    24 hours, so a person's SECOND webinar of the day was captured and held for
+    staff review — never delivered, no registration created, and they saw a
+    normal thank-you. The event now joins the match.
+
+    Driven through the real public endpoint rather than the helper, because the
+    value has to survive the URL, the pre-flight check and the schema before it
+    can reach the guard at all."""
+    from core.config import get_settings
+    from forms import event_registration
+    from tests.test_events_public import FakeEspo
+    from tests.test_events_service import make_event
+
+    store = FakeStore()
+    monkeypatch.setenv("DATABASE_URL", "postgresql://x/y")
+    monkeypatch.setenv("EVENTS_ENABLED", "true")
+    monkeypatch.setenv("EVENTS_PUBLIC_API", "true")
+    monkeypatch.setenv("ESPO_DRY_RUN", "false")
+    monkeypatch.setenv("ESPO_BASE_URL", "https://crm.example.test")
+    monkeypatch.setenv("ESPO_API_KEY", "k")
+    monkeypatch.setattr(store_mod, "make_store", lambda *a, **k: store)
+    get_settings.cache_clear()
+    app = create_app([event_registration.SPEC])
+    # The fixture event is fixed in the past, and the endpoint's pre-flight check
+    # refuses a closed registration before capture ever runs. Build its date from
+    # today so this test does not rot the way the full-event one did.
+    from datetime import datetime, timedelta, timezone
+
+    soon = datetime.now(timezone.utc) + timedelta(days=30)
+    upcoming = make_event(
+        dateStart=soon.strftime("%Y-%m-%d %H:%M:%S"),
+        dateEnd=(soon + timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S"),
+    )
+    app.state.events_client_factory = lambda: FakeEspo(events=[upcoming])
+    client = TestClient(app)
+
+    resp = client.post(
+        "/api/events/grant-writing-basics/register",
+        json=_event_body(event_slug="grant-writing-basics"),
+    )
+    # 200 on capture, or 502 when the fake CRM cannot complete the delivery it
+    # only knows how to LIST for. Either way the submission was captured, which
+    # is the point — a 404 would mean the route never mounted and a 409 that the
+    # pre-flight refused before the guard could run.
+    assert resp.status_code in (200, 502), resp.text
+    assert store.duplicate_calls, "no duplicate check ran at all"
+    call = store.duplicate_calls[-1]
+    assert call["scope_key"] == "event_slug"
+    assert call["scope_value"] == "grant-writing-basics"
+    get_settings.cache_clear()
+
+
+def test_client_intake_still_matches_on_form_and_email_alone(monkeypatch):
+    """Unchanged, and it must stay that way: re-filling that form is one person
+    editing one application, and holding the second is what stopped a second
+    client profile stripping the company off the first."""
+    store = FakeStore()
+    monkeypatch.setenv("DATABASE_URL", "postgresql://x/y")
+    monkeypatch.setattr(store_mod, "make_store", lambda *a, **k: store)
+    client = TestClient(create_app([client_intake.SPEC]))
+
+    client.post("/api/client-intake/intake", json=_body())
+    assert store.duplicate_calls
+    call = store.duplicate_calls[-1]
+    assert call["scope_key"] is None
+    assert call["scope_value"] is None

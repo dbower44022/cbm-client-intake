@@ -17,7 +17,12 @@ SPEC = FormSpec(
     title="Event Registration",
     submission_model=EventRegistration,
     orchestrator=orchestrate,
-    frontend_dir=None,  # the form lives on the CBM WordPress site
+    frontend_dir=None,  # the public pages are served at /webinars/
+    # Two sign-ups from one address on one day are two different sessions, not a
+    # near-duplicate. Without this the second was captured and HELD for staff
+    # review, never delivered — the visitor saw a normal thank-you, no
+    # registration was created, and nobody was told.
+    duplicate_scope_key="event_slug",
 )
 
 __all__ = ["SPEC", "EventRegistration", "orchestrate"]

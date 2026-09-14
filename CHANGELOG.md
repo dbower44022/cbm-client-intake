@@ -19,6 +19,57 @@ every test on a laptop, where the variable simply does not exist. `Settings`
 now falls back to the stamp when the variable is empty; a real tag still
 overrides. Regression test added for all three cases: absent, empty, set.
 
+## [0.229.0] — 2026-09-13
+
+**fix(events): registering for a second session on one day no longer loses it.**
+The last blocker on the redirect (`OPEN-ITEMS.md` 19f), and a live defect since
+event registration first rode the shared pipeline.
+
+**What was happening.** A guard holds a second submission of the same form from
+the same email inside `DUPLICATE_HOLD_SECONDS` (24h) and captures it as
+`held_duplicate` for staff review, without delivering it. That guard exists for
+two real production incidents where a client re-filled the intake form minutes
+later, each producing a second `CClientProfile` that — because `linkedCompany`
+is a hasOne — silently stripped the company and contact off the first. It is
+right there, and event registration inherited it as collateral. So a person
+signing up for two **different** webinars on one day had the second captured and
+never delivered: no registration, no Zoom push, and a normal thank-you on screen.
+Nobody was told, at either end.
+
+**The fix.** `FormSpec` gains an optional `duplicate_scope_key` — ONE more
+payload key that joins the match. Event registration sets it to `event_slug`, so
+the match is form + email + event. A repeat for the **same** event still holds,
+which is the case the guard is actually for. Every other form is untouched and
+matches on form + email exactly as before.
+
+Two details worth keeping:
+
+- **No value for the key means no hold**, rather than falling back to the broad
+  match. The fallback would *be* the defect, quietly, on any submission whose
+  payload lacked the key.
+- The hold's log line now names what it matched on, so "why was this held?" is
+  answerable from the logs rather than by reading this entry.
+
+**Tested against real SQL, not a fake.** The clause is a JSONB comparison, so a
+fake store proves nothing about it. `docker compose up -d db` and
+`TEST_DATABASE_URL=…` turn on the 21 Postgres tests that are otherwise skipped;
+four new ones cover two events delivering, the same event still holding, an
+unscoped form unchanged, and a scoped form with no value holding nothing. Two
+more drive the **real public endpoint** to prove the event survives the URL, the
+pre-flight check and the schema before it reaches the guard.
+
+Suite 2,053 green with the database attached, and **nothing skipped** — worth
+doing that way whenever the store changes.
+
+**One caveat if you do.** `tests/test_settings_store_pg.py::test_override_round_
+trip_and_history` fails when a developer's own `.env` is present: it asserts the
+override history is exactly two entries, and the environment file changes what
+the surrounding tests write. **Reproduced on v0.228.1 with the same `.env`**, so
+it predates this change and is not caused by it — the same class of problem as
+the playlist test repaired in v0.225.1, where a test read the machine it happened
+to be running on. Worth fixing on its own; it is invisible in normal runs because
+these tests are skipped without `TEST_DATABASE_URL`.
+
 ## [0.228.0] — 2026-09-13
 
 **feat(chapters): upgrading a chapter is one operation.** Doug's judgement on

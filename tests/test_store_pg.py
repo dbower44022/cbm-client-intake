@@ -424,3 +424,94 @@ async def test_metrics_needs_attention_open_excludes_closed():
     assert (await store.get_submission(stuck.id))["status"] == "needs_attention"
 
     await store.dispose()
+
+
+# --- the near-duplicate hold, scoped per event -------------------------------
+
+
+async def test_two_events_one_email_are_not_duplicates_of_each_other():
+    """The live defect this fixes (OPEN-ITEMS 19f). The guard matched form +
+    email inside 24 hours, so a person signing up for their SECOND webinar of
+    the day had it captured and held for staff review — never delivered, no
+    registration created, and the visitor saw a normal thank-you."""
+    store = PostgresStore(_URL)
+    await store.create_all()
+    email = f"two-events-{uuid.uuid4().hex[:8]}@example.com"
+
+    await store.capture(
+        "event-registration", f"t-{uuid.uuid4()}",
+        {"email": email, "event_slug": "grant-writing-basics"},
+        status=STATUS_PENDING,
+    )
+    # A different session, same person, same day.
+    prior = await store.find_recent_duplicate(
+        "event-registration", email, within_seconds=86400,
+        scope_key="event_slug", scope_value="pricing-for-profit",
+    )
+    assert prior is None, "a different event must not read as a duplicate"
+
+    await store.dispose()
+
+
+async def test_the_same_event_twice_still_holds():
+    """The case the guard is actually for. Narrowing the match must not disable
+    it."""
+    store = PostgresStore(_URL)
+    await store.create_all()
+    email = f"same-event-{uuid.uuid4().hex[:8]}@example.com"
+
+    first = await store.capture(
+        "event-registration", f"t-{uuid.uuid4()}",
+        {"email": email, "event_slug": "grant-writing-basics"},
+        status=STATUS_PENDING,
+    )
+    prior = await store.find_recent_duplicate(
+        "event-registration", email, within_seconds=86400,
+        scope_key="event_slug", scope_value="grant-writing-basics",
+    )
+    assert prior is not None
+    assert prior["id"] == first.id
+
+    await store.dispose()
+
+
+async def test_a_form_with_no_scope_still_matches_on_form_and_email():
+    """Client intake is unchanged: re-filling that form IS one person editing one
+    application, and holding the second is what stopped a second client profile
+    stripping the company off the first."""
+    store = PostgresStore(_URL)
+    await store.create_all()
+    email = f"intake-{uuid.uuid4().hex[:8]}@example.com"
+
+    first = await store.capture(
+        "client-intake", f"t-{uuid.uuid4()}",
+        {"email": email, "business_name": "Flowing River"},
+        status=STATUS_PENDING,
+    )
+    prior = await store.find_recent_duplicate(
+        "client-intake", email, within_seconds=86400,
+    )
+    assert prior is not None and prior["id"] == first.id
+
+    await store.dispose()
+
+
+async def test_a_scoped_form_with_no_value_holds_nothing():
+    """No value for the key means no hold, rather than falling back to the broad
+    match — the fallback would BE the defect."""
+    store = PostgresStore(_URL)
+    await store.create_all()
+    email = f"noscope-{uuid.uuid4().hex[:8]}@example.com"
+
+    await store.capture(
+        "event-registration", f"t-{uuid.uuid4()}",
+        {"email": email, "event_slug": "grant-writing-basics"},
+        status=STATUS_PENDING,
+    )
+    prior = await store.find_recent_duplicate(
+        "event-registration", email, within_seconds=86400,
+        scope_key="event_slug", scope_value="",
+    )
+    assert prior is None
+
+    await store.dispose()

@@ -143,8 +143,20 @@ async def _recent_duplicate_id(
     email = str(getattr(submission, "email", "") or "").strip()
     if window <= 0 or not email:
         return None
+    # Some forms are legitimately submitted twice by one person on one day about
+    # two different things. Those name a second payload key to match on, so the
+    # guard still catches a genuine repeat without swallowing the second one.
+    scope_key = getattr(spec, "duplicate_scope_key", None)
+    scope_value = None
+    if scope_key:
+        scope_value = str(getattr(submission, scope_key, "") or "").strip()
+        if not scope_value:
+            return None
     try:
-        prior = await store.find_recent_duplicate(spec.slug, email, within_seconds=window)
+        prior = await store.find_recent_duplicate(
+            spec.slug, email, within_seconds=window,
+            scope_key=scope_key, scope_value=scope_value,
+        )
     except Exception as exc:  # noqa: BLE001 — never block a submission over this
         log.warning("duplicate check failed for %s (%s) — delivering: %s",
                     spec.slug, email, exc)
@@ -152,8 +164,10 @@ async def _recent_duplicate_id(
     if not prior:
         return None
     log.info(
-        "%s duplicate hold: %s re-submitted (prior=%s received %s)",
-        spec.slug, email, prior.get("id"), prior.get("received_at"),
+        "%s duplicate hold: %s re-submitted%s (prior=%s received %s)",
+        spec.slug, email,
+        f" for {scope_key}={scope_value}" if scope_key else "",
+        prior.get("id"), prior.get("received_at"),
     )
     return prior.get("id")
 
