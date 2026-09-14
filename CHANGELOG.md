@@ -4,37 +4,6 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
-## [0.228.2] — 2026-09-13
-
-**fix(chapters): a policy change does not move an app to the branch tip, and
-the script now says so.** Found putting `lakeside-intake` on Latest Stable: the
-spec update triggered a deployment that rebuilt **the commit it was already
-running** (v0.226.0) rather than the `release` tip pushed ten minutes earlier,
-so the app came up reporting no release at all — the variable gone and the old
-image carrying no stamp file. A manual `create-deployment` fetched the tip and
-it reported `0.228.1 / v0.228.1` with nothing set, which is the mechanism
-proven end to end on a real chapter deployment.
-
-`scripts/set_updates_policy.py` gains `--deploy`, and without it prints the
-exact command and the reason. Ordinary Sundays are unaffected: the push to
-`release` is the trigger, and a push does re-resolve the branch — this bites
-only on the transition *into* Latest Stable.
-
-## [0.228.1] — 2026-09-13
-
-**fix(chapters): an empty `RELEASE_TAG` is an absence, not an override.** Found
-by verifying v0.228.0 on the dev app minutes after cutting it: version 0.228.0,
-`releaseTag` **null**, with the correct value sitting unread in
-`release-tag.txt`.
-
-The Dockerfile carries `ARG RELEASE_TAG=""` and `ENV RELEASE_TAG=$RELEASE_TAG`,
-so **every** image has the variable set and empty whether or not anyone passed
-one — and pydantic reads an empty environment value as a value, which beat the
-stamp everywhere. The whole mechanism was inert in a container while passing
-every test on a laptop, where the variable simply does not exist. `Settings`
-now falls back to the stamp when the variable is empty; a real tag still
-overrides. Regression test added for all three cases: absent, empty, set.
-
 ## [0.229.0] — 2026-09-13
 
 **fix(events): registering for a second session on one day no longer loses it.**
@@ -85,6 +54,44 @@ it predates this change and is not caused by it — the same class of problem as
 the playlist test repaired in v0.225.1, where a test read the machine it happened
 to be running on. Worth fixing on its own; it is invisible in normal runs because
 these tests are skipped without `TEST_DATABASE_URL`.
+
+## [0.228.2] — 2026-09-13
+
+> **Never stamped as its own version.** Two sessions were numbering in
+> parallel on 2026-09-13: `pyproject.toml` had already moved to 0.229.0 when
+> this landed, so this change shipped **inside 0.229.0** and no deployment
+> ever reported 0.228.2. The entry is kept under its own heading because the
+> work is separate; the number is not a release. (0.228.1 *was* real — the
+> Lakeside chapter app reported it.)
+
+**fix(chapters): a policy change does not move an app to the branch tip, and
+the script now says so.** Found putting `lakeside-intake` on Latest Stable: the
+spec update triggered a deployment that rebuilt **the commit it was already
+running** (v0.226.0) rather than the `release` tip pushed ten minutes earlier,
+so the app came up reporting no release at all — the variable gone and the old
+image carrying no stamp file. A manual `create-deployment` fetched the tip and
+it reported `0.228.1 / v0.228.1` with nothing set, which is the mechanism
+proven end to end on a real chapter deployment.
+
+`scripts/set_updates_policy.py` gains `--deploy`, and without it prints the
+exact command and the reason. Ordinary Sundays are unaffected: the push to
+`release` is the trigger, and a push does re-resolve the branch — this bites
+only on the transition *into* Latest Stable.
+
+## [0.228.1] — 2026-09-13
+
+**fix(chapters): an empty `RELEASE_TAG` is an absence, not an override.** Found
+by verifying v0.228.0 on the dev app minutes after cutting it: version 0.228.0,
+`releaseTag` **null**, with the correct value sitting unread in
+`release-tag.txt`.
+
+The Dockerfile carries `ARG RELEASE_TAG=""` and `ENV RELEASE_TAG=$RELEASE_TAG`,
+so **every** image has the variable set and empty whether or not anyone passed
+one — and pydantic reads an empty environment value as a value, which beat the
+stamp everywhere. The whole mechanism was inert in a container while passing
+every test on a laptop, where the variable simply does not exist. `Settings`
+now falls back to the stamp when the variable is empty; a real tag still
+overrides. Regression test added for all three cases: absent, empty, set.
 
 ## [0.228.0] — 2026-09-13
 
