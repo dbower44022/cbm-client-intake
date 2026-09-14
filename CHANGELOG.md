@@ -4,6 +4,22 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.228.2] — 2026-09-13
+
+**fix(chapters): a policy change does not move an app to the branch tip, and
+the script now says so.** Found putting `lakeside-intake` on Latest Stable: the
+spec update triggered a deployment that rebuilt **the commit it was already
+running** (v0.226.0) rather than the `release` tip pushed ten minutes earlier,
+so the app came up reporting no release at all — the variable gone and the old
+image carrying no stamp file. A manual `create-deployment` fetched the tip and
+it reported `0.228.1 / v0.228.1` with nothing set, which is the mechanism
+proven end to end on a real chapter deployment.
+
+`scripts/set_updates_policy.py` gains `--deploy`, and without it prints the
+exact command and the reason. Ordinary Sundays are unaffected: the push to
+`release` is the trigger, and a push does re-resolve the branch — this bites
+only on the transition *into* Latest Stable.
+
 ## [0.228.1] — 2026-09-13
 
 **fix(chapters): an empty `RELEASE_TAG` is an absence, not an override.** Found

@@ -27,6 +27,16 @@ deployment's reported promotion at whatever it last said while the code moves on
 — which is the misreport the two stamps exist to prevent. ``--keep-release-tag``
 retains it for a deployment that is deliberately pinned by hand.
 
+**A policy change does not move the app to the branch tip.** A spec update
+triggers a deployment that rebuilds the **same source commit** with the new
+configuration — measured on `lakeside-intake` 2026-09-13, where turning
+Latest Stable on redeployed the commit it was already running rather than the
+`release` tip pushed ten minutes earlier. That is usually right (a policy change
+is not a promotion), but on the transition *into* Latest Stable it leaves the
+app behind. ``--deploy`` triggers a source-fetching deployment afterwards; the
+script says so either way. Ordinary Sundays need none of this: the push to
+`release` is itself the trigger, and a push does re-resolve the branch.
+
 Dry run by default: prints the plan and touches nothing. ``--status`` is the
 read-only detector Phase 5 asked for — the live spec compared against a policy,
 which is how you find "latest-stable, but ``deploy_on_push`` is off".
@@ -148,6 +158,9 @@ def main() -> int:
     ap.add_argument("--apply", action="store_true")
     ap.add_argument("--status", action="store_true",
                     help="read-only: the live spec, flagged against POLICY if given")
+    ap.add_argument("--deploy", action="store_true",
+                    help="after applying, trigger a deployment that fetches the branch tip "
+                         "(a spec update alone rebuilds the same commit)")
     ap.add_argument("--keep-release-tag", action="store_true",
                     help="leave a RELEASE_TAG variable in place (a hand-pinned deployment)")
     args = ap.parse_args()
@@ -189,6 +202,16 @@ def main() -> int:
     if p.returncode != 0:
         print(f"spec update failed: {p.stderr.strip()[:400]}", file=sys.stderr)
         return 2
+
+    if args.deploy:
+        d = run(["doctl", "apps", "create-deployment", args.app_id], timeout=120)
+        print("deployment triggered" if d.returncode == 0
+              else f"could not trigger a deployment: {d.stderr.strip()[:200]}")
+    else:
+        print("\nNOTE: the spec update rebuilds the SAME commit with the new settings.\n"
+              "      To move this app to the branch tip now, re-run with --deploy or:\n"
+              f"        doctl apps create-deployment {args.app_id}\n"
+              "      From here on a push to the tracked branch triggers it by itself.")
 
     # Read it back: a spec update that reports success but stores something else
     # is the failure this whole script exists to make visible.
