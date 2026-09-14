@@ -79,6 +79,16 @@
               <input type="search" id="searchBox" placeholder="Search recorded webinars…" />
               <button type="button" class="cbm-button cbm-button--secondary" id="searchBtn">Search</button>
             </div>
+            <!-- Filled from the response, which lists only the subjects that
+                 actually have a recording — a filter offering an empty topic is
+                 a dead end. Hidden until there is more than one to choose
+                 between, because a dropdown with a single option is furniture. -->
+            <div class="pub__topicfilter" id="topicFilterRow" hidden>
+              <label for="topicFilter">Topic</label>
+              <select id="topicFilter">
+                <option value="">All topics</option>
+              </select>
+            </div>
             <p class="pub__reclabel" id="recordingsLabel" hidden>Most Recent</p>
             <div id="recordings"></div>
           </div>

@@ -190,13 +190,11 @@ async def list_upcoming(
     return rows
 
 
-async def list_recordings(
-    client: EspoApi, *, query: str = "", limit: int = 50
-) -> list[dict[str, Any]]:
-    """Past published events that have a recording, newest first.
+async def published_recordings(client: EspoApi) -> list[dict[str, Any]]:
+    """Every past published event that has a recording, newest first.
 
-    The search runs **server-side** over title, summary and topic (EV-04) so the
-    browser never receives the whole archive to filter.
+    One read. The filtering below is pure, so the topic list and the filtered
+    results come from the same fetch rather than one query each.
     """
     rows = await _all_events(
         client,
@@ -206,16 +204,53 @@ async def list_recordings(
         order="desc",
         limit=1000,
     )
-    with_recording = [r for r in rows if (r.get("recordingUrl") or "").strip()]
+    return [r for r in rows if (r.get("recordingUrl") or "").strip()]
+
+
+def recording_topics(rows: list[dict[str, Any]]) -> list[str]:
+    """The topics that actually have a recording, in the CRM's own order.
+
+    Derived from the recordings rather than from the CRM's ten curated options,
+    because a filter offering a topic with nothing behind it is a dead end — the
+    visitor picks it and the panel empties. Deliberately NOT narrowed by the
+    current search, so the list does not shift under the reader between one
+    search and the next.
+    """
+    present = {(r.get("topic") or "").strip() for r in rows}
+    present.discard("")
+    ordered = [t for t in cfg.TOPIC_ORDER if t in present]
+    # Anything the CRM has since added to the enum, or a stored value that has
+    # drifted out of it, still appears rather than vanishing from the filter.
+    return ordered + sorted(present - set(ordered))
+
+
+def filter_recordings(
+    rows: list[dict[str, Any]], *, query: str = "", topic: str = "", limit: int = 50
+) -> list[dict[str, Any]]:
+    """Search and topic filter, both server-side (EV-04), so the browser never
+    receives the whole archive to sift. Pure — testable without a CRM."""
+    hits = rows
+    wanted = (topic or "").strip().lower()
+    if wanted:
+        hits = [r for r in hits if (r.get("topic") or "").strip().lower() == wanted]
     needle = (query or "").strip().lower()
     if needle:
-        with_recording = [
-            r for r in with_recording
+        hits = [
+            r for r in hits
             if needle in " ".join(
                 str(r.get(key) or "") for key in ("name", "description", "topic")
             ).lower()
         ]
-    return with_recording[: max(1, limit)]
+    return hits[: max(1, limit)]
+
+
+async def list_recordings(
+    client: EspoApi, *, query: str = "", limit: int = 50, topic: str = ""
+) -> list[dict[str, Any]]:
+    """Past published events that have a recording, newest first, filtered."""
+    return filter_recordings(
+        await published_recordings(client), query=query, topic=topic, limit=limit
+    )
 
 
 async def get_by_slug(client: EspoApi, slug: str) -> Optional[dict[str, Any]]:

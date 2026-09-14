@@ -88,15 +88,45 @@
     });
   }
 
+  /* The topic dropdown is filled from the response, which lists only subjects
+   * that actually have a recording. Rebuilt only when the set changes, so the
+   * reader's current choice is never yanked out from under them by a reload. */
+  function fillTopics(topics) {
+    var select = $("topicFilter");
+    var signature = (topics || []).join("|");
+    if (select.dataset.signature === signature) return;
+    select.dataset.signature = signature;
+    var chosen = select.value;
+    select.innerHTML = "";
+    var all = document.createElement("option");
+    all.value = "";
+    all.textContent = "All topics";
+    select.appendChild(all);
+    (topics || []).forEach(function (topic) {
+      var option = document.createElement("option");
+      option.value = topic;
+      option.textContent = topic;
+      select.appendChild(option);
+    });
+    // Keep the chosen topic if it still exists; otherwise fall back to all.
+    select.value = (topics || []).indexOf(chosen) >= 0 ? chosen : "";
+    // One topic is not a choice, it is furniture.
+    $("topicFilterRow").hidden = (topics || []).length < 2;
+  }
+
   async function loadRecordings() {
     var q = ($("searchBox").value || "").trim();
+    var topic = ($("topicFilter").value || "").trim();
     var data = await getJson(
-      "/api/events/recordings?limit=24" + (q ? "&q=" + encodeURIComponent(q) : "")
+      "/api/events/recordings?limit=24"
+      + (q ? "&q=" + encodeURIComponent(q) : "")
+      + (topic ? "&topic=" + encodeURIComponent(topic) : "")
     );
     var items = data.recordings || [];
-    // The site labels its default list "Most Recent". A search result is not
-    // that, so the label goes away while one is showing.
-    $("recordingsLabel").hidden = !!q || !items.length;
+    fillTopics(data.topics);
+    // The site labels its default list "Most Recent". A filtered or searched
+    // list is not that, so the label goes away while one is showing.
+    $("recordingsLabel").hidden = !!q || !!topic || !items.length;
     window.CBMEvents.renderRecordings($("recordings"), items, {
       onPlay: function (item) {
         if (item.recordingUrl) window.open(item.recordingUrl, "_blank", "noopener");
@@ -172,6 +202,13 @@
     });
     $("searchBox").addEventListener("keydown", function (ev) {
       if (ev.key === "Enter") { ev.preventDefault(); $("searchBtn").click(); }
+    });
+    // Choosing a topic filters immediately — a dropdown that needs a second
+    // button pressed after it reads as broken.
+    $("topicFilter").addEventListener("change", function () {
+      loadRecordings().catch(function () {
+        message("The recordings could not be filtered just now.", "error");
+      });
     });
     loadAll();
   });

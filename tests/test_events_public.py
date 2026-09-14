@@ -227,3 +227,97 @@ def test_crm_outage_returns_a_plain_502_without_leaking_details(monkeypatch):
     assert resp.status_code == 502
     assert "CRM is down" not in resp.text
     assert "temporarily unavailable" in resp.json()["detail"]
+
+
+# --- the recorded library's topic filter -------------------------------------
+
+
+def _recorded(topic, name, vid, slug):
+    return make_event(
+        id=vid, name=name, slug=slug, topic=topic,
+        recordingUrl=f"https://www.youtube.com/watch?v={vid}",
+        dateStart="2026-07-01 12:00:00", dateEnd="2026-07-01 13:00:00",
+    )
+
+
+def _library():
+    return [
+        _recorded("Technology & Digital", "Tech for Nonprofits", "vid0000001", "a"),
+        _recorded("Business Fundamentals", "Business Basics", "vid0000002", "b"),
+        _recorded("Technology & Digital", "AI Tools", "vid0000003", "c"),
+        # No topic at all — must not become a blank option in the dropdown.
+        _recorded("", "Untagged Session", "vid0000004", "d"),
+    ]
+
+
+def test_the_library_offers_only_topics_that_have_a_recording(monkeypatch):
+    """A filter offering a topic with nothing behind it is a dead end: the
+    visitor picks it and the panel empties."""
+    client, _ = build(monkeypatch, events=_library())
+    body = client.get("/api/events/recordings").json()
+    assert body["topics"] == ["Business Fundamentals", "Technology & Digital"]
+    assert "" not in body["topics"]
+
+
+def test_choosing_a_topic_filters_the_list(monkeypatch):
+    client, _ = build(monkeypatch, events=_library())
+    body = client.get("/api/events/recordings?topic=Technology%20%26%20Digital").json()
+    titles = sorted(r["title"] for r in body["recordings"])
+    assert titles == ["AI Tools", "Tech for Nonprofits"]
+    assert body["topic"] == "Technology & Digital"
+
+
+def test_the_topic_list_does_not_shift_when_a_search_narrows_the_results(monkeypatch):
+    """Computed from the whole library, not from the current results — a filter
+    whose options move about as you type is unusable."""
+    client, _ = build(monkeypatch, events=_library())
+    searched = client.get("/api/events/recordings?q=AI").json()
+    assert len(searched["recordings"]) == 1
+    assert searched["topics"] == ["Business Fundamentals", "Technology & Digital"]
+
+
+def test_search_and_topic_compose(monkeypatch):
+    client, _ = build(monkeypatch, events=_library())
+    body = client.get(
+        "/api/events/recordings?topic=Technology%20%26%20Digital&q=AI"
+    ).json()
+    assert [r["title"] for r in body["recordings"]] == ["AI Tools"]
+
+
+def test_an_unknown_topic_returns_nothing_rather_than_everything(monkeypatch):
+    """Failing open here would quietly show the whole library under a label
+    saying otherwise."""
+    client, _ = build(monkeypatch, events=_library())
+    body = client.get("/api/events/recordings?topic=Nonsense").json()
+    assert body["recordings"] == []
+
+
+def test_no_topic_returns_the_whole_library(monkeypatch):
+    client, _ = build(monkeypatch, events=_library())
+    assert len(client.get("/api/events/recordings").json()["recordings"]) == 4
+
+
+def test_the_topic_order_follows_the_crm_not_the_alphabet():
+    """It should read the way the dropdown in Event Administration does."""
+    from events import service
+
+    rows = [
+        {"topic": "Other", "recordingUrl": "x"},
+        {"topic": "Business Fundamentals", "recordingUrl": "x"},
+        {"topic": "Operations", "recordingUrl": "x"},
+    ]
+    assert service.recording_topics(rows) == [
+        "Business Fundamentals", "Operations", "Other",
+    ]
+
+
+def test_a_topic_that_has_drifted_out_of_the_enum_still_appears():
+    """The CRM is the source of truth; the curated order is only an order. A
+    stored value the enum no longer lists must not vanish from the filter."""
+    from events import service
+
+    rows = [
+        {"topic": "Operations", "recordingUrl": "x"},
+        {"topic": "Retired Category", "recordingUrl": "x"},
+    ]
+    assert service.recording_topics(rows) == ["Operations", "Retired Category"]

@@ -152,6 +152,19 @@ body {
    line, and without it the box says nothing about what it searches. */
 .pub__searchnote { margin: 0 0 14px; font-size: 0.92rem; font-style: italic; color: var(--cbm-slate-700, #52606d); }
 
+.pub__topicfilter {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0 0 4px; font-size: 0.85rem;
+}
+.pub__topicfilter label { font-weight: 600; color: var(--cbm-slate-700, #52606d); }
+.pub__topicfilter select {
+  flex: 1 1 auto; min-width: 0;
+  padding: 7px 10px; font: inherit;
+  border: 1px solid var(--cbm-border, #cfd6e0);
+  border-radius: var(--cbm-radius, 6px);
+  background: var(--cbm-white, #fff);
+}
+
 /* The site labels the default list. Hidden while a search is showing, because
    the results are then not "most recent", they are the matches. */
 .pub__reclabel {

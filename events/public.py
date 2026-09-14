@@ -116,30 +116,47 @@ async def upcoming(request: Request, response: Response) -> dict[str, Any]:
 
 @api_router.get("/recordings")
 async def recordings(
-    request: Request, response: Response, q: str = "", limit: int = 50
+    request: Request, response: Response, q: str = "", limit: int = 50,
+    topic: str = "",
 ) -> dict[str, Any]:
+    """The recorded library, optionally searched and filtered by topic.
+
+    ``topics`` comes back on every response and lists only the subjects that
+    actually have a recording, so the page's filter can never offer a dead end.
+    It is computed from the whole library rather than from the current results,
+    so it does not shift under the reader as they search.
+    """
     settings = get_settings()
     ttl = settings.events_cache_seconds
     limit = max(1, min(limit, 200))
-    key = f"recordings:{q.strip().lower()}:{limit}"
+    key = f"recordings:{q.strip().lower()}:{topic.strip().lower()}:{limit}"
     cached = _cache.get(key, ttl)
     if cached is None:
         try:
-            rows = await service.list_recordings(_client(request), query=q, limit=limit)
+            # ONE read; the search, the topic filter and the topic list are all
+            # derived from it.
+            rows = await service.published_recordings(_client(request))
         except EspoError as exc:
             raise _crm_failure(exc, "recordings") from exc
-        cached = [
-            service.public_recording(
-                r,
-                base_url=settings.events_public_base,
-                api_base_url=settings.app_base_url,
-                default_image=settings.events_default_graphic_url,
-            )
-            for r in rows
-        ]
+        hits = service.filter_recordings(rows, query=q, topic=topic, limit=limit)
+        cached = {
+            "topics": service.recording_topics(rows),
+            "recordings": [
+                service.public_recording(
+                    r,
+                    base_url=settings.events_public_base,
+                    api_base_url=settings.app_base_url,
+                    default_image=settings.events_default_graphic_url,
+                )
+                for r in hits
+            ],
+        }
         _cache.put(key, cached)
     _cacheable(response, ttl)
-    return {"success": True, "query": q, "recordings": cached}
+    return {
+        "success": True, "query": q, "topic": topic,
+        "topics": cached["topics"], "recordings": cached["recordings"],
+    }
 
 
 @api_router.get("/{slug}")

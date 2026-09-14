@@ -4,6 +4,46 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.230.0] — 2026-09-14
+
+**feat(events): the recorded library can be filtered by topic.** Doug's request:
+a dropdown on the public programme page that narrows the recorded webinars to
+one subject. It sits under the existing search box, in the panel's own styling,
+and filters the moment it is changed — a dropdown that needs a second button
+pressed reads as broken.
+
+**It only ever offers topics that have a recording.** The list is derived from
+the library rather than from the CRM's ten curated options, because a filter
+offering an empty subject is a dead end: the visitor picks it and the panel
+empties. It is also computed from the **whole** library rather than from the
+current results, so the options do not shift under the reader as they search.
+Below two topics the control hides itself, since a dropdown with one choice is
+furniture.
+
+**Search and topic compose**, both server-side (EV-04), so the browser never
+receives the archive to sift. An unknown topic returns nothing rather than
+everything — failing open there would quietly show the whole library under a
+label claiming otherwise.
+
+**One read serves all three answers.** `list_recordings` already fetched every
+published event and filtered in Python, so it split into
+`published_recordings` (the read) plus two **pure** functions,
+`filter_recordings` and `recording_topics`. The endpoint calls the read once and
+derives the results, the topic list and the count from it — no extra query for
+the dropdown. Both pure functions are testable with no CRM at all.
+
+**Ordering follows the CRM, not the alphabet**, via a new `TOPIC_ORDER` in
+`events/config.py`, so the public filter reads the way the dropdown in Event
+Administration does. A stored value that has drifted out of the enum still
+appears rather than vanishing — the CRM stays the source of truth and this is
+only an ordering.
+
+The renderer and the website's own stylesheet are untouched: the control is host
+markup, like the search box beside it.
+
+Tests: 8 new. Suite 2,040 green. Driven in a browser against a seven-recording
+library across four topics: choosing one narrowed the list to exactly its two.
+
 ## [0.229.1] — 2026-09-14
 
 **fix(events): publishing an imported recording no longer fails, and a rejected

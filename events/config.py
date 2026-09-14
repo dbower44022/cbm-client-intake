@@ -133,6 +133,26 @@ class EventField:
     hidden: bool = False
 
 
+#: The curated subject categories, in the order the CRM lists them. Used to
+#: order the public recorded-library filter so it reads the way the dropdown in
+#: Event Administration does. Only the ones that actually have a recording are
+#: offered, and a value that has drifted out of this list still appears rather
+#: than disappearing from the filter — the CRM stays the source of truth, this
+#: is only an ordering.
+TOPIC_ORDER: tuple[str, ...] = (
+    "Business Fundamentals",
+    "Marketing & Sales",
+    "Finance & Accounting",
+    "Legal & Compliance",
+    "Operations",
+    "Technology & Digital",
+    "Leadership & People",
+    "Industry-Specific",
+    "Networking",
+    "Other",
+)
+
+
 EVENT_FIELDS: list[EventField] = [
     # Event
     EventField("name", "Title", "varchar", "Event"),
