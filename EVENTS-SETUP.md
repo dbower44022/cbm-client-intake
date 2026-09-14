@@ -439,16 +439,21 @@ Honest list, so nothing surprises you mid-test:
 
 - **The website does not point here yet.** Since v0.222.0 the public programme
   is a real page this application serves at `/webinars/`, with a page per event
-  at `/webinars/<slug>`; what is missing is the one redirect on the marketing
-  site, which is section 6b. The **Website preview** button on `/events` still
+  at `/webinars/<slug>`, and since 2026-09-14 it is live on **production** with
+  ten recorded webinars published. What is missing is the one redirect on the
+  marketing site, which is section 6b. The **Website preview** button on `/events` still
   exists and still drives the same renderer, but `/webinars/` is now the thing
   to look at, because it is what visitors will get. Both **really register**,
   creating a Contact and a CEventRegistration on whichever CRM this deployment
   points at — use obvious test data and delete the records afterwards.
-- **Registration records no consent.** Both public doors send `consent: false`,
-  because the wording shown to the visitor promises emails about sessions while
-  the flag would also record terms-of-use, privacy-policy and code-of-conduct
-  acceptance. Settle this before the redirect (`OPEN-ITEMS.md` 19d).
+- ~~Registration records no consent.~~ **Settled 2026-09-14 (v0.227.0).** Both
+  public doors now carry a tick naming the terms of use, the privacy policy and
+  the code of conduct, each linked, and neither will register anyone until it is
+  ticked.
+- **No registration has ever run on production.** The public sign-up path is
+  live there but has never been exercised end to end — do that before the
+  redirect, with an obviously fake surname, and delete the Contact and its
+  registration afterwards.
 - **No automatic attendance** — manual only, until Phase 6.
 - **No follow-up emails** — designed, not built.
 - **The staff app has been driven with a stubbed session**, not a real

@@ -22,6 +22,20 @@ registrations, track who actually turned up, and publish the recording. It is
 
 ## The event list
 
+**The list opens on "Needs review" whenever there is anything in it.** That means
+events carrying a recording link that are not yet published — exactly what the
+YouTube import creates, and nothing else looks like it, so the list can never
+open on the internal calendar by mistake. Each one needs its real date (the
+import's starting guess is the video's upload date, which is usually wrong), a
+topic, and the **Publish to website** tick. The count beside the option falls as
+you work through them. Once it empties, the list opens on the published
+programme as before.
+
+Use the **Show** dropdown to move between Needs review, Published to the
+website, Upcoming, Past and All events. Choosing one yourself stops the
+automatic switch for the rest of your visit, so a reload will not drag you back.
+
+
 The landing screen lists events, newest first.
 
 **Show** (top left) chooses what you're looking at:
@@ -220,7 +234,7 @@ don't exist:
 
 | Not yet | Meaning |
 |---|---|
-| **The website still points at the old system** | The public programme page is built and live here — `/webinars/`, with a page per event — but `clevelandbusinessmentors.org/webinars/` has not been redirected to it yet. Until that one redirect is added, this tool and the public page are separate worlds, and every webinar registrant on the live site is still an invisible lead. **Publishing an event here is what gives it a web address**, so create events through this screen rather than in the CRM. |
+| **The website still points at the old system** | The public programme page is built and live on production — `/webinars/`, with a page per event — but `clevelandbusinessmentors.org/webinars/` has not been redirected to it yet. Until that one redirect is added, this tool and the public page are separate worlds, and every webinar registrant on the live site is still an invisible lead. **Creating an event through this screen is what gives it a web address**, so create events here rather than in the CRM. |
 | **Automatic attendance from Zoom** | Built, but switched **off** and never yet run against the real Zoom account. Attendance is manual for now — the Registrants tab and door check-in. |
 | **Follow-up emails** | Built, but they need their five email templates created in EspoCRM before anything can send, and there is no button for them in this tool yet. See below. |
 

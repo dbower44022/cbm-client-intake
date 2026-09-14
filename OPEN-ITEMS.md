@@ -499,7 +499,16 @@ toggle.
     - Both need `ANALYTICS_ENABLED`; record-scoped metrics always run live as
       the user, so an empty panel means the metric found nothing, not a cache.
 
-19i. **The recorded library would go from full to empty at the redirect — and
+19i. ~~**The recorded library would go from full to empty at the redirect**~~ —
+    **DONE 2026-09-14.** The import ran against production from inside its own
+    container: 13 playlist items across the five playlists, 3 of them in more
+    than one playlist, 10 created. All ten were reviewed and published with
+    topics the same day, so the production library is populated and its topic
+    filter offers Business Fundamentals, Finance & Accounting and
+    Industry-Specific. `YOUTUBE_API_KEY` and `YOUTUBE_PLAYLIST_ID` now live in
+    production's overlay, so a re-run needs no new setup. Original text below.
+
+    **The recorded library would go from full to empty at the redirect — and
     the fix has never been run** (found 2026-09-12 by the first side-by-side
     against the live page). The marketing page's recorded library is drawn
     straight from the **YouTube playlist** by the Apps Script. Our page draws it
@@ -583,7 +592,16 @@ toggle.
     contract files, while the per-event page's own form is ours and can carry
     one today. Whichever is chosen, the two doors must agree.
 
-19e. **The public `/webinars/` pages have been driven only against fabricated
+19e. ~~**The public `/webinars/` pages have been driven only against fabricated
+    events**~~ — **largely DISCHARGED 2026-09-14.** Doug drove the production
+    pages for real: the programme page, Event Administration, publishing ten
+    recordings, and the topic filter. Three defects came out of it and are
+    fixed (v0.229.1 the empty-enum save, v0.230.0 the topic filter, v0.230.1 its
+    ordering and the clear-to-reload). **Still owed: a registration end to end**
+    — no `CEventRegistration` exists on production, so the public sign-up path
+    has never run there. Original text below.
+
+    **The public `/webinars/` pages have been driven only against fabricated
     events** (2026-08-16; superseded 2026-09-11, v0.222.0). The preview page is
     no longer the thing to check — the real public pages now exist at
     `/webinars/` and `/webinars/{slug}`, and they are what the marketing site
@@ -632,7 +650,20 @@ toggle.
     engagement rollup, the contact history and the programme reports carry real
     numbers.
 
-19g. **Events is still off on production, and switching it on is now most of
+19g. ~~**Events is still off on production**~~ — **SWITCHED ON 2026-09-14.**
+    The schema was probed inside the production container and diffed against
+    crm-test: two differences, both harmless (an extra EspoCRM-generated
+    `emails hasChildren` link, and a missing default on `attendanceSource`,
+    which the app reads as "empty if unset" either way). `EVENTS_ENABLED` and
+    `EVENTS_PUBLIC_API` went into the **overlay** rather than `/setup`, because
+    both are read at boot and applying the overlay is what restarts the app —
+    one operation instead of a settings change plus a restart. Note the first
+    attempt silently did nothing: the live app showed no events keys and its
+    deployments were all push-triggered, so the apply had never run. Confirm an
+    apply by the **Spec Name** in its output — production says
+    `cbm-client-intake-prod`. Original text below.
+
+    **Events is still off on production, and switching it on is now most of
     the remaining work** (2026-08-16; re-scoped 2026-09-11, v0.222.0). crm-test
     has `EVENTS_ENABLED` + `EVENTS_PUBLIC_API`; prod has neither, though its CRM
     schema and the `Event Registration` receipt enum have been ready since

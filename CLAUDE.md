@@ -822,9 +822,22 @@ today runs on a Google Apps Script plus a browser-side YouTube API call with
 Staff guide: `event-administration.md`; activation + test script:
 `EVENTS-SETUP.md`; schema: `cevent-entities-crm-handoff.md`.
 
-**Live on crm-test, off on prod, and the website still runs on the Apps Script.**
-`EVENTS_ENABLED` + `EVENTS_PUBLIC_API` are on for crm-test only; `ZOOM_EVENTS`,
-`EVENTS_REMINDERS` and the attendance pull are off everywhere. Phases 1, 2, 3, 5
+**Live on BOTH deployments since 2026-09-14; the website still runs on the Apps
+Script.** `EVENTS_ENABLED` + `EVENTS_PUBLIC_API` are on for crm-test and
+production; `ZOOM_EVENTS`, `EVENTS_REMINDERS` and the attendance pull are off
+everywhere. Production's overlay also carries `YOUTUBE_API_KEY` and
+`YOUTUBE_PLAYLIST_ID` (five playlists, comma separated) on the **web** component
+only — the worker needs neither until attendance is switched on.
+
+**Production holds a real programme now**: 10 recorded webinars imported from the
+playlists on 2026-09-14 and published with topics, plus one internal
+`CRM Training Webinar` that is **published** and dated in the future, so it is
+currently the only thing on the public calendar — check whether that is intended
+before the redirect. Zero registrations so far; the end-to-end test registration
+is still owed.
+
+**The only thing between here and the lead leak stopping is the redirect
+itself** — one rule on the marketing site, and removing it is the rollback. Phases 1, 2, 3, 5
 and **6** are built. **Phase 4 — the WordPress plugin — was STRUCK on
 2026-09-11**: Doug ruled that the marketing site should **redirect** to a page
 this app serves rather than embed or reimplement one. What stops the lead leak
@@ -872,6 +885,17 @@ would be indistinguishable from a slug.
   The menu is built **server-side** for the same reason the name is substituted
   there: a menu that appears a moment late is worse than none, and it is the
   visitor's only way on to the rest of the site.
+- **The recorded library has a TOPIC filter** (v0.230.x). It offers only
+  subjects that actually have a recording — a filter listing an empty one is a
+  dead end — computed from the whole library rather than the current results so
+  the options do not shift as a visitor searches, and hidden below two topics.
+  The selector sits **above** the search box because the search runs *inside*
+  the chosen topic, and the placeholder names it. Clearing the search box
+  reloads on its own (`input`, not the `search` event, which Firefox does not
+  raise). One CRM read serves the results, the topic list and the count:
+  `published_recordings` plus the pure `filter_recordings` / `recording_topics`.
+  Order comes from `cfg.TOPIC_ORDER`; a value that has drifted out of the enum
+  still appears.
 - **Panel wording is the SITE's, not ours** — "Calendar of Upcoming Webinars"
   and "Find a Recorded Webinar". Inventing better names put our page out of step
   with the one it replaces; don't re-invent them.
@@ -1447,8 +1471,9 @@ stamp — pending on both CRMs), `cintake-submission-*.md`, `cinformation-reques
 deployed and verified; `CHANGELOG.md` is the permanent record, `OPEN-ITEMS.md`
 holds anything still owed.*
 
-**Pushed and live through v0.229.0 (2026-09-14) on all three Cleveland apps;
-Lakeside runs v0.228.1 off the release lane.** `deploy_on_push` is still on for
+**Pushed through v0.230.1 (2026-09-14); crm-test and prod were serving v0.230.0
+at the time of writing, with the 0.230.1 build stalled at 2/13 on DigitalOcean's
+side rather than ours. Lakeside runs v0.228.1 off the release lane.** `deploy_on_push` is still on for
 Cleveland by design. What is *verified* is narrower than what is deployed — see
 each block.
 
@@ -1506,6 +1531,38 @@ sentence is a convenience.
   per-event duplicate hold**. The browser pass against **real** crm-test data
   has never run (19e); note crm-test's seeded events carry no slug, so an event
   has to be created through `/events` first.
+
+- **v0.222.0 → v0.230.1 (2026-09-11 to 09-14) — the events programme is a page
+  this app serves, and production is switched on.** The WordPress plugin was
+  struck; the marketing site will **redirect** to `/webinars/` instead. Standing
+  rules are in the Events section above. What belongs here is what is owed and
+  what was learned.
+
+  **Done:** the public pages with the site's own hero, band, menu and panel
+  wording; consent as an active tick on both sign-up doors; the near-duplicate
+  hold scoped per event; production switched on and its recorded library
+  imported from five YouTube playlists and published; a topic filter on that
+  library.
+
+  **Owed, and all Doug's:** create the upcoming sessions on production, one
+  end-to-end test registration (none has ever run there), decide whether the
+  internal `CRM Training Webinar` should be publicly listed, and add the
+  redirect.
+
+  **Four things this arc taught, the hard way:**
+  - **A version not moving is as likely to be DigitalOcean as us.** A push was
+    ignored entirely on 09-13 (no deployment created at all) and a build stalled
+    at 2/13 on 09-14. `doctl apps list-deployments` tells the two apart; a
+    manual `create-deployment` clears the first.
+  - **Confirm an overlay apply by the Spec Name in its output.** The first
+    production apply silently did nothing, and the tell was that the live app
+    carried no events keys while every deployment was push-triggered.
+  - **The editor posts every field, not just changed ones.** An unset enum went
+    as `""`, which EspoCRM refuses, so publishing an imported recording failed
+    and looked like the publish flag's fault. Enums now go as `null`, and a CRM
+    400 names the field instead of reading as an outage.
+  - **A test that reads the developer's own `.env` passes until the day the
+    value is set.** Two did (`OPEN-ITEMS.md` #31 is the survivor).
 
 - **v0.220.0 / v0.221.0 (2026-09-01) — the mentor detail popup, and
   employment status on both mentor screens.** Both deployed and **verified
