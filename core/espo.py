@@ -197,6 +197,32 @@ def is_not_found(exc: Exception) -> bool:
     return bool(m) and m.group(1) == "404"
 
 
+def validation_failure(exc: Exception) -> Optional[str]:
+    """When a CRM call failed with 400 because a FIELD was rejected, say which
+    field in words. ``None`` for any other failure.
+
+    EspoCRM answers a bad field value with
+    ``HTTP 400 [Field validation failure; entityType: CEvent, field: topic,
+    type: valid.]``. That is the user's problem to fix, not an outage, but a
+    router that maps every non-403 to 502 tells them the CRM is unavailable —
+    which is both wrong and unactionable. Seen live on 2026-09-14: publishing an
+    imported recording sent an empty ``topic``, the CRM refused it, and the
+    screen said the request failed with no hint that choosing a topic would fix
+    it.
+    """
+    text = str(exc)
+    m = _HTTP_STATUS_RE.search(text)
+    if not m or m.group(1) != "400":
+        return None
+    field = re.search(r"field:\s*([A-Za-z0-9_]+)", text)
+    if not field:
+        return "The CRM rejected one of the values on this form."
+    return (
+        f"The CRM rejected the value for \u201c{field.group(1)}\u201d. "
+        "Choose a valid option and save again."
+    )
+
+
 def forbidden_hint(exc: Exception) -> Optional[str]:
     """When a CRM call was denied, name the missing permission — e.g.
     ``"read access to CClientProfile records"`` — parsed from the

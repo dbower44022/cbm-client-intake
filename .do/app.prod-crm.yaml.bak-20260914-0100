@@ -1,0 +1,197 @@
+databases:
+- engine: PG
+  name: cbm-db-prod
+domains:
+- domain: apps.clevelandbusinessmentors.org
+  type: PRIMARY
+ingress:
+  rules:
+  - component:
+      name: web
+    match:
+      path:
+        prefix: /
+jobs:
+- dockerfile_path: Dockerfile
+  envs:
+  - key: DATABASE_URL
+    scope: RUN_TIME
+    value: ${cbm-db-prod.DATABASE_URL}
+  github:
+    branch: main
+    repo: dbower44022/cbm-client-intake
+  instance_count: 1
+  instance_size_slug: apps-s-1vcpu-0.5gb
+  kind: PRE_DEPLOY
+  name: migrate
+  run_command: .venv/bin/alembic upgrade head
+name: cbm-client-intake-prod
+region: nyc
+services:
+- dockerfile_path: Dockerfile
+  envs:
+  - key: RELEASE_TAG
+    value: v0.217.0
+    scope: RUN_AND_BUILD_TIME
+  - key: CRM_CONFIG_REFRESH_SECONDS
+    value: "300"
+    scope: RUN_TIME
+  - key: SETUP_ENABLED
+    scope: RUN_TIME
+    value: "true"
+  - key: ESPO_DRY_RUN
+    scope: RUN_TIME
+    value: "false"
+  - key: ESPO_BASE_URL
+    scope: RUN_TIME
+    value: https://crm.clevelandbusinessmentors.org
+  - key: ESPO_API_KEY
+    scope: RUN_TIME
+    type: SECRET
+    value: EV[1:qZYQU45EVy6Y8HH4jDP57oUiA2dg9vQ6:o8zbxOORdgOf1KvMVGQ4HweCSvBviNsc60cFHDt9Bm9hq046WdR08W15rTsTvIpu]
+  - key: ALLOWED_ORIGINS
+    scope: RUN_TIME
+    value: http://localhost:8000
+  - key: DATABASE_URL
+    scope: RUN_TIME
+    value: ${cbm-db-prod.DATABASE_URL}
+  - key: ASYNC_DELIVERY
+    scope: RUN_TIME
+    value: "true"
+  - key: APP_ENCRYPTION_KEY
+    scope: RUN_TIME
+    type: SECRET
+    value: BhAgxWz9oqX3G6gxNomX26mT7orKrTcJwAF6pLuQHFc=
+  - key: SESSION_SECRET
+    scope: RUN_TIME
+    type: SECRET
+    value: EV[1:Gp/Qc9AN8PQhsAYXVNoYlj7Tg3PTqGFu:l+vixEY3xCcorvu0qlDyngdRxMiLQXVUcqmQ1AhltcnZ6dxmZSuRrJ3HIPlIbwHSupznPq5jD7YyZtWFMgbRCNfZWEsXd3SlJbWVACu7WxQ=]
+  - key: SESSION_COOKIE_SECURE
+    scope: RUN_TIME
+    value: "true"
+  - key: ANALYTICS_ENABLED
+    scope: RUN_TIME
+    value: "true"
+  - key: ASSIGN_ALLOWED_TEAMS
+    scope: RUN_TIME
+    value: Client Administration Team
+  - key: MENTOR_ADMIN_ALLOWED_TEAMS
+    scope: RUN_TIME
+    value: Mentor Administration Team
+  - key: MENTOR_TEAM_NAME
+    scope: RUN_TIME
+    value: Mentor Team
+  - key: MENTOR_PROVISION_USERS
+    scope: RUN_TIME
+    value: "true"
+  - key: ESPO_PROVISION_USERNAME
+    scope: RUN_TIME
+    type: SECRET
+    value: EV[1:X1UyP8suuB+DDEuQbZYgpS6JghaD5fsN:8P3gFPVKm2XJEIOqsCiiTVoC7ZiTFHUAUZxIKDyprW0feHdcura9L7w=]
+  - key: ESPO_PROVISION_PASSWORD
+    scope: RUN_TIME
+    type: SECRET
+    value: EV[1:RtLgXGpOfDZq/I0bhEGWw6H9QirKFOKd:R6cuOtAxapaCk4VBkD2pOqnXyazfTpg=]
+  - key: GCAL_EVENTS
+    scope: RUN_TIME
+    value: "true"
+  - key: GDRIVE_DOCS
+    scope: RUN_TIME
+    value: "true"
+  - key: GDRIVE_SHARED_DRIVE_ID
+    scope: RUN_TIME
+    value: 0AE50yNppMh_hUk9PVA
+  - key: GMAIL_SYNC
+    scope: RUN_TIME
+    value: "true"
+  - key: GOOGLE_SERVICE_ACCOUNT_JSON
+    scope: RUN_TIME
+    type: SECRET
+    value: EV[1:ztcwvKvyEuWTJwZFPd8eawgUWu2lt1ot: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]
+  - key: GDRIVE_IDENTITY
+    scope: RUN_TIME
+    value: service
+  - key: APP_BASE_URL
+    scope: RUN_TIME
+    value: https://apps.clevelandbusinessmentors.org
+  - key: ALERT_EMAIL_TO
+    scope: RUN_TIME
+    value: admin@cbmentors.org
+  - key: ALERT_EMAIL_FROM
+    scope: RUN_TIME
+    value: info@cbmentors.org
+  - key: OPS_MAILBOX
+    scope: RUN_TIME
+    value: info@cbmentors.org
+  github:
+    branch: main
+    deploy_on_push: true
+    repo: dbower44022/cbm-client-intake
+  health_check:
+    http_path: /healthz
+  http_port: 8080
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  name: web
+workers:
+- dockerfile_path: Dockerfile
+  envs:
+  - key: APP_ENCRYPTION_KEY
+    scope: RUN_TIME
+    type: SECRET
+    value: BhAgxWz9oqX3G6gxNomX26mT7orKrTcJwAF6pLuQHFc=
+  - key: DATABASE_URL
+    scope: RUN_TIME
+    value: ${cbm-db-prod.DATABASE_URL}
+  - key: ASYNC_DELIVERY
+    scope: RUN_TIME
+    value: "true"
+  - key: ANALYTICS_ENABLED
+    scope: RUN_TIME
+    value: "true"
+  - key: ESPO_DRY_RUN
+    scope: RUN_TIME
+    value: "false"
+  - key: ESPO_BASE_URL
+    scope: RUN_TIME
+    value: https://crm.clevelandbusinessmentors.org
+  - key: ESPO_API_KEY
+    scope: RUN_TIME
+    type: SECRET
+    value: EV[1:qg2hvQpRbjI0eGXZKFRaTuwsoE+kKBR2:TUA+0svAv42eyYmrlggrSNREYK/VNy08D4KfkBp6IPtO6MymOF+rnkcDalg7Uf81]
+  - key: GMAIL_SYNC
+    scope: RUN_TIME
+    value: "true"
+  - key: GOOGLE_SERVICE_ACCOUNT_JSON
+    scope: RUN_TIME
+    type: SECRET
+    value: EV[1:Ad4Ayvsm3jo482VdO99Dk+NIDE5NHpBP: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]
+  - key: GDRIVE_DOCS
+    scope: RUN_TIME
+    value: "true"
+  - key: GDRIVE_SHARED_DRIVE_ID
+    scope: RUN_TIME
+    value: 0AE50yNppMh_hUk9PVA
+  - key: GDRIVE_IDENTITY
+    scope: RUN_TIME
+    value: service
+  - key: APP_BASE_URL
+    scope: RUN_TIME
+    value: https://apps.clevelandbusinessmentors.org
+  - key: ALERT_EMAIL_TO
+    scope: RUN_TIME
+    value: admin@cbmentors.org
+  - key: ALERT_EMAIL_FROM
+    scope: RUN_TIME
+    value: info@cbmentors.org
+  - key: OPS_MAILBOX
+    scope: RUN_TIME
+    value: info@cbmentors.org
+  github:
+    branch: main
+    deploy_on_push: true
+    repo: dbower44022/cbm-client-intake
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  name: delivery-worker
+  run_command: .venv/bin/python -m worker

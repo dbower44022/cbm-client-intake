@@ -27,7 +27,7 @@ from assignments.auth import current_user, is_member
 from assignments.espo_user import client_for
 from core.action_log import CAT_COMMUNICATION, CAT_RECORD_EDIT, CAT_STATUS, record_action
 from core.config import get_settings
-from core.espo import EspoError, forbidden_hint, is_forbidden
+from core.espo import EspoError, forbidden_hint, is_forbidden, validation_failure
 
 from . import config as cfg
 from . import notify
@@ -73,6 +73,12 @@ def _crm_failure(exc: EspoError, what: str) -> HTTPException:
             detail=forbidden_hint(exc)
             or "Your CRM role does not allow that — ask CBM staff to grant it.",
         )
+    # A rejected FIELD is the user's to fix, not an outage. Mapping it to 502
+    # told them the CRM was unavailable, which is wrong and leaves them nothing
+    # to do — seen live on 2026-09-14 publishing an imported recording.
+    invalid = validation_failure(exc)
+    if invalid:
+        raise HTTPException(status_code=400, detail=invalid)
     raise HTTPException(
         status_code=502,
         detail=f"The CRM could not complete this request ({what}).",

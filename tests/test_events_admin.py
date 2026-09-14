@@ -266,3 +266,65 @@ def test_the_grid_opens_on_the_work_but_yields_to_the_user():
     assert "if (!state.scopeChosen && state.events.some(needsReview))" in js
     assert "state.scopeChosen = true;" in js
     assert "scopeChosen: false," in js
+
+
+# --- an unset enum is null, not "" (found live 2026-09-14) -------------------
+
+
+def test_an_empty_enum_is_sent_as_null_not_empty_string():
+    """The editor posts every field, not only the changed ones, so an event with
+    no topic sends `topic: ""`. EspoCRM's topic enum has no empty option and
+    answers 400 Field validation failure.
+
+    Found in production: publishing an imported recording failed every time and
+    only worked once a topic was chosen too — because that replaced the empty
+    string with a real option. Publishing was never the problem; the empty enum
+    riding along with it was."""
+    from events.service import _blank_enums_to_null
+
+    out = _blank_enums_to_null(
+        {"topic": "", "eventType": "", "format": "", "name": "", "location": ""}
+    )
+    assert out["topic"] is None
+    assert out["eventType"] is None
+    assert out["format"] is None
+    # Only enums. An empty text field is a legitimate "cleared this".
+    assert out["name"] == ""
+    assert out["location"] == ""
+
+
+def test_a_real_enum_value_passes_through():
+    from events.service import _blank_enums_to_null
+
+    out = _blank_enums_to_null({"topic": "Operations", "format": "Virtual"})
+    assert out == {"topic": "Operations", "format": "Virtual"}
+
+
+def test_every_enum_in_the_spec_is_covered():
+    """The list is derived from the one field spec that also drives the form, so
+    a new enum field cannot be forgotten here."""
+    from events import config as cfg
+    from events.service import _ENUM_FIELD_NAMES
+
+    assert _ENUM_FIELD_NAMES == frozenset(
+        f.name for f in cfg.EVENT_FIELDS if f.type == "enum"
+    )
+    assert "topic" in _ENUM_FIELD_NAMES
+
+
+def test_a_rejected_field_reads_as_a_message_not_an_outage():
+    """A 400 naming a field is the user's to fix. Mapping it to 502 told them
+    the CRM was unavailable — wrong, and nothing they could act on."""
+    from core.espo import EspoError, validation_failure
+
+    exc = EspoError(
+        "update CEvent/6aa7f859056d868f5 failed: HTTP 400 "
+        "[Field validation failure; entityType: CEvent, field: topic, type: valid.]"
+    )
+    message = validation_failure(exc)
+    assert message and "topic" in message
+    assert "unavailable" not in message.lower()
+
+    # Anything that is not a 400 is left to the existing handling.
+    assert validation_failure(EspoError("read CEvent failed: HTTP 403 [Forbidden]")) is None
+    assert validation_failure(EspoError("read CEvent failed: HTTP 500 [Boom]")) is None

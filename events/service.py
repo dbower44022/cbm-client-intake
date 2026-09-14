@@ -719,11 +719,38 @@ async def create_event(client: EspoApi, changes: dict[str, Any]) -> dict[str, An
     return await client.get(cfg.EVENT, created["id"], select=cfg.PUBLIC_SELECT)
 
 
+#: Enum fields on CEvent, from the one spec that also drives the form.
+_ENUM_FIELD_NAMES = frozenset(f.name for f in cfg.EVENT_FIELDS if f.type == "enum")
+
+
+def _blank_enums_to_null(payload: dict[str, Any]) -> dict[str, Any]:
+    """An unset enum is ``null``, never ``""``.
+
+    The editor posts every field rather than only the changed ones, so an event
+    with no topic sends ``topic: ""``. EspoCRM's ``topic`` enum has no empty
+    option, and it answers ``400 Field validation failure`` — which the router
+    used to report as a 502 "the CRM is unavailable".
+
+    Found live on 2026-09-14: publishing an imported recording failed every
+    time, and only succeeded once a topic was chosen as well, because that
+    replaced the empty string with a real option. Nothing about publishing was
+    at fault; the empty enum riding along with it was.
+
+    ``null`` is what EspoCRM means by "no value": accepted for an optional enum,
+    and correctly refused for a required one — where the user now gets a message
+    naming the field instead of a gateway error.
+    """
+    return {
+        key: (None if key in _ENUM_FIELD_NAMES and value == "" else value)
+        for key, value in payload.items()
+    }
+
+
 async def update_event(
     client: EspoApi, event_id: str, changes: dict[str, Any]
 ) -> dict[str, Any]:
     """Apply whitelisted changes; give the event a slug if it never had one."""
-    payload = _writable(changes)
+    payload = _blank_enums_to_null(_writable(changes))
     if "name" in payload and not (payload["name"] or "").strip():
         raise EventError("An event needs a title.")
     current = await client.get(cfg.EVENT, event_id, select=cfg.PUBLIC_SELECT)

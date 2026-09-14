@@ -4,6 +4,38 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.229.1] — 2026-09-14
+
+**fix(events): publishing an imported recording no longer fails, and a rejected
+field says which one.** Found by Doug on the first real production review:
+ticking *Publish to website* and saving returned a failed request every time,
+while setting the topic as well saved fine.
+
+**Publishing was never the problem.** The editor posts **every** field rather
+than only the changed ones, so an event with no topic sends `topic: ""`.
+EspoCRM's `topic` enum has no empty option, and it answers
+`400 Field validation failure; field: topic`. Choosing a topic replaced the
+empty string with a real option, which is why the second save worked and why
+the cause looked like the publish flag. Every one of the ten imported
+recordings would have hit it, since the import deliberately sets no topic.
+
+An unset enum is now sent as `null`, which is what EspoCRM means by "no value":
+accepted for an optional enum, correctly refused for a required one. The list of
+enum fields is derived from the same field spec that drives the form, so a new
+one cannot be forgotten.
+
+**And the error was unactionable.** The router mapped every non-403 CRM failure
+to a 502 — "the CRM could not complete this request" — so a rejected *field*
+read as an outage. `core.espo.validation_failure` now parses a 400 and names the
+field, and the events router returns a 400 with it. The user is told which value
+to fix instead of being told the system is down.
+
+The server-side read confirmed the diagnosis before any code changed: no event
+in production was published without a topic, so the timed-out save had written
+nothing. The logs then named the cause exactly.
+
+Tests: 4 new. Suite 2,032 green.
+
 ## [0.229.0] — 2026-09-13
 
 **fix(events): registering for a second session on one day no longer loses it.**
