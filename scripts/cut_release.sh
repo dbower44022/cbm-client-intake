@@ -40,7 +40,13 @@ die() { printf '\nERROR: %s\n' "$1" >&2; exit 1; }
 # --- 1. The tree must be clean, and on main -------------------------------
 # An annotated tag records a commit. Cutting one with uncommitted work in the
 # tree produces a tag that does not describe anything anyone can check out.
-[[ -n "$(git status --porcelain)" ]] && die "the working tree is dirty. Commit or stash first — a tag must name a commit that exists."
+#
+# UNTRACKED files are deliberately not "dirty": nothing can put them in a
+# commit, since the stamp below is committed with an explicit pathspec, so they
+# cannot change what the tag names. Counting them cost a real cut — on
+# 2026-09-13 another session held an untracked file, this script refused, and
+# v0.226.0 was tagged by hand instead, going around the whole procedure.
+[[ -n "$(git status --porcelain --untracked-files=no)" ]] && die "the working tree has uncommitted changes to tracked files. Commit or stash first — a tag must name a commit that exists."
 
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 if [[ "$BRANCH" != "main" ]]; then
