@@ -110,6 +110,20 @@ scopes shown as on/off; *(not set)* means the role does not mention the scope).
   F6) — whichever side is ruled, that entry must not enter the standard:
   EspoCRM 10 rejects the whole role over it.
 
+## Applied, 2026-09-13 — the seven owed cells are in
+
+All six cells in the table below, plus the `CInformationRequest` `stream` cell
+noted under it, were written to crm-test by `scripts/align_crmtest_roles.py`
+(idempotent, dry-run by default, crm-test-only). Re-measured live against this
+document's production capture straight afterwards: **194 cells agree, 16 are
+group A's sanctioned delete deviation, and one difference remains** — the
+Client Assignment Role's `User` grant, which crm-test has and production does
+not, because that is the 2026-09-07 fix still owed to production
+(`OPEN-ITEMS.md` #28), not drift. `role` is a KEEP table in the sandbox reset,
+so this survives the nightly restore without a re-baseline.
+
+The section below is the 2026-08-31 record, left as it was written.
+
 ## Verification, 2026-08-31 18:37 UTC — after the ruling
 
 crm-test was re-captured and re-diffed against production. Groups B and C are

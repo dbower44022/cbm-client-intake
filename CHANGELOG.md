@@ -41,6 +41,18 @@ is already ruled to live (proposal 8).
   container and the script declared a false failure on the 2026-09-13
   `lakeside-intake` promotion to v0.226.0 — which had in fact landed, verified
   five minutes later. It now polls `/healthz` for up to two minutes for the tag.
+- **`scripts/align_crmtest_roles.py`** (new) brought crm-test's roles to the
+  standard: the **seven cells** the 2026-08-31 comparison ruled and nobody
+  applied. Not new rulings — production was named the standard then, with the
+  application role's wider `delete` grants the one sanctioned staging
+  deviation. Four of the seven *reduce* what crm-test grants, deliberately: a
+  sandbox more permissive than production is what let the Client Assignment
+  Role reach production unable to assign a mentor (v0.221.1). Applied and
+  verified 2026-09-13 — 194 cells now agree, 16 are the sanctioned deviation,
+  and the only remaining difference is the Client Assignment Role's `User`
+  grant, which is production's to receive. `role` is a KEEP table in the
+  sandbox reset, so it survives the nightly restore with no re-baseline.
+  crm-test-only by a hard refusal on the instance name.
 - **Owed, in this order**: push, cut the tag (the cut now writes the stamp), push
   the tag and `release`, then put Lakeside on `latest-stable`. The order matters
   — dropping the variable before a stamped commit exists on `release` would make
