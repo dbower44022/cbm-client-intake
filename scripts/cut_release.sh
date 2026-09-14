@@ -147,9 +147,9 @@ Then promote each deployment that should run it:
     uv run python scripts/promote.py <app-id> $TAG          # dry run
     uv run python scripts/promote.py <app-id> $TAG --apply
 
-(Deployments whose Updates policy is Latest Stable and which track the
-release branch with deploy_on_push on will rebuild on the push by
-themselves — the promote script is for On Demand ones, and it also sets
-RELEASE_TAG so /healthz reports the promotion honestly.)
+(A deployment tracking the release branch with deploy_on_push on rebuilds on
+that push by itself and reports the tag from the stamp above — that is the
+whole point of stamping it here. promote.py is for On Demand deployments;
+scripts/set_updates_policy.py is what sets which of the two a deployment is.)
 
 EOF
