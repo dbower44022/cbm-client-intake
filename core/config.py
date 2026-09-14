@@ -6,7 +6,7 @@ import logging
 from functools import lru_cache
 from typing import Literal, Optional
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from .version import release_stamp
@@ -635,6 +635,21 @@ class Settings(BaseSettings):
     # deployment needs to: that variable is what made promoting a deployment two
     # operations instead of one.
     release_tag: str = Field(default_factory=release_stamp)
+
+    @field_validator("release_tag", mode="after")
+    @classmethod
+    def _empty_release_tag_means_use_the_stamp(cls, value: str) -> str:
+        """An EMPTY ``RELEASE_TAG`` is not an override, it is an absence.
+
+        The Dockerfile carries ``ARG RELEASE_TAG=""`` / ``ENV RELEASE_TAG=$RELEASE_TAG``,
+        so **every** image has the variable set, empty, whether or not anyone
+        passed one — and an empty environment value would otherwise beat the
+        stamp and make every deployment report no release at all. That is
+        exactly what v0.228.0 did on the dev app: version 0.228.0, releaseTag
+        null, with the right value sitting unread in release-tag.txt. A
+        deployment that wants to override still sets a real tag.
+        """
+        return value or release_stamp()
     # Stamp B, the CRM's configuration version: how often to re-read the
     # CNetworkStandard record behind this deployment. ZERO DISABLES THE PROBE
     # entirely, and zero is the default — this ships dark and is switched on

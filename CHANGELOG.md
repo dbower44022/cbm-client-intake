@@ -4,6 +4,21 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.228.1] — 2026-09-13
+
+**fix(chapters): an empty `RELEASE_TAG` is an absence, not an override.** Found
+by verifying v0.228.0 on the dev app minutes after cutting it: version 0.228.0,
+`releaseTag` **null**, with the correct value sitting unread in
+`release-tag.txt`.
+
+The Dockerfile carries `ARG RELEASE_TAG=""` and `ENV RELEASE_TAG=$RELEASE_TAG`,
+so **every** image has the variable set and empty whether or not anyone passed
+one — and pydantic reads an empty environment value as a value, which beat the
+stamp everywhere. The whole mechanism was inert in a container while passing
+every test on a laptop, where the variable simply does not exist. `Settings`
+now falls back to the stamp when the variable is empty; a real tag still
+overrides. Regression test added for all three cases: absent, empty, set.
+
 ## [0.228.0] — 2026-09-13
 
 **feat(chapters): upgrading a chapter is one operation.** Doug's judgement on

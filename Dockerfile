@@ -27,9 +27,12 @@ COPY . .
 # what makes promoting a deployment one operation rather than two.
 #
 # This ARG stays as an override for a build that is not a release commit but
-# must still claim a tag. An environment variable wins over the file, so use it
-# deliberately: a stale value here makes the deployment report the PREVIOUS
-# promotion as if it were the new one, which is worse than reporting none.
+# must still claim a tag. A NON-EMPTY environment value wins over the file; an
+# empty one is treated as an absence, because this ENV line sets the variable
+# on every image whether or not anyone passed an argument (v0.228.0 shipped
+# before that was handled, and every deployment reported no release at all).
+# Use the override deliberately: a stale value here makes the deployment report
+# the PREVIOUS promotion as if it were the new one, which is worse than none.
 ARG RELEASE_TAG=""
 ENV RELEASE_TAG=$RELEASE_TAG
 

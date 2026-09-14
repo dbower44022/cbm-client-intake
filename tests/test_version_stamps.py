@@ -83,6 +83,17 @@ def test_release_tag_comes_from_the_source_stamp():
     assert Settings().release_tag == release_stamp()
 
 
+def test_empty_env_release_tag_is_an_absence_not_an_override(monkeypatch):
+    """Every image sets RELEASE_TAG empty (the Dockerfile ARG defaults to ""),
+    so an empty environment value must not beat the stamp. v0.228.0 shipped
+    without this and the dev app reported no release at all while the right
+    value sat unread in release-tag.txt."""
+    monkeypatch.setenv("RELEASE_TAG", "")
+    assert Settings().release_tag == release_stamp()
+    monkeypatch.setenv("RELEASE_TAG", "v9.9.9")
+    assert Settings().release_tag == "v9.9.9"
+
+
 def test_stamp_counts_only_when_it_names_this_version(tmp_path, monkeypatch):
     """The cut writes v<version> at the commit declaring that version, so the
     two agree there and nowhere else. The next commit bumps the version and the
