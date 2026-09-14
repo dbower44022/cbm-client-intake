@@ -146,9 +146,12 @@ for, per app.
 One defect found live
 and fixed on the spot: the guard compared the branch against the annotated
 **tag object** instead of its peeled commit and refused its own success case
-(`73b97e9`). `--status` is the per-app policy-vs-spec signal; the fleet-wide
-"policy says Latest Stable but the spec disagrees" detector needs the policy to
-live somewhere first — CRMBuilder's Deployment record (A3).
+(`73b97e9`). `--status` on both `promote.py` and `set_updates_policy.py` is the per-app
+policy-vs-spec signal; the fleet-wide "policy says Latest Stable but the spec
+disagrees" detector still needs the policy to live somewhere first —
+CRMBuilder's Deployment record (A3). What this repo can now answer per app is
+the whole comparison, because `set_updates_policy.py` names the three policies
+explicitly rather than leaving them implicit in a spec.
 
 ### What this is
 

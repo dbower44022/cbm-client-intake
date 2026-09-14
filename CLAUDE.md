@@ -748,8 +748,9 @@ the crm-test overlay, so every prod flag change needed `doctl`. Runbook:
   (the override table lives inside the database it names, so a move would be
   left behind in the database being abandoned), `APP_ENCRYPTION_KEY` (rotating
   it makes every stored secret permanently unreadable — data loss, not lockout)
-  and `RELEASE_TAG` (stamped into the image; an override would make the
-  deployment misreport its own build). All three are **visible and read-only**,
+  and `RELEASE_TAG` (the release stamp travels in the image's own
+  `release-tag.txt`; a stored override would survive a restart and make the
+  deployment misreport which promotion it is). All three are **visible and read-only**,
   each refusal naming its reason. Everything else that used to be hidden — the
   CRM address and key, dry-run, the provisioning account, every integration
   credential, the session secret, `SETUP_ENABLED`, `SETTINGS_OVERRIDES` — is
@@ -1446,13 +1447,31 @@ stamp — pending on both CRMs), `cintake-submission-*.md`, `cinformation-reques
 deployed and verified; `CHANGELOG.md` is the permanent record, `OPEN-ITEMS.md`
 holds anything still owed.*
 
-**Local work sits at v0.223.0 (2026-09-12), unpushed. Pushed through v0.221.0
-on 2026-09-01, confirmed live on all three apps,
-and feature-verified live by Doug the same day** — dev, crm-test and prod all
-report `0.221.0`, artifact-checked, and Doug exercised the two new features in
-the live UI (the mentor detail popup and the employment-status fields) and
-reported them working. `deploy_on_push` is still on everywhere by design. What
-is *verified* is narrower than what is deployed — see each block.
+**Pushed and live through v0.229.0 (2026-09-14) on all three Cleveland apps;
+Lakeside runs v0.228.1 off the release lane.** `deploy_on_push` is still on for
+Cleveland by design. What is *verified* is narrower than what is deployed — see
+each block.
+
+- **v0.228.0–v0.228.2 (2026-09-13) — a chapter upgrade is one operation.**
+  Doug's ruling after the nine-step Lakeside upgrade was put in front of him:
+  *"This is way too difficult."* The release tag no longer rides in each
+  deployment's spec. `scripts/cut_release.sh` writes it into **`release-tag.txt`**
+  in the commit the tag names, and it counts **only when it matches that build's
+  version** — so a deployment on the `release` branch with `deploy_on_push` on
+  updates itself correctly on the push, and a Sunday release is two commands:
+  cut, push. `scripts/set_updates_policy.py` sets a deployment to
+  Development / Latest Stable / On Demand across all three components at once
+  and drops the redundant variable; `promote.py` remains for On Demand ones.
+  **Lakeside is on `latest-stable` and reports `v0.228.1` with nothing set** —
+  the mechanism proven on a real chapter deployment. Two defects were found by
+  *deploying*, not by testing, and both are worth remembering: the Dockerfile
+  sets `RELEASE_TAG` **empty** on every image and pydantic read empty as a
+  value, so the whole thing was inert in containers while 2025 tests passed
+  ([[env-var-empty-vs-absent]]); and a spec update rebuilds the **same commit**,
+  not the branch tip, so switching a policy on leaves the app behind
+  ([[do-spec-update-rebuilds-same-commit]]). Cleveland's three apps still track
+  `main` and keep their overlay variable, so they report `v0.217.0` while
+  running current code — `OPEN-ITEMS.md` #29 is the decision.
 
 **Confirm that against the remote, do not trust this line.** On 2026-08-20 it
 still read "pushed through v0.202.2" while v0.203.x/v0.204.0 sat unpushed

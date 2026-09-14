@@ -28,7 +28,23 @@ than merely discouraged. A deployment on the `release` branch with
 Sunday ritual is two commands: cut, push. `scripts/set_updates_policy.py` sets
 a deployment's policy across all three components and drops the now-redundant
 variable; `promote.py` remains for On Demand deployments and as the button's
-worked example. What remains of this phase: cutting on cadence each Sunday, taking
+worked example.
+
+**Proven on a real chapter deployment the same evening**: `lakeside-intake` was
+put on `latest-stable` (`set_updates_policy.py`), and reports `v0.228.1` with
+no variable set anywhere. Two defects surfaced only by deploying, neither
+catchable by the suite:
+
+- The Dockerfile sets `RELEASE_TAG` **empty on every image** (`ARG` + `ENV`),
+  and an empty environment value beat the stamp — so v0.228.0 shipped with the
+  mechanism inert in every container while 2025 tests passed on a laptop, where
+  the variable does not exist. v0.228.1 treats empty as an absence.
+- A **spec update rebuilds the same source commit**, not the branch tip, so
+  turning the policy on left the app a release behind, ACTIVE and healthy.
+  v0.228.2 gives the script a `--deploy` flag and prints the reason otherwise.
+  Ordinary Sundays are unaffected: a push to `release` does re-resolve.
+
+What remains of this phase: cutting on cadence each Sunday, taking
 `deploy_on_push` off Cleveland's three apps once the train is trusted, and the
 CRMBuilder Deployment record + Update button (proposal 8, session A3) that
 turns `promote.py` into a console action.
@@ -130,11 +146,14 @@ Two decisions taken the day the first non-automatic deployment existed
   when the paired CRM's conformance check is not green. The consumer
   requirements are in `prompts/crmbuilder-deployment-updates-requirements-v0.1.md`.
 
-**Two operations, not one.** Under the branch mechanism `RELEASE_TAG` is a
-build-time env var in each app's spec, so promoting a deployment is *set the
-variable, then trigger the build*. Triggering alone makes `/healthz` report the
-previous promotion as if it were the new one — which is why the button, not a
-person, should do it.
+**Two operations, not one — until v0.228.0 made it one.** This paragraph
+described the mechanism as it stood: `RELEASE_TAG` was a build-time env var in
+each app's spec, so promoting was *set the variable, then trigger the build*,
+and triggering alone made `/healthz` report the previous promotion as if it
+were the new one. That hazard is now designed out — the tag is stamped into the
+commit the tag names — but the reasoning is kept because it is **why the button
+exists**: any mechanism where a promotion is two steps will eventually be done
+half-way by a person, and the button's job is to make that impossible.
 
 **What this repo owes** (TASKS § R10): the `release` branch and the one-line
 fast-forward in `cut_release.sh`; a `promote` script that does the two
