@@ -74,12 +74,11 @@
           <div class="panel__body">
             <p class="pub__searchnote">Search by topic, keyword, or title to find
               a recorded webinar. Results link directly to the recording.</p>
-            <div class="pub__search">
-              <label class="pub__srlabel" for="searchBox">Search recorded webinars</label>
-              <input type="search" id="searchBox" placeholder="Search recorded webinars…" />
-              <button type="button" class="cbm-button cbm-button--secondary" id="searchBtn">Search</button>
-            </div>
-            <!-- Filled from the response, which lists only the subjects that
+            <!-- The topic comes FIRST because the search runs inside it: pick
+                 the subject, then search within it. Reading order is the only
+                 thing telling a visitor which narrows which.
+
+                 Filled from the response, which lists only the subjects that
                  actually have a recording — a filter offering an empty topic is
                  a dead end. Hidden until there is more than one to choose
                  between, because a dropdown with a single option is furniture. -->
@@ -88,6 +87,11 @@
               <select id="topicFilter">
                 <option value="">All topics</option>
               </select>
+            </div>
+            <div class="pub__search">
+              <label class="pub__srlabel" for="searchBox">Search recorded webinars</label>
+              <input type="search" id="searchBox" placeholder="Search recorded webinars…" />
+              <button type="button" class="cbm-button cbm-button--secondary" id="searchBtn">Search</button>
             </div>
             <p class="pub__reclabel" id="recordingsLabel" hidden>Most Recent</p>
             <div id="recordings"></div>

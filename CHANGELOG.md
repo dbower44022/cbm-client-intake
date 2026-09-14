@@ -4,6 +4,30 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.230.1] — 2026-09-14
+
+**fix(events): the topic comes before the search, and clearing the search
+restores the list.** Both from Doug after using the filter for real.
+
+**The topic selector now sits above the search box**, because the search runs
+*inside* the chosen topic and reading order is the only thing telling a visitor
+which narrows which. The placeholder says so too: with a topic chosen it reads
+*"Search within Technology & Digital…"*. Without that, an empty result while a
+topic is set looks like the search is broken rather than scoped.
+
+**Clearing the box reloads on its own.** The native clear control in a search
+field is an "x" that looks like it undoes the search, so leaving the old results
+up until *Search* is pressed again reads as broken. It listens on `input` rather
+than the `search` event, because Firefox does not raise that one, and fires only
+when the box **becomes** empty — so it is not a search-as-you-type, and an empty
+box being tapped costs nothing.
+
+Driven in a browser against seven recordings across four topics: seven, then two
+for a search, then seven again on clearing with no button pressed; choosing a
+topic gave its two, and searching within it gave one.
+
+Tests: 4 new. Suite 2,044 green.
+
 ## [0.230.0] — 2026-09-14
 
 **feat(events): the recorded library can be filtered by topic.** Doug's request:

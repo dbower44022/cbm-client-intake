@@ -15,6 +15,9 @@
   function $(id) { return document.getElementById(id); }
 
   var signupModal = null;
+  //: The search text the list currently reflects, so clearing the box can tell
+  //: "there was a search to undo" from "there never was one".
+  var lastQuery = "";
 
   function message(text, kind) {
     var box = $("msg");
@@ -112,11 +115,24 @@
     select.value = (topics || []).indexOf(chosen) >= 0 ? chosen : "";
     // One topic is not a choice, it is furniture.
     $("topicFilterRow").hidden = (topics || []).length < 2;
+    describeSearchScope();
+  }
+
+  /* Say what the search box will actually search. The topic narrows first and
+   * the search runs inside it, which the reading order implies and this makes
+   * explicit — otherwise an empty result while a topic is set looks like the
+   * search is broken rather than scoped. */
+  function describeSearchScope() {
+    var topic = ($("topicFilter").value || "").trim();
+    $("searchBox").placeholder = topic
+      ? "Search within " + topic + "…"
+      : "Search recorded webinars…";
   }
 
   async function loadRecordings() {
     var q = ($("searchBox").value || "").trim();
     var topic = ($("topicFilter").value || "").trim();
+    lastQuery = q;
     var data = await getJson(
       "/api/events/recordings?limit=24"
       + (q ? "&q=" + encodeURIComponent(q) : "")
@@ -206,9 +222,24 @@
     // Choosing a topic filters immediately — a dropdown that needs a second
     // button pressed after it reads as broken.
     $("topicFilter").addEventListener("change", function () {
+      describeSearchScope();
       loadRecordings().catch(function () {
         message("The recordings could not be filtered just now.", "error");
       });
+    });
+    // Clearing the box restores the full list on its own. The native clear
+    // control in a search field is an "x" that looks like it undoes the search,
+    // so leaving the old results up until Search is pressed again reads as
+    // broken. Fires on the "x", on select-all-delete, and on backspacing to
+    // empty; `input` rather than the `search` event because Firefox does not
+    // raise that one. Only when it BECOMES empty, so it is not a keystroke
+    // search.
+    $("searchBox").addEventListener("input", function () {
+      if (($("searchBox").value || "").trim() === "" && lastQuery !== "") {
+        loadRecordings().catch(function () {
+          message("The recordings could not be reloaded just now.", "error");
+        });
+      }
     });
     loadAll();
   });

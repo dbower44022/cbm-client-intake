@@ -441,3 +441,49 @@ def test_neither_door_can_register_without_the_tick():
     page = (root / "events" / "public_frontend" / "event.js").read_text()
     assert "if (!body.consent)" in page
     assert 'consent: !!$("consent").checked,' in page
+
+
+# --- the recorded library's controls -----------------------------------------
+
+
+def _public_js() -> str:
+    from pathlib import Path
+
+    return (
+        Path(__file__).resolve().parents[1]
+        / "events" / "public_frontend" / "public.js"
+    ).read_text(encoding="utf-8")
+
+
+def test_the_topic_selector_comes_before_the_search_box(monkeypatch):
+    """The search runs INSIDE the chosen topic, and reading order is the only
+    thing telling a visitor which narrows which (Doug, 2026-09-14)."""
+    client, _ = build(monkeypatch, events=[make_event()])
+    html = client.get("/webinars/").text
+    assert html.index('id="topicFilterRow"') < html.index('class="pub__search"')
+    assert html.index('id="topicFilter"') < html.index('id="searchBox"')
+
+
+def test_clearing_the_search_reloads_without_pressing_search():
+    """The native clear control is an "x" that looks like it undoes the search.
+    Leaving the old results up until Search is pressed again reads as broken."""
+    js = _public_js()
+    assert '$("searchBox").addEventListener("input"' in js
+    assert 'lastQuery !== ""' in js
+    # `input`, not the `search` event: Firefox does not raise that one.
+    assert 'addEventListener("search"' not in js
+
+
+def test_clearing_only_reloads_when_there_was_a_search_to_undo():
+    """Otherwise every keystroke on an empty box would hit the server."""
+    js = _public_js()
+    assert 'lastQuery = q;' in js
+    assert 'var lastQuery = "";' in js
+
+
+def test_the_placeholder_names_the_topic_being_searched():
+    """An empty result while a topic is set otherwise looks like the search is
+    broken rather than scoped."""
+    js = _public_js()
+    assert "function describeSearchScope()" in js
+    assert '"Search within " + topic' in js

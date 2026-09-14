@@ -154,7 +154,7 @@ body {
 
 .pub__topicfilter {
   display: flex; align-items: center; gap: 8px;
-  margin: 0 0 4px; font-size: 0.85rem;
+  margin: 0 0 10px; font-size: 0.85rem;
 }
 .pub__topicfilter label { font-weight: 600; color: var(--cbm-slate-700, #52606d); }
 .pub__topicfilter select {
