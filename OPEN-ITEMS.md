@@ -6,6 +6,25 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+29. **Cleveland's two live apps misreport which promotion they are running**
+    (2026-09-13). Production and crm-test both carry `RELEASE_TAG=v0.217.0` in
+    their overlays while running 0.226.0, so `/healthz` names a promotion six
+    releases old — the exact "previous promotion as if it were the new one"
+    failure the two stamps exist to prevent. **v0.228.0 changes what fixing it
+    means**: the tag now travels in `release-tag.txt` and an environment
+    variable overrides it, so the overlay line is no longer a thing to refresh
+    but a thing to remove. **The decision is what Cleveland should then
+    report.** Both apps track `main` with `deploy_on_push` on, so once the
+    variable is gone they report `releaseTag: null` except at a cut commit —
+    which is honest (continuous deployment is not a named promotion) but is a
+    change from what the fleet console was told to expect. The alternative is
+    to move Cleveland onto the `release` branch, which is the "take
+    `deploy_on_push` off Cleveland's three apps once the train is trusted" step
+    Phase 2 already owes and is a larger change than a stamp fix. Doug's call;
+    nothing is broken while it waits, beyond the misreport itself.
+    `scripts/set_updates_policy.py <app-id> --status` shows the current state
+    of any of the three.
+
 28. **Three Cleveland defects the Lakeside dress rehearsal found** (2026-08-31).
     All three surfaced while standing a throwaway chapter instance up from
     crm-test's configuration

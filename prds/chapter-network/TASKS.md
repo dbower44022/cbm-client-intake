@@ -129,7 +129,21 @@ step itself is not.
 `release` exists on origin and the weekly cut fast-forwards it; `scripts/promote.py`
 promoted `lakeside-intake` to **v0.217.0** on 2026-08-31 — the first deployment
 ever to report a non-null `releaseTag` (`/healthz`: version 0.217.0, releaseTag
-v0.217.0, all three components on the `release` branch). One defect found live
+v0.217.0, all three components on the `release` branch).
+
+**Second promotion 2026-09-13**: `lakeside-intake` → v0.226.0, the same two
+operations. Found live: the post-ACTIVE health read races the new container
+(DigitalOcean reports ACTIVE seconds before the public address serves the new
+revision), so the script declared a false failure while the promotion had in
+fact landed; fixed in v0.228.0 by waiting up to two minutes for `/healthz` to
+report the tag. **The same release removed the second operation**: the tag is
+stamped into `release-tag.txt` at cut time rather than set per deployment, and
+`scripts/set_updates_policy.py` puts a deployment on Development /
+Latest Stable / On Demand across all three components and drops the redundant
+variable — which is also the policy-vs-spec detector this task's step 4 asked
+for, per app.
+
+One defect found live
 and fixed on the spot: the guard compared the branch against the annotated
 **tag object** instead of its peeled commit and refused its own success case
 (`73b97e9`). `--status` is the per-app policy-vs-spec signal; the fleet-wide

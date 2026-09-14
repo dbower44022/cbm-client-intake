@@ -6,7 +6,29 @@ cuts the tag AND fast-forwards the `release` branch (six tags exist, through
 `releaseTag: "v0.217.0"` — and `scripts/promote.py` performed the first real
 promotion on 2026-08-31: `lakeside-intake` to v0.217.0, the first deployment
 with `deploy_on_push` off, moved by the two-operation update and verified at
-`/healthz`. What remains of this phase: cutting on cadence each Sunday, taking
+`/healthz`.
+
+**The second promotion ran on 2026-09-13**: `lakeside-intake` to v0.226.0,
+tagged by hand at `origin/main` because the cut script refuses a dirty tree,
+then `promote.py --apply`. The script's final health read raced the new
+container and reported a false failure (fixed in v0.228.0 — it now waits up to
+two minutes for the container to answer). The 09-06 slot was missed and the
+09-13 cut ran late; v0.218.0 through v0.225.1 were never tagged.
+
+**The update is ONE operation now (v0.228.0, Doug's ruling 2026-09-13, after
+the nine-step Lakeside upgrade was put in front of him and judged too
+difficult).** The release tag no longer rides in each deployment's spec as a
+`RUN_AND_BUILD_TIME` variable: `scripts/cut_release.sh` writes it into
+**`release-tag.txt`** in the very commit the tag names, and
+`core.version.release_stamp` reports it **only when it matches that build's
+version** — so main stops claiming a release the moment it moves past one, and
+"report the previous promotion as if it were the new one" is unreachable rather
+than merely discouraged. A deployment on the `release` branch with
+`deploy_on_push` on therefore updates itself correctly on the push, and the
+Sunday ritual is two commands: cut, push. `scripts/set_updates_policy.py` sets
+a deployment's policy across all three components and drops the now-redundant
+variable; `promote.py` remains for On Demand deployments and as the button's
+worked example. What remains of this phase: cutting on cadence each Sunday, taking
 `deploy_on_push` off Cleveland's three apps once the train is trusted, and the
 CRMBuilder Deployment record + Update button (proposal 8, session A3) that
 turns `promote.py` into a console action.
