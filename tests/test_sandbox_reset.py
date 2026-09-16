@@ -176,3 +176,21 @@ def test_guard_allows_the_armed_sandbox():
 
 def test_the_reset_is_off_by_default():
     assert Settings().sandbox_nightly_reset is False
+
+
+# --- restored uploads must be writable by the container --------------------
+
+
+def test_restored_uploads_take_the_data_directory_owner(tmp_path):
+    """The chown after extracting the golden archive used to say 1000:1000 —
+    the host user — while the container runs as www-data (33). Every upload
+    on crm-test then failed with "Permission denied for data/upload/<id>"
+    from the night the reset went live until 2026-09-16."""
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    st = data_dir.stat()
+    assert sandbox.upload_owner(data_dir) == f"{st.st_uid}:{st.st_gid}"
+
+
+def test_no_hard_coded_owner_in_the_reset_script():
+    assert '"1000:1000"' not in SCRIPT.read_text(encoding="utf-8")

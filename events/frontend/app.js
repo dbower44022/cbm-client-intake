@@ -48,6 +48,15 @@
   }
 
   function notice(message, kind) {
+    // The page banner sits BEHIND the modal overlay, so a message raised while
+    // the editor is open (an upload that failed, a graphic saved) went unseen
+    // — "the upload does not seem to work" was a CRM error nobody could read.
+    // While the modal is up, the modal's own message slot carries it.
+    if (!$("modal").hidden) {
+      $("modalMsg").textContent = message || "";
+      $("modalMsg").className = "ev__modal-msg" + (kind ? " ev__modal-msg--" + kind : "");
+      return;
+    }
     var box = $("notice");
     box.textContent = message;
     box.className = "ev__notice" + (kind ? " ev__notice--" + kind : "");

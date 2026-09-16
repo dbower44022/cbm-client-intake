@@ -106,3 +106,11 @@ def test_the_two_columns_are_a_grid_that_stacks_when_narrow():
     assert ".ev__overview[hidden] { display: none !important; }" in CSS
     assert "max-width" not in CSS[CSS.index(".ev__overview {"):CSS.index(".ev__overview[hidden]")]
     assert ".ev__overview { grid-template-columns: minmax(0, 1fr); }" in CSS
+
+
+def test_a_message_raised_while_the_editor_is_open_lands_in_the_modal():
+    """The page banner sits behind the modal overlay, so an upload error was
+    invisible — the graphic upload "did not seem to work" while the CRM was
+    answering 500 (crm-test, 2026-09-16)."""
+    assert 'if (!$("modal").hidden) {' in APP
+    assert '$("modalMsg").textContent = message || "";' in APP

@@ -4,6 +4,33 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.231.1] — 2026-09-16
+
+**fix(sandbox): the nightly reset left the CRM unable to write attachments —
+and the editor hid the error.** Doug: *"The upload graphic function does not
+seem to work."*
+
+**The cause was on the crm-test droplet, not in the app.** The reset script
+restores the golden `data/upload` archive every night and then `chown`s it to
+`1000:1000` — the host user — while the EspoCRM container runs as `www-data`
+(uid 33). Read access survived (every existing attachment still served), write
+access did not: since the reset went live on 2026-08-22, **every** attachment
+create on crm-test has failed with *"Permission denied for
+data/upload/<id>"* (`POST /Attachment` → 500, surfaced by the app as 502). The
+event graphic is only where it was noticed; mentor photos, inline images and
+document uploads on the sandbox were equally broken. Production has no reset
+and is unaffected. `scripts/sandbox/reset_crm_sandbox.py` now takes the owner
+from the parent data directory (`upload_owner`), never a hard-coded id; the
+deployed copy and a one-off `chown` of the live folder are owed on the droplet
+(`OPEN-ITEMS.md` #32).
+
+**The editor now shows a message raised while it is open.** The page banner
+sits *behind* the modal overlay, so "Graphic saved." and the CRM's error alike
+went unseen — which is what made a 500 read as "nothing happened". While the
+modal is up, `notice()` writes into the modal's own message slot.
+
+Tests: 3 new. Suite green.
+
 ## [0.231.0] — 2026-09-16
 
 **feat(events): the Overview tab shows the whole record.** Doug's rule: the

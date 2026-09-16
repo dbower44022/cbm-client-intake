@@ -6,6 +6,18 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+32. **crm-test cannot write attachments until its upload folder is re-owned**
+    (found 2026-09-16 through the event graphic; v0.231.1). The nightly reset
+    restored `data/upload` and `chown`ed it to `1000:1000` (the host user) while
+    the container runs as `www-data` (33), so every `POST /Attachment` on the
+    sandbox has 500'd since 2026-08-22 — graphics, mentor photos, inline images,
+    documents. The script is fixed in the repo (`upload_owner`); **owed on the
+    droplet, Doug runs**: copy `scripts/sandbox/reset_crm_sandbox.py` over
+    `/usr/local/sbin/reset_crm_sandbox.py`, then
+    `chown -R 33:33 /var/www/espocrm/data/espocrm/data/upload` once, then upload
+    a graphic through `/events` and confirm "Graphic saved." appears in the
+    editor. Production has no reset and was never affected.
+
 31. **A settings-store test reads the developer's own `.env`** (found
     2026-09-13). `tests/test_settings_store_pg.py::test_override_round_trip_and_
     history` asserts the override history is exactly `["30", "25"]`; with a real

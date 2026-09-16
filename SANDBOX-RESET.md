@@ -108,6 +108,14 @@ attachment *files* — restoring the table without them leaves every golden
 record pointing at a missing document), `config-reference.sql.gz` (disaster
 recovery only; a reset never restores it) and `manifest.json`.
 
+**Ownership of the restored files follows the container, not the host.** After
+extracting `upload.tar.gz` the reset `chown`s `data/upload` to whatever owns
+the parent `data/` directory — `www-data` (uid 33) in the official image. It
+used to hard-code `1000:1000`, the host user, and from 2026-08-22 to 2026-09-16
+EspoCRM could read every attachment and write none (*"Permission denied for
+data/upload/<id>"* on every `POST /Attachment`). If uploads fail on the
+sandbox, check `ls -ln data/espocrm/data/upload` first.
+
 **5. Prove the restore before trusting it.** Change something obvious in the
 CRM, run the reset by hand, confirm it came back:
 

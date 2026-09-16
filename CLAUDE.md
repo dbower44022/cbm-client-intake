@@ -130,7 +130,11 @@ half-finished overnight has to start again. The two halves are an hour apart, so
 a submission whose `CInformationRequest` has already been restored away is the
 normal case there, not a defect (see the 403-vs-404 gotcha). Pause a night with
 `touch /var/www/espocrm/.sandbox-hold` on the droplet (CRM half only — clear the
-worker flag too if the app-side data matters). What survives by design: the CRM
+worker flag too if the app-side data matters). **Attachment uploads failing on
+crm-test only** (`POST /Attachment` 500, *Permission denied for data/upload*)
+means the restored upload folder is owned by the wrong uid — the reset used to
+hard-code `1000:1000`; it must be the container's `www-data` (33)
+([[sandbox-reset-upload-ownership]]). What survives by design: the CRM
 team's Entity Manager work (it lives in files, and the reset rebuilds from it),
 the `/setup` overrides in `app_setting`, roles, teams, email templates and the
 integration credentials. Runbook: `SANDBOX-RESET.md`; the training data and its

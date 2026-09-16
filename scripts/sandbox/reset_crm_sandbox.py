@@ -365,7 +365,21 @@ def _restore_uploads() -> None:
     with tarfile.open(archive, "r:gz") as tar:
         tar.extractall(data_dir)          # writes data/upload
     # tar wrote straight over the live dir; make ownership match the container.
-    subprocess.run(["chown", "-R", "1000:1000", str(live)], check=False)
+    # The owner is whoever owns the parent data directory — www-data (33) in
+    # the official image — NEVER a hard-coded id. This line used to say
+    # 1000:1000, which is the host user, so from the day the nightly reset
+    # went live (2026-08-22) EspoCRM could read every attachment and write
+    # none: every upload on crm-test failed with "Permission denied for
+    # data/upload/<id>" (found through the event graphic, 2026-09-16).
+    owner = upload_owner(data_dir)
+    subprocess.run(["chown", "-R", owner, str(live)], check=False)
+
+
+def upload_owner(data_dir: Path) -> str:
+    """``uid:gid`` the restored upload directory must carry: the parent data
+    directory's own, because that is what the container runs as."""
+    st = data_dir.stat()
+    return f"{st.st_uid}:{st.st_gid}"
 
 
 # --------------------------------------------------------------------------
