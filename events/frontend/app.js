@@ -210,8 +210,102 @@
     });
   }
 
+  /* ---------- overview: the whole record, read-only ----------
+   *
+   * Staff check an event here without opening the editor (Doug, 2026-09-16):
+   * everything the record holds is on this one screen. The facts column is
+   * driven by the SAME field spec the editor is built from (/fields), in the
+   * editor's group order, so a field added to the spec appears here without a
+   * second edit — and one left out of the spec is not on the record at all.
+   * The content column carries what the website shows: the graphic, the
+   * Summary, the Full description and the Syllabus. */
+
+  var CONTENT_GROUP = "Content";
+
+  /* The stored value of one spec field, formatted for reading. Every type the
+     spec uses has a case; "—" is the empty value everywhere, never a blank. */
+  function factValue(spec, raw, event) {
+    var value = raw[spec.name];
+    switch (spec.type) {
+      case "datetime": return fmtStamp(value);
+      case "duration":
+        return window.CBMDateTime.formatDuration(
+          window.CBMDateTime.durationBetween(raw.dateStart, raw.dateEnd)) || "—";
+      case "bool": return value ? "Yes" : "No";
+      case "int":
+        if (spec.name === "venueCapacity") return value ? String(value) : "Unlimited";
+        return value == null || value === "" ? "—" : String(value);
+      case "image":
+        // Named even when absent: "none" is the answer to "why has the website
+        // card got no picture?".
+        return raw.eventGraphicId ? "uploaded (shown at right)"
+          : "none — the card falls back to the recording thumbnail";
+      case "url":
+        if (spec.name === "recordingUrl" && !value) return "not published";
+        return value || "—";
+      case "varchar":
+        if (spec.name === "zoomWebinarId" && !value) return "not created";
+        return value || "—";
+      default:
+        return value == null || String(value).trim() === "" ? "—" : String(value);
+    }
+  }
+
+  /* A CRM UTC stamp as local wall time, the way the editor's date control
+     would show it. */
+  function fmtStamp(stamp) {
+    if (!stamp) return "—";
+    var d = window.CBMDateTime.parseCrmStamp(stamp);
+    if (!d) return String(stamp);
+    return d.toLocaleDateString(undefined, { weekday: "short", year: "numeric",
+                                             month: "short", day: "numeric" })
+      + " · " + d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  }
+
+  function factRow(host, label, value) {
+    var row = document.createElement("div");
+    row.className = "ev__fact";
+    var key = document.createElement("span");
+    key.className = "ev__fact-key";
+    key.textContent = label;
+    var val = document.createElement("span");
+    val.className = "ev__fact-value";
+    if (/^https?:\/\//.test(value)) {
+      var link = document.createElement("a");
+      link.href = value; link.textContent = value;
+      link.target = "_blank"; link.rel = "noopener";
+      val.appendChild(link);
+    } else {
+      val.textContent = value;
+    }
+    row.appendChild(key); row.appendChild(val);
+    host.appendChild(row);
+  }
+
+  function factGroup(host, label) {
+    var head = document.createElement("h4");
+    head.className = "ev__fact-group";
+    head.textContent = label;
+    host.appendChild(head);
+  }
+
+  /* Rich text authored in the CRM is HTML, and the website renders it as HTML
+     — so this does too, through the shared sanitizer, because staff-authored
+     is not the same as trusted. An empty field shows "—" rather than nothing. */
+  function setRich(host, html) {
+    var clean = window.CBMRichText ? window.CBMRichText.sanitizeHtml(html || "") : "";
+    var probe = document.createElement("div");
+    probe.innerHTML = clean;
+    var empty = probe.textContent.trim() === "" && !probe.querySelector("img,table,hr");
+    host.classList.toggle("ev__prose--empty", empty);
+    if (empty) { host.textContent = "—"; return; }
+    if (!window.CBMRichText) { host.textContent = html || ""; return; }
+    host.innerHTML = clean;
+  }
+
   function renderOverview() {
     var event = state.current.event, counts = state.current.counts || {};
+    var raw = event.raw || {};
     var tiles = [
       ["Registered", counts.registered == null ? "—" : counts.registered],
       ["Attended", counts.attended == null ? "—" : counts.attended],
@@ -233,57 +327,49 @@
       $("overviewTiles").appendChild(box);
     });
 
-    // The website card image. Served through the app's staff proxy, so it also
-    // shows for an unpublished event — the public route is gated on publishing.
-    var graphicId = (event.raw && event.raw.eventGraphicId) || "";
-    var graphicWrap = $("overviewGraphicWrap");
-    if (graphicId && event.raw && event.raw.id) {
-      $("overviewGraphic").src = API + "/events/" + encodeURIComponent(event.raw.id)
-        + "/graphic?v=" + encodeURIComponent(graphicId);
-      graphicWrap.hidden = false;
-    } else {
-      $("overviewGraphic").removeAttribute("src");
-      graphicWrap.hidden = true;
-    }
-
-    var facts = [
-      ["When", fmtWhen(event)],
-      ["Format", event.format || "—"],
-      ["Status", event.status || "—"],
-      ["Topic", event.category || "—"],
-      ["Location", event.location || "—"],
-      ["On the website", event.raw && event.raw.publishToWebsite ? "Yes" : "No"],
-      ["Public page", event.url || "—"],
-      ["Zoom webinar", event.webinarId || "not created"],
-      ["Join URL", event.joinUrl || "—"],
-      ["Recording", event.recordingUrl || "not published"],
-      // Named even when absent: a missing row reads as a missing feature, and
-      // "none" is the answer to "why has the website card got no picture?".
-      ["Website graphic", graphicId ? "uploaded" : "none — the card falls back "
-        + "to the recording thumbnail"],
-      ["Summary", event.summary || "—"],
-    ];
+    // --- facts: every spec field, in the editor's groups and order ---
     var host = $("overviewFacts");
     host.innerHTML = "";
-    facts.forEach(function (pair) {
-      var row = document.createElement("div");
-      row.className = "ev__fact";
-      var key = document.createElement("span");
-      key.className = "ev__fact-key";
-      key.textContent = pair[0];
-      var val = document.createElement("span");
-      val.className = "ev__fact-value";
-      if (/^https?:\/\//.test(pair[1])) {
-        var link = document.createElement("a");
-        link.href = pair[1]; link.textContent = pair[1];
-        link.target = "_blank"; link.rel = "noopener";
-        val.appendChild(link);
-      } else {
-        val.textContent = pair[1];
+    var lastGroup = null;
+    state.fields.forEach(function (spec) {
+      // The long-form content has its own column; the Summary goes with it.
+      if (spec.group === CONTENT_GROUP && spec.type !== "image") return;
+      if (spec.name === "description") return;
+      if (spec.group !== lastGroup) {
+        factGroup(host, spec.group);
+        lastGroup = spec.group;
+        if (spec.group === "Event") {
+          // Not in the spec because it is the CRM's own workflow field, not
+          // something the editor writes — but it is on the record.
+          factRow(host, "Status", raw.status || "—");
+        }
       }
-      row.appendChild(key); row.appendChild(val);
-      host.appendChild(row);
+      factRow(host, spec.label, factValue(spec, raw, event));
     });
+    // What the app derives from the record, after what the record stores.
+    factGroup(host, "On the website");
+    factRow(host, "Public page", event.url || "—");
+    factRow(host, "Registration", event.registrationOpen ? "Open" : "Closed");
+    factRow(host, "When (as shown)", fmtWhen(event));
+
+    // --- content: what the website shows, read the way the website reads it ---
+    var graphicId = raw.eventGraphicId || "";
+    var img = $("overviewGraphic");
+    if (graphicId && raw.id) {
+      // Served through the app's staff proxy, so it also shows for an
+      // unpublished event — the public route is gated on publishing.
+      img.src = API + "/events/" + encodeURIComponent(raw.id)
+        + "/graphic?v=" + encodeURIComponent(graphicId);
+      img.hidden = false;
+      $("overviewGraphicEmpty").hidden = true;
+    } else {
+      img.removeAttribute("src");
+      img.hidden = true;
+      $("overviewGraphicEmpty").hidden = false;
+    }
+    $("overviewSummary").textContent = event.summary || "—";
+    setRich($("overviewDescription"), event.overview);
+    setRich($("overviewSyllabus"), event.syllabus);
   }
 
   function registrantRows() {

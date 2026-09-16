@@ -134,15 +134,38 @@
         <button type="button" class="ev__tab" data-tab="checkin">Check-in</button>
       </nav>
 
-      <div class="ev__tabpanel" data-panel="overview">
-        <div class="ev__tiles" id="overviewTiles"></div>
-        <!-- The website card image. Shown here because this is the screen
-             staff check to see what the public will get. -->
-        <figure class="ev__overviewgraphic" id="overviewGraphicWrap" hidden>
-          <img id="overviewGraphic" alt="" />
-          <figcaption>Website graphic</figcaption>
-        </figure>
-        <div class="ev__facts" id="overviewFacts"></div>
+      <!-- The Overview is the WHOLE record, read-only, so staff can check an
+           event without opening the editor (Doug, 2026-09-16). Facts on the
+           left — every field the editor offers, in the editor's own order —
+           and the website-facing content on the right: the graphic, the
+           Summary, the Full description and the Syllabus. Every slot renders
+           even when empty; a slot that vanishes reads as a missing feature. -->
+      <div class="ev__tabpanel ev__overview" data-panel="overview">
+        <div class="ev__overview-facts">
+          <div class="ev__tiles" id="overviewTiles"></div>
+          <div class="ev__facts" id="overviewFacts"></div>
+        </div>
+        <div class="ev__overview-content">
+          <!-- The website card image, served through the app's staff proxy so
+               it shows for an unpublished event too. -->
+          <figure class="ev__overviewgraphic" id="overviewGraphicWrap">
+            <figcaption>Event graphic</figcaption>
+            <img id="overviewGraphic" alt="" hidden />
+            <p class="ev__content-empty" id="overviewGraphicEmpty">—</p>
+          </figure>
+          <section class="ev__content">
+            <h3>Summary</h3>
+            <p class="ev__content-text" id="overviewSummary"></p>
+          </section>
+          <section class="ev__content">
+            <h3>Full description</h3>
+            <div class="ev__prose" id="overviewDescription"></div>
+          </section>
+          <section class="ev__content">
+            <h3>Syllabus</h3>
+            <div class="ev__prose" id="overviewSyllabus"></div>
+          </section>
+        </div>
       </div>
 
       <div class="ev__tabpanel" data-panel="registrants" hidden>

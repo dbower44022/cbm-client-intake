@@ -914,6 +914,10 @@ would be indistinguishable from a slug.
 - Redirect runbook: `EVENTS-SETUP.md` § 6b. **The rollback is removing the
   redirect** — under a minute, no deploy.
 
+- **The staff Overview tab is the whole record, read-only** (v0.231.0, Doug's
+  rule): facts left, driven by `EVENT_FIELDS` so a new spec field shows without
+  a second edit; graphic + Summary + Full description + Syllabus right, rich
+  text through the shared sanitizer. Every slot renders even when empty.
 - **Phase 6a attendance** (`events/attendance.py`, worker): pulls each finished
   online event's Zoom participant report and matches by email. An empty report
   means "not published yet", never "nobody came"; a `Manual`/`Check-in` source

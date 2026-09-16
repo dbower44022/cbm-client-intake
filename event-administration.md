@@ -218,11 +218,23 @@ published to the CBM channel without a person deciding to.
 
 ## The Overview tab
 
-Five figures at a glance — **Registered · Attended · Show rate · Waitlisted ·
-Seats left** — then the event's facts, its public page address, Zoom details and
-recording link.
+**The whole record, read-only, on one screen** — so you can check an event
+without opening the editor.
 
-Every one of those numbers is **worked out fresh each time you look**. None of
+Five figures at a glance — **Registered · Attended · Show rate · Waitlisted ·
+Seats left** — then two columns:
+
+- **Left — the facts.** Every field the editor offers, in the editor's own
+  groups and order (Event, Schedule, Place & capacity, Publishing, Zoom), plus
+  what the app works out from them: the public page address, whether
+  registration is open, and the date as the website shows it. An empty field
+  shows a dash rather than disappearing.
+- **Right — what the website shows.** The event graphic, then the Summary, the
+  Full description and the Syllabus, rendered the way the public page renders
+  them. An event with no graphic says so here, and the facts column says what
+  the website card falls back to.
+
+Every one of the figures is **worked out fresh each time you look**. None of
 them is stored, so none of them can drift out of step with reality.
 
 ---

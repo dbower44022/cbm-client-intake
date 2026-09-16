@@ -80,6 +80,8 @@ PUBLIC_SELECT = ",".join([
     "dateStart", "dateEnd", "duration", "status", "format", "eventType",
     "topic", "location", "venueCapacity", "publishToWebsite",
     "registrationCloses", "recordingUrl", "virtualMeetingUrl", "zoomWebinarId",
+    # The staff Overview shows every spec field, so the record must carry it.
+    "registrationUrl",
     "eventGraphicId",
 ])
 

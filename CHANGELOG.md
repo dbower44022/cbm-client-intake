@@ -4,6 +4,40 @@ All notable changes to **cbm-client-intake**. Versions are the value reported by
 `/healthz` and the page footer (sourced from `pyproject.toml`), and double as the
 deploy marker on App Platform.
 
+## [0.231.0] — 2026-09-16
+
+**feat(events): the Overview tab shows the whole record.** Doug's rule: the
+view screen shows all the data about an event, so a person can check it
+without opening the editor — and the website-facing content sits on the right.
+
+**Facts on the left, content on the right.** The facts column is now driven by
+the same field spec the editor is built from (`EVENT_FIELDS`, via `/fields`),
+in the editor's own groups and order, so a field added to the spec appears on
+the view screen without a second edit; the CRM's own Status and the app's
+derived facts (public page, registration open, the date as the website shows
+it) follow. The content column carries the **event graphic**, the **Summary**,
+the **Full description** and the **Syllabus** — the last two rendered as HTML
+the way the public page renders them, through the shared CBMRichText sanitizer,
+because staff-authored is not the same as trusted.
+
+**Every slot renders even when empty.** The graphic figure is always there
+(only its image hides; the figure says "—"), and an empty description or
+syllabus shows a dash rather than nothing — a slot that vanishes reads as a
+missing feature.
+
+**The record read now carries `registrationUrl`** (added to `PUBLIC_SELECT`),
+which the spec declared and the Zoom sync wrote but no read ever selected — so
+the Zoom registration link is on the record for the first time. A guard test
+asserts every spec field is selected.
+
+Two columns that both grow with the window, no width cap; they stack below
+1000px. Verified in a fetch-stubbed browser harness at 3137px: 21 facts in
+seven groups, the graphic proxied through the staff route, a `<script>` and an
+`onerror` in the description stripped, and the empty record showing dashes in
+every slot. Not yet run against a live CRM.
+
+Tests: 8 new (`tests/test_events_overview_ui.py`).
+
 ## [0.230.1] — 2026-09-14
 
 **fix(events): the topic comes before the search, and clearing the search
