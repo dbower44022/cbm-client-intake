@@ -716,6 +716,16 @@ toggle.
 20. **Everything through v0.187.0 is DEPLOYED to both environments** (verified
     2026-07-28; only docs commits are unpushed). What is owed is the *live
     eyeball*, not a deploy. Never driven against the live CRM/Gmail/Drive:
+    - **The event Overview tab (v0.231.0)** — the view screen now carries the
+      whole record: facts left (driven by `EVENT_FIELDS`), and the graphic,
+      Summary, Full description and Syllabus right. Verified in a fetch-stubbed
+      browser harness only. On **crm-test**, signed in as a real non-admin in
+      the events team, open an event with rich-text content and confirm the
+      description and syllabus render as formatted text rather than HTML
+      source, the graphic appears, and an event with none of the three shows a
+      dash in each slot rather than an empty panel. The ACL half is only as
+      good as the account used — a "fields missing" report starts at field-level
+      ACL, not the renderer.
     - **The verified-settings path (v0.216.0)** — tests and a stub harness only.
       On **crm-test**, as an EspoCRM admin at `/setup`: (1) set **CRM API key**
       to a wrong value and confirm it is *refused* with the CRM's own 401/403
