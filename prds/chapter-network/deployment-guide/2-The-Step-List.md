@@ -1,10 +1,10 @@
 # New Chapter Deployment Guide — The Step List
 
 **Document:** The bare list of steps, with no methods yet
-**Version:** 0.13
+**Version:** 0.14
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 16:57
+**Last Updated:** 09-18-26 20:05
 
 ---
 
@@ -142,7 +142,8 @@ Done when:
 - Two-step sign-in is on.
 - The central support organization's named people are members.
 - The sign-in and recovery codes are in the chapter's vault.
-- CRMBuilder supports no other DNS provider.
+
+Note: CRMBuilder supports no other DNS provider.
 
 ---
 
@@ -251,7 +252,8 @@ Done when:
 - A Cloudflare API token limited to editing DNS in the chapter's zones exists.
 - Both tokens are in the chapter's vault.
 - Both tokens are entered in CRMBuilder as the chapter's provider credentials.
-- CRMBuilder builds the chapter's CRM with the chapter's own accounts, never its own (ruled 09-18-26).
+
+Note: CRMBuilder builds the chapter's CRM with the chapter's own accounts, never its own (ruled 09-18-26).
 
 ---
 
@@ -277,7 +279,8 @@ Done when:
 - The chapter's colours are chosen.
 - The colours are written into a small stylesheet.
 - The stylesheet is published at a web address the software can load.
-- Colours are the only visual difference between chapters in the software, so a chapter that skips this looks exactly like Cleveland.
+
+Note: Colours are the only visual difference between chapters in the software, so a chapter that skips this looks exactly like Cleveland.
 
 **6.6 Produce the chapter's logo image.**
 Done when: an image file of the chapter's logo exists in a form the CRM system
@@ -376,7 +379,8 @@ Done when:
 - All seven are listed by name with the holder named beside each.
 - The video meeting app's secret is listed too, for a chapter that runs webinars.
 - No secret value is written on the form.
-- Seven, not six: besides the six the planning documents name, the applications use an encryption key for stored data that the settings generator creates quietly on first run. Changing it later destroys the data it protects, so it is permanent from the moment it exists.
+
+Note: Seven, not six: besides the six the planning documents name, the applications use an encryption key for stored data that the settings generator creates quietly on first run. Changing it later destroys the data it protects, so it is permanent from the moment it exists.
 
 **8.8 Put the chapter's secrets into the store.**
 Done when:
@@ -403,7 +407,8 @@ Done when:
 - The chapter's build has, in writing, the CRM version to install.
 - The build has, in writing, the version of each of the two add-on products.
 - The build has, in writing, which release of the standard configuration is being applied.
-- Without these three numbers the later steps have nothing to check against.
+
+Note: Without these three numbers the later steps have nothing to check against.
 
 **9.2 Create the server.**
 Done when: a server is running in the chapter's own hosting account and the central
@@ -433,7 +438,8 @@ Done when:
 - Both are installed at the versions the standard names.
 - Both are licensed to this chapter.
 - Both are listed in the CRM's own list of installed products.
-- They must be installed before the permission roles are created, because the roles refer to them.
+
+Note: They must be installed before the permission roles are created, because the roles refer to them.
 
 **9.8 Copy on the standard configuration files.**
 Done when:
@@ -441,7 +447,8 @@ Done when:
 - Both sets of configuration files are in place.
 - Both sets are owned by the web server user.
 - The rebuild command has finished without errors.
-- There are two sets, not one.
+
+Note: There are two sets, not one.
 
 **9.9 Confirm the CRM's own screen loads.**
 Done when: an administrator signs in and sees the normal working screen. A blank
@@ -555,7 +562,8 @@ Done when:
 - The session secret is loaded.
 - The stored-data encryption key is loaded.
 - None of them appears in a file anyone can read.
-- The database connection is not among them — the hosting platform supplies that to the application directly.
+
+Note: The database connection is not among them — the hosting platform supplies that to the application directly.
 
 **11.4 Create the database.**
 Done when:
@@ -584,7 +592,8 @@ no warning from the platform.
 Done when:
 
 - No part of the deployment follows the main development branch.
-- This replaces what the earlier planning documents said. Those documents require automatic deployment to be switched off on a chapter's application, which was right when the release version travelled inside each deployment's settings. The version is now stamped into the software itself when a release is cut, so an application following the release branch with automatic deployment on updates itself correctly. The danger was never automatic deployment — it is automatic deployment from the development branch, which delivers untested software straight to a chapter's live system.
+
+Note: This replaces what the earlier planning documents said. Those documents require automatic deployment to be switched off on a chapter's application, which was right when the release version travelled inside each deployment's settings. The version is now stamped into the software itself when a release is cut, so an application following the release branch with automatic deployment on updates itself correctly. The danger was never automatic deployment — it is automatic deployment from the development branch, which delivers untested software straight to a chapter's live system.
 
 **11.10 Point the application's web address at the application.**
 Done when: the domain name record for the application address resolves to it.
@@ -681,7 +690,8 @@ Done when:
 
 - A list names every member of staff, with their email address and their team.
 - The list is approved by the chapter.
-- Mentors are not on this list. Their accounts are created from their mentor records, at the end of the records stage (step 15.9).
+
+Note: Mentors are not on this list. Their accounts are created from their mentor records, at the end of the records stage (step 15.9).
 
 **14.2 Create the staff accounts.**
 Done when: every person on the list has an account in the CRM on the right team.
@@ -749,7 +759,8 @@ Done when:
 - The passwords were set fresh for this chapter.
 - One person from the chapter has signed in once.
 - Ruled 09-14-26: chapters train on the existing test system rather than on their own live system or on a practice system built for them.
-- Ruled 09-18-26: they sign in with shared training accounts set up specifically for chapter training, never with accounts of their own.
+
+Note: Ruled 09-18-26: they sign in with shared training accounts set up specifically for chapter training, never with accounts of their own.
 
 **16.2 Explain how the practice system behaves.**
 Done when: everyone being trained has been told two things. The system clears
@@ -776,7 +787,8 @@ Done when:
 - The chapter training account passwords are changed once training ends.
 - The change has survived a nightly reset.
 - It is written down when this was done.
-- People from one chapter do not keep standing access to a system another chapter also uses.
+
+Note: People from one chapter do not keep standing access to a system another chapter also uses.
 
 ---
 
@@ -838,7 +850,8 @@ Done when:
 - The chapter knows where to send a request that would change the software for everyone.
 - The chapter knows who decides.
 - The chapter knows how often those decisions are made.
-- The central committee decides, every two weeks (ruled 09-18-26).
+
+Note: The central committee decides, every two weeks (ruled 09-18-26).
 
 **18.3 Explain the release schedule.**
 Done when:
@@ -862,7 +875,8 @@ Done when:
 - The officer has demonstrated the same for the hosting account.
 - The officer has demonstrated the same for the Google Workspace account.
 - The officer has demonstrated the same for the domain registrar account.
-- The agreement says neither side can lock the other out; this is the step that makes that true rather than stated.
+
+Note: The agreement says neither side can lock the other out; this is the step that makes that true rather than stated.
 
 **18.6 Confirm the leaving terms in practice.**
 Done when: the chapter has been shown exactly what it would receive if it left, and
@@ -877,6 +891,7 @@ Done when: a date is booked to review how the first months have gone.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.14 | 09-18-26 20:05 | In fourteen finishing tests, the sentence that explains rather than tests moved out of the list of conditions into a separate Note line (steps 3.7, 5.8, 6.5, 8.7, 9.1, 9.7, 9.8, 11.3, 11.9, 14.1, 16.1, 16.6, 18.2, 18.5). No condition changed. |
 | 0.13 | 09-18-26 16:57 | Every finishing test that packed three or more conditions or items into one sentence is now a list, one condition per line (Doug's rule, 09-18-26: every list puts each item on its own line). Thirty-seven steps: 1.1, 1.4, 2.1, 2.5, 3.3, 3.7, 4.1, 4.14, 5.7, 5.8, 6.5, 7.4, 8.2 to 8.5, 8.7, 8.8, 9.1, 9.7, 9.8, 9.14, 9.15, 9.17, 11.3, 11.4, 11.9, 11.12, 14.1, 16.1, 16.6, 17.9 and 18.1 to 18.5. Words kept; only the connectives changed so each condition reads alone. The step data in `steps/` carries the same lists. |
 | 0.12 | 09-18-26 14:45 | Cloudflare added (Doug, 09-18-26). Step 3.7: the chapter's domain names move to a Cloudflare account the chapter owns, because CRMBuilder supports no other DNS provider. Step 5.8: the chapter's own DigitalOcean and Cloudflare tokens are given to CRMBuilder, which never builds a chapter with its own. One hundred and fifty-five steps. |
 | 0.11 | 09-18-26 14:30 | Step 2.7 added: the chapter sets up its own Proton Pass business organization, owned by two chapter officers, with the central support organization's named people as members of a shared Operations vault (Doug, 09-18-26). Step 8.8 now names that vault as the secrets store. One hundred and fifty-three steps. |

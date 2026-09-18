@@ -285,7 +285,8 @@ The chapter information form holds the roughly thirty-five values that differ fr
 - All seven are listed by name with the holder named beside each.
 - The video meeting app's secret is listed too, for a chapter that runs webinars.
 - No secret value is written on the form.
-- Seven, not six: besides the six the planning documents name, the applications use an encryption key for stored data that the settings generator creates quietly on first run. Changing it later destroys the data it protects, so it is permanent from the moment it exists.
+
+**Note:** Seven, not six: besides the six the planning documents name, the applications use an encryption key for stored data that the settings generator creates quietly on first run. Changing it later destroys the data it protects, so it is permanent from the moment it exists.
 
 **How to check:** Seven names, or eight for a webinar chapter, each with a holder, and no values.
 

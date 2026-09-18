@@ -170,7 +170,8 @@ The public website is the chapter's own marketing site. The software does not bu
 - The chapter's colours are chosen.
 - The colours are written into a small stylesheet.
 - The stylesheet is published at a web address the software can load.
-- Colours are the only visual difference between chapters in the software, so a chapter that skips this looks exactly like Cleveland.
+
+**Note:** Colours are the only visual difference between chapters in the software, so a chapter that skips this looks exactly like Cleveland.
 
 **How to check:** The file's address shows the stylesheet's text in a browser. Once the applications are deployed, the public forms show the chapter's colours.
 

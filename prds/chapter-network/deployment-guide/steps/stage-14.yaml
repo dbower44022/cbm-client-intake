@@ -47,7 +47,7 @@ steps:
     done_when:
       - "A list names every member of staff, with their email address and their team."
       - "The list is approved by the chapter."
-      - "Mentors are not on this list. Their accounts are created from their mentor records, at the end of the records stage (step 15.9)."
+    note: "Mentors are not on this list. Their accounts are created from their mentor records, at the end of the records stage (step 15.9)."
     check:
       how: Every person on the list has a chapter email address and at least one team.
       probe: The app checks each address is on the chapter's domain and each team name exists in the CRM.

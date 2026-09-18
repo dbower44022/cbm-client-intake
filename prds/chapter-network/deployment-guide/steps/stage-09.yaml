@@ -43,7 +43,7 @@ steps:
       - "The chapter's build has, in writing, the CRM version to install."
       - "The build has, in writing, the version of each of the two add-on products."
       - "The build has, in writing, which release of the standard configuration is being applied."
-      - "Without these three numbers the later steps have nothing to check against."
+    note: "Without these three numbers the later steps have nothing to check against."
     check:
       how: The three numbers are written down.
       probe: The app reads them from the published standard and shows them before the build starts.
@@ -217,7 +217,7 @@ steps:
       - "Both are installed at the versions the standard names."
       - "Both are licensed to this chapter."
       - "Both are listed in the CRM's own list of installed products."
-      - "They must be installed before the permission roles are created, because the roles refer to them."
+    note: "They must be installed before the permission roles are created, because the roles refer to them."
     check:
       how: Both appear in the CRM's list of installed products, at the right versions.
       probe: The app reads the CRM's installed products and compares them with the standard.
@@ -248,7 +248,7 @@ steps:
       - "Both sets of configuration files are in place."
       - "Both sets are owned by the web server user."
       - "The rebuild command has finished without errors."
-      - "There are two sets, not one."
+    note: "There are two sets, not one."
     check:
       how: The rebuild log shows no errors, and step 9.9 shows a working screen.
       probe: The app runs the rebuild and reads its result.

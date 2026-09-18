@@ -297,7 +297,8 @@ The chapter's CRM server, its applications and their database all run in a hosti
 - A Cloudflare API token limited to editing DNS in the chapter's zones exists.
 - Both tokens are in the chapter's vault.
 - Both tokens are entered in CRMBuilder as the chapter's provider credentials.
-- CRMBuilder builds the chapter's CRM with the chapter's own accounts, never its own (ruled 09-18-26).
+
+**Note:** CRMBuilder builds the chapter's CRM with the chapter's own accounts, never its own (ruled 09-18-26).
 
 **How to check:** CRMBuilder's provider credentials screen shows both configured for the chapter's engagement, and lists the chapter's Cloudflare zones.
 

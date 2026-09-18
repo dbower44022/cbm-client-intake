@@ -71,7 +71,8 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 - The chapter's build has, in writing, the CRM version to install.
 - The build has, in writing, the version of each of the two add-on products.
 - The build has, in writing, which release of the standard configuration is being applied.
-- Without these three numbers the later steps have nothing to check against.
+
+**Note:** Without these three numbers the later steps have nothing to check against.
 
 **How to check:** The three numbers are written down.
 
@@ -251,7 +252,8 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 - Both are installed at the versions the standard names.
 - Both are licensed to this chapter.
 - Both are listed in the CRM's own list of installed products.
-- They must be installed before the permission roles are created, because the roles refer to them.
+
+**Note:** They must be installed before the permission roles are created, because the roles refer to them.
 
 **How to check:** Both appear in the CRM's list of installed products, at the right versions.
 
@@ -286,7 +288,8 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 - Both sets of configuration files are in place.
 - Both sets are owned by the web server user.
 - The rebuild command has finished without errors.
-- There are two sets, not one.
+
+**Note:** There are two sets, not one.
 
 **How to check:** The rebuild log shows no errors, and step 9.9 shows a working screen.
 

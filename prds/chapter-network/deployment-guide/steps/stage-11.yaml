@@ -93,7 +93,7 @@ steps:
       - "The session secret is loaded."
       - "The stored-data encryption key is loaded."
       - "None of them appears in a file anyone can read."
-      - "The database connection is not among them — the hosting platform supplies that to the application directly."
+    note: "The database connection is not among them — the hosting platform supplies that to the application directly."
     check:
       how: The application starts, and no settings file with secrets is left on any computer.
       probe: The app reads the deployment's settings list and confirms each secret is present and encrypted.
@@ -253,7 +253,7 @@ steps:
         see: All three parts naming the release branch, and none naming main.
     done_when:
       - "No part of the deployment follows the main development branch."
-      - "This replaces what the earlier planning documents said. Those documents require automatic deployment to be switched off on a chapter's application, which was right when the release version travelled inside each deployment's settings. The version is now stamped into the software itself when a release is cut, so an application following the release branch with automatic deployment on updates itself correctly. The danger was never automatic deployment — it is automatic deployment from the development branch, which delivers untested software straight to a chapter's live system."
+    note: "This replaces what the earlier planning documents said. Those documents require automatic deployment to be switched off on a chapter's application, which was right when the release version travelled inside each deployment's settings. The version is now stamped into the software itself when a release is cut, so an application following the release branch with automatic deployment on updates itself correctly. The danger was never automatic deployment — it is automatic deployment from the development branch, which delivers untested software straight to a chapter's live system."
     check:
       how: All three parts name the release branch.
       probe: The app reads the branch of every part of every chapter's application and flags any on main.

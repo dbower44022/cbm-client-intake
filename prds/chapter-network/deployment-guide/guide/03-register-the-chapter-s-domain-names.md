@@ -242,7 +242,8 @@ Every address the chapter uses hangs off its domain names: its email, its websit
 - Two-step sign-in is on.
 - The central support organization's named people are members.
 - The sign-in and recovery codes are in the chapter's vault.
-- CRMBuilder supports no other DNS provider.
+
+**Note:** CRMBuilder supports no other DNS provider.
 
 **How to check:** Cloudflare shows each domain name as active, and a name-server lookup on each domain name returns Cloudflare's two servers.
 

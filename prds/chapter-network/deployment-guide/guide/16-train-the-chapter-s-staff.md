@@ -56,7 +56,8 @@ Staff learn the system on invented records before they touch real ones. Training
 - The passwords were set fresh for this chapter.
 - One person from the chapter has signed in once.
 - Ruled 09-14-26: chapters train on the existing test system rather than on their own live system or on a practice system built for them.
-- Ruled 09-18-26: they sign in with shared training accounts set up specifically for chapter training, never with accounts of their own.
+
+**Note:** Ruled 09-18-26: they sign in with shared training accounts set up specifically for chapter training, never with accounts of their own.
 
 **How to check:** After one nightly reset, someone from the chapter signs in with the new password.
 
@@ -209,7 +210,8 @@ Staff learn the system on invented records before they touch real ones. Training
 - The chapter training account passwords are changed once training ends.
 - The change has survived a nightly reset.
 - It is written down when this was done.
-- People from one chapter do not keep standing access to a system another chapter also uses.
+
+**Note:** People from one chapter do not keep standing access to a system another chapter also uses.
 
 **How to check:** The morning after, the old password is refused.
 

@@ -93,7 +93,8 @@ This stage moves the chapter from being set up to being supported, and proves th
 - The chapter knows where to send a request that would change the software for everyone.
 - The chapter knows who decides.
 - The chapter knows how often those decisions are made.
-- The central committee decides, every two weeks (ruled 09-18-26).
+
+**Note:** The central committee decides, every two weeks (ruled 09-18-26).
 
 **How to check:** The chapter can say, without looking it up, that a change is for everyone or not at all.
 
@@ -206,7 +207,8 @@ This stage moves the chapter from being set up to being supported, and proves th
 - The officer has demonstrated the same for the hosting account.
 - The officer has demonstrated the same for the Google Workspace account.
 - The officer has demonstrated the same for the domain registrar account.
-- The agreement says neither side can lock the other out; this is the step that makes that true rather than stated.
+
+**Note:** The agreement says neither side can lock the other out; this is the step that makes that true rather than stated.
 
 **How to check:** The officer has signed in to all four, and the date is recorded.
 

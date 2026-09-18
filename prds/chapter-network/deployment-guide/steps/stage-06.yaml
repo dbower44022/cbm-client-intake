@@ -139,7 +139,7 @@ steps:
       - "The chapter's colours are chosen."
       - "The colours are written into a small stylesheet."
       - "The stylesheet is published at a web address the software can load."
-      - "Colours are the only visual difference between chapters in the software, so a chapter that skips this looks exactly like Cleveland."
+    note: "Colours are the only visual difference between chapters in the software, so a chapter that skips this looks exactly like Cleveland."
     check:
       how: The file's address shows the stylesheet's text in a browser. Once the applications are deployed, the public forms show the chapter's colours.
       probe: The app fetches the file, checks it is served as a stylesheet, and checks it sets only --cbm- names on :root.

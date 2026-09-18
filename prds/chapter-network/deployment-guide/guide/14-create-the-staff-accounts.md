@@ -58,7 +58,8 @@ Each member of the chapter's staff needs their own account to use the applicatio
 
 - A list names every member of staff, with their email address and their team.
 - The list is approved by the chapter.
-- Mentors are not on this list. Their accounts are created from their mentor records, at the end of the records stage (step 15.9).
+
+**Note:** Mentors are not on this list. Their accounts are created from their mentor records, at the end of the records stage (step 15.9).
 
 **How to check:** Every person on the list has a chapter email address and at least one team.
 

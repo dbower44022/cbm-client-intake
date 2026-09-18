@@ -84,6 +84,8 @@ def render_stage(stage: dict) -> str:
             out.append("")
         else:
             out.append(f"**Done when:** {dw.strip()}\n")
+        if s.get("note"):
+            out.append(f"**Note:** {str(s['note']).strip()}\n")
         check = s.get("check") or {}
         if check.get("how"):
             out.append(f"**How to check:** {check['how'].strip()}\n")

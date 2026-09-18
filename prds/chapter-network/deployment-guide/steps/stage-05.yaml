@@ -250,7 +250,7 @@ steps:
       - "A Cloudflare API token limited to editing DNS in the chapter's zones exists."
       - "Both tokens are in the chapter's vault."
       - "Both tokens are entered in CRMBuilder as the chapter's provider credentials."
-      - "CRMBuilder builds the chapter's CRM with the chapter's own accounts, never its own (ruled 09-18-26)."
+    note: "CRMBuilder builds the chapter's CRM with the chapter's own accounts, never its own (ruled 09-18-26)."
     check:
       how: CRMBuilder's provider credentials screen shows both configured for the chapter's engagement, and lists the chapter's Cloudflare zones.
       probe: The app lists the chapter's hosting account through the DigitalOcean token and the chapter's zones through the Cloudflare token.

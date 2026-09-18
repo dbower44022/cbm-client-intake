@@ -200,7 +200,7 @@ steps:
       - "Two-step sign-in is on."
       - "The central support organization's named people are members."
       - "The sign-in and recovery codes are in the chapter's vault."
-      - "CRMBuilder supports no other DNS provider."
+    note: "CRMBuilder supports no other DNS provider."
     check:
       how: Cloudflare shows each domain name as active, and a name-server lookup on each domain name returns Cloudflare's two servers.
       probe: The app looks up each domain name's name servers and confirms they are Cloudflare's.

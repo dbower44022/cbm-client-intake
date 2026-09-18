@@ -121,7 +121,8 @@ The applications are what the chapter's staff, mentors and the public actually u
 - The session secret is loaded.
 - The stored-data encryption key is loaded.
 - None of them appears in a file anyone can read.
-- The database connection is not among them — the hosting platform supplies that to the application directly.
+
+**Note:** The database connection is not among them — the hosting platform supplies that to the application directly.
 
 **How to check:** The application starts, and no settings file with secrets is left on any computer.
 
@@ -288,7 +289,8 @@ The applications are what the chapter's staff, mentors and the public actually u
 **Done when all of these are true:**
 
 - No part of the deployment follows the main development branch.
-- This replaces what the earlier planning documents said. Those documents require automatic deployment to be switched off on a chapter's application, which was right when the release version travelled inside each deployment's settings. The version is now stamped into the software itself when a release is cut, so an application following the release branch with automatic deployment on updates itself correctly. The danger was never automatic deployment — it is automatic deployment from the development branch, which delivers untested software straight to a chapter's live system.
+
+**Note:** This replaces what the earlier planning documents said. Those documents require automatic deployment to be switched off on a chapter's application, which was right when the release version travelled inside each deployment's settings. The version is now stamped into the software itself when a release is cut, so an application following the release branch with automatic deployment on updates itself correctly. The danger was never automatic deployment — it is automatic deployment from the development branch, which delivers untested software straight to a chapter's live system.
 
 **How to check:** All three parts name the release branch.
 
