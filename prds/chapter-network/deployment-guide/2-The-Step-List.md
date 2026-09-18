@@ -1,10 +1,10 @@
 # New Chapter Deployment Guide — The Step List
 
 **Document:** The bare list of steps, with no methods yet
-**Version:** 0.10
+**Version:** 0.11
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 13:50
+**Last Updated:** 09-18-26 14:30
 
 ---
 
@@ -85,6 +85,11 @@ takes with it are written into the agreement.
 
 **2.6 Sign the agreement.**
 Done when: both sides have signed and each holds a copy.
+
+**2.7 Set up the chapter's password vault.**
+Done when: the chapter owns a Proton Pass business organization with at least two
+chapter owners, and at least two named people from the central support organization
+are members of its shared operations vault (ruled 09-18-26).
 
 ---
 
@@ -307,11 +312,9 @@ settings generator creates quietly on first run. Changing it later destroys the
 data it protects, so it is permanent from the moment it exists.
 
 **8.8 Put the chapter's secrets into the store.**
-Done when: all seven of the chapter's secrets are held in the central support
-organization's secrets store, at least two named people can reach each one, and
-none of them exists only in a file on one person's computer. The store itself is
-not built for each chapter — it has to exist before any chapter starts, and today
-it does not. See the work list document.
+Done when: all seven of the chapter's secrets are held in the chapter's Proton Pass
+Operations vault (step 2.7), at least two named people can reach each one, and none
+of them exists only in a file on one person's computer.
 
 **8.9 Review the completed form.**
 Done when: two people have read the whole form together in one sitting and both
@@ -753,6 +756,7 @@ Done when: a date is booked to review how the first months have gone.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.11 | 09-18-26 14:30 | Step 2.7 added: the chapter sets up its own Proton Pass business organization, owned by two chapter officers, with the central support organization's named people as members of a shared Operations vault (Doug, 09-18-26). Step 8.8 now names that vault as the secrets store. One hundred and fifty-three steps. |
 | 0.10 | 09-18-26 13:50 | Step 18.1: nothing is treated as urgent, and everyday requests are handled as they arrive rather than waiting for the committee (Doug, 09-18-26). |
 | 0.9 | 09-18-26 13:45 | Steps 18.1 and 18.2 updated from Doug's rulings on 09-18-26: requests go into the ClickUp system, the central committee reviews and schedules features and defects every two weeks, and there is no committed response time. |
 | 0.8 | 09-18-26 02:05 | Corrections found while writing the methods for the remaining stages. Step 4.11: mentors' mailboxes come from their records, not by hand. Step 5.5: the video meeting account also needs the app the software schedules webinars through. Step 6.3: tests a redirect, not an embedded page, since the events programme is reached by a redirect (ruled 09-11-26). Step 8.7: a chapter running webinars has an eighth secret. Stage 13: step 13.2 renamed for the redirect, step 13.3 applies only to an embedded page, step 13.5 renamed, and steps 13.1 and 13.4 marked blocked until the public mentor directory page is built. No steps added or removed. |

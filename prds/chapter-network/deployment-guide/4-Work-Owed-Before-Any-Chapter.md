@@ -2,10 +2,10 @@
 
 **Document:** Things the central support organization has to build, decide or write
 before the New Chapter Deployment Guide can actually be followed
-**Version:** 0.9
+**Version:** 0.10
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 14:00
+**Last Updated:** 09-18-26 14:30
 
 ---
 
@@ -36,7 +36,9 @@ the step methods and the chapter information form's gap list.
 1. **Item 15 — the CRM configuration has no versioned source and no applier.**
    Building the CRM (stage 9) copies configuration files off Cleveland's test
    system by hand and replays a capture taken on 08-31 through a trial script.
-2. **Item 1 — no secrets store.**
+2. **Item 1 — the secrets store.** Chosen 09-18-26: Proton Pass, chapter-owned.
+   Still to do: the central support organization's own vault, and moving the
+   existing secrets off one laptop.
 3. **Item 16 — no settings generator.** Deploying the applications (stage 11)
    runs a trial script that reads a filled-in form nothing else reads.
 4. **Item 2 — no published version standard**, including whether the two paid CRM
@@ -55,7 +57,18 @@ the step methods and the chapter information form's gap list.
 
 ## 1. A place to keep secrets
 
-**What is missing.** There is no shared store for the six passwords and keys each
+**Ruled 09-18-26 (Doug).** Each chapter owns a Proton Pass business organization,
+with at least two chapter owners. Named people from the central support
+organization are members of its shared Operations vault. Named sign-ins are used
+wherever a system allows; the vault holds break-glass sign-ins, recovery codes and
+machine secrets. Written into the guide as step 2.7.
+
+**What is still missing.** The central support organization's own vault, for its own
+secrets: the release tooling, Cleveland's deployments and the shared training
+system. And moving Cleveland's and the trial chapter's secrets off the one laptop
+into vaults.
+
+**What was missing before the ruling.** There is no shared store for the six passwords and keys each
 chapter's system needs. Today they live in files on one person's computer, and
 regenerating one of those files scrambles the passwords inside it into something
 unreadable.
@@ -378,6 +391,7 @@ own records (finding F7 of the August build).
 
 | Version | Date | Change |
 |---|---|---|
+| 0.10 | 09-18-26 14:30 | Item 1 ruled: a chapter-owned Proton Pass business organization with central support members (Doug, 09-18-26). What remains is the central support organization's own vault and moving existing secrets off one laptop. |
 | 0.9 | 09-18-26 14:00 | Implementation put first (Doug, 09-18-26): a ranked list of the technical holes added at the top, and five technical items added — a versioned CRM standard and applier, a settings generator, the time zone written into the code, five missing event email templates, and CRM field labels that say "CBM". |
 | 0.8 | 09-18-26 13:50 | Item 8: nothing is urgent, and everyday requests are handled as they arrive (Doug, 09-18-26). Only chapter access to the ClickUp system remains. |
 | 0.7 | 09-18-26 13:45 | Item 8 narrowed: the central committee reviews and schedules features and defects every two weeks, and there is no committed response time (Doug, 09-18-26). What remains is what counts as urgent, and chapter access to the ClickUp system. |

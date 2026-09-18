@@ -1,10 +1,10 @@
 # New Chapter Deployment Guide — How We Will Build It
 
 **Document:** The plan for writing the New Chapter Deployment Guide
-**Version:** 1.1
+**Version:** 1.2
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 02:05
+**Last Updated:** 09-18-26 14:30
 
 ---
 
@@ -80,6 +80,11 @@ the software for every chapter.
 
 **The chapter information form.** The list of roughly thirty-five values that
 differ from one chapter to the next.
+
+**The chapter's vault.** The chapter's own Proton Pass business organization, where
+every shared sign-in, recovery code and machine secret is kept. The chapter owns it;
+named people from the central support organization are members (ruled 09-18-26).
+Called "the secrets store" in some steps.
 
 ---
 
@@ -442,6 +447,7 @@ visible.
 
 | Version | Date | Change |
 |---|---|---|
+| 1.2 | 09-18-26 14:30 | The chapter's vault added to the names we use: a chapter-owned Proton Pass organization with central support members (Doug, 09-18-26). |
 | 1.1 | 09-18-26 02:05 | Build order step 5 done: methods written for the last ten stages — setting up the legal organization through publishing the policy documents (documents 8 and 9), putting the chapter's pages on its website and loading existing records (document 10), and the handover (document 11). Every stage now has written methods. Next is step 6, taking the first real chapter through the guide. |
 | 1.0 | 09-18-26 01:55 | Build order step 5 updated: methods written for training the chapter's staff (`7-Methods-Training.md`). Ten stages remain. |
 | 0.9 | 09-18-26 01:18 | Build order step 5 updated: methods written for setting up backups and monitoring (`6-Methods-Backups-Monitoring.md`). Eleven stages remain. |

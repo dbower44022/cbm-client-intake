@@ -3,10 +3,10 @@
 **Document:** The written-out steps for three stages — opening the hosting and video
 meeting accounts (stage 5), building the chapter's public website (stage 6), and
 writing and publishing the policy documents (stage 7)
-**Version:** 0.2
+**Version:** 0.3
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 02:05
+**Last Updated:** 09-18-26 14:30
 
 ---
 
@@ -249,7 +249,8 @@ from stages 3 and 4.
 the domain registrar, Google Workspace, the hosting account, the Zoom account if
 there is one. For each: the web address to sign in at, who holds the top-level
 sign-in, who else has access, where the recovery codes are, and the nonprofit
-discount or credit applied, if any. No passwords on the list.
+discount or credit applied, if any. No passwords on the list: those, and the
+recovery codes, are in the chapter's Proton Pass Operations vault (step 2.7).
 
 **How it will be done later:** the fleet console holds the list for every chapter.
 
@@ -718,5 +719,6 @@ documents.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.3 | 09-18-26 14:30 | Step 5.7 points to the chapter's Proton Pass vault for passwords and recovery codes (Doug, 09-18-26). |
 | 0.2 | 09-18-26 02:05 | Step 5.5's finishing test now includes the app the software schedules webinars through. Step 6.3 rewritten to test a redirect rather than an embedded page, matching the step list. |
 | 0.1 | 09-18-26 01:37 | First draft of the methods for three stages — opening the hosting and video meeting accounts, building the chapter's public website, and writing and publishing the policy documents. Written from the rulings, the chapter information form's source document, the first-chapter phase plan, Cleveland's live settings and the software's consent-link code. Nothing here has been done for a chapter. Six findings, two of them recommended corrections to the step list: step 6.3 tests embedding where the events programme now uses a redirect, and the Zoom connection needs three values the form does not ask for. |

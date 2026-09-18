@@ -3,10 +3,10 @@
 **Document:** The written-out steps for three stages — building the CRM system
 (stage 9), setting up the Google permissions (stage 10), and deploying the
 chapter's applications (stage 11)
-**Version:** 0.3
+**Version:** 0.4
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 01:18
+**Last Updated:** 09-18-26 14:30
 
 ---
 
@@ -774,7 +774,9 @@ file anyone can read.
 connection is not a secret anybody holds — the hosting platform supplies it to
 the application directly.
 
-**How it will be done later:** from the store.
+**How it will be done later:** the settings generator reads each secret from the
+chapter's Proton Pass Operations vault (step 2.7) with Proton Pass's command-line
+tool, and hands it to the hosting platform without writing it to a file.
 
 **How you know it worked:** the application starts.
 
@@ -1201,6 +1203,7 @@ clothes.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.4 | 09-18-26 14:30 | Step 11.3: secrets will be read from the chapter's Proton Pass vault (Doug, 09-18-26). |
 | 0.3 | 09-18-26 01:18 | Step 11.4 corrected: the application database must be a managed database, because a development database takes no backups. The trial chapter's database is a development database. Found while writing the methods for backups and monitoring. |
 | 0.2 | 09-15-26 00:19 | Stage 10, setting up the Google permissions, added — five steps written from the design after Doug ruled on 09-15-26 that the Google connection will not be rehearsed on the trial chapter. The five Google checks at the end of the deployment stage written the same way, replacing the placeholder. A closing note records what "not yet tried" costs here and what the first real chapter is expected to do about it. |
 | 0.1 | 09-14-26 18:13 | First draft of the methods for two stages — building the CRM system and deploying the applications. Written from the record of the 31 August build, the existing update procedure, and the scripts that did the work. Two corrections to the step list came out of writing it: there are seven secrets rather than six, and the rule about automatic deployment was out of date. |

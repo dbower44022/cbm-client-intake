@@ -4,10 +4,10 @@
 legal organization (stage 1), signing the agreement with the central support
 organization (stage 2), registering the chapter's domain names (stage 3), and
 setting up Google Workspace and the chapter's email (stage 4)
-**Version:** 0.3
+**Version:** 0.4
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 13:40
+**Last Updated:** 09-18-26 14:30
 
 ---
 
@@ -434,6 +434,48 @@ officer can reach it.
 **What goes wrong:** nothing known yet.
 
 **Status:** not yet tried.
+
+---
+
+### 2.7 Set up the chapter's password vault
+
+**Done when:** the chapter owns a Proton Pass business organization with at least two
+chapter owners, and at least two named people from the central support organization
+are members of its shared operations vault (ruled 09-18-26).
+
+**Who:** the chapter owns it; the central support organization sets it up alongside.
+
+**First:** the agreement is signed (step 2.6).
+
+**How to do it today:** the chapter buys a Proton Pass business plan in its own name
+and pays for it itself. Two chapter officers are made owners. Create two vaults:
+
+- **Operations**, shared with the central support organization's named people.
+  Every sign-in, recovery code and machine secret the system runs on goes here.
+- **Board**, kept to the chapter, for anything the central support organization has
+  no need to see.
+
+Every account created from stage 3 onward is recorded in the Operations vault the
+moment it is created, not gathered up afterwards.
+
+Two rules go with the vault. Use named sign-ins wherever a system allows them:
+Google Workspace, the hosting account, the domain registrar and the CRM all support
+individual accounts with two-step sign-in, and each person uses their own. The vault
+holds only what cannot belong to one person: the break-glass top-level sign-ins,
+two-step recovery codes and machine secrets.
+
+**How it will be done later:** the settings generator reads the machine secrets
+straight from the vault with Proton Pass's command-line tool, so no secret is ever
+written to a file.
+
+**How you know it worked:** a second chapter owner and a second central member each
+sign in and open the Operations vault without help.
+
+**What goes wrong:** a vault owned by the central support organization instead of the
+chapter. The chapter could then lose access to its own credentials in a dispute,
+which breaks the rule that neither side can lock the other out.
+
+**Status:** not yet tried. Proton Pass chosen on 09-18-26.
 
 ---
 
@@ -1037,6 +1079,7 @@ agreement.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.4 | 09-18-26 14:30 | Step 2.7 added: set up the chapter's own Proton Pass vault, with central support members (Doug, 09-18-26). |
 | 0.3 | 09-18-26 13:40 | Stage 2 updated: a draft of the standard agreement exists and is in review (Doug, 09-18-26). |
 | 0.2 | 09-18-26 02:05 | Step 4.11's finishing test updated to match the step list: mentors' mailboxes come from their records (step 15.9). |
 | 0.1 | 09-18-26 01:50 | First draft of the methods for the first four stages — setting up the legal organization, signing the agreement with the central support organization, registering the domain names, and setting up Google Workspace and the chapter's email. Thirty-three steps, all not yet tried. Written from the settled rulings, the governance design, the chapter information form and Cleveland's own Google Workspace lessons. Four findings: there is no agreement document, mentor mailboxes should not be created by hand, the second Google Workspace branch has no steps, and the receiving address for warnings may be a group. |

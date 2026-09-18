@@ -4,10 +4,10 @@
 information form (stage 8), creating the staff accounts (stage 14), entering the
 mentors and creating their accounts (the last three steps of stage 15), and checking
 everything works before going live (stage 17)
-**Version:** 0.3
+**Version:** 0.4
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 02:05
+**Last Updated:** 09-18-26 14:30
 
 ---
 
@@ -239,7 +239,7 @@ the name and password of the administrator account for creating logins, the
 database address, the session secret, the encryption key for stored data, and the
 Google key. Write beside each one who holds it.
 
-**How it will be done later:** the secrets store lists them itself.
+**How it will be done later:** the settings generator reads the list from the vault.
 
 **How you know it worked:** seven names, seven holders, no values.
 
@@ -255,17 +255,18 @@ the deployment stage.
 
 ### 8.8 Put the chapter's secrets into the store
 
-**Done when:** all seven of the chapter's secrets are held in the central support
-organization's secrets store, at least two named people can reach each one, and none
+**Done when:** all seven of the chapter's secrets are held in the chapter's Proton Pass
+Operations vault (step 2.7), at least two named people can reach each one, and none
 of them exists only in a file on one person's computer.
 
 **Who:** central support organization.
 
-**First:** step 8.7, and the secrets store existing, which it does not.
+**First:** step 8.7, and the chapter's vault (step 2.7).
 
-**How to do it today:** it cannot be done. There is no secrets store. The trial
-chapter's secrets sit in files on one laptop. This is item 1 in the work list
-document, and this step stays blocked until it is built.
+**How to do it today:** check that each secret named in step 8.7 has an entry in the
+Operations vault. Most arrive as the accounts are created in stages 3 to 5. The
+machine secrets are created later, in stages 9 to 11, and go straight into the vault
+as each is made. This step is the check that nothing was left out.
 
 **How it will be done later:** the secrets are written into the store as each one is
 created, rather than gathered here afterwards.
@@ -276,7 +277,8 @@ created, rather than gathered here afterwards.
 Regenerating the deployment settings from the hosting provider scrambles the
 passwords inside them. Cleveland has lost working passwords that way.
 
-**Status:** not yet tried. Blocked.
+**Status:** not yet tried. The vault is chosen (Proton Pass, 09-18-26). The trial
+chapter's secrets still sit in files on one laptop.
 
 ---
 
@@ -845,6 +847,7 @@ trial chapter's version (09-18-26).
 
 | Version | Date | Change |
 |---|---|---|
+| 0.4 | 09-18-26 14:30 | Step 8.8 now names the chapter's Proton Pass Operations vault as the secrets store, and is no longer blocked (Doug, 09-18-26). |
 | 0.3 | 09-18-26 02:05 | Step 8.7's finishing test now counts the video meeting app's secret for a chapter that runs webinars, matching the step list. |
 | 0.2 | 09-18-26 00:55 | Mentor accounts moved out of the staff accounts stage and written as the last three steps of the records stage (15.8 to 15.10), after Doug ruled on 09-18-26. Stage 14 is now staff only, and step 14.5 became step 14.4. The advice for partner and funder managers now says how to give them a mentor profile without creating a duplicate account. The blank form in `chapter-values.md` was brought up to date the same day. |
 | 0.1 | 09-18-26 00:40 | First draft of the methods for three stages — filling in the chapter information form, creating the staff and mentor accounts, and checking everything works before going live. Written from the record of the 31 August build, the trial chapter's filled-in form, the script that created its test users, and the table of which pages each test user could open. Two findings: mentor accounts cannot come before mentor records, and the blank form is behind the trial chapter's form. One gap in the August record noted: the settings page answered "not found" to every test user, and the record cannot say why. |

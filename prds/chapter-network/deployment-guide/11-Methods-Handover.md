@@ -2,10 +2,10 @@
 
 **Document:** The written-out steps for one stage — handing over and starting normal
 support (stage 18)
-**Version:** 0.4
+**Version:** 0.5
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 13:50
+**Last Updated:** 09-18-26 14:30
 
 ---
 
@@ -177,7 +177,8 @@ registrar account, the Google Workspace account, the hosting account, the video
 meeting account if there is one, the CRM's administrator accounts, and the
 documentation site if the chapter has its own. For each account, write who holds the
 top-level sign-in and who else has access. Never write a password on the list.
-Passwords live in the secrets store (step 8.8).
+Passwords and recovery codes live in the chapter's Proton Pass Operations vault
+(step 2.7).
 
 **How it will be done later:** the fleet console produces the list from what it
 created.
@@ -314,6 +315,7 @@ forgotten, because the CRM looks like the whole system and is not.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.5 | 09-18-26 14:30 | Step 18.4 points to the chapter's Proton Pass vault (Doug, 09-18-26). |
 | 0.4 | 09-18-26 13:50 | Step 18.1 finished: nothing is treated as urgent, and everyday requests are handled as they arrive (Doug, 09-18-26). Stage status updated: two steps, not four, now wait on something unbuilt. |
 | 0.3 | 09-18-26 13:45 | Steps 18.1 and 18.2 updated: the central committee reviews and schedules features and defects every two weeks, and there is no committed response time (Doug, 09-18-26). Step 18.1 now warns that everyday requests must not wait for the committee. |
 | 0.2 | 09-18-26 13:40 | Steps 18.1 and 18.2 rewritten around the ClickUp system that takes new feature requests, defect reports and support requests, managed by the entire support team (Doug, 09-18-26). Defect reports added as a third kind of request. Still open: the response time, what counts as urgent, and who decides feature requests. |
