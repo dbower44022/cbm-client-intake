@@ -1,10 +1,10 @@
 # New Chapter Deployment Guide — How We Will Build It
 
 **Document:** The plan for writing the New Chapter Deployment Guide
-**Version:** 0.8
+**Version:** 0.9
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 00:50
+**Last Updated:** 09-18-26 01:18
 
 ---
 
@@ -421,8 +421,10 @@ known yet.
 5. Write the methods for the remaining stages. The Google permissions stage is
    done, written from the design. Filling in the chapter information form,
    creating the staff accounts, and checking everything works before
-   going live are done, written from the August build (09-18-26). Twelve stages
-   remain, all written from the design and labelled as never performed.
+   going live are done, written from the August build (09-18-26). Setting up
+   backups and monitoring is done, written from Cleveland's live hosting account
+   (09-18-26). Eleven stages remain, all written from the design and labelled as
+   never performed.
 6. Take the first real chapter through the guide. Someone from the central support
    organization is present for the Google steps, and corrects them the same day.
 
@@ -437,6 +439,7 @@ visible.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.9 | 09-18-26 01:18 | Build order step 5 updated: methods written for setting up backups and monitoring (`6-Methods-Backups-Monitoring.md`). Eleven stages remain. |
 | 0.8 | 09-18-26 00:50 | Stages 14 and 15 renamed and their boundary moved: mentor accounts are now created at the end of the records stage, from each mentor's record (Doug, 09-18-26). |
 | 0.7 | 09-18-26 00:45 | Build order step 5 updated: methods written for three more stages, all tested in the August build (`5-Methods-Form-Accounts-Checks.md`). Twelve stages remain. |
 | 0.6 | 09-15-26 00:22 | The trial chapter stays up, with testing the setup steps as its stated reason (Doug, 09-15-26), reviewed at the end of October. Section 10 also corrected: five stages were covered in whole or in part by the August build, not two. Filling in the chapter information form, creating the staff and mentor accounts, and checking everything works before going live all have real evidence behind them and were wrongly counted as untested. |

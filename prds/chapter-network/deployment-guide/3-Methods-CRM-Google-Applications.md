@@ -3,10 +3,10 @@
 **Document:** The written-out steps for three stages — building the CRM system
 (stage 9), setting up the Google permissions (stage 10), and deploying the
 chapter's applications (stage 11)
-**Version:** 0.2
+**Version:** 0.3
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-15-26 00:19
+**Last Updated:** 09-18-26 01:18
 
 ---
 
@@ -796,18 +796,27 @@ application can reach it.
 **First:** step 5.1.
 
 **How to do it today:** it is created as part of the application, named after the
-chapter's short label.
+chapter's short label. It must be a managed database, not a development database,
+because a development database takes no backups at all. The settings generator used
+in August asks for a development database, so convert it in the hosting account
+straight after the application is created (see step 12.2).
 
-**How it will be done later:** unchanged.
+**How it will be done later:** the settings generator asks for a managed database
+from the start.
 
-**How you know it worked:** the application connects.
+**How you know it worked:** the application connects, and the hosting account shows
+the database as a managed database.
 
-**What goes wrong:** the hosting provider adds an instruction to the connection
+**What goes wrong:** leaving it as a development database. Nothing reports an error,
+and there are no backups. The trial chapter's database is in this state.
+
+Separately, the hosting provider adds an instruction to the connection
 details that the application's database library rejects. The software already
 strips it out, so this is handled — but it is the kind of thing that looks like a
 broken database.
 
-**Status:** done for real.
+**Status:** done for real, as a development database. The managed database is not
+yet tried on a chapter.
 
 ---
 
@@ -1192,5 +1201,6 @@ clothes.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.3 | 09-18-26 01:18 | Step 11.4 corrected: the application database must be a managed database, because a development database takes no backups. The trial chapter's database is a development database. Found while writing the methods for backups and monitoring. |
 | 0.2 | 09-15-26 00:19 | Stage 10, setting up the Google permissions, added — five steps written from the design after Doug ruled on 09-15-26 that the Google connection will not be rehearsed on the trial chapter. The five Google checks at the end of the deployment stage written the same way, replacing the placeholder. A closing note records what "not yet tried" costs here and what the first real chapter is expected to do about it. |
 | 0.1 | 09-14-26 18:13 | First draft of the methods for two stages — building the CRM system and deploying the applications. Written from the record of the 31 August build, the existing update procedure, and the scripts that did the work. Two corrections to the step list came out of writing it: there are seven secrets rather than six, and the rule about automatic deployment was out of date. |
