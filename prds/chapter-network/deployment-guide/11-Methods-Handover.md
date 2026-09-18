@@ -16,10 +16,11 @@ proves the chapter can reach everything it owns without help.
 
 It is written from the network's settled rulings (`DECISIONS.md`), the governance
 and leaving design (`governance-and-exit.md`), and the release train
-(`phase-2-release-train.md`). Most of what this stage hands over does not exist yet:
-there is no support contact, no change-request route, no emergency access procedure
-and no leaving kit. Each step says so plainly rather than describing a process that
-is not there.
+(`phase-2-release-train.md`). Some of what this stage hands over does not exist yet:
+no promised response time, no one named to decide feature requests, no emergency
+access procedure and no leaving kit. Requests themselves have a home: the ClickUp
+system the support team manages (09-18-26). Each step says plainly what is missing
+rather than describing a process that is not there.
 
 Each step carries the same eight headings as the other methods documents.
 
