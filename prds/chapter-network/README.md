@@ -56,6 +56,7 @@ are in **[DECISIONS.md](DECISIONS.md)**.
 | [`interface-contract.md`](interface-contract.md) | C1–C10 and both version stamps: what any CRM-config applier must satisfy | Rarely. It is meant to be stable, and it has a reader outside this repo |
 | `phase-0…6-*.md` | One file per phase, each closable on its own | Work on that phase |
 | [`governance-and-exit.md`](governance-and-exit.md) | Change governance, non-payment, the exit kit | The organizational design changes |
+| [`deployment-guide/`](deployment-guide/) | **Drafts of the New Chapter Deployment Guide** — the plan for writing it, the step list, the written-out methods for stages 9–11, and the work owed before any chapter can follow it | The guide is drafted further |
 
 ## Working this project separately
 
