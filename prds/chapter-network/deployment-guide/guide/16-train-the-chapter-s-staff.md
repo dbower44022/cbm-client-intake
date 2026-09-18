@@ -12,10 +12,21 @@ Staff learn the system on invented records before they touch real ones. Training
 
 **Who:** The chapter's trainer runs the sessions; the central support organization sets up the training accounts and hands over the guides.  
 **Time:** One session per role. The mentor session is the longest, at 30 to 40 minutes.  
-**Before you start:** The staff accounts (stage 14); The chapter training accounts on the shared training system (work list item 6 — they do not exist yet)  
 **When this stage is done:** The final checks before going live (stage 17), with staff who know what they are checking.
 
-**Steps in this stage:** 16.1 Get the chapter's staff onto the shared practice system, 16.2 Explain how the practice system behaves, 16.3 Train each role, 16.4 Hand over the written guides, 16.5 Name the chapter's own first point of contact, 16.6 Change the training account passwords
+**Before you start:**
+
+- The staff accounts (stage 14)
+- The chapter training accounts on the shared training system (work list item 6 — they do not exist yet)
+
+**Steps in this stage:**
+
+- 16.1 Get the chapter's staff onto the shared practice system
+- 16.2 Explain how the practice system behaves
+- 16.3 Train each role
+- 16.4 Hand over the written guides
+- 16.5 Name the chapter's own first point of contact
+- 16.6 Change the training account passwords
 
 ---
 
@@ -23,8 +34,11 @@ Staff learn the system on invented records before they touch real ones. Training
 
 **Why:** Trainees need working sign-ins, and fresh passwords stop the previous chapter keeping access.
 
-**Who:** The central support organization  
-**Finish first:** step 14.2
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 14.2 Create the staff accounts
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -36,7 +50,13 @@ Staff learn the system on invented records before they touch real ones. Training
 4. The next morning, have one person from the chapter sign in with a new password.
    *You should see:* The training system's pages, with "(Test)" after the version number in the footer.
 
-**Done when:** The chapter's trainer holds the sign-in details for the chapter training accounts, the passwords were set fresh for this chapter, and one person from the chapter has signed in once. Ruled 09-14-26: chapters train on the existing test system rather than on their own live system or on a practice system built for them. Ruled 09-18-26: they sign in with shared training accounts set up specifically for chapter training, never with accounts of their own.
+**Done when all of these are true:**
+
+- The chapter's trainer holds the sign-in details for the chapter training accounts.
+- The passwords were set fresh for this chapter.
+- One person from the chapter has signed in once.
+- Ruled 09-14-26: chapters train on the existing test system rather than on their own live system or on a practice system built for them.
+- Ruled 09-18-26: they sign in with shared training accounts set up specifically for chapter training, never with accounts of their own.
 
 **How to check:** After one nightly reset, someone from the chapter signs in with the new password.
 
@@ -50,8 +70,11 @@ Staff learn the system on invented records before they touch real ones. Training
 
 **Why:** Trainees who do not know the system resets, or that it shows Cleveland's name, lose work and lose trust in what they see.
 
-**Who:** The chapter and the central support organization — the chapter's trainer, or the central support organization's  
-**Finish first:** step 16.1
+**Who:** The chapter and the central support organization — the chapter's trainer, or the central support organization's
+
+**Finish first:**
+
+- step 16.1 Get the chapter's staff onto the shared practice system
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -76,8 +99,11 @@ Staff learn the system on invented records before they touch real ones. Training
 
 **Why:** Each person should have done their own main task once before doing it for real.
 
-**Who:** The chapter — the trainer, with the central support organization available  
-**Finish first:** step 16.2
+**Who:** The chapter — the trainer, with the central support organization available
+
+**Finish first:**
+
+- step 16.2 Explain how the practice system behaves
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -101,15 +127,24 @@ Staff learn the system on invented records before they touch real ones. Training
 
 **Why:** After training, people need something to look things up in.
 
-**Who:** The central support organization  
-**Finish first:** step 6.7
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 6.7 Decide where the chapter's help documentation lives
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
 **Do this:**
 
 1. Give the chapter the link to the documentation site.
-2. Name the guide for each role. Mentor Administration, the mentor directory, Submission Admin, email, events and analytics each have one.
+2. Name the guide for each role. Each of these has one:
+   - Mentor Administration.
+   - The mentor directory.
+   - Submission Admin.
+   - Email.
+   - Events.
+   - Analytics.
 3. Tell the chapter the guides say Cleveland throughout, because they were written for Cleveland's staff.
 
 **Done when:** The chapter holds the written guides for each role and knows where they live.
@@ -126,8 +161,11 @@ Staff learn the system on invented records before they touch real ones. Training
 
 **Why:** Colleagues need one person to ask first, before raising a request with the central support organization.
 
-**Who:** The chapter  
-**Finish first:** step 16.3
+**Who:** The chapter
+
+**Finish first:**
+
+- step 16.3 Train each role
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -150,8 +188,11 @@ Staff learn the system on invented records before they touch real ones. Training
 
 **Why:** People from one chapter must not keep standing access to a system another chapter also uses.
 
-**Who:** The central support organization  
-**Finish first:** step 16.3
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 16.3 Train each role
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -163,7 +204,12 @@ Staff learn the system on invented records before they touch real ones. Training
    *You should see:* The old password refused.
 4. Record the date on the chapter's entry in the list of watched systems.
 
-**Done when:** The chapter training account passwords are changed once training ends, the change has survived a nightly reset, and it is written down when this was done. People from one chapter do not keep standing access to a system another chapter also uses.
+**Done when all of these are true:**
+
+- The chapter training account passwords are changed once training ends.
+- The change has survived a nightly reset.
+- It is written down when this was done.
+- People from one chapter do not keep standing access to a system another chapter also uses.
 
 **How to check:** The morning after, the old password is refused.
 

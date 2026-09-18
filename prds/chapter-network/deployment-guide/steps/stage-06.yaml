@@ -4,11 +4,11 @@ version: "0.1"
 updated: "09-18-26 17:20"
 why: >-
   The public website is the chapter's own marketing site. The software does not
-  build it, but it needs four things from it - addresses for the policy documents,
-  a place to host the chapter's colour file, a link to the public application
-  forms, and a way to send visitors to the events page the applications serve.
-  This stage makes sure the site can do all four, and that someone at the
-  chapter can change it.
+  build it, but it needs four things from it. The policy documents need addresses
+  on it. The chapter's colour file needs a place to live on it. The public
+  application forms need a link from it. And visitors need to be sent from it to
+  the events page the applications serve. This stage makes sure the site can do
+  all four, and that someone at the chapter can change it.
 who: >-
   The chapter. The central support organization writes the colour file and helps
   with the help documentation decision.
@@ -135,11 +135,11 @@ steps:
       - do: Open the file's address in a browser.
         see: The stylesheet's text, not a download and not an error.
       - do: Write the address on the chapter information form. It becomes the setting CHAPTER_TOKENS_URL.
-    done_when: >-
-      The chapter's colours are chosen, written into a small stylesheet, and
-      published at a web address the software can load. Colours are the only visual
-      difference between chapters in the software, so a chapter that skips this
-      looks exactly like Cleveland.
+    done_when:
+      - "The chapter's colours are chosen."
+      - "The colours are written into a small stylesheet."
+      - "The stylesheet is published at a web address the software can load."
+      - "Colours are the only visual difference between chapters in the software, so a chapter that skips this looks exactly like Cleveland."
     check:
       how: The file's address shows the stylesheet's text in a browser. Once the applications are deployed, the public forms show the chapter's colours.
       probe: The app fetches the file, checks it is served as a stylesheet, and checks it sets only --cbm- names on :root.

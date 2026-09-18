@@ -156,7 +156,14 @@ steps:
     mode: automated
     actions:
       - do: Open the list of watched systems, kept in the chapter-network folder of the software's code repository until the fleet console exists.
-      - do: Add the chapter, with its CRM address, its application address, the hosting account it lives in, both backup schedules, who reads the alerts, and the date of the last restore test.
+      - do: "Add the chapter, with:"
+        items:
+          - Its CRM address.
+          - Its application address.
+          - The hosting account it lives in.
+          - Both backup schedules.
+          - Who reads the alerts.
+          - The date of the last restore test.
         see: Every column filled in for the chapter.
     done_when: >-
       The central support organization's list of systems includes this chapter's

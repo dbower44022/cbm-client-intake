@@ -12,10 +12,21 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 
 **Who:** The chapter's founding group and board, with their own legal and accounting advice.  
 **Time:** Weeks to months. Incorporation and the employer identification number are quick. Nonprofit tax status typically takes weeks to a few months on the short federal form, and several months or longer on the full form.  
-**Before you start:** A founding group that has agreed to form the chapter  
 **When this stage is done:** The agreement with the central support organization (stage 2) can be signed. The nonprofit evidence from this stage is needed later for the Google Workspace discount (step 4.13) and the hosting credits (step 5.3).
 
-**Steps in this stage:** 1.1 Choose the chapter's name, 1.2 Incorporate the chapter, 1.3 Get a federal employer identification number, 1.4 Appoint a board and adopt bylaws, 1.5 Obtain nonprofit tax status, or a sponsorship arrangement, 1.6 Open a bank account, 1.7 Name the person who acts for the chapter during setup
+**Before you start:**
+
+- A founding group that has agreed to form the chapter
+
+**Steps in this stage:**
+
+- 1.1 Choose the chapter's name
+- 1.2 Incorporate the chapter
+- 1.3 Get a federal employer identification number
+- 1.4 Appoint a board and adopt bylaws
+- 1.5 Obtain nonprofit tax status, or a sponsorship arrangement
+- 1.6 Open a bank account
+- 1.7 Name the person who acts for the chapter during setup
 
 ---
 
@@ -23,8 +34,9 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 
 **Why:** The name appears on every page the software shows and in the legal filing, so it is chosen once and not revisited.
 
-**Who:** The chapter  
-**Finish first:** nothing
+**Who:** The chapter
+
+**Finish first:** nothing.
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -39,7 +51,11 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
    *You should see:* The domain names shown as available.
 5. Save the results of all three searches, with the date.
 
-**Done when:** The founding group has agreed one name, a search of state business registrations and trademarks shows no conflict, and the matching domain names are still available to buy.
+**Done when all of these are true:**
+
+- The founding group has agreed one name.
+- A search of state business registrations and trademarks shows no conflict.
+- The matching domain names are still available to buy.
 
 **How to check:** All three searches came back clear, and the results are saved with the date.
 
@@ -53,8 +69,11 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 
 **Why:** A corporation can own accounts and sign agreements in its own name, so nothing depends on one founder.
 
-**Who:** The chapter with its own legal advice  
-**Finish first:** step 1.1
+**Who:** The chapter with its own legal advice
+
+**Finish first:**
+
+- step 1.1 Choose the chapter's name
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -80,8 +99,11 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 
 **Why:** The bank account and the nonprofit application both need this number.
 
-**Who:** The chapter  
-**Finish first:** step 1.2
+**Who:** The chapter
+
+**Finish first:**
+
+- step 1.2 Incorporate the chapter
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -106,8 +128,11 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 
 **Why:** The bank and the central support organization will both ask which officers may sign for the chapter.
 
-**Who:** The chapter with its own legal advice  
-**Finish first:** step 1.2
+**Who:** The chapter with its own legal advice
+
+**Finish first:**
+
+- step 1.2 Incorporate the chapter
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -118,7 +143,11 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 3. Minute which officers may sign contracts and open accounts.
    *You should see:* Signed minutes that name the signers.
 
-**Done when:** Bylaws are adopted, directors are named, and the minutes record which officers may sign contracts.
+**Done when all of these are true:**
+
+- Bylaws are adopted.
+- Directors are named.
+- The minutes record which officers may sign contracts.
 
 **How to check:** Signed minutes of the first meeting are in the chapter's files, naming who may sign.
 
@@ -132,8 +161,12 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 
 **Why:** The nonprofit discounts for Google Workspace and hosting are claimed against this status, and it is the longest wait in the guide.
 
-**Who:** The chapter with its own legal or accounting advice  
-**Finish first:** step 1.3, step 1.4
+**Who:** The chapter with its own legal or accounting advice
+
+**Finish first:**
+
+- step 1.3 Get a federal employer identification number
+- step 1.4 Appoint a board and adopt bylaws
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -159,8 +192,12 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 
 **Why:** Every account the chapter owns is paid from here, and more than one officer must be able to pay.
 
-**Who:** The chapter  
-**Finish first:** step 1.3, step 1.4
+**Who:** The chapter
+
+**Finish first:**
+
+- step 1.3 Get a federal employer identification number
+- step 1.4 Appoint a board and adopt bylaws
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -185,8 +222,11 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 
 **Why:** Setup needs one person with authority to open accounts and grant access, so work does not wait on a board meeting each time.
 
-**Who:** chapter's board  
-**Finish first:** step 1.4
+**Who:** chapter's board
+
+**Finish first:**
+
+- step 1.4 Appoint a board and adopt bylaws
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 

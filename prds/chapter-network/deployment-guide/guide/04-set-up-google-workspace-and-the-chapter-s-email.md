@@ -12,10 +12,30 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Who:** The chapter's setup contact and its Google Workspace administrator, with the central support organization.  
 **Time:** Most of a day, spread over two or three days while DNS records are seen and the nonprofit application is answered.  
-**Before you start:** The agreement signed (stage 2); The domain names registered and in the chapter's Cloudflare account (stage 3); The nonprofit determination letter, for the discount (step 1.5)  
 **When this stage is done:** The hosting and video meeting accounts can be opened with chapter addresses (stage 5). The Google permissions the software needs (stage 10) depend on the accounts made here.
 
-**Steps in this stage:** 4.1 Choose the Google Workspace branch, 4.2 Create the Google Workspace account, 4.3 Verify the domain, 4.4 Switch mail delivery to Google, 4.5 Create the chapter's own administrator account, 4.6 Create the central support organization's administrator account, 4.7 Create the shared operations mailbox, 4.8 Create the alert sending mailbox, 4.9 Decide who receives the system's warning messages, 4.10 Create the members group, 4.11 Create the staff mailboxes, 4.12 Require two-step sign-in, 4.13 Apply for the nonprofit discount, 4.14 Move control of the registrar account to a chapter mailbox
+**Before you start:**
+
+- The agreement signed (stage 2)
+- The domain names registered and in the chapter's Cloudflare account (stage 3)
+- The nonprofit determination letter, for the discount (step 1.5)
+
+**Steps in this stage:**
+
+- 4.1 Choose the Google Workspace branch
+- 4.2 Create the Google Workspace account
+- 4.3 Verify the domain
+- 4.4 Switch mail delivery to Google
+- 4.5 Create the chapter's own administrator account
+- 4.6 Create the central support organization's administrator account
+- 4.7 Create the shared operations mailbox
+- 4.8 Create the alert sending mailbox
+- 4.9 Decide who receives the system's warning messages
+- 4.10 Create the members group
+- 4.11 Create the staff mailboxes
+- 4.12 Require two-step sign-in
+- 4.13 Apply for the nonprofit discount
+- 4.14 Move control of the registrar account to a chapter mailbox
 
 ---
 
@@ -23,8 +43,11 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Why:** Whether the chapter holds its own Google Workspace decides how hard it would be to leave later.
 
-**Who:** chapter's board, advised by the central support organization  
-**Finish first:** step 2.6
+**Who:** chapter's board, advised by the central support organization
+
+**Finish first:**
+
+- step 2.6 Sign the agreement
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -34,7 +57,11 @@ Google Workspace is Google's paid service for an organization's email, calendars
 2. Give the board in writing what the second branch means on leaving. The chapter's mail, documents and calendars would sit in an account the central support organization controls. They can be moved out, but it is real work.
 3. The board chooses and minutes the choice. It is proposed, not ruled, that every chapter that can should take the first branch. The rest of this stage is written for the first branch only.
 
-**Done when:** The chapter has chosen either to hold its own Google Workspace or to have one provided by the central support organization, the choice is recorded, and the board has seen in writing what the provided option means if the chapter later leaves.
+**Done when all of these are true:**
+
+- The chapter has chosen either to hold its own Google Workspace or to have one provided by the central support organization.
+- The choice is recorded.
+- The board has seen in writing what the provided option means if the chapter later leaves.
 
 **How to check:** The board minutes record the choice and the written explanation.
 
@@ -48,8 +75,12 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Why:** The chapter's mailboxes, calendars and shared documents all live in this account.
 
-**Who:** The chapter — the setup contact  
-**Finish first:** step 4.1, step 3.4
+**Who:** The chapter — the setup contact
+
+**Finish first:**
+
+- step 4.1 Choose the Google Workspace branch
+- step 3.4 Register and pay for the domain names
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -76,8 +107,12 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Why:** Google will not deliver mail for a domain until the chapter proves it owns it.
 
-**Who:** The chapter and the central support organization — the chapter's setup contact, with the central support organization's help  
-**Finish first:** step 4.2, step 3.7
+**Who:** The chapter and the central support organization — the chapter's setup contact, with the central support organization's help
+
+**Finish first:**
+
+- step 4.2 Create the Google Workspace account
+- step 3.7 Move the domain names' DNS to the chapter's Cloudflare account
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -102,8 +137,11 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Why:** Mail sent to the chapter's addresses must reach Google, and mail the chapter sends must not land in spam folders.
 
-**Who:** The chapter and the central support organization — the chapter's setup contact, with the central support organization's help  
-**Finish first:** step 4.3
+**Who:** The chapter and the central support organization — the chapter's setup contact, with the central support organization's help
+
+**Finish first:**
+
+- step 4.3 Verify the domain
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -129,8 +167,11 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Why:** The chapter must always be able to run its own Google Workspace, whatever happens to the central support organization.
 
-**Who:** The chapter  
-**Finish first:** step 4.2
+**Who:** The chapter
+
+**Finish first:**
+
+- step 4.2 Create the Google Workspace account
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -155,8 +196,12 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Why:** The central support organization needs its own named administrator account to enter the software's permission grant in step 10.3.
 
-**Who:** The chapter and the central support organization — the chapter's administrator creates it; the central support organization uses it  
-**Finish first:** step 4.5, step 2.4
+**Who:** The chapter and the central support organization — the chapter's administrator creates it; the central support organization uses it
+
+**Finish first:**
+
+- step 4.5 Create the chapter's own administrator account
+- step 2.4 Agree the access the central support organization will hold
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -182,8 +227,11 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Why:** The software reads the chapter's public email and sends as this address, so every staff member sees the same conversation.
 
-**Who:** chapter's administrator  
-**Finish first:** step 4.5
+**Who:** chapter's administrator
+
+**Finish first:**
+
+- step 4.5 Create the chapter's own administrator account
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -208,8 +256,11 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Why:** The software sends its warning messages from this address, and Google refuses to send as a group or an alias.
 
-**Who:** chapter's administrator  
-**Finish first:** step 4.5
+**Who:** chapter's administrator
+
+**Finish first:**
+
+- step 4.5 Create the chapter's own administrator account
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -233,8 +284,11 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Why:** A warning nobody reads changes nothing, so the receiving address must reach named people.
 
-**Who:** The chapter and the central support organization  
-**Finish first:** step 4.5
+**Who:** The chapter and the central support organization
+
+**Finish first:**
+
+- step 4.5 Create the chapter's own administrator account
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -258,8 +312,11 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Why:** When a new mentor's mailbox is created, the software adds the mentor to this group, so the chapter can write to all its members at once.
 
-**Who:** chapter's administrator  
-**Finish first:** step 4.5
+**Who:** chapter's administrator
+
+**Finish first:**
+
+- step 4.5 Create the chapter's own administrator account
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -284,8 +341,11 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Why:** Staff sign in and are addressed at their chapter address only, never a personal one.
 
-**Who:** chapter's administrator  
-**Finish first:** step 4.5
+**Who:** chapter's administrator
+
+**Finish first:**
+
+- step 4.5 Create the chapter's own administrator account
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -309,8 +369,17 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Why:** The chapter's mailboxes hold client and mentor records, and a stolen password must not be enough to read them.
 
-**Who:** chapter's administrator  
-**Finish first:** step 4.5, step 4.6, step 4.7, step 4.8, step 4.9, step 4.10, step 4.11
+**Who:** chapter's administrator
+
+**Finish first:**
+
+- step 4.5 Create the chapter's own administrator account
+- step 4.6 Create the central support organization's administrator account
+- step 4.7 Create the shared operations mailbox
+- step 4.8 Create the alert sending mailbox
+- step 4.9 Decide who receives the system's warning messages
+- step 4.10 Create the members group
+- step 4.11 Create the staff mailboxes
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -334,8 +403,12 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Why:** The discount is claimed in the chapter's own name and lowers the Google Workspace bill the chapter pays every month.
 
-**Who:** The chapter  
-**Finish first:** step 1.5, step 4.2
+**Who:** The chapter
+
+**Finish first:**
+
+- step 1.5 Obtain nonprofit tax status, or a sponsorship arrangement
+- step 4.2 Create the Google Workspace account
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -359,8 +432,11 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Why:** The domain names must not stay tied to one volunteer's personal email.
 
-**Who:** The chapter — the setup contact  
-**Finish first:** step 4.4
+**Who:** The chapter — the setup contact
+
+**Finish first:**
+
+- step 4.4 Switch mail delivery to Google
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -372,7 +448,11 @@ Google Workspace is Google's paid service for an organization's email, calendars
 4. Ask the registrar for a password reset.
    *You should see:* The password reset message arrives in the chapter mailbox.
 
-**Done when:** The registrar account's contact address is a chapter mailbox, the founder's personal address has been removed, and a password reset test lands in the chapter mailbox.
+**Done when all of these are true:**
+
+- The registrar account's contact address is a chapter mailbox.
+- The founder's personal address has been removed.
+- A password reset test lands in the chapter mailbox.
 
 **How to check:** The password reset message arrives in the chapter mailbox.
 

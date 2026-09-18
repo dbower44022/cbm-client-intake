@@ -12,10 +12,20 @@ The applications read and send the chapter's email, keep calendars in step, file
 
 **Who:** The central support organization, inside the chapter's Google account, with the chapter's own Google administrator at the keyboard for the permission grant.  
 **Time:** Not known yet. This stage has never been done on a new chapter. Book an hour with the chapter's Google administrator for step 10.3.  
-**Before you start:** The chapter's Google Workspace, with its shared operations mailbox (stage 4); The chapter's vault, for the key this stage creates (step 2.7)  
 **When this stage is done:** The applications can be deployed with their Google key (stage 11), and the Google checks at the end of stage 11 can run.
 
-**Steps in this stage:** 10.1 Create the machine account, 10.2 Download and store its key, 10.3 Enter the permission grant, 10.4 Name the mailbox the software acts as, 10.5 Create the shared drive and add the machine account
+**Before you start:**
+
+- The chapter's Google Workspace, with its shared operations mailbox (stage 4)
+- The chapter's vault, for the key this stage creates (step 2.7)
+
+**Steps in this stage:**
+
+- 10.1 Create the machine account
+- 10.2 Download and store its key
+- 10.3 Enter the permission grant
+- 10.4 Name the mailbox the software acts as
+- 10.5 Create the shared drive and add the machine account
 
 ---
 
@@ -23,8 +33,11 @@ The applications read and send the chapter's email, keep calendars in step, file
 
 **Why:** The applications act on Google through an account made for a program, not a person, so no one person's sign-in is involved.
 
-**Who:** The central support organization inside the chapter's Google account  
-**Finish first:** step 4.5
+**Who:** The central support organization inside the chapter's Google account
+
+**Finish first:**
+
+- step 4.5 Create the chapter's own administrator account
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -46,8 +59,12 @@ The applications read and send the chapter's email, keep calendars in step, file
 
 **Why:** The key file is the whole of the chapter's Google access in one file, so it goes straight into the vault and nowhere else.
 
-**Who:** The central support organization  
-**Finish first:** step 10.1, step 2.7
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 10.1 Create the machine account
+- step 2.7 Set up the chapter's password vault
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -73,8 +90,11 @@ The applications read and send the chapter's email, keep calendars in step, file
 
 **Why:** The machine account can do nothing until the chapter's Google administrator allows it, and each permission missed here fails much later with an error that names nothing useful.
 
-**Who:** The chapter and the central support organization — the chapter's Google administrator types; the central support organization reads out the list  
-**Finish first:** step 10.1
+**Who:** The chapter and the central support organization — the chapter's Google administrator types; the central support organization reads out the list
+
+**Finish first:**
+
+- step 10.1 Create the machine account
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -83,7 +103,12 @@ The applications read and send the chapter's email, keep calendars in step, file
 1. The chapter's Google administrator signs in to the chapter's Google admin console. Nobody else can do this step.
 2. Open the setting that allows a service account to act on behalf of users in the domain (called domain-wide delegation). The exact menu path is not verified for this guide.
 3. Add the client identifier from step 10.1.
-4. Paste in the standard list of permissions. It covers reading and sending mail, managing calendar events, reading and changing user accounts in the directory, managing groups, and files on the shared drive.
+4. Paste in the standard list of permissions. It covers:
+   - Reading and sending mail.
+   - Managing calendar events.
+   - Reading and changing user accounts in the directory.
+   - Managing groups.
+   - Files on the shared drive.
 5. Read each permission back against the standard list, one at a time, aloud.
    *You should see:* Every permission on the list, and nothing missing.
 6. Save.
@@ -103,8 +128,11 @@ The applications read and send the chapter's email, keep calendars in step, file
 
 **Why:** The applications act as one mailbox when they read and send the chapter's mail, and Google refuses anything that is not a real mailbox.
 
-**Who:** The chapter and the central support organization  
-**Finish first:** step 4.7
+**Who:** The chapter and the central support organization
+
+**Finish first:**
+
+- step 4.7 Create the shared operations mailbox
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -128,8 +156,11 @@ The applications read and send the chapter's email, keep calendars in step, file
 
 **Why:** Every record's documents are kept on one shared drive the chapter owns, and the applications file them there as the machine account.
 
-**Who:** The central support organization inside the chapter's Google account  
-**Finish first:** step 10.1
+**Who:** The central support organization inside the chapter's Google account
+
+**Finish first:**
+
+- step 10.1 Create the machine account
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 

@@ -12,10 +12,26 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Who:** The chapter opens and pays for the accounts. The central support organization is invited in, and creates the two tokens.  
 **Time:** About two hours of work. The nonprofit hosting credits can take weeks to be answered, but nothing waits on them.  
-**Before you start:** The chapter's mailboxes on its own domain (stage 4); The chapter's bank account (step 1.6); The agreement on what access the central support organization holds (step 2.4); The chapter's vault (step 2.7); The chapter's domain names in its Cloudflare account (step 3.7)  
 **When this stage is done:** Building the CRM (stage 9) can start once the chapter information form is complete, because CRMBuilder now holds the chapter's own tokens.
 
-**Steps in this stage:** 5.1 Create the server hosting account, 5.2 Set up billing on the hosting account, 5.3 Apply for the nonprofit hosting credits, 5.4 Grant the central support organization access to the hosting account, 5.5 Create the video meeting account, or record that it is not needed, 5.6 Turn on two-step sign-in for both accounts, 5.7 Write down every account the chapter now owns, 5.8 Create the two tokens CRMBuilder builds with
+**Before you start:**
+
+- The chapter's mailboxes on its own domain (stage 4)
+- The chapter's bank account (step 1.6)
+- The agreement on what access the central support organization holds (step 2.4)
+- The chapter's vault (step 2.7)
+- The chapter's domain names in its Cloudflare account (step 3.7)
+
+**Steps in this stage:**
+
+- 5.1 Create the server hosting account
+- 5.2 Set up billing on the hosting account
+- 5.3 Apply for the nonprofit hosting credits
+- 5.4 Grant the central support organization access to the hosting account
+- 5.5 Create the video meeting account, or record that it is not needed
+- 5.6 Turn on two-step sign-in for both accounts
+- 5.7 Write down every account the chapter now owns
+- 5.8 Create the two tokens CRMBuilder builds with
 
 ---
 
@@ -23,8 +39,11 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Why:** The chapter's servers must sit in an account the chapter owns, not in anyone else's.
 
-**Who:** The chapter  
-**Finish first:** step 4.7
+**Who:** The chapter
+
+**Finish first:**
+
+- step 4.7 Create the shared operations mailbox
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -49,8 +68,12 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Why:** The chapter pays its own hosting, and a bill tied to a volunteer's card stops being paid when that volunteer leaves.
 
-**Who:** The chapter  
-**Finish first:** step 5.1, step 1.6
+**Who:** The chapter
+
+**Finish first:**
+
+- step 5.1 Create the server hosting account
+- step 1.6 Open a bank account
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -75,8 +98,12 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Why:** Nonprofit credits lower the chapter's hosting bill, and they belong to the chapter only if the chapter applies in its own name.
 
-**Who:** The chapter with the central support organization's help  
-**Finish first:** step 5.2, step 1.5
+**Who:** The chapter with the central support organization's help
+
+**Finish first:**
+
+- step 5.2 Set up billing on the hosting account
+- step 1.5 Obtain nonprofit tax status, or a sponsorship arrangement
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -100,8 +127,12 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Why:** The central support organization builds and runs the chapter's servers, and must do it under its own named sign-in so the chapter can see who did what and remove access.
 
-**Who:** The chapter and the central support organization — the chapter grants, the central support organization accepts  
-**Finish first:** step 5.1, step 2.4
+**Who:** The chapter and the central support organization — the chapter grants, the central support organization accepts
+
+**Finish first:**
+
+- step 5.1 Create the server hosting account
+- step 2.4 Agree the access the central support organization will hold
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -128,8 +159,11 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Why:** The public webinar programme schedules its meetings through the chapter's own Zoom account; mentoring sessions never use it.
 
-**Who:** The chapter and the central support organization — the chapter decides, the central support organization sets up the connection  
-**Finish first:** step 4.7
+**Who:** The chapter and the central support organization — the chapter decides, the central support organization sets up the connection
+
+**Finish first:**
+
+- step 4.7 Create the shared operations mailbox
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -157,8 +191,12 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Why:** A stolen password must not be enough to take over the chapter's servers or its meetings, and losing one phone must not lock the chapter out.
 
-**Who:** The chapter  
-**Finish first:** step 5.1, step 5.5
+**Who:** The chapter
+
+**Finish first:**
+
+- step 5.1 Create the server hosting account
+- step 5.5 Create the video meeting account, or record that it is not needed
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -185,18 +223,41 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Why:** Every account must be findable by a second person, so no account depends on the one who opened it.
 
-**Who:** The chapter checked by the central support organization  
-**Finish first:** step 5.1, step 5.2, step 5.3, step 5.4, step 5.5, step 5.6
+**Who:** The chapter checked by the central support organization
+
+**Finish first:**
+
+- step 5.1 Create the server hosting account
+- step 5.2 Set up billing on the hosting account
+- step 5.3 Apply for the nonprofit hosting credits
+- step 5.4 Grant the central support organization access to the hosting account
+- step 5.5 Create the video meeting account, or record that it is not needed
+- step 5.6 Turn on two-step sign-in for both accounts
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
 **Do this:**
 
-1. Make one list, held by the chapter, with one line per account - the domain registrar, Cloudflare, Google Workspace, the hosting account, and the Zoom account if there is one.
-2. On each line write the web address to sign in at, who holds the top-level sign-in, who else has access, where the recovery codes are, and any nonprofit discount or credit applied.
+1. Make one list, held by the chapter, with one line per account:
+   - The domain registrar.
+   - Cloudflare.
+   - Google Workspace.
+   - The hosting account.
+   - The Zoom account, if there is one.
+2. On each line write:
+   - The web address to sign in at.
+   - Who holds the top-level sign-in.
+   - Who else has access.
+   - Where the recovery codes are.
+   - Any nonprofit discount or credit applied.
    *You should see:* No passwords on the list. Passwords and recovery codes are in the chapter's vault (step 2.7).
 
-**Done when:** One list names each account, its web address, who holds the top-level sign-in, and who else has access.
+**Done when all of these are true:**
+
+- One list names each account.
+- The list gives each account's web address.
+- The list says who holds the top-level sign-in.
+- The list says who else has access.
 
 **How to check:** A second person at the chapter finds every account on the list without asking anyone.
 
@@ -210,8 +271,12 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Why:** CRMBuilder creates the chapter's CRM server and its web address itself, and must do it inside the chapter's own accounts so the chapter can revoke access and keep everything.
 
-**Who:** The central support organization inside the chapter's accounts  
-**Finish first:** step 5.4, step 3.7
+**Who:** The central support organization inside the chapter's accounts
+
+**Finish first:**
+
+- step 5.4 Grant the central support organization access to the hosting account
+- step 3.7 Move the domain names' DNS to the chapter's Cloudflare account
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -226,7 +291,13 @@ The chapter's CRM server, its applications and their database all run in a hosti
 4. In CRMBuilder, enter both as the provider credentials on the chapter's engagement.
    *You should see:* Both credentials shown as configured, and the chapter's Cloudflare zones listed.
 
-**Done when:** A DigitalOcean API token from the chapter's hosting account, and a Cloudflare API token limited to editing DNS in the chapter's zones, both exist, are in the chapter's vault, and are entered in CRMBuilder as the chapter's provider credentials. CRMBuilder builds the chapter's CRM with the chapter's own accounts, never its own (ruled 09-18-26).
+**Done when all of these are true:**
+
+- A DigitalOcean API token from the chapter's hosting account exists.
+- A Cloudflare API token limited to editing DNS in the chapter's zones exists.
+- Both tokens are in the chapter's vault.
+- Both tokens are entered in CRMBuilder as the chapter's provider credentials.
+- CRMBuilder builds the chapter's CRM with the chapter's own accounts, never its own (ruled 09-18-26).
 
 **How to check:** CRMBuilder's provider credentials screen shows both configured for the chapter's engagement, and lists the chapter's Cloudflare zones.
 

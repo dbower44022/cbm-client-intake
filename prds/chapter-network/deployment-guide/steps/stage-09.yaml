@@ -32,14 +32,18 @@ steps:
     produces: [crm_version, addon_versions, standard_release]
     mode: automated
     actions:
-      - do: Write down the CRM version, the version of each of the two paid add-on products, and the release of the standard configuration this chapter will get.
+      - do: "Write down three version numbers:"
+        items:
+          - The CRM version.
+          - The version of each of the two paid add-on products.
+          - The release of the standard configuration this chapter will get.
         see: Three version numbers, written where the rest of the stage can read them.
       - do: There is no published statement of the standard yet (work list item 2). Until there is, use the versions Cleveland's production system runs, and the date its configuration was last captured.
-    done_when: >-
-      The chapter's build has, in writing, the CRM version to install, the version
-      of each of the two add-on products, and which release of the standard
-      configuration is being applied. Without these three numbers the later steps
-      have nothing to check against.
+    done_when:
+      - "The chapter's build has, in writing, the CRM version to install."
+      - "The build has, in writing, the version of each of the two add-on products."
+      - "The build has, in writing, which release of the standard configuration is being applied."
+      - "Without these three numbers the later steps have nothing to check against."
     check:
       how: The three numbers are written down.
       probe: The app reads them from the published standard and shows them before the build starts.
@@ -68,7 +72,12 @@ steps:
       - do: Tick the box for extra sign-in keys.
         see: The box ticked. Without it nobody can open a command line on the server.
       - do: Start the run, and wait for it to finish.
-        see: The run reports each phase complete. It creates the server, writes the CRM's address into Cloudflare, waits for the address to resolve, and installs the CRM.
+        see:
+          - The server created
+          - The CRM's address written into Cloudflare
+          - The address resolving
+          - The CRM installed
+          - Each phase reported complete
     done_when: >-
       A server is running in the chapter's own hosting account and the central
       support organization can reach it.
@@ -204,11 +213,11 @@ steps:
       - do: Buy a licence for each of the two products in the chapter's name.
       - do: In the CRM, open Administration, then Extensions, and upload each product.
         see: Both products listed as installed, at the versions from step 9.1.
-    done_when: >-
-      Both are installed at the versions the standard names, licensed to this
-      chapter, and listed in the CRM's own list of installed products. They must be
-      installed before the permission roles are created, because the roles refer to
-      them.
+    done_when:
+      - "Both are installed at the versions the standard names."
+      - "Both are licensed to this chapter."
+      - "Both are listed in the CRM's own list of installed products."
+      - "They must be installed before the permission roles are created, because the roles refer to them."
     check:
       how: Both appear in the CRM's list of installed products, at the right versions.
       probe: The app reads the CRM's installed products and compares them with the standard.
@@ -235,10 +244,11 @@ steps:
       - do: Make the web server user the owner of both folders.
       - do: Run the CRM's rebuild command inside its container.
         see: The rebuild finishing with no errors. In August it took three seconds.
-    done_when: >-
-      Both sets of configuration files are in place, owned by the web server user,
-      and the rebuild command has finished without errors. There are two sets, not
-      one.
+    done_when:
+      - "Both sets of configuration files are in place."
+      - "Both sets are owned by the web server user."
+      - "The rebuild command has finished without errors."
+      - "There are two sets, not one."
     check:
       how: The rebuild log shows no errors, and step 9.9 shows a working screen.
       probe: The app runs the rebuild and reads its result.
@@ -284,7 +294,14 @@ steps:
     actions:
       - do: Run the trial script scripts/rehearsal/apply_api_half.py with the chapter's settings file and without the apply option.
         see: A list of what it would create, and nothing written.
-      - do: Run it again with the apply option. It creates the teams, the roles, their attachments, the email templates, two accounts and the instance settings (steps 9.10 to 9.14, 9.17 and 9.18).
+      - do: "Run it again with the apply option. It does steps 9.10 to 9.14, 9.17 and 9.18 in one run, creating:"
+        items:
+          - The teams.
+          - The roles.
+          - The roles' attachments to the teams.
+          - The email templates.
+          - Two accounts.
+          - The instance settings.
         see: Every team reported applied.
     done_when: >-
       Every team the standard names exists, spelled exactly as the standard spells
@@ -388,10 +405,19 @@ steps:
     actions:
       - do: Nothing extra to run. The script in step 9.10 applies them from the chapter information form and reads them back.
         see: Each setting reported equal to what was sent.
-    done_when: >-
-      The chapter's name, sending name, sending address, web address, logo, time
-      zone, date format, time format, currency, language and week start are all set
-      from the chapter information form, and reading them back matches.
+    done_when:
+      - "The chapter's name is set."
+      - "The sending name is set."
+      - "The sending address is set."
+      - "The web address is set."
+      - "The logo is set."
+      - "The time zone is set."
+      - "The date format is set."
+      - "The time format is set."
+      - "The currency is set."
+      - "The language is set."
+      - "The week start is set."
+      - "All of them are set from the chapter information form, and reading them back matches."
     check:
       how: Each setting reads back equal to the form.
       probe: The app reads the CRM's settings and compares them with the form.
@@ -415,10 +441,10 @@ steps:
       - do: Nothing extra to run. The script in step 9.10 applies them.
       - do: Open the CRM and click the documentation tab.
         see: The chapter's own help documentation, not another chapter's.
-    done_when: >-
-      The tabs match the standard, the chapter's own documentation link is in
-      place of any other chapter's, and the list of records staff can add quickly
-      matches the standard.
+    done_when:
+      - "The tabs match the standard."
+      - "The chapter's own documentation link is in place of any other chapter's."
+      - "The list of records staff can add quickly matches the standard."
     check:
       how: The tab bar matches, and the documentation tab opens this chapter's documentation.
       probe: The app reads the tab list and compares it with the standard plus the chapter's link.
@@ -464,14 +490,19 @@ steps:
     produces: [ESPO_API_KEY]
     mode: automated
     actions:
-      - do: Nothing extra to run. The script in step 9.10 creates the account, attaches its role, and writes its key to the settings file.
+      - do: "Nothing extra to run. The script in step 9.10 does three things:"
+        items:
+          - Creates the account.
+          - Attaches its role.
+          - Writes its key to the settings file.
       - do: Move the key into the chapter's vault, and delete it from the settings file.
         see: The key in the Operations vault.
       - do: Make one test request to the CRM with the key.
         see: A normal answer. An empty list is fine.
-    done_when: >-
-      The account exists, its key has been recorded in the secrets store, and a
-      test request using that key succeeds.
+    done_when:
+      - "The account exists."
+      - "Its key has been recorded in the secrets store."
+      - "A test request using that key succeeds."
     check:
       how: A request using the key returns a normal answer, not a refusal.
       probe: The app makes one read request with the key.

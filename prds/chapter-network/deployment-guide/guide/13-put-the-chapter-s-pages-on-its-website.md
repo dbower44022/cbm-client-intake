@@ -12,10 +12,22 @@ The public learns about the chapter through its website. This stage connects tha
 
 **Who:** The chapter makes the website change; the central support organization sets up the application side.  
 **Time:** About an hour for the events page. The mentor directory cannot be done yet.  
-**Before you start:** The chapter's website, published (step 6.2); The website able to redirect an address (step 6.3); The applications, deployed with the events switches on (stage 11); At least one published event  
 **When this stage is done:** The final checks before going live can include the website (step 17.8).
 
-**Steps in this stage:** 13.1 Display the mentor directory page, 13.2 Send the events address to the events programme page, 13.3 Allow only the chapter's own website to display these pages, 13.4 Confirm links to a single mentor work, 13.5 Confirm the public pages read properly on a computer and a phone
+**Before you start:**
+
+- The chapter's website, published (step 6.2)
+- The website able to redirect an address (step 6.3)
+- The applications, deployed with the events switches on (stage 11)
+- At least one published event
+
+**Steps in this stage:**
+
+- 13.1 Display the mentor directory page
+- 13.2 Send the events address to the events programme page
+- 13.3 Allow only the chapter's own website to display these pages
+- 13.4 Confirm links to a single mentor work
+- 13.5 Confirm the public pages read properly on a computer and a phone
 
 ---
 
@@ -23,8 +35,11 @@ The public learns about the chapter through its website. This stage connects tha
 
 **Why:** Visitors to the chapter's website should be able to find the chapter's own mentors.
 
-**Who:** The central support organization then the chapter for the website change  
-**Finish first:** step 6.2
+**Who:** The central support organization then the chapter for the website change
+
+**Finish first:**
+
+- step 6.2 Publish the website
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -45,14 +60,22 @@ The public learns about the chapter through its website. This stage connects tha
 
 **Why:** The chapter's website sends visitors to the events page the application serves, so every registration reaches the chapter's CRM.
 
-**Who:** The chapter and the central support organization — the chapter for the website change; the central support organization for the application settings  
-**Finish first:** step 6.2, step 6.3
+**Who:** The chapter and the central support organization — the chapter for the website change; the central support organization for the application settings
+
+**Finish first:**
+
+- step 6.2 Publish the website
+- step 6.3 Confirm the website can redirect an address to another site
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
 **Do this:**
 
-1. On the application's settings page, set the chapter's website address, the website menu, the contact address for presenters and the opening wording of the events page.
+1. On the application's settings page, set:
+   - The chapter's website address.
+   - The website menu.
+   - The contact address for presenters.
+   - The opening wording of the events page.
 2. In the application's Event Administration page, create and publish each upcoming event. Saving there is what gives an event its own web address.
 3. Open the application's /webinars/ page.
    *You should see:* The chapter's published events.
@@ -75,8 +98,12 @@ The public learns about the chapter through its website. This stage connects tha
 
 **Why:** An embedded page should appear only inside the chapter's own website, never someone else's.
 
-**Who:** The central support organization  
-**Finish first:** step 13.1, step 13.2
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 13.1 Display the mentor directory page
+- step 13.2 Send the events address to the events programme page
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -97,8 +124,11 @@ The public learns about the chapter through its website. This stage connects tha
 
 **Why:** People share links to one mentor, and a shared link must land on that mentor.
 
-**Who:** The central support organization  
-**Finish first:** step 13.1
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 13.1 Display the mentor directory page
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -123,8 +153,11 @@ The public learns about the chapter through its website. This stage connects tha
 
 **Why:** Most visitors arrive on a phone, and a page that scrolls sideways or cuts off text loses them.
 
-**Who:** The chapter checked by the central support organization  
-**Finish first:** step 13.2
+**Who:** The chapter checked by the central support organization
+
+**Finish first:**
+
+- step 13.2 Send the events address to the events programme page
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 

@@ -29,12 +29,17 @@ steps:
     actions:
       - do: Give the chapter's first point of contact access to the ClickUp system the support team uses for new feature requests, defect reports and support requests.
       - do: Show them how to raise each of the three kinds, and how to follow one to its answer.
-      - do: Explain the three kinds. Everyday requests, such as adding a person, changing someone's team or resetting a password, are handled as they arrive. Defect reports include the version number from the page footer. New feature requests go to the central committee.
+      - do: "Explain the three kinds:"
+        items:
+          - Everyday requests, such as adding a person, changing someone's team or resetting a password. These are handled as they arrive.
+          - Defect reports. These include the version number from the page footer.
+          - New feature requests. These go to the central committee.
       - do: Tell them plainly that no request is treated as urgent, and that no response time is committed.
-    done_when: >-
-      The chapter has in writing how to raise a request, that no request is treated
-      as urgent, that everyday requests are handled as they arrive, and that no
-      response time is committed (ruled 09-18-26).
+    done_when:
+      - "The chapter has in writing how to raise a request."
+      - "The chapter has in writing that no request is treated as urgent."
+      - "The chapter has in writing that everyday requests are handled as they arrive."
+      - "The chapter has in writing that no response time is committed (ruled 09-18-26)."
     check:
       how: The first point of contact raises a test request in ClickUp and sees it acknowledged.
       probe: The app confirms the chapter's contact has access to ClickUp.
@@ -58,10 +63,11 @@ steps:
       - do: Explain the rule. A requested change is made for every chapter, or it is not made. There is no third answer.
       - do: Show how to raise a new feature request in ClickUp.
       - do: Explain that the central committee reviews and schedules features and defects every two weeks, and that an accepted request goes into a weekly release.
-    done_when: >-
-      The chapter knows where to send a request that would change the software for
-      everyone, who decides, and how often those decisions are made. The central
-      committee decides, every two weeks (ruled 09-18-26).
+    done_when:
+      - "The chapter knows where to send a request that would change the software for everyone."
+      - "The chapter knows who decides."
+      - "The chapter knows how often those decisions are made."
+      - "The central committee decides, every two weeks (ruled 09-18-26)."
     check:
       how: The chapter can say, without looking it up, that a change is for everyone or not at all.
       probe: none
@@ -85,9 +91,10 @@ steps:
       - do: Explain what to do if something looks wrong on Monday. First refresh the page properly, because a browser can keep an old page. Then raise a defect report with the version number from the page footer.
       - do: Show the first point of contact where the version number is.
         see: The version number in the page footer.
-    done_when: >-
-      The chapter knows software updates arrive automatically on a weekly schedule,
-      roughly when, and what to do if something looks wrong afterwards.
+    done_when:
+      - "The chapter knows software updates arrive automatically on a weekly schedule."
+      - "The chapter knows roughly when."
+      - "The chapter knows what to do if something looks wrong afterwards."
     check:
       how: The first point of contact finds the version number in the footer.
       probe: The app reads the chapter's health address and shows its release.
@@ -107,15 +114,25 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: Bring the account list from step 5.7 up to date. It covers the domain registrar, Cloudflare, Google Workspace, the hosting account, the video meeting account if there is one, the chapter's vault, the CRM's administrator accounts, and the documentation site if the chapter has its own.
+      - do: "Bring the account list from step 5.7 up to date. It covers:"
+        items:
+          - The domain registrar.
+          - Cloudflare.
+          - Google Workspace.
+          - The hosting account.
+          - The video meeting account, if there is one.
+          - The chapter's vault.
+          - The CRM's administrator accounts.
+          - The documentation site, if the chapter has its own.
       - do: For each account, write who holds the top-level sign-in and who else has access. No passwords on the list; those are in the chapter's vault.
       - do: Check that no top-level sign-in belongs to a volunteer's personal email address.
       - do: Go through the list with a named chapter officer.
         see: The officer recognising every account on it.
-    done_when: >-
-      The chapter holds the list of every account, who has the top-level sign-in,
-      and who else has access — and a named chapter officer can reach every one of
-      them.
+    done_when:
+      - "The chapter holds the list of every account."
+      - "The list says who has the top-level sign-in."
+      - "The list says who else has access."
+      - "A named chapter officer can reach every one of them."
     check:
       how: The named officer reads the list and confirms every account is one they recognise.
       probe: The app compares the list with the accounts recorded in the chapter's vault.
@@ -140,11 +157,12 @@ steps:
       - do: The officer signs in to the domain registrar account.
       - do: The officer reaches the CRM server through the hosting account. No written procedure exists for this yet (work list item 5), so this action cannot be completed.
       - do: Record the date on the chapter's entry in the list of watched systems.
-    done_when: >-
-      A named chapter officer has demonstrated, not merely been told, that they can
-      reach the server, the hosting account, the Google Workspace account and the
-      domain registrar account on their own. The agreement says neither side can
-      lock the other out; this is the step that makes that true rather than stated.
+    done_when:
+      - "A named chapter officer has demonstrated, not merely been told, that they can reach the server on their own."
+      - "The officer has demonstrated the same for the hosting account."
+      - "The officer has demonstrated the same for the Google Workspace account."
+      - "The officer has demonstrated the same for the domain registrar account."
+      - "The agreement says neither side can lock the other out; this is the step that makes that true rather than stated."
     check:
       how: The officer has signed in to all four, and the date is recorded.
       probe: none
@@ -192,7 +210,12 @@ steps:
     mode: offline
     actions:
       - do: Book a meeting about three months out, in both organizations' calendars.
-      - do: At it, go through the requests raised, any feature requests and their answers, whether a restore test has run since go-live, and whether the account list is still right.
+      - do: "At it, go through:"
+        items:
+          - The requests raised.
+          - Any feature requests and their answers.
+          - Whether a restore test has run since go-live.
+          - Whether the account list is still right.
     done_when: >-
       A date is booked to review how the first months have gone.
     check:

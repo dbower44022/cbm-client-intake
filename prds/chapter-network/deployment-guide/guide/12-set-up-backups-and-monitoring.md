@@ -12,10 +12,22 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 
 **Who:** The central support organization, working inside the chapter's hosting account. The chapter names who reads the alerts.  
 **Time:** About two hours, most of it waiting for a restored copy to be built.  
-**Before you start:** The CRM server (stage 9); The applications and their database (stage 11); Outgoing mail working, for the alert emails (step 11.15); The decision about who receives warning messages (step 4.9)  
 **When this stage is done:** The chapter's pages can go on its website (stage 13), and real records can be loaded (stage 15).
 
-**Steps in this stage:** 12.1 Back up the CRM server on a schedule, 12.2 Back up the application database on a schedule, 12.3 Restore from a backup once, 12.4 Confirm alerts reach a person, 12.5 Add the chapter to the list of systems being watched
+**Before you start:**
+
+- The CRM server (stage 9)
+- The applications and their database (stage 11)
+- Outgoing mail working, for the alert emails (step 11.15)
+- The decision about who receives warning messages (step 4.9)
+
+**Steps in this stage:**
+
+- 12.1 Back up the CRM server on a schedule
+- 12.2 Back up the application database on a schedule
+- 12.3 Restore from a backup once
+- 12.4 Confirm alerts reach a person
+- 12.5 Add the chapter to the list of systems being watched
 
 ---
 
@@ -23,8 +35,11 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 
 **Why:** A backup of the whole server holds the CRM's database, its uploaded files and its configuration together, so one restore brings back all three.
 
-**Who:** The central support organization inside the chapter's hosting account  
-**Finish first:** step 9.2
+**Who:** The central support organization inside the chapter's hosting account
+
+**Finish first:**
+
+- step 9.2 Create the server
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -49,8 +64,11 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 
 **Why:** Submissions that have arrived but not yet reached the CRM exist only in this database, so losing it loses them.
 
-**Who:** The central support organization inside the chapter's hosting account  
-**Finish first:** step 11.4
+**Who:** The central support organization inside the chapter's hosting account
+
+**Finish first:**
+
+- step 11.4 Create the database
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -78,8 +96,12 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 
 **Why:** A backup nobody has restored is only a hope, so each kind is restored once into a separate copy and checked.
 
-**Who:** The central support organization  
-**Finish first:** step 12.1, step 12.2
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 12.1 Back up the CRM server on a schedule
+- step 12.2 Back up the application database on a schedule
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -111,8 +133,12 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 
 **Why:** When the system stops working or submissions pile up, somebody has to be told, and an alert nobody reads is the same as no alert.
 
-**Who:** The chapter and the central support organization — the central support organization sets it up; the chapter names who reads the alerts  
-**Finish first:** step 4.9, step 11.15
+**Who:** The chapter and the central support organization — the central support organization sets it up; the chapter names who reads the alerts
+
+**Finish first:**
+
+- step 4.9 Decide who receives the system's warning messages
+- step 11.15 Confirm outgoing mail
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -141,15 +167,27 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 
 **Why:** The central support organization supports every chapter, and needs one place saying where each chapter's systems are and when they were last checked.
 
-**Who:** The central support organization  
-**Finish first:** step 12.1, step 12.2, step 12.3, step 12.4
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 12.1 Back up the CRM server on a schedule
+- step 12.2 Back up the application database on a schedule
+- step 12.3 Restore from a backup once
+- step 12.4 Confirm alerts reach a person
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
 **Do this:**
 
 1. Open the list of watched systems, kept in the chapter-network folder of the software's code repository until the fleet console exists.
-2. Add the chapter, with its CRM address, its application address, the hosting account it lives in, both backup schedules, who reads the alerts, and the date of the last restore test.
+2. Add the chapter, with:
+   - Its CRM address.
+   - Its application address.
+   - The hosting account it lives in.
+   - Both backup schedules.
+   - Who reads the alerts.
+   - The date of the last restore test.
    *You should see:* Every column filled in for the chapter.
 
 **Done when:** The central support organization's list of systems includes this chapter's CRM and application.

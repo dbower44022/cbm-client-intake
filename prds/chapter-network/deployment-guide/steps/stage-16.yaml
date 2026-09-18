@@ -33,13 +33,12 @@ steps:
       - do: Put the new passwords in the central support organization's vault, and give them to the chapter's trainer by a private route, never an email to a group.
       - do: The next morning, have one person from the chapter sign in with a new password.
         see: The training system's pages, with "(Test)" after the version number in the footer.
-    done_when: >-
-      The chapter's trainer holds the sign-in details for the chapter training
-      accounts, the passwords were set fresh for this chapter, and one person from
-      the chapter has signed in once. Ruled 09-14-26: chapters train on the existing
-      test system rather than on their own live system or on a practice system built
-      for them. Ruled 09-18-26: they sign in with shared training accounts set up
-      specifically for chapter training, never with accounts of their own.
+    done_when:
+      - "The chapter's trainer holds the sign-in details for the chapter training accounts."
+      - "The passwords were set fresh for this chapter."
+      - "One person from the chapter has signed in once."
+      - "Ruled 09-14-26: chapters train on the existing test system rather than on their own live system or on a practice system built for them."
+      - "Ruled 09-18-26: they sign in with shared training accounts set up specifically for chapter training, never with accounts of their own."
     check:
       how: After one nightly reset, someone from the chapter signs in with the new password.
       probe: The app signs in with each new password the morning after.
@@ -116,7 +115,14 @@ steps:
     mode: guided
     actions:
       - do: Give the chapter the link to the documentation site.
-      - do: Name the guide for each role. Mentor Administration, the mentor directory, Submission Admin, email, events and analytics each have one.
+      - do: "Name the guide for each role. Each of these has one:"
+        items:
+          - Mentor Administration.
+          - The mentor directory.
+          - Submission Admin.
+          - Email.
+          - Events.
+          - Analytics.
       - do: Tell the chapter the guides say Cleveland throughout, because they were written for Cleveland's staff.
     done_when: >-
       The chapter holds the written guides for each role and knows where they live.
@@ -167,11 +173,11 @@ steps:
       - do: The next morning, try an old password.
         see: The old password refused.
       - do: Record the date on the chapter's entry in the list of watched systems.
-    done_when: >-
-      The chapter training account passwords are changed once training ends, the
-      change has survived a nightly reset, and it is written down when this was
-      done. People from one chapter do not keep standing access to a system another
-      chapter also uses.
+    done_when:
+      - "The chapter training account passwords are changed once training ends."
+      - "The change has survived a nightly reset."
+      - "It is written down when this was done."
+      - "People from one chapter do not keep standing access to a system another chapter also uses."
     check:
       how: The morning after, the old password is refused.
       probe: The app tries the old password the morning after and expects a refusal.

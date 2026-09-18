@@ -12,10 +12,22 @@ Everything after this stage involves one organization spending money and holding
 
 **Who:** The chapter's board and the central support organization together.  
 **Time:** Not known yet. A draft of the standard agreement exists and is in review (09-18-26).  
-**Before you start:** The chapter's board, bylaws and named signers (step 1.4); The person who acts for the chapter during setup (step 1.7)  
 **When this stage is done:** The chapter's domain names can be registered (stage 3), and every account created from then on goes into the chapter's vault.
 
-**Steps in this stage:** 2.1 Agree what the central support organization does, 2.2 Agree the cost, 2.3 Accept the identical-software rule, 2.4 Agree the access the central support organization will hold, 2.5 Agree the leaving terms, 2.6 Sign the agreement, 2.7 Set up the chapter's password vault
+**Before you start:**
+
+- The chapter's board, bylaws and named signers (step 1.4)
+- The person who acts for the chapter during setup (step 1.7)
+
+**Steps in this stage:**
+
+- 2.1 Agree what the central support organization does
+- 2.2 Agree the cost
+- 2.3 Accept the identical-software rule
+- 2.4 Agree the access the central support organization will hold
+- 2.5 Agree the leaving terms
+- 2.6 Sign the agreement
+- 2.7 Set up the chapter's password vault
 
 ---
 
@@ -23,19 +35,32 @@ Everything after this stage involves one organization spending money and holding
 
 **Why:** The chapter needs to know what it will get, what it will not, and how to ask for help, before it relies on anyone.
 
-**Who:** The chapter and the central support organization  
-**Finish first:** step 1.7
+**Who:** The chapter and the central support organization
+
+**Finish first:**
+
+- step 1.7 Name the person who acts for the chapter during setup
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
 **Do this:**
 
-1. List what is provided: building and running the CRM and the applications, the weekly software release, and support.
-2. List what is not provided: the chapter's legal, tax and banking work, its website's content, and its own training beyond the first sessions.
+1. List what is provided:
+   - Building and running the CRM and the applications.
+   - The weekly software release.
+   - Support.
+2. List what is not provided:
+   - The chapter's legal, tax and banking work.
+   - Its website's content.
+   - Its own training beyond the first sessions.
 3. Explain how requests are made. Feature requests, defect reports and support requests all go into one ClickUp system, managed by the whole support team.
 4. Explain the answer times. No response time is committed and no request is treated as urgent. Everyday requests, such as adding a person or resetting a password, are handled as they arrive. Feature requests and defects are reviewed and scheduled by the central committee every two weeks.
 
-**Done when:** The chapter has in writing the list of what is provided, what is not, and how quickly ordinary requests are answered.
+**Done when all of these are true:**
+
+- The chapter has in writing the list of what is provided.
+- The chapter has in writing what is not provided.
+- The chapter has in writing how quickly ordinary requests are answered.
 
 **How to check:** The chapter can answer, from the document, "who do I ask to add a new staff member, and how is it handled?"
 
@@ -49,14 +74,22 @@ Everything after this stage involves one organization spending money and holding
 
 **Why:** The chapter's treasurer must know every recurring cost and who it is paid to, so the budget has no surprises.
 
-**Who:** The chapter and the central support organization  
-**Finish first:** step 2.1
+**Who:** The chapter and the central support organization
+
+**Finish first:**
+
+- step 2.1 Agree what the central support organization does
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
 **Do this:**
 
-1. List the costs the chapter pays directly in its own accounts, with each supplier and an approximate price. They include hosting, Google Workspace, the domain names, Cloudflare if a paid plan is ever needed, and the Proton Pass vault.
+1. List the costs the chapter pays directly in its own accounts, with each supplier and an approximate price. They include:
+   - Hosting.
+   - Google Workspace.
+   - The domain names.
+   - Cloudflare, if a paid plan is ever needed.
+   - The Proton Pass vault.
 2. Agree the fee paid to the central support organization. It is proposed, not ruled, that the fee covers labour only.
 3. Settle whether the two paid CRM add-on products are part of the standard before quoting a cost (work list item 2).
 
@@ -74,8 +107,11 @@ Everything after this stage involves one organization spending money and holding
 
 **Why:** One release works for every chapter only if every chapter runs the same software, with no local additions.
 
-**Who:** The chapter and the central support organization — the central support organization explains, the chapter's board accepts  
-**Finish first:** step 2.1
+**Who:** The chapter and the central support organization — the central support organization explains, the chapter's board accepts
+
+**Finish first:**
+
+- step 2.1 Agree what the central support organization does
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -100,14 +136,23 @@ Everything after this stage involves one organization spending money and holding
 
 **Why:** The central support organization works inside the chapter's accounts, so the chapter must know which ones, and that it can withdraw that access.
 
-**Who:** The chapter and the central support organization  
-**Finish first:** step 2.1
+**Who:** The chapter and the central support organization
+
+**Finish first:**
+
+- step 2.1 Agree what the central support organization does
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
 **Do this:**
 
-1. List the accounts the central support organization will administer. They include the hosting account, the Cloudflare account, the Google Workspace administrator account, the video meeting account if there is one, the vault's shared Operations vault, and the CRM.
+1. List the accounts the central support organization will administer. They include:
+   - The hosting account.
+   - The Cloudflare account.
+   - The Google Workspace administrator account.
+   - The video meeting account, if there is one.
+   - The vault's shared Operations vault.
+   - The CRM.
 2. Write in the rule that the central support organization holds the only CRM administrator accounts, and chapter staff hold ordinary accounts.
 3. Write in the other half of the rule. The chapter can always get in through the server it owns, and can withdraw the central support organization's access at any time.
 
@@ -125,25 +170,36 @@ Everything after this stage involves one organization spending money and holding
 
 **Why:** A chapter must be able to leave with all its data, and the central support organization must never be able to lock it out.
 
-**Who:** The chapter and the central support organization  
-**Finish first:** step 2.4
+**Who:** The chapter and the central support organization
+
+**Finish first:**
+
+- step 2.4 Agree the access the central support organization will hold
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
 **Do this:**
 
 1. Write in a notice period and a defined wind-down.
-2. Write in the leaving kit: a copy of the CRM's database, an export of the application's own database, a transfer of the chapter's documents in Google Drive, and the chapter's own files such as its logo and colour file.
+2. Write in the leaving kit:
+   - A copy of the CRM's database.
+   - An export of the application's own database.
+   - A transfer of the chapter's documents in Google Drive.
+   - The chapter's own files, such as its logo and colour file.
 3. Write in a perpetual licence to the last version of the software the chapter received.
 4. Write in that the central support organization may stop working for a chapter that stops paying, but can never lock it out.
 
-**Done when:** The notice period, the wind-down, and the list of everything the chapter takes with it are written into the agreement.
+**Done when all of these are true:**
+
+- The notice period is written into the agreement.
+- The wind-down is written into the agreement.
+- The list of everything the chapter takes with it is written into the agreement.
 
 **How to check:** Each item in the leaving kit names what it is and who produces it.
 
 **If it didn't work:** Stop, and ask the central support organization before going on.
 
-**What usually goes wrong:** Leaving out the application's own database. Some of the chapter's records live only there: the partner and funder discussion notes, the full history of every submission, and any analytics pages the chapter built.
+**What usually goes wrong:** Leaving out the application's own database. Some of the chapter's records live only there. The partner and funder discussion notes are there. So is the full history of every submission. So are any analytics pages the chapter built.
 
 ---
 
@@ -151,8 +207,16 @@ Everything after this stage involves one organization spending money and holding
 
 **Why:** Nothing after this stage should happen inside the chapter's accounts without a signed agreement.
 
-**Who:** The chapter and the central support organization  
-**Finish first:** step 2.1, step 2.2, step 2.3, step 2.4, step 2.5, step 1.4
+**Who:** The chapter and the central support organization
+
+**Finish first:**
+
+- step 2.1 Agree what the central support organization does
+- step 2.2 Agree the cost
+- step 2.3 Accept the identical-software rule
+- step 2.4 Agree the access the central support organization will hold
+- step 2.5 Agree the leaving terms
+- step 1.4 Appoint a board and adopt bylaws
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -174,8 +238,11 @@ Everything after this stage involves one organization spending money and holding
 
 **Why:** Every sign-in, recovery code and machine secret needs one safe place that the chapter owns and the central support organization can reach.
 
-**Who:** The chapter and the central support organization — the chapter owns the vault; the central support organization sets it up alongside  
-**Finish first:** step 2.6
+**Who:** The chapter and the central support organization — the chapter owns the vault; the central support organization sets it up alongside
+
+**Finish first:**
+
+- step 2.6 Sign the agreement
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 

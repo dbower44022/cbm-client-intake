@@ -12,10 +12,25 @@ This stage proves the chapter's system works end to end before any real client u
 
 **Who:** The central support organization, signed in as test users; the chapter for the website check.  
 **Time:** About two hours. Most of the checks can be run by a script.  
-**Before you start:** The staff accounts exist (stage 14); The mentor accounts exist (steps 15.8 to 15.10); The chapter's pages are on its website (stage 13)  
 **When this stage is done:** The handover to normal support (stage 18). The chapter can take real clients.
 
-**Steps in this stage:** 17.1 Create one ordinary test user per team, 17.2 Confirm each test user sees only what their team allows, 17.3 Submit the public application form, 17.4 Assign the submission, 17.5 Confirm the mentor sees it, 17.6 Confirm the submission closes, 17.7 Confirm the CRM's own screen works for an ordinary user, 17.8 Confirm the website pages work for a member of the public, 17.9 Remove the test records
+**Before you start:**
+
+- The staff accounts exist (stage 14)
+- The mentor accounts exist (steps 15.8 to 15.10)
+- The chapter's pages are on its website (stage 13)
+
+**Steps in this stage:**
+
+- 17.1 Create one ordinary test user per team
+- 17.2 Confirm each test user sees only what their team allows
+- 17.3 Submit the public application form
+- 17.4 Assign the submission
+- 17.5 Confirm the mentor sees it
+- 17.6 Confirm the submission closes
+- 17.7 Confirm the CRM's own screen works for an ordinary user
+- 17.8 Confirm the website pages work for a member of the public
+- 17.9 Remove the test records
 
 ---
 
@@ -23,8 +38,12 @@ This stage proves the chapter's system works end to end before any real client u
 
 **Why:** Each team's permissions can only be proven by someone who holds that team and nothing else.
 
-**Who:** The central support organization  
-**Finish first:** step 14.2, step 15.9
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 14.2 Create the staff accounts
+- step 15.9 Create the mentor accounts
 
 **Do this:**
 
@@ -46,8 +65,11 @@ This stage proves the chapter's system works end to end before any real client u
 
 **Why:** A permission gap either locks staff out of their work or shows them records they must not see, and only a per-team test finds it.
 
-**Who:** The central support organization  
-**Finish first:** step 17.1
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 17.1 Create one ordinary test user per team
 
 **Do this:**
 
@@ -71,8 +93,12 @@ This stage proves the chapter's system works end to end before any real client u
 
 **Why:** The public form is how clients arrive, so it is tested from the chapter's own website the way a client would use it.
 
-**Who:** The chapter and the central support organization — the central support organization, or anyone at the chapter  
-**Finish first:** step 17.2, step 13.2
+**Who:** The chapter and the central support organization — the central support organization, or anyone at the chapter
+
+**Finish first:**
+
+- step 17.2 Confirm each test user sees only what their team allows
+- step 13.2 Send the events address to the events programme page
 
 **Do this:**
 
@@ -96,8 +122,11 @@ This stage proves the chapter's system works end to end before any real client u
 
 **Why:** Assigning a new client to a mentor is the client administrator's main task, and it depends on several permissions at once.
 
-**Who:** The central support organization signed in as the Client Administration Team test user  
-**Finish first:** step 17.3
+**Who:** The central support organization signed in as the Client Administration Team test user
+
+**Finish first:**
+
+- step 17.3 Submit the public application form
 
 **Do this:**
 
@@ -119,8 +148,11 @@ This stage proves the chapter's system works end to end before any real client u
 
 **Why:** The assignment only matters if the mentor can find the client and work with them.
 
-**Who:** The central support organization signed in as the Mentor Team test user  
-**Finish first:** step 17.4
+**Who:** The central support organization signed in as the Mentor Team test user
+
+**Finish first:**
+
+- step 17.4 Assign the submission
 
 **Do this:**
 
@@ -143,8 +175,11 @@ This stage proves the chapter's system works end to end before any real client u
 
 **Why:** A submission that never reaches Completed means the background worker is not delivering to the CRM.
 
-**Who:** The central support organization signed in as the Marketing Admin Team test user  
-**Finish first:** step 17.3
+**Who:** The central support organization signed in as the Marketing Admin Team test user
+
+**Finish first:**
+
+- step 17.3 Submit the public application form
 
 **Do this:**
 
@@ -163,8 +198,11 @@ This stage proves the chapter's system works end to end before any real client u
 
 **Why:** Staff also use the CRM directly, and a missing screen file shows an ordinary user a blank page.
 
-**Who:** The central support organization  
-**Finish first:** step 17.1
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 17.1 Create one ordinary test user per team
 
 **Do this:**
 
@@ -185,15 +223,22 @@ This stage proves the chapter's system works end to end before any real client u
 
 **Why:** The public pages are what clients and volunteers see first, on computers and on phones.
 
-**Who:** The chapter  
-**Finish first:** step 13.2
+**Who:** The chapter
+
+**Finish first:**
+
+- step 13.2 Send the events address to the events programme page
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
 **Do this:**
 
 1. Open the chapter's website in a private browser window on a computer.
-2. Open the mentor directory, one mentor, the events programme and one event.
+2. Open each of these:
+   - The mentor directory.
+   - One mentor.
+   - The events programme.
+   - One event.
    *You should see:* Each page with the chapter's own content and name.
 3. Do the same on a phone.
    *You should see:* One column, no sideways scrolling, no text cut off.
@@ -212,19 +257,37 @@ This stage proves the chapter's system works end to end before any real client u
 
 **Why:** Test records left behind turn up in the chapter's reports and lists.
 
-**Who:** The central support organization  
-**Finish first:** step 17.2, step 17.3, step 17.4, step 17.5, step 17.6, step 17.7, step 17.8
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 17.2 Confirm each test user sees only what their team allows
+- step 17.3 Submit the public application form
+- step 17.4 Assign the submission
+- step 17.5 Confirm the mentor sees it
+- step 17.6 Confirm the submission closes
+- step 17.7 Confirm the CRM's own screen works for an ordinary user
+- step 17.8 Confirm the website pages work for a member of the public
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
 **Do this:**
 
-1. In the CRM, delete the made-up company, its contact, its client profile and its engagement.
+1. In the CRM, delete the made-up records:
+   - The company.
+   - Its contact.
+   - Its client profile.
+   - Its engagement.
 2. Leave the submission in Submission Admin, closed. It is the record that the path worked.
 3. Set the seven test users to inactive, so the check can be repeated after a later release.
 4. Write down what was removed in the chapter's handover notes.
 
-**Done when:** The test submissions, test assignments and test users created for this stage are gone or disabled, and it is written down what was removed.
+**Done when all of these are true:**
+
+- The test submissions created for this stage are gone or disabled.
+- The test assignments created for this stage are gone or disabled.
+- The test users created for this stage are gone or disabled.
+- It is written down what was removed.
 
 **How to check:** No record with the made-up names remains, and the seven test users cannot sign in.
 

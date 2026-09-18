@@ -12,10 +12,23 @@ This stage moves the chapter from being set up to being supported, and proves th
 
 **Who:** The central support organization, with the chapter's officers.  
 **Time:** About two hours of meetings, plus the review three months later.  
-**Before you start:** The final checks passed (stage 17); The chapter's first point of contact named (step 16.5); Access to the ClickUp system for the chapter's people (work list item 8)  
 **When this stage is done:** Normal support. The chapter is live.
 
-**Steps in this stage:** 18.1 Publish how to get help, 18.2 Explain how to ask for a change, 18.3 Explain the release schedule, 18.4 Hand over the account and access list, 18.5 Confirm the chapter can get in without the central support organization, 18.6 Confirm the leaving terms in practice, 18.7 Set the first review date
+**Before you start:**
+
+- The final checks passed (stage 17)
+- The chapter's first point of contact named (step 16.5)
+- Access to the ClickUp system for the chapter's people (work list item 8)
+
+**Steps in this stage:**
+
+- 18.1 Publish how to get help
+- 18.2 Explain how to ask for a change
+- 18.3 Explain the release schedule
+- 18.4 Hand over the account and access list
+- 18.5 Confirm the chapter can get in without the central support organization
+- 18.6 Confirm the leaving terms in practice
+- 18.7 Set the first review date
 
 ---
 
@@ -23,8 +36,12 @@ This stage moves the chapter from being set up to being supported, and proves th
 
 **Why:** The chapter needs to know where every request goes and what to expect, so nobody waits in silence.
 
-**Who:** The central support organization  
-**Finish first:** step 2.6, step 16.5
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 2.6 Sign the agreement
+- step 16.5 Name the chapter's own first point of contact
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -32,10 +49,18 @@ This stage moves the chapter from being set up to being supported, and proves th
 
 1. Give the chapter's first point of contact access to the ClickUp system the support team uses for new feature requests, defect reports and support requests.
 2. Show them how to raise each of the three kinds, and how to follow one to its answer.
-3. Explain the three kinds. Everyday requests, such as adding a person, changing someone's team or resetting a password, are handled as they arrive. Defect reports include the version number from the page footer. New feature requests go to the central committee.
+3. Explain the three kinds:
+   - Everyday requests, such as adding a person, changing someone's team or resetting a password. These are handled as they arrive.
+   - Defect reports. These include the version number from the page footer.
+   - New feature requests. These go to the central committee.
 4. Tell them plainly that no request is treated as urgent, and that no response time is committed.
 
-**Done when:** The chapter has in writing how to raise a request, that no request is treated as urgent, that everyday requests are handled as they arrive, and that no response time is committed (ruled 09-18-26).
+**Done when all of these are true:**
+
+- The chapter has in writing how to raise a request.
+- The chapter has in writing that no request is treated as urgent.
+- The chapter has in writing that everyday requests are handled as they arrive.
+- The chapter has in writing that no response time is committed (ruled 09-18-26).
 
 **How to check:** The first point of contact raises a test request in ClickUp and sees it acknowledged.
 
@@ -49,8 +74,11 @@ This stage moves the chapter from being set up to being supported, and proves th
 
 **Why:** Every chapter runs the same software, so a change is made for everyone or not at all, and the chapter needs to know who decides.
 
-**Who:** The central support organization  
-**Finish first:** step 18.1
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 18.1 Publish how to get help
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -60,7 +88,12 @@ This stage moves the chapter from being set up to being supported, and proves th
 2. Show how to raise a new feature request in ClickUp.
 3. Explain that the central committee reviews and schedules features and defects every two weeks, and that an accepted request goes into a weekly release.
 
-**Done when:** The chapter knows where to send a request that would change the software for everyone, who decides, and how often those decisions are made. The central committee decides, every two weeks (ruled 09-18-26).
+**Done when all of these are true:**
+
+- The chapter knows where to send a request that would change the software for everyone.
+- The chapter knows who decides.
+- The chapter knows how often those decisions are made.
+- The central committee decides, every two weeks (ruled 09-18-26).
 
 **How to check:** The chapter can say, without looking it up, that a change is for everyone or not at all.
 
@@ -74,8 +107,11 @@ This stage moves the chapter from being set up to being supported, and proves th
 
 **Why:** Software changes arrive without anyone at the chapter doing anything, so they need to know when, and what to do if something looks wrong.
 
-**Who:** The central support organization  
-**Finish first:** step 11.8
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 11.8 Set the update policy to Latest Stable
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -87,7 +123,11 @@ This stage moves the chapter from being set up to being supported, and proves th
 4. Show the first point of contact where the version number is.
    *You should see:* The version number in the page footer.
 
-**Done when:** The chapter knows software updates arrive automatically on a weekly schedule, roughly when, and what to do if something looks wrong afterwards.
+**Done when all of these are true:**
+
+- The chapter knows software updates arrive automatically on a weekly schedule.
+- The chapter knows roughly when.
+- The chapter knows what to do if something looks wrong afterwards.
 
 **How to check:** The first point of contact finds the version number in the footer.
 
@@ -101,20 +141,36 @@ This stage moves the chapter from being set up to being supported, and proves th
 
 **Why:** The chapter owns its accounts, and must know every one of them, who holds it, and how to reach it.
 
-**Who:** The central support organization prepares it; the chapter keeps it  
-**Finish first:** step 5.7
+**Who:** The central support organization prepares it; the chapter keeps it
+
+**Finish first:**
+
+- step 5.7 Write down every account the chapter now owns
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
 **Do this:**
 
-1. Bring the account list from step 5.7 up to date. It covers the domain registrar, Cloudflare, Google Workspace, the hosting account, the video meeting account if there is one, the chapter's vault, the CRM's administrator accounts, and the documentation site if the chapter has its own.
+1. Bring the account list from step 5.7 up to date. It covers:
+   - The domain registrar.
+   - Cloudflare.
+   - Google Workspace.
+   - The hosting account.
+   - The video meeting account, if there is one.
+   - The chapter's vault.
+   - The CRM's administrator accounts.
+   - The documentation site, if the chapter has its own.
 2. For each account, write who holds the top-level sign-in and who else has access. No passwords on the list; those are in the chapter's vault.
 3. Check that no top-level sign-in belongs to a volunteer's personal email address.
 4. Go through the list with a named chapter officer.
    *You should see:* The officer recognising every account on it.
 
-**Done when:** The chapter holds the list of every account, who has the top-level sign-in, and who else has access — and a named chapter officer can reach every one of them.
+**Done when all of these are true:**
+
+- The chapter holds the list of every account.
+- The list says who has the top-level sign-in.
+- The list says who else has access.
+- A named chapter officer can reach every one of them.
 
 **How to check:** The named officer reads the list and confirms every account is one they recognise.
 
@@ -128,8 +184,11 @@ This stage moves the chapter from being set up to being supported, and proves th
 
 **Why:** The promise that neither side can lock the other out is only real once a chapter officer has done it.
 
-**Who:** The chapter and the central support organization — the chapter officer does it; the central support organization watches  
-**Finish first:** step 18.4
+**Who:** The chapter and the central support organization — the chapter officer does it; the central support organization watches
+
+**Finish first:**
+
+- step 18.4 Hand over the account and access list
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -141,7 +200,13 @@ This stage moves the chapter from being set up to being supported, and proves th
 4. The officer reaches the CRM server through the hosting account. No written procedure exists for this yet (work list item 5), so this action cannot be completed.
 5. Record the date on the chapter's entry in the list of watched systems.
 
-**Done when:** A named chapter officer has demonstrated, not merely been told, that they can reach the server, the hosting account, the Google Workspace account and the domain registrar account on their own. The agreement says neither side can lock the other out; this is the step that makes that true rather than stated.
+**Done when all of these are true:**
+
+- A named chapter officer has demonstrated, not merely been told, that they can reach the server on their own.
+- The officer has demonstrated the same for the hosting account.
+- The officer has demonstrated the same for the Google Workspace account.
+- The officer has demonstrated the same for the domain registrar account.
+- The agreement says neither side can lock the other out; this is the step that makes that true rather than stated.
 
 **How to check:** The officer has signed in to all four, and the date is recorded.
 
@@ -155,8 +220,11 @@ This stage moves the chapter from being set up to being supported, and proves th
 
 **Why:** A chapter should know exactly what it keeps if it leaves, before it ever needs to.
 
-**Who:** The central support organization  
-**Finish first:** step 2.5
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 2.5 Agree the leaving terms
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -180,15 +248,27 @@ This stage moves the chapter from being set up to being supported, and proves th
 
 **Why:** The first months show what the guide and the support route got wrong, and a booked review makes sure someone looks.
 
-**Who:** The chapter and the central support organization  
-**Finish first:** step 18.1, step 18.2, step 18.3, step 18.4, step 18.5, step 18.6
+**Who:** The chapter and the central support organization
+
+**Finish first:**
+
+- step 18.1 Publish how to get help
+- step 18.2 Explain how to ask for a change
+- step 18.3 Explain the release schedule
+- step 18.4 Hand over the account and access list
+- step 18.5 Confirm the chapter can get in without the central support organization
+- step 18.6 Confirm the leaving terms in practice
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
 **Do this:**
 
 1. Book a meeting about three months out, in both organizations' calendars.
-2. At it, go through the requests raised, any feature requests and their answers, whether a restore test has run since go-live, and whether the account list is still right.
+2. At it, go through:
+   - The requests raised.
+   - Any feature requests and their answers.
+   - Whether a restore test has run since go-live.
+   - Whether the account list is still right.
 
 **Done when:** A date is booked to review how the first months have gone.
 

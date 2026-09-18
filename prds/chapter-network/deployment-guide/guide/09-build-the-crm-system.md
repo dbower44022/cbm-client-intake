@@ -12,10 +12,38 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Who:** The central support organization, working inside the chapter's accounts.  
 **Time:** About half a day when nothing goes wrong. The August build of the trial chapter took most of a day, including the failures it found.  
-**Before you start:** The chapter information form, complete and reviewed (stage 8); The chapter's hosting account, with the central support organization's access (steps 5.1 and 5.4); The chapter's domain names in its Cloudflare account (step 3.7); The chapter's own DigitalOcean and Cloudflare tokens entered in CRMBuilder (step 5.8); The chapter's vault, for every secret this stage creates (step 2.7)  
 **When this stage is done:** The Google permissions (stage 10) and the applications (stage 11) can start. The applications need the CRM's key, which this stage creates.
 
-**Steps in this stage:** 9.1 Obtain the current standard from the central support organization, 9.2 Create the server, 9.3 Install the CRM software at the version the standard names, 9.4 Confirm command line access, and record who holds the key, 9.5 Point the CRM's web address at the server, 9.6 Publish the CRM at its own web address, 9.7 Install the two paid add-on products, 9.8 Copy on the standard configuration files, 9.9 Confirm the CRM's own screen loads, 9.10 Create the teams, 9.11 Create the permission roles, 9.12 Attach the roles to the teams, 9.13 Create the email templates, 9.14 Apply the instance settings, 9.15 Apply the navigation tabs and the quick-add list, 9.16 Apply the standard's duplicate checking, saved views and automated rules, 9.17 Create the account the applications sign in with, 9.18 Create the administrator account for the central support organization, 9.19 Create the configuration version record, 9.20 Run the checking tool until it reports no differences
+**Before you start:**
+
+- The chapter information form, complete and reviewed (stage 8)
+- The chapter's hosting account, with the central support organization's access (steps 5.1 and 5.4)
+- The chapter's domain names in its Cloudflare account (step 3.7)
+- The chapter's own DigitalOcean and Cloudflare tokens entered in CRMBuilder (step 5.8)
+- The chapter's vault, for every secret this stage creates (step 2.7)
+
+**Steps in this stage:**
+
+- 9.1 Obtain the current standard from the central support organization
+- 9.2 Create the server
+- 9.3 Install the CRM software at the version the standard names
+- 9.4 Confirm command line access, and record who holds the key
+- 9.5 Point the CRM's web address at the server
+- 9.6 Publish the CRM at its own web address
+- 9.7 Install the two paid add-on products
+- 9.8 Copy on the standard configuration files
+- 9.9 Confirm the CRM's own screen loads
+- 9.10 Create the teams
+- 9.11 Create the permission roles
+- 9.12 Attach the roles to the teams
+- 9.13 Create the email templates
+- 9.14 Apply the instance settings
+- 9.15 Apply the navigation tabs and the quick-add list
+- 9.16 Apply the standard's duplicate checking, saved views and automated rules
+- 9.17 Create the account the applications sign in with
+- 9.18 Create the administrator account for the central support organization
+- 9.19 Create the configuration version record
+- 9.20 Run the checking tool until it reports no differences
 
 ---
 
@@ -23,18 +51,27 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Why:** Every later step checks against three version numbers, so they have to be fixed before anything is installed.
 
-**Who:** The central support organization  
-**Finish first:** nothing
+**Who:** The central support organization
+
+**Finish first:** nothing.
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
 **Do this:**
 
-1. Write down the CRM version, the version of each of the two paid add-on products, and the release of the standard configuration this chapter will get.
+1. Write down three version numbers:
+   - The CRM version.
+   - The version of each of the two paid add-on products.
+   - The release of the standard configuration this chapter will get.
    *You should see:* Three version numbers, written where the rest of the stage can read them.
 2. There is no published statement of the standard yet (work list item 2). Until there is, use the versions Cleveland's production system runs, and the date its configuration was last captured.
 
-**Done when:** The chapter's build has, in writing, the CRM version to install, the version of each of the two add-on products, and which release of the standard configuration is being applied. Without these three numbers the later steps have nothing to check against.
+**Done when all of these are true:**
+
+- The chapter's build has, in writing, the CRM version to install.
+- The build has, in writing, the version of each of the two add-on products.
+- The build has, in writing, which release of the standard configuration is being applied.
+- Without these three numbers the later steps have nothing to check against.
 
 **How to check:** The three numbers are written down.
 
@@ -48,8 +85,13 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Why:** The CRM needs a server of its own, in the chapter's own hosting account, so the chapter owns it.
 
-**Who:** The central support organization inside the chapter's hosting account  
-**Finish first:** step 5.4, step 5.8, step 3.7
+**Who:** The central support organization inside the chapter's hosting account
+
+**Finish first:**
+
+- step 5.4 Grant the central support organization access to the hosting account
+- step 5.8 Create the two tokens CRMBuilder builds with
+- step 3.7 Move the domain names' DNS to the chapter's Cloudflare account
 
 **Do this:**
 
@@ -60,7 +102,12 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 4. Tick the box for extra sign-in keys.
    *You should see:* The box ticked. Without it nobody can open a command line on the server.
 5. Start the run, and wait for it to finish.
-   *You should see:* The run reports each phase complete. It creates the server, writes the CRM's address into Cloudflare, waits for the address to resolve, and installs the CRM.
+   *You should see:*
+   - The server created
+   - The CRM's address written into Cloudflare
+   - The address resolving
+   - The CRM installed
+   - Each phase reported complete
 
 **Done when:** A server is running in the chapter's own hosting account and the central support organization can reach it.
 
@@ -76,8 +123,12 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Why:** Every chapter must run the same CRM version, or a release built for one may break another.
 
-**Who:** The central support organization  
-**Finish first:** step 9.1, step 9.2
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 9.1 Obtain the current standard from the central support organization
+- step 9.2 Create the server
 
 **Do this:**
 
@@ -100,8 +151,11 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Why:** Copying the configuration files (step 9.8) needs a command line on the server, and the key must not live on one laptop.
 
-**Who:** The central support organization  
-**Finish first:** step 9.2
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 9.2 Create the server
 
 **Do this:**
 
@@ -124,8 +178,12 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Why:** People and the applications reach the CRM by its name, so the name must lead to the server.
 
-**Who:** The central support organization  
-**Finish first:** step 3.7, step 9.2
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 3.7 Move the domain names' DNS to the chapter's Cloudflare account
+- step 9.2 Create the server
 
 **Do this:**
 
@@ -146,8 +204,11 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Why:** A secure connection protects every sign-in, and a certificate that is not renewed automatically takes the whole system down about ninety days later.
 
-**Who:** The central support organization  
-**Finish first:** step 9.5
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 9.5 Point the CRM's web address at the server
 
 **Do this:**
 
@@ -170,8 +231,12 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Why:** The standard permission roles refer to features inside these two products, and the CRM refuses a role that names a missing feature.
 
-**Who:** The central support organization with the chapter paying for the licences  
-**Finish first:** step 9.3, step 9.1
+**Who:** The central support organization with the chapter paying for the licences
+
+**Finish first:**
+
+- step 9.3 Install the CRM software at the version the standard names
+- step 9.1 Obtain the current standard from the central support organization
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -181,7 +246,12 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 2. In the CRM, open Administration, then Extensions, and upload each product.
    *You should see:* Both products listed as installed, at the versions from step 9.1.
 
-**Done when:** Both are installed at the versions the standard names, licensed to this chapter, and listed in the CRM's own list of installed products. They must be installed before the permission roles are created, because the roles refer to them.
+**Done when all of these are true:**
+
+- Both are installed at the versions the standard names.
+- Both are licensed to this chapter.
+- Both are listed in the CRM's own list of installed products.
+- They must be installed before the permission roles are created, because the roles refer to them.
 
 **How to check:** Both appear in the CRM's list of installed products, at the right versions.
 
@@ -195,8 +265,12 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Why:** The standard's records, fields, links, screen layouts and rules arrive as two sets of files, and the CRM must be rebuilt to take them in.
 
-**Who:** The central support organization  
-**Finish first:** step 9.4, step 9.7
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 9.4 Confirm command line access, and record who holds the key
+- step 9.7 Install the two paid add-on products
 
 **Do this:**
 
@@ -207,7 +281,12 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 4. Run the CRM's rebuild command inside its container.
    *You should see:* The rebuild finishing with no errors. In August it took three seconds.
 
-**Done when:** Both sets of configuration files are in place, owned by the web server user, and the rebuild command has finished without errors. There are two sets, not one.
+**Done when all of these are true:**
+
+- Both sets of configuration files are in place.
+- Both sets are owned by the web server user.
+- The rebuild command has finished without errors.
+- There are two sets, not one.
 
 **How to check:** The rebuild log shows no errors, and step 9.9 shows a working screen.
 
@@ -221,8 +300,11 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Why:** A blank screen is the only sign that one of the two sets of files is missing, so it is checked by eye before going on.
 
-**Who:** The central support organization  
-**Finish first:** step 9.8
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 9.8 Copy on the standard configuration files
 
 **Do this:**
 
@@ -241,14 +323,23 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Why:** Every page in the applications is opened by team membership, and each gate looks for an exact team name.
 
-**Who:** The central support organization  
-**Finish first:** step 9.9
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 9.9 Confirm the CRM's own screen loads
 
 **Do this:**
 
 1. Run the trial script scripts/rehearsal/apply_api_half.py with the chapter's settings file and without the apply option.
    *You should see:* A list of what it would create, and nothing written.
-2. Run it again with the apply option. It creates the teams, the roles, their attachments, the email templates, two accounts and the instance settings (steps 9.10 to 9.14, 9.17 and 9.18).
+2. Run it again with the apply option. It does steps 9.10 to 9.14, 9.17 and 9.18 in one run, creating:
+   - The teams.
+   - The roles.
+   - The roles' attachments to the teams.
+   - The email templates.
+   - Two accounts.
+   - The instance settings.
    *You should see:* Every team reported applied.
 
 **Done when:** Every team the standard names exists, spelled exactly as the standard spells it.
@@ -265,8 +356,12 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Why:** Roles decide what each team may read and change. They are what keeps a mentor to their own clients.
 
-**Who:** The central support organization  
-**Finish first:** step 9.7, step 9.10
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 9.7 Install the two paid add-on products
+- step 9.10 Create the teams
 
 **Do this:**
 
@@ -287,8 +382,11 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Why:** A team gives its members permissions only through the roles attached to it.
 
-**Who:** The central support organization  
-**Finish first:** step 9.11
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 9.11 Create the permission roles
 
 **Do this:**
 
@@ -311,8 +409,11 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Why:** The applications send their standard emails, such as the mentor assignment notice, from these templates.
 
-**Who:** The central support organization  
-**Finish first:** step 9.9
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 9.9 Confirm the CRM's own screen loads
 
 **Do this:**
 
@@ -333,15 +434,31 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Why:** The CRM's own name, sending name and address, logo and locale are the chapter's, and anything the CRM sends directly uses them.
 
-**Who:** The central support organization  
-**Finish first:** step 9.9
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 9.9 Confirm the CRM's own screen loads
 
 **Do this:**
 
 1. Nothing extra to run. The script in step 9.10 applies them from the chapter information form and reads them back.
    *You should see:* Each setting reported equal to what was sent.
 
-**Done when:** The chapter's name, sending name, sending address, web address, logo, time zone, date format, time format, currency, language and week start are all set from the chapter information form, and reading them back matches.
+**Done when all of these are true:**
+
+- The chapter's name is set.
+- The sending name is set.
+- The sending address is set.
+- The web address is set.
+- The logo is set.
+- The time zone is set.
+- The date format is set.
+- The time format is set.
+- The currency is set.
+- The language is set.
+- The week start is set.
+- All of them are set from the chapter information form, and reading them back matches.
 
 **How to check:** Each setting reads back equal to the form.
 
@@ -355,8 +472,12 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Why:** Staff find their way around the CRM by its tab bar, which must be the standard one with the chapter's own help link.
 
-**Who:** The central support organization  
-**Finish first:** step 9.14, step 6.7
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 9.14 Apply the instance settings
+- step 6.7 Decide where the chapter's help documentation lives
 
 **Do this:**
 
@@ -364,7 +485,11 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 2. Open the CRM and click the documentation tab.
    *You should see:* The chapter's own help documentation, not another chapter's.
 
-**Done when:** The tabs match the standard, the chapter's own documentation link is in place of any other chapter's, and the list of records staff can add quickly matches the standard.
+**Done when all of these are true:**
+
+- The tabs match the standard.
+- The chapter's own documentation link is in place of any other chapter's.
+- The list of records staff can add quickly matches the standard.
 
 **How to check:** The tab bar matches, and the documentation tab opens this chapter's documentation.
 
@@ -378,8 +503,11 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Why:** The client intake software behaves differently depending on the CRM's duplicate checking, so every chapter must have the same settings.
 
-**Who:** The central support organization  
-**Finish first:** step 9.9
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 9.9 Confirm the CRM's own screen loads
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -401,18 +529,28 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Why:** The applications reach the CRM with an account of their own, and the key it creates is the first secret stage 11 needs.
 
-**Who:** The central support organization  
-**Finish first:** step 9.12
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 9.12 Attach the roles to the teams
 
 **Do this:**
 
-1. Nothing extra to run. The script in step 9.10 creates the account, attaches its role, and writes its key to the settings file.
+1. Nothing extra to run. The script in step 9.10 does three things:
+   - Creates the account.
+   - Attaches its role.
+   - Writes its key to the settings file.
 2. Move the key into the chapter's vault, and delete it from the settings file.
    *You should see:* The key in the Operations vault.
 3. Make one test request to the CRM with the key.
    *You should see:* A normal answer. An empty list is fine.
 
-**Done when:** The account exists, its key has been recorded in the secrets store, and a test request using that key succeeds.
+**Done when all of these are true:**
+
+- The account exists.
+- Its key has been recorded in the secrets store.
+- A test request using that key succeeds.
 
 **How to check:** A request using the key returns a normal answer, not a refusal.
 
@@ -426,8 +564,11 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Why:** Only an administrator can create CRM accounts, and the applications use this account to create mentor logins.
 
-**Who:** The central support organization  
-**Finish first:** step 9.9
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 9.9 Confirm the CRM's own screen loads
 
 **Do this:**
 
@@ -449,8 +590,11 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Why:** The applications report which version of the standard their CRM holds, and they read it from this record.
 
-**Who:** The central support organization  
-**Finish first:** step 9.17
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 9.17 Create the account the applications sign in with
 
 **Do this:**
 
@@ -473,8 +617,20 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Why:** This is the proof that the chapter's CRM matches the standard, and so that the next release will work on it.
 
-**Who:** The central support organization  
-**Finish first:** step 9.10, step 9.11, step 9.12, step 9.13, step 9.14, step 9.15, step 9.16, step 9.17, step 9.18, step 9.19
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 9.10 Create the teams
+- step 9.11 Create the permission roles
+- step 9.12 Attach the roles to the teams
+- step 9.13 Create the email templates
+- step 9.14 Apply the instance settings
+- step 9.15 Apply the navigation tabs and the quick-add list
+- step 9.16 Apply the standard's duplicate checking, saved views and automated rules
+- step 9.17 Create the account the applications sign in with
+- step 9.18 Create the administrator account for the central support organization
+- step 9.19 Create the configuration version record
 
 **Do this:**
 

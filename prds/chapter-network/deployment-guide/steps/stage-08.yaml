@@ -34,7 +34,14 @@ steps:
     mode: automated
     actions:
       - do: Copy the blank form from the last section of prds/chapter-network/chapter-values.md.
-        see: A form with sections for the chapter, web addresses, Google, Zoom, the CRM, secrets and feature switches.
+        see:
+          - A section for the chapter
+          - A section for web addresses
+          - A section for Google
+          - A section for Zoom
+          - A section for the CRM
+          - A section for secrets
+          - A section for feature switches
       - do: Send the trial chapter's filled-in form, prds/chapter-network/rehearsal-2026-08-31/lakeside-values.yaml, alongside it as a worked example.
       - do: Write a name beside each section. The chapter's setup contact fills in the name, the web addresses and the policy addresses. The central support organization fills in the CRM details, the feature switches and the list of secrets.
         see: Every section with a name beside it.
@@ -66,8 +73,12 @@ steps:
         see: A time zone name such as America/Denver.
       - do: If the time zone is not Eastern, write "not supported yet" beside it. The software has Eastern time written into its code (work list item 17).
       - do: Write the currency and language. They are almost always US dollars and US English.
-    done_when: >-
-      The chapter name, short label, time zone, currency and language are filled in.
+    done_when:
+      - "The chapter name is filled in."
+      - "The short label is filled in."
+      - "The time zone is filled in."
+      - "The currency is filled in."
+      - "The language is filled in."
     check:
       how: The name matches the legal name, or the trading name the board chose, letter for letter.
       probe: The app compares the name with the legal name recorded in stage 1, and warns when the time zone is not Eastern.
@@ -93,10 +104,13 @@ steps:
       - do: Copy in the events page address, the help documentation address and the colour file address.
       - do: Open each of the four policy documents in a private browser window, and copy each address into the form.
         see: Each policy document's page, with the chapter's own name on it.
-    done_when: >-
-      The application address, the website address, the events page address, the
-      documentation address, the colour file address and the four policy addresses
-      are filled in.
+    done_when:
+      - "The application address is filled in."
+      - "The website address is filled in."
+      - "The events page address is filled in."
+      - "The documentation address is filled in."
+      - "The colour file address is filled in."
+      - "The four policy addresses are filled in."
     check:
       how: Every address, opened in a private browser window, shows the right page.
       probe: The app requests every address and reports any that does not answer.
@@ -117,14 +131,25 @@ steps:
     mode: guided
     actions:
       - do: Write the Google Workspace branch the chapter chose in step 4.1.
-      - do: Copy the main domain, the shared operations mailbox, the alert sending address, the alert receiving address and the members group from the Google Workspace admin console.
+      - do: "Copy these from the Google Workspace admin console:"
+        items:
+          - The main domain.
+          - The shared operations mailbox.
+          - The alert sending address.
+          - The alert receiving address.
+          - The members group.
       - do: Copy the shared drive's identifier, the string of letters at the end of its web address.
       - do: Write the mentor email domain, the domain mentors' addresses are created on.
       - do: For a chapter that runs public webinars, copy the Zoom host address and the Zoom app's account and client identifiers from step 5.5. Otherwise write "no webinars".
-    done_when: >-
-      The branch chosen, the main domain, the shared operations mailbox, the alert
-      sending and receiving addresses, the members group, the shared drive and the
-      mentor email domain are filled in.
+    done_when:
+      - "The branch chosen is filled in."
+      - "The main domain is filled in."
+      - "The shared operations mailbox is filled in."
+      - "The alert sending address is filled in."
+      - "The alert receiving address is filled in."
+      - "The members group is filled in."
+      - "The shared drive is filled in."
+      - "The mentor email domain is filled in."
     check:
       how: Each mailbox named on the form is listed as a mailbox, with a licence, in the Google Workspace admin console.
       probe: Once the Google connection works (stage 10), the app looks up each address in the chapter's directory and confirms it is a licensed mailbox, not a group.
@@ -149,9 +174,12 @@ steps:
       - do: Write the name shown inside the CRM and the sending name. Both are usually the chapter's name.
       - do: Write the sending address, a mailbox from stage 4.
       - do: Attach the logo image from step 6.6.
-    done_when: >-
-      The CRM address, the name shown inside the CRM, the sending name, the sending
-      address and the logo file are filled in.
+    done_when:
+      - "The CRM address is filled in."
+      - "The name shown inside the CRM is filled in."
+      - "The sending name is filled in."
+      - "The sending address is filled in."
+      - "The logo file is filled in."
     check:
       how: The section is complete, and the sending address is a real mailbox.
       probe: The app confirms the CRM address is under the chapter's domain and that the logo file is attached.
@@ -197,17 +225,23 @@ steps:
     produces: [secret_list]
     mode: guided
     actions:
-      - do: List the seven secrets by name. They are the CRM key the applications use, the name and password of the administrator account that creates logins, the database address, the session secret, the encryption key for stored data, and the Google key.
+      - do: "List the seven secrets by name:"
+        items:
+          - The CRM key the applications use.
+          - The name of the administrator account that creates logins.
+          - The password of that administrator account.
+          - The database address.
+          - The session secret.
+          - The encryption key for stored data.
+          - The Google key.
       - do: For a chapter that runs public webinars, add the Zoom app's secret as an eighth.
       - do: Write the holder beside each one. Write no secret value on the form.
         see: Seven or eight names, each with a holder, and no values.
-    done_when: >-
-      All seven are listed by name with the holder named beside each, plus the video
-      meeting app's secret for a chapter that runs webinars. No secret value is
-      written on the form. Seven, not six: besides the six the planning documents
-      name, the applications use an encryption key for stored data that the settings
-      generator creates quietly on first run. Changing it later destroys the data it
-      protects, so it is permanent from the moment it exists.
+    done_when:
+      - "All seven are listed by name with the holder named beside each."
+      - "The video meeting app's secret is listed too, for a chapter that runs webinars."
+      - "No secret value is written on the form."
+      - "Seven, not six: besides the six the planning documents name, the applications use an encryption key for stored data that the settings generator creates quietly on first run. Changing it later destroys the data it protects, so it is permanent from the moment it exists."
     check:
       how: Seven names, or eight for a webinar chapter, each with a holder, and no values.
       probe: The app checks the list against the software's own list of secret settings.
@@ -231,10 +265,10 @@ steps:
       - do: For each secret on the list from step 8.7, check it has an entry. Most arrive as accounts are created; the machine secrets arrive in stages 9 to 11 and go straight into the vault as each is made.
         see: An entry for every secret that exists so far.
       - do: Ask a second named person to open each entry.
-    done_when: >-
-      All seven of the chapter's secrets are held in the chapter's Proton Pass
-      Operations vault (step 2.7), at least two named people can reach each one, and
-      none of them exists only in a file on one person's computer.
+    done_when:
+      - "All seven of the chapter's secrets are held in the chapter's Proton Pass Operations vault (step 2.7)."
+      - "At least two named people can reach each one."
+      - "None of them exists only in a file on one person's computer."
     check:
       how: A second named person opens each secret without help.
       probe: The app reads each secret from the vault through Proton Pass's command-line tool, by name.

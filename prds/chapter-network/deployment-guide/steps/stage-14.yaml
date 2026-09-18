@@ -31,16 +31,23 @@ steps:
     produces: [staff_list]
     mode: guided
     actions:
-      - do: List each member of staff with their chapter email address and their team. The seven teams that open a page are the Client Administration Team, the Mentor Administration Team, the Mentor Team, the Partner Management Team, the Sponsor Management Team, the Marketing Admin Team and the Analytics Admin Team.
+      - do: "List each member of staff with their chapter email address and their team. The seven teams that open a page are:"
+        items:
+          - Client Administration Team
+          - Mentor Administration Team
+          - Mentor Team
+          - Partner Management Team
+          - Sponsor Management Team
+          - Marketing Admin Team
+          - Analytics Admin Team
       - do: Give each person the fewest teams that cover their work. A person with two jobs gets two teams.
       - do: Leave mentors off the list.
       - do: Have the chapter approve the list in writing.
         see: A list of names, chapter email addresses and teams, with the chapter's approval.
-    done_when: >-
-      A list names every member of staff, their email address and their team,
-      approved by the chapter. Mentors are not on this list. Their accounts are
-      created from their mentor records, at the end of the records stage (step
-      15.9).
+    done_when:
+      - "A list names every member of staff, with their email address and their team."
+      - "The list is approved by the chapter."
+      - "Mentors are not on this list. Their accounts are created from their mentor records, at the end of the records stage (step 15.9)."
     check:
       how: Every person on the list has a chapter email address and at least one team.
       probe: The app checks each address is on the chapter's domain and each team name exists in the CRM.

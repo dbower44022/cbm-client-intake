@@ -209,7 +209,12 @@ steps:
     mode: guided
     actions:
       - do: Open the chapter's website in a private browser window on a computer.
-      - do: Open the mentor directory, one mentor, the events programme and one event.
+      - do: "Open each of these:"
+        items:
+          - The mentor directory.
+          - One mentor.
+          - The events programme.
+          - One event.
         see: Each page with the chapter's own content and name.
       - do: Do the same on a phone.
         see: One column, no sideways scrolling, no text cut off.
@@ -236,13 +241,20 @@ steps:
     produces: []
     mode: automated
     actions:
-      - do: In the CRM, delete the made-up company, its contact, its client profile and its engagement.
+      - do: "In the CRM, delete the made-up records:"
+        items:
+          - The company.
+          - Its contact.
+          - Its client profile.
+          - Its engagement.
       - do: Leave the submission in Submission Admin, closed. It is the record that the path worked.
       - do: Set the seven test users to inactive, so the check can be repeated after a later release.
       - do: Write down what was removed in the chapter's handover notes.
-    done_when: >-
-      The test submissions, test assignments and test users created for this stage
-      are gone or disabled, and it is written down what was removed.
+    done_when:
+      - "The test submissions created for this stage are gone or disabled."
+      - "The test assignments created for this stage are gone or disabled."
+      - "The test users created for this stage are gone or disabled."
+      - "It is written down what was removed."
     check:
       how: No record with the made-up names remains, and the seven test users cannot sign in.
       probe: The app searches for the made-up names and confirms the test users are inactive.

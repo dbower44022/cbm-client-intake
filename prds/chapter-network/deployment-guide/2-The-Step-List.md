@@ -1,10 +1,10 @@
 # New Chapter Deployment Guide — The Step List
 
 **Document:** The bare list of steps, with no methods yet
-**Version:** 0.12
+**Version:** 0.13
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 14:45
+**Last Updated:** 09-18-26 16:57
 
 ---
 
@@ -31,9 +31,11 @@ carry once the methods are written.
 ## Stage 1 — Set up the chapter as a legal organization
 
 **1.1 Choose the chapter's name.**
-Done when: the founding group has agreed one name, a search of state business
-registrations and trademarks shows no conflict, and the matching domain names are
-still available to buy.
+Done when:
+
+- The founding group has agreed one name.
+- A search of state business registrations and trademarks shows no conflict.
+- The matching domain names are still available to buy.
 
 **1.2 Incorporate the chapter.**
 Done when: the state has accepted the articles of incorporation and returned a
@@ -43,8 +45,11 @@ stamped copy.
 Done when: the number has been issued and the confirmation letter is filed.
 
 **1.4 Appoint a board and adopt bylaws.**
-Done when: bylaws are adopted, directors are named, and the minutes record which
-officers may sign contracts.
+Done when:
+
+- Bylaws are adopted.
+- Directors are named.
+- The minutes record which officers may sign contracts.
 
 **1.5 Obtain nonprofit tax status, or a sponsorship arrangement.**
 Done when: either the determination letter from the tax authority has arrived, or a
@@ -62,8 +67,11 @@ setup, with authority to open accounts and grant access to others.
 ## Stage 2 — Sign the agreement with the central support organization
 
 **2.1 Agree what the central support organization does.**
-Done when: the chapter has in writing the list of what is provided, what is not,
-and how quickly ordinary requests are answered.
+Done when:
+
+- The chapter has in writing the list of what is provided.
+- The chapter has in writing what is not provided.
+- The chapter has in writing how quickly ordinary requests are answered.
 
 **2.2 Agree the cost.**
 Done when: the fee is agreed in writing, and it is clear which costs the chapter
@@ -80,8 +88,11 @@ organization will administer, and that the chapter may withdraw that access at a
 time.
 
 **2.5 Agree the leaving terms.**
-Done when: the notice period, the wind-down, and the list of everything the chapter
-takes with it are written into the agreement.
+Done when:
+
+- The notice period is written into the agreement.
+- The wind-down is written into the agreement.
+- The list of everything the chapter takes with it is written into the agreement.
 
 **2.6 Sign the agreement.**
 Done when: both sides have signed and each holds a copy.
@@ -105,8 +116,11 @@ Done when: the names are chosen and confirmed available. See the open question i
 the plan document about whether a chapter needs one domain name or two.
 
 **3.3 Create the domain registrar account.**
-Done when: the account exists, is in the chapter's name, and uses the founding
-email address.
+Done when:
+
+- The account exists.
+- The account is in the chapter's name.
+- The account uses the founding email address.
 
 **3.4 Register and pay for the domain names.**
 Done when: a public ownership lookup returns the chapter as the registrant, and the
@@ -121,20 +135,25 @@ Done when: signing in requires a second factor, and the recovery codes are store
 where more than one person can reach them.
 
 **3.7 Move the domain names' DNS to the chapter's Cloudflare account.**
-Done when: each domain name is a zone in a Cloudflare account the chapter owns, the
-registrar points at Cloudflare's name servers, two-step sign-in is on, the central
-support organization's named people are members, and the sign-in and recovery codes
-are in the chapter's vault. CRMBuilder supports no other DNS provider.
+Done when:
+
+- Each domain name is a zone in a Cloudflare account the chapter owns.
+- The registrar points at Cloudflare's name servers.
+- Two-step sign-in is on.
+- The central support organization's named people are members.
+- The sign-in and recovery codes are in the chapter's vault.
+- CRMBuilder supports no other DNS provider.
 
 ---
 
 ## Stage 4 — Set up Google Workspace and the chapter's email
 
 **4.1 Choose the Google Workspace branch.**
-Done when: the chapter has chosen either to hold its own Google Workspace or to
-have one provided by the central support organization, the choice is recorded, and
-the board has seen in writing what the provided option means if the chapter later
-leaves.
+Done when:
+
+- The chapter has chosen either to hold its own Google Workspace or to have one provided by the central support organization.
+- The choice is recorded.
+- The board has seen in writing what the provided option means if the chapter later leaves.
 
 **4.2 Create the Google Workspace account.**
 Done when: the account exists on the chapter's email domain and the first
@@ -185,9 +204,11 @@ Done when: the application has been submitted with the chapter's nonprofit
 evidence, and the expected answer date is recorded.
 
 **4.14 Move control of the registrar account to a chapter mailbox.**
-Done when: the registrar account's contact address is a chapter mailbox, the
-founder's personal address has been removed, and a password reset test lands in the
-chapter mailbox.
+Done when:
+
+- The registrar account's contact address is a chapter mailbox.
+- The founder's personal address has been removed.
+- A password reset test lands in the chapter mailbox.
 
 ---
 
@@ -216,15 +237,21 @@ this chapter runs no public webinars.
 Done when: two-step sign-in is on and recovery does not depend on one person.
 
 **5.7 Write down every account the chapter now owns.**
-Done when: one list names each account, its web address, who holds the top-level
-sign-in, and who else has access.
+Done when:
+
+- One list names each account.
+- The list gives each account's web address.
+- The list says who holds the top-level sign-in.
+- The list says who else has access.
 
 **5.8 Create the two tokens CRMBuilder builds with.**
-Done when: a DigitalOcean API token from the chapter's hosting account, and a
-Cloudflare API token limited to editing DNS in the chapter's zones, both exist, are
-in the chapter's vault, and are entered in CRMBuilder as the chapter's provider
-credentials. CRMBuilder builds the chapter's CRM with the chapter's own accounts,
-never its own (ruled 09-18-26).
+Done when:
+
+- A DigitalOcean API token from the chapter's hosting account exists.
+- A Cloudflare API token limited to editing DNS in the chapter's zones exists.
+- Both tokens are in the chapter's vault.
+- Both tokens are entered in CRMBuilder as the chapter's provider credentials.
+- CRMBuilder builds the chapter's CRM with the chapter's own accounts, never its own (ruled 09-18-26).
 
 ---
 
@@ -245,10 +272,12 @@ public mentor directory page is built and its method is decided.)
 Done when: a named person at the chapter has signed in and made a change.
 
 **6.5 Choose the chapter's colours and publish the colour file.**
-Done when: the chapter's colours are chosen, written into a small stylesheet, and
-published at a web address the software can load. Colours are the only visual
-difference between chapters in the software, so a chapter that skips this looks
-exactly like Cleveland.
+Done when:
+
+- The chapter's colours are chosen.
+- The colours are written into a small stylesheet.
+- The stylesheet is published at a web address the software can load.
+- Colours are the only visual difference between chapters in the software, so a chapter that skips this looks exactly like Cleveland.
 
 **6.6 Produce the chapter's logo image.**
 Done when: an image file of the chapter's logo exists in a form the CRM system
@@ -275,8 +304,11 @@ Done when: the document is published and opens without signing in.
 Done when: the document is published and opens without signing in.
 
 **7.4 Write and publish the privacy policy.**
-Done when: the document is published, opens without signing in, and names this
-chapter rather than any other organization.
+Done when:
+
+- The document is published.
+- The document opens without signing in.
+- The document names this chapter rather than any other organization.
 
 **7.5 Have the four documents reviewed.**
 Done when: whoever advises the chapter on legal matters has read all four and
@@ -294,22 +326,44 @@ one has been opened and checked.
 Done when: the chapter has the current blank form and knows who fills in each part.
 
 **8.2 Fill in the chapter's name and identity.**
-Done when: the chapter name, short label, time zone, currency and language are
-filled in.
+Done when:
+
+- The chapter name is filled in.
+- The short label is filled in.
+- The time zone is filled in.
+- The currency is filled in.
+- The language is filled in.
 
 **8.3 Fill in the web addresses.**
-Done when: the application address, the website address, the events page address,
-the documentation address, the colour file address and the four policy addresses
-are filled in.
+Done when:
+
+- The application address is filled in.
+- The website address is filled in.
+- The events page address is filled in.
+- The documentation address is filled in.
+- The colour file address is filled in.
+- The four policy addresses are filled in.
 
 **8.4 Fill in the Google details.**
-Done when: the branch chosen, the main domain, the shared operations mailbox, the
-alert sending and receiving addresses, the members group, the shared drive and the
-mentor email domain are filled in.
+Done when:
+
+- The branch chosen is filled in.
+- The main domain is filled in.
+- The shared operations mailbox is filled in.
+- The alert sending address is filled in.
+- The alert receiving address is filled in.
+- The members group is filled in.
+- The shared drive is filled in.
+- The mentor email domain is filled in.
 
 **8.5 Fill in the CRM details.**
-Done when: the CRM address, the name shown inside the CRM, the sending name, the
-sending address and the logo file are filled in.
+Done when:
+
+- The CRM address is filled in.
+- The name shown inside the CRM is filled in.
+- The sending name is filled in.
+- The sending address is filled in.
+- The logo file is filled in.
 
 **8.6 Decide every feature switch.**
 Done when: each switch has been deliberately set to on or off, and the branch the
@@ -317,17 +371,19 @@ application follows is recorded as the release branch rather than the developmen
 branch.
 
 **8.7 List the secrets by name.**
-Done when: all seven are listed by name with the holder named beside each, plus the
-video meeting app's secret for a chapter that runs webinars. No secret value is
-written on the form. Seven, not six: besides the six the planning
-documents name, the applications use an encryption key for stored data that the
-settings generator creates quietly on first run. Changing it later destroys the
-data it protects, so it is permanent from the moment it exists.
+Done when:
+
+- All seven are listed by name with the holder named beside each.
+- The video meeting app's secret is listed too, for a chapter that runs webinars.
+- No secret value is written on the form.
+- Seven, not six: besides the six the planning documents name, the applications use an encryption key for stored data that the settings generator creates quietly on first run. Changing it later destroys the data it protects, so it is permanent from the moment it exists.
 
 **8.8 Put the chapter's secrets into the store.**
-Done when: all seven of the chapter's secrets are held in the chapter's Proton Pass
-Operations vault (step 2.7), at least two named people can reach each one, and none
-of them exists only in a file on one person's computer.
+Done when:
+
+- All seven of the chapter's secrets are held in the chapter's Proton Pass Operations vault (step 2.7).
+- At least two named people can reach each one.
+- None of them exists only in a file on one person's computer.
 
 **8.9 Review the completed form.**
 Done when: two people have read the whole form together in one sitting and both
@@ -342,10 +398,12 @@ confirmed it can open it.
 ## Stage 9 — Build the CRM system
 
 **9.1 Obtain the current standard from the central support organization.**
-Done when: the chapter's build has, in writing, the CRM version to install, the
-version of each of the two add-on products, and which release of the standard
-configuration is being applied. Without these three numbers the later steps have
-nothing to check against.
+Done when:
+
+- The chapter's build has, in writing, the CRM version to install.
+- The build has, in writing, the version of each of the two add-on products.
+- The build has, in writing, which release of the standard configuration is being applied.
+- Without these three numbers the later steps have nothing to check against.
 
 **9.2 Create the server.**
 Done when: a server is running in the chapter's own hosting account and the central
@@ -370,14 +428,20 @@ certificate is set to renew by itself. A certificate that has to be renewed by h
 will expire and take the system down.
 
 **9.7 Install the two paid add-on products.**
-Done when: both are installed at the versions the standard names, licensed to this
-chapter, and listed in the CRM's own list of installed products. They must be
-installed before the permission roles are created, because the roles refer to them.
+Done when:
+
+- Both are installed at the versions the standard names.
+- Both are licensed to this chapter.
+- Both are listed in the CRM's own list of installed products.
+- They must be installed before the permission roles are created, because the roles refer to them.
 
 **9.8 Copy on the standard configuration files.**
-Done when: both sets of configuration files are in place, owned by the web server
-user, and the rebuild command has finished without errors. There are two sets, not
-one.
+Done when:
+
+- Both sets of configuration files are in place.
+- Both sets are owned by the web server user.
+- The rebuild command has finished without errors.
+- There are two sets, not one.
 
 **9.9 Confirm the CRM's own screen loads.**
 Done when: an administrator signs in and sees the normal working screen. A blank
@@ -399,14 +463,27 @@ without one. A team with no role gives its members no access at all.
 Done when: every template the standard names exists.
 
 **9.14 Apply the instance settings.**
-Done when: the chapter's name, sending name, sending address, web address, logo,
-time zone, date format, time format, currency, language and week start are all set
-from the chapter information form, and reading them back matches.
+Done when:
+
+- The chapter's name is set.
+- The sending name is set.
+- The sending address is set.
+- The web address is set.
+- The logo is set.
+- The time zone is set.
+- The date format is set.
+- The time format is set.
+- The currency is set.
+- The language is set.
+- The week start is set.
+- All of them are set from the chapter information form, and reading them back matches.
 
 **9.15 Apply the navigation tabs and the quick-add list.**
-Done when: the tabs match the standard, the chapter's own documentation link is in
-place of any other chapter's, and the list of records staff can add quickly matches
-the standard.
+Done when:
+
+- The tabs match the standard.
+- The chapter's own documentation link is in place of any other chapter's.
+- The list of records staff can add quickly matches the standard.
 
 **9.16 Apply the standard's duplicate checking, saved views and automated rules.**
 Done when: the settings the standard names are applied and read back correctly.
@@ -415,8 +492,11 @@ on the existing systems. Deciding them is work owed before any chapter reaches t
 step. See the work list document.
 
 **9.17 Create the account the applications sign in with.**
-Done when: the account exists, its key has been recorded in the secrets store, and
-a test request using that key succeeds.
+Done when:
+
+- The account exists.
+- Its key has been recorded in the secrets store.
+- A test request using that key succeeds.
 
 **9.18 Create the administrator account for the central support organization.**
 Done when: the account exists and its password is in the secrets store, not on
@@ -469,14 +549,20 @@ Done when: the settings are produced from the chapter information form and every
 value in them traces back to a line on that form.
 
 **11.3 Load the secrets.**
-Done when: every secret, including the Google key, the session secret and the
-stored-data encryption key, is loaded into the deployment and none of them appears
-in a file anyone can read. The database connection is not among them — the hosting
-platform supplies that to the application directly.
+Done when:
+
+- Every secret is loaded into the deployment, including the Google key.
+- The session secret is loaded.
+- The stored-data encryption key is loaded.
+- None of them appears in a file anyone can read.
+- The database connection is not among them — the hosting platform supplies that to the application directly.
 
 **11.4 Create the database.**
-Done when: the database exists in the chapter's hosting account, its connection
-details are in the secrets store, and the application can reach it.
+Done when:
+
+- The database exists in the chapter's hosting account.
+- Its connection details are in the secrets store.
+- The application can reach it.
 
 **11.5 Create the application parts.**
 Done when: the web part, the background worker part and the setup job all exist.
@@ -495,15 +581,10 @@ each with its own setting, and setting one without the others half-updates it wi
 no warning from the platform.
 
 **11.9 Confirm the application does not follow the development branch.**
-Done when: no part of the deployment follows the main development branch. This
-replaces what the earlier planning documents said. Those documents require
-automatic deployment to be switched off on a chapter's application, which was right
-when the release version travelled inside each deployment's settings. The version
-is now stamped into the software itself when a release is cut, so an application
-following the release branch with automatic deployment on updates itself correctly.
-The danger was never automatic deployment — it is automatic deployment from the
-development branch, which delivers untested software straight to a chapter's live
-system.
+Done when:
+
+- No part of the deployment follows the main development branch.
+- This replaces what the earlier planning documents said. Those documents require automatic deployment to be switched off on a chapter's application, which was right when the release version travelled inside each deployment's settings. The version is now stamped into the software itself when a release is cut, so an application following the release branch with automatic deployment on updates itself correctly. The danger was never automatic deployment — it is automatic deployment from the development branch, which delivers untested software straight to a chapter's live system.
 
 **11.10 Point the application's web address at the application.**
 Done when: the domain name record for the application address resolves to it.
@@ -513,8 +594,11 @@ Done when: the application loads at its address over a secure connection, and th
 security certificate is set to renew by itself.
 
 **11.12 Confirm the application is healthy.**
-Done when: the application's health address reports it is running, names the
-chapter correctly, and shows the background worker alive.
+Done when:
+
+- The application's health address reports it is running.
+- The health address names the chapter correctly.
+- The health address shows the background worker alive.
 
 **11.13 Confirm the application can read the CRM.**
 Done when: a request through the application returns CRM data.
@@ -593,9 +677,11 @@ computer and on a phone.
 ## Stage 14 — Create the staff accounts
 
 **14.1 Agree which staff get an account and which team they are on.**
-Done when: a list names every member of staff, their email address and their team,
-approved by the chapter. Mentors are not on this list. Their accounts are created
-from their mentor records, at the end of the records stage (step 15.9).
+Done when:
+
+- A list names every member of staff, with their email address and their team.
+- The list is approved by the chapter.
+- Mentors are not on this list. Their accounts are created from their mentor records, at the end of the records stage (step 15.9).
 
 **14.2 Create the staff accounts.**
 Done when: every person on the list has an account in the CRM on the right team.
@@ -657,12 +743,13 @@ Done when: each mentor has signed in at least once and set their own password.
 ## Stage 16 — Train the chapter's staff
 
 **16.1 Get the chapter's staff onto the shared practice system.**
-Done when: the chapter's trainer holds the sign-in details for the chapter training
-accounts, the passwords were set fresh for this chapter, and one person from the
-chapter has signed in once. Ruled 09-14-26: chapters train on the existing test
-system rather than on their own live system or on a practice system built for them.
-Ruled 09-18-26: they sign in with shared training accounts set up specifically for
-chapter training, never with accounts of their own.
+Done when:
+
+- The chapter's trainer holds the sign-in details for the chapter training accounts.
+- The passwords were set fresh for this chapter.
+- One person from the chapter has signed in once.
+- Ruled 09-14-26: chapters train on the existing test system rather than on their own live system or on a practice system built for them.
+- Ruled 09-18-26: they sign in with shared training accounts set up specifically for chapter training, never with accounts of their own.
 
 **16.2 Explain how the practice system behaves.**
 Done when: everyone being trained has been told two things. The system clears
@@ -684,10 +771,12 @@ Done when: one person at the chapter is named as the person colleagues ask first
 before contacting the central support organization.
 
 **16.6 Change the training account passwords.**
-Done when: the chapter training account passwords are changed once training ends,
-the change has survived a nightly reset, and it is written down when this was done.
-People from one chapter do not keep standing access to a system another chapter
-also uses.
+Done when:
+
+- The chapter training account passwords are changed once training ends.
+- The change has survived a nightly reset.
+- It is written down when this was done.
+- People from one chapter do not keep standing access to a system another chapter also uses.
 
 ---
 
@@ -724,37 +813,56 @@ Done when: someone not signed in to anything opens the mentor directory and even
 pages on the chapter's website and they work.
 
 **17.9 Remove the test records.**
-Done when: the test submissions, test assignments and test users created for this
-stage are gone or disabled, and it is written down what was removed.
+Done when:
+
+- The test submissions created for this stage are gone or disabled.
+- The test assignments created for this stage are gone or disabled.
+- The test users created for this stage are gone or disabled.
+- It is written down what was removed.
 
 ---
 
 ## Stage 18 — Hand over and start normal support
 
 **18.1 Publish how to get help.**
-Done when: the chapter has in writing how to raise a request, that no request is
-treated as urgent, that everyday requests are handled as they arrive, and that no
-response time is committed (ruled 09-18-26).
+Done when:
+
+- The chapter has in writing how to raise a request.
+- The chapter has in writing that no request is treated as urgent.
+- The chapter has in writing that everyday requests are handled as they arrive.
+- The chapter has in writing that no response time is committed (ruled 09-18-26).
 
 **18.2 Explain how to ask for a change.**
-Done when: the chapter knows where to send a request that would change the software
-for everyone, who decides, and how often those decisions are made. The central
-committee decides, every two weeks (ruled 09-18-26).
+Done when:
+
+- The chapter knows where to send a request that would change the software for everyone.
+- The chapter knows who decides.
+- The chapter knows how often those decisions are made.
+- The central committee decides, every two weeks (ruled 09-18-26).
 
 **18.3 Explain the release schedule.**
-Done when: the chapter knows software updates arrive automatically on a weekly
-schedule, roughly when, and what to do if something looks wrong afterwards.
+Done when:
+
+- The chapter knows software updates arrive automatically on a weekly schedule.
+- The chapter knows roughly when.
+- The chapter knows what to do if something looks wrong afterwards.
 
 **18.4 Hand over the account and access list.**
-Done when: the chapter holds the list of every account, who has the top-level
-sign-in, and who else has access — and a named chapter officer can reach every one
-of them.
+Done when:
+
+- The chapter holds the list of every account.
+- The list says who has the top-level sign-in.
+- The list says who else has access.
+- A named chapter officer can reach every one of them.
 
 **18.5 Confirm the chapter can get in without the central support organization.**
-Done when: a named chapter officer has demonstrated, not merely been told, that
-they can reach the server, the hosting account, the Google Workspace account and
-the domain registrar account on their own. The agreement says neither side can lock
-the other out; this is the step that makes that true rather than stated.
+Done when:
+
+- A named chapter officer has demonstrated, not merely been told, that they can reach the server on their own.
+- The officer has demonstrated the same for the hosting account.
+- The officer has demonstrated the same for the Google Workspace account.
+- The officer has demonstrated the same for the domain registrar account.
+- The agreement says neither side can lock the other out; this is the step that makes that true rather than stated.
 
 **18.6 Confirm the leaving terms in practice.**
 Done when: the chapter has been shown exactly what it would receive if it left, and
@@ -769,6 +877,7 @@ Done when: a date is booked to review how the first months have gone.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.13 | 09-18-26 16:57 | Every finishing test that packed three or more conditions or items into one sentence is now a list, one condition per line (Doug's rule, 09-18-26: every list puts each item on its own line). Thirty-seven steps: 1.1, 1.4, 2.1, 2.5, 3.3, 3.7, 4.1, 4.14, 5.7, 5.8, 6.5, 7.4, 8.2 to 8.5, 8.7, 8.8, 9.1, 9.7, 9.8, 9.14, 9.15, 9.17, 11.3, 11.4, 11.9, 11.12, 14.1, 16.1, 16.6, 17.9 and 18.1 to 18.5. Words kept; only the connectives changed so each condition reads alone. The step data in `steps/` carries the same lists. |
 | 0.12 | 09-18-26 14:45 | Cloudflare added (Doug, 09-18-26). Step 3.7: the chapter's domain names move to a Cloudflare account the chapter owns, because CRMBuilder supports no other DNS provider. Step 5.8: the chapter's own DigitalOcean and Cloudflare tokens are given to CRMBuilder, which never builds a chapter with its own. One hundred and fifty-five steps. |
 | 0.11 | 09-18-26 14:30 | Step 2.7 added: the chapter sets up its own Proton Pass business organization, owned by two chapter officers, with the central support organization's named people as members of a shared Operations vault (Doug, 09-18-26). Step 8.8 now names that vault as the secrets store. One hundred and fifty-three steps. |
 | 0.10 | 09-18-26 13:50 | Step 18.1: nothing is treated as urgent, and everyday requests are handled as they arrive rather than waiting for the committee (Doug, 09-18-26). |

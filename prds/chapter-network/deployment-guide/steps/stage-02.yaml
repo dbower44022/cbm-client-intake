@@ -30,13 +30,22 @@ steps:
     produces: []
     mode: offline
     actions:
-      - do: "List what is provided: building and running the CRM and the applications, the weekly software release, and support."
-      - do: "List what is not provided: the chapter's legal, tax and banking work, its website's content, and its own training beyond the first sessions."
+      - do: "List what is provided:"
+        items:
+          - Building and running the CRM and the applications.
+          - The weekly software release.
+          - Support.
+      - do: "List what is not provided:"
+        items:
+          - The chapter's legal, tax and banking work.
+          - Its website's content.
+          - Its own training beyond the first sessions.
       - do: Explain how requests are made. Feature requests, defect reports and support requests all go into one ClickUp system, managed by the whole support team.
       - do: Explain the answer times. No response time is committed and no request is treated as urgent. Everyday requests, such as adding a person or resetting a password, are handled as they arrive. Feature requests and defects are reviewed and scheduled by the central committee every two weeks.
-    done_when: >-
-      The chapter has in writing the list of what is provided, what is not, and how
-      quickly ordinary requests are answered.
+    done_when:
+      - "The chapter has in writing the list of what is provided."
+      - "The chapter has in writing what is not provided."
+      - "The chapter has in writing how quickly ordinary requests are answered."
     check:
       how: The chapter can answer, from the document, "who do I ask to add a new staff member, and how is it handled?"
       probe: none
@@ -56,7 +65,13 @@ steps:
     produces: []
     mode: offline
     actions:
-      - do: List the costs the chapter pays directly in its own accounts, with each supplier and an approximate price. They include hosting, Google Workspace, the domain names, Cloudflare if a paid plan is ever needed, and the Proton Pass vault.
+      - do: "List the costs the chapter pays directly in its own accounts, with each supplier and an approximate price. They include:"
+        items:
+          - Hosting.
+          - Google Workspace.
+          - The domain names.
+          - Cloudflare, if a paid plan is ever needed.
+          - The Proton Pass vault.
       - do: Agree the fee paid to the central support organization. It is proposed, not ruled, that the fee covers labour only.
       - do: Settle whether the two paid CRM add-on products are part of the standard before quoting a cost (work list item 2).
     done_when: >-
@@ -109,7 +124,14 @@ steps:
     produces: []
     mode: offline
     actions:
-      - do: List the accounts the central support organization will administer. They include the hosting account, the Cloudflare account, the Google Workspace administrator account, the video meeting account if there is one, the vault's shared Operations vault, and the CRM.
+      - do: "List the accounts the central support organization will administer. They include:"
+        items:
+          - The hosting account.
+          - The Cloudflare account.
+          - The Google Workspace administrator account.
+          - The video meeting account, if there is one.
+          - The vault's shared Operations vault.
+          - The CRM.
       - do: Write in the rule that the central support organization holds the only CRM administrator accounts, and chapter staff hold ordinary accounts.
       - do: Write in the other half of the rule. The chapter can always get in through the server it owns, and can withdraw the central support organization's access at any time.
     done_when: >-
@@ -136,19 +158,25 @@ steps:
     mode: offline
     actions:
       - do: Write in a notice period and a defined wind-down.
-      - do: "Write in the leaving kit: a copy of the CRM's database, an export of the application's own database, a transfer of the chapter's documents in Google Drive, and the chapter's own files such as its logo and colour file."
+      - do: "Write in the leaving kit:"
+        items:
+          - A copy of the CRM's database.
+          - An export of the application's own database.
+          - A transfer of the chapter's documents in Google Drive.
+          - The chapter's own files, such as its logo and colour file.
       - do: Write in a perpetual licence to the last version of the software the chapter received.
       - do: Write in that the central support organization may stop working for a chapter that stops paying, but can never lock it out.
-    done_when: >-
-      The notice period, the wind-down, and the list of everything the chapter takes
-      with it are written into the agreement.
+    done_when:
+      - "The notice period is written into the agreement."
+      - "The wind-down is written into the agreement."
+      - "The list of everything the chapter takes with it is written into the agreement."
     check:
       how: Each item in the leaving kit names what it is and who produces it.
       probe: none
     goes_wrong: >-
       Leaving out the application's own database. Some of the chapter's records live
-      only there: the partner and funder discussion notes, the full history of every
-      submission, and any analytics pages the chapter built.
+      only there. The partner and funder discussion notes are there. So is the full
+      history of every submission. So are any analytics pages the chapter built.
     later: unchanged
     status: not-yet-tried — the leaving procedure has never been rehearsed either.
     source: 8-Methods-Organization-Domains-Google.md#2.5

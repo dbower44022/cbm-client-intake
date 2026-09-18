@@ -45,26 +45,45 @@ def render_stage(stage: dict) -> str:
     out.append(stage["why"].strip() + "\n")
     out.append(f"**Who:** {stage['who'].strip()}  ")
     out.append(f"**Time:** {stage.get('time', 'not known yet').strip()}  ")
-    before = stage.get("before_you_start") or []
-    out.append("**Before you start:** " + ("; ".join(before) if before else "nothing.") + "  ")
     out.append(f"**When this stage is done:** {stage['unlocks'].strip()}\n")
-    out.append("**Steps in this stage:** " + ", ".join(f"{s['id']} {s['name']}" for s in stage["steps"]) + "\n")
+    before = stage.get("before_you_start") or []
+    out.append("**Before you start:**" + ("\n" if before else " nothing.\n"))
+    out.extend(f"- {b.strip()}" for b in before)
+    out.append("")
+    out.append("**Steps in this stage:**\n")
+    out.extend(f"- {s['id']} {s['name']}" for s in stage["steps"])
+    out.append("")
     for s in stage["steps"]:
         out.append("---\n")
         out.append(f"## {s['id']} {s['name']}\n")
         out.append(f"**Why:** {s['why'].strip()}\n")
         first = s.get("first") or []
-        out.append(f"**Who:** {_who(s['who'].strip())}  ")
-        out.append("**Finish first:** " + (", ".join(f"step {f}" for f in first) if first else "nothing") + "\n")
+        out.append(f"**Who:** {_who(s['who'].strip())}\n")
+        out.append("**Finish first:**" + ("\n" if first else " nothing.\n"))
+        if first:
+            out.extend(f"- step {f} {NAMES.get(str(f), '')}".rstrip() for f in first)
+            out.append("")
         if not str(s.get("status", "")).startswith("done-for-real"):
             out.append("> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.\n")
         out.append("**Do this:**\n")
         for n, a in enumerate(s.get("actions") or [], 1):
             out.append(f"{n}. {a['do'].strip()}")
-            if a.get("see"):
-                out.append(f"   *You should see:* {a['see'].strip()}")
+            for item in a.get("items") or []:
+                out.append(f"   - {str(item).strip()}")
+            see = a.get("see")
+            if isinstance(see, list):
+                out.append("   *You should see:*")
+                out.extend(f"   - {str(x).strip()}" for x in see)
+            elif see:
+                out.append(f"   *You should see:* {see.strip()}")
         out.append("")
-        out.append(f"**Done when:** {s['done_when'].strip()}\n")
+        dw = s["done_when"]
+        if isinstance(dw, list):
+            out.append("**Done when all of these are true:**\n")
+            out.extend(f"- {str(x).strip()}" for x in dw)
+            out.append("")
+        else:
+            out.append(f"**Done when:** {dw.strip()}\n")
         check = s.get("check") or {}
         if check.get("how"):
             out.append(f"**How to check:** {check['how'].strip()}\n")
@@ -88,7 +107,8 @@ def render_index(stages: list[dict]) -> str:
            "Each stage opens with why it exists, who does it, and what must be finished first.\n",
            "---\n"]
     for st in stages:
-        out.append(f"{st['stage']}. [{st['name']}]({_slug(st)}.md) — {st['why'].strip().split('. ')[0].rstrip('.')}.")
+        out.append(f"{st['stage']}. [{st['name']}]({_slug(st)}.md)")
+        out.append(f"   {st['why'].strip().split('. ')[0].rstrip('.')}.")
     out.append("")
     return "\n".join(out)
 
@@ -125,8 +145,12 @@ def information_check(stages: list[dict]) -> list[str]:
     return problems
 
 
+NAMES: dict[str, str] = {}
+
+
 def build(stages: list[dict] | None = None) -> dict[Path, str]:
     stages = stages if stages is not None else load()
+    NAMES.update({s["id"]: s["name"] for st in stages for s in st["steps"]})
     files = {GUIDE / f"{_slug(st)}.md": render_stage(st) for st in stages}
     files[GUIDE / "README.md"] = render_index(stages)
     return files

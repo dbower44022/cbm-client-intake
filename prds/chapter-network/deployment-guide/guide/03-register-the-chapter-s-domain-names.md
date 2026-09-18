@@ -12,10 +12,23 @@ Every address the chapter uses hangs off its domain names: its email, its websit
 
 **Who:** The chapter's setup contact, with the central support organization for the Cloudflare step.  
 **Time:** About an hour of work. A change of name servers can take up to a day to be seen everywhere.  
-**Before you start:** The chapter's name (step 1.1) and bank account (step 1.6); The person who acts for the chapter during setup (step 1.7); The chapter's vault (step 2.7)  
 **When this stage is done:** Google Workspace and the chapter's email can be set up on the domain (stage 4).
 
-**Steps in this stage:** 3.1 Choose the founding email address used for setup, 3.2 Decide how many domain names the chapter needs, and choose them, 3.3 Create the domain registrar account, 3.4 Register and pay for the domain names, 3.5 Turn on automatic renewal, 3.6 Turn on two-step sign-in for the registrar account, 3.7 Move the domain names' DNS to the chapter's Cloudflare account
+**Before you start:**
+
+- The chapter's name (step 1.1) and bank account (step 1.6)
+- The person who acts for the chapter during setup (step 1.7)
+- The chapter's vault (step 2.7)
+
+**Steps in this stage:**
+
+- 3.1 Choose the founding email address used for setup
+- 3.2 Decide how many domain names the chapter needs, and choose them
+- 3.3 Create the domain registrar account
+- 3.4 Register and pay for the domain names
+- 3.5 Turn on automatic renewal
+- 3.6 Turn on two-step sign-in for the registrar account
+- 3.7 Move the domain names' DNS to the chapter's Cloudflare account
 
 ---
 
@@ -23,8 +36,11 @@ Every address the chapter uses hangs off its domain names: its email, its websit
 
 **Why:** The chapter has no email of its own until stage 4, so the first accounts must be opened with someone's existing address, and everyone must know it is temporary.
 
-**Who:** The chapter — the setup contact  
-**Finish first:** step 1.7
+**Who:** The chapter — the setup contact
+
+**Finish first:**
+
+- step 1.7 Name the person who acts for the chapter during setup
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -47,8 +63,11 @@ Every address the chapter uses hangs off its domain names: its email, its websit
 
 **Why:** The email domain name becomes part of every mentor's address for good, so it has to be chosen deliberately.
 
-**Who:** The chapter advised by the central support organization  
-**Finish first:** step 1.1
+**Who:** The chapter advised by the central support organization
+
+**Finish first:**
+
+- step 1.1 Choose the chapter's name
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -74,8 +93,12 @@ Every address the chapter uses hangs off its domain names: its email, its websit
 
 **Why:** The domain names must sit in an account that belongs to the chapter, not to a person.
 
-**Who:** The chapter — the setup contact  
-**Finish first:** step 3.1, step 3.2
+**Who:** The chapter — the setup contact
+
+**Finish first:**
+
+- step 3.1 Choose the founding email address used for setup
+- step 3.2 Decide how many domain names the chapter needs, and choose them
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -87,7 +110,11 @@ Every address the chapter uses hangs off its domain names: its email, its websit
 4. Put the sign-in in the chapter's vault, in the Operations vault.
    *You should see:* The registrar's account page shows the chapter's legal name.
 
-**Done when:** The account exists, is in the chapter's name, and uses the founding email address.
+**Done when all of these are true:**
+
+- The account exists.
+- The account is in the chapter's name.
+- The account uses the founding email address.
 
 **How to check:** The registrar's account page shows the chapter's legal name.
 
@@ -101,8 +128,12 @@ Every address the chapter uses hangs off its domain names: its email, its websit
 
 **Why:** The domain names must be bought in the chapter's name and paid for by the chapter, so they do not lapse when one person's card expires.
 
-**Who:** The chapter — the setup contact  
-**Finish first:** step 3.3, step 1.6
+**Who:** The chapter — the setup contact
+
+**Finish first:**
+
+- step 3.3 Create the domain registrar account
+- step 1.6 Open a bank account
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -127,8 +158,11 @@ Every address the chapter uses hangs off its domain names: its email, its websit
 
 **Why:** A lapsed domain name stops the chapter's email, website, CRM and applications all at once.
 
-**Who:** The chapter — the setup contact  
-**Finish first:** step 3.4
+**Who:** The chapter — the setup contact
+
+**Finish first:**
+
+- step 3.4 Register and pay for the domain names
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -152,8 +186,11 @@ Every address the chapter uses hangs off its domain names: its email, its websit
 
 **Why:** Whoever signs in to the registrar account controls every address the chapter has.
 
-**Who:** The chapter — the setup contact  
-**Finish first:** step 3.3
+**Who:** The chapter — the setup contact
+
+**Finish first:**
+
+- step 3.3 Create the domain registrar account
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -177,8 +214,13 @@ Every address the chapter uses hangs off its domain names: its email, its websit
 
 **Why:** CRMBuilder writes the CRM's address into Cloudflare itself, so the chapter's domain names must live in a Cloudflare account the chapter owns.
 
-**Who:** The chapter and the central support organization — the chapter's setup contact, with the central support organization  
-**Finish first:** step 3.4, step 3.6, step 2.7
+**Who:** The chapter and the central support organization — the chapter's setup contact, with the central support organization
+
+**Finish first:**
+
+- step 3.4 Register and pay for the domain names
+- step 3.6 Turn on two-step sign-in for the registrar account
+- step 2.7 Set up the chapter's password vault
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -193,7 +235,14 @@ Every address the chapter uses hangs off its domain names: its email, its websit
 6. Wait for Cloudflare to report each domain name as active. It can take up to a day.
    *You should see:* Each domain name shown as active in Cloudflare.
 
-**Done when:** Each domain name is a zone in a Cloudflare account the chapter owns, the registrar points at Cloudflare's name servers, two-step sign-in is on, the central support organization's named people are members, and the sign-in and recovery codes are in the chapter's vault. CRMBuilder supports no other DNS provider.
+**Done when all of these are true:**
+
+- Each domain name is a zone in a Cloudflare account the chapter owns.
+- The registrar points at Cloudflare's name servers.
+- Two-step sign-in is on.
+- The central support organization's named people are members.
+- The sign-in and recovery codes are in the chapter's vault.
+- CRMBuilder supports no other DNS provider.
 
 **How to check:** Cloudflare shows each domain name as active, and a name-server lookup on each domain name returns Cloudflare's two servers.
 

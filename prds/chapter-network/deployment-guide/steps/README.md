@@ -53,8 +53,8 @@ steps: [...]
 | `needs` | Values from the chapter information form, or secrets, this step uses. |
 | `produces` | Values or secrets this step creates. These include the chapter information form's values and the working values the build passes between steps (an account list, a duplicate rule). Every value is produced by exactly one step and needed by at least one: that is the plan's information check, and the renderer runs it every time. A step that only records a value created earlier (stage 8, filling in the form) lists it under `needs`, not `produces`. |
 | `mode` | What the onboarding app will do: `automated` (the app does it), `guided` (a person does it; the app instructs and then checks) or `offline` (a person does it outside any system; the app only records that it is done). |
-| `actions` | Numbered actions. Each has `do` (one action) and, where it helps, `see` (what the person should see). Click-level where the screens are known; coarser where they are not, and `status` says so. |
-| `done_when` | The finishing test, word for word from the step list. |
+| `actions` | Numbered actions. Each has `do` (one action), `items` when the action involves a list (each item renders on its own line), and, where it helps, `see` (what the person should see — a sentence, or a list when there are several things to see). Click-level where the screens are known; coarser where they are not, and `status` says so. |
+| `done_when` | The finishing test, word for word from the step list. A test with several conditions is a list, one condition per item, rendered as "Done when all of these are true". |
 | `check` | `how`: how a person confirms it. `probe`: what the app would check automatically, in plain words, or `none`. |
 | `if_not` | What to do when the check fails. Default: stop and ask the central support organization. |
 | `goes_wrong` | The known failure and how to recognise it, or `nothing known yet`. |
@@ -71,7 +71,9 @@ the app and the people maintaining the guide.
 
 The guide's language rules apply (section 3 of `1-How-We-Will-Build-The-Guide.md`):
 short sentences, common words, the full name of a thing every time. Each action
-is one thing to do. Never invent a screen label: if the exact wording of a
+is one thing to do. **Every list puts each item on its own line** (Doug,
+09-18-26): never write three or more things as a run of commas inside a
+sentence — use `items` in an action, or a YAML list. Never invent a screen label: if the exact wording of a
 screen is not known, say so in the action.
 
 ---

@@ -88,11 +88,12 @@ steps:
       - do: Today the settings file from step 11.2 carries the secrets into the deployment. Nothing else to do.
       - do: After step 11.5, delete the settings file.
         see: No copy of the settings file left anywhere.
-    done_when: >-
-      Every secret, including the Google key, the session secret and the
-      stored-data encryption key, is loaded into the deployment and none of them
-      appears in a file anyone can read. The database connection is not among them
-      — the hosting platform supplies that to the application directly.
+    done_when:
+      - "Every secret is loaded into the deployment, including the Google key."
+      - "The session secret is loaded."
+      - "The stored-data encryption key is loaded."
+      - "None of them appears in a file anyone can read."
+      - "The database connection is not among them — the hosting platform supplies that to the application directly."
     check:
       how: The application starts, and no settings file with secrets is left on any computer.
       probe: The app reads the deployment's settings list and confirms each secret is present and encrypted.
@@ -121,9 +122,10 @@ steps:
         see: Whether it says it is a managed database or a development database.
       - do: If it is a development database, convert it to a managed database, at the smallest size.
         see: The database shown as a managed database.
-    done_when: >-
-      The database exists in the chapter's hosting account, its connection details
-      are in the secrets store, and the application can reach it.
+    done_when:
+      - "The database exists in the chapter's hosting account."
+      - "Its connection details are in the secrets store."
+      - "The application can reach it."
     check:
       how: The application connects, and the hosting account shows a managed database.
       probe: The app reads the database type from the hosting account and refuses a development database.
@@ -249,16 +251,9 @@ steps:
     actions:
       - do: Run scripts/set_updates_policy.py with the application's identifier and the status option.
         see: All three parts naming the release branch, and none naming main.
-    done_when: >-
-      No part of the deployment follows the main development branch. This replaces
-      what the earlier planning documents said. Those documents require automatic
-      deployment to be switched off on a chapter's application, which was right
-      when the release version travelled inside each deployment's settings. The
-      version is now stamped into the software itself when a release is cut, so an
-      application following the release branch with automatic deployment on updates
-      itself correctly. The danger was never automatic deployment — it is automatic
-      deployment from the development branch, which delivers untested software
-      straight to a chapter's live system.
+    done_when:
+      - "No part of the deployment follows the main development branch."
+      - "This replaces what the earlier planning documents said. Those documents require automatic deployment to be switched off on a chapter's application, which was right when the release version travelled inside each deployment's settings. The version is now stamped into the software itself when a release is cut, so an application following the release branch with automatic deployment on updates itself correctly. The danger was never automatic deployment — it is automatic deployment from the development branch, which delivers untested software straight to a chapter's live system."
     check:
       how: All three parts name the release branch.
       probe: The app reads the branch of every part of every chapter's application and flags any on main.
@@ -326,13 +321,20 @@ steps:
     produces: []
     mode: automated
     actions:
-      - do: Open the application's address followed by /healthz.
-        see: The chapter's own name as the organization, the release in releaseTag, and a worker block showing a recent heartbeat.
+      - do: "Open the application's address followed by /healthz, and read three things:"
+        items:
+          - "The organization: the chapter's own name."
+          - "releaseTag: the release."
+          - "The worker block: a recent heartbeat."
+        see: All three as listed.
       - do: Read the crmConfig block.
-        see: A state of stamped or unstamped, not absent, forbidden or unreachable.
-    done_when: >-
-      The application's health address reports it is running, names the chapter
-      correctly, and shows the background worker alive.
+        see:
+          - A state of stamped or unstamped: both are fine
+          - Not absent, forbidden or unreachable: each of those is a problem to report
+    done_when:
+      - "The application's health address reports it is running."
+      - "The health address names the chapter correctly."
+      - "The health address shows the background worker alive."
     check:
       how: /healthz shows the chapter's name, a live worker and a readable CRM.
       probe: The app reads /healthz for every chapter at once.

@@ -8,14 +8,25 @@
 
 ## Why this stage
 
-Every public form carries one required consent box that links to four documents - the code of conduct, the mentor code of ethics, the terms of use and the privacy policy. The links must lead to this chapter's own documents, because showing one city's applicants another city's privacy policy is a legal problem. The chapter writes the documents with its own legal adviser; this stage covers only what the software needs from them.
+Every public form carries one required consent box that links to four documents. Two are codes: the code of conduct, and the mentor code of ethics. Two are legal: the terms of use, and the privacy policy. The links must lead to this chapter's own documents, because showing one city's applicants another city's privacy policy is a legal problem. The chapter writes the documents with its own legal adviser; this stage covers only what the software needs from them.
 
 **Who:** The chapter, with its own legal adviser. The central support organization supplies the list of what personal information the software collects, and gives no legal advice.  
 **Time:** Not known. It depends on the chapter's legal adviser.  
-**Before you start:** The website, published (step 6.2); A named person at the chapter who can edit the website (step 6.4)  
 **When this stage is done:** The four addresses go on the chapter information form (stage 8), and from there into the consent box on every public form.
 
-**Steps in this stage:** 7.1 Write and publish the client code of conduct, 7.2 Write and publish the mentor code of ethics, 7.3 Write and publish the terms, 7.4 Write and publish the privacy policy, 7.5 Have the four documents reviewed, 7.6 Record the four web addresses
+**Before you start:**
+
+- The website, published (step 6.2)
+- A named person at the chapter who can edit the website (step 6.4)
+
+**Steps in this stage:**
+
+- 7.1 Write and publish the client code of conduct
+- 7.2 Write and publish the mentor code of ethics
+- 7.3 Write and publish the terms
+- 7.4 Write and publish the privacy policy
+- 7.5 Have the four documents reviewed
+- 7.6 Record the four web addresses
 
 ---
 
@@ -23,8 +34,12 @@ Every public form carries one required consent box that links to four documents 
 
 **Why:** The consent box on the client, partner and funder forms links to it as "Code of Conduct".
 
-**Who:** The chapter  
-**Finish first:** step 6.2, step 6.4
+**Who:** The chapter
+
+**Finish first:**
+
+- step 6.2 Publish the website
+- step 6.4 Confirm someone at the chapter can edit the website
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -49,8 +64,11 @@ Every public form carries one required consent box that links to four documents 
 
 **Why:** The volunteer application form's "Code of Conduct" link goes to this document, which is different from the client code of conduct.
 
-**Who:** The chapter  
-**Finish first:** step 6.4
+**Who:** The chapter
+
+**Finish first:**
+
+- step 6.4 Confirm someone at the chapter can edit the website
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -75,8 +93,11 @@ Every public form carries one required consent box that links to four documents 
 
 **Why:** The consent box on every public form links to it as "Terms of Use".
 
-**Who:** The chapter  
-**Finish first:** step 6.4
+**Who:** The chapter
+
+**Finish first:**
+
+- step 6.4 Confirm someone at the chapter can edit the website
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -99,8 +120,11 @@ Every public form carries one required consent box that links to four documents 
 
 **Why:** The consent box on every public form links to it, and it must describe what this chapter's system collects, under this chapter's name.
 
-**Who:** The chapter and the central support organization — the chapter writes it, the central support organization says what the software collects  
-**Finish first:** step 6.4
+**Who:** The chapter and the central support organization — the chapter writes it, the central support organization says what the software collects
+
+**Finish first:**
+
+- step 6.4 Confirm someone at the chapter can edit the website
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -112,7 +136,11 @@ Every public form carries one required consent box that links to four documents 
 4. Open the page in a private browser window and read which organization it names.
    *You should see:* The document, without a sign-in, naming this chapter.
 
-**Done when:** The document is published, opens without signing in, and names this chapter rather than any other organization.
+**Done when all of these are true:**
+
+- The document is published.
+- The document opens without signing in.
+- The document names this chapter rather than any other organization.
 
 **How to check:** The page opens in a private browser window, and the organization it names is this chapter.
 
@@ -126,8 +154,14 @@ Every public form carries one required consent box that links to four documents 
 
 **Why:** The documents are live the moment they are published, and the consent box points at them as soon as the applications are deployed.
 
-**Who:** The chapter  
-**Finish first:** step 7.1, step 7.2, step 7.3, step 7.4
+**Who:** The chapter
+
+**Finish first:**
+
+- step 7.1 Write and publish the client code of conduct
+- step 7.2 Write and publish the mentor code of ethics
+- step 7.3 Write and publish the terms
+- step 7.4 Write and publish the privacy policy
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -151,8 +185,11 @@ Every public form carries one required consent box that links to four documents 
 
 **Why:** The software's four policy settings are filled from these addresses, and every one defaults to Cleveland's documents.
 
-**Who:** The chapter checked by the central support organization  
-**Finish first:** step 7.5
+**Who:** The chapter checked by the central support organization
+
+**Finish first:**
+
+- step 7.5 Have the four documents reviewed
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 

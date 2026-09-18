@@ -4,8 +4,8 @@ version: "0.1"
 updated: "09-18-26 17:20"
 why: >-
   Every public form carries one required consent box that links to four
-  documents - the code of conduct, the mentor code of ethics, the terms of use and
-  the privacy policy. The links must lead to this chapter's own documents, because
+  documents. Two are codes: the code of conduct, and the mentor code of ethics.
+  Two are legal: the terms of use, and the privacy policy. The links must lead to this chapter's own documents, because
   showing one city's applicants another city's privacy policy is a legal problem.
   The chapter writes the documents with its own legal adviser; this stage covers
   only what the software needs from them.
@@ -110,9 +110,10 @@ steps:
       - do: Publish it as a page on the chapter's website. Cleveland's is at clevelandbusinessmentors.org/privacy-policy/.
       - do: Open the page in a private browser window and read which organization it names.
         see: The document, without a sign-in, naming this chapter.
-    done_when: >-
-      The document is published, opens without signing in, and names this chapter
-      rather than any other organization.
+    done_when:
+      - "The document is published."
+      - "The document opens without signing in."
+      - "The document names this chapter rather than any other organization."
     check:
       how: The page opens in a private browser window, and the organization it names is this chapter.
       probe: The app fetches the address without signing in and checks the page contains the chapter's name and not "Cleveland".

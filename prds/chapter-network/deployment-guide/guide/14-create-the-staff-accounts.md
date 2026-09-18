@@ -12,10 +12,20 @@ Each member of the chapter's staff needs their own account to use the applicatio
 
 **Who:** The central support organization, from a list the chapter writes and approves.  
 **Time:** About an hour for a dozen staff, plus the time it takes everyone to sign in.  
-**Before you start:** The CRM is built, with its teams and roles (stage 9); The applications are deployed (stage 11); Each member of staff has a mailbox on the chapter's domain (step 4.11)  
 **When this stage is done:** Bringing in the chapter's records and creating the mentor accounts (stage 15). The mentor administrator's account, created here, is what creates the mentor accounts.
 
-**Steps in this stage:** 14.1 Agree which staff get an account and which team they are on, 14.2 Create the staff accounts, 14.3 Confirm nobody at the chapter holds an administrator account, 14.4 Confirm every member of staff has signed in
+**Before you start:**
+
+- The CRM is built, with its teams and roles (stage 9)
+- The applications are deployed (stage 11)
+- Each member of staff has a mailbox on the chapter's domain (step 4.11)
+
+**Steps in this stage:**
+
+- 14.1 Agree which staff get an account and which team they are on
+- 14.2 Create the staff accounts
+- 14.3 Confirm nobody at the chapter holds an administrator account
+- 14.4 Confirm every member of staff has signed in
 
 ---
 
@@ -23,18 +33,32 @@ Each member of the chapter's staff needs their own account to use the applicatio
 
 **Why:** A person's team decides which pages they can open, so the list has to be right before any account exists.
 
-**Who:** The chapter and the central support organization — the chapter writes the list; the central support organization checks it  
-**Finish first:** step 9.12
+**Who:** The chapter and the central support organization — the chapter writes the list; the central support organization checks it
+
+**Finish first:**
+
+- step 9.12 Attach the roles to the teams
 
 **Do this:**
 
-1. List each member of staff with their chapter email address and their team. The seven teams that open a page are the Client Administration Team, the Mentor Administration Team, the Mentor Team, the Partner Management Team, the Sponsor Management Team, the Marketing Admin Team and the Analytics Admin Team.
+1. List each member of staff with their chapter email address and their team. The seven teams that open a page are:
+   - Client Administration Team
+   - Mentor Administration Team
+   - Mentor Team
+   - Partner Management Team
+   - Sponsor Management Team
+   - Marketing Admin Team
+   - Analytics Admin Team
 2. Give each person the fewest teams that cover their work. A person with two jobs gets two teams.
 3. Leave mentors off the list.
 4. Have the chapter approve the list in writing.
    *You should see:* A list of names, chapter email addresses and teams, with the chapter's approval.
 
-**Done when:** A list names every member of staff, their email address and their team, approved by the chapter. Mentors are not on this list. Their accounts are created from their mentor records, at the end of the records stage (step 15.9).
+**Done when all of these are true:**
+
+- A list names every member of staff, with their email address and their team.
+- The list is approved by the chapter.
+- Mentors are not on this list. Their accounts are created from their mentor records, at the end of the records stage (step 15.9).
 
 **How to check:** Every person on the list has a chapter email address and at least one team.
 
@@ -48,8 +72,11 @@ Each member of the chapter's staff needs their own account to use the applicatio
 
 **Why:** Each person needs an ordinary account on the right team before they can use the applications.
 
-**Who:** The central support organization  
-**Finish first:** step 14.1
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 14.1 Agree which staff get an account and which team they are on
 
 **Do this:**
 
@@ -72,8 +99,11 @@ Each member of the chapter's staff needs their own account to use the applicatio
 
 **Why:** An administrator can change the CRM's setup, which would end the rule that every chapter runs the same software.
 
-**Who:** The central support organization  
-**Finish first:** step 14.2
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 14.2 Create the staff accounts
 
 **Do this:**
 
@@ -94,8 +124,11 @@ Each member of the chapter's staff needs their own account to use the applicatio
 
 **Why:** An account nobody has used is an account with a password somebody else may still know.
 
-**Who:** The chapter and the central support organization — the chapter chases; the central support organization checks  
-**Finish first:** step 14.2
+**Who:** The chapter and the central support organization — the chapter chases; the central support organization checks
+
+**Finish first:**
+
+- step 14.2 Create the staff accounts
 
 **Do this:**
 

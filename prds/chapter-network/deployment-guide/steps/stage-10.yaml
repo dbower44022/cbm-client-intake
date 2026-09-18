@@ -83,7 +83,13 @@ steps:
       - do: The chapter's Google administrator signs in to the chapter's Google admin console. Nobody else can do this step.
       - do: Open the setting that allows a service account to act on behalf of users in the domain (called domain-wide delegation). The exact menu path is not verified for this guide.
       - do: Add the client identifier from step 10.1.
-      - do: Paste in the standard list of permissions. It covers reading and sending mail, managing calendar events, reading and changing user accounts in the directory, managing groups, and files on the shared drive.
+      - do: "Paste in the standard list of permissions. It covers:"
+        items:
+          - Reading and sending mail.
+          - Managing calendar events.
+          - Reading and changing user accounts in the directory.
+          - Managing groups.
+          - Files on the shared drive.
       - do: Read each permission back against the standard list, one at a time, aloud.
         see: Every permission on the list, and nothing missing.
       - do: Save.

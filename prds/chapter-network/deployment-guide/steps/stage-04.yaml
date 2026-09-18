@@ -35,11 +35,10 @@ steps:
       - do: "Explain the two branches. In the first, the chapter holds its own Google Workspace and grants the software's machine account permission inside it. In the second, the central support organization provides the chapter a domain inside a Google Workspace it holds."
       - do: Give the board in writing what the second branch means on leaving. The chapter's mail, documents and calendars would sit in an account the central support organization controls. They can be moved out, but it is real work.
       - do: The board chooses and minutes the choice. It is proposed, not ruled, that every chapter that can should take the first branch. The rest of this stage is written for the first branch only.
-    done_when: >-
-      The chapter has chosen either to hold its own Google Workspace or to have one
-      provided by the central support organization, the choice is recorded, and the
-      board has seen in writing what the provided option means if the chapter later
-      leaves.
+    done_when:
+      - "The chapter has chosen either to hold its own Google Workspace or to have one provided by the central support organization."
+      - "The choice is recorded."
+      - "The board has seen in writing what the provided option means if the chapter later leaves."
     check:
       how: The board minutes record the choice and the written explanation.
       probe: The app records the chosen branch.
@@ -378,10 +377,10 @@ steps:
       - do: Do the same in the Cloudflare account from step 3.7, which was also opened with the founding address.
       - do: Ask the registrar for a password reset.
         see: The password reset message arrives in the chapter mailbox.
-    done_when: >-
-      The registrar account's contact address is a chapter mailbox, the founder's
-      personal address has been removed, and a password reset test lands in the
-      chapter mailbox.
+    done_when:
+      - "The registrar account's contact address is a chapter mailbox."
+      - "The founder's personal address has been removed."
+      - "A password reset test lands in the chapter mailbox."
     check:
       how: The password reset message arrives in the chapter mailbox.
       probe: none

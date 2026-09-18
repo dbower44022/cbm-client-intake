@@ -39,10 +39,10 @@ steps:
       - do: Search a domain registrar for the domain names the chapter would want. Step 3.2 explains whether a chapter needs one or two.
         see: The domain names shown as available.
       - do: Save the results of all three searches, with the date.
-    done_when: >-
-      The founding group has agreed one name, a search of state business
-      registrations and trademarks shows no conflict, and the matching domain names
-      are still available to buy.
+    done_when:
+      - "The founding group has agreed one name."
+      - "A search of state business registrations and trademarks shows no conflict."
+      - "The matching domain names are still available to buy."
     check:
       how: All three searches came back clear, and the results are saved with the date.
       probe: The app checks that the domain names are still unregistered.
@@ -119,9 +119,10 @@ steps:
       - do: Adopt bylaws and elect officers.
       - do: Minute which officers may sign contracts and open accounts.
         see: Signed minutes that name the signers.
-    done_when: >-
-      Bylaws are adopted, directors are named, and the minutes record which
-      officers may sign contracts.
+    done_when:
+      - "Bylaws are adopted."
+      - "Directors are named."
+      - "The minutes record which officers may sign contracts."
     check:
       how: Signed minutes of the first meeting are in the chapter's files, naming who may sign.
       probe: none

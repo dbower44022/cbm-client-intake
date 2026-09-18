@@ -8,14 +8,26 @@
 
 ## Why this stage
 
-The public website is the chapter's own marketing site. The software does not build it, but it needs four things from it - addresses for the policy documents, a place to host the chapter's colour file, a link to the public application forms, and a way to send visitors to the events page the applications serve. This stage makes sure the site can do all four, and that someone at the chapter can change it.
+The public website is the chapter's own marketing site. The software does not build it, but it needs four things from it. The policy documents need addresses on it. The chapter's colour file needs a place to live on it. The public application forms need a link from it. And visitors need to be sent from it to the events page the applications serve. This stage makes sure the site can do all four, and that someone at the chapter can change it.
 
 **Who:** The chapter. The central support organization writes the colour file and helps with the help documentation decision.  
 **Time:** Not known. A chapter that already has a website finishes in an hour; building a new site can take weeks.  
-**Before you start:** The chapter's domain names (stage 3); The chapter's name (step 1.1)  
 **When this stage is done:** The policy documents (stage 7) can be published on the site, and the chapter information form (stage 8) can be filled in with the site's addresses.
 
-**Steps in this stage:** 6.1 Choose the website platform, 6.2 Publish the website, 6.3 Confirm the website can redirect an address to another site, 6.4 Confirm someone at the chapter can edit the website, 6.5 Choose the chapter's colours and publish the colour file, 6.6 Produce the chapter's logo image, 6.7 Decide where the chapter's help documentation lives
+**Before you start:**
+
+- The chapter's domain names (stage 3)
+- The chapter's name (step 1.1)
+
+**Steps in this stage:**
+
+- 6.1 Choose the website platform
+- 6.2 Publish the website
+- 6.3 Confirm the website can redirect an address to another site
+- 6.4 Confirm someone at the chapter can edit the website
+- 6.5 Choose the chapter's colours and publish the colour file
+- 6.6 Produce the chapter's logo image
+- 6.7 Decide where the chapter's help documentation lives
 
 ---
 
@@ -23,8 +35,11 @@ The public website is the chapter's own marketing site. The software does not bu
 
 **Why:** The site must be able to publish pages, host a small file and redirect one address to another, and someone must own it.
 
-**Who:** The chapter  
-**Finish first:** step 3.4
+**Who:** The chapter
+
+**Finish first:**
+
+- step 3.4 Register and pay for the domain names
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -48,8 +63,11 @@ The public website is the chapter's own marketing site. The software does not bu
 
 **Why:** Every later page the software links to lives on this site, and it must load securely.
 
-**Who:** The chapter  
-**Finish first:** step 6.1
+**Who:** The chapter
+
+**Finish first:**
+
+- step 6.1 Choose the website platform
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -73,8 +91,11 @@ The public website is the chapter's own marketing site. The software does not bu
 
 **Why:** The chapter's events page will be a redirect to the page the applications serve, so the site must be able to do one.
 
-**Who:** The chapter  
-**Finish first:** step 6.2
+**Who:** The chapter
+
+**Finish first:**
+
+- step 6.2 Publish the website
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -99,8 +120,11 @@ The public website is the chapter's own marketing site. The software does not bu
 
 **Why:** The policy documents (stage 7) and the events redirect (stage 13) both need changes on the site, made by someone at the chapter.
 
-**Who:** The chapter  
-**Finish first:** step 6.2
+**Who:** The chapter
+
+**Finish first:**
+
+- step 6.2 Publish the website
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -124,8 +148,11 @@ The public website is the chapter's own marketing site. The software does not bu
 
 **Why:** Colours are the only visual difference between chapters in the software, so a chapter that skips this looks exactly like Cleveland.
 
-**Who:** The chapter and the central support organization — the chapter chooses the colours, the central support organization writes the file  
-**Finish first:** step 6.2
+**Who:** The chapter and the central support organization — the chapter chooses the colours, the central support organization writes the file
+
+**Finish first:**
+
+- step 6.2 Publish the website
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -138,7 +165,12 @@ The public website is the chapter's own marketing site. The software does not bu
    *You should see:* The stylesheet's text, not a download and not an error.
 5. Write the address on the chapter information form. It becomes the setting CHAPTER_TOKENS_URL.
 
-**Done when:** The chapter's colours are chosen, written into a small stylesheet, and published at a web address the software can load. Colours are the only visual difference between chapters in the software, so a chapter that skips this looks exactly like Cleveland.
+**Done when all of these are true:**
+
+- The chapter's colours are chosen.
+- The colours are written into a small stylesheet.
+- The stylesheet is published at a web address the software can load.
+- Colours are the only visual difference between chapters in the software, so a chapter that skips this looks exactly like Cleveland.
 
 **How to check:** The file's address shows the stylesheet's text in a browser. Once the applications are deployed, the public forms show the chapter's colours.
 
@@ -152,8 +184,11 @@ The public website is the chapter's own marketing site. The software does not bu
 
 **Why:** The CRM shows the chapter's logo, and it is the only per-chapter image in the whole system.
 
-**Who:** The chapter  
-**Finish first:** step 1.1
+**Who:** The chapter
+
+**Finish first:**
+
+- step 1.1 Choose the chapter's name
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -177,8 +212,11 @@ The public website is the chapter's own marketing site. The software does not bu
 
 **Why:** The applications' portal and the CRM's navigation bar both link to the help documentation, and leaving it undecided sends the chapter's staff to Cleveland's.
 
-**Who:** The chapter and the central support organization — the chapter, with the central support organization  
-**Finish first:** step 6.2
+**Who:** The chapter and the central support organization — the chapter, with the central support organization
+
+**Finish first:**
+
+- step 6.2 Publish the website
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 

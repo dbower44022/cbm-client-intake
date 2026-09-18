@@ -53,7 +53,12 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: On the application's settings page, set the chapter's website address, the website menu, the contact address for presenters and the opening wording of the events page.
+      - do: "On the application's settings page, set:"
+        items:
+          - The chapter's website address.
+          - The website menu.
+          - The contact address for presenters.
+          - The opening wording of the events page.
       - do: In the application's Event Administration page, create and publish each upcoming event. Saving there is what gives an event its own web address.
       - do: Open the application's /webinars/ page.
         see: The chapter's published events.

@@ -12,10 +12,27 @@ The chapter information form holds the roughly thirty-five values that differ fr
 
 **Who:** The chapter's setup contact and someone from the central support organization, together. The form uses the names the software uses, so a chapter cannot fill in most of it alone.  
 **Time:** One to two hours, once the website, the policy documents and Google Workspace exist.  
-**Before you start:** The agreement is signed (step 2.6); The chapter's vault exists (step 2.7); Google Workspace is set up (stage 4); The website is published and the four policy documents have their addresses (stages 6 and 7)  
 **When this stage is done:** Building the CRM (stage 9). Nothing after this stage can start until the form is complete, and everything after it becomes routine once it is.
 
-**Steps in this stage:** 8.1 Obtain the blank form, 8.2 Fill in the chapter's name and identity, 8.3 Fill in the web addresses, 8.4 Fill in the Google details, 8.5 Fill in the CRM details, 8.6 Decide every feature switch, 8.7 List the secrets by name, 8.8 Put the chapter's secrets into the store, 8.9 Review the completed form, 8.10 Store the form where the central support organization can reach it
+**Before you start:**
+
+- The agreement is signed (step 2.6)
+- The chapter's vault exists (step 2.7)
+- Google Workspace is set up (stage 4)
+- The website is published and the four policy documents have their addresses (stages 6 and 7)
+
+**Steps in this stage:**
+
+- 8.1 Obtain the blank form
+- 8.2 Fill in the chapter's name and identity
+- 8.3 Fill in the web addresses
+- 8.4 Fill in the Google details
+- 8.5 Fill in the CRM details
+- 8.6 Decide every feature switch
+- 8.7 List the secrets by name
+- 8.8 Put the chapter's secrets into the store
+- 8.9 Review the completed form
+- 8.10 Store the form where the central support organization can reach it
 
 ---
 
@@ -23,13 +40,23 @@ The chapter information form holds the roughly thirty-five values that differ fr
 
 **Why:** Everyone has to work from the same current form, and each part needs a named person to fill it in.
 
-**Who:** The chapter and the central support organization — the central support organization supplies the form; the chapter names the people  
-**Finish first:** step 2.6
+**Who:** The chapter and the central support organization — the central support organization supplies the form; the chapter names the people
+
+**Finish first:**
+
+- step 2.6 Sign the agreement
 
 **Do this:**
 
 1. Copy the blank form from the last section of prds/chapter-network/chapter-values.md.
-   *You should see:* A form with sections for the chapter, web addresses, Google, Zoom, the CRM, secrets and feature switches.
+   *You should see:*
+   - A section for the chapter
+   - A section for web addresses
+   - A section for Google
+   - A section for Zoom
+   - A section for the CRM
+   - A section for secrets
+   - A section for feature switches
 2. Send the trial chapter's filled-in form, prds/chapter-network/rehearsal-2026-08-31/lakeside-values.yaml, alongside it as a worked example.
 3. Write a name beside each section. The chapter's setup contact fills in the name, the web addresses and the policy addresses. The central support organization fills in the CRM details, the feature switches and the list of secrets.
    *You should see:* Every section with a name beside it.
@@ -48,8 +75,12 @@ The chapter information form holds the roughly thirty-five values that differ fr
 
 **Why:** The chapter's name appears on every page the software shows, and the short label names its servers and secrets.
 
-**Who:** The chapter  
-**Finish first:** step 1.1, step 8.1
+**Who:** The chapter
+
+**Finish first:**
+
+- step 1.1 Choose the chapter's name
+- step 8.1 Obtain the blank form
 
 **Do this:**
 
@@ -60,7 +91,13 @@ The chapter information form holds the roughly thirty-five values that differ fr
 4. If the time zone is not Eastern, write "not supported yet" beside it. The software has Eastern time written into its code (work list item 17).
 5. Write the currency and language. They are almost always US dollars and US English.
 
-**Done when:** The chapter name, short label, time zone, currency and language are filled in.
+**Done when all of these are true:**
+
+- The chapter name is filled in.
+- The short label is filled in.
+- The time zone is filled in.
+- The currency is filled in.
+- The language is filled in.
 
 **How to check:** The name matches the legal name, or the trading name the board chose, letter for letter.
 
@@ -74,8 +111,14 @@ The chapter information form holds the roughly thirty-five values that differ fr
 
 **Why:** The software links to the website, the events page, the help documentation and the four policy documents, and a broken link on the consent box is a legal problem.
 
-**Who:** The chapter checked by the central support organization  
-**Finish first:** step 6.2, step 6.7, step 7.6, step 8.1
+**Who:** The chapter checked by the central support organization
+
+**Finish first:**
+
+- step 6.2 Publish the website
+- step 6.7 Decide where the chapter's help documentation lives
+- step 7.6 Record the four web addresses
+- step 8.1 Obtain the blank form
 
 **Do this:**
 
@@ -85,7 +128,14 @@ The chapter information form holds the roughly thirty-five values that differ fr
 4. Open each of the four policy documents in a private browser window, and copy each address into the form.
    *You should see:* Each policy document's page, with the chapter's own name on it.
 
-**Done when:** The application address, the website address, the events page address, the documentation address, the colour file address and the four policy addresses are filled in.
+**Done when all of these are true:**
+
+- The application address is filled in.
+- The website address is filled in.
+- The events page address is filled in.
+- The documentation address is filled in.
+- The colour file address is filled in.
+- The four policy addresses are filled in.
 
 **How to check:** Every address, opened in a private browser window, shows the right page.
 
@@ -99,20 +149,42 @@ The chapter information form holds the roughly thirty-five values that differ fr
 
 **Why:** Mail, calendars, documents and mentor mailboxes all run through the chapter's Google Workspace, and each needs an exact address.
 
-**Who:** The chapter checked by the central support organization  
-**Finish first:** step 4.1, step 4.7, step 4.8, step 4.9, step 4.10, step 8.1
+**Who:** The chapter checked by the central support organization
+
+**Finish first:**
+
+- step 4.1 Choose the Google Workspace branch
+- step 4.7 Create the shared operations mailbox
+- step 4.8 Create the alert sending mailbox
+- step 4.9 Decide who receives the system's warning messages
+- step 4.10 Create the members group
+- step 8.1 Obtain the blank form
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
 **Do this:**
 
 1. Write the Google Workspace branch the chapter chose in step 4.1.
-2. Copy the main domain, the shared operations mailbox, the alert sending address, the alert receiving address and the members group from the Google Workspace admin console.
+2. Copy these from the Google Workspace admin console:
+   - The main domain.
+   - The shared operations mailbox.
+   - The alert sending address.
+   - The alert receiving address.
+   - The members group.
 3. Copy the shared drive's identifier, the string of letters at the end of its web address.
 4. Write the mentor email domain, the domain mentors' addresses are created on.
 5. For a chapter that runs public webinars, copy the Zoom host address and the Zoom app's account and client identifiers from step 5.5. Otherwise write "no webinars".
 
-**Done when:** The branch chosen, the main domain, the shared operations mailbox, the alert sending and receiving addresses, the members group, the shared drive and the mentor email domain are filled in.
+**Done when all of these are true:**
+
+- The branch chosen is filled in.
+- The main domain is filled in.
+- The shared operations mailbox is filled in.
+- The alert sending address is filled in.
+- The alert receiving address is filled in.
+- The members group is filled in.
+- The shared drive is filled in.
+- The mentor email domain is filled in.
 
 **How to check:** Each mailbox named on the form is listed as a mailbox, with a licence, in the Google Workspace admin console.
 
@@ -126,8 +198,12 @@ The chapter information form holds the roughly thirty-five values that differ fr
 
 **Why:** The CRM has its own name, sending name, sending address and logo, and anything it sends directly carries them.
 
-**Who:** The central support organization  
-**Finish first:** step 6.6, step 8.1
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 6.6 Produce the chapter's logo image
+- step 8.1 Obtain the blank form
 
 **Do this:**
 
@@ -136,7 +212,13 @@ The chapter information form holds the roughly thirty-five values that differ fr
 3. Write the sending address, a mailbox from stage 4.
 4. Attach the logo image from step 6.6.
 
-**Done when:** The CRM address, the name shown inside the CRM, the sending name, the sending address and the logo file are filled in.
+**Done when all of these are true:**
+
+- The CRM address is filled in.
+- The name shown inside the CRM is filled in.
+- The sending name is filled in.
+- The sending address is filled in.
+- The logo file is filled in.
 
 **How to check:** The section is complete, and the sending address is a real mailbox.
 
@@ -148,8 +230,14 @@ The chapter information form holds the roughly thirty-five values that differ fr
 
 **Why:** Each switch turns a part of the software on or off, and a switch left blank gives a chapter behaviour nobody chose.
 
-**Who:** The chapter and the central support organization — the central support organization proposes; the chapter agrees  
-**Finish first:** step 8.2, step 8.3, step 8.4, step 8.5
+**Who:** The chapter and the central support organization — the central support organization proposes; the chapter agrees
+
+**Finish first:**
+
+- step 8.2 Fill in the chapter's name and identity
+- step 8.3 Fill in the web addresses
+- step 8.4 Fill in the Google details
+- step 8.5 Fill in the CRM details
 
 **Do this:**
 
@@ -172,17 +260,32 @@ The chapter information form holds the roughly thirty-five values that differ fr
 
 **Why:** Each secret needs a named holder before it exists, so that none is ever held by one person alone.
 
-**Who:** The central support organization  
-**Finish first:** step 8.6
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 8.6 Decide every feature switch
 
 **Do this:**
 
-1. List the seven secrets by name. They are the CRM key the applications use, the name and password of the administrator account that creates logins, the database address, the session secret, the encryption key for stored data, and the Google key.
+1. List the seven secrets by name:
+   - The CRM key the applications use.
+   - The name of the administrator account that creates logins.
+   - The password of that administrator account.
+   - The database address.
+   - The session secret.
+   - The encryption key for stored data.
+   - The Google key.
 2. For a chapter that runs public webinars, add the Zoom app's secret as an eighth.
 3. Write the holder beside each one. Write no secret value on the form.
    *You should see:* Seven or eight names, each with a holder, and no values.
 
-**Done when:** All seven are listed by name with the holder named beside each, plus the video meeting app's secret for a chapter that runs webinars. No secret value is written on the form. Seven, not six: besides the six the planning documents name, the applications use an encryption key for stored data that the settings generator creates quietly on first run. Changing it later destroys the data it protects, so it is permanent from the moment it exists.
+**Done when all of these are true:**
+
+- All seven are listed by name with the holder named beside each.
+- The video meeting app's secret is listed too, for a chapter that runs webinars.
+- No secret value is written on the form.
+- Seven, not six: besides the six the planning documents name, the applications use an encryption key for stored data that the settings generator creates quietly on first run. Changing it later destroys the data it protects, so it is permanent from the moment it exists.
 
 **How to check:** Seven names, or eight for a webinar chapter, each with a holder, and no values.
 
@@ -196,8 +299,12 @@ The chapter information form holds the roughly thirty-five values that differ fr
 
 **Why:** A secret that exists only in a file on one computer is lost when that person or that computer is.
 
-**Who:** The central support organization  
-**Finish first:** step 8.7, step 2.7
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 8.7 List the secrets by name
+- step 2.7 Set up the chapter's password vault
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -208,7 +315,11 @@ The chapter information form holds the roughly thirty-five values that differ fr
    *You should see:* An entry for every secret that exists so far.
 3. Ask a second named person to open each entry.
 
-**Done when:** All seven of the chapter's secrets are held in the chapter's Proton Pass Operations vault (step 2.7), at least two named people can reach each one, and none of them exists only in a file on one person's computer.
+**Done when all of these are true:**
+
+- All seven of the chapter's secrets are held in the chapter's Proton Pass Operations vault (step 2.7).
+- At least two named people can reach each one.
+- None of them exists only in a file on one person's computer.
 
 **How to check:** A second named person opens each secret without help.
 
@@ -222,8 +333,16 @@ The chapter information form holds the roughly thirty-five values that differ fr
 
 **Why:** A wrong value becomes a fault in every later stage, and a second reader catches what the first misses.
 
-**Who:** The chapter and the central support organization — the chapter's setup contact and someone from the central support organization  
-**Finish first:** step 8.2, step 8.3, step 8.4, step 8.5, step 8.6, step 8.7
+**Who:** The chapter and the central support organization — the chapter's setup contact and someone from the central support organization
+
+**Finish first:**
+
+- step 8.2 Fill in the chapter's name and identity
+- step 8.3 Fill in the web addresses
+- step 8.4 Fill in the Google details
+- step 8.5 Fill in the CRM details
+- step 8.6 Decide every feature switch
+- step 8.7 List the secrets by name
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
 
@@ -246,8 +365,11 @@ The chapter information form holds the roughly thirty-five values that differ fr
 
 **Why:** Stages 9 to 12 are built from the form, so the people building them have to be able to open it.
 
-**Who:** The central support organization  
-**Finish first:** step 8.9
+**Who:** The central support organization
+
+**Finish first:**
+
+- step 8.9 Review the completed form
 
 **Do this:**
 

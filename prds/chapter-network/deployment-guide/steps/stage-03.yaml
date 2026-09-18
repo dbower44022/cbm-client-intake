@@ -87,9 +87,10 @@ steps:
       - do: Use the founding email address from step 3.1.
       - do: Put the sign-in in the chapter's vault, in the Operations vault.
         see: The registrar's account page shows the chapter's legal name.
-    done_when: >-
-      The account exists, is in the chapter's name, and uses the founding email
-      address.
+    done_when:
+      - "The account exists."
+      - "The account is in the chapter's name."
+      - "The account uses the founding email address."
     check:
       how: The registrar's account page shows the chapter's legal name.
       probe: none
@@ -193,12 +194,13 @@ steps:
       - do: Invite the central support organization's named people as members of the Cloudflare account.
       - do: Wait for Cloudflare to report each domain name as active. It can take up to a day.
         see: Each domain name shown as active in Cloudflare.
-    done_when: >-
-      Each domain name is a zone in a Cloudflare account the chapter owns, the
-      registrar points at Cloudflare's name servers, two-step sign-in is on, the
-      central support organization's named people are members, and the sign-in and
-      recovery codes are in the chapter's vault. CRMBuilder supports no other DNS
-      provider.
+    done_when:
+      - "Each domain name is a zone in a Cloudflare account the chapter owns."
+      - "The registrar points at Cloudflare's name servers."
+      - "Two-step sign-in is on."
+      - "The central support organization's named people are members."
+      - "The sign-in and recovery codes are in the chapter's vault."
+      - "CRMBuilder supports no other DNS provider."
     check:
       how: Cloudflare shows each domain name as active, and a name-server lookup on each domain name returns Cloudflare's two servers.
       probe: The app looks up each domain name's name servers and confirms they are Cloudflare's.
