@@ -1,10 +1,10 @@
 # New Chapter Deployment Guide — The Step List
 
 **Document:** The bare list of steps, with no methods yet
-**Version:** 0.11
+**Version:** 0.12
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 14:30
+**Last Updated:** 09-18-26 14:45
 
 ---
 
@@ -120,6 +120,12 @@ method is on file.
 Done when: signing in requires a second factor, and the recovery codes are stored
 where more than one person can reach them.
 
+**3.7 Move the domain names' DNS to the chapter's Cloudflare account.**
+Done when: each domain name is a zone in a Cloudflare account the chapter owns, the
+registrar points at Cloudflare's name servers, two-step sign-in is on, the central
+support organization's named people are members, and the sign-in and recovery codes
+are in the chapter's vault. CRMBuilder supports no other DNS provider.
+
 ---
 
 ## Stage 4 — Set up Google Workspace and the chapter's email
@@ -212,6 +218,13 @@ Done when: two-step sign-in is on and recovery does not depend on one person.
 **5.7 Write down every account the chapter now owns.**
 Done when: one list names each account, its web address, who holds the top-level
 sign-in, and who else has access.
+
+**5.8 Create the two tokens CRMBuilder builds with.**
+Done when: a DigitalOcean API token from the chapter's hosting account, and a
+Cloudflare API token limited to editing DNS in the chapter's zones, both exist, are
+in the chapter's vault, and are entered in CRMBuilder as the chapter's provider
+credentials. CRMBuilder builds the chapter's CRM with the chapter's own accounts,
+never its own (ruled 09-18-26).
 
 ---
 
@@ -756,6 +769,7 @@ Done when: a date is booked to review how the first months have gone.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.12 | 09-18-26 14:45 | Cloudflare added (Doug, 09-18-26). Step 3.7: the chapter's domain names move to a Cloudflare account the chapter owns, because CRMBuilder supports no other DNS provider. Step 5.8: the chapter's own DigitalOcean and Cloudflare tokens are given to CRMBuilder, which never builds a chapter with its own. One hundred and fifty-five steps. |
 | 0.11 | 09-18-26 14:30 | Step 2.7 added: the chapter sets up its own Proton Pass business organization, owned by two chapter officers, with the central support organization's named people as members of a shared Operations vault (Doug, 09-18-26). Step 8.8 now names that vault as the secrets store. One hundred and fifty-three steps. |
 | 0.10 | 09-18-26 13:50 | Step 18.1: nothing is treated as urgent, and everyday requests are handled as they arrive rather than waiting for the committee (Doug, 09-18-26). |
 | 0.9 | 09-18-26 13:45 | Steps 18.1 and 18.2 updated from Doug's rulings on 09-18-26: requests go into the ClickUp system, the central committee reviews and schedules features and defects every two weeks, and there is no committed response time. |

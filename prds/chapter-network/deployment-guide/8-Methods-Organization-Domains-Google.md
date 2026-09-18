@@ -4,10 +4,10 @@
 legal organization (stage 1), signing the agreement with the central support
 organization (stage 2), registering the chapter's domain names (stage 3), and
 setting up Google Workspace and the chapter's email (stage 4)
-**Version:** 0.4
+**Version:** 0.5
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 14:30
+**Last Updated:** 09-18-26 14:45
 
 ---
 
@@ -631,9 +631,8 @@ where more than one person can reach them.
 **First:** step 3.3.
 
 **How to do it today:** turn on two-step sign-in in the registrar account. Store the
-recovery codes where at least two officers can reach them. The central support
-organization's secrets store is not the place for them: this is the chapter's own
-account.
+recovery codes in the chapter's vault (step 2.7), where at least two officers can
+reach them.
 
 **How it will be done later:** unchanged.
 
@@ -643,6 +642,48 @@ account.
 codes held by the same person.
 
 **Status:** not yet tried.
+
+---
+
+### 3.7 Move the domain names' DNS to the chapter's Cloudflare account
+
+**Done when:** each domain name is a zone in a Cloudflare account the chapter owns, the
+registrar points at Cloudflare's name servers, two-step sign-in is on, the central
+support organization's named people are members, and the sign-in and recovery codes
+are in the chapter's vault. CRMBuilder supports no other DNS provider.
+
+**Who:** the chapter's setup contact, with the central support organization.
+
+**First:** steps 3.4 and 3.6, and the chapter's vault (step 2.7).
+
+**How to do it today:**
+
+1. Create a Cloudflare account in the chapter's name, signed up with a chapter
+   address rather than a personal one. The free plan is enough.
+2. Add each domain name to the account. Cloudflare reads the existing records and
+   gives two name servers.
+3. In the registrar account, replace the name servers with Cloudflare's two.
+4. Turn on two-step sign-in. Put the sign-in and recovery codes in the chapter's
+   vault.
+5. Invite the central support organization's named people as members.
+
+From this point on, every DNS record is made in Cloudflare, not at the registrar.
+That includes Google's verification and mail records (steps 4.3 and 4.4), the CRM's
+address (step 9.5) and the application's address (step 11.10).
+
+**How it will be done later:** unchanged.
+
+**How you know it worked:** Cloudflare shows each zone as active, and a name-server
+lookup on the domain returns Cloudflare's two servers.
+
+**What goes wrong:** turning on Cloudflare's proxy for the CRM or the application.
+Both addresses must be "DNS only", with the grey cloud. Their certificates are issued
+by a direct check against the server, and the proxy blocks that check, so the
+certificate fails to issue or to renew. The public website can use the proxy;
+Cleveland's does.
+
+**Status:** not yet tried. Cleveland's two domains and the trial chapter's domain are
+all on Cloudflare this way.
 
 ---
 
@@ -731,15 +772,15 @@ name. Check step 3.2's record first.
 
 **First:** step 4.2.
 
-**How to do it today:** Google gives a verification record to add at the domain
-registrar. Add it in the registrar account from step 3.3. Then return to the Google
+**How to do it today:** Google gives a verification record to add to the domain's
+DNS. Add it in the chapter's Cloudflare account (step 3.7), not at the registrar. Then return to the Google
 Workspace admin console and ask it to check.
 
 **How it will be done later:** unchanged.
 
 **How you know it worked:** the admin console shows the domain as verified.
 
-**What goes wrong:** impatience. A new record at the registrar can take from minutes
+**What goes wrong:** impatience. A new DNS record can take from minutes
 to a day to be seen. Wait before assuming the record is wrong.
 
 **Status:** not yet tried.
@@ -755,9 +796,9 @@ Google mailbox.
 
 **First:** step 4.3.
 
-**How to do it today:** Google gives the mail delivery records to set at the
-registrar. Set them in the registrar account, replacing any mail records already
-there. Also add the records Google recommends so that mail the chapter sends is not
+**How to do it today:** Google gives the mail delivery records. Set them in the
+chapter's Cloudflare account (step 3.7), replacing any mail records already there.
+Mail records are never proxied; Cloudflare shows them as DNS only by itself. Also add the records Google recommends so that mail the chapter sends is not
 marked as spam. The admin console lists them.
 
 **How it will be done later:** unchanged.
@@ -1079,6 +1120,7 @@ agreement.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.5 | 09-18-26 14:45 | Step 3.7 added: the domain names move to the chapter's own Cloudflare account (Doug, 09-18-26). Steps 4.3 and 4.4 now add Google's records in Cloudflare. Step 3.6 stores recovery codes in the chapter's vault. |
 | 0.4 | 09-18-26 14:30 | Step 2.7 added: set up the chapter's own Proton Pass vault, with central support members (Doug, 09-18-26). |
 | 0.3 | 09-18-26 13:40 | Stage 2 updated: a draft of the standard agreement exists and is in review (Doug, 09-18-26). |
 | 0.2 | 09-18-26 02:05 | Step 4.11's finishing test updated to match the step list: mentors' mailboxes come from their records (step 15.9). |

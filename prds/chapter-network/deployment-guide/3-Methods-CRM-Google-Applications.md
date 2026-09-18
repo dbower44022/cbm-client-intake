@@ -3,10 +3,10 @@
 **Document:** The written-out steps for three stages — building the CRM system
 (stage 9), setting up the Google permissions (stage 10), and deploying the
 chapter's applications (stage 11)
-**Version:** 0.4
+**Version:** 0.5
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 14:30
+**Last Updated:** 09-18-26 14:45
 
 ---
 
@@ -78,10 +78,14 @@ central support organization can reach it.
 
 **Who:** central support organization, inside the chapter's account.
 
-**First:** the hosting account and its access grant (steps 5.1 and 5.4).
+**First:** the hosting account and its access grant (steps 5.1 and 5.4), and the
+chapter's tokens entered in CRMBuilder (step 5.8).
 
-**How to do it today:** use the deployment tool's wizard, which builds the server
-with the CRM already packaged on it. **Tick the box for extra sign-in keys.**
+**How to do it today:** use CRMBuilder's deployment wizard. It creates the server in
+the chapter's hosting account, writes the CRM's address into the chapter's
+Cloudflare zone with the proxy off, waits for the address to resolve, and installs
+the CRM. Check the wizard is using the chapter's own tokens, not CRMBuilder's.
+**Tick the box for extra sign-in keys.**
 
 **How it will be done later:** unchanged.
 
@@ -153,15 +157,20 @@ situation today and it is on the work list.
 
 **Who:** central support organization.
 
-**First:** the domain names exist (stage 3).
+**First:** the domain names are in the chapter's Cloudflare account (step 3.7), and
+step 9.2.
 
-**How to do it today:** add the address record at the domain registrar.
+**How to do it today:** nothing to do by hand. CRMBuilder's wizard writes the record
+into the chapter's Cloudflare zone during step 9.2. Check it: in Cloudflare, the
+CRM's address is an A record pointing at the server, marked "DNS only".
 
 **How it will be done later:** unchanged.
 
-**How you know it worked:** a name lookup returns the server's address.
+**How you know it worked:** a name lookup returns the server's address, not one of
+Cloudflare's.
 
-**What goes wrong:** nothing known.
+**What goes wrong:** the proxy switched on, the orange cloud. The CRM's certificate
+is issued by a direct check against the server, which the proxy blocks.
 
 **Status:** done for real.
 
@@ -954,16 +963,22 @@ chapter's live system.
 
 **Who:** central support organization.
 
-**First:** stage 3.
+**First:** the domain names are in the chapter's Cloudflare account (step 3.7).
 
-**How to do it today:** add the address record at the registrar, then tell the
-hosting platform about the address.
+**How to do it today:** in the chapter's Cloudflare account, add a CNAME record for
+the application's address pointing at the address the hosting platform gave the
+application, and set it to "DNS only", the grey cloud. Then tell the hosting
+platform about the address. Cleveland's `apps.` address is set up exactly this way
+(`DEPLOYMENT.md`).
 
 **How it will be done later:** unchanged.
 
 **How you know it worked:** a name lookup returns the application.
 
-**What goes wrong:** nothing known.
+**What goes wrong:** the proxy switched on. The hosting platform then cannot issue
+or renew the certificate (`DEPLOYMENT.md`). Also, straight after the record is
+created, some resolvers keep an earlier "no such address" answer for a while; wait
+rather than changing the record.
 
 **Status:** not yet tried. The August build used the address the platform supplies
 by default.
@@ -1203,6 +1218,7 @@ clothes.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.5 | 09-18-26 14:45 | Cloudflare written in (Doug, 09-18-26): step 9.2 uses CRMBuilder's wizard with the chapter's own tokens, step 9.5 becomes a check of the record the wizard writes, and step 11.10 is a DNS-only CNAME in the chapter's Cloudflare zone. |
 | 0.4 | 09-18-26 14:30 | Step 11.3: secrets will be read from the chapter's Proton Pass vault (Doug, 09-18-26). |
 | 0.3 | 09-18-26 01:18 | Step 11.4 corrected: the application database must be a managed database, because a development database takes no backups. The trial chapter's database is a development database. Found while writing the methods for backups and monitoring. |
 | 0.2 | 09-15-26 00:19 | Stage 10, setting up the Google permissions, added — five steps written from the design after Doug ruled on 09-15-26 that the Google connection will not be rehearsed on the trial chapter. The five Google checks at the end of the deployment stage written the same way, replacing the placeholder. A closing note records what "not yet tried" costs here and what the first real chapter is expected to do about it. |

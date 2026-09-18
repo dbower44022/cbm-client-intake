@@ -3,10 +3,10 @@
 **Document:** The written-out steps for three stages — opening the hosting and video
 meeting accounts (stage 5), building the chapter's public website (stage 6), and
 writing and publishing the policy documents (stage 7)
-**Version:** 0.3
+**Version:** 0.4
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 14:30
+**Last Updated:** 09-18-26 14:45
 
 ---
 
@@ -246,8 +246,8 @@ sign-in, and who else has access.
 from stages 3 and 4.
 
 **How to do it today:** one document, held by the chapter, with one line per account:
-the domain registrar, Google Workspace, the hosting account, the Zoom account if
-there is one. For each: the web address to sign in at, who holds the top-level
+the domain registrar, Cloudflare, Google Workspace, the hosting account, the Zoom
+account if there is one. For each: the web address to sign in at, who holds the top-level
 sign-in, who else has access, where the recovery codes are, and the nonprofit
 discount or credit applied, if any. No passwords on the list: those, and the
 recovery codes, are in the chapter's Proton Pass Operations vault (step 2.7).
@@ -259,6 +259,46 @@ the list without asking anyone.
 
 **What goes wrong:** the list goes stale. It is handed over again at the end
 (step 18.4), and that is the moment to check it.
+
+**Status:** not yet tried.
+
+---
+
+### 5.8 Create the two tokens CRMBuilder builds with
+
+**Done when:** a DigitalOcean API token from the chapter's hosting account, and a
+Cloudflare API token limited to editing DNS in the chapter's zones, both exist, are
+in the chapter's vault, and are entered in CRMBuilder as the chapter's provider
+credentials. CRMBuilder builds the chapter's CRM with the chapter's own accounts,
+never its own (ruled 09-18-26).
+
+**Who:** central support organization, inside the chapter's accounts.
+
+**First:** steps 5.4 and 3.7.
+
+**How to do it today:**
+
+1. In the chapter's DigitalOcean account, create an API token with write access.
+2. In the chapter's Cloudflare account, create an API token with the "Zone, DNS,
+   Edit" permission, limited to the chapter's own zones.
+3. Put both tokens in the chapter's vault.
+4. In CRMBuilder, enter both as the provider credentials on the chapter's
+   engagement.
+
+CRMBuilder's default is to build with its own DigitalOcean and Cloudflare tokens.
+For a chapter, that default is never used. The chapter's server and DNS records must
+be created in the chapter's own accounts, so the chapter can revoke both tokens and
+keep everything.
+
+**How it will be done later:** unchanged.
+
+**How you know it worked:** CRMBuilder's provider credentials screen shows both
+configured for the chapter's engagement, and lists the chapter's Cloudflare zones.
+
+**What goes wrong:** a Cloudflare token with more permission than it needs, or one
+covering every zone in the account. Limit it to editing DNS on the chapter's zones.
+Also: leaving the engagement on CRMBuilder's own tokens by mistake. The server then
+appears in the wrong hosting account, and nothing says so until someone looks.
 
 **Status:** not yet tried.
 
@@ -719,6 +759,7 @@ documents.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.4 | 09-18-26 14:45 | Step 5.8 added: the chapter's own DigitalOcean and Cloudflare tokens are given to CRMBuilder (Doug, 09-18-26). Step 5.7's account list gains Cloudflare. |
 | 0.3 | 09-18-26 14:30 | Step 5.7 points to the chapter's Proton Pass vault for passwords and recovery codes (Doug, 09-18-26). |
 | 0.2 | 09-18-26 02:05 | Step 5.5's finishing test now includes the app the software schedules webinars through. Step 6.3 rewritten to test a redirect rather than an embedded page, matching the step list. |
 | 0.1 | 09-18-26 01:37 | First draft of the methods for three stages — opening the hosting and video meeting accounts, building the chapter's public website, and writing and publishing the policy documents. Written from the rulings, the chapter information form's source document, the first-chapter phase plan, Cleveland's live settings and the software's consent-link code. Nothing here has been done for a chapter. Six findings, two of them recommended corrections to the step list: step 6.3 tests embedding where the events programme now uses a redirect, and the Zoom connection needs three values the form does not ask for. |
