@@ -2,10 +2,10 @@
 
 **Document:** The written-out steps for one stage — handing over and starting normal
 support (stage 18)
-**Version:** 0.1
+**Version:** 0.2
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 01:50
+**Last Updated:** 09-18-26 13:40
 
 ---
 
@@ -50,20 +50,26 @@ organization, what counts as urgent, and how quickly to expect an answer.
 **First:** the agreement is signed (step 2.6), and the chapter's first point of
 contact is named (step 16.5).
 
-**How to do it today:** there is no support address, no definition of urgent and no
-published response time. Until there is, write down for this chapter: one email
-address to use, the name of the person who answers it, and the promise made in the
-agreement. Separate the two kinds of request from the start:
+**How to do it today:** every request goes into the ClickUp system the support team
+uses for new feature requests, defect reports and support requests (Doug,
+09-18-26). The whole support team manages it, so a request never waits on one
+person. Give the chapter's first point of contact access to it, and show them how to
+raise each of the three kinds and how to follow one to its answer.
+
+Two things the chapter needs to be told are not decided yet: what counts as urgent,
+and how quickly an answer comes (work list item 8). Until they are, give the promise
+the agreement makes. Separate the kinds of request from the start:
 
 - **Everyday requests**: add a person, change someone's team, reset a password.
   These need an administrator and must be answered quickly. Several are already
   self-service. Mentor Administration creates mentor logins itself, and "Forgot
   your password?" on the sign-in page resets a password without anyone's help.
-- **Change requests**: anything that would change the software. These go through
-  step 18.2.
+- **Defect reports**: something that worked and has stopped, or does the wrong
+  thing. Include the version number from the page footer.
+- **New feature requests**: anything that would change the software. These go
+  through step 18.2.
 
-**How it will be done later:** one shared place to raise a request, visible to every
-member chapter, as `governance-and-exit.md` proposes.
+**How it will be done later:** unchanged. The ClickUp system is the method.
 
 **How you know it worked:** the chapter's first point of contact sends a test
 request and gets an answer within the time promised.
@@ -72,7 +78,8 @@ request and gets an answer within the time promised.
 volunteer who waits a week for an account is how a chapter starts asking for an
 administrator account of its own.
 
-**Status:** not yet tried. The support route does not exist.
+**Status:** not yet tried. The ClickUp system is chosen. What counts as urgent and
+the promised response time are not yet decided.
 
 ---
 
@@ -87,16 +94,15 @@ software for everyone, who decides, and how often those decisions are made.
 
 **How to do it today:** explain the rule first: every chapter runs the same software.
 A requested change is made for every chapter, or it is not made. There is no third
-answer. Then give the chapter the place to send a change request, and say who
-decides and when.
+answer. Then show the chapter how to raise a new feature request in the ClickUp
+system (step 18.1), where the support team manages it.
 
-None of those three exists yet. `governance-and-exit.md` proposes one shared place
-for requests and a decision forum of the funding member chapters. `DECISIONS.md`
-proposal 3 suggests the forum meets monthly. Neither is ruled. Until they are, say
-so, and record the request with the central support organization directly.
+Who decides a feature request, and how often, is not decided yet (work list item
+8). `DECISIONS.md` proposal 3 suggests a forum of the funding member chapters
+meeting monthly. Until that is ruled, tell the chapter the support team reviews
+each request, and that the answer will be "for every chapter" or "no".
 
-**How it will be done later:** the shared request place and the decision forum,
-once ruled.
+**How it will be done later:** unchanged once the decision rule is set.
 
 **How you know it worked:** the chapter can say, without looking it up, that a change
 is for everyone or not at all.
@@ -105,8 +111,8 @@ is for everyone or not at all.
 it becomes a change for everyone, or it does not happen. Granting one exception is
 how the rule ends.
 
-**Status:** not yet tried. The request route and the forum are proposals, not
-rulings.
+**Status:** not yet tried. Requests go into the ClickUp system. Who decides them, and
+how often, is not yet ruled.
 
 ---
 
@@ -282,9 +288,10 @@ go-live, and whether the account list from step 18.4 is still right.
 
 ## What writing this stage found
 
-**1. Four steps depend on things that do not exist.** Step 18.1 needs a support
-route and a promised response time. Step 18.2 needs a place to send change requests
-and a decision forum, both only proposed. Step 18.5 needs the emergency access
+**1. Four steps depend on things that do not exist.** Step 18.1 needs a promised
+response time and a definition of urgent. Step 18.2 needs someone named to decide
+feature requests. The place to raise both is settled: the ClickUp system (Doug,
+09-18-26). Step 18.5 needs the emergency access
 procedure (work list item 5). Step 18.6 needs a leaving kit, never produced or
 rehearsed. The first three are organizational decisions rather than builds. They
 should be added to the work list as items of their own.
@@ -300,4 +307,5 @@ forgotten, because the CRM looks like the whole system and is not.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.2 | 09-18-26 13:40 | Steps 18.1 and 18.2 rewritten around the ClickUp system that takes new feature requests, defect reports and support requests, managed by the entire support team (Doug, 09-18-26). Defect reports added as a third kind of request. Still open: the response time, what counts as urgent, and who decides feature requests. |
 | 0.1 | 09-18-26 01:50 | First draft of the methods for handing over and starting normal support. Written from the network's rulings, the governance and leaving design, and the release train. Two findings: four steps depend on things that do not exist, and the leaving kit has no owner on the work list. |

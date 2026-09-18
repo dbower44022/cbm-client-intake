@@ -4,10 +4,10 @@
 legal organization (stage 1), signing the agreement with the central support
 organization (stage 2), registering the chapter's domain names (stage 3), and
 setting up Google Workspace and the chapter's email (stage 4)
-**Version:** 0.2
+**Version:** 0.3
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 02:05
+**Last Updated:** 09-18-26 13:40
 
 ---
 
@@ -257,10 +257,10 @@ hold on an account, for exactly this reason.
 
 # Stage 2 — Sign the agreement with the central support organization
 
-**Stage status: not yet tried.** There is no agreement document. The settled rulings
-and the governance design say what it must contain, and the steps below are written
-from them. Writing the agreement itself is work the central support organization
-owes. See "What writing these steps found".
+**Stage status: not yet tried.** A draft of the standard agreement exists and is in
+review (Doug, 09-18-26). It is not held in this repository. The steps below are
+written from the settled rulings and the governance design. Once the agreement is
+final, check these steps against it clause by clause.
 
 ---
 
@@ -1005,10 +1005,10 @@ this case.
 
 ## What writing these steps found
 
-**1. There is no agreement document.** Stage 2 can only be written as what the
-agreement must contain. Writing a standard agreement is work the central support
-organization owes before any chapter signs, and it belongs on the work list. It also
-needs two things ruled first: whether the fee covers labour only (proposed, not
+**1. The agreement was in draft.** When these steps were written, stage 2 could only
+say what the agreement must contain. Doug confirmed on 09-18-26 that a draft exists
+and is in review (work list item 7). Its final cost may still depend on two things
+not yet ruled: whether the fee covers labour only (proposed, not
 ruled), and whether the two paid CRM add-on products are part of the standard (an
 open question), because each changes the cost.
 
@@ -1037,5 +1037,6 @@ agreement.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.3 | 09-18-26 13:40 | Stage 2 updated: a draft of the standard agreement exists and is in review (Doug, 09-18-26). |
 | 0.2 | 09-18-26 02:05 | Step 4.11's finishing test updated to match the step list: mentors' mailboxes come from their records (step 15.9). |
 | 0.1 | 09-18-26 01:50 | First draft of the methods for the first four stages — setting up the legal organization, signing the agreement with the central support organization, registering the domain names, and setting up Google Workspace and the chapter's email. Thirty-three steps, all not yet tried. Written from the settled rulings, the governance design, the chapter information form and Cleveland's own Google Workspace lessons. Four findings: there is no agreement document, mentor mailboxes should not be created by hand, the second Google Workspace branch has no steps, and the receiving address for warnings may be a group. |

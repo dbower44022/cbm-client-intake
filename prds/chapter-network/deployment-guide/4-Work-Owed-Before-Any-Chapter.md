@@ -2,10 +2,10 @@
 
 **Document:** Things the central support organization has to build, decide or write
 before the New Chapter Deployment Guide can actually be followed
-**Version:** 0.5
+**Version:** 0.6
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 02:05
+**Last Updated:** 09-18-26 13:40
 
 ---
 
@@ -148,28 +148,39 @@ until the chapter training accounts exist.
 
 ## 7. A standard agreement
 
-**What is missing.** There is no agreement document for a chapter to sign. Stage 2
-can only say what the agreement must contain. Two unruled questions change its cost:
-whether the fee covers labour only (`DECISIONS.md` proposal 5), and whether the two
-paid CRM add-on products are part of the standard (item 2).
+**Where it stands (Doug, 09-18-26).** A draft of the standard agreement exists and is
+in review. It is not held in this repository.
 
-**What it blocks.** The whole of stage 2 (steps 2.1 to 2.6), and so everything
-after it.
+**What is still missing.** The finished agreement. Two unruled questions may still
+change its cost: whether the fee covers labour only (`DECISIONS.md` proposal 5), and
+whether the two paid CRM add-on products are part of the standard (item 2). Once it
+is final, stage 2's steps should be checked against it, clause by clause.
 
-**Size.** A drafting job plus two decisions, and legal review outside the central
-support organization.
+**What it blocks.** Signing it (step 2.6), and so every stage after stage 2.
+
+**Size.** Finishing the review. Then one pass over stage 2 to match the
+agreement's wording.
 
 ---
 
 ## 8. A support route and a change-request forum
 
-**What is missing.** No support address, no definition of urgent, no promised
-response time, no shared place to raise a change request, and no forum to decide
-one. `governance-and-exit.md` proposes the shape and `DECISIONS.md` proposal 3 the
-cadence. Neither is ruled.
+**Where it stands (Doug, 09-18-26).** New feature requests, defect reports and
+support requests all go into one ClickUp system, managed by the entire support
+team. That settles the shared place to raise a request, and that no one person owns
+it.
 
-**What it blocks.** Publishing how to get help (step 18.1) and explaining how to ask
-for a change (step 18.2).
+**What is still missing.** Three things. The promised response time for a support
+request. What counts as urgent. And who decides a new feature request, and how
+often. Under the rule that every chapter runs the same software, the answer to a
+feature request is always "for every chapter" or "no", so somebody has to be named
+as able to give it. `DECISIONS.md` proposal 3 suggests a forum of the funding member
+chapters meeting monthly. It is not ruled. Also still to set up: how a chapter's
+people get access to the ClickUp system to raise and follow their requests.
+
+**What it blocks.** Finishing the written help for a chapter (step 18.1) and the
+explanation of how a feature request is decided (step 18.2). Both steps are now
+written around the ClickUp system.
 
 **Size.** Decisions first, then a small amount of setup. This is the item the rule
 that every chapter runs the same software depends on: a slow route is how chapters
@@ -261,6 +272,7 @@ own the default, and it is not ruled.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.6 | 09-18-26 13:40 | Items 7 and 8 updated from Doug's answers on 09-18-26: a draft of the standard agreement exists and is in review; feature requests, defect reports and support requests go into one ClickUp system managed by the entire support team. Each item now lists only what is still missing. |
 | 0.5 | 09-18-26 02:05 | Eight items added (7 to 14), found while writing the methods for the remaining stages: a standard agreement, a support route and change-request forum, a leaving kit, the public mentor directory page, chapter colours on the public events page, a way to load existing records, a plain list of personal information collected, and steps for the provided Google Workspace branch. |
 | 0.4 | 09-18-26 01:55 | Item 6 rewritten after Doug ruled on 09-18-26 that chapter staff train with shared training accounts set up specifically for chapter training. Building those accounts is now the item's one piece of real work, and it blocks steps 16.1 and 16.6. |
 | 0.3 | 09-15-26 00:22 | No items changed. Noted here for the record: the trial chapter stays running with testing the setup steps as its reason (Doug, 09-15-26), which gives four of the five remaining items somewhere to be tried before a real chapter meets them. |
