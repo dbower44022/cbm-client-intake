@@ -152,9 +152,11 @@ Also per-chapter inside the CRM, and not configuration:
 | `ESPO_PROVISION_USERNAME` / `_PASSWORD` | **yes** | Services org — admin accounts are theirs by ruling 6 |
 | `DATABASE_URL` | **yes** | Chapter's DO account. Note DO appends `?sslmode=require`, which asyncpg rejects — `core/store.make_async_engine` strips it |
 | `SESSION_SECRET` | **yes** | Generated per chapter |
+| `APP_ENCRYPTION_KEY` | **yes** | Generated per chapter, **once** — it encrypts the secrets `/setup` stores, so rotating it makes every one of them permanently unreadable |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | **yes** | The chapter's Google service account key (deployment guide stage 10) |
 | `SESSION_COOKIE_SECURE` | no | `true` everywhere real |
 
-Six secrets across 42 environment variables today. **They live in gitignored
+Seven secrets across 42 environment variables today (six until 2026-09-18, which missed `APP_ENCRYPTION_KEY`; the Google key rides alongside them). **They live in gitignored
 overlays on one laptop**, and regenerating an overlay from `doctl apps spec get`
 encrypts the plaintext into unreadable `EV[…]` blobs. That is fragile for two
 apps and not viable for N — it is the single largest reason
@@ -202,7 +204,7 @@ The honest gap list, in the order I would fix it.
    first chapter outside Eastern time.
 2. **The values file itself** — this document describes the shape; nothing reads
    it. Phase 3.
-3. **The secrets store** (§ F) — six secrets on one laptop.
+3. **The secrets store** (§ F) — seven secrets on one laptop.
 4. **The CRM settings in § E** — no script sets them, and they were not on any
    list before today. They are a handful of API calls and belong in whatever
    applies CRM configuration.
@@ -260,19 +262,33 @@ secrets:                # names only — values live in the store, never here
   - ESPO_PROVISION_PASSWORD
   - DATABASE_URL
   - SESSION_SECRET
+  - APP_ENCRYPTION_KEY    # generated once; never rotated — rotation destroys stored secrets
   - GOOGLE_SERVICE_ACCOUNT_JSON
 
 flags:                  # state each one deliberately
   analytics_enabled:
   events_enabled:
+  events_public_api:
   gmail_sync:
   gcal_events:
   gdrive_docs:
   mentor_provision_users:
+  google_directory_check:
+  record_quick_add:
   setup_enabled:
+  async_delivery:
+  espo_dry_run: false       # true only on a deployment with no CRM
   deploy_on_push: false     # OFF once the release train exists
 ```
 
-**That is the whole per-city surface: about 35 values, six of them secrets, one
+**That is the whole per-city surface: about 35 values, seven of them secrets, one
 of them an image.** Small enough to review in one sitting, which is the point —
 the danger was never the number, it was that nobody could see them all at once.
+
+---
+
+## Change log
+
+| Date | Change |
+|---|---|
+| 09-18-26 00:58 | The blank form brought up to the trial chapter's filled-in copy. `APP_ENCRYPTION_KEY` added as the seventh secret (§ F and the form), and `GOOGLE_SERVICE_ACCOUNT_JSON` added to § F, where the form already had it. Five flags the trial chapter needed added to the form: `events_public_api`, `google_directory_check`, `record_quick_add`, `async_delivery`, `espo_dry_run`. Found while writing the deployment guide's methods for filling in the form. |

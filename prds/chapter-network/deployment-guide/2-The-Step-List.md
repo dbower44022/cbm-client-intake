@@ -1,10 +1,10 @@
 # New Chapter Deployment Guide — The Step List
 
 **Document:** The bare list of steps, with no methods yet
-**Version:** 0.5
+**Version:** 0.6
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-14-26 18:13
+**Last Updated:** 09-18-26 00:50
 
 ---
 
@@ -567,11 +567,12 @@ no cut-off text, on a computer and on a phone.
 
 ---
 
-## Stage 14 — Create the staff and mentor accounts
+## Stage 14 — Create the staff accounts
 
-**14.1 Agree who gets an account and which team they are on.**
-Done when: a list names every person, their email address and their team, approved
-by the chapter.
+**14.1 Agree which staff get an account and which team they are on.**
+Done when: a list names every member of staff, their email address and their team,
+approved by the chapter. Mentors are not on this list. Their accounts are created
+from their mentor records, at the end of the records stage (step 15.9).
 
 **14.2 Create the staff accounts.**
 Done when: every person on the list has an account in the CRM on the right team.
@@ -580,19 +581,18 @@ Done when: every person on the list has an account in the CRM on the right team.
 Done when: the only administrator accounts belong to the central support
 organization. Chapter staff hold ordinary accounts.
 
-**14.4 Create the mentor accounts.**
-Done when: the chapter's existing mentors have accounts and can sign in.
-
-**14.5 Confirm every person has signed in.**
-Done when: each person has signed in at least once and set their own password.
+**14.4 Confirm every member of staff has signed in.**
+Done when: each member of staff has signed in at least once and set their own
+password.
 
 ---
 
-## Stage 15 — Bring in the chapter's existing records
+## Stage 15 — Bring in the chapter's records and create the mentor accounts
 
 **15.1 Decide whether there are records to bring in.**
 Done when: either the sources are listed, or a note records that the chapter starts
-with nothing and this whole stage is skipped.
+with nothing. A chapter starting with nothing skips the load (steps 15.2 to 15.7)
+but not the mentor steps after it (steps 15.8 to 15.10).
 
 **15.2 Export the existing records.**
 Done when: every source has been exported to a file, and the number of records in
@@ -617,6 +617,17 @@ with any difference explained.
 **15.7 Check a sample.**
 Done when: somebody who knows the old records has opened a sample in the CRM and
 confirmed they are right.
+
+**15.8 Enter every mentor the load did not bring in.**
+Done when: every current mentor has a mentor record in the CRM, with a linked
+contact. For a chapter starting with nothing, this is every mentor.
+
+**15.9 Create the mentor accounts.**
+Done when: every current mentor has an account, created from their mentor record in
+Mentor Administration, and none was created by hand.
+
+**15.10 Confirm every mentor has signed in.**
+Done when: each mentor has signed in at least once and set their own password.
 
 ---
 
@@ -731,6 +742,7 @@ Done when: a date is booked to review how the first months have gone.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.6 | 09-18-26 00:50 | Mentor accounts moved from the staff accounts stage to the end of the records stage (Doug, 09-18-26). A mentor's account has to be created from their mentor record in Mentor Administration, or the software makes a duplicate account, so it cannot come before the records are loaded. Stage 14 renamed "Create the staff accounts" and now has four steps. Stage 15 renamed "Bring in the chapter's records and create the mentor accounts" and gains three steps: entering mentors the load did not bring in, creating the mentor accounts, and confirming each mentor has signed in. A chapter starting with nothing now skips only the load, not the whole stage. Total steps now one hundred and fifty-two. |
 | 0.5 | 09-14-26 18:13 | Two corrections found while writing the methods for building the CRM and deploying the applications. There are seven secrets, not six — the applications use a stored-data encryption key that no planning document lists and that cannot be changed later without destroying data. And the rule requiring automatic deployment to be switched off is out of date: the danger is following the development branch, not automatic deployment itself. Steps 8.6, 8.7, 8.8, 11.3, 11.8 and 11.9 changed. |
 | 0.4 | 09-14-26 18:09 | Training settled on the existing test system as the shared practice area (Doug, 09-14-26). The training stage grew from four steps to six: getting chapter staff onto that system, explaining that it clears itself nightly and shows Cleveland's name, and removing the accounts when training ends. Total steps now one hundred and fifty. |
 | 0.3 | 09-14-26 17:51 | Two of the new steps were reviewed and corrected. Putting the chapter's secrets into the store is a chapter step; building the store is not, and now says so. Applying the duplicate checking, saved views and automated rules is a chapter step; deciding what they should be is not, and now says so. Both now point at the work list document. |

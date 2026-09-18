@@ -1,12 +1,13 @@
 # New Chapter Deployment Guide — Methods for the Form, the Accounts and the Final Checks
 
 **Document:** The written-out steps for three stages — filling in the chapter
-information form (stage 8), creating the staff and mentor accounts (stage 14), and
-checking everything works before going live (stage 17)
-**Version:** 0.1
+information form (stage 8), creating the staff accounts (stage 14), entering the
+mentors and creating their accounts (the last three steps of stage 15), and checking
+everything works before going live (stage 17)
+**Version:** 0.2
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 00:40
+**Last Updated:** 09-18-26 00:55
 
 ---
 
@@ -214,11 +215,10 @@ for a new chapter, and the chapter changes only what it needs.
 
 **How you know it worked:** no blank switch on the form.
 
-**What goes wrong:** the blank switch list in `chapter-values.md` is shorter than
-the list the trial chapter needed. The trial chapter's form carries switches the
-blank does not have, including the public events switch and the switch for
-delivering submissions in the background. Use the trial chapter's list, not the
-blank, until the blank is brought up to date.
+**What goes wrong:** a switch in the software that the form does not list. Until
+09-18-26 the blank form was missing five switches the trial chapter needed. It has
+been brought up to date, but it can fall behind again whenever the software gains a
+switch.
 
 **Status:** done for real.
 
@@ -242,10 +242,9 @@ Google key. Write beside each one who holds it.
 
 **How you know it worked:** seven names, seven holders, no values.
 
-**What goes wrong:** listing six. The blank form and the trial chapter's form both
-name six. Each misses a different one: the blank misses the encryption key, and the
-trial chapter's form misses the Google key. The encryption key is the one that
-matters. Changing the encryption key later makes every stored secret permanently
+**What goes wrong:** listing six. Until 09-18-26 the blank form named six and
+missed the encryption key, and the trial chapter's form missed the Google key. The
+blank form now lists all seven. The encryption key is the one that matters. Changing the encryption key later makes every stored secret permanently
 unreadable, so it is fixed from the moment it is created.
 
 **Status:** done for real, as six. The seventh is known from writing the methods for
@@ -330,21 +329,21 @@ is not a secrets store.
 
 ---
 
-# Stage 14 — Create the staff and mentor accounts
+# Stage 14 — Create the staff accounts
 
-**Stage status: done for real for staff accounts; not yet tried for mentors brought
-in from the chapter's existing records.**
+**Stage status: done for real.**
 
-Only an administrator can create CRM accounts, and nobody at the chapter holds an
+Only an administrator can create staff accounts, and nobody at the chapter holds an
 administrator account. So the central support organization does this whole stage,
-from a list the chapter approves.
+from a list the chapter approves. Mentors are not created here. Their accounts come
+from their mentor records, at the end of the records stage (step 15.9).
 
 ---
 
-### 14.1 Agree who gets an account and which team they are on
+### 14.1 Agree which staff get an account and which team they are on
 
-**Done when:** a list names every person, their email address and their team,
-approved by the chapter.
+**Done when:** a list names every member of staff, their email address and their
+team, approved by the chapter. Mentors are not on this list.
 
 **Who:** the chapter writes the list; the central support organization checks it.
 
@@ -410,7 +409,9 @@ blaming the person's account.
 The second: a partner or funder manager who has no mentor profile. The pages that
 choose who manages a partner or a funder list mentor profiles, not user accounts.
 A manager with an account but no mentor profile cannot be chosen. Give each partner
-and funder manager a mentor profile linked to their account.
+and funder manager a mentor profile in Mentor Administration. Fill in its chapter
+email address first, exactly matching their account's user name. The software then
+links the account that already exists instead of creating a second one.
 
 **Status:** done for real. Seven accounts were created and each reported exactly its
 one team on sign-in.
@@ -445,45 +446,14 @@ setup. Refuse it, and route the request through a change request (step 18.2).
 
 ---
 
-### 14.4 Create the mentor accounts
+### 14.4 Confirm every member of staff has signed in
 
-**Done when:** the chapter's existing mentors have accounts and can sign in.
-
-**Who:** central support organization, using the Mentor Administration page.
-
-**First:** every mentor has a mentor record in the CRM. For a chapter bringing
-existing records, that is stage 15, which comes after this one. See "What writing
-these steps found", below.
-
-**How to do it today:** never create a mentor's account by hand. Open the mentor in
-Mentor Administration and set their status to Active. The software then creates the
-mentor's chapter mailbox if Google is switched on, creates their CRM account on the
-Mentor Team, links the account to the mentor record, and emails the mentor their
-sign-in details. The software records every one of these runs.
-
-**How it will be done later:** unchanged. Mentor Administration is the method.
-
-**How you know it worked:** each mentor shows as complete in the Mentor
-Administration list, and signs in.
-
-**What goes wrong:** an account created by hand before the mentor record has its
-chapter email address. The software then treats the hand-made account as belonging
-to a different person with the same name. It creates a second account with a number
-added to the address, and sends a second welcome email. Cleveland had to clean up a
-run of these duplicates.
-
-**Status:** not yet tried. The trial chapter's one mentor account was created by the
-script together with its mentor record, which a real chapter should not copy.
-
----
-
-### 14.5 Confirm every person has signed in
-
-**Done when:** each person has signed in at least once and set their own password.
+**Done when:** each member of staff has signed in at least once and set their own
+password.
 
 **Who:** the chapter chases; the central support organization checks.
 
-**First:** steps 14.2 and 14.4.
+**First:** step 14.2.
 
 **How to do it today:** on the CRM's user administration screen, read the last
 sign-in date for each account. Chase anyone blank. A person who has lost their
@@ -497,6 +467,105 @@ welcome email uses "Forgot your password?" on the applications' sign-in page.
 address is new. Ask each person to check spam before re-sending.
 
 **Status:** done for real for the seven test accounts. Not tried for real people.
+
+---
+
+# Stage 15, last three steps — Enter the mentors and create their accounts
+
+**Stage status: not yet tried.**
+
+Only the last three steps of this stage are written here. They moved here from the
+staff accounts stage on 09-18-26, because a mentor's account has to be created from
+their mentor record. The first seven steps, which load the chapter's existing
+records, are still to be written from the design.
+
+These three steps run for every chapter. A chapter starting with nothing skips the
+load, but still has mentors.
+
+---
+
+### 15.8 Enter every mentor the load did not bring in
+
+**Done when:** every current mentor has a mentor record in the CRM, with a linked
+contact. For a chapter starting with nothing, this is every mentor.
+
+**Who:** the chapter's mentor administrator.
+
+**First:** the staff accounts, including the mentor administrator's (stage 14), and
+the load, if there was one (step 15.7).
+
+**How to do it today:** either have each mentor fill in the public volunteer form,
+which creates both the contact and the mentor record, or enter each one in Mentor
+Administration. The form is better for a large group. Each mentor types their own
+details, and agrees to the code of ethics as they submit.
+
+**How it will be done later:** unchanged.
+
+**How you know it worked:** the Mentor Administration list holds every current
+mentor, and each one shows a linked contact.
+
+**What goes wrong:** the same mentor entered twice, once by the load and once by
+hand. Two records with the same name make assignments go to the wrong one, and the
+mentor then sees no clients. Search Mentor Administration by surname before entering
+anyone.
+
+**Status:** not yet tried.
+
+---
+
+### 15.9 Create the mentor accounts
+
+**Done when:** every current mentor has an account, created from their mentor record
+in Mentor Administration, and none was created by hand.
+
+**Who:** the chapter's mentor administrator, with the central support organization
+present for the first few.
+
+**First:** step 15.8.
+
+**How to do it today:** never create a mentor's account by hand. Open the mentor in
+Mentor Administration and set their status to Active. The software then creates the
+mentor's chapter mailbox if Google is switched on, creates their CRM account on the
+Mentor Team, links the account to the mentor record, and emails the mentor their
+sign-in details. The software records every one of these runs. The mentor
+administrator does not need an administrator account for this. The software uses its
+own administrator account to create the login (step 9.17).
+
+**How it will be done later:** unchanged. Mentor Administration is the method.
+
+**How you know it worked:** each mentor shows as complete in the Mentor
+Administration list.
+
+**What goes wrong:** an account created by hand before the mentor record has its
+chapter email address. The software then treats the hand-made account as belonging
+to a different person with the same name. It creates a second account with a number
+added to the address, and sends a second welcome email. Cleveland had to clean up a
+run of these duplicates.
+
+**Status:** not yet tried. The trial chapter's one mentor account was created by a
+script together with its mentor record, which a real chapter should not copy.
+
+---
+
+### 15.10 Confirm every mentor has signed in
+
+**Done when:** each mentor has signed in at least once and set their own password.
+
+**Who:** the chapter's mentor administrator chases; the central support organization
+checks.
+
+**First:** step 15.9.
+
+**How to do it today:** as for staff (step 14.4). Read the last sign-in date for each
+mentor's account on the CRM's user administration screen, and chase anyone blank.
+
+**How it will be done later:** the fleet console shows the list.
+
+**How you know it worked:** no mentor's account has a blank last sign-in date.
+
+**What goes wrong:** as for staff: the welcome email lands in spam.
+
+**Status:** not yet tried.
 
 ---
 
@@ -522,7 +591,7 @@ only ever tested by an administrator.
 **How to do it today:** run `scripts/rehearsal/stage4_users.py`, changing the
 chapter name in it, or create the seven accounts by hand. Each account is an
 ordinary user with exactly one team. The Mentor Team test user also needs a mentor
-record linked to its account. Create that in Mentor Administration, as in step 14.4.
+record linked to its account. Create that in Mentor Administration, as in step 15.9.
 
 **How it will be done later:** the fleet console creates and removes a standard set
 of test users.
@@ -757,18 +826,17 @@ analytics pages count every engagement.
 
 ## What writing these steps found
 
-**1. Mentor accounts cannot come before mentor records.** The step list creates the
+**1. Mentor accounts cannot come before mentor records.** The step list created the
 staff and mentor accounts (stage 14) before bringing in the chapter's existing
 records (stage 15). A mentor's account has to be created from their mentor record,
-through Mentor Administration, or the software creates duplicate accounts. So for
-a chapter bringing in existing mentors, step 14.4 cannot be done where it sits.
-This needs a decision about the order of the stages. It is not corrected here.
+through Mentor Administration, or the software creates duplicate accounts. Ruled
+09-18-26: mentor accounts move to the end of the records stage, as steps 15.8 to
+15.10, and the staff accounts stage keeps staff only. The step list is corrected.
 
 **2. The blank form is behind the trial chapter's form.** The blank form in
 `chapter-values.md` names six secrets and nine switches. The trial chapter needed a
-seventh secret and thirteen switches. The blank form should be brought up to the
-trial chapter's version before a real chapter is handed it. That is a small fix to
-`chapter-values.md`.
+seventh secret and thirteen switches. The blank form has been brought up to the
+trial chapter's version (09-18-26).
 
 ---
 
@@ -776,4 +844,5 @@ trial chapter's version before a real chapter is handed it. That is a small fix 
 
 | Version | Date | Change |
 |---|---|---|
+| 0.2 | 09-18-26 00:55 | Mentor accounts moved out of the staff accounts stage and written as the last three steps of the records stage (15.8 to 15.10), after Doug ruled on 09-18-26. Stage 14 is now staff only, and step 14.5 became step 14.4. The advice for partner and funder managers now says how to give them a mentor profile without creating a duplicate account. The blank form in `chapter-values.md` was brought up to date the same day. |
 | 0.1 | 09-18-26 00:40 | First draft of the methods for three stages — filling in the chapter information form, creating the staff and mentor accounts, and checking everything works before going live. Written from the record of the 31 August build, the trial chapter's filled-in form, the script that created its test users, and the table of which pages each test user could open. Two findings: mentor accounts cannot come before mentor records, and the blank form is behind the trial chapter's form. One gap in the August record noted: the settings page answered "not found" to every test user, and the record cannot say why. |
