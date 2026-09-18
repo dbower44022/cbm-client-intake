@@ -1,10 +1,10 @@
 # New Chapter Deployment Guide — How We Will Build It
 
 **Document:** The plan for writing the New Chapter Deployment Guide
-**Version:** 0.6
+**Version:** 0.7
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-15-26 00:22
+**Last Updated:** 09-18-26 00:45
 
 ---
 
@@ -415,8 +415,11 @@ known yet.
    fourteen gaps found and closed.
 4. ~~Write the methods for the stages that have been done for real.~~ Done
    09-14-26 — building the CRM system and deploying the applications.
-5. Write the methods for the remaining stages, from the design, labelled as never
-   performed. The Google permissions stage is done; fifteen stages remain.
+5. Write the methods for the remaining stages. The Google permissions stage is
+   done, written from the design. Filling in the chapter information form,
+   creating the staff and mentor accounts, and checking everything works before
+   going live are done, written from the August build (09-18-26). Twelve stages
+   remain, all written from the design and labelled as never performed.
 6. Take the first real chapter through the guide. Someone from the central support
    organization is present for the Google steps, and corrects them the same day.
 
@@ -431,6 +434,7 @@ visible.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.7 | 09-18-26 00:45 | Build order step 5 updated: methods written for three more stages, all tested in the August build (`5-Methods-Form-Accounts-Checks.md`). Twelve stages remain. |
 | 0.6 | 09-15-26 00:22 | The trial chapter stays up, with testing the setup steps as its stated reason (Doug, 09-15-26), reviewed at the end of October. Section 10 also corrected: five stages were covered in whole or in part by the August build, not two. Filling in the chapter information form, creating the staff and mentor accounts, and checking everything works before going live all have real evidence behind them and were wrongly counted as untested. |
 | 0.5 | 09-15-26 00:19 | A list of the names we use added as section 4, after two systems were confused in conversation — the shared training system and the trial chapter are different machines. Later sections renumbered. Section 10 rewritten after Doug ruled the Google connection will not be rehearsed: those steps are written from the design and the first real chapter is the rehearsal. |
 | 0.4 | 09-14-26 17:41 | Fourth open question added: whether each chapter publishes its own help documentation or shares one site. Found by running the completeness checks against the step list. |
