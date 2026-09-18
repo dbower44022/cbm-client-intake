@@ -2,10 +2,10 @@
 
 **Document:** The written-out steps for one stage — setting up backups and
 monitoring (stage 12)
-**Version:** 0.2
+**Version:** 0.3
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 01:35
+**Last Updated:** 09-18-26 01:40
 
 ---
 
@@ -225,13 +225,15 @@ The second: the address alerts go to is a group, and nobody in the group reads i
 Cleveland's hosting alerts go to a group address. That works for receiving mail,
 but the step is only finished when a named person is known to read it.
 
-The third: nothing watches the CRM directly. Cleveland's uptime check watches the
-application, not the CRM. The application notices a CRM that is down only when a
-delivery fails, which needs a submission to arrive first. Add a second uptime check
-on the CRM's own address.
+The third: nothing watching the CRM directly. The application notices a CRM that
+is down only when a delivery fails, which needs a submission to arrive first. Add a
+second uptime check on the CRM's own address, with the same two-minute down alert.
+Cleveland had only the application check until 09-18-26.
 
-**Status:** done for real on Cleveland's production system, except for the CRM
-uptime check, which Cleveland does not have. Not tried on any chapter.
+**Status:** done for real on Cleveland's production system. The CRM uptime check
+(`cbm-crm-prod-up`, on the CRM's home page, alerting after two minutes down) was
+added on 09-18-26. No test alert has been sent for either check. Not tried on any
+chapter.
 
 ---
 
@@ -277,9 +279,9 @@ August (`scripts/rehearsal/render_spec.py`) asks for a development database. Ste
 11.4 in the deployment methods should say "managed database", and the generator
 should ask for one.
 
-**3. Nothing watches the CRM directly.** Cleveland has an uptime check on its
-application and none on its CRM. Adding one is a few minutes' work in the hosting
-account.
+**3. Nothing watched the CRM directly.** Cleveland had an uptime check on its
+application and none on its CRM. One was added on 09-18-26, emailing the same
+address as the application's check.
 
 ---
 
@@ -287,5 +289,6 @@ account.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.3 | 09-18-26 01:40 | An uptime check on Cleveland's production CRM added on 09-18-26, closing finding 3. Step 12.4 updated to match. |
 | 0.2 | 09-18-26 01:35 | Step 12.3 is now done for real for the application database. Cleveland's production database was restored into a new copy, checked and deleted on 09-18-26. The method was rewritten from what happened, with three things learned: a restore with no date rebuilds to the latest moment rather than the last daily backup; the hosting provider's output carries the copy's password; and the copy inherits a firewall that must be opened. The CRM server restore is still untried. |
 | 0.1 | 09-18-26 01:15 | First draft of the methods for setting up backups and monitoring. Written from Cleveland's production hosting account, read directly on 09-18-26: daily CRM server backups kept seven days, a managed application database with daily backups kept seven days, an uptime check with an alert on the application, and processor, memory and disk alerts on the databases. Three findings: no backup has ever been restored, the trial chapter's database takes no backups, and nothing watches the CRM directly. |
