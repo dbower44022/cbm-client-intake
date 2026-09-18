@@ -2,10 +2,10 @@
 
 **Document:** Things the central support organization has to build, decide or write
 before the New Chapter Deployment Guide can actually be followed
-**Version:** 0.4
+**Version:** 0.5
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 01:55
+**Last Updated:** 09-18-26 02:05
 
 ---
 
@@ -146,10 +146,122 @@ until the chapter training accounts exist.
 
 ---
 
+## 7. A standard agreement
+
+**What is missing.** There is no agreement document for a chapter to sign. Stage 2
+can only say what the agreement must contain. Two unruled questions change its cost:
+whether the fee covers labour only (`DECISIONS.md` proposal 5), and whether the two
+paid CRM add-on products are part of the standard (item 2).
+
+**What it blocks.** The whole of stage 2 (steps 2.1 to 2.6), and so everything
+after it.
+
+**Size.** A drafting job plus two decisions, and legal review outside the central
+support organization.
+
+---
+
+## 8. A support route and a change-request forum
+
+**What is missing.** No support address, no definition of urgent, no promised
+response time, no shared place to raise a change request, and no forum to decide
+one. `governance-and-exit.md` proposes the shape and `DECISIONS.md` proposal 3 the
+cadence. Neither is ruled.
+
+**What it blocks.** Publishing how to get help (step 18.1) and explaining how to ask
+for a change (step 18.2).
+
+**Size.** Decisions first, then a small amount of setup. This is the item the rule
+that every chapter runs the same software depends on: a slow route is how chapters
+end up asking for administrator accounts of their own.
+
+---
+
+## 9. A leaving kit, rehearsed once
+
+**What is missing.** `governance-and-exit.md` defines what a leaving chapter
+receives: its CRM, an export of the application's own database, its shared drive
+documents, and a licence to the last version. Nothing produces the kit, and the
+leaving procedure has never been rehearsed.
+
+**What it blocks.** Confirming the leaving terms in practice (step 18.6).
+
+**Size.** A script for the database export, a written procedure, and one rehearsal on
+the shared training system.
+
+---
+
+## 10. The public mentor directory page
+
+**What is missing.** The page is not built (`prds/public-mentor-pages-plan.md`), and
+it is not decided whether a chapter's website embeds it or redirects to it, as it
+now does for events.
+
+**What it blocks.** Displaying the mentor directory (step 13.1), links to a single
+mentor (step 13.4), and whether step 13.3 applies at all.
+
+**Size.** A build, and a decision first.
+
+---
+
+## 11. Chapter colours on the public events page
+
+**What is missing.** The public events page uses a word-for-word copy of Cleveland's
+website stylesheet, which sets Cleveland's navy and gold itself and never reads the
+chapter's colour file. Every chapter's events page would look like Cleveland's.
+
+**What it blocks.** Nothing outright, but step 13.2 gives a chapter a page in
+another city's colours.
+
+**Size.** Small: make the stylesheet's colours come from the chapter's colour
+settings. Sits beside item 4.
+
+---
+
+## 12. A way to load a chapter's existing records
+
+**What is missing.** No tool loads a chapter's old records into its CRM. The two
+candidates are the CRM's own import screen and a script that uses the same
+find-or-create rules as the public intake forms. Neither has been tried, and whether
+the import screen can link each record to the one it belongs to is unchecked.
+
+**What it blocks.** The trial load and the real load (steps 15.4 and 15.6).
+
+**Size.** An investigation, then probably a script.
+
+---
+
+## 13. A plain list of the personal information the software collects
+
+**What is missing.** Nothing lists, in plain words, what personal information the
+forms and the software collect and where it is kept. A chapter's legal adviser needs
+that list to write the privacy policy.
+
+**What it blocks.** Writing the privacy policy (step 7.4).
+
+**Size.** Small. The field mapping record (`field-mapping-completion-plan.md`) holds
+the facts; they need rewriting for a lawyer.
+
+---
+
+## 14. Steps for the provided Google Workspace branch
+
+**What is missing.** Stage 4 is written for a chapter that brings its own Google
+Workspace. The other branch, where the central support organization provides the
+Workspace, has no written steps. `DECISIONS.md` proposal 4 would make bringing your
+own the default, and it is not ruled.
+
+**What it blocks.** Stage 4 for any chapter choosing the provided branch.
+
+**Size.** A writing job, after the proposal is ruled.
+
+---
+
 ## Change log
 
 | Version | Date | Change |
 |---|---|---|
+| 0.5 | 09-18-26 02:05 | Eight items added (7 to 14), found while writing the methods for the remaining stages: a standard agreement, a support route and change-request forum, a leaving kit, the public mentor directory page, chapter colours on the public events page, a way to load existing records, a plain list of personal information collected, and steps for the provided Google Workspace branch. |
 | 0.4 | 09-18-26 01:55 | Item 6 rewritten after Doug ruled on 09-18-26 that chapter staff train with shared training accounts set up specifically for chapter training. Building those accounts is now the item's one piece of real work, and it blocks steps 16.1 and 16.6. |
 | 0.3 | 09-15-26 00:22 | No items changed. Noted here for the record: the trial chapter stays running with testing the setup steps as its reason (Doug, 09-15-26), which gives four of the five remaining items somewhere to be tried before a real chapter meets them. |
 | 0.2 | 09-14-26 18:09 | Item 6 rewritten after Doug ruled that chapters train on the existing test system. It is no longer a build — what remains is an account rule, a note for trainees, and a decision about when that machine stops being the answer. Five items now block work; this one blocks nothing. |

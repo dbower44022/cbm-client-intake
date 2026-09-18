@@ -247,7 +247,11 @@ google:
   alert_email_to:
   members_group:        # optional; empty disables the group step
   shared_drive_id:
-  zoom_host_email:      # public webinars only
+  zoom_host_email:      # public webinars only; the default is Cleveland's host, so set it
+
+zoom:                   # public webinars only — the chapter's Zoom Server-to-Server OAuth app
+  account_id:
+  client_id:
 
 crm:
   base_url:
@@ -264,6 +268,7 @@ secrets:                # names only — values live in the store, never here
   - SESSION_SECRET
   - APP_ENCRYPTION_KEY    # generated once; never rotated — rotation destroys stored secrets
   - GOOGLE_SERVICE_ACCOUNT_JSON
+  - ZOOM_CLIENT_SECRET    # only for a chapter that runs public webinars
 
 flags:                  # state each one deliberately
   analytics_enabled:
@@ -291,4 +296,5 @@ the danger was never the number, it was that nobody could see them all at once.
 
 | Date | Change |
 |---|---|
+| 09-18-26 02:05 | The Zoom app's account and client identifiers added to the form, and its client secret added to the secrets list, for a chapter that runs public webinars. `ZOOM_HOST_EMAIL` defaults to Cleveland's host, so a chapter must set it. Found while writing the deployment guide's methods for the hosting and video meeting accounts. |
 | 09-18-26 00:58 | The blank form brought up to the trial chapter's filled-in copy. `APP_ENCRYPTION_KEY` added as the seventh secret (§ F and the form), and `GOOGLE_SERVICE_ACCOUNT_JSON` added to § F, where the form already had it. Five flags the trial chapter needed added to the form: `events_public_api`, `google_directory_check`, `record_quick_add`, `async_delivery`, `espo_dry_run`. Found while writing the deployment guide's methods for filling in the form. |

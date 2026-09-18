@@ -4,10 +4,10 @@
 information form (stage 8), creating the staff accounts (stage 14), entering the
 mentors and creating their accounts (the last three steps of stage 15), and checking
 everything works before going live (stage 17)
-**Version:** 0.2
+**Version:** 0.3
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 00:55
+**Last Updated:** 09-18-26 02:05
 
 ---
 
@@ -226,8 +226,9 @@ switch.
 
 ### 8.7 List the secrets by name
 
-**Done when:** all seven are listed by name with the holder named beside each. No
-secret value is written on the form.
+**Done when:** all seven are listed by name with the holder named beside each, plus
+the video meeting app's secret for a chapter that runs webinars. No secret value is
+written on the form.
 
 **Who:** central support organization.
 
@@ -844,5 +845,6 @@ trial chapter's version (09-18-26).
 
 | Version | Date | Change |
 |---|---|---|
+| 0.3 | 09-18-26 02:05 | Step 8.7's finishing test now counts the video meeting app's secret for a chapter that runs webinars, matching the step list. |
 | 0.2 | 09-18-26 00:55 | Mentor accounts moved out of the staff accounts stage and written as the last three steps of the records stage (15.8 to 15.10), after Doug ruled on 09-18-26. Stage 14 is now staff only, and step 14.5 became step 14.4. The advice for partner and funder managers now says how to give them a mentor profile without creating a duplicate account. The blank form in `chapter-values.md` was brought up to date the same day. |
 | 0.1 | 09-18-26 00:40 | First draft of the methods for three stages — filling in the chapter information form, creating the staff and mentor accounts, and checking everything works before going live. Written from the record of the 31 August build, the trial chapter's filled-in form, the script that created its test users, and the table of which pages each test user could open. Two findings: mentor accounts cannot come before mentor records, and the blank form is behind the trial chapter's form. One gap in the August record noted: the settings page answered "not found" to every test user, and the record cannot say why. |

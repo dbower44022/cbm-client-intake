@@ -1,10 +1,10 @@
 # New Chapter Deployment Guide — How We Will Build It
 
 **Document:** The plan for writing the New Chapter Deployment Guide
-**Version:** 1.0
+**Version:** 1.1
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 01:55
+**Last Updated:** 09-18-26 02:05
 
 ---
 
@@ -418,14 +418,16 @@ known yet.
    fourteen gaps found and closed.
 4. ~~Write the methods for the stages that have been done for real.~~ Done
    09-14-26 — building the CRM system and deploying the applications.
-5. Write the methods for the remaining stages. The Google permissions stage is
+5. ~~Write the methods for the remaining stages.~~ Done 09-18-26 — every stage now
+   has written methods, in documents 3 and 5 to 11. The Google permissions stage is
    done, written from the design. Filling in the chapter information form,
    creating the staff accounts, and checking everything works before
    going live are done, written from the August build (09-18-26). Setting up
    backups and monitoring is done, written from Cleveland's live hosting account
    (09-18-26). Training the chapter's staff is done, written from Cleveland's own
-   training material (09-18-26). Ten stages remain, all written from the design and
-   labelled as never performed.
+   training material (09-18-26). The last ten stages were written the same day from
+   the design and the network's rulings, and are labelled as never performed. The
+   work list grew to fourteen items.
 6. Take the first real chapter through the guide. Someone from the central support
    organization is present for the Google steps, and corrects them the same day.
 
@@ -440,6 +442,7 @@ visible.
 
 | Version | Date | Change |
 |---|---|---|
+| 1.1 | 09-18-26 02:05 | Build order step 5 done: methods written for the last ten stages — setting up the legal organization through publishing the policy documents (documents 8 and 9), putting the chapter's pages on its website and loading existing records (document 10), and the handover (document 11). Every stage now has written methods. Next is step 6, taking the first real chapter through the guide. |
 | 1.0 | 09-18-26 01:55 | Build order step 5 updated: methods written for training the chapter's staff (`7-Methods-Training.md`). Ten stages remain. |
 | 0.9 | 09-18-26 01:18 | Build order step 5 updated: methods written for setting up backups and monitoring (`6-Methods-Backups-Monitoring.md`). Eleven stages remain. |
 | 0.8 | 09-18-26 00:50 | Stages 14 and 15 renamed and their boundary moved: mentor accounts are now created at the end of the records stage, from each mentor's record (Doug, 09-18-26). |

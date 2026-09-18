@@ -1,10 +1,10 @@
 # New Chapter Deployment Guide — The Step List
 
 **Document:** The bare list of steps, with no methods yet
-**Version:** 0.7
+**Version:** 0.8
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 01:55
+**Last Updated:** 09-18-26 02:05
 
 ---
 
@@ -161,8 +161,9 @@ Done when: the group exists at its own address and the administrator can add and
 remove members.
 
 **4.11 Create the staff mailboxes.**
-Done when: every person who will use the system has a mailbox on the chapter's
-domain.
+Done when: every member of staff who will use the system has a mailbox on the
+chapter's domain. Mentors' mailboxes are created later, from their mentor records
+(step 15.9).
 
 **4.12 Require two-step sign-in.**
 Done when: two-step sign-in is enforced for every account, and recovery is possible
@@ -196,8 +197,9 @@ Done when: the central support organization can create and manage servers in the
 account under its own named sign-in, and the chapter can remove that access itself.
 
 **5.5 Create the video meeting account, or record that it is not needed.**
-Done when: either the account exists with a chapter mailbox as its host address, or
-a note records that this chapter runs no public webinars.
+Done when: either the account exists with a chapter mailbox as its host address and
+an app that lets the software schedule webinars through it, or a note records that
+this chapter runs no public webinars.
 
 **5.6 Turn on two-step sign-in for both accounts.**
 Done when: two-step sign-in is on and recovery does not depend on one person.
@@ -216,9 +218,10 @@ Done when: the choice is made and someone is named to build and maintain the sit
 **6.2 Publish the website.**
 Done when: the site loads at the chapter's website domain over a secure connection.
 
-**6.3 Confirm the website can display an embedded page.**
-Done when: a test embedded block from another web address displays correctly on a
-page of the site.
+**6.3 Confirm the website can redirect an address to another site.**
+Done when: a test address on the site sends the visitor to a page on another site,
+by a temporary redirect. (Checking that the site can embed a page returns once the
+public mentor directory page is built and its method is decided.)
 
 **6.4 Confirm someone at the chapter can edit the website.**
 Done when: a named person at the chapter has signed in and made a change.
@@ -296,8 +299,9 @@ application follows is recorded as the release branch rather than the developmen
 branch.
 
 **8.7 List the secrets by name.**
-Done when: all seven are listed by name with the holder named beside each. No
-secret value is written on the form. Seven, not six: besides the six the planning
+Done when: all seven are listed by name with the holder named beside each, plus the
+video meeting app's secret for a chapter that runs webinars. No secret value is
+written on the form. Seven, not six: besides the six the planning
 documents name, the applications use an encryption key for stored data that the
 settings generator creates quietly on first run. Changing it later destroys the
 data it protects, so it is permanent from the moment it exists.
@@ -548,22 +552,25 @@ chapter's CRM and application.
 
 **13.1 Display the mentor directory page.**
 Done when: the page displays on the chapter's website, showing that chapter's
-mentors.
+mentors. Blocked: the public mentor directory page is not built, and whether it is
+embedded or reached by a redirect is not decided.
 
-**13.2 Display the events programme page.**
-Done when: the page displays on the chapter's website, showing that chapter's
-events.
+**13.2 Send the events address to the events programme page.**
+Done when: the chapter's website sends visitors to the application's events page,
+and that page shows the chapter's events.
 
 **13.3 Allow only the chapter's own website to display these pages.**
-Done when: the chapter's site can display them and a different site cannot.
+Done when: the chapter's site can display them and a different site cannot. Applies
+only to a page embedded in the website. The events programme page is reached by a
+redirect, so this step does not apply to it.
 
 **13.4 Confirm links to a single mentor work.**
 Done when: opening a link to one mentor lands on that mentor, and the address can
-be copied and shared.
+be copied and shared. Blocked until the public mentor directory page is built.
 
-**13.5 Confirm the embedded pages fit.**
-Done when: the pages size themselves to their content, with no inner scrollbar and
-no cut-off text, on a computer and on a phone.
+**13.5 Confirm the public pages read properly on a computer and a phone.**
+Done when: the pages show with no sideways scrolling and no cut-off text, on a
+computer and on a phone.
 
 ---
 
@@ -744,6 +751,7 @@ Done when: a date is booked to review how the first months have gone.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.8 | 09-18-26 02:05 | Corrections found while writing the methods for the remaining stages. Step 4.11: mentors' mailboxes come from their records, not by hand. Step 5.5: the video meeting account also needs the app the software schedules webinars through. Step 6.3: tests a redirect, not an embedded page, since the events programme is reached by a redirect (ruled 09-11-26). Step 8.7: a chapter running webinars has an eighth secret. Stage 13: step 13.2 renamed for the redirect, step 13.3 applies only to an embedded page, step 13.5 renamed, and steps 13.1 and 13.4 marked blocked until the public mentor directory page is built. No steps added or removed. |
 | 0.7 | 09-18-26 01:55 | Steps 16.1 and 16.6 rewritten after Doug ruled on 09-18-26 that chapter staff train with shared training accounts set up specifically for chapter training. The shared training system restores its user accounts every night, so per-person accounts could not be created or removed without re-capturing its fixed copy. Step 16.6 renamed "Change the training account passwords". |
 | 0.6 | 09-18-26 00:50 | Mentor accounts moved from the staff accounts stage to the end of the records stage (Doug, 09-18-26). A mentor's account has to be created from their mentor record in Mentor Administration, or the software makes a duplicate account, so it cannot come before the records are loaded. Stage 14 renamed "Create the staff accounts" and now has four steps. Stage 15 renamed "Bring in the chapter's records and create the mentor accounts" and gains three steps: entering mentors the load did not bring in, creating the mentor accounts, and confirming each mentor has signed in. A chapter starting with nothing now skips only the load, not the whole stage. Total steps now one hundred and fifty-two. |
 | 0.5 | 09-14-26 18:13 | Two corrections found while writing the methods for building the CRM and deploying the applications. There are seven secrets, not six — the applications use a stored-data encryption key that no planning document lists and that cannot be changed later without destroying data. And the rule requiring automatic deployment to be switched off is out of date: the danger is following the development branch, not automatic deployment itself. Steps 8.6, 8.7, 8.8, 11.3, 11.8 and 11.9 changed. |
