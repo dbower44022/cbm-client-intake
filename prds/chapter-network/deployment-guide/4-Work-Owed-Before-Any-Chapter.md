@@ -2,10 +2,10 @@
 
 **Document:** Things the central support organization has to build, decide or write
 before the New Chapter Deployment Guide can actually be followed
-**Version:** 0.8
+**Version:** 0.9
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 13:50
+**Last Updated:** 09-18-26 14:00
 
 ---
 
@@ -22,6 +22,34 @@ none of them can be done by a chapter.
 
 Each item says what is missing, which step cannot be completed without it, and how
 big the work looks.
+
+---
+
+## Implementation first
+
+Doug, 09-18-26: the technical steps that build a chapter's system come first. The
+legal and administrative items (7, 8, 9, 13 and 14) wait.
+
+The technical holes, largest first. Items 15 to 19 were added on 09-18-26 from
+the step methods and the chapter information form's gap list.
+
+1. **Item 15 — the CRM configuration has no versioned source and no applier.**
+   Building the CRM (stage 9) copies configuration files off Cleveland's test
+   system by hand and replays a capture taken on 08-31 through a trial script.
+2. **Item 1 — no secrets store.**
+3. **Item 16 — no settings generator.** Deploying the applications (stage 11)
+   runs a trial script that reads a filled-in form nothing else reads.
+4. **Item 2 — no published version standard**, including whether the two paid CRM
+   add-on products are part of it.
+5. **Item 17 — the time zone is written into the code.**
+6. **Item 12 — no way to load a chapter's existing records.**
+7. **Item 3 — duplicate checking, saved views and automated rules unexamined.**
+8. **Items 10 and 11 — the public pages**: the mentor directory page is not built,
+   and the events page shows Cleveland's colours.
+9. **Item 18 — five event email templates are missing** from the standard.
+10. **Item 19 — CRM field labels say "CBM".**
+11. **Items 4, 5 and 6** — the colour file template, the emergency access
+    procedure, and the chapter training accounts.
 
 ---
 
@@ -269,10 +297,88 @@ own the default, and it is not ruled.
 
 ---
 
+## 15. A versioned CRM standard and an applier
+
+**What is missing.** Nothing holds the standard CRM configuration as a versioned
+artifact, and nothing applies it. The August build copied two folders of
+configuration files off Cleveland's test system by hand, then ran a trial script
+(`scripts/rehearsal/apply_api_half.py`) that replays the teams, roles, email
+templates and instance settings captured from that system on 08-31. Cleveland's
+test system changes under the application, so "copy it off the test system" is a
+different standard every week. Phase 1's plan has the conformance check built and
+the applier not started.
+
+**What it blocks.** Doing stage 9 (building the CRM system) repeatably, and the
+final check that the CRM matches the standard (step 9.20).
+
+**Size.** The largest item here. Ruled 08-31-26: the applier lives inside
+CRMBuilder, which is a separate repository with its own requirement-first process.
+Phase 1's decision trigger is 09-19-26: if CRMBuilder's requirements session has
+not settled the headless requirement by then, the applier is built in this
+repository instead (`phase-1-crm-config.md`).
+
+---
+
+## 16. A settings generator
+
+**What is missing.** Nothing turns a filled-in chapter information form into the
+application's deployment settings. The August build used a trial script
+(`scripts/rehearsal/render_spec.py`). It asks for a development database, which
+takes no backups, and it knows nothing about the Google or Zoom values. This is
+Phase 3 of the chapter-network plan, not started.
+
+**What it blocks.** Generating the deployment settings (step 11.2) and loading the
+secrets (step 11.3) by anyone but the person holding the files.
+
+**Size.** Moderate, and it pairs with item 1: the generator reads secrets from the
+store.
+
+---
+
+## 17. The time zone is written into the code
+
+**What is missing.** The Eastern time zone is written into four source files:
+birthday greetings, the assignment date stamp, the public events page and a Zoom
+default (`chapter-values.md` § C). A chapter elsewhere gets wrong dates, and
+nothing reports an error.
+
+**What it blocks.** Any chapter outside the Eastern United States.
+
+**Size.** Small: one setting, defaulting to Eastern, read in four places.
+
+---
+
+## 18. Five event email templates missing from the standard
+
+**What is missing.** The event follow-up emails need five CRM email templates:
+`EventReminder`, `EventRecordingAvailable`, `EventNoShow`, `EventMentorCTA` and
+`EventSurvey`. None exists on Cleveland's test system, so none reached the trial
+chapter, and the conformance check fails on both for this reason alone.
+
+**What it blocks.** A clean result from the conformance check (step 9.20), and
+event follow-up emails on any system.
+
+**Size.** Small: write the five templates once, on the test system.
+
+---
+
+## 19. CRM field labels say "CBM"
+
+**What is missing.** Ten field labels in the CRM's configuration say "CBM", for
+example "CBM Email". Every chapter's staff would see Cleveland's initials on their
+own records (finding F7 of the August build).
+
+**What it blocks.** Nothing breaks. Every chapter sees another city's initials.
+
+**Size.** Small: relabel the ten fields with a neutral word, once, for everyone.
+
+---
+
 ## Change log
 
 | Version | Date | Change |
 |---|---|---|
+| 0.9 | 09-18-26 14:00 | Implementation put first (Doug, 09-18-26): a ranked list of the technical holes added at the top, and five technical items added — a versioned CRM standard and applier, a settings generator, the time zone written into the code, five missing event email templates, and CRM field labels that say "CBM". |
 | 0.8 | 09-18-26 13:50 | Item 8: nothing is urgent, and everyday requests are handled as they arrive (Doug, 09-18-26). Only chapter access to the ClickUp system remains. |
 | 0.7 | 09-18-26 13:45 | Item 8 narrowed: the central committee reviews and schedules features and defects every two weeks, and there is no committed response time (Doug, 09-18-26). What remains is what counts as urgent, and chapter access to the ClickUp system. |
 | 0.6 | 09-18-26 13:40 | Items 7 and 8 updated from Doug's answers on 09-18-26: a draft of the standard agreement exists and is in review; feature requests, defect reports and support requests go into one ClickUp system managed by the entire support team. Each item now lists only what is still missing. |
