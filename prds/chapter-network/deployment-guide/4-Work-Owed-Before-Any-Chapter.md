@@ -2,10 +2,10 @@
 
 **Document:** Things the central support organization has to build, decide or write
 before the New Chapter Deployment Guide can actually be followed
-**Version:** 0.3
+**Version:** 0.4
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-15-26 00:22
+**Last Updated:** 09-18-26 01:55
 
 ---
 
@@ -114,11 +114,16 @@ live system, and not on a practice system built for each of them. That closes mo
 of this item — the machine already exists, it already clears itself out nightly,
 and it already holds example records to practise on.
 
-**What is still missing.** Three small things, none of them a build.
+**What is still missing.** Three things.
 
-A way to give a chapter's staff accounts on that system and take them away again,
-and a written rule about what those accounts may see and do. Chapter staff are not
-Cleveland staff, and the system is Cleveland's.
+A set of shared chapter training accounts (ruled 09-18-26), separate from the six
+Cleveland's own trainers use. This is the one piece of real work: one account per
+team, each with an `@sandbox.cbmentors.org` address that leads nowhere; added to the
+training data script so they are rebuilt with everything else; a mentor profile for
+the mentor account with its own invented clients; then one re-capture of the
+training system's fixed copy. Personal accounts were ruled out because the system
+restores its user accounts every night, and because a personal account puts a real
+mailbox behind the Send button.
 
 A note to trainees explaining two things they will otherwise find confusing: the
 system clears itself out every night, so nothing they create survives to the next
@@ -135,9 +140,9 @@ releases, and recommended moving to a machine the central support organization o
 once a second chapter is in sight. The same answer applies here: use it now, move
 it later, and decide at the same moment.
 
-**What it blocks.** Nothing, now. Getting chapter staff onto the practice system
-(step 16.1) and removing them afterwards (step 16.6) can be written as soon as the
-account rule is agreed.
+**What it blocks.** Getting chapter staff onto the practice system (step 16.1) and
+changing the passwords afterwards (step 16.6). Both are written; neither can be done
+until the chapter training accounts exist.
 
 ---
 
@@ -145,6 +150,7 @@ account rule is agreed.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.4 | 09-18-26 01:55 | Item 6 rewritten after Doug ruled on 09-18-26 that chapter staff train with shared training accounts set up specifically for chapter training. Building those accounts is now the item's one piece of real work, and it blocks steps 16.1 and 16.6. |
 | 0.3 | 09-15-26 00:22 | No items changed. Noted here for the record: the trial chapter stays running with testing the setup steps as its reason (Doug, 09-15-26), which gives four of the five remaining items somewhere to be tried before a real chapter meets them. |
 | 0.2 | 09-14-26 18:09 | Item 6 rewritten after Doug ruled that chapters train on the existing test system. It is no longer a build — what remains is an account rule, a note for trainees, and a decision about when that machine stops being the answer. Five items now block work; this one blocks nothing. |
 | 0.1 | 09-14-26 17:51 | First draft. Six items, found by reviewing the fourteen steps added after the completeness checks were run against the step list. |

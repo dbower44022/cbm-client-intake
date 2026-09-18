@@ -1,10 +1,10 @@
 # New Chapter Deployment Guide — The Step List
 
 **Document:** The bare list of steps, with no methods yet
-**Version:** 0.6
+**Version:** 0.7
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 00:50
+**Last Updated:** 09-18-26 01:55
 
 ---
 
@@ -634,10 +634,12 @@ Done when: each mentor has signed in at least once and set their own password.
 ## Stage 16 — Train the chapter's staff
 
 **16.1 Get the chapter's staff onto the shared practice system.**
-Done when: each person who needs training has an account on the existing test
-system, on the right team, and has signed in once. Ruled 09-14-26: chapters train
-on the existing test system rather than on their own live system or on a practice
-system built for them.
+Done when: the chapter's trainer holds the sign-in details for the chapter training
+accounts, the passwords were set fresh for this chapter, and one person from the
+chapter has signed in once. Ruled 09-14-26: chapters train on the existing test
+system rather than on their own live system or on a practice system built for them.
+Ruled 09-18-26: they sign in with shared training accounts set up specifically for
+chapter training, never with accounts of their own.
 
 **16.2 Explain how the practice system behaves.**
 Done when: everyone being trained has been told two things. The system clears
@@ -658,11 +660,11 @@ live.
 Done when: one person at the chapter is named as the person colleagues ask first,
 before contacting the central support organization.
 
-**16.6 Remove the training accounts.**
-Done when: the chapter's accounts on the shared practice system are removed or
-switched off once training ends, and it is written down what was removed. People
-from one chapter do not keep standing access to a system another chapter also
-uses.
+**16.6 Change the training account passwords.**
+Done when: the chapter training account passwords are changed once training ends,
+the change has survived a nightly reset, and it is written down when this was done.
+People from one chapter do not keep standing access to a system another chapter
+also uses.
 
 ---
 
@@ -742,6 +744,7 @@ Done when: a date is booked to review how the first months have gone.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.7 | 09-18-26 01:55 | Steps 16.1 and 16.6 rewritten after Doug ruled on 09-18-26 that chapter staff train with shared training accounts set up specifically for chapter training. The shared training system restores its user accounts every night, so per-person accounts could not be created or removed without re-capturing its fixed copy. Step 16.6 renamed "Change the training account passwords". |
 | 0.6 | 09-18-26 00:50 | Mentor accounts moved from the staff accounts stage to the end of the records stage (Doug, 09-18-26). A mentor's account has to be created from their mentor record in Mentor Administration, or the software makes a duplicate account, so it cannot come before the records are loaded. Stage 14 renamed "Create the staff accounts" and now has four steps. Stage 15 renamed "Bring in the chapter's records and create the mentor accounts" and gains three steps: entering mentors the load did not bring in, creating the mentor accounts, and confirming each mentor has signed in. A chapter starting with nothing now skips only the load, not the whole stage. Total steps now one hundred and fifty-two. |
 | 0.5 | 09-14-26 18:13 | Two corrections found while writing the methods for building the CRM and deploying the applications. There are seven secrets, not six — the applications use a stored-data encryption key that no planning document lists and that cannot be changed later without destroying data. And the rule requiring automatic deployment to be switched off is out of date: the danger is following the development branch, not automatic deployment itself. Steps 8.6, 8.7, 8.8, 11.3, 11.8 and 11.9 changed. |
 | 0.4 | 09-14-26 18:09 | Training settled on the existing test system as the shared practice area (Doug, 09-14-26). The training stage grew from four steps to six: getting chapter staff onto that system, explaining that it clears itself nightly and shows Cleveland's name, and removing the accounts when training ends. Total steps now one hundred and fifty. |

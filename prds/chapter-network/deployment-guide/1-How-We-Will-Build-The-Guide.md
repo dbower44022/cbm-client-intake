@@ -1,10 +1,10 @@
 # New Chapter Deployment Guide — How We Will Build It
 
 **Document:** The plan for writing the New Chapter Deployment Guide
-**Version:** 0.9
+**Version:** 1.0
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 01:18
+**Last Updated:** 09-18-26 01:55
 
 ---
 
@@ -423,8 +423,9 @@ known yet.
    creating the staff accounts, and checking everything works before
    going live are done, written from the August build (09-18-26). Setting up
    backups and monitoring is done, written from Cleveland's live hosting account
-   (09-18-26). Eleven stages remain, all written from the design and labelled as
-   never performed.
+   (09-18-26). Training the chapter's staff is done, written from Cleveland's own
+   training material (09-18-26). Ten stages remain, all written from the design and
+   labelled as never performed.
 6. Take the first real chapter through the guide. Someone from the central support
    organization is present for the Google steps, and corrects them the same day.
 
@@ -439,6 +440,7 @@ visible.
 
 | Version | Date | Change |
 |---|---|---|
+| 1.0 | 09-18-26 01:55 | Build order step 5 updated: methods written for training the chapter's staff (`7-Methods-Training.md`). Ten stages remain. |
 | 0.9 | 09-18-26 01:18 | Build order step 5 updated: methods written for setting up backups and monitoring (`6-Methods-Backups-Monitoring.md`). Eleven stages remain. |
 | 0.8 | 09-18-26 00:50 | Stages 14 and 15 renamed and their boundary moved: mentor accounts are now created at the end of the records stage, from each mentor's record (Doug, 09-18-26). |
 | 0.7 | 09-18-26 00:45 | Build order step 5 updated: methods written for three more stages, all tested in the August build (`5-Methods-Form-Accounts-Checks.md`). Twelve stages remain. |
