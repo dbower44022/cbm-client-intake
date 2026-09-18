@@ -1,0 +1,258 @@
+stage: 5
+name: Open the hosting and video meeting accounts
+version: "0.1"
+updated: "09-18-26 17:20"
+why: >-
+  The chapter's CRM server, its applications and their database all run in a
+  hosting account, and the public webinar programme runs through a video meeting
+  account. This stage opens both in the chapter's own name, so the chapter owns
+  its system and can withdraw access at any time. It ends with the two tokens
+  CRMBuilder needs to build the CRM inside the chapter's accounts.
+who: >-
+  The chapter opens and pays for the accounts. The central support organization
+  is invited in, and creates the two tokens.
+time: >-
+  About two hours of work. The nonprofit hosting credits can take weeks to be
+  answered, but nothing waits on them.
+before_you_start:
+  - The chapter's mailboxes on its own domain (stage 4)
+  - The chapter's bank account (step 1.6)
+  - The agreement on what access the central support organization holds (step 2.4)
+  - The chapter's vault (step 2.7)
+  - The chapter's domain names in its Cloudflare account (step 3.7)
+unlocks: >-
+  Building the CRM (stage 9) can start once the chapter information form is
+  complete, because CRMBuilder now holds the chapter's own tokens.
+steps:
+  - id: "5.1"
+    name: Create the server hosting account
+    why: The chapter's servers must sit in an account the chapter owns, not in anyone else's.
+    who: chapter
+    first: ["4.7"]
+    needs: [ops_mailbox]
+    produces: [hosting_account]
+    mode: guided
+    actions:
+      - do: Sign up for a DigitalOcean account using a chapter mailbox that more than one person can read, such as the shared operations mailbox. Never use a personal address.
+        see: A new, empty DigitalOcean account.
+      - do: Put the account's sign-in in the chapter's Operations vault.
+        see: The sign-in listed in the vault.
+    done_when: >-
+      The account exists in the chapter's name, using a chapter mailbox.
+    check:
+      how: The chapter's setup contact signs in, and the account's profile shows the chapter's name and the chapter mailbox.
+      probe: none — the app cannot reach the account until the token in step 5.8 exists.
+    goes_wrong: >-
+      Signing up with a founder's personal email address. The account then belongs,
+      in practice, to whoever reads that inbox.
+    later: unchanged — the account is the chapter's by ruling, so the chapter creates it.
+    status: not-yet-tried — the trial chapter was built inside Doug's own hosting account.
+    source: 9-Methods-Hosting-Website-Policies.md#5.1
+
+  - id: "5.2"
+    name: Set up billing on the hosting account
+    why: The chapter pays its own hosting, and a bill tied to a volunteer's card stops being paid when that volunteer leaves.
+    who: chapter
+    first: ["5.1", "1.6"]
+    needs: []
+    produces: []
+    mode: guided
+    actions:
+      - do: In the hosting account's billing settings, add the chapter's own card or bank payment method.
+        see: The chapter's payment method listed.
+      - do: Set the billing email to a chapter mailbox the chapter's treasurer reads.
+        see: The chapter mailbox shown as the billing contact.
+    done_when: >-
+      A chapter payment method is on file and the billing contact is a chapter
+      mailbox.
+    check:
+      how: The billing settings show the chapter's payment method and the chapter mailbox.
+      probe: none
+    goes_wrong: >-
+      A volunteer's personal card on the account. When that person leaves, the bills
+      stop being paid and the hosting provider eventually switches the chapter's
+      system off.
+    later: unchanged
+    status: not-yet-tried
+    source: 9-Methods-Hosting-Website-Policies.md#5.2
+
+  - id: "5.3"
+    name: Apply for the nonprofit hosting credits
+    why: Nonprofit credits lower the chapter's hosting bill, and they belong to the chapter only if the chapter applies in its own name.
+    who: chapter, with the central support organization's help
+    first: ["5.2", "1.5"]
+    needs: []
+    produces: []
+    mode: offline
+    actions:
+      - do: Apply for hosting credits in the chapter's own name, through the hosting provider's own nonprofit programme or through TechSoup. The current terms of both have not been checked for this guide.
+      - do: Write down which route was used and when an answer is expected, on the chapter's account list (step 5.7).
+        see: The route and the answer date on the list.
+    done_when: >-
+      The application is submitted and the expected answer date is recorded.
+    check:
+      how: The confirmation of the application and the answer date are on the chapter's account list.
+      probe: none
+    goes_wrong: >-
+      A chapter under a sponsoring nonprofit has no nonprofit status of its own to
+      apply with. That case is an open question. Until it is answered, such a
+      chapter should budget for the full price.
+    later: unchanged
+    status: not-yet-tried
+    source: 9-Methods-Hosting-Website-Policies.md#5.3
+
+  - id: "5.4"
+    name: Grant the central support organization access to the hosting account
+    why: The central support organization builds and runs the chapter's servers, and must do it under its own named sign-in so the chapter can see who did what and remove access.
+    who: both — the chapter grants, the central support organization accepts
+    first: ["5.1", "2.4"]
+    needs: []
+    produces: []
+    mode: guided
+    actions:
+      - do: In the hosting account's team settings, invite a named person from the central support organization by that person's own email address.
+        see: The invitation listed as pending.
+      - do: Give that person a role that can create and manage servers, databases and applications. The exact names of the roles on that screen have not been checked for this guide.
+      - do: Keep the owner role with the chapter.
+      - do: The invited person accepts the invitation and signs in.
+        see: The chapter's account, reached from the invited person's own sign-in.
+    done_when: >-
+      The central support organization can create and manage servers in the
+      account under its own named sign-in, and the chapter can remove that access
+      itself.
+    check:
+      how: The central support organization's named person sees the chapter's account, and the chapter's owner can see the remove button beside that person's name. There is no need to press it.
+      probe: none
+    goes_wrong: >-
+      Sharing the chapter's own sign-in instead of inviting a named person. Nobody
+      can tell who did what, and the chapter cannot withdraw access without changing
+      its own password.
+    later: unchanged — the fleet console works inside the chapter's account using this same access.
+    status: not-yet-tried — the August build worked inside Doug's own account, so no access was ever granted.
+    source: 9-Methods-Hosting-Website-Policies.md#5.4
+
+  - id: "5.5"
+    name: Create the video meeting account, or record that it is not needed
+    why: The public webinar programme schedules its meetings through the chapter's own Zoom account; mentoring sessions never use it.
+    who: both — the chapter decides, the central support organization sets up the connection
+    first: ["4.7"]
+    needs: []
+    produces: [zoom_host_email, zoom_account_id, zoom_client_id, ZOOM_CLIENT_SECRET]
+    mode: guided
+    actions:
+      - do: Decide whether the chapter will run public webinars through the software. If not, write "no public webinars through Zoom" on the chapter's account list and stop here.
+      - do: Open a Zoom account with a chapter mailbox as the host address.
+        see: The host mailbox signs in to Zoom.
+      - do: On that Zoom account, create a "Server-to-Server OAuth" app, as section 5 of EVENTS-SETUP.md describes.
+        see: Three values - an account identifier, a client identifier and a client secret.
+      - do: Put the client secret in the chapter's Operations vault. Write the host address and the two identifiers on the chapter information form.
+        see: The secret in the vault, and three values on the form.
+    done_when: >-
+      Either the account exists with a chapter mailbox as its host address and an
+      app that lets the software schedule webinars through it, or a note records
+      that this chapter runs no public webinars.
+    check:
+      how: The chapter's host mailbox signs in to Zoom, and the three values are recorded. The connection itself cannot be checked until the applications are deployed.
+      probe: Once the applications run, the app asks Zoom for an access token with the three values.
+    goes_wrong: >-
+      The host address setting in the software defaults to Cleveland's. A chapter
+      that forgets to change it would create its webinars under Cleveland's Zoom
+      host. The Zoom connection has never been run against a real Zoom account.
+    later: unchanged
+    status: not-yet-tried
+    source: 9-Methods-Hosting-Website-Policies.md#5.5
+
+  - id: "5.6"
+    name: Turn on two-step sign-in for both accounts
+    why: A stolen password must not be enough to take over the chapter's servers or its meetings, and losing one phone must not lock the chapter out.
+    who: chapter
+    first: ["5.1", "5.5"]
+    needs: []
+    produces: []
+    mode: guided
+    actions:
+      - do: In the hosting account's security settings, turn on two-step sign-in.
+        see: Signing in now asks for a second step.
+      - do: Do the same in the Zoom account, if there is one.
+        see: Signing in to Zoom asks for a second step.
+      - do: Put the recovery codes for both in the chapter's vault, where a second named person can reach them.
+        see: The recovery codes listed in the vault.
+    done_when: >-
+      Two-step sign-in is on and recovery does not depend on one person.
+    check:
+      how: Signing in to each account asks for the second step, and a second named person confirms they can reach the recovery codes.
+      probe: none
+    goes_wrong: >-
+      Recovery codes kept only on the phone of the person who turned two-step
+      sign-in on. When that phone is lost, so is the account.
+    later: unchanged
+    status: not-yet-tried
+    source: 9-Methods-Hosting-Website-Policies.md#5.6
+
+  - id: "5.7"
+    name: Write down every account the chapter now owns
+    why: Every account must be findable by a second person, so no account depends on the one who opened it.
+    who: chapter, checked by the central support organization
+    first: ["5.1", "5.2", "5.3", "5.4", "5.5", "5.6"]
+    needs: []
+    produces: [account_list]
+    mode: guided
+    actions:
+      - do: Make one list, held by the chapter, with one line per account - the domain registrar, Cloudflare, Google Workspace, the hosting account, and the Zoom account if there is one.
+      - do: On each line write the web address to sign in at, who holds the top-level sign-in, who else has access, where the recovery codes are, and any nonprofit discount or credit applied.
+        see: No passwords on the list. Passwords and recovery codes are in the chapter's vault (step 2.7).
+    done_when: >-
+      One list names each account, its web address, who holds the top-level
+      sign-in, and who else has access.
+    check:
+      how: A second person at the chapter finds every account on the list without asking anyone.
+      probe: The app compares the list with the accounts it holds tokens for.
+    goes_wrong: >-
+      The list goes stale. It is handed over again at the end (step 18.4), and that
+      is the moment to check it.
+    later: The fleet console holds the list for every chapter.
+    status: not-yet-tried
+    source: 9-Methods-Hosting-Website-Policies.md#5.7
+
+  - id: "5.8"
+    name: Create the two tokens CRMBuilder builds with
+    why: CRMBuilder creates the chapter's CRM server and its web address itself, and must do it inside the chapter's own accounts so the chapter can revoke access and keep everything.
+    who: central, inside the chapter's accounts
+    first: ["5.4", "3.7"]
+    needs: [hosting_account, cloudflare_account]
+    produces: [digitalocean_token, cloudflare_token]
+    mode: guided
+    actions:
+      - do: In the chapter's DigitalOcean account, create an API token with write access. The screen is under the account's API settings; its exact labels have not been checked for this guide.
+        see: A new token, shown once.
+      - do: In the chapter's Cloudflare account, create an API token with the "Zone, DNS, Edit" permission, limited to the chapter's own zones.
+        see: A new token covering only the chapter's zones.
+      - do: Put both tokens in the chapter's Operations vault.
+        see: Both tokens listed in the vault.
+      - do: In CRMBuilder, enter both as the provider credentials on the chapter's engagement.
+        see: Both credentials shown as configured, and the chapter's Cloudflare zones listed.
+    done_when: >-
+      A DigitalOcean API token from the chapter's hosting account, and a Cloudflare
+      API token limited to editing DNS in the chapter's zones, both exist, are in the
+      chapter's vault, and are entered in CRMBuilder as the chapter's provider
+      credentials. CRMBuilder builds the chapter's CRM with the chapter's own
+      accounts, never its own (ruled 09-18-26).
+    check:
+      how: CRMBuilder's provider credentials screen shows both configured for the chapter's engagement, and lists the chapter's Cloudflare zones.
+      probe: The app lists the chapter's hosting account through the DigitalOcean token and the chapter's zones through the Cloudflare token.
+    goes_wrong: >-
+      A Cloudflare token with more permission than it needs, or one covering every
+      zone in the account. Also, leaving the engagement on CRMBuilder's own tokens
+      by mistake. The server then appears in the wrong hosting account, and nothing
+      says so until someone looks.
+    later: unchanged
+    status: not-yet-tried
+    source: 9-Methods-Hosting-Website-Policies.md#5.8
+
+changes:
+  - version: "0.1"
+    date: "09-18-26 17:20"
+    change: >-
+      First version as data, converted from the methods for the hosting and video
+      meeting accounts (9-Methods-Hosting-Website-Policies.md, version 0.4) with the
+      step list's finishing tests.

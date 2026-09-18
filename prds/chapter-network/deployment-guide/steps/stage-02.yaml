@@ -1,0 +1,218 @@
+stage: 2
+name: Sign the agreement with the central support organization
+version: "0.1"
+updated: "09-18-26 17:20"
+why: >-
+  Everything after this stage involves one organization spending money and
+  holding administrative access inside another organization's accounts. The
+  agreement sets out what the central support organization does, what it costs,
+  the rule that every chapter runs identical software, what access is held, and
+  what the chapter takes if it leaves. The stage ends by setting up the chapter's
+  password vault, so every account created from stage 3 onward has a safe home.
+who: >-
+  The chapter's board and the central support organization together.
+time: >-
+  Not known yet. A draft of the standard agreement exists and is in review
+  (09-18-26).
+before_you_start:
+  - The chapter's board, bylaws and named signers (step 1.4)
+  - The person who acts for the chapter during setup (step 1.7)
+unlocks: >-
+  The chapter's domain names can be registered (stage 3), and every account
+  created from then on goes into the chapter's vault.
+steps:
+  - id: "2.1"
+    name: Agree what the central support organization does
+    why: The chapter needs to know what it will get, what it will not, and how to ask for help, before it relies on anyone.
+    who: both
+    first: ["1.7"]
+    needs: []
+    produces: []
+    mode: offline
+    actions:
+      - do: "List what is provided: building and running the CRM and the applications, the weekly software release, and support."
+      - do: "List what is not provided: the chapter's legal, tax and banking work, its website's content, and its own training beyond the first sessions."
+      - do: Explain how requests are made. Feature requests, defect reports and support requests all go into one ClickUp system, managed by the whole support team.
+      - do: Explain the answer times. No response time is committed and no request is treated as urgent. Everyday requests, such as adding a person or resetting a password, are handled as they arrive. Feature requests and defects are reviewed and scheduled by the central committee every two weeks.
+    done_when: >-
+      The chapter has in writing the list of what is provided, what is not, and how
+      quickly ordinary requests are answered.
+    check:
+      how: The chapter can answer, from the document, "who do I ask to add a new staff member, and how is it handled?"
+      probe: none
+    goes_wrong: >-
+      Slow answers to everyday requests. A chapter that waits too long asks for its
+      own administrator account, and granting one ends the identical-software rule.
+    later: A standard schedule attached to every chapter's agreement.
+    status: not-yet-tried
+    source: 8-Methods-Organization-Domains-Google.md#2.1
+
+  - id: "2.2"
+    name: Agree the cost
+    why: The chapter's treasurer must know every recurring cost and who it is paid to, so the budget has no surprises.
+    who: both
+    first: ["2.1"]
+    needs: []
+    produces: []
+    mode: offline
+    actions:
+      - do: List the costs the chapter pays directly in its own accounts, with each supplier and an approximate price. They include hosting, Google Workspace, the domain names, Cloudflare if a paid plan is ever needed, and the Proton Pass vault.
+      - do: Agree the fee paid to the central support organization. It is proposed, not ruled, that the fee covers labour only.
+      - do: Settle whether the two paid CRM add-on products are part of the standard before quoting a cost (work list item 2).
+    done_when: >-
+      The fee is agreed in writing, and it is clear which costs the chapter pays
+      directly to other companies rather than through the fee.
+    check:
+      how: The chapter's treasurer can name every recurring cost and who it is paid to.
+      probe: none
+    goes_wrong: >-
+      The CRM add-on products. The permission roles depend on two paid products that a
+      chapter would have to license, and whether they are part of the standard is still
+      open.
+    later: unchanged
+    status: not-yet-tried
+    source: 8-Methods-Organization-Domains-Google.md#2.2
+
+  - id: "2.3"
+    name: Accept the identical-software rule
+    why: One release works for every chapter only if every chapter runs the same software, with no local additions.
+    who: both — the central support organization explains, the chapter's board accepts
+    first: ["2.1"]
+    needs: []
+    produces: []
+    mode: offline
+    actions:
+      - do: "Give the board the rule in writing: core or nothing. A change a chapter wants becomes part of the software for every chapter, or it does not happen. There is no third answer."
+      - do: Show the board how to raise a feature request in the ClickUp system, and that the central committee decides it every two weeks.
+      - do: Ask the board to minute that the rule was read and accepted.
+        see: The minute.
+    done_when: >-
+      The chapter's board has been told in writing that no chapter gets its own
+      custom fields, form questions or list choices, and has been shown how to ask for
+      a change that would apply to every chapter.
+    check:
+      how: The board minutes record that the rule was read and accepted.
+      probe: none
+    goes_wrong: >-
+      A promise made in conversation that one field can be added "just for you". The
+      first exception ends the rule for everyone.
+    later: unchanged
+    status: not-yet-tried
+    source: 8-Methods-Organization-Domains-Google.md#2.3
+
+  - id: "2.4"
+    name: Agree the access the central support organization will hold
+    why: The central support organization works inside the chapter's accounts, so the chapter must know which ones, and that it can withdraw that access.
+    who: both
+    first: ["2.1"]
+    needs: []
+    produces: []
+    mode: offline
+    actions:
+      - do: List the accounts the central support organization will administer. They include the hosting account, the Cloudflare account, the Google Workspace administrator account, the video meeting account if there is one, the vault's shared Operations vault, and the CRM.
+      - do: Write in the rule that the central support organization holds the only CRM administrator accounts, and chapter staff hold ordinary accounts.
+      - do: Write in the other half of the rule. The chapter can always get in through the server it owns, and can withdraw the central support organization's access at any time.
+    done_when: >-
+      It is written down which of the chapter's accounts the central support
+      organization will administer, and that the chapter may withdraw that access at
+      any time.
+    check:
+      how: The list is in the agreement, and each account on it has a named later step that grants the access.
+      probe: none
+    goes_wrong: >-
+      Promising emergency access with no written way to use it. The emergency access
+      procedure is on the work list (item 5).
+    later: unchanged
+    status: not-yet-tried
+    source: 8-Methods-Organization-Domains-Google.md#2.4
+
+  - id: "2.5"
+    name: Agree the leaving terms
+    why: A chapter must be able to leave with all its data, and the central support organization must never be able to lock it out.
+    who: both
+    first: ["2.4"]
+    needs: []
+    produces: []
+    mode: offline
+    actions:
+      - do: Write in a notice period and a defined wind-down.
+      - do: "Write in the leaving kit: a copy of the CRM's database, an export of the application's own database, a transfer of the chapter's documents in Google Drive, and the chapter's own files such as its logo and colour file."
+      - do: Write in a perpetual licence to the last version of the software the chapter received.
+      - do: Write in that the central support organization may stop working for a chapter that stops paying, but can never lock it out.
+    done_when: >-
+      The notice period, the wind-down, and the list of everything the chapter takes
+      with it are written into the agreement.
+    check:
+      how: Each item in the leaving kit names what it is and who produces it.
+      probe: none
+    goes_wrong: >-
+      Leaving out the application's own database. Some of the chapter's records live
+      only there: the partner and funder discussion notes, the full history of every
+      submission, and any analytics pages the chapter built.
+    later: unchanged
+    status: not-yet-tried — the leaving procedure has never been rehearsed either.
+    source: 8-Methods-Organization-Domains-Google.md#2.5
+
+  - id: "2.6"
+    name: Sign the agreement
+    why: Nothing after this stage should happen inside the chapter's accounts without a signed agreement.
+    who: both
+    first: ["2.1", "2.2", "2.3", "2.4", "2.5", "1.4"]
+    needs: []
+    produces: []
+    mode: offline
+    actions:
+      - do: The officers the board minute names (step 1.4) sign for the chapter.
+      - do: Store the chapter's copy where more than one officer can reach it.
+        see: Both copies signed and dated.
+    done_when: >-
+      Both sides have signed and each holds a copy.
+    check:
+      how: Both copies are signed and dated.
+      probe: The app records the date the agreement was signed.
+    goes_wrong: nothing known yet
+    later: unchanged
+    status: not-yet-tried
+    source: 8-Methods-Organization-Domains-Google.md#2.6
+
+  - id: "2.7"
+    name: Set up the chapter's password vault
+    why: Every sign-in, recovery code and machine secret needs one safe place that the chapter owns and the central support organization can reach.
+    who: both — the chapter owns the vault; the central support organization sets it up alongside
+    first: ["2.6"]
+    needs: []
+    produces: [chapter_vault]
+    mode: guided
+    actions:
+      - do: The chapter buys a Proton Pass business plan in its own name, and pays for it itself.
+      - do: Make two chapter officers owners of the organization.
+      - do: Create a vault called Operations, shared with the central support organization's named people. Every sign-in, recovery code and machine secret the system runs on goes here.
+      - do: Create a vault called Board, kept to the chapter, for anything the central support organization has no need to see.
+      - do: Invite at least two named people from the central support organization as members of the Operations vault.
+        see: Their names listed as members of the Operations vault.
+    done_when: >-
+      The chapter owns a Proton Pass business organization with at least two chapter
+      owners, and at least two named people from the central support organization are
+      members of its shared operations vault (ruled 09-18-26).
+    check:
+      how: A second chapter owner and a second central member each sign in and open the Operations vault without help.
+      probe: The app reads the Operations vault's member list through Proton Pass's command-line tool and counts the owners and central members.
+    goes_wrong: >-
+      A vault owned by the central support organization instead of the chapter. The
+      chapter could then lose access to its own credentials in a dispute. Also, from
+      stage 3 on, every account must go into the vault the moment it is created, not
+      gathered up afterwards. Use named sign-ins wherever a system allows; the vault
+      holds only what cannot belong to one person.
+    later: The settings generator reads the machine secrets straight from the vault with Proton Pass's command-line tool.
+    status: not-yet-tried — Proton Pass chosen on 09-18-26.
+    source: 8-Methods-Organization-Domains-Google.md#2.7
+
+changes:
+  - version: "0.1"
+    date: "09-18-26 17:20"
+    change: >-
+      First version as data, converted from the methods for signing the agreement
+      (8-Methods-Organization-Domains-Google.md, version 0.5) with the step list's
+      finishing tests. Step 2.1 brought up to the 09-18-26 rulings: requests go into
+      ClickUp, the central committee meets every two weeks, and no response time is
+      committed.

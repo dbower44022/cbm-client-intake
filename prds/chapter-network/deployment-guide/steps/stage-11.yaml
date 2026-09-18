@@ -1,0 +1,511 @@
+stage: 11
+name: Deploy the chapter's applications
+version: "0.1"
+updated: "09-18-26 17:20"
+why: >-
+  The applications are what the chapter's staff, mentors and the public actually
+  use: the intake forms, the staff tools and the public events page. This stage
+  deploys them into the chapter's own hosting account, connects them to the
+  chapter's CRM and Google account, and sets them to take each weekly release by
+  themselves. It ends by proving each Google connection works, one at a time.
+who: >-
+  The central support organization, inside the chapter's hosting account.
+time: >-
+  About an hour for the deployment itself; the August build was active on the
+  first attempt in seven minutes. The Google checks at the end are not timed yet.
+before_you_start:
+  - The chapter information form, complete and reviewed (stage 8)
+  - The CRM, built and matching the standard, with the applications' key in the vault (stage 9)
+  - The Google permissions and the Google key (stage 10)
+  - The chapter's domain names in its Cloudflare account (step 3.7)
+unlocks: >-
+  Backups and monitoring can be set up (stage 12), and the chapter's website
+  pages can be connected (stage 13).
+steps:
+  - id: "11.1"
+    name: Generate the session secret
+    why: The session secret protects every sign-in to the applications, so each chapter has its own.
+    who: central
+    first: ["2.7"]
+    needs: []
+    produces: [SESSION_SECRET]
+    mode: automated
+    actions:
+      - do: Generate a new random value of at least 48 characters. The settings generator (step 11.2) does this the first time it runs.
+      - do: Put the value in the chapter's Operations vault.
+        see: The session secret listed in the vault.
+    done_when: >-
+      A new random session secret has been generated for this chapter alone and
+      stored in the secrets store. It is never copied from another chapter.
+    check:
+      how: The value is in the vault and differs from every other chapter's.
+      probe: The app compares a fingerprint of the value with every other chapter's.
+    goes_wrong: Copying another chapter's.
+    later: Created directly in the vault.
+    status: done-for-real
+    source: 3-Methods-CRM-Google-Applications.md#11.1
+
+  - id: "11.2"
+    name: Generate the deployment settings
+    why: The deployment settings are what the hosting platform builds the applications from, and every value must come from the reviewed form, not from memory.
+    who: central
+    first: ["8.9", "9.17"]
+    needs: [chapter_name, chapter_slug, timezone, app_base_url, website_base_url, events_public_base_url, docs_site_url, policy_client_conduct_url, policy_mentor_ethics_url, policy_terms_url, policy_privacy_url, chapter_tokens_url, primary_domain, ops_mailbox, alert_email_from, alert_email_to, members_group, shared_drive_id, zoom_host_email, crm_base_url, flags, ZOOM_CLIENT_SECRET, zoom_account_id, zoom_client_id, mentor_email_domain]
+    produces: [APP_ENCRYPTION_KEY]
+    mode: automated
+    actions:
+      - do: Run scripts/rehearsal/render_spec.py with the chapter information form, the secrets file and an output file name.
+        see: A settings file written, containing the secret values in plain text.
+      - do: Never commit the output file, and delete it once step 11.5 is done.
+      - do: Move the stored-data encryption key the generator created into the chapter's Operations vault.
+        see: The encryption key listed in the vault.
+    done_when: >-
+      The settings are produced from the chapter information form and every value
+      in them traces back to a line on that form.
+    check:
+      how: Every value in the settings file matches a line on the form.
+      probe: The app builds the settings from the form itself, so there is nothing to trace.
+    if_not: The generator refuses to run when the CRM key or the administrator credentials are missing. Fetch them from the vault and run it again.
+    goes_wrong: >-
+      The stored-data encryption key. The generator creates it quietly on first run,
+      and changing it later destroys the data it protects, so it is permanent from
+      the moment it exists. Also, the trial script asks for a development database,
+      which takes no backups (see step 11.4), and it does not know the Google or
+      Zoom values.
+    later: The settings generator (work list item 16) reads the form and the vault and writes no file.
+    status: done-for-real — with the trial script, not a finished generator.
+    source: 3-Methods-CRM-Google-Applications.md#11.2
+
+  - id: "11.3"
+    name: Load the secrets
+    why: The applications need their secrets at start-up, and a secret left readable in a file is a secret leaked.
+    who: central
+    first: ["11.2"]
+    needs: [ESPO_API_KEY, ESPO_PROVISION_USERNAME, ESPO_PROVISION_PASSWORD, SESSION_SECRET, APP_ENCRYPTION_KEY, GOOGLE_SERVICE_ACCOUNT_JSON]
+    produces: []
+    mode: automated
+    actions:
+      - do: Today the settings file from step 11.2 carries the secrets into the deployment. Nothing else to do.
+      - do: After step 11.5, delete the settings file.
+        see: No copy of the settings file left anywhere.
+    done_when: >-
+      Every secret, including the Google key, the session secret and the
+      stored-data encryption key, is loaded into the deployment and none of them
+      appears in a file anyone can read. The database connection is not among them
+      — the hosting platform supplies that to the application directly.
+    check:
+      how: The application starts, and no settings file with secrets is left on any computer.
+      probe: The app reads the deployment's settings list and confirms each secret is present and encrypted.
+    goes_wrong: >-
+      The settings file with plain-text secrets left on a laptop or committed.
+      Getting the settings back from the platform afterwards does not help: the
+      platform hands the secrets back scrambled into an unreadable form.
+    later: >-
+      The settings generator reads each secret from the chapter's Proton Pass
+      Operations vault with Proton Pass's command-line tool and hands it to the
+      hosting platform without writing a file.
+    status: done-for-real — and this is the weakest point in the stage.
+    source: 3-Methods-CRM-Google-Applications.md#11.3
+
+  - id: "11.4"
+    name: Create the database
+    why: Every submission is saved in the application's database before it reaches the CRM, so the database must exist and take backups.
+    who: central
+    first: ["5.1"]
+    needs: [chapter_slug]
+    produces: [DATABASE_URL]
+    mode: automated
+    actions:
+      - do: The database is created with the application in step 11.5, named after the chapter's short label.
+      - do: Straight after step 11.5, open the application's settings in the hosting account and find the database part.
+        see: Whether it says it is a managed database or a development database.
+      - do: If it is a development database, convert it to a managed database, at the smallest size.
+        see: The database shown as a managed database.
+    done_when: >-
+      The database exists in the chapter's hosting account, its connection details
+      are in the secrets store, and the application can reach it.
+    check:
+      how: The application connects, and the hosting account shows a managed database.
+      probe: The app reads the database type from the hosting account and refuses a development database.
+    goes_wrong: >-
+      Leaving it as a development database. Nothing reports an error, and there are
+      no backups. The trial chapter's database is in this state. Also, the hosting
+      platform adds an instruction to the connection details that the application's
+      database library rejects; the software strips it, so it only looks broken.
+    later: The settings generator asks for a managed database from the start.
+    status: done-for-real — as a development database. A managed database is not yet tried on a chapter.
+    source: 3-Methods-CRM-Google-Applications.md#11.4
+
+  - id: "11.5"
+    name: Create the application parts
+    why: The applications run as three parts, and the background worker is the one that sends mail and finishes unfinished work.
+    who: central
+    first: ["11.2", "11.3"]
+    needs: [digitalocean_token, DATABASE_URL]
+    produces: [app_id]
+    mode: automated
+    actions:
+      - do: Run doctl apps create with the settings file from step 11.2, signed in to the chapter's hosting account.
+        see: A new application with an identifier.
+      - do: Open the application in the hosting account.
+        see: Three parts listed — the web part, the delivery worker and the migrate setup job.
+    done_when: >-
+      The web part, the background worker part and the setup job all exist.
+    check:
+      how: All three parts appear in the hosting account.
+      probe: The app reads the application's parts through the chapter's token.
+    goes_wrong: >-
+      Creating only the web part. Without the background worker the system looks
+      fine and quietly does nothing.
+    later: unchanged for now
+    status: done-for-real — active on the first attempt, in seven minutes.
+    source: 3-Methods-CRM-Google-Applications.md#11.5
+
+  - id: "11.6"
+    name: Run the database setup
+    why: The application cannot start until its database has the tables it expects.
+    who: central
+    first: ["11.5"]
+    needs: []
+    produces: []
+    mode: automated
+    actions:
+      - do: Nothing to run. The setup job runs by itself before the application starts.
+      - do: Open the deployment's log in the hosting account.
+        see: The migrate job reported as successful.
+    done_when: >-
+      The setup job has completed and the database holds the expected tables.
+    check:
+      how: The deployment log shows the setup job succeeded.
+      probe: The app reads the deployment's status for the setup job.
+    goes_wrong: nothing known yet
+    later: unchanged
+    status: done-for-real
+    source: 3-Methods-CRM-Google-Applications.md#11.6
+
+  - id: "11.7"
+    name: Deploy the released version
+    why: Every chapter runs the same named release, so a support question never starts with "which version are you on".
+    who: central
+    first: ["11.6"]
+    needs: []
+    produces: []
+    mode: automated
+    actions:
+      - do: Check the application follows the release branch, which always points at the latest release.
+      - do: Open the application's health address, /healthz, in a browser.
+        see: releaseTag set to the current release, for example v0.228.1, and version matching it.
+    done_when: >-
+      The application is running the version the release schedule names, and it
+      reports that version when asked.
+    check:
+      how: /healthz shows releaseTag equal to the current release.
+      probe: The app reads /healthz and compares releaseTag with the latest release.
+    goes_wrong: >-
+      releaseTag reads null. That means the application follows the development
+      branch rather than the release branch. It is the honest answer, not a fault.
+    later: unchanged
+    status: done-for-real — twice, in August and in September.
+    source: 3-Methods-CRM-Google-Applications.md#11.7
+
+  - id: "11.8"
+    name: Set the update policy to Latest Stable
+    why: Latest Stable makes the application take each weekly release by itself, so no chapter falls behind.
+    who: central
+    first: ["11.7"]
+    needs: [app_id]
+    produces: []
+    mode: automated
+    actions:
+      - do: Run scripts/set_updates_policy.py with the application's identifier and latest-stable, without the apply option.
+        see: The plan it would apply to all three parts.
+      - do: Run it again with the apply option and the deploy option. The deploy option starts a fresh deployment, without which the application stays one release behind while reporting itself healthy.
+        see: All three parts changed.
+      - do: Run it with the status option.
+        see: All three parts read back as latest-stable, in agreement.
+    done_when: >-
+      All three parts of the application follow the release branch and the policy
+      script reads all three back in agreement. An application has three parts,
+      each with its own setting, and setting one without the others half-updates it
+      with no warning from the platform.
+    check:
+      how: The status option reports all three parts in agreement.
+      probe: The app runs the status check and shows the result.
+    goes_wrong: >-
+      Setting one part and not the others. Nothing on the platform tells you that
+      you have half-updated it.
+    later: A button in the fleet console.
+    status: done-for-real
+    source: 3-Methods-CRM-Google-Applications.md#11.8
+
+  - id: "11.9"
+    name: Confirm the application does not follow the development branch
+    why: The development branch delivers untested software, and no chapter's live system may take it.
+    who: central
+    first: ["11.8"]
+    needs: [app_id]
+    produces: []
+    mode: automated
+    actions:
+      - do: Run scripts/set_updates_policy.py with the application's identifier and the status option.
+        see: All three parts naming the release branch, and none naming main.
+    done_when: >-
+      No part of the deployment follows the main development branch. This replaces
+      what the earlier planning documents said. Those documents require automatic
+      deployment to be switched off on a chapter's application, which was right
+      when the release version travelled inside each deployment's settings. The
+      version is now stamped into the software itself when a release is cut, so an
+      application following the release branch with automatic deployment on updates
+      itself correctly. The danger was never automatic deployment — it is automatic
+      deployment from the development branch, which delivers untested software
+      straight to a chapter's live system.
+    check:
+      how: All three parts name the release branch.
+      probe: The app reads the branch of every part of every chapter's application and flags any on main.
+    goes_wrong: nothing known yet
+    later: The fleet view reports any deployment following the wrong branch.
+    status: done-for-real
+    source: 3-Methods-CRM-Google-Applications.md#11.9
+
+  - id: "11.10"
+    name: Point the application's web address at the application
+    why: People reach the applications by the chapter's own address, not the hosting platform's.
+    who: central
+    first: ["3.7", "11.5"]
+    needs: [app_base_url, cloudflare_token]
+    produces: []
+    mode: automated
+    actions:
+      - do: In the chapter's Cloudflare account, open the domain, then DNS, and add a CNAME record for the application's address, pointing at the address the hosting platform gave the application.
+      - do: Set the record to "DNS only", the grey cloud.
+        see: The record listed with a grey cloud.
+      - do: In the hosting account, add the address to the application as its main domain.
+    done_when: >-
+      The domain name record for the application address resolves to it.
+    check:
+      how: A name lookup on the application's address returns the hosting platform's address for it.
+      probe: The app looks up the address and compares it with the application's platform address.
+    goes_wrong: >-
+      The proxy switched on, an orange cloud. The hosting platform then cannot issue
+      or renew the certificate. Also, straight after the record is created, some
+      resolvers keep an earlier "no such address" answer for a while; wait rather
+      than changing the record.
+    later: unchanged
+    status: not-yet-tried — the August build used the platform's own address. Cleveland's apps. address is set up exactly this way.
+    source: 3-Methods-CRM-Google-Applications.md#11.10
+
+  - id: "11.11"
+    name: Publish the application at its own web address
+    why: A secure connection protects every sign-in and every form submission.
+    who: central
+    first: ["11.10"]
+    needs: [app_base_url]
+    produces: []
+    mode: automated
+    actions:
+      - do: Nothing to do. The hosting platform issues the certificate and renews it.
+      - do: Open the application's address in a browser.
+        see: The applications' sign-in page, with no certificate warning.
+    done_when: >-
+      The application loads at its address over a secure connection, and the
+      security certificate is set to renew by itself.
+    check:
+      how: The page loads with no warning.
+      probe: The app reads the certificate's expiry date and warns under thirty days.
+    goes_wrong: nothing known yet
+    later: unchanged
+    status: not-yet-tried
+    source: 3-Methods-CRM-Google-Applications.md#11.11
+
+  - id: "11.12"
+    name: Confirm the application is healthy
+    why: The health address is the one place that shows, at a glance, that the application runs, knows whose it is, and has a working background worker.
+    who: central
+    first: ["11.7"]
+    needs: [app_base_url, chapter_name]
+    produces: []
+    mode: automated
+    actions:
+      - do: Open the application's address followed by /healthz.
+        see: The chapter's own name as the organization, the release in releaseTag, and a worker block showing a recent heartbeat.
+      - do: Read the crmConfig block.
+        see: A state of stamped or unstamped, not absent, forbidden or unreachable.
+    done_when: >-
+      The application's health address reports it is running, names the chapter
+      correctly, and shows the background worker alive.
+    check:
+      how: /healthz shows the chapter's name, a live worker and a readable CRM.
+      probe: The app reads /healthz for every chapter at once.
+    if_not: Wait a minute and read it again before calling it a failure.
+    goes_wrong: >-
+      Reading it before the new software has finished starting, which shows a
+      failure that is not real. And Cleveland's name where the chapter's should be,
+      which means the chapter name setting was not applied.
+    later: The fleet view reads it for every chapter at once.
+    status: done-for-real
+    source: 3-Methods-CRM-Google-Applications.md#11.12
+
+  - id: "11.13"
+    name: Confirm the application can read the CRM
+    why: A permission missed in stage 9 shows up here as an empty screen rather than an error, so it is checked directly.
+    who: central
+    first: ["9.17", "11.12"]
+    needs: [ESPO_API_KEY]
+    produces: []
+    mode: automated
+    actions:
+      - do: Sign in to the applications and open a page that lists records, such as Client Administration.
+        see: Records, or an empty list. Both are fine.
+    done_when: >-
+      A request through the application returns CRM data.
+    check:
+      how: The page shows records or an empty list, not a refusal.
+      probe: The app makes one list request through the application.
+    if_not: A refusal means a permission was missed in stage 9. Go back to steps 9.11 and 9.12.
+    goes_wrong: >-
+      A page that asks for more than two hundred records at once is refused rather
+      than trimmed, and inside the software that refusal reads as "there are no
+      records". This once emptied every selection list on Cleveland's live system.
+    later: unchanged
+    status: done-for-real
+    source: 3-Methods-CRM-Google-Applications.md#11.13
+
+  - id: "11.14"
+    name: Confirm incoming mail
+    why: Inbound email is the first Google connection, and if it fails nothing after it will work.
+    who: central
+    first: ["10.3", "10.4"]
+    needs: [ops_mailbox, GOOGLE_SERVICE_ACCOUNT_JSON]
+    produces: []
+    mode: guided
+    actions:
+      - do: Confirm no other deployment reads the same shared operations mailbox.
+      - do: Switch on the mail feature on the application's settings page, and restart the background worker.
+      - do: Read the worker's log.
+        see: A line naming the mailbox the worker is acting as, and it is the shared operations mailbox.
+      - do: Send a message from an outside address to the shared operations mailbox.
+        see: The message appearing against a record in the application.
+    done_when: >-
+      A message sent to the shared operations mailbox appears in the application.
+    check:
+      how: The log names the right mailbox and the test message appears in the application.
+      probe: The app sends a test message to the mailbox and watches for it to arrive.
+    if_not: If the log line is missing or names the wrong address, stop. The cause is in stage 10, not here.
+    goes_wrong: >-
+      Two deployments reading the same mailbox. Each takes roughly half the
+      messages, and neither is obviously broken.
+    later: unchanged
+    status: not-yet-tried
+    source: 3-Methods-CRM-Google-Applications.md#11.14
+
+  - id: "11.15"
+    name: Confirm outgoing mail
+    why: Staff and mentors send email from records, and it must arrive with the chapter's own name.
+    who: central
+    first: ["11.14"]
+    needs: [alert_email_from]
+    produces: []
+    mode: guided
+    actions:
+      - do: Open a record in the application and send a message from it to an outside address you can read.
+        see: The message arriving, with the chapter's own name as the sender.
+    done_when: >-
+      A message sent from a record arrives, and the sender shown is the chapter.
+    check:
+      how: The test message arrives with the chapter's name.
+      probe: The app sends a test message to an address it can read and checks the sender.
+    goes_wrong: >-
+      The address the software sends warnings from must also be a real licensed
+      mailbox. A group or alias is refused, and the refusal reads as though the
+      machine account is not allowed at all.
+    later: unchanged
+    status: not-yet-tried
+    source: 3-Methods-CRM-Google-Applications.md#11.15
+
+  - id: "11.16"
+    name: Confirm the calendar
+    why: Mentors' sessions are put on their Google calendars, with the right people invited.
+    who: central
+    first: ["11.14"]
+    needs: []
+    produces: []
+    mode: guided
+    actions:
+      - do: Switch on the calendar feature on the application's settings page.
+      - do: Create a scheduled session through the application.
+        see: The meeting on the mentor's calendar, with the invitations sent.
+    done_when: >-
+      A meeting created through the application appears on the calendar with the
+      right people invited.
+    check:
+      how: The meeting is on the calendar and the invitations went out.
+      probe: The app creates a test event and reads it back.
+    goes_wrong: >-
+      The calendar permission is a separate entry in the grant from step 10.3, and
+      the one most often missed, because working mail makes everything look fine.
+    later: unchanged
+    status: not-yet-tried
+    source: 3-Methods-CRM-Google-Applications.md#11.16
+
+  - id: "11.17"
+    name: Confirm the shared drive
+    why: Record documents are filed on the chapter's shared drive, so the application must be able to create folders there.
+    who: central
+    first: ["10.5", "11.14"]
+    needs: [shared_drive_id]
+    produces: []
+    mode: guided
+    actions:
+      - do: Switch on the documents feature on the application's settings page.
+      - do: Create a record that should get a folder.
+        see: The folder appearing on the shared drive.
+    done_when: >-
+      The application creates a folder on the shared drive and it appears.
+    check:
+      how: The folder is on the shared drive.
+      probe: The app creates and removes a test folder as the service account.
+    goes_wrong: >-
+      The service account is not a member of the shared drive, or the drive's
+      identifier on the form is wrong. Both give silence, not an error.
+    later: unchanged
+    status: not-yet-tried
+    source: 3-Methods-CRM-Google-Applications.md#11.17
+
+  - id: "11.18"
+    name: Confirm a new mentor gets a mailbox
+    why: This last check exercises the most — the directory permissions, the mentor email domain and the approval process — and it is what each new mentor will depend on.
+    who: central
+    first: ["10.3", "11.14"]
+    needs: [primary_domain]
+    produces: []
+    mode: guided
+    actions:
+      - do: Switch on the mentor account switches on the application's settings page, including the Google directory check.
+      - do: In Mentor Administration, take a test mentor through approval.
+        see: A new mailbox created on the chapter's mentor email domain.
+      - do: Sign in to the new mailbox.
+        see: The mailbox opens.
+      - do: Remove the test mentor's mailbox and records afterwards.
+    done_when: >-
+      A mentor taken through approval ends up with a real working mailbox on the
+      chapter's mentor email domain.
+    check:
+      how: The new mailbox exists and the mentor can sign in to it.
+      probe: The app asks Google's directory whether the test mentor's address now exists.
+    goes_wrong: >-
+      Two directory permissions are needed, reading and changing. A grant with only
+      the reading one gets all the way to this step before failing. And the mentor
+      email domain is a setting somebody has to fill in; a chapter whose mentor
+      addresses are on a different domain from its staff addresses has to say so.
+    later: unchanged
+    status: not-yet-tried
+    source: 3-Methods-CRM-Google-Applications.md#11.18
+
+changes:
+  - version: "0.1"
+    date: "09-18-26 17:20"
+    change: >-
+      First version as data, converted from the methods for deploying the
+      applications (3-Methods-CRM-Google-Applications.md, version 0.5) with the step
+      list's finishing tests. Numbered actions, a reason per step, and a check an
+      app can run were added.

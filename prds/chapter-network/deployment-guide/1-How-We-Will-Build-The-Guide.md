@@ -1,10 +1,10 @@
 # New Chapter Deployment Guide — How We Will Build It
 
 **Document:** The plan for writing the New Chapter Deployment Guide
-**Version:** 1.2
+**Version:** 1.3
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 14:30
+**Last Updated:** 09-18-26 17:50
 
 ---
 
@@ -405,7 +405,17 @@ during writing.
 **Version number and change log** on the guide and on this plan, with the date and
 time stamp in MM-DD-YY HH:MM form.
 
-**One document to start.** The guide begins as a single document with a list of its
+**The guide is data (ruled 09-18-26).** Every stage is held as structured data in
+`steps/`, one file per stage, and the readable guide in `guide/` is generated from
+it by `scripts/render_deployment_guide.py`. Each stage page opens with why the stage
+exists, who does it, how long it takes and what must come first; each step has a
+one-line reason and numbered actions with what you should see. The same data is the
+specification of the onboarding app CRMBuilder is asked to build
+(`prompts/crmbuilder-chapter-onboarding-requirements-v0.1.md`). The renderer also
+runs the information check from section 9 on every run. The numbered methods
+documents (3 to 11) are now the history behind the steps.
+
+**One document to start** (superseded by the rule above). The guide began as a single document with a list of its
 stages at the top. Any stage that grows beyond roughly fifteen steps moves into its
 own file, with the main document keeping the numbered list and the finishing tests.
 Decided rather than asked, because it follows from length, and the length is not
@@ -447,6 +457,7 @@ visible.
 
 | Version | Date | Change |
 |---|---|---|
+| 1.3 | 09-18-26 17:50 | The guide is now structured data with a generated readable guide, and the specification of a CRMBuilder onboarding app (Doug, 09-18-26). The information check is automated in the renderer. |
 | 1.2 | 09-18-26 14:30 | The chapter's vault added to the names we use: a chapter-owned Proton Pass organization with central support members (Doug, 09-18-26). |
 | 1.1 | 09-18-26 02:05 | Build order step 5 done: methods written for the last ten stages — setting up the legal organization through publishing the policy documents (documents 8 and 9), putting the chapter's pages on its website and loading existing records (document 10), and the handover (document 11). Every stage now has written methods. Next is step 6, taking the first real chapter through the guide. |
 | 1.0 | 09-18-26 01:55 | Build order step 5 updated: methods written for training the chapter's staff (`7-Methods-Training.md`). Ten stages remain. |

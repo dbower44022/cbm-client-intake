@@ -1,0 +1,222 @@
+stage: 1
+name: Set up the chapter as a legal organization
+version: "0.1"
+updated: "09-18-26 17:20"
+why: >-
+  The chapter has to exist in law before it can own accounts, sign an agreement or
+  claim nonprofit discounts. This stage creates the organization, names who can act
+  for it, and starts the nonprofit application, which is the longest wait in the
+  whole guide. The central support organization does not do this work; the chapter
+  gets legal, tax and banking advice elsewhere.
+who: >-
+  The chapter's founding group and board, with their own legal and accounting
+  advice.
+time: >-
+  Weeks to months. Incorporation and the employer identification number are quick.
+  Nonprofit tax status typically takes weeks to a few months on the short federal
+  form, and several months or longer on the full form.
+before_you_start:
+  - A founding group that has agreed to form the chapter
+unlocks: >-
+  The agreement with the central support organization (stage 2) can be signed.
+  The nonprofit evidence from this stage is needed later for the Google Workspace
+  discount (step 4.13) and the hosting credits (step 5.3).
+steps:
+  - id: "1.1"
+    name: Choose the chapter's name
+    why: The name appears on every page the software shows and in the legal filing, so it is chosen once and not revisited.
+    who: chapter
+    first: []
+    needs: []
+    produces: [chapter_name]
+    mode: offline
+    actions:
+      - do: Agree one name as a founding group. Write it exactly as it will appear everywhere, including capital letters.
+      - do: Search the state's business registrations for the name. Most states run this search through the Secretary of State's office.
+        see: No registered organization with the same or a confusingly similar name.
+      - do: Search the federal trademark records, run by the United States Patent and Trademark Office.
+        see: No conflicting trademark.
+      - do: Search a domain registrar for the domain names the chapter would want. Step 3.2 explains whether a chapter needs one or two.
+        see: The domain names shown as available.
+      - do: Save the results of all three searches, with the date.
+    done_when: >-
+      The founding group has agreed one name, a search of state business
+      registrations and trademarks shows no conflict, and the matching domain names
+      are still available to buy.
+    check:
+      how: All three searches came back clear, and the results are saved with the date.
+      probe: The app checks that the domain names are still unregistered.
+    if_not: Choose another name and search again. Do not file anything under a name that conflicts.
+    goes_wrong: >-
+      Changing the name later. The software can change it in one setting, but the
+      legal filing, the domain names and the bank account cannot be changed so
+      easily.
+    later: unchanged
+    status: not-yet-tried
+    source: 8-Methods-Organization-Domains-Google.md#1.1
+
+  - id: "1.2"
+    name: Incorporate the chapter
+    why: A corporation can own accounts and sign agreements in its own name, so nothing depends on one founder.
+    who: chapter, with its own legal advice
+    first: ["1.1"]
+    needs: [chapter_name]
+    produces: []
+    mode: offline
+    actions:
+      - do: Get advice on filing articles of incorporation for a nonprofit corporation in the chapter's state. A lawyer or the state's nonprofit association can give it; the association often publishes a guide.
+      - do: Include the wording about the organization's purpose and about what happens to its assets if it closes. The tax authority looks for that wording in step 1.5.
+      - do: File the articles with the state.
+        see: The state returns a stamped copy.
+      - do: Keep the stamped copy in the chapter's files.
+    done_when: >-
+      The state has accepted the articles of incorporation and returned a stamped
+      copy.
+    check:
+      how: The stamped articles are in the chapter's files.
+      probe: none
+    goes_wrong: >-
+      Articles written without the wording the tax authority expects. Fixing them
+      means filing an amendment, which delays step 1.5.
+    later: unchanged — this stays outside the software.
+    status: not-yet-tried
+    source: 8-Methods-Organization-Domains-Google.md#1.2
+
+  - id: "1.3"
+    name: Get a federal employer identification number
+    why: The bank account and the nonprofit application both need this number.
+    who: chapter
+    first: ["1.2"]
+    needs: []
+    produces: []
+    mode: offline
+    actions:
+      - do: Apply online directly to the Internal Revenue Service. Applying there is free.
+        see: The number is usually issued at the end of the online session.
+      - do: Name an officer of the chapter as the responsible person when the application asks for one.
+      - do: Save the confirmation letter in the chapter's files.
+    done_when: >-
+      The number has been issued and the confirmation letter is filed.
+    check:
+      how: The confirmation letter from the Internal Revenue Service is in the chapter's files.
+      probe: none
+    goes_wrong: >-
+      Paying a third-party website to apply. Several charge a fee for a free service.
+    later: unchanged
+    status: not-yet-tried
+    source: 8-Methods-Organization-Domains-Google.md#1.3
+
+  - id: "1.4"
+    name: Appoint a board and adopt bylaws
+    why: The bank and the central support organization will both ask which officers may sign for the chapter.
+    who: chapter, with its own legal advice
+    first: ["1.2"]
+    needs: []
+    produces: []
+    mode: offline
+    actions:
+      - do: Hold the first board meeting.
+      - do: Adopt bylaws and elect officers.
+      - do: Minute which officers may sign contracts and open accounts.
+        see: Signed minutes that name the signers.
+    done_when: >-
+      Bylaws are adopted, directors are named, and the minutes record which
+      officers may sign contracts.
+    check:
+      how: Signed minutes of the first meeting are in the chapter's files, naming who may sign.
+      probe: none
+    goes_wrong: >-
+      Minutes that do not name who may sign. The bank (step 1.6) and the agreement
+      (step 2.6) both need that minute.
+    later: unchanged
+    status: not-yet-tried
+    source: 8-Methods-Organization-Domains-Google.md#1.4
+
+  - id: "1.5"
+    name: Obtain nonprofit tax status, or a sponsorship arrangement
+    why: The nonprofit discounts for Google Workspace and hosting are claimed against this status, and it is the longest wait in the guide.
+    who: chapter, with its own legal or accounting advice
+    first: ["1.3", "1.4"]
+    needs: []
+    produces: []
+    mode: offline
+    actions:
+      - do: Get advice on which of the two routes suits the chapter.
+      - do: "Route one, the chapter's own status: apply to the Internal Revenue Service for recognition as a charity under section 501(c)(3). Small organizations may qualify for the shorter Form 1023-EZ; others file the full Form 1023."
+        see: A determination letter. Typically weeks to a few months on the short form, and several months or longer on the full form.
+      - do: "Route two, a sponsoring nonprofit: an existing charity agrees to take the chapter in under its own status, usually called fiscal sponsorship. Before choosing it, tell the central support organization. See what usually goes wrong, below."
+        see: A signed sponsorship agreement naming the sponsoring nonprofit.
+    done_when: >-
+      Either the determination letter from the tax authority has arrived, or a
+      signed sponsorship agreement is in place naming the sponsoring nonprofit.
+    check:
+      how: The determination letter or the signed sponsorship agreement is in the chapter's files.
+      probe: none
+    goes_wrong: >-
+      Choosing sponsorship without seeing what it does to the accounts. The nonprofit
+      discounts (steps 4.13 and 5.3) are claimed against a nonprofit's own status, so a
+      sponsored chapter's accounts may have to sit under the sponsor. That cuts against
+      the rule that each chapter owns its own accounts. It is an open question in the
+      plan, and nothing yet says how to handle it.
+    later: unchanged
+    status: not-yet-tried
+    source: 8-Methods-Organization-Domains-Google.md#1.5
+
+  - id: "1.6"
+    name: Open a bank account
+    why: Every account the chapter owns is paid from here, and more than one officer must be able to pay.
+    who: chapter
+    first: ["1.3", "1.4"]
+    needs: []
+    produces: []
+    mode: offline
+    actions:
+      - do: Ask the bank which documents it needs. Banks set their own list.
+      - do: Take the stamped articles, the employer identification number letter and the board minute naming the signers to the bank.
+      - do: Open the account with at least two officers able to authorise a payment.
+        see: Two officers can each see and approve a payment.
+    done_when: >-
+      The account is open and at least two officers can authorise a payment.
+    check:
+      how: Two officers can each see and approve a payment.
+      probe: none
+    goes_wrong: >-
+      One person as the only signer. If that person leaves, nobody can pay the domain
+      name renewal, the Google Workspace bill or the hosting bill.
+    later: unchanged
+    status: not-yet-tried
+    source: 8-Methods-Organization-Domains-Google.md#1.6
+
+  - id: "1.7"
+    name: Name the person who acts for the chapter during setup
+    why: Setup needs one person with authority to open accounts and grant access, so work does not wait on a board meeting each time.
+    who: chapter's board
+    first: ["1.4"]
+    needs: []
+    produces: []
+    mode: offline
+    actions:
+      - do: Minute the setup contact's name, and their authority to open accounts in the chapter's name and to grant the central support organization access to them.
+      - do: Send a copy of the minute to the central support organization.
+        see: The central support organization confirms it holds the copy.
+    done_when: >-
+      One named person is recorded as the chapter's main contact for the whole
+      setup, with authority to open accounts and grant access to others.
+    check:
+      how: The minute exists, and the central support organization has a copy.
+      probe: The app records the setup contact's name as the chapter's first contact.
+    goes_wrong: >-
+      A setup contact who is also the only person holding the accounts. Stages 3 and
+      4 each end with a step that removes the founder's personal hold on an account,
+      for this reason.
+    later: unchanged
+    status: not-yet-tried
+    source: 8-Methods-Organization-Domains-Google.md#1.7
+
+changes:
+  - version: "0.1"
+    date: "09-18-26 17:20"
+    change: >-
+      First version as data, converted from the methods for setting up the legal
+      organization (8-Methods-Organization-Domains-Google.md, version 0.5) with the
+      step list's finishing tests.

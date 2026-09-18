@@ -1,0 +1,571 @@
+stage: 9
+name: Build the CRM system
+version: "0.1"
+updated: "09-18-26 17:05"
+why: >-
+  The CRM is the chapter's system of record: every client, mentor, partner,
+  funder and meeting lives in it, and every application reads and writes it. This
+  stage builds the chapter's own CRM on the chapter's own server and makes it
+  identical to every other chapter's, so that one release of the software works
+  for all of them.
+who: >-
+  The central support organization, working inside the chapter's accounts.
+time: >-
+  About half a day when nothing goes wrong. The August build of the trial chapter
+  took most of a day, including the failures it found.
+before_you_start:
+  - The chapter information form, complete and reviewed (stage 8)
+  - The chapter's hosting account, with the central support organization's access (steps 5.1 and 5.4)
+  - The chapter's domain names in its Cloudflare account (step 3.7)
+  - The chapter's own DigitalOcean and Cloudflare tokens entered in CRMBuilder (step 5.8)
+  - The chapter's vault, for every secret this stage creates (step 2.7)
+unlocks: >-
+  The Google permissions (stage 10) and the applications (stage 11) can start.
+  The applications need the CRM's key, which this stage creates.
+steps:
+  - id: "9.1"
+    name: Obtain the current standard from the central support organization
+    why: Every later step checks against three version numbers, so they have to be fixed before anything is installed.
+    who: central
+    first: []
+    needs: []
+    produces: [crm_version, addon_versions, standard_release]
+    mode: automated
+    actions:
+      - do: Write down the CRM version, the version of each of the two paid add-on products, and the release of the standard configuration this chapter will get.
+        see: Three version numbers, written where the rest of the stage can read them.
+      - do: There is no published statement of the standard yet (work list item 2). Until there is, use the versions Cleveland's production system runs, and the date its configuration was last captured.
+    done_when: >-
+      The chapter's build has, in writing, the CRM version to install, the version
+      of each of the two add-on products, and which release of the standard
+      configuration is being applied. Without these three numbers the later steps
+      have nothing to check against.
+    check:
+      how: The three numbers are written down.
+      probe: The app reads them from the published standard and shows them before the build starts.
+    if_not: Do not start the build. Ask the central support organization for the three numbers.
+    goes_wrong: >-
+      Skipping this and installing whatever version is newest. The August build did
+      exactly that and ended up a whole major version ahead of Cleveland. It worked,
+      but nobody planned it.
+    later: The standard is published with a version number that the checking tool compares against.
+    status: not-yet-tried — the August build had no standard to obtain.
+    source: 3-Methods-CRM-Google-Applications.md#9.1
+
+  - id: "9.2"
+    name: Create the server
+    why: The CRM needs a server of its own, in the chapter's own hosting account, so the chapter owns it.
+    who: central, inside the chapter's hosting account
+    first: ["5.4", "5.8", "3.7"]
+    needs: [digitalocean_token, cloudflare_token, crm_base_url]
+    produces: [crm_server_ip, crm_ssh_key]
+    mode: automated
+    actions:
+      - do: In CRMBuilder, open the chapter's engagement and start the deployment wizard.
+      - do: Check the wizard names the chapter's own DigitalOcean and Cloudflare credentials, not CRMBuilder's.
+        see: The chapter's hosting account and its Cloudflare zone, by name.
+      - do: Enter the CRM's address from the chapter information form.
+      - do: Tick the box for extra sign-in keys.
+        see: The box ticked. Without it nobody can open a command line on the server.
+      - do: Start the run, and wait for it to finish.
+        see: The run reports each phase complete. It creates the server, writes the CRM's address into Cloudflare, waits for the address to resolve, and installs the CRM.
+    done_when: >-
+      A server is running in the chapter's own hosting account and the central
+      support organization can reach it.
+    check:
+      how: The server appears in the chapter's hosting account and answers.
+      probe: The app lists the chapter's hosting account through its token and finds the new server.
+    if_not: >-
+      The run keeps what it built and names the phase that failed. Do not delete
+      anything. Ask the central support organization to retry from the failed phase.
+    goes_wrong: >-
+      Not ticking the extra keys box. The wizard then leaves nobody with a command
+      line on the server, and steps 9.4 and 9.8 become impossible. The August build
+      hit this and had to paste a key through the hosting provider's own console as a
+      rescue.
+    later: unchanged
+    status: done-for-real
+    source: 3-Methods-CRM-Google-Applications.md#9.2
+
+  - id: "9.3"
+    name: Install the CRM software at the version the standard names
+    why: Every chapter must run the same CRM version, or a release built for one may break another.
+    who: central
+    first: ["9.1", "9.2"]
+    needs: [crm_version]
+    produces: []
+    mode: automated
+    actions:
+      - do: Sign in to the new CRM as the administrator the wizard created, and open the Administration page.
+        see: The installed version number, shown on the Administration page.
+      - do: Compare it with the CRM version from step 9.1.
+        see: The same number.
+    done_when: >-
+      The installed version matches the version named in the step above, not
+      simply the newest available.
+    check:
+      how: The version on the CRM's administration page matches step 9.1.
+      probe: The app reads the CRM's version and compares it with the standard.
+    if_not: Stop, and ask the central support organization. Do not carry on with a different version.
+    goes_wrong: >-
+      The wizard installs whatever version is newest. In August the configuration
+      captured from an older version rebuilt cleanly on a newer one, so a difference
+      is not automatically fatal. It is simply unplanned.
+    later: The deployment tool installs the version the standard names.
+    status: done-for-real
+    source: 3-Methods-CRM-Google-Applications.md#9.3
+
+  - id: "9.4"
+    name: Confirm command line access, and record who holds the key
+    why: Copying the configuration files (step 9.8) needs a command line on the server, and the key must not live on one laptop.
+    who: central
+    first: ["9.2"]
+    needs: [crm_ssh_key]
+    produces: []
+    mode: guided
+    actions:
+      - do: Open a terminal and sign in to the server over a secure shell, using the key from step 9.2.
+        see: The server's command prompt.
+      - do: Put the key in the chapter's vault, in the Operations vault.
+        see: The key listed in the vault, with a second named person able to open it.
+    done_when: >-
+      The central support organization can open a command line on the server, and
+      the key that allows it is recorded in the secrets store with at least two
+      people able to reach it. The server can be created without this access, and
+      the next steps cannot be done without it.
+    check:
+      how: A command runs on the server and returns, and a second person can open the key in the vault.
+      probe: The app runs one harmless command on the server over the key.
+    goes_wrong: >-
+      The key exists on one person's laptop only.
+    later: The deployment tool holds the key it created and writes it to the chapter's vault itself.
+    status: done-for-real — except storing the key in a vault, which did not exist in August.
+    source: 3-Methods-CRM-Google-Applications.md#9.4
+
+  - id: "9.5"
+    name: Point the CRM's web address at the server
+    why: People and the applications reach the CRM by its name, so the name must lead to the server.
+    who: central
+    first: ["3.7", "9.2"]
+    needs: [crm_base_url, crm_server_ip]
+    produces: []
+    mode: automated
+    actions:
+      - do: Nothing to do by hand. The wizard wrote the record in step 9.2. Open the chapter's Cloudflare account, then the domain, then DNS.
+        see: An A record for the CRM's address, pointing at the server, marked "DNS only" with a grey cloud.
+    done_when: >-
+      The domain name record for the CRM address resolves to the server.
+    check:
+      how: A name lookup on the CRM's address returns the server's own address, not one of Cloudflare's.
+      probe: The app looks up the CRM's address and compares it with the server's address.
+    goes_wrong: >-
+      The proxy switched on, an orange cloud. The CRM's certificate is issued by a
+      direct check against the server, and the proxy blocks it.
+    later: unchanged
+    status: done-for-real
+    source: 3-Methods-CRM-Google-Applications.md#9.5
+
+  - id: "9.6"
+    name: Publish the CRM at its own web address
+    why: A secure connection protects every sign-in, and a certificate that is not renewed automatically takes the whole system down about ninety days later.
+    who: central
+    first: ["9.5"]
+    needs: [crm_base_url]
+    produces: []
+    mode: automated
+    actions:
+      - do: Open the CRM's address in a browser.
+        see: The CRM's sign-in page, with no certificate warning.
+      - do: On the server's command line, confirm the certificate renewal is scheduled.
+        see: An active renewal timer or scheduled job. The exact name depends on the installer version, so look rather than assume.
+    done_when: >-
+      The CRM loads at its address over a secure connection, and the security
+      certificate is set to renew by itself. A certificate that has to be renewed by
+      hand will expire and take the system down.
+    check:
+      how: The sign-in page loads with no warning, and the renewal is scheduled.
+      probe: The app reads the certificate's expiry date and warns if it is under thirty days away.
+    goes_wrong: >-
+      A certificate that has to be renewed by hand. It expires about ninety days
+      after go-live and the whole system stops.
+    later: unchanged
+    status: done-for-real — except the renewal check.
+    source: 3-Methods-CRM-Google-Applications.md#9.6
+
+  - id: "9.7"
+    name: Install the two paid add-on products
+    why: The standard permission roles refer to features inside these two products, and the CRM refuses a role that names a missing feature.
+    who: central, with the chapter paying for the licences
+    first: ["9.3", "9.1"]
+    needs: [addon_versions]
+    produces: []
+    mode: guided
+    actions:
+      - do: Buy a licence for each of the two products in the chapter's name.
+      - do: In the CRM, open Administration, then Extensions, and upload each product.
+        see: Both products listed as installed, at the versions from step 9.1.
+    done_when: >-
+      Both are installed at the versions the standard names, licensed to this
+      chapter, and listed in the CRM's own list of installed products. They must be
+      installed before the permission roles are created, because the roles refer to
+      them.
+    check:
+      how: Both appear in the CRM's list of installed products, at the right versions.
+      probe: The app reads the CRM's installed products and compares them with the standard.
+    goes_wrong: >-
+      Doing this after the permission roles instead of before. The CRM then rejects
+      each whole role. The August build hit this: seventy-one role entries had to be
+      stripped out and the run finished in a partial state.
+    later: unchanged — these are paid products and cannot be copied between chapters.
+    status: not-yet-tried — the August build did not install them, which is how the failure was found. Whether they are part of the standard is still open (work list item 2).
+    source: 3-Methods-CRM-Google-Applications.md#9.7
+
+  - id: "9.8"
+    name: Copy on the standard configuration files
+    why: The standard's records, fields, links, screen layouts and rules arrive as two sets of files, and the CRM must be rebuilt to take them in.
+    who: central
+    first: ["9.4", "9.7"]
+    needs: [standard_release]
+    produces: []
+    mode: automated
+    actions:
+      - do: On the new server, find where the installer keeps the CRM's custom files. An older installer uses a folder called custom; a newer one uses a folder called persistent, with the screen code in a second folder beside it.
+        see: Two folders, one for the configuration and one for the screen code.
+      - do: Copy both sets of files from the source onto the new server, into those two folders.
+      - do: Make the web server user the owner of both folders.
+      - do: Run the CRM's rebuild command inside its container.
+        see: The rebuild finishing with no errors. In August it took three seconds.
+    done_when: >-
+      Both sets of configuration files are in place, owned by the web server user,
+      and the rebuild command has finished without errors. There are two sets, not
+      one.
+    check:
+      how: The rebuild log shows no errors, and step 9.9 shows a working screen.
+      probe: The app runs the rebuild and reads its result.
+    goes_wrong: >-
+      Copying only one of the two sets. The applications still work, but the CRM's
+      own screen is blank. Also, until the standard is versioned (work list item 15),
+      the source is Cleveland's test system, which changes under the application.
+    later: The configuration is packaged, versioned and applied by the applier (work list item 15) rather than copied.
+    status: done-for-real
+    source: 3-Methods-CRM-Google-Applications.md#9.8
+
+  - id: "9.9"
+    name: Confirm the CRM's own screen loads
+    why: A blank screen is the only sign that one of the two sets of files is missing, so it is checked by eye before going on.
+    who: central
+    first: ["9.8"]
+    needs: []
+    produces: []
+    mode: guided
+    actions:
+      - do: Open the CRM's address in a browser and sign in as the administrator.
+        see: The normal working screen, with the navigation bar across the top.
+    done_when: >-
+      An administrator signs in and sees the normal working screen. A blank page
+      here means one of the two sets of files is missing.
+    check:
+      how: The navigation bar and the home screen appear.
+      probe: none
+    if_not: A blank page means the screen code folder from step 9.8 is missing. Copy it, rebuild, and look again.
+    goes_wrong: nothing known yet
+    later: unchanged — this one stays human.
+    status: done-for-real
+    source: 3-Methods-CRM-Google-Applications.md#9.9
+
+  - id: "9.10"
+    name: Create the teams
+    why: Every page in the applications is opened by team membership, and each gate looks for an exact team name.
+    who: central
+    first: ["9.9"]
+    needs: [standard_release]
+    produces: []
+    mode: automated
+    actions:
+      - do: Run the trial script scripts/rehearsal/apply_api_half.py with the chapter's settings file and without the apply option.
+        see: A list of what it would create, and nothing written.
+      - do: Run it again with the apply option. It creates the teams, the roles, their attachments, the email templates, two accounts and the instance settings (steps 9.10 to 9.14, 9.17 and 9.18).
+        see: Every team reported applied.
+    done_when: >-
+      Every team the standard names exists, spelled exactly as the standard spells
+      it.
+    check:
+      how: The teams list in the CRM matches the standard, letter for letter.
+      probe: The app reads the CRM's teams and compares the names with the standard.
+    goes_wrong: >-
+      A misspelled team name. The feature behind it becomes unreachable, and the
+      error names nothing useful.
+    later: The same work moves inside the applier.
+    status: done-for-real — nine of nine.
+    source: 3-Methods-CRM-Google-Applications.md#9.10
+
+  - id: "9.11"
+    name: Create the permission roles
+    why: Roles decide what each team may read and change. They are what keeps a mentor to their own clients.
+    who: central
+    first: ["9.7", "9.10"]
+    needs: [standard_release]
+    produces: []
+    mode: automated
+    actions:
+      - do: Nothing extra to run. The script in step 9.10 creates the roles, checking each one against what this CRM has before writing it.
+        see: Every role reported applied and read back identical, and no entries reported removed.
+    done_when: >-
+      Every role the standard names exists, and reading each one back matches what
+      was sent.
+    check:
+      how: The script reports every role read back identical, with nothing removed.
+      probe: The conformance check compares each role with the standard.
+    if_not: If the script reports entries it had to remove, the run is incomplete. Install the add-on products (step 9.7) and run it again.
+    goes_wrong: >-
+      Two things, both seen in August. An entry naming a feature the CRM does not
+      have: the CRM refuses the entire role, not just that entry. And an entry naming
+      a field since deleted on the source: the target refuses the whole role for it,
+      so the source needs cleaning.
+    later: Inside the applier, with the same check.
+    status: done-for-real — twelve of twelve applied, with seventy-three entries removed because the add-on products were absent.
+    source: 3-Methods-CRM-Google-Applications.md#9.11
+
+  - id: "9.12"
+    name: Attach the roles to the teams
+    why: A team gives its members permissions only through the roles attached to it.
+    who: central
+    first: ["9.11"]
+    needs: []
+    produces: []
+    mode: automated
+    actions:
+      - do: Nothing extra to run. The script in step 9.10 attaches them.
+        see: Every attachment reported applied.
+      - do: In the CRM, open Administration, then Teams, and open each team.
+        see: Every team carrying a role. None empty.
+    done_when: >-
+      Each team carries the role it is meant to carry, and no team is left without
+      one. A team with no role gives its members no access at all.
+    check:
+      how: No team in the list has an empty role.
+      probe: The app reads each team's roles and flags any team with none.
+    goes_wrong: >-
+      A team with no role. Its members can read nothing, and nobody notices until
+      someone on that team tries to work. Two of Cleveland's own test-system teams
+      are in this state.
+    later: unchanged
+    status: done-for-real — seven of seven.
+    source: 3-Methods-CRM-Google-Applications.md#9.12
+
+  - id: "9.13"
+    name: Create the email templates
+    why: The applications send their standard emails, such as the mentor assignment notice, from these templates.
+    who: central
+    first: ["9.9"]
+    needs: [standard_release]
+    produces: []
+    mode: automated
+    actions:
+      - do: Nothing extra to run. The script in step 9.10 creates them.
+        see: The templates listed in the CRM under Email Templates.
+    done_when: >-
+      Every template the standard names exists.
+    check:
+      how: Every template the standard names is in the CRM.
+      probe: The conformance check lists any template missing.
+    goes_wrong: >-
+      Editing them per chapter. They carry no chapter name, on purpose, and must stay
+      identical. Also, five event templates the standard names exist nowhere yet
+      (work list item 18).
+    later: unchanged
+    status: done-for-real — two of two, which is all the source holds.
+    source: 3-Methods-CRM-Google-Applications.md#9.13
+
+  - id: "9.14"
+    name: Apply the instance settings
+    why: The CRM's own name, sending name and address, logo and locale are the chapter's, and anything the CRM sends directly uses them.
+    who: central
+    first: ["9.9"]
+    needs: [chapter_name, crm_application_name, crm_outbound_from_name, crm_outbound_from_address, crm_base_url, crm_logo_file, timezone, currency, locale]
+    produces: []
+    mode: automated
+    actions:
+      - do: Nothing extra to run. The script in step 9.10 applies them from the chapter information form and reads them back.
+        see: Each setting reported equal to what was sent.
+    done_when: >-
+      The chapter's name, sending name, sending address, web address, logo, time
+      zone, date format, time format, currency, language and week start are all set
+      from the chapter information form, and reading them back matches.
+    check:
+      how: Each setting reads back equal to the form.
+      probe: The app reads the CRM's settings and compares them with the form.
+    goes_wrong: >-
+      The sending name here is separate from anything the applications show.
+      Anything the CRM sends directly carries this name. Also, currency fields refuse
+      to save unless the currency setting is right.
+    later: unchanged
+    status: done-for-real
+    source: 3-Methods-CRM-Google-Applications.md#9.14
+
+  - id: "9.15"
+    name: Apply the navigation tabs and the quick-add list
+    why: Staff find their way around the CRM by its tab bar, which must be the standard one with the chapter's own help link.
+    who: central
+    first: ["9.14", "6.7"]
+    needs: [docs_site_url]
+    produces: []
+    mode: automated
+    actions:
+      - do: Nothing extra to run. The script in step 9.10 applies them.
+      - do: Open the CRM and click the documentation tab.
+        see: The chapter's own help documentation, not another chapter's.
+    done_when: >-
+      The tabs match the standard, the chapter's own documentation link is in
+      place of any other chapter's, and the list of records staff can add quickly
+      matches the standard.
+    check:
+      how: The tab bar matches, and the documentation tab opens this chapter's documentation.
+      probe: The app reads the tab list and compares it with the standard plus the chapter's link.
+    goes_wrong: >-
+      The documentation link is the one tab that differs per chapter, and it is easy
+      to leave pointing at Cleveland's.
+    later: unchanged
+    status: done-for-real
+    source: 3-Methods-CRM-Google-Applications.md#9.15
+
+  - id: "9.16"
+    name: Apply the standard's duplicate checking, saved views and automated rules
+    why: The client intake software behaves differently depending on the CRM's duplicate checking, so every chapter must have the same settings.
+    who: central
+    first: ["9.9"]
+    needs: [standard_release]
+    produces: []
+    mode: automated
+    actions:
+      - do: Not possible yet. The standard does not say what these settings are, because nobody has examined them on either existing system (work list item 3).
+    done_when: >-
+      The settings the standard names are applied and read back correctly. The
+      standard does not yet say what they are, because nobody has ever examined them
+      on the existing systems. Deciding them is work owed before any chapter reaches
+      this step. See the work list document.
+    check:
+      how: Cannot be checked until the standard says what is expected.
+      probe: The conformance check compares them with the standard, once it names them.
+    if_not: Record the step as blocked and carry on.
+    goes_wrong: >-
+      Duplicate checking is not only a convenience. The intake software's behaviour
+      depends on it, and that dependency has never been tested either way.
+    later: Part of the standard like everything else.
+    status: not-yet-tried — blocked on work list item 3.
+    source: 3-Methods-CRM-Google-Applications.md#9.16
+
+  - id: "9.17"
+    name: Create the account the applications sign in with
+    why: The applications reach the CRM with an account of their own, and the key it creates is the first secret stage 11 needs.
+    who: central
+    first: ["9.12"]
+    needs: []
+    produces: [ESPO_API_KEY]
+    mode: automated
+    actions:
+      - do: Nothing extra to run. The script in step 9.10 creates the account, attaches its role, and writes its key to the settings file.
+      - do: Move the key into the chapter's vault, and delete it from the settings file.
+        see: The key in the Operations vault.
+      - do: Make one test request to the CRM with the key.
+        see: A normal answer. An empty list is fine.
+    done_when: >-
+      The account exists, its key has been recorded in the secrets store, and a
+      test request using that key succeeds.
+    check:
+      how: A request using the key returns a normal answer, not a refusal.
+      probe: The app makes one read request with the key.
+    if_not: A refusal means a permission was missed in step 9.11. Stop and ask.
+    goes_wrong: >-
+      A refusal here becomes an invisible feature later: the applications show
+      nothing rather than an error.
+    later: The key goes straight into the chapter's vault.
+    status: done-for-real
+    source: 3-Methods-CRM-Google-Applications.md#9.17
+
+  - id: "9.18"
+    name: Create the administrator account for the central support organization
+    why: Only an administrator can create CRM accounts, and the applications use this account to create mentor logins.
+    who: central
+    first: ["9.9"]
+    needs: []
+    produces: [ESPO_PROVISION_USERNAME, ESPO_PROVISION_PASSWORD]
+    mode: automated
+    actions:
+      - do: Nothing extra to run. The script in step 9.10 creates it and writes its password to the settings file.
+      - do: Move the password into the chapter's vault, and delete it from the settings file.
+        see: The name and password in the Operations vault.
+    done_when: >-
+      The account exists and its password is in the secrets store, not on anyone's
+      computer.
+    check:
+      how: The account signs in, and the password is in the vault only.
+      probe: The app signs in with the account once.
+    goes_wrong: >-
+      The password ends up on a laptop. On Cleveland's production system it exists
+      only inside the running application.
+    later: unchanged
+    status: done-for-real
+    source: 3-Methods-CRM-Google-Applications.md#9.18
+
+  - id: "9.19"
+    name: Create the configuration version record
+    why: The applications report which version of the standard their CRM holds, and they read it from this record.
+    who: central
+    first: ["9.17"]
+    needs: [ESPO_API_KEY]
+    produces: []
+    mode: automated
+    actions:
+      - do: Run scripts/build_networkstandard.py without the apply option.
+        see: A plan and a fingerprint.
+      - do: Run it again with the apply option and the fingerprint from the dry run.
+        see: The record created. The script refuses if anything moved in between.
+    done_when: >-
+      The record that says which version of the standard this CRM holds exists and
+      can be read by the applications' own key.
+    check:
+      how: A request with the applications' key returns the record.
+      probe: The app reads the record with the applications' key.
+    goes_wrong: >-
+      Writing a version after an incomplete run. A CRM claiming a version it does not
+      hold is worse than one claiming nothing.
+    later: The applier writes the record itself, and only after a completely successful run.
+    status: done-for-real
+    source: 3-Methods-CRM-Google-Applications.md#9.19
+
+  - id: "9.20"
+    name: Run the checking tool until it reports no differences
+    why: This is the proof that the chapter's CRM matches the standard, and so that the next release will work on it.
+    who: central
+    first: ["9.10", "9.11", "9.12", "9.13", "9.14", "9.15", "9.16", "9.17", "9.18", "9.19"]
+    needs: [ESPO_API_KEY]
+    produces: []
+    mode: automated
+    actions:
+      - do: Run scripts/preflight_crm.py with the applications' key and the machine-readable output option. Keep the output file.
+        see: A result code and a list of differences.
+      - do: Read the result code. Nothing to fix, something differs, and could not be checked are three different answers. The third usually means a key or network problem, not a CRM problem.
+    done_when: >-
+      The tool runs using the applications' own key and reports that the CRM matches
+      the standard. Any difference that is allowed on purpose is listed and
+      explained in writing.
+    check:
+      how: The tool reports nothing to fix, or only differences that are written down and explained.
+      probe: The app runs the conformance check and shows its result.
+    goes_wrong: >-
+      Today no system can reach "nothing to fix": Cleveland's systems and the trial
+      chapter all lack the same five event email templates (work list item 18). Until
+      they exist, the honest result is a recorded, explained difference.
+    later: The same check runs before every release and refuses a CRM that does not match.
+    status: done-for-real — with that difference.
+    source: 3-Methods-CRM-Google-Applications.md#9.20
+
+changes:
+  - version: "0.1"
+    date: "09-18-26 17:05"
+    change: >-
+      First version as data, converted from the methods for building the CRM
+      (3-Methods-CRM-Google-Applications.md, version 0.5) with the step list's
+      finishing tests. Numbered actions, a reason per step, and a check an app can
+      run were added.

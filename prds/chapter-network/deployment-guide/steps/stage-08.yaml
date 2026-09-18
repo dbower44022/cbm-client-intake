@@ -1,0 +1,304 @@
+stage: 8
+name: Fill in the chapter information form
+version: "0.1"
+updated: "09-18-26 17:20"
+why: >-
+  The chapter information form holds the roughly thirty-five values that differ
+  from one chapter to the next: its name, its addresses, its Google details, its
+  feature switches and the names of its secrets. Everything after this stage is
+  built from the form, so a wrong or missing value here becomes a fault in every
+  later stage. In the onboarding app, this stage is the interview.
+who: >-
+  The chapter's setup contact and someone from the central support organization,
+  together. The form uses the names the software uses, so a chapter cannot fill in
+  most of it alone.
+time: >-
+  One to two hours, once the website, the policy documents and Google Workspace
+  exist.
+before_you_start:
+  - The agreement is signed (step 2.6)
+  - The chapter's vault exists (step 2.7)
+  - Google Workspace is set up (stage 4)
+  - The website is published and the four policy documents have their addresses (stages 6 and 7)
+unlocks: >-
+  Building the CRM (stage 9). Nothing after this stage can start until the form is
+  complete, and everything after it becomes routine once it is.
+steps:
+  - id: "8.1"
+    name: Obtain the blank form
+    why: Everyone has to work from the same current form, and each part needs a named person to fill it in.
+    who: both — the central support organization supplies the form; the chapter names the people
+    first: ["2.6"]
+    needs: []
+    produces: []
+    mode: automated
+    actions:
+      - do: Copy the blank form from the last section of prds/chapter-network/chapter-values.md.
+        see: A form with sections for the chapter, web addresses, Google, Zoom, the CRM, secrets and feature switches.
+      - do: Send the trial chapter's filled-in form, prds/chapter-network/rehearsal-2026-08-31/lakeside-values.yaml, alongside it as a worked example.
+      - do: Write a name beside each section. The chapter's setup contact fills in the name, the web addresses and the policy addresses. The central support organization fills in the CRM details, the feature switches and the list of secrets.
+        see: Every section with a name beside it.
+    done_when: >-
+      The chapter has the current blank form and knows who fills in each part.
+    check:
+      how: Every section of the form has a name beside it.
+      probe: The app opens the interview with each section assigned to a named person.
+    goes_wrong: >-
+      The blank form falls behind the software. A new setting that differs by
+      chapter gets added to the software but not to the form. Run the information
+      check in the plan again whenever the software gains a per-chapter setting.
+    later: The onboarding app asks these questions on screen and checks each answer as it is typed.
+    status: done-for-real — the trial chapter's form was filled in from this blank.
+    source: 5-Methods-Form-Accounts-Checks.md#8.1
+
+  - id: "8.2"
+    name: Fill in the chapter's name and identity
+    why: The chapter's name appears on every page the software shows, and the short label names its servers and secrets.
+    who: chapter
+    first: ["1.1", "8.1"]
+    needs: [chapter_name]
+    produces: [chapter_slug, timezone, currency, locale]
+    mode: guided
+    actions:
+      - do: Write the chapter's name exactly as it should appear on every page, capital letters included. For example, Akron Business Mentors.
+      - do: Write the short label, one lower-case word, for example akron. It names the chapter's servers and secrets.
+      - do: Write the chapter's time zone.
+        see: A time zone name such as America/Denver.
+      - do: If the time zone is not Eastern, write "not supported yet" beside it. The software has Eastern time written into its code (work list item 17).
+      - do: Write the currency and language. They are almost always US dollars and US English.
+    done_when: >-
+      The chapter name, short label, time zone, currency and language are filled in.
+    check:
+      how: The name matches the legal name, or the trading name the board chose, letter for letter.
+      probe: The app compares the name with the legal name recorded in stage 1, and warns when the time zone is not Eastern.
+    goes_wrong: >-
+      The time zone. A chapter outside the Eastern United States gets wrong dates on
+      birthday greetings, assignment dates and the public events page, and nothing
+      reports an error.
+    later: unchanged
+    status: done-for-real — the trial chapter recorded Eastern time, the only honest value available.
+    source: 5-Methods-Form-Accounts-Checks.md#8.2
+
+  - id: "8.3"
+    name: Fill in the web addresses
+    why: The software links to the website, the events page, the help documentation and the four policy documents, and a broken link on the consent box is a legal problem.
+    who: chapter, checked by the central support organization
+    first: ["6.2", "6.7", "7.6", "8.1"]
+    needs: [website_base_url, docs_site_url, chapter_tokens_url, policy_client_conduct_url, policy_mentor_ethics_url, policy_terms_url, policy_privacy_url]
+    produces: [app_base_url, events_public_base_url]
+    mode: guided
+    actions:
+      - do: Leave the application address empty. It does not exist until the applications are deployed, and step 11.10 fills it in.
+      - do: Open the chapter's website in a browser, and copy its address into the form.
+      - do: Copy in the events page address, the help documentation address and the colour file address.
+      - do: Open each of the four policy documents in a private browser window, and copy each address into the form.
+        see: Each policy document's page, with the chapter's own name on it.
+    done_when: >-
+      The application address, the website address, the events page address, the
+      documentation address, the colour file address and the four policy addresses
+      are filled in.
+    check:
+      how: Every address, opened in a private browser window, shows the right page.
+      probe: The app requests every address and reports any that does not answer.
+    goes_wrong: >-
+      A policy address that does not load. The public application form links to all
+      four policies from its consent box.
+    later: unchanged
+    status: done-for-real — with made-up addresses; the trial chapter had no website, so nothing was opened.
+    source: 5-Methods-Form-Accounts-Checks.md#8.3
+
+  - id: "8.4"
+    name: Fill in the Google details
+    why: Mail, calendars, documents and mentor mailboxes all run through the chapter's Google Workspace, and each needs an exact address.
+    who: chapter, checked by the central support organization
+    first: ["4.1", "4.7", "4.8", "4.9", "4.10", "8.1"]
+    needs: [google_branch, primary_domain, mentor_email_domain, ops_mailbox, alert_email_from, alert_email_to, members_group, zoom_host_email, zoom_account_id, zoom_client_id]
+    produces: []
+    mode: guided
+    actions:
+      - do: Write the Google Workspace branch the chapter chose in step 4.1.
+      - do: Copy the main domain, the shared operations mailbox, the alert sending address, the alert receiving address and the members group from the Google Workspace admin console.
+      - do: Copy the shared drive's identifier, the string of letters at the end of its web address.
+      - do: Write the mentor email domain, the domain mentors' addresses are created on.
+      - do: For a chapter that runs public webinars, copy the Zoom host address and the Zoom app's account and client identifiers from step 5.5. Otherwise write "no webinars".
+    done_when: >-
+      The branch chosen, the main domain, the shared operations mailbox, the alert
+      sending and receiving addresses, the members group, the shared drive and the
+      mentor email domain are filled in.
+    check:
+      how: Each mailbox named on the form is listed as a mailbox, with a licence, in the Google Workspace admin console.
+      probe: Once the Google connection works (stage 10), the app looks up each address in the chapter's directory and confirms it is a licensed mailbox, not a group.
+    goes_wrong: >-
+      Writing a group where a mailbox is needed. The alert sending address and the
+      shared operations mailbox must both be real licensed mailboxes. A group fails
+      later, with an error that does not name the cause.
+    later: unchanged
+    status: not-yet-tried — the trial chapter has no Google account, so this part of its form is blank.
+    source: 5-Methods-Form-Accounts-Checks.md#8.4
+
+  - id: "8.5"
+    name: Fill in the CRM details
+    why: The CRM has its own name, sending name, sending address and logo, and anything it sends directly carries them.
+    who: central
+    first: ["6.6", "8.1"]
+    needs: [crm_logo_file]
+    produces: [crm_base_url, crm_application_name, crm_outbound_from_name, crm_outbound_from_address]
+    mode: guided
+    actions:
+      - do: Write the CRM's address, the address it will be published at in step 9.6.
+      - do: Write the name shown inside the CRM and the sending name. Both are usually the chapter's name.
+      - do: Write the sending address, a mailbox from stage 4.
+      - do: Attach the logo image from step 6.6.
+    done_when: >-
+      The CRM address, the name shown inside the CRM, the sending name, the sending
+      address and the logo file are filled in.
+    check:
+      how: The section is complete, and the sending address is a real mailbox.
+      probe: The app confirms the CRM address is under the chapter's domain and that the logo file is attached.
+    goes_wrong: nothing known yet
+    later: unchanged
+    status: done-for-real — apart from the sending address and the logo; the trial chapter had neither.
+    source: 5-Methods-Form-Accounts-Checks.md#8.5
+
+  - id: "8.6"
+    name: Decide every feature switch
+    why: Each switch turns a part of the software on or off, and a switch left blank gives a chapter behaviour nobody chose.
+    who: both — the central support organization proposes; the chapter agrees
+    first: ["8.2", "8.3", "8.4", "8.5"]
+    needs: []
+    produces: [flags]
+    mode: guided
+    actions:
+      - do: Go down the switch list on the form and write on or off for each one. Never leave one blank.
+        see: Thirteen switches, each with on or off.
+      - do: Set every switch that uses Google to off for now. They are switched on only after the Google checks in steps 11.14 to 11.18 pass.
+      - do: Record that the application follows the release branch, not the development branch.
+    done_when: >-
+      Each switch has been deliberately set to on or off, and the branch the
+      application follows is recorded as the release branch rather than the
+      development branch.
+    check:
+      how: No switch on the form is blank.
+      probe: The app refuses to finish the interview while any switch is unanswered.
+    goes_wrong: >-
+      A switch in the software that the form does not list. Until 09-18-26 the blank
+      form was missing five switches the trial chapter needed, and it can fall behind
+      again whenever the software gains one.
+    later: The onboarding app offers a standard set of switches for a new chapter, and the chapter changes only what it needs.
+    status: done-for-real
+    source: 5-Methods-Form-Accounts-Checks.md#8.6
+
+  - id: "8.7"
+    name: List the secrets by name
+    why: Each secret needs a named holder before it exists, so that none is ever held by one person alone.
+    who: central
+    first: ["8.6"]
+    needs: []
+    produces: [secret_list]
+    mode: guided
+    actions:
+      - do: List the seven secrets by name. They are the CRM key the applications use, the name and password of the administrator account that creates logins, the database address, the session secret, the encryption key for stored data, and the Google key.
+      - do: For a chapter that runs public webinars, add the Zoom app's secret as an eighth.
+      - do: Write the holder beside each one. Write no secret value on the form.
+        see: Seven or eight names, each with a holder, and no values.
+    done_when: >-
+      All seven are listed by name with the holder named beside each, plus the video
+      meeting app's secret for a chapter that runs webinars. No secret value is
+      written on the form. Seven, not six: besides the six the planning documents
+      name, the applications use an encryption key for stored data that the settings
+      generator creates quietly on first run. Changing it later destroys the data it
+      protects, so it is permanent from the moment it exists.
+    check:
+      how: Seven names, or eight for a webinar chapter, each with a holder, and no values.
+      probe: The app checks the list against the software's own list of secret settings.
+    goes_wrong: >-
+      Listing six and missing the encryption key. Changing that key later makes every
+      stored secret permanently unreadable.
+    later: The settings generator reads the list from the chapter's vault.
+    status: done-for-real — as six; the seventh was found while writing the deployment methods.
+    source: 5-Methods-Form-Accounts-Checks.md#8.7
+
+  - id: "8.8"
+    name: Put the chapter's secrets into the store
+    why: A secret that exists only in a file on one computer is lost when that person or that computer is.
+    who: central
+    first: ["8.7", "2.7"]
+    needs: [secret_list]
+    produces: []
+    mode: guided
+    actions:
+      - do: Open the chapter's Operations vault in Proton Pass.
+      - do: For each secret on the list from step 8.7, check it has an entry. Most arrive as accounts are created; the machine secrets arrive in stages 9 to 11 and go straight into the vault as each is made.
+        see: An entry for every secret that exists so far.
+      - do: Ask a second named person to open each entry.
+    done_when: >-
+      All seven of the chapter's secrets are held in the chapter's Proton Pass
+      Operations vault (step 2.7), at least two named people can reach each one, and
+      none of them exists only in a file on one person's computer.
+    check:
+      how: A second named person opens each secret without help.
+      probe: The app reads each secret from the vault through Proton Pass's command-line tool, by name.
+    goes_wrong: >-
+      Treating a file on one laptop as good enough. Regenerating the deployment
+      settings from the hosting provider scrambles the passwords inside them.
+      Cleveland has lost working passwords that way.
+    later: The settings generator reads the list from the vault.
+    status: not-yet-tried — the vault was chosen on 09-18-26; the trial chapter's secrets still sit in files on one laptop.
+    source: 5-Methods-Form-Accounts-Checks.md#8.8
+
+  - id: "8.9"
+    name: Review the completed form
+    why: A wrong value becomes a fault in every later stage, and a second reader catches what the first misses.
+    who: both — the chapter's setup contact and someone from the central support organization
+    first: ["8.2", "8.3", "8.4", "8.5", "8.6", "8.7"]
+    needs: []
+    produces: []
+    mode: offline
+    actions:
+      - do: Sit down together and go through the form line by line.
+      - do: Open every address.
+      - do: Read every switch aloud with its setting.
+      - do: Write both names and the date at the top of the form.
+    done_when: >-
+      Two people have read the whole form together in one sitting and both have
+      signed it off.
+    check:
+      how: Both names and the date are at the top of the form.
+      probe: The app records who signed off, and when.
+    goes_wrong: nothing known yet
+    later: unchanged — a person still signs it off.
+    status: not-yet-tried — the trial chapter's form was written and used by one person.
+    source: 5-Methods-Form-Accounts-Checks.md#8.9
+
+  - id: "8.10"
+    name: Store the form where the central support organization can reach it
+    why: Stages 9 to 12 are built from the form, so the people building them have to be able to open it.
+    who: central
+    first: ["8.9"]
+    needs: []
+    produces: []
+    mode: automated
+    actions:
+      - do: Add the form to the chapter-network folder in the software's code repository, as the trial chapter's form was.
+      - do: Check the form holds no secret value.
+      - do: Ask a second person at the central support organization to open it.
+    done_when: >-
+      The form is in the agreed place and the central support organization has
+      confirmed it can open it.
+    check:
+      how: A second person at the central support organization opens it.
+      probe: The app stores the form itself and refuses any secret value in it.
+    goes_wrong: >-
+      A secret pasted into the form by mistake. The code repository is not a
+      secrets store.
+    later: The onboarding app holds the form.
+    status: done-for-real
+    source: 5-Methods-Form-Accounts-Checks.md#8.10
+
+changes:
+  - version: "0.1"
+    date: "09-18-26 17:20"
+    change: >-
+      First version as data, converted from the methods for filling in the chapter
+      information form (5-Methods-Form-Accounts-Checks.md, version 0.4) with the
+      step list's finishing tests. Each form field is now produced by a named step.

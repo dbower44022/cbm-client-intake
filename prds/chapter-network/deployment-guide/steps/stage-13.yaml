@@ -1,0 +1,165 @@
+stage: 13
+name: Put the chapter's pages on its website
+version: "0.1"
+updated: "09-18-26 17:30"
+why: >-
+  The public learns about the chapter through its website. This stage connects
+  that website to the pages the software serves: the events programme now, and the
+  mentor directory once it is built. The events page is reached by a redirect from
+  the website, not shown inside it (ruled 09-11-26).
+who: >-
+  The chapter makes the website change; the central support organization sets up
+  the application side.
+time: >-
+  About an hour for the events page. The mentor directory cannot be done yet.
+before_you_start:
+  - The chapter's website, published (step 6.2)
+  - The website able to redirect an address (step 6.3)
+  - The applications, deployed with the events switches on (stage 11)
+  - At least one published event
+unlocks: >-
+  The final checks before going live can include the website (step 17.8).
+steps:
+  - id: "13.1"
+    name: Display the mentor directory page
+    why: Visitors to the chapter's website should be able to find the chapter's own mentors.
+    who: central, then the chapter for the website change
+    first: ["6.2"]
+    needs: [website_base_url, app_base_url]
+    produces: []
+    mode: guided
+    actions:
+      - do: Nothing can be done yet. There is no public mentor directory page in the software (work list item 10).
+      - do: Do not copy Cleveland's current method, which feeds its mentor pages from a spreadsheet through scripts.
+    done_when: >-
+      The page displays on the chapter's website, showing that chapter's mentors.
+      Blocked: the public mentor directory page is not built, and whether it is
+      embedded or reached by a redirect is not decided.
+    check:
+      how: A visitor to the chapter's website reaches a list of that chapter's own mentors.
+      probe: The app opens the mentor directory address and checks it lists this chapter's mentors.
+    if_not: Record the step as blocked and carry on.
+    goes_wrong: nothing known yet
+    later: The public mentor directory page is built, then reached by a redirect or embedded. That choice has not been made.
+    status: not-yet-tried — blocked until the page is built.
+    source: 10-Methods-Website-Pages-Records.md#13.1
+
+  - id: "13.2"
+    name: Send the events address to the events programme page
+    why: The chapter's website sends visitors to the events page the application serves, so every registration reaches the chapter's CRM.
+    who: both — the chapter for the website change; the central support organization for the application settings
+    first: ["6.2", "6.3"]
+    needs: [website_base_url, app_base_url, events_public_base_url]
+    produces: []
+    mode: guided
+    actions:
+      - do: On the application's settings page, set the chapter's website address, the website menu, the contact address for presenters and the opening wording of the events page.
+      - do: In the application's Event Administration page, create and publish each upcoming event. Saving there is what gives an event its own web address.
+      - do: Open the application's /webinars/ page.
+        see: The chapter's published events.
+      - do: On the chapter's website, save a copy of the current events page, if there is one. That copy is the way back.
+      - do: On the chapter's website, add a temporary redirect, the kind numbered 302, from the website's events address to the application's /webinars/ page.
+        see: The redirect saved. Never use a permanent redirect; browsers remember it long after it is removed.
+      - do: Register once for an event with an obviously invented surname, then delete the contact and registration this created.
+    done_when: >-
+      The chapter's website sends visitors to the application's events page, and
+      that page shows the chapter's events.
+    check:
+      how: In a private browser window, the chapter's events address lands on the application's events page, listing the chapter's events.
+      probe: The app follows the website's events address and checks it arrives at the application's events page.
+    if_not: Remove the redirect. The website's old events page comes back at once.
+    goes_wrong: >-
+      Three things. The page shows Cleveland's navy and gold, because its
+      stylesheet is a copy of Cleveland's and never reads the chapter's colours
+      (work list item 11). An event created straight in the CRM has no web address.
+      And the events record doubles as the internal calendar: only an event with
+      "Publish to website" ticked appears, and an internal meeting published by
+      mistake appears to the public.
+    later: unchanged — the redirect is one rule on the website, and removing it is the way back.
+    status: not-yet-tried — the events page runs on Cleveland's production system, but Cleveland's own website is not yet pointed at it.
+    source: 10-Methods-Website-Pages-Records.md#13.2
+
+  - id: "13.3"
+    name: Allow only the chapter's own website to display these pages
+    why: An embedded page should appear only inside the chapter's own website, never someone else's.
+    who: central
+    first: ["13.1", "13.2"]
+    needs: [website_base_url]
+    produces: []
+    mode: automated
+    actions:
+      - do: For the events page, nothing to do. It is reached by a redirect, and any website may link to a public page.
+      - do: For the mentor directory page, this step applies only if it is embedded. The application would then have to name the one website allowed to embed it. It does not do that today.
+    done_when: >-
+      The chapter's site can display them and a different site cannot. Applies
+      only to a page embedded in the website. The events programme page is reached
+      by a redirect, so this step does not apply to it.
+    check:
+      how: For an embedded page, the chapter's website shows it and a test page on any other address shows an empty frame.
+      probe: The app reads the header the application sends and checks it names only the chapter's website.
+    if_not: Record the step as not applying, or as blocked, and carry on.
+    goes_wrong: nothing known yet
+    later: If the mentor directory is embedded, the application names the chapter's website as the only one allowed.
+    status: not-yet-tried — does not apply to the events page.
+    source: 10-Methods-Website-Pages-Records.md#13.3
+
+  - id: "13.4"
+    name: Confirm links to a single mentor work
+    why: People share links to one mentor, and a shared link must land on that mentor.
+    who: central
+    first: ["13.1"]
+    needs: [app_base_url]
+    produces: []
+    mode: guided
+    actions:
+      - do: For mentors, nothing can be done until the mentor directory page is built.
+      - do: Do the same check for events now. Open one event's page from the programme and copy its address.
+      - do: Open the copied address in a private browser window.
+        see: The same event.
+    done_when: >-
+      Opening a link to one mentor lands on that mentor, and the address can be
+      copied and shared. Blocked until the public mentor directory page is built.
+    check:
+      how: A copied address opens the same mentor, or the same event, in a private window.
+      probe: The app opens one published record's address and checks it shows that record.
+    goes_wrong: >-
+      An unpublished event answers "not found". That is deliberate: a page that
+      showed nothing would still reveal the event exists.
+    later: The mentor pages plan keeps each mentor's address the same as today's website address, so old links still arrive.
+    status: not-yet-tried — blocked for mentors.
+    source: 10-Methods-Website-Pages-Records.md#13.4
+
+  - id: "13.5"
+    name: Confirm the public pages read properly on a computer and a phone
+    why: Most visitors arrive on a phone, and a page that scrolls sideways or cuts off text loses them.
+    who: chapter, checked by the central support organization
+    first: ["13.2"]
+    needs: [events_public_base_url]
+    produces: []
+    mode: guided
+    actions:
+      - do: Open the events page on a computer.
+        see: The page filling the window, with the calendar and the recorded library side by side.
+      - do: Open the same page on a phone.
+        see: One column, no sideways scrolling, no text cut off.
+    done_when: >-
+      The pages show with no sideways scrolling and no cut-off text, on a computer
+      and on a phone.
+    check:
+      how: On a phone, the events page shows one column with nothing cut off.
+      probe: The app loads the page at phone width and checks nothing is wider than the screen.
+    goes_wrong: >-
+      A page with no styling at all. The events page depends on class names in its
+      copied stylesheet, and a mismatch shows unstyled panels with no error.
+      Cleveland shipped exactly this for an hour on 09-11-26.
+    later: unchanged
+    status: not-yet-tried
+    source: 10-Methods-Website-Pages-Records.md#13.5
+
+changes:
+  - version: "0.1"
+    date: "09-18-26 17:30"
+    change: >-
+      First version as data, converted from the methods for putting the chapter's
+      pages on its website (10-Methods-Website-Pages-Records.md, version 0.2) with
+      the step list's finishing tests.

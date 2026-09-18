@@ -1,0 +1,136 @@
+stage: 14
+name: Create the staff accounts
+version: "0.1"
+updated: "09-18-26 17:20"
+why: >-
+  Each member of the chapter's staff needs their own account to use the
+  applications, on the team that opens the pages their job needs. Only an
+  administrator can create an account, and nobody at the chapter is an
+  administrator, so the central support organization does this from a list the
+  chapter approves. Mentors are not created here: their accounts come from their
+  mentor records at the end of the records stage (step 15.9).
+who: >-
+  The central support organization, from a list the chapter writes and approves.
+time: >-
+  About an hour for a dozen staff, plus the time it takes everyone to sign in.
+before_you_start:
+  - The CRM is built, with its teams and roles (stage 9)
+  - The applications are deployed (stage 11)
+  - Each member of staff has a mailbox on the chapter's domain (step 4.11)
+unlocks: >-
+  Bringing in the chapter's records and creating the mentor accounts (stage 15).
+  The mentor administrator's account, created here, is what creates the mentor
+  accounts.
+steps:
+  - id: "14.1"
+    name: Agree which staff get an account and which team they are on
+    why: A person's team decides which pages they can open, so the list has to be right before any account exists.
+    who: both — the chapter writes the list; the central support organization checks it
+    first: ["9.12"]
+    needs: []
+    produces: [staff_list]
+    mode: guided
+    actions:
+      - do: List each member of staff with their chapter email address and their team. The seven teams that open a page are the Client Administration Team, the Mentor Administration Team, the Mentor Team, the Partner Management Team, the Sponsor Management Team, the Marketing Admin Team and the Analytics Admin Team.
+      - do: Give each person the fewest teams that cover their work. A person with two jobs gets two teams.
+      - do: Leave mentors off the list.
+      - do: Have the chapter approve the list in writing.
+        see: A list of names, chapter email addresses and teams, with the chapter's approval.
+    done_when: >-
+      A list names every member of staff, their email address and their team,
+      approved by the chapter. Mentors are not on this list. Their accounts are
+      created from their mentor records, at the end of the records stage (step
+      15.9).
+    check:
+      how: Every person on the list has a chapter email address and at least one team.
+      probe: The app checks each address is on the chapter's domain and each team name exists in the CRM.
+    goes_wrong: >-
+      A personal email address on the list. Members of the chapter are addressed at
+      their chapter address only. A personal address causes duplicate calendar
+      invitations and mail going to the wrong place.
+    later: The list is entered in the onboarding app.
+    status: done-for-real — with seven made-up people, one per team.
+    source: 5-Methods-Form-Accounts-Checks.md#14.1
+
+  - id: "14.2"
+    name: Create the staff accounts
+    why: Each person needs an ordinary account on the right team before they can use the applications.
+    who: central
+    first: ["14.1"]
+    needs: [staff_list]
+    produces: []
+    mode: automated
+    actions:
+      - do: Create each account as an ordinary user, not an administrator, with the teams from the list. The trial script scripts/rehearsal/stage4_users.py did this for the trial chapter; it has its seven made-up people written into it, so for a real chapter adapt it to read the list, or create the accounts by hand on the CRM's user administration screen.
+      - do: Send each person their sign-in details by email from the CRM.
+        see: Each account listed in the CRM, on its team.
+      - do: For a partner or funder manager, create a mentor profile in Mentor Administration too. Fill in its chapter email address first, exactly matching their account's user name, so the software links the existing account instead of creating a second one.
+    done_when: >-
+      Every person on the list has an account in the CRM on the right team.
+    check:
+      how: Each person signs in to the applications and sees a tile for each of their teams, and no others.
+      probe: The app reads each account's teams from the CRM and compares them with the list.
+    goes_wrong: >-
+      Two known failures. A team with no role attached gives its members no access
+      at all; check step 9.12 before blaming the account. And a partner or funder
+      manager with no mentor profile cannot be chosen as a manager, because the
+      pages that choose one list mentor profiles, not accounts.
+    later: The onboarding app creates the accounts from the list.
+    status: done-for-real — seven accounts, each reporting exactly its one team on sign-in.
+    source: 5-Methods-Form-Accounts-Checks.md#14.2
+
+  - id: "14.3"
+    name: Confirm nobody at the chapter holds an administrator account
+    why: An administrator can change the CRM's setup, which would end the rule that every chapter runs the same software.
+    who: central
+    first: ["14.2"]
+    needs: []
+    produces: []
+    mode: automated
+    actions:
+      - do: On the CRM's user administration screen, filter the list to administrators.
+        see: Exactly two accounts, the central support organization's own administrator (step 9.18) and the account the applications use to create logins.
+    done_when: >-
+      The only administrator accounts belong to the central support organization.
+      Chapter staff hold ordinary accounts.
+    check:
+      how: The list of administrators holds those two and nothing else.
+      probe: The app lists every administrator account in the CRM and flags any not on the central support organization's list.
+    goes_wrong: >-
+      A chapter asks for administrator access "just to fix one thing". Refuse it, and
+      route the request through the support system (step 18.1).
+    later: The conformance check reports administrator accounts as part of its run.
+    status: done-for-real
+    source: 5-Methods-Form-Accounts-Checks.md#14.3
+
+  - id: "14.4"
+    name: Confirm every member of staff has signed in
+    why: An account nobody has used is an account with a password somebody else may still know.
+    who: both — the chapter chases; the central support organization checks
+    first: ["14.2"]
+    needs: []
+    produces: []
+    mode: guided
+    actions:
+      - do: On the CRM's user administration screen, read the last sign-in date for each account.
+      - do: Chase anyone with no date. A person who lost their welcome email uses "Forgot your password?" on the applications' sign-in page.
+        see: A last sign-in date for every account.
+    done_when: >-
+      Each member of staff has signed in at least once and set their own password.
+    check:
+      how: No account on the list has a blank last sign-in date.
+      probe: The app reads each account's last sign-in date and lists anyone who has not signed in.
+    goes_wrong: >-
+      The welcome email going to spam, because the chapter's sending address is new.
+      Ask each person to check spam before re-sending.
+    later: The onboarding app shows the list.
+    status: done-for-real — for the seven test accounts; not tried for real people.
+    source: 5-Methods-Form-Accounts-Checks.md#14.4
+
+changes:
+  - version: "0.1"
+    date: "09-18-26 17:20"
+    change: >-
+      First version as data, converted from the methods for creating the staff
+      accounts (5-Methods-Form-Accounts-Checks.md, version 0.4) with the step list's
+      finishing tests.

@@ -1,0 +1,403 @@
+stage: 4
+name: Set up Google Workspace and the chapter's email
+version: "0.1"
+updated: "09-18-26 17:20"
+why: >-
+  Google Workspace is Google's paid service for an organization's email, calendars
+  and documents. The software reads and sends the chapter's mail, creates calendar
+  events and stores documents through it, so several of the mailboxes made here are
+  used by the software and have rules of their own. This stage also takes the
+  domain registrar account off the founder's personal email.
+who: >-
+  The chapter's setup contact and its Google Workspace administrator, with the
+  central support organization.
+time: >-
+  Most of a day, spread over two or three days while DNS records are seen and
+  the nonprofit application is answered.
+before_you_start:
+  - The agreement signed (stage 2)
+  - The domain names registered and in the chapter's Cloudflare account (stage 3)
+  - The nonprofit determination letter, for the discount (step 1.5)
+unlocks: >-
+  The hosting and video meeting accounts can be opened with chapter addresses
+  (stage 5). The Google permissions the software needs (stage 10) depend on the
+  accounts made here.
+steps:
+  - id: "4.1"
+    name: Choose the Google Workspace branch
+    why: Whether the chapter holds its own Google Workspace decides how hard it would be to leave later.
+    who: chapter's board, advised by the central support organization
+    first: ["2.6"]
+    needs: []
+    produces: [google_branch]
+    mode: offline
+    actions:
+      - do: "Explain the two branches. In the first, the chapter holds its own Google Workspace and grants the software's machine account permission inside it. In the second, the central support organization provides the chapter a domain inside a Google Workspace it holds."
+      - do: Give the board in writing what the second branch means on leaving. The chapter's mail, documents and calendars would sit in an account the central support organization controls. They can be moved out, but it is real work.
+      - do: The board chooses and minutes the choice. It is proposed, not ruled, that every chapter that can should take the first branch. The rest of this stage is written for the first branch only.
+    done_when: >-
+      The chapter has chosen either to hold its own Google Workspace or to have one
+      provided by the central support organization, the choice is recorded, and the
+      board has seen in writing what the provided option means if the chapter later
+      leaves.
+    check:
+      how: The board minutes record the choice and the written explanation.
+      probe: The app records the chosen branch.
+    goes_wrong: >-
+      Choosing the second branch for speed without reading the consequence. Nothing
+      in the software differs between the branches, so nothing warns anyone later.
+    later: unchanged
+    status: not-yet-tried — the second branch has no written steps yet (work list item 14).
+    source: 8-Methods-Organization-Domains-Google.md#4.1
+
+  - id: "4.2"
+    name: Create the Google Workspace account
+    why: The chapter's mailboxes, calendars and shared documents all live in this account.
+    who: chapter — the setup contact
+    first: ["4.1", "3.4"]
+    needs: [primary_domain, founding_email, google_branch]
+    produces: []
+    mode: guided
+    actions:
+      - do: Check step 3.2's record of which domain name is the email domain.
+      - do: Sign up for Google Workspace using the chapter's email domain name.
+      - do: When Google asks for the first administrator, use the setup contact's own name on a chapter address, not a role name. This account becomes the chapter's own administrator account in step 4.5.
+      - do: Put the sign-in and its recovery codes in the chapter's vault.
+      - do: Sign in to the Google Workspace admin console.
+        see: The admin console's home page.
+    done_when: >-
+      The account exists on the chapter's email domain and the first administrator
+      can sign in.
+    check:
+      how: The setup contact signs in to the Google Workspace admin console.
+      probe: none
+    goes_wrong: >-
+      Signing up with the website domain name when the chapter chose a separate email
+      domain name. The mailboxes then land on the wrong domain name.
+    later: unchanged
+    status: not-yet-tried
+    source: 8-Methods-Organization-Domains-Google.md#4.2
+
+  - id: "4.3"
+    name: Verify the domain
+    why: Google will not deliver mail for a domain until the chapter proves it owns it.
+    who: both — the chapter's setup contact, with the central support organization's help
+    first: ["4.2", "3.7"]
+    needs: [primary_domain]
+    produces: []
+    mode: guided
+    actions:
+      - do: In the Google Workspace admin console, find the verification record Google gives for the domain.
+      - do: In the chapter's Cloudflare account, open the domain's DNS records and add the verification record exactly as Google gives it. Add it in Cloudflare, not at the registrar.
+      - do: Return to the admin console and ask it to check.
+        see: The domain shown as verified. A new record can take from minutes to a day to be seen.
+    done_when: >-
+      Google reports the domain as verified.
+    check:
+      how: The admin console shows the domain as verified.
+      probe: The app looks up the domain's text records and confirms Google's verification record is present.
+    goes_wrong: >-
+      Impatience. A new DNS record can take from minutes to a day to be seen. Wait
+      before assuming the record is wrong.
+    later: The app writes the verification record into Cloudflare with the chapter's token.
+    status: not-yet-tried
+    source: 8-Methods-Organization-Domains-Google.md#4.3
+
+  - id: "4.4"
+    name: Switch mail delivery to Google
+    why: Mail sent to the chapter's addresses must reach Google, and mail the chapter sends must not land in spam folders.
+    who: both — the chapter's setup contact, with the central support organization's help
+    first: ["4.3"]
+    needs: [primary_domain]
+    produces: []
+    mode: guided
+    actions:
+      - do: In the Google Workspace admin console, find the mail delivery records Google gives.
+      - do: In the chapter's Cloudflare account, set those records, replacing any mail records already there. Cloudflare shows mail records as DNS only by itself.
+      - do: Also add the records Google recommends so the chapter's own mail is not marked as spam. The admin console lists them.
+      - do: From a personal account outside the chapter, send a message to the first administrator's chapter address.
+        see: The message arrives in the Google mailbox.
+    done_when: >-
+      A message sent from outside to an address on the domain arrives in the Google
+      mailbox.
+    check:
+      how: A message from an outside account arrives in the first administrator's mailbox.
+      probe: The app looks up the domain's mail records and its anti-spam records and confirms they are Google's.
+    goes_wrong: >-
+      Skipping the records that stop the chapter's own mail being marked as spam.
+      Everything works, and the software's welcome emails to new mentors land in spam
+      folders.
+    later: The app writes the mail records into Cloudflare with the chapter's token.
+    status: not-yet-tried
+    source: 8-Methods-Organization-Domains-Google.md#4.4
+
+  - id: "4.5"
+    name: Create the chapter's own administrator account
+    why: The chapter must always be able to run its own Google Workspace, whatever happens to the central support organization.
+    who: chapter
+    first: ["4.2"]
+    needs: []
+    produces: []
+    mode: guided
+    actions:
+      - do: The first administrator from step 4.2 is this account. Give it the highest administrator level Google Workspace offers.
+      - do: Give a second person at the chapter the same level, so one person leaving does not lock the chapter out.
+      - do: The named person signs in to the admin console with their chapter address.
+        see: The admin console's home page.
+    done_when: >-
+      A named person at the chapter holds a Google Workspace administrator account on
+      a chapter address.
+    check:
+      how: The named person signs in to the admin console with their chapter address.
+      probe: none
+    goes_wrong: >-
+      The chapter's only administrator being the central support organization. That
+      breaks the rule that the chapter can always withdraw the central support
+      organization's access.
+    later: unchanged
+    status: not-yet-tried
+    source: 8-Methods-Organization-Domains-Google.md#4.5
+
+  - id: "4.6"
+    name: Create the central support organization's administrator account
+    why: The central support organization needs its own named administrator account to enter the software's permission grant in step 10.3.
+    who: both — the chapter's administrator creates it; the central support organization uses it
+    first: ["4.5", "2.4"]
+    needs: []
+    produces: []
+    mode: guided
+    actions:
+      - do: The chapter's administrator creates a user for the central support organization's named person, with a licence.
+      - do: Give it the highest administrator level. Step 10.3 needs it.
+      - do: Hand over its sign-in details privately, never in an email to a group.
+      - do: The central support organization's person signs in to the chapter's admin console with the account.
+        see: The chapter's admin console.
+    done_when: >-
+      The central support organization holds its own named administrator account,
+      separate from the chapter's.
+    check:
+      how: The central support organization signs in to the chapter's admin console with its own account.
+      probe: none
+    goes_wrong: >-
+      The account uses a paid licence, like any user. Budget for it in the cost
+      agreement (step 2.2).
+    later: unchanged
+    status: not-yet-tried
+    source: 8-Methods-Organization-Domains-Google.md#4.6
+
+  - id: "4.7"
+    name: Create the shared operations mailbox
+    why: The software reads the chapter's public email and sends as this address, so every staff member sees the same conversation.
+    who: chapter's administrator
+    first: ["4.5"]
+    needs: [primary_domain]
+    produces: [ops_mailbox]
+    mode: guided
+    actions:
+      - do: In the admin console, create a user for the shared address, usually info@ the chapter's email domain, with its own licence. Do not create it as a group or as a second name for someone's mailbox.
+      - do: Put its sign-in and recovery codes in the chapter's vault.
+      - do: Look it up in the admin console's list of users.
+        see: The address listed as a user with a licence, not in the list of groups.
+    done_when: >-
+      The shared address the software reads and sends from exists as a real licensed
+      mailbox, not as an alias or a group. An alias will not work.
+    check:
+      how: The address appears in the admin console as a user with a licence.
+      probe: Once stage 10 is done, the app asks Google's directory whether the address is a licensed user and not a group.
+    goes_wrong: >-
+      Creating the address as a group or an alias. The software can only act as a real
+      mailbox, and it fails later with an error that does not name the cause. Cleveland
+      learned this when its administrator address turned out to be a group. Also, only
+      one deployment may ever read a given shared operations mailbox.
+    later: unchanged
+    status: not-yet-tried — the rule is proven on Cleveland.
+    source: 8-Methods-Organization-Domains-Google.md#4.7
+
+  - id: "4.8"
+    name: Create the alert sending mailbox
+    why: The software sends its warning messages from this address, and Google refuses to send as a group or an alias.
+    who: chapter's administrator
+    first: ["4.5"]
+    needs: [ops_mailbox]
+    produces: [alert_email_from]
+    mode: guided
+    actions:
+      - do: Either create a separate licensed user for the address, or use the shared operations mailbox from step 4.7. Cleveland uses its shared operations mailbox for both, which saves a licence.
+      - do: Record the address on the chapter information form.
+        see: The address listed in the admin console as a user with a licence.
+    done_when: >-
+      The address the software sends its warning messages from exists as a real
+      licensed mailbox. An alias or a group will be refused.
+    check:
+      how: The address appears in the admin console as a user with a licence.
+      probe: Once stage 10 is done, the app asks Google's directory whether the address is a licensed user.
+    goes_wrong: >-
+      A group or an alias. It is refused, the same as in step 4.7.
+    later: unchanged
+    status: not-yet-tried
+    source: 8-Methods-Organization-Domains-Google.md#4.8
+
+  - id: "4.9"
+    name: Decide who receives the system's warning messages
+    why: A warning nobody reads changes nothing, so the receiving address must reach named people.
+    who: both
+    first: ["4.5"]
+    needs: []
+    produces: [alert_email_to]
+    mode: guided
+    actions:
+      - do: Choose one receiving address. Unlike the sending address, it may be a group.
+      - do: Forward it to named people at the chapter and at the central support organization, as Cleveland's alert address forwards to its named system administrators.
+      - do: Write the named people down beside the address.
+    done_when: >-
+      The receiving address is decided and it reaches a person who reads it during the
+      working week, not an unattended mailbox.
+    check:
+      how: The named people are written down beside the address. The real test is step 12.4, once the software can send.
+      probe: none
+    goes_wrong: >-
+      An address nobody reads. The warnings then arrive and change nothing.
+    later: unchanged
+    status: not-yet-tried
+    source: 8-Methods-Organization-Domains-Google.md#4.9
+
+  - id: "4.10"
+    name: Create the members group
+    why: When a new mentor's mailbox is created, the software adds the mentor to this group, so the chapter can write to all its members at once.
+    who: chapter's administrator
+    first: ["4.5"]
+    needs: [primary_domain]
+    produces: [members_group]
+    mode: guided
+    actions:
+      - do: In the admin console, create a group for all the chapter's members, at its own address.
+      - do: Add a test member, then remove them.
+        see: The test member appears in the group and then disappears.
+      - do: Record the group's address on the chapter information form. The group is optional; if its address is left off the form, the software skips that part.
+    done_when: >-
+      The group exists at its own address and the administrator can add and remove
+      members.
+    check:
+      how: The group appears in the admin console, and the administrator adds and removes a test member.
+      probe: Once stage 10 is done, the app reads the group through Google's directory.
+    goes_wrong: >-
+      Adding members to the group needs one more permission in the software's grant
+      than the rest. Step 10.3 lists it.
+    later: unchanged
+    status: not-yet-tried
+    source: 8-Methods-Organization-Domains-Google.md#4.10
+
+  - id: "4.11"
+    name: Create the staff mailboxes
+    why: Staff sign in and are addressed at their chapter address only, never a personal one.
+    who: chapter's administrator
+    first: ["4.5"]
+    needs: [primary_domain]
+    produces: []
+    mode: guided
+    actions:
+      - do: For each member of staff, create a licensed user, first name and last name at the chapter's email domain.
+      - do: Do not create mentors' mailboxes here. The software creates each mentor's mailbox from their mentor record (step 15.9).
+        see: Every member of staff listed in the admin console.
+    done_when: >-
+      Every member of staff who will use the system has a mailbox on the chapter's
+      domain. Mentors' mailboxes are created later, from their mentor records (step
+      15.9).
+    check:
+      how: Every name on the staff list (step 14.1) has a mailbox.
+      probe: Once stage 10 is done, the app compares the staff list with Google's directory.
+    goes_wrong: >-
+      A mentor's mailbox created by hand. The software may then pick a different
+      address for that mentor. Also, a staff member's personal address used in the
+      software causes duplicate calendar invitations.
+    later: unchanged
+    status: not-yet-tried
+    source: 8-Methods-Organization-Domains-Google.md#4.11
+
+  - id: "4.12"
+    name: Require two-step sign-in
+    why: The chapter's mailboxes hold client and mentor records, and a stolen password must not be enough to read them.
+    who: chapter's administrator
+    first: ["4.5", "4.6", "4.7", "4.8", "4.9", "4.10", "4.11"]
+    needs: [chapter_vault]
+    produces: []
+    mode: guided
+    actions:
+      - do: In the admin console, turn on two-step sign-in, then enforce it for the whole organization. Give users a short grace period to set it up.
+      - do: Set a second step on the shared mailboxes too. Put their recovery codes in the chapter's vault.
+        see: The admin console reports two-step sign-in as enforced, and each user shows as enrolled.
+    done_when: >-
+      Two-step sign-in is enforced for every account, and recovery is possible
+      without one person.
+    check:
+      how: The admin console reports two-step sign-in as enforced, each user enrolled, and the shared mailboxes' recovery codes are in the vault.
+      probe: Once stage 10 is done, the app reads each user's enrolment through Google's directory.
+    goes_wrong: >-
+      A shared mailbox whose second step is one person's phone. When that person is
+      away, nobody can sign in to it.
+    later: unchanged
+    status: not-yet-tried
+    source: 8-Methods-Organization-Domains-Google.md#4.12
+
+  - id: "4.13"
+    name: Apply for the nonprofit discount
+    why: The discount is claimed in the chapter's own name and lowers the Google Workspace bill the chapter pays every month.
+    who: chapter
+    first: ["1.5", "4.2"]
+    needs: []
+    produces: []
+    mode: offline
+    actions:
+      - do: Apply through Google's nonprofit programme, which checks the chapter's nonprofit status before granting the discount.
+      - do: Include the determination letter from step 1.5.
+      - do: Write down the date the application went in and the expected answer date.
+    done_when: >-
+      The application has been submitted with the chapter's nonprofit evidence, and
+      the expected answer date is recorded.
+    check:
+      how: The application is submitted, and the answer date is written down.
+      probe: none
+    goes_wrong: >-
+      A chapter under a sponsoring nonprofit has no status of its own to apply with.
+      See step 1.5 and the open question in the plan.
+    later: unchanged
+    status: not-yet-tried
+    source: 8-Methods-Organization-Domains-Google.md#4.13
+
+  - id: "4.14"
+    name: Move control of the registrar account to a chapter mailbox
+    why: The domain names must not stay tied to one volunteer's personal email.
+    who: chapter — the setup contact
+    first: ["4.4"]
+    needs: [ops_mailbox, founding_email]
+    produces: []
+    mode: guided
+    actions:
+      - do: In the registrar account, change the contact and sign-in address to a chapter mailbox that more than one person can reach. The shared operations mailbox from step 4.7 is one choice.
+      - do: Remove the founding email address from step 3.1.
+      - do: Do the same in the Cloudflare account from step 3.7, which was also opened with the founding address.
+      - do: Ask the registrar for a password reset.
+        see: The password reset message arrives in the chapter mailbox.
+    done_when: >-
+      The registrar account's contact address is a chapter mailbox, the founder's
+      personal address has been removed, and a password reset test lands in the
+      chapter mailbox.
+    check:
+      how: The password reset message arrives in the chapter mailbox.
+      probe: none
+    goes_wrong: >-
+      A loop. If the chapter's email is ever down because of a domain name problem,
+      the registrar's password reset goes to that same broken email. Keep the
+      registrar's recovery codes from step 3.6 safe for this case.
+    later: unchanged
+    status: not-yet-tried
+    source: 8-Methods-Organization-Domains-Google.md#4.14
+
+changes:
+  - version: "0.1"
+    date: "09-18-26 17:20"
+    change: >-
+      First version as data, converted from the methods for setting up Google
+      Workspace (8-Methods-Organization-Domains-Google.md, version 0.5) with the step
+      list's finishing tests. Step 4.14 also moves the Cloudflare account off the
+      founding address.

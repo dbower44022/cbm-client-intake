@@ -1,0 +1,183 @@
+stage: 7
+name: Write and publish the policy documents
+version: "0.1"
+updated: "09-18-26 17:20"
+why: >-
+  Every public form carries one required consent box that links to four
+  documents - the code of conduct, the mentor code of ethics, the terms of use and
+  the privacy policy. The links must lead to this chapter's own documents, because
+  showing one city's applicants another city's privacy policy is a legal problem.
+  The chapter writes the documents with its own legal adviser; this stage covers
+  only what the software needs from them.
+who: >-
+  The chapter, with its own legal adviser. The central support organization
+  supplies the list of what personal information the software collects, and gives
+  no legal advice.
+time: >-
+  Not known. It depends on the chapter's legal adviser.
+before_you_start:
+  - The website, published (step 6.2)
+  - A named person at the chapter who can edit the website (step 6.4)
+unlocks: >-
+  The four addresses go on the chapter information form (stage 8), and from there
+  into the consent box on every public form.
+steps:
+  - id: "7.1"
+    name: Write and publish the client code of conduct
+    why: The consent box on the client, partner and funder forms links to it as "Code of Conduct".
+    who: chapter
+    first: ["6.2", "6.4"]
+    needs: [website_base_url]
+    produces: [policy_client_conduct_url]
+    mode: offline
+    actions:
+      - do: Write the document with the chapter's legal adviser.
+      - do: Publish it as a page on the chapter's website. Cleveland's is at clevelandbusinessmentors.org/client-code-of-conduct/.
+      - do: Open the page in a private browser window.
+        see: The document, without being asked to sign in.
+    done_when: >-
+      The document is published on the chapter's website and opens without signing
+      in.
+    check:
+      how: The page opens in a private browser window.
+      probe: The app fetches the address without signing in and checks it answers with a page.
+    goes_wrong: >-
+      A page published as a draft, or behind a sign-in. It opens for the person who
+      wrote it and for nobody else. The private window is what catches this.
+    later: unchanged
+    status: not-yet-tried
+    source: 9-Methods-Hosting-Website-Policies.md#7.1
+
+  - id: "7.2"
+    name: Write and publish the mentor code of ethics
+    why: The volunteer application form's "Code of Conduct" link goes to this document, which is different from the client code of conduct.
+    who: chapter
+    first: ["6.4"]
+    needs: [website_base_url]
+    produces: [policy_mentor_ethics_url]
+    mode: offline
+    actions:
+      - do: Write the document with the chapter's legal adviser. It is a separate document from the client code of conduct.
+      - do: Publish it as a page on the chapter's website. Cleveland's is at clevelandbusinessmentors.org/mentor-code-of-ethics/.
+      - do: Open the page in a private browser window.
+        see: The document, without being asked to sign in.
+    done_when: >-
+      The document is published and opens without signing in.
+    check:
+      how: The page opens in a private browser window.
+      probe: The app fetches the address without signing in and checks it answers with a page.
+    goes_wrong: >-
+      Publishing one code for both. The software links two different addresses, and
+      a mentor applicant would then agree to the client code of conduct.
+    later: unchanged
+    status: not-yet-tried
+    source: 9-Methods-Hosting-Website-Policies.md#7.2
+
+  - id: "7.3"
+    name: Write and publish the terms
+    why: The consent box on every public form links to it as "Terms of Use".
+    who: chapter
+    first: ["6.4"]
+    needs: [website_base_url]
+    produces: [policy_terms_url]
+    mode: offline
+    actions:
+      - do: Write the document with the chapter's legal adviser, titled "Terms of Use" so it matches the link.
+      - do: Publish it as a page on the chapter's website. Cleveland's is at clevelandbusinessmentors.org/legal-notices/.
+      - do: Open the page in a private browser window.
+        see: The document, without being asked to sign in.
+    done_when: >-
+      The document is published and opens without signing in.
+    check:
+      how: The page opens in a private browser window.
+      probe: The app fetches the address without signing in and checks it answers with a page.
+    goes_wrong: nothing known yet
+    later: unchanged
+    status: not-yet-tried
+    source: 9-Methods-Hosting-Website-Policies.md#7.3
+
+  - id: "7.4"
+    name: Write and publish the privacy policy
+    why: The consent box on every public form links to it, and it must describe what this chapter's system collects, under this chapter's name.
+    who: both — the chapter writes it, the central support organization says what the software collects
+    first: ["6.4"]
+    needs: [website_base_url]
+    produces: [policy_privacy_url]
+    mode: offline
+    actions:
+      - do: The central support organization gives the chapter's adviser a plain list of what personal information the software collects and where it is kept. In outline - names, contact details and business details from the public forms, kept in the chapter's CRM; submissions, also held in the application database; mentoring email, copied onto the client's record; and documents, kept in the chapter's Google shared drive. There is no finished plain list yet (work list item 13).
+      - do: The chapter writes the policy with its legal adviser.
+      - do: Publish it as a page on the chapter's website. Cleveland's is at clevelandbusinessmentors.org/privacy-policy/.
+      - do: Open the page in a private browser window and read which organization it names.
+        see: The document, without a sign-in, naming this chapter.
+    done_when: >-
+      The document is published, opens without signing in, and names this chapter
+      rather than any other organization.
+    check:
+      how: The page opens in a private browser window, and the organization it names is this chapter.
+      probe: The app fetches the address without signing in and checks the page contains the chapter's name and not "Cleveland".
+    goes_wrong: >-
+      Starting from another chapter's policy and missing a name. The finishing test
+      for this step exists for that reason.
+    later: The central support organization keeps a standing description of what the software collects, updated with each release that changes it.
+    status: not-yet-tried — the plain list of what the software collects does not exist as one document yet.
+    source: 9-Methods-Hosting-Website-Policies.md#7.4
+
+  - id: "7.5"
+    name: Have the four documents reviewed
+    why: The documents are live the moment they are published, and the consent box points at them as soon as the applications are deployed.
+    who: chapter
+    first: ["7.1", "7.2", "7.3", "7.4"]
+    needs: []
+    produces: []
+    mode: offline
+    actions:
+      - do: The chapter's legal adviser reads all four documents.
+      - do: The adviser confirms in writing that they may be published. Keep the confirmation with the chapter's records. The central support organization plays no part in this review.
+        see: A written confirmation from the adviser.
+    done_when: >-
+      Whoever advises the chapter on legal matters has read all four and confirmed
+      they may be published.
+    check:
+      how: The written confirmation is kept with the chapter's records.
+      probe: none — the app only records that the chapter says it is done.
+    goes_wrong: >-
+      Publishing first and reviewing later. The documents are live as soon as they
+      are published.
+    later: unchanged
+    status: not-yet-tried
+    source: 9-Methods-Hosting-Website-Policies.md#7.5
+
+  - id: "7.6"
+    name: Record the four web addresses
+    why: The software's four policy settings are filled from these addresses, and every one defaults to Cleveland's documents.
+    who: chapter, checked by the central support organization
+    first: ["7.5"]
+    needs: [policy_client_conduct_url, policy_mentor_ethics_url, policy_terms_url, policy_privacy_url]
+    produces: []
+    mode: guided
+    actions:
+      - do: Copy each address from the browser's address bar, not from memory, onto the chapter information form (step 8.3).
+      - do: Open each address from the form itself, in a private browser window.
+        see: All four documents open.
+    done_when: >-
+      All four addresses are written on the chapter information form and each one
+      has been opened and checked.
+    check:
+      how: All four open from the form.
+      probe: The app fetches all four addresses without signing in and checks none is one of Cleveland's.
+    goes_wrong: >-
+      A changed address later. If the chapter moves a document on its website, the
+      consent box links break silently. Moving a policy document needs a change
+      request (step 18.2), so the setting is changed at the same time.
+    later: unchanged
+    status: not-yet-tried
+    source: 9-Methods-Hosting-Website-Policies.md#7.6
+
+changes:
+  - version: "0.1"
+    date: "09-18-26 17:20"
+    change: >-
+      First version as data, converted from the methods for the policy documents
+      (9-Methods-Hosting-Website-Policies.md, version 0.4) with the step list's
+      finishing tests.

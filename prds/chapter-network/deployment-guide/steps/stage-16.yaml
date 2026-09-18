@@ -1,0 +1,191 @@
+stage: 16
+name: Train the chapter's staff
+version: "0.1"
+updated: "09-18-26 17:30"
+why: >-
+  Staff learn the system on invented records before they touch real ones. Training
+  happens on Cleveland's shared training system, which clears itself every night,
+  using shared training accounts set up specifically for chapter training (ruled
+  09-14-26 and 09-18-26).
+who: >-
+  The chapter's trainer runs the sessions; the central support organization sets up
+  the training accounts and hands over the guides.
+time: >-
+  One session per role. The mentor session is the longest, at 30 to 40 minutes.
+before_you_start:
+  - The staff accounts (stage 14)
+  - The chapter training accounts on the shared training system (work list item 6 — they do not exist yet)
+unlocks: >-
+  The final checks before going live (stage 17), with staff who know what they are
+  checking.
+steps:
+  - id: "16.1"
+    name: Get the chapter's staff onto the shared practice system
+    why: Trainees need working sign-ins, and fresh passwords stop the previous chapter keeping access.
+    who: central
+    first: ["14.2"]
+    needs: []
+    produces: [training_passwords]
+    mode: guided
+    actions:
+      - do: Set a new password on each chapter training account.
+      - do: Run the training data script, then re-capture the shared training system's fixed copy, as SANDBOX-RESET.md sets out under "Re-baseline". Without this, the new passwords undo themselves at midnight.
+      - do: Put the new passwords in the central support organization's vault, and give them to the chapter's trainer by a private route, never an email to a group.
+      - do: The next morning, have one person from the chapter sign in with a new password.
+        see: The training system's pages, with "(Test)" after the version number in the footer.
+    done_when: >-
+      The chapter's trainer holds the sign-in details for the chapter training
+      accounts, the passwords were set fresh for this chapter, and one person from
+      the chapter has signed in once. Ruled 09-14-26: chapters train on the existing
+      test system rather than on their own live system or on a practice system built
+      for them. Ruled 09-18-26: they sign in with shared training accounts set up
+      specifically for chapter training, never with accounts of their own.
+    check:
+      how: After one nightly reset, someone from the chapter signs in with the new password.
+      probe: The app signs in with each new password the morning after.
+    if_not: If the new password fails the next morning, the re-capture was skipped. Set the passwords and re-capture again.
+    goes_wrong: >-
+      Skipping the re-capture. The new passwords work all afternoon and stop at
+      midnight, and the old ones, which the previous chapter holds, come back.
+    later: The fleet console sets and hands out the passwords in one action.
+    status: not-yet-tried — the chapter training accounts do not exist yet.
+    source: 7-Methods-Training.md#16.1
+
+  - id: "16.2"
+    name: Explain how the practice system behaves
+    why: Trainees who do not know the system resets, or that it shows Cleveland's name, lose work and lose trust in what they see.
+    who: both — the chapter's trainer, or the central support organization's
+    first: ["16.1"]
+    needs: []
+    produces: []
+    mode: offline
+    actions:
+      - do: At the start of the first session, say that it is a training system and every record is invented.
+      - do: Say that nobody is expected to save anything, and that if someone does, nothing can escape.
+      - do: Say that everything created today is gone tomorrow morning, so a walkthrough must finish inside one day.
+      - do: Say that every page shows Cleveland's name, and that the chapter's own system will show its own.
+    done_when: >-
+      Everyone being trained has been told two things. The system clears itself out
+      every night, so anything they create during a session is gone the next
+      morning — a session cannot be spread across two days using the same records.
+      And the practice system carries Cleveland's name and Cleveland's example
+      records, so what they see on screen will not say their own chapter's name.
+    check:
+      how: Nobody in the room asks, later, where their saved work went.
+      probe: none
+    if_not: If a session must run over two days, ask the central support organization to pause that night's reset.
+    goes_wrong: >-
+      A session spread over two days, whose first day's work is gone on the second.
+    later: unchanged
+    status: not-yet-tried — the points come from Cleveland's own trainer's guide.
+    source: 7-Methods-Training.md#16.2
+
+  - id: "16.3"
+    name: Train each role
+    why: Each person should have done their own main task once before doing it for real.
+    who: chapter — the trainer, with the central support organization available
+    first: ["16.2"]
+    needs: []
+    produces: []
+    mode: offline
+    actions:
+      - do: Follow the walkthrough for each role in training-guide.md, signing in with the chapter training account for that role.
+      - do: Have each trainee do their main task once. A client administrator assigns one engagement. A mentor opens a session and reads its notes. A mentor administrator runs the "Update Mentor Status" check. Partner and funder managers open a record's Sessions and Communications tabs. The person handling submissions opens Submission Admin.
+        see: Each trainee completing their task.
+    done_when: >-
+      Every person has been shown the parts of the system their own team uses, and
+      has done each main task once themselves.
+    check:
+      how: Each trainee has done their main task once, and says so.
+      probe: none
+    goes_wrong: >-
+      Two gaps in the walkthroughs. The Submission Admin queue is empty, so ask for
+      it to be filled before that session. And there is no walkthrough for the
+      Analytics Admin Team.
+    later: unchanged
+    status: not-yet-tried
+    source: 7-Methods-Training.md#16.3
+
+  - id: "16.4"
+    name: Hand over the written guides
+    why: After training, people need something to look things up in.
+    who: central
+    first: ["6.7"]
+    needs: [docs_site_url]
+    produces: []
+    mode: guided
+    actions:
+      - do: Give the chapter the link to the documentation site.
+      - do: Name the guide for each role. Mentor Administration, the mentor directory, Submission Admin, email, events and analytics each have one.
+      - do: Tell the chapter the guides say Cleveland throughout, because they were written for Cleveland's staff.
+    done_when: >-
+      The chapter holds the written guides for each role and knows where they live.
+    check:
+      how: The chapter's first point of contact opens the guide for one role without help.
+      probe: none
+    goes_wrong: >-
+      The guides name Cleveland throughout, until the help documentation question is
+      settled.
+    later: Depends on whether each chapter publishes its own help documentation or shares one site.
+    status: not-yet-tried
+    source: 7-Methods-Training.md#16.4
+
+  - id: "16.5"
+    name: Name the chapter's own first point of contact
+    why: Colleagues need one person to ask first, before raising a request with the central support organization.
+    who: chapter
+    first: ["16.3"]
+    needs: []
+    produces: [first_point_of_contact]
+    mode: offline
+    actions:
+      - do: Name the person in writing. Choose someone who was in the training.
+      - do: Record the name on the chapter's entry in the list of watched systems (step 12.5).
+    done_when: >-
+      One person at the chapter is named as the person colleagues ask first, before
+      contacting the central support organization.
+    check:
+      how: The name is on the list of watched systems.
+      probe: The app shows the named person on the chapter's record.
+    goes_wrong: >-
+      Naming someone who was not in the training.
+    later: unchanged
+    status: not-yet-tried
+    source: 7-Methods-Training.md#16.5
+
+  - id: "16.6"
+    name: Change the training account passwords
+    why: People from one chapter must not keep standing access to a system another chapter also uses.
+    who: central
+    first: ["16.3"]
+    needs: [training_passwords]
+    produces: []
+    mode: guided
+    actions:
+      - do: When training ends, set a new password on each chapter training account.
+      - do: Run the training data script, then re-capture the shared training system's fixed copy, exactly as in step 16.1.
+      - do: The next morning, try an old password.
+        see: The old password refused.
+      - do: Record the date on the chapter's entry in the list of watched systems.
+    done_when: >-
+      The chapter training account passwords are changed once training ends, the
+      change has survived a nightly reset, and it is written down when this was
+      done. People from one chapter do not keep standing access to a system another
+      chapter also uses.
+    check:
+      how: The morning after, the old password is refused.
+      probe: The app tries the old password the morning after and expects a refusal.
+    goes_wrong: >-
+      Skipping the re-capture. The old password comes back at midnight, and the
+      chapter keeps its access indefinitely.
+    later: The fleet console changes the passwords at the end of training in one action.
+    status: not-yet-tried
+    source: 7-Methods-Training.md#16.6
+
+changes:
+  - version: "0.1"
+    date: "09-18-26 17:30"
+    change: >-
+      First version as data, converted from the methods for training the chapter's
+      staff (7-Methods-Training.md, version 0.1) with the step list's finishing
+      tests.

@@ -1,0 +1,180 @@
+stage: 12
+name: Set up backups and monitoring
+version: "0.1"
+updated: "09-18-26 17:30"
+why: >-
+  This stage makes sure the chapter's records can be got back after a mistake or a
+  failure, and that a person finds out when the system stops working. It comes
+  before any real records are loaded, because a backup taken afterwards is too late
+  for whatever went wrong before it.
+who: >-
+  The central support organization, working inside the chapter's hosting account.
+  The chapter names who reads the alerts.
+time: >-
+  About two hours, most of it waiting for a restored copy to be built.
+before_you_start:
+  - The CRM server (stage 9)
+  - The applications and their database (stage 11)
+  - Outgoing mail working, for the alert emails (step 11.15)
+  - The decision about who receives warning messages (step 4.9)
+unlocks: >-
+  The chapter's pages can go on its website (stage 13), and real records can be
+  loaded (stage 15).
+steps:
+  - id: "12.1"
+    name: Back up the CRM server on a schedule
+    why: A backup of the whole server holds the CRM's database, its uploaded files and its configuration together, so one restore brings back all three.
+    who: central, inside the chapter's hosting account
+    first: ["9.2"]
+    needs: [digitalocean_token]
+    produces: []
+    mode: automated
+    actions:
+      - do: In the chapter's hosting account, open the CRM server, then its Backups tab.
+      - do: Switch backups on and choose daily.
+        see: Backups shown as enabled, with a daily schedule and a backup window.
+      - do: Write down the schedule, the backup window and how many days each backup is kept, on the chapter's entry in the list of watched systems (step 12.5).
+    done_when: >-
+      Backups run automatically, and the schedule and how long backups are kept
+      are written down.
+    check:
+      how: The next morning, the Backups tab lists a backup taken overnight.
+      probe: The app reads the server's backup policy and the date of its latest backup.
+    goes_wrong: >-
+      Two things. Seven days is short: a mistake nobody notices for eight days
+      cannot be undone from these backups. And backups cost extra and are easy to
+      leave off, because the deployment wizard does not switch them on.
+    later: The deployment tool switches backups on when it creates the server.
+    status: not-yet-tried on a chapter — done for real on Cleveland's production CRM (daily, kept seven days).
+    source: 6-Methods-Backups-Monitoring.md#12.1
+
+  - id: "12.2"
+    name: Back up the application database on a schedule
+    why: Submissions that have arrived but not yet reached the CRM exist only in this database, so losing it loses them.
+    who: central, inside the chapter's hosting account
+    first: ["11.4"]
+    needs: [digitalocean_token]
+    produces: []
+    mode: automated
+    actions:
+      - do: In the chapter's hosting account, open the application's settings and find its database.
+        see: The database described as a managed database.
+      - do: If it is described as a development database instead, convert it to a managed database there, at the smallest size.
+        see: The database described as a managed database. The application keeps running during the change.
+      - do: Open the database's Backups tab.
+        see: Daily backups, each kept seven days.
+      - do: Write the schedule and retention on the chapter's entry in the list of watched systems.
+    done_when: >-
+      Backups run automatically, and the schedule and retention are written down.
+    check:
+      how: The database's Backups tab lists a backup taken in the last day.
+      probe: The app lists the database's backups and reads the newest date.
+    goes_wrong: >-
+      A development database that nobody notices. Everything works, no error
+      appears, and there are no backups. The trial chapter's database is in this
+      state.
+    later: The settings generator creates a managed database from the start.
+    status: not-yet-tried on a chapter — done for real on Cleveland's production database.
+    source: 6-Methods-Backups-Monitoring.md#12.2
+
+  - id: "12.3"
+    name: Restore from a backup once
+    why: A backup nobody has restored is only a hope, so each kind is restored once into a separate copy and checked.
+    who: central
+    first: ["12.1", "12.2"]
+    needs: [digitalocean_token]
+    produces: []
+    mode: guided
+    actions:
+      - do: For the database, restore into a new database with the hosting provider's command-line tool, `doctl databases fork`, naming the live database as the source. It never restores over the live one.
+        see: A new database, listed as online. Do not show or save the address the tool prints; it carries the administrator password.
+      - do: Allow your own computer through the new database's firewall. It copies the live database's firewall, which lets only the application in.
+      - do: Connect to the new database and count the rows in every table.
+        see: Every table present and holding data, and the newest submission recent.
+      - do: Delete the new database the same hour. It holds the chapter's real personal details.
+      - do: For the CRM server, create a new server from the latest backup in the server's Backups tab.
+      - do: Open the new server's own address in a browser, sign in as the central support organization's administrator, and open one recent record.
+        see: The record, as it was at the time of the backup.
+      - do: Delete the new server.
+      - do: Write down the date, what was checked and how long each restore took.
+    done_when: >-
+      A restore has actually been performed and the result checked. An untested
+      backup is not a backup.
+    check:
+      how: Both copies started and held the expected records, and the test is written down.
+      probe: The app runs the database restore into a copy, counts the tables' rows, and deletes the copy.
+    goes_wrong: >-
+      A restore with no date given rebuilds the database to the latest moment it
+      can, not to the last daily backup. That is better, but it means the two are
+      the same command. Also, the restored copy holds real personal details, so it
+      is printed as counts and dates only and deleted the same hour.
+    later: The fleet console runs a restore test on a schedule and reports the result.
+    status: not-yet-tried on a chapter — the database half was done for real on Cleveland's production system on 09-18-26; the CRM server half has never been done anywhere.
+    source: 6-Methods-Backups-Monitoring.md#12.3
+
+  - id: "12.4"
+    name: Confirm alerts reach a person
+    why: When the system stops working or submissions pile up, somebody has to be told, and an alert nobody reads is the same as no alert.
+    who: both — the central support organization sets it up; the chapter names who reads the alerts
+    first: ["4.9", "11.15"]
+    needs: [alert_email_from, alert_email_to, app_base_url, crm_base_url]
+    produces: []
+    mode: guided
+    actions:
+      - do: Create an uptime check on the application's health address with the hosting provider's command-line tool, `doctl monitoring uptime create`, and an alert on it that emails the alert address after two minutes down.
+        see: The check listed as enabled.
+      - do: Create a second uptime check the same way on the CRM's own address, with the same alert.
+        see: Two checks listed, one for the application and one for the CRM.
+      - do: Add database alerts for processor, memory and disk above 90 per cent, emailing the same address.
+      - do: Send a test alert from the application. There is no button for this yet. Open a console on the background worker in the hosting account and run the software's own alert sender with a test message.
+        see: The test alert arrives at the alert address.
+      - do: Write down the names of the people who read the alert address.
+    done_when: >-
+      A test alert arrives at an address somebody reads, and it is recorded who
+      reads it.
+    check:
+      how: The test alert arrives, and a named person confirms they saw it.
+      probe: The app sends a test alert and asks the named reader to confirm it arrived.
+    if_not: If no test alert arrives, check the Google connection first. The application sends its alerts through the chapter's Google account.
+    goes_wrong: >-
+      Three things. A chapter with the Google connection switched off gets no alert
+      emails at all, and nothing says so. An alert address that nobody reads: use
+      one address forwarded to named people, as Cleveland does. And nothing
+      watching the CRM directly: without the second uptime check, a CRM outage is
+      noticed only when a delivery fails.
+    later: A "send a test alert" button on the settings page.
+    status: not-yet-tried on a chapter — done for real on Cleveland's production system, including the CRM uptime check added on 09-18-26.
+    source: 6-Methods-Backups-Monitoring.md#12.4
+
+  - id: "12.5"
+    name: Add the chapter to the list of systems being watched
+    why: The central support organization supports every chapter, and needs one place saying where each chapter's systems are and when they were last checked.
+    who: central
+    first: ["12.1", "12.2", "12.3", "12.4"]
+    needs: [crm_base_url, app_base_url, chapter_slug]
+    produces: []
+    mode: automated
+    actions:
+      - do: Open the list of watched systems, kept in the chapter-network folder of the software's code repository until the fleet console exists.
+      - do: Add the chapter, with its CRM address, its application address, the hosting account it lives in, both backup schedules, who reads the alerts, and the date of the last restore test.
+        see: Every column filled in for the chapter.
+    done_when: >-
+      The central support organization's list of systems includes this chapter's
+      CRM and application.
+    check:
+      how: The chapter is on the list, with every column filled in.
+      probe: The app is the list, and reads each chapter's health address.
+    goes_wrong: >-
+      The list drifting from the truth. An old restore test date on the list is a
+      chapter whose backups nobody has checked lately.
+    later: The fleet console is the list.
+    status: not-yet-tried — the list does not exist yet.
+    source: 6-Methods-Backups-Monitoring.md#12.5
+
+changes:
+  - version: "0.1"
+    date: "09-18-26 17:30"
+    change: >-
+      First version as data, converted from the methods for backups and monitoring
+      (6-Methods-Backups-Monitoring.md, version 0.4) with the step list's finishing
+      tests.

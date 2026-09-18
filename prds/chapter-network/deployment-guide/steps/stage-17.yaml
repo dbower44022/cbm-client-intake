@@ -1,0 +1,262 @@
+stage: 17
+name: Check everything works before going live
+version: "0.1"
+updated: "09-18-26 17:20"
+why: >-
+  This stage proves the chapter's system works end to end before any real client
+  uses it: each team reaches its own pages and nobody else's, and a public
+  application travels from the website through assignment to a mentor. Every
+  check is done as an ordinary user. An administrator skips every permission
+  check, so a check done as an administrator proves nothing, and several of
+  Cleveland's permission faults stayed hidden for weeks for exactly that reason.
+who: >-
+  The central support organization, signed in as test users; the chapter for the
+  website check.
+time: >-
+  About two hours. Most of the checks can be run by a script.
+before_you_start:
+  - The staff accounts exist (stage 14)
+  - The mentor accounts exist (steps 15.8 to 15.10)
+  - The chapter's pages are on its website (stage 13)
+unlocks: >-
+  The handover to normal support (stage 18). The chapter can take real clients.
+steps:
+  - id: "17.1"
+    name: Create one ordinary test user per team
+    why: Each team's permissions can only be proven by someone who holds that team and nothing else.
+    who: central
+    first: ["14.2", "15.9"]
+    needs: []
+    produces: [test_users]
+    mode: automated
+    actions:
+      - do: Create seven ordinary accounts, one per team that opens a page, each with exactly one team. scripts/rehearsal/stage4_users.py did this for the trial chapter; change the chapter name in it, or create the accounts by hand.
+      - do: For the Mentor Team test user, create a mentor record in Mentor Administration and set it to Active, so the account is linked to it (step 15.9).
+      - do: Put the test users' passwords in the chapter's vault.
+    done_when: >-
+      There is one non-administrator test account for each team.
+    check:
+      how: Each test user signs in, and the sign-in reports exactly one team.
+      probe: The app signs in as each test user and reads back its teams.
+    goes_wrong: >-
+      Giving test users a second team "to make testing easier". The check then
+      proves nothing about the single-team case real staff are in.
+    later: The onboarding app creates and later disables a standard set of test users.
+    status: done-for-real
+    source: 5-Methods-Form-Accounts-Checks.md#17.1
+
+  - id: "17.2"
+    name: Confirm each test user sees only what their team allows
+    why: A permission gap either locks staff out of their work or shows them records they must not see, and only a per-team test finds it.
+    who: central
+    first: ["17.1"]
+    needs: [test_users]
+    produces: []
+    mode: automated
+    actions:
+      - do: Sign in as each test user and try every restricted page in the applications.
+        see: Each user opens their own team's pages and is refused on the rest. The Mentor Team user also opens the directory and My Email; partner and funder managers also open My Email.
+      - do: Compare the results with the trial chapter's table, prds/chapter-network/rehearsal-2026-08-31/nonadmin-gate-matrix.json.
+        see: The same pattern of allowed and refused.
+      - do: Check the settings page separately. When it is switched on, an ordinary user should be refused with a message saying it is for administrators.
+    done_when: >-
+      Every test user can open their own team's pages and is refused on every other
+      team's pages. Administrator accounts skip all permission checks, so this must
+      be done as ordinary users.
+    check:
+      how: The new table matches the trial chapter's table.
+      probe: Fully automatable. The app signs in as each of the seven test users, requests each of the twelve restricted pages, and compares the answers with the expected table, as the August build did.
+    if_not: >-
+      A "not found" answer is not a refusal. Find out why the page answered that way
+      before calling it a pass.
+    goes_wrong: >-
+      Reading "not found" as "refused". In August the settings page answered "not
+      found" to every test user, and the record cannot say why.
+    later: The onboarding app runs the table itself.
+    status: done-for-real — apart from the settings page, whose answer is unexplained.
+    source: 5-Methods-Form-Accounts-Checks.md#17.2
+
+  - id: "17.3"
+    name: Submit the public application form
+    why: The public form is how clients arrive, so it is tested from the chapter's own website the way a client would use it.
+    who: both — the central support organization, or anyone at the chapter
+    first: ["17.2", "13.2"]
+    needs: [website_base_url]
+    produces: [test_submission]
+    mode: guided
+    actions:
+      - do: Open the chapter's website in a private browser window and follow its link to the client application form.
+      - do: Open all four policy links on the consent box.
+        see: Each of the chapter's own policy documents.
+      - do: Submit the form with a made-up business and a test email address the chapter controls. Write down the made-up names; step 17.9 removes them.
+        see: A thank-you message with a reference number.
+    done_when: >-
+      A submission made from the public website arrives in the system.
+    check:
+      how: The submission appears in Submission Admin.
+      probe: The app can submit a test application through the form's own address and watch for it to arrive, but the path from the website's link needs a person once.
+    goes_wrong: >-
+      A broken policy link on the consent box.
+    later: unchanged — a person should do this once by hand.
+    status: done-for-real — from the applications' own address; the trial chapter had no website, so the website's link was not tested.
+    source: 5-Methods-Form-Accounts-Checks.md#17.3
+
+  - id: "17.4"
+    name: Assign the submission
+    why: Assigning a new client to a mentor is the client administrator's main task, and it depends on several permissions at once.
+    who: central, signed in as the Client Administration Team test user
+    first: ["17.3"]
+    needs: [test_submission, test_users]
+    produces: []
+    mode: guided
+    actions:
+      - do: Open Client Administration and find the new engagement.
+      - do: Assign it to the Mentor Team test user's mentor record.
+        see: The engagement shows the mentor and the status "Pending Acceptance", and the email to the mentor opens ready to send.
+    done_when: >-
+      A client administrator test user assigns it to a mentor.
+    check:
+      how: The engagement shows the mentor and the status "Pending Acceptance".
+      probe: The app can assign through the same request the page makes, as the test user, and read the engagement back.
+    goes_wrong: >-
+      Two known failures. An empty mentor list: a mentor appears only when Active,
+      accepting new clients and linked to an account. And a refusal about users: the
+      client administration role needs permission to read users; Cleveland's role
+      lacked it, and production still needs the fix.
+    later: unchanged
+    status: done-for-real
+    source: 5-Methods-Form-Accounts-Checks.md#17.4
+
+  - id: "17.5"
+    name: Confirm the mentor sees it
+    why: The assignment only matters if the mentor can find the client and work with them.
+    who: central, signed in as the Mentor Team test user
+    first: ["17.4"]
+    needs: [test_users]
+    produces: []
+    mode: guided
+    actions:
+      - do: Open Client Management and find the engagement.
+        see: The engagement listed, and it opens.
+      - do: Open My Mentor Profile.
+        see: The mentor's own details.
+    done_when: >-
+      The mentor test user finds the assignment and can open their own profile.
+    check:
+      how: The engagement opens, and the profile page shows the mentor's own details.
+      probe: The app requests the mentor's list of engagements as the test user and looks for the new one.
+    goes_wrong: >-
+      Client Management is empty. Nearly always the mentor record is not linked to
+      the account, or the engagement was assigned to a duplicate mentor record with
+      the same name. Check the link first.
+    later: unchanged
+    status: done-for-real
+    source: 5-Methods-Form-Accounts-Checks.md#17.5
+
+  - id: "17.6"
+    name: Confirm the submission closes
+    why: A submission that never reaches Completed means the background worker is not delivering to the CRM.
+    who: central, signed in as the Marketing Admin Team test user
+    first: ["17.3"]
+    needs: [test_submission]
+    produces: []
+    mode: automated
+    actions:
+      - do: Open Submission Admin and find the submission.
+        see: Intake status Completed, closed, with the reason "Process completed".
+    done_when: >-
+      The submission shows as completed and closed to the user who handles
+      submissions.
+    check:
+      how: The submission reads Completed and closed.
+      probe: The app reads the submission's status as the test user.
+    if_not: A submission stuck at Received means the background worker is not running or cannot reach the CRM. Read the application's health page, which reports whether the worker is alive.
+    goes_wrong: nothing known yet
+    later: unchanged
+    status: done-for-real
+    source: 5-Methods-Form-Accounts-Checks.md#17.6
+
+  - id: "17.7"
+    name: Confirm the CRM's own screen works for an ordinary user
+    why: Staff also use the CRM directly, and a missing screen file shows an ordinary user a blank page.
+    who: central
+    first: ["17.1"]
+    needs: [test_users, crm_base_url]
+    produces: []
+    mode: guided
+    actions:
+      - do: Sign in to the CRM's own address as any test user.
+        see: The CRM's home screen and navigation bar.
+    done_when: >-
+      A non-administrator signs in to the CRM itself and sees a working screen.
+    check:
+      how: The home screen and menu appear.
+      probe: The app can load the CRM's screen code as a test user and confirm it answers, but a person should look once.
+    goes_wrong: >-
+      A blank page. The CRM's screen code folder was not copied (step 9.8). The trial
+      chapter hit exactly this.
+    later: The conformance check loads the CRM's screen as an ordinary user.
+    status: done-for-real — after the fix.
+    source: 5-Methods-Form-Accounts-Checks.md#17.7
+
+  - id: "17.8"
+    name: Confirm the website pages work for a member of the public
+    why: The public pages are what clients and volunteers see first, on computers and on phones.
+    who: chapter
+    first: ["13.2"]
+    needs: [website_base_url]
+    produces: []
+    mode: guided
+    actions:
+      - do: Open the chapter's website in a private browser window on a computer.
+      - do: Open the mentor directory, one mentor, the events programme and one event.
+        see: Each page with the chapter's own content and name.
+      - do: Do the same on a phone.
+        see: One column, no sideways scrolling, no text cut off.
+    done_when: >-
+      Someone not signed in to anything opens the mentor directory and events pages
+      on the chapter's website and they work.
+    check:
+      how: Each page shows the chapter's own content and name, on a computer and a phone.
+      probe: The app can request each public page and check it answers with the chapter's name, but the look of the page needs a person.
+    goes_wrong: >-
+      A page with no styling at all, when the page and its stylesheet disagree.
+      Cleveland shipped exactly this for an hour. Also, the public mentor directory
+      page is not built yet (step 13.1).
+    later: unchanged
+    status: not-yet-tried — the trial chapter had no website.
+    source: 5-Methods-Form-Accounts-Checks.md#17.8
+
+  - id: "17.9"
+    name: Remove the test records
+    why: Test records left behind turn up in the chapter's reports and lists.
+    who: central
+    first: ["17.2", "17.3", "17.4", "17.5", "17.6", "17.7", "17.8"]
+    needs: [test_submission, test_users]
+    produces: []
+    mode: automated
+    actions:
+      - do: In the CRM, delete the made-up company, its contact, its client profile and its engagement.
+      - do: Leave the submission in Submission Admin, closed. It is the record that the path worked.
+      - do: Set the seven test users to inactive, so the check can be repeated after a later release.
+      - do: Write down what was removed in the chapter's handover notes.
+    done_when: >-
+      The test submissions, test assignments and test users created for this stage
+      are gone or disabled, and it is written down what was removed.
+    check:
+      how: No record with the made-up names remains, and the seven test users cannot sign in.
+      probe: The app searches for the made-up names and confirms the test users are inactive.
+    goes_wrong: >-
+      A test record left behind turns up in the chapter's reports. The analytics
+      pages count every engagement.
+    later: The onboarding app removes its own standard test data.
+    status: not-yet-tried — the trial chapter's test records were kept on purpose.
+    source: 5-Methods-Form-Accounts-Checks.md#17.9
+
+changes:
+  - version: "0.1"
+    date: "09-18-26 17:20"
+    change: >-
+      First version as data, converted from the methods for checking everything
+      works before going live (5-Methods-Form-Accounts-Checks.md, version 0.4) with
+      the step list's finishing tests.

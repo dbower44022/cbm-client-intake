@@ -152,6 +152,7 @@ uv run python scripts/sync_form_options.py          # dry-run: form dropdowns vs
 uv run python scripts/sync_form_options.py --write  # apply the sync (review the git diff)
 uv run python scripts/publish_docs.py               # check every docs-site twin for drift
 uv run python scripts/publish_docs.py --publish training-guide.md   # publish one
+uv run python scripts/render_deployment_guide.py    # chapter deployment guide: YAML steps -> guide/ (--check in CI)
 ```
 
 ## Architecture

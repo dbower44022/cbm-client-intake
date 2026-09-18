@@ -1,0 +1,292 @@
+stage: 15
+name: Bring in the chapter's records and create the mentor accounts
+version: "0.1"
+updated: "09-18-26 17:30"
+why: >-
+  A chapter arrives with clients, companies, partners, funders and mentors it
+  already knows about. This stage moves those records into the CRM without
+  duplicates, then gives every mentor an account created from their mentor record.
+  A chapter starting from nothing skips the load but still enters its mentors.
+who: >-
+  The chapter provides and checks the records; the central support organization
+  does the load. The chapter's mentor administrator creates the mentor accounts.
+time: >-
+  Not known yet. It depends on how many records the chapter has and how clean they
+  are. No chapter's records have ever been loaded.
+before_you_start:
+  - The CRM system (stage 9)
+  - Backups switched on and restored once (stage 12)
+  - The staff accounts, including the mentor administrator's (stage 14)
+unlocks: >-
+  Staff can be trained (stage 16), and the final checks can run against the
+  chapter's real records (stage 17).
+steps:
+  - id: "15.1"
+    name: Decide whether there are records to bring in
+    why: A record source nobody mentions before go-live turns up later as missing history.
+    who: chapter decides; the central support organization records it
+    first: ["9.20"]
+    needs: []
+    produces: [record_sources]
+    mode: offline
+    actions:
+      - do: Ask every member of staff where they keep records today, not only the setup contact. Spreadsheets, another CRM, an email list and a mentoring platform all count.
+      - do: Write down each source, what kind of records it holds, and roughly how many.
+        see: A written list of sources, or a written note that there are none.
+    done_when: >-
+      Either the sources are listed, or a note records that the chapter starts with
+      nothing. A chapter starting with nothing skips the load (steps 15.2 to 15.7)
+      but not the mentor steps after it (steps 15.8 to 15.10).
+    check:
+      how: A written list of sources, or a written note that there are none.
+      probe: none
+    goes_wrong: >-
+      A source nobody mentions until after go-live.
+    later: unchanged
+    status: not-yet-tried
+    source: 10-Methods-Website-Pages-Records.md#15.1
+
+  - id: "15.2"
+    name: Export the existing records
+    why: The load works from files, and the row counts are how the load is later proved complete.
+    who: chapter
+    first: ["15.1"]
+    needs: [record_sources]
+    produces: [export_files]
+    mode: offline
+    actions:
+      - do: Export each source to a spreadsheet file, one file per kind of record.
+      - do: Count the rows in each file and write the count beside the file name.
+      - do: Compare each count with what the old system says it holds.
+        see: The same numbers.
+      - do: Keep the files where only the people doing the load can reach them. They hold personal details.
+    done_when: >-
+      Every source has been exported to a file, and the number of records in each
+      file is written down.
+    check:
+      how: One file per source per kind of record, each with its row count written down.
+      probe: The app counts the rows in each uploaded file.
+    goes_wrong: >-
+      An export that silently drops columns or rows.
+    later: unchanged
+    status: not-yet-tried
+    source: 10-Methods-Website-Pages-Records.md#15.2
+
+  - id: "15.3"
+    name: Map the old fields to the CRM's fields
+    why: Every old column has to land in the right CRM field, or be left out on purpose, so nothing is lost by accident.
+    who: central, with someone from the chapter who knows the old records
+    first: ["15.2"]
+    needs: [export_files]
+    produces: [field_mapping]
+    mode: guided
+    actions:
+      - do: List every column of every file in one table.
+      - do: Beside each column, write the CRM record and field it goes to, or "not brought across" and why. The data model (data-model.md) names the records and their links.
+      - do: For each column feeding a choice list, list the old values and the CRM value each becomes. A company's type is Client, Sponsor, Partner or Other. Funders are "Sponsor", never "Donor".
+      - do: For mentors, map their chapter email address, not their personal one. Their account is built on it in step 15.9.
+        see: No column without a line in the table.
+    done_when: >-
+      Every column in every export file is either mapped to a CRM field or marked
+      as not being brought across, with a reason.
+    check:
+      how: No column in any file is left without a line in the table.
+      probe: The app compares the files' columns with the mapping and lists any unmapped column.
+    goes_wrong: >-
+      A choice-list value mapped by guesswork. It is refused at load time, or the
+      software drops it to save the rest of the record and stores nothing. Also,
+      phone numbers with fewer than ten or more than fifteen digits are dropped.
+    later: unchanged
+    status: not-yet-tried
+    source: 10-Methods-Website-Pages-Records.md#15.3
+
+  - id: "15.4"
+    name: Do a trial load on a copy
+    why: A trial on a copy of the chapter's own CRM proves what the real load will do, without touching the live system.
+    who: central
+    first: ["15.3", "15.5"]
+    needs: [field_mapping, export_files, digitalocean_token]
+    produces: []
+    mode: guided
+    actions:
+      - do: Create a new server from the CRM server's latest backup, as in the restore test (step 12.3). This also completes the CRM server half of that test.
+      - do: Load the records into the new server, in link order. A company first, then its contacts, then its client profile, then its engagements. A mentor is a contact plus a mentor profile.
+      - do: There is no loading tool yet (work list item 12). Use the CRM's own import screen one kind of record at a time, or a script written for this chapter that uses the intake forms' find-or-create rules. The script is better when there are engagements to load.
+      - do: Compare the counts in the copy with the counts from step 15.2, and open a handful of records.
+        see: The same counts, with any difference explained, and records that look right.
+      - do: Delete the new server the same day, and write down when.
+    done_when: >-
+      The load has been run somewhere that is not the live system, and the result
+      has been looked at.
+    check:
+      how: The counts in the copy match the export, with any difference explained.
+      probe: The app counts each kind of record in the copy and compares with the export.
+    goes_wrong: >-
+      The trial copy holds real personal details. Never run the trial on the shared
+      training system, which holds Cleveland's records, or on the trial chapter.
+    later: A loading tool, built once, that reads the mapping table from step 15.3.
+    status: not-yet-tried — no loading tool exists.
+    source: 10-Methods-Website-Pages-Records.md#15.4
+
+  - id: "15.5"
+    name: Resolve duplicates
+    why: Two records for one person or company split their history, and a mentor assigned to the wrong duplicate cannot see their client.
+    who: central proposes the rule; the chapter approves it
+    first: ["15.2"]
+    needs: [export_files]
+    produces: [duplicate_rule]
+    mode: guided
+    actions:
+      - do: Use the rule the intake forms already use. A person is the same person when the email address matches. A company is the same company when the name matches. A company has at most one client profile.
+      - do: Where two rows match, keep one record. Fill its empty fields from the other row, and never overwrite a field that already holds a value.
+      - do: Write the rule down and have the chapter approve it.
+        see: No two contacts share an email address, and no two companies share a name, unless the chapter decided they are different.
+    done_when: >-
+      The rule for deciding what counts as the same person or company is written
+      down and has been applied.
+    check:
+      how: No two contacts share an email address and no two companies share a name, unless the chapter decided otherwise.
+      probe: The app lists contacts sharing an email address and companies sharing a name.
+    goes_wrong: >-
+      Two records for one mentor. An engagement assigned to the wrong one is
+      invisible to the mentor. The CRM's own duplicate checking has never been
+      examined (work list item 3).
+    later: The CRM's own duplicate checking does part of this at load time, once its settings are decided.
+    status: not-yet-tried
+    source: 10-Methods-Website-Pages-Records.md#15.5
+
+  - id: "15.6"
+    name: Do the real load
+    why: This puts the chapter's history into its live CRM, exactly as the trial proved it.
+    who: central
+    first: ["15.4", "15.5"]
+    needs: [field_mapping, export_files, ESPO_API_KEY, duplicate_rule]
+    produces: []
+    mode: automated
+    actions:
+      - do: Run exactly the load that ran on the trial copy, into the chapter's live CRM.
+      - do: Compare the counts with the export.
+        see: The same counts, with any difference explained in writing.
+      - do: After the mentor accounts exist (step 15.9), run scripts/audit_assignment_stamps.py with its repair option, so mentors can see their loaded clients. The nightly repair check also does this.
+    done_when: >-
+      The records are in the live CRM and the counts match what was exported, with
+      any difference explained.
+    check:
+      how: The counts in the CRM match the export, with any difference explained in writing.
+      probe: The app counts each kind of record in the CRM and compares with the export.
+    goes_wrong: >-
+      A list read with a page size over 200. The CRM refuses it rather than
+      returning fewer rows, and inside a step that tolerates errors the refusal
+      reads as "no records". A loading script must read in pages of 200 or fewer.
+    later: The loading tool runs the repair itself.
+    status: not-yet-tried
+    source: 10-Methods-Website-Pages-Records.md#15.6
+
+  - id: "15.7"
+    name: Check a sample
+    why: Counts can match while details are wrong, so someone who knows the old records looks at real examples.
+    who: chapter — someone who knows the old records
+    first: ["15.6"]
+    needs: []
+    produces: []
+    mode: guided
+    actions:
+      - do: Pick at least ten records of each kind, including the oldest, the newest, a few with unusual details and the rows that caused trouble in the trial.
+      - do: Open each in the CRM and compare it with the old record.
+      - do: Write down which records were checked, and anything wrong.
+        see: A written list, each record marked right or corrected.
+    done_when: >-
+      Somebody who knows the old records has opened a sample in the CRM and
+      confirmed they are right.
+    check:
+      how: A written list of checked records, each marked right or corrected.
+      probe: none
+    goes_wrong: >-
+      Checking only the records that were easy to load.
+    later: unchanged
+    status: not-yet-tried
+    source: 10-Methods-Website-Pages-Records.md#15.7
+
+  - id: "15.8"
+    name: Enter every mentor the load did not bring in
+    why: A mentor's account is created from their mentor record, so every mentor needs one before step 15.9.
+    who: chapter — the mentor administrator
+    first: ["14.2", "15.7"]
+    needs: []
+    produces: []
+    mode: guided
+    actions:
+      - do: Search Mentor Administration by surname before entering anyone, to avoid a second record for a mentor the load already brought in.
+      - do: For a large group, have each mentor fill in the public volunteer form, which creates both the contact and the mentor record and records their agreement to the code of ethics.
+      - do: For a few, enter each one in Mentor Administration.
+        see: Every current mentor in the Mentor Administration list, each with a linked contact.
+    done_when: >-
+      Every current mentor has a mentor record in the CRM, with a linked contact.
+      For a chapter starting with nothing, this is every mentor.
+    check:
+      how: The Mentor Administration list holds every current mentor, each with a linked contact.
+      probe: The app lists mentor records without a linked contact.
+    goes_wrong: >-
+      The same mentor entered twice, once by the load and once by hand.
+      Assignments then go to the wrong one, and the mentor sees no clients.
+    later: unchanged
+    status: not-yet-tried
+    source: 5-Methods-Form-Accounts-Checks.md#15.8
+
+  - id: "15.9"
+    name: Create the mentor accounts
+    why: Creating a mentor's account from their record links the two and sends the sign-in details, and an account made by hand turns into a duplicate.
+    who: chapter — the mentor administrator, with the central support organization present for the first few
+    first: ["15.8"]
+    needs: [mentor_email_domain]
+    produces: []
+    mode: guided
+    actions:
+      - do: Never create a mentor's account by hand.
+      - do: Open the mentor in Mentor Administration and set their status to Active.
+        see: The software creating the mentor's mailbox if Google is on, creating their CRM account on the Mentor Team, linking it to the record, and emailing the mentor their sign-in details.
+    done_when: >-
+      Every current mentor has an account, created from their mentor record in
+      Mentor Administration, and none was created by hand.
+    check:
+      how: Each mentor shows as complete in the Mentor Administration list.
+      probe: The app lists mentors marked Active without a linked account.
+    goes_wrong: >-
+      An account created by hand before the mentor record has its chapter email
+      address. The software then creates a second account with a number added to
+      the address, and sends a second welcome email.
+    later: unchanged — Mentor Administration is the method.
+    status: not-yet-tried
+    source: 5-Methods-Form-Accounts-Checks.md#15.9
+
+  - id: "15.10"
+    name: Confirm every mentor has signed in
+    why: An account nobody has signed in to is a mentor who has not started, or a welcome email lost in spam.
+    who: chapter — the mentor administrator chases; the central support organization checks
+    first: ["15.9"]
+    needs: []
+    produces: []
+    mode: automated
+    actions:
+      - do: On the CRM's user administration screen, read the last sign-in date for each mentor's account.
+        see: A date for every mentor.
+      - do: Chase anyone with a blank date. Ask them to check their spam folder first.
+    done_when: >-
+      Each mentor has signed in at least once and set their own password.
+    check:
+      how: No mentor's account has a blank last sign-in date.
+      probe: The app lists mentor accounts that have never signed in.
+    goes_wrong: >-
+      The welcome email lands in spam, because the chapter's sending address is new.
+    later: The fleet console shows the list.
+    status: not-yet-tried
+    source: 5-Methods-Form-Accounts-Checks.md#15.10
+
+changes:
+  - version: "0.1"
+    date: "09-18-26 17:30"
+    change: >-
+      First version as data, converted from the methods for loading records
+      (10-Methods-Website-Pages-Records.md, version 0.2) and for the mentor steps
+      (5-Methods-Form-Accounts-Checks.md, version 0.4) with the step list's
+      finishing tests.
