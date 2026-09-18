@@ -2,10 +2,10 @@
 
 **Document:** The written-out steps for one stage — setting up backups and
 monitoring (stage 12)
-**Version:** 0.1
+**Version:** 0.2
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 01:15
+**Last Updated:** 09-18-26 01:35
 
 ---
 
@@ -23,9 +23,11 @@ own practice falls short, the step says so.
 
 Each step carries the same eight headings as the other methods documents.
 
-**What writing this stage found** is set out at the end. The short version:
-**nobody has ever restored a backup of any system in this project, Cleveland's
-included**, and the trial chapter's application database was created on a tier that
+**What writing this stage found** is set out at the end. The short version: until
+09-18-26 nobody had ever restored a backup of any system in this project,
+Cleveland's included. The application database has now been restored once, on
+Cleveland's production system, and it worked. The CRM server has still never been
+restored. And the trial chapter's application database was created on a tier that
 takes no backups at all.
 
 ---
@@ -33,7 +35,8 @@ takes no backups at all.
 # Stage 12 — Set up backups and monitoring
 
 **Stage status: not yet tried on any chapter.** Steps 12.1, 12.2 and 12.4 are done
-for real on Cleveland's production system. Step 12.3 has never been done anywhere.
+for real on Cleveland's production system. Step 12.3 is done for real for the
+application database only, on Cleveland's production system on 09-18-26.
 
 ---
 
@@ -129,11 +132,17 @@ When it starts, open the new server's own address in a browser and sign in as th
 central support organization's administrator. Check that a recent record is there.
 Then delete the new server.
 
-For the application database: in the database's Backups tab, restore the latest
-backup. The hosting provider always restores into a new database, never over the
-existing one. Connect to the new database and count the rows in the submissions
-table. The count should match the live database as of the backup time. Then delete
-the new database.
+For the application database: restore it into a new database with the hosting
+provider's command-line tool (`doctl databases fork`), naming the live database as
+the source. The hosting provider always restores into a new database, never over the
+existing one. Allow your own computer through the new database's firewall, connect
+to it, and count the rows in every table. Every table should be there and hold data,
+and the newest submission should be recent. Then delete the new database.
+
+The restored copy holds the chapter's real records, including personal details. Do
+it from a computer the central support organization controls, print counts and
+dates only, and delete the copy the same hour. Never print the new database's
+address: the hosting provider's address for it carries the administrator password.
 
 Write down the date, how long each restore took, and what was checked.
 
@@ -143,16 +152,34 @@ and reports the result.
 **How you know it worked:** both copies started and held the expected records, and
 the record of the test is written down.
 
-**What goes wrong:** unknown, because this has never been done. It has not been done
-for Cleveland either. Cleveland's deployment runbook describes a database restore
-but records no test of one.
+**What goes wrong:** for the application database, three things were learned on
+09-18-26.
 
-What is known: a database restore produces a new database address, and using it for
+The first: a restore with no date given does not use the last daily backup. It
+rebuilds the database to the latest moment it can. The test copy held a submission
+received eight hours after the last daily backup. That is better, not worse, but
+it means "restore the latest backup" and "restore to now" are the same command.
+
+The second: the hosting provider's output after the restore includes the new
+database's address with its password. A script that shows that output to the screen
+leaks the password. The test did exactly that. The password was for the copy only,
+and stopped working when the copy was deleted.
+
+The third: the new database copies the live database's firewall, which admits only
+the application. You have to add your own computer before you can connect.
+
+For the CRM server, nothing is known, because it has never been restored.
+
+What is known about using a restore for real: a database restore produces a new database address, and using it for
 real means changing the application's settings and redeploying. The software is
 built to survive that. Deliveries resume where they stopped rather than repeating,
 and a submission replayed twice is recognised the second time.
 
-**Status:** not yet tried anywhere.
+**Status:** done for real for the application database, on Cleveland's production
+system on 09-18-26. How long the restore took was not timed. The copy held all 20 tables,
+179 submissions and 1,690 email threads, and its newest submission was from
+09-17-26 17:06 UTC, eight hours after the last daily backup. The copy was deleted
+the same hour. The CRM server restore is not yet tried anywhere.
 
 ---
 
@@ -239,11 +266,11 @@ chapter whose backups nobody has checked lately.
 
 ## What writing this stage found
 
-**1. Nobody has ever restored a backup.** Not on Cleveland's production CRM, not on
-its production database, not anywhere. The backups run every day and have never
-been checked. This is Cleveland's risk today, not only a future chapter's. The
-cheapest test is on Cleveland itself: restoring the database into a new copy costs
-a few cents for an hour and never touches the live system.
+**1. Nobody had ever restored a backup.** The backups ran every day and had never
+been checked, on Cleveland or anywhere else. On 09-18-26 Cleveland's production
+application database was restored into a new copy, checked and deleted, and it
+worked (step 12.3). The CRM server has still never been restored. That is the
+larger risk, because the CRM holds the records themselves.
 
 **2. The trial chapter's database takes no backups.** The settings generator used in
 August (`scripts/rehearsal/render_spec.py`) asks for a development database. Step
@@ -260,4 +287,5 @@ account.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.2 | 09-18-26 01:35 | Step 12.3 is now done for real for the application database. Cleveland's production database was restored into a new copy, checked and deleted on 09-18-26. The method was rewritten from what happened, with three things learned: a restore with no date rebuilds to the latest moment rather than the last daily backup; the hosting provider's output carries the copy's password; and the copy inherits a firewall that must be opened. The CRM server restore is still untried. |
 | 0.1 | 09-18-26 01:15 | First draft of the methods for setting up backups and monitoring. Written from Cleveland's production hosting account, read directly on 09-18-26: daily CRM server backups kept seven days, a managed application database with daily backups kept seven days, an uptime check with an alert on the application, and processor, memory and disk alerts on the databases. Three findings: no backup has ever been restored, the trial chapter's database takes no backups, and nothing watches the CRM directly. |
