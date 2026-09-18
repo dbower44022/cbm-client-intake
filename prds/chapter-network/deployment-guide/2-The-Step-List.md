@@ -1,10 +1,10 @@
 # New Chapter Deployment Guide — The Step List
 
 **Document:** The bare list of steps, with no methods yet
-**Version:** 0.9
+**Version:** 0.10
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 13:45
+**Last Updated:** 09-18-26 13:50
 
 ---
 
@@ -716,8 +716,9 @@ stage are gone or disabled, and it is written down what was removed.
 ## Stage 18 — Hand over and start normal support
 
 **18.1 Publish how to get help.**
-Done when: the chapter has in writing how to raise a request, what counts as urgent,
-and that no response time is committed (ruled 09-18-26).
+Done when: the chapter has in writing how to raise a request, that no request is
+treated as urgent, that everyday requests are handled as they arrive, and that no
+response time is committed (ruled 09-18-26).
 
 **18.2 Explain how to ask for a change.**
 Done when: the chapter knows where to send a request that would change the software
@@ -752,6 +753,7 @@ Done when: a date is booked to review how the first months have gone.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.10 | 09-18-26 13:50 | Step 18.1: nothing is treated as urgent, and everyday requests are handled as they arrive rather than waiting for the committee (Doug, 09-18-26). |
 | 0.9 | 09-18-26 13:45 | Steps 18.1 and 18.2 updated from Doug's rulings on 09-18-26: requests go into the ClickUp system, the central committee reviews and schedules features and defects every two weeks, and there is no committed response time. |
 | 0.8 | 09-18-26 02:05 | Corrections found while writing the methods for the remaining stages. Step 4.11: mentors' mailboxes come from their records, not by hand. Step 5.5: the video meeting account also needs the app the software schedules webinars through. Step 6.3: tests a redirect, not an embedded page, since the events programme is reached by a redirect (ruled 09-11-26). Step 8.7: a chapter running webinars has an eighth secret. Stage 13: step 13.2 renamed for the redirect, step 13.3 applies only to an embedded page, step 13.5 renamed, and steps 13.1 and 13.4 marked blocked until the public mentor directory page is built. No steps added or removed. |
 | 0.7 | 09-18-26 01:55 | Steps 16.1 and 16.6 rewritten after Doug ruled on 09-18-26 that chapter staff train with shared training accounts set up specifically for chapter training. The shared training system restores its user accounts every night, so per-person accounts could not be created or removed without re-capturing its fixed copy. Step 16.6 renamed "Change the training account passwords". |

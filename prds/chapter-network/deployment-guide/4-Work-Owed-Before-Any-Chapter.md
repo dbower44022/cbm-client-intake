@@ -2,10 +2,10 @@
 
 **Document:** Things the central support organization has to build, decide or write
 before the New Chapter Deployment Guide can actually be followed
-**Version:** 0.7
+**Version:** 0.8
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 13:45
+**Last Updated:** 09-18-26 13:50
 
 ---
 
@@ -173,13 +173,15 @@ it.
 **Also ruled (Doug, 09-18-26).** The central committee meets every two weeks to
 review and schedule features and defects. There is no committed response time.
 
-**What is still missing.** Two small things. What, if anything, counts as urgent,
-and what happens to an urgent request between committee meetings. And how a
-chapter's people get access to the ClickUp system to raise and follow their
-requests.
+**And (Doug, 09-18-26):** nothing is treated as urgent. Everyday requests — adding
+a person, changing someone's team, resetting a password — are handled by the support
+team as they arrive, not held for the committee.
 
-**What it blocks.** Only the "what counts as urgent" line of step 18.1. Step 18.2 is
-fully answered.
+**What is still missing.** One small thing: how a chapter's people get access to the
+ClickUp system to raise and follow their requests.
+
+**What it blocks.** Nothing in the writing: steps 18.1 and 18.2 are fully answered.
+The ClickUp access has to exist before the first chapter's handover.
 
 **Size.** Decisions first, then a small amount of setup. This is the item the rule
 that every chapter runs the same software depends on: a slow route is how chapters
@@ -271,6 +273,7 @@ own the default, and it is not ruled.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.8 | 09-18-26 13:50 | Item 8: nothing is urgent, and everyday requests are handled as they arrive (Doug, 09-18-26). Only chapter access to the ClickUp system remains. |
 | 0.7 | 09-18-26 13:45 | Item 8 narrowed: the central committee reviews and schedules features and defects every two weeks, and there is no committed response time (Doug, 09-18-26). What remains is what counts as urgent, and chapter access to the ClickUp system. |
 | 0.6 | 09-18-26 13:40 | Items 7 and 8 updated from Doug's answers on 09-18-26: a draft of the standard agreement exists and is in review; feature requests, defect reports and support requests go into one ClickUp system managed by the entire support team. Each item now lists only what is still missing. |
 | 0.5 | 09-18-26 02:05 | Eight items added (7 to 14), found while writing the methods for the remaining stages: a standard agreement, a support route and change-request forum, a leaving kit, the public mentor directory page, chapter colours on the public events page, a way to load existing records, a plain list of personal information collected, and steps for the provided Google Workspace branch. |
