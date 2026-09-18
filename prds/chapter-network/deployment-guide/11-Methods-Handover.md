@@ -2,10 +2,10 @@
 
 **Document:** The written-out steps for one stage — handing over and starting normal
 support (stage 18)
-**Version:** 0.2
+**Version:** 0.3
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 13:40
+**Last Updated:** 09-18-26 13:45
 
 ---
 
@@ -17,9 +17,9 @@ proves the chapter can reach everything it owns without help.
 It is written from the network's settled rulings (`DECISIONS.md`), the governance
 and leaving design (`governance-and-exit.md`), and the release train
 (`phase-2-release-train.md`). Some of what this stage hands over does not exist yet:
-no promised response time, no one named to decide feature requests, no emergency
-access procedure and no leaving kit. Requests themselves have a home: the ClickUp
-system the support team manages (09-18-26). Each step says plainly what is missing
+no definition of urgent, no emergency access procedure and no leaving kit. Requests
+have a home in the ClickUp system the support team manages, and the central
+committee reviews them every two weeks (09-18-26). Each step says plainly what is missing
 rather than describing a process that is not there.
 
 Each step carries the same eight headings as the other methods documents.
@@ -43,8 +43,8 @@ chapter, and four of its seven steps depend on things not yet built or decided.
 
 ### 18.1 Publish how to get help
 
-**Done when:** the chapter has in writing how to contact the central support
-organization, what counts as urgent, and how quickly to expect an answer.
+**Done when:** the chapter has in writing how to raise a request, what counts as
+urgent, and that no response time is committed (ruled 09-18-26).
 
 **Who:** central support organization.
 
@@ -57,9 +57,10 @@ uses for new feature requests, defect reports and support requests (Doug,
 person. Give the chapter's first point of contact access to it, and show them how to
 raise each of the three kinds and how to follow one to its answer.
 
-Two things the chapter needs to be told are not decided yet: what counts as urgent,
-and how quickly an answer comes (work list item 8). Until they are, give the promise
-the agreement makes. Separate the kinds of request from the start:
+Tell the chapter plainly that there is no committed response time (ruled 09-18-26).
+Feature requests and defects are reviewed and scheduled by the central committee,
+which meets every two weeks. What counts as urgent is not yet decided (work list
+item 8). Separate the kinds of request from the start:
 
 - **Everyday requests**: add a person, change someone's team, reset a password.
   These need an administrator and must be answered quickly. Several are already
@@ -72,22 +73,25 @@ the agreement makes. Separate the kinds of request from the start:
 
 **How it will be done later:** unchanged. The ClickUp system is the method.
 
-**How you know it worked:** the chapter's first point of contact sends a test
-request and gets an answer within the time promised.
+**How you know it worked:** the chapter's first point of contact raises a test
+request in the ClickUp system and sees it acknowledged.
 
-**What goes wrong:** everyday requests queued behind change requests. A new
-volunteer who waits a week for an account is how a chapter starts asking for an
-administrator account of its own.
+**What goes wrong:** everyday requests queued behind feature requests and defects. A
+new volunteer who waits for the next committee meeting to get an account is how a
+chapter starts asking for an administrator account of its own. With no committed
+response time, everyday requests need to be handled by the support team as they
+arrive, not held for the committee.
 
-**Status:** not yet tried. The ClickUp system is chosen. What counts as urgent and
-the promised response time are not yet decided.
+**Status:** not yet tried. The ClickUp system is chosen and there is no committed
+response time. What counts as urgent is not yet decided.
 
 ---
 
 ### 18.2 Explain how to ask for a change
 
 **Done when:** the chapter knows where to send a request that would change the
-software for everyone, who decides, and how often those decisions are made.
+software for everyone, who decides, and how often those decisions are made. The
+central committee decides, every two weeks (ruled 09-18-26).
 
 **Who:** central support organization.
 
@@ -98,12 +102,12 @@ A requested change is made for every chapter, or it is not made. There is no thi
 answer. Then show the chapter how to raise a new feature request in the ClickUp
 system (step 18.1), where the support team manages it.
 
-Who decides a feature request, and how often, is not decided yet (work list item
-8). `DECISIONS.md` proposal 3 suggests a forum of the funding member chapters
-meeting monthly. Until that is ruled, tell the chapter the support team reviews
-each request, and that the answer will be "for every chapter" or "no".
+The central committee reviews and schedules feature requests and defects every two
+weeks (ruled 09-18-26). Tell the chapter that, and that a feature request is
+answered "for every chapter" or "no". A request accepted is scheduled into a weekly
+release (step 18.3).
 
-**How it will be done later:** unchanged once the decision rule is set.
+**How it will be done later:** unchanged.
 
 **How you know it worked:** the chapter can say, without looking it up, that a change
 is for everyone or not at all.
@@ -112,8 +116,7 @@ is for everyone or not at all.
 it becomes a change for everyone, or it does not happen. Granting one exception is
 how the rule ends.
 
-**Status:** not yet tried. Requests go into the ClickUp system. Who decides them, and
-how often, is not yet ruled.
+**Status:** not yet tried. The route and the decision rule are both settled.
 
 ---
 
@@ -290,9 +293,9 @@ go-live, and whether the account list from step 18.4 is still right.
 ## What writing this stage found
 
 **1. Four steps depend on things that do not exist.** Step 18.1 needs a promised
-response time and a definition of urgent. Step 18.2 needs someone named to decide
-feature requests. The place to raise both is settled: the ClickUp system (Doug,
-09-18-26). Step 18.5 needs the emergency access
+response time and a definition of urgent. Since ruled on 09-18-26: requests go into
+the ClickUp system, the central committee decides feature requests and defects every
+two weeks, and no response time is committed. What counts as urgent is still open. Step 18.5 needs the emergency access
 procedure (work list item 5). Step 18.6 needs a leaving kit, never produced or
 rehearsed. The first three are organizational decisions rather than builds. They
 should be added to the work list as items of their own.
@@ -308,5 +311,6 @@ forgotten, because the CRM looks like the whole system and is not.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.3 | 09-18-26 13:45 | Steps 18.1 and 18.2 updated: the central committee reviews and schedules features and defects every two weeks, and there is no committed response time (Doug, 09-18-26). Step 18.1 now warns that everyday requests must not wait for the committee. |
 | 0.2 | 09-18-26 13:40 | Steps 18.1 and 18.2 rewritten around the ClickUp system that takes new feature requests, defect reports and support requests, managed by the entire support team (Doug, 09-18-26). Defect reports added as a third kind of request. Still open: the response time, what counts as urgent, and who decides feature requests. |
 | 0.1 | 09-18-26 01:50 | First draft of the methods for handing over and starting normal support. Written from the network's rulings, the governance and leaving design, and the release train. Two findings: four steps depend on things that do not exist, and the leaving kit has no owner on the work list. |
