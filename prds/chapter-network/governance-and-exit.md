@@ -49,7 +49,9 @@ granted the admin concession ruling 6 depends on.
   streams), the durable submission store with its Gmail thread anchors and the
   whole response-status history, authored analytics metrics and pages, and
   `app_setting` overrides. **The exit kit must include a Postgres export.**
-- **Branch B is the hard exit.** A bring-your-own chapter owns its domain and
+- **~~Branch B is the hard exit.~~** Removed 2026-09-18: every chapter hosts its own
+  Google Workspace, so no chapter's mail sits in the network's tenant. Kept for the
+  record: **Branch B was the hard exit.** A bring-your-own chapter owns its domain and
   walks away intact. A chapter provisioned inside the network Workspace has mail,
   Drive documents (in a shared drive the services org owns, with the service
   account as operational member) and calendars in someone else's tenant.

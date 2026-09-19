@@ -91,9 +91,8 @@ together, and a chapter outside Eastern time is the trigger.
 
 ## D. Google Workspace
 
-Per ruling 3, chapters either bring their own Workspace or get a domain under
-the network's. The difference is an onboarding branch, not code — but every row
-below differs either way.
+Every chapter hosts its own email on its own Google Workspace (ruled 09-18-26,
+replacing ruling 3's two branches). Every row below is the chapter's own.
 
 | Key | Lands in | Supplied by | Notes |
 |---|---|---|---|
@@ -240,7 +239,6 @@ web:
   chapter_tokens_url:   # optional; colours only
 
 google:
-  branch:               # "own" (bring your own Workspace) | "network"
   primary_domain:       # e.g. cbmentors.org
   ops_mailbox:          # shared info@ — ONE deployment may poll it
   alert_email_from:     # must be a real licensed mailbox, never a group
@@ -300,6 +298,7 @@ the danger was never the number, it was that nobody could see them all at once.
 
 | Date | Change |
 |---|---|
+| 09-19-26 00:10 | The Google branch field removed from the form, and § D rewritten: every chapter hosts its own Google Workspace (Doug, 09-18-26). |
 | 09-18-26 17:45 | `mentor_email_domain` added to the form's Google section, and three switches added: `google_create_mailbox`, `gdrive_identity`, `zoom_events`. Found by the information check when the deployment guide was turned into data. |
 | 09-18-26 02:05 | The Zoom app's account and client identifiers added to the form, and its client secret added to the secrets list, for a chapter that runs public webinars. `ZOOM_HOST_EMAIL` defaults to Cleveland's host, so a chapter must set it. Found while writing the deployment guide's methods for the hosting and video meeting accounts. |
 | 09-18-26 00:58 | The blank form brought up to the trial chapter's filled-in copy. `APP_ENCRYPTION_KEY` added as the seventh secret (§ F and the form), and `GOOGLE_SERVICE_ACCOUNT_JSON` added to § F, where the form already had it. Five flags the trial chapter needed added to the form: `events_public_api`, `google_directory_check`, `record_quick_add`, `async_delivery`, `espo_dry_run`. Found while writing the deployment guide's methods for filling in the form. |

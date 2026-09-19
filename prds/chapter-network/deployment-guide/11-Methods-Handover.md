@@ -259,8 +259,8 @@ procedure must be rehearsed once before it can be relied on, and it has not been
 **How it will be done later:** the leaving kit is produced by a script, and rehearsed
 once on the shared training system.
 
-**How you know it worked:** the chapter can list the four parts, and knows which of
-them depend on its choice of Google Workspace branch.
+**How you know it worked:** the chapter can list the four parts. (Before 09-18-26 a
+chapter could have had a centrally provided Google Workspace; that option is gone.)
 
 **What goes wrong:** a chapter that chose a Google Workspace provided by the central
 support organization, finding out only now what leaving costs. That choice is

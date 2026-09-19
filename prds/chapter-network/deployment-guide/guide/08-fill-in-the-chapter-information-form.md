@@ -153,7 +153,7 @@ The chapter information form holds the roughly thirty-five values that differ fr
 
 **Finish first:**
 
-- step 4.1 Choose the Google Workspace branch
+- step 4.1 Confirm the chapter will hold its own Google Workspace
 - step 4.7 Create the shared operations mailbox
 - step 4.8 Create the alert sending mailbox
 - step 4.9 Decide who receives the system's warning messages
@@ -164,16 +164,15 @@ The chapter information form holds the roughly thirty-five values that differ fr
 
 **Do this:**
 
-1. Write the Google Workspace branch the chapter chose in step 4.1.
-2. Copy these from the Google Workspace admin console:
+1. Copy these from the Google Workspace admin console:
    - The main domain.
    - The shared operations mailbox.
    - The alert sending address.
    - The alert receiving address.
    - The members group.
-3. Copy the shared drive's identifier, the string of letters at the end of its web address.
-4. Write the mentor email domain, the domain mentors' addresses are created on.
-5. For a chapter that runs public webinars, copy the Zoom host address and the Zoom app's account and client identifiers from step 5.5. Otherwise write "no webinars".
+2. Copy the shared drive's identifier, the string of letters at the end of its web address.
+3. Write the mentor email domain, the domain mentors' addresses are created on.
+4. For a chapter that runs public webinars, copy the Zoom host address and the Zoom app's account and client identifiers from step 5.5. Otherwise write "no webinars".
 
 **Done when all of these are true:**
 

@@ -185,17 +185,16 @@ steps:
     actions:
       - do: Walk the chapter through the four parts of the leaving kit. The CRM, which is already on the chapter's own server. An export of the application's own database. The shared drive documents. A licence to the last version received.
       - do: Explain that some records live only in the application's database, such as partner and funder discussion notes and the history of every public form submission, so keeping the CRM is not keeping all the data.
-      - do: Explain which parts depend on the chapter's choice of Google Workspace branch.
+      - do: Explain that the chapter's mail, documents and calendars are already in its own Google Workspace, so they stay with it.
     done_when: >-
       The chapter has been shown exactly what it would receive if it left, and who
       produces each part.
     check:
-      how: The chapter can list the four parts, and knows which depend on its Google Workspace branch.
+      how: The chapter can list the four parts of the leaving kit.
       probe: none
     goes_wrong: >-
-      A chapter that chose a Google Workspace provided by the central support
-      organization finding out only now what leaving costs. Nobody has produced a
-      leaving kit yet (work list item 9).
+      Forgetting the application's own database. Keeping the CRM is not keeping all
+      the data.
     later: The leaving kit is produced by a script and rehearsed once on the shared training system.
     status: not-yet-tried — the leaving kit does not exist.
     source: 11-Methods-Handover.md#18.6

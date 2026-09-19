@@ -1,10 +1,10 @@
 # New Chapter Deployment Guide — How We Will Build It
 
 **Document:** The plan for writing the New Chapter Deployment Guide
-**Version:** 1.3
+**Version:** 1.4
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 17:50
+**Last Updated:** 09-19-26 00:10
 
 ---
 
@@ -165,11 +165,9 @@ is an open question — see section 10.
 account is created on the chapter's domain, the domain is verified, email starts
 flowing, the shared mailboxes and the members group are created, control of the
 domain registrar account moves from the founder's personal email to a chapter
-mailbox, and the nonprofit discount is applied for. This stage also holds one
-choice: the chapter brings its own Google Workspace, or the central support
-organization provides one on its behalf. The consequences of the second choice —
-specifically what happens if the chapter later leaves — are explained before the
-choice is made, not after.
+mailbox, and the nonprofit discount is applied for. Every chapter hosts its own
+email on its own Google Workspace; the central support organization does not
+provide one (ruled 09-18-26).
 
 **5. Open the hosting and video meeting accounts.** The chapter's own server
 hosting account, its hosting credits, a video meeting account if it runs public
@@ -457,6 +455,7 @@ visible.
 
 | Version | Date | Change |
 |---|---|---|
+| 1.4 | 09-19-26 00:10 | Stage 4: the choice of a centrally provided Google Workspace removed. Every chapter hosts its own (Doug, 09-18-26). |
 | 1.3 | 09-18-26 17:50 | The guide is now structured data with a generated readable guide, and the specification of a CRMBuilder onboarding app (Doug, 09-18-26). The information check is automated in the renderer. |
 | 1.2 | 09-18-26 14:30 | The chapter's vault added to the names we use: a chapter-owned Proton Pass organization with central support members (Doug, 09-18-26). |
 | 1.1 | 09-18-26 02:05 | Build order step 5 done: methods written for the last ten stages — setting up the legal organization through publishing the policy documents (documents 8 and 9), putting the chapter's pages on its website and loading existing records (document 10), and the handover (document 11). Every stage now has written methods. Next is step 6, taking the first real chapter through the guide. |

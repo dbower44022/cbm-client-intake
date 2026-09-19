@@ -22,7 +22,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Steps in this stage:**
 
-- 4.1 Choose the Google Workspace branch
+- 4.1 Confirm the chapter will hold its own Google Workspace
 - 4.2 Create the Google Workspace account
 - 4.3 Verify the domain
 - 4.4 Switch mail delivery to Google
@@ -39,9 +39,9 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 ---
 
-## 4.1 Choose the Google Workspace branch
+## 4.1 Confirm the chapter will hold its own Google Workspace
 
-**Why:** Whether the chapter holds its own Google Workspace decides how hard it would be to leave later.
+**Why:** Every chapter hosts its own email on its own Google Workspace, so the chapter has to take on that account and its cost before anything is set up.
 
 **Who:** chapter's board, advised by the central support organization
 
@@ -53,21 +53,20 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Do this:**
 
-1. Explain the two branches. In the first, the chapter holds its own Google Workspace and grants the software's machine account permission inside it. In the second, the central support organization provides the chapter a domain inside a Google Workspace it holds.
-2. Give the board in writing what the second branch means on leaving. The chapter's mail, documents and calendars would sit in an account the central support organization controls. They can be moved out, but it is real work.
-3. The board chooses and minutes the choice. It is proposed, not ruled, that every chapter that can should take the first branch. The rest of this stage is written for the first branch only.
+1. Tell the board what holding its own Google Workspace means:
+   - The account is in the chapter's own name, on the chapter's own domain.
+   - The chapter pays for it, with the nonprofit discount once it is granted (step 4.13).
+   - The chapter's mail, documents and calendars stay with the chapter if it ever leaves.
+   - The central support organization works inside it only by the chapter's grant.
+2. The board records that the chapter will hold its own Google Workspace.
 
-**Done when all of these are true:**
+**Done when:** The board has recorded that the chapter will hold its own Google Workspace, in its own name and on its own domain.
 
-- The chapter has chosen either to hold its own Google Workspace or to have one provided by the central support organization.
-- The choice is recorded.
-- The board has seen in writing what the provided option means if the chapter later leaves.
+**Note:** Ruled 09-18-26: every chapter hosts its own email on its own Google Workspace. The central support organization does not provide Google Workspace.
 
-**How to check:** The board minutes record the choice and the written explanation.
+**How to check:** The board minutes record it.
 
 **If it didn't work:** Stop, and ask the central support organization before going on.
-
-**What usually goes wrong:** Choosing the second branch for speed without reading the consequence. Nothing in the software differs between the branches, so nothing warns anyone later.
 
 ---
 
@@ -79,7 +78,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Finish first:**
 
-- step 4.1 Choose the Google Workspace branch
+- step 4.1 Confirm the chapter will hold its own Google Workspace
 - step 3.4 Register and pay for the domain names
 
 > This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.

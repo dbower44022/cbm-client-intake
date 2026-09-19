@@ -19,8 +19,8 @@ proves nothing; none was used.
 A runbook, executed by the services org inside accounts the chapter owns
 (ruling 5):
 
-1. **Accounts.** Chapter creates its DigitalOcean account and (branch A) its
-   Google Workspace; grants the services org admin access to both. Nonprofit
+1. **Accounts.** Chapter creates its DigitalOcean account and its Google
+   Workspace (every chapter holds its own — ruled 2026-09-18); grants the services org admin access to both. Nonprofit
    credits claimed in the chapter's own name.
 2. **CRM.** Provision the EspoCRM instance with the CRMBuilder desktop's deploy
    wizard (Dockerized on a droplet in the chapter's account; **tick *Extra SSH
@@ -43,9 +43,8 @@ A runbook, executed by the services org inside accounts the chapter owns
    domain-wide delegation grant **in their own console** with the exact scope
    list — a known recurring failure point, and the impersonation subject must be
    a real licensed mailbox, never a group or alias, which fails with an error
-   naming nothing useful ([[gmail-delegation-needs-licensed-mailbox]]). Branch B
-   (provisioned): a domain under the network Workspace, with the exit consequence
-   below stated **before** the branch is chosen.
+   naming nothing useful ([[gmail-delegation-needs-licensed-mailbox]]). There is no
+   branch B: every chapter holds its own Workspace (ruled 2026-09-18).
 4. **App.** Generate the spec from template + values, create web + worker +
    PRE_DEPLOY jobs, run migrations, deploy the current pinned tag. Rehearsed:
    `scripts/rehearsal/render_spec.py` is the whole of the generator, and

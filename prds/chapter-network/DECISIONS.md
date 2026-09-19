@@ -32,6 +32,9 @@ verbatim in substance.*
    branches ("bring your own Workspace and grant delegation to our service
    account" vs "we provision a domain under the network Workspace") differ in an
    onboarding runbook, not in code.
+   **Amended 2026-09-18 (Doug):** not mixed any more. Every chapter hosts its own
+   email on its own Google Workspace; the network does not provision one. The
+   second branch is gone.
 4. **Strictly identical function — core or nothing.** No per-chapter fields, enum
    values or form questions. A want becomes core for everyone, or it does not
    exist.
@@ -85,9 +88,10 @@ therefore not paperwork; it is the load-bearing half of ruling 4.
    2026-09-18:** the central committee meets every two weeks to review and schedule
    features and defects. There is no committed response time, published or
    otherwise.
-4. **Prefer branch A (bring your own Workspace)** for every chapter that can, and
+4. ~~**Prefer branch A (bring your own Workspace)** for every chapter that can, and
    treat branch B as a transitional state with a documented path to A — because
-   branch B is the only hard exit in the architecture.
+   branch B is the only hard exit in the architecture.~~ **RULED stronger,
+   2026-09-18:** branch A is mandatory. Every chapter hosts its own Google Workspace.
 5. **The fee is labour only**, chapters paying hosting and Workspace directly in
    their own accounts under their own nonprofit grants (ruling 5).
 6. **The exit rehearsal is a Phase 6 deliverable with a named owner**, not a
@@ -144,6 +148,7 @@ therefore not paperwork; it is the load-bearing half of ruling 4.
 | 2026-09-18 | **Each chapter keeps its credentials in a Proton Pass business organization it owns.** At least two chapter officers are owners; named people from the central support organization are members of a shared Operations vault. Named sign-ins with two-step verification wherever a system allows; the vault holds break-glass sign-ins, recovery codes and machine secrets. Chosen because it is the only arrangement that satisfies ruling 5 (the chapter owns its infrastructure) and the no-lock-out rule at once. Proton Pass has a command-line tool that can inject secrets into deployments, which the settings generator will use. | Deployment guide step 2.7 (new), steps 5.7, 8.8, 11.3, 18.4; work list item 1 |
 | 2026-09-18 | **Every chapter's DNS lives in a Cloudflare account the chapter owns, and CRMBuilder builds a chapter's CRM with the chapter's own DigitalOcean and Cloudflare tokens.** CRMBuilder supports DigitalOcean plus Cloudflare as its only provider pair (DEC-946, 2026-08-29), and its deployment wizard writes the CRM's address into Cloudflare itself. CRMBuilder's own default — its own tokens — is never used for a chapter, because under ruling 5 the chapter must own its server and DNS and be able to revoke access. The CRM and application addresses are always DNS only (grey cloud); the proxy blocks their certificates. | Deployment guide steps 3.7 and 5.8 (new), 3.6, 4.3, 4.4, 5.7, 9.2, 9.5, 11.10 |
 | 2026-09-18 | **The deployment guide becomes structured data, and the specification of a chapter onboarding app in CRMBuilder.** An app should interview the chapter for its information and decisions and automate what can be automated; it belongs in CRMBuilder beside its deployment wizard and the proposed fleet console. The guide's steps are held as YAML (`deployment-guide/steps/`), which renders the readable guide and serves as the app's specification. Only steps done once by hand are automated. | [deployment-guide/steps/README.md](deployment-guide/steps/README.md); `prompts/crmbuilder-chapter-onboarding-requirements-v0.1.md` |
+| 2026-09-18 | **Every chapter must host its own email on its own Google Workspace.** The central support organization does not provide Google Workspace to any chapter. Amends ruling 3 (no longer mixed) and settles proposal 4 more strongly than proposed. The hard exit it created is gone. | Ruling 3; proposal 4; deployment guide step 4.1; work list item 14 (closed); `chapter-values.md` § D; `governance-and-exit.md` |
 
 ---
 

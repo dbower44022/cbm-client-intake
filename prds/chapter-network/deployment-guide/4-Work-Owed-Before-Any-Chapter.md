@@ -2,10 +2,10 @@
 
 **Document:** Things the central support organization has to build, decide or write
 before the New Chapter Deployment Guide can actually be followed
-**Version:** 0.10
+**Version:** 0.11
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 14:30
+**Last Updated:** 09-19-26 00:10
 
 ---
 
@@ -297,7 +297,10 @@ the facts; they need rewriting for a lawyer.
 
 ---
 
-## 14. Steps for the provided Google Workspace branch
+## 14. ~~Steps for the provided Google Workspace branch~~ — closed 09-18-26
+
+**Closed.** Doug ruled on 09-18-26 that every chapter hosts its own email on its own
+Google Workspace. There is no provided branch, so there are no steps to write.
 
 **What is missing.** Stage 4 is written for a chapter that brings its own Google
 Workspace. The other branch, where the central support organization provides the
@@ -391,6 +394,7 @@ own records (finding F7 of the August build).
 
 | Version | Date | Change |
 |---|---|---|
+| 0.11 | 09-19-26 00:10 | Item 14 closed: every chapter hosts its own Google Workspace, so there is no provided branch (Doug, 09-18-26). |
 | 0.10 | 09-18-26 14:30 | Item 1 ruled: a chapter-owned Proton Pass business organization with central support members (Doug, 09-18-26). What remains is the central support organization's own vault and moving existing secrets off one laptop. |
 | 0.9 | 09-18-26 14:00 | Implementation put first (Doug, 09-18-26): a ranked list of the technical holes added at the top, and five technical items added — a versioned CRM standard and applier, a settings generator, the time zone written into the code, five missing event email templates, and CRM field labels that say "CBM". |
 | 0.8 | 09-18-26 13:50 | Item 8: nothing is urgent, and everyday requests are handled as they arrive (Doug, 09-18-26). Only chapter access to the ClickUp system remains. |

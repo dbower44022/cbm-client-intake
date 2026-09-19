@@ -1,10 +1,10 @@
 # New Chapter Deployment Guide — The Step List
 
 **Document:** The bare list of steps, with no methods yet
-**Version:** 0.14
+**Version:** 0.15
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-18-26 20:05
+**Last Updated:** 09-19-26 00:10
 
 ---
 
@@ -149,12 +149,11 @@ Note: CRMBuilder supports no other DNS provider.
 
 ## Stage 4 — Set up Google Workspace and the chapter's email
 
-**4.1 Choose the Google Workspace branch.**
-Done when:
+**4.1 Confirm the chapter will hold its own Google Workspace.**
+Done when: the board has recorded that the chapter will hold its own Google Workspace,
+in its own name and on its own domain.
 
-- The chapter has chosen either to hold its own Google Workspace or to have one provided by the central support organization.
-- The choice is recorded.
-- The board has seen in writing what the provided option means if the chapter later leaves.
+Note: Ruled 09-18-26: every chapter hosts its own email on its own Google Workspace. The central support organization does not provide Google Workspace.
 
 **4.2 Create the Google Workspace account.**
 Done when: the account exists on the chapter's email domain and the first
@@ -891,6 +890,7 @@ Done when: a date is booked to review how the first months have gone.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.15 | 09-19-26 00:10 | Step 4.1 no longer offers a Google Workspace provided by the central support organization. Every chapter hosts its own email on its own Google Workspace (Doug, 09-18-26); the step now confirms that. |
 | 0.14 | 09-18-26 20:05 | In fourteen finishing tests, the sentence that explains rather than tests moved out of the list of conditions into a separate Note line (steps 3.7, 5.8, 6.5, 8.7, 9.1, 9.7, 9.8, 11.3, 11.9, 14.1, 16.1, 16.6, 18.2, 18.5). No condition changed. |
 | 0.13 | 09-18-26 16:57 | Every finishing test that packed three or more conditions or items into one sentence is now a list, one condition per line (Doug's rule, 09-18-26: every list puts each item on its own line). Thirty-seven steps: 1.1, 1.4, 2.1, 2.5, 3.3, 3.7, 4.1, 4.14, 5.7, 5.8, 6.5, 7.4, 8.2 to 8.5, 8.7, 8.8, 9.1, 9.7, 9.8, 9.14, 9.15, 9.17, 11.3, 11.4, 11.9, 11.12, 14.1, 16.1, 16.6, 17.9 and 18.1 to 18.5. Words kept; only the connectives changed so each condition reads alone. The step data in `steps/` carries the same lists. |
 | 0.12 | 09-18-26 14:45 | Cloudflare added (Doug, 09-18-26). Step 3.7: the chapter's domain names move to a Cloudflare account the chapter owns, because CRMBuilder supports no other DNS provider. Step 5.8: the chapter's own DigitalOcean and Cloudflare tokens are given to CRMBuilder, which never builds a chapter with its own. One hundred and fifty-five steps. |

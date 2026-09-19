@@ -24,29 +24,31 @@ unlocks: >-
   accounts made here.
 steps:
   - id: "4.1"
-    name: Choose the Google Workspace branch
-    why: Whether the chapter holds its own Google Workspace decides how hard it would be to leave later.
+    name: Confirm the chapter will hold its own Google Workspace
+    why: Every chapter hosts its own email on its own Google Workspace, so the chapter has to take on that account and its cost before anything is set up.
     who: chapter's board, advised by the central support organization
     first: ["2.6"]
     needs: []
-    produces: [google_branch]
+    produces: []
     mode: offline
     actions:
-      - do: "Explain the two branches. In the first, the chapter holds its own Google Workspace and grants the software's machine account permission inside it. In the second, the central support organization provides the chapter a domain inside a Google Workspace it holds."
-      - do: Give the board in writing what the second branch means on leaving. The chapter's mail, documents and calendars would sit in an account the central support organization controls. They can be moved out, but it is real work.
-      - do: The board chooses and minutes the choice. It is proposed, not ruled, that every chapter that can should take the first branch. The rest of this stage is written for the first branch only.
-    done_when:
-      - "The chapter has chosen either to hold its own Google Workspace or to have one provided by the central support organization."
-      - "The choice is recorded."
-      - "The board has seen in writing what the provided option means if the chapter later leaves."
+      - do: "Tell the board what holding its own Google Workspace means:"
+        items:
+          - The account is in the chapter's own name, on the chapter's own domain.
+          - The chapter pays for it, with the nonprofit discount once it is granted (step 4.13).
+          - The chapter's mail, documents and calendars stay with the chapter if it ever leaves.
+          - The central support organization works inside it only by the chapter's grant.
+      - do: The board records that the chapter will hold its own Google Workspace.
+    done_when: >-
+      The board has recorded that the chapter will hold its own Google Workspace,
+      in its own name and on its own domain.
+    note: "Ruled 09-18-26: every chapter hosts its own email on its own Google Workspace. The central support organization does not provide Google Workspace."
     check:
-      how: The board minutes record the choice and the written explanation.
-      probe: The app records the chosen branch.
-    goes_wrong: >-
-      Choosing the second branch for speed without reading the consequence. Nothing
-      in the software differs between the branches, so nothing warns anyone later.
+      how: The board minutes record it.
+      probe: none
+    goes_wrong: nothing known yet
     later: unchanged
-    status: not-yet-tried — the second branch has no written steps yet (work list item 14).
+    status: not-yet-tried
     source: 8-Methods-Organization-Domains-Google.md#4.1
 
   - id: "4.2"
@@ -54,7 +56,7 @@ steps:
     why: The chapter's mailboxes, calendars and shared documents all live in this account.
     who: chapter — the setup contact
     first: ["4.1", "3.4"]
-    needs: [primary_domain, founding_email, google_branch]
+    needs: [primary_domain, founding_email]
     produces: []
     mode: guided
     actions:

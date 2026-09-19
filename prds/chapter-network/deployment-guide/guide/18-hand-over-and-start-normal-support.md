@@ -234,15 +234,15 @@ This stage moves the chapter from being set up to being supported, and proves th
 
 1. Walk the chapter through the four parts of the leaving kit. The CRM, which is already on the chapter's own server. An export of the application's own database. The shared drive documents. A licence to the last version received.
 2. Explain that some records live only in the application's database, such as partner and funder discussion notes and the history of every public form submission, so keeping the CRM is not keeping all the data.
-3. Explain which parts depend on the chapter's choice of Google Workspace branch.
+3. Explain that the chapter's mail, documents and calendars are already in its own Google Workspace, so they stay with it.
 
 **Done when:** The chapter has been shown exactly what it would receive if it left, and who produces each part.
 
-**How to check:** The chapter can list the four parts, and knows which depend on its Google Workspace branch.
+**How to check:** The chapter can list the four parts of the leaving kit.
 
 **If it didn't work:** Stop, and ask the central support organization before going on.
 
-**What usually goes wrong:** A chapter that chose a Google Workspace provided by the central support organization finding out only now what leaving costs. Nobody has produced a leaving kit yet (work list item 9).
+**What usually goes wrong:** Forgetting the application's own database. Keeping the CRM is not keeping all the data.
 
 ---
 

@@ -126,11 +126,10 @@ steps:
     why: Mail, calendars, documents and mentor mailboxes all run through the chapter's Google Workspace, and each needs an exact address.
     who: chapter, checked by the central support organization
     first: ["4.1", "4.7", "4.8", "4.9", "4.10", "8.1"]
-    needs: [google_branch, primary_domain, mentor_email_domain, ops_mailbox, alert_email_from, alert_email_to, members_group, zoom_host_email, zoom_account_id, zoom_client_id]
+    needs: [primary_domain, mentor_email_domain, ops_mailbox, alert_email_from, alert_email_to, members_group, zoom_host_email, zoom_account_id, zoom_client_id]
     produces: []
     mode: guided
     actions:
-      - do: Write the Google Workspace branch the chapter chose in step 4.1.
       - do: "Copy these from the Google Workspace admin console:"
         items:
           - The main domain.

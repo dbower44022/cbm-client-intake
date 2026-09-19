@@ -702,6 +702,10 @@ own.
 
 ### 4.1 Choose the Google Workspace branch
 
+> **Superseded 09-18-26.** Every chapter hosts its own email on its own Google
+> Workspace; the central support organization does not provide one. The step is now
+> "Confirm the chapter will hold its own Google Workspace" — see `steps/stage-04.yaml`.
+
 **Done when:** the chapter has chosen either to hold its own Google Workspace or to
 have one provided by the central support organization, the choice is recorded, and
 the board has seen in writing what the provided option means if the chapter later
