@@ -1,7 +1,7 @@
 stage: 11
 name: Deploy the chapter's applications
-version: "0.2"
-updated: "09-19-26 00:07"
+version: "0.3"
+updated: "09-19-26 00:50"
 why: >-
   The applications are what the chapter's staff, mentors and the public actually
   use: the intake forms, the staff tools and the public events page. This stage
@@ -62,12 +62,12 @@ steps:
       - do: "In a terminal, in the folder ~/Dropbox/Projects/cbm-client-intake, type the line below and press Enter. CHAPTER-VALUES-FILE is the filled-in chapter information form saved as YAML (the trial chapter's is prds/chapter-network/rehearsal-2026-08-31/lakeside-values.yaml):"
         items:
           - "uv run python scripts/rehearsal/render_spec.py CHAPTER-VALUES-FILE ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG-app.yaml"
-        see: "A line reading: wrote ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG-app.yaml with 10 shared + N web-only env vars. If it reads secrets not yet minted, step 9.10 has not run."
-      - do: "Open CHAPTER-SLUG-app.yaml in a text editor and make three changes. The trial script was written for the rehearsal, and these three values are wrong for a real chapter:"
+        see: "A line reading: wrote ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG-app.yaml following branch release with 10 shared + N web-only env vars. If it reads secrets not yet minted, step 9.10 has not run."
+      - do: "Open CHAPTER-SLUG-app.yaml and check three things. The generator sets them itself; this is a check, not an edit:"
         items:
-          - "Delete the two lines for ENV_LABEL (key and value). Its value, Rehearsal, would show on every page's footer."
-          - "Change the value of ALLOWED_ORIGINS from http://localhost:8000 to https://APP-ADDRESS."
-          - "Change every branch: main to branch: release, in all three places (the web part, the worker and the migrate job)."
+          - "There is no ENV_LABEL line."
+          - "ALLOWED_ORIGINS is https://APP-ADDRESS, or absent if the application address is not known yet."
+          - "Every branch line reads branch: release (the web part, the worker and the migrate job)."
       - do: "Open CHAPTER-ENV-FILE and copy the value after APP_ENCRYPTION_KEY= into a new item in the chapter's Operations vault named Stored-data encryption key. This value must never change."
         see: The Stored-data encryption key item in the Operations vault.
       - do: Never commit CHAPTER-SLUG-app.yaml anywhere. It holds secrets in plain text. It is deleted in step 11.3.
@@ -586,6 +586,10 @@ steps:
     source: 3-Methods-CRM-Google-Applications.md#11.18
 
 changes:
+  - version: "0.3"
+    date: "09-19-26 00:50"
+    change: >-
+      The settings generator no longer writes the trial chapter's footer label, a localhost origin or the development branch, so the step that corrected them by hand is now a check. It refuses the development branch unless the form allows it.
   - version: "0.2"
     date: "09-19-26 00:07"
     change: >-

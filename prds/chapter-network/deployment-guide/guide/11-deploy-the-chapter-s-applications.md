@@ -1,7 +1,7 @@
 # Stage 11 — Deploy the chapter's applications
 
-**Version:** 0.2  
-**Last Updated:** 09-19-26 00:07  
+**Version:** 0.3  
+**Last Updated:** 09-19-26 00:50  
 **Generated from** `steps/stage-11.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -89,11 +89,11 @@ The applications are what the chapter's staff, mentors and the public actually u
    - ESPO_PROVISION_PASSWORD=
 2. In a terminal, in the folder ~/Dropbox/Projects/cbm-client-intake, type the line below and press Enter. CHAPTER-VALUES-FILE is the filled-in chapter information form saved as YAML (the trial chapter's is prds/chapter-network/rehearsal-2026-08-31/lakeside-values.yaml):
    - uv run python scripts/rehearsal/render_spec.py CHAPTER-VALUES-FILE ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG-app.yaml
-   *You should see:* A line reading: wrote ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG-app.yaml with 10 shared + N web-only env vars. If it reads secrets not yet minted, step 9.10 has not run.
-3. Open CHAPTER-SLUG-app.yaml in a text editor and make three changes. The trial script was written for the rehearsal, and these three values are wrong for a real chapter:
-   - Delete the two lines for ENV_LABEL (key and value). Its value, Rehearsal, would show on every page's footer.
-   - Change the value of ALLOWED_ORIGINS from http://localhost:8000 to https://APP-ADDRESS.
-   - Change every branch: main to branch: release, in all three places (the web part, the worker and the migrate job).
+   *You should see:* A line reading: wrote ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG-app.yaml following branch release with 10 shared + N web-only env vars. If it reads secrets not yet minted, step 9.10 has not run.
+3. Open CHAPTER-SLUG-app.yaml and check three things. The generator sets them itself; this is a check, not an edit:
+   - There is no ENV_LABEL line.
+   - ALLOWED_ORIGINS is https://APP-ADDRESS, or absent if the application address is not known yet.
+   - Every branch line reads branch: release (the web part, the worker and the migrate job).
 4. Open CHAPTER-ENV-FILE and copy the value after APP_ENCRYPTION_KEY= into a new item in the chapter's Operations vault named Stored-data encryption key. This value must never change.
    *You should see:* The Stored-data encryption key item in the Operations vault.
 5. Never commit CHAPTER-SLUG-app.yaml anywhere. It holds secrets in plain text. It is deleted in step 11.3.
@@ -628,5 +628,6 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 | Version | Date | Change |
 |---|---|---|
+| 0.3 | 09-19-26 00:50 | The settings generator no longer writes the trial chapter's footer label, a localhost origin or the development branch, so the step that corrected them by hand is now a check. It refuses the development branch unless the form allows it. |
 | 0.2 | 09-19-26 00:07 | Every action made exact (Doug, 09-19-26: sweep every step): the settings generator's command line and the three values in its output that are wrong for a real chapter (the Rehearsal label, the localhost origin, and the main branch); doctl commands against the chapter's own account; the managed database conversion path; the release policy commands; the Cloudflare record; the health page's exact fields; and the settings each Google check switches on at /setup, including GOOGLE_DELEGATED_ADMIN, which no list had named. |
 | 0.1 | 09-18-26 17:20 | First version as data, converted from the methods for deploying the applications (3-Methods-CRM-Google-Applications.md, version 0.5) with the step list's finishing tests. Numbered actions, a reason per step, and a check an app can run were added. |

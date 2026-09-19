@@ -60,18 +60,36 @@ ROLE_DEFAULT = "CustomAppAPIRole"
 GRANT = {"create": "no", "read": "all", "edit": "no", "delete": "no", "stream": "no"}
 
 
-def _env() -> dict[str, str]:
-    """Environment first; ``.env`` fills gaps for a laptop run against crm-test.
-    Parsed as text, never sourced — a shell interprets password punctuation."""
-    env = dict(os.environ)
-    dotenv = REPO / ".env"
-    if dotenv.exists():
-        for raw in dotenv.read_text(encoding="utf-8").splitlines():
+TARGET_KEYS = ("ESPO_ADMIN_BASE", "ESPO_ADMIN_USER", "ESPO_ADMIN_PASS", "ESPO_API_KEY")
+
+
+def _read_dotenv(path: Path) -> dict[str, str]:
+    """Parsed as text, never sourced — a shell interprets password punctuation."""
+    out: dict[str, str] = {}
+    if path.exists():
+        for raw in path.read_text(encoding="utf-8").splitlines():
             line = raw.strip()
             if line and not line.startswith("#") and "=" in line:
                 k, v = line.split("=", 1)
-                env.setdefault(k.strip(), v.strip().strip('"').strip("'"))
-    return env
+                out[k.strip()] = v.strip().strip('"').strip("'")
+    return out
+
+
+def _env(environ: dict[str, str] | None = None, dotenv: Path | None = None) -> tuple[dict[str, str], str]:
+    """The CRM target and its credentials, all from ONE source.
+
+    If the environment names any of them, the environment supplies all of them
+    and ``.env`` is not read at all. Only a laptop run with nothing in the
+    environment falls back to ``.env`` (which points at crm-test). Mixing the two
+    — a chapter's address from the environment, Cleveland's key from ``.env`` —
+    is how a run would act on one CRM with another's credentials (fixed
+    2026-09-19). Returns (values, source)."""
+    environ = dict(os.environ if environ is None else environ)
+    if any(environ.get(k) for k in TARGET_KEYS):
+        return {k: environ.get(k, "") for k in TARGET_KEYS}, "the environment"
+    path = dotenv if dotenv is not None else REPO / ".env"
+    file_values = _read_dotenv(path)
+    return {k: file_values.get(k, "") for k in TARGET_KEYS}, f"{path.name} (nothing set in the environment)"
 
 
 class Builder:
@@ -252,7 +270,8 @@ async def main() -> int:
     plan = json.loads(PLAN_PATH.read_text(encoding="utf-8"))
     fp = fingerprint(plan, args.role)
 
-    env = _env()
+    env, source = _env()
+    print(f"CRM target and credentials from {source}", file=sys.stderr)
     base = (env.get("ESPO_ADMIN_BASE") or "").rstrip("/")
     user, password = env.get("ESPO_ADMIN_USER", ""), env.get("ESPO_ADMIN_PASS", "")
     if not (base and user and password):

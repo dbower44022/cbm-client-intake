@@ -19,6 +19,13 @@ contract: 0 conformant/applied, 1 drift (dry run found work), 2 apply failed,
 Credentials: ESPO_ADMIN_BASE / ESPO_ADMIN_USER / ESPO_ADMIN_PASS, read from the
 file named by --env (never sourced by a shell). Secrets this script MINTS (the
 API key, the provisioning password) are appended to that same file.
+
+The chapter's own values — its name, the CRM's display and sending names, its
+time zone, currency and language, and its short label — come from the chapter
+information form named by --values (chapter-values.md's blank form, filled in).
+Nothing chapter-specific is written into this script: it was Lakeside's until
+2026-09-19. The provisioning account is SLUG.provision unless the env file
+already names one.
 """
 from __future__ import annotations
 
@@ -41,10 +48,8 @@ from core.espo import EspoClient, EspoError, EspoTransportError  # noqa: E402
 HERE = Path(__file__).resolve().parent
 CAP = REPO / "prds" / "chapter-network" / "rehearsal-2026-08-31" / "crmtest-capture"
 
-CHAPTER_NAME = "Lakeside Business Mentors"
 API_USER = "customapps"
 API_ROLE = "CustomAppAPIRole"
-PROVISION_USER = "lakeside.provision"
 
 ROLE_PERMISSION_KEYS = [
     "assignmentPermission", "userPermission", "exportPermission",
@@ -53,20 +58,40 @@ ROLE_PERMISSION_KEYS = [
     "messagePermission", "auditPermission", "mentionPermission",
 ]
 
-# chapter-values.md § E, for the fictional chapter. timeZone stays Eastern
-# because the app's four timezone hardcodes are Eastern (§ C, not parameterized).
-SETTINGS = {
-    "applicationName": CHAPTER_NAME,
-    "outboundEmailFromName": CHAPTER_NAME,
-    "timeZone": "America/New_York",
-    "dateFormat": "MM/DD/YYYY",
-    "timeFormat": "HH:mm",
-    "weekStart": 0,
-    "defaultCurrency": "USD",
-    "baseCurrency": "USD",
-    "currencyList": ["USD"],
-    "language": "en_US",
-}
+def chapter_settings(values: dict) -> dict[str, Any]:
+    """chapter-values.md § E, from the chapter's own form. Formats and week start
+    are standard; everything that names or locates the chapter is the form's."""
+    chapter, crm = values.get("chapter") or {}, values.get("crm") or {}
+    name = chapter.get("name")
+    if not name:
+        raise ValueError("the chapter information form has no chapter.name")
+    currency = chapter.get("currency") or "USD"
+    settings: dict[str, Any] = {
+        "applicationName": crm.get("application_name") or name,
+        "outboundEmailFromName": crm.get("outbound_from_name") or name,
+        "timeZone": chapter.get("timezone") or "America/New_York",
+        "dateFormat": "MM/DD/YYYY",
+        "timeFormat": "HH:mm",
+        "weekStart": 0,
+        "defaultCurrency": currency,
+        "baseCurrency": currency,
+        "currencyList": [currency],
+        "language": chapter.get("locale") or "en_US",
+    }
+    if crm.get("outbound_from_address"):
+        settings["outboundEmailFromAddress"] = crm["outbound_from_address"]
+    return settings
+
+
+def provision_user(values: dict, env: dict[str, str]) -> str:
+    """The provisioning admin's user name: the one already minted into the env
+    file, else SLUG.provision from the form. Never another chapter's."""
+    if env.get("ESPO_PROVISION_USERNAME"):
+        return env["ESPO_PROVISION_USERNAME"]
+    slug = (values.get("chapter") or {}).get("slug")
+    if not slug:
+        raise ValueError("the chapter information form has no chapter.slug")
+    return f"{slug}.provision"
 
 
 def read_env(path: Path) -> dict[str, str]:
@@ -147,6 +172,15 @@ async def list_all(client: EspoClient, entity: str, select: str | None = None) -
 async def run(args: argparse.Namespace) -> int:
     env_path = Path(args.env)
     env = read_env(env_path)
+    import yaml  # the chapter information form
+    values = yaml.safe_load(Path(args.values).read_text(encoding="utf-8")) or {}
+    try:
+        settings_wanted = chapter_settings(values)
+        prov_user = provision_user(values, env)
+    except ValueError as exc:
+        print(f"{args.values}: {exc}", file=sys.stderr)
+        return 2
+    chapter_name = values["chapter"]["name"]
     base = env.get("ESPO_ADMIN_BASE", "").rstrip("/")
     user = env.get("ESPO_ADMIN_USER", "")
     password = env.get("ESPO_ADMIN_PASS", "")
@@ -359,27 +393,27 @@ async def run(args: argparse.Namespace) -> int:
             res.add("userRole", f"{API_USER} -> {API_ROLE}", "conformant", "attached")
 
     # ---- the provisioning admin service account -----------------------------
-    if PROVISION_USER in users:
-        res.add("user", PROVISION_USER, "conformant", "exists")
+    if prov_user in users:
+        res.add("user", prov_user, "conformant", "exists")
     elif apply:
         pw = alnum_password()
         try:
             await client.create("User", {
-                "userName": PROVISION_USER, "type": "admin", "isActive": True,
-                "firstName": "Lakeside", "lastName": "Provisioning", "password": pw,
+                "userName": prov_user, "type": "admin", "isActive": True,
+                "firstName": chapter_name, "lastName": "Provisioning", "password": pw,
                 "passwordConfirm": pw,
             })
-            append_env(env_path, "ESPO_PROVISION_USERNAME", PROVISION_USER)
+            append_env(env_path, "ESPO_PROVISION_USERNAME", prov_user)
             append_env(env_path, "ESPO_PROVISION_PASSWORD", pw)
-            res.add("user", PROVISION_USER, "applied", "created (type admin); password stored in env file")
+            res.add("user", prov_user, "applied", "created (type admin); password stored in env file")
         except EspoError as exc:
-            failed += 1; res.add("user", PROVISION_USER, "failed", str(exc))
+            failed += 1; res.add("user", prov_user, "failed", str(exc))
     else:
-        drift += 1; res.add("user", PROVISION_USER, "drifted", "would create")
+        drift += 1; res.add("user", prov_user, "drifted", "would create")
 
     # ---- instance settings (§ E) + tab list --------------------------------
     cap_settings = json.loads((CAP / "settings-tablist.json").read_text()) if (CAP / "settings-tablist.json").exists() else {}
-    want_settings = dict(SETTINGS)
+    want_settings = dict(settings_wanted)
     if cap_settings.get("tabList"):
         # drop crm-test's per-chapter url tab (the Cleveland docs link) — per chapter-values § B
         want_settings["tabList"] = [x for x in cap_settings["tabList"]
@@ -422,6 +456,7 @@ async def run(args: argparse.Namespace) -> int:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--env", required=True, help="env file with ESPO_ADMIN_*; minted secrets are appended here")
+    ap.add_argument("--values", required=True, help="the chapter information form (YAML) for this chapter")
     ap.add_argument("--apply", action="store_true")
     args = ap.parse_args()
     try:

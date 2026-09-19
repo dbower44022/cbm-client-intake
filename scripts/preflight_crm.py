@@ -408,6 +408,29 @@ def render(result: dict) -> None:
               "a missing entity. A … is the CRM being unreachable.")
 
 
+def resolve_target(url, key, settings_factory):
+    """Which CRM to check, and with which key: both given, or neither.
+
+    Given neither, the deployment's own configured CRM is checked — that is what
+    makes this runnable inside a container with no arguments (C1). Given only
+    one, the other is NOT borrowed from the configured deployment: a chapter's
+    address with Cleveland's key, or Cleveland's address with a chapter's key,
+    checks the wrong CRM or the right one with the wrong credential (fixed
+    2026-09-19). Returns (url, key, source)."""
+    if url and key:
+        return url, key, "the arguments"
+    if url or key:
+        raise ValueError(
+            "give --url AND --key together (or PREFLIGHT_CRM_URL AND "
+            "PREFLIGHT_CRM_KEY); one without the other would be completed from "
+            "this deployment's own settings, which may be a different CRM")
+    s = settings_factory()
+    if not (s.espo_base_url and s.espo_api_key):
+        raise ValueError("provide --url and --key (or PREFLIGHT_CRM_URL / "
+                         "PREFLIGHT_CRM_KEY, or ESPO_BASE_URL / ESPO_API_KEY)")
+    return s.espo_base_url, s.espo_api_key, "this deployment's settings (ESPO_BASE_URL / ESPO_API_KEY)"
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Read-only EspoCRM conformance check.")
     ap.add_argument("--url", default=os.environ.get("PREFLIGHT_CRM_URL"))
@@ -417,15 +440,11 @@ def main() -> int:
     ap.add_argument("--strict-enums", action="store_true",
                     help="treat a missing enum option as drift rather than advisory")
     args = ap.parse_args()
-    if not args.url or not args.key:
-        # Fall back to the deployment's own configured CRM, which is what makes
-        # this runnable inside a container with no arguments (C1).
-        s = get_settings()
-        args.url = args.url or s.espo_base_url
-        args.key = args.key or s.espo_api_key
-    if not args.url or not args.key:
-        ap.error("provide --url and --key (or PREFLIGHT_CRM_URL / PREFLIGHT_CRM_KEY, "
-                 "or ESPO_BASE_URL / ESPO_API_KEY)")
+    try:
+        args.url, args.key, source = resolve_target(args.url, args.key, get_settings)
+    except ValueError as exc:
+        ap.error(str(exc))
+    print(f"Checking {args.url} (address and key from {source})", file=sys.stderr)
     code, result = asyncio.run(
         run(args.url.rstrip("/"), args.key, strict_enums=args.strict_enums)
     )

@@ -8,9 +8,9 @@ each one measured is in that directory's `coverage-record.md`.
 
 | Script | What it does | Reads | Writes |
 |---|---|---|---|
-| `apply_api_half.py --env FILE [--apply]` | Teams, roles (+ attachments), email templates, the org-wide API user, a provisioning admin, the § E instance settings, then `Admin/rebuild`. Idempotent; strips role scopes the target lacks and reports them `unapplyable` (exit 4) | the crm-test capture in `prds/chapter-network/rehearsal-2026-08-31/crmtest-capture/`; `ESPO_ADMIN_*` from FILE | minted secrets appended to FILE; `api-half-result.json` next to the script |
+| `apply_api_half.py --env FILE --values FORM [--apply]` | Teams, roles (+ attachments), email templates, the org-wide API user, a provisioning admin, the § E instance settings, then `Admin/rebuild`. Idempotent; strips role scopes the target lacks and reports them `unapplyable` (exit 4) | the crm-test capture in `prds/chapter-network/rehearsal-2026-08-31/crmtest-capture/`; `ESPO_ADMIN_*` from FILE | minted secrets appended to FILE; `api-half-result.json` next to the script |
 | `stage4_users.py [--apply]` | One `regular` user per gated team + the Mentor Team user's Contact and `CMentorProfile` | `lakeside.env` next to the script | `lakeside-users.env` next to the script |
-| `render_spec.py VALUES ENV OUT` | Renders a DigitalOcean App Platform spec (web + worker + Postgres + PRE_DEPLOY migrate, `deploy_on_push: false`) from a chapter-values file and a secrets env file | `lakeside-values.yaml`, an env file | a plaintext-secret YAML for `doctl apps create --spec` — never commit it |
+| `render_spec.py VALUES ENV OUT` | Renders a DigitalOcean App Platform spec (web + worker + Postgres + PRE_DEPLOY migrate, following the `release` branch) from a chapter-values file and a secrets env file | `lakeside-values.yaml`, an env file | a plaintext-secret YAML for `doctl apps create --spec` — never commit it |
 
 The file half (entities, fields, links, layouts, labels, client-side custom
 code) is not a script: it is `rsync` of two trees from a source instance —
@@ -19,3 +19,5 @@ code) is not a script: it is `rsync` of two trees from a source instance —
 
 Credentials never live in this directory. The env files sit in
 `~/.config/cbm-lakeside/` on the operator's machine.
+
+**2026-09-19:** both scripts now take everything chapter-specific from the chapter information form. `apply_api_half.py` no longer names Lakeside, and `render_spec.py` no longer writes a rehearsal footer label, a localhost origin or the `main` branch. `preflight_crm.py` and `build_networkstandard.py` never complete half a CRM target from this deployment's settings or `.env`. Guarded by `tests/test_chapter_build_scripts.py`.

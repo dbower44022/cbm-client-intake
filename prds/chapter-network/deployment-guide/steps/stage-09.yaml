@@ -1,7 +1,7 @@
 stage: 9
 name: Build the CRM system
-version: "0.2"
-updated: "09-19-26 00:07"
+version: "0.3"
+updated: "09-19-26 00:50"
 why: >-
   The CRM is the chapter's system of record: every client, mentor, partner,
   funder and meeting lives in it, and every application reads and writes it. This
@@ -329,14 +329,13 @@ steps:
           - "ESPO_ADMIN_USER=the wizard's administrator user name"
           - "ESPO_ADMIN_PASS=the wizard's administrator password"
       - do: The administrator password must be letters and numbers only, because later steps pass this file's values on a command line. If the wizard's password has any other character, change it in the CRM first (Administration, then Users), and put the new one in the file.
-      - do: "In ~/Dropbox/Projects/cbm-client-intake, open scripts/rehearsal/apply_api_half.py and change line 47 from PROVISION_USER = \"lakeside.provision\" to PROVISION_USER = \"CHAPTER-SLUG.provision\". The trial script names the trial chapter; do not commit this change."
       - do: "Type the line below and press Enter. It changes nothing, and reports what it would do:"
         items:
-          - "uv run python scripts/rehearsal/apply_api_half.py --env ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env"
+          - "uv run python scripts/rehearsal/apply_api_half.py --env ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env --values CHAPTER-VALUES-FILE"
         see: A list of teams, roles, attachments, email templates, two accounts and settings it would create.
       - do: "Type the line below and press Enter. It creates everything in steps 9.10 to 9.14, 9.17 and 9.18:"
         items:
-          - "uv run python scripts/rehearsal/apply_api_half.py --env ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env --apply"
+          - "uv run python scripts/rehearsal/apply_api_half.py --env ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env --values CHAPTER-VALUES-FILE --apply"
         see: "Nine teams reported applied, and the new values ESPO_API_KEY, ESPO_PROVISION_USERNAME and ESPO_PROVISION_PASSWORD added to the end of CHAPTER-ENV-FILE."
       - do: Put CHAPTER-ENV-FILE's contents in the chapter's Operations vault as an item named CRM build settings.
     done_when: >-
@@ -639,6 +638,10 @@ steps:
     source: 3-Methods-CRM-Google-Applications.md#9.20
 
 changes:
+  - version: "0.3"
+    date: "09-19-26 00:50"
+    change: >-
+      The script now reads the chapter's name, CRM settings and provisioning account (CHAPTER-SLUG.provision) from the chapter information form through --values; the step that edited Lakeside's name out of the script by hand is gone.
   - version: "0.2"
     date: "09-19-26 00:07"
     change: >-
