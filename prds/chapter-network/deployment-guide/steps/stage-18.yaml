@@ -1,7 +1,7 @@
 stage: 18
 name: Hand over and start normal support
-version: "0.1"
-updated: "09-18-26 17:30"
+version: "0.2"
+updated: "09-19-26 00:04"
 why: >-
   This stage moves the chapter from being set up to being supported, and proves the
   chapter can reach everything it owns without help. The central support
@@ -27,21 +27,29 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: Give the chapter's first point of contact access to the ClickUp system the support team uses for new feature requests, defect reports and support requests.
-      - do: Show them how to raise each of the three kinds, and how to follow one to its answer.
-      - do: "Explain the three kinds:"
+      - do: "Invite the chapter's first point of contact to the ClickUp system the support team uses for requests, at their chapter email address. The address of that ClickUp space, and how a chapter's people are given access to it, are not settled yet (work list item 8). The central support organization supplies both."
+        see: The first point of contact signed in to ClickUp and able to see the chapter's requests.
+      - do: "Show them the three kinds of request, and how to raise each one in ClickUp:"
         items:
-          - Everyday requests, such as adding a person, changing someone's team or resetting a password. These are handled as they arrive.
-          - Defect reports. These include the version number from the page footer.
-          - New feature requests. These go to the central committee.
-      - do: Tell them plainly that no request is treated as urgent, and that no response time is committed.
+          - "Support request: an everyday task needing an administrator, such as adding a person, changing someone's team or resetting a password. Handled by the support team as it arrives."
+          - "Defect report: something that worked and has stopped, or does the wrong thing. Include the page address, what was expected, what happened, and the version number from the page footer."
+          - "New feature request: anything that would change the software. Reviewed by the central committee every two weeks."
+      - do: Have them raise one test support request, titled "Test request from CHAPTER-NAME — please close", and watch it to its answer.
+        see: The request acknowledged and closed by the support team.
+      - do: "Send the chapter's first point of contact an email, and keep a copy, saying:"
+        items:
+          - "Every request goes into ClickUp."
+          - "No request is treated as urgent."
+          - "Everyday requests are handled as they arrive."
+          - "No response time is committed."
+          - "Before raising a request, a forgotten password can be reset from \"Forgot your password?\" on the sign-in page."
     done_when:
       - "The chapter has in writing how to raise a request."
       - "The chapter has in writing that no request is treated as urgent."
       - "The chapter has in writing that everyday requests are handled as they arrive."
       - "The chapter has in writing that no response time is committed (ruled 09-18-26)."
     check:
-      how: The first point of contact raises a test request in ClickUp and sees it acknowledged.
+      how: The first point of contact's test request was acknowledged and closed, and the email is sent.
       probe: The app confirms the chapter's contact has access to ClickUp.
     goes_wrong: >-
       Everyday requests held for the committee. A new volunteer who waits weeks for
@@ -60,9 +68,12 @@ steps:
     produces: []
     mode: offline
     actions:
-      - do: Explain the rule. A requested change is made for every chapter, or it is not made. There is no third answer.
-      - do: Show how to raise a new feature request in ClickUp.
-      - do: Explain that the central committee reviews and schedules features and defects every two weeks, and that an accepted request goes into a weekly release.
+      - do: "Say the rule in these words: \"Every chapter runs the same software. A change you ask for is made for every chapter, or it is not made. There is no third answer.\""
+      - do: Show them how to raise a new feature request in ClickUp, as in step 18.1.
+      - do: "Explain what happens to it:"
+        items:
+          - "The central committee reviews and schedules features and defects every two weeks."
+          - "An accepted request goes into a weekly release (step 18.3)."
     done_when:
       - "The chapter knows where to send a request that would change the software for everyone."
       - "The chapter knows who decides."
@@ -86,17 +97,22 @@ steps:
     produces: []
     mode: offline
     actions:
-      - do: Explain that a new release is named each week at the Sunday 17:00 UTC slot, and the chapter's application takes it by itself.
+      - do: "Explain when: a new release is named each week at 17:00 UTC on Sunday. That is 1 p.m. Eastern in summer and 12 noon Eastern in winter. The chapter's application then takes it by itself."
       - do: Explain that every chapter moves to the same release at the same time.
-      - do: Explain what to do if something looks wrong on Monday. First refresh the page properly, because a browser can keep an old page. Then raise a defect report with the version number from the page footer.
-      - do: Show the first point of contact where the version number is.
-        see: The version number in the page footer.
+      - do: "Explain what to do if something looks wrong afterwards:"
+        items:
+          - "Refresh the page fully: Ctrl and Shift and R on Windows, or Cmd and Shift and R on a Mac. A browser can keep an old copy of a page."
+          - "If it is still wrong, raise a defect report in ClickUp (step 18.1) with the version number from the page footer."
+      - do: Open any application page with the first point of contact and point to the footer.
+        see: "The version number in the footer, for example v0.231.1, followed by (Production)."
+      - do: "Show where the release itself is reported: open APP-ADDRESS/healthz."
+        see: A line named releaseTag, with the release's name.
     done_when:
       - "The chapter knows software updates arrive automatically on a weekly schedule."
       - "The chapter knows roughly when."
       - "The chapter knows what to do if something looks wrong afterwards."
     check:
-      how: The first point of contact finds the version number in the footer.
+      how: The first point of contact finds the version number in the footer without help.
       probe: The app reads the chapter's health address and shows its release.
     goes_wrong: >-
       A missed weekly slot. It has happened. A late release is harmless, but a
@@ -114,19 +130,24 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: "Bring the account list from step 5.7 up to date. It covers:"
+      - do: "Bring the account list from step 5.7 up to date. It has one line per account, with the address to sign in at:"
         items:
-          - The domain registrar.
-          - Cloudflare.
-          - Google Workspace.
-          - The hosting account.
-          - The video meeting account, if there is one.
-          - The chapter's vault.
-          - The CRM's administrator accounts.
-          - The documentation site, if the chapter has its own.
-      - do: For each account, write who holds the top-level sign-in and who else has access. No passwords on the list; those are in the chapter's vault.
-      - do: Check that no top-level sign-in belongs to a volunteer's personal email address.
-      - do: Go through the list with a named chapter officer.
+          - "The domain registrar: the registrar's own sign-in address"
+          - "Cloudflare: https://dash.cloudflare.com"
+          - "Google Workspace: https://admin.google.com"
+          - "The hosting account: https://cloud.digitalocean.com"
+          - "The video meeting account, if there is one: https://zoom.us"
+          - "The chapter's vault: https://pass.proton.me"
+          - "The CRM's administrator accounts: CRM-ADDRESS"
+          - "The documentation site, if the chapter has its own: its address"
+      - do: "On each line, write:"
+        items:
+          - "Who holds the top-level sign-in"
+          - "Who else has access"
+          - "That the password and recovery codes are in the chapter's vault. Never the password itself."
+      - do: Check each top-level sign-in address. None may be a volunteer's personal email address; each must be a chapter mailbox.
+        see: Chapter email addresses only.
+      - do: Go through the list line by line with a named chapter officer.
         see: The officer recognising every account on it.
     done_when:
       - "The chapter holds the list of every account."
@@ -152,11 +173,16 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: While someone watches, the officer signs in to the hosting account with their own sign-in.
-      - do: The officer signs in to the Google Workspace admin console.
-      - do: The officer signs in to the domain registrar account.
-      - do: The officer reaches the CRM server through the hosting account. No written procedure exists for this yet (work list item 5), so this action cannot be completed.
-      - do: Record the date on the chapter's entry in the list of watched systems.
+      - do: "With someone from the central support organization watching, the chapter officer signs in with their own sign-in, not a shared one, to each of these:"
+        items:
+          - "The hosting account, at https://cloud.digitalocean.com"
+          - "The Google Workspace admin console, at https://admin.google.com"
+          - "The domain registrar account, at the registrar's own sign-in address"
+        see: Each account's home page, under the officer's own name.
+      - do: "In the hosting account, the officer opens the CRM server's page and opens its web console. The exact label of the console action is not verified."
+        see: A command prompt on the CRM server.
+      - do: "What the officer does once inside the server, to regain the CRM without the central support organization, is not written yet (work list item 5). Until it is, record this part as blocked."
+      - do: Add the date and the officer's name to the chapter's entry in the list of watched systems (step 12.5).
     done_when:
       - "A named chapter officer has demonstrated, not merely been told, that they can reach the server on their own."
       - "The officer has demonstrated the same for the hosting account."
@@ -183,8 +209,17 @@ steps:
     produces: []
     mode: offline
     actions:
-      - do: Walk the chapter through the four parts of the leaving kit. The CRM, which is already on the chapter's own server. An export of the application's own database. The shared drive documents. A licence to the last version received.
-      - do: Explain that some records live only in the application's database, such as partner and funder discussion notes and the history of every public form submission, so keeping the CRM is not keeping all the data.
+      - do: "Walk the chapter through the four parts of the leaving kit, and who produces each:"
+        items:
+          - "The CRM. Already on the chapter's own server, so nobody needs to produce it."
+          - "An export of the application's own database. Produced by the central support organization. No script produces it yet (work list item 9)."
+          - "The shared drive documents. Already in the chapter's own Google Workspace."
+          - "A licence to the last version of the software received. Written in the agreement."
+      - do: "Explain what only the application's database holds, so keeping the CRM is not keeping all the data:"
+        items:
+          - "The discussion notes on partner and funder records."
+          - "The history of every public form submission and the replies to it."
+          - "The chapter's own analytics pages."
       - do: Explain that the chapter's mail, documents and calendars are already in its own Google Workspace, so they stay with it.
     done_when: >-
       The chapter has been shown exactly what it would receive if it left, and who
@@ -208,17 +243,23 @@ steps:
     produces: []
     mode: offline
     actions:
-      - do: Book a meeting about three months out, in both organizations' calendars.
-      - do: "At it, go through:"
+      - do: "Book a one-hour meeting 90 days after the chapter's go-live date, titled \"CHAPTER-NAME: first review\", and invite:"
         items:
-          - The requests raised.
-          - Any feature requests and their answers.
-          - Whether a restore test has run since go-live.
-          - Whether the account list is still right.
+          - "The chapter's first point of contact"
+          - "The chapter officer named in step 18.4"
+          - "One member of the central committee"
+          - "One member of the support team"
+        see: The meeting in both organizations' calendars.
+      - do: "Put this agenda in the invitation:"
+        items:
+          - "The requests raised in ClickUp, and how they went."
+          - "Any feature requests, and their answers."
+          - "Whether a restore test has run since go-live."
+          - "Whether the account list from step 18.4 is still right."
     done_when: >-
       A date is booked to review how the first months have gone.
     check:
-      how: The meeting is in both calendars.
+      how: The meeting is in both calendars, with the agenda.
       probe: The app shows the review date on the chapter's record.
     goes_wrong: nothing known yet
     later: unchanged
@@ -226,6 +267,15 @@ steps:
     source: 11-Methods-Handover.md#18.7
 
 changes:
+  - version: "0.2"
+    date: "09-19-26 00:04"
+    change: >-
+      Actions made precise (Doug, 09-19-26): the three kinds of ClickUp request and
+      what each contains, a test request, the exact wording to send, the release
+      time in Eastern time and the health address, each account's sign-in address,
+      the server console check, the four parts of the leaving kit with who produces
+      each, and the review meeting's invitees and agenda. The ClickUp space address
+      and how chapters get access to it are not settled, and step 18.1 says so.
   - version: "0.1"
     date: "09-18-26 17:30"
     change: >-

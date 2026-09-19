@@ -1,7 +1,7 @@
 stage: 13
 name: Put the chapter's pages on its website
-version: "0.1"
-updated: "09-18-26 17:30"
+version: "0.2"
+updated: "09-19-26 00:15"
 why: >-
   The public learns about the chapter through its website. This stage connects
   that website to the pages the software serves: the events programme now, and the
@@ -29,7 +29,7 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: Nothing can be done yet. There is no public mentor directory page in the software (work list item 10).
+      - do: "Nothing can be done yet. The software has no public mentor directory page (work list item 10). Record the step as blocked."
       - do: Do not copy Cleveland's current method, which feeds its mentor pages from a spreadsheet through scripts.
     done_when: >-
       The page displays on the chapter's website, showing that chapter's mentors.
@@ -53,19 +53,33 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: "On the application's settings page, set:"
+      - do: "Open https://APP-ADDRESS/setup/ and sign in as the central support organization's administrator. Set these settings, one at a time, and save each:"
         items:
-          - The chapter's website address.
-          - The website menu.
-          - The contact address for presenters.
-          - The opening wording of the events page.
-      - do: In the application's Event Administration page, create and publish each upcoming event. Saving there is what gives an event its own web address.
-      - do: Open the application's /webinars/ page.
-        see: The chapter's published events.
-      - do: On the chapter's website, save a copy of the current events page, if there is one. That copy is the way back.
-      - do: On the chapter's website, add a temporary redirect, the kind numbered 302, from the website's events address to the application's /webinars/ page.
-        see: The redirect saved. Never use a permanent redirect; browsers remember it long after it is removed.
-      - do: Register once for an event with an obviously invented surname, then delete the contact and registration this created.
+          - "ORGANIZATION_WEBSITE_URL: the chapter's website address, for example https://WEBSITE-DOMAIN"
+          - "ORGANIZATION_SITE_NAV: the website's menu, as Label|path pairs separated by commas, for example Home|/,About|/about/,Webinars|/webinars/,Contact|/contact/"
+          - "EVENTS_CONTACT_EMAIL: the address presenters write to; empty uses the shared operations mailbox"
+          - "EVENTS_HERO_TAGLINE: the heading at the top of the events page"
+          - "EVENTS_HERO_PILLARS: the short line under the heading"
+          - "EVENTS_HERO_BAND: the gold band's wording; empty hides it"
+          - "EVENTS_PUBLIC_BASE_URL: leave empty, so event links point at this application"
+        see: Each setting shown with its new value.
+      - do: "Open https://APP-ADDRESS/events/ and choose + New event. For each upcoming event fill in its title, format, topic, start and duration, and tick Publish to website, then save."
+        see: Each event in the grid, shown as published to the website.
+      - do: "Open https://APP-ADDRESS/webinars/ in a browser."
+        see: The published events in the left panel, and the recorded library on the right.
+      - do: "In the website's administration, open the current events page and export or copy its content to a file. This is the way back. The export's label depends on the website platform."
+        see: A file you can open and read. If you cannot export it, stop.
+      - do: "In the website's administration, add a redirect. Use a temporary redirect (numbered 302), never a permanent one, because browsers remember a permanent redirect long after it is removed. The menu is called Redirection, Tools then Redirects, or similar, depending on the website platform's redirect tool:"
+        items:
+          - "From: /webinars/"
+          - "To: https://APP-ADDRESS/webinars/"
+          - "Type: 302 (temporary)"
+      - do: "Open https://WEBSITE-DOMAIN/webinars/ in a private browser window."
+        see: The application's events page, with the published events.
+      - do: "Choose Sign Up on one event and register with an obviously invented surname, ZZTEST."
+        see: A confirmation message in the sign-up window.
+      - do: "In the CRM, open the contact named ZZTEST and delete it, then delete its event registration."
+        see: Neither record present.
     done_when: >-
       The chapter's website sends visitors to the application's events page, and
       that page shows the chapter's events.
@@ -93,8 +107,8 @@ steps:
     produces: []
     mode: automated
     actions:
-      - do: For the events page, nothing to do. It is reached by a redirect, and any website may link to a public page.
-      - do: For the mentor directory page, this step applies only if it is embedded. The application would then have to name the one website allowed to embed it. It does not do that today.
+      - do: "For the events page, nothing to do. It is reached by a redirect, and any website may link to a public page. Record the step as not applying."
+      - do: "For the mentor directory page, this step applies only if the page is embedded. The application would then have to send a header naming the one website allowed to embed it, and it does not do that today. Record the step as blocked."
     done_when: >-
       The chapter's site can display them and a different site cannot. Applies
       only to a page embedded in the website. The events programme page is reached
@@ -117,9 +131,10 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: For mentors, nothing can be done until the mentor directory page is built.
-      - do: Do the same check for events now. Open one event's page from the programme and copy its address.
-      - do: Open the copied address in a private browser window.
+      - do: "For mentors, nothing can be done until the mentor directory page is built. Record that half as blocked."
+      - do: "For events, open https://WEBSITE-DOMAIN/webinars/ and select one event's title."
+        see: "The event's own page, at an address of the form https://APP-ADDRESS/webinars/EVENT-SLUG."
+      - do: Copy the address from the browser's address bar and open it in a private browser window.
         see: The same event.
     done_when: >-
       Opening a link to one mentor lands on that mentor, and the address can be
@@ -143,10 +158,14 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: Open the events page on a computer.
-        see: The page filling the window, with the calendar and the recorded library side by side.
-      - do: Open the same page on a phone.
-        see: One column, no sideways scrolling, no text cut off.
+      - do: "On a computer, open https://WEBSITE-DOMAIN/webinars/ with the browser window at full width."
+        see: The calendar and the recorded library side by side, filling the window.
+      - do: "On a phone, open the same address."
+        see:
+          - One column
+          - No sideways scrolling
+          - No text cut off
+          - Every panel styled, with no plain unstyled blocks
     done_when: >-
       The pages show with no sideways scrolling and no cut-off text, on a computer
       and on a phone.
@@ -162,6 +181,13 @@ steps:
     source: 10-Methods-Website-Pages-Records.md#13.5
 
 changes:
+  - version: "0.2"
+    date: "09-19-26 00:15"
+    change: >-
+      Every action made precise (Doug, 09-19-26): the exact settings to set
+      on the settings page, the exact addresses, the redirect's exact from, to
+      and type, and the ZZTEST registration check, from EVENTS-SETUP.md
+      section 6b.
   - version: "0.1"
     date: "09-18-26 17:30"
     change: >-

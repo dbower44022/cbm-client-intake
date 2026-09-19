@@ -1,7 +1,7 @@
 # Stage 2 — Sign the agreement with the central support organization
 
-**Version:** 0.1  
-**Last Updated:** 09-18-26 17:20  
+**Version:** 0.2  
+**Last Updated:** 09-19-26 00:25  
 **Generated from** `steps/stage-02.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -45,16 +45,25 @@ Everything after this stage involves one organization spending money and holding
 
 **Do this:**
 
-1. List what is provided:
+1. Open the standard agreement's schedule of services. A draft of the standard agreement exists and is in review; until it is final, the central support organization supplies the current draft. Check the schedule says what is provided:
    - Building and running the CRM and the applications.
    - The weekly software release.
    - Support.
-2. List what is not provided:
+2. Check the schedule says what is not provided:
    - The chapter's legal, tax and banking work.
    - Its website's content.
    - Its own training beyond the first sessions.
-3. Explain how requests are made. Feature requests, defect reports and support requests all go into one ClickUp system, managed by the whole support team.
-4. Explain the answer times. No response time is committed and no request is treated as urgent. Everyday requests, such as adding a person or resetting a password, are handled as they arrive. Feature requests and defects are reviewed and scheduled by the central committee every two weeks.
+3. Check the schedule says how requests are made. All three kinds go into one ClickUp system, managed by the whole support team:
+   - Feature requests.
+   - Defect reports.
+   - Support requests.
+4. Check the schedule says how requests are answered:
+   - No response time is committed.
+   - No request is treated as urgent.
+   - Everyday requests, such as adding a person or resetting a password, are handled as they arrive.
+   - Feature requests and defects are reviewed and scheduled by the central committee every two weeks.
+5. Give the chapter's board a copy of the schedule.
+   *You should see:* The board's copy, with the four checks above all present.
 
 **Done when all of these are true:**
 
@@ -84,14 +93,17 @@ Everything after this stage involves one organization spending money and holding
 
 **Do this:**
 
-1. List the costs the chapter pays directly in its own accounts, with each supplier and an approximate price. They include:
-   - Hosting.
-   - Google Workspace.
-   - The domain names.
-   - Cloudflare, if a paid plan is ever needed.
-   - The Proton Pass vault.
-2. Agree the fee paid to the central support organization. It is proposed, not ruled, that the fee covers labour only.
-3. Settle whether the two paid CRM add-on products are part of the standard before quoting a cost (work list item 2).
+1. Make a cost sheet with one line per supplier. Look up each current price on the supplier's own page on the day the sheet is made, and write the date beside it. Prices change, so this guide does not state them:
+   - Hosting: DigitalOcean, https://www.digitalocean.com/pricing/droplets. One server for the CRM, plus the application and its managed database.
+   - Google Workspace: https://www.google.com/nonprofits/offerings/workspace/. Nonprofits may get it free or discounted once step 4.13 is approved.
+   - Domain names: the registrar's price for each name per year. Cleveland uses Porkbun, https://porkbun.com/products/domains.
+   - Cloudflare: the free plan, https://www.cloudflare.com/plans/. No cost unless a paid plan is ever needed.
+   - Proton Pass: Pass Professional, https://proton.me/business/pass. Priced per user per month, with a minimum of three users. Professional is the plan that includes the command-line tool the settings generator needs.
+   - Zoom: only for a chapter that runs public webinars (step 5.5).
+2. Add one line for the fee paid to the central support organization. The amount comes from the standard agreement. It is proposed, not ruled, that the fee covers labour only.
+3. Add one line marked "open" for the two paid CRM add-on products. Whether they are part of the standard is not decided (work list item 2). Do not quote a total without saying this line is open.
+4. Have the chapter's treasurer and the central support organization both initial the cost sheet.
+   *You should see:* A cost sheet with every line priced or marked open, dated and initialled by both.
 
 **Done when:** The fee is agreed in writing, and it is clear which costs the chapter pays directly to other companies rather than through the fee.
 
@@ -117,10 +129,11 @@ Everything after this stage involves one organization spending money and holding
 
 **Do this:**
 
-1. Give the board the rule in writing: core or nothing. A change a chapter wants becomes part of the software for every chapter, or it does not happen. There is no third answer.
-2. Show the board how to raise a feature request in the ClickUp system, and that the central committee decides it every two weeks.
-3. Ask the board to minute that the rule was read and accepted.
-   *You should see:* The minute.
+1. Send the board this rule in writing, as a page of its own: "Core or nothing. A change a chapter wants becomes part of the software for every chapter, or it does not happen. No chapter gets its own custom fields, form questions or list choices. There is no third answer."
+2. Show the board how to raise a feature request in the ClickUp system, and that the central committee reviews and schedules feature requests every two weeks.
+3. At its next meeting, the board minutes a resolution in words like these: "The board has read the identical-software rule and accepts it. Any change the chapter wants will be raised as a feature request for every chapter."
+   *You should see:* The signed minute.
+4. Send a copy of the minute to the central support organization.
 
 **Done when:** The chapter's board has been told in writing that no chapter gets its own custom fields, form questions or list choices, and has been shown how to ask for a change that would apply to every chapter.
 
@@ -146,15 +159,15 @@ Everything after this stage involves one organization spending money and holding
 
 **Do this:**
 
-1. List the accounts the central support organization will administer. They include:
-   - The hosting account.
-   - The Cloudflare account.
-   - The Google Workspace administrator account.
-   - The video meeting account, if there is one.
-   - The vault's shared Operations vault.
-   - The CRM.
-2. Write in the rule that the central support organization holds the only CRM administrator accounts, and chapter staff hold ordinary accounts.
-3. Write in the other half of the rule. The chapter can always get in through the server it owns, and can withdraw the central support organization's access at any time.
+1. Write an access schedule into the agreement, one line per account, naming the access each account gives the central support organization and the step that grants it:
+   - The hosting account (DigitalOcean): a team member able to create and manage resources. Granted in step 5.4.
+   - The Cloudflare account: a member able to edit DNS. Granted in step 3.7.
+   - Google Workspace: an administrator account of the central support organization's own. Created in step 4.6.
+   - The video meeting account (Zoom), if there is one: an administrator. Granted in step 5.5.
+   - The chapter's vault (Proton Pass): a member of the Operations vault only, never the Board vault. Granted in step 2.7.
+   - The CRM: the only administrator accounts. Created in steps 9.2 and 9.18.
+2. Write in the rule: the central support organization holds the only CRM administrator accounts, and chapter staff hold ordinary accounts.
+3. Write in the other half of the rule: the chapter can always get in through the server it owns, and can withdraw the central support organization's access to any account at any time, by removing its members.
 
 **Done when:** It is written down which of the chapter's accounts the central support organization will administer, and that the chapter may withdraw that access at any time.
 
@@ -180,14 +193,15 @@ Everything after this stage involves one organization spending money and holding
 
 **Do this:**
 
-1. Write in a notice period and a defined wind-down.
-2. Write in the leaving kit:
-   - A copy of the CRM's database.
-   - An export of the application's own database.
-   - A transfer of the chapter's documents in Google Drive.
-   - The chapter's own files, such as its logo and colour file.
-3. Write in a perpetual licence to the last version of the software the chapter received.
-4. Write in that the central support organization may stop working for a chapter that stops paying, but can never lock it out.
+1. Write the notice period into the agreement as a number of days, for example 90. The standard agreement sets the number; the draft is in review.
+2. Write in the wind-down: what the central support organization keeps doing during the notice period (the weekly release, backups and support) and what stops on the last day.
+3. Write in the leaving kit, with who produces each part:
+   - A copy of the CRM's database. Produced by the central support organization.
+   - An export of the application's own database. Produced by the central support organization.
+   - A transfer of the chapter's documents in Google Drive. Nothing to produce: they are already in the chapter's own Google Workspace.
+   - The chapter's own files, such as its logo and colour file. Produced by the central support organization.
+4. Write in a perpetual licence to the last version of the software the chapter received.
+5. Write in that the central support organization may stop working for a chapter that stops paying, but can never lock it out.
 
 **Done when all of these are true:**
 
@@ -222,9 +236,14 @@ Everything after this stage involves one organization spending money and holding
 
 **Do this:**
 
-1. The officers the board minute names (step 1.4) sign for the chapter.
-2. Store the chapter's copy where more than one officer can reach it.
-   *You should see:* Both copies signed and dated.
+1. Check the final agreement includes all four attachments:
+   - The schedule of services (step 2.1).
+   - The cost sheet (step 2.2).
+   - The access schedule (step 2.4).
+   - The leaving terms (step 2.5).
+2. The officers the board minute names as signers (step 1.4) sign for the chapter, with the date. An authorised person signs for the central support organization.
+3. Save the signed copy as a PDF named "YYYY-MM-DD agreement with the central support organization.pdf" in a place at least two chapter officers can reach, and send the central support organization its copy.
+   *You should see:* Both sides holding a copy signed and dated by both.
 
 **Done when:** Both sides have signed and each holds a copy.
 
@@ -248,12 +267,17 @@ Everything after this stage involves one organization spending money and holding
 
 **Do this:**
 
-1. The chapter buys a Proton Pass business plan in its own name, and pays for it itself.
-2. Make two chapter officers owners of the organization.
-3. Create a vault called Operations, shared with the central support organization's named people. Every sign-in, recovery code and machine secret the system runs on goes here.
-4. Create a vault called Board, kept to the chapter, for anything the central support organization has no need to see.
-5. Invite at least two named people from the central support organization as members of the Operations vault.
-   *You should see:* Their names listed as members of the Operations vault.
+1. Open https://proton.me/business/pass and buy Pass Professional in the chapter's name, paid with the chapter's card (step 1.6). Choose Professional, not Essentials: Professional includes the command-line tool the settings generator needs. The plan has a minimum of three users.
+   *You should see:* A Proton business organization named after the chapter.
+2. Sign up the first owner with the founding email address (step 3.1 names it; the chapter has no mailbox of its own until stage 4). Step 4.14 moves the organization's contact address to a chapter mailbox later.
+3. In the organization's settings, make two chapter officers administrators of the organization. The exact screen labels have not been checked; look for the organization's user or member settings.
+   *You should see:* Two chapter officers listed with administrator rights.
+4. Create two vaults, spelled exactly:
+   - Operations — shared with the central support organization's named people. Every sign-in, recovery code and machine secret the system runs on goes here.
+   - Board — kept to the chapter, for anything the central support organization has no need to see.
+5. Invite at least two named people from the central support organization as members of the Operations vault only, with the editor role (able to add and change items, not to manage sharing).
+   *You should see:* Their names listed as members of the Operations vault, and not of the Board vault.
+6. Turn on two-step sign-in for every chapter owner, and store each owner's Proton recovery phrase in that owner's own safekeeping, not in the vault it unlocks.
 
 **Done when:** The chapter owns a Proton Pass business organization with at least two chapter owners, and at least two named people from the central support organization are members of its shared operations vault (ruled 09-18-26).
 
@@ -269,4 +293,5 @@ Everything after this stage involves one organization spending money and holding
 
 | Version | Date | Change |
 |---|---|---|
+| 0.2 | 09-19-26 00:25 | Every action made precise (Doug, 09-19-26): each schedule's contents as a checklist; a cost sheet with each supplier's own pricing page; the access schedule naming the access and the step that grants it for every account; the wording of the board's resolution; the attachments the signed agreement must carry; and the Proton Pass plan (Pass Professional, which carries the command-line tool, minimum three users), the two vault names and the central members' role. Proton Pass's plans were read from its own page on 09-19-26; its organization screen labels are not checked, and the step says so. |
 | 0.1 | 09-18-26 17:20 | First version as data, converted from the methods for signing the agreement (8-Methods-Organization-Domains-Google.md, version 0.5) with the step list's finishing tests. Step 2.1 brought up to the 09-18-26 rulings: requests go into ClickUp, the central committee meets every two weeks, and no response time is committed. |

@@ -1,7 +1,7 @@
 stage: 2
 name: Sign the agreement with the central support organization
-version: "0.1"
-updated: "09-18-26 17:20"
+version: "0.2"
+updated: "09-19-26 00:25"
 why: >-
   Everything after this stage involves one organization spending money and
   holding administrative access inside another organization's accounts. The
@@ -30,18 +30,29 @@ steps:
     produces: []
     mode: offline
     actions:
-      - do: "List what is provided:"
+      - do: "Open the standard agreement's schedule of services. A draft of the standard agreement exists and is in review; until it is final, the central support organization supplies the current draft. Check the schedule says what is provided:"
         items:
           - Building and running the CRM and the applications.
           - The weekly software release.
           - Support.
-      - do: "List what is not provided:"
+      - do: "Check the schedule says what is not provided:"
         items:
           - The chapter's legal, tax and banking work.
           - Its website's content.
           - Its own training beyond the first sessions.
-      - do: Explain how requests are made. Feature requests, defect reports and support requests all go into one ClickUp system, managed by the whole support team.
-      - do: Explain the answer times. No response time is committed and no request is treated as urgent. Everyday requests, such as adding a person or resetting a password, are handled as they arrive. Feature requests and defects are reviewed and scheduled by the central committee every two weeks.
+      - do: "Check the schedule says how requests are made. All three kinds go into one ClickUp system, managed by the whole support team:"
+        items:
+          - Feature requests.
+          - Defect reports.
+          - Support requests.
+      - do: "Check the schedule says how requests are answered:"
+        items:
+          - No response time is committed.
+          - No request is treated as urgent.
+          - Everyday requests, such as adding a person or resetting a password, are handled as they arrive.
+          - Feature requests and defects are reviewed and scheduled by the central committee every two weeks.
+      - do: Give the chapter's board a copy of the schedule.
+        see: The board's copy, with the four checks above all present.
     done_when:
       - "The chapter has in writing the list of what is provided."
       - "The chapter has in writing what is not provided."
@@ -65,15 +76,18 @@ steps:
     produces: []
     mode: offline
     actions:
-      - do: "List the costs the chapter pays directly in its own accounts, with each supplier and an approximate price. They include:"
+      - do: "Make a cost sheet with one line per supplier. Look up each current price on the supplier's own page on the day the sheet is made, and write the date beside it. Prices change, so this guide does not state them:"
         items:
-          - Hosting.
-          - Google Workspace.
-          - The domain names.
-          - Cloudflare, if a paid plan is ever needed.
-          - The Proton Pass vault.
-      - do: Agree the fee paid to the central support organization. It is proposed, not ruled, that the fee covers labour only.
-      - do: Settle whether the two paid CRM add-on products are part of the standard before quoting a cost (work list item 2).
+          - "Hosting: DigitalOcean, https://www.digitalocean.com/pricing/droplets. One server for the CRM, plus the application and its managed database."
+          - "Google Workspace: https://www.google.com/nonprofits/offerings/workspace/. Nonprofits may get it free or discounted once step 4.13 is approved."
+          - "Domain names: the registrar's price for each name per year. Cleveland uses Porkbun, https://porkbun.com/products/domains."
+          - "Cloudflare: the free plan, https://www.cloudflare.com/plans/. No cost unless a paid plan is ever needed."
+          - "Proton Pass: Pass Professional, https://proton.me/business/pass. Priced per user per month, with a minimum of three users. Professional is the plan that includes the command-line tool the settings generator needs."
+          - "Zoom: only for a chapter that runs public webinars (step 5.5)."
+      - do: "Add one line for the fee paid to the central support organization. The amount comes from the standard agreement. It is proposed, not ruled, that the fee covers labour only."
+      - do: "Add one line marked \"open\" for the two paid CRM add-on products. Whether they are part of the standard is not decided (work list item 2). Do not quote a total without saying this line is open."
+      - do: Have the chapter's treasurer and the central support organization both initial the cost sheet.
+        see: A cost sheet with every line priced or marked open, dated and initialled by both.
     done_when: >-
       The fee is agreed in writing, and it is clear which costs the chapter pays
       directly to other companies rather than through the fee.
@@ -97,10 +111,11 @@ steps:
     produces: []
     mode: offline
     actions:
-      - do: "Give the board the rule in writing: core or nothing. A change a chapter wants becomes part of the software for every chapter, or it does not happen. There is no third answer."
-      - do: Show the board how to raise a feature request in the ClickUp system, and that the central committee decides it every two weeks.
-      - do: Ask the board to minute that the rule was read and accepted.
-        see: The minute.
+      - do: "Send the board this rule in writing, as a page of its own: \"Core or nothing. A change a chapter wants becomes part of the software for every chapter, or it does not happen. No chapter gets its own custom fields, form questions or list choices. There is no third answer.\""
+      - do: "Show the board how to raise a feature request in the ClickUp system, and that the central committee reviews and schedules feature requests every two weeks."
+      - do: "At its next meeting, the board minutes a resolution in words like these: \"The board has read the identical-software rule and accepts it. Any change the chapter wants will be raised as a feature request for every chapter.\""
+        see: The signed minute.
+      - do: Send a copy of the minute to the central support organization.
     done_when: >-
       The chapter's board has been told in writing that no chapter gets its own
       custom fields, form questions or list choices, and has been shown how to ask for
@@ -124,16 +139,16 @@ steps:
     produces: []
     mode: offline
     actions:
-      - do: "List the accounts the central support organization will administer. They include:"
+      - do: "Write an access schedule into the agreement, one line per account, naming the access each account gives the central support organization and the step that grants it:"
         items:
-          - The hosting account.
-          - The Cloudflare account.
-          - The Google Workspace administrator account.
-          - The video meeting account, if there is one.
-          - The vault's shared Operations vault.
-          - The CRM.
-      - do: Write in the rule that the central support organization holds the only CRM administrator accounts, and chapter staff hold ordinary accounts.
-      - do: Write in the other half of the rule. The chapter can always get in through the server it owns, and can withdraw the central support organization's access at any time.
+          - "The hosting account (DigitalOcean): a team member able to create and manage resources. Granted in step 5.4."
+          - "The Cloudflare account: a member able to edit DNS. Granted in step 3.7."
+          - "Google Workspace: an administrator account of the central support organization's own. Created in step 4.6."
+          - "The video meeting account (Zoom), if there is one: an administrator. Granted in step 5.5."
+          - "The chapter's vault (Proton Pass): a member of the Operations vault only, never the Board vault. Granted in step 2.7."
+          - "The CRM: the only administrator accounts. Created in steps 9.2 and 9.18."
+      - do: "Write in the rule: the central support organization holds the only CRM administrator accounts, and chapter staff hold ordinary accounts."
+      - do: "Write in the other half of the rule: the chapter can always get in through the server it owns, and can withdraw the central support organization's access to any account at any time, by removing its members."
     done_when: >-
       It is written down which of the chapter's accounts the central support
       organization will administer, and that the chapter may withdraw that access at
@@ -157,13 +172,14 @@ steps:
     produces: []
     mode: offline
     actions:
-      - do: Write in a notice period and a defined wind-down.
-      - do: "Write in the leaving kit:"
+      - do: "Write the notice period into the agreement as a number of days, for example 90. The standard agreement sets the number; the draft is in review."
+      - do: "Write in the wind-down: what the central support organization keeps doing during the notice period (the weekly release, backups and support) and what stops on the last day."
+      - do: "Write in the leaving kit, with who produces each part:"
         items:
-          - A copy of the CRM's database.
-          - An export of the application's own database.
-          - A transfer of the chapter's documents in Google Drive.
-          - The chapter's own files, such as its logo and colour file.
+          - "A copy of the CRM's database. Produced by the central support organization."
+          - "An export of the application's own database. Produced by the central support organization."
+          - "A transfer of the chapter's documents in Google Drive. Nothing to produce: they are already in the chapter's own Google Workspace."
+          - "The chapter's own files, such as its logo and colour file. Produced by the central support organization."
       - do: Write in a perpetual licence to the last version of the software the chapter received.
       - do: Write in that the central support organization may stop working for a chapter that stops paying, but can never lock it out.
     done_when:
@@ -190,9 +206,15 @@ steps:
     produces: []
     mode: offline
     actions:
-      - do: The officers the board minute names (step 1.4) sign for the chapter.
-      - do: Store the chapter's copy where more than one officer can reach it.
-        see: Both copies signed and dated.
+      - do: "Check the final agreement includes all four attachments:"
+        items:
+          - The schedule of services (step 2.1).
+          - The cost sheet (step 2.2).
+          - The access schedule (step 2.4).
+          - The leaving terms (step 2.5).
+      - do: The officers the board minute names as signers (step 1.4) sign for the chapter, with the date. An authorised person signs for the central support organization.
+      - do: "Save the signed copy as a PDF named \"YYYY-MM-DD agreement with the central support organization.pdf\" in a place at least two chapter officers can reach, and send the central support organization its copy."
+        see: Both sides holding a copy signed and dated by both.
     done_when: >-
       Both sides have signed and each holds a copy.
     check:
@@ -212,12 +234,18 @@ steps:
     produces: [chapter_vault]
     mode: guided
     actions:
-      - do: The chapter buys a Proton Pass business plan in its own name, and pays for it itself.
-      - do: Make two chapter officers owners of the organization.
-      - do: Create a vault called Operations, shared with the central support organization's named people. Every sign-in, recovery code and machine secret the system runs on goes here.
-      - do: Create a vault called Board, kept to the chapter, for anything the central support organization has no need to see.
-      - do: Invite at least two named people from the central support organization as members of the Operations vault.
-        see: Their names listed as members of the Operations vault.
+      - do: "Open https://proton.me/business/pass and buy Pass Professional in the chapter's name, paid with the chapter's card (step 1.6). Choose Professional, not Essentials: Professional includes the command-line tool the settings generator needs. The plan has a minimum of three users."
+        see: A Proton business organization named after the chapter.
+      - do: "Sign up the first owner with the founding email address (step 3.1 names it; the chapter has no mailbox of its own until stage 4). Step 4.14 moves the organization's contact address to a chapter mailbox later."
+      - do: "In the organization's settings, make two chapter officers administrators of the organization. The exact screen labels have not been checked; look for the organization's user or member settings."
+        see: Two chapter officers listed with administrator rights.
+      - do: "Create two vaults, spelled exactly:"
+        items:
+          - "Operations — shared with the central support organization's named people. Every sign-in, recovery code and machine secret the system runs on goes here."
+          - "Board — kept to the chapter, for anything the central support organization has no need to see."
+      - do: "Invite at least two named people from the central support organization as members of the Operations vault only, with the editor role (able to add and change items, not to manage sharing)."
+        see: Their names listed as members of the Operations vault, and not of the Board vault.
+      - do: Turn on two-step sign-in for every chapter owner, and store each owner's Proton recovery phrase in that owner's own safekeeping, not in the vault it unlocks.
     done_when: >-
       The chapter owns a Proton Pass business organization with at least two chapter
       owners, and at least two named people from the central support organization are
@@ -236,6 +264,17 @@ steps:
     source: 8-Methods-Organization-Domains-Google.md#2.7
 
 changes:
+  - version: "0.2"
+    date: "09-19-26 00:25"
+    change: >-
+      Every action made precise (Doug, 09-19-26): each schedule's contents as a
+      checklist; a cost sheet with each supplier's own pricing page; the access
+      schedule naming the access and the step that grants it for every account; the
+      wording of the board's resolution; the attachments the signed agreement must
+      carry; and the Proton Pass plan (Pass Professional, which carries the
+      command-line tool, minimum three users), the two vault names and the
+      central members' role. Proton Pass's plans were read from its own page on
+      09-19-26; its organization screen labels are not checked, and the step says so.
   - version: "0.1"
     date: "09-18-26 17:20"
     change: >-

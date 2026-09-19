@@ -1,7 +1,7 @@
 stage: 4
 name: Set up Google Workspace and the chapter's email
-version: "0.2"
-updated: "09-19-26 00:20"
+version: "0.3"
+updated: "09-19-26 00:05"
 why: >-
   Google Workspace is Google's paid service for an organization's email, calendars
   and documents. The software reads and sends the chapter's mail, creates calendar
@@ -60,12 +60,24 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: Check step 3.2's record of which domain name is the email domain.
-      - do: Sign up for Google Workspace using the chapter's email domain name.
-      - do: When Google asks for the first administrator, use the setup contact's own name on a chapter address, not a role name. This account becomes the chapter's own administrator account in step 4.5.
-      - do: Put the sign-in and its recovery codes in the chapter's vault.
-      - do: Sign in to the Google Workspace admin console.
-        see: The admin console's home page.
+      - do: "Open the chapter's record from step 3.2 and read which domain name is the email domain. Everything below uses that domain name, called EMAIL-DOMAIN."
+      - do: "In a browser, go to https://workspace.google.com and choose to get started. The exact wording of Google's screens has not been checked for this guide."
+      - do: "Answer Google's sign-up questions with these values:"
+        items:
+          - "Business name: the chapter's name, exactly as chosen in step 1.1"
+          - "Number of employees: the number of staff who will have mailboxes"
+          - "Region: United States"
+          - "Current email address: the founding email address from step 3.1"
+          - "Does the business have a domain: yes, and enter EMAIL-DOMAIN"
+      - do: "When Google asks for the first user, enter the setup contact's own details:"
+        items:
+          - "First name and last name: the setup contact's own name, not a role such as Admin"
+          - "Username: FIRSTNAME.LASTNAME, so the address is FIRSTNAME.LASTNAME@EMAIL-DOMAIN"
+          - "Password: a new password, stored straight away in the chapter's Board vault (step 2.7)"
+        see: "An account created, with this user as its first administrator. It becomes the chapter's own administrator account in step 4.5."
+      - do: "Choose the Business Starter plan, or the plan the cost agreement names (step 2.2), and pay with the chapter's own card (step 1.6). The nonprofit discount is applied for later, in step 4.13."
+      - do: "In a new browser window, go to https://admin.google.com and sign in as FIRSTNAME.LASTNAME@EMAIL-DOMAIN."
+        see: "The Google admin console's home page. Google will ask to verify the domain; that is step 4.3."
     done_when: >-
       The account exists on the chapter's email domain and the first administrator
       can sign in.
@@ -197,10 +209,14 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: The first administrator from step 4.2 is this account. Give it the highest administrator level Google Workspace offers.
-      - do: Give a second person at the chapter the same level, so one person leaving does not lock the chapter out.
-      - do: The named person signs in to the admin console with their chapter address.
-        see: The admin console's home page.
+      - do: "Sign in to https://admin.google.com as the first administrator from step 4.2."
+      - do: "Open Account, then Admin roles. Check the first administrator holds the Super Admin role. The menu wording has not been checked for this guide."
+        see: "Super Admin listed for FIRSTNAME.LASTNAME@EMAIL-DOMAIN."
+      - do: "Create a second chapter officer's user the same way as step 4.11, then open that user's page, open Admin roles and privileges, and assign Super Admin."
+        see: "Two chapter people holding Super Admin."
+      - do: "Record both names and addresses on the chapter's account list (step 5.7) as the holders of the Google Workspace top-level sign-in."
+      - do: "The second officer signs in at https://admin.google.com with their own chapter address."
+        see: "The admin console's home page."
     done_when: >-
       A named person at the chapter holds a Google Workspace administrator account on
       a chapter address.
@@ -224,11 +240,17 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: The chapter's administrator creates a user for the central support organization's named person, with a licence.
-      - do: Give it the highest administrator level. Step 10.3 needs it.
-      - do: Hand over its sign-in details privately, never in an email to a group.
-      - do: The central support organization's person signs in to the chapter's admin console with the account.
-        see: The chapter's admin console.
+      - do: "Sign in to https://admin.google.com as the chapter's administrator."
+      - do: "Open Directory, then Users, and choose Add new user. Enter:"
+        items:
+          - "First name: the central support person's first name"
+          - "Last name: the central support person's last name"
+          - "Primary email: FIRSTNAME.LASTNAME@EMAIL-DOMAIN, using the central support person's own name, never a shared name such as support"
+      - do: "Let Google generate the password. Copy it straight into the chapter's Operations vault, and tell the central support person privately where to find it. Never email it."
+      - do: "Open the new user's page, open Admin roles and privileges, and assign Super Admin. Entering the software's permission grant in step 10.3 needs it."
+        see: "Super Admin listed for the central support person's account."
+      - do: "The central support person signs in at https://admin.google.com with the new address, sets their own password, and turns on two-step sign-in straight away."
+        see: "The chapter's admin console, reached from their own account."
     done_when: >-
       The central support organization holds its own named administrator account,
       separate from the chapter's.
@@ -251,10 +273,16 @@ steps:
     produces: [ops_mailbox]
     mode: guided
     actions:
-      - do: In the admin console, create a user for the shared address, usually info@ the chapter's email domain, with its own licence. Do not create it as a group or as a second name for someone's mailbox.
-      - do: Put its sign-in and recovery codes in the chapter's vault.
-      - do: Look it up in the admin console's list of users.
-        see: The address listed as a user with a licence, not in the list of groups.
+      - do: "Sign in to https://admin.google.com as the chapter's administrator. Open Directory, then Users, and choose Add new user."
+      - do: "Enter exactly:"
+        items:
+          - "First name: the chapter's name, for example Akron Business Mentors"
+          - "Last name: Info"
+          - "Primary email: info@EMAIL-DOMAIN"
+      - do: "Let Google generate the password and copy it straight into the chapter's Operations vault."
+      - do: "Open Directory, then Users, and find info@EMAIL-DOMAIN."
+        see: "info@EMAIL-DOMAIN listed as a user with a Google Workspace licence. It must not appear under Directory, then Groups."
+      - do: "Write info@EMAIL-DOMAIN on the chapter information form as the shared operations mailbox. The software reads it as OPS_MAILBOX."
     done_when: >-
       The shared address the software reads and sends from exists as a real licensed
       mailbox, not as an alias or a group. An alias will not work.
@@ -279,9 +307,10 @@ steps:
     produces: [alert_email_from]
     mode: guided
     actions:
-      - do: Either create a separate licensed user for the address, or use the shared operations mailbox from step 4.7. Cleveland uses its shared operations mailbox for both, which saves a licence.
-      - do: Record the address on the chapter information form.
-        see: The address listed in the admin console as a user with a licence.
+      - do: "Use the shared operations mailbox from step 4.7 as the sending address. Cleveland does the same, and it saves a licence."
+      - do: "On the chapter information form, write info@EMAIL-DOMAIN as the alert sending address, or leave it empty. The software reads it as ALERT_EMAIL_FROM, and when it is empty it sends from OPS_MAILBOX anyway."
+      - do: "Only if the chapter wants a separate sending address: create a second user exactly as in step 4.7, with Last name Alerts and Primary email alerts@EMAIL-DOMAIN, and write that address on the form instead."
+        see: "The sending address listed under Directory, then Users, with a licence, and not under Groups."
     done_when: >-
       The address the software sends its warning messages from exists as a real
       licensed mailbox. An alias or a group will be refused.
@@ -303,9 +332,19 @@ steps:
     produces: [alert_email_to]
     mode: guided
     actions:
-      - do: Choose one receiving address. Unlike the sending address, it may be a group.
-      - do: Forward it to named people at the chapter and at the central support organization, as Cleveland's alert address forwards to its named system administrators.
-      - do: Write the named people down beside the address.
+      - do: "Sign in to https://admin.google.com. Open Directory, then Groups, and choose Create group. Enter:"
+        items:
+          - "Name: System Administrators"
+          - "Group email: admin@EMAIL-DOMAIN"
+          - "Description: Receives the system's warning messages"
+      - do: "In the group's access settings, let people outside the organization post to the group. The hosting provider's alerts come from outside the chapter. The setting's exact wording has not been checked for this guide."
+      - do: "Add these members to the group:"
+        items:
+          - "At least one named officer of the chapter"
+          - "At least one named person from the central support organization, by their own address"
+      - do: "Write admin@EMAIL-DOMAIN on the chapter information form as the alert receiving address. The software reads it as ALERT_EMAIL_TO. Write the members' names beside it on the chapter's account list (step 5.7)."
+      - do: "From a personal account outside the chapter, send a test message to admin@EMAIL-DOMAIN."
+        see: "The test message arrives with every member of the group."
     done_when: >-
       The receiving address is decided and it reaches a person who reads it during the
       working week, not an unattended mailbox.
@@ -327,10 +366,15 @@ steps:
     produces: [members_group]
     mode: guided
     actions:
-      - do: In the admin console, create a group for all the chapter's members, at its own address.
-      - do: Add a test member, then remove them.
-        see: The test member appears in the group and then disappears.
-      - do: Record the group's address on the chapter information form. The group is optional; if its address is left off the form, the software skips that part.
+      - do: "Sign in to https://admin.google.com. Open Directory, then Groups, and choose Create group. Enter:"
+        items:
+          - "Name: All Members"
+          - "Group email: allmembers@EMAIL-DOMAIN, or another address the chapter prefers"
+          - "Description: Every member of the chapter"
+      - do: "In the group's access settings, set who can post. That is the chapter's choice. Only the group's own members posting is the usual choice."
+      - do: "Add yourself as a test member, then remove yourself."
+        see: "The member appears in the group's member list and then disappears."
+      - do: "Write the group's address on the chapter information form as the members group. The software reads it as GOOGLE_MEMBERS_GROUP. Leaving it empty turns this feature off."
     done_when: >-
       The group exists at its own address and the administrator can add and remove
       members.
@@ -353,9 +397,16 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: For each member of staff, create a licensed user, first name and last name at the chapter's email domain.
-      - do: Do not create mentors' mailboxes here. The software creates each mentor's mailbox from their mentor record (step 15.9).
-        see: Every member of staff listed in the admin console.
+      - do: "Sign in to https://admin.google.com. For each member of staff the chapter names now (the full list is confirmed later, in step 14.1), open Directory, then Users, and choose Add new user. Enter:"
+        items:
+          - "First name: their first name"
+          - "Last name: their last name"
+          - "Primary email: FIRSTNAME.LASTNAME@EMAIL-DOMAIN"
+          - "Secondary email: their personal address, used only to send them their sign-in details"
+      - do: "Let Google generate a password, and choose the option that asks for a new password at the first sign-in. Send the sign-in details to the secondary email. The option wording has not been checked for this guide."
+      - do: "Do not create mentors' mailboxes here. The software creates each mentor's mailbox from their mentor record (step 15.9)."
+      - do: "Open Directory, then Users."
+        see: "Every member of staff listed, each with a licence."
     done_when: >-
       Every member of staff who will use the system has a mailbox on the chapter's
       domain. Mentors' mailboxes are created later, from their mentor records (step
@@ -380,9 +431,18 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: In the admin console, turn on two-step sign-in, then enforce it for the whole organization. Give users a short grace period to set it up.
-      - do: Set a second step on the shared mailboxes too. Put their recovery codes in the chapter's vault.
-        see: The admin console reports two-step sign-in as enforced, and each user shows as enrolled.
+      - do: "Sign in to https://admin.google.com. Open Security, then Authentication, then 2-step verification. The menu wording has not been checked for this guide."
+      - do: "Set exactly:"
+        items:
+          - "Allow users to turn on 2-step verification: on"
+          - "Enforcement: on, from a date one week away"
+          - "New user enrollment period: 1 week"
+          - "Methods: any except verification codes sent by text message or phone call"
+        see: "The settings saved for the whole organization."
+      - do: "Sign in as info@EMAIL-DOMAIN and turn on two-step sign-in at https://myaccount.google.com/signinoptions/twosv, using an authenticator app held by two named people, not one person's phone."
+      - do: "On the same page, generate backup codes for info@EMAIL-DOMAIN and put them in the chapter's Operations vault. Do the same for any other shared mailbox."
+      - do: "After the enforcement date, open Directory, then Users, and add the 2-step verification enrollment column."
+        see: "Every user shown as enrolled."
     done_when: >-
       Two-step sign-in is enforced for every account, and recovery is possible
       without one person.
@@ -405,9 +465,12 @@ steps:
     produces: []
     mode: offline
     actions:
-      - do: Apply through Google's nonprofit programme, which checks the chapter's nonprofit status before granting the discount.
-      - do: Include the determination letter from step 1.5.
-      - do: Write down the date the application went in and the expected answer date.
+      - do: "In a browser, go to https://www.google.com/nonprofits and choose to get started. Sign in as the chapter's administrator from step 4.5."
+      - do: "Fill in the application with the chapter's legal name, its employer identification number from step 1.3, and its address, exactly as they appear on the determination letter from step 1.5."
+      - do: "Google's verification partner, Goodstack (formerly called Percent), checks the chapter's nonprofit status. If it asks for evidence, upload the determination letter from step 1.5. That this is still the verification partner has not been checked for this guide."
+      - do: "Write the date the application went in on the chapter's account list (step 5.7), with the expected answer date Google gives."
+      - do: "Once approved, activate Google Workspace for Nonprofits from the Google for Nonprofits account, and choose the chapter's existing Google Workspace domain. The exact screens have not been checked for this guide."
+        see: "The admin console's billing page shows the nonprofit plan."
     done_when: >-
       The application has been submitted with the chapter's nonprofit evidence, and
       the expected answer date is recorded.
@@ -430,11 +493,13 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: In the registrar account, change the contact and sign-in address to a chapter mailbox that more than one person can reach. The shared operations mailbox from step 4.7 is one choice.
-      - do: Remove the founding email address from step 3.1.
-      - do: Do the same in the Cloudflare account from step 3.7, which was also opened with the founding address.
-      - do: Ask the registrar for a password reset.
-        see: The password reset message arrives in the chapter mailbox.
+      - do: "Sign in to the registrar account from step 3.3. Open its account profile or contact settings. Registrars name this page differently; if it cannot be found, search the registrar's help pages for how to change the account email."
+      - do: "Change the account's sign-in and contact email to info@EMAIL-DOMAIN, and confirm the change from the message sent there."
+      - do: "Delete the founding email address from step 3.1 from every contact field on the account."
+      - do: "Sign in to Cloudflare, open My Profile, and change the email address to info@EMAIL-DOMAIN. Confirm the change from the message sent there."
+        see: "Both accounts show info@EMAIL-DOMAIN."
+      - do: "Sign out of the registrar and use its forgotten-password link with info@EMAIL-DOMAIN."
+        see: "The password reset message arrives in info@EMAIL-DOMAIN. Do not complete the reset unless you mean to; if you do, put the new password in the chapter's vault."
     done_when:
       - "The registrar account's contact address is a chapter mailbox."
       - "The founder's personal address has been removed."
@@ -451,6 +516,10 @@ steps:
     source: 8-Methods-Organization-Domains-Google.md#4.14
 
 changes:
+  - version: "0.3"
+    date: "09-19-26 00:05"
+    change: >-
+      Every action outside steps 4.3 and 4.4 made precise (Doug, 09-19-26): the web addresses to open, the admin console paths, the exact user and group names to create (info@, admin@, allmembers@), the fields to fill in, the two-step sign-in settings, and the nonprofit application route. Screen wording not checked on screen is marked as such.
   - version: "0.2"
     date: "09-19-26 00:20"
     change: >-

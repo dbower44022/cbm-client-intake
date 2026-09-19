@@ -1,7 +1,7 @@
 stage: 14
 name: Create the staff accounts
-version: "0.1"
-updated: "09-18-26 17:20"
+version: "0.2"
+updated: "09-19-26 00:15"
 why: >-
   Each member of the chapter's staff needs their own account to use the
   applications, on the team that opens the pages their job needs. Only an
@@ -31,7 +31,12 @@ steps:
     produces: [staff_list]
     mode: guided
     actions:
-      - do: "List each member of staff with their chapter email address and their team. The seven teams that open a page are:"
+      - do: "Make a list with one line per member of staff, giving:"
+        items:
+          - Their full name.
+          - Their chapter email address, on the chapter's own domain.
+          - Their team or teams, spelled exactly as below.
+      - do: "Choose each person's teams from these seven, spelled exactly as written:"
         items:
           - Client Administration Team
           - Mentor Administration Team
@@ -68,10 +73,21 @@ steps:
     produces: []
     mode: automated
     actions:
-      - do: Create each account as an ordinary user, not an administrator, with the teams from the list. The trial script scripts/rehearsal/stage4_users.py did this for the trial chapter; it has its seven made-up people written into it, so for a real chapter adapt it to read the list, or create the accounts by hand on the CRM's user administration screen.
-      - do: Send each person their sign-in details by email from the CRM.
-        see: Each account listed in the CRM, on its team.
-      - do: For a partner or funder manager, create a mentor profile in Mentor Administration too. Fill in its chapter email address first, exactly matching their account's user name, so the software links the existing account instead of creating a second one.
+      - do: "Sign in to the CRM at https://CRM-ADDRESS as the central support organization's administrator, and open Administration, then Users."
+      - do: "For each person on the list, choose Create User and fill in:"
+        items:
+          - "User Name: their chapter email address"
+          - "Type: Regular. Never Admin."
+          - "First Name and Last Name: from the list"
+          - "Email: their chapter email address"
+          - "Teams: the teams from the list"
+          - "Default Team: their first team"
+          - "Roles: leave empty. Permissions come from the teams."
+        see: The user saved. These field labels are EspoCRM's standard ones and have not been checked on the chapter's version.
+      - do: "Set a password and send it to the person. EspoCRM's user screen offers to generate a password and email the person their sign-in details; use that option. Its exact label has not been checked."
+        see: The person receives an email with their user name and a sign-in link.
+      - do: "For a partner or funder manager, also open https://APP-ADDRESS/mentoradmin/, create a mentor profile for them, and fill in its CBM email field with exactly their user name before saving. The software then links the existing account instead of creating a second one."
+        see: The mentor profile linked to their existing account, with no second account created.
     done_when: >-
       Every person on the list has an account in the CRM on the right team.
     check:
@@ -95,8 +111,12 @@ steps:
     produces: []
     mode: automated
     actions:
-      - do: On the CRM's user administration screen, filter the list to administrators.
-        see: Exactly two accounts, the central support organization's own administrator (step 9.18) and the account the applications use to create logins.
+      - do: "In the CRM, open Administration, then Users, and filter the list by Type equal to Admin."
+        see:
+          - Exactly two accounts
+          - The central support organization's own administrator account (step 9.18)
+          - The account the applications use to create logins
+      - do: If any other account is an administrator, change its Type to Regular and tell the chapter why.
     done_when: >-
       The only administrator accounts belong to the central support organization.
       Chapter staff hold ordinary accounts.
@@ -119,9 +139,10 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: On the CRM's user administration screen, read the last sign-in date for each account.
-      - do: Chase anyone with no date. A person who lost their welcome email uses "Forgot your password?" on the applications' sign-in page.
-        see: A last sign-in date for every account.
+      - do: "In the CRM, open Administration, then Auth Log. It records every sign-in by user name. The label is EspoCRM's standard one and has not been checked on the chapter's version."
+      - do: Tick off every person on the staff list who appears there with a successful sign-in.
+        see: Every person on the list ticked.
+      - do: "Chase anyone not ticked. Ask them to check their spam folder first. A person who lost their welcome email opens https://APP-ADDRESS/ and chooses Forgot your password?"
     done_when: >-
       Each member of staff has signed in at least once and set their own password.
     check:
@@ -135,6 +156,12 @@ steps:
     source: 5-Methods-Form-Accounts-Checks.md#14.4
 
 changes:
+  - version: "0.2"
+    date: "09-19-26 00:15"
+    change: >-
+      Every action made precise (Doug, 09-19-26): the seven team names as
+      written, the exact user fields to fill in, the administrator filter, and
+      the Auth Log check. Unchecked EspoCRM labels are marked as unchecked.
   - version: "0.1"
     date: "09-18-26 17:20"
     change: >-

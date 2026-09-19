@@ -230,7 +230,7 @@ chapter:
 web:
   app_base_url:         # https://apps.<chapter domain>/
   website_base_url:     # the chapter's WordPress root
-  events_public_base_url:   # <website>/webinars
+  events_public_base_url:   # leave EMPTY: the software then uses its own /webinars/ page
   docs_site_url:
   policy_client_conduct_url:
   policy_mentor_ethics_url:
@@ -245,7 +245,8 @@ google:
   alert_email_to:
   members_group:        # optional; empty disables the group step
   mentor_email_domain:  # -> MENTOR_EMAIL_DOMAIN; the domain mentors' mailboxes are made on
-  shared_drive_id:
+  delegated_admin:      # -> GOOGLE_DELEGATED_ADMIN; a Workspace administrator the software acts as for directory reads
+  shared_drive_id:      # filled in at deployment guide step 10.5, when the shared drive is created
   zoom_host_email:      # public webinars only; the default is Cleveland's host, so set it
 
 zoom:                   # public webinars only — the chapter's Zoom Server-to-Server OAuth app
@@ -298,6 +299,7 @@ the danger was never the number, it was that nobody could see them all at once.
 
 | Date | Change |
 |---|---|
+| 09-19-26 00:30 | `delegated_admin` added (GOOGLE_DELEGATED_ADMIN, which no step or form set); `events_public_base_url` now says to leave it empty; `shared_drive_id` notes it is filled in at step 10.5. Found by the precision sweep. |
 | 09-19-26 00:10 | The Google branch field removed from the form, and § D rewritten: every chapter hosts its own Google Workspace (Doug, 09-18-26). |
 | 09-18-26 17:45 | `mentor_email_domain` added to the form's Google section, and three switches added: `google_create_mailbox`, `gdrive_identity`, `zoom_events`. Found by the information check when the deployment guide was turned into data. |
 | 09-18-26 02:05 | The Zoom app's account and client identifiers added to the form, and its client secret added to the secrets list, for a chapter that runs public webinars. `ZOOM_HOST_EMAIL` defaults to Cleveland's host, so a chapter must set it. Found while writing the deployment guide's methods for the hosting and video meeting accounts. |

@@ -1,7 +1,7 @@
 # Stage 5 — Open the hosting and video meeting accounts
 
-**Version:** 0.1  
-**Last Updated:** 09-18-26 17:20  
+**Version:** 0.2  
+**Last Updated:** 09-19-26 00:05  
 **Generated from** `steps/stage-05.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -49,10 +49,12 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Do this:**
 
-1. Sign up for a DigitalOcean account using a chapter mailbox that more than one person can read, such as the shared operations mailbox. Never use a personal address.
-   *You should see:* A new, empty DigitalOcean account.
-2. Put the account's sign-in in the chapter's Operations vault.
-   *You should see:* The sign-in listed in the vault.
+1. In a browser, go to https://cloud.digitalocean.com/registrations/new and sign up with email, not with a Google or GitHub sign-in. Use info@EMAIL-DOMAIN, the shared operations mailbox from step 4.7. Never use a personal address. The exact wording of DigitalOcean's screens has not been checked for this guide.
+2. Set a new password, and put it in the chapter's Operations vault straight away.
+3. Open the confirmation message DigitalOcean sends to info@EMAIL-DOMAIN and confirm the address.
+4. When DigitalOcean asks for a team name, enter the chapter's name exactly as chosen in step 1.1.
+   *You should see:* A new, empty DigitalOcean account named after the chapter.
+5. Write the account on the chapter's account list (step 5.7): https://cloud.digitalocean.com, signed in as info@EMAIL-DOMAIN.
 
 **Done when:** The account exists in the chapter's name, using a chapter mailbox.
 
@@ -79,10 +81,12 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Do this:**
 
-1. In the hosting account's billing settings, add the chapter's own card or bank payment method.
-   *You should see:* The chapter's payment method listed.
-2. Set the billing email to a chapter mailbox the chapter's treasurer reads.
-   *You should see:* The chapter mailbox shown as the billing contact.
+1. Sign in at https://cloud.digitalocean.com as info@EMAIL-DOMAIN and open Billing. The exact wording of DigitalOcean's screens has not been checked for this guide.
+2. Add a payment method: the chapter's own card, or its bank account, from step 1.6. Never a volunteer's personal card.
+   *You should see:* The chapter's payment method listed as the default.
+3. Set the billing email to an address the chapter's treasurer reads, such as info@EMAIL-DOMAIN or the treasurer's own chapter address.
+   *You should see:* The chapter address shown as the billing contact.
+4. Set a billing alert, so the chapter hears when a month's spend passes a set amount. Use the amount the cost agreement names (step 2.2).
 
 **Done when:** A chapter payment method is on file and the billing contact is a chapter mailbox.
 
@@ -109,9 +113,13 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Do this:**
 
-1. Apply for hosting credits in the chapter's own name, through the hosting provider's own nonprofit programme or through TechSoup. The current terms of both have not been checked for this guide.
-2. Write down which route was used and when an answer is expected, on the chapter's account list (step 5.7).
-   *You should see:* The route and the answer date on the list.
+1. Find the current nonprofit route for DigitalOcean credits. Two are known: DigitalOcean's own programme for nonprofits, and the DigitalOcean offer on TechSoup (https://www.techsoup.org). Neither has been checked for this guide, and the terms change. Ask the central support organization which is open now.
+2. Apply in the chapter's own name, with the employer identification number from step 1.3 and the determination letter from step 1.5. Use info@EMAIL-DOMAIN as the contact.
+3. Write on the chapter's account list (step 5.7):
+   - The route used
+   - The date the application went in
+   - The expected answer date
+   *You should see:* The route and both dates on the list.
 
 **Done when:** The application is submitted and the expected answer date is recorded.
 
@@ -138,12 +146,15 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Do this:**
 
-1. In the hosting account's team settings, invite a named person from the central support organization by that person's own email address.
+1. The central support organization's named person first creates their own DigitalOcean sign-in, at https://cloud.digitalocean.com/registrations/new, with their own work address, and turns on two-step sign-in for it.
+2. The chapter signs in at https://cloud.digitalocean.com as info@EMAIL-DOMAIN, opens the team's settings, and chooses to invite a member. The exact wording of DigitalOcean's screens has not been checked for this guide.
+3. Enter the central support person's own address, and give them a role that can create and manage servers, databases, applications, domains and tokens. DigitalOcean's role names have changed over time; choose the role that manages every resource but is not Owner, and write its name on the chapter's account list.
    *You should see:* The invitation listed as pending.
-2. Give that person a role that can create and manage servers, databases and applications. The exact names of the roles on that screen have not been checked for this guide.
-3. Keep the owner role with the chapter.
-4. The invited person accepts the invitation and signs in.
-   *You should see:* The chapter's account, reached from the invited person's own sign-in.
+4. Keep the Owner role with the chapter's own sign-in, info@EMAIL-DOMAIN.
+5. The invited person accepts from the message DigitalOcean sends, and switches to the chapter's team from their own sign-in.
+   *You should see:* The chapter's team, reached from the invited person's own sign-in.
+6. The chapter opens the team's member list.
+   *You should see:* The central support person listed, with a remove option beside them. Do not press it.
 
 **Done when:** The central support organization can create and manage servers in the account under its own named sign-in, and the chapter can remove that access itself.
 
@@ -169,13 +180,26 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Do this:**
 
-1. Decide whether the chapter will run public webinars through the software. If not, write "no public webinars through Zoom" on the chapter's account list and stop here.
-2. Open a Zoom account with a chapter mailbox as the host address.
-   *You should see:* The host mailbox signs in to Zoom.
-3. On that Zoom account, create a "Server-to-Server OAuth" app, as section 5 of EVENTS-SETUP.md describes.
-   *You should see:* Three values - an account identifier, a client identifier and a client secret.
-4. Put the client secret in the chapter's Operations vault. Write the host address and the two identifiers on the chapter information form.
-   *You should see:* The secret in the vault, and three values on the form.
+1. Decide whether the chapter will run public webinars through the software. If not, write "No public webinars through Zoom" on the chapter's account list (step 5.7) and stop here. Mentoring sessions never need this account.
+2. Create a licensed user for the webinar host in the chapter's Google Workspace, exactly as in step 4.7, with Last name Webinars and Primary email webinars@EMAIL-DOMAIN. Zoom will send its host mail there.
+3. In a browser, go to https://zoom.us/signup and create a Zoom account with webinars@EMAIL-DOMAIN. Put the password in the chapter's Operations vault.
+4. Buy a paid Zoom plan with a Zoom Webinars licence, and assign that licence to webinars@EMAIL-DOMAIN. Automatic attendance also needs the plan to allow webinar reports. Which plan the chapter needs has not been checked for this guide; the central support organization confirms it.
+5. Signed in to Zoom as webinars@EMAIL-DOMAIN, go to https://marketplace.zoom.us and open Develop, then Build App. Choose Server-to-Server OAuth and name the app after the chapter, for example Akron Business Mentors Webinars.
+6. On the app's Information page, fill in the company name (the chapter's name) and a developer contact (info@EMAIL-DOMAIN).
+7. On the Scopes page, add the scopes the software uses:
+   - Webinars: read and write
+   - Webinar registrants: read and write
+   - Reports: read
+   - Users: read
+   *You should see:* Four groups of scopes added. Zoom's exact scope names have changed over time; pick the ones matching these four descriptions, and the central support organization checks them later with scripts/probe_zoom.py, which names any missing scope.
+8. On the Activation page, activate the app.
+   *You should see:* The app shown as activated.
+9. From the app's App Credentials page, copy three values:
+   - Account ID: write it on the chapter information form as the Zoom account identifier
+   - Client ID: write it on the form as the Zoom client identifier
+   - Client Secret: put it only in the chapter's Operations vault, never on the form
+10. On the chapter information form, write webinars@EMAIL-DOMAIN as the Zoom host address. The software reads it as ZOOM_HOST_EMAIL, which otherwise defaults to Cleveland's host.
+   *You should see:* The three values on the form and the secret in the vault.
 
 **Done when:** Either the account exists with a chapter mailbox as its host address and an app that lets the software schedule webinars through it, or a note records that this chapter runs no public webinars.
 
@@ -202,12 +226,15 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Do this:**
 
-1. In the hosting account's security settings, turn on two-step sign-in.
-   *You should see:* Signing in now asks for a second step.
-2. Do the same in the Zoom account, if there is one.
-   *You should see:* Signing in to Zoom asks for a second step.
-3. Put the recovery codes for both in the chapter's vault, where a second named person can reach them.
-   *You should see:* The recovery codes listed in the vault.
+1. In DigitalOcean, signed in as info@EMAIL-DOMAIN, open the account's security settings and turn on two-factor authentication with an authenticator app. The exact wording of DigitalOcean's screens has not been checked for this guide.
+   *You should see:* Signing in now asks for a code.
+2. Save DigitalOcean's recovery codes straight into the chapter's Operations vault.
+3. Set up the same authenticator on a second named person's device, from the same set-up code, so one lost phone does not lock the chapter out. Or store the set-up code itself in the vault.
+4. In Zoom, signed in as webinars@EMAIL-DOMAIN, open the account's security settings and turn on two-factor authentication with an authenticator app. The exact wording of Zoom's screens has not been checked for this guide.
+   *You should see:* Signing in to Zoom now asks for a code.
+5. Save Zoom's recovery codes in the chapter's Operations vault.
+6. A second named person opens the vault and finds both sets of recovery codes.
+   *You should see:* Both sets present, reachable by two people.
 
 **Done when:** Two-step sign-in is on and recovery does not depend on one person.
 
@@ -238,18 +265,19 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Do this:**
 
-1. Make one list, held by the chapter, with one line per account:
-   - The domain registrar.
-   - Cloudflare.
-   - Google Workspace.
-   - The hosting account.
-   - The Zoom account, if there is one.
+1. Make one list, held by the chapter in its Operations vault as a secure note, where the central support organization's named members can read it, with one line per account:
+   - The domain registrar
+   - Cloudflare
+   - Google Workspace
+   - The Proton Pass vault itself
+   - The hosting account
+   - The Zoom account, if there is one
 2. On each line write:
-   - The web address to sign in at.
-   - Who holds the top-level sign-in.
-   - Who else has access.
-   - Where the recovery codes are.
-   - Any nonprofit discount or credit applied.
+   - The web address to sign in at
+   - Who holds the top-level sign-in
+   - Who else has access
+   - Where the recovery codes are
+   - Any nonprofit discount or credit applied, or applied for
    *You should see:* No passwords on the list. Passwords and recovery codes are in the chapter's vault (step 2.7).
 
 **Done when all of these are true:**
@@ -282,13 +310,24 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 **Do this:**
 
-1. In the chapter's DigitalOcean account, create an API token with write access. The screen is under the account's API settings; its exact labels have not been checked for this guide.
-   *You should see:* A new token, shown once.
-2. In the chapter's Cloudflare account, create an API token with the "Zone, DNS, Edit" permission, limited to the chapter's own zones.
-   *You should see:* A new token covering only the chapter's zones.
-3. Put both tokens in the chapter's Operations vault.
-   *You should see:* Both tokens listed in the vault.
-4. In CRMBuilder, enter both as the provider credentials on the chapter's engagement.
+1. In the chapter's DigitalOcean account, open API, then Tokens, and choose to generate a new token. The exact wording of DigitalOcean's screens has not been checked for this guide.
+2. Enter:
+   - Token name: crmbuilder-CHAPTER-SLUG, using the chapter's short label from step 8.2
+   - Expiration: the longest the screen offers, or no expiry
+   - Scopes: full read and write access
+   *You should see:* A new token, shown once only.
+3. Copy the DigitalOcean token straight into the chapter's Operations vault, named DigitalOcean token for CRMBuilder.
+4. In Cloudflare, open My Profile, then API Tokens, and choose Create Token. Use the Edit zone DNS template.
+5. Set exactly:
+   - Token name: crmbuilder-CHAPTER-SLUG
+   - Permissions: Zone, DNS, Edit (the template sets this)
+   - Zone resources: Include, Specific zone, and each of the chapter's domain names; never All zones
+   - Client IP address filtering: leave empty
+   - TTL: leave empty, for no expiry
+6. Choose to continue to the summary, then create the token.
+   *You should see:* A new token, shown once only, covering only the chapter's zones.
+7. Copy the Cloudflare token straight into the chapter's Operations vault, named Cloudflare DNS token for CRMBuilder.
+8. In CRMBuilder, open the chapter's engagement, open its provider credentials, and enter the DigitalOcean token as the DigitalOcean credential and the Cloudflare token as the Cloudflare credential.
    *You should see:* Both credentials shown as configured, and the chapter's Cloudflare zones listed.
 
 **Done when all of these are true:**
@@ -312,4 +351,5 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 | Version | Date | Change |
 |---|---|---|
+| 0.2 | 09-19-26 00:05 | Every action made precise (Doug, 09-19-26): DigitalOcean sign-up, billing, team invitation and API token settings; the Cloudflare DNS token's exact settings; the Zoom Server-to-Server OAuth app with the four scope groups the software uses (from core/zoom.py and EVENTS-SETUP.md); two-step sign-in and recovery codes; the account list kept in the Operations vault. Screen wording not checked on screen is marked as such. |
 | 0.1 | 09-18-26 17:20 | First version as data, converted from the methods for the hosting and video meeting accounts (9-Methods-Hosting-Website-Policies.md, version 0.4) with the step list's finishing tests. |

@@ -1,7 +1,7 @@
 # Stage 10 — Set up the Google permissions the software needs
 
-**Version:** 0.1  
-**Last Updated:** 09-18-26 17:20  
+**Version:** 0.2  
+**Last Updated:** 09-19-26 00:07  
 **Generated from** `steps/stage-10.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -43,9 +43,25 @@ The applications read and send the chapter's email, keep calendars in step, file
 
 **Do this:**
 
-1. In the chapter's Google Cloud project, create a service account. The exact screen names are not verified for this guide, so follow Google's own current wording.
-   *You should see:* The new service account, with a client identifier (a long number).
-2. Write the client identifier down. Step 10.3 needs it.
+1. In a browser, go to console.cloud.google.com and sign in as the chapter's Google administrator (the account from step 4.5). Labels below are Google Cloud's wording as of 2026, not checked on screen for this guide; if one differs, use the search box at the top of the console.
+2. Open the project picker at the top of the page and choose New project. Enter:
+   - Project name: CHAPTER-SLUG-apps
+   - Organization: the chapter's own domain
+   *You should see:* The new project selected in the project picker.
+3. Open APIs and services, then Library. Search for each of these and choose Enable on each:
+   - Admin SDK API
+   - Gmail API
+   - Google Calendar API
+   - Google Drive API
+   - Google Meet REST API (only if meeting transcripts will be switched on)
+   *You should see:* Each API shown as enabled under APIs and services, then Enabled APIs and services.
+4. Open IAM and admin, then Service accounts, and choose Create service account. Enter:
+   - Service account name: CHAPTER-SLUG-apps
+   - Service account ID: CHAPTER-SLUG-apps (filled in for you)
+   - Roles: none. Skip the optional steps and choose Done.
+   *You should see:* The service account listed, with an email address ending @CHAPTER-SLUG-apps.iam.gserviceaccount.com.
+5. Open the service account. Copy its Unique ID, a number of about twenty digits, into the chapter's Operations vault as a note named Google machine account client ID. Step 10.3 needs it.
+   *You should see:* The Unique ID on the service account's details page.
 
 **Done when:** The account the software will use exists in the chapter's Google account.
 
@@ -70,11 +86,14 @@ The applications read and send the chapter's email, keep calendars in step, file
 
 **Do this:**
 
-1. Create a key for the service account, in the JSON format, and download it.
-   *You should see:* One file, downloaded.
-2. Put the file in the chapter's Operations vault.
-   *You should see:* The key file listed in the vault.
-3. Delete the downloaded file from the computer, and empty the computer's bin.
+1. In the same service account, open the Keys tab, choose Add key, then Create new key. Choose:
+   - Key type: JSON
+   *You should see:* One file ending .json downloaded to the computer.
+2. If Google refuses to create the key, the organization has the policy that blocks service account keys switched on. That is the default for Google Cloud organizations created since 2024. The chapter's Google administrator must allow keys for this one project: open IAM and admin, then Organization policies, find Disable service account key creation, and override it for project CHAPTER-SLUG-apps only. Then create the key again.
+3. In Proton Pass, open the chapter's Operations vault and add a new item named Google machine account key. Attach the downloaded .json file to it.
+   *You should see:* The item in the Operations vault with the file attached, and a second named person able to open it.
+4. Delete the downloaded .json file from the computer, and empty the computer's bin.
+   *You should see:* A search of the downloads folder for .json finds nothing.
 
 **Done when:** The key file is stored as a secret and is not left on anyone's laptop or in email.
 
@@ -100,19 +119,24 @@ The applications read and send the chapter's email, keep calendars in step, file
 
 **Do this:**
 
-1. The chapter's Google administrator signs in to the chapter's Google admin console. Nobody else can do this step.
-2. Open the setting that allows a service account to act on behalf of users in the domain (called domain-wide delegation). The exact menu path is not verified for this guide.
-3. Add the client identifier from step 10.1.
-4. Paste in the standard list of permissions. It covers:
-   - Reading and sending mail.
-   - Managing calendar events.
-   - Reading and changing user accounts in the directory.
-   - Managing groups.
-   - Files on the shared drive.
-5. Read each permission back against the standard list, one at a time, aloud.
-   *You should see:* Every permission on the list, and nothing missing.
-6. Save.
-   *You should see:* The grant listed with the client identifier and the full list beside it.
+1. The chapter's Google administrator signs in at admin.google.com. Nobody else can do this step.
+2. Open Security, then Access and data control, then API controls, then Manage domain-wide delegation, and choose Add new. The menu names are Google's wording as of 2026, not checked on screen for this guide; if they differ, search the admin console for domain-wide delegation.
+3. In Client ID, paste the Unique ID from step 10.1 (it is in the Operations vault).
+4. In OAuth scopes, paste these scopes, separated by commas with no spaces. They are exactly the scopes the software requests, read from its code (core/gmail.py, core/gcalendar.py, core/gdrive.py, core/google_directory.py, core/gmeet.py):
+   - https://www.googleapis.com/auth/gmail.readonly
+   - https://www.googleapis.com/auth/gmail.send
+   - https://www.googleapis.com/auth/calendar.events
+   - https://www.googleapis.com/auth/drive
+   - https://www.googleapis.com/auth/admin.directory.user.readonly
+   - https://www.googleapis.com/auth/admin.directory.user
+   - https://www.googleapis.com/auth/admin.directory.group
+   - https://www.googleapis.com/auth/meetings.space.created (only if meeting transcripts will be switched on)
+5. The same list as one line, ready to paste (leave off the last scope if meeting transcripts will not be switched on):
+   - https://www.googleapis.com/auth/gmail.readonly,https://www.googleapis.com/auth/gmail.send,https://www.googleapis.com/auth/calendar.events,https://www.googleapis.com/auth/drive,https://www.googleapis.com/auth/admin.directory.user.readonly,https://www.googleapis.com/auth/admin.directory.user,https://www.googleapis.com/auth/admin.directory.group,https://www.googleapis.com/auth/meetings.space.created
+6. Read each scope back against the list above, one at a time, aloud, before saving. Look for a space after a comma, a trailing full stop, or http instead of https; each silently breaks one scope.
+   *You should see:* Every scope on the list, spelled exactly, and nothing missing.
+7. Choose Authorize.
+   *You should see:* The client ID listed on the domain-wide delegation page, with the scopes beside it.
 
 **Done when:** The grant is entered in the chapter's own Google admin console with the exact list of permissions, and the list has been checked item by item against the standard. A missing permission fails later with a message that names nothing useful.
 
@@ -138,9 +162,9 @@ The applications read and send the chapter's email, keep calendars in step, file
 
 **Do this:**
 
-1. In the chapter's Google admin console, open the list of users and find the shared operations mailbox.
-   *You should see:* It is listed as a user with a licence, not as a group or an alias.
-2. Write its address on the chapter information form as the shared operations mailbox.
+1. At admin.google.com, open Directory, then Users, and search for the shared operations mailbox address (for example info@CHAPTER-DOMAIN).
+   *You should see:* The address listed as a user, with a Google Workspace licence shown against it. If it is not in the users list at all, it is a group or an alias, and cannot be used.
+2. Write the address on the chapter information form as the shared operations mailbox.
 
 **Done when:** The mailbox is named, and it is a real licensed mailbox rather than a group or an alias. A group or alias is refused.
 
@@ -166,11 +190,15 @@ The applications read and send the chapter's email, keep calendars in step, file
 
 **Do this:**
 
-1. In Google Drive, create a shared drive for the chapter's documents.
-   *You should see:* The new shared drive in the list of shared drives.
-2. Add the service account from step 10.1 as a member, with permission to create and manage files.
-   *You should see:* The service account's address in the drive's member list.
-3. Copy the shared drive's identifier (the string of letters at the end of its web address) onto the chapter information form.
+1. Sign in at drive.google.com as the chapter's Google administrator. Open Shared drives and choose New. Enter:
+   - Name: CHAPTER-NAME Documents
+   *You should see:* The new shared drive open, and empty.
+2. Open the shared drive's menu, choose Manage members, and add the service account's email address from step 10.1 (ending @CHAPTER-SLUG-apps.iam.gserviceaccount.com). Choose:
+   - Access: Manager (Cleveland's service account is a Manager of its shared drive, because it grants people access to folders)
+   - Notify people: off (the service account has no mailbox)
+   *You should see:* The service account in the member list as Manager.
+3. Copy the shared drive's identifier from the browser's address bar: the characters after /drive/folders/ . Write it on the chapter information form as the shared drive.
+   *You should see:* A string of about nineteen letters and numbers, often starting 0A.
 
 **Done when:** The shared drive exists and the machine account is a member of it.
 
@@ -186,4 +214,5 @@ The applications read and send the chapter's email, keep calendars in step, file
 
 | Version | Date | Change |
 |---|---|---|
+| 0.2 | 09-19-26 00:07 | Every action made exact (Doug, 09-19-26: sweep every step): the Google Cloud project, the five APIs, the service account, the JSON key (including the organization policy that blocks keys by default), the domain-wide delegation entry with the exact scope list read from the software's code, one per line and as one pasteable line, and the shared drive with the Manager role Cleveland's own service account holds. |
 | 0.1 | 09-18-26 17:20 | First version as data, converted from the methods for the Google permissions (3-Methods-CRM-Google-Applications.md, version 0.5) with the step list's finishing tests. Numbered actions, a reason per step, and a check an app can run were added. |

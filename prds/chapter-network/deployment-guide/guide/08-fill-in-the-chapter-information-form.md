@@ -1,7 +1,7 @@
 # Stage 8 — Fill in the chapter information form
 
-**Version:** 0.1  
-**Last Updated:** 09-18-26 17:20  
+**Version:** 0.2  
+**Last Updated:** 09-19-26 00:05  
 **Generated from** `steps/stage-08.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -48,18 +48,21 @@ The chapter information form holds the roughly thirty-five values that differ fr
 
 **Do this:**
 
-1. Copy the blank form from the last section of prds/chapter-network/chapter-values.md.
+1. Copy the block of text under "The blank form" at the end of prds/chapter-network/chapter-values.md into a new file named CHAPTER-SLUG-values.yaml, for example akron-values.yaml.
    *You should see:*
-   - A section for the chapter
-   - A section for web addresses
-   - A section for Google
-   - A section for Zoom
-   - A section for the CRM
-   - A section for secrets
-   - A section for feature switches
+   - A chapter section
+   - A web section
+   - A google section
+   - A zoom section
+   - A crm section
+   - A secrets section
+   - A flags section
 2. Send the trial chapter's filled-in form, prds/chapter-network/rehearsal-2026-08-31/lakeside-values.yaml, alongside it as a worked example.
-3. Write a name beside each section. The chapter's setup contact fills in the name, the web addresses and the policy addresses. The central support organization fills in the CRM details, the feature switches and the list of secrets.
-   *You should see:* Every section with a name beside it.
+3. Add a comment line at the top of each section naming who fills it in:
+   - chapter and web: the chapter's setup contact
+   - google and zoom: the chapter's setup contact, checked by the central support organization
+   - crm, secrets and flags: the central support organization
+   *You should see:* Every section with a name at its top.
 
 **Done when:** The chapter has the current blank form and knows who fills in each part.
 
@@ -84,12 +87,13 @@ The chapter information form holds the roughly thirty-five values that differ fr
 
 **Do this:**
 
-1. Write the chapter's name exactly as it should appear on every page, capital letters included. For example, Akron Business Mentors.
-2. Write the short label, one lower-case word, for example akron. It names the chapter's servers and secrets.
-3. Write the chapter's time zone.
-   *You should see:* A time zone name such as America/Denver.
-4. If the time zone is not Eastern, write "not supported yet" beside it. The software has Eastern time written into its code (work list item 17).
-5. Write the currency and language. They are almost always US dollars and US English.
+1. Fill in the chapter section, key by key:
+   - name: the chapter's name exactly as it should appear on every page, capital letters included. Example: Lakeside Business Mentors. It becomes the setting ORGANIZATION_NAME.
+   - slug: one lower-case word with no spaces, used to name the chapter's servers and secrets. Example: lakeside.
+   - timezone: the time zone's standard name. Examples: America/New_York, America/Chicago, America/Denver, America/Phoenix.
+   - currency: USD
+   - locale: en_US
+2. If the time zone is not America/New_York, add the comment "not supported yet" beside it. The software has Eastern time written into its code (work list item 17).
 
 **Done when all of these are true:**
 
@@ -122,17 +126,22 @@ The chapter information form holds the roughly thirty-five values that differ fr
 
 **Do this:**
 
-1. Leave the application address empty. It does not exist until the applications are deployed, and step 11.10 fills it in.
-2. Open the chapter's website in a browser, and copy its address into the form.
-3. Copy in the events page address, the help documentation address and the colour file address.
-4. Open each of the four policy documents in a private browser window, and copy each address into the form.
-   *You should see:* Each policy document's page, with the chapter's own name on it.
+1. Fill in the web section, key by key, copying every address from a browser's address bar:
+   - app_base_url: https://apps.CHAPTER-DOMAIN/ — the address the applications will have. It does not answer until step 11.10.
+   - website_base_url: the website's home address from step 6.2. Example: https://lakesidebusinessmentors.org
+   - events_public_base_url: leave empty. Empty means the applications' own events page, APP-ADDRESS/webinars/, which is what every chapter now uses.
+   - docs_site_url: the answer from step 6.7.
+   - policy_client_conduct_url, policy_mentor_ethics_url, policy_terms_url and policy_privacy_url: the four addresses from stage 7, one per key.
+   - chapter_tokens_url: the colour file's address from step 6.5.
+2. In a terminal, run this once for each address except app_base_url, putting the address in place of ADDRESS:
+   - curl -sI ADDRESS
+   *You should see:* A first line of HTTP/2 200 for every one.
 
 **Done when all of these are true:**
 
 - The application address is filled in.
 - The website address is filled in.
-- The events page address is filled in.
+- The events page address is left empty, so the software uses its own events page.
 - The documentation address is filled in.
 - The colour file address is filled in.
 - The four policy addresses are filled in.
@@ -164,25 +173,28 @@ The chapter information form holds the roughly thirty-five values that differ fr
 
 **Do this:**
 
-1. Copy these from the Google Workspace admin console:
-   - The main domain.
-   - The shared operations mailbox.
-   - The alert sending address.
-   - The alert receiving address.
-   - The members group.
-2. Copy the shared drive's identifier, the string of letters at the end of its web address.
-3. Write the mentor email domain, the domain mentors' addresses are created on.
-4. For a chapter that runs public webinars, copy the Zoom host address and the Zoom app's account and client identifiers from step 5.5. Otherwise write "no webinars".
+1. Fill in the google section, key by key, copying each address from the Google Workspace admin console:
+   - primary_domain: the chapter's email domain. Example: cbmentors.org is Cleveland's.
+   - ops_mailbox: the shared operations mailbox from step 4.7. Example: info@CHAPTER-DOMAIN
+   - alert_email_from: the alert sending mailbox from step 4.8. It must be a mailbox with a licence, never a group.
+   - alert_email_to: the address that receives warnings, from step 4.9. It may be a group.
+   - members_group: the members group from step 4.10. Example: members@CHAPTER-DOMAIN
+   - mentor_email_domain: the domain mentors' mailboxes are made on. Usually the same as primary_domain. It becomes the setting MENTOR_EMAIL_DOMAIN.
+   - shared_drive_id: leave empty for now. The shared drive is created in step 10.5, which writes its identifier here: the part of the drive's web address after /drive/folders/.
+   - zoom_host_email: the Zoom host address from step 5.5, or leave empty for a chapter with no webinars. The default is Cleveland's host, so a webinar chapter must set it.
+2. Fill in the zoom section from step 5.5, or leave both empty for a chapter with no webinars:
+   - account_id: the Zoom app's account identifier.
+   - client_id: the Zoom app's client identifier.
+3. In the Google Workspace admin console, open Users and find ops_mailbox and alert_email_from.
+   *You should see:* Both listed as users with a licence. Neither is a group.
 
 **Done when all of these are true:**
 
-- The branch chosen is filled in.
 - The main domain is filled in.
 - The shared operations mailbox is filled in.
 - The alert sending address is filled in.
 - The alert receiving address is filled in.
 - The members group is filled in.
-- The shared drive is filled in.
 - The mentor email domain is filled in.
 
 **How to check:** Each mailbox named on the form is listed as a mailbox, with a licence, in the Google Workspace admin console.
@@ -206,10 +218,12 @@ The chapter information form holds the roughly thirty-five values that differ fr
 
 **Do this:**
 
-1. Write the CRM's address, the address it will be published at in step 9.6.
-2. Write the name shown inside the CRM and the sending name. Both are usually the chapter's name.
-3. Write the sending address, a mailbox from stage 4.
-4. Attach the logo image from step 6.6.
+1. Fill in the crm section, key by key:
+   - base_url: the CRM's address, published in step 9.6. Example: https://crm.CHAPTER-DOMAIN — Cleveland's is https://crm.clevelandbusinessmentors.org
+   - application_name: the name shown inside the CRM. Usually the chapter's name.
+   - outbound_from_name: the name on mail the CRM sends. Usually the chapter's name.
+   - outbound_from_address: a mailbox from stage 4 that the CRM sends from. Example: info@CHAPTER-DOMAIN
+   - logo_file: the logo's file name from step 6.6. Example: lakeside-logo.png
 
 **Done when all of these are true:**
 
@@ -240,10 +254,25 @@ The chapter information form holds the roughly thirty-five values that differ fr
 
 **Do this:**
 
-1. Go down the switch list on the form and write on or off for each one. Never leave one blank.
-   *You should see:* Thirteen switches, each with on or off.
-2. Set every switch that uses Google to off for now. They are switched on only after the Google checks in steps 11.14 to 11.18 pass.
-3. Record that the application follows the release branch, not the development branch.
+1. Fill in the flags section. Write true or false for each switch; never leave one blank. These are the starting values for a new chapter, which the central support organization proposes and the chapter agrees:
+   - analytics_enabled: true
+   - events_enabled: true
+   - events_public_api: true once the chapter runs public events, otherwise false
+   - gmail_sync: false until step 11.14 passes
+   - gcal_events: false until step 11.16 passes
+   - gdrive_docs: false until step 11.17 passes
+   - mentor_provision_users: true
+   - google_directory_check: false until step 11.18 passes
+   - google_create_mailbox: false until step 11.18 passes
+   - gdrive_identity: service (this one is a word, not true or false)
+   - zoom_events: false until the chapter's Zoom app is working
+   - record_quick_add: true
+   - setup_enabled: true
+   - async_delivery: true
+   - espo_dry_run: false
+   - deploy_on_push: false
+   *You should see:* Sixteen switches, none blank.
+2. Add the comment "follows the release branch" beside deploy_on_push. The application follows the release branch, never the development branch (step 11.9).
 
 **Done when:** Each switch has been deliberately set to on or off, and the branch the application follows is recorded as the release branch rather than the development branch.
 
@@ -267,16 +296,16 @@ The chapter information form holds the roughly thirty-five values that differ fr
 
 **Do this:**
 
-1. List the seven secrets by name:
-   - The CRM key the applications use.
-   - The name of the administrator account that creates logins.
-   - The password of that administrator account.
-   - The database address.
-   - The session secret.
-   - The encryption key for stored data.
-   - The Google key.
-2. For a chapter that runs public webinars, add the Zoom app's secret as an eighth.
-3. Write the holder beside each one. Write no secret value on the form.
+1. Fill in the secrets section with these names, exactly as written, and nothing else:
+   - ESPO_API_KEY — the CRM key the applications use. Created in step 9.17.
+   - ESPO_PROVISION_USERNAME — the name of the administrator account that creates logins. Created in step 9.18.
+   - ESPO_PROVISION_PASSWORD — that account's password. Created in step 9.18.
+   - DATABASE_URL — the database address. Supplied by the hosting platform in step 11.4.
+   - SESSION_SECRET — created in step 11.1.
+   - APP_ENCRYPTION_KEY — the encryption key for stored data. Created in step 11.2, and never changed afterwards.
+   - GOOGLE_SERVICE_ACCOUNT_JSON — the Google key. Created in step 10.2.
+2. For a chapter that runs public webinars, add ZOOM_CLIENT_SECRET, the Zoom app's secret from step 5.5, as an eighth.
+3. Add a comment beside each name with its holder. Write no secret value anywhere on the form.
    *You should see:* Seven or eight names, each with a holder, and no values.
 
 **Done when all of these are true:**
@@ -311,9 +340,10 @@ The chapter information form holds the roughly thirty-five values that differ fr
 **Do this:**
 
 1. Open the chapter's Operations vault in Proton Pass.
-2. For each secret on the list from step 8.7, check it has an entry. Most arrive as accounts are created; the machine secrets arrive in stages 9 to 11 and go straight into the vault as each is made.
-   *You should see:* An entry for every secret that exists so far.
-3. Ask a second named person to open each entry.
+2. For each name on the list from step 8.7 whose step has already happened, check there is an entry titled with exactly that name, for example ESPO_API_KEY. The machine secrets are created later, in stages 9 to 11, and go straight into the vault under the same titles as each is made.
+   *You should see:* An entry for every secret that exists so far, titled with its name from the list.
+3. Ask a second named person to open each entry in their own Proton Pass.
+   *You should see:* The second person can open every entry.
 
 **Done when all of these are true:**
 
@@ -348,10 +378,15 @@ The chapter information form holds the roughly thirty-five values that differ fr
 
 **Do this:**
 
-1. Sit down together and go through the form line by line.
-2. Open every address.
-3. Read every switch aloud with its setting.
-4. Write both names and the date at the top of the form.
+1. Sit down together, the chapter's setup contact and someone from the central support organization, with the form open.
+2. Read every key and its value aloud, section by section.
+3. Run the curl check from step 8.3 on every address again:
+   - curl -sI ADDRESS
+   *You should see:* A first line of HTTP/2 200 for every address except app_base_url.
+4. Read every switch aloud with its value.
+5. Add two comment lines at the top of the form:
+   - # reviewed by: NAME-ONE and NAME-TWO
+   - # reviewed on: MM-DD-YY
 
 **Done when:** Two people have read the whole form together in one sitting and both have signed it off.
 
@@ -373,9 +408,11 @@ The chapter information form holds the roughly thirty-five values that differ fr
 
 **Do this:**
 
-1. Add the form to the chapter-network folder in the software's code repository, as the trial chapter's form was.
-2. Check the form holds no secret value.
-3. Ask a second person at the central support organization to open it.
+1. Check the form holds no secret value. Every line under secrets must be a name only.
+2. Save the form in the software's code repository at exactly this path, beside the trial chapter's form's folder: prds/chapter-network/chapters/CHAPTER-SLUG-values.yaml
+3. Commit it with the message "docs(chapter-network): CHAPTER-SLUG chapter information form", and push it.
+4. Ask a second person at the central support organization to open the file from the remote repository.
+   *You should see:* The file opens, with both reviewers' names at the top.
 
 **Done when:** The form is in the agreed place and the central support organization has confirmed it can open it.
 
@@ -391,4 +428,5 @@ The chapter information form holds the roughly thirty-five values that differ fr
 
 | Version | Date | Change |
 |---|---|---|
+| 0.2 | 09-19-26 00:05 | Every action made precise (Doug, 09-19-26): each section of the form filled key by key with what goes in it and an example, the sixteen switches with their starting values, the secret names with the step that creates each, vault entry titles, curl checks for every address, and the exact file path the finished form is saved at. |
 | 0.1 | 09-18-26 17:20 | First version as data, converted from the methods for filling in the chapter information form (5-Methods-Form-Accounts-Checks.md, version 0.4) with the step list's finishing tests. Each form field is now produced by a named step. |

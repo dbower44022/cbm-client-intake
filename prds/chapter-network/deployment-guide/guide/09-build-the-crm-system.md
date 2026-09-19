@@ -1,7 +1,7 @@
 # Stage 9 — Build the CRM system
 
-**Version:** 0.1  
-**Last Updated:** 09-18-26 17:05  
+**Version:** 0.2  
+**Last Updated:** 09-19-26 00:07  
 **Generated from** `steps/stage-09.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -160,10 +160,15 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Do this:**
 
-1. Open a terminal and sign in to the server over a secure shell, using the key from step 9.2.
-   *You should see:* The server's command prompt.
-2. Put the key in the chapter's vault, in the Operations vault.
-   *You should see:* The key listed in the vault, with a second named person able to open it.
+1. In a terminal, type the line below and press Enter, with SERVER-IP the server's address from the deployment wizard and KEY-FILE the private key the wizard's extra sign-in keys option used:
+   - ssh -i KEY-FILE root@SERVER-IP
+   *You should see:* The server's prompt, ending root@ followed by the server's name.
+2. Type the line below and press Enter, to confirm the CRM is running in its container:
+   - docker ps --format '{{.Names}}'
+   *You should see:* A list of container names, one of them espocrm. Later steps call that name CRM-CONTAINER; if it is named differently, use that name instead.
+3. Type exit and press Enter.
+4. In Proton Pass, add an item to the chapter's Operations vault named CRM server sign-in key, and attach KEY-FILE to it.
+   *You should see:* The item in the vault, with a second named person able to open it.
 
 **Done when:** The central support organization can open a command line on the server, and the key that allows it is recorded in the secrets store with at least two people able to reach it. The server can be created without this access, and the next steps cannot be done without it.
 
@@ -213,10 +218,14 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Do this:**
 
-1. Open the CRM's address in a browser.
+1. Open https://CRM-ADDRESS in a private browser window.
    *You should see:* The CRM's sign-in page, with no certificate warning.
-2. On the server's command line, confirm the certificate renewal is scheduled.
-   *You should see:* An active renewal timer or scheduled job. The exact name depends on the installer version, so look rather than assume.
+2. Sign in to the server as in step 9.4 and type the line below and press Enter, to list the running containers:
+   - docker ps --format '{{.Names}}'
+   *You should see:* A container whose name includes letsencrypt or certbot, which is what renews the certificate. The exact name depends on the installer version and is not checked for this guide; if no such container is listed, stop and ask.
+3. Type the line below and press Enter, with the CRM's address in place of CRM-ADDRESS, to read the certificate's expiry date:
+   - echo | openssl s_client -connect CRM-ADDRESS:443 -servername CRM-ADDRESS 2>/dev/null | openssl x509 -noout -enddate
+   *You should see:* A line beginning notAfter= with a date about ninety days away.
 
 **Done when:** The CRM loads at its address over a secure connection, and the security certificate is set to renew by itself. A certificate that has to be renewed by hand will expire and take the system down.
 
@@ -276,12 +285,25 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Do this:**
 
-1. On the new server, find where the installer keeps the CRM's custom files. An older installer uses a folder called custom; a newer one uses a folder called persistent, with the screen code in a second folder beside it.
-   *You should see:* Two folders, one for the configuration and one for the screen code.
-2. Copy both sets of files from the source onto the new server, into those two folders.
-3. Make the web server user the owner of both folders.
-4. Run the CRM's rebuild command inside its container.
-   *You should see:* The rebuild finishing with no errors. In August it took three seconds.
+1. Sign in to the source system, Cleveland's test system, and find the two configuration folders. Type the line below and press Enter:
+   - ssh root@104.131.45.208 "find /var/www/espocrm -type d \( -path '*Espo/Custom' -o -path '*client/custom/src' \) -not -path '*/vendor/*'"
+   *You should see:* Two folder paths, one ending Espo/Custom and one ending client/custom/src. Later actions call them SOURCE-CONFIG and SOURCE-SCREEN-CODE. In August the first was under data/espocrm/custom.
+2. Sign in to the new server and find the same two folders there. Type the line below and press Enter:
+   - ssh -i KEY-FILE root@SERVER-IP "find / -type d \( -path '*Espo/Custom' -o -path '*custom/src' \) -path '*espocrm*' 2>/dev/null"
+   *You should see:* Two folder paths. Later actions call them TARGET-CONFIG and TARGET-SCREEN-CODE. On the newer installer the first is under data/espocrm/persistent/custom, and the screen code sits in a second folder beside it (August finding F13). If only one appears, stop and ask.
+3. On this computer, copy both folders down, then up to the new server. Type each line below and press Enter:
+   - mkdir -p ~/cbm-standard/config ~/cbm-standard/screen-code
+   - rsync -a root@104.131.45.208:SOURCE-CONFIG/ ~/cbm-standard/config/
+   - rsync -a root@104.131.45.208:SOURCE-SCREEN-CODE/ ~/cbm-standard/screen-code/
+   - rsync -a -e 'ssh -i KEY-FILE' ~/cbm-standard/config/ root@SERVER-IP:TARGET-CONFIG/
+   - rsync -a -e 'ssh -i KEY-FILE' ~/cbm-standard/screen-code/ root@SERVER-IP:TARGET-SCREEN-CODE/
+   *You should see:* Each command returning to the prompt with no error. In August the configuration folder held 791 files.
+4. Make the web server user the owner of both folders. The web server user inside the CRM's container is number 33. Type the line below and press Enter:
+   - ssh -i KEY-FILE root@SERVER-IP "chown -R 33:33 TARGET-CONFIG TARGET-SCREEN-CODE"
+5. Rebuild the CRM. Type the line below and press Enter:
+   - ssh -i KEY-FILE root@SERVER-IP "docker exec -u www-data CRM-CONTAINER php command.php rebuild"
+   *You should see:* The command returning with no error. In August it took three seconds.
+6. Delete ~/cbm-standard from this computer.
 
 **Done when all of these are true:**
 
@@ -334,16 +356,19 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Do this:**
 
-1. Run the trial script scripts/rehearsal/apply_api_half.py with the chapter's settings file and without the apply option.
-   *You should see:* A list of what it would create, and nothing written.
-2. Run it again with the apply option. It does steps 9.10 to 9.14, 9.17 and 9.18 in one run, creating:
-   - The teams.
-   - The roles.
-   - The roles' attachments to the teams.
-   - The email templates.
-   - Two accounts.
-   - The instance settings.
-   *You should see:* Every team reported applied.
+1. Make the chapter's settings file, CHAPTER-ENV-FILE, at ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env, outside the code repository. Put these three lines in it, using the administrator account the deployment wizard created:
+   - ESPO_ADMIN_BASE=https://CRM-ADDRESS
+   - ESPO_ADMIN_USER=the wizard's administrator user name
+   - ESPO_ADMIN_PASS=the wizard's administrator password
+2. The administrator password must be letters and numbers only, because later steps pass this file's values on a command line. If the wizard's password has any other character, change it in the CRM first (Administration, then Users), and put the new one in the file.
+3. In ~/Dropbox/Projects/cbm-client-intake, open scripts/rehearsal/apply_api_half.py and change line 47 from PROVISION_USER = "lakeside.provision" to PROVISION_USER = "CHAPTER-SLUG.provision". The trial script names the trial chapter; do not commit this change.
+4. Type the line below and press Enter. It changes nothing, and reports what it would do:
+   - uv run python scripts/rehearsal/apply_api_half.py --env ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env
+   *You should see:* A list of teams, roles, attachments, email templates, two accounts and settings it would create.
+5. Type the line below and press Enter. It creates everything in steps 9.10 to 9.14, 9.17 and 9.18:
+   - uv run python scripts/rehearsal/apply_api_half.py --env ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env --apply
+   *You should see:* Nine teams reported applied, and the new values ESPO_API_KEY, ESPO_PROVISION_USERNAME and ESPO_PROVISION_PASSWORD added to the end of CHAPTER-ENV-FILE.
+6. Put CHAPTER-ENV-FILE's contents in the chapter's Operations vault as an item named CRM build settings.
 
 **Done when:** Every team the standard names exists, spelled exactly as the standard spells it.
 
@@ -540,14 +565,12 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Do this:**
 
-1. Nothing extra to run. The script in step 9.10 does three things:
-   - Creates the account.
-   - Attaches its role.
-   - Writes its key to the settings file.
-2. Move the key into the chapter's vault, and delete it from the settings file.
-   *You should see:* The key in the Operations vault.
-3. Make one test request to the CRM with the key.
-   *You should see:* A normal answer. An empty list is fine.
+1. Nothing extra to run. The script in step 9.10 created the account customapps, attached its role, and added its key to CHAPTER-ENV-FILE as ESPO_API_KEY.
+2. Copy the value after ESPO_API_KEY= into a new item in the chapter's Operations vault named CRM key for the applications.
+   *You should see:* The item in the Operations vault.
+3. Type the line below and press Enter, with the key in place of CRM-KEY, to make one test request:
+   - curl -s -o /dev/null -w '%{http_code}\n' -H 'X-Api-Key: CRM-KEY' https://CRM-ADDRESS/api/v1/CMentorProfile?maxSize=1
+   *You should see:* 200. A 401 means the key is wrong; a 403 means a permission was missed in step 9.11.
 
 **Done when all of these are true:**
 
@@ -575,9 +598,11 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Do this:**
 
-1. Nothing extra to run. The script in step 9.10 creates it and writes its password to the settings file.
-2. Move the password into the chapter's vault, and delete it from the settings file.
-   *You should see:* The name and password in the Operations vault.
+1. Nothing extra to run. The script in step 9.10 created the administrator account CHAPTER-SLUG.provision and added its name and password to CHAPTER-ENV-FILE as ESPO_PROVISION_USERNAME and ESPO_PROVISION_PASSWORD.
+2. Copy both values into a new item in the chapter's Operations vault named CRM provisioning administrator.
+   *You should see:* The item in the Operations vault, with the user name and password.
+3. Sign in at https://CRM-ADDRESS with that name and password once, then sign out.
+   *You should see:* The CRM's home screen, with Administration in the menu.
 
 **Done when:** The account exists and its password is in the secrets store, not on anyone's computer.
 
@@ -601,10 +626,12 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Do this:**
 
-1. Run scripts/build_networkstandard.py without the apply option.
-   *You should see:* A plan and a fingerprint.
-2. Run it again with the apply option and the fingerprint from the dry run.
-   *You should see:* The record created. The script refuses if anything moved in between.
+1. In ~/Dropbox/Projects/cbm-client-intake, type the line below and press Enter. It reads the four values it needs from CHAPTER-ENV-FILE, and changes nothing. Every value must come from that file: the script fills any missing value from the repository's own .env file, which holds Cleveland's settings.
+   - env $(grep -v '^#' ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env | xargs) uv run python scripts/build_networkstandard.py
+   *You should see:* A plan and a line giving its fingerprint, sixteen letters and numbers. Later actions call it FINGERPRINT.
+2. Type the line below and press Enter. The production option is required for any system that is not Cleveland's test system:
+   - env $(grep -v '^#' ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env | xargs) uv run python scripts/build_networkstandard.py --apply --production --expect FINGERPRINT
+   *You should see:* The record created and read back by the applications' key. If it says the plan moved, run the first line again and read the new plan.
 
 **Done when:** The record that says which version of the standard this CRM holds exists and can be read by the applications' own key.
 
@@ -637,9 +664,13 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **Do this:**
 
-1. Run scripts/preflight_crm.py with the applications' key and the machine-readable output option. Keep the output file.
-   *You should see:* A result code and a list of differences.
-2. Read the result code. Nothing to fix, something differs, and could not be checked are three different answers. The third usually means a key or network problem, not a CRM problem.
+1. In ~/Dropbox/Projects/cbm-client-intake, type the line below and press Enter. Pass both the address and the key: with either missing, the script uses Cleveland's own settings instead.
+   - env $(grep -v '^#' ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env | xargs) sh -c 'uv run python scripts/preflight_crm.py --url "$ESPO_ADMIN_BASE" --key "$ESPO_API_KEY" --json' > ~/.config/cbm-CHAPTER-SLUG/preflight.json; echo exit $?
+   *You should see:* exit 0 (conformant), exit 1 (something differs) or exit 3 (could not be checked, usually a key or network problem).
+2. Type the line below and press Enter, to read the result as a report:
+   - env $(grep -v '^#' ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env | xargs) sh -c 'uv run python scripts/preflight_crm.py --url "$ESPO_ADMIN_BASE" --key "$ESPO_API_KEY"'
+   *You should see:* A last line beginning RESULT: CONFORMANT, DRIFT or UNCHECKED. Today the expected result is DRIFT, with only the five missing event email templates listed.
+3. Write each difference that is allowed on purpose, with its reason, into the chapter's entry in the list of watched systems (step 12.5). Keep preflight.json in the chapter's Operations vault.
 
 **Done when:** The tool runs using the applications' own key and reports that the CRM matches the standard. Any difference that is allowed on purpose is listed and explained in writing.
 
@@ -655,4 +686,5 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 | Version | Date | Change |
 |---|---|---|
+| 0.2 | 09-19-26 00:07 | Every command-line action made exact (Doug, 09-19-26: sweep every step): the ssh, docker, find, rsync, chown and rebuild commands for copying the configuration; the trial scripts' exact options, including the name the provisioning account takes and the production option the version record needs; the test request for the applications' key; and the conformance check with its exit codes. Two traps written in: the scripts fill missing values from the repository's own settings, which are Cleveland's, and the settings file's password must be letters and numbers only. |
 | 0.1 | 09-18-26 17:05 | First version as data, converted from the methods for building the CRM (3-Methods-CRM-Google-Applications.md, version 0.5) with the step list's finishing tests. Numbered actions, a reason per step, and a check an app can run were added. |

@@ -1,7 +1,7 @@
 # Stage 15 — Bring in the chapter's records and create the mentor accounts
 
-**Version:** 0.1  
-**Last Updated:** 09-18-26 17:30  
+**Version:** 0.2  
+**Last Updated:** 09-19-26 00:15  
 **Generated from** `steps/stage-15.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -49,15 +49,15 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 **Do this:**
 
-1. Ask every member of staff where they keep records today, not only the setup contact. All of these count:
+1. Ask every member of staff, not only the setup contact, where they keep records today. All of these count:
    - Spreadsheets.
    - Another CRM.
    - An email list.
    - A mentoring platform.
-2. For each source, write down:
-   - Where it is.
-   - What kind of records it holds.
-   - Roughly how many.
+2. Write one line per source, giving:
+   - Where it is: the system's name, or the file's location.
+   - What it holds: clients, companies, mentors, partners, funders or meetings.
+   - Roughly how many records.
    *You should see:* A written list of sources, or a written note that there are none.
 
 **Done when:** Either the sources are listed, or a note records that the chapter starts with nothing. A chapter starting with nothing skips the load (steps 15.2 to 15.7) but not the mentor steps after it (steps 15.8 to 15.10).
@@ -84,11 +84,11 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 **Do this:**
 
-1. Export each source to a spreadsheet file, one file per kind of record.
-2. Count the rows in each file and write the count beside the file name.
-3. Compare each count with what the old system says it holds.
+1. Export each source to a spreadsheet file in CSV format, one file per kind of record, named SOURCE-KIND.csv, for example oldcrm-contacts.csv.
+2. Count the data rows in each file, not counting the heading row, and write the count beside the file name.
+3. Compare each count with the number the old system reports.
    *You should see:* The same numbers.
-4. Keep the files where only the people doing the load can reach them. They hold personal details.
+4. Keep the files in the chapter's Board vault or another place only the people doing the load can reach. They hold personal details.
 
 **Done when:** Every source has been exported to a file, and the number of records in each file is written down.
 
@@ -114,15 +114,20 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 **Do this:**
 
-1. List every column of every file in one table.
-2. Beside each column, write the CRM record and field it goes to, or "not brought across" and why. The data model (data-model.md) names the records and their links.
-3. For each column feeding a choice list, list the old values and the CRM value each becomes. Funders are "Sponsor", never "Donor". A company's type is one of:
+1. Make one table with a line for every column of every file, and these columns:
+   - File
+   - Column
+   - CRM record: Company, Contact, Client Profile, Engagement, Mentor Profile, Partner Profile or Sponsor Profile
+   - CRM field
+   - Or: not brought across, and why
+2. Use data-model.md in the software's code repository for the records and their links. For the exact field names, sign in to the CRM as the administrator and open Administration, then Entity Manager, then the record, then Fields.
+3. For each column feeding a choice list, list every old value and the CRM value it becomes. A company's type is one of these, exactly:
    - Client
    - Sponsor
    - Partner
    - Other
-4. For mentors, map their chapter email address, not their personal one. Their account is built on it in step 15.9.
-   *You should see:* No column without a line in the table.
+4. Funders are Sponsor, never Donor. For mentors, map their chapter email address to the CBM email field, not their personal address.
+   *You should see:* No column in any file without a line in the table.
 
 **Done when:** Every column in every export file is either mapped to a CRM field or marked as not being brought across, with a reason.
 
@@ -149,12 +154,21 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 **Do this:**
 
-1. Create a new server from the CRM server's latest backup, as in the restore test (step 12.3). This also completes the CRM server half of that test.
-2. Load the records into the new server, in link order. A company first, then its contacts, then its client profile, then its engagements. A mentor is a contact plus a mentor profile.
-3. There is no loading tool yet (work list item 12). Use the CRM's own import screen one kind of record at a time, or a script written for this chapter that uses the intake forms' find-or-create rules. The script is better when there are engagements to load.
-4. Compare the counts in the copy with the counts from step 15.2, and open a handful of records.
-   *You should see:* The same counts, with any difference explained, and records that look right.
-5. Delete the new server the same day, and write down when.
+1. Create a new server from the CRM server's latest backup, exactly as in step 12.3: `doctl compute droplet backups SERVER-ID`, then `doctl compute droplet create load-trial-CHAPTER-SLUG --image BACKUP-IMAGE-ID --region REGION --size SIZE --wait`. This also completes the CRM server half of the restore test.
+   *You should see:* A new server, NEW-SERVER-IP, holding a copy of the chapter's CRM.
+2. Load the records into the copy at https://NEW-SERVER-IP, in this order, so each record's link already exists when it is loaded:
+   - Companies.
+   - Contacts.
+   - Client profiles.
+   - Engagements.
+   - Mentor profiles, each linked to its contact.
+   - Partner and sponsor profiles.
+3. There is no loading tool yet (work list item 12). For each kind of record, use the CRM's own import: open the record's list, then the menu, then Import, and upload the file. The exact menu label has not been checked on the chapter's version. Engagements need links the import screen may not set; if so, stop and ask the central support organization, which will write a script for this chapter.
+4. In the copy, open each kind of record's list and read its total.
+   *You should see:* The same counts as step 15.2, with any difference explained.
+5. Open five records of each kind and compare them with the file.
+6. Delete the copy the same day and write down when:
+   - doctl compute droplet delete load-trial-CHAPTER-SLUG --force
 
 **Done when:** The load has been run somewhere that is not the live system, and the result has been looked at.
 
@@ -180,9 +194,12 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 **Do this:**
 
-1. Use the rule the intake forms already use. A person is the same person when the email address matches. A company is the same company when the name matches. A company has at most one client profile.
-2. Where two rows match, keep one record. Fill its empty fields from the other row, and never overwrite a field that already holds a value.
-3. Write the rule down and have the chapter approve it.
+1. Apply the rule the intake forms already use, and write it down:
+   - A person is the same person when the email address matches.
+   - A company is the same company when the name matches.
+   - A company has at most one client profile.
+2. Where two rows match, keep one. Fill its empty fields from the other row, and never overwrite a field that already holds a value.
+3. Have the chapter approve the written rule.
    *You should see:* No two contacts share an email address, and no two companies share a name, unless the chapter decided they are different.
 
 **Done when:** The rule for deciding what counts as the same person or company is written down and has been applied.
@@ -210,10 +227,15 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 **Do this:**
 
-1. Run exactly the load that ran on the trial copy, into the chapter's live CRM.
-2. Compare the counts with the export.
-   *You should see:* The same counts, with any difference explained in writing.
-3. After the mentor accounts exist (step 15.9), run scripts/audit_assignment_stamps.py with its repair option, so mentors can see their loaded clients. The nightly repair check also does this.
+1. Run exactly the load that ran on the trial copy, in the same order, into the chapter's live CRM at https://CRM-ADDRESS.
+2. In the CRM, open each kind of record's list and read its total.
+   *You should see:* The same counts as step 15.2, with any difference explained in writing.
+3. After the mentor accounts exist (step 15.9), give the mentors access to their loaded clients. Open a console on the application's web part, putting the application's ID in place of APP-ID:
+   - doctl apps console APP-ID web
+4. In that console, report what is missing, then repair it:
+   - PYTHONPATH=/app .venv/bin/python scripts/audit_assignment_stamps.py
+   - PYTHONPATH=/app .venv/bin/python scripts/audit_assignment_stamps.py --heal
+   *You should see:* The second run reports the missing users merged. A third run without --heal reports nothing missing. The nightly repair check does the same work if this is skipped.
 
 **Done when:** The records are in the live CRM and the counts match what was exported, with any difference explained.
 
@@ -244,8 +266,10 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
    - The newest.
    - A few with unusual details.
    - The rows that caused trouble in the trial.
-2. Open each in the CRM and compare it with the old record.
-3. Write down which records were checked, and anything wrong.
+2. Open each in the CRM at https://CRM-ADDRESS and compare it field by field with the old record.
+3. Write down, for each record checked:
+   - Its name.
+   - Right, or what was corrected.
    *You should see:* A written list, each record marked right or corrected.
 
 **Done when:** Somebody who knows the old records has opened a sample in the CRM and confirmed they are right.
@@ -273,9 +297,9 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 **Do this:**
 
-1. Search Mentor Administration by surname before entering anyone, to avoid a second record for a mentor the load already brought in.
-2. For a large group, have each mentor fill in the public volunteer form, which creates both the contact and the mentor record and records their agreement to the code of ethics.
-3. For a few, enter each one in Mentor Administration.
+1. Open https://APP-ADDRESS/mentoradmin/ and search by surname for each mentor before entering anyone, so no mentor the load already brought in gets a second record.
+2. For a large group, send each mentor the public volunteer form at https://APP-ADDRESS/volunteer/. Each submission creates the contact and the mentor record, and records the mentor's agreement to the code of ethics.
+3. For a few mentors, enter each one directly in Mentor Administration, with their chapter email address in the CBM email field.
    *You should see:* Every current mentor in the Mentor Administration list, each with a linked contact.
 
 **Done when:** Every current mentor has a mentor record in the CRM, with a linked contact. For a chapter starting with nothing, this is every mentor.
@@ -302,9 +326,10 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 **Do this:**
 
-1. Never create a mentor's account by hand.
-2. Open the mentor in Mentor Administration and set their status to Active.
+1. Never create a mentor's account by hand in the CRM.
+2. Open https://APP-ADDRESS/mentoradmin/, open the mentor, and on the Status tab set Status to Active. Save.
    *You should see:*
+   - A status window listing each step as it runs
    - The mentor's mailbox created, if Google is switched on
    - The mentor's CRM account created on the Mentor Team
    - The account linked to the mentor record
@@ -334,9 +359,10 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 **Do this:**
 
-1. On the CRM's user administration screen, read the last sign-in date for each mentor's account.
-   *You should see:* A date for every mentor.
-2. Chase anyone with a blank date. Ask them to check their spam folder first.
+1. In the CRM, open Administration, then Auth Log, as in step 14.4. The label has not been checked on the chapter's version.
+2. Tick off every mentor who appears there with a successful sign-in.
+   *You should see:* Every mentor ticked.
+3. Chase anyone not ticked. Ask them to check their spam folder first. A mentor who lost the welcome email opens https://APP-ADDRESS/ and chooses Forgot your password?
 
 **Done when:** Each mentor has signed in at least once and set their own password.
 
@@ -352,4 +378,5 @@ A chapter arrives with clients, companies, partners, funders and mentors it alre
 
 | Version | Date | Change |
 |---|---|---|
+| 0.2 | 09-19-26 00:15 | Every action made precise (Doug, 09-19-26): exact file naming, the mapping table's columns, the load order, the restore-copy commands, the audit script run inside the application's web part, and exact addresses for Mentor Administration and the volunteer form. |
 | 0.1 | 09-18-26 17:30 | First version as data, converted from the methods for loading records (10-Methods-Website-Pages-Records.md, version 0.2) and for the mentor steps (5-Methods-Form-Accounts-Checks.md, version 0.4) with the step list's finishing tests. |

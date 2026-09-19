@@ -144,7 +144,18 @@ def information_check(stages: list[dict]) -> list[str]:
     for v, where in sorted(needed.items()):
         if v not in produced:
             problems.append(f"'{v}' is needed by step {', '.join(where)} but no step produces it")
+            continue
+        # order: a value must exist before the first step that uses it
+        src = produced[v][0]
+        for use in where:
+            if _pos(use) <= _pos(src):
+                problems.append(f"'{v}' is needed by step {use} but only produced later, by step {src}")
     return problems
+
+
+def _pos(step_id: str) -> tuple[int, int]:
+    stage, _, n = step_id.partition(".")
+    return int(stage), int(n)
 
 
 NAMES: dict[str, str] = {}

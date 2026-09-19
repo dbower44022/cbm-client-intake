@@ -1,10 +1,10 @@
 # New Chapter Deployment Guide — The Step List
 
 **Document:** The bare list of steps, with no methods yet
-**Version:** 0.15
+**Version:** 0.16
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-19-26 00:10
+**Last Updated:** 09-19-26 00:30
 
 ---
 
@@ -341,7 +341,7 @@ Done when:
 
 - The application address is filled in.
 - The website address is filled in.
-- The events page address is filled in.
+- The events page address is left empty, so the software uses its own events page.
 - The documentation address is filled in.
 - The colour file address is filled in.
 - The four policy addresses are filled in.
@@ -349,13 +349,11 @@ Done when:
 **8.4 Fill in the Google details.**
 Done when:
 
-- The branch chosen is filled in.
 - The main domain is filled in.
 - The shared operations mailbox is filled in.
 - The alert sending address is filled in.
 - The alert receiving address is filled in.
 - The members group is filled in.
-- The shared drive is filled in.
 - The mentor email domain is filled in.
 
 **8.5 Fill in the CRM details.**
@@ -757,9 +755,8 @@ Done when:
 - The chapter's trainer holds the sign-in details for the chapter training accounts.
 - The passwords were set fresh for this chapter.
 - One person from the chapter has signed in once.
-- Ruled 09-14-26: chapters train on the existing test system rather than on their own live system or on a practice system built for them.
 
-Note: Ruled 09-18-26: they sign in with shared training accounts set up specifically for chapter training, never with accounts of their own.
+Note: Ruled 09-14-26: chapters train on the existing test system rather than on their own live system or on a practice system built for them. Ruled 09-18-26: they sign in with shared training accounts set up specifically for chapter training, never with accounts of their own.
 
 **16.2 Explain how the practice system behaves.**
 Done when: everyone being trained has been told two things. The system clears
@@ -890,6 +887,7 @@ Done when: a date is booked to review how the first months have gone.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.16 | 09-19-26 00:30 | Three finishing tests brought in line with later rulings, found by the precision sweep. Step 8.3: the events page address is left empty, so the software uses its own page. Step 8.4: the Google branch condition removed (every chapter holds its own Google Workspace), and the shared drive condition removed, because the shared drive is only created in step 10.5. Step 16.1: the 09-14-26 ruling moved from the conditions into the note. |
 | 0.15 | 09-19-26 00:10 | Step 4.1 no longer offers a Google Workspace provided by the central support organization. Every chapter hosts its own email on its own Google Workspace (Doug, 09-18-26); the step now confirms that. |
 | 0.14 | 09-18-26 20:05 | In fourteen finishing tests, the sentence that explains rather than tests moved out of the list of conditions into a separate Note line (steps 3.7, 5.8, 6.5, 8.7, 9.1, 9.7, 9.8, 11.3, 11.9, 14.1, 16.1, 16.6, 18.2, 18.5). No condition changed. |
 | 0.13 | 09-18-26 16:57 | Every finishing test that packed three or more conditions or items into one sentence is now a list, one condition per line (Doug's rule, 09-18-26: every list puts each item on its own line). Thirty-seven steps: 1.1, 1.4, 2.1, 2.5, 3.3, 3.7, 4.1, 4.14, 5.7, 5.8, 6.5, 7.4, 8.2 to 8.5, 8.7, 8.8, 9.1, 9.7, 9.8, 9.14, 9.15, 9.17, 11.3, 11.4, 11.9, 11.12, 14.1, 16.1, 16.6, 17.9 and 18.1 to 18.5. Words kept; only the connectives changed so each condition reads alone. The step data in `steps/` carries the same lists. |

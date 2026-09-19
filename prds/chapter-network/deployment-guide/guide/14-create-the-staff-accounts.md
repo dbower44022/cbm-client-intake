@@ -1,7 +1,7 @@
 # Stage 14 — Create the staff accounts
 
-**Version:** 0.1  
-**Last Updated:** 09-18-26 17:20  
+**Version:** 0.2  
+**Last Updated:** 09-19-26 00:15  
 **Generated from** `steps/stage-14.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -41,7 +41,11 @@ Each member of the chapter's staff needs their own account to use the applicatio
 
 **Do this:**
 
-1. List each member of staff with their chapter email address and their team. The seven teams that open a page are:
+1. Make a list with one line per member of staff, giving:
+   - Their full name.
+   - Their chapter email address, on the chapter's own domain.
+   - Their team or teams, spelled exactly as below.
+2. Choose each person's teams from these seven, spelled exactly as written:
    - Client Administration Team
    - Mentor Administration Team
    - Mentor Team
@@ -49,9 +53,9 @@ Each member of the chapter's staff needs their own account to use the applicatio
    - Sponsor Management Team
    - Marketing Admin Team
    - Analytics Admin Team
-2. Give each person the fewest teams that cover their work. A person with two jobs gets two teams.
-3. Leave mentors off the list.
-4. Have the chapter approve the list in writing.
+3. Give each person the fewest teams that cover their work. A person with two jobs gets two teams.
+4. Leave mentors off the list.
+5. Have the chapter approve the list in writing.
    *You should see:* A list of names, chapter email addresses and teams, with the chapter's approval.
 
 **Done when all of these are true:**
@@ -81,10 +85,20 @@ Each member of the chapter's staff needs their own account to use the applicatio
 
 **Do this:**
 
-1. Create each account as an ordinary user, not an administrator, with the teams from the list. The trial script scripts/rehearsal/stage4_users.py did this for the trial chapter; it has its seven made-up people written into it, so for a real chapter adapt it to read the list, or create the accounts by hand on the CRM's user administration screen.
-2. Send each person their sign-in details by email from the CRM.
-   *You should see:* Each account listed in the CRM, on its team.
-3. For a partner or funder manager, create a mentor profile in Mentor Administration too. Fill in its chapter email address first, exactly matching their account's user name, so the software links the existing account instead of creating a second one.
+1. Sign in to the CRM at https://CRM-ADDRESS as the central support organization's administrator, and open Administration, then Users.
+2. For each person on the list, choose Create User and fill in:
+   - User Name: their chapter email address
+   - Type: Regular. Never Admin.
+   - First Name and Last Name: from the list
+   - Email: their chapter email address
+   - Teams: the teams from the list
+   - Default Team: their first team
+   - Roles: leave empty. Permissions come from the teams.
+   *You should see:* The user saved. These field labels are EspoCRM's standard ones and have not been checked on the chapter's version.
+3. Set a password and send it to the person. EspoCRM's user screen offers to generate a password and email the person their sign-in details; use that option. Its exact label has not been checked.
+   *You should see:* The person receives an email with their user name and a sign-in link.
+4. For a partner or funder manager, also open https://APP-ADDRESS/mentoradmin/, create a mentor profile for them, and fill in its CBM email field with exactly their user name before saving. The software then links the existing account instead of creating a second one.
+   *You should see:* The mentor profile linked to their existing account, with no second account created.
 
 **Done when:** Every person on the list has an account in the CRM on the right team.
 
@@ -108,8 +122,12 @@ Each member of the chapter's staff needs their own account to use the applicatio
 
 **Do this:**
 
-1. On the CRM's user administration screen, filter the list to administrators.
-   *You should see:* Exactly two accounts, the central support organization's own administrator (step 9.18) and the account the applications use to create logins.
+1. In the CRM, open Administration, then Users, and filter the list by Type equal to Admin.
+   *You should see:*
+   - Exactly two accounts
+   - The central support organization's own administrator account (step 9.18)
+   - The account the applications use to create logins
+2. If any other account is an administrator, change its Type to Regular and tell the chapter why.
 
 **Done when:** The only administrator accounts belong to the central support organization. Chapter staff hold ordinary accounts.
 
@@ -133,9 +151,10 @@ Each member of the chapter's staff needs their own account to use the applicatio
 
 **Do this:**
 
-1. On the CRM's user administration screen, read the last sign-in date for each account.
-2. Chase anyone with no date. A person who lost their welcome email uses "Forgot your password?" on the applications' sign-in page.
-   *You should see:* A last sign-in date for every account.
+1. In the CRM, open Administration, then Auth Log. It records every sign-in by user name. The label is EspoCRM's standard one and has not been checked on the chapter's version.
+2. Tick off every person on the staff list who appears there with a successful sign-in.
+   *You should see:* Every person on the list ticked.
+3. Chase anyone not ticked. Ask them to check their spam folder first. A person who lost their welcome email opens https://APP-ADDRESS/ and chooses Forgot your password?
 
 **Done when:** Each member of staff has signed in at least once and set their own password.
 
@@ -151,4 +170,5 @@ Each member of the chapter's staff needs their own account to use the applicatio
 
 | Version | Date | Change |
 |---|---|---|
+| 0.2 | 09-19-26 00:15 | Every action made precise (Doug, 09-19-26): the seven team names as written, the exact user fields to fill in, the administrator filter, and the Auth Log check. Unchecked EspoCRM labels are marked as unchecked. |
 | 0.1 | 09-18-26 17:20 | First version as data, converted from the methods for creating the staff accounts (5-Methods-Form-Accounts-Checks.md, version 0.4) with the step list's finishing tests. |

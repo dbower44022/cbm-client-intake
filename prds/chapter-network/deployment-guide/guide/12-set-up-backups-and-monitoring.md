@@ -1,7 +1,7 @@
 # Stage 12 — Set up backups and monitoring
 
-**Version:** 0.1  
-**Last Updated:** 09-18-26 17:30  
+**Version:** 0.2  
+**Last Updated:** 09-19-26 00:15  
 **Generated from** `steps/stage-12.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -45,10 +45,19 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 
 **Do this:**
 
-1. In the chapter's hosting account, open the CRM server, then its Backups tab.
-2. Switch backups on and choose daily.
-   *You should see:* Backups shown as enabled, with a daily schedule and a backup window.
-3. Write down the schedule, the backup window and how many days each backup is kept, on the chapter's entry in the list of watched systems (step 12.5).
+1. In a terminal signed in to the chapter's DigitalOcean account (`doctl auth init` with the chapter's DigitalOcean token), list the servers and note the CRM server's ID:
+   - doctl compute droplet list --format ID,Name,Features
+   *You should see:* The CRM server's row. Its Features column does not yet include backups.
+2. Switch on daily backups, putting the CRM server's ID in place of SERVER-ID:
+   - doctl compute droplet-action enable-backups SERVER-ID --backup-policy-plan daily --backup-policy-hour 4 --wait
+   *You should see:* The action reported as completed.
+3. Read the policy back:
+   - doctl compute droplet backup-policies get SERVER-ID
+   *You should see:* Enabled true, Plan daily, Hour 4, Retention Period Days 7. Cleveland's production CRM reads exactly this.
+4. Write on the chapter's entry in the list of watched systems (step 12.5):
+   - Schedule: daily
+   - Backup window: from 04:00 UTC, four hours long
+   - Kept for: seven days
 
 **Done when:** Backups run automatically, and the schedule and how long backups are kept are written down.
 
@@ -74,13 +83,17 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 
 **Do this:**
 
-1. In the chapter's hosting account, open the application's settings and find its database.
-   *You should see:* The database described as a managed database.
-2. If it is described as a development database instead, convert it to a managed database there, at the smallest size.
-   *You should see:* The database described as a managed database. The application keeps running during the change.
-3. Open the database's Backups tab.
-   *You should see:* Daily backups, each kept seven days.
-4. Write the schedule and retention on the chapter's entry in the list of watched systems.
+1. In the chapter's DigitalOcean account, list the databases and note the application database's ID:
+   - doctl databases list --format ID,Name,Engine,Size
+   *You should see:* A row for the application's database. If there is no row at all, the database is a development database, which this command does not list and which takes no backups.
+2. If there is no row, convert the database: in the DigitalOcean web console, open the application, then Settings, then the database component, and choose to convert it to a managed database at the smallest size. This label was the one Cleveland used on 07-23-26 and has not been checked since.
+   *You should see:* The application keeps running, and the database now appears in the list above.
+3. List the database's backups, putting the database's ID in place of DATABASE-ID:
+   - doctl databases backups DATABASE-ID
+   *You should see:* A backup dated within the last day. Backups are daily and kept seven days.
+4. Write on the chapter's entry in the list of watched systems:
+   - Schedule: daily
+   - Kept for: seven days, with restore to any moment in that week
 
 **Done when:** Backups run automatically, and the schedule and retention are written down.
 
@@ -107,17 +120,36 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 
 **Do this:**
 
-1. For the database, restore into a new database with the hosting provider's command-line tool, `doctl databases fork`, naming the live database as the source. It never restores over the live one.
-   *You should see:* A new database, listed as online. Do not show or save the address the tool prints; it carries the administrator password.
-2. Allow your own computer through the new database's firewall. It copies the live database's firewall, which lets only the application in.
-3. Connect to the new database and count the rows in every table.
-   *You should see:* Every table present and holding data, and the newest submission recent.
-4. Delete the new database the same hour. It holds the chapter's real personal details.
-5. For the CRM server, create a new server from the latest backup in the server's Backups tab.
-6. Open the new server's own address in a browser, sign in as the central support organization's administrator, and open one recent record.
+1. Database first. Find the application database's ID:
+   - doctl databases list --format ID,Name
+2. Restore it into a new database, putting that ID in place of DATABASE-ID. The output is thrown away on purpose, because it includes the new database's password:
+   - doctl databases fork restore-test-CHAPTER-SLUG --restore-from-cluster-id DATABASE-ID --wait > /dev/null
+   *You should see:* The prompt returns after five to fifteen minutes, with nothing printed.
+3. Find the new database's ID:
+   - doctl databases list --format ID,Name,Status
+   *You should see:* A row named restore-test-CHAPTER-SLUG with status online. Note its ID as RESTORED-ID.
+4. Let your own computer through the new database's firewall, which copies the live one and admits only the application. Putting your computer's public address in place of YOUR-IP (find it with `curl -s https://api.ipify.org`):
+   - doctl databases firewalls append RESTORED-ID --rule ip_addr:YOUR-IP
+5. Count the submissions in the copy, without ever printing its address. This needs `psql` installed. The application's database is named after the chapter's short label, so put it in place of DATABASE-NAME (list it with `doctl databases db list RESTORED-ID`):
+   - psql "$(doctl databases connection RESTORED-ID --no-header --format URI | sed 's#/defaultdb?#/DATABASE-NAME?#')" -c 'select count(*), max(received_at) from submission'
+   *You should see:* A count of submissions and the date of the newest one, which should be recent. On Cleveland's test on 09-18-26 the newest was eight hours after the last daily backup, because a restore with no date rebuilds to the latest moment.
+6. Delete the copy the same hour. It holds the chapter's real personal details:
+   - doctl databases delete RESTORED-ID --force
+   *You should see:* The copy gone from `doctl databases list`.
+7. Now the CRM server. List its backups, putting the CRM server's ID in place of SERVER-ID:
+   - doctl compute droplet backups SERVER-ID
+   *You should see:* One backup image per day. Note the newest image's ID as BACKUP-IMAGE-ID.
+8. Create a new server from that backup, in the same region and size as the CRM server (read both from `doctl compute droplet get SERVER-ID --format Region,SizeSlug`):
+   - doctl compute droplet create restore-test-CHAPTER-SLUG --image BACKUP-IMAGE-ID --region REGION --size SIZE --wait
+   *You should see:* A new server with its own public address, NEW-SERVER-IP.
+9. Open https://NEW-SERVER-IP in a browser. The certificate warning is expected, because the certificate is for the CRM's real address. Sign in as the central support organization's administrator and open one record changed recently.
    *You should see:* The record, as it was at the time of the backup.
-7. Delete the new server.
-8. Write down the date, what was checked and how long each restore took.
+10. Delete the new server:
+   - doctl compute droplet delete restore-test-CHAPTER-SLUG --force
+11. Write down on the chapter's entry in the list of watched systems:
+   - The date.
+   - What was checked in each copy.
+   - How long each restore took, timed from the command to the copy being usable.
 
 **Done when:** A restore has actually been performed and the result checked. An untested backup is not a backup.
 
@@ -144,14 +176,29 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 
 **Do this:**
 
-1. Create an uptime check on the application's health address with the hosting provider's command-line tool, `doctl monitoring uptime create`, and an alert on it that emails the alert address after two minutes down.
-   *You should see:* The check listed as enabled.
-2. Create a second uptime check the same way on the CRM's own address, with the same alert.
-   *You should see:* Two checks listed, one for the application and one for the CRM.
-3. Add database alerts for processor, memory and disk above 90 per cent, emailing the same address.
-4. Send a test alert from the application. There is no button for this yet. Open a console on the background worker in the hosting account and run the software's own alert sender with a test message.
-   *You should see:* The test alert arrives at the alert address.
-5. Write down the names of the people who read the alert address.
+1. The alert address must belong to a member of the chapter's DigitalOcean team; DigitalOcean refuses any other. Check it is listed under the chapter's team members in the DigitalOcean web console.
+2. Create the uptime check on the application's health page, putting the application's address in place of APP-ADDRESS:
+   - doctl monitoring uptime create CHAPTER-SLUG-app-up --target https://APP-ADDRESS/healthz --type https --regions us_east
+   *You should see:* A new uptime check with its ID. Note it as APP-CHECK-ID.
+3. Add its alert, putting the alert address in place of ALERT-ADDRESS:
+   - doctl monitoring uptime alert create APP-CHECK-ID --name CHAPTER-SLUG-app-down --type down --threshold 1 --comparison less_than --period 2m --emails ALERT-ADDRESS
+   *You should see:* The alert with type down and period 2m. These are exactly the settings on Cleveland's production application.
+4. Create the uptime check on the CRM's own address, putting it in place of CRM-ADDRESS:
+   - doctl monitoring uptime create CHAPTER-SLUG-crm-up --target https://CRM-ADDRESS/ --type https --regions us_east
+   *You should see:* A second uptime check with its ID. Note it as CRM-CHECK-ID.
+5. Add its alert:
+   - doctl monitoring uptime alert create CRM-CHECK-ID --name CHAPTER-SLUG-crm-down --type down --threshold 1 --comparison less_than --period 2m --emails ALERT-ADDRESS
+6. Add the three database alerts, putting the application database's ID in place of DATABASE-ID. Run each line on its own:
+   - doctl monitoring alert create --type v1/dbaas/alerts/cpu_alerts --compare GreaterThan --value 90 --window 5m --entities DATABASE-ID --emails ALERT-ADDRESS --description 'CPU is running high'
+   - doctl monitoring alert create --type v1/dbaas/alerts/memory_utilization_alerts --compare GreaterThan --value 90 --window 5m --entities DATABASE-ID --emails ALERT-ADDRESS --description 'Memory Utilization is running high'
+   - doctl monitoring alert create --type v1/dbaas/alerts/disk_utilization_alerts --compare GreaterThan --value 90 --window 5m --entities DATABASE-ID --emails ALERT-ADDRESS --description 'Disk Utilization is running high'
+   *You should see:* Three alert policies. They match Cleveland's database alerts.
+7. Send a test alert from the application itself. Open a console on the background worker, putting the application's ID in place of APP-ID:
+   - doctl apps console APP-ID delivery-worker
+8. In that console, run:
+   - PYTHONPATH=/app .venv/bin/python -c "import asyncio; from core.config import get_settings; from core.monitoring import send_alert; asyncio.run(send_alert(get_settings(), 'Test alert: checking the alert path'))"
+   *You should see:* The line "alert sent (email to ...)" in the output, and the message arrives at the alert address. The line "ALERT (no delivery channel configured/working)" means the alert went only to the log.
+9. Write down the names of the people who read the alert address.
 
 **Done when:** A test alert arrives at an address somebody reads, and it is recorded who reads it.
 
@@ -180,15 +227,16 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 
 **Do this:**
 
-1. Open the list of watched systems, kept in the chapter-network folder of the software's code repository until the fleet console exists.
-2. Add the chapter, with:
-   - Its CRM address.
-   - Its application address.
-   - The hosting account it lives in.
-   - Both backup schedules.
-   - Who reads the alerts.
-   - The date of the last restore test.
-   *You should see:* Every column filled in for the chapter.
+1. Open the list of watched systems. It does not exist yet. Until the fleet console exists, create it once as `prds/chapter-network/watched-systems.md` in the software's code repository, one section per chapter.
+2. Add a section for the chapter headed with its name, holding one line each for:
+   - CRM address: the value of crm_base_url
+   - Application address: the value of app_base_url
+   - Hosting account: the DigitalOcean team name
+   - CRM server backups: the schedule from step 12.1
+   - Application database backups: the schedule from step 12.2
+   - Alert readers: the names from step 12.4
+   - Last restore test: the date from step 12.3
+   *You should see:* Every line filled in. No password or key appears anywhere in the file.
 
 **Done when:** The central support organization's list of systems includes this chapter's CRM and application.
 
@@ -204,4 +252,5 @@ This stage makes sure the chapter's records can be got back after a mistake or a
 
 | Version | Date | Change |
 |---|---|---|
+| 0.2 | 09-19-26 00:15 | Every action made precise (Doug, 09-19-26): exact doctl commands with named placeholders for backups, the restore test and the uptime and database alerts, flags checked against doctl's own help, and the restore copy's password never printed. |
 | 0.1 | 09-18-26 17:30 | First version as data, converted from the methods for backups and monitoring (6-Methods-Backups-Monitoring.md, version 0.4) with the step list's finishing tests. |

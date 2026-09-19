@@ -1,7 +1,7 @@
 stage: 7
 name: Write and publish the policy documents
-version: "0.1"
-updated: "09-18-26 17:20"
+version: "0.2"
+updated: "09-19-26 00:05"
 why: >-
   Every public form carries one required consent box that links to four
   documents. Two are codes: the code of conduct, and the mentor code of ethics.
@@ -31,10 +31,15 @@ steps:
     produces: [policy_client_conduct_url]
     mode: offline
     actions:
-      - do: Write the document with the chapter's legal adviser.
-      - do: Publish it as a page on the chapter's website. Cleveland's is at clevelandbusinessmentors.org/client-code-of-conduct/.
-      - do: Open the page in a private browser window.
+      - do: Write the document with the chapter's legal adviser. Give it the title "Client Code of Conduct". The client, partner and funder forms link to it from the words Client Code of Conduct or Code of Conduct, depending on the form.
+      - do: "Publish it as a public page on the chapter's website at exactly this address, the same path Cleveland uses: https://WEBSITE-DOMAIN/client-code-of-conduct/"
+      - do: "In a terminal, run exactly:"
+        items:
+          - "curl -sI https://WEBSITE-DOMAIN/client-code-of-conduct/"
+        see: A first line of HTTP/2 200. A 302 to a sign-in page means the page is a draft or private.
+      - do: Open the same address in a private browser window.
         see: The document, without being asked to sign in.
+      - do: "Write the address on the chapter information form under web: policy_client_conduct_url. It becomes the setting POLICY_CLIENT_CONDUCT_URL."
     done_when: >-
       The document is published on the chapter's website and opens without signing
       in.
@@ -57,10 +62,15 @@ steps:
     produces: [policy_mentor_ethics_url]
     mode: offline
     actions:
-      - do: Write the document with the chapter's legal adviser. It is a separate document from the client code of conduct.
-      - do: Publish it as a page on the chapter's website. Cleveland's is at clevelandbusinessmentors.org/mentor-code-of-ethics/.
-      - do: Open the page in a private browser window.
+      - do: Write the document with the chapter's legal adviser. Give it the title "Mentor Code of Ethics". It is a separate document from the client code of conduct. The volunteer form's link reads Code of Conduct and leads here.
+      - do: "Publish it as a public page on the chapter's website at exactly this address, the same path Cleveland uses: https://WEBSITE-DOMAIN/mentor-code-of-ethics/"
+      - do: "In a terminal, run exactly:"
+        items:
+          - "curl -sI https://WEBSITE-DOMAIN/mentor-code-of-ethics/"
+        see: A first line of HTTP/2 200. A 302 to a sign-in page means the page is a draft or private.
+      - do: Open the same address in a private browser window.
         see: The document, without being asked to sign in.
+      - do: "Write the address on the chapter information form under web: policy_mentor_ethics_url. It becomes the setting POLICY_MENTOR_ETHICS_URL."
     done_when: >-
       The document is published and opens without signing in.
     check:
@@ -82,10 +92,15 @@ steps:
     produces: [policy_terms_url]
     mode: offline
     actions:
-      - do: Write the document with the chapter's legal adviser, titled "Terms of Use" so it matches the link.
-      - do: Publish it as a page on the chapter's website. Cleveland's is at clevelandbusinessmentors.org/legal-notices/.
-      - do: Open the page in a private browser window.
+      - do: Write the document with the chapter's legal adviser. Give it the title "Terms of Use". Every public form's link reads Terms of Use.
+      - do: "Publish it as a public page on the chapter's website at exactly this address, the same path Cleveland uses: https://WEBSITE-DOMAIN/legal-notices/"
+      - do: "In a terminal, run exactly:"
+        items:
+          - "curl -sI https://WEBSITE-DOMAIN/legal-notices/"
+        see: A first line of HTTP/2 200. A 302 to a sign-in page means the page is a draft or private.
+      - do: Open the same address in a private browser window.
         see: The document, without being asked to sign in.
+      - do: "Write the address on the chapter information form under web: policy_terms_url. It becomes the setting POLICY_TERMS_URL."
     done_when: >-
       The document is published and opens without signing in.
     check:
@@ -105,11 +120,21 @@ steps:
     produces: [policy_privacy_url]
     mode: offline
     actions:
-      - do: The central support organization gives the chapter's adviser a plain list of what personal information the software collects and where it is kept. In outline - names, contact details and business details from the public forms, kept in the chapter's CRM; submissions, also held in the application database; mentoring email, copied onto the client's record; and documents, kept in the chapter's Google shared drive. There is no finished plain list yet (work list item 13).
-      - do: The chapter writes the policy with its legal adviser.
-      - do: Publish it as a page on the chapter's website. Cleveland's is at clevelandbusinessmentors.org/privacy-policy/.
-      - do: Open the page in a private browser window and read which organization it names.
+      - do: "The central support organization gives the chapter's adviser a plain list of what personal information the software collects and where it is kept. There is no finished list yet (work list item 13). Until there is, give this outline:"
+        items:
+          - "Names, contact details and business details from the public forms, kept in the chapter's CRM."
+          - "Every form submission, also held in the application's own database."
+          - "Email between mentors and clients, copied onto the client's record in the CRM."
+          - "Documents, kept in the chapter's Google shared drive."
+      - do: The chapter writes the policy with its legal adviser. Give it the title "Privacy Policy". Every public form's link reads Privacy Policy.
+      - do: "Publish it as a public page at exactly this address, the same path Cleveland uses: https://WEBSITE-DOMAIN/privacy-policy/"
+      - do: "In a terminal, run exactly:"
+        items:
+          - "curl -s https://WEBSITE-DOMAIN/privacy-policy/ | grep -c -i cleveland"
+        see: The number 0. Any other number means Cleveland's name is still in the page.
+      - do: Open the same address in a private browser window and read which organization the policy names.
         see: The document, without a sign-in, naming this chapter.
+      - do: "Write the address on the chapter information form under web: policy_privacy_url. It becomes the setting POLICY_PRIVACY_URL."
     done_when:
       - "The document is published."
       - "The document opens without signing in."
@@ -133,9 +158,10 @@ steps:
     produces: []
     mode: offline
     actions:
-      - do: The chapter's legal adviser reads all four documents.
-      - do: The adviser confirms in writing that they may be published. Keep the confirmation with the chapter's records. The central support organization plays no part in this review.
-        see: A written confirmation from the adviser.
+      - do: Send the chapter's legal adviser the four addresses from steps 7.1 to 7.4.
+      - do: The adviser reads all four and replies in writing that they may be published, naming each document.
+        see: A written reply naming all four documents.
+      - do: Save the reply in the chapter's shared drive, in a folder named Legal, with the date in its file name. The central support organization plays no part in this review.
     done_when: >-
       Whoever advises the chapter on legal matters has read all four and confirmed
       they may be published.
@@ -158,9 +184,17 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: Copy each address from the browser's address bar, not from memory, onto the chapter information form (step 8.3).
-      - do: Open each address from the form itself, in a private browser window.
-        see: All four documents open.
+      - do: "Open the chapter information form and check the web: section holds exactly these four keys, each with an address copied from the browser's address bar, not typed from memory:"
+        items:
+          - "policy_client_conduct_url: https://WEBSITE-DOMAIN/client-code-of-conduct/"
+          - "policy_mentor_ethics_url: https://WEBSITE-DOMAIN/mentor-code-of-ethics/"
+          - "policy_terms_url: https://WEBSITE-DOMAIN/legal-notices/"
+          - "policy_privacy_url: https://WEBSITE-DOMAIN/privacy-policy/"
+      - do: "In a terminal, run this once for each of the four addresses, putting the address in place of POLICY-ADDRESS:"
+        items:
+          - "curl -sI POLICY-ADDRESS"
+        see: A first line of HTTP/2 200 for all four.
+      - do: Check that none of the four addresses contains clevelandbusinessmentors.org. Each setting defaults to Cleveland's document, so a copied Cleveland address would pass every other check.
     done_when: >-
       All four addresses are written on the chapter information form and each one
       has been opened and checked.
@@ -176,6 +210,13 @@ steps:
     source: 9-Methods-Hosting-Website-Policies.md#7.6
 
 changes:
+  - version: "0.2"
+    date: "09-19-26 00:05"
+    change: >-
+      Every action made precise (Doug, 09-19-26): the title each document must carry to match
+      the consent box's link text, the exact address to publish it at (Cleveland's paths), a curl
+      check that it is public, a check that the privacy policy no longer names Cleveland, and the
+      form key and setting each address goes into.
   - version: "0.1"
     date: "09-18-26 17:20"
     change: >-

@@ -1,7 +1,7 @@
 # Stage 4 — Set up Google Workspace and the chapter's email
 
-**Version:** 0.2  
-**Last Updated:** 09-19-26 00:20  
+**Version:** 0.3  
+**Last Updated:** 09-19-26 00:05  
 **Generated from** `steps/stage-04.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -85,12 +85,22 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Do this:**
 
-1. Check step 3.2's record of which domain name is the email domain.
-2. Sign up for Google Workspace using the chapter's email domain name.
-3. When Google asks for the first administrator, use the setup contact's own name on a chapter address, not a role name. This account becomes the chapter's own administrator account in step 4.5.
-4. Put the sign-in and its recovery codes in the chapter's vault.
-5. Sign in to the Google Workspace admin console.
-   *You should see:* The admin console's home page.
+1. Open the chapter's record from step 3.2 and read which domain name is the email domain. Everything below uses that domain name, called EMAIL-DOMAIN.
+2. In a browser, go to https://workspace.google.com and choose to get started. The exact wording of Google's screens has not been checked for this guide.
+3. Answer Google's sign-up questions with these values:
+   - Business name: the chapter's name, exactly as chosen in step 1.1
+   - Number of employees: the number of staff who will have mailboxes
+   - Region: United States
+   - Current email address: the founding email address from step 3.1
+   - Does the business have a domain: yes, and enter EMAIL-DOMAIN
+4. When Google asks for the first user, enter the setup contact's own details:
+   - First name and last name: the setup contact's own name, not a role such as Admin
+   - Username: FIRSTNAME.LASTNAME, so the address is FIRSTNAME.LASTNAME@EMAIL-DOMAIN
+   - Password: a new password, stored straight away in the chapter's Board vault (step 2.7)
+   *You should see:* An account created, with this user as its first administrator. It becomes the chapter's own administrator account in step 4.5.
+5. Choose the Business Starter plan, or the plan the cost agreement names (step 2.2), and pay with the chapter's own card (step 1.6). The nonprofit discount is applied for later, in step 4.13.
+6. In a new browser window, go to https://admin.google.com and sign in as FIRSTNAME.LASTNAME@EMAIL-DOMAIN.
+   *You should see:* The Google admin console's home page. Google will ask to verify the domain; that is step 4.3.
 
 **Done when:** The account exists on the chapter's email domain and the first administrator can sign in.
 
@@ -220,9 +230,13 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Do this:**
 
-1. The first administrator from step 4.2 is this account. Give it the highest administrator level Google Workspace offers.
-2. Give a second person at the chapter the same level, so one person leaving does not lock the chapter out.
-3. The named person signs in to the admin console with their chapter address.
+1. Sign in to https://admin.google.com as the first administrator from step 4.2.
+2. Open Account, then Admin roles. Check the first administrator holds the Super Admin role. The menu wording has not been checked for this guide.
+   *You should see:* Super Admin listed for FIRSTNAME.LASTNAME@EMAIL-DOMAIN.
+3. Create a second chapter officer's user the same way as step 4.11, then open that user's page, open Admin roles and privileges, and assign Super Admin.
+   *You should see:* Two chapter people holding Super Admin.
+4. Record both names and addresses on the chapter's account list (step 5.7) as the holders of the Google Workspace top-level sign-in.
+5. The second officer signs in at https://admin.google.com with their own chapter address.
    *You should see:* The admin console's home page.
 
 **Done when:** A named person at the chapter holds a Google Workspace administrator account on a chapter address.
@@ -250,11 +264,16 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Do this:**
 
-1. The chapter's administrator creates a user for the central support organization's named person, with a licence.
-2. Give it the highest administrator level. Step 10.3 needs it.
-3. Hand over its sign-in details privately, never in an email to a group.
-4. The central support organization's person signs in to the chapter's admin console with the account.
-   *You should see:* The chapter's admin console.
+1. Sign in to https://admin.google.com as the chapter's administrator.
+2. Open Directory, then Users, and choose Add new user. Enter:
+   - First name: the central support person's first name
+   - Last name: the central support person's last name
+   - Primary email: FIRSTNAME.LASTNAME@EMAIL-DOMAIN, using the central support person's own name, never a shared name such as support
+3. Let Google generate the password. Copy it straight into the chapter's Operations vault, and tell the central support person privately where to find it. Never email it.
+4. Open the new user's page, open Admin roles and privileges, and assign Super Admin. Entering the software's permission grant in step 10.3 needs it.
+   *You should see:* Super Admin listed for the central support person's account.
+5. The central support person signs in at https://admin.google.com with the new address, sets their own password, and turns on two-step sign-in straight away.
+   *You should see:* The chapter's admin console, reached from their own account.
 
 **Done when:** The central support organization holds its own named administrator account, separate from the chapter's.
 
@@ -280,10 +299,15 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Do this:**
 
-1. In the admin console, create a user for the shared address, usually info@ the chapter's email domain, with its own licence. Do not create it as a group or as a second name for someone's mailbox.
-2. Put its sign-in and recovery codes in the chapter's vault.
-3. Look it up in the admin console's list of users.
-   *You should see:* The address listed as a user with a licence, not in the list of groups.
+1. Sign in to https://admin.google.com as the chapter's administrator. Open Directory, then Users, and choose Add new user.
+2. Enter exactly:
+   - First name: the chapter's name, for example Akron Business Mentors
+   - Last name: Info
+   - Primary email: info@EMAIL-DOMAIN
+3. Let Google generate the password and copy it straight into the chapter's Operations vault.
+4. Open Directory, then Users, and find info@EMAIL-DOMAIN.
+   *You should see:* info@EMAIL-DOMAIN listed as a user with a Google Workspace licence. It must not appear under Directory, then Groups.
+5. Write info@EMAIL-DOMAIN on the chapter information form as the shared operations mailbox. The software reads it as OPS_MAILBOX.
 
 **Done when:** The shared address the software reads and sends from exists as a real licensed mailbox, not as an alias or a group. An alias will not work.
 
@@ -309,9 +333,10 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Do this:**
 
-1. Either create a separate licensed user for the address, or use the shared operations mailbox from step 4.7. Cleveland uses its shared operations mailbox for both, which saves a licence.
-2. Record the address on the chapter information form.
-   *You should see:* The address listed in the admin console as a user with a licence.
+1. Use the shared operations mailbox from step 4.7 as the sending address. Cleveland does the same, and it saves a licence.
+2. On the chapter information form, write info@EMAIL-DOMAIN as the alert sending address, or leave it empty. The software reads it as ALERT_EMAIL_FROM, and when it is empty it sends from OPS_MAILBOX anyway.
+3. Only if the chapter wants a separate sending address: create a second user exactly as in step 4.7, with Last name Alerts and Primary email alerts@EMAIL-DOMAIN, and write that address on the form instead.
+   *You should see:* The sending address listed under Directory, then Users, with a licence, and not under Groups.
 
 **Done when:** The address the software sends its warning messages from exists as a real licensed mailbox. An alias or a group will be refused.
 
@@ -337,9 +362,17 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Do this:**
 
-1. Choose one receiving address. Unlike the sending address, it may be a group.
-2. Forward it to named people at the chapter and at the central support organization, as Cleveland's alert address forwards to its named system administrators.
-3. Write the named people down beside the address.
+1. Sign in to https://admin.google.com. Open Directory, then Groups, and choose Create group. Enter:
+   - Name: System Administrators
+   - Group email: admin@EMAIL-DOMAIN
+   - Description: Receives the system's warning messages
+2. In the group's access settings, let people outside the organization post to the group. The hosting provider's alerts come from outside the chapter. The setting's exact wording has not been checked for this guide.
+3. Add these members to the group:
+   - At least one named officer of the chapter
+   - At least one named person from the central support organization, by their own address
+4. Write admin@EMAIL-DOMAIN on the chapter information form as the alert receiving address. The software reads it as ALERT_EMAIL_TO. Write the members' names beside it on the chapter's account list (step 5.7).
+5. From a personal account outside the chapter, send a test message to admin@EMAIL-DOMAIN.
+   *You should see:* The test message arrives with every member of the group.
 
 **Done when:** The receiving address is decided and it reaches a person who reads it during the working week, not an unattended mailbox.
 
@@ -365,10 +398,14 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Do this:**
 
-1. In the admin console, create a group for all the chapter's members, at its own address.
-2. Add a test member, then remove them.
-   *You should see:* The test member appears in the group and then disappears.
-3. Record the group's address on the chapter information form. The group is optional; if its address is left off the form, the software skips that part.
+1. Sign in to https://admin.google.com. Open Directory, then Groups, and choose Create group. Enter:
+   - Name: All Members
+   - Group email: allmembers@EMAIL-DOMAIN, or another address the chapter prefers
+   - Description: Every member of the chapter
+2. In the group's access settings, set who can post. That is the chapter's choice. Only the group's own members posting is the usual choice.
+3. Add yourself as a test member, then remove yourself.
+   *You should see:* The member appears in the group's member list and then disappears.
+4. Write the group's address on the chapter information form as the members group. The software reads it as GOOGLE_MEMBERS_GROUP. Leaving it empty turns this feature off.
 
 **Done when:** The group exists at its own address and the administrator can add and remove members.
 
@@ -394,9 +431,15 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Do this:**
 
-1. For each member of staff, create a licensed user, first name and last name at the chapter's email domain.
-2. Do not create mentors' mailboxes here. The software creates each mentor's mailbox from their mentor record (step 15.9).
-   *You should see:* Every member of staff listed in the admin console.
+1. Sign in to https://admin.google.com. For each member of staff the chapter names now (the full list is confirmed later, in step 14.1), open Directory, then Users, and choose Add new user. Enter:
+   - First name: their first name
+   - Last name: their last name
+   - Primary email: FIRSTNAME.LASTNAME@EMAIL-DOMAIN
+   - Secondary email: their personal address, used only to send them their sign-in details
+2. Let Google generate a password, and choose the option that asks for a new password at the first sign-in. Send the sign-in details to the secondary email. The option wording has not been checked for this guide.
+3. Do not create mentors' mailboxes here. The software creates each mentor's mailbox from their mentor record (step 15.9).
+4. Open Directory, then Users.
+   *You should see:* Every member of staff listed, each with a licence.
 
 **Done when:** Every member of staff who will use the system has a mailbox on the chapter's domain. Mentors' mailboxes are created later, from their mentor records (step 15.9).
 
@@ -428,9 +471,17 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Do this:**
 
-1. In the admin console, turn on two-step sign-in, then enforce it for the whole organization. Give users a short grace period to set it up.
-2. Set a second step on the shared mailboxes too. Put their recovery codes in the chapter's vault.
-   *You should see:* The admin console reports two-step sign-in as enforced, and each user shows as enrolled.
+1. Sign in to https://admin.google.com. Open Security, then Authentication, then 2-step verification. The menu wording has not been checked for this guide.
+2. Set exactly:
+   - Allow users to turn on 2-step verification: on
+   - Enforcement: on, from a date one week away
+   - New user enrollment period: 1 week
+   - Methods: any except verification codes sent by text message or phone call
+   *You should see:* The settings saved for the whole organization.
+3. Sign in as info@EMAIL-DOMAIN and turn on two-step sign-in at https://myaccount.google.com/signinoptions/twosv, using an authenticator app held by two named people, not one person's phone.
+4. On the same page, generate backup codes for info@EMAIL-DOMAIN and put them in the chapter's Operations vault. Do the same for any other shared mailbox.
+5. After the enforcement date, open Directory, then Users, and add the 2-step verification enrollment column.
+   *You should see:* Every user shown as enrolled.
 
 **Done when:** Two-step sign-in is enforced for every account, and recovery is possible without one person.
 
@@ -457,9 +508,12 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Do this:**
 
-1. Apply through Google's nonprofit programme, which checks the chapter's nonprofit status before granting the discount.
-2. Include the determination letter from step 1.5.
-3. Write down the date the application went in and the expected answer date.
+1. In a browser, go to https://www.google.com/nonprofits and choose to get started. Sign in as the chapter's administrator from step 4.5.
+2. Fill in the application with the chapter's legal name, its employer identification number from step 1.3, and its address, exactly as they appear on the determination letter from step 1.5.
+3. Google's verification partner, Goodstack (formerly called Percent), checks the chapter's nonprofit status. If it asks for evidence, upload the determination letter from step 1.5. That this is still the verification partner has not been checked for this guide.
+4. Write the date the application went in on the chapter's account list (step 5.7), with the expected answer date Google gives.
+5. Once approved, activate Google Workspace for Nonprofits from the Google for Nonprofits account, and choose the chapter's existing Google Workspace domain. The exact screens have not been checked for this guide.
+   *You should see:* The admin console's billing page shows the nonprofit plan.
 
 **Done when:** The application has been submitted with the chapter's nonprofit evidence, and the expected answer date is recorded.
 
@@ -485,11 +539,13 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Do this:**
 
-1. In the registrar account, change the contact and sign-in address to a chapter mailbox that more than one person can reach. The shared operations mailbox from step 4.7 is one choice.
-2. Remove the founding email address from step 3.1.
-3. Do the same in the Cloudflare account from step 3.7, which was also opened with the founding address.
-4. Ask the registrar for a password reset.
-   *You should see:* The password reset message arrives in the chapter mailbox.
+1. Sign in to the registrar account from step 3.3. Open its account profile or contact settings. Registrars name this page differently; if it cannot be found, search the registrar's help pages for how to change the account email.
+2. Change the account's sign-in and contact email to info@EMAIL-DOMAIN, and confirm the change from the message sent there.
+3. Delete the founding email address from step 3.1 from every contact field on the account.
+4. Sign in to Cloudflare, open My Profile, and change the email address to info@EMAIL-DOMAIN. Confirm the change from the message sent there.
+   *You should see:* Both accounts show info@EMAIL-DOMAIN.
+5. Sign out of the registrar and use its forgotten-password link with info@EMAIL-DOMAIN.
+   *You should see:* The password reset message arrives in info@EMAIL-DOMAIN. Do not complete the reset unless you mean to; if you do, put the new password in the chapter's vault.
 
 **Done when all of these are true:**
 
@@ -509,5 +565,6 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 | Version | Date | Change |
 |---|---|---|
+| 0.3 | 09-19-26 00:05 | Every action outside steps 4.3 and 4.4 made precise (Doug, 09-19-26): the web addresses to open, the admin console paths, the exact user and group names to create (info@, admin@, allmembers@), the fields to fill in, the two-step sign-in settings, and the nonprofit application route. Screen wording not checked on screen is marked as such. |
 | 0.2 | 09-19-26 00:20 | Steps 4.3 and 4.4 rewritten with the exact DNS records to add in Cloudflare, field by field: the verification record, and the MX, SPF, DKIM and DMARC records, with a header check that all three pass (Doug, 09-19-26). Values read from Cleveland's live email domain. |
 | 0.1 | 09-18-26 17:20 | First version as data, converted from the methods for setting up Google Workspace (8-Methods-Organization-Domains-Google.md, version 0.5) with the step list's finishing tests. Step 4.14 also moves the Cloudflare account off the founding address. |

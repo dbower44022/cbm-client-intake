@@ -1,7 +1,7 @@
 stage: 11
 name: Deploy the chapter's applications
-version: "0.1"
-updated: "09-18-26 17:20"
+version: "0.2"
+updated: "09-19-26 00:07"
 why: >-
   The applications are what the chapter's staff, mentors and the public actually
   use: the intake forms, the staff tools and the public events page. This stage
@@ -31,9 +31,9 @@ steps:
     produces: [SESSION_SECRET]
     mode: automated
     actions:
-      - do: Generate a new random value of at least 48 characters. The settings generator (step 11.2) does this the first time it runs.
-      - do: Put the value in the chapter's Operations vault.
-        see: The session secret listed in the vault.
+      - do: Nothing to run by hand. The settings generator in step 11.2 creates the session secret the first time it runs, as a random value of 48 bytes, and appends it to the chapter's settings file (CHAPTER-ENV-FILE, which is ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env).
+      - do: After step 11.2, open CHAPTER-ENV-FILE in a text editor, copy the value after SESSION_SECRET= into a new item in the chapter's Operations vault named Session secret, and save.
+        see: The Session secret item in the Operations vault.
     done_when: >-
       A new random session secret has been generated for this chapter alone and
       stored in the secrets store. It is never copied from another chapter.
@@ -54,11 +54,23 @@ steps:
     produces: [APP_ENCRYPTION_KEY]
     mode: automated
     actions:
-      - do: Run scripts/rehearsal/render_spec.py with the chapter information form, the secrets file and an output file name.
-        see: A settings file written, containing the secret values in plain text.
-      - do: Never commit the output file, and delete it once step 11.5 is done.
-      - do: Move the stored-data encryption key the generator created into the chapter's Operations vault.
-        see: The encryption key listed in the vault.
+      - do: "Before running it, check CHAPTER-ENV-FILE already holds these three lines, written by the script in step 9.10:"
+        items:
+          - "ESPO_API_KEY="
+          - "ESPO_PROVISION_USERNAME="
+          - "ESPO_PROVISION_PASSWORD="
+      - do: "In a terminal, in the folder ~/Dropbox/Projects/cbm-client-intake, type the line below and press Enter. CHAPTER-VALUES-FILE is the filled-in chapter information form saved as YAML (the trial chapter's is prds/chapter-network/rehearsal-2026-08-31/lakeside-values.yaml):"
+        items:
+          - "uv run python scripts/rehearsal/render_spec.py CHAPTER-VALUES-FILE ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG-app.yaml"
+        see: "A line reading: wrote ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG-app.yaml with 10 shared + N web-only env vars. If it reads secrets not yet minted, step 9.10 has not run."
+      - do: "Open CHAPTER-SLUG-app.yaml in a text editor and make three changes. The trial script was written for the rehearsal, and these three values are wrong for a real chapter:"
+        items:
+          - "Delete the two lines for ENV_LABEL (key and value). Its value, Rehearsal, would show on every page's footer."
+          - "Change the value of ALLOWED_ORIGINS from http://localhost:8000 to https://APP-ADDRESS."
+          - "Change every branch: main to branch: release, in all three places (the web part, the worker and the migrate job)."
+      - do: "Open CHAPTER-ENV-FILE and copy the value after APP_ENCRYPTION_KEY= into a new item in the chapter's Operations vault named Stored-data encryption key. This value must never change."
+        see: The Stored-data encryption key item in the Operations vault.
+      - do: Never commit CHAPTER-SLUG-app.yaml anywhere. It holds secrets in plain text. It is deleted in step 11.3.
     done_when: >-
       The settings are produced from the chapter information form and every value
       in them traces back to a line on that form.
@@ -85,9 +97,13 @@ steps:
     produces: []
     mode: automated
     actions:
-      - do: Today the settings file from step 11.2 carries the secrets into the deployment. Nothing else to do.
-      - do: After step 11.5, delete the settings file.
-        see: No copy of the settings file left anywhere.
+      - do: Nothing to run. The settings file from step 11.2 carries every secret into the deployment when step 11.5 creates the application. The database connection is supplied by the hosting platform and never appears in the file.
+      - do: "After step 11.5 has succeeded, type the line below and press Enter, to delete the settings file:"
+        items:
+          - "rm ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG-app.yaml"
+        see: The prompt again, with no message.
+      - do: Check every secret in CHAPTER-ENV-FILE also has an item in the Operations vault. Then delete CHAPTER-ENV-FILE too, once the vault holds everything.
+        see: No settings file and no secrets file left on the computer.
     done_when:
       - "Every secret is loaded into the deployment, including the Google key."
       - "The session secret is loaded."
@@ -117,11 +133,15 @@ steps:
     produces: [DATABASE_URL]
     mode: automated
     actions:
-      - do: The database is created with the application in step 11.5, named after the chapter's short label.
-      - do: Straight after step 11.5, open the application's settings in the hosting account and find the database part.
-        see: Whether it says it is a managed database or a development database.
-      - do: If it is a development database, convert it to a managed database, at the smallest size.
-        see: The database shown as a managed database.
+      - do: Nothing to run. Step 11.5 creates the database with the application, named CHAPTER-SLUG-db.
+      - do: "Straight after step 11.5, sign in to the chapter's hosting account at cloud.digitalocean.com and open Apps, then CHAPTER-SLUG-intake, then Settings, then the component CHAPTER-SLUG-db. The path is the one Cleveland used on 23 July 2026 (DEPLOYMENT.md)."
+        see: Either a managed database, or a development database with an option to convert it.
+      - do: "If it is a development database, choose Database Type and Scale, then Convert to a Managed Database, and choose:"
+        items:
+          - "Plan: the smallest node size (db-s-1vcpu-1gb)"
+          - "Nodes: 1"
+          - "Standby node: none"
+        see: The conversion completing and the application redeploying by itself, with no downtime. The connection details do not change.
     done_when:
       - "The database exists in the chapter's hosting account."
       - "Its connection details are in the secrets store."
@@ -147,10 +167,21 @@ steps:
     produces: [app_id]
     mode: automated
     actions:
-      - do: Run doctl apps create with the settings file from step 11.2, signed in to the chapter's hosting account.
-        see: A new application with an identifier.
-      - do: Open the application in the hosting account.
-        see: Three parts listed — the web part, the delivery worker and the migrate setup job.
+      - do: "If this computer has never been signed in to the chapter's hosting account, type the line below and press Enter, then paste the chapter's DigitalOcean token from the Operations vault when asked:"
+        items:
+          - "doctl auth init --context CHAPTER-SLUG"
+        see: A message that the token was validated.
+      - do: "Type the line below and press Enter, so every following doctl command acts on the chapter's account and not Cleveland's:"
+        items:
+          - "doctl auth switch --context CHAPTER-SLUG"
+      - do: "Type the line below and press Enter:"
+        items:
+          - "doctl apps create --spec ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG-app.yaml"
+        see: A table with the new application's ID and the name CHAPTER-SLUG-intake. Copy the ID into the Operations vault as a note named Application ID; later steps call it APP-ID.
+      - do: "Type the line below and press Enter:"
+        items:
+          - "doctl apps get APP-ID"
+        see: The application listed. In the hosting account's web page, its Components show web, delivery-worker and migrate.
     done_when: >-
       The web part, the background worker part and the setup job all exist.
     check:
@@ -172,9 +203,11 @@ steps:
     produces: []
     mode: automated
     actions:
-      - do: Nothing to run. The setup job runs by itself before the application starts.
-      - do: Open the deployment's log in the hosting account.
-        see: The migrate job reported as successful.
+      - do: Nothing to run. The migrate job runs by itself before the application starts.
+      - do: "Type the line below and press Enter:"
+        items:
+          - "doctl apps list-deployments APP-ID"
+        see: The first deployment in the list with its phase ACTIVE. A phase of ERROR means the migrate job or the build failed; open the deployment in the hosting account's web page and read its log.
     done_when: >-
       The setup job has completed and the database holds the expected tables.
     check:
@@ -194,9 +227,11 @@ steps:
     produces: []
     mode: automated
     actions:
-      - do: Check the application follows the release branch, which always points at the latest release.
-      - do: Open the application's health address, /healthz, in a browser.
-        see: releaseTag set to the current release, for example v0.228.1, and version matching it.
+      - do: "Open https://APP-ADDRESS/healthz in a browser. Until step 11.10, use the address DigitalOcean gave the application, shown by doctl apps get APP-ID under Default Ingress."
+        see:
+          - "status: ok"
+          - "version: the current release's number, for example 0.231.1"
+          - "releaseTag: the same release, for example v0.231.1. It reads null until step 11.8 moves the application to the release branch."
     done_when: >-
       The application is running the version the release schedule names, and it
       reports that version when asked.
@@ -219,12 +254,18 @@ steps:
     produces: []
     mode: automated
     actions:
-      - do: Run scripts/set_updates_policy.py with the application's identifier and latest-stable, without the apply option.
-        see: The plan it would apply to all three parts.
-      - do: Run it again with the apply option and the deploy option. The deploy option starts a fresh deployment, without which the application stays one release behind while reporting itself healthy.
-        see: All three parts changed.
-      - do: Run it with the status option.
-        see: All three parts read back as latest-stable, in agreement.
+      - do: "In the folder ~/Dropbox/Projects/cbm-client-intake, with doctl switched to the chapter's account (step 11.5), type the line below and press Enter. It changes nothing:"
+        items:
+          - "uv run python scripts/set_updates_policy.py APP-ID latest-stable"
+        see: The change it would make to each of the three parts.
+      - do: "Type the line below and press Enter. The deploy option starts a fresh deployment; without it the application rebuilds the same commit it already runs:"
+        items:
+          - "uv run python scripts/set_updates_policy.py APP-ID latest-stable --apply --deploy"
+        see: The spec updated and a new deployment started.
+      - do: "Type the line below and press Enter:"
+        items:
+          - "uv run python scripts/set_updates_policy.py APP-ID latest-stable --status"
+        see: "One line per part, each showing branch=release and deploy_on_push=True, and a final line reading conformant with 'latest-stable'."
     done_when: >-
       All three parts of the application follow the release branch and the policy
       script reads all three back in agreement. An application has three parts,
@@ -249,8 +290,10 @@ steps:
     produces: []
     mode: automated
     actions:
-      - do: Run scripts/set_updates_policy.py with the application's identifier and the status option.
-        see: All three parts naming the release branch, and none naming main.
+      - do: "Type the line below and press Enter:"
+        items:
+          - "uv run python scripts/set_updates_policy.py APP-ID latest-stable --status"
+        see: "Every part showing branch=release, none showing branch=main, and the line conformant with 'latest-stable'."
     done_when:
       - "No part of the deployment follows the main development branch."
     note: "This replaces what the earlier planning documents said. Those documents require automatic deployment to be switched off on a chapter's application, which was right when the release version travelled inside each deployment's settings. The version is now stamped into the software itself when a release is cut, so an application following the release branch with automatic deployment on updates itself correctly. The danger was never automatic deployment — it is automatic deployment from the development branch, which delivers untested software straight to a chapter's live system."
@@ -271,10 +314,19 @@ steps:
     produces: []
     mode: automated
     actions:
-      - do: In the chapter's Cloudflare account, open the domain, then DNS, and add a CNAME record for the application's address, pointing at the address the hosting platform gave the application.
-      - do: Set the record to "DNS only", the grey cloud.
+      - do: "Type the line below and press Enter, and copy the address shown under Default Ingress (it ends .ondigitalocean.app):"
+        items:
+          - "doctl apps get APP-ID"
+      - do: "In the chapter's Cloudflare account, open the domain, then DNS, then Records, and choose Add record. Enter exactly:"
+        items:
+          - "Type: CNAME"
+          - "Name: the first part of the application's address, for example apps"
+          - "Target: the Default Ingress address, without https://"
+          - "Proxy status: DNS only (grey cloud)"
+          - "TTL: Auto"
         see: The record listed with a grey cloud.
-      - do: In the hosting account, add the address to the application as its main domain.
+      - do: "In the hosting account, open Apps, then CHAPTER-SLUG-intake, then Settings, then Domains, and add APP-ADDRESS. Choose to manage DNS yourself and make it the primary domain. Labels are not checked on screen for this guide."
+        see: The domain listed, moving to Active once the certificate is issued.
     done_when: >-
       The domain name record for the application address resolves to it.
     check:
@@ -298,8 +350,8 @@ steps:
     produces: []
     mode: automated
     actions:
-      - do: Nothing to do. The hosting platform issues the certificate and renews it.
-      - do: Open the application's address in a browser.
+      - do: Nothing to do. The hosting platform issues the certificate and renews it by itself.
+      - do: Open https://APP-ADDRESS in a private browser window.
         see: The applications' sign-in page, with no certificate warning.
     done_when: >-
       The application loads at its address over a secure connection, and the
@@ -321,16 +373,18 @@ steps:
     produces: []
     mode: automated
     actions:
-      - do: "Open the application's address followed by /healthz, and read three things:"
+      - do: "Open https://APP-ADDRESS/healthz in a browser and read these fields:"
         items:
-          - "The organization: the chapter's own name."
-          - "releaseTag: the release."
-          - "The worker block: a recent heartbeat."
-        see: All three as listed.
-      - do: Read the crmConfig block.
+          - "status: ok"
+          - "organization: the chapter's own name, not Cleveland's"
+          - "releaseTag: the current release, for example v0.231.1"
+          - "database: ok"
+          - "worker, then lastHeartbeatAgeSeconds: under 180"
+        see: All five as listed.
+      - do: Read the crmConfig block's state field.
         see:
-          - A state of stamped or unstamped: both are fine
-          - Not absent, forbidden or unreachable: each of those is a problem to report
+          - "stamped or unstamped: both are fine"
+          - "absent, forbidden or unreachable: each is a problem to report"
     done_when:
       - "The application's health address reports it is running."
       - "The health address names the chapter correctly."
@@ -356,8 +410,9 @@ steps:
     produces: []
     mode: automated
     actions:
-      - do: Sign in to the applications and open a page that lists records, such as Client Administration.
-        see: Records, or an empty list. Both are fine.
+      - do: Open https://APP-ADDRESS and sign in with the CRM administrator account the deployment wizard created in step 9.2. Its name and password are in the Operations vault.
+      - do: Open Client Administration.
+        see: Records, or an empty list. Both are fine. A message that access was refused means a permission was missed in stage 9.
     done_when: >-
       A request through the application returns CRM data.
     check:
@@ -381,12 +436,22 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: Confirm no other deployment reads the same shared operations mailbox.
-      - do: Switch on the mail feature on the application's settings page, and restart the background worker.
-      - do: Read the worker's log.
-        see: A line naming the mailbox the worker is acting as, and it is the shared operations mailbox.
-      - do: Send a message from an outside address to the shared operations mailbox.
-        see: The message appearing against a record in the application.
+      - do: Confirm no other deployment reads the same shared operations mailbox. Only one deployment may read a given mailbox.
+      - do: "Sign in to https://APP-ADDRESS/setup as a CRM administrator. Set these settings, one at a time, saving each:"
+        items:
+          - "GOOGLE_SERVICE_ACCOUNT_JSON: the whole content of the key file from the Operations vault (step 10.2)"
+          - "OPS_MAILBOX: the shared operations mailbox address"
+          - "COMMS_INTERNAL_DOMAINS: the chapter's email domain"
+          - "GMAIL_SYNC: true"
+        see: Each setting shown with its new value. The key is shown as set, never as its value.
+      - do: "Restart the worker: type the line below and press Enter:"
+        items:
+          - "doctl apps create-deployment APP-ID"
+        see: A new deployment reaching ACTIVE.
+      - do: In the hosting account, open Apps, then CHAPTER-SLUG-intake, then Runtime Logs, and choose the delivery-worker component.
+        see: A line naming the mailbox the worker acts as, and it is the shared operations mailbox. If that line is absent or names another address, stop; the cause is in stage 10.
+      - do: From an outside address, send a message to the shared operations mailbox.
+        see: Within about five minutes, the message in Submission Admin as a new email submission.
     done_when: >-
       A message sent to the shared operations mailbox appears in the application.
     check:
@@ -409,6 +474,10 @@ steps:
     produces: []
     mode: guided
     actions:
+      - do: "At https://APP-ADDRESS/setup, set:"
+        items:
+          - "ALERT_EMAIL_FROM: the alert sending mailbox (step 4.8)"
+          - "ALERT_EMAIL_TO: the alert receiving address (step 4.9)"
       - do: Open a record in the application and send a message from it to an outside address you can read.
         see: The message arriving, with the chapter's own name as the sender.
     done_when: >-
@@ -433,9 +502,11 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: Switch on the calendar feature on the application's settings page.
-      - do: Create a scheduled session through the application.
-        see: The meeting on the mentor's calendar, with the invitations sent.
+      - do: "At https://APP-ADDRESS/setup, set:"
+        items:
+          - "GCAL_EVENTS: true"
+      - do: Sign in as a mentor, open a client in Client Management, and create a session with Status Scheduled and a start time tomorrow.
+        see: The meeting on the mentor's Google calendar, with the client's contacts invited and a Meet link attached.
     done_when: >-
       A meeting created through the application appears on the calendar with the
       right people invited.
@@ -458,9 +529,13 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: Switch on the documents feature on the application's settings page.
-      - do: Create a record that should get a folder.
-        see: The folder appearing on the shared drive.
+      - do: "At https://APP-ADDRESS/setup, set:"
+        items:
+          - "GDRIVE_SHARED_DRIVE_ID: the shared drive identifier (step 10.5)"
+          - "GDRIVE_IDENTITY: service"
+          - "GDRIVE_DOCS: true"
+      - do: Open a client in Client Management, open its Documents tab, and upload a small test file.
+        see: The file listed on the Documents tab, and a folder for that client on the shared drive holding it.
     done_when: >-
       The application creates a folder on the shared drive and it appears.
     check:
@@ -482,12 +557,19 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: Switch on the mentor account switches on the application's settings page, including the Google directory check.
-      - do: In Mentor Administration, take a test mentor through approval.
-        see: A new mailbox created on the chapter's mentor email domain.
-      - do: Sign in to the new mailbox.
-        see: The mailbox opens.
-      - do: Remove the test mentor's mailbox and records afterwards.
+      - do: "At https://APP-ADDRESS/setup, set:"
+        items:
+          - "MENTOR_EMAIL_DOMAIN: the domain mentors' mailboxes are made on"
+          - "GOOGLE_DELEGATED_ADMIN: the chapter's Google administrator address (step 4.5). The directory calls act as this administrator."
+          - "GOOGLE_MEMBERS_GROUP: the members group address (step 4.10), or leave empty to skip the group step"
+          - "GOOGLE_DIRECTORY_CHECK: true"
+          - "GOOGLE_CREATE_MAILBOX: true"
+          - "MENTOR_PROVISION_USERS: true"
+      - do: In Mentor Administration, create a test mentor with a first and last name no real mentor has, and set Mentor Status to Accepted-Provisional.
+        see: The status window reporting the mailbox created, and a temporary password shown once. Copy it into the Operations vault.
+      - do: Sign in at mail.google.com as the new mentor address, with the temporary password.
+        see: The mailbox opens and asks for a new password.
+      - do: Delete the test mentor's mailbox in admin.google.com, then the test mentor record and its contact in the CRM.
     done_when: >-
       A mentor taken through approval ends up with a real working mailbox on the
       chapter's mentor email domain.
@@ -504,6 +586,10 @@ steps:
     source: 3-Methods-CRM-Google-Applications.md#11.18
 
 changes:
+  - version: "0.2"
+    date: "09-19-26 00:07"
+    change: >-
+      Every action made exact (Doug, 09-19-26: sweep every step): the settings generator's command line and the three values in its output that are wrong for a real chapter (the Rehearsal label, the localhost origin, and the main branch); doctl commands against the chapter's own account; the managed database conversion path; the release policy commands; the Cloudflare record; the health page's exact fields; and the settings each Google check switches on at /setup, including GOOGLE_DELEGATED_ADMIN, which no list had named.
   - version: "0.1"
     date: "09-18-26 17:20"
     change: >-

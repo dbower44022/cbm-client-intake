@@ -1,7 +1,7 @@
 # Stage 6 — Build the chapter's public website
 
-**Version:** 0.1  
-**Last Updated:** 09-18-26 17:20  
+**Version:** 0.2  
+**Last Updated:** 09-19-26 00:04  
 **Generated from** `steps/stage-06.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -45,9 +45,17 @@ The public website is the chapter's own marketing site. The software does not bu
 
 **Do this:**
 
-1. If the chapter already has a website, keep it. Otherwise choose any platform that can publish pages, host a small file and redirect one address to another. Cleveland's runs on WordPress with the Elementor page builder.
-2. Name the person who will build and maintain the site, and write the platform and their name on the chapter's account list (step 5.7).
-   *You should see:* The platform and a named person on the list.
+1. If the chapter already has a website, keep it. Otherwise choose a platform that can do all three of these:
+   - Publish ordinary pages at addresses the chapter chooses, such as /privacy-policy/.
+   - Send one address to another site by a temporary redirect, the kind numbered 302.
+   - Serve a small stylesheet file with the file type text/css, or link to one hosted elsewhere.
+2. For reference, Cleveland's website runs on WordPress with the Elementor page builder. That is an example, not a requirement.
+3. Add a line to the chapter's account list (step 5.7) with exactly these entries:
+   - Account: the website
+   - Platform: the platform's name
+   - Sign-in address: the address the site's editors sign in at
+   - Built and maintained by: the named person
+   *You should see:* The website on the account list, with a named person.
 
 **Done when:** The choice is made and someone is named to build and maintain the site.
 
@@ -73,8 +81,11 @@ The public website is the chapter's own marketing site. The software does not bu
 
 **Do this:**
 
-1. Publish the site at the chapter's website domain, at an address beginning https://.
-2. Open the site in a private browser window.
+1. Publish the site at https://WEBSITE-DOMAIN/, where WEBSITE-DOMAIN is the chapter's website domain from stage 3, for example lakesidebusinessmentors.org.
+2. Open a terminal and run exactly:
+   - curl -sI https://WEBSITE-DOMAIN/
+   *You should see:* A first line of HTTP/2 200, or a 301 redirect to the same site with www added, which is also fine.
+3. Open https://WEBSITE-DOMAIN/ in a private browser window.
    *You should see:* The site, with no security warning.
 
 **Done when:** The site loads at the chapter's website domain over a secure connection.
@@ -101,10 +112,19 @@ The public website is the chapter's own marketing site. The software does not bu
 
 **Do this:**
 
-1. On the website, add a temporary redirect (the kind numbered 302) from a test address, such as /redirect-test, to any page on another site. Most platforms do this through a redirect setting or a redirect add-on.
-2. Open the test address in a private browser window.
-   *You should see:* The other site's page.
-3. Remove the redirect.
+1. On the website, add a temporary redirect with exactly these values. On WordPress the free Redirection plugin does this; on other platforms look for a setting named redirects:
+   - From: /redirect-test
+   - To: https://example.com/
+   - Type: 302 (temporary)
+2. In a terminal, run exactly:
+   - curl -sI https://WEBSITE-DOMAIN/redirect-test
+   *You should see:*
+   - A first line of HTTP/2 302 (or HTTP/1.1 302).
+   - A line location: https://example.com/
+3. Delete the /redirect-test redirect.
+4. Run the same command again:
+   - curl -sI https://WEBSITE-DOMAIN/redirect-test
+   *You should see:* A first line of HTTP/2 404. The test redirect is gone.
 
 **Done when:** A test address on the site sends the visitor to a page on another site, by a temporary redirect. (Checking that the site can embed a page returns once the public mentor directory page is built and its method is decided.)
 
@@ -130,9 +150,12 @@ The public website is the chapter's own marketing site. The software does not bu
 
 **Do this:**
 
-1. The named person signs in to the website with their own sign-in.
-2. They change one word on one page, check the public site, and change it back.
-   *You should see:* The change on the public site, then gone again.
+1. The named person from step 6.1 signs in to the website's editor at its sign-in address, with their own sign-in, not a shared one.
+2. They change one word on the home page and publish the change.
+3. They open https://WEBSITE-DOMAIN/ in a private browser window.
+   *You should see:* The changed word.
+4. They change the word back, publish, and reload the private window.
+   *You should see:* The original word again.
 
 **Done when:** A named person at the chapter has signed in and made a change.
 
@@ -158,12 +181,26 @@ The public website is the chapter's own marketing site. The software does not bu
 
 **Do this:**
 
-1. Choose the chapter's colours. The main ones are the primary colour (Cleveland's navy,
-2. The central support organization writes a small stylesheet that sets new values only for colour names starting --cbm-, on :root, and nothing else. The names are in frontend/shared/tokens.css. Anything left out keeps Cleveland's value. There is no starter file yet (work list item 4).
-3. Publish the file on the chapter's website, so it has its own web address.
-4. Open the file's address in a browser.
-   *You should see:* The stylesheet's text, not a download and not an error.
-5. Write the address on the chapter information form. It becomes the setting CHAPTER_TOKENS_URL.
+1. The chapter chooses four colours, each as a six-digit colour code. Cleveland's are shown for comparison:
+   - Primary colour, used for headings. Cleveland: #173B60 (navy).
+   - Button colour. Cleveland: #CB963B (gold).
+   - Button colour when the mouse is over it, about ten per cent darker. Cleveland: #b8842f.
+   - Body text colour. Cleveland: #7A7A7A (grey).
+2. The central support organization writes a file named chapter-tokens.css containing exactly these lines, with the chapter's four colour codes in place of the capitalised words:
+   - :root {
+   - --cbm-navy: PRIMARY-COLOUR;
+   - --cbm-gold: BUTTON-COLOUR;
+   - --cbm-btn-bg-hover: BUTTON-HOVER-COLOUR;
+   - --cbm-text: BODY-TEXT-COLOUR;
+   - }
+3. Add nothing else to the file. It may only set names that start --cbm-, and only inside :root. Every name it leaves out keeps Cleveland's value from frontend/shared/tokens.css, where the full list of names is.
+4. Publish the file so it has its own address, for example https://WEBSITE-DOMAIN/chapter-tokens.css. Whether the chapter's platform can serve a .css file has not been checked for any platform. If it cannot, the central support organization hosts the file elsewhere.
+5. In a terminal, run exactly:
+   - curl -sI https://WEBSITE-DOMAIN/chapter-tokens.css
+   *You should see:*
+   - A first line of HTTP/2 200.
+   - A line content-type: text/css. Browsers ignore a stylesheet from another site served with any other type.
+6. Write the file's full address on the chapter information form, under web: chapter_tokens_url. It becomes the setting CHAPTER_TOKENS_URL.
 
 **Done when all of these are true:**
 
@@ -195,9 +232,10 @@ The public website is the chapter's own marketing site. The software does not bu
 
 **Do this:**
 
-1. Produce the logo as an image file. Cleveland's CRM logo is a PNG file. There is no written specification of the best size or shape yet (work list item 4).
-   *You should see:* An image file that opens.
-2. Keep the file where the central support organization can reach it. It is loaded into the CRM's settings as its company logo in step 9.14.
+1. Produce the chapter's logo as a PNG image file, the type Cleveland's CRM logo uses. Name it CHAPTER-SLUG-logo.png, for example lakeside-logo.png.
+2. The best size and shape are not specified yet (work list item 4). Until they are, open Cleveland's CRM, note the size the logo shows at, and make the chapter's the same shape.
+   *You should see:* A PNG file that opens.
+3. Put the file in the chapter's shared drive folder, and write its file name on the chapter information form under crm: logo_file. It is loaded into the CRM as its company logo in step 9.14.
 
 **Done when:** An image file of the chapter's logo exists in a form the CRM system accepts. The applications carry no logo; the CRM system does, and it is the only per-chapter image in the whole system.
 
@@ -223,8 +261,14 @@ The public website is the chapter's own marketing site. The software does not bu
 
 **Do this:**
 
-1. Record one of two things on the chapter information form - the chapter's own documentation address, or "none yet". Whether each chapter publishes its own or shares one site is an open question in the plan.
+1. Decide one of two answers, then write it on the chapter information form under web: docs_site_url:
+   - The chapter's own documentation site's full address, beginning https://.
+   - none yet — until the open question of shared or per-chapter documentation is settled.
    *You should see:* An address or "none yet" on the form. Never blank.
+2. If an address was written, run exactly:
+   - curl -sI DOCS-ADDRESS
+   *You should see:* A first line of HTTP/2 200.
+3. The answer becomes the setting DOCS_SITE_URL. Its default is Cleveland's, https://docs.clevelandbusinessmentors.org, so it must never be left unset.
 
 **Done when:** Either the chapter has its own documentation site published at its own address, or it is recorded that the chapter points at a shared one. Two later steps link to this address, so it cannot be left undecided.
 
@@ -240,4 +284,5 @@ The public website is the chapter's own marketing site. The software does not bu
 
 | Version | Date | Change |
 |---|---|---|
+| 0.2 | 09-19-26 00:04 | Every action made precise (Doug, 09-19-26): the three things the platform must do, the exact curl checks for the site, the redirect test at /redirect-test and the colour file, the exact lines of chapter-tokens.css with the four --cbm- colour names, the logo file name, and the form keys each value is written under. |
 | 0.1 | 09-18-26 17:20 | First version as data, converted from the methods for the public website (9-Methods-Hosting-Website-Policies.md, version 0.4, including the redirect version of step 6.3) with the step list's finishing tests. |

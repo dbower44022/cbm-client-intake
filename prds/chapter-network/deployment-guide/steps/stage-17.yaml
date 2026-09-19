@@ -1,7 +1,7 @@
 stage: 17
 name: Check everything works before going live
-version: "0.1"
-updated: "09-18-26 17:20"
+version: "0.2"
+updated: "09-19-26 00:04"
 why: >-
   This stage proves the chapter's system works end to end before any real client
   uses it: each team reaches its own pages and nobody else's, and a public
@@ -30,13 +30,29 @@ steps:
     produces: [test_users]
     mode: automated
     actions:
-      - do: Create seven ordinary accounts, one per team that opens a page, each with exactly one team. scripts/rehearsal/stage4_users.py did this for the trial chapter; change the chapter name in it, or create the accounts by hand.
-      - do: For the Mentor Team test user, create a mentor record in Mentor Administration and set it to Active, so the account is linked to it (step 15.9).
-      - do: Put the test users' passwords in the chapter's vault.
+      - do: "In these steps, CRM-ADDRESS is the chapter's CRM address, APP-ADDRESS is the chapter's application address, and SLUG is the chapter's short label, all from the chapter information form."
+      - do: "Sign in to CRM-ADDRESS as the central support organization's administrator. Open Administration, then Users, and create these six accounts. The exact labels on the create-user screen are not verified. Use these values:"
+        items:
+          - "User name SLUG.test.clientadmin, team Client Administration Team"
+          - "User name SLUG.test.mentoradmin, team Mentor Administration Team"
+          - "User name SLUG.test.partner, team Partner Management Team"
+          - "User name SLUG.test.funder, team Sponsor Management Team"
+          - "User name SLUG.test.marketing, team Marketing Admin Team"
+          - "User name SLUG.test.analytics, team Analytics Admin Team"
+      - do: "For each of the six, also set:"
+        items:
+          - "Type: Regular, never Admin"
+          - "Exactly one team, the one named above"
+          - "Active: yes"
+          - "A password of 20 letters and digits, stored first in the chapter's vault under the user name"
+        see: Six accounts in the Users list, each with one team.
+      - do: "Create the seventh, the Mentor Team test user, through Mentor Administration so it is linked to a mentor record (step 15.9). Sign in to APP-ADDRESS/mentoradmin/ as a mentor administrator, add a mentor named Test Mentor SLUG, fill in the required fields, and set the status to Active."
+        see: The mentor marked Complete, with a login created. Its user name is set by the software from the mentor's name; write it down.
+      - do: Store the seventh account's password in the chapter's vault under its user name.
     done_when: >-
       There is one non-administrator test account for each team.
     check:
-      how: Each test user signs in, and the sign-in reports exactly one team.
+      how: Each test user signs in at APP-ADDRESS/, and the portal shows tiles for exactly one team.
       probe: The app signs in as each test user and reads back its teams.
     goes_wrong: >-
       Giving test users a second team "to make testing easier". The check then
@@ -54,21 +70,45 @@ steps:
     produces: []
     mode: automated
     actions:
-      - do: Sign in as each test user and try every restricted page in the applications.
-        see: Each user opens their own team's pages and is refused on the rest. The Mentor Team user also opens the directory and My Email; partner and funder managers also open My Email.
-      - do: Compare the results with the trial chapter's table, prds/chapter-network/rehearsal-2026-08-31/nonadmin-gate-matrix.json.
-        see: The same pattern of allowed and refused.
-      - do: Check the settings page separately. When it is switched on, an ordinary user should be refused with a message saying it is for administrators.
+      - do: "The test uses twelve addresses. Each returns the page's own session check: an allowed user gets an answer, a refused user gets a refusal naming the team needed. They are:"
+        items:
+          - "APP-ADDRESS/assignments/api/session"
+          - "APP-ADDRESS/mentoradmin/api/session"
+          - "APP-ADDRESS/mentorprofile/api/session"
+          - "APP-ADDRESS/mentorsessions/api/session"
+          - "APP-ADDRESS/partnersessions/api/session"
+          - "APP-ADDRESS/sponsorsessions/api/session"
+          - "APP-ADDRESS/ops/api/session"
+          - "APP-ADDRESS/directory/mentors/api/session"
+          - "APP-ADDRESS/myemail/api/session"
+          - "APP-ADDRESS/analytics/api/session"
+          - "APP-ADDRESS/events/api/session"
+          - "APP-ADDRESS/setup/api/settings"
+      - do: For the first test user, open a private browser window, sign in at APP-ADDRESS/, then open each of the twelve addresses in the same window. Write down for each whether it answered with information or refused. Close the window, and repeat for each of the other six test users.
+      - do: "Compare what you wrote with what each test user must be allowed. Every address not listed for a user must be refused:"
+        items:
+          - "SLUG.test.clientadmin: assignments only"
+          - "SLUG.test.mentoradmin: mentoradmin only"
+          - "The Mentor Team test user: mentorprofile, mentorsessions, directory and myemail"
+          - "SLUG.test.partner: partnersessions and myemail"
+          - "SLUG.test.funder: sponsorsessions and myemail"
+          - "SLUG.test.marketing: ops and events"
+          - "SLUG.test.analytics: analytics only"
+          - "setup: refused for all seven"
+        see: The same pattern as the trial chapter's record, prds/chapter-network/rehearsal-2026-08-31/nonadmin-gate-matrix.json.
+      - do: "For the setup address, read the refusal. The right answer, when the settings page is switched on, is a refusal saying System Settings is restricted to administrators."
+        see: That refusal, not "Not Found".
     done_when: >-
       Every test user can open their own team's pages and is refused on every other
       team's pages. Administrator accounts skip all permission checks, so this must
       be done as ordinary users.
     check:
-      how: The new table matches the trial chapter's table.
-      probe: Fully automatable. The app signs in as each of the seven test users, requests each of the twelve restricted pages, and compares the answers with the expected table, as the August build did.
+      how: The pattern written down matches the list above for every test user.
+      probe: Fully automatable. The app signs in as each of the seven test users, requests each of the twelve addresses, and compares the answers with the expected table, as the August build did.
     if_not: >-
-      A "not found" answer is not a refusal. Find out why the page answered that way
-      before calling it a pass.
+      A "Not Found" answer is not a refusal. It means the page is switched off or the
+      address is wrong. Find out which before calling it a pass. Any other difference
+      from the table: stop, and ask the central support organization.
     goes_wrong: >-
       Reading "not found" as "refused". In August the settings page answered "not
       found" to every test user, and the record cannot say why.
@@ -85,15 +125,23 @@ steps:
     produces: [test_submission]
     mode: guided
     actions:
-      - do: Open the chapter's website in a private browser window and follow its link to the client application form.
-      - do: Open all four policy links on the consent box.
-        see: Each of the chapter's own policy documents.
-      - do: Submit the form with a made-up business and a test email address the chapter controls. Write down the made-up names; step 17.9 removes them.
-        see: A thank-you message with a reference number.
+      - do: Open the chapter's website address in a private browser window and follow its link to the client application form.
+        see: The form at APP-ADDRESS/client-intake/.
+      - do: Open each of the four policy links beside the consent box.
+        see: Each of the chapter's own four policy documents, not Cleveland's.
+      - do: "Fill in the form with these made-up values, and write them down; step 17.9 removes them:"
+        items:
+          - "Business name: Test Bakery DELETE-ME"
+          - "First name: Test"
+          - "Last name: Applicant DELETE-ME"
+          - "Email: an address on a mailbox the chapter controls"
+          - "Every other required field: any plausible made-up value"
+      - do: Tick the consent box and submit.
+        see: A thank-you message with a reference number. Write the reference number down.
     done_when: >-
       A submission made from the public website arrives in the system.
     check:
-      how: The submission appears in Submission Admin.
+      how: The submission appears in Submission Admin at APP-ADDRESS/ops/, under its reference number.
       probe: The app can submit a test application through the form's own address and watch for it to arrive, but the path from the website's link needs a person once.
     goes_wrong: >-
       A broken policy link on the consent box.
@@ -110,13 +158,18 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: Open Client Administration and find the new engagement.
-      - do: Assign it to the Mentor Team test user's mentor record.
-        see: The engagement shows the mentor and the status "Pending Acceptance", and the email to the mentor opens ready to send.
+      - do: Sign in at APP-ADDRESS/ as SLUG.test.clientadmin and open Client Administration at APP-ADDRESS/assignments/.
+      - do: Find the row for Test Bakery DELETE-ME. Its status is Submitted.
+      - do: Use the row's Assign action and choose the Mentor Team test user's mentor, Test Mentor SLUG.
+        see:
+          - The row showing Test Mentor SLUG
+          - The status Pending Acceptance
+          - The email to the mentor opening, ready to send
+      - do: Close the email without sending it.
     done_when: >-
       A client administrator test user assigns it to a mentor.
     check:
-      how: The engagement shows the mentor and the status "Pending Acceptance".
+      how: The engagement shows Test Mentor SLUG and the status Pending Acceptance.
       probe: The app can assign through the same request the page makes, as the test user, and read the engagement back.
     goes_wrong: >-
       Two known failures. An empty mentor list: a mentor appears only when Active,
@@ -136,10 +189,10 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: Open Client Management and find the engagement.
-        see: The engagement listed, and it opens.
-      - do: Open My Mentor Profile.
-        see: The mentor's own details.
+      - do: In a new private browser window, sign in at APP-ADDRESS/ as the Mentor Team test user and open Client Management at APP-ADDRESS/mentorsessions/.
+        see: Test Bakery DELETE-ME in the list, and it opens.
+      - do: Open My Mentor Profile at APP-ADDRESS/mentorprofile/.
+        see: Test Mentor SLUG's own details.
     done_when: >-
       The mentor test user finds the assignment and can open their own profile.
     check:
@@ -162,15 +215,22 @@ steps:
     produces: []
     mode: automated
     actions:
-      - do: Open Submission Admin and find the submission.
-        see: Intake status Completed, closed, with the reason "Process completed".
+      - do: In a new private browser window, sign in at APP-ADDRESS/ as SLUG.test.marketing and open Submission Admin at APP-ADDRESS/ops/.
+      - do: Find the submission by the reference number from step 17.3.
+        see:
+          - "Intake status: Completed"
+          - "Response status: Closed"
+          - "Close reason: Process completed"
     done_when: >-
       The submission shows as completed and closed to the user who handles
       submissions.
     check:
-      how: The submission reads Completed and closed.
+      how: The submission reads Completed and Closed.
       probe: The app reads the submission's status as the test user.
-    if_not: A submission stuck at Received means the background worker is not running or cannot reach the CRM. Read the application's health page, which reports whether the worker is alive.
+    if_not: >-
+      A submission stuck at Received means the background worker is not running or
+      cannot reach the CRM. Open APP-ADDRESS/healthz and read the worker section:
+      a heartbeat older than 180 seconds means the worker is not running.
     goes_wrong: nothing known yet
     later: unchanged
     status: done-for-real
@@ -185,12 +245,12 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: Sign in to the CRM's own address as any test user.
-        see: The CRM's home screen and navigation bar.
+      - do: In a new private browser window, open CRM-ADDRESS and sign in as SLUG.test.clientadmin.
+        see: The CRM's home screen, with the navigation bar across the top.
     done_when: >-
       A non-administrator signs in to the CRM itself and sees a working screen.
     check:
-      how: The home screen and menu appear.
+      how: The home screen and navigation bar appear.
       probe: The app can load the CRM's screen code as a test user and confirm it answers, but a person should look once.
     goes_wrong: >-
       A blank page. The CRM's screen code folder was not copied (step 9.8). The trial
@@ -208,15 +268,12 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: Open the chapter's website in a private browser window on a computer.
-      - do: "Open each of these:"
-        items:
-          - The mentor directory.
-          - One mentor.
-          - The events programme.
-          - One event.
-        see: Each page with the chapter's own content and name.
-      - do: Do the same on a phone.
+      - do: On a computer, open a private browser window, go to the chapter's website address, and follow its link to the events programme.
+        see: The page at APP-ADDRESS/webinars/, with the chapter's name, menu and events.
+      - do: Open one event from the calendar.
+        see: The event's own page, with its title, date and a sign-up form.
+      - do: "The mentor directory: skip it. The public mentor directory page is not built yet (step 13.1). Write \"not built\" beside it."
+      - do: Repeat the two events checks on a phone.
         see: One column, no sideways scrolling, no text cut off.
     done_when: >-
       Someone not signed in to anything opens the mentor directory and events pages
@@ -241,22 +298,31 @@ steps:
     produces: []
     mode: automated
     actions:
-      - do: "In the CRM, delete the made-up records:"
+      - do: "Sign in to CRM-ADDRESS as the central support organization's administrator and delete these records, in this order:"
         items:
-          - The company.
-          - Its contact.
-          - Its client profile.
-          - Its engagement.
+          - "The engagement for Test Bakery DELETE-ME"
+          - "The client profile for Test Bakery DELETE-ME"
+          - "The contact Test Applicant DELETE-ME"
+          - "The company Test Bakery DELETE-ME"
       - do: Leave the submission in Submission Admin, closed. It is the record that the path worked.
-      - do: Set the seven test users to inactive, so the check can be repeated after a later release.
-      - do: Write down what was removed in the chapter's handover notes.
+      - do: "In the CRM, open Administration, then Users, and set each of the seven test users to inactive, so the check can be repeated after a later release:"
+        items:
+          - SLUG.test.clientadmin
+          - SLUG.test.mentoradmin
+          - The Mentor Team test user
+          - SLUG.test.partner
+          - SLUG.test.funder
+          - SLUG.test.marketing
+          - SLUG.test.analytics
+      - do: In Mentor Administration, set Test Mentor SLUG's status to Inactive.
+      - do: "Write in the chapter's handover notes: the date, the four records deleted, and the seven users set inactive."
     done_when:
       - "The test submissions created for this stage are gone or disabled."
       - "The test assignments created for this stage are gone or disabled."
       - "The test users created for this stage are gone or disabled."
       - "It is written down what was removed."
     check:
-      how: No record with the made-up names remains, and the seven test users cannot sign in.
+      how: A CRM search for DELETE-ME finds nothing, and each of the seven test users is refused at sign-in.
       probe: The app searches for the made-up names and confirms the test users are inactive.
     goes_wrong: >-
       A test record left behind turns up in the chapter's reports. The analytics
@@ -266,6 +332,14 @@ steps:
     source: 5-Methods-Form-Accounts-Checks.md#17.9
 
 changes:
+  - version: "0.2"
+    date: "09-19-26 00:04"
+    change: >-
+      Actions made precise (Doug, 09-19-26): exact test user names and teams, the
+      twelve session-check addresses and the expected result per test user from the
+      August table, exact made-up values for the test application, the pages and
+      statuses to look for at each step, and the records and users to remove. The
+      exact labels of the CRM's user screens are not verified, and the steps say so.
   - version: "0.1"
     date: "09-18-26 17:20"
     change: >-

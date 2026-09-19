@@ -1,7 +1,7 @@
 # Stage 1 — Set up the chapter as a legal organization
 
-**Version:** 0.1  
-**Last Updated:** 09-18-26 17:20  
+**Version:** 0.2  
+**Last Updated:** 09-19-26 00:15  
 **Generated from** `steps/stage-01.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -42,14 +42,24 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 
 **Do this:**
 
-1. Agree one name as a founding group. Write it exactly as it will appear everywhere, including capital letters.
-2. Search the state's business registrations for the name. Most states run this search through the Secretary of State's office.
-   *You should see:* No registered organization with the same or a confusingly similar name.
-3. Search the federal trademark records, run by the United States Patent and Trademark Office.
-   *You should see:* No conflicting trademark.
-4. Search a domain registrar for the domain names the chapter would want. Step 3.2 explains whether a chapter needs one or two.
-   *You should see:* The domain names shown as available.
-5. Save the results of all three searches, with the date.
+1. Agree one name as a founding group. Write it down exactly as it will appear everywhere, for example:
+   - Akron Business Mentors
+   - Capital letters exactly as they will be printed
+   - No abbreviation, unless the abbreviation is the name
+2. Search the state's register of business and nonprofit names. Each state runs its own search, usually through the Secretary of State. Search the web for the state's name followed by "Secretary of State business search". For Ohio the search is at https://businesssearch.ohiosos.gov/. Search for:
+   - The full name.
+   - The distinctive word or words in the name on their own, for example "Akron Mentors".
+   *You should see:* No registered organization with the same or a confusingly similar name. Take a screenshot of the results.
+3. Open the United States Patent and Trademark Office's trademark search at https://tmsearch.uspto.gov/ and search for:
+   - The full name.
+   - The distinctive word or words on their own.
+   *You should see:* No live trademark for the same or a similar name used for mentoring, business advice or education. Take a screenshot of the results.
+4. Open the domain registrar the chapter will use (Cleveland uses Porkbun, at https://porkbun.com) and search for each domain name the chapter would want. Step 3.2 explains whether a chapter needs one domain name or two.
+   *You should see:* Each domain name shown as available to register.
+5. Save the three sets of results in one folder, each file named with the search and the date, for example:
+   - 2026-10-01 state name search.png
+   - 2026-10-01 trademark search.png
+   - 2026-10-01 domain search.png
 
 **Done when all of these are true:**
 
@@ -59,7 +69,7 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 
 **How to check:** All three searches came back clear, and the results are saved with the date.
 
-**If it didn't work:** Choose another name and search again. Do not file anything under a name that conflicts.
+**If it didn't work:** Choose another name and search again. Do not file anything under a name that conflicts. If a result is unclear, the chapter's own adviser decides whether it conflicts.
 
 **What usually goes wrong:** Changing the name later. The software can change it in one setting, but the legal filing, the domain names and the bank account cannot be changed so easily.
 
@@ -79,19 +89,26 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 
 **Do this:**
 
-1. Get advice on filing articles of incorporation for a nonprofit corporation in the chapter's state. A lawyer or the state's nonprofit association can give it; the association often publishes a guide.
-2. Include the wording about the organization's purpose and about what happens to its assets if it closes. The tax authority looks for that wording in step 1.5.
-3. File the articles with the state.
-   *You should see:* The state returns a stamped copy.
-4. Keep the stamped copy in the chapter's files.
+1. Find the state's form for incorporating a nonprofit corporation on the Secretary of State's website. In most states it is called the articles of incorporation for a nonprofit corporation. Ohio's filing is made through the Ohio Secretary of State. The chapter's own adviser confirms the right form for its state.
+2. Fill in the form. It usually asks for:
+   - The chapter's name, exactly as chosen in step 1.1.
+   - The name and address of the statutory agent, also called the registered agent, who receives legal papers.
+   - The names of the incorporators who sign the form.
+   - The organization's purpose.
+3. Add two clauses the Internal Revenue Service looks for in step 1.5. The Internal Revenue Service's Publication 557 (https://www.irs.gov/pub/irs-pdf/p557.pdf) gives sample wording for both. The chapter's own adviser confirms the final wording.
+   - A purpose clause limiting the organization to charitable and educational purposes under section 501(c)(3) of the Internal Revenue Code.
+   - A dissolution clause saying that, if the organization closes, its assets go to another section 501(c)(3) organization.
+4. File the form with the state and pay the state's filing fee, which the form states.
+   *You should see:* The state returns a stamped or certified copy of the articles, with a filing date and a charter or entity number.
+5. Save the stamped copy in the chapter's files, and write down the entity number.
 
 **Done when:** The state has accepted the articles of incorporation and returned a stamped copy.
 
-**How to check:** The stamped articles are in the chapter's files.
+**How to check:** The stamped articles are in the chapter's files, with the state's entity number.
 
 **If it didn't work:** Stop, and ask the central support organization before going on.
 
-**What usually goes wrong:** Articles written without the wording the tax authority expects. Fixing them means filing an amendment, which delays step 1.5.
+**What usually goes wrong:** Articles written without the purpose and dissolution clauses the Internal Revenue Service expects. Fixing them means filing an amendment, which delays step 1.5.
 
 ---
 
@@ -109,10 +126,16 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 
 **Do this:**
 
-1. Apply online directly to the Internal Revenue Service. Applying there is free.
-   *You should see:* The number is usually issued at the end of the online session.
-2. Name an officer of the chapter as the responsible person when the application asks for one.
-3. Save the confirmation letter in the chapter's files.
+1. Open the Internal Revenue Service's own application page at https://www.irs.gov/businesses/small-businesses-self-employed/apply-for-an-employer-identification-number-ein-online and start the online application. Applying there is free. The page lists the hours the tool is open; on 09-19-26 they were weekdays from 6 a.m. to 1 a.m. Eastern time, with shorter hours at weekends.
+2. Answer the questions. Have these ready:
+   - The type of organization: choose the option for a nonprofit or tax-exempt organization. The exact wording on the screen has not been checked.
+   - The chapter's legal name and address, exactly as in the stamped articles.
+   - The name and Social Security number of the responsible party, who must be an officer of the chapter.
+   - The date the articles were filed.
+   *You should see:* The employer identification number, shown at the end of the session.
+3. Download the confirmation letter the site offers at the end of the session, before closing the page.
+   *You should see:* A letter from the Internal Revenue Service, known as the CP 575, showing the number and the chapter's name.
+4. Save the letter in the chapter's files, and put the number in the chapter's vault once it exists (step 2.7).
 
 **Done when:** The number has been issued and the confirmation letter is filed.
 
@@ -120,7 +143,7 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 
 **If it didn't work:** Stop, and ask the central support organization before going on.
 
-**What usually goes wrong:** Paying a third-party website to apply. Several charge a fee for a free service.
+**What usually goes wrong:** Paying a third-party website to apply. Several charge a fee for a free service. Also, the online tool issues only one number per responsible party per day.
 
 ---
 
@@ -138,10 +161,19 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 
 **Do this:**
 
-1. Hold the first board meeting.
-2. Adopt bylaws and elect officers.
-3. Minute which officers may sign contracts and open accounts.
+1. Draft bylaws with the chapter's own adviser. The state's nonprofit association often publishes a model. At the least they say:
+   - How many directors there are, and how they are elected.
+   - Which officers there are.
+   - How a meeting is called, and how many directors make a quorum.
+   - Who may sign contracts and open accounts for the chapter.
+2. Hold the first board meeting, and put these items on its agenda:
+   - Adopt the bylaws.
+   - Elect the directors and officers.
+   - Name the officers who may sign contracts and open accounts, by name and office.
+   - Name the person who acts for the chapter during setup (step 1.7).
+3. Write up the minutes, and have the secretary sign them.
    *You should see:* Signed minutes that name the signers.
+4. Save the signed bylaws and minutes in the chapter's files.
 
 **Done when all of these are true:**
 
@@ -172,10 +204,20 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 
 **Do this:**
 
-1. Get advice on which of the two routes suits the chapter.
-2. Route one, the chapter's own status: apply to the Internal Revenue Service for recognition as a charity under section 501(c)(3). Small organizations may qualify for the shorter Form 1023-EZ; others file the full Form 1023.
-   *You should see:* A determination letter. Typically weeks to a few months on the short form, and several months or longer on the full form.
-3. Route two, a sponsoring nonprofit: an existing charity agrees to take the chapter in under its own status, usually called fiscal sponsorship. Before choosing it, tell the central support organization. See what usually goes wrong, below.
+1. Decide the route with the chapter's own adviser:
+   - Route one: the chapter applies for its own recognition as a charity under section 501(c)(3).
+   - Route two: an existing charity takes the chapter in under its own status, usually called fiscal sponsorship.
+2. For route one, first work out which form the chapter may use. Read the eligibility worksheet in the instructions for Form 1023-EZ, linked from https://www.irs.gov/forms-pubs/about-form-1023-ez. A chapter that passes every question may file the shorter Form 1023-EZ. Any other chapter files the full Form 1023.
+3. File the chosen form online. Both forms are filed only through Pay.gov:
+   - Create an account at https://www.pay.gov/.
+   - Search for "1023-EZ" or "1023", whichever applies.
+   - Complete the form, attaching the stamped articles and the bylaws for Form 1023.
+   - Pay the user fee Pay.gov shows. It is paid when the form is filed.
+   *You should see:* A Pay.gov confirmation with a tracking number. Save it.
+4. File within 27 months of the date the articles were filed. Recognition then counts from the date of incorporation. The chapter's own adviser confirms this.
+5. Wait for the determination letter.
+   *You should see:* A determination letter from the Internal Revenue Service. Typically weeks to a few months on the short form, and several months or longer on the full form.
+6. For route two, tell the central support organization before choosing it. See what usually goes wrong, below. Then sign a fiscal sponsorship agreement with the sponsoring charity, naming it.
    *You should see:* A signed sponsorship agreement naming the sponsoring nonprofit.
 
 **Done when:** Either the determination letter from the tax authority has arrived, or a signed sponsorship agreement is in place naming the sponsoring nonprofit.
@@ -203,10 +245,16 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 
 **Do this:**
 
-1. Ask the bank which documents it needs. Banks set their own list.
-2. Take the stamped articles, the employer identification number letter and the board minute naming the signers to the bank.
-3. Open the account with at least two officers able to authorise a payment.
-   *You should see:* Two officers can each see and approve a payment.
+1. Call or visit the bank and ask for its list of documents for opening a nonprofit account. Banks set their own list.
+2. Take the documents banks usually ask for:
+   - The stamped articles of incorporation (step 1.2).
+   - The employer identification number letter (step 1.3).
+   - The signed board minutes naming the signers (step 1.4).
+   - Photo identification for each signer.
+3. Open the account with at least two officers as signers, each able to authorise a payment on their own.
+4. Order a payment card in the chapter's name, for the domain names, Google Workspace, hosting and vault bills.
+   *You should see:* Two officers can each sign in to the bank's online service and approve a payment.
+5. Put the bank's online sign-in details for each officer in their own care, not in the shared vault. Each signer has their own sign-in.
 
 **Done when:** The account is open and at least two officers can authorise a payment.
 
@@ -232,9 +280,12 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 
 **Do this:**
 
-1. Minute the setup contact's name, and their authority to open accounts in the chapter's name and to grant the central support organization access to them.
-2. Send a copy of the minute to the central support organization.
-   *You should see:* The central support organization confirms it holds the copy.
+1. Put a resolution in the board minutes, in words like these:
+   - NAME is appointed the chapter's setup contact.
+   - NAME may open accounts in the chapter's name with the domain registrar, Cloudflare, Google Workspace, DigitalOcean, Proton Pass and Zoom.
+   - NAME may grant the central support organization's named people access to those accounts.
+2. Email a copy of the signed minute to the central support organization.
+   *You should see:* The central support organization replies confirming it holds the copy.
 
 **Done when:** One named person is recorded as the chapter's main contact for the whole setup, with authority to open accounts and grant access to others.
 
@@ -250,4 +301,5 @@ The chapter has to exist in law before it can own accounts, sign an agreement or
 
 | Version | Date | Change |
 |---|---|---|
+| 0.2 | 09-19-26 00:15 | Every action made precise (Doug, 09-19-26): the official web addresses for the trademark search, the Internal Revenue Service's online application for the employer identification number and Form 1023-EZ, and Pay.gov; the two clauses the articles need; the questions each application asks; the documents a bank asks for; and the wording of the setup contact resolution. The web addresses and the application's hours were checked on 09-19-26. Where a state's own forms differ, the step says the chapter's own adviser confirms. |
 | 0.1 | 09-18-26 17:20 | First version as data, converted from the methods for setting up the legal organization (8-Methods-Organization-Domains-Google.md, version 0.5) with the step list's finishing tests. |

@@ -1,7 +1,7 @@
 # Stage 11 — Deploy the chapter's applications
 
-**Version:** 0.1  
-**Last Updated:** 09-18-26 17:20  
+**Version:** 0.2  
+**Last Updated:** 09-19-26 00:07  
 **Generated from** `steps/stage-11.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -56,9 +56,9 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 **Do this:**
 
-1. Generate a new random value of at least 48 characters. The settings generator (step 11.2) does this the first time it runs.
-2. Put the value in the chapter's Operations vault.
-   *You should see:* The session secret listed in the vault.
+1. Nothing to run by hand. The settings generator in step 11.2 creates the session secret the first time it runs, as a random value of 48 bytes, and appends it to the chapter's settings file (CHAPTER-ENV-FILE, which is ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env).
+2. After step 11.2, open CHAPTER-ENV-FILE in a text editor, copy the value after SESSION_SECRET= into a new item in the chapter's Operations vault named Session secret, and save.
+   *You should see:* The Session secret item in the Operations vault.
 
 **Done when:** A new random session secret has been generated for this chapter alone and stored in the secrets store. It is never copied from another chapter.
 
@@ -83,11 +83,20 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 **Do this:**
 
-1. Run scripts/rehearsal/render_spec.py with the chapter information form, the secrets file and an output file name.
-   *You should see:* A settings file written, containing the secret values in plain text.
-2. Never commit the output file, and delete it once step 11.5 is done.
-3. Move the stored-data encryption key the generator created into the chapter's Operations vault.
-   *You should see:* The encryption key listed in the vault.
+1. Before running it, check CHAPTER-ENV-FILE already holds these three lines, written by the script in step 9.10:
+   - ESPO_API_KEY=
+   - ESPO_PROVISION_USERNAME=
+   - ESPO_PROVISION_PASSWORD=
+2. In a terminal, in the folder ~/Dropbox/Projects/cbm-client-intake, type the line below and press Enter. CHAPTER-VALUES-FILE is the filled-in chapter information form saved as YAML (the trial chapter's is prds/chapter-network/rehearsal-2026-08-31/lakeside-values.yaml):
+   - uv run python scripts/rehearsal/render_spec.py CHAPTER-VALUES-FILE ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG.env ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG-app.yaml
+   *You should see:* A line reading: wrote ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG-app.yaml with 10 shared + N web-only env vars. If it reads secrets not yet minted, step 9.10 has not run.
+3. Open CHAPTER-SLUG-app.yaml in a text editor and make three changes. The trial script was written for the rehearsal, and these three values are wrong for a real chapter:
+   - Delete the two lines for ENV_LABEL (key and value). Its value, Rehearsal, would show on every page's footer.
+   - Change the value of ALLOWED_ORIGINS from http://localhost:8000 to https://APP-ADDRESS.
+   - Change every branch: main to branch: release, in all three places (the web part, the worker and the migrate job).
+4. Open CHAPTER-ENV-FILE and copy the value after APP_ENCRYPTION_KEY= into a new item in the chapter's Operations vault named Stored-data encryption key. This value must never change.
+   *You should see:* The Stored-data encryption key item in the Operations vault.
+5. Never commit CHAPTER-SLUG-app.yaml anywhere. It holds secrets in plain text. It is deleted in step 11.3.
 
 **Done when:** The settings are produced from the chapter information form and every value in them traces back to a line on that form.
 
@@ -111,9 +120,12 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 **Do this:**
 
-1. Today the settings file from step 11.2 carries the secrets into the deployment. Nothing else to do.
-2. After step 11.5, delete the settings file.
-   *You should see:* No copy of the settings file left anywhere.
+1. Nothing to run. The settings file from step 11.2 carries every secret into the deployment when step 11.5 creates the application. The database connection is supplied by the hosting platform and never appears in the file.
+2. After step 11.5 has succeeded, type the line below and press Enter, to delete the settings file:
+   - rm ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG-app.yaml
+   *You should see:* The prompt again, with no message.
+3. Check every secret in CHAPTER-ENV-FILE also has an item in the Operations vault. Then delete CHAPTER-ENV-FILE too, once the vault holds everything.
+   *You should see:* No settings file and no secrets file left on the computer.
 
 **Done when all of these are true:**
 
@@ -144,11 +156,14 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 **Do this:**
 
-1. The database is created with the application in step 11.5, named after the chapter's short label.
-2. Straight after step 11.5, open the application's settings in the hosting account and find the database part.
-   *You should see:* Whether it says it is a managed database or a development database.
-3. If it is a development database, convert it to a managed database, at the smallest size.
-   *You should see:* The database shown as a managed database.
+1. Nothing to run. Step 11.5 creates the database with the application, named CHAPTER-SLUG-db.
+2. Straight after step 11.5, sign in to the chapter's hosting account at cloud.digitalocean.com and open Apps, then CHAPTER-SLUG-intake, then Settings, then the component CHAPTER-SLUG-db. The path is the one Cleveland used on 23 July 2026 (DEPLOYMENT.md).
+   *You should see:* Either a managed database, or a development database with an option to convert it.
+3. If it is a development database, choose Database Type and Scale, then Convert to a Managed Database, and choose:
+   - Plan: the smallest node size (db-s-1vcpu-1gb)
+   - Nodes: 1
+   - Standby node: none
+   *You should see:* The conversion completing and the application redeploying by itself, with no downtime. The connection details do not change.
 
 **Done when all of these are true:**
 
@@ -177,10 +192,17 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 **Do this:**
 
-1. Run doctl apps create with the settings file from step 11.2, signed in to the chapter's hosting account.
-   *You should see:* A new application with an identifier.
-2. Open the application in the hosting account.
-   *You should see:* Three parts listed — the web part, the delivery worker and the migrate setup job.
+1. If this computer has never been signed in to the chapter's hosting account, type the line below and press Enter, then paste the chapter's DigitalOcean token from the Operations vault when asked:
+   - doctl auth init --context CHAPTER-SLUG
+   *You should see:* A message that the token was validated.
+2. Type the line below and press Enter, so every following doctl command acts on the chapter's account and not Cleveland's:
+   - doctl auth switch --context CHAPTER-SLUG
+3. Type the line below and press Enter:
+   - doctl apps create --spec ~/.config/cbm-CHAPTER-SLUG/CHAPTER-SLUG-app.yaml
+   *You should see:* A table with the new application's ID and the name CHAPTER-SLUG-intake. Copy the ID into the Operations vault as a note named Application ID; later steps call it APP-ID.
+4. Type the line below and press Enter:
+   - doctl apps get APP-ID
+   *You should see:* The application listed. In the hosting account's web page, its Components show web, delivery-worker and migrate.
 
 **Done when:** The web part, the background worker part and the setup job all exist.
 
@@ -204,9 +226,10 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 **Do this:**
 
-1. Nothing to run. The setup job runs by itself before the application starts.
-2. Open the deployment's log in the hosting account.
-   *You should see:* The migrate job reported as successful.
+1. Nothing to run. The migrate job runs by itself before the application starts.
+2. Type the line below and press Enter:
+   - doctl apps list-deployments APP-ID
+   *You should see:* The first deployment in the list with its phase ACTIVE. A phase of ERROR means the migrate job or the build failed; open the deployment in the hosting account's web page and read its log.
 
 **Done when:** The setup job has completed and the database holds the expected tables.
 
@@ -228,9 +251,11 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 **Do this:**
 
-1. Check the application follows the release branch, which always points at the latest release.
-2. Open the application's health address, /healthz, in a browser.
-   *You should see:* releaseTag set to the current release, for example v0.228.1, and version matching it.
+1. Open https://APP-ADDRESS/healthz in a browser. Until step 11.10, use the address DigitalOcean gave the application, shown by doctl apps get APP-ID under Default Ingress.
+   *You should see:*
+   - status: ok
+   - version: the current release's number, for example 0.231.1
+   - releaseTag: the same release, for example v0.231.1. It reads null until step 11.8 moves the application to the release branch.
 
 **Done when:** The application is running the version the release schedule names, and it reports that version when asked.
 
@@ -254,12 +279,15 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 **Do this:**
 
-1. Run scripts/set_updates_policy.py with the application's identifier and latest-stable, without the apply option.
-   *You should see:* The plan it would apply to all three parts.
-2. Run it again with the apply option and the deploy option. The deploy option starts a fresh deployment, without which the application stays one release behind while reporting itself healthy.
-   *You should see:* All three parts changed.
-3. Run it with the status option.
-   *You should see:* All three parts read back as latest-stable, in agreement.
+1. In the folder ~/Dropbox/Projects/cbm-client-intake, with doctl switched to the chapter's account (step 11.5), type the line below and press Enter. It changes nothing:
+   - uv run python scripts/set_updates_policy.py APP-ID latest-stable
+   *You should see:* The change it would make to each of the three parts.
+2. Type the line below and press Enter. The deploy option starts a fresh deployment; without it the application rebuilds the same commit it already runs:
+   - uv run python scripts/set_updates_policy.py APP-ID latest-stable --apply --deploy
+   *You should see:* The spec updated and a new deployment started.
+3. Type the line below and press Enter:
+   - uv run python scripts/set_updates_policy.py APP-ID latest-stable --status
+   *You should see:* One line per part, each showing branch=release and deploy_on_push=True, and a final line reading conformant with 'latest-stable'.
 
 **Done when:** All three parts of the application follow the release branch and the policy script reads all three back in agreement. An application has three parts, each with its own setting, and setting one without the others half-updates it with no warning from the platform.
 
@@ -283,8 +311,9 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 **Do this:**
 
-1. Run scripts/set_updates_policy.py with the application's identifier and the status option.
-   *You should see:* All three parts naming the release branch, and none naming main.
+1. Type the line below and press Enter:
+   - uv run python scripts/set_updates_policy.py APP-ID latest-stable --status
+   *You should see:* Every part showing branch=release, none showing branch=main, and the line conformant with 'latest-stable'.
 
 **Done when all of these are true:**
 
@@ -313,10 +342,17 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 **Do this:**
 
-1. In the chapter's Cloudflare account, open the domain, then DNS, and add a CNAME record for the application's address, pointing at the address the hosting platform gave the application.
-2. Set the record to "DNS only", the grey cloud.
+1. Type the line below and press Enter, and copy the address shown under Default Ingress (it ends .ondigitalocean.app):
+   - doctl apps get APP-ID
+2. In the chapter's Cloudflare account, open the domain, then DNS, then Records, and choose Add record. Enter exactly:
+   - Type: CNAME
+   - Name: the first part of the application's address, for example apps
+   - Target: the Default Ingress address, without https://
+   - Proxy status: DNS only (grey cloud)
+   - TTL: Auto
    *You should see:* The record listed with a grey cloud.
-3. In the hosting account, add the address to the application as its main domain.
+3. In the hosting account, open Apps, then CHAPTER-SLUG-intake, then Settings, then Domains, and add APP-ADDRESS. Choose to manage DNS yourself and make it the primary domain. Labels are not checked on screen for this guide.
+   *You should see:* The domain listed, moving to Active once the certificate is issued.
 
 **Done when:** The domain name record for the application address resolves to it.
 
@@ -342,8 +378,8 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 **Do this:**
 
-1. Nothing to do. The hosting platform issues the certificate and renews it.
-2. Open the application's address in a browser.
+1. Nothing to do. The hosting platform issues the certificate and renews it by itself.
+2. Open https://APP-ADDRESS in a private browser window.
    *You should see:* The applications' sign-in page, with no certificate warning.
 
 **Done when:** The application loads at its address over a secure connection, and the security certificate is set to renew by itself.
@@ -366,15 +402,17 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 **Do this:**
 
-1. Open the application's address followed by /healthz, and read three things:
-   - The organization: the chapter's own name.
-   - releaseTag: the release.
-   - The worker block: a recent heartbeat.
-   *You should see:* All three as listed.
-2. Read the crmConfig block.
+1. Open https://APP-ADDRESS/healthz in a browser and read these fields:
+   - status: ok
+   - organization: the chapter's own name, not Cleveland's
+   - releaseTag: the current release, for example v0.231.1
+   - database: ok
+   - worker, then lastHeartbeatAgeSeconds: under 180
+   *You should see:* All five as listed.
+2. Read the crmConfig block's state field.
    *You should see:*
-   - {'A state of stamped or unstamped': 'both are fine'}
-   - {'Not absent, forbidden or unreachable': 'each of those is a problem to report'}
+   - stamped or unstamped: both are fine
+   - absent, forbidden or unreachable: each is a problem to report
 
 **Done when all of these are true:**
 
@@ -403,8 +441,9 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 **Do this:**
 
-1. Sign in to the applications and open a page that lists records, such as Client Administration.
-   *You should see:* Records, or an empty list. Both are fine.
+1. Open https://APP-ADDRESS and sign in with the CRM administrator account the deployment wizard created in step 9.2. Its name and password are in the Operations vault.
+2. Open Client Administration.
+   *You should see:* Records, or an empty list. Both are fine. A message that access was refused means a permission was missed in stage 9.
 
 **Done when:** A request through the application returns CRM data.
 
@@ -431,12 +470,20 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 **Do this:**
 
-1. Confirm no other deployment reads the same shared operations mailbox.
-2. Switch on the mail feature on the application's settings page, and restart the background worker.
-3. Read the worker's log.
-   *You should see:* A line naming the mailbox the worker is acting as, and it is the shared operations mailbox.
-4. Send a message from an outside address to the shared operations mailbox.
-   *You should see:* The message appearing against a record in the application.
+1. Confirm no other deployment reads the same shared operations mailbox. Only one deployment may read a given mailbox.
+2. Sign in to https://APP-ADDRESS/setup as a CRM administrator. Set these settings, one at a time, saving each:
+   - GOOGLE_SERVICE_ACCOUNT_JSON: the whole content of the key file from the Operations vault (step 10.2)
+   - OPS_MAILBOX: the shared operations mailbox address
+   - COMMS_INTERNAL_DOMAINS: the chapter's email domain
+   - GMAIL_SYNC: true
+   *You should see:* Each setting shown with its new value. The key is shown as set, never as its value.
+3. Restart the worker: type the line below and press Enter:
+   - doctl apps create-deployment APP-ID
+   *You should see:* A new deployment reaching ACTIVE.
+4. In the hosting account, open Apps, then CHAPTER-SLUG-intake, then Runtime Logs, and choose the delivery-worker component.
+   *You should see:* A line naming the mailbox the worker acts as, and it is the shared operations mailbox. If that line is absent or names another address, stop; the cause is in stage 10.
+5. From an outside address, send a message to the shared operations mailbox.
+   *You should see:* Within about five minutes, the message in Submission Admin as a new email submission.
 
 **Done when:** A message sent to the shared operations mailbox appears in the application.
 
@@ -462,7 +509,10 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 **Do this:**
 
-1. Open a record in the application and send a message from it to an outside address you can read.
+1. At https://APP-ADDRESS/setup, set:
+   - ALERT_EMAIL_FROM: the alert sending mailbox (step 4.8)
+   - ALERT_EMAIL_TO: the alert receiving address (step 4.9)
+2. Open a record in the application and send a message from it to an outside address you can read.
    *You should see:* The message arriving, with the chapter's own name as the sender.
 
 **Done when:** A message sent from a record arrives, and the sender shown is the chapter.
@@ -489,9 +539,10 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 **Do this:**
 
-1. Switch on the calendar feature on the application's settings page.
-2. Create a scheduled session through the application.
-   *You should see:* The meeting on the mentor's calendar, with the invitations sent.
+1. At https://APP-ADDRESS/setup, set:
+   - GCAL_EVENTS: true
+2. Sign in as a mentor, open a client in Client Management, and create a session with Status Scheduled and a start time tomorrow.
+   *You should see:* The meeting on the mentor's Google calendar, with the client's contacts invited and a Meet link attached.
 
 **Done when:** A meeting created through the application appears on the calendar with the right people invited.
 
@@ -518,9 +569,12 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 **Do this:**
 
-1. Switch on the documents feature on the application's settings page.
-2. Create a record that should get a folder.
-   *You should see:* The folder appearing on the shared drive.
+1. At https://APP-ADDRESS/setup, set:
+   - GDRIVE_SHARED_DRIVE_ID: the shared drive identifier (step 10.5)
+   - GDRIVE_IDENTITY: service
+   - GDRIVE_DOCS: true
+2. Open a client in Client Management, open its Documents tab, and upload a small test file.
+   *You should see:* The file listed on the Documents tab, and a folder for that client on the shared drive holding it.
 
 **Done when:** The application creates a folder on the shared drive and it appears.
 
@@ -547,12 +601,18 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 **Do this:**
 
-1. Switch on the mentor account switches on the application's settings page, including the Google directory check.
-2. In Mentor Administration, take a test mentor through approval.
-   *You should see:* A new mailbox created on the chapter's mentor email domain.
-3. Sign in to the new mailbox.
-   *You should see:* The mailbox opens.
-4. Remove the test mentor's mailbox and records afterwards.
+1. At https://APP-ADDRESS/setup, set:
+   - MENTOR_EMAIL_DOMAIN: the domain mentors' mailboxes are made on
+   - GOOGLE_DELEGATED_ADMIN: the chapter's Google administrator address (step 4.5). The directory calls act as this administrator.
+   - GOOGLE_MEMBERS_GROUP: the members group address (step 4.10), or leave empty to skip the group step
+   - GOOGLE_DIRECTORY_CHECK: true
+   - GOOGLE_CREATE_MAILBOX: true
+   - MENTOR_PROVISION_USERS: true
+2. In Mentor Administration, create a test mentor with a first and last name no real mentor has, and set Mentor Status to Accepted-Provisional.
+   *You should see:* The status window reporting the mailbox created, and a temporary password shown once. Copy it into the Operations vault.
+3. Sign in at mail.google.com as the new mentor address, with the temporary password.
+   *You should see:* The mailbox opens and asks for a new password.
+4. Delete the test mentor's mailbox in admin.google.com, then the test mentor record and its contact in the CRM.
 
 **Done when:** A mentor taken through approval ends up with a real working mailbox on the chapter's mentor email domain.
 
@@ -568,4 +628,5 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 | Version | Date | Change |
 |---|---|---|
+| 0.2 | 09-19-26 00:07 | Every action made exact (Doug, 09-19-26: sweep every step): the settings generator's command line and the three values in its output that are wrong for a real chapter (the Rehearsal label, the localhost origin, and the main branch); doctl commands against the chapter's own account; the managed database conversion path; the release policy commands; the Cloudflare record; the health page's exact fields; and the settings each Google check switches on at /setup, including GOOGLE_DELEGATED_ADMIN, which no list had named. |
 | 0.1 | 09-18-26 17:20 | First version as data, converted from the methods for deploying the applications (3-Methods-CRM-Google-Applications.md, version 0.5) with the step list's finishing tests. Numbered actions, a reason per step, and a check an app can run were added. |
