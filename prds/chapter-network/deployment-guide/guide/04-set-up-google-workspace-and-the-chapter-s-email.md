@@ -1,7 +1,7 @@
 # Stage 4 — Set up Google Workspace and the chapter's email
 
-**Version:** 0.1  
-**Last Updated:** 09-18-26 17:20  
+**Version:** 0.2  
+**Last Updated:** 09-19-26 00:20  
 **Generated from** `steps/stage-04.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -117,9 +117,15 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Do this:**
 
-1. In the Google Workspace admin console, find the verification record Google gives for the domain.
-2. In the chapter's Cloudflare account, open the domain's DNS records and add the verification record exactly as Google gives it. Add it in Cloudflare, not at the registrar.
-3. Return to the admin console and ask it to check.
+1. In the Google Workspace admin console, start domain verification and choose the method that adds a TXT record. Copy the value Google shows.
+   *You should see:* A value beginning google-site-verification= followed by a long code. The code is different for every domain.
+2. In the chapter's Cloudflare account, open the domain, then DNS, then Records, and choose Add record. Enter exactly:
+   - Type: TXT
+   - Name: @ (the domain itself)
+   - Content: the whole value from Google, starting google-site-verification=
+   - TTL: Auto
+   *You should see:* The new TXT record in the list. Leave any other TXT records as they are.
+3. Return to the admin console and choose to verify.
    *You should see:* The domain shown as verified. A new record can take from minutes to a day to be seen.
 
 **Done when:** Google reports the domain as verified.
@@ -134,7 +140,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 ## 4.4 Switch mail delivery to Google
 
-**Why:** Mail sent to the chapter's addresses must reach Google, and mail the chapter sends must not land in spam folders.
+**Why:** Mail sent to the chapter's addresses must reach Google, and mail the chapter sends must prove it is genuine or it lands in spam folders.
 
 **Who:** The chapter and the central support organization — the chapter's setup contact, with the central support organization's help
 
@@ -146,19 +152,57 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Do this:**
 
-1. In the Google Workspace admin console, find the mail delivery records Google gives.
-2. In the chapter's Cloudflare account, set those records, replacing any mail records already there. Cloudflare shows mail records as DNS only by itself.
-3. Also add the records Google recommends so the chapter's own mail is not marked as spam. The admin console lists them.
-4. From a personal account outside the chapter, send a message to the first administrator's chapter address.
-   *You should see:* The message arrives in the Google mailbox.
+1. Four DNS records are needed on the chapter's email domain, all added in the chapter's Cloudflare account (open the domain, then DNS, then Records):
+   - One MX record, which sends incoming mail to Google.
+   - One SPF record, which lists who may send mail as the domain.
+   - One DKIM record, which lets receivers check a message's signature.
+   - One DMARC record, which tells receivers what to do with mail that fails the other two.
+2. Delete every existing MX record on the domain. Then choose Add record and enter exactly:
+   - Type: MX
+   - Name: @ (the domain itself)
+   - Mail server: smtp.google.com
+   - Priority: 1
+   - TTL: Auto
+   *You should see:* One MX record only, pointing at smtp.google.com. Cloudflare shows it as DNS only by itself. Cleveland's email domain uses exactly this record.
+3. Look for an existing TXT record beginning v=spf1. A domain may have only one. If one exists, edit it; if not, choose Add record. Enter exactly:
+   - Type: TXT
+   - Name: @
+   - Content: v=spf1 include:_spf.google.com ~all
+   - TTL: Auto
+   *You should see:* Exactly one TXT record beginning v=spf1.
+4. In the Google Workspace admin console, open Apps, then Google Workspace, then Gmail, then Authenticate email. If the menu differs, search the admin console for Authenticate email. Choose the domain, then generate a new record with these settings:
+   - Key length: 2048
+   - Prefix selector: google
+   *You should see:* A record name, google._domainkey, and a long value beginning v=DKIM1; k=rsa; p=.
+5. In Cloudflare, choose Add record and enter exactly:
+   - Type: TXT
+   - Name: google._domainkey
+   - Content: the whole value from the admin console, beginning v=DKIM1
+   - TTL: Auto
+6. Wait at least an hour, then return to Authenticate email in the admin console and choose Start authentication.
+   *You should see:* The status for the domain reads that it is authenticating email with DKIM.
+7. In Cloudflare, choose Add record and enter exactly, putting the first administrator's chapter address in place of REPORT-ADDRESS. Receivers send their reports to it. Change it to the alert receiving address once step 4.9 has decided that address:
+   - Type: TXT
+   - Name: _dmarc
+   - Content: v=DMARC1; p=none; rua=mailto:REPORT-ADDRESS
+   - TTL: Auto
+   *You should see:* One TXT record named _dmarc.
+8. From a personal account outside the chapter, send a message to the first administrator's chapter address.
+   *You should see:* The message arrives in the chapter mailbox.
+9. From the chapter mailbox, reply to that personal account. In the personal account, open the message and show its original, or its full headers.
+   *You should see:*
+   - SPF: PASS
+   - DKIM: PASS
+   - DMARC: PASS
+10. Put a reminder in the chapter's calendar for four weeks' time, to change the DMARC record from p=none to p=quarantine once the reports show only the chapter's own mail. Cleveland's email domain now runs at p=reject.
 
 **Done when:** A message sent from outside to an address on the domain arrives in the Google mailbox.
 
-**How to check:** A message from an outside account arrives in the first administrator's mailbox.
+**How to check:** The outside message arrives, and the reply shows SPF, DKIM and DMARC all passing.
 
-**If it didn't work:** Stop, and ask the central support organization before going on.
+**If it didn't work:** Do not change the records again straight away. A changed record can take up to a day to be seen everywhere. Check the four records against the values above, character by character, then ask the central support organization.
 
-**What usually goes wrong:** Skipping the records that stop the chapter's own mail being marked as spam. Everything works, and the software's welcome emails to new mentors land in spam folders.
+**What usually goes wrong:** Three things. Leaving an old MX record from a previous mail provider: some mail then goes to the old provider and is never seen. Adding a second SPF record instead of editing the first: receivers then treat SPF as broken. And skipping DKIM or DMARC: everything seems to work, but the software's welcome emails to new mentors land in spam folders. Any other service that will send mail as the chapter's domain, such as a newsletter service or the website's contact form, must be added to the SPF record too; ask the central support organization.
 
 ---
 
@@ -465,4 +509,5 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 | Version | Date | Change |
 |---|---|---|
+| 0.2 | 09-19-26 00:20 | Steps 4.3 and 4.4 rewritten with the exact DNS records to add in Cloudflare, field by field: the verification record, and the MX, SPF, DKIM and DMARC records, with a header check that all three pass (Doug, 09-19-26). Values read from Cleveland's live email domain. |
 | 0.1 | 09-18-26 17:20 | First version as data, converted from the methods for setting up Google Workspace (8-Methods-Organization-Domains-Google.md, version 0.5) with the step list's finishing tests. Step 4.14 also moves the Cloudflare account off the founding address. |
