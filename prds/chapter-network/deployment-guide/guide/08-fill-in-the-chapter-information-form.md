@@ -1,7 +1,7 @@
 # Stage 8 — Fill in the chapter information form
 
-**Version:** 0.2  
-**Last Updated:** 09-19-26 00:05  
+**Version:** 0.3  
+**Last Updated:** 09-19-26 14:45  
 **Generated from** `steps/stage-08.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -300,7 +300,7 @@ The chapter information form holds the roughly thirty-five values that differ fr
    - ESPO_API_KEY — the CRM key the applications use. Created in step 9.17.
    - ESPO_PROVISION_USERNAME — the name of the administrator account that creates logins. Created in step 9.18.
    - ESPO_PROVISION_PASSWORD — that account's password. Created in step 9.18.
-   - DATABASE_URL — the database address. Supplied by the hosting platform in step 11.4.
+   - DATABASE_URL — the database address. Held by the hosting platform, which supplies it to the application (step 11.4). No person holds it, and it never goes in the vault.
    - SESSION_SECRET — created in step 11.1.
    - APP_ENCRYPTION_KEY — the encryption key for stored data. Created in step 11.2, and never changed afterwards.
    - GOOGLE_SERVICE_ACCOUNT_JSON — the Google key. Created in step 10.2.
@@ -347,7 +347,7 @@ The chapter information form holds the roughly thirty-five values that differ fr
 
 **Done when all of these are true:**
 
-- All seven of the chapter's secrets are held in the chapter's Proton Pass Operations vault (step 2.7).
+- Every secret a person holds is in the chapter's Proton Pass Operations vault (step 2.7). That is all seven except the database connection, which the hosting platform holds (step 11.4).
 - At least two named people can reach each one.
 - None of them exists only in a file on one person's computer.
 
@@ -428,5 +428,6 @@ The chapter information form holds the roughly thirty-five values that differ fr
 
 | Version | Date | Change |
 |---|---|---|
+| 0.3 | 09-19-26 14:45 | Steps 8.7 and 8.8: the database connection is held by the hosting platform and never goes in the vault, matching step 11.3 (Doug, 09-19-26). |
 | 0.2 | 09-19-26 00:05 | Every action made precise (Doug, 09-19-26): each section of the form filled key by key with what goes in it and an example, the sixteen switches with their starting values, the secret names with the step that creates each, vault entry titles, curl checks for every address, and the exact file path the finished form is saved at. |
 | 0.1 | 09-18-26 17:20 | First version as data, converted from the methods for filling in the chapter information form (5-Methods-Form-Accounts-Checks.md, version 0.4) with the step list's finishing tests. Each form field is now produced by a named step. |

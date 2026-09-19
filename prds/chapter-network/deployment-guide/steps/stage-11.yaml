@@ -1,7 +1,7 @@
 stage: 11
 name: Deploy the chapter's applications
-version: "0.3"
-updated: "09-19-26 00:50"
+version: "0.4"
+updated: "09-19-26 14:45"
 why: >-
   The applications are what the chapter's staff, mentors and the public actually
   use: the intake forms, the staff tools and the public events page. This stage
@@ -144,7 +144,7 @@ steps:
         see: The conversion completing and the application redeploying by itself, with no downtime. The connection details do not change.
     done_when:
       - "The database exists in the chapter's hosting account."
-      - "Its connection details are in the secrets store."
+      - "Its connection details are supplied to the application by the hosting platform, and no person holds them."
       - "The application can reach it."
     check:
       how: The application connects, and the hosting account shows a managed database.
@@ -586,6 +586,10 @@ steps:
     source: 3-Methods-CRM-Google-Applications.md#11.18
 
 changes:
+  - version: "0.4"
+    date: "09-19-26 14:45"
+    change: >-
+      Step 11.4's finishing test now matches step 11.3: the hosting platform supplies the database connection to the application, and no person holds it (Doug, 09-19-26).
   - version: "0.3"
     date: "09-19-26 00:50"
     change: >-

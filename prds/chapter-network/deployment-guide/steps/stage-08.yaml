@@ -1,7 +1,7 @@
 stage: 8
 name: Fill in the chapter information form
-version: "0.2"
-updated: "09-19-26 00:05"
+version: "0.3"
+updated: "09-19-26 14:45"
 why: >-
   The chapter information form holds the roughly thirty-five values that differ
   from one chapter to the next: its name, its addresses, its Google details, its
@@ -265,7 +265,7 @@ steps:
           - "ESPO_API_KEY — the CRM key the applications use. Created in step 9.17."
           - "ESPO_PROVISION_USERNAME — the name of the administrator account that creates logins. Created in step 9.18."
           - "ESPO_PROVISION_PASSWORD — that account's password. Created in step 9.18."
-          - "DATABASE_URL — the database address. Supplied by the hosting platform in step 11.4."
+          - "DATABASE_URL — the database address. Held by the hosting platform, which supplies it to the application (step 11.4). No person holds it, and it never goes in the vault."
           - "SESSION_SECRET — created in step 11.1."
           - "APP_ENCRYPTION_KEY — the encryption key for stored data. Created in step 11.2, and never changed afterwards."
           - "GOOGLE_SERVICE_ACCOUNT_JSON — the Google key. Created in step 10.2."
@@ -302,7 +302,7 @@ steps:
       - do: Ask a second named person to open each entry in their own Proton Pass.
         see: The second person can open every entry.
     done_when:
-      - "All seven of the chapter's secrets are held in the chapter's Proton Pass Operations vault (step 2.7)."
+      - "Every secret a person holds is in the chapter's Proton Pass Operations vault (step 2.7). That is all seven except the database connection, which the hosting platform holds (step 11.4)."
       - "At least two named people can reach each one."
       - "None of them exists only in a file on one person's computer."
     check:
@@ -375,6 +375,10 @@ steps:
     source: 5-Methods-Form-Accounts-Checks.md#8.10
 
 changes:
+  - version: "0.3"
+    date: "09-19-26 14:45"
+    change: >-
+      Steps 8.7 and 8.8: the database connection is held by the hosting platform and never goes in the vault, matching step 11.3 (Doug, 09-19-26).
   - version: "0.2"
     date: "09-19-26 00:05"
     change: >-

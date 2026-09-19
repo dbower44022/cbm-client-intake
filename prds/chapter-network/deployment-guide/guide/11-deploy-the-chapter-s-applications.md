@@ -1,7 +1,7 @@
 # Stage 11 — Deploy the chapter's applications
 
-**Version:** 0.3  
-**Last Updated:** 09-19-26 00:50  
+**Version:** 0.4  
+**Last Updated:** 09-19-26 14:45  
 **Generated from** `steps/stage-11.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -168,7 +168,7 @@ The applications are what the chapter's staff, mentors and the public actually u
 **Done when all of these are true:**
 
 - The database exists in the chapter's hosting account.
-- Its connection details are in the secrets store.
+- Its connection details are supplied to the application by the hosting platform, and no person holds them.
 - The application can reach it.
 
 **How to check:** The application connects, and the hosting account shows a managed database.
@@ -628,6 +628,7 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 | Version | Date | Change |
 |---|---|---|
+| 0.4 | 09-19-26 14:45 | Step 11.4's finishing test now matches step 11.3: the hosting platform supplies the database connection to the application, and no person holds it (Doug, 09-19-26). |
 | 0.3 | 09-19-26 00:50 | The settings generator no longer writes the trial chapter's footer label, a localhost origin or the development branch, so the step that corrected them by hand is now a check. It refuses the development branch unless the form allows it. |
 | 0.2 | 09-19-26 00:07 | Every action made exact (Doug, 09-19-26: sweep every step): the settings generator's command line and the three values in its output that are wrong for a real chapter (the Rehearsal label, the localhost origin, and the main branch); doctl commands against the chapter's own account; the managed database conversion path; the release policy commands; the Cloudflare record; the health page's exact fields; and the settings each Google check switches on at /setup, including GOOGLE_DELEGATED_ADMIN, which no list had named. |
 | 0.1 | 09-18-26 17:20 | First version as data, converted from the methods for deploying the applications (3-Methods-CRM-Google-Applications.md, version 0.5) with the step list's finishing tests. Numbered actions, a reason per step, and a check an app can run were added. |

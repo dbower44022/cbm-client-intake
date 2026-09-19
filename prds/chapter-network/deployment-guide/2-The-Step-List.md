@@ -1,10 +1,10 @@
 # New Chapter Deployment Guide — The Step List
 
 **Document:** The bare list of steps, with no methods yet
-**Version:** 0.16
+**Version:** 0.17
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-19-26 00:30
+**Last Updated:** 09-19-26 14:45
 
 ---
 
@@ -382,7 +382,7 @@ Note: Seven, not six: besides the six the planning documents name, the applicati
 **8.8 Put the chapter's secrets into the store.**
 Done when:
 
-- All seven of the chapter's secrets are held in the chapter's Proton Pass Operations vault (step 2.7).
+- Every secret a person holds is in the chapter's Proton Pass Operations vault (step 2.7). That is all seven except the database connection, which the hosting platform holds (step 11.4).
 - At least two named people can reach each one.
 - None of them exists only in a file on one person's computer.
 
@@ -566,7 +566,7 @@ Note: The database connection is not among them — the hosting platform supplie
 Done when:
 
 - The database exists in the chapter's hosting account.
-- Its connection details are in the secrets store.
+- Its connection details are supplied to the application by the hosting platform, and no person holds them.
 - The application can reach it.
 
 **11.5 Create the application parts.**
@@ -887,6 +887,7 @@ Done when: a date is booked to review how the first months have gone.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.17 | 09-19-26 14:45 | Steps 11.4 and 8.8 brought in line with step 11.3 (Doug, 09-19-26): the database connection is supplied to the application by the hosting platform and no person holds it, so it is not kept in the vault. The other six secrets are. |
 | 0.16 | 09-19-26 00:30 | Three finishing tests brought in line with later rulings, found by the precision sweep. Step 8.3: the events page address is left empty, so the software uses its own page. Step 8.4: the Google branch condition removed (every chapter holds its own Google Workspace), and the shared drive condition removed, because the shared drive is only created in step 10.5. Step 16.1: the 09-14-26 ruling moved from the conditions into the note. |
 | 0.15 | 09-19-26 00:10 | Step 4.1 no longer offers a Google Workspace provided by the central support organization. Every chapter hosts its own email on its own Google Workspace (Doug, 09-18-26); the step now confirms that. |
 | 0.14 | 09-18-26 20:05 | In fourteen finishing tests, the sentence that explains rather than tests moved out of the list of conditions into a separate Note line (steps 3.7, 5.8, 6.5, 8.7, 9.1, 9.7, 9.8, 11.3, 11.9, 14.1, 16.1, 16.6, 18.2, 18.5). No condition changed. |
