@@ -6,18 +6,6 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
-32. **crm-test cannot write attachments until its upload folder is re-owned**
-    (found 2026-09-16 through the event graphic; v0.231.1). The nightly reset
-    restored `data/upload` and `chown`ed it to `1000:1000` (the host user) while
-    the container runs as `www-data` (33), so every `POST /Attachment` on the
-    sandbox has 500'd since 2026-08-22 — graphics, mentor photos, inline images,
-    documents. The script is fixed in the repo (`upload_owner`); **owed on the
-    droplet, Doug runs**: copy `scripts/sandbox/reset_crm_sandbox.py` over
-    `/usr/local/sbin/reset_crm_sandbox.py`, then
-    `chown -R 33:33 /var/www/espocrm/data/espocrm/data/upload` once, then upload
-    a graphic through `/events` and confirm "Graphic saved." appears in the
-    editor. Production has no reset and was never affected.
-
 31. **A settings-store test reads the developer's own `.env`** (found
     2026-09-13). `tests/test_settings_store_pg.py::test_override_round_trip_and_
     history` asserts the override history is exactly `["30", "25"]`; with a real
@@ -716,16 +704,6 @@ toggle.
 20. **Everything through v0.187.0 is DEPLOYED to both environments** (verified
     2026-07-28; only docs commits are unpushed). What is owed is the *live
     eyeball*, not a deploy. Never driven against the live CRM/Gmail/Drive:
-    - **The event Overview tab (v0.231.0)** — the view screen now carries the
-      whole record: facts left (driven by `EVENT_FIELDS`), and the graphic,
-      Summary, Full description and Syllabus right. Verified in a fetch-stubbed
-      browser harness only. On **crm-test**, signed in as a real non-admin in
-      the events team, open an event with rich-text content and confirm the
-      description and syllabus render as formatted text rather than HTML
-      source, the graphic appears, and an event with none of the three shows a
-      dash in each slot rather than an empty panel. The ACL half is only as
-      good as the account used — a "fields missing" report starts at field-level
-      ACL, not the renderer.
     - **The verified-settings path (v0.216.0)** — tests and a stub harness only.
       On **crm-test**, as an EspoCRM admin at `/setup`: (1) set **CRM API key**
       to a wrong value and confirm it is *refused* with the CRM's own 401/403
@@ -977,6 +955,28 @@ toggle.
 
 
 ## Resolved
+
+- **crm-test writes attachments again, and the event Overview tab is verified
+  live** (was item 32 and the first sub-bullet of item 20; raised 2026-09-16,
+  closed 2026-09-20). Two things had to hold together, and both do:
+  - **The droplet.** Doug copied `scripts/sandbox/reset_crm_sandbox.py` over
+    `/usr/local/sbin/reset_crm_sandbox.py` and ran
+    `chown -R 33:33 /var/www/espocrm/data/espocrm/data/upload` once. The repair
+    was confirmed **after** the following 04:00 UTC reset (2026-09-18): the
+    upload folder was owned by `33:33`, no entry belonged to any other user,
+    and the installed script matched the repository copy by checksum. That is
+    the half that matters — the fix had to survive a reset, not just precede
+    one.
+  - **The application.** Doug ran the crm-test browser pass and reported every
+    check passing: a graphic uploads through `/events` and the editor shows
+    **Graphic saved.**, and the event Overview tab renders the record —
+    facts left, graphic and rich text right, a dash in each empty slot.
+  Production has no nightly reset and was never affected. The diagnosis is kept
+  in memory as `sandbox-reset-upload-ownership`, because "uploads fail on
+  crm-test only" reads as an application defect and is not one. One caveat kept
+  for the record: the Overview tab's ACL half is only as verified as the account
+  the pass used, so a later "fields missing" report starts at field-level ACL,
+  not the renderer.
 
 - **The mentor detail popup (v0.220.0) is verified live** (was item 31, raised
   and closed 2026-09-01 — the day it shipped). Doug tested the new UI on the

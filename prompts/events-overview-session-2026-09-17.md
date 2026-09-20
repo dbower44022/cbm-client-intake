@@ -1,6 +1,13 @@
 # Resume prompt — event Overview tab + the crm-test upload repair
 
-Last Updated: 09-17-26 11:44 · Revision 1.0 — see change log at the end.
+Last Updated: 09-20-26 15:52 · Revision 1.1 — see change log at the end.
+
+**Discharged 2026-09-20 — nothing here is owed any more.** The three commits
+are pushed and live on both environments, the droplet holds the fixed reset
+script with `data/upload` owned by `33:33` (confirmed after the 09-18 reset),
+and Doug's crm-test browser pass covered both the graphic upload and the event
+Overview tab. Kept as the record of what the work was. The resolution is in
+`OPEN-ITEMS.md` § *Resolved*.
 
 Paste this into a fresh Claude Code session rooted in `cbm-client-intake`.
 It carries the state of the work interrupted by a reboot on 09-17-26.
@@ -93,4 +100,5 @@ Doug runs those himself, or with a `!` prefix in the session.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 09-20-26 15:52 | Claude (Claude Code) | Marked discharged: the push, the droplet repair, its survival of the 09-18 reset, and Doug's crm-test browser pass are all done. |
 | 1.0 | 09-17-26 11:44 | Claude (Claude Code) | Written at the end of the 09-16/09-17 session, interrupted by a system reboot. Carries the three unpushed commits, the cause of the crm-test upload failure, and the ordered list of what is owed. |
