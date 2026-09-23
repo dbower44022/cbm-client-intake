@@ -1,7 +1,7 @@
 stage: 11
 name: Deploy the chapter's applications
-version: "0.6"
-updated: "09-23-26 12:25"
+version: "0.7"
+updated: "09-23-26 13:54"
 why: >-
   The applications are what the chapter's staff, mentors and the public actually
   use: the intake forms, the staff tools and the public events page. This stage
@@ -17,7 +17,7 @@ before_you_start:
   - The chapter information form, complete and reviewed (stage 8)
   - The CRM, built and matching the standard, with the applications' key in the vault (stage 9)
   - The Google permissions and the Google key (stage 10)
-  - The chapter's domain names in its Cloudflare account (step 3.7)
+  - The chapter's domain names in its Cloudflare account, or at its own DNS provider with manual DNS (step 3.7)
   - The chapter's hosting account linked to the code repository on GitHub (step 5.9)
 unlocks: >-
   Backups and monitoring can be set up (stage 12), and the chapter's website
@@ -332,6 +332,7 @@ steps:
           - "Proxy status: DNS only (grey cloud)"
           - "TTL: Auto"
         see: The record listed with a grey cloud.
+      - do: "With manual DNS (step 3.7), add the same CNAME record in the chapter's DNS provider account instead, with any proxy or forwarding off. Its screens differ by provider and are not given here; the Name and Target are the same."
       - do: "In the hosting account, open Apps, then CHAPTER-SLUG-intake, then Settings, then Domains, and add APP-ADDRESS. Choose to manage DNS yourself and make it the primary domain. Labels are not checked on screen for this guide."
         see: The domain listed, moving to Active once the certificate is issued.
     done_when: >-
@@ -599,6 +600,11 @@ steps:
     source: 3-Methods-CRM-Google-Applications.md#11.18
 
 changes:
+  - version: "0.7"
+    date: "09-23-26 13:54"
+    change: >-
+      Manual DNS added (Doug, 09-23-26): step 11.10 adds the application's CNAME record at the
+      chapter's own DNS provider when the chapter kept it.
   - version: "0.6"
     date: "09-23-26 12:25"
     change: >-

@@ -1,7 +1,7 @@
 # Stage 9 — Build the CRM system
 
-**Version:** 0.8  
-**Last Updated:** 09-23-26 13:51  
+**Version:** 0.9  
+**Last Updated:** 09-23-26 13:54  
 **Generated from** `steps/stage-09.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -18,8 +18,8 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 - The chapter information form, complete and reviewed (stage 8)
 - The chapter's hosting account, with the central support organization's access (steps 5.1 and 5.4)
-- The chapter's domain names in its Cloudflare account (step 3.7)
-- The chapter's own DigitalOcean and Cloudflare tokens entered in CRMBuilder (step 5.8)
+- The chapter's domain names in its Cloudflare account, or at its own DNS provider with manual DNS (step 3.7)
+- The chapter's own DigitalOcean token, and its Cloudflare token unless it uses manual DNS, entered in CRMBuilder (step 5.8)
 - The chapter's vault, for every secret this stage creates (step 2.7)
 
 **Steps in this stage:**
@@ -115,31 +115,46 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
    *You should see:* The chapter's engagement named in the strip. If it is not in the list, step 5.8 is not finished.
 8. Open the deploy window. Click the tab 11 · CRM Deployment, then Instances in the side bar, then Deploy new… on the toolbar. Do not use New Instance: it only records a CRM that already exists.
    *You should see:* A window titled Deploy a new CRM instance, open at Step 1 of 5 — Providers.
-9. Step 1, Providers. Confirm both lines name the chapter's own tokens, by the label given in step 5.8, then click Next:
+9. Step 1, Providers. In the DNS list, choose the entry that matches the DNS provider item in the chapter's Operations vault (step 3.7):
+   - Cloudflare — the run creates the record: the chapter's DNS is at Cloudflare.
+   - Manual DNS — I add the record at the domain's own DNS provider: the chapter kept its own DNS provider.
+   *You should see:* The DNS list showing the entry that matches the vault.
+10. Step 1, Providers. Confirm both lines name the chapter's own tokens, by the label given in step 5.8, then click Next. With manual DNS, only the DigitalOcean line matters; the Cloudflare line may read Not set:
    - DigitalOcean: ✓ Configured — crmbuilder-CHAPTER-SLUG
    - Cloudflare: ✓ Configured — crmbuilder-CHAPTER-SLUG
    *You should see:* Both labels exactly as above. Any other label, or Not set, means the server would be built in the wrong account: click Set credentials… and repeat step 5.8's token actions first.
-10. Step 2, Server. Fill in each box, then click Next. The lists come from the chapter's DigitalOcean account and take a moment to fill.
+11. Step 2, Server. Fill in each box, then click Next. The lists come from the chapter's DigitalOcean account and take a moment to fill.
    - Instance name: CHAPTER-SLUG CRM, using the chapter's short label from step 8.2
    - Region: the region nearest the chapter; for Boston, New York
    - Size: s-2vcpu-4gb (2 vCPU, 4096 MB), a recommendation not yet ruled
    - Image: the newest Ubuntu LTS release in the list
    - Extra SSH keys: tick crm-CHAPTER-SLUG
    *You should see:* crm-CHAPTER-SLUG ticked. Without it, nobody can open a command line on the server, and steps 9.4 and 9.8 cannot be done.
-11. Step 3, Domain. Fill in each box from the chapter information form, then click Next:
+12. Step 3, Domain. Fill in each box from the chapter information form, then click Next:
    - Cloudflare zone: the chapter's domain that the CRM's address ends in
    - Subdomain: the CRM's address up to the first dot; for crm.example.org, crm
    - Let's Encrypt email: the alert receiving address
    *You should see:* Instance address showing the CRM's address exactly as the chapter information form has it, without https://.
-12. Step 4, Accounts. Fill in each box, then click Next:
+13. Step 3, Domain, with manual DNS. The page shows different boxes. Fill in each one from the chapter information form, then click Next:
+   - CRM address: the CRM's full address, without https://; for Boston, crm.bbmentors.org
+   - Let's Encrypt email: the alert receiving address
+   *You should see:* A note on the page saying the run will show the A record to add at the domain's DNS provider.
+14. Step 4, Accounts. Fill in each box, then click Next:
    - Administrator username: admin
    - Administrator email: the alert receiving address from the chapter information form
    - Administrator password: paste it from the CRM administrator item in the vault
    - Generate database passwords automatically (recommended): leave ticked
    *You should see:* A reminder to record the administrator password. It is already in the vault; CRMBuilder never shows it again.
-13. Step 5, Review. Check every line against what was entered, then click Deploy.
-   *You should see:* Extra SSH keys reading crm-CHAPTER-SLUG, not (generated key only). Then a window titled Deploy run DEP-NNN, with a progress bar and a log.
-14. Wait for the run to finish. The status line names each of its ten stages in turn:
+15. Step 5, Review. Check every line against what was entered, then click Deploy.
+   *You should see:* Extra SSH keys reading crm-CHAPTER-SLUG, not (generated key only). With manual DNS, the line DNS reading manual DNS — you add the A record when the run shows it. Then a window titled Deploy run DEP-NNN, with a progress bar and a log.
+16. With manual DNS, the run stops at Waiting for DNS until the CRM's record exists, so add it by hand while the run waits. When the status line reads Waiting for DNS, it also shows the record, in the words Add this DNS record at the domain's DNS provider: type A, name, then the CRM's address, value, then the server's address. The log shows the same line. In the chapter's DNS provider account, add a record with exactly:
+   - Type: A
+   - Name or host: the CRM's address, or only its first part (for crm.bbmentors.org, crm), whichever the provider's screen asks for
+   - Value, data or points to: the server's address from the status line
+   - Proxy or forwarding: off
+   - TTL: the provider's default, or the shortest it offers
+   *You should see:* Within a few minutes, a log line saying the CRM's address resolves to the server's address on public resolvers, and the status line moving on to Preparing server. The run waits up to 30 minutes for the record.
+17. Wait for the run to finish. The status line names each of its ten stages in turn:
    - Checking credentials
    - Creating server
    - Waiting for server
@@ -151,15 +166,15 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
    - Verifying
    - Registering instance
    *You should see:* The status line reading Deployment complete. The run takes place on CRMBuilder's online service, not on the build computer, so closing the window does not stop it. To reopen it, click Deploy History, then Open progress….
-15. Record the server's address. The log shows it on the line beginning Server active at. Later steps call it SERVER-IP.
+18. Record the server's address. The log shows it on the line beginning Server active at. Later steps call it SERVER-IP.
    *You should see:* The same address under Droplet IP, in the Deploy config section of the new instance on the Instances page.
-16. In Proton Pass, add the server's address to the CRM administrator item, as a note headed Server address.
+19. In Proton Pass, add the server's address to the CRM administrator item, as a note headed Server address.
 
 **Done when:** A server is running in the chapter's own hosting account and the central support organization can reach it.
 
 **How to check:** The server appears in the chapter's hosting account, the run reads Deployment complete, and the new instance is listed on CRMBuilder's Instances page.
 
-**If it didn't work:** The run keeps what it built, names the stage that failed, and bills for the server until it is finished or deleted. Do not delete anything. If the failed stage is Preparing server and the log mentions Could not get lock, the new server was still setting itself up: wait five minutes and click Retry, which starts again at the stage that failed. Deployment complete with verification gaps means the CRM is installed but a check failed: read the log, and stop and ask before going on. Anything else: stop, and ask the central support organization to retry from the failed stage.
+**If it didn't work:** The run keeps what it built, names the stage that failed, and bills for the server until it is finished or deleted. Do not delete anything. If the failed stage is Preparing server and the log mentions Could not get lock, the new server was still setting itself up: wait five minutes and click Retry, which starts again at the stage that failed. With manual DNS, a failure at Waiting for DNS means the record was not seen within 30 minutes: check the record at the chapter's DNS provider against the status line, character by character, then click Retry, which waits again on the same server. Deployment complete with verification gaps means the CRM is installed but a check failed: read the log, and stop and ask before going on. Anything else: stop, and ask the central support organization to retry from the failed stage.
 
 **What usually goes wrong:** Not ticking crm-CHAPTER-SLUG under Extra SSH keys. The run then leaves nobody with a command line on the server, because CRMBuilder's own key never leaves its service, and steps 9.4 and 9.8 become impossible. The August build hit this and had to paste a key through the hosting provider's own console as a rescue. Also, a run left on CRMBuilder's own tokens builds the server in CRMBuilder's hosting account, and nothing says so until someone looks.
 
@@ -243,6 +258,8 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 1. Nothing to do by hand. The wizard wrote the record in step 9.2. Open the chapter's Cloudflare account, then the domain, then DNS.
    *You should see:* An A record for the CRM's address, pointing at the server, marked "DNS only" with a grey cloud.
+2. With manual DNS, the record was added by hand during step 9.2. Open the domain's DNS records in the chapter's DNS provider account instead.
+   *You should see:* An A record for the CRM's address, pointing at the server, with no proxy or forwarding.
 
 **Done when:** The domain name record for the CRM address resolves to the server.
 
@@ -739,6 +756,7 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 | Version | Date | Change |
 |---|---|---|
+| 0.9 | 09-23-26 13:54 | Manual DNS added (Doug, 09-23-26): CRMBuilder's wizard now asks on its first page whether the CRM's address is managed through Cloudflare or by hand at the chapter's own DNS provider. Step 9.2 chooses from the DNS provider item in the vault, fills in the CRM address box that manual DNS shows, and adds the A record by hand when the run shows it; its failure advice covers the 30-minute wait and Retry. Step 9.5 checks the record at the chapter's DNS provider. Screen labels read from CRMBuilder's code (commit 7b1a5062); the first page's DNS list was seen on screen by Doug on 09-23-26. |
 | 0.8 | 09-23-26 13:51 | Step 9.2 rewritten in executive register (Doug, 09-23-26: it said "this computer" without saying which). It names the build computer, the central support organization's own computer with CRMBuilder installed, and uses that name for every command; defines an SSH key at first use; gives the change of folder its own action; and moves explanations out of the actions into what the reader should see. Step 9.8's two "this computer" now say the build computer. |
 | 0.7 | 09-23-26 13:41 | Steps 9.1 and 9.3 brought in line with the ruling that a new chapter runs the current CRM release and Cleveland moves up later (Doug, 09-23-26). Step 9.1 writes down "the current release CRMBuilder installs" rather than Cleveland's version, and checks each add-on supports version 10. Step 9.3 records the exact number instead of comparing it, since CRMBuilder cannot install any other. Both finishing tests changed with the step list (version 0.18). |
 | 0.6 | 09-23-26 13:39 | Step 9.2 points to step 5.8 for the chapter's engagement, which 5.8 now creates, instead of stopping to ask. |

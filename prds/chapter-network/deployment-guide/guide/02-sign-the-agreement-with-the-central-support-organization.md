@@ -1,7 +1,7 @@
 # Stage 2 — Sign the agreement with the central support organization
 
-**Version:** 0.2  
-**Last Updated:** 09-19-26 00:25  
+**Version:** 0.3  
+**Last Updated:** 09-23-26 13:54  
 **Generated from** `steps/stage-02.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -97,7 +97,7 @@ Everything after this stage involves one organization spending money and holding
    - Hosting: DigitalOcean, https://www.digitalocean.com/pricing/droplets. One server for the CRM, plus the application and its managed database.
    - Google Workspace: https://www.google.com/nonprofits/offerings/workspace/. Nonprofits may get it free or discounted once step 4.13 is approved.
    - Domain names: the registrar's price for each name per year. Cleveland uses Porkbun, https://porkbun.com/products/domains.
-   - Cloudflare: the free plan, https://www.cloudflare.com/plans/. No cost unless a paid plan is ever needed.
+   - Cloudflare: the free plan, https://www.cloudflare.com/plans/. No cost unless a paid plan is ever needed. A chapter that keeps its own DNS provider (manual DNS, step 3.7) writes that provider's price instead, often included with the domain name.
    - Proton Pass: Pass Professional, https://proton.me/business/pass. Priced per user per month, with a minimum of three users. Professional is the plan that includes the command-line tool the settings generator needs.
    - Zoom: only for a chapter that runs public webinars (step 5.5).
 2. Add one line for the fee paid to the central support organization. The amount comes from the standard agreement. It is proposed, not ruled, that the fee covers labour only.
@@ -161,7 +161,7 @@ Everything after this stage involves one organization spending money and holding
 
 1. Write an access schedule into the agreement, one line per account, naming the access each account gives the central support organization and the step that grants it:
    - The hosting account (DigitalOcean): a team member able to create and manage resources. Granted in step 5.4.
-   - The Cloudflare account: a member able to edit DNS. Granted in step 3.7.
+   - The Cloudflare account, or with manual DNS the chapter's DNS provider account: a member able to edit DNS. Granted in step 3.7.
    - Google Workspace: an administrator account of the central support organization's own. Created in step 4.6.
    - The video meeting account (Zoom), if there is one: an administrator. Granted in step 5.5.
    - The chapter's vault (Proton Pass): a member of the Operations vault only, never the Board vault. Granted in step 2.7.
@@ -293,5 +293,6 @@ Everything after this stage involves one organization spending money and holding
 
 | Version | Date | Change |
 |---|---|---|
+| 0.3 | 09-23-26 13:54 | Manual DNS added (Doug, 09-23-26): the cost sheet and the access schedule name the chapter's own DNS provider when it keeps one instead of moving to Cloudflare. |
 | 0.2 | 09-19-26 00:25 | Every action made precise (Doug, 09-19-26): each schedule's contents as a checklist; a cost sheet with each supplier's own pricing page; the access schedule naming the access and the step that grants it for every account; the wording of the board's resolution; the attachments the signed agreement must carry; and the Proton Pass plan (Pass Professional, which carries the command-line tool, minimum three users), the two vault names and the central members' role. Proton Pass's plans were read from its own page on 09-19-26; its organization screen labels are not checked, and the step says so. |
 | 0.1 | 09-18-26 17:20 | First version as data, converted from the methods for signing the agreement (8-Methods-Organization-Domains-Google.md, version 0.5) with the step list's finishing tests. Step 2.1 brought up to the 09-18-26 rulings: requests go into ClickUp, the central committee meets every two weeks, and no response time is committed. |

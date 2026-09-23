@@ -1,7 +1,7 @@
 # Stage 5 — Open the hosting and video meeting accounts
 
-**Version:** 0.6  
-**Last Updated:** 09-23-26 13:51  
+**Version:** 0.7  
+**Last Updated:** 09-23-26 13:54  
 **Generated from** `steps/stage-05.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -20,7 +20,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 - The chapter's bank account (step 1.6)
 - The agreement on what access the central support organization holds (step 2.4)
 - The chapter's vault (step 2.7)
-- The chapter's domain names in its Cloudflare account (step 3.7)
+- The chapter's domain names in its Cloudflare account, or at its own DNS provider with manual DNS (step 3.7)
 
 **Steps in this stage:**
 
@@ -268,7 +268,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 1. Make one list, held by the chapter in its Operations vault as a secure note, where the central support organization's named members can read it, with one line per account:
    - The domain registrar
-   - Cloudflare
+   - Cloudflare, or with manual DNS the chapter's DNS provider
    - Google Workspace
    - The Proton Pass vault itself
    - The hosting account
@@ -318,45 +318,46 @@ The chapter's CRM server, its applications and their database all run in a hosti
    - Scopes: full read and write access
    *You should see:* A new token, shown once only.
 3. Copy the DigitalOcean token straight into the chapter's Operations vault, named DigitalOcean token for CRMBuilder.
-4. In Cloudflare, open My Profile, then API Tokens, and choose Create Token. Use the Edit zone DNS template.
-5. Set exactly:
+4. With manual DNS (step 3.7), skip every Cloudflare action below: there is no Cloudflare token to make, and the Cloudflare box in CRMBuilder stays empty. Go on to the action that begins Work at the build computer.
+5. In Cloudflare, open My Profile, then API Tokens, and choose Create Token. Use the Edit zone DNS template.
+6. Set exactly:
    - Token name: crmbuilder-CHAPTER-SLUG
    - Permissions: Zone, DNS, Edit (the template sets this)
    - A second permission line: Zone, Zone, Read. CRMBuilder lists the chapter's zones with it, and the template does not add it.
    - Zone resources: Include, Specific zone, and each of the chapter's domain names; never All zones
    - Client IP address filtering: leave empty
    - TTL: leave empty, for no expiry
-6. Choose to continue to the summary, then create the token.
+7. Choose to continue to the summary, then create the token.
    *You should see:* A new token, shown once only, covering only the chapter's zones.
-7. Copy the Cloudflare token straight into the chapter's Operations vault, named Cloudflare DNS token for CRMBuilder.
-8. Work at the build computer: the central support organization's own computer, the one with CRMBuilder installed. Open a terminal window on it, type the line below and press Enter:
+8. Copy the Cloudflare token straight into the chapter's Operations vault, named Cloudflare DNS token for CRMBuilder.
+9. Work at the build computer: the central support organization's own computer, the one with CRMBuilder installed. Open a terminal window on it, type the line below and press Enter:
    - cd ~/Dropbox/Projects/crmbuilder
-9. Start CRMBuilder. Type the line below and press Enter:
+10. Start CRMBuilder. Type the line below and press Enter:
    - ./start-v2.sh
    *You should see:* CRMBuilder's main window. If a window titled Cloud backend not configured appears instead, the build computer is not connected to CRMBuilder's online service: stop and ask.
-10. Create the chapter's engagement, which holds the two tokens. Click the strip across the top of the window, which names the current engagement, then Manage engagements… at the bottom of the list. On the Engagements page, click New Engagement.
+11. Create the chapter's engagement, which holds the two tokens. Click the strip across the top of the window, which names the current engagement, then Manage engagements… at the bottom of the list. On the Engagements page, click New Engagement.
    *You should see:* A window titled New engagement, with four boxes.
-11. Fill in each box, then save:
+12. Fill in each box, then save:
    - Code: the chapter's short label from step 8.2 in capital letters, for Boston BOSTON. Two to ten capital letters and digits, starting with a letter. It cannot be changed later.
    - Name: the chapter's full name from step 8.2
    - Purpose: Build and run the chapter's CRM and applications.
    - Status: active
    *You should see:* The new engagement listed with an identifier of the form ENG-NNN, and named in the strip across the top of the window. If another engagement is named there, click the strip and choose the chapter's.
-12. Open the tab 11 · CRM Deployment, click Instances in the side bar, then Deploy new…, and on Step 1 of 5 — Providers click Set credentials….
+13. Open the tab 11 · CRM Deployment, click Instances in the side bar, then Deploy new…, and on Step 1 of 5 — Providers click Set credentials….
    *You should see:* A window titled Provider credentials, with one box for DigitalOcean and one for Cloudflare.
-13. In each box, paste the token into Token, type crmbuilder-CHAPTER-SLUG into Label, and click Save token. Then click Close, and click Cancel to leave the deploy window; step 9.2 runs it.
+14. In each box, paste the token into Token, type crmbuilder-CHAPTER-SLUG into Label, and click Save token. Then click Close, and click Cancel to leave the deploy window; step 9.2 runs it.
    *You should see:* Step 1 reading DigitalOcean: ✓ Configured — crmbuilder-CHAPTER-SLUG, and the same for Cloudflare. The token itself is never shown again.
 
 **Done when all of these are true:**
 
 - A DigitalOcean API token from the chapter's hosting account exists.
-- A Cloudflare API token limited to editing DNS in the chapter's zones exists.
+- A Cloudflare API token limited to editing DNS in the chapter's zones exists, unless the chapter uses manual DNS.
 - Both tokens are in the chapter's vault.
 - Both tokens are entered in CRMBuilder as the chapter's provider credentials.
 
 **Note:** CRMBuilder builds the chapter's CRM with the chapter's own accounts, never its own (ruled 09-18-26).
 
-**How to check:** CRMBuilder's provider credentials screen shows both configured for the chapter's engagement, and lists the chapter's Cloudflare zones.
+**How to check:** CRMBuilder's provider credentials screen shows both configured for the chapter's engagement, and lists the chapter's Cloudflare zones. With manual DNS, only the DigitalOcean line needs to be configured.
 
 **If it didn't work:** Stop, and ask the central support organization before going on.
 
@@ -419,6 +420,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 | Version | Date | Change |
 |---|---|---|
+| 0.7 | 09-23-26 13:54 | Manual DNS added (Doug, 09-23-26): step 5.7's account list names the chapter's DNS provider when the chapter kept its own, and step 5.8 makes only the DigitalOcean token for a chapter on manual DNS. The finishing test changed with the step list (version 0.19). |
 | 0.6 | 09-23-26 13:51 | Step 5.8 names the build computer, the central support organization's own computer with CRMBuilder installed, instead of "this computer", and gives the change of folder its own action. |
 | 0.5 | 09-23-26 13:39 | Step 5.8 now opens CRMBuilder and creates the chapter's engagement (Code, Name, Purpose, Status) before entering the tokens, because the tokens are stored on the engagement and no step created it (Doug, 09-23-26: in 5.8, code BOSTON for Boston). |
 | 0.4 | 09-23-26 13:35 | Step 5.8 names CRMBuilder's real screens for entering the two tokens (Set credentials…, then the Provider credentials window), gives each token the label step 9.2 checks for, and adds the Zone, Zone, Read permission to the Cloudflare token: CRMBuilder asks for Zone:Read and DNS:Edit, and the Edit zone DNS template gives only the second. |

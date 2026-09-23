@@ -1,7 +1,7 @@
 # Stage 18 — Hand over and start normal support
 
-**Version:** 0.2  
-**Last Updated:** 09-19-26 00:04  
+**Version:** 0.3  
+**Last Updated:** 09-23-26 13:54  
 **Generated from** `steps/stage-18.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -167,7 +167,7 @@ This stage moves the chapter from being set up to being supported, and proves th
 
 1. Bring the account list from step 5.7 up to date. It has one line per account, with the address to sign in at:
    - The domain registrar: the registrar's own sign-in address
-   - Cloudflare: https://dash.cloudflare.com
+   - Cloudflare: https://dash.cloudflare.com, or with manual DNS the chapter's DNS provider's sign-in address
    - Google Workspace: https://admin.google.com
    - The hosting account: https://cloud.digitalocean.com
    - The video meeting account, if there is one: https://zoom.us
@@ -317,5 +317,6 @@ This stage moves the chapter from being set up to being supported, and proves th
 
 | Version | Date | Change |
 |---|---|---|
+| 0.3 | 09-23-26 13:54 | Manual DNS added (Doug, 09-23-26): the handover account list names the chapter's own DNS provider when it kept one. |
 | 0.2 | 09-19-26 00:04 | Actions made precise (Doug, 09-19-26): the three kinds of ClickUp request and what each contains, a test request, the exact wording to send, the release time in Eastern time and the health address, each account's sign-in address, the server console check, the four parts of the leaving kit with who produces each, and the review meeting's invitees and agenda. The ClickUp space address and how chapters get access to it are not settled, and step 18.1 says so. |
 | 0.1 | 09-18-26 17:30 | First version as data, converted from the methods for the handover (11-Methods-Handover.md, version 0.5) with the step list's finishing tests. |

@@ -1,10 +1,10 @@
 # New Chapter Deployment Guide — The Step List
 
 **Document:** The bare list of steps, with no methods yet
-**Version:** 0.18
+**Version:** 0.19
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-23-26 13:41
+**Last Updated:** 09-23-26 13:54
 
 ---
 
@@ -137,13 +137,13 @@ where more than one person can reach them.
 **3.7 Move the domain names' DNS to the chapter's Cloudflare account.**
 Done when:
 
-- Each domain name is a zone in a Cloudflare account the chapter owns.
-- The registrar points at Cloudflare's name servers.
+- Each domain name is a zone in a Cloudflare account the chapter owns, or, with manual DNS, is hosted in a DNS provider account the chapter owns.
+- The registrar points at Cloudflare's name servers, or, with manual DNS, at the chapter's DNS provider's.
 - Two-step sign-in is on.
 - The central support organization's named people are members.
 - The sign-in and recovery codes are in the chapter's vault.
 
-Note: CRMBuilder supports no other DNS provider.
+Note: CRMBuilder writes DNS records only into Cloudflare. With manual DNS it shows each record, and a person adds it at the chapter's DNS provider (ruled 09-23-26).
 
 ---
 
@@ -248,7 +248,7 @@ Done when:
 Done when:
 
 - A DigitalOcean API token from the chapter's hosting account exists.
-- A Cloudflare API token limited to editing DNS in the chapter's zones exists.
+- A Cloudflare API token limited to editing DNS in the chapter's zones exists, unless the chapter uses manual DNS.
 - Both tokens are in the chapter's vault.
 - Both tokens are entered in CRMBuilder as the chapter's provider credentials.
 
@@ -890,6 +890,7 @@ Done when: a date is booked to review how the first months have gone.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.19 | 09-23-26 13:54 | Manual DNS added (Doug, 09-23-26, amending the 09-18-26 Cloudflare ruling): a chapter may keep its DNS at the provider it already uses. Step 3.7's finishing test and note accept a DNS provider account the chapter owns; step 5.8 needs no Cloudflare token for such a chapter. |
 | 0.18 | 09-23-26 13:41 | Steps 9.1 and 9.3 brought in line with the ruling that a new chapter runs the current CRM release and Cleveland moves up later (Doug, 09-23-26). Step 9.1 names the current release CRMBuilder installs as the CRM version; step 9.3 records the installed number rather than comparing it with Cleveland's. |
 | 0.17 | 09-19-26 14:45 | Steps 11.4 and 8.8 brought in line with step 11.3 (Doug, 09-19-26): the database connection is supplied to the application by the hosting platform and no person holds it, so it is not kept in the vault. The other six secrets are. |
 | 0.16 | 09-19-26 00:30 | Three finishing tests brought in line with later rulings, found by the precision sweep. Step 8.3: the events page address is left empty, so the software uses its own page. Step 8.4: the Google branch condition removed (every chapter holds its own Google Workspace), and the shared drive condition removed, because the shared drive is only created in step 10.5. Step 16.1: the 09-14-26 ruling moved from the conditions into the note. |

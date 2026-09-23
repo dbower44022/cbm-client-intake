@@ -1,7 +1,7 @@
 # Stage 4 — Set up Google Workspace and the chapter's email
 
-**Version:** 0.3  
-**Last Updated:** 09-19-26 00:05  
+**Version:** 0.4  
+**Last Updated:** 09-23-26 13:54  
 **Generated from** `steps/stage-04.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -17,7 +17,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 **Before you start:**
 
 - The agreement signed (stage 2)
-- The domain names registered and in the chapter's Cloudflare account (stage 3)
+- The domain names registered and in the chapter's Cloudflare account, or at its own DNS provider with manual DNS (stage 3)
 - The nonprofit determination letter, for the discount (step 1.5)
 
 **Steps in this stage:**
@@ -135,7 +135,8 @@ Google Workspace is Google's paid service for an organization's email, calendars
    - Content: the whole value from Google, starting google-site-verification=
    - TTL: Auto
    *You should see:* The new TXT record in the list. Leave any other TXT records as they are.
-3. Return to the admin console and choose to verify.
+3. With manual DNS, add the TXT record in the chapter's DNS provider account instead (step 3.7). Its screens differ by provider and are not given here; the record's values are the same.
+4. Return to the admin console and choose to verify.
    *You should see:* The domain shown as verified. A new record can take from minutes to a day to be seen.
 
 **Done when:** Google reports the domain as verified.
@@ -162,7 +163,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 **Do this:**
 
-1. Four DNS records are needed on the chapter's email domain, all added in the chapter's Cloudflare account (open the domain, then DNS, then Records):
+1. Four DNS records are needed on the chapter's email domain, all added in the chapter's Cloudflare account (open the domain, then DNS, then Records). With manual DNS, add all four in the chapter's DNS provider account instead (step 3.7); its screens differ by provider and are not given here, and the records' values are the same:
    - One MX record, which sends incoming mail to Google.
    - One SPF record, which lists who may send mail as the domain.
    - One DKIM record, which lets receivers check a message's signature.
@@ -542,7 +543,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 1. Sign in to the registrar account from step 3.3. Open its account profile or contact settings. Registrars name this page differently; if it cannot be found, search the registrar's help pages for how to change the account email.
 2. Change the account's sign-in and contact email to info@EMAIL-DOMAIN, and confirm the change from the message sent there.
 3. Delete the founding email address from step 3.1 from every contact field on the account.
-4. Sign in to Cloudflare, open My Profile, and change the email address to info@EMAIL-DOMAIN. Confirm the change from the message sent there.
+4. Sign in to Cloudflare, open My Profile, and change the email address to info@EMAIL-DOMAIN. Confirm the change from the message sent there. With manual DNS, do the same in the chapter's DNS provider account, unless the registrar hosts the DNS.
    *You should see:* Both accounts show info@EMAIL-DOMAIN.
 5. Sign out of the registrar and use its forgotten-password link with info@EMAIL-DOMAIN.
    *You should see:* The password reset message arrives in info@EMAIL-DOMAIN. Do not complete the reset unless you mean to; if you do, put the new password in the chapter's vault.
@@ -565,6 +566,7 @@ Google Workspace is Google's paid service for an organization's email, calendars
 
 | Version | Date | Change |
 |---|---|---|
+| 0.4 | 09-23-26 13:54 | Manual DNS added (Doug, 09-23-26): steps 4.3 and 4.4 say that a chapter keeping its own DNS provider adds the same records there, and step 4.14 moves that provider account's email too. |
 | 0.3 | 09-19-26 00:05 | Every action outside steps 4.3 and 4.4 made precise (Doug, 09-19-26): the web addresses to open, the admin console paths, the exact user and group names to create (info@, admin@, allmembers@), the fields to fill in, the two-step sign-in settings, and the nonprofit application route. Screen wording not checked on screen is marked as such. |
 | 0.2 | 09-19-26 00:20 | Steps 4.3 and 4.4 rewritten with the exact DNS records to add in Cloudflare, field by field: the verification record, and the MX, SPF, DKIM and DMARC records, with a header check that all three pass (Doug, 09-19-26). Values read from Cleveland's live email domain. |
 | 0.1 | 09-18-26 17:20 | First version as data, converted from the methods for setting up Google Workspace (8-Methods-Organization-Domains-Google.md, version 0.5) with the step list's finishing tests. Step 4.14 also moves the Cloudflare account off the founding address. |

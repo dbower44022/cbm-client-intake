@@ -1,7 +1,7 @@
 stage: 4
 name: Set up Google Workspace and the chapter's email
-version: "0.3"
-updated: "09-19-26 00:05"
+version: "0.4"
+updated: "09-23-26 13:54"
 why: >-
   Google Workspace is Google's paid service for an organization's email, calendars
   and documents. The software reads and sends the chapter's mail, creates calendar
@@ -16,7 +16,7 @@ time: >-
   the nonprofit application is answered.
 before_you_start:
   - The agreement signed (stage 2)
-  - The domain names registered and in the chapter's Cloudflare account (stage 3)
+  - The domain names registered and in the chapter's Cloudflare account, or at its own DNS provider with manual DNS (stage 3)
   - The nonprofit determination letter, for the discount (step 1.5)
 unlocks: >-
   The hosting and video meeting accounts can be opened with chapter addresses
@@ -109,6 +109,7 @@ steps:
           - "Content: the whole value from Google, starting google-site-verification="
           - "TTL: Auto"
         see: The new TXT record in the list. Leave any other TXT records as they are.
+      - do: "With manual DNS, add the TXT record in the chapter's DNS provider account instead (step 3.7). Its screens differ by provider and are not given here; the record's values are the same."
       - do: Return to the admin console and choose to verify.
         see: The domain shown as verified. A new record can take from minutes to a day to be seen.
     done_when: >-
@@ -119,7 +120,7 @@ steps:
     goes_wrong: >-
       Impatience. A new DNS record can take from minutes to a day to be seen. Wait
       before assuming the record is wrong.
-    later: The app writes the verification record into Cloudflare with the chapter's token.
+    later: The app writes the verification record into Cloudflare with the chapter's token. With manual DNS, a person still adds it.
     status: not-yet-tried
     source: 8-Methods-Organization-Domains-Google.md#4.3
 
@@ -132,7 +133,7 @@ steps:
     produces: []
     mode: guided
     actions:
-      - do: "Four DNS records are needed on the chapter's email domain, all added in the chapter's Cloudflare account (open the domain, then DNS, then Records):"
+      - do: "Four DNS records are needed on the chapter's email domain, all added in the chapter's Cloudflare account (open the domain, then DNS, then Records). With manual DNS, add all four in the chapter's DNS provider account instead (step 3.7); its screens differ by provider and are not given here, and the records' values are the same:"
         items:
           - "One MX record, which sends incoming mail to Google."
           - "One SPF record, which lists who may send mail as the domain."
@@ -196,7 +197,7 @@ steps:
       new mentors land in spam folders. Any other service that will send mail as the
       chapter's domain, such as a newsletter service or the website's contact form,
       must be added to the SPF record too; ask the central support organization.
-    later: The app writes the MX, SPF and DMARC records into Cloudflare with the chapter's token, and then only asks a person to generate the DKIM key.
+    later: The app writes the MX, SPF and DMARC records into Cloudflare with the chapter's token, and then only asks a person to generate the DKIM key. With manual DNS, a person still adds all four.
     status: not-yet-tried — the record values are Cleveland's own, read from its live email domain on 09-19-26.
     source: 8-Methods-Organization-Domains-Google.md#4.4
 
@@ -496,7 +497,7 @@ steps:
       - do: "Sign in to the registrar account from step 3.3. Open its account profile or contact settings. Registrars name this page differently; if it cannot be found, search the registrar's help pages for how to change the account email."
       - do: "Change the account's sign-in and contact email to info@EMAIL-DOMAIN, and confirm the change from the message sent there."
       - do: "Delete the founding email address from step 3.1 from every contact field on the account."
-      - do: "Sign in to Cloudflare, open My Profile, and change the email address to info@EMAIL-DOMAIN. Confirm the change from the message sent there."
+      - do: "Sign in to Cloudflare, open My Profile, and change the email address to info@EMAIL-DOMAIN. Confirm the change from the message sent there. With manual DNS, do the same in the chapter's DNS provider account, unless the registrar hosts the DNS."
         see: "Both accounts show info@EMAIL-DOMAIN."
       - do: "Sign out of the registrar and use its forgotten-password link with info@EMAIL-DOMAIN."
         see: "The password reset message arrives in info@EMAIL-DOMAIN. Do not complete the reset unless you mean to; if you do, put the new password in the chapter's vault."
@@ -516,6 +517,11 @@ steps:
     source: 8-Methods-Organization-Domains-Google.md#4.14
 
 changes:
+  - version: "0.4"
+    date: "09-23-26 13:54"
+    change: >-
+      Manual DNS added (Doug, 09-23-26): steps 4.3 and 4.4 say that a chapter keeping its own DNS
+      provider adds the same records there, and step 4.14 moves that provider account's email too.
   - version: "0.3"
     date: "09-19-26 00:05"
     change: >-

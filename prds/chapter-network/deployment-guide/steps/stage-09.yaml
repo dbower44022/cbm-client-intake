@@ -1,7 +1,7 @@
 stage: 9
 name: Build the CRM system
-version: "0.8"
-updated: "09-23-26 13:51"
+version: "0.9"
+updated: "09-23-26 13:54"
 why: >-
   The CRM is the chapter's system of record: every client, mentor, partner,
   funder and meeting lives in it, and every application reads and writes it. This
@@ -16,8 +16,8 @@ time: >-
 before_you_start:
   - The chapter information form, complete and reviewed (stage 8)
   - The chapter's hosting account, with the central support organization's access (steps 5.1 and 5.4)
-  - The chapter's domain names in its Cloudflare account (step 3.7)
-  - The chapter's own DigitalOcean and Cloudflare tokens entered in CRMBuilder (step 5.8)
+  - The chapter's domain names in its Cloudflare account, or at its own DNS provider with manual DNS (step 3.7)
+  - The chapter's own DigitalOcean token, and its Cloudflare token unless it uses manual DNS, entered in CRMBuilder (step 5.8)
   - The chapter's vault, for every secret this stage creates (step 2.7)
 unlocks: >-
   The Google permissions (stage 10) and the applications (stage 11) can start.
@@ -88,7 +88,12 @@ steps:
         see: The chapter's engagement named in the strip. If it is not in the list, step 5.8 is not finished.
       - do: "Open the deploy window. Click the tab 11 · CRM Deployment, then Instances in the side bar, then Deploy new… on the toolbar. Do not use New Instance: it only records a CRM that already exists."
         see: A window titled Deploy a new CRM instance, open at Step 1 of 5 — Providers.
-      - do: "Step 1, Providers. Confirm both lines name the chapter's own tokens, by the label given in step 5.8, then click Next:"
+      - do: "Step 1, Providers. In the DNS list, choose the entry that matches the DNS provider item in the chapter's Operations vault (step 3.7):"
+        items:
+          - "Cloudflare — the run creates the record: the chapter's DNS is at Cloudflare."
+          - "Manual DNS — I add the record at the domain's own DNS provider: the chapter kept its own DNS provider."
+        see: The DNS list showing the entry that matches the vault.
+      - do: "Step 1, Providers. Confirm both lines name the chapter's own tokens, by the label given in step 5.8, then click Next. With manual DNS, only the DigitalOcean line matters; the Cloudflare line may read Not set:"
         items:
           - "DigitalOcean: ✓ Configured — crmbuilder-CHAPTER-SLUG"
           - "Cloudflare: ✓ Configured — crmbuilder-CHAPTER-SLUG"
@@ -107,6 +112,11 @@ steps:
           - "Subdomain: the CRM's address up to the first dot; for crm.example.org, crm"
           - "Let's Encrypt email: the alert receiving address"
         see: Instance address showing the CRM's address exactly as the chapter information form has it, without https://.
+      - do: "Step 3, Domain, with manual DNS. The page shows different boxes. Fill in each one from the chapter information form, then click Next:"
+        items:
+          - "CRM address: the CRM's full address, without https://; for Boston, crm.bbmentors.org"
+          - "Let's Encrypt email: the alert receiving address"
+        see: A note on the page saying the run will show the A record to add at the domain's DNS provider.
       - do: "Step 4, Accounts. Fill in each box, then click Next:"
         items:
           - "Administrator username: admin"
@@ -115,7 +125,15 @@ steps:
           - "Generate database passwords automatically (recommended): leave ticked"
         see: A reminder to record the administrator password. It is already in the vault; CRMBuilder never shows it again.
       - do: "Step 5, Review. Check every line against what was entered, then click Deploy."
-        see: "Extra SSH keys reading crm-CHAPTER-SLUG, not (generated key only). Then a window titled Deploy run DEP-NNN, with a progress bar and a log."
+        see: "Extra SSH keys reading crm-CHAPTER-SLUG, not (generated key only). With manual DNS, the line DNS reading manual DNS — you add the A record when the run shows it. Then a window titled Deploy run DEP-NNN, with a progress bar and a log."
+      - do: "With manual DNS, the run stops at Waiting for DNS until the CRM's record exists, so add it by hand while the run waits. When the status line reads Waiting for DNS, it also shows the record, in the words Add this DNS record at the domain's DNS provider: type A, name, then the CRM's address, value, then the server's address. The log shows the same line. In the chapter's DNS provider account, add a record with exactly:"
+        items:
+          - "Type: A"
+          - "Name or host: the CRM's address, or only its first part (for crm.bbmentors.org, crm), whichever the provider's screen asks for"
+          - "Value, data or points to: the server's address from the status line"
+          - "Proxy or forwarding: off"
+          - "TTL: the provider's default, or the shortest it offers"
+        see: "Within a few minutes, a log line saying the CRM's address resolves to the server's address on public resolvers, and the status line moving on to Preparing server. The run waits up to 30 minutes for the record."
       - do: "Wait for the run to finish. The status line names each of its ten stages in turn:"
         items:
           - Checking credentials
@@ -143,7 +161,10 @@ steps:
       server until it is finished or deleted. Do not delete anything. If the failed
       stage is Preparing server and the log mentions Could not get lock, the new
       server was still setting itself up: wait five minutes and click Retry, which
-      starts again at the stage that failed. Deployment complete with verification
+      starts again at the stage that failed. With manual DNS, a failure at Waiting
+      for DNS means the record was not seen within 30 minutes: check the record at
+      the chapter's DNS provider against the status line, character by character,
+      then click Retry, which waits again on the same server. Deployment complete with verification
       gaps means the CRM is installed but a check failed: read the log, and stop and
       ask before going on. Anything else: stop, and ask the central support
       organization to retry from the failed stage.
@@ -233,6 +254,8 @@ steps:
     actions:
       - do: Nothing to do by hand. The wizard wrote the record in step 9.2. Open the chapter's Cloudflare account, then the domain, then DNS.
         see: An A record for the CRM's address, pointing at the server, marked "DNS only" with a grey cloud.
+      - do: With manual DNS, the record was added by hand during step 9.2. Open the domain's DNS records in the chapter's DNS provider account instead.
+        see: An A record for the CRM's address, pointing at the server, with no proxy or forwarding.
     done_when: >-
       The domain name record for the CRM address resolves to the server.
     check:
@@ -717,6 +740,16 @@ steps:
     source: 3-Methods-CRM-Google-Applications.md#9.20
 
 changes:
+  - version: "0.9"
+    date: "09-23-26 13:54"
+    change: >-
+      Manual DNS added (Doug, 09-23-26): CRMBuilder's wizard now asks on its first page whether the
+      CRM's address is managed through Cloudflare or by hand at the chapter's own DNS provider. Step 9.2
+      chooses from the DNS provider item in the vault, fills in the CRM address box that manual DNS
+      shows, and adds the A record by hand when the run shows it; its failure advice covers the
+      30-minute wait and Retry. Step 9.5 checks the record at the chapter's DNS provider. Screen labels
+      read from CRMBuilder's code (commit 7b1a5062); the first page's DNS list was seen on screen by
+      Doug on 09-23-26.
   - version: "0.8"
     date: "09-23-26 13:51"
     change: >-

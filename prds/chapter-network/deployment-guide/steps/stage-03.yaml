@@ -1,13 +1,15 @@
 stage: 3
 name: Register the chapter's domain names
-version: "0.2"
-updated: "09-19-26 00:35"
+version: "0.3"
+updated: "09-23-26 13:51"
 why: >-
   Every address the chapter uses hangs off its domain names: its email, its
   website, its CRM and its applications. This stage buys them in the chapter's
   name, protects the account that holds them, and moves their DNS to Cloudflare,
-  the only DNS provider CRMBuilder can build with. Losing the account that holds
-  the domain names loses the chapter's email and website together.
+  the DNS provider CRMBuilder writes records into itself. A chapter that already
+  has its DNS at another provider may keep it there instead (manual DNS, step
+  3.7). Losing the account that holds the domain names loses the chapter's email
+  and website together.
 who: >-
   The chapter's setup contact, with the central support organization for the
   Cloudflare step.
@@ -216,6 +218,21 @@ steps:
     produces: [cloudflare_account]
     mode: guided
     actions:
+      - do: "Find out where each domain name's DNS is hosted today. From a terminal, type the line below, putting the domain name in place of DOMAIN:"
+        items:
+          - "dig +short NS DOMAIN"
+        see: "Two or more name servers. Names ending in ns.cloudflare.com mean the DNS is already at Cloudflare. Any other names, such as nsc1.squarespacedns.com, mean another DNS provider hosts it."
+      - do: "Decide with the central support organization whether the DNS moves to Cloudflare or stays where it is. A chapter whose email and website already run on its domain may keep its DNS provider; this is called manual DNS (ruled 09-23-26). Moving costs two to three hours and touches the chapter's live email and website. Keeping it means every DNS record in this guide is added by hand at the chapter's DNS provider."
+        see: "One answer, agreed by both: Cloudflare, or manual DNS at the named provider."
+      - do: "Manual DNS only: do the next three actions, then skip every Cloudflare action in this step."
+      - do: "Manual DNS only: in the Operations vault, create an item titled DNS provider, holding:"
+        items:
+          - "The words Manual DNS, and the provider's name."
+          - The provider's sign-in address.
+          - The sign-in email and the password. If the registrar from step 3.3 hosts the DNS, name the registrar's item instead.
+      - do: "Manual DNS only: give the central support organization's named people the ability to add DNS records at the provider. Use the provider's own team or member feature if it has one; otherwise they use the sign-in held in the vault. Providers name this feature differently, and this guide does not give the labels."
+        see: A named person from the central support organization able to open the domain's DNS records.
+      - do: "Manual DNS only: check that two-step sign-in is on for the DNS provider account, with its codes in the DNS provider item. Leave DNSSEC as it is: it only matters when the name servers change, and manual DNS does not change them."
       - do: "Open https://dash.cloudflare.com/sign-up and create the account with:"
         items:
           - "Email: the founding email address from step 3.1. Step 4.14 changes it to a chapter mailbox."
@@ -233,15 +250,15 @@ steps:
           - "dig +short NS DOMAIN"
         see: Cloudflare's two name servers from the command, and each domain name shown as active in Cloudflare.
     done_when:
-      - "Each domain name is a zone in a Cloudflare account the chapter owns."
-      - "The registrar points at Cloudflare's name servers."
+      - "Each domain name is a zone in a Cloudflare account the chapter owns, or, with manual DNS, is hosted in a DNS provider account the chapter owns."
+      - "The registrar points at Cloudflare's name servers, or, with manual DNS, at the chapter's DNS provider's."
       - "Two-step sign-in is on."
       - "The central support organization's named people are members."
       - "The sign-in and recovery codes are in the chapter's vault."
-    note: "CRMBuilder supports no other DNS provider."
+    note: "CRMBuilder writes DNS records only into Cloudflare. With manual DNS it shows each record, and a person adds it at the chapter's DNS provider (ruled 09-23-26)."
     check:
-      how: Cloudflare shows each domain name as active, and a name-server lookup on each domain name returns Cloudflare's two servers.
-      probe: The app looks up each domain name's name servers and confirms they are Cloudflare's.
+      how: Cloudflare shows each domain name as active, and a name-server lookup on each domain name returns Cloudflare's two servers. With manual DNS, the lookup returns the chapter's DNS provider's servers, and a person from the central support organization can open the domain's DNS records there.
+      probe: The app looks up each domain name's name servers and confirms they are Cloudflare's, or, with manual DNS, the provider named in the vault.
     goes_wrong: >-
       From now on every DNS record is made in Cloudflare, not at the registrar. And
       Cloudflare's proxy must stay off for the CRM and the applications: both addresses
@@ -252,6 +269,14 @@ steps:
     source: 8-Methods-Organization-Domains-Google.md#3.7
 
 changes:
+  - version: "0.3"
+    date: "09-23-26 13:51"
+    change: >-
+      Manual DNS added (Doug, 09-23-26, amending the 09-18-26 Cloudflare ruling): step 3.7 first looks
+      up where each domain's DNS is hosted, then either moves it to Cloudflare as before or keeps it at the
+      chapter's existing provider, with the provider's sign-in in the vault and the central support
+      organization able to add records there. The finishing test and note changed with the step list
+      (version 0.19). Boston is the first chapter on manual DNS, at Squarespace Domains.
   - version: "0.2"
     date: "09-19-26 00:35"
     change: >-

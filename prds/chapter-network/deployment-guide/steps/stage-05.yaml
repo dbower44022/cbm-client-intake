@@ -1,7 +1,7 @@
 stage: 5
 name: Open the hosting and video meeting accounts
-version: "0.6"
-updated: "09-23-26 13:51"
+version: "0.7"
+updated: "09-23-26 13:54"
 why: >-
   The chapter's CRM server, its applications and their database all run in a
   hosting account, and the public webinar programme runs through a video meeting
@@ -20,7 +20,7 @@ before_you_start:
   - The chapter's bank account (step 1.6)
   - The agreement on what access the central support organization holds (step 2.4)
   - The chapter's vault (step 2.7)
-  - The chapter's domain names in its Cloudflare account (step 3.7)
+  - The chapter's domain names in its Cloudflare account, or at its own DNS provider with manual DNS (step 3.7)
 unlocks: >-
   Building the CRM (stage 9) can start once the chapter information form is
   complete, because CRMBuilder now holds the chapter's own tokens.
@@ -232,7 +232,7 @@ steps:
       - do: "Make one list, held by the chapter in its Operations vault as a secure note, where the central support organization's named members can read it, with one line per account:"
         items:
           - "The domain registrar"
-          - "Cloudflare"
+          - "Cloudflare, or with manual DNS the chapter's DNS provider"
           - "Google Workspace"
           - "The Proton Pass vault itself"
           - "The hosting account"
@@ -277,6 +277,7 @@ steps:
           - "Scopes: full read and write access"
         see: "A new token, shown once only."
       - do: "Copy the DigitalOcean token straight into the chapter's Operations vault, named DigitalOcean token for CRMBuilder."
+      - do: "With manual DNS (step 3.7), skip every Cloudflare action below: there is no Cloudflare token to make, and the Cloudflare box in CRMBuilder stays empty. Go on to the action that begins Work at the build computer."
       - do: "In Cloudflare, open My Profile, then API Tokens, and choose Create Token. Use the Edit zone DNS template."
       - do: "Set exactly:"
         items:
@@ -311,12 +312,12 @@ steps:
         see: "Step 1 reading DigitalOcean: ✓ Configured — crmbuilder-CHAPTER-SLUG, and the same for Cloudflare. The token itself is never shown again."
     done_when:
       - "A DigitalOcean API token from the chapter's hosting account exists."
-      - "A Cloudflare API token limited to editing DNS in the chapter's zones exists."
+      - "A Cloudflare API token limited to editing DNS in the chapter's zones exists, unless the chapter uses manual DNS."
       - "Both tokens are in the chapter's vault."
       - "Both tokens are entered in CRMBuilder as the chapter's provider credentials."
     note: "CRMBuilder builds the chapter's CRM with the chapter's own accounts, never its own (ruled 09-18-26)."
     check:
-      how: CRMBuilder's provider credentials screen shows both configured for the chapter's engagement, and lists the chapter's Cloudflare zones.
+      how: CRMBuilder's provider credentials screen shows both configured for the chapter's engagement, and lists the chapter's Cloudflare zones. With manual DNS, only the DigitalOcean line needs to be configured.
       probe: The app lists the chapter's hosting account through the DigitalOcean token and the chapter's zones through the Cloudflare token.
     goes_wrong: >-
       A Cloudflare token with more permission than it needs, or one covering every
@@ -379,6 +380,12 @@ steps:
     source: TASKS.md § work owed, item 12
 
 changes:
+  - version: "0.7"
+    date: "09-23-26 13:54"
+    change: >-
+      Manual DNS added (Doug, 09-23-26): step 5.7's account list names the chapter's DNS provider when
+      the chapter kept its own, and step 5.8 makes only the DigitalOcean token for a chapter on manual
+      DNS. The finishing test changed with the step list (version 0.19).
   - version: "0.6"
     date: "09-23-26 13:51"
     change: >-

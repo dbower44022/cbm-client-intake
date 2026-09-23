@@ -1,7 +1,7 @@
 # Stage 11 — Deploy the chapter's applications
 
-**Version:** 0.6  
-**Last Updated:** 09-23-26 12:25  
+**Version:** 0.7  
+**Last Updated:** 09-23-26 13:54  
 **Generated from** `steps/stage-11.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -19,7 +19,7 @@ The applications are what the chapter's staff, mentors and the public actually u
 - The chapter information form, complete and reviewed (stage 8)
 - The CRM, built and matching the standard, with the applications' key in the vault (stage 9)
 - The Google permissions and the Google key (stage 10)
-- The chapter's domain names in its Cloudflare account (step 3.7)
+- The chapter's domain names in its Cloudflare account, or at its own DNS provider with manual DNS (step 3.7)
 - The chapter's hosting account linked to the code repository on GitHub (step 5.9)
 
 **Steps in this stage:**
@@ -357,7 +357,8 @@ The applications are what the chapter's staff, mentors and the public actually u
    - Proxy status: DNS only (grey cloud)
    - TTL: Auto
    *You should see:* The record listed with a grey cloud.
-3. In the hosting account, open Apps, then CHAPTER-SLUG-intake, then Settings, then Domains, and add APP-ADDRESS. Choose to manage DNS yourself and make it the primary domain. Labels are not checked on screen for this guide.
+3. With manual DNS (step 3.7), add the same CNAME record in the chapter's DNS provider account instead, with any proxy or forwarding off. Its screens differ by provider and are not given here; the Name and Target are the same.
+4. In the hosting account, open Apps, then CHAPTER-SLUG-intake, then Settings, then Domains, and add APP-ADDRESS. Choose to manage DNS yourself and make it the primary domain. Labels are not checked on screen for this guide.
    *You should see:* The domain listed, moving to Active once the certificate is issued.
 
 **Done when:** The domain name record for the application address resolves to it.
@@ -639,6 +640,7 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 | Version | Date | Change |
 |---|---|---|
+| 0.7 | 09-23-26 13:54 | Manual DNS added (Doug, 09-23-26): step 11.10 adds the application's CNAME record at the chapter's own DNS provider when the chapter kept it. |
 | 0.6 | 09-23-26 12:25 | Step 11.5 now waits for step 5.9, the hosting account's link to the code repository on GitHub, without which creating the application fails. |
 | 0.5 | 09-23-26 00:55 | From the review before the first real chapter. Every Google, mail, Drive, website and Zoom setting now goes into the deployment in step 11.2, from the form, and steps 11.14 to 11.18 confirm them at /setup instead of setting them there: the background worker decides at start-up from its own settings whether to read the mailbox, so a switch set at /setup never reached it. The Google key is named by file (GOOGLE_SERVICE_ACCOUNT_KEY_FILE), and step 11.3 deletes the file. The stored-data encryption key the generator creates is now one the software accepts; before, /setup refused to store any secret. Step 11.7 no longer names a release that does not exist, and step 11.16 creates the test mentor and client it needs. Step 11.18 switches doctl back. |
 | 0.4 | 09-19-26 14:45 | Step 11.4's finishing test now matches step 11.3: the hosting platform supplies the database connection to the application, and no person holds it (Doug, 09-19-26). |
