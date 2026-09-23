@@ -1,7 +1,7 @@
 stage: 8
 name: Fill in the chapter information form
-version: "0.12"
-updated: "09-23-26 14:27"
+version: "0.13"
+updated: "09-23-26 17:47"
 why: >-
   The chapter information form holds the roughly forty answers that differ from
   one chapter to the next: its name, its addresses, its Google details and its
@@ -754,8 +754,8 @@ steps:
         items:
           - "curl -sI ADDRESS"
         see: A first line of HTTP/2 200 for every address except the applications' address and the CRM address, which do not exist yet.
-      - do: At the bottom of the page, in the section Sign-off, each of the two people types their own name and clicks Sign off.
-        see: Both names listed with the date.
+      - do: "At the bottom of the setup contact's page, in the section Sign-off, sign off both people: each name typed and Sign off clicked. Both go on the setup contact's page, because the answers are kept in that browser only. On a call, the setup contact types the central support person's name as they say it."
+        see: Both names listed with the date, on the setup contact's page.
     done_when: >-
       Two people have read the whole form together in one sitting and both have
       signed it off.
@@ -776,29 +776,46 @@ steps:
     produces: []
     mode: automated
     actions:
-      - do: "In a Claude Code session in the folder ~/Dropbox/Projects/cbm-client-intake, type this request, with the page's link in place of PAGE-LINK:"
+      - do: "The chapter's setup contact: on the page, press Copy all answers, paste the result into an email, and send it to the central support organization."
+        see: "An email whose text starts with the line CHAPTER-INFORMATION-ANSWERS v1. The page keeps answers only in the setup contact's browser, so this email is the only way they reach the central support organization."
+      - do: "The central support organization, at the build computer: copy the email's text, from the line CHAPTER-INFORMATION-ANSWERS v1 to the end of the block, into a plain text file named ~/Downloads/SHORT-LABEL-answers.txt."
+      - do: "In a terminal window, go to the application's folder. Type the line below and press Enter:"
         items:
-          - "Write the chapter values file from the chapter information page PAGE-LINK with scripts/chapter_form/to_values.py."
-        see: "A message naming the file written, prds/chapter-network/chapters/SHORT-LABEL-values.yaml, and reading that the check passed. If the check names a question, the answer on the page is wrong or missing: correct it on the page and ask again."
+          - "cd ~/Dropbox/Projects/cbm-client-intake"
+      - do: "Check the answers without writing anything. Type the line below and press Enter:"
+        items:
+          - "uv run python scripts/chapter_form/to_values.py ~/Downloads/SHORT-LABEL-answers.txt --check"
+        see: "A report that the check passed. If it names a question, that answer is wrong or missing: ask the setup contact to correct it on the page and send a new email, then start this step again."
+      - do: "Write the values file. Type the line below and press Enter:"
+        items:
+          - "uv run python scripts/chapter_form/to_values.py ~/Downloads/SHORT-LABEL-answers.txt"
+        see: "A message naming the file written, prds/chapter-network/chapters/SHORT-LABEL-values.yaml."
       - do: Open the file and check it holds no secret value. Every line under secrets must be a name only.
       - do: 'Commit it with the message "docs(chapter-network): SHORT-LABEL chapter information form", and push it.'
       - do: Ask a second person at the central support organization to open the file from the remote repository.
         see: The file opens, with both reviewers' names at the top.
+      - do: Delete ~/Downloads/SHORT-LABEL-answers.txt from the build computer. The committed file is now the copy the build uses.
     done_when: >-
       The form is in the agreed place and the central support organization has
       confirmed it can open it.
     check:
       how: A second person at the central support organization opens it.
       probe: The values file is written by a script that runs the settings generator's own checks and refuses any secret value.
-    if_not: If an answer changes after the file is written, change it on the page and write the file again. The page is the record; the file is always produced from it.
+    if_not: If an answer changes after the file is written, the setup contact changes it on the page and emails a new block, and this step is done again from it. The setup contact's page is the record; the file is always produced from it.
     goes_wrong: >-
-      Editing the file by hand. The page and the file then disagree, and the next
-      time the file is written the hand edit is lost.
+      Two things. Editing the file by hand: the page and the file then disagree,
+      and the next time the file is written the hand edit is lost. And the setup
+      contact changing computer or browser without first copying their answers:
+      the answers stay behind in the old browser.
     later: The onboarding app holds the form.
-    status: not-yet-tried — the file used to be typed by hand; writing it from the page is new for the Boston chapter.
+    status: not-yet-tried — the file used to be typed by hand; writing it from the emailed answers is new for the Boston chapter.
     source: 5-Methods-Form-Accounts-Checks.md#8.10
 
 changes:
+  - version: "0.13"
+    date: "09-23-26 17:47"
+    change: >-
+      Step 8.10 said to write the values file from the page's link, which the script cannot read: the answers live only in the setup contact's browser (Doug, 09-23-26: fix it). The setup contact now emails the Copy all answers block; the central support organization saves it as a file on the build computer, checks it, writes the values file from it, and deletes the copy. Step 8.9 puts both sign-offs on the setup contact's page, the only one whose block carries the answers.
   - version: "0.12"
     date: "09-23-26 14:27"
     change: >-

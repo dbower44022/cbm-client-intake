@@ -1,7 +1,7 @@
 # Stage 8 — Fill in the chapter information form
 
-**Version:** 0.12  
-**Last Updated:** 09-23-26 14:27  
+**Version:** 0.13  
+**Last Updated:** 09-23-26 17:47  
 **Generated from** `steps/stage-08.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -612,8 +612,8 @@ The chapter information form holds the roughly forty answers that differ from on
 3. The central support organization: run the curl check from step 8.3 on every address again:
    - curl -sI ADDRESS
    *You should see:* A first line of HTTP/2 200 for every address except the applications' address and the CRM address, which do not exist yet.
-4. At the bottom of the page, in the section Sign-off, each of the two people types their own name and clicks Sign off.
-   *You should see:* Both names listed with the date.
+4. At the bottom of the setup contact's page, in the section Sign-off, sign off both people: each name typed and Sign off clicked. Both go on the setup contact's page, because the answers are kept in that browser only. On a call, the setup contact types the central support person's name as they say it.
+   *You should see:* Both names listed with the date, on the setup contact's page.
 
 **Done when:** Two people have read the whole form together in one sitting and both have signed it off.
 
@@ -637,21 +637,30 @@ The chapter information form holds the roughly forty answers that differ from on
 
 **Do this:**
 
-1. In a Claude Code session in the folder ~/Dropbox/Projects/cbm-client-intake, type this request, with the page's link in place of PAGE-LINK:
-   - Write the chapter values file from the chapter information page PAGE-LINK with scripts/chapter_form/to_values.py.
-   *You should see:* A message naming the file written, prds/chapter-network/chapters/SHORT-LABEL-values.yaml, and reading that the check passed. If the check names a question, the answer on the page is wrong or missing: correct it on the page and ask again.
-2. Open the file and check it holds no secret value. Every line under secrets must be a name only.
-3. Commit it with the message "docs(chapter-network): SHORT-LABEL chapter information form", and push it.
-4. Ask a second person at the central support organization to open the file from the remote repository.
+1. The chapter's setup contact: on the page, press Copy all answers, paste the result into an email, and send it to the central support organization.
+   *You should see:* An email whose text starts with the line CHAPTER-INFORMATION-ANSWERS v1. The page keeps answers only in the setup contact's browser, so this email is the only way they reach the central support organization.
+2. The central support organization, at the build computer: copy the email's text, from the line CHAPTER-INFORMATION-ANSWERS v1 to the end of the block, into a plain text file named ~/Downloads/SHORT-LABEL-answers.txt.
+3. In a terminal window, go to the application's folder. Type the line below and press Enter:
+   - cd ~/Dropbox/Projects/cbm-client-intake
+4. Check the answers without writing anything. Type the line below and press Enter:
+   - uv run python scripts/chapter_form/to_values.py ~/Downloads/SHORT-LABEL-answers.txt --check
+   *You should see:* A report that the check passed. If it names a question, that answer is wrong or missing: ask the setup contact to correct it on the page and send a new email, then start this step again.
+5. Write the values file. Type the line below and press Enter:
+   - uv run python scripts/chapter_form/to_values.py ~/Downloads/SHORT-LABEL-answers.txt
+   *You should see:* A message naming the file written, prds/chapter-network/chapters/SHORT-LABEL-values.yaml.
+6. Open the file and check it holds no secret value. Every line under secrets must be a name only.
+7. Commit it with the message "docs(chapter-network): SHORT-LABEL chapter information form", and push it.
+8. Ask a second person at the central support organization to open the file from the remote repository.
    *You should see:* The file opens, with both reviewers' names at the top.
+9. Delete ~/Downloads/SHORT-LABEL-answers.txt from the build computer. The committed file is now the copy the build uses.
 
 **Done when:** The form is in the agreed place and the central support organization has confirmed it can open it.
 
 **How to check:** A second person at the central support organization opens it.
 
-**If it didn't work:** If an answer changes after the file is written, change it on the page and write the file again. The page is the record; the file is always produced from it.
+**If it didn't work:** If an answer changes after the file is written, the setup contact changes it on the page and emails a new block, and this step is done again from it. The setup contact's page is the record; the file is always produced from it.
 
-**What usually goes wrong:** Editing the file by hand. The page and the file then disagree, and the next time the file is written the hand edit is lost.
+**What usually goes wrong:** Two things. Editing the file by hand: the page and the file then disagree, and the next time the file is written the hand edit is lost. And the setup contact changing computer or browser without first copying their answers: the answers stay behind in the old browser.
 
 ---
 
@@ -659,6 +668,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 | Version | Date | Change |
 |---|---|---|
+| 0.13 | 09-23-26 17:47 | Step 8.10 said to write the values file from the page's link, which the script cannot read: the answers live only in the setup contact's browser (Doug, 09-23-26: fix it). The setup contact now emails the Copy all answers block; the central support organization saves it as a file on the build computer, checks it, writes the values file from it, and deletes the copy. Step 8.9 puts both sign-offs on the setup contact's page, the only one whose block carries the answers. |
 | 0.12 | 09-23-26 14:27 | The placeholder CHAPTER-SLUG is now SHORT-LABEL, the form's own name for it (Doug, 09-23-26: slug is a terrible name for a user). The guide's index lists every shared placeholder. The Short label question now says it is neither the chapter's name nor its abbreviation, with Boston's three answers as the example. |
 | 0.11 | 09-23-26 12:49 | The chapter now gives its four colours instead of the colour file's web address (Doug, 09-23-26): main, button, button under the mouse, and text, each with Cleveland's for comparison. The colour file's address becomes a question for the central support organization, and the values-file writer produces the file from the four colours. |
 | 0.10 | 09-23-26 12:38 | New question, the chapter abbreviation (Doug, 09-23-26): Cleveland's pages say CBM in about 90 places, and each chapter needs its own. The software does not read the answer yet (work list G1, item 15). |
