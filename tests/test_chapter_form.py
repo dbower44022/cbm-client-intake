@@ -76,6 +76,8 @@ def test_every_switch_has_a_recommended_answer():
 
 @pytest.mark.parametrize("kind,good,bad", [
     ("slug", "boston", "Boston MA"),
+    ("slug", "boston-mentors", "a" * 26),
+    ("slug", "b2", "boston-"),
     ("url", "https://bbmentors.org/privacy/", "bbmentors.org"),
     ("email", "info@bbmentors.org", "info at bbmentors"),
     ("domain", "bbmentors.org", "https://bbmentors.org"),

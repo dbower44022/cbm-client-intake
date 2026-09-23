@@ -23,8 +23,11 @@ STAGE_8 = ROOT / "prds" / "chapter-network" / "deployment-guide" / "steps" / "st
 # JavaScript and Python read these patterns identically; keep them to the
 # common subset (no look-behind, no named groups).
 CHECKS: dict[str, tuple[str, str]] = {
-    "slug": (r"^[a-z][a-z0-9-]{1,30}$",
-             "One lower-case word: letters, digits and hyphens, starting with a letter."),
+    # At most 25: the label becomes "<label>-intake" (a hosting platform app name,
+    # 32 at most) and "<label>-apps" (a Google Cloud project, 30 at most), and
+    # both accept only lower case, digits and hyphens, never ending in a hyphen.
+    "slug": (r"^[a-z]([a-z0-9-]{0,23}[a-z0-9])?$",
+             "Lower-case letters, digits and hyphens only, starting with a letter, not ending with a hyphen, at most 25 characters."),
     "url": (r"^https://[A-Za-z0-9.-]+\.[A-Za-z]{2,}(:[0-9]+)?(/[^\s]*)?$",
             "A full address beginning with https://, copied from the browser's address bar."),
     "email": (r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$",

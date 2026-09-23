@@ -1,7 +1,7 @@
 # Stage 8 — Fill in the chapter information form
 
-**Version:** 0.8  
-**Last Updated:** 09-23-26 12:28  
+**Version:** 0.9  
+**Last Updated:** 09-23-26 12:33  
 **Generated from** `steps/stage-08.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -92,8 +92,8 @@ The chapter information form holds the roughly forty answers that differ from on
   - *If it is wrong:* Every page title, page footer and email shows the wrong name until it is corrected and the applications are deployed again.
   - *Example:* Lakeside Business Mentors
 - **Short label** (`chapter.slug`) — answered by the chapter; required.
-  - *What it is:* One short lower-case word that names the chapter's server, applications and secrets. Letters, digits and hyphens only, starting with a letter.
-  - *Where to find it:* Choose it now. The city's name is usual.
+  - *What it is:* A short name, in lower case, that the software uses to name the chapter's server, applications and secrets. It has to be lower case because the hosting platform and Google accept only lower-case names: a label of boston becomes the application boston-intake, the database boston-db and the Google project boston-apps. Letters, digits and hyphens only, starting with a letter, at most 25 characters.
+  - *Where to find it:* Choose it now. The city's name is usual. The page turns capitals into lower case and spaces into hyphens for you.
   - *If it is wrong:* The label becomes part of the names of the chapter's server and applications. Changing it after stage 9 means renaming them.
   - *Example:* lakeside
 - **Time zone** (`chapter.timezone`) — answered by the chapter; required.
@@ -631,6 +631,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 | Version | Date | Change |
 |---|---|---|
+| 0.9 | 09-23-26 12:33 | The short label question says why it must be lower case (Doug, 09-23-26): the hosting platform and Google accept only lower-case names, and the label becomes the application, database and Google project names. The limit is now 25 characters, the longest that fits those names. The page lower-cases the label as it is typed, and every question with a required format shows that format under its box instead of only in the collapsed explanation. |
 | 0.8 | 09-23-26 12:28 | Every question can be marked not known yet (Doug, 09-23-26: "There should always be an option of not known yet"). A question marked so is written to the values file as owed, naming the step that needs it: the four policy addresses by step 17.3, before the public forms are used; the others by the step that builds from them. Only the short label must be known to write the file, because it names the file. |
 | 0.7 | 09-23-26 12:26 | Every web-address question now says plainly that it asks for the web address (URL) of a page, and which page (Doug, 09-23-26: "Why doesn't it say that?"). The four policy questions say what to do when the page does not exist yet, and that leaving one out links the forms to Cleveland's document. Examples use yourchapter.org rather than Boston's own domain, because this stage serves every chapter. The page no longer shows each question's internal name; the guide still does. |
 | 0.6 | 09-23-26 12:20 | Step 8.6's page button renamed Use recommended answers, and the step now says exactly what it does (Doug, 09-23-26). |

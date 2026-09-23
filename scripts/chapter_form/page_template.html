@@ -224,11 +224,13 @@ details[open] summary{margin-bottom:6px}
       input = el('input', {type:'text', id:id, autocomplete:'off', spellcheck:'false', placeholder: f.example ? 'For example ' + f.example : ''});
       input.value = a.value || '';
       var timer = null;
-      var commit = function(){ var v = input.value.trim(); var cur = (state.answers[f.key] || {}).value || ''; if (v !== cur) { setAnswer(f.key, {value:v, notYet: v ? false : !!(state.answers[f.key] || {}).notYet}); refresh(); } };
+      var commit = function(){ var v = input.value.trim();
+        if (f.kind === 'slug') { v = v.toLowerCase().replace(/\s+/g, '-'); input.value = v; } var cur = (state.answers[f.key] || {}).value || ''; if (v !== cur) { setAnswer(f.key, {value:v, notYet: v ? false : !!(state.answers[f.key] || {}).notYet}); refresh(); } };
       input.addEventListener('input', function(){ clearTimeout(timer); timer = setTimeout(commit, 700); });
       input.addEventListener('change', function(){ clearTimeout(timer); commit(); });
     }
     card.appendChild(input);
+    if (D.checks[f.kind] && f.kind !== 'text') card.appendChild(el('div', {'class':'tag'}, 'Format: ' + D.checks[f.kind].message));
 
     {
       var nk = el('label', {'class':'nk'}); var cb = el('input', {type:'checkbox'});
