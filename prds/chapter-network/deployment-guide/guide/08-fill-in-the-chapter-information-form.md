@@ -1,7 +1,7 @@
 # Stage 8 — Fill in the chapter information form
 
-**Version:** 0.5  
-**Last Updated:** 09-23-26 12:10  
+**Version:** 0.6  
+**Last Updated:** 09-23-26 12:20  
 **Generated from** `steps/stage-08.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -379,7 +379,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 1. The chapter's setup contact: answer the three switch questions marked For the chapter.
    *You should see:* The three marked as saved.
-2. The central support organization: check the recommended answer on each remaining switch, change any that should differ, and save each one. The page's button Save every recommended switch saves the recommended answer on every switch not yet answered.
+2. The central support organization: check the recommended answer on each remaining switch, change any that should differ, and save each one. The page's button Use recommended answers gives every switch marked For central support that is not yet answered its recommended answer; it never changes a switch already answered or one marked For the chapter.
    *You should see:* Every switch marked as saved. None left blank.
 
 **The questions in this step:**
@@ -623,6 +623,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 | Version | Date | Change |
 |---|---|---|
+| 0.6 | 09-23-26 12:20 | Step 8.6's page button renamed Use recommended answers, and the step now says exactly what it does (Doug, 09-23-26). |
 | 0.5 | 09-23-26 12:10 | Step 8.1 shares the page by link instead of by email invitation. A published page starts private and shows a signed-out visitor a sign-in page; opened to anyone with the link, the Boston chapter's page worked with no claude.ai account (Doug, 09-23-26). |
 | 0.4 | 09-23-26 11:45 | The form becomes a web page, built from this stage's data (Doug, 09-23-26). Each question now carries what it means, where to find the answer and what goes wrong if it is wrong, in a new fields list the guide and the page both read. Step 8.1 publishes the page and invites the setup contact; step 8.9 signs off on the page; step 8.10 writes the values file from the page's answers instead of by hand. New questions: the Google administrator the software acts as (it was on no step), and whether the chapter runs Zoom webinars and creates mentors' mailboxes automatically. The switches' starting values changed: the Google features and deploy_on_push are on, because the worker reads its mail switches only at start-up. |
 | 0.3 | 09-19-26 14:45 | Steps 8.7 and 8.8: the database connection is held by the hosting platform and never goes in the vault, matching step 11.3 (Doug, 09-19-26). |

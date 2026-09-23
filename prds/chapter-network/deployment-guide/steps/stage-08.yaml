@@ -1,7 +1,7 @@
 stage: 8
 name: Fill in the chapter information form
-version: "0.5"
-updated: "09-23-26 12:10"
+version: "0.6"
+updated: "09-23-26 12:20"
 why: >-
   The chapter information form holds the roughly forty answers that differ from
   one chapter to the next: its name, its addresses, its Google details and its
@@ -454,7 +454,7 @@ steps:
     actions:
       - do: "The chapter's setup contact: answer the three switch questions marked For the chapter."
         see: The three marked as saved.
-      - do: "The central support organization: check the recommended answer on each remaining switch, change any that should differ, and save each one. The page's button Save every recommended switch saves the recommended answer on every switch not yet answered."
+      - do: "The central support organization: check the recommended answer on each remaining switch, change any that should differ, and save each one. The page's button Use recommended answers gives every switch marked For central support that is not yet answered its recommended answer; it never changes a switch already answered or one marked For the chapter."
         see: Every switch marked as saved. None left blank.
     fields:
       - key: flags.events_public_api
@@ -743,6 +743,10 @@ steps:
     source: 5-Methods-Form-Accounts-Checks.md#8.10
 
 changes:
+  - version: "0.6"
+    date: "09-23-26 12:20"
+    change: >-
+      Step 8.6's page button renamed Use recommended answers, and the step now says exactly what it does (Doug, 09-23-26).
   - version: "0.5"
     date: "09-23-26 12:10"
     change: >-
