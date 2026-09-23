@@ -2,10 +2,10 @@
 
 **Document:** Things the central support organization has to build, decide or write
 before the New Chapter Deployment Guide can actually be followed
-**Version:** 0.11
+**Version:** 0.12
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-19-26 00:10
+**Last Updated:** 09-23-26 13:21
 
 ---
 
@@ -25,7 +25,68 @@ big the work looks.
 
 ---
 
-## Implementation first
+## Where each item stands for Boston (09-23-26)
+
+Boston is the first real chapter, and it is being built now. So every open item
+is one of three things: it needs an answer before Boston's build reaches it, Boston
+builds around it with a known workaround, or it can wait until after the build.
+Each line was checked against the code and the step files on 09-23-26.
+
+**Needs an answer before Boston's build reaches it:**
+
+1. **Item 2 — which CRM version Boston installs.** Nothing pins a version.
+   CRMBuilder's deploy installs the current release (10.0.6 on 08-31), while
+   Cleveland's test system runs 9.3.4. Boston starts a major version ahead of
+   Cleveland unless someone decides otherwise. The add-on half of this item was
+   ruled on 08-31 (R7): both add-ons are in the standard.
+
+**Boston builds around it, with a known workaround:**
+
+2. **Item 15 — the CRM applier.** Boston is built the way the August trial was:
+   configuration files copied off Cleveland's test system, then the trial script
+   `apply_api_half.py`. The decision date (09-19-26, `TASKS.md` A1) has passed,
+   and nothing in this repository records what happened on it.
+3. **Item 16 — the settings generator.** The trial script `render_spec.py` now
+   covers the Google and Zoom settings and reads the chapter information form,
+   which is a web page since 09-23-26. Two gaps remain: it still asks for a
+   development database, which step 11.4 converts by hand, and it reads secrets
+   from a file rather than the vault.
+4. **Item 1 — the central support organization's own vault.** Boston keeps its
+   own secrets in its own vault (step 2.7). The central support organization's
+   secrets are still on one laptop.
+5. **Item 18 — five event email templates.** The conformance check at step 9.20
+   will report these five as a difference for Boston, as it did for the trial
+   chapter. The difference is known and accepted.
+
+**Can wait until after Boston's build:**
+
+6. **Item 6 — the chapter training accounts.** Needed before Boston's staff train
+   (step 16.1), so it is the first thing after the build.
+7. **Item 12 — loading existing records.** Needed only if Boston has records to
+   bring in (step 15.4).
+8. **Item 8 — ClickUp access for chapter people.** Needed before Boston's
+   handover (step 18.1).
+9. **Item 19 — CRM field labels say "CBM".** Boston's staff will see Cleveland's
+   initials. On 09-23-26 Doug ruled that Boston launches with "CBM" in the
+   application's own text, to be swept in a later release (`TASKS.md` G1 item
+   11). That ruling does not cover the CRM labels, but the same answer is the
+   likely one.
+10. **Items 4 and 11 — colours and the logo.** The colour file is now written
+    from four answers on the chapter information form (09-23-26). Still missing:
+    the logo specification (item 4), and the public events page, which still
+    shows Cleveland's navy and gold (item 11). Item 11 matters only if Boston
+    sends its events address to that page.
+11. **Item 3 — duplicate checking, saved views and automated rules.** Step 9.16
+    is skipped for Boston, as it was for the trial chapter.
+12. **Item 17 — the time zone.** Boston is in Eastern time, so this does not
+    affect Boston.
+13. **Items 5, 7, 9, 10 and 13** — the emergency access procedure, the standard
+    agreement, the leaving kit, the public mentor directory page and the plain
+    list of personal information. None is reached during the build.
+
+---
+
+## Implementation first (09-18-26 ranking, kept for the record)
 
 Doug, 09-18-26: the technical steps that build a chapter's system come first. The
 legal and administrative items (7, 8, 9, 13 and 14) wait.
@@ -87,6 +148,11 @@ second chapter ever appears.
 
 ## 2. A published statement of what the standard is
 
+**Update 09-23-26.** The add-on half is ruled: both paid add-on products are in
+the standard (R7, 08-31-26). The version half is still open, and Boston's build
+reaches it at step 9.3. Steps 2.2 and 9.7 still call the add-ons undecided
+(`TASKS.md` G1 item 6).
+
 **What is missing.** No document says which CRM version a new chapter installs,
 which versions of the two paid add-on products, or which release of the standard
 configuration is current.
@@ -119,6 +185,10 @@ either direction.
 ---
 
 ## 4. A starter colour file and a logo specification
+
+**Update 09-23-26.** The colour half is done another way: the chapter information
+form asks for four colours, and `scripts/chapter_form/to_values.py` writes the
+colour file from them. The logo specification is still missing.
 
 **What is missing.** Colours are the only visual difference between chapters, and
 they are supplied as a small stylesheet the software loads. There is no template
@@ -315,6 +385,11 @@ own the default, and it is not ruled.
 
 ## 15. A versioned CRM standard and an applier
 
+**Update 09-23-26.** The 09-19-26 decision date has passed. Nothing in this
+repository records whether the CRMBuilder requirements session was held, so it is
+not known whether the applier is being built in CRMBuilder or here. Boston is
+built with the trial method.
+
 **What is missing.** Nothing holds the standard CRM configuration as a versioned
 artifact, and nothing applies it. The August build copied two folders of
 configuration files off Cleveland's test system by hand, then ran a trial script
@@ -336,6 +411,12 @@ repository instead (`phase-1-crm-config.md`).
 ---
 
 ## 16. A settings generator
+
+**Update 09-23-26.** Mostly overtaken. `scripts/rehearsal/render_spec.py` now
+writes the Google, mail, Drive, website and Zoom settings, and the chapter
+information form is a web page that writes its values file. Two gaps remain: the
+database it asks for is still a development database, and it reads secrets from
+a file, not the vault.
 
 **What is missing.** Nothing turns a filled-in chapter information form into the
 application's deployment settings. The August build used a trial script
@@ -394,6 +475,7 @@ own records (finding F7 of the August build).
 
 | Version | Date | Change |
 |---|---|---|
+| 0.12 | 09-23-26 13:21 | Brought up to date the day Boston is built. A new list at the top sorts every open item by what Boston needs: one needs an answer before the build (item 2, the CRM version), four have workarounds (items 15, 16, 1, 18), and the rest wait. Items 2, 4, 15 and 16 carry an update: the add-ons are ruled in, the colour file comes from the form, the applier's decision date passed with no recorded outcome, and the settings generator is mostly built. The 09-18-26 ranking is kept below the new list. |
 | 0.11 | 09-19-26 00:10 | Item 14 closed: every chapter hosts its own Google Workspace, so there is no provided branch (Doug, 09-18-26). |
 | 0.10 | 09-18-26 14:30 | Item 1 ruled: a chapter-owned Proton Pass business organization with central support members (Doug, 09-18-26). What remains is the central support organization's own vault and moving existing secrets off one laptop. |
 | 0.9 | 09-18-26 14:00 | Implementation put first (Doug, 09-18-26): a ranked list of the technical holes added at the top, and five technical items added — a versioned CRM standard and applier, a settings generator, the time zone written into the code, five missing event email templates, and CRM field labels that say "CBM". |
