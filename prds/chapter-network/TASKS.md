@@ -104,6 +104,9 @@ same review and left, because none stops the build. Each one names the file.
     data synced from the CRM, standard under ruling 4 — changing them is a CRM
     decision, not a text sweep. Identifiers (`cbm-`, `--cbm-*`, `CBMBusy`…)
     are never renamed.
+    **Ruled 09-23-26: later, in a normal release.** Boston launches showing
+    CBM in these places until then (Doug chose this over sweeping before the
+    Boston install).
 
 ### Steps
 
