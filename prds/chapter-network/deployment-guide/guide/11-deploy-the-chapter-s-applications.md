@@ -1,7 +1,7 @@
 # Stage 11 — Deploy the chapter's applications
 
-**Version:** 0.5  
-**Last Updated:** 09-23-26 00:55  
+**Version:** 0.6  
+**Last Updated:** 09-23-26 12:25  
 **Generated from** `steps/stage-11.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -20,6 +20,7 @@ The applications are what the chapter's staff, mentors and the public actually u
 - The CRM, built and matching the standard, with the applications' key in the vault (stage 9)
 - The Google permissions and the Google key (stage 10)
 - The chapter's domain names in its Cloudflare account (step 3.7)
+- The chapter's hosting account linked to the code repository on GitHub (step 5.9)
 
 **Steps in this stage:**
 
@@ -193,6 +194,7 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 - step 11.2 Generate the deployment settings
 - step 11.3 Load the secrets
+- step 5.9 Link the hosting account to the code repository
 
 **Do this:**
 
@@ -637,6 +639,7 @@ The applications are what the chapter's staff, mentors and the public actually u
 
 | Version | Date | Change |
 |---|---|---|
+| 0.6 | 09-23-26 12:25 | Step 11.5 now waits for step 5.9, the hosting account's link to the code repository on GitHub, without which creating the application fails. |
 | 0.5 | 09-23-26 00:55 | From the review before the first real chapter. Every Google, mail, Drive, website and Zoom setting now goes into the deployment in step 11.2, from the form, and steps 11.14 to 11.18 confirm them at /setup instead of setting them there: the background worker decides at start-up from its own settings whether to read the mailbox, so a switch set at /setup never reached it. The Google key is named by file (GOOGLE_SERVICE_ACCOUNT_KEY_FILE), and step 11.3 deletes the file. The stored-data encryption key the generator creates is now one the software accepts; before, /setup refused to store any secret. Step 11.7 no longer names a release that does not exist, and step 11.16 creates the test mentor and client it needs. Step 11.18 switches doctl back. |
 | 0.4 | 09-19-26 14:45 | Step 11.4's finishing test now matches step 11.3: the hosting platform supplies the database connection to the application, and no person holds it (Doug, 09-19-26). |
 | 0.3 | 09-19-26 00:50 | The settings generator no longer writes the trial chapter's footer label, a localhost origin or the development branch, so the step that corrected them by hand is now a check. It refuses the development branch unless the form allows it. |

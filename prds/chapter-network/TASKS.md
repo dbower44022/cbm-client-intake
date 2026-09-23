@@ -76,7 +76,9 @@ same review and left, because none stops the build. Each one names the file.
     https://claude.ai/artifact/Xy8TFAbhH3hCtuBDSbTY7m
     **Boston done 09-23:** Doug linked Boston's team to GitHub from the Create
     App screen; `dbower44022/cbm-client-intake` and its `release` branch are
-    visible there, nothing was created. Still owed: the guide step itself.
+    visible there, nothing was created. **Guide step added 09-23 as step 5.9**
+    (step 11.5 now waits for it), with a note that the link moves to the
+    central support organization's own GitHub organization once it exists.
 13. **The guide assumes Cloudflare DNS and a WordPress site.** Boston is on
     Squarespace for both, with DNSSEC on. Stages 3, 6, 9, 11 and 13 need a
     non-Cloudflare path (see DECISIONS 2026-09-23), and any DNS move must switch

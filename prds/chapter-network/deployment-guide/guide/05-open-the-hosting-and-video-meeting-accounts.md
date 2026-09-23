@@ -1,14 +1,14 @@
 # Stage 5 — Open the hosting and video meeting accounts
 
-**Version:** 0.2  
-**Last Updated:** 09-19-26 00:05  
+**Version:** 0.3  
+**Last Updated:** 09-23-26 12:25  
 **Generated from** `steps/stage-05.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
 
 ## Why this stage
 
-The chapter's CRM server, its applications and their database all run in a hosting account, and the public webinar programme runs through a video meeting account. This stage opens both in the chapter's own name, so the chapter owns its system and can withdraw access at any time. It ends with the two tokens CRMBuilder needs to build the CRM inside the chapter's accounts.
+The chapter's CRM server, its applications and their database all run in a hosting account, and the public webinar programme runs through a video meeting account. This stage opens both in the chapter's own name, so the chapter owns its system and can withdraw access at any time. It ends with the two tokens CRMBuilder needs to build the CRM inside the chapter's accounts, and with the hosting account linked to the code repository the applications are built from.
 
 **Who:** The chapter opens and pays for the accounts. The central support organization is invited in, and creates the two tokens.  
 **Time:** About two hours of work. The nonprofit hosting credits can take weeks to be answered, but nothing waits on them.  
@@ -32,6 +32,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 - 5.6 Turn on two-step sign-in for both accounts
 - 5.7 Write down every account the chapter now owns
 - 5.8 Create the two tokens CRMBuilder builds with
+- 5.9 Link the hosting account to the code repository
 
 ---
 
@@ -347,9 +348,61 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 ---
 
+## 5.9 Link the hosting account to the code repository
+
+**Why:** The applications are built from the code repository on GitHub, and the hosting account can fetch it, and take each weekly release by itself, only after GitHub has given it access.
+
+**Who:** The central support organization inside the chapter's hosting account, signed in to GitHub as the repository's owner
+
+**Finish first:**
+
+- step 5.4 Grant the central support organization access to the hosting account
+
+**Do this:**
+
+1. Sign in at https://cloud.digitalocean.com under your own named sign-in from step 5.4.
+   *You should see:* The DigitalOcean control panel.
+2. Open the team switcher and choose the chapter's team. The exact placement of the team switcher has not been checked for this guide.
+   *You should see:* The chapter's team name shown as the current team. If the chapter's team is not in the list, the step 5.4 invitation has not been accepted yet.
+3. Choose Create, then App Platform.
+   *You should see:* The Create App screen, with a list of places to take code from, including GitHub.
+4. Choose GitHub.
+   *You should see:* Either a Repository box, or a button to connect GitHub. The button's label may be Connect GitHub account or Manage Access. If the Repository box is already there, go on to the action that types the repository's name.
+5. Choose the button to connect GitHub. If GitHub asks you to sign in, sign in as the repository's owner, today dbower44022.
+   *You should see:* A GitHub page asking you to authorize or install DigitalOcean.
+6. Give DigitalOcean access to the repository cbm-client-intake only. If the page offers All repositories or Only select repositories, choose Only select repositories and pick cbm-client-intake. Then choose the Authorize or Install button the page shows. If GitHub says the DigitalOcean app is already installed, check that cbm-client-intake is listed under Repository access, and add it and choose Save if it is not.
+   *You should see:* GitHub returning you to DigitalOcean's Create App screen.
+7. Click into the Repository box and type cbm-client-intake.
+   *You should see:* dbower44022/cbm-client-intake offered in a short list under the Repository box. If it is not offered, stop: step 11.5 will fail.
+8. Choose dbower44022/cbm-client-intake from that list.
+   *You should see:* The Repository box reads dbower44022/cbm-client-intake, and a Branch drop-down appears below it, most likely reading main. Do not change it.
+9. Click the Branch drop-down to open its list. Do not pick anything from it.
+   *You should see:* release among the branch names. That is the whole test.
+10. Press Esc to close the list.
+   *You should see:* The Branch list closed. Nothing on this screen is saved.
+11. Do not choose Next or Create. Choose App Platform in the left menu to leave the screen. Going on would create a billed application with the wrong settings.
+   *You should see:* The chapter's App Platform page, with no application. An empty page may show a getting-started panel or a Create App button instead of a list.
+
+**Done when all of these are true:**
+
+- The chapter's DigitalOcean team is authorized to read the code repository on GitHub.
+- The repository's release branch is offered on the chapter's Create App screen.
+- No application was created.
+
+**Note:** Today the link runs through one personal GitHub account, the repository owner's. Once the central support organization has its own GitHub organization, the repository moves there and this link is made by that organization's account instead.
+
+**How to check:** The release branch appears in the Branch list on the chapter's Create App screen.
+
+**If it didn't work:** Stop, and ask the central support organization before going on.
+
+**What usually goes wrong:** Skipping this step. Nothing complains until step 11.5, where creating the application fails in the middle of the build. Also, every chapter's builds then depend on the GitHub account that made the link: if that account revokes DigitalOcean's access, the chapter's running application keeps working but stops building and stops taking weekly releases. Until the repository moves to the central support organization's own GitHub organization, that account is one person's.
+
+---
+
 ## Change log
 
 | Version | Date | Change |
 |---|---|---|
+| 0.3 | 09-23-26 12:25 | Step 5.9 added: link the chapter's hosting account to the code repository on GitHub. No step did this, and step 11.5 would have failed for Boston, whose account was opened with email. Done for real on Boston the same day. A note says the link belongs to the central support organization's own GitHub organization once it exists (Doug, 09-23-26). |
 | 0.2 | 09-19-26 00:05 | Every action made precise (Doug, 09-19-26): DigitalOcean sign-up, billing, team invitation and API token settings; the Cloudflare DNS token's exact settings; the Zoom Server-to-Server OAuth app with the four scope groups the software uses (from core/zoom.py and EVENTS-SETUP.md); two-step sign-in and recovery codes; the account list kept in the Operations vault. Screen wording not checked on screen is marked as such. |
 | 0.1 | 09-18-26 17:20 | First version as data, converted from the methods for the hosting and video meeting accounts (9-Methods-Hosting-Website-Policies.md, version 0.4) with the step list's finishing tests. |
