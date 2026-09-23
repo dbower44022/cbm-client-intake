@@ -1,7 +1,7 @@
 # Stage 9 — Build the CRM system
 
-**Version:** 0.6  
-**Last Updated:** 09-23-26 13:39  
+**Version:** 0.7  
+**Last Updated:** 09-23-26 13:41  
 **Generated from** `steps/stage-09.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -64,11 +64,13 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
    - The version of each of the two paid add-on products.
    - The release of the standard configuration this chapter will get.
    *You should see:* Three version numbers, written where the rest of the stage can read them.
-2. There is no published statement of the standard yet (work list item 2). Until there is, use the versions Cleveland's production system runs, and the date its configuration was last captured.
+2. For the CRM version, write down: the current release CRMBuilder installs. A new chapter takes the current release, and Cleveland's systems move up to it later (ruled 09-23-26). CRMBuilder's deploy cannot install any other version, so the exact number is only known once the server exists; step 9.3 records it.
+3. For the other two, there is no published statement of the standard yet. Until there is, use the add-on versions Cleveland's production system runs, and the date its configuration was last captured.
+   *You should see:* Each add-on version marked by its maker as supporting CRM version 10. If one is not, stop and ask: Cleveland's own add-ons have not yet been checked against version 10.
 
 **Done when all of these are true:**
 
-- The chapter's build has, in writing, the CRM version to install.
+- The chapter's build has, in writing, the CRM version to install: the current release CRMBuilder installs.
 - The build has, in writing, the version of each of the two add-on products.
 - The build has, in writing, which release of the standard configuration is being applied.
 
@@ -78,7 +80,7 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 **If it didn't work:** Do not start the build. Ask the central support organization for the three numbers.
 
-**What usually goes wrong:** Skipping this and installing whatever version is newest. The August build did exactly that and ended up a whole major version ahead of Cleveland. It worked, but nobody planned it.
+**What usually goes wrong:** Writing down the CRM version Cleveland's test system runs, 9.3.4. CRMBuilder cannot install it, and a new chapter does not take it: it takes the current release. The August build installed 10.0.6 and the configuration captured from 9.3.4 rebuilt cleanly on it.
 
 ---
 
@@ -174,17 +176,20 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 **Do this:**
 
 1. Sign in to the new CRM as the administrator the wizard created, and open the Administration page.
-   *You should see:* The installed version number, shown on the Administration page.
-2. Compare it with the CRM version from step 9.1.
-   *You should see:* The same number.
+   *You should see:* The installed version number, shown on the Administration page. It is 10 or higher.
+2. In Proton Pass, add the number to the CRM administrator item in the chapter's Operations vault, as a note headed CRM version.
+3. Send the number to the central support organization, which records it against the chapter.
+   *You should see:* A reply confirming it is recorded.
 
-**Done when:** The installed version matches the version named in the step above, not simply the newest available.
+**Done when:** The installed version is the current release CRMBuilder installs, and its exact number is recorded where the central support organization can find it.
 
-**How to check:** The version on the CRM's administration page matches step 9.1.
+**Note:** Ruled 09-23-26: a new chapter takes the current release, and Cleveland's systems move up to it later.
 
-**If it didn't work:** Stop, and ask the central support organization. Do not carry on with a different version.
+**How to check:** The version on the CRM's administration page is 10 or higher, and matches the number the central support organization recorded.
 
-**What usually goes wrong:** The wizard installs whatever version is newest. In August the configuration captured from an older version rebuilt cleanly on a newer one, so a difference is not automatically fatal. It is simply unplanned.
+**If it didn't work:** A number below 10 means something other than CRMBuilder's deploy installed the CRM. Stop, and ask the central support organization.
+
+**What usually goes wrong:** Not recording the number. Until Cleveland moves up (task C1 in the chapter network task list), the network runs two major CRM versions, and a problem found on one may not happen on the other. The recorded number is what tells the two apart.
 
 ---
 
@@ -731,6 +736,7 @@ The CRM is the chapter's system of record: every client, mentor, partner, funder
 
 | Version | Date | Change |
 |---|---|---|
+| 0.7 | 09-23-26 13:41 | Steps 9.1 and 9.3 brought in line with the ruling that a new chapter runs the current CRM release and Cleveland moves up later (Doug, 09-23-26). Step 9.1 writes down "the current release CRMBuilder installs" rather than Cleveland's version, and checks each add-on supports version 10. Step 9.3 records the exact number instead of comparing it, since CRMBuilder cannot install any other. Both finishing tests changed with the step list (version 0.18). |
 | 0.6 | 09-23-26 13:39 | Step 9.2 points to step 5.8 for the chapter's engagement, which 5.8 now creates, instead of stopping to ask. |
 | 0.5 | 09-23-26 13:35 | Step 9.2 rewritten click by click from CRMBuilder's deploy wizard (Doug, 09-23-26: the step was not clear). Named every screen, box and stage, and three facts the old text hid: CRMBuilder's own sign-in key never leaves its service, so the key ticked under Extra SSH keys must first be made and added to the chapter's DigitalOcean account; the wizard's Generate button can put - or _ in the password, which step 9.10 cannot take; and a Preparing server failure on a fast run is cured by Retry. Step 9.4 now names that key. |
 | 0.4 | 09-23-26 00:55 | Step 9.11 now runs scripts/migrate_client_assignment_role.py. The roles captured on 31 August give the Client Assignment Role no User permission, so a client administrator on that team alone was refused on Assign (ruled 09-07-26). Its If it didn't work now tells an expected exit 4 (a field the source deleted) from a real one (an add-on missing); the old advice to install the add-ons and run again never ended. Found in the review before the first real chapter. |

@@ -1,10 +1,10 @@
 # New Chapter Deployment Guide — The Step List
 
 **Document:** The bare list of steps, with no methods yet
-**Version:** 0.17
+**Version:** 0.18
 **Status:** Draft for review
 **Owner:** Doug Bower
-**Last Updated:** 09-19-26 14:45
+**Last Updated:** 09-23-26 13:41
 
 ---
 
@@ -401,7 +401,7 @@ confirmed it can open it.
 **9.1 Obtain the current standard from the central support organization.**
 Done when:
 
-- The chapter's build has, in writing, the CRM version to install.
+- The chapter's build has, in writing, the CRM version to install: the current release CRMBuilder installs.
 - The build has, in writing, the version of each of the two add-on products.
 - The build has, in writing, which release of the standard configuration is being applied.
 
@@ -412,8 +412,11 @@ Done when: a server is running in the chapter's own hosting account and the cent
 support organization can reach it.
 
 **9.3 Install the CRM software at the version the standard names.**
-Done when: the installed version matches the version named in the step above, not
-simply the newest available.
+Done when: the installed version is the current release CRMBuilder installs, and
+its exact number is recorded where the central support organization can find it.
+
+Note: Ruled 09-23-26: a new chapter takes the current release, and Cleveland's
+systems move up to it later.
 
 **9.4 Confirm command line access, and record who holds the key.**
 Done when: the central support organization can open a command line on the server,
@@ -887,6 +890,7 @@ Done when: a date is booked to review how the first months have gone.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.18 | 09-23-26 13:41 | Steps 9.1 and 9.3 brought in line with the ruling that a new chapter runs the current CRM release and Cleveland moves up later (Doug, 09-23-26). Step 9.1 names the current release CRMBuilder installs as the CRM version; step 9.3 records the installed number rather than comparing it with Cleveland's. |
 | 0.17 | 09-19-26 14:45 | Steps 11.4 and 8.8 brought in line with step 11.3 (Doug, 09-19-26): the database connection is supplied to the application by the hosting platform and no person holds it, so it is not kept in the vault. The other six secrets are. |
 | 0.16 | 09-19-26 00:30 | Three finishing tests brought in line with later rulings, found by the precision sweep. Step 8.3: the events page address is left empty, so the software uses its own page. Step 8.4: the Google branch condition removed (every chapter holds its own Google Workspace), and the shared drive condition removed, because the shared drive is only created in step 10.5. Step 16.1: the 09-14-26 ruling moved from the conditions into the note. |
 | 0.15 | 09-19-26 00:10 | Step 4.1 no longer offers a Google Workspace provided by the central support organization. Every chapter hosts its own email on its own Google Workspace (Doug, 09-18-26); the step now confirms that. |

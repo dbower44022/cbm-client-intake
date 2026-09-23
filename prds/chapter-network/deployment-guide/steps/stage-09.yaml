@@ -1,7 +1,7 @@
 stage: 9
 name: Build the CRM system
-version: "0.6"
-updated: "09-23-26 13:39"
+version: "0.7"
+updated: "09-23-26 13:41"
 why: >-
   The CRM is the chapter's system of record: every client, mentor, partner,
   funder and meeting lives in it, and every application reads and writes it. This
@@ -38,9 +38,11 @@ steps:
           - The version of each of the two paid add-on products.
           - The release of the standard configuration this chapter will get.
         see: Three version numbers, written where the rest of the stage can read them.
-      - do: There is no published statement of the standard yet (work list item 2). Until there is, use the versions Cleveland's production system runs, and the date its configuration was last captured.
+      - do: "For the CRM version, write down: the current release CRMBuilder installs. A new chapter takes the current release, and Cleveland's systems move up to it later (ruled 09-23-26). CRMBuilder's deploy cannot install any other version, so the exact number is only known once the server exists; step 9.3 records it."
+      - do: "For the other two, there is no published statement of the standard yet. Until there is, use the add-on versions Cleveland's production system runs, and the date its configuration was last captured."
+        see: "Each add-on version marked by its maker as supporting CRM version 10. If one is not, stop and ask: Cleveland's own add-ons have not yet been checked against version 10."
     done_when:
-      - "The chapter's build has, in writing, the CRM version to install."
+      - "The chapter's build has, in writing, the CRM version to install: the current release CRMBuilder installs."
       - "The build has, in writing, the version of each of the two add-on products."
       - "The build has, in writing, which release of the standard configuration is being applied."
     note: "Without these three numbers the later steps have nothing to check against."
@@ -49,9 +51,10 @@ steps:
       probe: The app reads them from the published standard and shows them before the build starts.
     if_not: Do not start the build. Ask the central support organization for the three numbers.
     goes_wrong: >-
-      Skipping this and installing whatever version is newest. The August build did
-      exactly that and ended up a whole major version ahead of Cleveland. It worked,
-      but nobody planned it.
+      Writing down the CRM version Cleveland's test system runs, 9.3.4. CRMBuilder
+      cannot install it, and a new chapter does not take it: it takes the current
+      release. The August build installed 10.0.6 and the configuration captured from
+      9.3.4 rebuilt cleanly on it.
     later: The standard is published with a version number that the checking tool compares against.
     status: not-yet-tried — the August build had no standard to obtain.
     source: 3-Methods-CRM-Google-Applications.md#9.1
@@ -161,21 +164,23 @@ steps:
     mode: automated
     actions:
       - do: Sign in to the new CRM as the administrator the wizard created, and open the Administration page.
-        see: The installed version number, shown on the Administration page.
-      - do: Compare it with the CRM version from step 9.1.
-        see: The same number.
+        see: The installed version number, shown on the Administration page. It is 10 or higher.
+      - do: In Proton Pass, add the number to the CRM administrator item in the chapter's Operations vault, as a note headed CRM version.
+      - do: Send the number to the central support organization, which records it against the chapter.
+        see: A reply confirming it is recorded.
     done_when: >-
-      The installed version matches the version named in the step above, not
-      simply the newest available.
+      The installed version is the current release CRMBuilder installs, and its
+      exact number is recorded where the central support organization can find it.
+    note: "Ruled 09-23-26: a new chapter takes the current release, and Cleveland's systems move up to it later."
     check:
-      how: The version on the CRM's administration page matches step 9.1.
-      probe: The app reads the CRM's version and compares it with the standard.
-    if_not: Stop, and ask the central support organization. Do not carry on with a different version.
+      how: The version on the CRM's administration page is 10 or higher, and matches the number the central support organization recorded.
+      probe: The app reads the CRM's version and records it against the chapter.
+    if_not: A number below 10 means something other than CRMBuilder's deploy installed the CRM. Stop, and ask the central support organization.
     goes_wrong: >-
-      The wizard installs whatever version is newest. In August the configuration
-      captured from an older version rebuilt cleanly on a newer one, so a difference
-      is not automatically fatal. It is simply unplanned.
-    later: The deployment tool installs the version the standard names.
+      Not recording the number. Until Cleveland moves up (task C1 in the chapter network task list), the network
+      runs two major CRM versions, and a problem found on one may not happen on the
+      other. The recorded number is what tells the two apart.
+    later: The deployment tool installs the version the standard names, and every chapter's number is checked against it.
     status: done-for-real
     source: 3-Methods-CRM-Google-Applications.md#9.3
 
@@ -708,6 +713,10 @@ steps:
     source: 3-Methods-CRM-Google-Applications.md#9.20
 
 changes:
+  - version: "0.7"
+    date: "09-23-26 13:41"
+    change: >-
+      Steps 9.1 and 9.3 brought in line with the ruling that a new chapter runs the current CRM release and Cleveland moves up later (Doug, 09-23-26). Step 9.1 writes down "the current release CRMBuilder installs" rather than Cleveland's version, and checks each add-on supports version 10. Step 9.3 records the exact number instead of comparing it, since CRMBuilder cannot install any other. Both finishing tests changed with the step list (version 0.18).
   - version: "0.6"
     date: "09-23-26 13:39"
     change: >-
