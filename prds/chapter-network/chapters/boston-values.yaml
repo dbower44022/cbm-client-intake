@@ -1,6 +1,6 @@
 # Chapter information form — WRITTEN FROM THE CHAPTER INFORMATION PAGE. Do not edit by hand:
 # change the answer on the page and write this file again (deployment guide step 8.10).
-# written: 09-23-26 18:08
+# written: 09-23-26 18:19
 # OWED — answers marked not known yet, each with the step that needs it:
 #   Web address (URL) of your client code of conduct page (web.policy_client_conduct_url): marked not known yet; needed by step 17.3, before the public forms are used. Once known, it is entered at the applications' settings page; no redeployment is needed.
 #   Web address (URL) of your mentor code of ethics page (web.policy_mentor_ethics_url): marked not known yet; needed by step 17.3, before the public forms are used. Once known, it is entered at the applications' settings page; no redeployment is needed.
@@ -71,19 +71,19 @@ secrets:
 - APP_ENCRYPTION_KEY
 - GOOGLE_SERVICE_ACCOUNT_JSON
 flags:
-  events_public_api: false
+  events_public_api: owed
   zoom_events: false
   google_create_mailbox: false
-  gmail_sync: false
-  gcal_events: false
-  gdrive_docs: false
+  gmail_sync: owed
+  gcal_events: owed
+  gdrive_docs: owed
   gdrive_identity: ''
-  google_directory_check: false
-  mentor_provision_users: false
-  analytics_enabled: false
-  events_enabled: false
-  record_quick_add: false
+  google_directory_check: owed
+  mentor_provision_users: owed
+  analytics_enabled: owed
+  events_enabled: owed
+  record_quick_add: owed
   setup_enabled: true
-  async_delivery: false
-  espo_dry_run: false
+  async_delivery: owed
+  espo_dry_run: owed
   deploy_on_push: true

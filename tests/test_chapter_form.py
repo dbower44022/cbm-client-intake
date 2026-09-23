@@ -218,3 +218,15 @@ def test_the_page_carries_every_question_and_no_placeholder():
         assert f'"{f["key"]}"' in html, f["key"]
     for pattern, _ in form.CHECKS.values():
         assert json.dumps(pattern)[1:-1] in html
+
+
+def test_a_switch_not_known_yet_is_written_as_owed_and_the_generator_refuses_it(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(to_values, "CHAPTERS", tmp_path)
+    src = tmp_path / "answers.txt"
+    src.write_text(_block(_answers(flags__gmail_sync={"notYet": True})))
+    assert to_values.main(["x", str(src)]) == 0
+    values = yaml.safe_load((tmp_path / "boston-values.yaml").read_text())
+    assert values["flags"]["gmail_sync"] == "owed"
+    assert to_values.generator_problems(values) == ([], [])
+    with pytest.raises(ValueError, match="gmail_sync"):
+        to_values._render_spec().build_spec(values, {})

@@ -138,6 +138,13 @@ def deploy_branch(values: dict) -> str:
 def build_spec(values: dict, env: dict[str, str]) -> dict:
     """The App Platform spec for one chapter. ``env`` must already hold the
     minted secrets; see main() for SESSION_SECRET / APP_ENCRYPTION_KEY."""
+    owed = [k for k, v in values["flags"].items() if v == "owed"]
+    if owed:
+        raise ValueError(
+            f"flags {owed} are marked not known yet (owed) in the values file. Answer "
+            "them on the chapter information page and write the values file again "
+            "(deployment guide step 8.10)."
+        )
     missing = [k for k in ("ESPO_API_KEY", "ESPO_PROVISION_USERNAME", "ESPO_PROVISION_PASSWORD",
                            "SESSION_SECRET", "APP_ENCRYPTION_KEY") if k not in env]
     if missing:

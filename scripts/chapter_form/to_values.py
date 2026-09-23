@@ -33,6 +33,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fields as form  # noqa: E402
 
 CHAPTERS = form.ROOT / "prds" / "chapter-network" / "chapters"
+# A switch marked not known yet. Written as this word, never as false, so the
+# file cannot pass an unanswered switch off as a decision; the settings
+# generator (scripts/rehearsal/render_spec.py) refuses it at step 11.2.
+OWED = "owed"
 SECRET_MARKERS = ("-----BEGIN", "private_key", "PRIVATE KEY")
 
 
@@ -76,7 +80,10 @@ def build_values(answers: dict, stage: dict | None = None) -> dict:
         shown = form.is_shown(f, answers)
         value = a.get("value") if shown and not a.get("notYet") else None
         if f["kind"] == "bool":
-            values[section][name] = bool(value) if value is not None else False
+            if shown and a.get("notYet"):
+                values[section][name] = OWED
+            else:
+                values[section][name] = bool(value) if value is not None else False
         else:
             values[section][name] = "" if value is None else str(value).strip()
     # Not asked: empty means the applications' own events page (step 8.3's note).
@@ -104,6 +111,7 @@ def generator_problems(values: dict) -> tuple[list[str], list[str]]:
                    "SESSION_SECRET": "t", "APP_ENCRYPTION_KEY": Fernet.generate_key().decode(),
                    "GOOGLE_SERVICE_ACCOUNT_KEY_FILE": str(key)}
         trial = json.loads(json.dumps(values))
+        trial["flags"] = {k: (False if v == OWED else v) for k, v in trial["flags"].items()}
         for section in ("web", "google", "zoom", "crm"):  # answers owed later must not fail the trial
             for k, v in trial.get(section, {}).items():
                 if v == "" and k.endswith("_url"):
