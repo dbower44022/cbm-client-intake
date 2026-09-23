@@ -1,7 +1,7 @@
 # Stage 5 — Open the hosting and video meeting accounts
 
-**Version:** 0.3  
-**Last Updated:** 09-23-26 12:25  
+**Version:** 0.4  
+**Last Updated:** 09-23-26 13:50  
 **Generated from** `steps/stage-05.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -322,14 +322,17 @@ The chapter's CRM server, its applications and their database all run in a hosti
 5. Set exactly:
    - Token name: crmbuilder-CHAPTER-SLUG
    - Permissions: Zone, DNS, Edit (the template sets this)
+   - A second permission line: Zone, Zone, Read. CRMBuilder lists the chapter's zones with it, and the template does not add it.
    - Zone resources: Include, Specific zone, and each of the chapter's domain names; never All zones
    - Client IP address filtering: leave empty
    - TTL: leave empty, for no expiry
 6. Choose to continue to the summary, then create the token.
    *You should see:* A new token, shown once only, covering only the chapter's zones.
 7. Copy the Cloudflare token straight into the chapter's Operations vault, named Cloudflare DNS token for CRMBuilder.
-8. In CRMBuilder, open the chapter's engagement, open its provider credentials, and enter the DigitalOcean token as the DigitalOcean credential and the Cloudflare token as the Cloudflare credential.
-   *You should see:* Both credentials shown as configured, and the chapter's Cloudflare zones listed.
+8. In CRMBuilder, choose the chapter's engagement in the strip across the top of the window. Open the tab 11 · CRM Deployment, click Instances in the side bar, then Deploy new…, and on Step 1 of 5 — Providers click Set credentials….
+   *You should see:* A window titled Provider credentials, with one box for DigitalOcean and one for Cloudflare.
+9. In each box, paste the token into Token, type crmbuilder-CHAPTER-SLUG into Label, and click Save token. Then click Close, and click Cancel to leave the deploy window; step 9.2 runs it.
+   *You should see:* Step 1 reading DigitalOcean: ✓ Configured — crmbuilder-CHAPTER-SLUG, and the same for Cloudflare. The token itself is never shown again.
 
 **Done when all of these are true:**
 
@@ -403,6 +406,7 @@ The chapter's CRM server, its applications and their database all run in a hosti
 
 | Version | Date | Change |
 |---|---|---|
+| 0.4 | 09-23-26 13:50 | Step 5.8 names CRMBuilder's real screens for entering the two tokens (Set credentials…, then the Provider credentials window), gives each token the label step 9.2 checks for, and adds the Zone, Zone, Read permission to the Cloudflare token: CRMBuilder asks for Zone:Read and DNS:Edit, and the Edit zone DNS template gives only the second. |
 | 0.3 | 09-23-26 12:25 | Step 5.9 added: link the chapter's hosting account to the code repository on GitHub. No step did this, and step 11.5 would have failed for Boston, whose account was opened with email. Done for real on Boston the same day. A note says the link belongs to the central support organization's own GitHub organization once it exists (Doug, 09-23-26). |
 | 0.2 | 09-19-26 00:05 | Every action made precise (Doug, 09-19-26): DigitalOcean sign-up, billing, team invitation and API token settings; the Cloudflare DNS token's exact settings; the Zoom Server-to-Server OAuth app with the four scope groups the software uses (from core/zoom.py and EVENTS-SETUP.md); two-step sign-in and recovery codes; the account list kept in the Operations vault. Screen wording not checked on screen is marked as such. |
 | 0.1 | 09-18-26 17:20 | First version as data, converted from the methods for the hosting and video meeting accounts (9-Methods-Hosting-Website-Policies.md, version 0.4) with the step list's finishing tests. |
