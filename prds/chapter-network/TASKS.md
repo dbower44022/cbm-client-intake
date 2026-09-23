@@ -91,6 +91,20 @@ same review and left, because none stops the build. Each one names the file.
     lines 70 and 159 ("about CBM", "from CBM"). An applicant sees Cleveland's
     initials (`OPEN-ITEMS.md` #28).
 
+15. **The software says "CBM" in about 90 places a user can see, and has no
+    setting for a chapter's abbreviation** (found 09-23-26). The form now asks
+    for it (`chapter.abbreviation`, stage 8.2); nothing reads it. Roughly 40 are
+    in page text and scripts (browser tab titles "CBM — …", "ask CBM staff",
+    "CBM Contacts", "How did you hear about CBM?") and roughly 50 in server
+    messages. The fix is Phase 0's pattern: an `ORGANIZATION_ABBREVIATION`
+    setting defaulting to `CBM`, a token substituted server-side beside
+    `{{org}}`, a sweep, and a guard test, so Cleveland renders exactly as
+    before. **Not in scope of that sweep:** the CRM enum values "CBM Client or
+    Volunteer" and "CBM Email" in the forms' "how did you hear" lists are CRM
+    data synced from the CRM, standard under ruling 4 — changing them is a CRM
+    decision, not a text sweep. Identifiers (`cbm-`, `--cbm-*`, `CBMBusy`…)
+    are never renamed.
+
 ### Steps
 
 1. Note what the first chapter's build actually hit, and fold it in here.

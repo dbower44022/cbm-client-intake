@@ -31,7 +31,7 @@ form = _load("scripts/chapter_form/fields.py", "fields")
 to_values = _load("scripts/chapter_form/to_values.py", "to_values_under_test")
 build_page = _load("scripts/chapter_form/build_page.py", "build_page_under_test")
 
-KINDS = {"text", "slug", "url", "email", "domain", "bool", "choice"}
+KINDS = {"text", "abbreviation", "slug", "url", "email", "domain", "bool", "choice"}
 
 # Every form key a build script reads (render_spec.build_spec, apply_api_half.chapter_settings).
 READ_BY_BUILD = {
@@ -78,6 +78,7 @@ def test_every_switch_has_a_recommended_answer():
     ("slug", "boston", "Boston MA"),
     ("slug", "boston-mentors", "a" * 26),
     ("slug", "b2", "boston-"),
+    ("abbreviation", "BBM", "B B M"),
     ("url", "https://bbmentors.org/privacy/", "bbmentors.org"),
     ("email", "info@bbmentors.org", "info at bbmentors"),
     ("domain", "bbmentors.org", "https://bbmentors.org"),
@@ -108,6 +109,8 @@ def _answers(**over):
             v = "info@bbmentors.org"
         elif f["kind"] == "domain":
             v = "bbmentors.org"
+        elif f["kind"] == "abbreviation":
+            v = "BBM"
         elif f["kind"] == "slug":
             v = "boston"
         else:
