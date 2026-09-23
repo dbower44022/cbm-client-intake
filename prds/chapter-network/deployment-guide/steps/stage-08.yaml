@@ -1,7 +1,7 @@
 stage: 8
 name: Fill in the chapter information form
-version: "0.4"
-updated: "09-23-26 11:45"
+version: "0.5"
+updated: "09-23-26 12:10"
 why: >-
   The chapter information form holds the roughly forty answers that differ from
   one chapter to the next: its name, its addresses, its Google details and its
@@ -38,24 +38,26 @@ steps:
         items:
           - "Build and publish the chapter information page for CHAPTER-NAME with scripts/chapter_form/build_page.py."
         see: A link to a page titled with the chapter's short name followed by Chapter Information.
-      - do: Open the link. In the page's Share menu, invite the chapter's setup contact by their email address, with permission to edit. The page cannot save answers for anyone opening it through a plain link.
-        see: The setup contact listed as able to edit.
+      - do: Open the link. In the page's Share menu, change the access so anyone with the link can open the page. A published page starts private, and a visitor who is not signed in to claude.ai is shown a sign-in page until this is changed.
+        see: The Share menu showing the page open to anyone with the link.
+      - do: Open the link in a private browser window, where you are not signed in.
+        see: The page itself, not a sign-in page.
       - do: Send the link to the chapter's setup contact, with this guide's stage 8 page.
       - do: "The chapter's setup contact: open the link."
         see: The page, with a line at the top reading how many questions are answered, and each question marked either For the chapter or For central support.
     done_when: >-
       The chapter has the current blank form and knows who fills in each part.
     check:
-      how: The setup contact opens the page, types an answer into one question, and the page shows it as saved with their name.
-      probe: The page records who saved each answer.
-    if_not: If the page says it cannot save answers, the invitation is missing or gives view-only permission. The central support organization invites the setup contact again, with permission to edit.
+      how: The setup contact opens the page, types an answer into one question, reloads the page, and the answer is still there, marked saved in this browser.
+      probe: The page reports on screen when the browser is not keeping answers.
+    if_not: If the setup contact sees a sign-in page, the page is still private; change its access in the Share menu. If the page says the browser is not keeping answers, the setup contact uses Copy all answers before closing it, or answers on a call with the central support organization typing.
     goes_wrong: >-
-      Inviting someone outside the central support organization's claude.ai
-      organization has not been tried before the Boston chapter. If the setup
-      contact cannot open the page or cannot save, fall back to filling in the
-      form on a call, with the central support organization typing the answers.
+      Leaving the page private. It looks fine to the person who published it,
+      because they are signed in, and every one else sees a sign-in page. The
+      setup contact needs no claude.ai account once the page is open to anyone
+      with the link (confirmed 09-23-26).
     later: The onboarding app in CRMBuilder replaces the page and asks the same questions from the same source.
-    status: not-yet-tried — the page is new for the Boston chapter; the trial chapter's form was a file typed by hand.
+    status: done-for-real — the Boston chapter's page opened signed out once its access was changed (09-23-26).
     source: 5-Methods-Form-Accounts-Checks.md#8.1
 
   - id: "8.2"
@@ -741,6 +743,10 @@ steps:
     source: 5-Methods-Form-Accounts-Checks.md#8.10
 
 changes:
+  - version: "0.5"
+    date: "09-23-26 12:10"
+    change: >-
+      Step 8.1 shares the page by link instead of by email invitation. A published page starts private and shows a signed-out visitor a sign-in page; opened to anyone with the link, the Boston chapter's page worked with no claude.ai account (Doug, 09-23-26).
   - version: "0.4"
     date: "09-23-26 11:45"
     change: >-

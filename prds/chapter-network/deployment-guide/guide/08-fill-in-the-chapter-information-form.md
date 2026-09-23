@@ -1,7 +1,7 @@
 # Stage 8 — Fill in the chapter information form
 
-**Version:** 0.4  
-**Last Updated:** 09-23-26 11:45  
+**Version:** 0.5  
+**Last Updated:** 09-23-26 12:10  
 **Generated from** `steps/stage-08.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -45,26 +45,26 @@ The chapter information form holds the roughly forty answers that differ from on
 
 - step 2.6 Sign the agreement
 
-> This step has not yet been done on a real chapter. Follow it, and tell the central support organization anything that differs.
-
 **Do this:**
 
 1. The central support organization: in a Claude Code session in the folder ~/Dropbox/Projects/cbm-client-intake, type this request, with the chapter's name in place of CHAPTER-NAME:
    - Build and publish the chapter information page for CHAPTER-NAME with scripts/chapter_form/build_page.py.
    *You should see:* A link to a page titled with the chapter's short name followed by Chapter Information.
-2. Open the link. In the page's Share menu, invite the chapter's setup contact by their email address, with permission to edit. The page cannot save answers for anyone opening it through a plain link.
-   *You should see:* The setup contact listed as able to edit.
-3. Send the link to the chapter's setup contact, with this guide's stage 8 page.
-4. The chapter's setup contact: open the link.
+2. Open the link. In the page's Share menu, change the access so anyone with the link can open the page. A published page starts private, and a visitor who is not signed in to claude.ai is shown a sign-in page until this is changed.
+   *You should see:* The Share menu showing the page open to anyone with the link.
+3. Open the link in a private browser window, where you are not signed in.
+   *You should see:* The page itself, not a sign-in page.
+4. Send the link to the chapter's setup contact, with this guide's stage 8 page.
+5. The chapter's setup contact: open the link.
    *You should see:* The page, with a line at the top reading how many questions are answered, and each question marked either For the chapter or For central support.
 
 **Done when:** The chapter has the current blank form and knows who fills in each part.
 
-**How to check:** The setup contact opens the page, types an answer into one question, and the page shows it as saved with their name.
+**How to check:** The setup contact opens the page, types an answer into one question, reloads the page, and the answer is still there, marked saved in this browser.
 
-**If it didn't work:** If the page says it cannot save answers, the invitation is missing or gives view-only permission. The central support organization invites the setup contact again, with permission to edit.
+**If it didn't work:** If the setup contact sees a sign-in page, the page is still private; change its access in the Share menu. If the page says the browser is not keeping answers, the setup contact uses Copy all answers before closing it, or answers on a call with the central support organization typing.
 
-**What usually goes wrong:** Inviting someone outside the central support organization's claude.ai organization has not been tried before the Boston chapter. If the setup contact cannot open the page or cannot save, fall back to filling in the form on a call, with the central support organization typing the answers.
+**What usually goes wrong:** Leaving the page private. It looks fine to the person who published it, because they are signed in, and every one else sees a sign-in page. The setup contact needs no claude.ai account once the page is open to anyone with the link (confirmed 09-23-26).
 
 ---
 
@@ -623,6 +623,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 | Version | Date | Change |
 |---|---|---|
+| 0.5 | 09-23-26 12:10 | Step 8.1 shares the page by link instead of by email invitation. A published page starts private and shows a signed-out visitor a sign-in page; opened to anyone with the link, the Boston chapter's page worked with no claude.ai account (Doug, 09-23-26). |
 | 0.4 | 09-23-26 11:45 | The form becomes a web page, built from this stage's data (Doug, 09-23-26). Each question now carries what it means, where to find the answer and what goes wrong if it is wrong, in a new fields list the guide and the page both read. Step 8.1 publishes the page and invites the setup contact; step 8.9 signs off on the page; step 8.10 writes the values file from the page's answers instead of by hand. New questions: the Google administrator the software acts as (it was on no step), and whether the chapter runs Zoom webinars and creates mentors' mailboxes automatically. The switches' starting values changed: the Google features and deploy_on_push are on, because the worker reads its mail switches only at start-up. |
 | 0.3 | 09-19-26 14:45 | Steps 8.7 and 8.8: the database connection is held by the hosting platform and never goes in the vault, matching step 11.3 (Doug, 09-19-26). |
 | 0.2 | 09-19-26 00:05 | Every action made precise (Doug, 09-19-26): each section of the form filled key by key with what goes in it and an example, the sixteen switches with their starting values, the secret names with the step that creates each, vault entry titles, curl checks for every address, and the exact file path the finished form is saved at. |
