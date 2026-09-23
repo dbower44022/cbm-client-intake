@@ -1,7 +1,7 @@
 # Stage 8 — Fill in the chapter information form
 
-**Version:** 0.7  
-**Last Updated:** 09-23-26 12:26  
+**Version:** 0.8  
+**Last Updated:** 09-23-26 12:28  
 **Generated from** `steps/stage-08.yaml` — do not edit this page; edit the YAML and re-render.
 
 ---
@@ -18,7 +18,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 - The agreement is signed (step 2.6)
 - Google Workspace is set up (stage 4)
-- The website is published and the four policy documents have their addresses (stages 6 and 7). A question whose answer does not exist yet can be marked "not known yet" and answered later, except the four policy addresses
+- Ideally, the website is published and the four policy documents have their addresses (stages 6 and 7). Any question whose answer is not known yet can be marked "not known yet"; the values file then lists it as owed, with the step that needs it
 
 **Steps in this stage:**
 
@@ -144,7 +144,7 @@ The chapter information form holds the roughly forty answers that differ from on
 **Do this:**
 
 1. Answer every question in the section "Fill in the web addresses" on the page. Copy each address from a browser's address bar rather than typing it.
-   *You should see:* Every question in the section marked as saved, or marked not known yet where that is allowed.
+   *You should see:* Every question in the section marked as saved, or marked not known yet.
 2. The central support organization: in a terminal, run the line below once for each address in the section except the applications' address, with the address in place of ADDRESS:
    - curl -sI ADDRESS
    *You should see:* A first line of HTTP/2 200 for every one.
@@ -161,32 +161,36 @@ The chapter information form holds the roughly forty answers that differ from on
   - *Where to find it:* https://apps. followed by the chapter's domain, unless the chapter and the central support organization agree another name.
   - *If it is wrong:* Links in emails the software sends point to the wrong place, and signing in can fail because the software only trusts its own address.
   - *Example:* https://apps.yourchapter.org
-- **Web address (URL) of your help documentation site** (`web.docs_site_url`) — answered by the chapter; may be marked not known yet.
+- **Web address (URL) of your help documentation site** (`web.docs_site_url`) — answered by the chapter; optional.
   - *What it is:* The web address of a website holding help and how-to guides for your staff and mentors. The applications' home page and the CRM's menu link to it.
   - *Where to find it:* The decision in step 6.7. Most chapters do not have one at first; mark this not known yet.
   - *If it is wrong:* The Documentation link leads nowhere. Marked not known yet, the link is simply left out.
   - *Example:* https://docs.yourchapter.org
 - **Web address (URL) of your client code of conduct page** (`web.policy_client_conduct_url`) — answered by the chapter; required.
   - *What it is:* The web address of the page on your website that shows your client code of conduct. Every public application form links to it from its consent box, so applicants can read what they are agreeing to.
-  - *Where to find it:* Open that page on your website in a browser and copy the web address from the address bar. If your website has no such page yet, stage 7 is where the document is written and published; this question cannot be skipped.
+  - *Where to find it:* Open that page on your website in a browser and copy the web address from the address bar. If your website has no such page yet, or you are not sure, mark this not known yet. Stage 7 is where the document is written and published, and the public forms must not be put on the website until this is answered.
   - *If it is wrong:* Applicants agree to a document that is not the chapter's, which is a legal problem, not a cosmetic one. Left out altogether, the forms link to Cleveland's client code of conduct instead.
+  - *If not known yet:* needed by step 17.3, before the public forms are used. Once known, it is entered at the applications' settings page; no redeployment is needed.
   - *Example:* https://www.yourchapter.org/client-code-of-conduct/
 - **Web address (URL) of your mentor code of ethics page** (`web.policy_mentor_ethics_url`) — answered by the chapter; required.
   - *What it is:* The web address of the page on your website that shows your mentor code of ethics. The volunteer application form links to it from its consent box, so volunteers can read what they are agreeing to.
-  - *Where to find it:* Open that page on your website in a browser and copy the web address from the address bar. If your website has no such page yet, stage 7 is where the document is written and published; this question cannot be skipped.
+  - *Where to find it:* Open that page on your website in a browser and copy the web address from the address bar. If your website has no such page yet, or you are not sure, mark this not known yet. Stage 7 is where the document is written and published, and the public forms must not be put on the website until this is answered.
   - *If it is wrong:* Volunteers agree to a document that is not the chapter's. Left out altogether, the forms link to Cleveland's mentor code of ethics instead.
+  - *If not known yet:* needed by step 17.3, before the public forms are used. Once known, it is entered at the applications' settings page; no redeployment is needed.
   - *Example:* https://www.yourchapter.org/mentor-code-of-ethics/
 - **Web address (URL) of your terms of use page** (`web.policy_terms_url`) — answered by the chapter; required.
   - *What it is:* The web address of the page on your website that shows your terms of use. Every public form links to it from its consent box.
-  - *Where to find it:* Open that page on your website in a browser and copy the web address from the address bar. If your website has no such page yet, stage 7 is where the document is written and published; this question cannot be skipped.
+  - *Where to find it:* Open that page on your website in a browser and copy the web address from the address bar. If your website has no such page yet, or you are not sure, mark this not known yet. Stage 7 is where the document is written and published, and the public forms must not be put on the website until this is answered.
   - *If it is wrong:* Applicants agree to terms that are not the chapter's. Left out altogether, the forms link to Cleveland's terms of use instead.
+  - *If not known yet:* needed by step 17.3, before the public forms are used. Once known, it is entered at the applications' settings page; no redeployment is needed.
   - *Example:* https://www.yourchapter.org/terms-of-use/
 - **Web address (URL) of your privacy policy page** (`web.policy_privacy_url`) — answered by the chapter; required.
   - *What it is:* The web address of the page on your website that shows your privacy policy. Every public form links to it from its consent box.
-  - *Where to find it:* Open that page on your website in a browser and copy the web address from the address bar. If your website has no such page yet, stage 7 is where the document is written and published; this question cannot be skipped.
+  - *Where to find it:* Open that page on your website in a browser and copy the web address from the address bar. If your website has no such page yet, or you are not sure, mark this not known yet. Stage 7 is where the document is written and published, and the public forms must not be put on the website until this is answered.
   - *If it is wrong:* Applicants are shown a privacy policy that is not the chapter's, which is a legal exposure. Left out altogether, the forms link to Cleveland's privacy policy instead.
+  - *If not known yet:* needed by step 17.3, before the public forms are used. Once known, it is entered at the applications' settings page; no redeployment is needed.
   - *Example:* https://www.yourchapter.org/privacy-policy/
-- **Web address (URL) of your colour file** (`web.chapter_tokens_url`) — answered by the chapter; may be marked not known yet.
+- **Web address (URL) of your colour file** (`web.chapter_tokens_url`) — answered by the chapter; optional.
   - *What it is:* The web address of a small file that sets your chapter's colours on the software's pages.
   - *Where to find it:* The colour file published in step 6.5. Most chapters start without one; mark this not known yet.
   - *If it is wrong:* The pages keep the standard colours. Nothing breaks.
@@ -198,7 +202,7 @@ The chapter information form holds the roughly forty answers that differ from on
 - The events page address is left empty, so the software uses its own events page.
 - The documentation address is filled in.
 - The colour file address is filled in.
-- The four policy addresses are filled in.
+- The four policy addresses are filled in, or marked not known yet and listed as owed.
 
 **Note:** The events page address is not asked. Left empty, it means the applications' own events page, APP-ADDRESS/webinars/, which is what every chapter now uses. The documentation and colour file addresses count as filled in when they are marked not known yet.
 
@@ -256,7 +260,7 @@ The chapter information form holds the roughly forty answers that differ from on
   - *Where to find it:* The decision in step 4.9.
   - *If it is wrong:* Warnings about failed submissions reach nobody.
   - *Example:* support@yourchapter.org
-- **Members group** (`google.members_group`) — answered by the chapter; may be marked not known yet.
+- **Members group** (`google.members_group`) — answered by the chapter; optional.
   - *What it is:* The Google group every member of the chapter belongs to. A new mentor's mailbox is added to it automatically.
   - *Where to find it:* The group created in step 4.10. Mark not known yet if the chapter has none; the software then skips adding mentors to a group.
   - *If it is wrong:* New mentors are added to the wrong group, or to none.
@@ -271,7 +275,7 @@ The chapter information form holds the roughly forty answers that differ from on
   - *Where to find it:* The chapter's own administrator account from step 4.5.
   - *If it is wrong:* Checking and creating mentors' mailboxes fails, so new mentors are left without one.
   - *Example:* admin@yourchapter.org
-- **Shared drive identifier** (`google.shared_drive_id`) — answered by the central support organization; may be marked not known yet; filled in at step 10.5.
+- **Shared drive identifier** (`google.shared_drive_id`) — answered by the central support organization; optional; filled in at step 10.5.
   - *What it is:* The identifier of the shared drive where the software files each record's documents.
   - *Where to find it:* Step 10.5 creates the drive and writes its identifier here. It is the part of the drive's web address after /drive/folders/. Leave it until then.
   - *If it is wrong:* Documents cannot be filed. The settings generator refuses to switch document filing on without it.
@@ -346,7 +350,7 @@ The chapter information form holds the roughly forty answers that differ from on
   - *Where to find it:* Usually the shared operations mailbox from step 8.4.
   - *If it is wrong:* Password resets and other CRM emails bounce or land in spam.
   - *Example:* info@yourchapter.org
-- **Logo file name** (`crm.logo_file`) — answered by the central support organization; may be marked not known yet.
+- **Logo file name** (`crm.logo_file`) — answered by the central support organization; optional.
   - *What it is:* The file name of the chapter's logo, shown on the CRM's sign-in screen and menu.
   - *Where to find it:* The logo from step 6.6. No build script sets the logo yet (work list G1, item 2); it is uploaded by hand in the CRM.
   - *If it is wrong:* The CRM shows no logo. Nothing else is affected.
@@ -627,6 +631,7 @@ The chapter information form holds the roughly forty answers that differ from on
 
 | Version | Date | Change |
 |---|---|---|
+| 0.8 | 09-23-26 12:28 | Every question can be marked not known yet (Doug, 09-23-26: "There should always be an option of not known yet"). A question marked so is written to the values file as owed, naming the step that needs it: the four policy addresses by step 17.3, before the public forms are used; the others by the step that builds from them. Only the short label must be known to write the file, because it names the file. |
 | 0.7 | 09-23-26 12:26 | Every web-address question now says plainly that it asks for the web address (URL) of a page, and which page (Doug, 09-23-26: "Why doesn't it say that?"). The four policy questions say what to do when the page does not exist yet, and that leaving one out links the forms to Cleveland's document. Examples use yourchapter.org rather than Boston's own domain, because this stage serves every chapter. The page no longer shows each question's internal name; the guide still does. |
 | 0.6 | 09-23-26 12:20 | Step 8.6's page button renamed Use recommended answers, and the step now says exactly what it does (Doug, 09-23-26). |
 | 0.5 | 09-23-26 12:10 | Step 8.1 shares the page by link instead of by email invitation. A published page starts private and shows a signed-out visitor a sign-in page; opened to anyone with the link, the Boston chapter's page worked with no claude.ai account (Doug, 09-23-26). |

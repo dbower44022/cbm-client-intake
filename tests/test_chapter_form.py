@@ -143,7 +143,27 @@ def test_a_missing_answer_is_named_by_its_label(tmp_path, capsys):
     src = tmp_path / "answers.txt"
     src.write_text(_block(a))
     assert to_values.main(["x", str(src), "--check"]) == 1
-    assert "Web address (URL) of your privacy policy page (web.policy_privacy_url): Not answered yet." in capsys.readouterr().out
+    assert "Web address (URL) of your privacy policy page (web.policy_privacy_url): Not answered yet. Answer it, or mark it not known yet." in capsys.readouterr().out
+
+
+def test_any_question_can_be_marked_not_known_yet_and_is_listed_as_owed(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(to_values, "CHAPTERS", tmp_path)
+    a = _answers(web__policy_privacy_url={"notYet": True}, crm__base_url={"notYet": True})
+    src = tmp_path / "answers.txt"
+    src.write_text(_block(a))
+    assert to_values.main(["x", str(src)]) == 0
+    out = capsys.readouterr().out
+    assert "privacy policy page (web.policy_privacy_url): marked not known yet; needed by step 17.3" in out
+    assert "(crm.base_url): marked not known yet; needed by step 9.10" in out
+    text = (tmp_path / "boston-values.yaml").read_text()
+    assert "# OWED" in text and yaml.safe_load(text)["web"]["policy_privacy_url"] == ""
+
+
+def test_the_short_label_must_be_known_to_write_the_file(tmp_path, capsys):
+    src = tmp_path / "answers.txt"
+    src.write_text(_block(_answers(chapter__slug={"notYet": True})))
+    assert to_values.main(["x", str(src), "--check"]) == 1
+    assert "Short label (chapter.slug): must be known" in capsys.readouterr().out
 
 
 def test_the_shared_drive_is_owed_later_not_a_failure(tmp_path, capsys):

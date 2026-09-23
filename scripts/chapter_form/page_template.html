@@ -175,8 +175,8 @@ details[open] summary{margin-bottom:6px}
   function shown(f){ if (!f.show_if) return true; var a = state.answers[f.show_if]; return !!(a && a.value === true); }
   function problem(f, a){
     a = a || {}; var v = a.value;
-    if (a.notYet) { return (f.required && !f.later) ? 'This question must be answered; it cannot be marked not known yet.' : null; }
-    if (v === undefined || v === null || v === '') { if (f.later) return null; return f.required ? 'Not answered yet.' : 'Not answered yet. Answer it, or mark it not known yet.'; }
+    if (a.notYet) return null;
+    if (v === undefined || v === null || v === '') { if (f.later) return null; return 'Not answered yet. Answer it, or mark it not known yet.'; }
     if (f.kind === 'bool') return typeof v === 'boolean' ? null : 'Answer yes or no.';
     if (f.kind === 'choice') return (f.options || []).indexOf(v) >= 0 ? null : 'Choose one of the listed answers.';
     var c = D.checks[f.kind]; return new RegExp(c.pattern).test(String(v)) ? null : c.message;
@@ -200,7 +200,7 @@ details[open] summary{margin-bottom:6px}
     head.appendChild(lbl);
     head.appendChild(el('span', {'class':'badge b-' + f.by}, BYLABEL[f.by] || f.by));
     var tags = [];
-    tags.push(f.required ? 'Required' : 'May be marked not known yet');
+    tags.push(f.required ? 'Required' : 'Optional');
     if (f.later) tags.push('Answered at step ' + f.later);
     head.appendChild(el('span', {'class':'tag'}, tags.join(' · ')));
     card.appendChild(head);
@@ -230,7 +230,7 @@ details[open] summary{margin-bottom:6px}
     }
     card.appendChild(input);
 
-    if (!f.required || f.later) {
+    {
       var nk = el('label', {'class':'nk'}); var cb = el('input', {type:'checkbox'});
       cb.checked = !!a.notYet;
       cb.addEventListener('change', function(){ setAnswer(f.key, {notYet: cb.checked}); refresh(); });
@@ -296,7 +296,7 @@ details[open] summary{margin-bottom:6px}
       card.classList.toggle('bad', !!p && touched && a.value !== '' && a.value != null);
       if (!p && touched) {
         st.className = 'status ok';
-        st.textContent = a.notYet ? 'Marked not known yet. Saved in this browser.' : 'Saved in this browser.';
+        st.textContent = a.notYet ? (f.required && !f.later ? 'Marked not known yet. Saved in this browser. It will be needed by ' + (f.needed_by || D.neededBy[f.key.split('.')[0]]) + '.' : 'Marked not known yet. Saved in this browser.') : 'Saved in this browser.';
         if (f.key === 'chapter.timezone' && a.value && a.value !== 'America/New_York') { st.className = 'status warn'; st.textContent = 'Saved. The software supports only Eastern time today: tell the central support organization before stage 9.'; }
       } else if (p && touched && !(a.value === '' || a.value == null)) { st.className = 'status bad'; st.textContent = p; }
       else if (f.later && !a.value) { st.className = 'status idle'; st.textContent = 'Answered at step ' + f.later + '.'; }

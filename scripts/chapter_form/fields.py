@@ -74,18 +74,39 @@ def is_shown(field: dict, answers: dict) -> bool:
     return a.get("value") is True
 
 
+# When a question marked not known yet must be answered, by the part of the
+# form it belongs to. A field's own ``needed_by`` overrides this.
+NEEDED_BY = {
+    "chapter": "step 9.10, where the CRM is set up",
+    "crm": "step 9.10, where the CRM is set up",
+    "web": "step 11.2, where the applications' settings are generated",
+    "google": "step 11.2, where the applications' settings are generated",
+    "zoom": "step 11.2, where the applications' settings are generated",
+    "flags": "step 11.2, where the applications' settings are generated",
+}
+
+
+def needed_by(field: dict) -> str:
+    return field.get("needed_by") or NEEDED_BY[field["key"].partition(".")[0]]
+
+
+def owed(field: dict, answer: dict | None) -> bool:
+    """A required answer marked not known yet: allowed on the form, owed later."""
+    return bool((answer or {}).get("notYet")) and bool(field.get("required")) and not field.get("later")
+
+
 def problem(field: dict, answer: dict | None) -> str | None:
-    """Why this answer cannot be used, in plain words, or None when it can."""
+    """Why this answer cannot be used, in plain words, or None when it can.
+    "Not known yet" is always an allowed answer (Doug, 09-23-26); a required
+    one is reported as owed by ``owed``/``needed_by`` rather than here."""
     answer = answer or {}
     value = answer.get("value")
     if answer.get("notYet"):
-        if field.get("required") and not field.get("later"):
-            return "This question must be answered; it cannot be marked not known yet."
         return None
     if value is None or value == "":
         if field.get("later"):
             return None
-        return "Not answered yet." if field.get("required") else "Not answered yet. Answer it, or mark it not known yet."
+        return "Not answered yet. Answer it, or mark it not known yet."
     kind = field["kind"]
     if kind == "bool":
         return None if isinstance(value, bool) else "Answer yes or no."

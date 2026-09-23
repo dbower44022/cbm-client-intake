@@ -45,6 +45,7 @@ def page_data(chapter: str) -> dict:
         "secrets": secret_lines,
         "webinarSecret": form.WEBINAR_SECRET,
         "guideVersion": stage.get("version"),
+        "neededBy": form.NEEDED_BY,
     }
 
 

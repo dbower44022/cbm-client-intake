@@ -1,7 +1,7 @@
 stage: 8
 name: Fill in the chapter information form
-version: "0.7"
-updated: "09-23-26 12:26"
+version: "0.8"
+updated: "09-23-26 12:28"
 why: >-
   The chapter information form holds the roughly forty answers that differ from
   one chapter to the next: its name, its addresses, its Google details and its
@@ -20,7 +20,7 @@ time: >-
 before_you_start:
   - The agreement is signed (step 2.6)
   - Google Workspace is set up (stage 4)
-  - The website is published and the four policy documents have their addresses (stages 6 and 7). A question whose answer does not exist yet can be marked "not known yet" and answered later, except the four policy addresses
+  - Ideally, the website is published and the four policy documents have their addresses (stages 6 and 7). Any question whose answer is not known yet can be marked "not known yet"; the values file then lists it as owed, with the step that needs it
 unlocks: >-
   Building the CRM (stage 9). Nothing after this stage can start until the form is
   complete and reviewed, and everything after it becomes routine once it is.
@@ -148,7 +148,7 @@ steps:
     mode: guided
     actions:
       - do: Answer every question in the section "Fill in the web addresses" on the page. Copy each address from a browser's address bar rather than typing it.
-        see: Every question in the section marked as saved, or marked not known yet where that is allowed.
+        see: Every question in the section marked as saved, or marked not known yet.
       - do: "The central support organization: in a terminal, run the line below once for each address in the section except the applications' address, with the address in place of ADDRESS:"
         items:
           - "curl -sI ADDRESS"
@@ -182,40 +182,44 @@ steps:
         source: The decision in step 6.7. Most chapters do not have one at first; mark this not known yet.
         wrong: The Documentation link leads nowhere. Marked not known yet, the link is simply left out.
       - key: web.policy_client_conduct_url
+        needed_by: step 17.3, before the public forms are used. Once known, it is entered at the applications' settings page; no redeployment is needed
         label: Web address (URL) of your client code of conduct page
         by: chapter
         kind: url
         required: true
         example: https://www.yourchapter.org/client-code-of-conduct/
         meaning: The web address of the page on your website that shows your client code of conduct. Every public application form links to it from its consent box, so applicants can read what they are agreeing to.
-        source: Open that page on your website in a browser and copy the web address from the address bar. If your website has no such page yet, stage 7 is where the document is written and published; this question cannot be skipped.
+        source: Open that page on your website in a browser and copy the web address from the address bar. If your website has no such page yet, or you are not sure, mark this not known yet. Stage 7 is where the document is written and published, and the public forms must not be put on the website until this is answered.
         wrong: Applicants agree to a document that is not the chapter's, which is a legal problem, not a cosmetic one. Left out altogether, the forms link to Cleveland's client code of conduct instead.
       - key: web.policy_mentor_ethics_url
+        needed_by: step 17.3, before the public forms are used. Once known, it is entered at the applications' settings page; no redeployment is needed
         label: Web address (URL) of your mentor code of ethics page
         by: chapter
         kind: url
         required: true
         example: https://www.yourchapter.org/mentor-code-of-ethics/
         meaning: The web address of the page on your website that shows your mentor code of ethics. The volunteer application form links to it from its consent box, so volunteers can read what they are agreeing to.
-        source: Open that page on your website in a browser and copy the web address from the address bar. If your website has no such page yet, stage 7 is where the document is written and published; this question cannot be skipped.
+        source: Open that page on your website in a browser and copy the web address from the address bar. If your website has no such page yet, or you are not sure, mark this not known yet. Stage 7 is where the document is written and published, and the public forms must not be put on the website until this is answered.
         wrong: Volunteers agree to a document that is not the chapter's. Left out altogether, the forms link to Cleveland's mentor code of ethics instead.
       - key: web.policy_terms_url
+        needed_by: step 17.3, before the public forms are used. Once known, it is entered at the applications' settings page; no redeployment is needed
         label: Web address (URL) of your terms of use page
         by: chapter
         kind: url
         required: true
         example: https://www.yourchapter.org/terms-of-use/
         meaning: The web address of the page on your website that shows your terms of use. Every public form links to it from its consent box.
-        source: Open that page on your website in a browser and copy the web address from the address bar. If your website has no such page yet, stage 7 is where the document is written and published; this question cannot be skipped.
+        source: Open that page on your website in a browser and copy the web address from the address bar. If your website has no such page yet, or you are not sure, mark this not known yet. Stage 7 is where the document is written and published, and the public forms must not be put on the website until this is answered.
         wrong: Applicants agree to terms that are not the chapter's. Left out altogether, the forms link to Cleveland's terms of use instead.
       - key: web.policy_privacy_url
+        needed_by: step 17.3, before the public forms are used. Once known, it is entered at the applications' settings page; no redeployment is needed
         label: Web address (URL) of your privacy policy page
         by: chapter
         kind: url
         required: true
         example: https://www.yourchapter.org/privacy-policy/
         meaning: The web address of the page on your website that shows your privacy policy. Every public form links to it from its consent box.
-        source: Open that page on your website in a browser and copy the web address from the address bar. If your website has no such page yet, stage 7 is where the document is written and published; this question cannot be skipped.
+        source: Open that page on your website in a browser and copy the web address from the address bar. If your website has no such page yet, or you are not sure, mark this not known yet. Stage 7 is where the document is written and published, and the public forms must not be put on the website until this is answered.
         wrong: Applicants are shown a privacy policy that is not the chapter's, which is a legal exposure. Left out altogether, the forms link to Cleveland's privacy policy instead.
       - key: web.chapter_tokens_url
         label: Web address (URL) of your colour file
@@ -231,7 +235,7 @@ steps:
       - "The events page address is left empty, so the software uses its own events page."
       - "The documentation address is filled in."
       - "The colour file address is filled in."
-      - "The four policy addresses are filled in."
+      - "The four policy addresses are filled in, or marked not known yet and listed as owed."
     note: "The events page address is not asked. Left empty, it means the applications' own events page, APP-ADDRESS/webinars/, which is what every chapter now uses. The documentation and colour file addresses count as filled in when they are marked not known yet."
     check:
       how: Every address, opened in a private browser window, shows the right page.
@@ -747,6 +751,10 @@ steps:
     source: 5-Methods-Form-Accounts-Checks.md#8.10
 
 changes:
+  - version: "0.8"
+    date: "09-23-26 12:28"
+    change: >-
+      Every question can be marked not known yet (Doug, 09-23-26: "There should always be an option of not known yet"). A question marked so is written to the values file as owed, naming the step that needs it: the four policy addresses by step 17.3, before the public forms are used; the others by the step that builds from them. Only the short label must be known to write the file, because it names the file.
   - version: "0.7"
     date: "09-23-26 12:26"
     change: >-

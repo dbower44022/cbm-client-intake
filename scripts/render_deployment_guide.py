@@ -115,7 +115,7 @@ def render_field(f: dict) -> list[str]:
     """One question of the chapter information form, as the guide prints it.
     The same entry drives the web page (scripts/chapter_form/build_page.py)."""
     flags = [f"answered by {BY.get(f['by'], f['by'])}"]
-    flags.append("required" if f.get("required") else "may be marked not known yet")
+    flags.append("required" if f.get("required") else "optional")
     if f.get("later"):
         flags.append(f"filled in at step {f['later']}")
     if f.get("show_if"):
@@ -124,6 +124,8 @@ def render_field(f: dict) -> list[str]:
     lines.append(f"  - *What it is:* {f['meaning'].strip()}")
     lines.append(f"  - *Where to find it:* {f['source'].strip()}")
     lines.append(f"  - *If it is wrong:* {f['wrong'].strip()}")
+    if f.get("needed_by"):
+        lines.append(f"  - *If not known yet:* needed by {f['needed_by'].strip()}.")
     if "default" in f:
         d = f["default"]
         shown = ("yes" if d else "no") if isinstance(d, bool) else d

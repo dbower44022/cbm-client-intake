@@ -61,6 +61,13 @@ def answer_problems(answers: dict, stage: dict | None = None) -> list[str]:
     return out
 
 
+def owed_answers(answers: dict, stage: dict | None = None) -> list[str]:
+    """Required answers marked not known yet, each with the step that needs it."""
+    return [f"{f['label']} ({f['key']}): marked not known yet; needed by {form.needed_by(f)}."
+            for f in form.all_fields(stage)
+            if form.is_shown(f, answers) and form.owed(f, answers.get(f["key"]))]
+
+
 def build_values(answers: dict, stage: dict | None = None) -> dict:
     values: dict = {"chapter": {}, "web": {}, "google": {}, "zoom": {}, "crm": {}, "secrets": [], "flags": {}}
     for f in form.all_fields(stage):
@@ -96,8 +103,13 @@ def generator_problems(values: dict) -> tuple[list[str], list[str]]:
         secrets = {"ESPO_API_KEY": "t", "ESPO_PROVISION_USERNAME": "t", "ESPO_PROVISION_PASSWORD": "t",
                    "SESSION_SECRET": "t", "APP_ENCRYPTION_KEY": Fernet.generate_key().decode(),
                    "GOOGLE_SERVICE_ACCOUNT_KEY_FILE": str(key)}
+        trial = json.loads(json.dumps(values))
+        for section in ("web", "google", "zoom", "crm"):  # answers owed later must not fail the trial
+            for k, v in trial.get(section, {}).items():
+                if v == "" and k.endswith("_url"):
+                    trial[section][k] = "https://owed.invalid/"
         try:
-            rs.build_spec(values, secrets)
+            rs.build_spec(trial, secrets)
         except (ValueError, KeyError) as exc:
             msg = str(exc)
             if "shared_drive_id" in msg:
@@ -113,6 +125,10 @@ def header(data: dict, now: dt.datetime) -> str:
         f"# written: {now.strftime('%m-%d-%y %H:%M')}",
     ]
     signoffs = data.get("signoffs") or []
+    owed_now = owed_answers(data.get("answers") or {})
+    if owed_now:
+        lines.append("# OWED — answers marked not known yet, each with the step that needs it:")
+        lines.extend(f"#   {o}" for o in owed_now)
     if signoffs:
         lines.append("# reviewed by: " + " and ".join(s.get("name", "?") for s in signoffs))
         lines.append("# reviewed on: " + ", ".join(sorted({s.get("date", "?") for s in signoffs})))
@@ -141,11 +157,14 @@ def main(argv: list[str]) -> int:
         return 2
     answers = data["answers"]
     problems = answer_problems(answers)
+    owed = owed_answers(answers)
     values = build_values(answers)
-    owed: list[str] = []
+    if not values["chapter"].get("slug"):
+        problems.append("Short label (chapter.slug): must be known to write the file, because it names the file.")
     if not problems:
-        more, owed = generator_problems(values)
+        more, later = generator_problems(values)
         problems += more
+        owed += later
     for p in problems:
         print(f"change on the page: {p}")
     for o in owed:
