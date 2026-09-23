@@ -1,0 +1,9 @@
+/* Colour file for Boston Business Mentors, written from its chapter
+   information page (deployment guide steps 6.5 and 8.10). Publish it and enter
+   its address as the colour file's web address. */
+:root {
+  --cbm-navy: #14496a;
+  --cbm-gold: #f59b4c;
+  --cbm-btn-bg-hover: #14496a;
+  --cbm-text: #14496a;
+}

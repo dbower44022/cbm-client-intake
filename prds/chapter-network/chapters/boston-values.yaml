@@ -1,0 +1,89 @@
+# Chapter information form — WRITTEN FROM THE CHAPTER INFORMATION PAGE. Do not edit by hand:
+# change the answer on the page and write this file again (deployment guide step 8.10).
+# written: 09-23-26 18:08
+# OWED — answers marked not known yet, each with the step that needs it:
+#   Web address (URL) of your client code of conduct page (web.policy_client_conduct_url): marked not known yet; needed by step 17.3, before the public forms are used. Once known, it is entered at the applications' settings page; no redeployment is needed.
+#   Web address (URL) of your mentor code of ethics page (web.policy_mentor_ethics_url): marked not known yet; needed by step 17.3, before the public forms are used. Once known, it is entered at the applications' settings page; no redeployment is needed.
+#   Web address (URL) of your terms of use page (web.policy_terms_url): marked not known yet; needed by step 17.3, before the public forms are used. Once known, it is entered at the applications' settings page; no redeployment is needed.
+#   Web address (URL) of your privacy policy page (web.policy_privacy_url): marked not known yet; needed by step 17.3, before the public forms are used. Once known, it is entered at the applications' settings page; no redeployment is needed.
+#   Alert sending mailbox (google.alert_email_from): marked not known yet; needed by step 11.2, where the applications' settings are generated.
+#   Publish workshops and webinars on the public events page? (flags.events_public_api): marked not known yet; needed by step 11.2, where the applications' settings are generated.
+#   Read and file email (flags.gmail_sync): marked not known yet; needed by step 11.2, where the applications' settings are generated.
+#   Put mentoring sessions on Google calendars (flags.gcal_events): marked not known yet; needed by step 11.2, where the applications' settings are generated.
+#   File documents on the shared drive (flags.gdrive_docs): marked not known yet; needed by step 11.2, where the applications' settings are generated.
+#   Account the shared drive is used as (flags.gdrive_identity): marked not known yet; needed by step 11.2, where the applications' settings are generated.
+#   Check a mentor's mailbox exists before creating their sign-in (flags.google_directory_check): marked not known yet; needed by step 11.2, where the applications' settings are generated.
+#   Create mentors' CRM sign-ins (flags.mentor_provision_users): marked not known yet; needed by step 11.2, where the applications' settings are generated.
+#   Analytics pages (flags.analytics_enabled): marked not known yet; needed by step 11.2, where the applications' settings are generated.
+#   Events page for staff (flags.events_enabled): marked not known yet; needed by step 11.2, where the applications' settings are generated.
+#   Quick add for partners and funders (flags.record_quick_add): marked not known yet; needed by step 11.2, where the applications' settings are generated.
+#   Deliver submissions in the background (flags.async_delivery): marked not known yet; needed by step 11.2, where the applications' settings are generated.
+#   Practice mode with no CRM (flags.espo_dry_run): marked not known yet; needed by step 11.2, where the applications' settings are generated.
+# reviewed by: Teresa Lang
+# reviewed on: 09-23-26
+# No secret values: the secrets section lists names only.
+chapter:
+  name: Boston Business Mentors
+  abbreviation: BBM
+  slug: boston
+  timezone: America/New_York
+  currency: USD
+  locale: en_US
+web:
+  website_base_url: https://www.bbmentors.org/
+  app_base_url: https://apps.bbmentors.org/
+  docs_site_url: ''
+  policy_client_conduct_url: ''
+  policy_mentor_ethics_url: ''
+  policy_terms_url: ''
+  policy_privacy_url: ''
+  colour_primary: '#14496a'
+  colour_button: '#f59b4c'
+  colour_button_hover: '#14496a'
+  colour_text: '#14496a'
+  chapter_tokens_url: ''
+  events_public_base_url: ''
+google:
+  primary_domain: bbmentors.org
+  ops_mailbox: connect@bbmentors.org
+  alert_email_from: ''
+  alert_email_to: help@bbmentors.org
+  members_group: ''
+  mentor_email_domain: bbmentors.org
+  delegated_admin: admin@bbmentors.org
+  shared_drive_id: ''
+  zoom_host_email: ''
+zoom:
+  account_id: ''
+  client_id: ''
+crm:
+  base_url: https://crm.bbmentors.org/
+  application_name: Boston Business Mentors
+  outbound_from_name: BBMentors
+  outbound_from_address: connect@bbmentors.org
+  logo_file: ''
+secrets:
+- ESPO_API_KEY
+- ESPO_PROVISION_USERNAME
+- ESPO_PROVISION_PASSWORD
+- DATABASE_URL
+- SESSION_SECRET
+- APP_ENCRYPTION_KEY
+- GOOGLE_SERVICE_ACCOUNT_JSON
+flags:
+  events_public_api: false
+  zoom_events: false
+  google_create_mailbox: false
+  gmail_sync: false
+  gcal_events: false
+  gdrive_docs: false
+  gdrive_identity: ''
+  google_directory_check: false
+  mentor_provision_users: false
+  analytics_enabled: false
+  events_enabled: false
+  record_quick_add: false
+  setup_enabled: true
+  async_delivery: false
+  espo_dry_run: false
+  deploy_on_push: true
