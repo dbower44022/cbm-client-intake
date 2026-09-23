@@ -14,6 +14,9 @@ __pycache__/
 # Production App Platform spec overlays — carry ESPO_DRY_RUN=false + CRM secrets
 .do/app.prod.yaml
 .do/app.prod-crm.yaml
+# Backups of the overlays hold the same secrets, some in plain text. One was
+# committed and published on 2026-09-14 (OPEN-ITEMS #33); never again.
+.do/*.bak*
 
 # Claude Code per-machine runtime state (scheduled task locks, local settings,
 # transcripts) — do not commit; each PC that opens the repo generates its own.

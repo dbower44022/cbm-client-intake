@@ -6,6 +6,23 @@ found; move resolved items to the bottom with the resolution date.
 
 ## Needs a fix / decision
 
+33. **Production's `APP_ENCRYPTION_KEY` was published in plain text** (found
+    2026-09-23, preparing the v0.231.1 cut). `11e1fed` (09-14, v0.229.1)
+    committed `.do/app.prod-crm.yaml.bak-20260914-0100`, a backup of the
+    production overlay carrying the key in plain text on web and worker, and
+    the repository is public. `.gitignore` covered only the two live overlays.
+    The key alone does not open anything: it decrypts the secrets `/setup`
+    stores in production's database, so it matters together with a copy of that
+    database. **Ruled 2026-09-23 (Doug, option A): replace the key and re-enter
+    every `/setup`-stored secret.** Done in the repository: the three `.bak`
+    files untracked (kept locally) and `.do/*.bak*` ignored. **Owed, Doug's
+    hands:** generate a new key, set it on production's web and worker and in
+    the local `.do/app.prod-crm.yaml` (or the next `doctl apps update` puts the
+    old one back), redeploy, then re-enter each secret listed at `/setup`. The
+    old key stays in public history by choice (history was not rewritten); once
+    replaced it is worthless. The other two backups held only DigitalOcean
+    `EV[…]` values.
+
 32. **The worker reads its mail switches only at start-up, from the
     environment** (found 2026-09-23, reviewing the deployment guide before the
     first real chapter). `worker.py` decides `inbound_on` (the info@ poller) and
